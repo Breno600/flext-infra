@@ -10,7 +10,7 @@ from collections import defaultdict
 from collections.abc import MutableMapping, MutableSequence, MutableSet
 from pathlib import Path
 from types import MappingProxyType
-from typing import Annotated, ClassVar
+from typing import TYPE_CHECKING, Annotated, ClassVar
 
 from flext_cli import m
 
@@ -20,6 +20,9 @@ from flext_infra._models.refactor_ast_grep import FlextInfraModelsRefactorGrep
 from flext_infra._models.refactor_namespace_enforcer import (
     FlextInfraModelsNamespaceEnforcer,
 )
+
+if TYPE_CHECKING:
+    from flext_infra._models.scan import FlextInfraModelsScan
 
 
 class FlextInfraModelsRefactor(
@@ -35,6 +38,103 @@ class FlextInfraModelsRefactor(
 
     class ModTextCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
         """Repository-scoped request for authenticated Sed rule replay."""
+
+    class ViolationsSweepCommand(FlextInfraModelsMixins.WriteMixin, m.ContractModel):
+        """Repository-scoped request for the canonical repair-and-prove sweep.
+
+        The sweep always mutates: its effect is the repository's own canonical
+        repair verbs (``make fix``, ``make fmt``, ``make mod``) run between two
+        mod scans, and the command fails when any scan total increased.
+        """
+
+    class ViolationsTotals(m.ContractModel):
+        """One mod scan's violation totals as the sweep compares them."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        findings: Annotated[
+            int,
+            m.Field(description="Total mod scan findings"),
+        ]
+        actionable: Annotated[
+            int,
+            m.Field(description="Findings a mod rewrite would repair"),
+        ]
+        detection_only: Annotated[
+            int,
+            m.Field(description="Findings no rewrite repairs"),
+        ]
+        non_actionable_with_fix: Annotated[
+            int,
+            m.Field(description="Findings whose rewrite matches the current source"),
+        ]
+
+        @classmethod
+        def from_scan_report(
+            cls,
+            report: FlextInfraModelsScan.ModScanReport,
+        ) -> FlextInfraModelsRefactor.ViolationsTotals:
+            """Read one scan report's totals.
+
+            Returns:
+                The resulting ``FlextInfraModelsRefactor.ViolationsTotals``.
+
+            """
+            return cls(
+                findings=report.findings,
+                actionable=report.actionable,
+                detection_only=report.detection_only,
+                non_actionable_with_fix=report.non_actionable_with_fix,
+            )
+
+    class ViolationsSweepReport(m.ContractModel):
+        """Before/after receipt of one violations sweep.
+
+        Published only when the always-reducing law held: no scan total
+        increased across the repair sequence.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        schema_version: Annotated[
+            int,
+            m.Field(description="Report schema version"),
+        ]
+        repository_root: Annotated[
+            Path,
+            m.Field(description="Repository the sweep repaired and proved"),
+        ]
+        repair_verbs: Annotated[
+            t.StrSequence,
+            m.Field(description="Canonical verbs the sweep ran, in order"),
+        ]
+        before: Annotated[
+            FlextInfraModelsRefactor.ViolationsTotals,
+            m.Field(description="Scan totals before the repair sequence"),
+        ]
+        after: Annotated[
+            FlextInfraModelsRefactor.ViolationsTotals,
+            m.Field(description="Scan totals after the repair sequence"),
+        ]
+
+        @property
+        def increased_totals(self) -> t.StrSequence:
+            """Names of the totals that increased, empty when none did.
+
+            Returns:
+                The resulting ``t.StrSequence``.
+
+            """
+            return tuple(
+                name
+                for name in (
+                    "findings",
+                    "actionable",
+                    "detection_only",
+                    "non_actionable_with_fix",
+                )
+                if getattr(self.after, name) > getattr(self.before, name)
+            )
 
     class RefactorNamespaceEnforceInput(
         FlextInfraModelsMixins.WriteMixin,

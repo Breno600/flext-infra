@@ -7,8 +7,10 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from enum import StrEnum, unique
-from typing import TYPE_CHECKING, ClassVar
+from pathlib import Path
+from typing import TYPE_CHECKING, ClassVar, Literal
 
+from flext_infra._constants.base import FlextInfraConstantsBase as cb
 from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
 
 if TYPE_CHECKING:
@@ -123,6 +125,25 @@ print(json.dumps({
     )
     PROPAGATION_REPORT_KEY: ClassVar[str] = "propagation"
     "Report directory holding each member lane's pull-request body."
+
+    FLEET_GAPS_ROUTE_NAME: ClassVar[str] = "fleet-gaps"
+    "Canonical workspace CLI verb that reports per-repository fleet gaps."
+    FLEET_GAPS_REPORT_RELATIVE_PATH: ClassVar[Path] = (
+        Path(cb.REPORTS_DIR_NAME) / "fleet-gaps.json"
+    )
+    "Canonical single-file receipt for the latest fleet-gaps report."
+    FLEET_GAPS_REPORT_SCHEMA_VERSION: ClassVar[Literal[1]] = 1
+    "Exact structured fleet-gaps report schema version."
+    AGENTS_DOC_FILENAME: ClassVar[str] = "AGENTS.md"
+    "Repository-local governance law file every governed checkout declares."
+    SKILLS_STAMP_RELPATH: ClassVar[Path] = (
+        Path(".agents") / "skills" / ".flext-stamp.json"
+    )
+    "Repository-local skills provisioning stamp observed by the gaps report."
+    SKILLS_STAMP_DISTRIBUTION_VERSION_KEY: ClassVar[str] = "distribution_version"
+    "Stamp field carrying the provisioned skills distribution version."
+    BEADS_RUNTIME_CONFIG_RELPATH: ClassVar[Path] = Path(".beads") / "config.yaml"
+    "Repository-local Beads runtime identity every participating checkout holds."
 
 
 __all__: list[str] = ["FlextInfraConstantsWorkspace"]

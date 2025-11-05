@@ -274,7 +274,6 @@ class FlextInfraModelsCheck:
             validate_default=True,
         )
         outcome: c.Infra.ToolOutcome = m.Field(
-            default=c.Infra.ToolOutcome.CLEAN,
             description="Native process/report verdict, independent of findings policy",
         )
 

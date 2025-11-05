@@ -471,7 +471,8 @@ class FlextInfraUtilitiesRopeSourceBases:
                     # The reexport destination is already being resolved on
                     # this walk: statically it cannot terminate, so the base
                     # is unresolved for this derivation (bases() skips it).
-                    raise ValueError(f"Unresolved external base: {target}")
+                    msg = f"Unresolved external base: {target}"
+                    raise ValueError(msg)
                 return resolve(
                     m.Infra.SourceClassReference(
                         target=destination,
@@ -518,8 +519,9 @@ class FlextInfraUtilitiesRopeSourceBases:
                 # environment: stdlib submodules (collections.abc) and
                 # non-importable namespaces have no source resource here.
                 # The recognized verdict degrades the base in every caller.
+                msg = f"No source module for required base: {target}"
                 raise ValueError(
-                    f"No source module for required base: {target}",
+                    msg,
                 ) from error
             if resource is not None:
                 module = FlextInfraUtilitiesRopeCore.resolve_pymodule(project, resource)
@@ -597,9 +599,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                         # base cannot participate in the derivation, and the
                         # remaining bases still describe the lineage.
                         message = str(error)
-                        if message.startswith(
+                        if message.startswith((
                             "Unresolved external base:",
-                        ) or message.startswith("No source module for required base:"):
+                            "No source module for required base:",
+                        )):
                             continue
                         if message.startswith("Unresolved planned base:"):
                             continue
@@ -725,9 +728,10 @@ class FlextInfraUtilitiesRopeSourceBases:
                 # Structural defects (duplicates, inconsistent MRO, shadowing)
                 # keep raising.
                 message = str(error)
-                if message.startswith(
+                if message.startswith((
                     "Unresolved external base:",
-                ) or message.startswith("No source module for required base:"):
+                    "No source module for required base:",
+                )):
                     continue
                 if message.startswith("Unresolved planned base:"):
                     continue

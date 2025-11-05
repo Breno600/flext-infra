@@ -230,7 +230,16 @@
 			receipt_release=$${receipt_output%% *}; \
 		fi; \
 		if ! printf '%s\n' "$$receipt_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
+<<<<<<< HEAD
 			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; return 2; \
+=======
+			printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_output" >&2; \
+			printf 'ERROR: Mise receipt stderr: ' >&2; \
+			if cat "$$mise_receipt_log.stderr" >&2; then :; \
+			else printf 'ERROR: cannot read Mise receipt diagnostics: %s\n' "$$mise_receipt_log.stderr" >&2; return 2; fi; \
+			printf 'ERROR: Mise receipt executable: %s; scratch: %s\n' "$$1" "$$scratch" >&2; \
+			return 2; \
+>>>>>>> origin/0.12.0-dev
 		fi; \
 	}; \
 	pinned_mise="$$mise"; \
