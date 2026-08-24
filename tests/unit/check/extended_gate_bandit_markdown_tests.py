@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from flext_infra import p, r, t
-from tests import m
+from flext_infra import m, p, r, t
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.markdown import FlextInfraMarkdownGate
 from flext_tests import tm

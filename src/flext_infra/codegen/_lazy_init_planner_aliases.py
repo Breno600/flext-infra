@@ -31,9 +31,18 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
             self, pkg_dir: Path
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
-        def _module_file(self, module_path: str) -> Path | None: ...
+        def _parents_from_constants_module(
+            self, module_path: Path, current_pkg: str, visited: set[str] | None = None
+        ) -> t.StrSequence: ...
 
-        def _export_names_for_package(self, package_name: str) -> frozenset[str]: ...
+        def _resolve_inherited_alias_source(
+            self,
+            package_names: t.StrSequence,
+            alias_name: str,
+            *,
+            current_pkg: str,
+            use_test_runtime_aliases: bool,
+        ) -> str: ...
 
     def _resolve_aliases(
         self,

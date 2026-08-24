@@ -7,9 +7,8 @@ import shutil
 from typing import TYPE_CHECKING
 
 from flext_infra.basemk.generator import FlextInfraBaseMkGenerator
-from flext_infra import p
-from tests import u
 from flext_tests import tm
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -57,7 +56,7 @@ class TestsFlextInfraBasemkWorktreeUvContract:
         )
         (lane_root / "lane_probe.py").write_text('VALUE = "lane"\n', encoding="utf-8")
 
-        rendered: str = tm.ok(FlextInfraBaseMkGenerator().generate_basemk())
+        rendered = tm.ok(FlextInfraBaseMkGenerator().generate_basemk())
         (lane_root / "base.mk").write_text(rendered, encoding="utf-8")
         (lane_root / "Makefile").write_text(
             "include base.mk\n"
@@ -88,27 +87,28 @@ class TestsFlextInfraBasemkWorktreeUvContract:
             "MAKEOVERRIDES": "",
             "UV": str(uv_executable),
         })
-        result: p.Result[p.Cli.CommandOutput] = u.Cli.run_raw(
+        result = u.Cli.run_raw(
             ["make", "print-uv-roots"],
             cwd=lane_root,
             env=active_env,
             remove_env_keys=inherited_keys,
         )
 
-        stdout: str = tm.ok(result).stdout
-        output: list[str] = [
-            line for line in stdout.splitlines() if line.startswith(str(tmp_path))
+        output = [
+            line
+            for line in tm.ok(result).stdout.splitlines()
+            if line.startswith(str(tmp_path))
         ]
         tm.that(output, eq=[str(lane_root), str(lane_root / ".venv")])
 
-        runtime: p.Result[p.Cli.CommandOutput] = u.Cli.run_raw(
+        runtime = u.Cli.run_raw(
             ["make", "print-runtime-source"],
             cwd=lane_root,
             env=active_env,
             remove_env_keys=inherited_keys,
         )
 
-        runtime_lines: list[str] = tm.ok(runtime).stdout.splitlines()
+        runtime_lines = tm.ok(runtime).stdout.splitlines()
         tm.that("lane" in runtime_lines, eq=True)
         tm.that("canonical" in runtime_lines, eq=False)
 

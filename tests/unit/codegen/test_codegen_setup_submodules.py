@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tests import c, u
+from flext_infra import c, u
 from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
 from flext_tests import tm
 

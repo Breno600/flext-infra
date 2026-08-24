@@ -1,9 +1,9 @@
 id: hardcoded-ssot-literal
 valid:
   # value read from the config SSOT -> canonical, must NOT match
-    - |
-      def build() -> str:
-        return config.Infra.codegen.toolchain.python_version
+  - |
+    def build() -> str:
+        return config.Infra.codegen.toolchain.python_selector
   # value read from the constants SSOT -> canonical, must NOT match
   - |
     def build() -> str:

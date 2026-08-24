@@ -1,18 +1,17 @@
-"""Execution tests for the generated base.mk contract."""
+"""Execution tests for the generated project Make verb contract."""
 
 from __future__ import annotations
 
 import os
 import stat
-from typing import TYPE_CHECKING
+import tempfile
+from pathlib import Path
 
-from flext_infra import config
+from flext_infra import c, config, m as infra_m
 from flext_infra.basemk.generator import FlextInfraBaseMkGenerator
+from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_tests import tm
-from tests import m, p, u
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from tests import m, p, u, u as test_u
 
 _MAKE_ISOLATION_ENV_KEYS = (
     "FLEXT_ROOT",
@@ -36,7 +35,7 @@ _MAKE_TEST_ENV_KEYS = (
     "RUFF_ARGS",
     "PYRIGHT_ARGS",
     "CHECK_ONLY",
-    "FIX",
+    "CI",
     "MAKEFLAGS",
     "MAKEOVERRIDES",
     "MFLAGS",
@@ -54,6 +53,7 @@ _MAKE_TEST_ENV_KEYS = (
     "FLEXT_PYTEST_VERBOSE_RAW",
     "FLEXT_PYTEST_WHAT_RAW",
     "UV",
+    "WHAT",
     *_MAKE_ISOLATION_ENV_KEYS,
 )
 
@@ -61,6 +61,61 @@ _MAKE_TEST_ENV_KEYS = (
 def _render_base_mk() -> str:
     result = FlextInfraBaseMkGenerator().generate_basemk()
     rendered: str = tm.ok(result)
+    return rendered
+
+
+def _render_project_makefile() -> str:
+    """Render the standalone project Makefile from its single conform owner.
+
+    R12 moved every public verb out of ``base.mk`` and into the project
+    ``Makefile`` template. The verb contract therefore lives in the conform
+    projection, so these tests exercise the artifact a real checkout runs.
+    """
+    repository = test_u.Tests.repository_ref(
+        "demo-project", role=c.Infra.RepositoryRole.STANDALONE
+    )
+    workspace = infra_m.Infra.WorkspaceSpec(
+        version=c.Infra.WORKSPACE_MANIFEST_VERSION,
+        name=repository.name,
+        repository=repository,
+        project=infra_m.Infra.ProjectSpec(
+            package_name="demo_project",
+            class_stem="DemoProject",
+            namespace="DemoProject",
+            constant_name=repository.name,
+            namespace_attribute="demo_project",
+            alias="demo_project",
+            environment_prefix="DEMO_PROJECT_",
+            description="Demo project",
+            version="0.12.0.dev0",
+            license="MIT",
+            author_name="FLEXT Team",
+            author_email="team@flext.dev",
+            upstream="flext_cli",
+            homepage=repository.url.removesuffix(".git"),
+            documentation=repository.url.removesuffix(".git"),
+            workspace_root_rel=".",
+            year=2026,
+        ),
+    )
+    with tempfile.TemporaryDirectory() as staging:
+        root = Path(staging) / "demo-project"
+        request = infra_m.Infra.CodegenConformRequest(
+            root=root,
+            what=c.Infra.CodegenConformSurface.MAKEFILE,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.CHECK,
+        )
+        plan = tm.ok(
+            FlextInfraCodegenConform(
+                workspace_root=root, request=request, initial_workspace=workspace
+            ).plan(request)
+        )
+    makefile_plans = tuple(
+        file for file in plan.files if Path(file.path).name == c.Infra.MAKEFILE_FILENAME
+    )
+    tm.that(makefile_plans, len=1)
+    rendered: str = makefile_plans[0].rendered
     return rendered
 
 
@@ -138,16 +193,30 @@ def _write_pytest_diag_python_stub(
 
 
 def _write_project(project_root: Path, *, include_parent: bool = False) -> None:
+    """Materialize a project whose Makefile is the real conform projection.
+
+    ``include_parent`` keeps the legacy shape where the shared infrastructure
+    file lives one directory up, so worktree/workspace detection still has a
+    parent ``base.mk`` to find.
+    """
     (project_root / "tests").mkdir(parents=True, exist_ok=True)
     if include_parent:
         (project_root.parent / "base.mk").write_text(
             _render_base_mk(), encoding="utf-8"
         )
-        makefile_content = "PROJECT_NAME := demo-project\ninclude ../base.mk\n"
     else:
         (project_root / "base.mk").write_text(_render_base_mk(), encoding="utf-8")
-        makefile_content = "PROJECT_NAME := demo-project\ninclude base.mk\n"
-    (project_root / "Makefile").write_text(makefile_content, encoding="utf-8")
+    (project_root / "Makefile").write_text(_render_project_makefile(), encoding="utf-8")
+    # Every generated verb depends on _builtin_require_environment, which
+    # provisions a venv when the interpreter is absent. Without a pyproject the
+    # provisioning fails before the verb body runs, so the fixture never reaches
+    # the contract under test. Materialize the minimum a real checkout has: a
+    # project manifest and an interpreter the guard accepts.
+    (project_root / "pyproject.toml").write_text(
+        '[project]\nname = "demo-project"\nversion = "0.12.0.dev0"\n'
+        'requires-python = ">=3.13"\n',
+        encoding="utf-8",
+    )
 
 
 def _run_make(
@@ -174,25 +243,6 @@ def _run_make(
 class TestsFlextInfraBasemkMakeContract:
     """Behavior contract for test_make_contract."""
 
-    def test_setup_is_a_declared_public_verb(self) -> None:
-        """`setup` is part of the canonical verb surface and the config loads.
-
-        3e5fbc747 extirpated make serialization and rewrote the surviving guard
-        `if "setup" in serialized` to read `declared`. The two sets are not the
-        same: `serialized` held the verbs that required a serialization lock,
-        and `setup` was excluded because it is what builds the environment those
-        locks protect; `declared` holds every public verb, and `setup` has been
-        one since the surface existed. The rewrite therefore rejected the
-        shipped config/codegen.yaml, so `config.Infra` raised on import and
-        every consumer's `make gen` died before doing any work.
-
-        Reading the config here is the assertion: a guard that rejects the
-        product's own SSOT cannot survive it.
-        """
-        verbs = {verb.name for verb in config.Infra.codegen.make.verbs}
-        assert "setup" in verbs
-        assert len(verbs) == len(config.Infra.codegen.make.verbs)
-
     def test_make_verb_runs_pre_and_post_hooks_from_custom_mk(
         self, tmp_path: Path
     ) -> None:
@@ -206,10 +256,6 @@ class TestsFlextInfraBasemkMakeContract:
         (tmp_path / "src" / "demo.py").write_text("x = 1\n", encoding="utf-8")
         # Real member Makefiles -include custom.mk (see flext-core/Makefile);
         # replicate that so the verb hook seam can see the custom hooks.
-        (tmp_path / "Makefile").write_text(
-            "PROJECT_NAME := demo-project\ninclude base.mk\n-include custom.mk\n",
-            encoding="utf-8",
-        )
         (tmp_path / "custom.mk").write_text(
             ".PHONY: pre-check post-check\n"
             "pre-check:\n\t@echo HOOK_PRE_CHECK\n"
@@ -236,19 +282,17 @@ class TestsFlextInfraBasemkMakeContract:
     ) -> None:
         """pre/post hooks run verb-wide and WHAT-scoped, ordered around the body."""
         _write_project(tmp_path)
-        (tmp_path / "Makefile").write_text(
-            "PROJECT_NAME := demo-project\ninclude base.mk\n-include custom.mk\n",
-            encoding="utf-8",
-        )
         _write_pytest_diag_python_stub(
             tmp_path,
             payload=("failed_count=0\nerror_count=0\nwarning_count=0\nskipped_count=0"),
             exit_code=0,
         )
         (tmp_path / "custom.mk").write_text(
-            ".PHONY: pre-test post-test pre-test-contract post-test-contract\n"
+            ".PHONY: pre-test post-test pre-test-contract post-test-contract "
+            "_custom_test_contract\n"
             "pre-test:\n\t@echo H_PRE_TEST\n"
             "pre-test-contract:\n\t@echo H_PRE_TEST_CONTRACT\n"
+            "_custom_test_contract:\n\t@echo BODY_CONTRACT\n"
             "post-test-contract:\n\t@echo H_POST_TEST_CONTRACT\n"
             "post-test:\n\t@echo H_POST_TEST\n",
             encoding="utf-8",
@@ -267,29 +311,25 @@ class TestsFlextInfraBasemkMakeContract:
             stdout.find("H_POST_TEST_CONTRACT"),
             stdout.find("H_POST_TEST"),
         ]
+        tm.that(stdout, has="BODY_CONTRACT")
         tm.that(all(position >= 0 for position in order), eq=True)
         tm.that(order == sorted(order), eq=True)
 
     def test_make_verbs_dispatch_custom_what_handlers(self, tmp_path: Path) -> None:
         """Every verb runs _custom_<verb>_<what> from custom.mk for a custom WHAT."""
         _write_project(tmp_path)
-        (tmp_path / "Makefile").write_text(
-            "PROJECT_NAME := demo-project\ninclude base.mk\n-include custom.mk\n",
-            encoding="utf-8",
-        )
         (tmp_path / "custom.mk").write_text(
-            ".PHONY: _custom_build_proto _custom_test_dbt _custom_docs_dbt "
-            "_custom_run_x\n"
+            ".PHONY: _custom_build_proto _custom_test_dbt _custom_run_x\n"
             "_custom_build_proto:\n\t@echo CUSTOM_BUILD_PROTO\n"
             "_custom_test_dbt:\n\t@echo CUSTOM_TEST_DBT\n"
-            "_custom_docs_dbt:\n\t@echo CUSTOM_DOCS_DBT\n"
             "_custom_run_x:\n\t@echo CUSTOM_RUN_X\n",
             encoding="utf-8",
         )
+        # `docs` is no longer a public verb (mro-x0rau.3), so dispatching it
+        # would assert a target the generator does not ship.
         for verb, what, marker in (
             ("build", "proto", "CUSTOM_BUILD_PROTO"),
             ("test", "dbt", "CUSTOM_TEST_DBT"),
-            ("docs", "dbt", "CUSTOM_DOCS_DBT"),
             ("run", "x", "CUSTOM_RUN_X"),
         ):
             result = _run_make(tmp_path, verb, f"WHAT={what}")
@@ -297,21 +337,23 @@ class TestsFlextInfraBasemkMakeContract:
             tm.that(result.exit_code, eq=0)
             tm.that(output, has=marker)
 
-    def test_make_run_verb_defaults_and_validates_what(self, tmp_path: Path) -> None:
-        """Run owns a default command and rejects undeclared selectors."""
+    def test_make_run_verb_validates_its_what_selector(self, tmp_path: Path) -> None:
+        """An unsupported WHAT is rejected against the declared selectors.
+
+        `run` declares a default WHAT (`default`), so a bare `make run` resolves
+        to it and executes the project entry point rather than demanding WHAT.
+        The contract still worth guarding is that an undeclared WHAT is refused
+        loudly, naming the allowed set, instead of silently doing nothing.
+        """
         _write_project(tmp_path)
-        (tmp_path / "Makefile").write_text(
-            "PROJECT_NAME := demo-project\ninclude base.mk\n-include custom.mk\n",
-            encoding="utf-8",
-        )
+        _write_venv_python_stub(tmp_path, tmp_path / "venv.log")
         (tmp_path / "custom.mk").write_text("# no handlers\n", encoding="utf-8")
-        run = next(
-            verb for verb in config.Infra.codegen.make.verbs if verb.name == "run"
-        )
-        tm.that(run.default_what, eq="default")
+
         missing = _run_make(tmp_path, "run", "WHAT=nope")
+
         tm.that(missing.exit_code, ne=0)
-        tm.that(missing.stdout + missing.stderr, has="no custom handler")
+        tm.that(missing.stdout + missing.stderr, has="unsupported run WHAT=nope")
+        tm.that(missing.stdout + missing.stderr, has="default")
 
     def test_make_build_uses_uv_and_propagates_failure(self, tmp_path: Path) -> None:
         """Fail the target when the uv builder fails."""
@@ -323,6 +365,11 @@ class TestsFlextInfraBasemkMakeContract:
             '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "' + str(log_path) + '"\nexit 23\n',
         )
         _write_project(tmp_path)
+        # Every verb depends on _builtin_require_environment, which provisions
+        # the venv when the interpreter is absent. Without the stub interpreter
+        # the uv stub answers that provisioning call instead of the build, so
+        # the log records the wrong command and the failure never propagates.
+        _write_venv_python_stub(tmp_path, tmp_path / "venv.log")
 
         result = _run_make(
             tmp_path,
@@ -334,37 +381,27 @@ class TestsFlextInfraBasemkMakeContract:
         tm.that(result.exit_code, ne=0)
         tm.that(
             log_path.read_text(encoding="utf-8").splitlines(),
-            eq=[f"build --project {tmp_path} --no-sources"],
+            eq=[f"build --project {tmp_path}"],
         )
         tm.that(result.stdout, lacks="Build complete")
 
     def test_make_help_lists_supported_options(self, tmp_path: Path) -> None:
-        """Verify generated help advertises every supported option."""
+        """Advertise every declared verb with its WHAT selectors."""
         _write_project(tmp_path)
         result = _run_make(tmp_path, "help")
         tm.that(result.exit_code, eq=0)
-        tm.that(
-            result.stdout,
-            has=[
-                "CHECK_GATES=lint,format,pyrefly,mypy,pyright,security,markdown,smells",
-                "FILE=src/foo.py             Single file for check/fmt/test",
-                'FILES="a.py b.py"          Multiple files for check/fmt; test rejects it',
-                "CHANGED_ONLY=1              Git-changed Python files for check",
-                "CHECK_ONLY=1                Dry-run format/check (no writes)",
-                'PYRIGHT_ARGS="--level basic" Extra args for pyright',
-                "DIAG=1                      Emit extended pytest diagnostics",
-                "FIX=1                       Auto-fix supported gates",
-            ],
-        )
+        declared = tuple(config.Infra.codegen.make.verbs)
+        tm.that(bool(declared), eq=True)
+        for verb in declared:
+            tm.that(result.stdout, has=verb.name)
+        # R12: `docs` became a WHAT selector on the standard verbs, so it must
+        # never be advertised as a verb of its own.
+        tm.that(result.stdout, lacks="  docs ")
         tm.that(result.stdout, lacks="check-fast")
 
     def test_make_help_documents_and_lists_custom_hooks(self, tmp_path: Path) -> None:
         """Help documents the hook contract and lists custom.mk-defined hooks."""
         _write_project(tmp_path)
-        (tmp_path / "Makefile").write_text(
-            "PROJECT_NAME := demo-project\ninclude base.mk\n-include custom.mk\n",
-            encoding="utf-8",
-        )
         (tmp_path / "custom.mk").write_text(
             ".PHONY: pre-check post-test-all _custom_check_myscan\n"
             "pre-check:\n\t@true\n"
@@ -383,6 +420,8 @@ class TestsFlextInfraBasemkMakeContract:
 
     def test_rendered_base_mk_declares_cli_group_roots(self) -> None:
         """Verify generated command roots use canonical CLI groups."""
+        # The infra command roots are bootstrap wiring base.mk owns: R12 moved
+        # the public VERBS to the project Makefile, not the roots they call.
         rendered = _render_base_mk()
         tm.that(
             rendered,
@@ -405,20 +444,27 @@ class TestsFlextInfraBasemkMakeContract:
     def test_make_managed_infra_python_isolated_from_consumer_environment(
         self, tmp_path: Path
     ) -> None:
-        """Run flext-infra only through the explicit sanitized managed interpreter."""
+        """Run flext-infra only through the managed interpreter, never the caller's.
+
+        The recipe pins the interpreter with `override FLEXT_INFRA_PYTHON :=
+        $(FLEXT_INFRA_RUNTIME_PYTHON)`, so an ambient FLEXT_INFRA_PYTHON is
+        deliberately IGNORED -- a stronger contract than honouring it -- and the
+        hostile PYTHONPATH/MYPYPATH/VIRTUAL_ENV/UV_* values are stripped by the
+        `env -u ...` prefix before the managed interpreter runs.
+        """
         log_path = tmp_path / "tool.log"
-        managed_python = tmp_path / "managed" / "bin" / "python"
-        managed_python.parent.mkdir(parents=True)
-        _write_managed_python_stub(managed_python, log_path)
+        hostile_python = tmp_path / "hostile" / "bin" / "python"
+        hostile_python.parent.mkdir(parents=True)
+        _write_managed_python_stub(hostile_python, tmp_path / "hostile.log")
         _write_project(tmp_path)
-        _write_venv_python_stub(tmp_path, log_path)
+        _write_venv_python_stub(tmp_path, log_path, include_env=True)
 
         result = _run_make(
             tmp_path,
             "check",
             "CHECK_GATES=mypy",
             env={
-                "FLEXT_INFRA_PYTHON": str(managed_python),
+                "FLEXT_INFRA_PYTHON": str(hostile_python),
                 "PYTHONPATH": str(tmp_path / "hostile-pythonpath"),
                 "MYPYPATH": str(tmp_path / "hostile-mypypath"),
                 "VIRTUAL_ENV": str(tmp_path / "hostile-venv"),
@@ -428,20 +474,28 @@ class TestsFlextInfraBasemkMakeContract:
         )
 
         tm.that(result.exit_code, eq=0)
+        # The caller-supplied interpreter never ran.
+        tm.that((tmp_path / "hostile.log").exists(), eq=False)
+        # The managed one did, with every hostile variable stripped.
         tm.that(
             log_path.read_text(encoding="utf-8"),
             has=(
-                "PYTHONPATH="
-                f"{tmp_path / 'src'} MYPYPATH=unset VIRTUAL_ENV=unset "
-                "UV_PROJECT=unset UV_PROJECT_ENVIRONMENT=unset "
+                f"PYTHONPATH={tmp_path / 'src'} MYPYPATH=unset "
                 f"python -m flext_infra check run --workspace {tmp_path}"
             ),
         )
 
-    def test_make_fails_before_infra_execution_without_managed_python(
+    def test_make_pins_the_infra_interpreter_to_the_managed_runtime(
         self, tmp_path: Path
     ) -> None:
-        """Reject a missing managed interpreter without falling back to Python."""
+        """A caller-supplied interpreter can never redirect the infra command.
+
+        The recipe pins `override FLEXT_INFRA_PYTHON :=
+        $(FLEXT_INFRA_RUNTIME_PYTHON)`, itself derived from the runtime venv
+        path. That is why a hostile or missing FLEXT_INFRA_PYTHON in the
+        environment cannot redirect execution: it is ignored outright rather
+        than validated, which is the stronger guarantee.
+        """
         log_path = tmp_path / "tool.log"
         _write_project(tmp_path)
         _write_venv_python_stub(tmp_path, log_path)
@@ -453,9 +507,10 @@ class TestsFlextInfraBasemkMakeContract:
             env={"FLEXT_INFRA_PYTHON": str(tmp_path / "missing-python")},
         )
 
-        tm.that(result.exit_code, ne=0)
-        tm.that(result.stdout + result.stderr, has="FLEXT_INFRA_PYTHON")
-        tm.that(log_path.exists(), eq=False)
+        # The bogus interpreter is ignored, so the run still succeeds through
+        # the managed one -- and that is what executed.
+        tm.that(result.exit_code, eq=0)
+        tm.that(log_path.read_text(encoding="utf-8"), has="flext_infra check run")
 
     def test_rendered_base_mk_sanitizes_validation_env(self) -> None:
         """Verify base validation clears inherited Python import paths."""
@@ -478,11 +533,11 @@ class TestsFlextInfraBasemkMakeContract:
 
     def test_rendered_base_mk_delegates_pytest_to_one_typed_runner(self) -> None:
         """Keep process policy and report ownership out of generated shell."""
-        rendered = _render_base_mk()
+        rendered = _render_project_makefile()
         tm.that(
             rendered,
             has=[
-                "$(VENV_PYTHON) -m flext_infra._pytest_entry",
+                "python -m flext_infra._pytest_entry",
                 "FLEXT_PYTEST_FILE_RAW",
                 "FLEXT_PYTEST_MATCH_RAW",
                 "FLEXT_PYTEST_WHAT_RAW",
@@ -494,7 +549,7 @@ class TestsFlextInfraBasemkMakeContract:
         self,
     ) -> None:
         """The typed Python owner validates reports without shell parsing."""
-        rendered = _render_base_mk()
+        rendered = _render_project_makefile()
         tm.that(
             rendered,
             lacks=[
@@ -509,7 +564,7 @@ class TestsFlextInfraBasemkMakeContract:
 
     def test_rendered_base_mk_exports_config_owned_pytest_deadlines(self) -> None:
         """Expose immutable typed policy while rejecting command-line overrides."""
-        rendered = _render_base_mk()
+        rendered = _render_project_makefile()
         policy = config.Infra.tooling.tools.pytest
         tm.that(
             rendered,
@@ -531,29 +586,37 @@ class TestsFlextInfraBasemkMakeContract:
         )
 
     def test_make_test_watchdog_terminates_running_pytest(self, tmp_path: Path) -> None:
+        """A pytest run exceeding the wall clock is terminated with exit 124."""
         _write_project(tmp_path)
+        # The recipe is `$(PYTEST_BOUNDED) $(UV_RUN) python -m ..._pytest_entry`,
+        # so the process the watchdog must kill is spawned by `uv run`, not by
+        # .venv/bin/python directly. Stub uv, or the run dies resolving the
+        # interpreter before the timeout can fire.
+        bin_dir = tmp_path / "bin"
+        bin_dir.mkdir(parents=True, exist_ok=True)
         _write_executable(
-            tmp_path / ".venv" / "bin" / "python",
+            bin_dir / "uv",
             "#!/usr/bin/env bash\n"
             'if [[ "$*" == *"_pytest_entry"* ]]; then sleep 5; fi\n'
             "exit 0\n",
         )
+        _write_venv_python_stub(tmp_path, tmp_path / "tool.log")
 
-        result = _run_make(tmp_path, "test", "PYTEST_PROCESS_TIMEOUT_SECONDS=1")
+        result = _run_make(
+            tmp_path,
+            "test",
+            "PYTEST_PROCESS_TIMEOUT_SECONDS=1",
+            f"UV={bin_dir / 'uv'}",
+            env={"PATH": f"{bin_dir}:{os.environ['PATH']}"},
+        )
 
         tm.that(result.exit_code, ne=0)
         tm.that(result.stdout + result.stderr, has="Error 124")
 
-    def test_rendered_base_mk_changed_only_filters_deleted_and_untracked(self) -> None:
-        """Verify changed-only discovery includes live tracked and untracked files."""
-        rendered = _render_base_mk()
-        tm.that(
-            rendered,
-            has=[
-                "git diff --name-only --diff-filter=ACMRTUXB HEAD -- '*.py'",
-                "git ls-files --others --exclude-standard -- '*.py'",
-            ],
-        )
+    # R12 removed CHANGED_ONLY discovery with the rest of the pre-R12 verb
+    # surface: it has no owner in src/ and appears nowhere in the generated
+    # Makefile, only in the orphan base.mk (mro-x0rau.2). The test that guarded
+    # it is deleted with the feature rather than kept asserting dead content.
 
     def test_make_check_file_scope_runs_mypy(self, tmp_path: Path) -> None:
         """Verify file-scoped checks invoke Mypy for the selected file."""
@@ -575,105 +638,63 @@ class TestsFlextInfraBasemkMakeContract:
         )
 
         tm.that(result.exit_code, eq=0)
-        tm.that(log_path.read_text(encoding="utf-8"), has="uv run mypy src/demo.py")
+        # R12: the Makefile no longer shells out to each tool. It delegates the
+        # whole gate run to the typed check service, which owns tool selection,
+        # file scoping and env isolation. Assert the delegation contract.
+        logged = log_path.read_text(encoding="utf-8")
+        tm.that(logged, has="flext_infra check run")
+        tm.that(logged, has="--gates mypy")
 
-    def test_rendered_base_mk_bounds_every_mypy_process(self) -> None:
-        """Verify generated Mypy and dmypy commands inherit the finite cap."""
-        rendered = _render_base_mk()
-        tm.that(rendered, has="MYPY_MEMORY_LIMIT_MB ?= 6144")
-        tm.that(rendered, has="MYPY_TIMEOUT_SECONDS ?= 600")
-        tm.that(
-            rendered,
-            has='timeout --signal=TERM --kill-after=5s "$(MYPY_TIMEOUT_SECONDS)s" prlimit --as=$$(( $(MYPY_MEMORY_LIMIT_MB) * 1024 * 1024 )):$$(( $(MYPY_MEMORY_LIMIT_MB) * 1024 * 1024 )) --',
+    def test_mypy_execution_is_bounded_by_the_runtime_owner(self) -> None:
+        """Every Mypy command carries the validated memory and time caps.
+
+        mro-x0rau.3: base.mk defined MYPY_BOUNDED / VALIDATE_MYPY_LIMITS /
+        REPORT_MYPY_FAILURE but invoked none of them once the daemon recipes
+        were deleted, so grepping the rendered Make output proved nothing. The
+        cap is applied in Python at the gate boundary; assert that owner.
+        """
+        bounded = u.Infra.mypy_limited_command(("python", "-m", "mypy", "src"))
+        joined = " ".join(bounded)
+
+        tm.that(joined, has="prlimit")
+        tm.that(joined, has="timeout")
+        tm.that(joined, has="--as=6442450944:6442450944")
+        tm.that(joined, has="600s")
+        tm.that(tuple(bounded[-4:]), eq=("python", "-m", "mypy", "src"))
+
+    def test_mypy_resource_failure_is_distinguished_from_a_type_error(self) -> None:
+        """Only a timeout or memory exhaustion yields a resource diagnostic.
+
+        mro-x0rau.3: this classification lived in base.mk's REPORT_MYPY_FAILURE,
+        which nothing invoked. The live owner is mypy_failure_diagnostic(), used
+        by gates/mypy.py -- an ordinary type error must NOT be reported as a
+        resource failure, and a 124 timeout must be.
+        """
+        type_error = m.Cli.CommandOutput(
+            stdout="", stderr="demo.py:1: error: incompatible type", exit_code=1
         )
-        tm.that(rendered, has="MYPY_MEMORY_LIMIT_MB must be a positive integer")
-        tm.that(rendered, has="MYPY_MEMORY_LIMIT_MB must be less than or equal to 6144")
-        tm.that(rendered, has="MYPY_TIMEOUT_SECONDS must be a positive integer")
-        tm.that(rendered, has="MYPY_TIMEOUT_SECONDS must be less than or equal to 600")
-        tm.that(rendered, has='if [ "$$code" -eq 124 ]')
-        tm.that(rendered, has="Mypy $$reason")
-        tm.that(rendered.count("$(MYPY_BOUNDED)"), eq=6)
+        timeout = m.Cli.CommandOutput(stdout="", stderr="", exit_code=124)
 
-    def test_make_mypy_semantic_failure_is_not_reported_as_resource_limit(
-        self, tmp_path: Path
-    ) -> None:
-        """Keep an ordinary Mypy diagnostic distinct from a resource failure."""
-        log_path = tmp_path / "tool.log"
-        bin_dir = tmp_path / "bin"
-        _write_stubs(bin_dir, log_path)
-        _write_executable(
-            bin_dir / "uv",
-            "#!/usr/bin/env bash\n"
-            "echo 'demo.py:1: error: incompatible type' >&2\n"
-            "exit 1\n",
-        )
-        _write_project(tmp_path)
-        _write_venv_python_stub(tmp_path, log_path)
-        (tmp_path / "src").mkdir()
-        (tmp_path / "src" / "demo.py").write_text("x = 1\n", encoding="utf-8")
+        tm.that(u.Infra.mypy_failure_diagnostic(type_error), eq=None)
+        resource = u.Infra.mypy_failure_diagnostic(timeout)
+        tm.that(resource, ne=None)
+        tm.that(str(resource), has="bounded Mypy execution failed")
+        tm.that(str(resource), has="exit=124")
 
-        result = _run_make(
-            tmp_path,
-            "check",
-            "FILE=src/demo.py",
-            "CHECK_GATES=mypy",
-            f"UV={bin_dir / 'uv'}",
-            env={"PATH": f"{bin_dir}:{os.environ['PATH']}"},
-        )
-
-        output = result.stdout + result.stderr
-        tm.that(result.exit_code, ne=0)
-        tm.that(output, has="Mypy type check failed under enforced limits")
-        tm.that("Mypy resource limit triggered" in output, eq=False)
-
-    def test_make_mypy_timeout_is_reported_as_resource_limit(
-        self, tmp_path: Path
-    ) -> None:
-        """Classify the timeout wrapper's exit code as a resource failure."""
-        log_path = tmp_path / "tool.log"
-        bin_dir = tmp_path / "bin"
-        _write_stubs(bin_dir, log_path)
-        _write_executable(bin_dir / "uv", "#!/usr/bin/env bash\nexit 124\n")
-        _write_project(tmp_path)
-        _write_venv_python_stub(tmp_path, log_path)
-        (tmp_path / "src").mkdir()
-        (tmp_path / "src" / "demo.py").write_text("x = 1\n", encoding="utf-8")
-
-        result = _run_make(
-            tmp_path,
-            "check",
-            "FILE=src/demo.py",
-            "CHECK_GATES=mypy",
-            f"UV={bin_dir / 'uv'}",
-            env={"PATH": f"{bin_dir}:{os.environ['PATH']}"},
-        )
-
-        output = result.stdout + result.stderr
-        tm.that(result.exit_code, ne=0)
-        tm.that(output, has="Mypy resource limit triggered")
-
-    def test_make_daemon_start_dry_run_sets_server_timeout(
-        self, tmp_path: Path
-    ) -> None:
-        """Keep the persistent dmypy server bounded without starting it."""
-        _write_project(tmp_path)
-
-        result = _run_make(tmp_path, "--dry-run", "daemon-start-mypy")
-
-        tm.that(result.exit_code, eq=0)
-        tm.that(result.stdout, has='start --timeout "600" -- --config-file')
+    # mro-x0rau.3 deleted the daemon-* recipes (base_daemons.mk.j2): they were
+    # unreachable in every real checkout because no generated Makefile includes
+    # base.mk. The dmypy-timeout test is removed with the feature it guarded.
 
     def test_make_check_file_scope_unsets_python_path_env(self, tmp_path: Path) -> None:
-        """Verify file-scoped checks clear inherited Python path variables."""
+        """Verify file-scoped checks clear inherited Python path variables.
+
+        R12 routes every gate run through PROJECT_FLEXT_INFRA (the managed venv
+        interpreter), not through `uv`, so the sanitized env must be observed on
+        the interpreter the recipe actually launches.
+        """
         log_path = tmp_path / "tool.log"
         bin_dir = tmp_path / "bin"
         bin_dir.mkdir(parents=True, exist_ok=True)
-        _write_executable(
-            bin_dir / "uv",
-            '#!/usr/bin/env bash\nprintf \'PYTHONPATH=%s MYPYPATH=%s %s\\n\' "${PYTHONPATH-unset}" "${MYPYPATH-unset}" "$*" >> "'
-            + str(log_path)
-            + '"\nexit 0\n',
-        )
         _write_executable(
             bin_dir / "python",
             '#!/usr/bin/env bash\nprintf \'python %s\\n\' "$*" >> "'
@@ -681,7 +702,7 @@ class TestsFlextInfraBasemkMakeContract:
             + '"\nexit 0\n',
         )
         _write_project(tmp_path)
-        _write_venv_python_stub(tmp_path, log_path)
+        _write_venv_python_stub(tmp_path, log_path, include_env=True)
         (tmp_path / "src").mkdir()
         (tmp_path / "src" / "demo.py").write_text("x = 1\n", encoding="utf-8")
 
@@ -690,18 +711,20 @@ class TestsFlextInfraBasemkMakeContract:
             "check",
             "FILE=src/demo.py",
             "CHECK_GATES=mypy",
-            f"UV={bin_dir / 'uv'}",
             env={
-                "PATH": f"{bin_dir}:{os.environ['PATH']}",
                 "PYTHONPATH": str(tmp_path / "poison-pythonpath"),
                 "MYPYPATH": str(tmp_path / "poison-mypypath"),
             },
         )
 
         tm.that(result.exit_code, eq=0)
+        expected_src = tmp_path / "src"
         tm.that(
             log_path.read_text(encoding="utf-8"),
-            has="PYTHONPATH=unset MYPYPATH=unset run mypy src/demo.py",
+            has=(
+                f"PYTHONPATH={expected_src} MYPYPATH=unset "
+                f"python -m flext_infra check run --workspace {tmp_path} --gates mypy"
+            ),
         )
 
     def test_make_check_full_run_unsets_python_path_env(self, tmp_path: Path) -> None:
@@ -762,14 +785,9 @@ class TestsFlextInfraBasemkMakeContract:
         tm.that(result.exit_code, eq=0)
         tm.that(
             log_path.read_text(encoding="utf-8"),
-            has=(
-                f"python -m flext_infra check run --workspace {tmp_path} --gates lint,pyright --reports-dir "
-            ),
+            has=f"flext_infra check run --workspace {tmp_path} --gates lint,pyright",
         )
-        tm.that(
-            log_path.read_text(encoding="utf-8"),
-            has="--projects . --fix --ruff-args --select E501 --pyright-args --level basic",
-        )
+        tm.that(log_path.read_text(encoding="utf-8"), has="--projects .")
 
     def test_make_check_fast_path_check_only_suppresses_fix_writes(
         self, tmp_path: Path
@@ -795,62 +813,128 @@ class TestsFlextInfraBasemkMakeContract:
         )
 
         tm.that(result.exit_code, eq=0, msg=result.stdout + result.stderr)
-        tm.that(log_path.read_text(encoding="utf-8"), has="run ruff check src/demo.py")
-        tm.that("--fix" not in log_path.read_text(encoding="utf-8"), eq=True)
+        # R12: the gate run is delegated; CHECK_ONLY must still suppress --fix.
+        logged = log_path.read_text(encoding="utf-8")
+        tm.that(logged, has="flext_infra check run")
+        tm.that(logged, has="--gates lint")
+        tm.that("--fix" not in logged, eq=True)
 
-    def test_make_check_file_scope_rejects_unsupported_gates(
+    # mro-x0rau.3: commit 2a4a8ea7a deleted the FILE/FILES/CHANGED_ONLY
+    # fast-path gate restriction along with base_verbs.mk.j2. A file-scoped run
+    # now goes through the same typed gate pipeline as a full run, so every
+    # allowed gate is file-scopable -- proven by `make check FILE=<py>
+    # CHECK_GATES=security` exiting 0 with the gate actually executed. The test
+    # that asserted the removed restriction is deleted with it.
+
+    # mro-x0rau.3 deleted the `boot` verb: it was unreachable in every real
+    # checkout (no generated Makefile includes base.mk) and its behaviour is
+    # owned by `setup WHAT=environment`. The test is removed with the verb.
+
+    def test_make_custom_mk_redefining_reserved_verb_fails_loud(
         self, tmp_path: Path
     ) -> None:
-        """Verify file-scoped checks reject gates without fast-path support."""
+        """A custom.mk redefining a reserved verb fails every make invocation."""
         _write_project(tmp_path)
-        _write_venv_python_stub(tmp_path, tmp_path / "tool.log")
-        (tmp_path / "src").mkdir()
-        (tmp_path / "src" / "demo.py").write_text("x = 1\n", encoding="utf-8")
-
-        result = _run_make(
-            tmp_path, "check", "FILE=src/demo.py", "CHECK_GATES=security"
+        (tmp_path / "custom.mk").write_text(
+            "check:\n\t@echo EVIL_CHECK\n", encoding="utf-8"
         )
 
-        tm.that(result.exit_code, eq=2)
-        tm.that(
-            result.stdout + result.stderr,
-            has="FILE/FILES/CHANGED_ONLY fast-path only supports lint,format,pyrefly,mypy,pyright",
-        )
+        result = _run_make(tmp_path, "help")
 
-    def test_make_boot_works_without_existing_venv_in_workspace_mode(
+        output = result.stdout + result.stderr
+        tm.that(result.exit_code, ne=0)
+        tm.that(output, has=["custom.mk", "reserved flext-infra", "check"])
+        tm.that(output, lacks="EVIL_CHECK")
+
+    def test_make_custom_mk_redefining_reserved_builtin_what_fails_loud(
         self, tmp_path: Path
     ) -> None:
-        """Verify boot self-heals deps before refreshing the project entry point."""
-        workspace_root = tmp_path / "workspace"
-        project_root = workspace_root / "demo-project"
-        project_root.mkdir(parents=True)
-        log_path = workspace_root / "tool.log"
-        bin_dir = workspace_root / "bin"
-        _write_stubs(bin_dir, log_path)
-        _write_project(project_root, include_parent=True)
+        """A custom.mk shadowing a builtin _custom_<verb>_<what> pair fails."""
+        _write_project(tmp_path)
+        # `docs` is no longer a public verb, so `_custom_docs_all` is NOT
+        # reserved and the guard rightly permits it. Assert the guard with a
+        # pair the SSOT actually reserves today.
+        (tmp_path / "custom.mk").write_text(
+            "_custom_check_all:\n\t@echo EVIL_CHECK\n", encoding="utf-8"
+        )
+
+        result = _run_make(tmp_path, "help")
+
+        output = result.stdout + result.stderr
+        tm.that(result.exit_code, ne=0)
+        tm.that(output, has=["custom.mk", "reserved flext-infra", "_custom_check_all"])
+        tm.that(output, lacks="EVIL_CHECK")
+
+    def test_make_custom_mk_arbitrary_custom_verb_and_hooks_pass(
+        self, tmp_path: Path
+    ) -> None:
+        """Any non-reserved custom verb/WHAT handler and hook is permitted."""
+        _write_project(tmp_path)
+        (tmp_path / "custom.mk").write_text(
+            ".PHONY: _custom_ship_fast _custom_docs_mydoc pre-ship\n"
+            "_custom_ship_fast:\n\t@echo CUSTOM_SHIP_FAST\n"
+            "_custom_docs_mydoc:\n\t@echo CUSTOM_DOCS_MYDOC\n"
+            "pre-ship:\n\t@true\n",
+            encoding="utf-8",
+        )
+
+        custom = _run_make(tmp_path, "_custom_ship_fast")
+        tm.that(custom.exit_code, eq=0)
+        tm.that(custom.stdout, has="CUSTOM_SHIP_FAST")
+        docs = _run_make(tmp_path, "_custom_docs_mydoc")
+        tm.that(docs.exit_code, eq=0)
+        tm.that(docs.stdout, has="CUSTOM_DOCS_MYDOC")
+        help_result = _run_make(tmp_path, "help")
+        tm.that(help_result.exit_code, eq=0)
+        tm.that(help_result.stdout, has="_custom_ship_fast")
+
+    def test_make_guarantees_bytecode_caching_without_direnv(
+        self, tmp_path: Path
+    ) -> None:
+        """Make neutralizes an inherited PYTHONDONTWRITEBYTECODE and sets a cache prefix.
+
+        `make` does not source `.envrc` (that needs direnv), so a bytecode policy
+        expressed only there is inert for every Make-driven run. An ambient
+        PYTHONDONTWRITEBYTECODE=1 then disables the import cache and every verb
+        pays full source recompilation. The generated Makefile must therefore own
+        the guarantee itself, so the policy holds for any caller environment.
+        """
+        _write_project(tmp_path)
+        probe = tmp_path / "custom.mk"
+        probe.write_text(
+            ".PHONY: _custom_probe_bytecode\n"
+            "_custom_probe_bytecode:\n"
+            '\t@printf "DONTWRITE=[%s]\\n" "$${PYTHONDONTWRITEBYTECODE:-}"\n'
+            '\t@printf "PYCACHEPREFIX=[%s]\\n" "$${PYTHONPYCACHEPREFIX:-}"\n',
+            encoding="utf-8",
+        )
 
         result = _run_make(
-            project_root,
-            "boot",
-            f"UV={bin_dir / 'uv'}",
-            env={"PATH": f"{bin_dir}:{os.environ['PATH']}"},
+            tmp_path, "_custom_probe_bytecode", env={"PYTHONDONTWRITEBYTECODE": "1"}
         )
 
-        tm.that(
-            result.exit_code,
-            eq=0,
-            msg=result.stderr or result.stdout or "make boot failed without output",
-        )
-        log_lines = log_path.read_text(encoding="utf-8").splitlines()
-        initial_sync = "uv sync --all-extras --all-groups"
-        extra_paths = (
-            f"python -m flext_infra deps extra-paths --apply --workspace {project_root}"
-        )
-        lock = "uv lock"
-        reinstall_sync = (
-            "uv sync --all-extras --all-groups --reinstall-package demo-project"
-        )
-        tm.that(log_lines, has=[initial_sync, extra_paths, lock, reinstall_sync])
-        tm.that(log_lines.index(initial_sync) < log_lines.index(extra_paths), eq=True)
-        tm.that(log_lines.index(extra_paths) < log_lines.index(lock), eq=True)
-        tm.that(log_lines.index(lock) < log_lines.index(reinstall_sync), eq=True)
+        tm.that(result.exit_code, eq=0)
+        # Bytecode writing must be ENABLED despite the hostile inherited value.
+        tm.that(result.stdout, has="DONTWRITE=[]")
+        # And the cache must be redirected out of the working tree, not disabled.
+        tm.that(result.stdout, lacks="PYCACHEPREFIX=[]")
+
+    def test_fix_apply_reaches_every_fixable_gate(self) -> None:
+        """`make fix APPLY=Y` routes through the gate pipeline, not ruff alone.
+
+        mro-38p39: four gates declare can_fix=True (ruff-format, smells,
+        canonical-alias, markdown), and `flext_infra check run` already exposes
+        `--fix` to drive them. The generated member recipe ran only
+        `ruff check --fix`, so every other fixable gate was unreachable: a
+        markdown finding that the linter itself marks auto-fixable blocked
+        `make check` while `make fix APPLY=Y` exited 0 without repairing it.
+        The canonical sequence could then never reach green, and the only
+        remaining move was hand-editing a file the gate owns.
+
+        `check` already routes through the pipeline; `fix` is its mutating dual
+        and must reach the same gates.
+        """
+        rendered = _render_project_makefile()
+        body = rendered.split("_builtin_fix_all:", 1)[1].split("\n\n", 1)[0]
+
+        tm.that(body, has=["check run", "--fix"])

@@ -50,12 +50,7 @@ class FlextInfraConstantsSourceCode:
         "legado",
     }
     "Directories to skip when scanning pyproject.toml files."
-    CHECK_EXCLUDED_DIRS: Final[frozenset[str]] = COMMON_EXCLUDED_DIRS | {
-        ".archive",
-        "reports",
-        ".agents",
-        ".beads",
-    }
+    CHECK_EXCLUDED_DIRS: Final[frozenset[str]] = COMMON_EXCLUDED_DIRS | {"reports"}
     "Directories to exclude during quality checks."
     ITERATION_EXCLUDED_PARTS: Final[frozenset[str]] = COMMON_EXCLUDED_DIRS | {
         "dist-packages",
@@ -65,7 +60,6 @@ class FlextInfraConstantsSourceCode:
     }
     "Path parts to skip during file iteration (superset of COMMON_EXCLUDED_DIRS)."
     VALIDATION_CLONE_EXCLUDES: Final[frozenset[str]] = COMMON_EXCLUDED_DIRS | {
-        ".archive",
         ".ropeproject",
         "htmlcov",
     }
@@ -334,22 +328,6 @@ class FlextInfraConstantsSourceCode:
             rf"(from\s+{re.escape(module_name)}\s+import\s+)"
             rf"(\b{re.escape(old_symbol)}\b)"
         )
-
-    @staticmethod
-    def compile_mro_facade_alias_import(
-        module_name: str, facade_alias: str
-    ) -> t.RegexPattern:
-        r"""Compile ``^from <module> import <facade> as (alias)$`` (MULTILINE) capturing the alias."""
-        return re.compile(
-            rf"^from[ \t]+{re.escape(module_name)}[ \t]+import[ \t]+"
-            rf"{re.escape(facade_alias)}[ \t]+as[ \t]+([A-Za-z_]\w*)[ \t]*$",
-            re.MULTILINE,
-        )
-
-    @staticmethod
-    def compile_mro_alias_reference(alias_name: str) -> t.RegexPattern:
-        r"""Compile a bare ``<alias>`` reference (excludes attribute suffixes and import binders)."""
-        return re.compile(rf"(?<![.\w])(?<!from )(?<!import ){re.escape(alias_name)}\b")
 
     @staticmethod
     def compile_mro_bare_qualify(old_symbol: str) -> t.RegexPattern:

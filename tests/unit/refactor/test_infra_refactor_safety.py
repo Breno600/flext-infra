@@ -115,9 +115,7 @@ class TestsFlextInfraRefactorInfraRefactorSafety:
         service.orchestrator.safety_manager = stub
         loaded = service.load_rules()
         tm.ok(loaded)
-        results = service.refactor_project(
-            tmp_path, dry_run=False, apply_safety=True, gates=("lint",)
-        )
+        results = service.refactor_project(tmp_path, dry_run=False, apply_safety=True)
         tm.that(results, empty=False)
         tm.that(all(item.success for item in results), eq=True)
         tm.that(stub.calls, eq=["checkpoint", "checkpoint-state", "validate", "clear"])

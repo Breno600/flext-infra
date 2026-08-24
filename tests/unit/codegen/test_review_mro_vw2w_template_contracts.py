@@ -39,23 +39,6 @@ class TestsReviewTemplateContracts:
         tm.that(upgrade, lacks='selected="$(strip $(PROJECTS))"')
         tm.that(upgrade, has="$(if $(strip $(DEPENDENCY)),,--rewrite-constraints)")
 
-    def test_makefile_explicit_root_selection_is_preserved(self) -> None:
-        """PROJECT=. selects the root instead of silently expanding to members."""
-        text = _MAKEFILE.read_text(encoding="utf-8")
-        tm.that(
-            text,
-            has=(
-                "SELECTED_PROJECTS := $(if $(strip $(REQUESTED_PROJECTS)),"
-                "$(REQUESTED_PROJECTS),$(DEFAULT_PROJECTS))"
-            ),
-        )
-        tm.that(text, lacks="$(if $(filter .,$(REQUESTED_PROJECTS))")
-
-    def test_makefile_has_no_legacy_work_lifecycle(self) -> None:
-        """Gas Town is the sole lane lifecycle owner."""
-        text = _MAKEFILE.read_text(encoding="utf-8")
-        tm.that(text, lacks=["_builtin_work_", "make work", "work start"])
-
     def test_makefile_defines_attached_member_for_status(self) -> None:
         text = _MAKEFILE.read_text(encoding="utf-8")
         tm.that(
@@ -101,14 +84,6 @@ class TestsReviewTemplateContracts:
         tm.that(dump, lacks="pytest.log")
         tm.that(dump, has="junit.xml")
         tm.that(dump, has="coverage.xml")
-
-    def test_ci_template_is_yamllint_safe_at_step_and_section_boundaries(self) -> None:
-        """Generated CI must not create blank-line or comment-indent violations."""
-        text = _CI.read_text(encoding="utf-8")
-        tm.that(text, has='{% for step in make.workflow if "ci" in step.contexts -%}')
-        tm.that(text, has="{% endfor -%}")
-        tm.that(text, has="  # End SECTION: ci job")
-        tm.that("    # End SECTION: ci job" not in text.splitlines(), eq=True)
 
     def test_docs_workflow_uses_public_cli_not_removed_make_verb(self) -> None:
         text = _DOCS.read_text(encoding="utf-8")

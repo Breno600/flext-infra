@@ -342,29 +342,9 @@ class TestCodegenConform:
 
         tm.that(merging_current.ancestor, eq=True)
 
-    @staticmethod
-    def _seed_minimal_python_project(root: Path) -> None:
-        dist = u.Tests.repository_ref(config.Infra.name).distribution
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                root / "pyproject.toml",
-                f'[project]\nname = "{dist}"\nversion = "0.12.0.dev0"\n'
-                'requires-python = ">=3.13,<3.14"\n',
-            )
-        )
-        package_init = root / "src" / "flext_infra" / "__init__.py"
-        package_init.parent.mkdir(parents=True, exist_ok=True)
-        tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
-        tests_init = root / "tests" / "__init__.py"
-        tests_init.parent.mkdir(parents=True, exist_ok=True)
-        tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
-
-    # Exemplar: a genuine end-to-end scenario -- scaffold a project, then run
-    # its console entry point in a fresh interpreter -- legitimately costs more
-    # than the suite-wide 30s budget, because importing the generated package's
-    # dependency chain dominates. Declaring the real budget with an explicit
-    # marker and timeout keeps the scenario honest instead of hiding it behind
-    # a global timeout bump that would mask genuine hangs elsewhere.
+    # This end-to-end scenario scaffolds a project and runs its console entry
+    # point in a fresh interpreter. The slow marker opts into the single
+    # config-owned slow-item budget; tests must not restate that policy locally.
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("kind", "name"),
@@ -508,7 +488,7 @@ class TestCodegenConform:
         root by itself and immediately reach a fixed point.
         """
         root = infra_git_repo
-        self._seed_minimal_python_project(root)
+        _seed_infra_package_tree(root)
         # The defect needs a Python root the declarative env_dirs never lists.
         extra_root = "tools"
         module = root / extra_root / "maintenance.py"
@@ -551,7 +531,7 @@ class TestCodegenConform:
         self, infra_git_repo: Path
     ) -> None:
         root = infra_git_repo
-        self._seed_minimal_python_project(root)
+        _seed_infra_package_tree(root)
         (root / "scripts").mkdir()
 
         result = FlextInfraCodegenConform.execute_request(
@@ -1402,20 +1382,6 @@ class TestScriptDispatchMakefile:
         for policy in handler_policies.values():
             tm.that("|gen|" in policy.target_pattern, eq=True)
             tm.that("|codegen|" in policy.target_pattern, eq=False)
-
-    def test_work_is_not_a_generated_make_verb(self, tmp_path: Path) -> None:
-        """Gas Town owns lifecycle; generated Make exposes no work command."""
-        make_config = config.Infra.codegen.make
-        verb_names = {verb.name for verb in make_config.verbs}
-        tm.that("work" in verb_names, eq=False)
-        rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
-        )
-        public_line = next(
-            line for line in rendered.splitlines() if line.startswith("PUBLIC_VERBS :=")
-        )
-        tm.that(" work" in public_line, eq=False)
-        tm.that(rendered, lacks=["_builtin_work_", "make work", "work start"])
 
     # NOTE (mro-4gbp): a test asserting a downstream consumer's verbs from this
     # engine's catalog was removed. The engine is consumer-agnostic: a consumer

@@ -17,7 +17,7 @@ from jinja2.environment import (
     Template as _JinjaTemplate,
 )
 
-from flext_core import m, t
+from flext_cli import m, t
 
 
 def _reject_blanket_mask(rule: str) -> str:

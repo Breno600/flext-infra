@@ -158,7 +158,7 @@ def _plan_independent_overlay(
         scope=c.Infra.CodegenConformScope.SELF,
         mode=c.Infra.CodegenConformMode.CHECK,
     )
-    plan: m.Infra.CodegenPlan = tm.ok(
+    plan = tm.ok(
         FlextInfraCodegenConform(
             workspace_root=root, request=request, initial_workspace=workspace
         ).plan(request)

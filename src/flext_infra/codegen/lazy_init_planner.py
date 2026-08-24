@@ -116,13 +116,11 @@ class FlextInfraCodegenLazyInitPlanner(
             return m.Infra.LazyInitPlan(context=context, action=empty_action)
         type_checking_map = dict(lazy_map)
         all_export_names = tuple(
-            sorted(
-                u.Infra.ordered_namespace_exports(
-                    package_dir=context.pkg_dir,
-                    package_name=context.current_pkg,
-                    export_names=tuple(lazy_map.keys() | eager_dunders.keys()),
-                )
-            )
+            sorted(u.Infra.ordered_namespace_exports(
+                package_dir=context.pkg_dir,
+                package_name=context.current_pkg,
+                export_names=lazy_map.keys() | eager_dunders.keys(),
+            ))
         )
         plan = m.Infra.LazyInitPlan(
             context=context,

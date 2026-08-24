@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from flext_core import t
+from flext_cli import t
 from flext_infra._protocols.rope_runtime import FlextInfraProtocolsRopeRuntime
 
 

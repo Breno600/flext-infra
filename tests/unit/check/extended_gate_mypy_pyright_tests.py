@@ -6,8 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from flext_infra import p, r
-from tests import m
+from flext_infra import m, p, r
 from flext_infra.gates.mypy import FlextInfraMypyGate
 from flext_infra.gates.pyright import FlextInfraPyrightGate
 from flext_tests import tm

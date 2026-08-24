@@ -88,7 +88,7 @@ class TestsFlextInfraExtraPathsArePure:
     def test_search_paths_survive_a_project_only_worktree(self, tmp_path: Path) -> None:
         """The same project alone on disk yields the same entries.
 
-        A Gas Town lane materializes one project without its siblings. Entries
+        A `make work` lane materializes one project without its siblings. Entries
         derived from sibling existence differ there, so `make gen` in the lane
         would rewrite what the primary just generated.
         """

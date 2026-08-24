@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from .protocols import FlextInfraProtocols, FlextInfraProtocols as p
     from .typings import FlextInfraTypes, FlextInfraTypes as t
     from .utilities import FlextInfraUtilities, FlextInfraUtilities as u
+    from .work import FlextInfraWorkService
     from .worktree import FlextInfraWorktreeService
 __all__: tuple[str, ...] = (
     "FlextInfra",
@@ -46,6 +47,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraServiceBase",
     "FlextInfraTypes",
     "FlextInfraUtilities",
+    "FlextInfraWorkService",
     "FlextInfraWorktreeService",
     "__author__",
     "__author_email__",
@@ -90,6 +92,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".protocols": ("FlextInfraProtocols", "p"),
             ".typings": ("FlextInfraTypes", "t"),
             ".utilities": ("FlextInfraUtilities", "u"),
+            ".work": ("FlextInfraWorkService",),
             ".worktree": ("FlextInfraWorktreeService",),
             "flext_cli": ("d", "e", "h", "r", "x"),
         }),

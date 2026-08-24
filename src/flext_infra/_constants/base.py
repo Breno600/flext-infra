@@ -395,8 +395,6 @@ class FlextInfraConstantsBase(
     "File backup suffix for copy-on-write safety."
     ENV_VAR_LINT_SNAPSHOT_GATES: Final[str] = "FLEXT_INFRA_LINT_SNAPSHOT_GATES"
     "Optional override for lint-snapshot gate selection (comma-separated)."
-    ENV_VAR_FORCE_COLOR: Final[str] = "FORCE_COLOR"
-    "Color-forcing variable: its mere presence makes ruff emit ANSI sequences."
 
     ENV_VAR_STANDALONE: Final[str] = "FLEXT_STANDALONE"
     ENV_VAR_WORKSPACE_ROOT: Final[str] = "FLEXT_WORKSPACE_ROOT"

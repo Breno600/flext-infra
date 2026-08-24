@@ -10,7 +10,7 @@ from collections.abc import Callable
 from itertools import chain
 from typing import Annotated, Literal, Self, override
 
-from flext_core import m
+from flext_cli import m
 from flext_infra import c, t
 
 

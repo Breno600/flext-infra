@@ -550,11 +550,12 @@ Infra:
         # cannot fit 10s; it is not a slow TEST, it is a slow HARNESS. This is
         # the declared exception, not a raised ceiling: unmarked cases keep 10s.
         slow-timeout-seconds: 60
-        # Complete-suite wall clock. Individual cases remain bounded at 10s
-        # (60s only when explicitly slow); the aggregate receives 600s so the
-        # entire parallel suite and coverage finalization can complete. The
-        # process wall adds one minute for orderly worker/report shutdown.
-        run-timeout-seconds: 600
+        # Complete-suite wall clock. The operator law (mro-38p39) sets the
+        # pre-push run wall at 120s: it keeps the abort-on-overrun guarantee
+        # (an unbounded hang still dies). The per-case budget stays 10s — this
+        # raises only the whole-suite wall, never a per-test ceiling. A suite
+        # that cannot fit is a TEST DEFECT and must be optimized, not exempted.
+        run-timeout-seconds: 120
         termination-grace-seconds: 2
         enforcement-plugin: flext_tests_enforcement
         progress-args: [--verbose]
@@ -564,13 +565,7 @@ Infra:
         # before the immutable 120s wall. Fourteen and sixteen workers
         # oversubscribed the subprocess-heavy cases and breached their 10s item
         # budgets. Twelve leaves eight of the host's 20 CPUs for child work.
-        # BUMP 2026-08-20: the 12-worker xdist pool crashes under loaded
-        # multi-lane hosts (12 subprocesses importing the full module graph +
-        # fixtures exhaust memory/cgroup limits → "Unexpectedly no active
-        # workers available"). The lifecycle cutover removed 34 subprocess-heavy
-        # modules and their fixtures. Four workers remains the stable full-suite
-        # pool for CI; pre-push uses impact selection instead of repeating full.
-        parallel-workers: 4
+        parallel-workers: 12
         # Work stealing drains uneven codegen/subprocess tails without the
         # serialized 99% tail measured under loadscope.
         parallel-distribution: worksteal
@@ -579,12 +574,9 @@ Infra:
         min-version: "8.0"
         python-classes: ["Test*"]
         python-files: ["*_test.py", "*_tests.py", "test_*.py"]
-        # Collect once from the canonical test root. The former list ended in
-        # `.` and therefore traversed tests, source, docs, examples, scripts,
-        # generated reports, and local runtime state a second time. Executable
-        # documentation and auxiliary surfaces remain covered by explicit tests
-        # and their lint/Markdown gates rather than duplicate pytest discovery.
-        test-paths: [tests]
+        # mro-pulj (codex): collect executable tests and markdown/docstring Python
+        # snippets; docs/examples/scripts are first-class documented surfaces.
+        test-paths: [tests, src, docs, examples, scripts, .]
         # pytest applies filterwarnings last-entry-wins; the conform phase +
         # tomlsort alpha-sort filterwarnings, so any override MUST sort AFTER
         # "error" to survive re-conform. Only module::/once:: sort after 'error'
@@ -620,7 +612,7 @@ Infra:
         # hook. A wide outer wall is itself an escape hatch — it would let an
         # overrun keep burning wall clock instead of aborting. Grace covers
         # interpreter start, collection and teardown only.
-        process-timeout-seconds: 660
+        process-timeout-seconds: 125
       tomlsort:
         all: true
         in_place: true

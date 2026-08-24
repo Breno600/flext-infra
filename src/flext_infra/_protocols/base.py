@@ -313,19 +313,12 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         @property
-        def dependency_cooldown_days(self) -> int:
-            """Supply-chain cooldown shared by dependency update tools."""
-            ...
-
-        @property
-        def dependency_cooldown_exclusions(self) -> t.StrSequence:
-            """Packages exempted from cooldown for urgent security floors."""
-            ...
-
-        @property
         def uv_exclude_newer(self) -> str:
-            """Uv exclude-newer cooldown window for dependency resolution."""
+            """Cooldown window (uv exclude-newer) for dependency resolution."""
             ...
+
+        @property
+        def uv_exclude_newer_package(self) -> t.StrMapping: ...
 
         @property
         def kubectl_version(self) -> str:

@@ -140,6 +140,7 @@ if TYPE_CHECKING:
     from .codegen.test_workspace_root_setup_submodules import (
         TestsWorkspaceRootSetupSubmodules,
     )
+    from .codegen.worktree_verb_tests import TestsCodegenWorkVerb
     from .codemod.test_mod_circuit import (
         TestsFlextInfraModCircuitApply,
         TestsFlextInfraModCircuitDecision,
@@ -439,13 +440,31 @@ if TYPE_CHECKING:
     from .workspace.test_main import TestsFlextInfraWorkspaceMain
     from .workspace.test_manifest_v2_contract import TestsWorkspaceManifestV2Contract
     from .workspace.test_vscode import TestsFlextInfraCodegenVscode
+    from .workspace.test_work_finish_recovery import TestsWorkFinishRecovery
+    from .workspace.test_work_service import TestsFlextInfraWorkService
     from .workspace.test_workspace_root_make_contract import (
         TestsWorkspaceRootMakeContract,
+    )
+    from .workspace.work_public_adversarial_fixture import (
+        MetadataSnapshot,
+        WorkAdversarialFixture,
+    )
+    from .workspace.work_public_finish_fixture import (
+        ChildFinishState,
+        WorkInvocation,
+        WorkPublicFinishFixture,
+    )
+    from .workspace.work_public_service_fixture import (
+        PullRequestCreateReceipt,
+        WorkPublicServiceFixture,
     )
     from .workspace.worktree_fixture import WorktreeFixture
     from .workspace_factory import TestsFlextInfraWorkspaceFactory
 __all__: tuple[str, ...] = (
+    "ChildFinishState",
     "FlextInfraRefactorTypingUnificationRule",
+    "MetadataSnapshot",
+    "PullRequestCreateReceipt",
     "RealSubprocessRunner",
     "RefactorSafetyStub",
     "TestAllDirectoriesScanned",
@@ -494,6 +513,7 @@ __all__: tuple[str, ...] = (
     "TestsBootstrapRefnameSafety",
     "TestsCodegenArtifactSsot",
     "TestsCodegenMakeEnvironment",
+    "TestsCodegenWorkVerb",
     "TestsDetectorOwnsNoProjectRegistry",
     "TestsDocsCli",
     "TestsDocsRenderExcludeDocs",
@@ -670,6 +690,7 @@ __all__: tuple[str, ...] = (
     "TestsFlextInfraUtilitiesformatting",
     "TestsFlextInfraUtilitiessafety",
     "TestsFlextInfraUtilitiesscanning",
+    "TestsFlextInfraWorkService",
     "TestsFlextInfraWorkspaceCheckScope",
     "TestsFlextInfraWorkspaceEnvironmentProvenance",
     "TestsFlextInfraWorkspaceFactory",
@@ -679,9 +700,14 @@ __all__: tuple[str, ...] = (
     "TestsReleasePolicyFixtureRoot",
     "TestsReviewTemplateContracts",
     "TestsVscodeOwnerMerge",
+    "TestsWorkFinishRecovery",
     "TestsWorkspaceManifestV2Contract",
     "TestsWorkspaceRootMakeContract",
     "TestsWorkspaceRootSetupSubmodules",
+    "WorkAdversarialFixture",
+    "WorkInvocation",
+    "WorkPublicFinishFixture",
+    "WorkPublicServiceFixture",
     "WorktreeFixture",
     "_utilities",
     "basemk",
@@ -865,6 +891,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".codegen.test_workspace_root_setup_submodules": (
                 "TestsWorkspaceRootSetupSubmodules",
             ),
+            ".codegen.worktree_verb_tests": ("TestsCodegenWorkVerb",),
             ".codemod": ("codemod",),
             ".codemod.test_mod_circuit": (
                 "TestsFlextInfraModCircuitApply",
@@ -1214,8 +1241,23 @@ _LAZY_IMPORTS = MappingProxyType(
                 "TestsWorkspaceManifestV2Contract",
             ),
             ".workspace.test_vscode": ("TestsFlextInfraCodegenVscode",),
+            ".workspace.test_work_finish_recovery": ("TestsWorkFinishRecovery",),
+            ".workspace.test_work_service": ("TestsFlextInfraWorkService",),
             ".workspace.test_workspace_root_make_contract": (
                 "TestsWorkspaceRootMakeContract",
+            ),
+            ".workspace.work_public_adversarial_fixture": (
+                "MetadataSnapshot",
+                "WorkAdversarialFixture",
+            ),
+            ".workspace.work_public_finish_fixture": (
+                "ChildFinishState",
+                "WorkInvocation",
+                "WorkPublicFinishFixture",
+            ),
+            ".workspace.work_public_service_fixture": (
+                "PullRequestCreateReceipt",
+                "WorkPublicServiceFixture",
             ),
             ".workspace.worktree_fixture": ("WorktreeFixture",),
             ".workspace_factory": ("TestsFlextInfraWorkspaceFactory",),

@@ -15,7 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import p as core_p
-from tests import u
+from flext_infra import u
 from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
 from flext_tests import tm
 

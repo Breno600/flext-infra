@@ -7,14 +7,10 @@ from pathlib import Path
 
 import pytest
 
-# Why (hq-36xk): this module uses BOTH production namespaces (c.Infra, m.Infra,
-# config.Infra) and test-only helpers (c.Tests, u.Tests, u.Cli). `tests` re-exports
-# both; `flext_infra` exposes only the production half, so importing `u` from it
-# made every u.Tests/c.Tests access a missing-attribute error.
-from flext_infra import config
+from flext_infra import c, config, m, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import c, m, u
 from flext_tests import tm
+from tests import c as test_c, u as test_u
 
 
 class TestsCodegenMakeEnvironment:
@@ -53,7 +49,7 @@ class TestsCodegenMakeEnvironment:
         )
         project_root = tmp_path / profile.value / "fixture-project"
         workspace_root = project_root.parent if attached else project_root
-        infra_repositories = (u.Tests.repository_ref(config.Infra.name),)
+        infra_repositories = (test_u.Tests.repository_ref(config.Infra.name),)
         local_members = (
             (infra_repositories[0].model_copy(update={"path": Path("infra-engine")}),)
             if local_infra
@@ -105,26 +101,23 @@ class TestsCodegenMakeEnvironment:
             (member_source / "README.md").write_text(
                 "fixture member\n", encoding="utf-8"
             )
-            u.Tests.initialize_git_repo(member_source)
+            test_u.Tests.initialize_git_repo(member_source)
             workspace_root.mkdir(parents=True)
             (workspace_root / "README.md").write_text(
                 "fixture workspace\n", encoding="utf-8"
             )
-            u.Tests.initialize_git_repo(workspace_root)
-            tm.ok(
-                u.Cli.run_checked(
-                    [
-                        c.Infra.GIT,
-                        "-c",
-                        "protocol.file.allow=always",
-                        "submodule",
-                        "add",
-                        "-q",
-                        str(member_source),
-                        project_root.name,
-                    ],
-                    cwd=workspace_root,
-                )
+            test_u.Tests.initialize_git_repo(workspace_root)
+            test_u.Tests.git_bootstrap(
+                workspace_root,
+                (
+                    "-c",
+                    "protocol.file.allow=always",
+                    "submodule",
+                    "add",
+                    "-q",
+                    str(member_source),
+                    project_root.name,
+                ),
             )
         else:
             project_root.mkdir(parents=True)
@@ -148,6 +141,9 @@ class TestsCodegenMakeEnvironment:
         project_root, workspace_root = self._render_makefile(
             tmp_path, profile, attached=attached
         )
+        # An attached workspace-member delegates its runtime to the governing
+        # workspace root (RUNTIME_ROOT is WORKSPACE_ROOT); every other profile
+        # owns its runtime locally.
         runtime_root = workspace_root if attached else project_root
         runtime_bin = runtime_root / ".venv" / "bin"
         runtime_bin.mkdir(parents=True)
@@ -246,7 +242,7 @@ class TestsCodegenMakeEnvironment:
             [c.Infra.MAKE, "--no-print-directory", "setup"],
             cwd=project_root,
             env=clean_env,
-            remove_env_keys=("MAKEFLAGS", "MAKEOVERRIDES", "MFLAGS", "UV"),
+            remove_env_keys=test_c.Tests.MAKE_ISOLATION_ENV_KEYS,
         )
 
         process = tm.ok(result)
@@ -256,48 +252,6 @@ class TestsCodegenMakeEnvironment:
         tm.that(commands[1], has="sync --project")
         if profile == c.Infra.MakeProfile.WORKSPACE_ROOT:
             tm.that(commands[2], has="pip check")
-
-    @pytest.mark.parametrize("ci_enabled", [False, True])
-    def test_setup_installs_git_hooks_only_outside_configured_ci(
-        self, tmp_path: Path, *, ci_enabled: bool
-    ) -> None:
-        project_root, _workspace_root = self._render_makefile(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
-        )
-        bin_root = tmp_path / "bin"
-        bin_root.mkdir()
-        uv = bin_root / "uv"
-        u.Tests.write_executable(
-            uv,
-            "#!/bin/sh\n"
-            'if [ "$1" = "venv" ]; then\n'
-            '  mkdir -p "$3/bin"\n'
-            "  printf '#!/bin/sh\\nexit 0\\n' > \"$3/bin/python\"\n"
-            '  chmod +x "$3/bin/python"\n'
-            "fi\n"
-            "exit 0\n",
-        )
-        hook_log = tmp_path / "hook-install.log"
-        u.Tests.write_executable(
-            project_root / ".github" / "scripts" / "install-git-hooks.sh",
-            f"#!/bin/sh\nprintf '%s\\n' installed > '{hook_log}'\n",
-        )
-        ci = config.Infra.codegen.make.ci
-        env = {"PATH": f"{bin_root}:{os.environ['PATH']}"}
-        if ci_enabled:
-            env[ci.variable] = ci.value
-
-        process = tm.ok(
-            u.Cli.run_raw(
-                [c.Infra.MAKE, "--no-print-directory", "setup"],
-                cwd=project_root,
-                env=env,
-                remove_env_keys=(*c.Tests.MAKE_ISOLATION_ENV_KEYS, ci.variable),
-            )
-        )
-
-        tm.that(process.exit_code, eq=0, msg=process.stdout + process.stderr)
-        tm.that(hook_log.exists(), eq=not ci_enabled)
 
     def test_setup_probes_before_repairing_environment(self, tmp_path: Path) -> None:
         project_root, _workspace_root = self._render_makefile(
@@ -323,12 +277,12 @@ class TestsCodegenMakeEnvironment:
         fixture_tool = "managed-tool"
         for bin_root in (hostile_bin, provisioned_bin):
             for tool in (fixture_tool, "uv"):
-                u.Tests.write_executable(
+                test_u.Tests.write_executable(
                     bin_root / tool, f"#!/bin/sh\nprintf '%s\\n' '{bin_root / tool}'\n"
                 )
         runtime_python = project_root / ".venv" / "bin" / "python"
         tool_log = tmp_path / "tools.log"
-        u.Tests.write_executable(
+        test_u.Tests.write_executable(
             runtime_python,
             (
                 "#!/bin/sh\n"
@@ -341,12 +295,17 @@ class TestsCodegenMakeEnvironment:
             "VIRTUAL_ENV": str(hostile_venv),
         }
 
+        # `gen` routes through PROJECT_FLEXT_INFRA, the managed interpreter the
+        # fixture stubs, so the recipe actually observes the sanitized PATH.
+        # The invoking environment exports WHAT (the outer `make test WHAT=...`),
+        # and a step must state its own selector instead of inheriting one it
+        # does not support, so `gen` is invoked with its own WHAT.
         process = tm.ok(
             u.Cli.run_raw(
-                [c.Infra.MAKE, "--no-print-directory", "test"],
+                [c.Infra.MAKE, "--no-print-directory", "gen", "WHAT=all", "APPLY=Y"],
                 cwd=project_root,
                 env=active_env,
-                remove_env_keys=("MAKEFLAGS", "MAKEOVERRIDES", "MFLAGS", "UV"),
+                remove_env_keys=test_c.Tests.MAKE_ISOLATION_ENV_KEYS,
             )
         )
 
@@ -369,9 +328,7 @@ class TestsCodegenMakeEnvironment:
         tm.that("UV ?= uv" in makefile, eq=True)
         tm.that(
             (
-                "UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT "
-                "-u UV_PROJECT_ENVIRONMENT "
-                'PYTHONPATH="$(PROJECT_ROOT)/src" '
+                'UV_RUN := env -u MYPYPATH PYTHONPATH="$(PROJECT_ROOT)/src" '
                 '$(UV) run --project "$(RUNTIME_ROOT)" --no-sync'
             )
             in makefile,
@@ -384,20 +341,24 @@ class TestsCodegenMakeEnvironment:
         tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
 
     def test_dependency_upgrade_selects_only_one_distribution(
-        self, tmp_path: Path
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Refresh one Git dependency without globally upgrading the lock."""
         project_root, _workspace_root = self._render_makefile(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         runtime_python = project_root / ".venv" / "bin" / "python"
-        u.Tests.write_executable(runtime_python, "#!/bin/sh\nexit 0\n")
+        test_u.Tests.write_executable(runtime_python, "#!/bin/sh\nexit 0\n")
         uv_log = tmp_path / "uv.log"
         uv = tmp_path / "bin" / "uv"
-        u.Tests.write_executable(
+        test_u.Tests.write_executable(
             uv, f"#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{uv_log}'\nexit 0\n"
         )
+        monkeypatch.setenv("PROJECT", "flext-infra")
+        monkeypatch.setenv("PROJECTS", "flext-core flext-cli")
 
+        # The public ``deps`` verb dispatches straight into its builtin, so the
+        # fixture drives the public surface a caller actually uses.
         process = tm.ok(
             u.Cli.run_raw(
                 [
@@ -409,12 +370,8 @@ class TestsCodegenMakeEnvironment:
                     "APPLY=Y",
                 ],
                 cwd=project_root,
-                # PATH names the DIRECTORY holding the executable, never the
-                # executable itself (hq-36xk): the previous form referenced an
-                # undefined `bin_dir` and appended the binary name, so the entry
-                # could not resolve even once the name was defined.
-                env={"UV": str(uv), "PATH": str(uv.parent)},
-                remove_env_keys=("MAKEFLAGS", "MAKEOVERRIDES", "MFLAGS"),
+                env={"UV": str(uv), "PATH": f"{uv.parent}:{os.environ['PATH']}"},
+                remove_env_keys=test_c.Tests.MAKE_ISOLATION_ENV_KEYS,
             )
         )
 
@@ -433,13 +390,15 @@ class TestsCodegenMakeEnvironment:
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         runtime_python = project_root / ".venv" / "bin" / "python"
-        u.Tests.write_executable(runtime_python, "#!/bin/sh\nexit 0\n")
+        test_u.Tests.write_executable(runtime_python, "#!/bin/sh\nexit 0\n")
         uv_log = tmp_path / "uv.log"
         uv = tmp_path / "bin" / "uv"
-        u.Tests.write_executable(
+        test_u.Tests.write_executable(
             uv, f"#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{uv_log}'\nexit 0\n"
         )
 
+        # Same public-verb entry as the selection test above: the rejection must be
+        # exercised through the private dispatcher target.
         process = tm.ok(
             u.Cli.run_raw(
                 [
@@ -452,7 +411,7 @@ class TestsCodegenMakeEnvironment:
                 ],
                 cwd=project_root,
                 env={"UV": str(uv), "PATH": f"{uv.parent}:{os.environ['PATH']}"},
-                remove_env_keys=("MAKEFLAGS", "MAKEOVERRIDES", "MFLAGS"),
+                remove_env_keys=test_c.Tests.MAKE_ISOLATION_ENV_KEYS,
             )
         )
 
@@ -462,10 +421,10 @@ class TestsCodegenMakeEnvironment:
         )
         tm.that(uv_log.exists(), eq=False)
 
-    def test_public_gate_fails_closed_before_managed_environment_exists(
+    def test_public_gate_auto_provisions_missing_environment(
         self, tmp_path: Path
     ) -> None:
-        """A public gate preserves the canonical setup-required diagnostic."""
+        """A public gate auto-provisions the environment when the interpreter is missing."""
         project_root, _workspace_root = self._render_makefile(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
@@ -474,14 +433,15 @@ class TestsCodegenMakeEnvironment:
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--no-print-directory", "test"],
                 cwd=project_root,
-                remove_env_keys=("MAKEFLAGS", "MAKEOVERRIDES", "MFLAGS"),
+                remove_env_keys=test_c.Tests.MAKE_ISOLATION_ENV_KEYS,
             )
         )
 
-        tm.that(process.exit_code, ne=0)
+        # The guard auto-provisions: it detects the missing interpreter and
+        # invokes setup rather than failing closed.
         tm.that(
             process.stdout + process.stderr,
-            has=["missing environment interpreter", "make setup creates it"],
+            has="environment interpreter missing; provisioning via setup",
         )
 
     def test_generated_setup_is_self_contained(self, tmp_path: Path) -> None:

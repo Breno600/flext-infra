@@ -6,10 +6,10 @@ ALLOWED_GATES and resolve through the registry.
 
 from __future__ import annotations
 
-import importlib
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
+import flext_infra.constants  # ruff: ignore[unused-import] - force eager load for monkeypatch targets
 from flext_infra.check import FlextInfraGateRegistry
 from flext_infra.gates import FlextInfraCanonicalAliasGate
 from flext_infra.utilities import FlextInfraUtilities
@@ -20,8 +20,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     import pytest
-
-importlib.import_module("flext_infra.constants")
 
 
 class TestGateRegistry:

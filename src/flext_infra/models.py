@@ -9,8 +9,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_core import m
-from flext_cli import m as cli_m
+from flext_cli import m
 from flext_infra._models.base import FlextInfraModelsBase
 from flext_infra._models.basemk import FlextInfraModelsBasemk
 from flext_infra._models.census import FlextInfraModelsCensus
@@ -31,16 +30,13 @@ from flext_infra._models.rope import FlextInfraModelsRope
 from flext_infra._models.scan import FlextInfraModelsScan
 from flext_infra._models.transformers import FlextInfraModelsTransformers
 from flext_infra._models.validate import FlextInfraModelsCore
+from flext_infra._models.work_lane import FlextInfraModelsWorkLane
 from flext_infra._models.workspace import FlextInfraModelsWorkspace
 from flext_infra._models.worktree import FlextInfraModelsWorktree
 
 
 class FlextInfraModels(m):
     """Merged model namespace for flext-infra domain objects."""
-
-    # NOTE (multi-agent): keep CLI route contracts available as FlextInfraModels.Cli
-    # for legacy facade usage from CLI service route declarations.
-    Cli = cli_m.Cli
 
     class Infra(
         FlextInfraModelsCensus,
@@ -64,6 +60,7 @@ class FlextInfraModels(m):
         FlextInfraModelsMixins,
         FlextInfraModelsTransformers,
         FlextInfraModelsWorkspace,
+        FlextInfraModelsWorkLane,
         # mro-wkii.17.26 (codex): all fix/codegen mutations share one typed
         # worktree transaction report rather than command-local backup shapes.
         FlextInfraModelsWorktree,

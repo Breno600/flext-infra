@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import FlextInfraWorktreeService, config
-from tests import c
+from flext_infra import FlextInfraWorktreeService, c, config
 from flext_tests import tm
 from tests import u
 

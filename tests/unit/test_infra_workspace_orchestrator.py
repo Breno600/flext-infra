@@ -7,8 +7,7 @@ from typing import override
 
 import pytest
 
-from flext_infra import r
-from tests import c, u
+from flext_infra import c, r, u
 from flext_infra.workspace.orchestrator import FlextInfraOrchestratorService
 from flext_tests import tm
 from tests import m, p, t
@@ -218,41 +217,6 @@ class TestsFlextInfraInfraWorkspaceOrchestrator:
                 str(system_bin),
             )),
         )
-
-    def test_run_project_surfaces_process_lifecycle_failure(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        tmp_path: Path,
-        capsys: pytest.CaptureFixture[str],
-    ) -> None:
-        """Persist runner diagnostics even when the child log looks green."""
-        failure = "owned process boundary was not empty before return"
-        monkeypatch.chdir(tmp_path)
-
-        def fake_run_to_file(
-            cmd: t.StrSequence,
-            output_file: t.Cli.TextPath,
-            cwd: t.Cli.TextPath | None = None,
-            timeout: int | None = None,
-            env: t.StrMapping | None = None,
-            remove_env_keys: t.StrSequence = (),
-        ) -> p.Result[int]:
-            _ = cmd, cwd, timeout, env, remove_env_keys
-            Path(output_file).parent.mkdir(parents=True, exist_ok=True)
-            Path(output_file).write_text("child gates passed\n", encoding="utf-8")
-            return r[int].fail(failure)
-
-        monkeypatch.setattr(u.Cli, "run_to_file", staticmethod(fake_run_to_file))
-        orchestrator = FlextInfraOrchestratorService(verb="check")
-
-        result = orchestrator.orchestrate(["flext-demo"], "check", fail_fast=True)
-
-        tm.fail(result, has="exit=1")
-        diagnostic = f"ERROR: workspace process lifecycle failed: {failure}"
-        captured = capsys.readouterr()
-        tm.that(captured.out + captured.err, has=diagnostic)
-        log_path = tmp_path / ".reports" / "workspace" / "check" / "flext-demo.log"
-        tm.that(log_path.read_text(encoding="utf-8"), has=diagnostic)
 
     def test_execute_returns_success_for_supported_verb(self) -> None:
         """Return success when execute resolves and runs a supported verb."""

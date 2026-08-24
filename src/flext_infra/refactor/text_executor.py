@@ -175,25 +175,20 @@ class FlextInfraRefactorTextExecutor(FlextInfraRefactorLegacyTextOps):
             settings_mapping, c.Infra.RK_FIX_ACTION, case="lower"
         )
         if fix_action == "fix_silent_failure_sentinels":
-            sentinels_result: t.Infra.TransformResult = (
-                u.Infra.apply_transformer_to_source(
-                    source,
-                    file_path,
-                    lambda rope_project, resource: u.Infra.fix_silent_failure_sentinels(
-                        rope_project, resource, apply=True
-                    ),
-                )
+            return u.Infra.apply_transformer_to_source(
+                source,
+                file_path,
+                lambda rope_project, resource: u.Infra.fix_silent_failure_sentinels(
+                    rope_project, resource, apply=True
+                ),
             )
-            return sentinels_result
         if fix_action == "remove_redundant_casts":
-            casts_result: t.Infra.TransformResult = u.Infra.apply_transformer_to_source(
+            return u.Infra.apply_transformer_to_source(
                 source, file_path, self._remove_redundant_casts
             )
-            return casts_result
-        mappings_result: t.Infra.TransformResult = u.Infra.apply_transformer_to_source(
+        return u.Infra.apply_transformer_to_source(
             source, file_path, self._replace_mapping_annotations
         )
-        return mappings_result
 
     def _apply_typing_unification(
         self, source: str, file_path: Path
@@ -220,10 +215,9 @@ class FlextInfraRefactorTextExecutor(FlextInfraRefactorLegacyTextOps):
         )
         if fix_action != "replace_object_annotations":
             return (source, list[str]())
-        result: t.Infra.TransformResult = u.Infra.apply_transformer_to_source(
+        return u.Infra.apply_transformer_to_source(
             source, file_path, self._replace_object_annotations
         )
-        return result
 
     @staticmethod
     def _replace_object_annotations(
@@ -311,10 +305,9 @@ class FlextInfraRefactorTextExecutor(FlextInfraRefactorLegacyTextOps):
                 settings.get(c.Infra.RK_CORE_PACKAGE, c.Infra.PKG_CORE_UNDERSCORE)
             ),
         )
-        result: t.Infra.TransformResult = u.Infra.apply_transformer_to_source(
+        return u.Infra.apply_transformer_to_source(
             source, file_path, transformer.transform
         )
-        return result
 
     def _apply_symbol_propagation(
         self, settings: t.MappingKV[str, t.Infra.InfraValue], source: str

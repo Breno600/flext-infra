@@ -127,7 +127,10 @@ class FlextInfraModelsBase:
         ]
         expected_sources: Annotated[
             t.MappingKV[Path, str],
-            m.Field(description="Expected current source bytes keyed by updated path"),
+            m.Field(
+                default_factory=lambda: MappingProxyType({}),
+                description="Expected current source bytes keyed by updated path",
+            ),
         ] = m.Field(default_factory=lambda: MappingProxyType({}))
         keep_backup: Annotated[
             bool, m.Field(description="Whether to preserve .bak copies before editing")

@@ -6,11 +6,11 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from flext_cli import r, u
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
+from flext_infra._utilities.repository import FlextInfraUtilitiesRepository
 from flext_infra.constants import c
 from flext_infra.models import m
 from flext_infra.typings import t
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-from flext_infra._utilities.repository import FlextInfraUtilitiesRepository
 
 if TYPE_CHECKING:
     from flext_infra.protocols import p
@@ -33,6 +33,11 @@ class FlextInfraUtilitiesPyprojectConform:
         toolchain: p.Infra.ToolchainSpec,
         required_dev_dependencies: t.StrSequence,
         uv_exclude_dependencies: t.SequenceOf[p.Model] = (),
+        # The caller resolves the repository policy overlay: a project
+        # carrying a security floor in override-dependencies pins an absolute
+        # cutoff, because the fleet rolling window would age past that floor
+        # and make resolution unsatisfiable.
+        uv_exclude_newer: str | None = None,
     ) -> p.Result[str]:
         """Return canonical TOML with autonomous dependencies and root workspace."""
         source = u.Cli.toml_parse_text(pyproject_content)
@@ -46,11 +51,6 @@ class FlextInfraUtilitiesPyprojectConform:
             return r[str].fail("[project].name must be a non-empty string")
         project_name = project_name_raw.strip()
 
-        version_result = cls._sync_project_version(project, workspace=workspace)
-        if version_result.failure:
-            return r[str].fail(
-                version_result.error or "project version conformance failed"
-            )
         cls._sync_dependency_groups(
             source,
             project_name=project_name,
@@ -80,8 +80,8 @@ class FlextInfraUtilitiesPyprojectConform:
             workspace=workspace,
             workspace_mode=workspace_mode,
             link_mode=toolchain.uv_link_mode,
-            exclude_newer=toolchain.uv_exclude_newer,
-            exclude_newer_packages=toolchain.dependency_cooldown_exclusions,
+            exclude_newer=uv_exclude_newer or toolchain.uv_exclude_newer,
+            exclude_newer_package=toolchain.uv_exclude_newer_package,
             exclude_dependencies=uv_exclude_dependencies,
         )
         if sources_result.failure:
@@ -492,29 +492,6 @@ class FlextInfraUtilitiesPyprojectConform:
         )
 
     @staticmethod
-    def _sync_project_version(
-        project: t.Cli.TomlTable, *, workspace: p.Infra.WorkspaceSpec
-    ) -> p.Result[bool]:
-        """Project the manifest-declared release version onto ``[project]``.
-
-        Why (hq-36xk): ``config/workspace.yaml`` declares ``project.version`` and
-        the scaffold template renders it as ``version = "{{ version }}"``, but the
-        template carries ``overwrite: false``, so it only ever applies at scaffold
-        time. On an existing repository this conformance pass owned dependencies,
-        groups, typecheck paths and uv sources while ``[project].version`` was left
-        untouched — so the manifest and the package disagreed silently and a
-        release bump recorded in the SSOT never reached the artifact consumers
-        install. Two owners for one fact is the defect; the manifest is the SSOT,
-        so conformance projects it here.
-        """
-        if workspace.project is None:
-            return r[bool].ok(False)
-        mutated = u.Cli.toml_sync_value(
-            project, c.Infra.VERSION, workspace.project.version
-        )
-        return r[bool].ok(mutated)
-
-    @staticmethod
     def _remove_legacy_tooling(document: t.Cli.TomlDocument) -> None:
         """Delete legacy packaging owners superseded by canonical conformance.
 
@@ -531,9 +508,9 @@ class FlextInfraUtilitiesPyprojectConform:
     def _sync_typecheck_paths(document: t.Cli.TomlDocument) -> p.Result[bool]:
         """Remove checkout-absolute type checker interpreter pins.
 
-        Search paths belong to FlextInfraExtraPathsManager. Top-level
-        ``venv`` / ``venvPath`` belong to deps modernize (root vs child
-        runtime). Conform must not strip those or gen oscillates.
+        Search paths belong to FlextInfraExtraPathsManager. Shared analyzer
+        configuration omits checkout-specific interpreter and virtualenv paths;
+        the governed Make runtime selects the active environment.
         """
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
@@ -546,8 +523,8 @@ class FlextInfraUtilitiesPyprojectConform:
         if pyright is None:
             return r[bool].ok(True)
 
-        # venv / venvPath are owned by deps modernize (workspace vs child
-        # runtime). Conform only strips checkout-absolute interpreter pins.
+        # Shared config never owns interpreter or virtualenv locations; the
+        # governed Make runtime selects them for the current checkout.
         interpreter_keys = ("pythonPath", "pythonInterpreterPath")
         for key in interpreter_keys:
             u.Cli.toml_remove_key_if_present(pyright, key)
@@ -583,7 +560,7 @@ class FlextInfraUtilitiesPyprojectConform:
         workspace_mode: c.Infra.WorkspaceMode,
         link_mode: str | None = None,
         exclude_newer: str | None = None,
-        exclude_newer_packages: t.StrSequence = (),
+        exclude_newer_package: t.StrMapping | None = None,
         constraint_dependencies: t.SequenceOf[str] | None = None,
         exclude_dependencies: t.SequenceOf[p.Model] = (),
     ) -> p.Result[bool]:
@@ -599,7 +576,7 @@ class FlextInfraUtilitiesPyprojectConform:
                 not workspace_root
                 and link_mode is None
                 and exclude_newer is None
-                and not exclude_newer_packages
+                and not exclude_newer_package
                 and not exclude_dependencies
             ):
                 return r[bool].ok(True)
@@ -610,7 +587,7 @@ class FlextInfraUtilitiesPyprojectConform:
                 not workspace_root
                 and link_mode is None
                 and exclude_newer is None
-                and not exclude_newer_packages
+                and not exclude_newer_package
                 and not exclude_dependencies
             ):
                 return r[bool].ok(True)
@@ -639,13 +616,19 @@ class FlextInfraUtilitiesPyprojectConform:
             u.Cli.toml_sync_value(uv, "link-mode", link_mode)
         if exclude_newer is not None:
             u.Cli.toml_sync_value(uv, "exclude-newer", exclude_newer)
-        if exclude_newer_packages:
-            exclude_newer_payload: t.JsonDict = dict.fromkeys(
-                sorted(exclude_newer_packages), False
-            )
-            u.Cli.toml_sync_value(uv, "exclude-newer-package", exclude_newer_payload)
-        else:
-            u.Cli.toml_remove_key_if_present(uv, "exclude-newer-package")
+        # None means "not this caller's concern" (dependencies-only conform),
+        # exactly like link_mode/exclude_newer above; only a provided mapping
+        # owns the table, and a provided-but-empty mapping retires it.
+        if exclude_newer_package is not None:
+            if exclude_newer_package:
+                package_cutoffs = u.Cli.toml_ensure_table(uv, "exclude-newer-package")
+                for package, timestamp in sorted(exclude_newer_package.items()):
+                    u.Cli.toml_sync_value(package_cutoffs, package, timestamp)
+                for stale_package in tuple(package_cutoffs):
+                    if stale_package not in exclude_newer_package:
+                        u.Cli.toml_remove_key_if_present(package_cutoffs, stale_package)
+            else:
+                u.Cli.toml_remove_key_if_present(uv, "exclude-newer-package")
         # Project is a flext-infra routing key only; uv scoped form is
         # {package={name, version?}, dependencies=[...]} (uv settings docs).
         # Emit on every owning pyproject so standalone CI clones resolve;

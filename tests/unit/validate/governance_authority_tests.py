@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 import flext_infra
-from tests import u
+from flext_infra import u
 from flext_tests import tm
 
 ROOT = Path(flext_infra.__file__).resolve().parents[2]

@@ -397,6 +397,3 @@ whitelines = {{ tooling.tools.yamlfix.whitelines }}
 [tool.uv]
 link-mode = "{{ uv_link_mode }}"
 exclude-newer = "{{ uv_exclude_newer }}"
-{% if dependency_cooldown_exclusions %}
-exclude-newer-package = { {% for package in dependency_cooldown_exclusions %}{{ package }} = false{% if not loop.last %}, {% endif %}{% endfor %} }
-{% endif %}

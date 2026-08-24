@@ -138,7 +138,6 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             common_dir=common_dir,
             branch=branch,
             origin_remote=origin_remote,
-            is_inside_work_tree=True,
             superproject_root=superproject,
             requested_path=requested_path,
             is_worktree=is_worktree,

@@ -6,8 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from flext_infra import config, t
-from tests import c, u
+from flext_infra import c, config, t, u
 from flext_infra.services.codegen import FlextInfraCodegen
 from flext_tests import tm
 
@@ -127,8 +126,8 @@ class TestsCodegenArtifactSsot:
         self, tmp_path: Path, codegen: CodegenSpec
     ) -> None:
         """Validate the public renderer output instead of private implementation."""
-        rendered: str = tm.ok(FlextInfraCodegen.render_vscode_settings(tmp_path))
-        parsed: t.JsonValue = tm.ok(u.Cli.json_parse(rendered))
+        rendered = tm.ok(FlextInfraCodegen.render_vscode_settings(tmp_path))
+        parsed = tm.ok(u.Cli.json_parse(rendered))
         settings = t.Cli.JSON_MAPPING_ADAPTER.validate_python(parsed)
         tm.that(settings["files.exclude"], eq=dict(codegen.vscode_files_exclude_map))
         tm.that(settings["search.exclude"], eq=dict(codegen.vscode_search_exclude_map))

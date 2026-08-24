@@ -38,8 +38,7 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         if value is None:
             return None
         if isinstance(value, t.PRIMITIVES_TYPES):
-            primitive: t.Infra.InfraValue = value
-            return primitive
+            return value
         scalar_types = t.PRIMITIVES_TYPES
         if isinstance(value, list):
             try:
@@ -69,10 +68,7 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
             if conv is None or not isinstance(conv, scalar_types):
                 return None
             converted_map[key] = conv
-        mapping: t.Infra.InfraValue = t.json_dict_adapter().validate_python(
-            converted_map
-        )
-        return mapping
+        return t.json_dict_adapter().validate_python(converted_map)
 
     def _mapping_from_value(self, value: t.Infra.InfraValue | None) -> t.JsonMapping:
         """Build a mapping from a value."""

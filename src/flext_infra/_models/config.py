@@ -30,6 +30,30 @@ class _ConfigContract(m.ContractModel):
     )
 
 
+def _default_make_work_in_progress_spec() -> (
+    FlextInfraConfigModels.MakeWorkInProgressSpec
+):
+    """Return the default work-in-progress predicate for make gates."""
+    return FlextInfraConfigModels.MakeWorkInProgressSpec(
+        draft_pr=True,
+        branch_patterns=(r"^wip/", r"WIP"),
+        merge_lock_target_branches=("dev", "develop", "0.12.0-dev"),
+    )
+
+
+class _WorkspaceWorkSpec(_ConfigContract):
+    """GitFlow lane policy for Beads task and chore issue types."""
+
+    task_kind: Annotated[
+        Literal["feature", "bugfix"],
+        m.Field(description="GitFlow kind derived for task issues"),
+    ] = "feature"
+    chore_kind: Annotated[
+        Literal["feature", "bugfix"],
+        m.Field(description="GitFlow kind derived for chore issues"),
+    ] = "feature"
+
+
 class FlextInfraConfigModels:
     """Field-only models for config loading and codegen plans."""
 
@@ -67,16 +91,6 @@ class FlextInfraConfigModels:
                 ),
             ),
         ] = None
-        expected_schema: Annotated[
-            int | None,
-            m.Field(
-                gt=0,
-                description=(
-                    "Schema version the pinned tool must report for its managed "
-                    "data store (e.g. the Beads Dolt ledger schema)"
-                ),
-            ),
-        ] = None
 
     class BeadsServerSpec(_ConfigContract):
         """Machine-wide shared Dolt server connection for Beads ledgers."""
@@ -104,6 +118,21 @@ class FlextInfraConfigModels:
         auto_commit: Annotated[
             Literal["off", "on", "batch"],
             m.Field(description="Dolt auto-commit policy for ledger writes"),
+        ]
+        idle_timeout: Annotated[
+            str, m.Field(description="Dolt idle timeout for per-project connections")
+        ] = "0"
+        export_auto: Annotated[
+            Literal["off", "on", "batch"],
+            m.Field(description="Beads export auto-commit policy"),
+        ]
+        types_custom: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Comma-separated custom issue types for the ledger"),
+        ]
+        types_infra: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Comma-separated infra issue types for the ledger"),
         ]
 
     class BeadsToolSpec(MiseToolSpec):
@@ -142,26 +171,19 @@ class FlextInfraConfigModels:
         uv_link_mode: Annotated[
             t.NonEmptyStr, m.Field(description="Portable uv installation link mode")
         ]
-        dependency_cooldown_days: Annotated[
-            int,
-            m.Field(
-                ge=1,
-                le=90,
-                description=(
-                    "Supply-chain cooldown shared by uv resolution and "
-                    "Dependabot version updates"
-                ),
-            ),
-        ]
-        dependency_cooldown_exclusions: Annotated[
-            tuple[t.NonEmptyStr, ...],
+        uv_exclude_newer: Annotated[
+            t.NonEmptyStr,
             m.Field(
                 description=(
-                    "Packages explicitly exempted from cooldown for urgent "
-                    "security floors"
+                    "uv exclude-newer cooldown window for dependency resolution "
+                    "(e.g. '7 days')"
                 )
             ),
-        ] = ()
+        ]
+        uv_exclude_newer_package: t.StrMapping = m.Field(
+            default_factory=lambda: MappingProxyType({}),
+            description="Package-specific uv exclude-newer timestamps.",
+        )
         kubectl_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact kubectl version, e.g. '1.32.0'")
         ]
@@ -183,12 +205,6 @@ class FlextInfraConfigModels:
                 ),
             ),
         ] = ()
-        uv_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact uv resolver version")
-        ]
-        qlty_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact qlty code-quality version")
-        ]
         taplo_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
         ]
@@ -200,6 +216,9 @@ class FlextInfraConfigModels:
         ]
         tokei_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact Tokei analyzer version")
+        ]
+        qlty_version: Annotated[
+            t.NonEmptyStr, m.Field(description="Exact qlty code-smell scanner version")
         ]
         go_version: Annotated[
             t.NonEmptyStr,
@@ -232,12 +251,6 @@ class FlextInfraConfigModels:
         def python_selector(self) -> str:
             """Mise/pyenv-style selector for the configured Python minor line."""
             return self.python_version
-
-        @m.computed_field()
-        @property
-        def uv_exclude_newer(self) -> str:
-            """Render the shared dependency cooldown in uv duration syntax."""
-            return f"{self.dependency_cooldown_days} days"
 
     class ProviderSpec(_ConfigContract):
         """One GitHub organization and its mandatory branch policy."""
@@ -362,19 +375,8 @@ class FlextInfraConfigModels:
         repository_branch: Annotated[
             t.NonEmptyStr, m.Field(description="Repository integration branch")
         ]
-        ci_trigger_branches: Annotated[
-            tuple[t.NonEmptyStr, ...],
-            m.Field(description="Ordered, deduplicated blocking CI branches"),
-        ]
-
         python_version: Annotated[
             t.NonEmptyStr, m.Field(description="Python major.minor line")
-        ]
-        dependency_cooldown_days: Annotated[
-            int,
-            m.Field(
-                ge=1, le=90, description="Shared uv and Dependabot dependency cooldown"
-            ),
         ]
         github_actions: Annotated[
             Mapping[str, FlextInfraConfigModels.GithubActionPinSpec],
@@ -394,21 +396,6 @@ class FlextInfraConfigModels:
                 ),
             ),
         ]
-        has_devcontainer: Annotated[
-            bool,
-            m.Field(
-                default=False,
-                description=(
-                    "Whether the rendered repository ships a .devcontainer "
-                    "directory. Dependabot only accepts a devcontainers "
-                    "ecosystem entry when one exists; declaring it for a "
-                    "repository without that directory makes GitHub reject the "
-                    "whole manifest, which silently disables EVERY ecosystem in "
-                    "it, security updates included. Derived from the repository "
-                    "on disk (hq-36xk)"
-                ),
-            ),
-        ] = False
         checkout_submodules: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -442,6 +429,18 @@ class FlextInfraConfigModels:
                     "workflow_dispatch; when false (default), workflow_dispatch "
                     "only — file remains projected for root/standalone"
                 )
+            ),
+        ] = False
+        has_devcontainer: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description=(
+                    "True when the repository ships a devcontainer definition. "
+                    "Dependabot aborts the whole update job when the "
+                    "devcontainers ecosystem is declared and no devcontainer "
+                    "file exists, so the entry is projected only when true"
+                ),
             ),
         ] = False
 
@@ -493,6 +492,39 @@ class FlextInfraConfigModels:
             m.Field(min_length=1, description="Excluded transitive dependency names"),
         ]
 
+    class ManagedDestinationOwnershipSpec(_ConfigContract):
+        """Project-routed ownership claim over a managed codegen destination.
+
+        Why: a managed destination excluded from a project's profile is pruned
+        as an orphan projection. That is correct while the path is only ever a
+        projection, but a repository may legitimately own a hand-written file
+        at the same path (for example a chart library whose
+        ``.github/workflows/release.yml`` drives its own OCI release, not the
+        workspace-root release projection). Without a declared owner the prune
+        deletes real source on every ``make gen``.
+
+        Declaring ownership here keeps the prune fully enabled everywhere else:
+        it is scoped to one project and one destination, and it never suppresses
+        the prune of an actual generated projection — a file still carrying the
+        generated marker is pruned even when claimed, so a retired projection
+        can never be resurrected by a stale claim.
+        """
+
+        project: Annotated[
+            t.NonEmptyStr,
+            m.Field(exclude=True, description="Owning project distribution route"),
+        ]
+        destinations: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Managed destinations this project owns as hand-written "
+                    "source; codegen never prunes them for profile exclusion"
+                ),
+            ),
+        ]
+
     class ProfileSpec(_ConfigContract):
         """Execution semantics for one generated Make profile."""
 
@@ -528,15 +560,7 @@ class FlextInfraConfigModels:
             bool, m.Field(description="Whether mutation requires APPLY=Y")
         ] = False
         accepts_apply: Annotated[
-            bool,
-            m.Field(
-                description=(
-                    "Whether APPLY=Y is legal for this verb without placing it "
-                    "in the serialized mutation set. Used by run handlers that "
-                    "sometimes mutate under explicit APPLY but must not take "
-                    "the checkout lock on every invocation."
-                )
-            ),
+            bool, m.Field(description="Whether APPLY=Y is legal for this verb")
         ] = False
         apply_what: Annotated[
             t.NonEmptyStr,
@@ -566,13 +590,6 @@ class FlextInfraConfigModels:
                     "accepts_apply"
                 )
                 raise ValueError(msg)
-            if self.apply_guarded and self.default_what == self.apply_what:
-                msg = (
-                    f"make verb {self.name} apply_guarded default_what must "
-                    "differ from apply_what so the fixed-point re-check "
-                    "runs without APPLY=Y"
-                )
-                raise ValueError(msg)
             missing = required - set(self.whats)
             if missing:
                 msg = (
@@ -586,24 +603,10 @@ class FlextInfraConfigModels:
         """One canonical workflow step and its explicit mutation intent."""
 
         verb: Annotated[t.NonEmptyStr, m.Field(description="Declared public verb")]
-        # Why (hq-36xk): the hook templates read `step.what` and
-        # `step.gates_skip` to narrow a step's selector and revoke gates it must
-        # not skip. Neither was declared, and Jinja's StrictUndefined rejects an
-        # undeclared attribute even inside `{% if %}`, so rendering the
-        # pre-commit config failed for every repository. Both are genuinely
-        # optional per step, so they are declared with empty defaults: a step
-        # that omits them renders exactly as before.
         what: Annotated[
             t.NonEmptyStr | None,
-            m.Field(default=None, description="Optional WHAT selector for this step"),
+            m.Field(description="Optional explicit WHAT selector for this invocation"),
         ] = None
-        gates_skip: Annotated[
-            tuple[t.NonEmptyStr, ...],
-            m.Field(
-                default=(),
-                description="Check gates this step must not skip, revoked from the default set",
-            ),
-        ] = ()
         apply: Annotated[
             bool,
             m.Field(description="Whether the step supplies the configured apply token"),
@@ -615,6 +618,16 @@ class FlextInfraConfigModels:
                 description="Execution contexts consuming this single workflow row",
             ),
         ]
+        gates_skip: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(
+                description=(
+                    "Gate ids this step omits when it runs from a hook context "
+                    "(pre_commit/pre_push). Local and CI invocations of the "
+                    "same verb keep the full default set."
+                )
+            ),
+        ] = ()
 
         @u.model_validator(mode="after")
         def _validate_contexts(self) -> Self:
@@ -624,6 +637,14 @@ class FlextInfraConfigModels:
                 raise ValueError(msg)
             if "local" not in self.contexts:
                 msg = f"make workflow step {self.verb} must run locally"
+                raise ValueError(msg)
+            allowed = set(FlextInfraConstantsMake.PROJECT_CHECK_GATES_ALLOWED_VALUES)
+            unknown = sorted(set(self.gates_skip) - allowed)
+            if unknown:
+                msg = (
+                    f"make workflow step {self.verb} gates_skip contains "
+                    f"unknown gates: {', '.join(unknown)}"
+                )
                 raise ValueError(msg)
             return self
 
@@ -636,31 +657,54 @@ class FlextInfraConfigModels:
             t.NonEmptyStr,
             m.Field(
                 description=(
-                    "Local arm of the same ternary. Only the exact `value` "
-                    "disables coverage and narrows CHECK_GATES, so pre-push "
-                    "sets this to keep every gate and the full pytest run"
+                    "Local form of the CI ternary. A hook declares this value "
+                    "explicitly so an inherited CI token from the caller can "
+                    "never revoke pytest or the type-checker gates."
                 )
             ),
-        ]
-        check_gates_skip: Annotated[
+        ] = "N"
+        local_check_gates: Annotated[
             tuple[t.NonEmptyStr, ...],
             m.Field(
                 description=(
-                    "Gate ids omitted from make check when the CI token is exact "
-                    "(ruff lint/format and pyrefly). Local make check without the "
-                    "token still runs the full default set."
+                    "Gate ids run by make check under the local CI token: the "
+                    "slow whole-program type checkers. This is the ONLY "
+                    "declared set; the CI token runs its strict complement and "
+                    "an unset token runs every allowed gate."
                 )
             ),
-        ] = ("lint", "format", "pyrefly")
+        ] = FlextInfraConstantsMake.PROJECT_CHECK_GATES_LOCAL_VALUES
+        verb_timeout_seconds: Annotated[
+            int,
+            m.Field(
+                gt=0,
+                description=(
+                    "Per verb/what/project wall-clock budget under the CI "
+                    "token: CI=Y owns the fast gates, so every handler must "
+                    "finish inside this bound."
+                ),
+            ),
+        ] = 120
+
+        local_verb_timeout_seconds: Annotated[
+            int,
+            m.Field(
+                gt=0,
+                description=(
+                    "Per verb/what/project wall-clock budget under the local "
+                    "CI token: CI=N owns the slow whole-program analyses."
+                ),
+            ),
+        ] = 300
 
         @u.model_validator(mode="after")
-        def _validate_check_gates_skip(self) -> Self:
-            """Every skipped gate must be in the allowed check vocabulary."""
+        def _validate_local_check_gates(self) -> Self:
+            """Every locally owned gate must be in the allowed check vocabulary."""
             allowed = set(FlextInfraConstantsMake.PROJECT_CHECK_GATES_ALLOWED_VALUES)
-            unknown = sorted(set(self.check_gates_skip) - allowed)
+            unknown = sorted(set(self.local_check_gates) - allowed)
             if unknown:
                 msg = (
-                    "make.ci.check_gates_skip contains unknown gates: "
+                    "make.ci.local_check_gates contains unknown gates: "
                     f"{', '.join(unknown)}"
                 )
                 raise ValueError(msg)
@@ -669,32 +713,19 @@ class FlextInfraConfigModels:
         @m.computed_field()
         @property
         def check_gates(self) -> tuple[str, ...]:
-            """Gates make check runs under the CI ternary (allowed minus skipped).
+            """Gates run under the CI token, as the strict complement.
 
-            Why (hq-36xk): workspace_check.apply_ci_gate_rules reads ci.check_gates
-            and ci.local_check_gates as the owner-set that survives scoping under
-            each arm of the CI/local ternary. They are the COMPLEMENT of
-            check_gates_skip -- the gates that DO run, not the ones skipped.
-            Derived from the projected allow list so the model and the live
-            registry in tests/unit/check/gate_registry_tests.py cannot diverge.
+            CI=Y is the inverse of CI=N by construction, never a second list: a
+            gate that moves into or out of ``local_check_gates`` moves out of or
+            into this set in the same edit, so the two can never overlap nor
+            leave a gate unowned.
             """
+            local = frozenset(self.local_check_gates)
             return tuple(
                 gate
                 for gate in FlextInfraConstantsMake.PROJECT_CHECK_GATES_ALLOWED_VALUES
-                if gate not in self.check_gates_skip
+                if gate not in local
             )
-
-        @m.computed_field()
-        @property
-        def local_check_gates(self) -> tuple[str, ...]:
-            """Gates make check runs outside CI (always the full allow list).
-
-            Why (hq-36xk): the local arm of the ternary runs every allowed gate,
-            so it is the allow list wholesale, exposed as the complement of the CI
-            skip so the two live/computed properties in this spec stay
-            structurally symmetric and provably consistent.
-            """
-            return FlextInfraConstantsMake.PROJECT_CHECK_GATES_ALLOWED_VALUES
 
     class ScriptDispatchSpec(_ConfigContract):
         """Opt-in routing of non-builtin verbs to a script command framework."""
@@ -784,13 +815,34 @@ class FlextInfraConfigModels:
             ),
         ] = ""
 
-    class MakeDocsSpec(_ConfigContract):
-        """Generated Makefile docs verb lifecycle and audit policy."""
+    class MakeCleanSpec(_ConfigContract):
+        """Disposable artifacts the generated clean verb removes.
 
-        mutable_actions: Annotated[
+        Stale caches and traces cause FALSE DIAGNOSES, so the disposable set is
+        declared data rather than a literal buried in a recipe: every project
+        cleans exactly the same things and a new artifact kind is one config row.
+        """
+
+        cache_dirs: Annotated[
             tuple[t.NonEmptyStr, ...],
-            m.Field(min_length=1, description="Docs actions guarded by APPLY=Y"),
+            m.Field(description="Cache directory names removed anywhere in the tree"),
         ]
+        root_dirs: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(description="Directories removed at the project root only"),
+        ]
+        root_files: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(description="Files removed at the project root only"),
+        ]
+        trace_globs: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(description="Trace/profile globs removed anywhere in the tree"),
+        ]
+
+    class MakeDocsSpec(_ConfigContract):
+        """Docs policy for reports, cross-project links, and GitHub repos."""
+
         reports_dir: Annotated[
             Path, m.Field(description="Repository-relative docs reports directory")
         ]
@@ -872,64 +924,11 @@ class FlextInfraConfigModels:
                 raise ValueError(msg)
             return self
 
-    class MakeCleanSpec(_ConfigContract):
-        """Disposable-artifact selector for the `make clean` verb (maintenance/clean.py).
-
-        Why (hq-36xk): FlextInfraCleanService reads config.Infra.codegen.make.clean,
-        and cli_routes_validate routes c.Infra.VERB_CLEAN to that service, but the
-        spec field was never declared -- 3e5fbc747 removed the legacy work-lifecycle
-        spec without rewire-ing these consumers. Declaring the spec here is the
-        single owner-cut; clean.py is now type-correct without any suppression or
-        cast.
-        """
-
-        cache_dirs: Annotated[
-            tuple[t.NonEmptyStr, ...],
-            m.Field(
-                default=(".pytest_cache", "__pycache__", ".mypy_cache", ".ty", "dist"),
-                description="Directory names rglobbed anywhere under the project root",
-            ),
-        ]
-        root_dirs: Annotated[
-            tuple[t.NonEmptyStr, ...],
-            m.Field(
-                default=(".venv", ".mypy_cache", "node_modules", "build"),
-                description="Project-root entries removed only when present",
-            ),
-        ]
-        root_files: Annotated[
-            tuple[t.NonEmptyStr, ...],
-            m.Field(
-                default=(".coverage", ".coverage.*", "*.egg-info"),
-                description="Root-level glob patterns removed only when matched",
-            ),
-        ]
-        trace_globs: Annotated[
-            tuple[t.NonEmptyStr, ...],
-            m.Field(
-                default=("*~", "*.pyc", ".coverage*"),
-                description="rglob patterns for trace/profiling artifacts",
-            ),
-        ]
-
     class MakeWorkInProgressSpec(_ConfigContract):
-        """Predicate for work-in-progress branches and draft PR gate behavior.
-
-        Why (hq-36xk): c82e6dd2b introduced this spec and its `work_in_progress`
-        SSOT block for operator law mro-g3zl2 — pre-push gates skip WIP branches
-        and draft PRs, and merges of those states into protected integration
-        branches are blocked in CI. A later merge resolution dropped the model
-        and the config block while `ci.yml.j2` and `.pre-commit-config.yaml.j2`
-        kept consuming `make.work_in_progress`, so every render failed with
-        "'dict object' has no attribute 'work_in_progress'" and no repository
-        could regenerate its CI. Restored verbatim from c82e6dd2b: the gate is a
-        merge protection, so it is reinstated rather than deleted with its
-        consumers.
-        """
+        """Predicate for work-in-progress branches and draft PR gate behavior."""
 
         draft_pr: Annotated[
-            bool,
-            m.Field(description="Treat GitHub draft PRs as work-in-progress"),
+            bool, m.Field(description="Treat GitHub draft PRs as work-in-progress")
         ]
         branch_patterns: Annotated[
             tuple[t.NonEmptyStr, ...],
@@ -949,10 +948,6 @@ class FlextInfraConfigModels:
     class MakeSpec(_ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
-        work_in_progress: Annotated[
-            FlextInfraConfigModels.MakeWorkInProgressSpec,
-            m.Field(description="WIP branch and draft PR gate predicate"),
-        ]
         selector: Annotated[
             t.NonEmptyStr, m.Field(description="Single selector variable name")
         ]
@@ -988,15 +983,15 @@ class FlextInfraConfigModels:
         ]
         testmon_cache: Annotated[
             FlextInfraConfigModels.TestmonCacheSpec,
-            m.Field(description="Adaptive pytest-testmon GitHub Actions cache policy"),
-        ]
-        clean: Annotated[
-            FlextInfraConfigModels.MakeCleanSpec,
-            m.Field(description="Disposable-artifact selector for `make clean`"),
+            m.Field(description="Adaptive testmon Actions cache policy"),
         ]
         verbs: Annotated[
             tuple[FlextInfraConfigModels.MakeVerbSpec, ...],
             m.Field(description="Ordered canonical public verbs"),
+        ]
+        clean: Annotated[
+            FlextInfraConfigModels.MakeCleanSpec,
+            m.Field(description="Disposable artifacts removed by the clean verb"),
         ]
         docs: Annotated[
             FlextInfraConfigModels.MakeDocsSpec,
@@ -1013,28 +1008,26 @@ class FlextInfraConfigModels:
                 description="Per-profile overrides of the custom handler policy",
             ),
         ]
+        work_in_progress: Annotated[
+            FlextInfraConfigModels.MakeWorkInProgressSpec,
+            m.Field(
+                default_factory=_default_make_work_in_progress_spec,
+                description="Work-in-progress predicate for gates and merge locks",
+            ),
+        ]
 
         @u.model_validator(mode="after")
         def _validate_verbs(self) -> Self:
-            """Validate declared public verbs against workflow and contract."""
+            """Require workflow and docs entries to target declared public verbs."""
             declared = {verb.name for verb in self.verbs}
             if len(declared) != len(self.verbs):
                 msg = "make public verb names must be unique"
                 raise ValueError(msg)
-            # Why (hq-36xk): the guard that lived here read
-            # `if "setup" in serialized` and protected `make setup` from being
-            # placed in the serialized mutation set, so it could never require
-            # the managed validation environment it is supposed to CREATE.
-            # 3e5fbc747 exterminated the serialize-make lifecycle and deleted
-            # `self.serialization`, but rebound this condition to `declared`
-            # instead of removing it with the concept it guarded. `setup` is a
-            # mandatory canonical verb, so the inverted check rejected every
-            # valid configuration and `flext_infra.config` could not be built at
-            # all. The serialized set no longer exists; the guard has no object.
-            workflow_verbs = tuple(step.verb for step in self.workflow)
-            if len(set(workflow_verbs)) != len(workflow_verbs):
-                msg = "make workflow verbs must be unique"
+            workflow_steps = tuple((step.verb, step.what) for step in self.workflow)
+            if len(set(workflow_steps)) != len(workflow_steps):
+                msg = "make workflow verb and selector pairs must be unique"
                 raise ValueError(msg)
+            workflow_verbs = tuple(step.verb for step in self.workflow)
             unknown_workflow = set(workflow_verbs) - declared
             if unknown_workflow:
                 msg = (
@@ -1046,7 +1039,14 @@ class FlextInfraConfigModels:
             invalid_apply = [
                 step.verb
                 for step in self.workflow
-                if step.apply != verb_specs[step.verb].apply_guarded
+                if (verb_specs[step.verb].apply_guarded and not step.apply)
+                or (
+                    step.apply
+                    and not (
+                        verb_specs[step.verb].apply_guarded
+                        or verb_specs[step.verb].accepts_apply
+                    )
+                )
             ]
             if invalid_apply:
                 msg = (
@@ -1054,14 +1054,17 @@ class FlextInfraConfigModels:
                     f"{', '.join(sorted(invalid_apply))}"
                 )
                 raise ValueError(msg)
-            docs_verb = next((verb for verb in self.verbs if verb.name == "docs"), None)
-            if docs_verb is None:
-                msg = "make docs verb must be declared"
-                raise ValueError(msg)
-            docs_actions = set(docs_verb.whats)
-            invalid_mutable = set(self.docs.mutable_actions) - docs_actions
-            if invalid_mutable:
-                msg = "make docs mutable_actions must be declared in actions"
+            invalid_selectors = [
+                f"{step.verb}/{step.what}"
+                for step in self.workflow
+                if step.what is not None
+                and step.what not in verb_specs[step.verb].whats
+            ]
+            if invalid_selectors:
+                msg = (
+                    "make workflow selectors are not declared by their verbs: "
+                    f"{', '.join(sorted(invalid_selectors))}"
+                )
                 raise ValueError(msg)
             if (
                 self.docs.reports_dir.is_absolute()
@@ -1079,6 +1082,20 @@ class FlextInfraConfigModels:
 
         @m.computed_field()
         @property
+        def default_whats(self) -> Mapping[str, str]:
+            """Canonical public verb-to-default-selector map consumed by renderers.
+
+            A workflow step that declares no selector of its own must still state
+            one explicitly, because a git hook inherits the caller's environment
+            and would otherwise validate a caller-narrowed subset. The selector it
+            states is the verb's own declared default -- read from this map rather
+            than written as a literal, so a verb that renames its default selector
+            moves every generated hook with it.
+            """
+            return {verb.name: verb.default_what for verb in self.verbs}
+
+        @m.computed_field()
+        @property
         def check_gates_allowed(self) -> tuple[str, ...]:
             """Canonical generated Make check-gate vocabulary."""
             return FlextInfraConstantsMake.PROJECT_CHECK_GATES_ALLOWED_VALUES
@@ -1088,6 +1105,12 @@ class FlextInfraConfigModels:
         def check_gates_default(self) -> tuple[str, ...]:
             """Canonical generated Make default check gates."""
             return FlextInfraConstantsMake.PROJECT_CHECK_GATES_DEFAULT_VALUES
+
+        @m.computed_field()
+        @property
+        def check_gates_fixable(self) -> tuple[str, ...]:
+            """Gates that repair what they report, driving ``make fix APPLY=Y``."""
+            return FlextInfraConstantsMake.PROJECT_CHECK_GATES_FIXABLE_VALUES
 
         @m.computed_field()
         @property
@@ -1135,6 +1158,15 @@ class FlextInfraConfigModels:
                 )
             ),
         ]
+        conflict_sections: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(
+                description=(
+                    "TOML sections whose merge conflicts this owner can recover "
+                    "before rendering"
+                )
+            ),
+        ] = ()
 
     class TemplateEntrySpec(_ConfigContract):
         """One scaffold-only template mapping consumed by ``codegen new``."""
@@ -1408,6 +1440,20 @@ class FlextInfraConfigModels:
                 )
             ),
         ] = ()
+        uv_exclude_newer: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                description=(
+                    "Project-local [tool.uv].exclude-newer cooldown. The"
+                    " fleet default is a rolling window, which silently ages"
+                    " past a security floor declared in"
+                    " override-dependencies and makes resolution"
+                    " unsatisfiable with no code change. A project carrying"
+                    " such a floor pins the absolute cutoff here instead of"
+                    " hand-editing the generated pyproject.toml"
+                )
+            ),
+        ] = None
 
     class RepositoryConformTarget(_ConfigContract):
         """Runtime-derived conformance identity for one repository."""
@@ -1418,6 +1464,10 @@ class FlextInfraConfigModels:
             FlextInfraConfigModels.RepositoryRef,
             m.Field(description="Declared immutable repository identity"),
         ]
+        uv_exclude_newer_package: t.StrMapping = m.Field(
+            default_factory=lambda: MappingProxyType({}),
+            description="Package-specific uv exclude-newer timestamps.",
+        )
         root: Annotated[
             Path, m.Field(description="Resolved repository root receiving conformance")
         ]
@@ -1556,10 +1606,10 @@ class FlextInfraConfigModels:
             t.NonEmptyStr,
             m.Field(description="uv exclude-newer cooldown window for [tool.uv]"),
         ]
-        dependency_cooldown_exclusions: Annotated[
-            tuple[t.NonEmptyStr, ...],
-            m.Field(description="Packages exempted from uv dependency cooldown"),
-        ] = ()
+        uv_exclude_newer_package: t.StrMapping = m.Field(
+            default_factory=lambda: MappingProxyType({}),
+            description="Package-specific uv exclude-newer timestamps.",
+        )
         make: Annotated[
             FlextInfraConfigModels.MakeSpec,
             m.Field(description="Generated Make command contract"),
@@ -1577,6 +1627,18 @@ class FlextInfraConfigModels:
             t.NonEmptyStr,
             m.Field(description="Generated custom Make policy include directive"),
         ]
+        custom_mk_reserved: Annotated[
+            str,
+            m.Field(
+                description=(
+                    "Space-joined reserved "
+                    f"{FlextInfraConstantsCodegenProject.CUSTOM_MAKE_FILENAME} "
+                    "targets. R12 moved the public "
+                    "verbs into the project projection, so the parse-time monopoly "
+                    "guard must render there instead of only in base.mk."
+                )
+            ),
+        ] = ""
         orchestrated_verbs: Annotated[
             tuple[str, ...],
             m.Field(
@@ -1678,6 +1740,20 @@ class FlextInfraConfigModels:
             ),
         ]
 
+    class MarkdownlintRenderSpec(_ConfigContract):
+        """Typed input for the generated markdown lint projections.
+
+        The markdown templates read only the tooling policy, so their render
+        input carries exactly that: requiring the full project context made
+        the standalone flext-infra checkout fail (`workspace has no project
+        metadata`) for a file that never consumes project metadata.
+        """
+
+        tooling: Annotated[
+            FlextInfraModelsDepsToolSettings.ToolConfigDocument,
+            m.Field(description="Canonical validated tooling policy"),
+        ]
+
     class SgconfigRenderSpec(_ConfigContract):
         """Typed input for the generated ast-grep project config.
 
@@ -1685,8 +1761,10 @@ class FlextInfraConfigModels:
         required surface, but no generator owned it, so the file was authored by
         hand in one repository and simply absent in another -- provider discovery
         then failed closed with ``missing declared file: sgconfig.yml``. The rule
-        and fixture directories are declared here so every repository renders the
-        same contract from the SSOT instead of a hand-written copy.
+        and fixture directories are declared here so a repository with its own
+        hand-written rules renders the same contract from the SSOT instead of a
+        hand-written copy; every other repository consumes the packaged rule
+        cascade and needs no ``sgconfig.yml``.
         """
 
         rule_dirs: Annotated[
@@ -1742,6 +1820,10 @@ class FlextInfraConfigModels:
         upstream: Annotated[
             t.NonEmptyStr, m.Field(description="Upstream FLEXT facade module")
         ]
+        inherited_facets: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(description="Upstream facets re-exported by the project root"),
+        ] = ()
         homepage: Annotated[t.NonEmptyStr, m.Field(description="Project homepage")]
         documentation: Annotated[
             t.NonEmptyStr, m.Field(description="Project documentation URL")
@@ -1778,6 +1860,10 @@ class FlextInfraConfigModels:
             FlextInfraConfigModels.MakeSpec,
             m.Field(description="Generated Make command contract"),
         ]
+        uv_exclude_newer_package: t.StrMapping = m.Field(
+            default_factory=lambda: MappingProxyType({}),
+            description="Package-specific uv exclude-newer timestamps.",
+        )
         mypy_memory_limit_mb: Annotated[
             int, m.Field(gt=0, description="Generated Mypy address-space limit in MiB")
         ]
@@ -1819,10 +1905,6 @@ class FlextInfraConfigModels:
             t.NonEmptyStr,
             m.Field(description="uv exclude-newer cooldown window for [tool.uv]"),
         ]
-        dependency_cooldown_exclusions: Annotated[
-            tuple[t.NonEmptyStr, ...],
-            m.Field(description="Packages exempted from uv dependency cooldown"),
-        ] = ()
         make_profile: Annotated[
             FlextInfraConstantsCodegenProject.MakeProfile,
             m.Field(description="Generated Make execution profile"),
@@ -1838,6 +1920,16 @@ class FlextInfraConfigModels:
                 description=("Make directive that includes the custom Make surface"),
             ),
         ]
+        custom_mk_reserved: Annotated[
+            str,
+            m.Field(
+                description=(
+                    "Space-joined reserved "
+                    f"{FlextInfraConstantsCodegenProject.CUSTOM_MAKE_FILENAME} "
+                    "targets guarded at parse time"
+                )
+            ),
+        ] = ""
         workspace_members: Annotated[
             tuple[str, ...], m.Field(description="Ordered workspace member paths")
         ] = ()
@@ -1949,6 +2041,10 @@ class FlextInfraConfigModels:
         upstream: Annotated[
             t.NonEmptyStr, m.Field(description="Upstream FLEXT facade module")
         ]
+        inherited_facets: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(description="Declared upstream facets re-exported at the root"),
+        ] = ()
         description: Annotated[
             t.NonEmptyStr, m.Field(description="Project description")
         ]
@@ -1966,12 +2062,6 @@ class FlextInfraConfigModels:
         kind_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact kind toolchain version")
         ]
-        uv_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact uv resolver version")
-        ]
-        qlty_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact qlty code-quality version")
-        ]
         taplo_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
         ]
@@ -1983,6 +2073,9 @@ class FlextInfraConfigModels:
         ]
         tokei_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact Tokei analyzer version")
+        ]
+        qlty_version: Annotated[
+            t.NonEmptyStr, m.Field(description="Exact qlty code-smell scanner version")
         ]
         go_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact Go runtime version")
@@ -2061,8 +2154,8 @@ class FlextInfraConfigModels:
             t.NonEmptyStr | None,
             m.Field(
                 description=(
-                    "Beads ledger identity declared by the workspace root; None "
-                    "falls back to the standalone canonical project name"
+                    "Beads database identity and default issue prefix declared "
+                    "by the tracker-owning workspace root"
                 )
             ),
         ] = None
@@ -2070,9 +2163,9 @@ class FlextInfraConfigModels:
             t.NonEmptyStr | None,
             m.Field(
                 description=(
-                    "Beads issue-prefix override for workspaces whose tracker "
-                    "namespace diverges from the canonical project name; None "
-                    "keeps the canonical project name (see mro-6fca)"
+                    "Beads issue prefix declared by the tracker-owning "
+                    "workspace root; declaring it equal to ledger_id states "
+                    "the namespace explicitly instead of inheriting it"
                 )
             ),
         ] = None
@@ -2114,6 +2207,10 @@ class FlextInfraConfigModels:
                 )
             ),
         ] = None
+        work: Annotated[
+            _WorkspaceWorkSpec,
+            m.Field(description="Typed Beads-to-GitFlow lane policy"),
+        ] = _WorkspaceWorkSpec()
         repository_policy_overlays: Annotated[
             tuple[FlextInfraConfigModels.RepositoryPolicyOverlaySpec, ...],
             m.Field(description="Repository-local policy exceptions keyed by project"),
@@ -2122,6 +2219,25 @@ class FlextInfraConfigModels:
         @u.model_validator(mode="after")
         def _validate_repository_policy_overlays(self) -> Self:
             """Require local overlays to reference one declared repository each."""
+            if self.ledger_prefix is not None and self.ledger_id is None:
+                msg = "ledger_prefix requires ledger_id"
+                raise ValueError(msg)
+            # Why (mro-cdzxf): the issue prefix and the database identity are
+            # INDEPENDENT declared facts, never inferable from one another. A
+            # Dolt database must be SQL-safe ("cosmos_main") while the issue
+            # prefix is the hyphenated namespace ("cosmos-main"). Deriving one
+            # from the other silently renames every issue namespace and binds bd
+            # to a ledger that does not exist (mro-9wv8). A tracker-owning
+            # workspace therefore declares BOTH; declaring them equal is the
+            # explicit form of "same string", never an inherited default.
+            if self.ledger_id is not None and self.ledger_prefix is None:
+                msg = (
+                    "ledger_id requires ledger_prefix: the Beads issue prefix is "
+                    "a declared fact and is never derived from the database "
+                    "identity (they legitimately differ, e.g. database "
+                    "'cosmos_main' vs issue prefix 'cosmos-main')"
+                )
+                raise ValueError(msg)
             invalid_external_paths = tuple(
                 path
                 for path in self.external_dependency_paths
@@ -2164,6 +2280,24 @@ class FlextInfraConfigModels:
                 msg = (
                     "repository policy overlays reference unknown projects: "
                     f"{', '.join(sorted(unknown))}"
+                )
+                raise ValueError(msg)
+            # ci-matrix is OFF fleet-wide and owned by flext-infra: it runs by
+            # workflow_dispatch only. `ci_matrix_auto_run` keeps its default and
+            # NO project -- internal or external -- may override it. An override
+            # that flips it on binds the matrix to push-on-main across every
+            # generated repository, so it is refused at load time rather than
+            # discovered from a workflow run.
+            auto_run = tuple(
+                item.project
+                for item in self.repository_policy_overlays
+                if item.ci_matrix_auto_run
+            )
+            if auto_run:
+                msg = (
+                    "ci_matrix_auto_run cannot be overridden; ci-matrix is "
+                    "dispatch-only fleet-wide: "
+                    f"{', '.join(sorted(auto_run))}"
                 )
                 raise ValueError(msg)
             return self
@@ -2260,6 +2394,15 @@ class FlextInfraConfigModels:
         uv_exclude_dependencies: Annotated[
             tuple[FlextInfraConfigModels.UvScopedDependencyExclusionSpec, ...],
             m.Field(description="Project-scoped official uv dependency exclusions"),
+        ] = ()
+        managed_destination_ownership: Annotated[
+            tuple[FlextInfraConfigModels.ManagedDestinationOwnershipSpec, ...],
+            m.Field(
+                description=(
+                    "Managed destinations a project owns as hand-written "
+                    "source; excluded from the profile-orphan prune"
+                )
+            ),
         ] = ()
         providers: Annotated[
             tuple[FlextInfraConfigModels.ProviderSpec, ...],
@@ -2671,30 +2814,9 @@ class FlextInfraConfigModels:
             t.NonEmptyStr,
             m.Field(description="Required issue prefix derived from project metadata"),
         ]
-        expected_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Exact official Beads version pinned by mise"),
-        ]
-        expected_checksum: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(
-                pattern=r"^[0-9a-f]{64}$",
-                description=(
-                    "SHA-256 the resolved Beads binary must match; declared by "
-                    "the toolchain SSOT, verified fail-closed"
-                ),
-            ),
-        ] = None
-        expected_schema: Annotated[
-            int | None,
-            m.Field(
-                gt=0,
-                description=(
-                    "Ledger schema the pinned binary must know; content identity "
-                    "of the artifact is the enforcement surface"
-                ),
-            ),
-        ] = None
+        # Why: mise owns which binary it installs, so this plan carries no
+        # expected version/checksum/schema. Re-auditing them here ran before the
+        # drift report and deadlocked `make gen WHAT=apply`.
         ledger_root: Annotated[
             Path,
             m.Field(
@@ -2874,6 +2996,29 @@ class FlextInfraConfigModels:
         ] = False
         reason: Annotated[str, m.Field(description="Blocking explanation")] = ""
 
+    class HooksPlan(_ConfigContract):
+        """Declared workflow git hooks and where they must be installed."""
+
+        repository_root: Annotated[
+            Path, m.Field(description="Checkout owning the hook configuration")
+        ]
+        hooks_directory: Annotated[
+            Path, m.Field(description="Resolved git hook directory for this checkout")
+        ]
+        stages: Annotated[
+            tuple[str, ...],
+            m.Field(description="Hook stages this checkout must have installed"),
+        ] = ()
+        retired_stages: Annotated[
+            tuple[str, ...],
+            m.Field(
+                description=(
+                    "Hook stages this checkout must NOT carry, uninstalled on "
+                    "apply and reported as drift on check"
+                )
+            ),
+        ] = ()
+
     class CodegenPlan(_ConfigContract):
         """Fully validated plan produced before any managed-file write."""
 
@@ -2901,6 +3046,10 @@ class FlextInfraConfigModels:
             tuple[FlextInfraConfigModels.BeadsPlan, ...],
             m.Field(description="Beads lifecycle plans paired with repositories"),
         ]
+        hooks: Annotated[
+            tuple[FlextInfraConfigModels.HooksPlan, ...],
+            m.Field(description="Workflow git-hook plans paired with repositories"),
+        ] = ()
         branch_ancestry: Annotated[
             tuple[FlextInfraConfigModels.BranchAncestryPlan, ...],
             m.Field(description="Governed branch ancestry observations"),

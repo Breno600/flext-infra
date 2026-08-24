@@ -24,7 +24,7 @@
 	if [ ! -f "$$root/.gitmodules" ]; then exit 0; fi; \
 	profile="$(MAKE_PROFILE)"; \
 	if [ "$$profile" = "workspace-root" ]; then \
-		managed="$(MANAGED_GITLINKS)"; \
+		managed="$(WORKSPACE_MEMBERS)"; \
 	else \
 		managed=""; \
 		keys=$$(git -C "$$root" config -f .gitmodules --name-only --get-regexp '^submodule\..*\.flext-managed$$' || :); \

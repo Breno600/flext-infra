@@ -387,6 +387,21 @@ class TestsFlextInfraInfraWorkspaceDetector:
         tm.that(spec.name, eq="consumer-project")
         tm.that(spec.repository.name, eq="consumer-project")
 
+    def test_workspace_manifest_declares_task_lane_kind_policy(
+        self, tmp_path: Path
+    ) -> None:
+        repository = self._repository(
+            name="consumer-project",
+            path=".",
+            role=c.Infra.RepositoryRole.WORKSPACE_ROOT,
+        )
+        self._write_manifest(tmp_path, repository)
+
+        spec = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(tmp_path))
+
+        tm.that(spec.work.task_kind, eq=c.Infra.WorkKind.FEATURE)
+        tm.that(spec.work.chore_kind, eq=c.Infra.WorkKind.FEATURE)
+
     def test_workspace_root_with_governed_member_is_workspace(
         self, tmp_path: Path
     ) -> None:

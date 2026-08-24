@@ -44,7 +44,7 @@ license = "MIT"
 name = "flext-infra"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
-version = "0.12.0"
+version = "0.12.0rc0"
 
 [[project.authors]]
 email = "team@flext.sh"
@@ -354,8 +354,6 @@ reportUnusedFunction = "error"
 reportUnusedImport = "error"
 reportUnusedVariable = "error"
 typeCheckingMode = "strict"
-venv = ".venv"
-venvPath = "."
 
 [[tool.pyright.executionEnvironments]]
 extraPaths = ["src"]
@@ -440,7 +438,7 @@ markers = [
 minversion = "8.0"
 python_classes = ["Test*"]
 python_files = ["*_test.py", "*_tests.py", "test_*.py"]
-testpaths = ["tests"]
+testpaths = [".", "docs", "examples", "scripts", "src", "tests"]
 
 [tool.pytest_env]
 FLEXT_INFRA_LINT_SNAPSHOT_GATES = "lint"
@@ -612,7 +610,7 @@ dependencies = ["flext-infra"]
 name = "flext-tests"
 
 [tool.uv.exclude-newer-package]
-cryptography = false
+mypy = "2026-08-15T03:04:00Z"
 
 [tool.vulture]
 exclude = ["*/_protocols/*"]
@@ -662,7 +660,7 @@ dev = [
   "mkdocs-versioning>=0.4.0",
   "mkdocstrings>=1.0.6",
   "mkdocstrings-python>=2.0.5",
-  "mypy>=2.3.0",
+  "mypy>=2.3.1",
   "pip-audit>=2.10.1",
   "pre-commit>=4.6.1",
   "pylint>=4.0.6",

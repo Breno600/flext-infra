@@ -21,7 +21,7 @@ class TestsFlextInfraCodegenGeneration:
         exports: t.StrSequence,
         lazy_map: t.LazyAliasMap,
         *,
-        eager_dunders: t.MappingKV[str, t.StrPair] | None = None,
+        eager_dunders: t.MutableLazyAliasMap | None = None,
         child_packages: t.StrSequence = (),
     ) -> m.Infra.LazyInitPlan:
         """Build one validated render plan for a synthetic package path."""
@@ -52,7 +52,9 @@ class TestsFlextInfraCodegenGeneration:
                 "Demo": ("demo_pkg.api", "Demo"),
                 "r": ("flext_core", "r"),
             }),
-            eager_dunders={"__version__": ("demo_pkg.__version__", "__version__")},
+            eager_dunders=MappingProxyType({
+                "__version__": ("demo_pkg.__version__", "__version__")
+            }),
             child_packages=("demo_pkg.services",),
         )
 

@@ -104,10 +104,7 @@ class FlextInfraRefactorTypingUnifier(
             return None
         escaped = [c.Infra.escape(m) for m in sorted(members)]
         part = rf"(?:{'|'.join(escaped)})"
-        pattern: t.Infra.RegexPattern = c.Infra.compile(
-            rf"\b{part}(?:\s*\|\s*{part}){{{len(members) - 1}}}\b"
-        )
-        return pattern
+        return c.Infra.compile(rf"\b{part}(?:\s*\|\s*{part}){{{len(members) - 1}}}\b")
 
     def _modernize_typealias(self, source: str) -> str:
         """Convert ``X: TypeAlias = expr`` to ``type X = expr`` (PEP 695)."""

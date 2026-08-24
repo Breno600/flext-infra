@@ -42,9 +42,6 @@ class FlextInfraRefactorMROSymbolPropagator(FlextInfraRopeTransformer):
                 facade_alias=facade_alias,
                 symbol_paths=symbol_paths,
             )
-            rewritten_source = self._normalize_facade_alias_imports(
-                rewritten_source, module_name=module_name, facade_alias=facade_alias
-            )
             rewritten_source = self._qualify_bare_references(
                 rewritten_source, facade_alias=facade_alias, symbol_paths=symbol_paths
             )
@@ -110,46 +107,6 @@ class FlextInfraRefactorMROSymbolPropagator(FlextInfraRopeTransformer):
                 f"Rewired import: {module_name}.{old} -> {facade_alias}.{tp}"
             ),
         )
-
-    def _normalize_facade_alias_imports(
-        self, source: str, *, module_name: str, facade_alias: str
-    ) -> str:
-        """Collapse ``from module import Facade as alias`` onto the canonical facade name.
-
-        Rewriting a moved symbol emits ``from module import Facade``; a consumer
-        that already bound the same facade under an alias would then hold two
-        bindings for one namespace, so the alias import and its references are
-        folded into the canonical facade name.
-        """
-        alias_pattern = c.Infra.compile_mro_facade_alias_import(
-            module_name, facade_alias
-        )
-        aliases = [match.group(1) for match in alias_pattern.finditer(source)]
-        if not aliases:
-            return source
-        canonical_import = f"from {module_name} import {facade_alias}"
-        normalized = alias_pattern.sub(lambda _: canonical_import, source)
-        for alias in aliases:
-            normalized = c.Infra.compile_mro_alias_reference(alias).sub(
-                facade_alias, normalized
-            )
-            self._record_change(f"Normalized facade alias: {alias} -> {facade_alias}")
-        return self._deduplicate_import_line(normalized, canonical_import)
-
-    @staticmethod
-    def _deduplicate_import_line(source: str, import_line: str) -> str:
-        """Keep only the first occurrence of *import_line* in *source*."""
-        kept: list[str] = []
-        seen = False
-        for line in source.splitlines(keepends=True):
-            if line.strip() != import_line:
-                kept.append(line)
-                continue
-            if seen:
-                continue
-            seen = True
-            kept.append(line)
-        return "".join(kept)
 
     def _qualify_bare_references(
         self, source: str, *, facade_alias: str, symbol_paths: t.StrMapping

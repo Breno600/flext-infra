@@ -114,19 +114,10 @@ class FlextInfraUtilitiesProtectedEditLinting:
             return resolved_workspace
         return project_root
 
-    _COMMAND_ENV_REMOVE_KEYS: ClassVar[t.StrSequence] = (
-        c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,
-        c.Infra.ENV_VAR_FORCE_COLOR,
-    )
-
     @staticmethod
     def _command_env() -> t.StrMapping:
-        """Return subprocess env overrides for lint and validation commands.
-
-        ``run_raw`` merges this mapping over ``os.environ``, so keys can only be
-        dropped by passing ``_COMMAND_ENV_REMOVE_KEYS`` as ``remove_env_keys``.
-        """
-        return {c.Infra.ORCHESTRATOR_ENV_NO_COLOR: "1"}
+        """Command env."""
+        return u.Cli.process_env(remove_keys=("PYTHONPATH",))
 
     @classmethod
     def _new_file_lint_baseline(
@@ -244,7 +235,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
             cmd,
             cwd=command_cwd,
             env=command_env,
-            remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
             timeout=FlextInfraUtilitiesResourceLimits.mypy_runner_timeout()
             if tool_name == c.Infra.MYPY
             else gate_timeout,

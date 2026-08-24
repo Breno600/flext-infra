@@ -190,9 +190,7 @@ class TestsFlextInfraRefactorInfraRefactorService:
         service = FlextInfraRefactorService(config_path=config_path)
         loaded = service.load_rules()
         tm.ok(loaded)
-        results = service.refactor_project(
-            project_root, apply_safety=False, gates=("lint",)
-        )
+        results = service.refactor_project(project_root, apply_safety=False)
         file_results = [
             result for result in results if result.file_path != project_root
         ]

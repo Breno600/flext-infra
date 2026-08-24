@@ -483,15 +483,12 @@ class FlextInfraUtilitiesRopeImports:
         import_statements = FlextInfraUtilitiesRopeImports.import_statements(
             module_imports
         )
-        absolute_from_imports: list[t.Infra.RopeFromImport] = []
-        for import_stmt in import_statements:
-            import_info = import_stmt.import_info
-            if (
-                FlextInfraUtilitiesRopeRuntime.is_from_import(import_info)
-                and import_info.level == 0
-            ):
-                absolute_from_imports.append(import_info)
-        return tuple(absolute_from_imports)
+        return tuple(
+            import_stmt.import_info
+            for import_stmt in import_statements
+            if FlextInfraUtilitiesRopeRuntime.is_from_import(import_stmt.import_info)
+            and import_stmt.import_info.level == 0
+        )
 
     @classmethod
     def relocate_from_import_aliases(

@@ -6,7 +6,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Annotated, ClassVar
 
-from flext_core import m
+from flext_cli import m
 from flext_infra import c, t
 from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 from flext_infra._models.mro_scan import FlextInfraModelsMroScan

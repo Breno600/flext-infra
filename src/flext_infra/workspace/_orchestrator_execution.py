@@ -218,13 +218,6 @@ class FlextInfraWorkspaceOrchestratorExecutionMixin:
             env=self._project_child_env(),
             remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
         )
-        process_failure = (
-            u.Infra.append_process_failure(
-                log_path, proc_result.error or "project process lifecycle failed"
-            )
-            if proc_result.failure
-            else ""
-        )
         return_code: int = proc_result.unwrap() if proc_result.success else 1
         # mro-9v0d: GNU make exits 2 for any failed recipe, so recover the
         # child's real exit code from make's own error line in the log.
@@ -238,21 +231,17 @@ class FlextInfraWorkspaceOrchestratorExecutionMixin:
             u.Cli.info(f"  ✓ {project} completed in {int(elapsed)}s  ({log_path})")
         else:
             error_count, error_lines = u.Infra.extract_errors(log_path)
-            displayed_errors = list(error_lines)
-            if process_failure and process_failure not in displayed_errors:
-                displayed_errors.insert(0, process_failure)
-                error_count = max(error_count, len(displayed_errors))
             u.Cli.project_failure(
                 m.Infra.ProjectFailureInfo(
                     project=project,
                     elapsed=elapsed,
                     log_path=log_path,
                     error_count=error_count,
-                    errors=displayed_errors,
+                    errors=list(error_lines),
                 )
             )
-            if displayed_errors:
-                stderr = "\n".join(displayed_errors)
+            if error_lines:
+                stderr = "\n".join(error_lines)
         return r[m.Cli.CommandOutput].ok(
             m.Cli.CommandOutput(
                 stdout=str(log_path),

@@ -9,7 +9,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from tests import m, u
+from flext_infra import m, u
 from flext_tests import tm
 from tests import u as test_u
 

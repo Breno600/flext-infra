@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from flext_core import e as core_e
-from tests import c, m, u
+from flext_infra import c, m, u
 from flext_infra.check.workspace_check_gates import FlextInfraGateRegistry
 from flext_infra.gates.smells import FlextInfraSmellsGate
 from flext_tests import tm
@@ -230,7 +230,7 @@ class TestSmellsGate:
         (tmp_path / "empty-bin").mkdir()
 
         gate = FlextInfraSmellsGate(tmp_path)
-        execution = gate.check(tmp_path, _ctx(tmp_path))
+        execution = gate.execute(_ctx(tmp_path))
 
         tm.that(execution.result.passed, eq=True)
 

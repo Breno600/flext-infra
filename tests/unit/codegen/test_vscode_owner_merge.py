@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import config, t
-from tests import c, u
+from flext_infra import c, config, t, u
 from flext_infra.services.codegen import FlextInfraCodegen
 from flext_tests import tm
 

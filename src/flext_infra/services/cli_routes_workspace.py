@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from flext_infra import c, m
+from flext_infra import FlextInfraWorkService, c, m
 from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
 from flext_infra.services.cli_route_base import CliRouteBase
 from flext_infra.services.cli_routes_refactor import RefactorRoutes
@@ -68,10 +68,15 @@ class WorkspaceRoutes(RefactorRoutes):
                         "Detect workspace or standalone mode",
                         FlextInfraWorkspaceDetector,
                     ),
-                     (
+                    (
                         "orchestrate",
                         "Run make verb across projects",
                         FlextInfraOrchestratorService,
+                    ),
+                    (
+                        "work",
+                        "Unified bead/GitFlow/worktree/PR lane saga",
+                        FlextInfraWorkService,
                     ),
                 )
             ),

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 from flext_cli import m as cli_m
-from tests import c
+from flext_infra import c
 from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_tests import tm
 

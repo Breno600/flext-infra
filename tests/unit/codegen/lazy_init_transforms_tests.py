@@ -5,10 +5,8 @@ from __future__ import annotations
 import sys
 from typing import TYPE_CHECKING
 
-from flext_infra import p
-from tests import c
 from flext_tests import tm
-from tests import u
+from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -106,7 +104,7 @@ class TestsFlextInfraLazyInitTransforms:
         )
         tm.that(result, eq=0)
         source_root = workspace_root / c.Infra.DEFAULT_SRC_DIR
-        imported: p.Cli.CommandOutput = tm.ok(
+        imported = tm.ok(
             u.Cli.run_raw(
                 [
                     sys.executable,

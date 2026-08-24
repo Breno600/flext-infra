@@ -12,8 +12,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import config
-from tests import c, m, u
+from flext_infra import c, config, m, u
 from flext_tests import tm
 from tests import TestsFlextInfraUtilities as tu
 

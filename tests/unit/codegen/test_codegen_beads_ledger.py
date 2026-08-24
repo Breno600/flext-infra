@@ -12,8 +12,7 @@ from pathlib import Path
 
 import pytest
 
-from flext_infra import config
-from tests import c, m, u
+from flext_infra import c, config, m, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_tests import tm
 from tests import u as test_u
@@ -477,7 +476,7 @@ class TestCodegenBeadsLedger:
         mro-tvc03: rejecting equality invalidated the real governing manifest,
         which declares ``ledger_id: mro`` with ``ledger_prefix: mro`` precisely
         to state the namespace instead of inheriting it. Runtime proved it:
-        Lane provisioning failed with "workspace manifest model validation failed"
+        ``make work`` failed with "workspace manifest model validation failed"
         for every lane until equality was allowed again.
         """
         repository = test_u.Tests.repository_ref(config.Infra.name)

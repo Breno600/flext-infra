@@ -7,7 +7,7 @@ from typing import Annotated, Self
 
 from packaging.version import InvalidVersion, Version
 
-from flext_core import m
+from flext_cli import m
 from flext_core import u
 from flext_infra import t
 from flext_infra._models.mixins import FlextInfraModelsMixins as mm

@@ -6,8 +6,7 @@ import re
 import shutil
 from pathlib import Path
 
-from flext_infra import config
-from tests import c
+from flext_infra import c, config
 from flext_tests import tm
 from tests import m, u
 

@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
-from tests import c, m, u
+from flext_infra import c, m, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_tests import tm
 from tests import u as test_u
+
+_MEMBER_BRANCH = "0.12.0-dev"
+_FILE_PROTOCOL_CONFIG = ("-c", "protocol.file.allow=always")
+# Local bare origins are reached over the file transport, which Git refuses by
+# default for submodule clones. The allowance belongs to the fixture topology,
+# never to the developer environment the suite happens to inherit.
+_FILE_PROTOCOL_ENV = {"GIT_ALLOW_PROTOCOL": "file"}
 
 
 def _render_workspace_root_makefile(tmp_path: Path) -> str:
@@ -72,20 +78,20 @@ def _create_member_origin(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     test_u.Tests.initialize_git_repo(member)
-    tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "-b", "0.12.0-dev"], cwd=member))
-    tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "main"], cwd=member))
+    test_u.Tests.git_bootstrap(member, ("checkout", "-b", _MEMBER_BRANCH))
+    test_u.Tests.git_bootstrap(member, ("checkout", c.Infra.GIT_MAIN))
     remote_root = tmp_path / "member-remote"
     remote_root.mkdir()
     origin = test_u.Tests.configure_local_origin(member, remote_root)
     tm.ok(
-        u.Cli.run_checked(
-            [c.Infra.GIT, "push", "-u", c.Infra.GIT_ORIGIN, "0.12.0-dev"], cwd=member
+        u.Infra.git_push_upstream(
+            m.Infra.GitPushRequest(
+                repo_root=member, remote=c.Infra.GIT_ORIGIN, branch=_MEMBER_BRANCH
+            )
         )
     )
-    tm.ok(
-        u.Cli.run_checked(
-            [c.Infra.GIT, "symbolic-ref", "HEAD", "refs/heads/0.12.0-dev"], cwd=origin
-        )
+    test_u.Tests.git_bootstrap(
+        origin, ("symbolic-ref", c.Infra.GIT_HEAD, f"refs/heads/{_MEMBER_BRANCH}")
     )
     return origin
 
@@ -101,43 +107,40 @@ def _create_uninitialized_workspace(tmp_path: Path, makefile: str) -> Path:
         encoding="utf-8",
     )
     test_u.Tests.initialize_git_repo(source)
-    tm.ok(
-        u.Cli.run_checked(
-            [
-                "git",
-                "-c",
-                "protocol.file.allow=always",
-                "submodule",
-                "add",
-                "-q",
-                "-b",
-                "0.12.0-dev",
-                str(member_origin),
-                "flext-core",
-            ],
-            cwd=source,
-        )
+    test_u.Tests.git_bootstrap(
+        source,
+        (
+            *_FILE_PROTOCOL_CONFIG,
+            "submodule",
+            "add",
+            "-q",
+            "-b",
+            _MEMBER_BRANCH,
+            str(member_origin),
+            "flext-core",
+        ),
     )
     test_u.Tests.commit_git_changes(source, "Declare workspace member")
-    tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "-b", "0.12.0-dev"], cwd=source))
-    tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "main"], cwd=source))
+    test_u.Tests.git_bootstrap(source, ("checkout", "-b", _MEMBER_BRANCH))
+    test_u.Tests.git_bootstrap(source, ("checkout", c.Infra.GIT_MAIN))
     remote_root = tmp_path / "workspace-remote"
     remote_root.mkdir()
     workspace_origin = test_u.Tests.configure_local_origin(source, remote_root)
     tm.ok(
-        u.Cli.run_checked(
-            [c.Infra.GIT, "push", "-u", c.Infra.GIT_ORIGIN, "0.12.0-dev"], cwd=source
+        u.Infra.git_push_upstream(
+            m.Infra.GitPushRequest(
+                repo_root=source, remote=c.Infra.GIT_ORIGIN, branch=_MEMBER_BRANCH
+            )
         )
     )
-    tm.ok(
-        u.Cli.run_checked(
-            [c.Infra.GIT, "symbolic-ref", "HEAD", "refs/heads/0.12.0-dev"],
-            cwd=workspace_origin,
-        )
+    test_u.Tests.git_bootstrap(
+        workspace_origin,
+        ("symbolic-ref", c.Infra.GIT_HEAD, f"refs/heads/{_MEMBER_BRANCH}"),
     )
     checkout = tmp_path / "workspace-checkout"
-    tm.ok(
-        u.Cli.run_checked(["git", "clone", "-q", str(workspace_origin), str(checkout)])
+    checkout.mkdir()
+    test_u.Tests.git_bootstrap(
+        checkout, ("clone", "-q", str(workspace_origin), str(checkout))
     )
     return checkout
 
@@ -148,10 +151,20 @@ class TestsWorkspaceRootSetupSubmodules:
     ) -> None:
         rendered = _render_workspace_root_makefile(tmp_path)
 
-        tm.that(rendered, has="_builtin_setup_environment: _builtin_setup_submodules")
-        tm.that(rendered, has="submodule update --init --")
-        tm.that(rendered, has="$(UV) sync --project")
-        tm.that(rendered, lacks="submodule update --init --recursive")
+        # The generated setup expresses the ordering as a Make prerequisite:
+        # every _builtin_setup_environment profile branch depends on
+        # _builtin_setup_submodules, whose recipe runs the per-module
+        # `submodule update --init` before any `$(UV) sync --project` can run.
+        prerequisite = "_builtin_setup_environment: _builtin_setup_submodules"
+        update_at = rendered.index("submodule update --init")
+        first_uv_at = rendered.index("$(UV) sync --project")
+
+        tm.that(rendered.count(prerequisite), eq=3)
+        tm.that(update_at < rendered.index(prerequisite), eq=True)
+        # The only uv sync lives in SETUP_ENVIRONMENT_RECIPE, which is reachable
+        # solely through the prerequisite-guarded _builtin_setup_environment.
+        env_recipe_at = rendered.index("SETUP_ENVIRONMENT_RECIPE = ")
+        tm.that(env_recipe_at < first_uv_at, eq=True)
 
     def test_make_setup_initializes_local_submodule_before_environment(
         self, tmp_path: Path
@@ -159,16 +172,15 @@ class TestsWorkspaceRootSetupSubmodules:
         """Generated workspace-root setup initializes declared submodules first."""
         rendered = _render_workspace_root_makefile(tmp_path)
         workspace = _create_uninitialized_workspace(tmp_path, rendered)
-        env = os.environ.copy()
-        env["GIT_ALLOW_PROTOCOL"] = "file"
-
         outcome = u.Cli.run_raw(
-            ["make", "_builtin_setup_submodules"], cwd=workspace, env=env
+            ["make", "_builtin_setup_submodules"],
+            cwd=workspace,
+            env=_FILE_PROTOCOL_ENV,
+            remove_env_keys=test_u.Tests.isolated_git_keys(),
         )
         process = outcome.value
+        transcript = process.stdout + process.stderr
 
-        # The fixture bootstraps through submodules; the invariant we care about
-        # is that the submodule is initialized before environment provisioning.
-        tm.that(process.exit_code, eq=0)
-        tm.that(process.stdout + process.stderr, has="Submodule path 'flext-core'")
+        tm.that(process.exit_code, eq=0, msg=transcript)
+        tm.that(transcript, has="Submodule path 'flext-core'")
         tm.that((workspace / "flext-core" / "pyproject.toml").is_file(), eq=True)

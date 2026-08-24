@@ -20,31 +20,33 @@ __all__: tuple[str, ...] = (
 {% endfor %}
 )
 
+_LAZY_IMPORTS = MappingProxyType(
+    build_lazy_import_map(
+        MappingProxyType({
+{% for mod, names in lazy_module_groups %}
+            "{{ mod }}": (
+{% for name in names %}
+                "{{ name }}",
+{% endfor %}
+            ),
+{% endfor %}
+        }),
+        alias_groups=MappingProxyType({
+{% for mod, pairs in lazy_alias_groups %}
+            "{{ mod }}": (
+{% for export_name, attr_name in pairs %}
+                ("{{ export_name }}", "{{ attr_name }}"),
+{% endfor %}
+            ),
+{% endfor %}
+        }),
+        sort_keys=False,
+    )
+)
+
 install_lazy_exports(
     __name__,
     globals(),
-    MappingProxyType(
-        build_lazy_import_map(
-            MappingProxyType({
-{% for mod, names in lazy_module_groups %}
-                "{{ mod }}": (
-{% for name in names %}
-                    "{{ name }}",
-{% endfor %}
-                ),
-{% endfor %}
-            }),
-            alias_groups=MappingProxyType({
-{% for mod, pairs in lazy_alias_groups %}
-                "{{ mod }}": (
-{% for export_name, attr_name in pairs %}
-                    ("{{ export_name }}", "{{ attr_name }}"),
-{% endfor %}
-                ),
-{% endfor %}
-            }),
-            sort_keys=False,
-        )
-    ),
+    _LAZY_IMPORTS,
     public_exports=__all__,
 )

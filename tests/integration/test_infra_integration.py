@@ -16,8 +16,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from flext_infra import r
-from tests import m, u
+from flext_infra import m, r, u
 from flext_infra.basemk.generator import FlextInfraBaseMkGenerator
 from flext_infra.basemk.renderer import FlextInfraBaseMkTemplateRenderer
 from flext_infra.gates.markdown import FlextInfraMarkdownGate

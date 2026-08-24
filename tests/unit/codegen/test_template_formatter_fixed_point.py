@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests import m, u
+from flext_infra import m, u
 from flext_tests import tm
 
 _TEMPLATES = (

@@ -1,11 +1,10 @@
-"""Worktree ADD creates a checkout without owning project lane lifecycle."""
+"""Worktree ADD creates a checkout and leaves provisioning to the work saga."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import FlextInfraWorktreeService
-from tests import c
+from flext_infra import FlextInfraWorktreeService, c
 from flext_tests import tm
 from tests import u
 

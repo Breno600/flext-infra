@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from tests import u
+from flext_infra import u
 from flext_tests import tm
 from tests import c, u as test_u
 

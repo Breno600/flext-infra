@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import importlib
 from typing import TYPE_CHECKING
 
 import pytest
 
+import flext_infra.constants  # ruff: ignore[unused-import] - force eager load for monkeypatch targets
 from flext_infra import m, u
 from flext_infra.detectors.class_placement_detector import (
     FlextInfraClassPlacementDetector,
@@ -22,8 +22,6 @@ if TYPE_CHECKING:
 
     from flext_infra.typings import t
 
-importlib.import_module("flext_infra.constants")
-
 
 class TestsFlextInfraRefactorDeclarativeEnforcement:
     """Root-cause coverage for declarative detection strategies."""
@@ -31,10 +29,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
     @staticmethod
     def _rule(rule_id: str) -> m.EnforcementRuleSpec:
         catalog = u.build_canonical_catalog()
-        rule: m.EnforcementRuleSpec = next(
-            rule for rule in catalog.enabled_rules() if rule.id == rule_id
-        )
-        return rule
+        return next(rule for rule in catalog.enabled_rules() if rule.id == rule_id)
 
     @staticmethod
     def _ctx(
