@@ -349,14 +349,15 @@ class FlextInfraUtilitiesPyprojectConform:
             normalized_items.append(normalized.value)
         canonical = tuple(dict.fromkeys(normalized_items))
         if canonicalize_all:
-
-            def requirement_key(requirement: str) -> t.Pair[str, str]:
-                name = FlextInfraUtilitiesDependencies.dep_name(requirement) or ""
-                return name, requirement
-
-            canonical = tuple(sorted(canonical, key=requirement_key))
+            canonical = tuple(sorted(canonical, key=cls._dependency_order_key))
         u.Cli.toml_sync_string_list(container, key, canonical)
         return r[bool].ok(True)
+
+    @staticmethod
+    def _dependency_order_key(requirement: str) -> t.Pair[str, str]:
+        """Return the canonical dependency ordering key (name, full spec)."""
+        name = FlextInfraUtilitiesDependencies.dep_name(requirement) or ""
+        return name, requirement
 
     @classmethod
     def _canonical_requirement(
@@ -985,8 +986,10 @@ class FlextInfraUtilitiesPyprojectConform:
                     }
                     # Profiles own same-name requirements. CUSTOM requirements
                     # retain full specs, including distinct markers for one name.
+                    # The merged array carries the canonical dependency order so
+                    # overlay over a conformed document is the fixed point.
                     project[key] = [
-                        *dict.fromkeys((
+                        *dict.fromkeys(sorted((
                             *required,
                             *(
                                 item
@@ -994,7 +997,7 @@ class FlextInfraUtilitiesPyprojectConform:
                                 if FlextInfraUtilitiesDependencies.dep_name(item)
                                 not in owned_names
                             ),
-                        ))
+                        ), key=cls._dependency_order_key))
                     ]
                 else:
                     project[key] = live_project[key]

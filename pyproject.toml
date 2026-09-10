@@ -34,7 +34,7 @@ dependencies = [
   "pytest>=9.1.1",
   "pyyaml>=6.0.3",
   "rope>=1.14.0",
-  "structlog>=25.5.0",
+  "structlog>=25.5.0,<26",
   "typing-extensions>=4.16.0",
 ]
 description = "FLEXT Infrastructure Tooling - Build automation, code generation, and workspace management"
