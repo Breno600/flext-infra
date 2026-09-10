@@ -1,0 +1,19 @@
+group: family_part_shape
+number: 2
+name: flatten-family-namespace-wrapper
+severity: error
+message: "{module}:{line} — wrapper namespace puro '{class}' proibido em parte de familia; achatar membros um nivel acima"
+files:
+  - "**/_[constants|models|typings|protocols|utilities]/**/*.py"
+select:
+  level: direct_child_of_part
+  bases_max: 0
+  body_functions: false
+  body_classes_or_assigns: true
+ops:
+  - kind: lift
+    drop_hops: 1
+    delete_source: true
+auto_fix: true
+propagate_mro: true
+propagate_workspace: true
