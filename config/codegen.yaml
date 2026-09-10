@@ -1138,7 +1138,7 @@ Infra:
               - pydantic>=2.13.5
               - pydantic-settings>=2.15.0
               - pyyaml>=6.0.3
-              - structlog>=25.5.0
+              - structlog>=25.5.0,<26
               - typing-extensions>=4.16.0
             codegen: [flext-infra]
           - upstream: flext_cli
@@ -1161,7 +1161,7 @@ Infra:
             project: flext-cli
             # click floor mirrors the shared fleet lock (8.3.3); meltano upstream
             # already caps click<8.4 for the workspace resolver.
-            runtime: [click>=8.3.3, typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
+            runtime: [click>=8.4.2, typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
             runtime: [flext-cli, defusedxml>=0.7.1, filelock>=3.32.6, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.10.3, rope>=1.14.0, pytest>=9.1.1, mkdocs>=1.6.1]
