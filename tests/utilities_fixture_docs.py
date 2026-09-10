@@ -53,7 +53,7 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
             _write(
                 workspace / "pyproject.toml",
                 (
-                    '[project]\nname = "workspace"\n\n'
+                    '[project]\nname = "workspace"\nversion = "0.1.0"\n\n'
                     f"[tool.uv.workspace]\nmembers = [{members}]\n"
                 ),
             )
