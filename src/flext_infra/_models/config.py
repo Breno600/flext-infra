@@ -44,12 +44,12 @@ class FlextInfraConfigModels:
             strict=False, frozen=True, extra="forbid", str_strip_whitespace=False
         )
 
-    MiseToolSpec = FlextInfraModelsMiseToolchain.MiseToolSpec
-    ProtectedMiseToolSpec = FlextInfraModelsMiseToolchain.ProtectedMiseToolSpec
-    BeadsEndpointSpec = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
-    BeadsToolSpec = FlextInfraModelsMiseToolchain.BeadsToolSpec
-    MiseBootstrapEnvironmentSpec = FlextInfraModelsMiseToolchain.MiseBootstrapEnvironmentSpec
-    ToolchainSpec = FlextInfraModelsMiseToolchain.ToolchainSpec
+    MiseToolSpec: ClassVar = FlextInfraModelsMiseToolchain.MiseToolSpec
+    ProtectedMiseToolSpec: ClassVar = FlextInfraModelsMiseToolchain.ProtectedMiseToolSpec
+    BeadsEndpointSpec: ClassVar = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
+    BeadsToolSpec: ClassVar = FlextInfraModelsMiseToolchain.BeadsToolSpec
+    MiseBootstrapEnvironmentSpec: ClassVar = FlextInfraModelsMiseToolchain.MiseBootstrapEnvironmentSpec
+    ToolchainSpec: ClassVar = FlextInfraModelsMiseToolchain.ToolchainSpec
 
     class ProviderSpec(_ConfigContract):
         """One GitHub organization and its mandatory branch policy."""
@@ -3848,20 +3848,18 @@ class FlextInfraConfigModels:
             t.VariadicTuple[Path],
             m.Field(description="Files atomically replaced by apply"),
         ] = ()
-errors: Annotated[
+        errors: Annotated[
             t.VariadicTuple[str],
             m.Field(description="Fail-closed validation or write errors"),
         ] = ()
 
-    # Re-export mise toolchain models from single source of truth
-    MiseToolSpec = FlextInfraModelsMiseToolchain.MiseToolSpec
-    ProtectedMiseToolSpec = FlextInfraModelsMiseToolchain.ProtectedMiseToolSpec
-    BeadsEndpointSpec = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
-    BeadsToolSpec = FlextInfraModelsMiseToolchain.BeadsToolSpec
-    MiseBootstrapEnvironmentSpec = FlextInfraModelsMiseToolchain.MiseBootstrapEnvironmentSpec
-    ToolchainSpec = FlextInfraModelsMiseToolchain.ToolchainSpec
+# Re-export mise toolchain models from single source of truth
+        MiseToolSpec: ClassVar[type] = FlextInfraModelsMiseToolchain.MiseToolSpec
+        ProtectedMiseToolSpec: ClassVar[type] = FlextInfraModelsMiseToolchain.ProtectedMiseToolSpec
+        BeadsEndpointSpec: ClassVar[type] = FlextInfraModelsMiseToolchain.BeadsEndpointSpec
+        BeadsToolSpec: ClassVar[type] = FlextInfraModelsMiseToolchain.BeadsToolSpec
+        MiseBootstrapEnvironmentSpec: ClassVar[type] = FlextInfraModelsMiseToolchain.MiseBootstrapEnvironmentSpec
+        ToolchainSpec: ClassVar[type] = FlextInfraModelsMiseToolchain.ToolchainSpec
 
-
-__all__: list[str] = ["FlextInfraConfigModels"]
 
 __all__: list[str] = ["FlextInfraConfigModels"]

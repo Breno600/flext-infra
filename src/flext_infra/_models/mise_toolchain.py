@@ -307,11 +307,11 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
         beads: Annotated[
-            FlextInfraConfigModels.BeadsToolSpec,
+            BeadsToolSpec,
             m.Field(description="Official Beads CLI installed through mise"),
         ]
         gascity: Annotated[
-            FlextInfraConfigModels.ProtectedMiseToolSpec,
+            ProtectedMiseToolSpec,
             m.Field(description="Gas City CLI (gc) installed through mise"),
         ]
         protected_mise_tools: Annotated[
@@ -357,7 +357,7 @@ class FlextInfraModelsMiseToolchain:
             for owner in self.protected_mise_tools:
                 if not isinstance(
                     getattr(self, owner, None),
-                    FlextInfraConfigModels.ProtectedMiseToolSpec,
+                    ProtectedMiseToolSpec,
                 ):
                     msg = f"protected_mise_tools references invalid owner: {owner}"
                     raise TypeError(msg)
