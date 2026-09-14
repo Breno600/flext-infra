@@ -1907,7 +1907,7 @@ class FlextInfraConfigModels:
     class RepositoryRef(_ConfigContract):
         """One declared repository and its immutable Git origin contract."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(use_enum_values=False)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(use_enum_values=False)
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Catalog key")]
         distribution: Annotated[
@@ -2055,7 +2055,7 @@ class FlextInfraConfigModels:
     class RepositoryConformTarget(_ConfigContract):
         """Runtime-derived conformance identity for one repository."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(use_enum_values=False)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(use_enum_values=False)
 
         repository: Annotated[
             FlextInfraConfigModels.RepositoryRef,
@@ -3688,7 +3688,7 @@ class FlextInfraConfigModels:
 
         # The bump map is consumed as enum members by the strict release plan,
         # so the contract base's value coercion is switched off here.
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             strict=False, frozen=True, extra="forbid", use_enum_values=False
         )
 

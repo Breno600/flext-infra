@@ -5,7 +5,7 @@
 #   model_config: ClassVar[p.ConfigDict] = m.ConfigDict(...)   # defect
 #   model_config: ClassVar[m.ConfigDict] = m.ConfigDict(...)   # defect (m as type)
 #                       ->
-#   model_config: ClassVar[t.ConfigDict] = m.ConfigDict(...)   # canonical
+#   model_config: ClassVar[m.ConfigDict] = m.ConfigDict(...)   # canonical
 #
 # ConfigDict is exposed as a t.* TypeAlias in flext-core (FlextTypes.ConfigDict);
 # p.* (protocols) does NOT carry it, so `p.ConfigDict` crashes at import
@@ -21,8 +21,8 @@ id: config-dict-type-from-typings
 language: python
 severity: error
 files:
-  - "src/**/*.py"
-  - "tests/**/*.py"
+- "src/**/*.py"
+- "tests/**/*.py"
 rule:
   pattern: "model_config: ClassVar[$WRONG.ConfigDict] = $VAL"
   # F821-safety guard: only rewrite to t.ConfigDict when the module already
@@ -40,6 +40,4 @@ constraints:
     regex: "^[pm]$"
 fix: "model_config: ClassVar[t.ConfigDict] = $VAL"
 message: >-
-  model_config type must be the typings alias t.ConfigDict, not p.ConfigDict
-  (protocols has no ConfigDict -> import crash) nor m.ConfigDict (a model is
-  never a type). Construction value m.ConfigDict(...) is kept.
+  model_config type must be the typings alias t.ConfigDict, not p.ConfigDict (protocols has no ConfigDict -> import crash) nor m.ConfigDict (a model is never a type). Construction value m.ConfigDict(...) is kept.

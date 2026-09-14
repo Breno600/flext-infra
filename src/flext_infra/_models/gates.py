@@ -22,7 +22,7 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         """Quality gate execution context and configuration."""
 
         fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = True
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", arbitrary_types_allowed=True, populate_by_name=True
         )
         repository_root: Path = m.Field(description="Repository root directory")
@@ -247,7 +247,7 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
     class GateAttestationPredicate(m.ContractModel):
         """Canonical signed statement for locally completed gates."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", frozen=True, strict=False
         )
 

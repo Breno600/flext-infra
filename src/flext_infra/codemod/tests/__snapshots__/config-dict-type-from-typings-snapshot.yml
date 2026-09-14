@@ -9,7 +9,7 @@ snapshots:
       from flext_cli import t
       from typing import ClassVar
       class E:
-          model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+          model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
     labels:
     - source: 'model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)'
       style: primary
@@ -36,7 +36,7 @@ snapshots:
       from flext_ldif import c, t
       from typing import ClassVar
       class D:
-          model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid")
+          model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid")
     labels:
     - source: 'model_config: ClassVar[p.ConfigDict] = m.ConfigDict(extra="forbid")'
       style: primary

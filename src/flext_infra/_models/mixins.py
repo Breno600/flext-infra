@@ -28,7 +28,7 @@ class FlextInfraModelsMixins:
         command.
         """
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(populate_by_name=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
         repository_root: Annotated[
             Path,

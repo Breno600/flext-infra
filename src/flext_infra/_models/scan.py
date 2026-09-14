@@ -84,7 +84,7 @@ class FlextInfraModelsScan:
     class ModScanFinding(m.ArbitraryTypesModel):
         """One complete ast-grep JSONL finding with canonical evidence keys."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         rule_file: Annotated[
             t.NonEmptyStr,
@@ -122,7 +122,7 @@ class FlextInfraModelsScan:
     class ModScanReport(m.ArbitraryTypesModel):
         """Verified structural findings and actionable rewrite targets."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         findings: Annotated[
             t.NonNegativeInt, m.Field(description="Complete finding count")
@@ -149,7 +149,7 @@ class FlextInfraModelsScan:
     class ModScanEvidence(m.ArbitraryTypesModel):
         """Complete replace-on-run evidence for one public mod scan."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         schema_version: Annotated[
             Literal[1], m.Field(description="Exact structured evidence schema")
@@ -196,7 +196,7 @@ class FlextInfraModelsScan:
     class ModScanEvidenceReceipt(m.ArbitraryTypesModel):
         """Authenticated publication identity and its exact evidence payload."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         path: Annotated[Path, m.Field(description="Published evidence destination")]
         sha256: Annotated[t.NonEmptyStr, m.Field(description="Published byte digest")]

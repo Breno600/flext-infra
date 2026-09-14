@@ -20,7 +20,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     apply/dry-run toggles, output formatting, and project filtering.
     """
 
-    model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+    model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
         validate_by_name=True, validate_by_alias=True
     )
 
