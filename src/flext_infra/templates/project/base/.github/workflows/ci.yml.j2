@@ -22,7 +22,7 @@ name: CI
 {%- for branch in ci_trigger_branches %}
       - {{ branch }}
 {%- endfor %}
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
   workflow_call:
     secrets:
       CI_DEPENDENCIES_APP_ID:
@@ -79,8 +79,8 @@ jobs:
       # generator carrying that project's concerns.
 {{ custom_steps }}
 {%- endif %}
-      # make setup is the only toolchain installer. It bootstraps the newest
-      # released Mise, installs the fleet toolchain frozen from the committed
+      # make setup is the frozen installer. It bootstraps the committed Mise
+      # release and installs the fleet toolchain from the committed
       # mise.lock and the dependencies frozen from the committed uv.lock,
       # publishes that environment through GITHUB_PATH, and prepares the
       # project runtime. CI never runs `make upg`: it never re-resolves.

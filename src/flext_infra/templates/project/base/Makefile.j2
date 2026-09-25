@@ -65,6 +65,19 @@ export GEN_INIT_ONLY
 endif
 endif
 
+# GitHub CLI owns authentication. Setup can provision before gh is available
+# or authenticated. Operations that use Mise require a validated credential
+# at dispatch, independently of setup flags inherited from another invocation.
+# Keep the value in the process environment, never in a rendered recipe.
+ifneq ($(strip $(filter-out help _activated-help _builtin-help clean _activated-clean _builtin-clean _builtin-self-clean,$(MAKECMDGOALS))),)
+override export GITHUB_TOKEN := $(shell if command -v gh >/dev/null 2>&1; then gh auth status --active --hostname "$${GH_HOST:-github.com}" >/dev/null && gh auth token --hostname "$${GH_HOST:-github.com}"; else exit 127; fi)
+ifneq ($(.SHELLSTATUS),0)
+override GITHUB_TOKEN :=
+endif
+override export GH_TOKEN := $(GITHUB_TOKEN)
+override export MISE_GITHUB_TOKEN := $(GITHUB_TOKEN)
+endif
+
 # === SECTION: project identity (managed) ===
 # Source: config:dist / config:make_profile / config:repository_root_rel / config:uv_link_mode
 PROJECT_NAME := {{ dist }}
@@ -125,6 +138,13 @@ else
 override TRACKED_MISE := $(PROJECT_ROOT)/bin/mise
 endif
 override SETUP_MISE := $(TRACKED_MISE)
+# The Mise release is frozen like every tool: `upg` records the release it
+# resolved in the committed pin file; every other verb exports it so no
+# launcher call resolves `latest` (operator law 2026-09-24).
+override MISE_VERSION_PIN := $(PROJECT_ROOT)/{{ mise_bootstrap.version_pin_file }}
+ifneq ($(wildcard $(MISE_VERSION_PIN)),)
+export MISE_VERSION := $(strip $(file < $(MISE_VERSION_PIN)))
+endif
 override export FLEXT_PYTEST_TARGET_RAW := {{ make.testmon_cache.target_directory }}
 PROJECT_STATE_ROOT := $(abspath $(PROJECT_ROOT)/../{{ state_directory_name }}/$(notdir $(PROJECT_ROOT)))
 # Scratch never lives inside a versioned tree: the home scratch root mirrors
@@ -189,6 +209,8 @@ CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 # Source: repository topology. workspace has .gitmodules; standalone does not.
 # Attached members share their Git superproject runtime; standalone owns itself.
 override RUNTIME_ROOT := $(REPOSITORY_ROOT)
+override export GIT_CEILING_DIRECTORIES := $(abspath $(RUNTIME_ROOT)/..)
+override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
 # End SECTION: profile routing
 
 override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
@@ -367,6 +389,8 @@ endef
 
 .PHONY: $(PUBLIC_VERBS) $(addprefix _builtin-,$(PUBLIC_VERBS))
 .PHONY: _builtin_gen_init _builtin_gen_all
+$(filter-out help clean upg,$(PUBLIC_VERBS)): _builtin_require_mise_pin
+$(addprefix _activated-,$(filter-out help setup clean,$(PUBLIC_VERBS))): _builtin_require_github_auth
 
 {# The exclusion is a statement about ENVIRONMENT DEPENDENCY, never about a
    name. `setup` is filtered above because it builds the environment it would
@@ -379,7 +403,7 @@ endef
    environment exists, and the omission made the generated Makefile contradict
    the contract its own consumers assert. -#}
 {% for verb in make.verbs if verb.name not in ("setup", "upg") %}
-{% if verb.name != "help" %}
+{% if verb.name not in ("help", "clean") %}
 {{ verb.name }}: _builtin_require_workspace
 	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-{{ verb.name }}
 
@@ -411,6 +435,7 @@ setup: _bootstrap_setup_tools
 # must not require an existing environment.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
+upg: export MISE_VERSION :=
 upg: _bootstrap_setup_tools
 
 .PHONY: _setup_lifecycle
@@ -442,7 +467,34 @@ _builtin-help:
 # the recorded gitlink.
 {{ submodule_setup_recipe("_builtin_setup_submodules", "$(PROJECT_ROOT)") }}
 
-_builtin_require_environment: _builtin_require_workspace
+.PHONY: _builtin_require_github_auth
+_bootstrap_setup_tools: $(if $(filter upg,$(MAKECMDGOALS)),_builtin_require_github_auth,_builtin_require_mise_pin)
+_builtin_require_github_auth:
+	@if [ -z "$${GITHUB_TOKEN:-}" ]; then \
+		printf 'ERROR: GitHub authentication is required before invoking Mise\n' >&2; \
+		exit 1; \
+	fi
+
+$(addprefix _builtin-,$(filter-out help setup clean,$(BUILTIN_VERBS))): _builtin_require_github_auth
+_builtin-self-test _builtin-self-check _builtin-self-fmt _builtin-self-fix _builtin-self-fix-enforcement _builtin-self-build _builtin-self-docs _builtin-self-sonarcloud-sync: _builtin_require_github_auth
+
+.PHONY: _builtin_require_mise_pin
+_builtin_require_mise_pin:
+	@set -eu; \
+	if [ ! -s "$(MISE_VERSION_PIN)" ]; then \
+		printf 'ERROR: missing or empty %s; make upg records the Mise release\n' "$(MISE_VERSION_PIN)" >&2; \
+		exit 2; \
+	fi; \
+	case "$(MISE_VERSION)" in ''|latest) \
+		printf 'ERROR: %s must contain a resolved Mise release\n' "$(MISE_VERSION_PIN)" >&2; \
+		exit 2 ;; \
+	esac; \
+	if [ "$(MISE_VERSION)" != "$$(cat "$(MISE_VERSION_PIN)")" ]; then \
+		printf 'ERROR: MISE_VERSION conflicts with %s\n' "$(MISE_VERSION_PIN)" >&2; \
+		exit 2; \
+	fi
+
+_builtin_require_environment: _builtin_require_workspace _builtin_require_mise_pin
 # Documenting the interface (`make help`) must not require the interpreter it
 # tells the operator how to provision. Only `make help` with no other goal
 # skips the check; any combined goal still demands the environment.

@@ -34,13 +34,22 @@ class FlextInfraUtilitiesCodegen(
         """Return the single typed isolation contract used by setup and codegen."""
         return m.Infra.MiseBootstrapEnvironmentSpec(
             storage_root_variable=c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE,
-            fixed_environment=tuple(c.Infra.MISE_BOOTSTRAP_FIXED_ENVIRONMENT),
+            fixed_environment=(
+                *c.Infra.MISE_BOOTSTRAP_FIXED_ENVIRONMENT,
+                # Safe mode ignores project settings; project platform policy
+                # enters the isolated runtime explicitly from the same owner.
+                (
+                    "MISE_LOCKFILE_PLATFORMS",
+                    ",".join(config.Infra.codegen.toolchain.mise_lockfile_platforms),
+                ),
+            ),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
             empty_files=tuple(c.Infra.MISE_BOOTSTRAP_EMPTY_FILES),
             passthrough_environment=tuple(
                 c.Infra.MISE_BOOTSTRAP_PASSTHROUGH_ENVIRONMENT
             ),
+            version_pin_file=c.Infra.MISE_VERSION_PIN_FILENAME,
         )
 
     @staticmethod

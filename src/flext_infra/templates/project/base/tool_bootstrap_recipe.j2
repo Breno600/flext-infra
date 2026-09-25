@@ -9,8 +9,23 @@
 	fi; \
 	caller_path="$$PATH"; \
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
-	caller_{{ name | lower }}="$({{ name }})"; \
+	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
+	# Only ``upg`` resolves the Mise release; every other lifecycle launches \
+	# exactly the release ``upg`` recorded in the committed pin file. \
+	mise_pin_file="$$project_root/{{ bootstrap.version_pin_file }}"; \
+	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" != "1" ]; then \
+		if [ ! -f "$$mise_pin_file" ]; then \
+			printf 'ERROR: missing %s; make upg resolves and records the Mise release\n' "$$mise_pin_file" >&2; \
+			exit 2; \
+		fi; \
+		mise_pin=$$(cat "$$mise_pin_file"); \
+		if [ -n "$$caller_mise_version" ] && [ "$${caller_mise_version#v}" != "$$mise_pin" ]; then \
+			printf 'ERROR: MISE_VERSION=%s conflicts with %s=%s\n' "$$caller_mise_version" "$$mise_pin_file" "$$mise_pin" >&2; \
+			exit 2; \
+		fi; \
+		caller_mise_version="$$mise_pin"; \
+	fi; \
 	if [ -z "$$mise_storage_root" ]; then \
 		if [ -n "$$caller_xdg_data_home" ]; then \
 			mise_storage_root="$$caller_xdg_data_home/mise"; \
@@ -135,6 +150,12 @@
 	old_ifs=$$IFS; IFS=.; set -- $$runtime_release; IFS=$$old_ifs; \
 	if [ "$$#" -ne 3 ]; then \
 		printf 'ERROR: Mise receipt returned invalid version: %s\n' "$$receipt_runtime" >&2; exit 2; \
+	fi; \
+	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
+		printf '%s\n' "$$runtime_release" > "$$mise_pin_file"; \
+	elif [ "$$runtime_release" != "$$mise_pin" ]; then \
+		printf 'ERROR: launched Mise %s differs from the pinned %s\n' "$$runtime_release" "$$mise_pin" >&2; \
+		exit 2; \
 	fi; \
 	printf 'mise setup receipt=%s storage=%s\n' "$$runtime_release" "$$mise_storage_root"
 {%- endmacro %}

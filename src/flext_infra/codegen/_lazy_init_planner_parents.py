@@ -114,11 +114,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         return target
 
     def _resolve_inherited_alias_source(
-        self,
-        package_names: t.StrSequence,
-        alias_name: str,
-        *,
-        current_pkg: str,
+        self, package_names: t.StrSequence, alias_name: str, *, current_pkg: str
     ) -> str:
         """Return the nearest facade parent serving an inherited facade letter.
 

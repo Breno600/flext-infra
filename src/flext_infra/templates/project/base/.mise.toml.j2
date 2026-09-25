@@ -12,10 +12,11 @@
 # Setup installs frozen from that lock and never re-resolves.
 
 # === SECTION: settings (managed) ===
-# Source: config:codegen.toolchain.mise_lockfile / mise_locked
+# Source: config:codegen.toolchain.mise_lockfile / mise_locked / mise_lockfile_platforms
 [settings]
 lockfile = {{ "true" if mise_lockfile else "false" }}
 locked = {{ "true" if mise_locked else "false" }}
+lockfile_platforms = [{% for platform in mise_lockfile_platforms %}"{{ platform }}"{{ ", " if not loop.last }}{% endfor %}]
 [tool_config]
 locked = {{ "true" if mise_locked else "false" }}
 # End SECTION: settings
@@ -24,8 +25,9 @@ locked = {{ "true" if mise_locked else "false" }}
 # Source: config:python_version, config:codegen.scaffold.project.dev native toolchain floors
 #         (kubectl_version, helm_version, kind_version, taplo_version, ast_grep_version,
 #          gitleaks_version, scc_selector/scc_version, kubeconform_version, qlty_selector/qlty_version,
-#          node_version, jscpd_selector/jscpd_version, prettier_selector/prettier_version,
-#          waza_version, go_version, make_version)
+#          node_version, jscpd_selector/jscpd_version/jscpd_asset_patterns,
+#          prettier_selector/prettier_version, waza_selector/waza_version/waza_version_prefix,
+#          go_version, make_version)
 [tools]
 python = "{{ python_version }}"
 uv = "{{ uv_version }}"
@@ -40,12 +42,19 @@ gitleaks = "{{ gitleaks_version }}"
 "{{ scc_selector }}" = "{{ scc_version }}"
 kubeconform = "{{ kubeconform_version }}"
 node = "{{ node_version }}"
-"{{ jscpd_selector }}" = "{{ jscpd_version }}"
 "{{ prettier_selector }}" = "{{ prettier_version }}"
-"{{ waza_selector }}" = "{{ waza_version }}"
 go = "{{ go_version }}"
 make = "{{ make_version }}"
 [tools."{{ qlty_selector }}"]
 version = "{{ qlty_version }}"
 github_attestations = false
+[tools."{{ jscpd_selector }}"]
+version = "{{ jscpd_version }}"
+[tools."{{ jscpd_selector }}".platforms]
+{% for platform, pattern in jscpd_asset_patterns.items() -%}
+{{ platform }} = { asset_pattern = "{{ pattern }}" }
+{% endfor -%}
+[tools."{{ waza_selector }}"]
+version = "{{ waza_version }}"
+version_prefix = "{{ waza_version_prefix }}"
 # End SECTION: tools

@@ -233,6 +233,8 @@ class FlextInfraConstantsCodegen(
         "MISE_VERSION",
     )
     "Only host environment keys eligible for explicit reinjection."
+    MISE_VERSION_PIN_FILENAME: ClassVar[str] = "mise.version"
+    "Committed Mise release `make upg` resolved; setup passes it as MISE_VERSION."
 
     # --- Pipeline stage StrEnum (was: class Pipeline plain strings) ---
     @unique

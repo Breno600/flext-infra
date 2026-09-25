@@ -67,6 +67,17 @@ Infra:
       # setup installs frozen from it.
       mise_lockfile: true
       mise_locked: true
+      # Projection: .mise.toml [settings] lockfile_platforms. The platforms the
+      # CI matrix runs on (ubuntu, macos, windows runners, x64 and arm64);
+      # `make upg` resolves these plus the current host, which mise always adds.
+      # The safe bootstrap also passes this policy as MISE_LOCKFILE_PLATFORMS:
+      # mise safe mode ignores project [settings].
+      mise_lockfile_platforms:
+        - linux-x64
+        - linux-arm64
+        - macos-x64
+        - macos-arm64
+        - windows-x64
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
       # Pinned to the last provenance-attested release: 0.644.0 shipped
@@ -77,6 +88,14 @@ Infra:
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
       jscpd_version: latest
+      # jscpd release assets carry libc/ABI suffixes; mise cannot autodetect
+      # one per platform, so `mise lock` recorded no URL for them.
+      jscpd_asset_patterns:
+        linux-x64: jscpd-linux-x64-gnu.tar.gz
+        linux-arm64: jscpd-linux-arm64-gnu.tar.gz
+        macos-x64: jscpd-darwin-x64.tar.gz
+        macos-arm64: jscpd-darwin-arm64.tar.gz
+        windows-x64: jscpd-windows-x64-msvc.tar.gz
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       # Pinned to 3.5.x: prettier 3.7+ silently dropped markdown prose
@@ -86,6 +105,9 @@ Infra:
       prettier_version: 3.5.3
       waza_selector: github:microsoft/waza
       waza_version: latest
+      # microsoft/waza also publishes azd-extension tags, and GitHub marks
+      # one of them latest; the tool's own releases are the `v` tags.
+      waza_version_prefix: v
       scc_selector: aqua:boyter/scc
       scc_version: latest
       go_version: latest
@@ -738,6 +760,9 @@ Infra:
       allow_hidden: true
       canonical_root_files:
         - pyproject.toml
+        - uv.lock
+        - mise.lock
+        - mise.version
         - Makefile
         - base.mk
         - custom.mk
@@ -765,6 +790,7 @@ Infra:
         - .sonarcloud.properties
         - sonar-project.properties
       canonical_root_dirs:
+        - .mise
         - bin
         - src
         - tests
@@ -1394,8 +1420,21 @@ Infra:
           patterns:
             - "!.mise.toml"
             - "!mise.lock"
+            - "!mise.version"
             - "!.mise.lock"
             - "!.python-version"
+        # Native graphs referenced by mise.lock are required by locked installs.
+        # Local lockfiles and their graphs remain per-machine state.
+        - name: "mise native dependency graphs"
+          profiles: [workspace, standalone]
+          patterns:
+            - "!/.mise/"
+            - "/.mise/*"
+            - "!/.mise/locks/"
+            - "!/.mise/locks/**"
+            - "/.mise/locks/*.local/"
+            - "/mise*.local.lock"
+            - "/.mise*.local.lock"
         - name: "Docker configuration"
           profiles: [workspace]
           patterns:

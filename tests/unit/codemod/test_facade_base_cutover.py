@@ -89,8 +89,7 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.that(updated, has=f"from other_pkg import {self.OTHER_CLASS}\n")
         tm.that(updated, has=f"from parent_pkg import {self.PARENT_CLASS}\n")
         tm.that(
-            updated,
-            has=f"class ChildModels({self.PARENT_CLASS}, {self.OTHER_CLASS}):",
+            updated, has=f"class ChildModels({self.PARENT_CLASS}, {self.OTHER_CLASS}):"
         )
         tm.that(updated, has=f"    base = {self.PARENT_CLASS}.BaseModel\n")
         tm.that(updated, has=f"    other = {self.OTHER_CLASS}.BaseModel\n")

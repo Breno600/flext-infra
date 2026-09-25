@@ -5,6 +5,15 @@
 !.beads/metadata.json
 !.beads/identity.toml
 
+# mise native dependency graphs
+!/.mise/
+/.mise/*
+!/.mise/locks/
+!/.mise/locks/**
+/.mise/locks/*.local/
+/mise*.local.lock
+/.mise*.local.lock
+
 # BLOCK: AI/Agent Local Data (NEVER track these)
 .claude/local/
 .claude/history/

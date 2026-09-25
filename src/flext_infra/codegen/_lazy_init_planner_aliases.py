@@ -33,11 +33,7 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
         ) -> t.StrSequence: ...
 
         def _resolve_inherited_alias_source(
-            self,
-            package_names: t.StrSequence,
-            alias_name: str,
-            *,
-            current_pkg: str,
+            self, package_names: t.StrSequence, alias_name: str, *, current_pkg: str
         ) -> str: ...
 
     def _resolve_aliases(
@@ -94,9 +90,7 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
             if existing is not None and existing[0] != current_pkg:
                 continue
             package_name = self._resolve_inherited_alias_source(
-                inherited_packages,
-                alias_name,
-                current_pkg=current_pkg,
+                inherited_packages, alias_name, current_pkg=current_pkg
             )
             if package_name and package_name != current_pkg:
                 lazy_map[alias_name] = (package_name, alias_name)

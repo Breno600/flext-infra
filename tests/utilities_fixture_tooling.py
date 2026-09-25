@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from pathlib import Path
 
 from flext_infra import u
@@ -13,6 +14,13 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
     """Executable, Make, and toolchain-environment fixture helpers."""
 
     @staticmethod
+    def create_python_environment(root: Path) -> p.Result[bool]:
+        """Provision a physical fixture environment with the current interpreter."""
+        return u.Cli.run_checked(
+            ["uv", "venv", "--python", sys.executable, str(root / ".venv")], cwd=root
+        )
+
+    @staticmethod
     def make_read_only(path: Path) -> None:
         """Make one fixture path read-only."""
         path.chmod(0o444)
@@ -21,23 +29,31 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
     def copy_tracked_mise_seeds(root: Path) -> None:
         """Copy this checkout's committed Mise toolchain seeds into ``root``.
 
-        ``codegen conform`` validates the tracked, checksum-verified
-        ``bin/mise`` seeds instead of minting them, so a fixture tree that
-        conforms the full surface must carry them exactly as a governed
-        repository does. The declared ``.mise.toml`` travels with its
-        launchers: the generated seeds answer that exact declaration, so a fixture
-        carrying one without the other reads as a changed toolchain and
-        makes conform resolve every selector against its remote registry —
-        a network call inside a unit test. Conform still renders and
-        publishes the configuration; it simply has nothing to re-resolve
-        when the rendered bytes match the seed.
+        A governed repository carries the declaration, launchers, runtime pin,
+        and dependency lock together. Native dependency graphs referenced by
+        the lock must travel with it so frozen setup never resolves replacements.
+        Conform renders declarations; only ``make upg`` resolves new versions.
         """
         source_root = Path(__file__).resolve().parents[1]
-        for relative in (".mise.toml", "bin/mise", "bin/mise.cmd"):
+        for relative in (
+            c.Infra.MISE_TOML_FILENAME,
+            c.Infra.MISE_LOCK_FILENAME,
+            c.Infra.MISE_VERSION_PIN_FILENAME,
+            "bin/mise",
+            "bin/mise.cmd",
+        ):
             source = source_root / relative
             destination = root / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
             _ = shutil.copy2(source, destination)
+        sidecars = Path(".mise/locks")
+        if (source_root / sidecars).is_dir():
+            _ = shutil.copytree(
+                source_root / sidecars,
+                root / sidecars,
+                dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns("mise*.local"),
+            )
 
     @staticmethod
     def write_mise_stub(path: Path) -> Path:
