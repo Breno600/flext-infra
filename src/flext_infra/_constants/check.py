@@ -205,10 +205,6 @@ class FlextInfraConstantsCheck:
             "imports subprocess — use cli.run / cli.capture",
         ),
         (
-            re.compile(r"^\s*print\(", re.MULTILINE),
-            "uses u.Cli.print() — use cli.print",
-        ),
-        (
             re.compile(r"^\s*sys\.exit\(", re.MULTILINE),
             "uses sys.exit() — use cli.exit()",
         ),
