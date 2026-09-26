@@ -635,6 +635,13 @@ Infra:
         parallel-worker-memory-gb: 2
         # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
+        # Measured 2026-09-26: a 2-3 item nested testmon selection spawning two
+        # xdist workers spent 11-17s running trivial tests, then blocked the
+        # parent's own process.wait() for the remaining slow-item budget during
+        # worker teardown, failing the pytest-timeout slow ceiling (60s) even
+        # though every test passed. Below this floor the invoking process runs
+        # the selection itself; no execnet gateway is ever created for it.
+        parallel-worker-min-items: 8
         profile-sort: cumulative
         profile-limit: 50
         min-version: "8.0"
