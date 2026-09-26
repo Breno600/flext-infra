@@ -174,17 +174,6 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         ))
 
     @staticmethod
-    def _is_workspace_root_scope(scope: m.Infra.DocScope) -> bool:
-        """Whether one scope is the root of a manifest-carrying repository.
-
-        Mirrors the validate-side contract (docs_validate.docs_missing_required_paths):
-        a root that carries its own workspace manifest is the workspace scope
-        regardless of the scope label, so the generate side must route it to the
-        root publisher exactly the way validate demands the root contract.
-        """
-        return (scope.path / "config" / "workspace.yaml").is_file()
-
-    @staticmethod
     def docs_scope_artifacts(
         scope: m.Infra.DocScope,
         *,
@@ -192,11 +181,11 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         aggregate_scopes: t.SequenceOf[m.Infra.DocScope],
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
     ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
-        """Return the rendered artifact inventory for one docs scope."""
-        if (
-            scope.name == c.Infra.RK_ROOT
-            or FlextInfraUtilitiesDocsGenerateRootMixin._is_workspace_root_scope(scope)
-        ):
+        """Return the rendered artifact inventory for one docs scope.
+
+        The scope label is the only topology input (see ``build_scopes``).
+        """
+        if scope.name == c.Infra.RK_ROOT:
             return FlextInfraUtilitiesDocsGenerateRootMixin.docs_root_artifacts(
                 repository_root, aggregate_scopes
             )
