@@ -31,7 +31,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 f"scaffold workspace has no project metadata: {workspace.name}"
             )
         profile = target.make_profile
-        pyproject = root / c.Infra.PYPROJECT_FILENAME
+        pyproject = root / c.PYPROJECT_FILENAME
         managed_artifacts = u.Infra.empty_snapshot()
         # New and existing repositories share the exact same
         # root-scoped modernizer pipeline, so first generation is a fixed point.
@@ -131,9 +131,9 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         for entry, destination in scaffold_entries:
             if entry.delegate != "render":
                 continue
-            if destination == c.Infra.PYPROJECT_FILENAME and not contract.pyproject:
+            if destination == c.PYPROJECT_FILENAME and not contract.pyproject:
                 continue
-            if not contract.delegates and destination != c.Infra.PYPROJECT_FILENAME:
+            if not contract.delegates and destination != c.PYPROJECT_FILENAME:
                 continue
             rendered = self._rendered_artifact_source(
                 templates_root=templates_root,

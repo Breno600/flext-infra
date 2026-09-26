@@ -42,8 +42,8 @@ files:
   - "flext-infra/src/flext_infra/codegen/conform.py"
   - "flext-infra/src/flext_infra/codegen/_mise_artifacts_process.py"
   - "flext-infra/src/flext_infra/codegen/_codegen_generation_renderers.py"
-  - "flext-infra/src/flext_infra/release/_release_artifact_build.py"
-  - "flext-infra/src/flext_infra/release/_release_artifact_source.py"
+  - "flext-infra/src/flext_infra/release/_release_project.py"
+  - "flext-infra/src/flext_infra/release/_release_source.py"
 rule:
   all:
     - pattern: $OUTPUT.exit_code

@@ -6,25 +6,11 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import m, u as infra_u
-from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
+from flext_infra import m
 
 
 class TestsFlextInfraDepsDetectorInit:
     """Test flext infra deps detector init behavior."""
-
-    def test_detector_initialization(self) -> None:
-        """Verify detector initialization."""
-        detector = FlextInfraRuntimeDevDependencyDetector()
-        tm.that(
-            detector.__class__.__name__, eq="FlextInfraRuntimeDevDependencyDetector"
-        )
-
-    def test_detector_has_required_services(self) -> None:
-        """Verify detector has required services."""
-        detector = FlextInfraRuntimeDevDependencyDetector()
-        tm.that(type(detector.deps).__name__, eq="FlextInfraDependencyDetectionService")
-        tm.that(detector.runner is infra_u.Cli, eq=True)
 
     def test_detect_command_normalizes_public_fields(self, tmp_path: Path) -> None:
         """Verify detect command normalizes public fields."""

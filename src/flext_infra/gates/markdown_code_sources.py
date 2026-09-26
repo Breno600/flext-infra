@@ -32,10 +32,9 @@ def write_fenced_block_sources(
     """Write one temp source per parseable fenced ``python`` block.
 
     Blocks carrying the ``notest`` fence marker are skipped (opted out of
-    code validation by declaration), and so are blocks that do not compile:
-    documentation fragments are legitimate prose, and their syntax findings
-    belong to the flext-tests markdown validator (MD-001 with approved
-    exceptions), never to this formatting gate.
+    code validation by declaration). Every other block must compile: an
+    unparseable block in a python fence is a documentation defect and its
+    ``SyntaxError`` escapes unchanged.
     """
     origin_by_source: dict[str, t.Pair[str, int]] = {}
     for md_path in markdown_files:

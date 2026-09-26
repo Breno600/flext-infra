@@ -77,19 +77,22 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         repository: m.Infra.RepositoryRef,
         target: m.Infra.RepositoryConformTarget,
         codegen: m.Infra.CodegenConfigSpec,
+        workspace: m.Infra.WorkspaceSpec,
     ) -> t.VariadicTuple[m.Infra.UvScopedDependencyExclusionSpec]:
         """Return the uv dependency exclusions routed to one repository.
 
-        Workspace root owns resolution for attached subprojects (uv reads
-        exclude-dependencies only from the workspace root). Subprojects still
-        receive their own routed excludes for standalone CI clones.
+        An exclusion drops a reverse edge onto a project installed from its
+        local checkout. It applies only where that project is local: the
+        repository itself or, at a workspace root (uv reads
+        exclude-dependencies only from the root), one of its declared
+        members. Routing an exclusion for an absent project would drop the
+        only edge that installs it.
         """
+        local = {repository.distribution}
         if target.make_profile is c.Infra.MakeProfile.WORKSPACE:
-            return tuple(codegen.uv_exclude_dependencies)
+            local.update(member.distribution for member in workspace.subprojects)
         return tuple(
-            item
-            for item in codegen.uv_exclude_dependencies
-            if item.project == repository.distribution
+            item for item in codegen.uv_exclude_dependencies if item.project in local
         )
 
     @staticmethod

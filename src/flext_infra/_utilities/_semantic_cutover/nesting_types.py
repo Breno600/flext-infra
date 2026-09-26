@@ -158,7 +158,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
             def _visit_scoped(
                 self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef
             ) -> None:
-                self.bind(getattr(node, "name", ""))
+                self.bind(node.name)
                 self.depth += 1
                 for stmt in node.body:
                     self.visit(stmt)
@@ -206,9 +206,7 @@ class FlextInfraUtilitiesSemanticNestingTypes(
         return f"{owner}.{name}" if node.id == name else None
 
     @classmethod
-    def _checked_type_reference(
-        cls, scope: p.Infra.RopeScope, expression: str
-    ) -> str:
+    def _checked_type_reference(cls, scope: p.Infra.RopeScope, expression: str) -> str:
         """Reject a destination import captured by an existing lexical binding."""
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         node = ast.parse(expression, mode="eval").body

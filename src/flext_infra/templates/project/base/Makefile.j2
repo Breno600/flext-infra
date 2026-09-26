@@ -176,7 +176,11 @@ TESTMON_DATAFILE := $(PROJECT_STATE_ROOT)/{{ make.testmon_cache.namespace }}/{{ 
 export TESTMON_DATAFILE
 # === SECTION: REPOSITORY_ROOT isolation (managed) ===
 # Source: physical checkout topology; caller variables cannot select a workspace.
-ifneq ($(filter standalone,$(MAKE_PROFILE))$(GEN_INIT_ONLY),)
+# Operator law 2026-09-24 (flext-x8gn6): inside a workspace every make run, root
+# or member, uses the workspace runtime. A member resolves the Git superproject
+# that checks it out as a submodule; a checkout without one (a standalone clone,
+# a linked worktree) owns its runtime.
+ifneq ($(GEN_INIT_ONLY),)
 override REPOSITORY_ROOT := $(MAKEFILE_ROOT)
 else
 override REPOSITORY_ROOT := $(shell cd "$(MAKEFILE_ROOT)" && root=$$(git rev-parse --show-superproject-working-tree) && if [ -n "$$root" ]; then cd "$$root" && pwd -P; else pwd -P; fi)
@@ -186,9 +190,12 @@ endif
 endif
 # End SECTION: REPOSITORY_ROOT isolation
 # === SECTION: verb dispatch (managed) ===
-# Source: config:make.verbs and the canonical gate vocabulary.
-PUBLIC_VERBS :={% for verb in make.verbs %} {{ verb.name }}{% endfor %}{% for verb in extra_verbs %} {{ verb.name }}{% endfor %}
-BUILTIN_VERBS :={% for verb in make.verbs %} {{ verb.name }}{% endfor %}
+# Source: config:make.verbs and the canonical gate vocabulary. A verb exists
+# only in the profiles it declares (make.verbs[].profiles).
+{% set profile = namespace(verbs=[]) -%}
+{% for verb in make.verbs if make_profile in verb.profiles %}{% set profile.verbs = profile.verbs + [verb] %}{% endfor -%}
+PUBLIC_VERBS :={% for verb in profile.verbs %} {{ verb.name }}{% endfor %}{% for verb in extra_verbs %} {{ verb.name }}{% endfor %}
+BUILTIN_VERBS :={% for verb in profile.verbs %} {{ verb.name }}{% endfor %}
 SCRIPT_VERBS :={% for verb in extra_verbs %} {{ verb.name }}{% endfor %}
 {% if script_dispatch %}
 SCRIPT_ROOTS :={{ script_dispatch.roots | join(" ") }}
@@ -410,7 +417,7 @@ $(filter-out help clean upg,$(PUBLIC_VERBS)): _builtin_require_mise_pin
 {# Provisioning creates the physical environment. Activation producers use that
    existing environment to regenerate activation inputs before consuming them.
    All other operational verbs activate before their handlers and hooks. -#}
-{% for verb in (make.verbs | list) + (extra_verbs | list) if verb.name not in ("setup", "upg") %}
+{% for verb in profile.verbs + (extra_verbs | list) if verb.name not in ("setup", "upg") %}
 {% if verb.produces_activation %}
 # The pre hook and selected producer run once before activation. The producer
 # owns the complete generation transaction; activation adds no second writer.
@@ -465,7 +472,7 @@ _setup_activated:
 
 _builtin-help:
 	@printf '%s\n' '{{ dist }} [{{ make_profile }}]' '';
-{% for verb in (make.verbs | list) + (extra_verbs | list) %}
+{% for verb in profile.verbs + (extra_verbs | list) %}
 	@printf '  %-16s %s\n' '{{ verb.name }}' '{{ verb.description | replace("\n", " ") | trim | replace("$", "$$") | replace("'", "'\"'\"'") }}';
 {% endfor %}
 
@@ -476,7 +483,12 @@ _builtin-help:
 {{ submodule_setup_recipe("_builtin_setup_submodules", "$(PROJECT_ROOT)") }}
 
 .PHONY: _builtin_require_github_auth
-_bootstrap_setup_tools: _builtin_require_github_auth $(if $(filter upg,$(MAKECMDGOALS)),,.WAIT _builtin_require_mise_pin)
+# The credential check precedes the Mise pin check even under -j. `make setup`
+# first runs on the host's make before Mise installs the declared one, so the
+# ordering uses .NOTPARALLEL (every GNU Make; 4.4+ serializes only this target's
+# prerequisites) instead of .WAIT, which older releases read as a missing target.
+.NOTPARALLEL: _bootstrap_setup_tools
+_bootstrap_setup_tools: _builtin_require_github_auth $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
 _builtin_require_github_auth:
 	@if [ "$(GITHUB_CREDENTIAL_READ_STATUS)" != "0" ]; then \
 		printf 'ERROR: gh credential source failed with exit %s\n' "$(GITHUB_CREDENTIAL_READ_STATUS)" >&2; \
@@ -535,12 +547,21 @@ endif
 # `upg` is the only recipe that resolves: the bootstrap above bumps mise.lock
 # before installing, and this lifecycle upgrades every uv.lock, provisions the
 # environment frozen from the new locks, and conforms dependency floors.
+# The floors land in the codegen SSOT, so `gen` projects them into every
+# pyproject and the locks are re-resolved against those raised floors before
+# the frozen reprovision: the committed lock must match the committed
+# pyproject, or `setup --locked` (the CI path) rejects it.
 # Branch-tracked git dependencies are moving sources by declaration
 # (workspace.yaml owns the branch): --refresh re-reads their metadata so a
 # stale cached requires-dist can never block or skew the resolution
-# (flext-62fbu).
+# (flext-62fbu). Like `setup`, it runs the declared pre-/post-upg lifecycle
+# hooks, post-upg inside the activated environment.
 .PHONY: _upg_lifecycle
 _upg_lifecycle: _builtin_setup_submodules
+	@set -eu; \
+	case " $(CUSTOM_DECLARED_TARGETS) " in \
+		*" pre-upg "*) $(SELF_MAKE) pre-upg ;; \
+	esac
 	$(call _run_for_all_projects,--upgrade --refresh)
 	@$(SELF_MAKE) _builtin_setup_environment
 	@set -eu; \
@@ -550,7 +571,19 @@ _upg_lifecycle: _builtin_setup_submodules
 	for project in $$selected; do set -- "$$@" --projects "$$project"; done; \
 	$(PROJECT_FLEXT_INFRA) deps modernize --repository-root "$(PROJECT_ROOT)" \
 		--apply --rewrite-constraints "$$@"
+	@$(SELF_MAKE) gen
+	$(call _run_for_all_projects,)
+	@$(SELF_MAKE) _builtin_setup_environment
 	$(call _run_for_all_projects,--check)
+	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
+		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated
+
+.PHONY: _upg_activated
+_upg_activated:
+	@set -eu; \
+	case " $(CUSTOM_DECLARED_TARGETS) " in \
+		*" post-upg "*) $(SELF_MAKE) post-upg ;; \
+	esac
 
 
 # _builtin-self-* targets serve the workspace root itself (project selector
@@ -624,6 +657,12 @@ _builtin_fix_enforcement: _builtin_require_environment
 
 _builtin_sonarcloud_sync_all: _builtin_require_environment
 	@$(WORKSPACE_ORCHESTRATE) --verb sonarcloud-sync $(WORKSPACE_PROJECT_ARGS)
+
+# Member propagation exists only where members exist: this workspace's
+# flext-infra conforms and relocks each declared member and publishes one
+# pull-request lane per member that changed. It never merges.
+_builtin-propagate: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} propagate --repository-root "$(PROJECT_ROOT)"
 {% else %}
 _builtin_build_artifacts:
 	@$(UV) build --project "$(PROJECT_ROOT)"

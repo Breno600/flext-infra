@@ -644,7 +644,8 @@ class FlextInfraConfigModelsArtifact:
             t.NonEmptyStr,
             m.Field(
                 description=(
-                    "Repository-root-relative path to the old,new rename-list CSV"
+                    "Config-directory-relative path to the old,new rename-list "
+                    "CSV; the list ships with the declaring config"
                 )
             ),
         ]

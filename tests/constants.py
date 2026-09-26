@@ -52,7 +52,35 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
         )
         """Repository-local variables Git exports to hooks and aliases."""
 
+        MAKE_TEMPLATE_HOSTILE_VENV: ClassVar[str] = "hostile/.venv"
+        """Foreign environment beside a run-scoped ``make upg`` template."""
+
+        COLD_MISE_STORAGE: ClassVar[str] = "cold-mise-storage"
+        """Mise storage that starts empty, so every tool and lookup is fetched."""
+
+        MAKE_TEMPLATE_CI_CHECKOUT: ClassVar[str] = "ci"
+        """Home of the template checkout set up once in cold CI storage."""
+
+        MAKE_TEMPLATE_UPG_RECEIPT: ClassVar[str] = "upg-receipt.json"
+        """Recorded ``make upg`` outcome of one run-scoped template."""
+
+        MAKE_TEMPLATE_CI_RECEIPT: ClassVar[str] = "ci-setup-receipt.json"
+        """Recorded cold-storage CI ``make setup`` outcome of one template."""
+
+        DIRENV_STATE_ENV_KEYS: ClassVar[t.StrSequence] = (
+            "DIRENV_DIFF",
+            "DIRENV_DIR",
+            "DIRENV_FILE",
+            "DIRENV_WATCHES",
+        )
+        """direnv's loaded-activation protocol; ``direnv exec`` first reverts it.
+
+        An outer activation (the operator's shell) would otherwise undo the
+        variables a test hands to the activation under test.
+        """
+
         MAKE_ISOLATION_ENV_KEYS: ClassVar[t.StrSequence] = (
+            *DIRENV_STATE_ENV_KEYS,
             "BASH_ENV",
             "CHANGED_ONLY",
             "CHECK_GATES",
@@ -97,57 +125,6 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
         )
         RELEASE_PHASE_PUBLISH: ClassVar[str] = (
             FlextInfraConstants.Infra.ReleasePhase.PUBLISH
-        )
-
-        INFRA_PUBLIC_ROOT_EXPORTS: ClassVar[t.StrSequence] = (
-            "FlextInfra",
-            "c",
-            "infra",
-            "m",
-            "main",
-            "p",
-            "s",
-            "t",
-            "u",
-        )
-        INFRA_PUBLIC_WRAPPER_MODULES: ClassVar[t.StrSequence] = (
-            "flext_infra.__version__",
-            "flext_infra.constants",
-            "flext_infra.models",
-            "flext_infra.protocols",
-            "flext_infra.typings",
-            "flext_infra.utilities",
-        )
-        INFRA_PUBLIC_ROOT_ALIAS_EXPECTATIONS: ClassVar[
-            t.VariadicTuple[t.Pair[str, str]]
-        ] = (
-            ("c", "FlextInfraConstants"),
-            ("m", "FlextInfraModels"),
-            ("p", "FlextInfraProtocols"),
-            ("s", "FlextInfraServiceBase"),
-            ("t", "FlextInfraTypes"),
-            ("u", "FlextInfraUtilities"),
-        )
-        INFRA_PUBLIC_WRAPPER_ALIAS_EXPECTATIONS: ClassVar[
-            t.VariadicTuple[t.Triple[str, str, str]]
-        ] = (
-            ("flext_infra.constants", "c", "FlextInfraConstants"),
-            ("flext_infra.models", "m", "FlextInfraModels"),
-            ("flext_infra.protocols", "p", "FlextInfraProtocols"),
-            ("flext_infra.typings", "t", "FlextInfraTypes"),
-            ("flext_infra.utilities", "u", "FlextInfraUtilities"),
-        )
-        INFRA_PUBLIC_NAMESPACE_ALIAS_NAMES: ClassVar[t.StrSequence] = (
-            "c",
-            "m",
-            "p",
-            "t",
-            "u",
-        )
-        INFRA_PUBLIC_UTILITY_NAMESPACE_METHODS: ClassVar[t.StrSequence] = (
-            "plan_semantic_cutover",
-            "current_workspace_version",
-            "parse_semver",
         )
 
         WORKSPACE_PROJECT_NAME: ClassVar[str] = "workspace"

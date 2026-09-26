@@ -81,7 +81,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         limits_path: Path,
         params: m.Infra.DetectCommand,
         do_typings: bool,
-        projects_report: MutableMapping[str, MutableMapping[str, t.Infra.InfraValue]],
+        projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]],
     ) -> p.Result[bool]:
         """Run deptry + optional typings detection/apply for one project."""
         detector = self._detector
@@ -92,7 +92,12 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         if deptry_result.failure:
             return r[bool].from_failure(deptry_result)
         issues, _ = deptry_result.value
-        project_payload = deps_service.build_project_report(project_name, issues)
+        governed = deps_service.govern_deptry_issues(project_path, issues)
+        if governed.failure:
+            return r[bool].from_failure(governed)
+        project_payload = deps_service.build_project_report(
+            project_name, governed.value
+        )
         projects_report[project_name] = dict(project_payload.model_dump())
         run_typings_for_project = (
             do_typings
@@ -116,7 +121,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         typing_deps: p.Infra.TypingsDepsService | None,
         limits_path: Path,
         params: m.Infra.DetectCommand,
-        projects_report: MutableMapping[str, MutableMapping[str, t.Infra.InfraValue]],
+        projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]],
     ) -> p.Result[bool]:
         """Declare CUSTOM typing extras and install them through UV's source editor."""
         detector = self._detector

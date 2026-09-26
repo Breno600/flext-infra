@@ -33,7 +33,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         """Conform every declared managed surface in an existing repository."""
         stage_started = time.monotonic()
         u.Cli.info(f"  stage=pyproject repository={repository.name}")
-        pyproject = root / c.Infra.PYPROJECT_FILENAME
+        pyproject = root / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                 f"existing repository has no pyproject.toml: {root}; "
@@ -142,7 +142,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 and managed.path.as_posix() not in contract.destinations
             ):
                 continue
-            pyproject_skipped = managed.path == Path(c.Infra.PYPROJECT_FILENAME) and (
+            pyproject_skipped = managed.path == Path(c.PYPROJECT_FILENAME) and (
                 not contract.pyproject
                 or (
                     workspace.project is None

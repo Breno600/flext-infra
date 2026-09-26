@@ -238,7 +238,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             return None
         if project is not None and project.name:
             project_name = project.name
-        elif (resolved_root / c.Infra.PYPROJECT_FILENAME).is_file():
+        elif (resolved_root / c.PYPROJECT_FILENAME).is_file():
             project_name = FlextInfraUtilitiesDocsScope.project_name_from_payload(
                 resolved_root,
                 FlextInfraUtilitiesDocsScope.project_payload(resolved_root),
@@ -558,7 +558,7 @@ class FlextInfraUtilitiesCodegenNamespace:
         selected = tuple(
             project
             for project in discovered
-            if (project.path / c.Infra.PYPROJECT_FILENAME).exists()
+            if (project.path / c.PYPROJECT_FILENAME).exists()
         )
         return r[t.SequenceOf[m.Infra.ProjectInfo]].ok(selected)
 

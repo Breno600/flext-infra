@@ -169,7 +169,7 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
         return result, changed
 
     @staticmethod
-    def _drop_keyword(text: str, pattern: t.Infra.RegexPattern) -> t.Pair[str, int]:
+    def _drop_keyword(text: str, pattern: t.RegexPattern) -> t.Pair[str, int]:
         """Remove ``<name>=<value>[,]?`` occurrences from a call slice."""
         result = text
         drops = 0

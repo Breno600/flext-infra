@@ -22,7 +22,13 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
     def snapshot_config_sources(
         cls, project_dir: Path
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Capture one stable, physical, direct ``config/*.yaml`` file set."""
+        """Capture one stable, physical, direct ``config/*.yaml`` file set.
+
+        A project root that is not materialized yet (a scaffold planned
+        read-only) owns no config sources, exactly like an absent ``config/``.
+        """
+        if not project_dir.exists() and not project_dir.is_symlink():
+            return r[tuple[m.Cli.AtomicFileState, ...]].ok(())
         project_identity = cls._required_directory_identity(
             project_dir, purpose="project root"
         )

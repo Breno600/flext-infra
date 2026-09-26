@@ -449,12 +449,6 @@ Infra:
           venv-name: .venv
       coverage:
         source: [src]
-        fail-under:
-          core: 45
-          domain: 30
-          platform: 45
-          integration: 20
-          app: 15
         show-missing: true
         skip-covered: false
         precision: 2

@@ -2,67 +2,44 @@
 
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from tests import c, u
+from tests import c, t, u
 
-# These cases provision their own environment from the candidate's committed
-# locks. Make test-full owns the native installer and complete conform boundary.
+# Each scenario's candidate checkout is set up from its committed locks before
+# any item starts. Make test-full owns the native installer and conform boundary.
 pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraCodegenGenActivation:
     """Exercise the generated dispatcher with its real producer and activation."""
 
-    @staticmethod
-    def _project_inputs(tmp_path: Path) -> Path:
-        """Copy Git-visible source inputs, never a runtime or another Git store."""
-        source = Path(__file__).resolve().parents[3]
-        root = tmp_path / config.Infra.name
-        paths = tm.not_none(u.Infra.git_tracked_scope_paths(source))
-        tm.that(bool(paths), eq=True)
-        for path in paths:
-            destination = root / path.relative_to(source)
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            _ = shutil.copy2(path, destination, follow_symlinks=False)
-        tm.that((root / ".venv").exists(), eq=False)
-        tm.that((root / ".git").exists(), eq=False)
-        u.Tests.initialize_git_repo(
-            root, origin_url=u.Tests.repository_ref(config.Infra.name).url
-        )
-        return root
+    def test_gen_without_environment_fails_before_effects(self, tmp_path: Path) -> None:
+        """A checkout that setup never provisioned stops before any hook."""
+        root = u.Tests.infra_source_checkout(tmp_path)
+        envrc = root / c.Infra.ENVRC_FILENAME
+        broken_activation = envrc.read_text(encoding="utf-8") + "\nreturn 73\n"
+        envrc.write_text(broken_activation, encoding="utf-8")
 
-    @pytest.mark.parametrize(
-        "scenario",
-        [
-            "builtin",
-            "custom",
-            "producer-failure",
-            "activation-failure",
-            "missing-environment",
-        ],
-    )
+        process = tm.ok(
+            u.Tests.run_isolated_make(["--no-print-directory", "gen"], cwd=root)
+        )
+
+        tm.that(u.Cli.process_succeeded(process.outcome), eq=False)
+        tm.that(process.stderr, has="missing environment interpreter")
+        tm.that((root / "gen-lifecycle.log").exists(), eq=False)
+        tm.that((root / ".venv").exists(), eq=False)
+        tm.that(envrc.read_text(encoding="utf-8"), eq=broken_activation)
+
     def test_gen_recovers_activation_and_orders_hooks(
-        self, tmp_path: Path, scenario: str
+        self, provisioned_infra_checkout: t.Pair[str, Path]
     ) -> None:
         """Native failures stop post hooks; a valid producer activates only once."""
-        root = self._project_inputs(tmp_path)
-        if scenario != "missing-environment":
-            setup = tm.ok(
-                u.Tests.run_isolated_make(["--no-print-directory", "setup"], cwd=root)
-            )
-            tm.that(
-                u.Cli.process_succeeded(setup.outcome),
-                eq=True,
-                msg=setup.stdout + setup.stderr,
-            )
-            tm.that((root / ".venv" / "pyvenv.cfg").is_file(), eq=True)
-
+        scenario, root = provisioned_infra_checkout
         receipt = root / "gen-lifecycle.log"
         envrc = root / c.Infra.ENVRC_FILENAME
         broken_activation = envrc.read_text(encoding="utf-8") + "\nreturn 73\n"
@@ -132,12 +109,6 @@ class TestsFlextInfraCodegenGenActivation:
             eq=succeeded,
             msg=process.stdout + process.stderr,
         )
-        if scenario == "missing-environment":
-            tm.that(process.stderr, has="missing environment interpreter")
-            tm.that(receipt.exists(), eq=False)
-            tm.that((root / ".venv").exists(), eq=False)
-            tm.that(envrc.read_text(encoding="utf-8"), eq=broken_activation)
-            return
         if scenario == "producer-failure":
             tm.that(receipt.read_text().splitlines(), eq=["pre"])
             tm.that(process.stderr, has="SyntaxError")

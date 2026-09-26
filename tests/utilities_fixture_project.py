@@ -23,6 +23,32 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
     """Typed project identity, spec, and manifest-seed fixture helpers."""
 
     @staticmethod
+    def create_project_info(
+        project_root: Path,
+        *,
+        name: str = "test-project",
+        stack: str = "python",
+        has_tests: bool = False,
+        has_src: bool = True,
+        project_class: str = "FlextTestProject",
+        package_name: str = "test_project",
+        make_profile: c.Infra.MakeProfile = c.Infra.MakeProfile.STANDALONE,
+        declared_subproject: bool = False,
+    ) -> m.Infra.ProjectInfo:
+        """Provide the typed test helper `create_project_info`."""
+        return m.Infra.ProjectInfo(
+            name=name,
+            path=project_root,
+            stack=stack,
+            has_tests=has_tests,
+            has_src=has_src,
+            project_class=project_class,
+            package_name=package_name,
+            make_profile=make_profile,
+            declared_subproject=declared_subproject,
+        )
+
+    @staticmethod
     def provider(name: str = FIXTURE_PROVIDER_NAME) -> m.Infra.ProviderIdentitySpec:
         """Return the declared fixture provider identity for one provider key."""
         return m.Infra.ProviderIdentitySpec(

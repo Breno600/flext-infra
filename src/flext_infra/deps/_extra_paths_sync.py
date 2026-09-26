@@ -32,7 +32,7 @@ class FlextInfraExtraPathsSyncMixin:
         """Return the transitive workspace path-dependency closure of direct_names."""
 
         def dependencies(name: str) -> t.StrSequence:
-            dep_pyproject = self.root / name / c.Infra.PYPROJECT_FILENAME
+            dep_pyproject = self.root / name / c.PYPROJECT_FILENAME
             if not dep_pyproject.exists():
                 return ()
             dep_payload = u.Infra.pyproject_payload(dep_pyproject)
@@ -148,7 +148,7 @@ class FlextInfraExtraPathsSyncMixin:
         if project_dirs:
             updated_selected = 0
             for project_dir in project_dirs:
-                pyproject = project_dir / c.Infra.PYPROJECT_FILENAME
+                pyproject = project_dir / c.PYPROJECT_FILENAME
                 # A governed worktree transaction materializes only the scoped
                 # submodule's source tree, so a selected member legitimately has
                 # no pyproject there. Failing closed made every scoped apply
@@ -175,7 +175,7 @@ class FlextInfraExtraPathsSyncMixin:
         )
         updated = 0
         for target in targets:
-            pyproject = target / c.Infra.PYPROJECT_FILENAME
+            pyproject = target / c.PYPROJECT_FILENAME
             if not pyproject.exists():
                 if target == self.root:
                     return r[int].fail(f"Missing {pyproject}")

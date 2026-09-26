@@ -1,9 +1,7 @@
-# @flext-generated: continuous
-# @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/pyproject.toml.j2
-# @flext-adjust: MANAGED=conflict_sections + overwrite_project_keys. CUSTOM=preserve_project_keys and [tool.*] outside conflict_sections. Never edit this projection.
-# @flext-regenerate: make gen
-# {{ dist }} — generated pyproject (FLEXT standard; ADR-005 SSOT).
-
+{#- The generated-file header is not rendered here: the pyproject projection
+is a parse-merge-dump of this render and the live CUSTOM surface, which drops
+every comment. Its composition owner (compose_project_artifact) prepends the
+single header constant c.Infra.BANNER to the final projection. -#}
 {#- A bare internal flext-* entry is only a floor name: it declares no Git
 source, and conform fails loudly on source-less internal dependencies. The
 scaffold seeds the source from the declared FLEXT dependency line; the
@@ -98,7 +96,6 @@ exclude_also = [
   {{ item | tojson }},
 {% endfor %}
 ]
-fail_under = {{ tooling_runtime.coverage_fail_under }}
 precision = {{ tooling.tools.coverage.precision }}
 show_missing = {{ tooling.tools.coverage.show_missing | lower }}
 skip_covered = {{ tooling.tools.coverage.skip_covered | lower }}

@@ -72,7 +72,7 @@ class FlextInfraPyprojectModernizerRun:
             # A declared subproject whose pyproject cannot be read or named
             # would otherwise vanish from the alias map and resurface as a
             # false "missing" or "ambiguous" project further down.
-            state = self._read_document_state(path / c.Infra.PYPROJECT_FILENAME)
+            state = self._read_document_state(path / c.PYPROJECT_FILENAME)
             if state.failure:
                 return result_type.fail(
                     f"workspace subproject {path} has an unreadable pyproject: "
@@ -114,7 +114,7 @@ class FlextInfraPyprojectModernizerRun:
         if project_paths.failure:
             u.Cli.error(project_paths.error or "project selection failed")
             return 2
-        root_pyproject = self.root / c.Infra.PYPROJECT_FILENAME
+        root_pyproject = self.root / c.PYPROJECT_FILENAME
         root_state = self._read_document_state(root_pyproject)
         if root_state.failure:
             return 2

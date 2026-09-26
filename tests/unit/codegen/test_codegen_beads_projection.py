@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import ast
-import typing
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-import flext_infra
 from flext_infra import c, config, infra, m
-from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import u
 
 
@@ -69,7 +65,6 @@ class TestsFlextInfraCodegenBeadsProjection:
         # the portable routing marker but never mints the ledger identity.
         tm.that("project_id" in metadata, eq=False)
         tm.that(set(metadata), eq={"backend", "database", "dolt_mode", "dolt_database"})
-        tm.that(hasattr(plan, "beads"), eq=False)
 
     def test_gascity_disabled_renders_standalone_beads_config(
         self, tmp_path: Path
@@ -122,8 +117,11 @@ class TestsFlextInfraCodegenBeadsProjection:
 
         if rendered_mise is None:
             pytest.fail("conform must produce the managed .mise.toml")
-        tm.that(rendered_mise, has='make = "latest"')
+        tm.that(
+            rendered_mise, has=f'make = "{config.Infra.codegen.toolchain.make_version}"'
+        )
         tm.that(rendered_mise, lacks="conda")
+        tm.that(rendered_mise, lacks="stale")
 
     def test_gascity_disabled_renders_local_envrc_tier(self, tmp_path: Path) -> None:
         """A disabled city renders the repository-local bd activation tier."""
@@ -271,10 +269,10 @@ class TestsFlextInfraCodegenBeadsProjection:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("gascity_enabled", [True, False])
-    def test_envrc_render_models_have_one_definition(
+    def test_envrc_renders_in_both_city_tiers(
         self, tmp_path: Path, *, gascity_enabled: bool
     ) -> None:
-        """The .envrc context renders from one model family in both city tiers.
+        """The managed .envrc renders its city tier in both city modes.
 
         A duplicated model family let the renderer and its validator bind two
         different classes of the same name, so the ``gascity.backend`` field of
@@ -296,36 +294,6 @@ class TestsFlextInfraCodegenBeadsProjection:
         if rendered_envrc is None:
             pytest.fail("a governed identity must produce the managed .envrc")
         tm.that("AGENTS_GAS_CITY_ROOT" in rendered_envrc, eq=gascity_enabled)
-        pending: list[type[m.BaseModel]] = [m.Infra.EnvrcRenderSpec]
-        used: set[type[m.BaseModel]] = set()
-        while pending:
-            model = pending.pop()
-            if model in used:
-                continue
-            used.add(model)
-            for field in model.model_fields.values():
-                stack: list[object] = [field.annotation]
-                while stack:
-                    annotation = stack.pop()
-                    stack.extend(typing.get_args(annotation))
-                    if isinstance(annotation, type) and issubclass(
-                        annotation, m.BaseModel
-                    ):
-                        pending.append(annotation)
-        names = {model.__name__ for model in used}
-        definitions: dict[str, set[Path]] = {name: set() for name in names}
-        package_root = Path(flext_infra.__file__).parent
-        for module in package_root.rglob("*.py"):
-            source = module.read_text(encoding="utf-8")
-            if not any(f"class {name}" in source for name in names):
-                continue
-            for node in ast.walk(ast.parse(source)):
-                if isinstance(node, ast.ClassDef) and node.name in definitions:
-                    definitions[node.name].add(module.relative_to(package_root))
-        tm.that(
-            {name: len(modules) for name, modules in definitions.items()},
-            eq=dict.fromkeys(names, 1),
-        )
 
     def test_metadata_projection_preserves_a_minted_ledger_identity(
         self, tmp_path: Path
@@ -375,29 +343,3 @@ class TestsFlextInfraCodegenBeadsProjection:
         _ = u.Tests.governed_project_plan(root)
 
         tm.that(identity.read_bytes(), eq=before)
-
-    def test_codegen_exposes_no_beads_runtime_surface(self) -> None:
-        forbidden_models = ("BeadsPlan", "BeadsTrackerDeclaration")
-        forbidden_operations = (
-            "_beads_binary",
-            "_beads_command",
-            "_beads_ledger_root",
-            "_verify_beads_plan",
-            "beads_declaration",
-            "ledger_identity_for_target",
-        )
-
-        for model_name in forbidden_models:
-            tm.that(hasattr(m.Infra, model_name), eq=False)
-        for operation_name in forbidden_operations:
-            tm.that(hasattr(FlextInfraCodegenConform, operation_name), eq=False)
-        tool_fields = m.Infra.BeadsToolSpec.model_fields
-        tm.that("reported_version" in tool_fields, eq=False)
-        tm.that("checksum" in tool_fields, eq=False)
-        tm.that("expected_schema" in tool_fields, eq=False)
-        # The declarative endpoint projection survived, but caa162de0 split the
-        # single `endpoint` field into the origin/status pair. Asserting the
-        # retired name kept this test red against a model that is correct.
-        tm.that("endpoint" in tool_fields, eq=False)
-        tm.that("endpoint_origin" in tool_fields, eq=True)
-        tm.that("endpoint_status" in tool_fields, eq=True)

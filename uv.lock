@@ -394,7 +394,7 @@ wheels = [
 [[package]]
 name = "flext-cli"
 version = "0.12.0"
-source = { git = "https://github.com/flext-sh/flext-cli.git?rev=0.12.0-dev#0f6d0b35923b652790a9e533f53d5ee776ecfee0" }
+source = { git = "https://github.com/flext-sh/flext-cli.git?rev=0.12.0-dev#ce36f45d6438e0b90ca809715a1be6dc65cfae05" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },
@@ -421,7 +421,7 @@ dependencies = [
 [[package]]
 name = "flext-core"
 version = "0.12.0"
-source = { git = "https://github.com/flext-sh/flext-core.git?rev=0.12.0-dev#8de52fa6b117ef54a840ac655c4518aff26ba027" }
+source = { git = "https://github.com/flext-sh/flext-core.git?rev=0.12.0-dev#080c81b17a55498791b124fea24a270810cdcd60" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },
@@ -547,7 +547,7 @@ requires-dist = [
     { name = "pymdown-extensions", specifier = ">=11.0.1" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "rope", git = "https://github.com/marlon-costa-dc/rope.git?rev=1.14.0%2Bdc.2" },
+    { name = "rope", git = "https://github.com/marlon-costa-dc/rope.git?rev=1.14.0%2Bdc.3" },
     { name = "structlog", specifier = ">=25.5.0,<27" },
     { name = "types-markdown", marker = "extra == 'typings'" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
@@ -619,7 +619,7 @@ dev = [
 [[package]]
 name = "flext-tests"
 version = "0.12.0"
-source = { git = "https://github.com/flext-sh/flext-tests.git?rev=0.12.0-dev#58ba7e1d88887cbf3c8dc165a437c964e4e23677" }
+source = { git = "https://github.com/flext-sh/flext-tests.git?rev=0.12.0-dev#7dd55ef8e8f1b7a1652e16247a1842dd22471b4e" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },
@@ -1722,8 +1722,8 @@ wheels = [
 
 [[package]]
 name = "rope"
-version = "1.14.0+dc.2"
-source = { git = "https://github.com/marlon-costa-dc/rope.git?rev=1.14.0%2Bdc.2#d2571e8cfabe2e00de7783e153403ac0cf4828d4" }
+version = "1.14.0+dc.3"
+source = { git = "https://github.com/marlon-costa-dc/rope.git?rev=1.14.0%2Bdc.3#64134bf54db1c02ca19602f320d26e1a570e7786" }
 dependencies = [
     { name = "pytoolconfig", extra = ["global"] },
 ]

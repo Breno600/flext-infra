@@ -160,7 +160,8 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(snapshot.root.real_path)
         origin = (
-            request.source_file.relative_to(root)
+            request.source_file
+            .relative_to(root)
             .with_suffix("")
             .as_posix()
             .replace("/", ".")

@@ -94,7 +94,7 @@ class FlextInfraModelsCore:
         """Resolved inputs for one skill validation report."""
 
         rules: Annotated[
-            t.MappingKV[str, t.Infra.InfraValue], m.Field(description="Rules payload")
+            t.MappingKV[str, t.JsonValue], m.Field(description="Rules payload")
         ]
         root: Annotated[Path, m.Field(description="Repository root path")]
         skill_name: Annotated[str, m.Field(description="Skill folder name")]

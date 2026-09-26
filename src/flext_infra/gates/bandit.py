@@ -101,25 +101,21 @@ class FlextInfraBanditGate(FlextInfraGate):
         return u.Cli.process_succeeded(result.outcome), issues
 
     @staticmethod
-    def _parse_bandit_payload(
-        stdout: str,
-    ) -> p.Result[t.MappingKV[str, t.Infra.InfraValue]]:
+    def _parse_bandit_payload(stdout: str) -> p.Result[t.MappingKV[str, t.JsonValue]]:
         """Parse Bandit JSON stdout into a typed payload mapping."""
         parsed_result = u.Cli.json_parse(stdout)
         if parsed_result.failure:
-            return r[t.MappingKV[str, t.Infra.InfraValue]].from_failure(parsed_result)
+            return r[t.MappingKV[str, t.JsonValue]].from_failure(parsed_result)
         raw_payload = parsed_result.unwrap()
         if not isinstance(raw_payload, Mapping):
-            return r[t.MappingKV[str, t.Infra.InfraValue]].fail(
+            return r[t.MappingKV[str, t.JsonValue]].fail(
                 "Bandit output is not a JSON object"
             )
-        return r[t.MappingKV[str, t.Infra.InfraValue]].ok(
-            u.Cli.json_as_mapping(raw_payload)
-        )
+        return r[t.MappingKV[str, t.JsonValue]].ok(u.Cli.json_as_mapping(raw_payload))
 
     @staticmethod
     def _bandit_issues(
-        bandit_data: t.MappingKV[str, t.Infra.InfraValue],
+        bandit_data: t.MappingKV[str, t.JsonValue],
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Build typed gate issues from parsed Bandit result entries."""
         return tuple(

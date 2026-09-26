@@ -126,7 +126,7 @@ class FlextInfraGate:
     def _tool_failure_issue(self, scan: p.Cli.CommandOutput) -> m.Infra.Issue:
         """Scanner absence/crash must never read as a clean pass."""
         return m.Infra.Issue(
-            file=c.Infra.PYPROJECT_FILENAME,
+            file=c.PYPROJECT_FILENAME,
             line=1,
             column=0,
             code=self.gate_id,
@@ -576,7 +576,7 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
         if files_result.failure:
             return self._build_single_issue_result(
                 project_dir,
-                Path(c.Infra.PYPROJECT_FILENAME),
+                Path(c.PYPROJECT_FILENAME),
                 files_result.error or self.scan_error_message,
                 passed=False,
                 started=started,

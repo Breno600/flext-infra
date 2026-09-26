@@ -128,7 +128,7 @@ class TestsFlextInfraCodegenMain:
         def test_check_mode(self, real_git_repo: Path) -> None:
             """Init check reports managed drift without mutating the repository."""
             repository = TestsFlextInfraCodegenMain._with_pep621_identity(real_git_repo)
-            pyproject = repository / c.Infra.PYPROJECT_FILENAME
+            pyproject = repository / c.PYPROJECT_FILENAME
             before = pyproject.read_bytes()
             makefile = repository / c.Infra.MAKEFILE_FILENAME
             result = infra_main([

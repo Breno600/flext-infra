@@ -153,7 +153,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         self, tmp_path: Path, description: str, sort_first: t.StrSequence | None
     ) -> None:
         """Keep project scalars explicit for arbitrary valid top-level orders."""
-        pyproject = tmp_path / c.Infra.PYPROJECT_FILENAME
+        pyproject = tmp_path / c.PYPROJECT_FILENAME
         package_init = tmp_path / "src" / "flext_example" / "__init__.py"
         package_init.parent.mkdir(parents=True)
         package_init.write_text("", encoding="utf-8")
@@ -205,10 +205,10 @@ class TestsFlextInfraDepsModernizerWorkspace:
     ) -> None:
         """Verify main applies only selected projects."""
         selected_pyproject = (
-            modernizer_workspace_with_projects / "selected" / c.Infra.PYPROJECT_FILENAME
+            modernizer_workspace_with_projects / "selected" / c.PYPROJECT_FILENAME
         )
         ignored_pyproject = (
-            modernizer_workspace_with_projects / "ignored" / c.Infra.PYPROJECT_FILENAME
+            modernizer_workspace_with_projects / "ignored" / c.PYPROJECT_FILENAME
         )
         tm.that(
             main([
@@ -236,7 +236,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         workspace = tmp_path / "workspace"
         member = workspace / "member-dir"
         member.mkdir(parents=True)
-        (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (workspace / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "workspace"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         (workspace / ".gitmodules").write_text(
@@ -244,7 +244,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
             "\turl = https://github.com/flext-sh/declared-name.git\n",
             encoding="utf-8",
         )
-        (member / c.Infra.PYPROJECT_FILENAME).write_text(
+        (member / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "declared-name"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         u.Tests.write_beads_project(
@@ -271,7 +271,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         workspace = tmp_path / "workspace"
         member = workspace / "member"
         member.mkdir(parents=True)
-        (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (workspace / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "workspace"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         (workspace / ".gitmodules").write_text(
@@ -279,7 +279,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
             "\turl = https://github.com/flext-sh/member.git\n",
             encoding="utf-8",
         )
-        (member / c.Infra.PYPROJECT_FILENAME).write_text(
+        (member / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "member"\nversion = "0.1.0"\n', encoding="utf-8"
         )
 
@@ -301,7 +301,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         workspace = tmp_path / "workspace"
         (workspace / "first-dir").mkdir(parents=True)
         (workspace / "second-dir").mkdir()
-        (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (workspace / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "workspace"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         (workspace / ".gitmodules").write_text(
@@ -312,7 +312,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
             encoding="utf-8",
         )
         for member_name in ("first-dir", "second-dir"):
-            (workspace / member_name / c.Infra.PYPROJECT_FILENAME).write_text(
+            (workspace / member_name / c.PYPROJECT_FILENAME).write_text(
                 '[project]\nname = "shared-name"\nversion = "0.1.0"\n', encoding="utf-8"
             )
 
@@ -341,7 +341,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         """Reject configured members resolving outside root without mutation."""
         external_project = modernizer_workspace.parent / "external"
         external_project.mkdir()
-        external_pyproject = external_project / c.Infra.PYPROJECT_FILENAME
+        external_pyproject = external_project / c.PYPROJECT_FILENAME
         original = '[project]\nname = "external"\nversion = "0.1.0"\n'
         external_pyproject.write_text(original, encoding="utf-8")
         if member_kind == "absolute":
@@ -353,7 +353,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
             (modernizer_workspace / selector).symlink_to(
                 external_project, target_is_directory=True
             )
-        (modernizer_workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "workspace"\nversion = "0.1.0"\n'
             f'\n[tool.uv.workspace]\nmembers = ["{selector}"]\n',
             encoding="utf-8",
@@ -370,7 +370,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         """Reject selectors outside declared workspace projects without mutation."""
         external_project = modernizer_workspace.parent / "external"
         external_project.mkdir()
-        external_pyproject = external_project / c.Infra.PYPROJECT_FILENAME
+        external_pyproject = external_project / c.PYPROJECT_FILENAME
         original = '[project]\nname = "external"\nversion = "0.1.0"\n'
         external_pyproject.write_text(original, encoding="utf-8")
         selector = (

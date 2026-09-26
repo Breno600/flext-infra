@@ -283,7 +283,7 @@ class FlextInfraCodegenGenerationStandardMixin(
         prior behavior.
         """
         for candidate in (pkg_dir, *pkg_dir.parents):
-            if not (candidate / c.Infra.PYPROJECT_FILENAME).is_file():
+            if not (candidate / c.PYPROJECT_FILENAME).is_file():
                 continue
             metadata_result = u.Infra.read_project_metadata_result(candidate)
             if metadata_result.success:
@@ -295,7 +295,7 @@ class FlextInfraCodegenGenerationStandardMixin(
     def _project_first_party_names(project_root: Path) -> t.StrSequence:
         """Read strict Ruff policy, deriving namespaces only when it is absent."""
         project_payload = u.Infra.pyproject_payload(
-            (project_root / c.Infra.PYPROJECT_FILENAME).resolve()
+            (project_root / c.PYPROJECT_FILENAME).resolve()
         )
         projected: t.JsonValue | None = project_payload.get("tool")
         for section in ("ruff", "lint", "isort", "known-first-party"):
@@ -347,7 +347,7 @@ class FlextInfraCodegenGenerationStandardMixin(
             (
                 candidate
                 for candidate in (plan.context.pkg_dir, *plan.context.pkg_dir.parents)
-                if (candidate / c.Infra.PYPROJECT_FILENAME).is_file()
+                if (candidate / c.PYPROJECT_FILENAME).is_file()
             ),
             None,
         )

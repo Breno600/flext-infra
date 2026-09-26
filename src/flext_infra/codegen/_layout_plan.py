@@ -32,7 +32,7 @@ class FlextInfraCodegenLayoutPlanMixin:
         linked worktree (``.claude/worktrees/<lane>``) or a renamed clone is
         the same project and inherits the same keep-list.
         """
-        pyproject_path = project_dir / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = project_dir / c.PYPROJECT_FILENAME
         return u.Infra.project_name_from_payload(
             pyproject_path, u.Infra.pyproject_payload(pyproject_path)
         )

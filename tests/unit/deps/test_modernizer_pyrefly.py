@@ -241,7 +241,7 @@ class TestsFlextInfraModernizerPyrefly:
             ).resolve_tooling_context(
                 project_name="flext-consumer",
                 package_name="flext_consumer",
-                path=project_dir / c.Infra.PYPROJECT_FILENAME,
+                path=project_dir / c.PYPROJECT_FILENAME,
                 declared_python_dirs=(source_dir,),
                 declared_python_dirs_are_complete=True,
             )
@@ -259,7 +259,7 @@ class TestsFlextInfraModernizerPyrefly:
         for directory in ("src", "tests"):
             (project_dir / directory).mkdir(parents=True)
         (project_dir / "src" / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
-        (project_dir / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_dir / c.PYPROJECT_FILENAME).write_text(
             "[tool.pyright]\ninclude = ['src']\n", encoding="utf-8"
         )
 
@@ -283,7 +283,7 @@ class TestsFlextInfraModernizerPyrefly:
             "", encoding="utf-8"
         )
         (project_dir / "scripts" / "check.py").write_text("", encoding="utf-8")
-        (project_dir / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_dir / c.PYPROJECT_FILENAME).write_text(
             "[tool.pyright]\n"
             "include = ['src', 'tests/unit/**/*.py', 'scripts/check.py']\n",
             encoding="utf-8",

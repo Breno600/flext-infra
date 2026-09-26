@@ -53,7 +53,9 @@ class TestsFlextInfraDepsDetectionModels:
             current=[],
             to_add=[],
             to_remove=[],
+            untyped_imports_followed=True,
         )
+        tm.that(report.untyped_imports_followed, eq=True)
         tm.that(report.required_packages, empty=True)
         tm.that(report.hinted, empty=True)
         tm.that(report.missing_modules, empty=True)

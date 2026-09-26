@@ -202,9 +202,7 @@ class FlextInfraPyprojectModernizerDocument:
         changes: t.MutableSequenceOf[str] = [
             *self._normalize_build_payload(payload),
             *FlextInfraConsolidateGroupsPhase().apply_payload(payload, canonical_dev),
-            *FlextInfraToolTablesPhase(tooling).apply_payload(
-                payload, path=path, project_kind=resolved_kind
-            ),
+            *FlextInfraToolTablesPhase(tooling).apply_payload(payload, path=path),
             # Pyrefly derives its include globs from the canonical Pyright
             # roots, so resolve Pyright first and converge in one pass.
             *FlextInfraEnsurePyrightConfigPhase(tooling).apply_payload(

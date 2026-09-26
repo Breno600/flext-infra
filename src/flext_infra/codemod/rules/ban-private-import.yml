@@ -4,14 +4,23 @@
 # owner layout. Same-owner implementation modules use relative sibling imports;
 # every other consumer uses a public facade discovered from its live assignment
 # and inheritance graph.
+#
+# Both static spellings are the same coupling: `from pkg._mod import X` and
+# `import pkg._mod`. The semantic private-import cutover rewrites only the
+# `from` form; the plain `import` form stays a detection-only finding for the
+# owner to repair.
 
 id: ban-private-import
 language: Python
 severity: error
 rule:
-  all:
-    - kind: import_from_statement
-    - regex: '^from\s+\w[\w.]*\._[A-Za-z]\w*(\.[\w.]+)*\s+import\b'
+  any:
+    - all:
+        - kind: import_from_statement
+        - regex: '^from\s+\w[\w.]*\._[A-Za-z]\w*(\.[\w.]+)*\s+import\b'
+    - all:
+        - kind: import_statement
+        - regex: '^import\s+(?:[^\n]*,\s*)?\w[\w.]*\._[A-Za-z]\w*(\.[\w.]+)*\b'
 message: >-
   Absolute private implementation import is forbidden. Use a relative sibling
   import inside the owner or consume the public facade discovered from source.

@@ -18,9 +18,7 @@ from flext_infra import m
 
 from ..._utilities._git.remote import FlextInfraUtilitiesGitRemote
 from ..._utilities._git.repo import FlextInfraUtilitiesGitRepo
-from ..._utilities._git.semantic_worktree import (
-    FlextInfraUtilitiesGitSemanticWorktreeMixin,
-)
+from ..._utilities._git.semantic_lane import FlextInfraUtilitiesGitSemanticLaneMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -29,7 +27,7 @@ _GITLINK_MODE = "160000"
 
 
 class FlextInfraUtilitiesGitSemanticIdentityMixin(
-    FlextInfraUtilitiesGitSemanticWorktreeMixin
+    FlextInfraUtilitiesGitSemanticLaneMixin
 ):
     """Own semantic identity operations."""
 

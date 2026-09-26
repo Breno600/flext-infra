@@ -68,7 +68,7 @@ class TestsFlextInfraDocsShared:
     ) -> None:
         project_root = tmp_path / "acme-content"
         project_root.mkdir()
-        (project_root / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_root / c.PYPROJECT_FILENAME).write_text(
             "[project]\nname='acme-content'\n", encoding="utf-8"
         )
 
@@ -86,7 +86,7 @@ class TestsFlextInfraDocsShared:
         self, tmp_path: Path
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
-        (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (workspace / c.PYPROJECT_FILENAME).write_text(
             "[project]\nname='workspace'\n\n[tool.uv.workspace]\nmembers=['flext-a']\n",
             encoding="utf-8",
         )
@@ -106,7 +106,7 @@ class TestsFlextInfraDocsShared:
     ) -> None:
         workspace = tmp_path / "workspace"
         workspace.mkdir()
-        (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (workspace / c.PYPROJECT_FILENAME).write_text(
             "[project]\nname='workspace'\n\n[tool.uv.workspace]\nmembers=['flext-a']\n",
             encoding="utf-8",
         )
@@ -129,7 +129,7 @@ class TestsFlextInfraDocsShared:
     def test_build_scopes_preserves_disabled_root_policy(self, tmp_path: Path) -> None:
         project_root = tmp_path / "acme-content"
         project_root.mkdir()
-        (project_root / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_root / c.PYPROJECT_FILENAME).write_text(
             "[project]\nname='acme-content'\n\n[tool.flext.docs]\nenabled=false\n",
             encoding="utf-8",
         )
@@ -174,12 +174,12 @@ class TestsFlextInfraDocsShared:
         project_root = workspace / "flext-demo"
         package_root = project_root / "src" / "demo_pkg"
         package_root.mkdir(parents=True)
-        (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (workspace / c.PYPROJECT_FILENAME).write_text(
             "[project]\nname='workspace'\n\n[tool.uv.workspace]\nmembers=['flext-demo']\n",
             encoding="utf-8",
         )
         (package_root / "__init__.py").write_text("", encoding="utf-8")
-        (project_root / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_root / c.PYPROJECT_FILENAME).write_text(
             "[project]\n"
             "name='flext-demo'\n"
             "dependencies=['flext-core>=0.1.0']\n\n"

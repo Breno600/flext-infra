@@ -151,7 +151,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
     ) -> m.Infra.ProjectResult | None:
         """Check one project, returning None when the project should be skipped."""
         project_dir = target.path
-        pyproject_path = project_dir / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = project_dir / c.PYPROJECT_FILENAME
         if not project_dir.is_dir() or not pyproject_path.exists():
             u.Cli.progress(index, total, target.name, c.Infra.SeverityLevel.SKIP)
             return None

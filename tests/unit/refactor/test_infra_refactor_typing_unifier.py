@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class FlextInfraRefactorTypingUnificationRule:
     """Adapter for canonical typing-unifier behavior tests."""
 
-    def __init__(self, settings: t.Infra.InfraMapping) -> None:
+    def __init__(self, settings: t.JsonMapping) -> None:
         """Initialize the unification rule with typed settings."""
         self._settings = settings
 

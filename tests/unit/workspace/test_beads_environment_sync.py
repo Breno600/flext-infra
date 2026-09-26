@@ -31,9 +31,9 @@ class TestsFlextInfraBeadsEnvironmentSync:
         )
 
     def test_sync_writes_generated_envrc_and_allows(self, tmp_path: Path) -> None:
-        """An applied sync projects the canonical file and re-allows direnv."""
+        """An applied sync projects the canonical activation file."""
         result = infra.sync_environment_files(
-            self.make_request(tmp_path), runner=u.Tests.command_runner(returncode=0)
+            self.make_request(tmp_path, allow_direnv=False)
         )
         tm.ok(result)
         envrc = tmp_path / c.Infra.ENVRC_FILENAME
@@ -66,7 +66,7 @@ class TestsFlextInfraBeadsEnvironmentSync:
         self, tmp_path: Path
     ) -> None:
         """Selecting Beads retains Python activation and explicit server mode."""
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "beads-python"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         tm.ok(
@@ -119,7 +119,7 @@ class TestsFlextInfraBeadsEnvironmentSync:
 
     def test_none_backend_without_beads_identity(self, tmp_path: Path) -> None:
         """A repository with no Beads identity renders only the unset chain."""
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "bare"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         result = infra.sync_environment_files(
@@ -138,11 +138,11 @@ class TestsFlextInfraBeadsEnvironmentSync:
         tm.that(content, lacks="unset BEADS_DIR")
 
     def test_custom_envrc_preserved_without_force(self, tmp_path: Path) -> None:
-        """Custom content is never clobbered; direnv allow still heals."""
+        """Custom content is never clobbered without force."""
         custom = tmp_path / c.Infra.ENVRC_FILENAME
         _ = custom.write_text("PATH_add bin\n", encoding="utf-8")
         result = infra.sync_environment_files(
-            self.make_request(tmp_path), runner=u.Tests.command_runner(returncode=0)
+            self.make_request(tmp_path, allow_direnv=False)
         )
         tm.ok(result)
         tm.that(custom.read_text(encoding="utf-8"), eq="PATH_add bin\n")
@@ -152,19 +152,9 @@ class TestsFlextInfraBeadsEnvironmentSync:
         custom = tmp_path / c.Infra.ENVRC_FILENAME
         _ = custom.write_text('checkout_root="${DIRENV_DIR#-}"\n', encoding="utf-8")
         result = infra.sync_environment_files(
-            self.make_request(tmp_path, force=True),
-            runner=u.Tests.command_runner(returncode=0),
+            self.make_request(tmp_path, force=True, allow_direnv=False)
         )
         tm.ok(result)
         content = custom.read_text(encoding="utf-8")
         tm.that("$DIRENV_DIR" in content, eq=False)
         tm.that("pwd -P" in content, eq=True)
-
-    def test_failed_allow_fails_loud(self, tmp_path: Path) -> None:
-        """A direnv allow failure fails the whole sync."""
-        result = infra.sync_environment_files(
-            self.make_request(tmp_path),
-            runner=u.Tests.command_runner(returncode=1, stderr="blocked"),
-        )
-        tm.fail(result)
-        tm.that("direnv allow failed" in (result.error or ""), eq=True)

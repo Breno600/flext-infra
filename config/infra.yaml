@@ -192,8 +192,13 @@ Infra:
         description: "Replace print() with cli.display_text()"
 
   # CSV-driven rename campaigns applied by the mod verb's rename phase
-  # through the apply-renames engine. Each entry: csv (repository-root-
-  # relative path to an old,new list) and optional roots (scan directories;
-  # empty selects the whole repository root).
+  # through the apply-renames engine. Each entry: csv (path to an old,new
+  # list, relative to this config directory, which ships inside the
+  # package so every consumer's `make mod` reads the same list) and
+  # optional roots (repository-root-relative scan directories; empty
+  # selects the whole repository root). A campaign is declared here only
+  # once every `new` name already exists in the released definer, so each
+  # repository can apply it independently in any order.
   refactor_csv_campaigns:
-    campaigns: []
+    campaigns:
+      - csv: rules/mod/renames/infra-dedup.csv

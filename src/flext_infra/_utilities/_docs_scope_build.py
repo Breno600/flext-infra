@@ -91,7 +91,7 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
             resolved_root
         )
         if (
-            (resolved_root / c.Infra.PYPROJECT_FILENAME).is_file()
+            (resolved_root / c.PYPROJECT_FILENAME).is_file()
             and not has_declared_members
             and not has_child_projects
             and not has_workspace_topology

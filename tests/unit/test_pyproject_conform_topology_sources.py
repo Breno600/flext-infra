@@ -277,12 +277,12 @@ workspace = true
                 required_dev_dependencies=(),
             )
         )
-        (root / c.Infra.PYPROJECT_FILENAME).write_text(root_rendered, encoding="utf-8")
-        (provider_root / c.Infra.PYPROJECT_FILENAME).write_text(
+        (root / c.PYPROJECT_FILENAME).write_text(root_rendered, encoding="utf-8")
+        (provider_root / c.PYPROJECT_FILENAME).write_text(
             (f'[project]\nname = "{provider.distribution}"\nversion = "0.1.0"\n'),
             encoding="utf-8",
         )
-        (consumer_root / c.Infra.PYPROJECT_FILENAME).write_text(
+        (consumer_root / c.PYPROJECT_FILENAME).write_text(
             consumer_rendered, encoding="utf-8"
         )
 
@@ -297,7 +297,7 @@ workspace = true
                     "--python",
                     sys.executable,
                     "-r",
-                    str(root / c.Infra.PYPROJECT_FILENAME),
+                    str(root / c.PYPROJECT_FILENAME),
                 ],
                 cwd=root,
                 timeout=c.DEFAULT_TIMEOUT_SECONDS,

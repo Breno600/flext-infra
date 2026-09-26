@@ -195,7 +195,7 @@ class FlextInfraUtilitiesProjectDiscovery(
             for child in sorted(resolved_root.iterdir(), key=attrgetter("name"))
             if child.is_dir()
             and not child.name.startswith(".")
-            and (child / c.Infra.PYPROJECT_FILENAME).is_file()
+            and (child / c.PYPROJECT_FILENAME).is_file()
             and not cls._is_nonparticipant(child, resolved_root, nonparticipants)
         )
         return tuple(sorted({*declared, *direct}, key=Path.as_posix))

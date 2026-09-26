@@ -285,10 +285,10 @@ class TestsFlextInfraInfraRopeService:
     def test_open_workspace_keeps_the_requested_repository_boundary(
         self, tmp_path: Path
     ) -> None:
-        """Only an explicit workspace call includes sibling repositories."""
+        """Only an explicit workspace call includes declared sibling repositories."""
         monorepo_root = tmp_path / "repo"
         monorepo_root.mkdir()
-        u.Tests.declare_workspace_projects(monorepo_root, ("flext-infra",))
+        u.Tests.declare_workspace_projects(monorepo_root, ("flext-infra", "flext-demo"))
         (
             repository_root,
             package_root,

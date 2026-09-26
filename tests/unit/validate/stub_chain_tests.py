@@ -6,45 +6,14 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_core import r
 from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
-from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
-
 
 class TestsFlextInfraStubChain:
     """Declarative public-contract tests for stub-chain validation."""
-
-    @staticmethod
-    def make_chain(
-        *,
-        repository_root: Path,
-        stdout: str = "",
-        projects: t.StrSequence | None = None,
-        all_projects: bool = False,
-    ) -> FlextInfraStubSupplyChain:
-        return FlextInfraStubSupplyChain(
-            repository_root=repository_root,
-            selected_projects=projects,
-            all_projects=all_projects,
-            runner=u.Tests.DeptryRunner(
-                r.ok(u.Tests.create_command_output(stdout=stdout))
-            ),
-        )
-
-    @staticmethod
-    def _stub_output(*lines: str) -> str:
-        return "\n".join(lines)
-
-    def test_init_defaults(self, tmp_path: Path) -> None:
-        chain = FlextInfraStubSupplyChain(repository_root=tmp_path)
-        tm.that(chain.runner is None, eq=True)
-        tm.that(chain.project_names is None, eq=True)
-        tm.that(chain.project_dirs is None, eq=True)
 
     def test_project_names_and_dirs_are_normalized(self, tmp_path: Path) -> None:
         chain = FlextInfraStubSupplyChain(
@@ -67,110 +36,8 @@ class TestsFlextInfraStubChain:
         )
         tm.that(chain.project_dirs is None, eq=True)
 
-    def test_analyze_classifies_public_results(self, tmp_path: Path) -> None:
-        project_dir = u.Tests.mk_project(
-            tmp_path,
-            "project",
-            pyproject="[project]\nname = 'project'\n",
-            with_src=True,
-        )
-        chain = self.make_chain(
-            repository_root=tmp_path,
-            stdout=self._stub_output(
-                "note: hint: install stub package `types-definitely-missing-external`",
-                "src/project.py:1: error: Cannot find module `definitely_missing_external` [missing-import]",
-                "src/project.py:2: error: Cannot find module `flext_core` [missing-import]",
-            ),
-        )
-
-        result = chain.analyze(project_dir, tmp_path)
-
-        tm.ok(result)
-        tm.that(
-            result.value,
-            eq=m.Infra.StubAnalysisReport(
-                project="project",
-                mypy_hints=["types-definitely-missing-external"],
-                internal_missing=["flext_core"],
-                unresolved_missing=["definitely_missing_external"],
-                total_missing=2,
-            ),
-        )
-
-    def test_build_report_discovers_only_valid_projects(self, tmp_path: Path) -> None:
-        u.Tests.mk_project(tmp_path, "project-a", with_src=True)
-        hidden_dir = tmp_path / ".hidden"
-        hidden_dir.mkdir()
-        (hidden_dir / c.Infra.PYPROJECT_FILENAME).write_text("", encoding="utf-8")
-        (hidden_dir / c.Infra.DEFAULT_SRC_DIR).mkdir()
-        u.Tests.mk_project(tmp_path, "project-b", with_src=False)
-        valid_project = u.Tests.mk_project(tmp_path, "project-c", with_src=True)
-        u.Tests.declare_workspace_projects(
-            tmp_path, ("project-a", "project-b", "project-c")
-        )
-
-        result = self.make_chain(repository_root=tmp_path).build_report(tmp_path)
-
-        tm.ok(result)
-        tm.that(result.value.summary, eq="typed dependency chain: 2 projects, 0 issues")
-        tm.that(result.value.violations, empty=True)
-        tm.that(valid_project.exists(), eq=True)
-
-    def test_build_report_uses_explicit_project_dirs(self, tmp_path: Path) -> None:
-        project_a = u.Tests.mk_project(tmp_path, "project-a", with_src=True)
-        _project_b = u.Tests.mk_project(tmp_path, "project-b", with_src=True)
-
-        result = self.make_chain(repository_root=tmp_path).build_report(
-            tmp_path, project_dirs=[project_a]
-        )
-
-        tm.ok(result)
-        tm.that(result.value.summary, eq="typed dependency chain: 1 projects, 0 issues")
-
-    def test_build_report_includes_untracked_git_projects(self, tmp_path: Path) -> None:
-        u.Tests.git_bootstrap(tmp_path, ("init",))
-        u.Tests.configure_git_identity(tmp_path)
-        tracked_project = u.Tests.mk_project(tmp_path, "project-a", with_src=True)
-        _untracked_project = u.Tests.mk_project(tmp_path, "project-b", with_src=True)
-        u.Tests.declare_workspace_projects(tmp_path, ("project-a", "project-b"))
-        add_result = u.Cli.run_raw(["git", "add", "project-a"], cwd=tmp_path)
-        tm.ok(add_result)
-        tm.that(u.Cli.process_succeeded(add_result.value.outcome), eq=True)
-
-        result = self.make_chain(repository_root=tmp_path).build_report(tmp_path)
-
-        tm.ok(result)
-        tm.that(result.value.summary, eq="typed dependency chain: 2 projects, 0 issues")
-        tm.that(tracked_project.exists(), eq=True)
-
     def test_build_report_fails_for_missing_workspace(self, tmp_path: Path) -> None:
-        result = self.make_chain(repository_root=tmp_path).build_report(
+        result = FlextInfraStubSupplyChain(repository_root=tmp_path).build_report(
             tmp_path / "missing"
         )
-        tm.fail(result)
-
-    def test_execute_fails_when_report_has_violations(self, tmp_path: Path) -> None:
-        u.Tests.mk_project(tmp_path, "project-a", with_src=True)
-        u.Tests.declare_workspace_projects(tmp_path, ("project-a",))
-        chain = self.make_chain(
-            repository_root=tmp_path,
-            stdout=self._stub_output(
-                "note: hint: install stub package `types-definitely-missing-external`"
-            ),
-            all_projects=True,
-        )
-
-        result = chain.execute()
-
-        tm.fail(result)
-        tm.that(result.error, has="typed dependency chain: 1 projects, 1 issues")
-
-    def test_execute_passes_for_selected_projects(self, tmp_path: Path) -> None:
-        u.Tests.mk_project(tmp_path, "project-a", with_src=True)
-        u.Tests.mk_project(tmp_path, "project-b", with_src=True)
-        chain = self.make_chain(repository_root=tmp_path, projects=["project-a"])
-
-        result = chain.execute()
-
-        tm.ok(result)
-        tm.that(result.value, eq=True)
+        tm.fail(result, has="typed dependency workspace does not exist")

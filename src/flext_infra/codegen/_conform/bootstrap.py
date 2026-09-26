@@ -102,7 +102,7 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                 | c.Infra.CodegenConformSurface.PYPROJECT
             ):
                 return m.Infra.CodegenConformSurfaceContract(
-                    destinations=frozenset({c.Infra.PYPROJECT_FILENAME}),
+                    destinations=frozenset({c.PYPROJECT_FILENAME}),
                     delegates=False,
                     custom=False,
                 )
@@ -114,7 +114,7 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                 )
             case _:
                 return m.Infra.CodegenConformSurfaceContract(
-                    destinations=frozenset({c.Infra.PYPROJECT_FILENAME}),
+                    destinations=frozenset({c.PYPROJECT_FILENAME}),
                     delegates=False,
                     custom=False,
                 )

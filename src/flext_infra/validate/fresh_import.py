@@ -86,9 +86,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         )
         probes: t.MutableSequenceOf[m.Infra.FreshImportProbe] = []
         for layout in layouts:
-            source = u.Cli.files_read_text(
-                layout.project_root / c.Infra.PYPROJECT_FILENAME
-            )
+            source = u.Cli.files_read_text(layout.project_root / c.PYPROJECT_FILENAME)
             if source.failure:
                 return r[m.Infra.ValidationReport].from_failure(source)
             payload = u.Cli.toml_mapping_from_text(source.value)

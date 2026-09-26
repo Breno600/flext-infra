@@ -84,6 +84,50 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         )
 
     @staticmethod
+    def scaffold_plan(
+        root: Path, *, members: t.StrSequence = ()
+    ) -> m.Infra.CodegenPlan:
+        """Plan every artifact conform renders for a fresh repository scaffold.
+
+        Without members the fixture repository is standalone; each member
+        makes it a workspace composing that project, so generated surfaces
+        are observed exactly as the public codegen owner renders them.
+        """
+        fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
+        repository = fixture.repository_ref(
+            "fixture-project",
+            role=(
+                c.Infra.MakeProfile.WORKSPACE
+                if members
+                else c.Infra.MakeProfile.STANDALONE
+            ),
+        )
+        return TestsFlextInfraUtilitiesCodegenMixin.conform_plan(
+            root,
+            fixture.workspace_spec(
+                repository,
+                project=fixture.project_spec(repository.name),
+                subprojects=tuple(
+                    fixture.repository_ref(name, path=Path(name)) for name in members
+                ),
+            ),
+        )
+
+    @staticmethod
+    def scaffold_text(
+        root: Path, destination: str, *, members: t.StrSequence = ()
+    ) -> str:
+        """Return one rendered scaffold artifact, failing when it is not planned."""
+        return tm.not_none(
+            TestsFlextInfraUtilitiesCodegenMixin.planned_text(
+                TestsFlextInfraUtilitiesCodegenMixin.scaffold_plan(
+                    root, members=members
+                ),
+                destination,
+            )
+        )
+
+    @staticmethod
     def governed_project_plan(root: Path) -> m.Infra.CodegenPlan:
         """Plan every declared artifact of one governed fixture project read-only."""
         for entry in config.Infra.codegen.templates.entries:
@@ -137,7 +181,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         (repository_root / "Makefile").write_text(
             "check:\n\t@true\n", encoding=c.Infra.ENCODING_DEFAULT
         )
-        (repository_root / c.Infra.PYPROJECT_FILENAME).write_text(
+        (repository_root / c.PYPROJECT_FILENAME).write_text(
             (
                 f'[project]\nname = "{project_name}"\nversion = "0.1.0"\n\n'
                 + TestsFlextInfraUtilitiesCodegenMixin.ruff_per_file_ignores_toml()
@@ -241,6 +285,15 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         )
         for plan in changed:
             before = u.Infra.codegen_file_before_state(plan)
+            if plan.desired_content is not None and (
+                before.failure or before.value.parent_inode is None
+            ):
+                # Planning is read-only, so a destination planned into an absent
+                # directory chain carries no parent identity. Like the
+                # transaction owner at apply, the publisher materializes the
+                # chain and reads the destination again before publishing.
+                plan.path.parent.mkdir(parents=True, exist_ok=True)
+                before = u.Cli.atomic_read_binary_file_state(plan.path)
             if before.failure:
                 return r[bool].from_failure(before)
             if plan.desired_content is None:

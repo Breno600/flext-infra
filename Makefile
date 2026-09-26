@@ -135,7 +135,11 @@ TESTMON_DATAFILE := $(PROJECT_STATE_ROOT)/testmon/.testmondata
 export TESTMON_DATAFILE
 # === SECTION: REPOSITORY_ROOT isolation (managed) ===
 # Source: physical checkout topology; caller variables cannot select a workspace.
-ifneq ($(filter standalone,$(MAKE_PROFILE))$(GEN_INIT_ONLY),)
+# Operator law 2026-09-24 (flext-x8gn6): inside a workspace every make run, root
+# or member, uses the workspace runtime. A member resolves the Git superproject
+# that checks it out as a submodule; a checkout without one (a standalone clone,
+# a linked worktree) owns its runtime.
+ifneq ($(GEN_INIT_ONLY),)
 override REPOSITORY_ROOT := $(MAKEFILE_ROOT)
 else
 override REPOSITORY_ROOT := $(shell cd "$(MAKEFILE_ROOT)" && root=$$(git rev-parse --show-superproject-working-tree) && if [ -n "$$root" ]; then cd "$$root" && pwd -P; else pwd -P; fi)
@@ -145,7 +149,8 @@ endif
 endif
 # End SECTION: REPOSITORY_ROOT isolation
 # === SECTION: verb dispatch (managed) ===
-# Source: config:make.verbs and the canonical gate vocabulary.
+# Source: config:make.verbs and the canonical gate vocabulary. A verb exists
+# only in the profiles it declares (make.verbs[].profiles).
 PUBLIC_VERBS := help setup upg build check test test-full fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
 BUILTIN_VERBS := help setup upg build check test test-full fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
@@ -371,8 +376,8 @@ mise_exec() { \
 'MISE_GITHUB_OAUTH_CLIENT_ID=' \
 'MISE_GITHUB_OAUTH_EXPORT_ENV=' \
 'MISE_GITHUB_OAUTH_OPEN_BROWSER=false' \
-'MISE_LOCKFILE=false' \
-'MISE_LOCKED=false' \
+'MISE_LOCKFILE=true' \
+'MISE_LOCKED=true' \
 $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"} \
 "HOME=$$scratch/home" \
 "USERPROFILE=$$scratch/home" \
@@ -1093,7 +1098,12 @@ _builtin_setup_submodules:
 	done
 
 .PHONY: _builtin_require_github_auth
-_bootstrap_setup_tools: _builtin_require_github_auth $(if $(filter upg,$(MAKECMDGOALS)),,.WAIT _builtin_require_mise_pin)
+# The credential check precedes the Mise pin check even under -j. `make setup`
+# first runs on the host's make before Mise installs the declared one, so the
+# ordering uses .NOTPARALLEL (every GNU Make; 4.4+ serializes only this target's
+# prerequisites) instead of .WAIT, which older releases read as a missing target.
+.NOTPARALLEL: _bootstrap_setup_tools
+_bootstrap_setup_tools: _builtin_require_github_auth $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
 _builtin_require_github_auth:
 	@if [ "$(GITHUB_CREDENTIAL_READ_STATUS)" != "0" ]; then \
 		printf 'ERROR: gh credential source failed with exit %s\n' "$(GITHUB_CREDENTIAL_READ_STATUS)" >&2; \
@@ -1152,12 +1162,21 @@ endif
 # `upg` is the only recipe that resolves: the bootstrap above bumps mise.lock
 # before installing, and this lifecycle upgrades every uv.lock, provisions the
 # environment frozen from the new locks, and conforms dependency floors.
+# The floors land in the codegen SSOT, so `gen` projects them into every
+# pyproject and the locks are re-resolved against those raised floors before
+# the frozen reprovision: the committed lock must match the committed
+# pyproject, or `setup --locked` (the CI path) rejects it.
 # Branch-tracked git dependencies are moving sources by declaration
 # (workspace.yaml owns the branch): --refresh re-reads their metadata so a
 # stale cached requires-dist can never block or skew the resolution
-# (flext-62fbu).
+# (flext-62fbu). Like `setup`, it runs the declared pre-/post-upg lifecycle
+# hooks, post-upg inside the activated environment.
 .PHONY: _upg_lifecycle
 _upg_lifecycle: _builtin_setup_submodules
+	@set -eu; \
+	case " $(CUSTOM_DECLARED_TARGETS) " in \
+		*" pre-upg "*) $(SELF_MAKE) pre-upg ;; \
+	esac
 	$(call _run_for_all_projects,--upgrade --refresh)
 	@$(SELF_MAKE) _builtin_setup_environment
 	@set -eu; \
@@ -1167,7 +1186,19 @@ _upg_lifecycle: _builtin_setup_submodules
 	for project in $$selected; do set -- "$$@" --projects "$$project"; done; \
 	$(PROJECT_FLEXT_INFRA) deps modernize --repository-root "$(PROJECT_ROOT)" \
 		--apply --rewrite-constraints "$$@"
+	@$(SELF_MAKE) gen
+	$(call _run_for_all_projects,)
+	@$(SELF_MAKE) _builtin_setup_environment
 	$(call _run_for_all_projects,--check)
+	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
+		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated
+
+.PHONY: _upg_activated
+_upg_activated:
+	@set -eu; \
+	case " $(CUSTOM_DECLARED_TARGETS) " in \
+		*" post-upg "*) $(SELF_MAKE) post-upg ;; \
+	esac
 
 
 # _builtin-self-* targets serve the workspace root itself (project selector

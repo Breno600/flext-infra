@@ -80,9 +80,9 @@ class FlextInfraToolTablesPhase:
         return builder.build()
 
     def _phases(
-        self, *, first_party: t.StrSequence, project_kind: str
+        self, *, first_party: t.StrSequence
     ) -> t.SequenceOf[m.Infra.DepsToml.PhaseConfig]:
-        """Build every policy table for one project classification."""
+        """Build every policy table; coverage is measured, never floor-gated."""
         tools = self._tool_config.tools
         phase = m.Infra.DepsToml.PhaseConfigBuilder
         merge, replace = c.Infra.TomlMergeMode.MERGE, c.Infra.TomlMergeMode.REPLACE
@@ -96,13 +96,6 @@ class FlextInfraToolTablesPhase:
             codespell = codespell.value(
                 "ignore-words-list", tools.codespell.ignore_words_list
             )
-        fail_under: t.IntMapping = {
-            "core": coverage.fail_under.core,
-            "domain": coverage.fail_under.domain,
-            "platform": coverage.fail_under.platform,
-            "integration": coverage.fail_under.integration,
-            "app": coverage.fail_under.app,
-        }
         return (
             phase("pytest")
             .table(c.Infra.PYTEST, c.Infra.INI_OPTIONS)
@@ -167,7 +160,7 @@ class FlextInfraToolTablesPhase:
             .build(),
             phase("coverage-report")
             .table("coverage", "report")
-            .value("fail_under", fail_under.get(project_kind, coverage.fail_under.core))
+            .deprecated("fail_under")
             .value("show_missing", coverage.show_missing)
             .value("skip_covered", coverage.skip_covered)
             .value("precision", coverage.precision)
@@ -181,15 +174,12 @@ class FlextInfraToolTablesPhase:
         )
 
     def apply_payload(
-        self, payload: t.MutableJsonMapping, *, path: Path, project_kind: str = "core"
+        self, payload: t.MutableJsonMapping, *, path: Path
     ) -> t.StrSequence:
         """Apply every policy table to one normalized payload."""
         return u.Infra.apply_toml_phases(
             payload,
-            *self._phases(
-                first_party=self.first_party_namespaces(payload, path=path),
-                project_kind=project_kind,
-            ),
+            *self._phases(first_party=self.first_party_namespaces(payload, path=path)),
         )
 
 

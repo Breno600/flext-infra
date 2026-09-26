@@ -103,9 +103,7 @@ class TestsFlextInfraDepsModernizerPackaging:
         applied = self._conform_self(infra_git_repo)
 
         tm.that(applied, eq=0)
-        manifest = (infra_git_repo / c.Infra.PYPROJECT_FILENAME).read_text(
-            encoding="utf-8"
-        )
+        manifest = (infra_git_repo / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         wheel = u.Tests.toml_table_at(
             manifest, c.Infra.TOOL, "hatch", "build", "targets", "wheel"
         )
@@ -153,8 +151,8 @@ class TestsFlextInfraDepsModernizerPackaging:
             materialize_module=missing_kind != "module",
             materialize_package=missing_kind != "package",
         )
-        before = (infra_git_repo / c.Infra.PYPROJECT_FILENAME).read_bytes()
+        before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
 
         with pytest.raises(FileNotFoundError, match=f"root {missing_kind}"):
             self._conform_self(infra_git_repo)
-        tm.that((infra_git_repo / c.Infra.PYPROJECT_FILENAME).read_bytes(), eq=before)
+        tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)

@@ -473,25 +473,6 @@ class FlextInfraModelsDepsToolConfig(
             bool, m.Field(description="Emit explicit YAML start marker.")
         ]
 
-    class CoverageFailUnderConfig(m.ArbitraryTypesModel):
-        """Coverage fail-under thresholds by layer."""
-
-        core: int = m.Field(
-            description="Minimum coverage percentage required for core layer."
-        )
-        domain: int = m.Field(
-            description="Minimum coverage percentage required for domain layer."
-        )
-        platform: int = m.Field(
-            description="Minimum coverage percentage required for platform layer."
-        )
-        integration: int = m.Field(
-            description="Minimum coverage percentage required for integration layer."
-        )
-        app: int = m.Field(
-            description="Minimum coverage percentage required for app layer."
-        )
-
     class CoverageConfig(m.ArbitraryTypesModel):
         """Coverage baseline settings loaded from YAML."""
 
@@ -499,9 +480,6 @@ class FlextInfraModelsDepsToolConfig(
             t.StrSequence,
             m.Field(description="Production roots measured by full coverage runs."),
         ]
-        fail_under: FlextInfraModelsDepsToolConfig.CoverageFailUnderConfig = m.Field(
-            alias="fail-under", description="Coverage fail-under thresholds by layer."
-        )
         show_missing: Annotated[
             bool,
             m.Field(
@@ -787,13 +765,6 @@ class FlextInfraModelsDepsToolConfig(
     class ToolingConformedTools(m.FlexibleModel):
         """Typed view of the ``[tool]`` tables one conformed pyproject carries."""
 
-        coverage_fail_under: Annotated[
-            int,
-            m.Field(
-                validation_alias=m.AliasPath("coverage", "report", "fail_under"),
-                description="Conformed coverage threshold",
-            ),
-        ]
         deptry: Annotated[t.JsonMapping, m.Field(description="Conformed deptry table")]
         mypy: Annotated[t.JsonMapping, m.Field(description="Conformed mypy table")]
         mypy_path: Annotated[
@@ -853,9 +824,6 @@ class FlextInfraModelsDepsToolConfig(
 
         project_kind: Annotated[
             t.NonEmptyStr, m.Field(description="Resolved project classification")
-        ]
-        coverage_fail_under: Annotated[
-            int, m.Field(ge=0, le=100, description="Resolved coverage threshold")
         ]
         first_party: Annotated[
             t.StrTuple, m.Field(description="Resolved first-party namespaces")

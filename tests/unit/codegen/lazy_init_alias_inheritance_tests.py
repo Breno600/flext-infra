@@ -190,7 +190,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
             project_name="flext-test-groups",
             package_name="flext_test_groups_child",
         )
-        pyproject = repository_root / c.Infra.PYPROJECT_FILENAME
+        pyproject = repository_root / c.PYPROJECT_FILENAME
         pyproject.write_text(
             pyproject.read_text(encoding=c.Infra.ENCODING_DEFAULT)
             + '\n[dependency-groups]\ncodegen = ["flext-infra"]\n'

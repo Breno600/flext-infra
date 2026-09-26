@@ -90,7 +90,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         documented block could never satisfy both surfaces at once.
         """
         args = ["format", "--no-cache", "--output-format", "concise"]
-        config_path = project_dir / c.Infra.PYPROJECT_FILENAME
+        config_path = project_dir / c.PYPROJECT_FILENAME
         args += (
             ["--config", str(config_path)] if config_path.is_file() else ["--isolated"]
         )

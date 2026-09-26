@@ -109,55 +109,17 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         runtime_names = {
             name for item in pep621.dependencies if (name := u.Infra.dep_name(item))
         }
-        profiles = codegen.scaffold.project.dependency_profiles
-        # The root of the dependency tree declares no upstream distribution:
-        # a distribution that IS a profile's upstream owns that profile.
-        own_profile = next(
-            (
-                item
-                for item in profiles
-                if item.project is None
-                and item.upstream.replace("_", "-") == repository.distribution
-            ),
-            None,
-        )
-        candidates = (
-            (own_profile,)
-            if own_profile is not None
-            else tuple(
-                item
-                for item in profiles
-                if item.project is None
-                and item.upstream.replace("_", "-") in runtime_names
-            )
-        )
-        # A profile whose upstream is itself a runtime dependency of another
-        # candidate is implied by it; the declared upstream is the most
-        # specific candidate, never the first catalog row that happens to match.
-        runtime_of = {
-            item.upstream: {
-                name
-                for dependency in item.runtime
-                if (name := u.Infra.dep_name(dependency))
-            }
-            for item in candidates
-        }
-        direct = tuple(
-            item
-            for item in candidates
-            if not any(
-                item.upstream.replace("_", "-") in runtime_of[other.upstream]
-                for other in candidates
-                if other is not item
-            )
+        direct = u.Infra.dependency_profile_upstreams(
+            codegen.scaffold.project.dependency_profiles,
+            distribution=repository.distribution,
+            runtime_names=runtime_names,
         )
         if len(direct) != 1:
             return r[m.Infra.ProjectSpec].fail(
                 "scaffold.project.dependency_profiles.upstream must match live "
-                f"dependencies exactly once at {repository_root}: "
-                f"{tuple(item.upstream for item in direct)}"
+                f"dependencies exactly once at {repository_root}: {tuple(direct)}"
             )
-        upstream = direct[0].upstream
+        upstream = direct[0]
         licenses = codegen.scaffold.project.supported_licenses
         return r[m.Infra.ProjectSpec].ok(
             m.Infra.ProjectSpec(
@@ -215,23 +177,16 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             project = project.model_copy(
                 update={"namespace_scan_dirs": workspace.namespace_scan_dirs}
             )
-        dependency_profile = next(
-            (
-                item
-                for item in codegen.scaffold.project.dependency_profiles
-                if item.project is None and item.upstream == project.upstream
-            ),
-            None,
+        rows = u.Infra.dependency_profile_rows(
+            codegen.scaffold.project.dependency_profiles,
+            upstream=project.upstream,
+            distribution=repository.distribution,
         )
-        if dependency_profile is None:
+        if not rows:
             return r[m.Infra.ProjectRenderContext].fail(
                 f"unsupported scaffold upstream: {project.upstream}"
             )
-        additions = tuple(
-            item
-            for item in codegen.scaffold.project.dependency_profiles
-            if item.project == repository.distribution
-        )
+        dependency_profile, *additions = rows
         if additions:
             dependency_profile = m.Infra.ScaffoldDependencyProfileSpec.model_validate({
                 **dependency_profile.model_dump(),
@@ -298,7 +253,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             repository_root=repository_root,
             bootstrap_source=(
                 workspace.flext_source
-                if not (repository_root / c.Infra.PYPROJECT_FILENAME).exists()
+                if not (repository_root / c.PYPROJECT_FILENAME).exists()
                 else None
             ),
         )
@@ -349,7 +304,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         # typed initial version and the protocol owns every change after that.
         version_result = (
             u.Infra.current_workspace_version(repository_root)
-            if (repository_root / c.Infra.PYPROJECT_FILENAME).is_file()
+            if (repository_root / c.PYPROJECT_FILENAME).is_file()
             else r[str].ok(config.Infra.initial_project_version)
         )
         if version_result.failure:

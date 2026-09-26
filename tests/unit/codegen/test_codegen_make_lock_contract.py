@@ -171,7 +171,12 @@ class TestsFlextInfraCodegenMakeLockContract:
         )
         bootstrap = u.Infra.mise_bootstrap_environment()
         cold_storage = tmp_path / "unprovisioned-mise"
-        tm.that(cold_storage.exists(), eq=False)
+        release = (root / bootstrap.version_pin_file).read_text(encoding="utf-8")
+        # The host's direnv launcher may itself be a Mise shim that provisions
+        # direnv into the storage it is handed; the activation contract is only
+        # that the pinned Mise runtime is never installed.
+        template = bootstrap.runtime_install_relative_template
+        pinned_runtime = cold_storage / template.format(release=release.strip())
 
         process = tm.ok(
             u.Cli.run_raw(
@@ -183,9 +188,9 @@ class TestsFlextInfraCodegenMakeLockContract:
         )
 
         tm.that(u.Cli.process_succeeded(process.outcome), eq=False)
-        tm.that(process.stderr, has="missing pinned Mise runtime")
+        tm.that(process.stderr, has=f"missing pinned Mise runtime {pinned_runtime}")
         tm.that(process.stderr, has="run make setup")
-        tm.that(cold_storage.exists(), eq=False)
+        tm.that(pinned_runtime.exists(), eq=False)
 
     @pytest.mark.parametrize("pin_content", [None, "latest\n", " \n", "1.2.3\n4.5.6\n"])
     def test_direnv_rejects_unresolved_runtime_pin(
@@ -220,6 +225,9 @@ class TestsFlextInfraCodegenMakeLockContract:
                 (verb.name, None)
                 for verb in config.Infra.codegen.make.verbs
                 if verb.name not in {"help", "clean", "upg"}
+                # The rendered Makefile is standalone: it declares only the
+                # verbs whose operation applies to that profile.
+                and c.Infra.MakeProfile.STANDALONE in verb.profiles
             ),
             ("status", ""),
             ("status", " \n"),

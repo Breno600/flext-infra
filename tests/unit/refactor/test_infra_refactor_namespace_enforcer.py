@@ -670,15 +670,21 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
 
         tm.that(report.total_cyclic_imports, gte=1)
 
+    @pytest.mark.parametrize(
+        ("declaration", "violations"),
+        [("", 0), ('__all__: list[str] = ["DemoConstants", "c"]\n\n', 1)],
+    )
     def test_namespace_enforcer_does_not_infer_alias_from_external_filename(
-        self, tmp_path: Path
+        self, tmp_path: Path, declaration: str, violations: int
     ) -> None:
-        """An undeclared script module does not acquire a facade letter by name."""
+        """Only a letter declared in ``__all__`` is owed; never one from a filename."""
         workspace, project, _pkg = u.Tests.namespace_workspace(tmp_path)
         scripts_dir = project / "scripts"
         scripts_dir.mkdir(parents=True)
         _ = (scripts_dir / "constants.py").write_text(
-            "from __future__ import annotations\n\nclass DemoConstants:\n    pass\n",
+            "from __future__ import annotations\n\n"
+            f"{declaration}"
+            "class DemoConstants:\n    pass\n",
             encoding="utf-8",
         )
 
@@ -686,7 +692,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False
         )
 
-        tm.that(report.total_runtime_alias_violations, eq=0)
+        tm.that(report.total_runtime_alias_violations, eq=violations)
 
     def test_namespace_enforcer_respects_tool_flext_namespace_scan_dirs(
         self, tmp_path: Path

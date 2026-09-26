@@ -204,8 +204,6 @@ if TYPE_CHECKING:
     from .refactor.signature_propagation import FlextInfraRefactorSignaturePropagation
     from .refactor.wrapper_root_namespace import FlextInfraWrapperRootNamespaceRefactor
     from .release.orchestrator import FlextInfraReleaseOrchestrator
-    from .release.orchestrator_phases import FlextInfraReleaseOrchestratorPhases
-    from .release.policy_render import FlextInfraReleasePolicyRender
     from .services.cli_dispatch import CliDispatchService
     from .services.cli_route_base import CliRouteBase
     from .services.cli_routes import CliRouteService
@@ -277,6 +275,7 @@ if TYPE_CHECKING:
     )
     from .workspace.flext_binding import FlextInfraFlextBindingService
     from .workspace.orchestrator import FlextInfraOrchestratorService
+    from .workspace.propagation import FlextInfraWorkspacePropagation
     from .workspace.rope import FlextInfraRopeWorkspace
     from .worktree import FlextInfraWorktreeService
 
@@ -432,8 +431,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorSymbolPropagator",
     "FlextInfraRefactorTypingUnifier",
     "FlextInfraReleaseOrchestrator",
-    "FlextInfraReleaseOrchestratorPhases",
-    "FlextInfraReleasePolicyRender",
     "FlextInfraRopeWorkspace",
     "FlextInfraRuffFormatGate",
     "FlextInfraRuffLintGate",
@@ -472,6 +469,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspaceEnvironmentMixin",
     "FlextInfraWorkspaceEnvironmentProvenance",
     "FlextInfraWorkspaceEnvironmentSync",
+    "FlextInfraWorkspacePropagation",
     "FlextInfraWorktreeService",
     "FlextInfraWrapperRootNamespaceRefactor",
     "GateContractInfraError",
@@ -718,8 +716,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ),
             ".release": ("release",),
             ".release.orchestrator": ("FlextInfraReleaseOrchestrator",),
-            ".release.orchestrator_phases": ("FlextInfraReleaseOrchestratorPhases",),
-            ".release.policy_render": ("FlextInfraReleasePolicyRender",),
             ".services": ("services",),
             ".services.cli_dispatch": ("CliDispatchService",),
             ".services.cli_route_base": ("CliRouteBase",),
@@ -809,6 +805,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ),
             ".workspace.flext_binding": ("FlextInfraFlextBindingService",),
             ".workspace.orchestrator": ("FlextInfraOrchestratorService",),
+            ".workspace.propagation": ("FlextInfraWorkspacePropagation",),
             ".workspace.rope": ("FlextInfraRopeWorkspace",),
             ".worktree": ("FlextInfraWorktreeService",),
             "flext_cli": ("d", "e", "h", "r", "x"),

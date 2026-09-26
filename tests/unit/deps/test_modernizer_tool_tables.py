@@ -23,7 +23,6 @@ class TestsFlextInfraDepsModernizerToolTables:
         source: str = "",
         *,
         tool_config: m.Infra.ToolConfigDocument | None = None,
-        project_kind: str = "core",
     ) -> t.Pair[t.MutableJsonMapping, t.StrSequence]:
         """Apply the phase to one named project payload; return payload and changes."""
         project_dir = tmp_path / "flext-sample"
@@ -33,9 +32,7 @@ class TestsFlextInfraDepsModernizerToolTables:
         )
         changes = FlextInfraToolTablesPhase(
             tool_config or config.Infra.tooling
-        ).apply_payload(
-            payload, path=project_dir / "pyproject.toml", project_kind=project_kind
-        )
+        ).apply_payload(payload, path=project_dir / "pyproject.toml")
         return payload, changes
 
     @staticmethod
@@ -184,24 +181,15 @@ class TestsFlextInfraDepsModernizerToolTables:
         vulture = self._table(payload, "vulture")
         tm.that(vulture["min_confidence"], eq=tools.vulture.min_confidence)
 
-    @pytest.mark.parametrize(
-        "project_kind", ["core", "domain", "platform", "integration", "app"]
-    )
-    def test_coverage_threshold_follows_project_kind(
-        self, tmp_path: Path, project_kind: str
-    ) -> None:
-        """Select the configured threshold for every classified project kind."""
+    def test_coverage_report_measures_without_a_floor(self, tmp_path: Path) -> None:
+        """Keep reporting policy and drop a floor left by an older projection."""
         coverage = config.Infra.tooling.tools.coverage
-        payload, _ = self._applied(tmp_path, project_kind=project_kind)
+        payload, changes = self._applied(
+            tmp_path, "[tool.coverage.report]\nfail_under = 45\n"
+        )
         report = self._table(payload, "coverage", "report")
-        thresholds: t.IntMapping = {
-            "core": coverage.fail_under.core,
-            "domain": coverage.fail_under.domain,
-            "platform": coverage.fail_under.platform,
-            "integration": coverage.fail_under.integration,
-            "app": coverage.fail_under.app,
-        }
-        tm.that(report["fail_under"], eq=thresholds[project_kind])
+        tm.that(report, lacks="fail_under")
+        tm.that(changes, has="tool.coverage.report.fail_under removed")
         tm.that(report["show_missing"], eq=coverage.show_missing)
         tm.that(
             list(u.Tests.strings(self._table(payload, "coverage", "run")["omit"])),
@@ -256,11 +244,10 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that(first, empty=False)
         tm.that(second, empty=True)
 
-    def test_modernizer_roots_and_members_converge_on_their_kind(
+    def test_modernizer_roots_and_members_converge_without_coverage_floor(
         self, tmp_path: Path
     ) -> None:
-        """Keep topology-owned roots distinct from dependency-classified members."""
-        thresholds = config.Infra.tooling.tools.coverage.fail_under
+        """Roots and members converge once and never project a coverage floor."""
         modernizer = FlextInfraPyprojectModernizer(
             repository_root=tmp_path, skip_check=True
         )
@@ -293,15 +280,8 @@ class TestsFlextInfraDepsModernizerToolTables:
             tm.ok(modernizer.conform_source(member_first, path=member_path)),
             eq=member_first,
         )
-        tm.that(
-            u.Tests.toml_table_at(root_first, "tool", "coverage", "report")[
-                "fail_under"
-            ],
-            eq=thresholds.platform,
-        )
-        tm.that(
-            u.Tests.toml_table_at(member_first, "tool", "coverage", "report")[
-                "fail_under"
-            ],
-            eq=thresholds.app,
-        )
+        for rendered in (root_first, member_first):
+            tm.that(
+                u.Tests.toml_table_at(rendered, "tool", "coverage", "report"),
+                lacks="fail_under",
+            )
