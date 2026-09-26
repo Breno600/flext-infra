@@ -168,7 +168,7 @@ class Row(BaseModel):
             consumer = importlib.import_module("derived_consumer")
             owner = importlib.import_module("flext_infra").m
 
-            tm.that(owner is m_fleet, eq=True)
+            tm.that(consumer.m is owner, eq=True)
             tm.that(
                 consumer.Row.model_validate_json('{"value": "live"}').value, eq="live"
             )

@@ -194,9 +194,12 @@ class FlextInfraWorkspaceChecker(
         dir_ensure = u.Cli.ensure_dir(report_base)
         if dir_ensure.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(dir_ensure)
-        effective_ctx = ctx or m.Infra.GateContext(
-            repository_root=self._repository_root, reports_dir=report_base
-        )
+        effective_ctx = (
+            ctx
+            or m.Infra.GateContext(
+                repository_root=self._repository_root, reports_dir=report_base
+            )
+        ).model_copy(update={"fail_fast": fail_fast})
         targets = self._project_targets(projects)
         rope_outcomes_result = self._run_rope_gate_cycle(targets, resolved_gates)
         if rope_outcomes_result.failure:

@@ -243,9 +243,20 @@ class FlextInfraWorkspaceCheckGatesMixin:
         project_name = project_dir.name
         result = m.Infra.ProjectResult(project=project_name)
 
+        ordered_gates = list(gates)
+        namespace_id = FlextInfraNamespaceGate.gate_id
+        census_id = FlextInfraRuntimeCensusGate.gate_id
+        if (
+            namespace_id in ordered_gates
+            and census_id in ordered_gates
+            and ordered_gates.index(namespace_id) > ordered_gates.index(census_id)
+        ):
+            ordered_gates.remove(namespace_id)
+            ordered_gates.insert(ordered_gates.index(census_id), namespace_id)
+
         stages: t.MutableSequenceOf[m.Cli.PipelineStageSpec] = []
         previous_gate_id: str | None = None
-        for gate_id in gates:
+        for gate_id in ordered_gates:
             gate_instance = self._registry.create(gate_id, self._repository_root)
             if gate_instance is None:
                 continue
@@ -253,8 +264,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 m.Cli.PipelineStageSpec(
                     stage_id=gate_id,
                     depends_on=(
-                        frozenset({"namespace"})
-                        if gate_id == "runtime-census"
+                        frozenset({namespace_id})
+                        if gate_id == census_id and namespace_id in ordered_gates
                         else frozenset()
                     )
                     | (
@@ -272,11 +283,18 @@ class FlextInfraWorkspaceCheckGatesMixin:
         if not stages:
             return result
 
-        cli.pipeline(
+        pipeline_result = cli.pipeline(
             stages,
             context=m.Cli.PipelineStageContext(repository_root=project_dir),
             logger=self._gate_logger,
         )
+        if not result.gates:
+            pipeline_result.unwrap()
+            msg = "gate pipeline completed without executing a gate"
+            raise RuntimeError(msg)
+        if pipeline_result.success and len(result.gates) != len(stages):
+            msg = "gate pipeline completed without executing every declared gate"
+            raise RuntimeError(msg)
         return result
 
     # ------------------------------------------------------------------

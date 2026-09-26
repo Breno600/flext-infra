@@ -73,6 +73,7 @@ class TestsFlextInfraRunProjects:
         )
 
         tm.ok(result)
+        tm.that(tuple(result.value[0].gates), eq=("lint",))
         tm.that((tmp_path / "reports" / report_name).exists(), eq=True)
 
     def test_run_projects_creates_project_scoped_reports_dir(
