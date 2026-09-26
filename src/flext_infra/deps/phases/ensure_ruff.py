@@ -137,60 +137,105 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
-        return (
-            m.Infra.DepsToml
-            .PhaseConfigBuilder("ruff")
-            .table(c.Infra.RUFF)
-            .deprecated(c.Infra.EXTEND)
-            .list(c.Infra.EXCLUDE, sorted({*ruff_cfg.exclude, *workspace_exclusions}))
-            .list("namespace-packages", sorted(ruff_cfg.namespace_packages))
-            .value("fix", ruff_cfg.fix)
-            .value("line-length", ruff_cfg.line_length)
-            .value("preview", ruff_cfg.preview)
-            .value("respect-gitignore", ruff_cfg.respect_gitignore)
-            .value("show-fixes", ruff_cfg.show_fixes)
-            .value("target-version", ruff_cfg.target_version)
-            .list("src", sorted(ruff_cfg.src))
-            .nested(
-                "format",
-                values=(
-                    ("docstring-code-format", ruff_cfg.format.docstring_code_format),
-                    ("indent-style", ruff_cfg.format.indent_style),
-                    ("line-ending", ruff_cfg.format.line_ending),
-                    ("quote-style", ruff_cfg.format.quote_style),
-                    (
-                        "skip-magic-trailing-comma",
-                        ruff_cfg.format.skip_magic_trailing_comma,
+        toml = m.Infra.DepsToml
+        return toml.PhaseConfig(
+            name="ruff",
+            table_path=(c.Infra.RUFF,),
+            operations=(
+                toml.RemoveOp(key=c.Infra.EXTEND),
+                toml.ListOp(
+                    key=c.Infra.EXCLUDE,
+                    values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
+                ),
+                toml.ListOp(
+                    key="namespace-packages", values=sorted(ruff_cfg.namespace_packages)
+                ),
+                toml.SetOp(key="fix", value=ruff_cfg.fix),
+                toml.SetOp(key="line-length", value=ruff_cfg.line_length),
+                toml.SetOp(key="preview", value=ruff_cfg.preview),
+                toml.SetOp(key="respect-gitignore", value=ruff_cfg.respect_gitignore),
+                toml.SetOp(key="show-fixes", value=ruff_cfg.show_fixes),
+                toml.SetOp(key="target-version", value=ruff_cfg.target_version),
+                toml.ListOp(key="src", values=sorted(ruff_cfg.src)),
+            ),
+            nested_tables=(
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=("format",),
+                    operations=tuple(
+                        toml.SetOp(key=key, value=value)
+                        for key, value in (
+                            (
+                                "docstring-code-format",
+                                ruff_cfg.format.docstring_code_format,
+                            ),
+                            ("indent-style", ruff_cfg.format.indent_style),
+                            ("line-ending", ruff_cfg.format.line_ending),
+                            ("quote-style", ruff_cfg.format.quote_style),
+                            (
+                                "skip-magic-trailing-comma",
+                                ruff_cfg.format.skip_magic_trailing_comma,
+                            ),
+                        )
                     ),
                 ),
-            )
-            .nested(
-                c.Infra.LINT_SECTION,
-                values=(
-                    ("select", u.normalize_to_json_value(sorted(ruff_cfg.lint.select))),
-                    (c.Infra.IGNORE, u.normalize_to_json_value(effective_ignore)),
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=(c.Infra.LINT_SECTION,),
+                    operations=(
+                        toml.SetOp(
+                            key="select",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.select)
+                            ),
+                        ),
+                        toml.SetOp(
+                            key=c.Infra.IGNORE,
+                            value=u.normalize_to_json_value(effective_ignore),
+                        ),
+                    ),
                 ),
-            )
-            .nested(
-                c.Infra.LINT_SECTION,
-                "flake8-tidy-imports",
-                "banned-api",
-                values=tuple(
-                    (name, u.normalize_to_json_value({"msg": message}))
-                    for name, message in ruff_cfg.lint.banned_api.items()
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=(
+                        c.Infra.LINT_SECTION,
+                        "flake8-tidy-imports",
+                        "banned-api",
+                    ),
+                    operations=tuple(
+                        toml.SetOp(
+                            key=name, value=u.normalize_to_json_value({"msg": message})
+                        )
+                        for name, message in ruff_cfg.lint.banned_api.items()
+                    ),
                 ),
-            )
-            .nested(c.Infra.LINT_SECTION, c.Infra.ISORT, values=tuple(isort_values))
-            .nested(
-                c.Infra.LINT_SECTION,
-                "per-file-ignores",
-                values=tuple(
-                    (pattern, u.normalize_to_json_value(sorted(rules)))
-                    for pattern, rules in per_file_ignores.items()
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=(c.Infra.LINT_SECTION, c.Infra.ISORT),
+                    operations=tuple(
+                        toml.SetOp(key=key, value=value) for key, value in isort_values
+                    ),
                 ),
-                deprecated_keys=stale_patterns,
-            )
-            .build()
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=(c.Infra.LINT_SECTION, "per-file-ignores"),
+                    operations=(
+                        *(
+                            toml.SetOp(
+                                key=pattern,
+                                value=u.normalize_to_json_value(sorted(rules)),
+                            )
+                            for pattern, rules in per_file_ignores.items()
+                        ),
+                        *(toml.RemoveOp(key=pattern) for pattern in stale_patterns),
+                    ),
+                ),
+            ),
         )
 
     def apply_payload(

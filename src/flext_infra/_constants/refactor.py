@@ -165,11 +165,14 @@ class FlextInfraConstantsRefactor:
     """Allowed keys under the ``refactor`` config scope."""
 
     TYPING_DEFINITION_FILES: ClassVar[frozenset[str]] = frozenset({
+        "constants.py",
+        "_constants",
         "typings.py",
         "_typings",
         "protocols.py",
         "_protocols",
     })
+    """Declaration layers where a runtime ``t`` dependency would invert layering."""
     TYPING_INLINE_UNION_CANONICAL_MAP: ClassVar[t.MappingKV[frozenset[str], str]] = (
         MappingProxyType({
             frozenset({"str", "int", "float", "bool"}): "t.Primitives",

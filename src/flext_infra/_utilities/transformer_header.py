@@ -98,16 +98,21 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         return f"{source[:offset]}{line}{source[offset:]}"
 
     @staticmethod
-    def has_runtime_alias_import(source: str, alias: str) -> bool:
-        """Prove availability from the unconditional import header only."""
+    def has_runtime_alias_import(source: str, alias: str | None = None) -> bool:
+        """Prove one or any canonical facade alias in the runtime import header."""
         module = ast.parse(source)
         header = (
             module.body[1:] if ast.get_docstring(module) is not None else module.body
         )
+        expected = (
+            frozenset({alias})
+            if alias is not None
+            else c.Infra.ENFORCEMENT_CANONICAL_ALIASES
+        )
         for node in header:
             if not isinstance(node, ast.ImportFrom | ast.Import):
                 return False
-            if any((name.asname or name.name) == alias for name in node.names):
+            if any((name.asname or name.name) in expected for name in node.names):
                 return True
         return False
 

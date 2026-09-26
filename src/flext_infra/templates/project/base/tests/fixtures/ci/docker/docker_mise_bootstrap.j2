@@ -61,6 +61,7 @@ WORKDIR /workspace
 RUN --mount=type=bind,source=.,target=/source,ro \
     cp -R /source/. /workspace/ \
     && chown -R runner:runner /workspace
+COPY --from=git --chown=runner:runner . /workspace/.git/
 USER runner
 {% for name, relative in mise_bootstrap.persistent_environment if name == "MISE_SHIMS_DIR" -%}
 ENV PATH="${{ mise_bootstrap.storage_root_variable }}{% if relative != "." %}/{{ relative }}{% endif %}:${PATH}"

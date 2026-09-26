@@ -1,4 +1,4 @@
-{% macro mise_runtime_bootstrap(project_root, mise, bootstrap) -%}
+{% macro mise_runtime_environment(project_root, mise, bootstrap) -%}
 	project_root="{{ project_root }}"; \
 	mise="{{ mise }}"; \
 	mise_storage_root="$({{ bootstrap.storage_root_variable }})"; \
@@ -14,8 +14,6 @@
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
 	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
-	# Only ``upg`` resolves the Mise release; every other lifecycle launches \
-	# exactly the release ``upg`` recorded in the committed pin file. \
 	mise_pin_file="$$project_root/{{ bootstrap.version_pin_file }}"; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" != "1" ]; then \
 		if [ ! -f "$$mise_pin_file" ]; then \
@@ -126,7 +124,37 @@
 			$${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
 			"$$@"; \
-	}; \
+	}
+{%- endmacro %}
+
+{% macro mise_runtime_command(project_root, mise, bootstrap) -%}
+	set -eu; \
+	{{ mise_runtime_environment(project_root, mise, bootstrap) }}; \
+	mise_runtime="$$mise_storage_root/{{ bootstrap.runtime_install_relative_template | replace('{release}', '${caller_mise_version#v}') | replace('$', '$$') }}"; \
+	if [ "$(OS)" = "Windows_NT" ]; then mise_runtime="$$mise_runtime.exe"; fi; \
+	if [ ! -x "$$mise_runtime" ]; then \
+		printf 'ERROR: missing pinned Mise runtime %s; run make setup\n' "$$mise_runtime" >&2; exit 2; \
+	fi; \
+	if mise_exec project env MISE_OFFLINE=true "$$mise_runtime" -C "$$project_root" bin-paths >"$$scratch/paths" 2>"$$scratch/stderr"; then \
+		cat "$$scratch/stderr" >&2; \
+	else \
+		mise_status=$$?; cat "$$scratch/stderr" >&2; cat "$$scratch/paths" >&2; exit "$$mise_status"; \
+	fi; \
+	if [ -s "$$scratch/stderr" ]; then \
+		printf 'ERROR: Mise emitted diagnostics during runtime selection\n' >&2; exit 2; \
+	fi; \
+	tool_paths=; \
+	while IFS= read -r tool_path; do \
+		case "$$tool_path" in /*) ;; *) printf 'ERROR: Mise returned a non-absolute tool path: %s\n' "$$tool_path" >&2; exit 2 ;; esac; \
+		if [ ! -d "$$tool_path" ]; then printf 'ERROR: missing tool directory: %s; run make setup\n' "$$tool_path" >&2; exit 2; fi; \
+		tool_paths="$${tool_paths:+$$tool_paths:}$$tool_path"; \
+	done < "$$scratch/paths"; \
+	if [ -z "$$tool_paths" ]; then printf 'ERROR: Mise returned no installed tool paths; run make setup\n' >&2; exit 2; fi; \
+	PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"
+{%- endmacro %}
+
+{% macro mise_runtime_bootstrap(project_root, mise, bootstrap) -%}
+	{{ mise_runtime_environment(project_root, mise, bootstrap) }}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
@@ -208,6 +236,8 @@
 	if [ ! -x "$$direnv_executable" ]; then \
 		printf 'ERROR: Mise resolved a non-executable direnv path: %s\n' "$$direnv_executable" >&2; exit 2; \
 	fi; \
+	mise_checked "$$scratch/python-path.log" mise_exec project "$$latest_mise" -C "$$project_root" which python; \
+	python_executable=$$(cat "$$scratch/python-path.log"); \
 	if [ -n "$${GITHUB_PATH:-}" ]; then \
 		printf '%s\n' "$$project_root/bin" >> "$$GITHUB_PATH"; \
 {% for name, relative in bootstrap.persistent_environment if name == "MISE_SHIMS_DIR" -%}
@@ -226,8 +256,9 @@
 		"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
 		"MISE_VERSION=$$runtime_release" \
 		"MISE_INSTALL_PATH=$$mise_runtime_path" \
-		"$$latest_mise" -C "$$project_root" exec -- env \
+		$(PROJECT_TOOL_EXEC) env \
 		"SETUP_DIRENV=$$direnv_executable" \
+		"SETUP_PYTHON=$$python_executable" \
 		"SETUP_DIRENV_XDG_DATA_HOME=$$caller_xdg_data_home" \
 		"{{ make.ci.variable }}=$({{ make.ci.variable }})" {{ lifecycle }}
 {%- endmacro %}
