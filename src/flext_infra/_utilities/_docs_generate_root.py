@@ -14,6 +14,7 @@ from ._docs_generate_project import FlextInfraUtilitiesDocsGenerateProjectMixin
 from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_contract import FlextInfraUtilitiesDocsContract
 from .docs_render import FlextInfraUtilitiesDocsRender
+from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -175,14 +176,13 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
 
     @staticmethod
     def _is_workspace_root_scope(scope: m.Infra.DocScope) -> bool:
-        """Whether one scope is the root of a manifest-carrying repository.
+        """Whether one scope declares the workspace root role.
 
         Mirrors the validate-side contract (docs_validate.docs_missing_required_paths):
-        a root that carries its own workspace manifest is the workspace scope
-        regardless of the scope label, so the generate side must route it to the
-        root publisher exactly the way validate demands the root contract.
+        standalone projects also carry manifests, so file presence cannot
+        elect the aggregate documentation publisher.
         """
-        return (scope.path / "config" / "workspace.yaml").is_file()
+        return FlextInfraUtilitiesWorkspaceManifest.is_fleet_umbrella(scope.path)
 
     @staticmethod
     def docs_scope_artifacts(

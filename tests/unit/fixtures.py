@@ -8,7 +8,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import fcntl
 import tempfile
 from pathlib import Path
 
@@ -74,7 +73,6 @@ def tool_config_document() -> m.Infra.ToolConfigDocument:
     return u.Tests.tool_config_document()
 
 
-_DETECTOR_FIXTURE = "real_detector_project"
 _DETECTOR_PROJECT_NAME = "detector-fixture"
 _DETECTOR_UPGRADE_RECEIPT = "upgrade-receipt.json"
 
@@ -178,10 +176,8 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
     _write_receipt(parent / _DETECTOR_UPGRADE_RECEIPT, upgrade)
 
 
-_MAKE_TEMPLATES_FIXTURE = "resolved_make_templates"
 _MAKE_UPGRADE_RECEIPT = c.Tests.MAKE_TEMPLATE_UPG_RECEIPT
 _MAKE_CI_SETUP_RECEIPT = c.Tests.MAKE_TEMPLATE_CI_RECEIPT
-_INFRA_CHECKOUT_FIXTURE = "provisioned_infra_checkout"
 _INFRA_SETUP_RECEIPT = "setup-receipt.json"
 # Every scenario that provisions the candidate's own environment before `gen`.
 _INFRA_CHECKOUT_SCENARIOS = (
@@ -275,67 +271,26 @@ def _provision_infra_checkout(scenario: str) -> None:
     _write_receipt(parent / _INFRA_SETUP_RECEIPT, setup)
 
 
-def pytest_collection_finish(session: pytest.Session) -> None:
-    """Provision every selected run-scoped consumer before any item runs.
+def _ensure_provisioned(
+    parent: Path, receipt: str, key: c.Infra.MakeProfile | str | t.StrSequence
+) -> None:
+    """Provision only a consumed fixture under the canonical filesystem lease.
 
-    Network resolution and environment installation are provisioning, not the
-    behaviour under test, so they never run inside an item's time budget.
-    Workers of one run share the provisioned consumers; the first worker
-    provisions one while the others wait on its lock and reuse its receipt.
+    Testmon inventory and selection collect tests without network or writes.
+    Provisioning belongs to the item that actually consumes the checkout, so
+    its cost and failure remain visible to the test deadline and report.
     """
-    functions = tuple(
-        item for item in session.items if isinstance(item, pytest.Function)
-    )
-    detector = dict.fromkeys(
-        tuple(
-            t.Infra.STR_SEQ_ADAPTER.validate_python(
-                item.callspec.params[_DETECTOR_FIXTURE]
-            )
-        )
-        for item in functions
-        if _DETECTOR_FIXTURE in item.fixturenames
-    )
-    profiles = (
-        tuple(c.Infra.MakeProfile)
-        if any(_MAKE_TEMPLATES_FIXTURE in item.fixturenames for item in functions)
-        else ()
-    )
-    scenarios = dict.fromkeys(
-        str(item.callspec.params[_INFRA_CHECKOUT_FIXTURE])
-        for item in functions
-        if _INFRA_CHECKOUT_FIXTURE in item.fixturenames
-    )
-    jobs = (
-        *(
-            (_detector_template_parent(modules), _DETECTOR_UPGRADE_RECEIPT, modules)
-            for modules in detector
-        ),
-        *(
-            (
-                _run_scoped("make-templates", profile.value),
-                _MAKE_UPGRADE_RECEIPT,
-                profile,
-            )
-            for profile in profiles
-        ),
-        *(
-            (_run_scoped("infra-checkouts", scenario), _INFRA_SETUP_RECEIPT, scenario)
-            for scenario in scenarios
-        ),
-    )
-    for parent, receipt, key in jobs:
-        parent.mkdir(parents=True, exist_ok=True)
-        with (parent.with_suffix(".lock")).open("a", encoding="utf-8") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            if (parent / receipt).is_file():
-                continue
-            match key:
-                case c.Infra.MakeProfile():
-                    _provision_make_template(key)
-                case str():
-                    _provision_infra_checkout(key)
-                case _:
-                    _provision_detector_template(key)
+    parent.mkdir(parents=True, exist_ok=True)
+    with u.Infra.codegen_transaction_lease(parent / receipt):
+        if (parent / receipt).is_file():
+            return
+        match key:
+            case c.Infra.MakeProfile():
+                _provision_make_template(key)
+            case str():
+                _provision_infra_checkout(key)
+            case _:
+                _provision_detector_template(key)
 
 
 @pytest.fixture
@@ -348,6 +303,7 @@ def resolved_make_templates() -> t.MappingKV[c.Infra.MakeProfile, Path]:
     templates: dict[c.Infra.MakeProfile, Path] = {}
     for profile in c.Infra.MakeProfile:
         parent = _run_scoped("make-templates", profile.value)
+        _ensure_provisioned(parent, _MAKE_UPGRADE_RECEIPT, profile)
         upgrade = u.Tests.command_receipt(parent / _MAKE_UPGRADE_RECEIPT)
         tm.that(
             u.Cli.process_succeeded(upgrade.outcome),
@@ -363,6 +319,7 @@ def provisioned_infra_checkout(request: pytest.FixtureRequest) -> t.Pair[str, Pa
     """Return one scenario's candidate checkout, set up from committed locks."""
     scenario = str(request.param)
     parent = _run_scoped("infra-checkouts", scenario)
+    _ensure_provisioned(parent, _INFRA_SETUP_RECEIPT, scenario)
     setup = u.Tests.command_receipt(parent / _INFRA_SETUP_RECEIPT)
     tm.that(
         u.Cli.process_succeeded(setup.outcome), eq=True, msg=setup.stdout + setup.stderr
@@ -382,6 +339,7 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     """
     modules = t.Infra.STR_SEQ_ADAPTER.validate_python(request.param)
     parent = _detector_template_parent(modules)
+    _ensure_provisioned(parent, _DETECTOR_UPGRADE_RECEIPT, modules)
     upgrade = m.Cli.CommandOutput.model_validate_json(
         (parent / _DETECTOR_UPGRADE_RECEIPT).read_text(encoding="utf-8")
     )

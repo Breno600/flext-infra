@@ -218,6 +218,12 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
+        npm_package_manager: Annotated[
+            Literal["npm"],
+            m.Field(
+                description="Mise npm installer that runs declared native CLI lifecycle scripts"
+            ),
+        ]
         qlty_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -299,6 +305,9 @@ class FlextInfraModelsMiseToolchain:
         ]
         taplo_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
+        ]
+        ast_grep_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")
         ]
         ast_grep_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact ast-grep analyzer version")
