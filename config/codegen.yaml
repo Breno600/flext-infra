@@ -7,14 +7,6 @@ Infra:
     # validate-git-hook.sh).
     retired_projections: [.github/scripts/install-git-hooks.sh]
 
-    # Operator law 2026-09-22: the pyproject template declares `.cli:main`
-    # for every distribution while most member cli facades predate that
-    # contract. Until the fleet converges the facades (bead
-    # flext-1pquc, gen-fixed-point campaign), declared-script import
-    # failures warn instead of failing the conformance transaction.
-    # Package-export probes stay blocking either way.
-    fresh_import_entry_points_warn_only: true
-
     # Per-module scc code-LOC ceiling. Operator instruction 2026-09-07:
     # the former 1000-LOC allowance stands (supersedes the 200 constant).
     loc_cap:
