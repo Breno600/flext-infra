@@ -60,7 +60,13 @@ class TestsFlextInfraCodegenLayout:
         candidates = tuple(f"consumer-note-{index}.fixture" for index in range(3))
         for filename in candidates:
             (project / filename).write_text(f"{filename}\n", encoding="utf-8")
-        baseline = cls._fresh_layout_report(project)
+        # Why in-process: no org overlay exists yet, so the baseline carries no
+        # config the long-lived worker's frozen config singleton could leak
+        # across parametrized cases. Only the post-override read below (which
+        # must observe the just-written project-scoped overlay) pays for a
+        # fresh interpreter; halving the subprocess count keeps both reads
+        # inside the default per-test budget.
+        baseline = layout_engine(project).check_project(project)
         baseline_paths = {finding.path for finding in baseline.findings}
         tm.that(set(candidates) <= baseline_paths, eq=True)
         override = m.Infra.LayoutProjectOverrideSpec(
