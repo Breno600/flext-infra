@@ -7,14 +7,6 @@ Infra:
     # validate-git-hook.sh).
     retired_projections: [.github/scripts/install-git-hooks.sh]
 
-    # Operator law 2026-09-22: the pyproject template declares `.cli:main`
-    # for every distribution while most member cli facades predate that
-    # contract. Until the fleet converges the facades (bead
-    # flext-1pquc, gen-fixed-point campaign), declared-script import
-    # failures warn instead of failing the conformance transaction.
-    # Package-export probes stay blocking either way.
-    fresh_import_entry_points_warn_only: true
-
     # Per-module scc code-LOC ceiling. Operator instruction 2026-09-07:
     # the former 1000-LOC allowance stands (supersedes the 200 constant).
     loc_cap:
@@ -63,7 +55,13 @@ Infra:
       kind_version: latest
       direnv_version: latest
       taplo_version: latest
+      # The npm CLI publishes a native musl binary; the GitHub CLI release does
+      # not. One selector therefore covers the declared Linux libc variants.
+      ast_grep_selector: npm:@ast-grep/cli
       ast_grep_version: latest
+      # ast-grep's native binary is selected by its npm lifecycle script.
+      # Mise's embedded aube installer omits it and emits a warning per scan.
+      npm_package_manager: aube
       gitleaks_version: latest
       kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
@@ -81,6 +79,7 @@ Infra:
       # mise safe mode ignores project [settings].
       mise_lockfile_platforms:
         - linux-x64
+        - linux-x64-musl
         - linux-arm64
         - macos-x64
         - macos-arm64
@@ -99,6 +98,7 @@ Infra:
       # one per platform, so `mise lock` recorded no URL for them.
       jscpd_asset_patterns:
         linux-x64: jscpd-linux-x64-gnu.tar.gz
+        linux-x64-musl: jscpd-linux-x64-musl.tar.gz
         linux-arm64: jscpd-linux-arm64-gnu.tar.gz
         macos-x64: jscpd-darwin-x64.tar.gz
         macos-arm64: jscpd-darwin-arm64.tar.gz
@@ -348,24 +348,7 @@ Infra:
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
       fmt_gates: [markdown-format]
-      # Explicit policy suspension; validators remain strict when invoked.
-      # Local, CI, and hooks derive their active gates from this same owner.
-      check_gate_suspensions:
-        - gate: duplication
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: codemod
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: boundary
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: namespace
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: runtime-census
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
+      check_gate_suspensions: []
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /
       # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).

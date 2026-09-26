@@ -609,12 +609,10 @@ Infra:
         # cannot fit 10s; it is not a slow TEST, it is a slow HARNESS. This is
         # the declared exception, not a raised ceiling: unmarked cases keep 10s.
         slow-timeout-seconds: 60
-        # Complete-suite wall clock. Individual cases remain bounded at 10s
-        # (60s only when explicitly slow). The 2026-09-24 cold baseline reached
-        # 69% of 2975 items at 2400s, projecting roughly 3500s for completion.
-        # 7200s provides bounded headroom for all selected cases and coverage.
-        # The outer wall adds one minute for orderly worker/report shutdown.
-        run-timeout-seconds: 7200
+        # A run that cannot finish in this budget is a performance defect.
+        # The former two-hour cap hid network upgrades in collection fixtures
+        # and made a stalled suite appear routine.
+        run-timeout-seconds: 240
         termination-grace-seconds: 2
         # Operator decision 2026-09-14: collect every selected test's outcome.
         # Pytest zero disables early stopping; failures retain their nonzero exit.
@@ -698,7 +696,7 @@ Infra:
         # hook. A wide outer wall is itself an escape hatch — it would let an
         # overrun keep burning wall clock instead of aborting. Grace covers
         # interpreter start, collection and teardown only.
-        process-timeout-seconds: 7260
+        process-timeout-seconds: 300
       tomlsort:
         all: true
         in_place: true

@@ -1,4 +1,4 @@
-{% macro mise_runtime_bootstrap(project_root, mise, bootstrap) -%}
+{% macro mise_runtime_environment(project_root, mise, bootstrap) -%}
 	project_root="{{ project_root }}"; \
 	mise="{{ mise }}"; \
 	mise_storage_root="$({{ bootstrap.storage_root_variable }})"; \
@@ -14,8 +14,6 @@
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
 	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
-	# Only ``upg`` resolves the Mise release; every other lifecycle launches \
-	# exactly the release ``upg`` recorded in the committed pin file. \
 	mise_pin_file="$$project_root/{{ bootstrap.version_pin_file }}"; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" != "1" ]; then \
 		if [ ! -f "$$mise_pin_file" ]; then \
@@ -126,7 +124,37 @@
 			$${mise_config_argument:+"$$mise_config_argument"} \
 			$${mise_runtime_path:+"MISE_INSTALL_PATH=$$mise_runtime_path"} \
 			"$$@"; \
-	}; \
+	}
+{%- endmacro %}
+
+{% macro mise_runtime_command(project_root, mise, bootstrap) -%}
+	set -eu; \
+	{{ mise_runtime_environment(project_root, mise, bootstrap) }}; \
+	mise_runtime="$$mise_storage_root/{{ bootstrap.runtime_install_relative_template | replace('{release}', '${caller_mise_version#v}') | replace('$', '$$') }}"; \
+	if [ "$(OS)" = "Windows_NT" ]; then mise_runtime="$$mise_runtime.exe"; fi; \
+	if [ ! -x "$$mise_runtime" ]; then \
+		printf 'ERROR: missing pinned Mise runtime %s; run make setup\n' "$$mise_runtime" >&2; exit 2; \
+	fi; \
+	if mise_exec project env MISE_OFFLINE=true "$$mise_runtime" -C "$$project_root" bin-paths >"$$scratch/paths" 2>"$$scratch/stderr"; then \
+		cat "$$scratch/stderr" >&2; \
+	else \
+		mise_status=$$?; cat "$$scratch/stderr" >&2; cat "$$scratch/paths" >&2; exit "$$mise_status"; \
+	fi; \
+	if [ -s "$$scratch/stderr" ]; then \
+		printf 'ERROR: Mise emitted diagnostics during runtime selection\n' >&2; exit 2; \
+	fi; \
+	tool_paths=; \
+	while IFS= read -r tool_path; do \
+		case "$$tool_path" in /*) ;; *) printf 'ERROR: Mise returned a non-absolute tool path: %s\n' "$$tool_path" >&2; exit 2 ;; esac; \
+		if [ ! -d "$$tool_path" ]; then printf 'ERROR: missing tool directory: %s; run make setup\n' "$$tool_path" >&2; exit 2; fi; \
+		tool_paths="$${tool_paths:+$$tool_paths:}$$tool_path"; \
+	done < "$$scratch/paths"; \
+	if [ -z "$$tool_paths" ]; then printf 'ERROR: Mise returned no installed tool paths; run make setup\n' >&2; exit 2; fi; \
+	PATH="$(RUNTIME_BIN):$$tool_paths:$$caller_path" "$$@"
+{%- endmacro %}
+
+{% macro mise_runtime_bootstrap(project_root, mise, bootstrap) -%}
+	{{ mise_runtime_environment(project_root, mise, bootstrap) }}; \
 	mise_checked() { \
 		mise_log="$$1"; shift; \
 		printf 'setup probe: begin stage=%s log=%s\n' "$${mise_log##*/}" "$$mise_log" >&2; \
@@ -167,7 +195,7 @@
 	printf 'mise setup receipt=%s storage=%s\n' "$$runtime_release" "$$mise_storage_root"
 {%- endmacro %}
 
-{% macro tool_bootstrap_recipe(target, project_root, mise, uv_version, lifecycle, bootstrap, make, mise_lockfile_platforms, qlty_selector, jscpd_selector, prettier_selector, scc_selector, waza_selector) -%}
+{% macro tool_bootstrap_recipe(target, project_root, mise, uv_version, lifecycle, bootstrap, make, ast_grep_selector) -%}
 .PHONY: {{ target }}
 
 {{ target }}:
@@ -179,16 +207,21 @@
 		exit 2; \
 	fi; \
 	{{ mise_runtime_bootstrap(project_root, mise, bootstrap) }}; \
-	# Only ``upg`` resolves. Artifact tools own a five-platform URL/checksum \
-	# matrix; npm owns one platform-independent Aube dependency graph. \
+	# Only ``upg`` resolves. Lock every configured tool in one pass so removed \
+	# selectors cannot survive beside their replacement in mise.lock. \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		mise_checked "$$scratch/lock-artifacts.log" mise_exec project "$$latest_mise" -C "$$project_root" lock --bump python uv kubectl helm kind direnv taplo ast-grep gitleaks "{{ scc_selector }}" kubeconform node go make "{{ qlty_selector }}" "{{ jscpd_selector }}" "{{ waza_selector }}"; \
-		mise_lockfile_platforms=; \
-		mise_checked "$$scratch/lock-npm-prettier.log" mise_exec project "$$latest_mise" -C "$$project_root" lock --bump "{{ prettier_selector }}"; \
-		mise_lockfile_platforms="{{ mise_lockfile_platforms | join(',') }}"; \
+		mise_checked "$$scratch/lock.log" mise_exec project "$$latest_mise" -C "$$project_root" lock --bump; \
 	fi; \
 	# ``locked`` mode installs exactly what the committed mise.lock pins. \
 	mise_checked "$$scratch/install.log" mise_exec project "$$latest_mise" -C "$$project_root" install --yes; \
+	# Existing npm tools may have been installed by Mise's old aube backend, \
+	# which omits ast-grep's required postinstall binary selection. Reinstall \
+	# this one configured tool with the declared npm backend. \
+	mise_checked "$$scratch/ast-grep-install.log" mise_exec project "$$latest_mise" -C "$$project_root" install --force --yes "{{ ast_grep_selector }}"; \
+	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_exec project "$$latest_mise" -C "$$project_root" exec -- ast-grep --version; \
+	if [ -s "$$scratch/ast-grep-version.stderr" ]; then \
+		printf 'ERROR: ast-grep emitted diagnostics after installation\n' >&2; exit 2; \
+	fi; \
 	mise_checked "$$scratch/uv-version.log" mise_exec project "$$latest_mise" -C "$$project_root" exec -- uv --version; \
 	uv_output=$$(cat "$$scratch/uv-version.log"); \
 	case "$$uv_output" in \
@@ -208,6 +241,8 @@
 	if [ ! -x "$$direnv_executable" ]; then \
 		printf 'ERROR: Mise resolved a non-executable direnv path: %s\n' "$$direnv_executable" >&2; exit 2; \
 	fi; \
+	mise_checked "$$scratch/python-path.log" mise_exec project "$$latest_mise" -C "$$project_root" which python; \
+	python_executable=$$(cat "$$scratch/python-path.log"); \
 	if [ -n "$${GITHUB_PATH:-}" ]; then \
 		printf '%s\n' "$$project_root/bin" >> "$$GITHUB_PATH"; \
 {% for name, relative in bootstrap.persistent_environment if name == "MISE_SHIMS_DIR" -%}
@@ -226,8 +261,9 @@
 		"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
 		"MISE_VERSION=$$runtime_release" \
 		"MISE_INSTALL_PATH=$$mise_runtime_path" \
-		"$$latest_mise" -C "$$project_root" exec -- env \
+		$(PROJECT_TOOL_EXEC) env \
 		"SETUP_DIRENV=$$direnv_executable" \
+		"SETUP_PYTHON=$$python_executable" \
 		"SETUP_DIRENV_XDG_DATA_HOME=$$caller_xdg_data_home" \
 		"{{ make.ci.variable }}=$({{ make.ci.variable }})" {{ lifecycle }}
 {%- endmacro %}

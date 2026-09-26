@@ -17,13 +17,17 @@
 lockfile = {{ "true" if mise_lockfile else "false" }}
 locked = {{ "true" if mise_locked else "false" }}
 lockfile_platforms = [{% for platform in mise_lockfile_platforms %}"{{ platform }}"{{ ", " if not loop.last }}{% endfor %}]
+[settings.npm]
+# The configured ast-grep package is approved below to run its own native
+# binary-selection lifecycle; dependency scripts remain denied.
+package_manager = "{{ npm_package_manager }}"
 [tool_config]
 locked = {{ "true" if mise_locked else "false" }}
 # End SECTION: settings
 
 # === SECTION: tools (managed) ===
 # Source: config:python_version, config:codegen.scaffold.project.dev native toolchain floors
-#         (kubectl_version, helm_version, kind_version, taplo_version, ast_grep_version,
+#         (kubectl_version, helm_version, kind_version, taplo_version, ast_grep_selector/ast_grep_version,
 #          gitleaks_version, scc_selector/scc_version, kubeconform_version, qlty_selector/qlty_version,
 #          node_version, jscpd_selector/jscpd_version/jscpd_asset_patterns,
 #          prettier_selector/prettier_version, waza_selector/waza_version/waza_version_prefix,
@@ -37,7 +41,7 @@ helm = "{{ helm_version }}"
 kind = "{{ kind_version }}"
 direnv = "{{ direnv_version }}"
 taplo = "{{ taplo_version }}"
-ast-grep = "{{ ast_grep_version }}"
+"{{ ast_grep_selector }}" = { version = "{{ ast_grep_version }}", allow_builds = ["{{ ast_grep_selector.removeprefix('npm:') }}"] }
 gitleaks = "{{ gitleaks_version }}"
 "{{ scc_selector }}" = "{{ scc_version }}"
 kubeconform = "{{ kubeconform_version }}"

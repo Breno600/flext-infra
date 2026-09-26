@@ -384,6 +384,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 jscpd_version=codegen.toolchain.jscpd_version,
                 waza_version=codegen.toolchain.waza_version,
                 taplo_version=codegen.toolchain.taplo_version,
+                ast_grep_selector=codegen.toolchain.ast_grep_selector,
                 ast_grep_version=codegen.toolchain.ast_grep_version,
                 gitleaks_version=codegen.toolchain.gitleaks_version,
                 scc_version=codegen.toolchain.scc_version,
