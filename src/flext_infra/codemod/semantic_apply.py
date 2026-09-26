@@ -9,7 +9,7 @@ from flext_cli import cli
 
 from flext_core import r
 
-from .. import c, config, infra, m, p, t, u
+from .. import c, config, m, p, t, u
 from ..transformers import publish_semantic_file_plans
 
 
@@ -28,7 +28,10 @@ class FlextInfraCodemodSemanticApply:
 
     @classmethod
     def plan_transaction_paths(
-        cls, root: Path, preflight: m.Infra.ModScanReport
+        cls,
+        root: Path,
+        preflight: m.Infra.ModScanReport,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Return one immutable Rope callback for the mod loop's progress identity."""
         original = cls._source_inventory(root, preflight)
@@ -36,10 +39,9 @@ class FlextInfraCodemodSemanticApply:
             FlextInfraUtilitiesCodegenPathCutover,
         )
 
-        with infra.rope_workspace(root) as rope_workspace:
-            return FlextInfraUtilitiesCodegenPathCutover.plan_transaction_path_cutover(
-                rope_workspace=rope_workspace, sources=original
-            )
+        return FlextInfraUtilitiesCodegenPathCutover.plan_transaction_path_cutover(
+            rope_workspace=rope_workspace, sources=original
+        )
 
     @classmethod
     def apply_transaction_paths(
@@ -54,7 +56,12 @@ class FlextInfraCodemodSemanticApply:
         cli.display_text(f"mod: Rope transaction paths changed_files={len(changed)}")
 
     @classmethod
-    def apply(cls, root: Path, preflight: m.Infra.ModScanReport) -> p.Result[bool]:
+    def apply(
+        cls,
+        root: Path,
+        preflight: m.Infra.ModScanReport,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+    ) -> p.Result[bool]:
         """Apply every semantic cutover selected by the canonical mod circuit.
 
         Every planner failure (per module) is returned as a failed Result so the
@@ -67,7 +74,7 @@ class FlextInfraCodemodSemanticApply:
         # Phase 0: Import alignment (rope-native; toggle in tooling.yaml).
         # Runs first so rope plans against disk truth that still equals the
         # in-memory working map.
-        alignment = cls._phase_import_alignment(root, working)
+        alignment = cls._phase_import_alignment(root, working, rope_workspace)
         if alignment.failure:
             return r[bool].from_failure(alignment)
         cls._apply_plan(working, alignment.value, changed)
@@ -79,67 +86,66 @@ class FlextInfraCodemodSemanticApply:
             "import_alignment_files": len(alignment.value),
             "future_annotations": len(future_annotations),
         }
-        with infra.rope_workspace(root) as rope_workspace:
-            residue = cls._check_residue(
-                "future-annotations",
-                r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
-                    cls._phase_future_annotations(root, preflight, working)
-                ),
+        residue = cls._check_residue(
+            "future-annotations",
+            r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
+                cls._phase_future_annotations(root, preflight, working)
+            ),
+        )
+        # Class nesting establishes declaration scopes before references are
+        # normalized; aliases and private imports follow those owner changes.
+        for phase in c.Infra.SemanticCutoverPhase:
+            if residue.failure:
+                return r[bool].from_failure(residue)
+            cli.display_text(f"mod: plan semantic phase {phase}")
+            planned = u.Infra.plan_semantic_cutover(
+                phase,
+                rope_workspace=rope_workspace,
+                sources=working,
+                findings=preflight.entries,
             )
-            # Phase 2: Class nesting establishes the final declaration scopes.
-            # Phase 3: Normalize references after nesting has rewritten their
-            # owners; normalizing first leaves definition-time references the
-            # structural phase introduces and rejects a convergent transaction.
-            # Phases 4-5: Compatibility aliases, then private imports.
-            for phase in c.Infra.SemanticCutoverPhase:
-                if residue.failure:
-                    return r[bool].from_failure(residue)
-                planned = u.Infra.plan_semantic_cutover(
+            if planned.failure:
+                return r[bool].from_failure(planned)
+            cls._apply_plan(working, planned.value, changed)
+            counts[phase] = len(planned.value)
+            residue = cls._check_residue(
+                phase,
+                u.Infra.plan_semantic_cutover(
                     phase,
                     rope_workspace=rope_workspace,
                     sources=working,
                     findings=preflight.entries,
-                )
-                if planned.failure:
-                    return r[bool].from_failure(planned)
-                cls._apply_plan(working, planned.value, changed)
-                counts[phase] = len(planned.value)
-                residue = cls._check_residue(
-                    phase,
-                    u.Infra.plan_semantic_cutover(
-                        phase,
-                        rope_workspace=rope_workspace,
-                        sources=working,
-                        findings=preflight.entries,
-                    ),
-                )
-                if phase is c.Infra.SemanticCutoverPhase.CLASS_NESTING:
-                    deferred = cls._deferred_model_edits(working)
-                    cls._apply_plan(working, deferred, changed)
-                    counts["deferred_models"] = len(deferred)
-                    residue = residue.flat_map(
-                        lambda _: cls._check_residue(
-                            "deferred-models",
-                            r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
-                                cls._deferred_model_edits(working)
-                            ),
-                        )
+                ),
+            )
+            if phase is c.Infra.SemanticCutoverPhase.CLASS_NESTING:
+                deferred = cls._deferred_model_edits(working)
+                cls._apply_plan(working, deferred, changed)
+                counts["deferred_models"] = len(deferred)
+                residue = residue.flat_map(
+                    lambda _: cls._check_residue(
+                        "deferred-models",
+                        r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
+                            cls._deferred_model_edits(working)
+                        ),
                     )
+                )
             if residue.failure:
                 return r[bool].from_failure(residue)
+            cli.display_text(f"mod: semantic phase {phase} complete")
         cli.display_text(
             "mod: semantic cutover "
             + " ".join(f"{name}={count}" for name, count in counts.items())
         )
-        verified = cls._verify_fixed_point(root, working, preflight)
-        if verified.failure:
-            return verified
 
         def validate_published() -> p.Result[bool]:
             published = dict(cls._source_inventory(root, preflight))
-            return cls._verify_fixed_point(root, published, preflight).flat_map(
+            rope_workspace.refresh()
+            return cls._verify_fixed_point(
+                root, published, preflight, rope_workspace
+            ).flat_map(
                 lambda _: cls._check_residue(
-                    "import-alignment", cls._phase_import_alignment(root, published)
+                    "import-alignment",
+                    cls._phase_import_alignment(root, published, rope_workspace),
                 )
             )
 
@@ -149,27 +155,27 @@ class FlextInfraCodemodSemanticApply:
 
     @classmethod
     def _phase_import_alignment(
-        cls, root: Path, working: t.MappingKV[Path, str]
+        cls,
+        root: Path,
+        working: t.MappingKV[Path, str],
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         """Plan rope-native cross-layer import alignment when tooling enables it."""
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         if not config.Infra.tooling.mod.phases.import_alignment:
             return planned_edits.ok(())
-        with infra.rope_workspace(root) as rope_workspace:
-            project_package = (
-                rope_workspace.workspace_index.project_package_by_root.get(
-                    str(root.resolve())
-                )
-            )
-            if project_package is None:
-                return planned_edits.ok(())
-            planned = u.Infra.align_module_imports(
-                rope_project=rope_workspace.rope_project,
-                repository_root=root.resolve(),
-                index=rope_workspace.workspace_index,
-                project_package=project_package,
-                config=config.Infra.tooling.lazy_init,
-            )
+        project_package = rope_workspace.workspace_index.project_package_by_root.get(
+            str(root.resolve())
+        )
+        if project_package is None:
+            return planned_edits.ok(())
+        planned = u.Infra.align_module_imports(
+            rope_project=rope_workspace.rope_project,
+            repository_root=root.resolve(),
+            index=rope_workspace.workspace_index,
+            project_package=project_package,
+            config=config.Infra.tooling.lazy_init,
+        )
         if planned.failure:
             return planned_edits.fail(
                 f"import-alignment failed to plan: {planned.error}"
@@ -245,6 +251,7 @@ class FlextInfraCodemodSemanticApply:
         root: Path,
         working: MutableMapping[Path, str],
         preflight: m.Infra.ModScanReport,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[bool]:
         """Replan every phase against the proposed or reread published sources."""
         edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
@@ -256,19 +263,18 @@ class FlextInfraCodemodSemanticApply:
                 "deferred-models", edits.ok(cls._deferred_model_edits(working))
             )
         )
-        with infra.rope_workspace(root) as rope_workspace:
-            for phase in c.Infra.SemanticCutoverPhase:
-                if verified.failure:
-                    return verified
-                verified = cls._check_residue(
+        for phase in c.Infra.SemanticCutoverPhase:
+            if verified.failure:
+                return verified
+            verified = cls._check_residue(
+                phase,
+                u.Infra.plan_semantic_cutover(
                     phase,
-                    u.Infra.plan_semantic_cutover(
-                        phase,
-                        rope_workspace=rope_workspace,
-                        sources=working,
-                        findings=preflight.entries,
-                    ),
-                )
+                    rope_workspace=rope_workspace,
+                    sources=working,
+                    findings=preflight.entries,
+                ),
+            )
         return verified
 
     @staticmethod

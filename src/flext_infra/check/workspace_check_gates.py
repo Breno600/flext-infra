@@ -257,11 +257,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                         else frozenset()
                     ),
                     handler=self._make_gate_handler(
-                        gate_instance,
-                        project_dir,
-                        ctx,
-                        result.gates,
-                        rope_outcomes,
+                        gate_instance, project_dir, ctx, result.gates, rope_outcomes
                     ),
                 )
             )
@@ -371,9 +367,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
         if ctx.apply_fixes and (not ctx.check_only) and gate_instance.can_fix:
             return gate_instance.fix(project_dir, ctx)
         if isinstance(gate_instance, p.Infra.RopeCheckGate):
-            return gate_instance.check_rope_outcomes(
-                project_dir, ctx, rope_outcomes
-            )
+            return gate_instance.check_rope_outcomes(project_dir, ctx, rope_outcomes)
         return gate_instance.check(project_dir, ctx)
 
 

@@ -41,9 +41,7 @@ class TestsFlextInfraRunProjects:
     ) -> None:
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path, rope=rope_workspace
-        ).run_projects(
-            ["p1"], ["invalid_gate"], reports_dir=tmp_path / "reports"
-        )
+        ).run_projects(["p1"], ["invalid_gate"], reports_dir=tmp_path / "reports")
 
         tm.fail(result)
 
@@ -52,9 +50,7 @@ class TestsFlextInfraRunProjects:
     ) -> None:
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path, rope=rope_workspace
-        ).run_projects(
-            ["nonexistent"], ["lint"], reports_dir=tmp_path / "reports"
-        )
+        ).run_projects(["nonexistent"], ["lint"], reports_dir=tmp_path / "reports")
 
         tm.ok(result)
         tm.that(result.value, eq=())
@@ -64,10 +60,7 @@ class TestsFlextInfraRunProjects:
         [c.Infra.CHECK_REPORT_MARKDOWN_FILENAME, c.Infra.CHECK_REPORT_SARIF_FILENAME],
     )
     def test_run_projects_creates_reports(
-        self,
-        tmp_path: Path,
-        report_name: str,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        self, tmp_path: Path, report_name: str, rope_workspace: p.Infra.RopeWorkspaceDsl
     ) -> None:
         checker = FlextInfraWorkspaceChecker(
             repository_root=tmp_path, rope=rope_workspace

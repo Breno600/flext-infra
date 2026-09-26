@@ -35,9 +35,7 @@ class FlextInfraProtocolsCheck(Protocol):
         """Gate that consumes the composition root's shared Rope cycle."""
 
         def rope_callback_binding(
-            self,
-            project_dir: Path,
-            rope: p.Infra.RopeWorkspaceDsl,
+            self, project_dir: Path, rope: p.Infra.RopeWorkspaceDsl
         ) -> m.Infra.RopeCallbackBinding: ...
 
         def check_rope_outcomes(

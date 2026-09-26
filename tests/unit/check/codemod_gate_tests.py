@@ -121,9 +121,7 @@ class TestsFlextInfraCodemodGate:
         results = tm.ok(
             FlextInfraWorkspaceChecker(
                 repository_root=tmp_path, rope=rope_workspace
-            ).run_projects(
-                [project.name], ["codemod"], reports_dir=reports
-            )
+            ).run_projects([project.name], ["codemod"], reports_dir=reports)
         )
 
         result = results[0]

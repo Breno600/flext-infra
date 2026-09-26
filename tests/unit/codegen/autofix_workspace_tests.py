@@ -57,9 +57,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
             },
         )
         u.Tests.declare_workspace_projects(tmp_path, (managed_project.name,))
-        fixer = FlextInfraCodegenFixer(
-            repository_root=tmp_path, rope=rope_workspace
-        )
+        fixer = FlextInfraCodegenFixer(repository_root=tmp_path, rope=rope_workspace)
         results = fixer.fix_workspace()
         project_names = [res.project for res in results]
         tm.that("external-project" not in project_names, eq=True)
@@ -73,9 +71,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         (project / "Makefile").touch()
         (project / "pyproject.toml").write_text("[project]\nname='no-src-proj'\n")
         (project / ".git").mkdir()
-        fixer = FlextInfraCodegenFixer(
-            repository_root=tmp_path, rope=rope_workspace
-        )
+        fixer = FlextInfraCodegenFixer(repository_root=tmp_path, rope=rope_workspace)
         [result] = fixer.fix_workspace(
             projects=[self._project_info(project, package_name="")]
         )
@@ -98,9 +94,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
                 "constants.py": "class TestProjConstants:\n    pass\n",
             },
         )
-        fixer = FlextInfraCodegenFixer(
-            repository_root=tmp_path, rope=rope_workspace
-        )
+        fixer = FlextInfraCodegenFixer(repository_root=tmp_path, rope=rope_workspace)
         [result] = fixer.fix_workspace(projects=[self._project_info(project)])
         modified_paths = tuple(Path(path) for path in result.files_modified)
         tm.that(modified_paths, length_gte=1)

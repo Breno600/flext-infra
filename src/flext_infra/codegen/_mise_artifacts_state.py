@@ -529,9 +529,23 @@ class FlextInfraMiseArtifactsState:
     def _hosts_lease_lock(
         layout: m.Infra.MiseToolchainWorkspaceLayout, directory: Path
     ) -> bool:
-        """Keep the journal lease lock's file identity across transactions."""
-        lock_path = layout.journal_path.with_name(f"{layout.journal_path.name}.lock")
-        return lock_path.is_relative_to(directory)
+        """Keep journal and participant lease identities across transactions."""
+        lease_paths = (
+            layout.journal_path,
+            layout.scope_root
+            / c.Infra.TRANSACTION_STATE_DIRNAME
+            / c.Infra.JOURNAL_NAME,
+            *(
+                participant.root
+                / c.Infra.TRANSACTION_STATE_DIRNAME
+                / c.Infra.JOURNAL_NAME
+                for participant in layout.file_participants
+            ),
+        )
+        return any(
+            lease.with_name(f"{lease.name}.lock").is_relative_to(directory)
+            for lease in lease_paths
+        )
 
     @classmethod
     def validate_transaction_roots(

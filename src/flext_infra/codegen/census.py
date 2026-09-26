@@ -108,7 +108,9 @@ class FlextInfraCodegenCensus(s[str]):
         )
         cycle_result = self.rope.cycle(
             bindings,
-            project_names=tuple(project.path.resolve().name for project in selected_projects),
+            project_names=tuple(
+                project.path.resolve().name for project in selected_projects
+            ),
         )
         if cycle_result.failure:
             return r[t.VariadicTuple[m.Infra.CensusReport]].from_failure(cycle_result)

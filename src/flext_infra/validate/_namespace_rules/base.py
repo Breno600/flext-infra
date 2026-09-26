@@ -109,9 +109,13 @@ class FlextInfraNamespaceRulesBase:
             if kind == "Import":
                 for alias in getattr(node, "names", ()) or ():
                     imported = getattr(alias, "name", "")
-                    local = getattr(alias, "asname", None) or str(imported).split(".")[0]
+                    local = (
+                        getattr(alias, "asname", None) or str(imported).split(".")[0]
+                    )
                     if isinstance(imported, str) and isinstance(local, str):
-                        bindings[local] = imported if getattr(alias, "asname", None) else local
+                        bindings[local] = (
+                            imported if getattr(alias, "asname", None) else local
+                        )
             elif kind == "ImportFrom":
                 module = getattr(node, "module", "")
                 if not isinstance(module, str):
@@ -123,7 +127,9 @@ class FlextInfraNamespaceRulesBase:
                         bindings[local] = f"{module}.{imported}"
         resolved: t.MutableMappingKV[t.Pair[int, int], frozenset[str]] = {}
         for node in cls.walk(tree):
-            callable_node = getattr(node, "func", None) if cls.kind(node) == "Call" else node
+            callable_node = (
+                getattr(node, "func", None) if cls.kind(node) == "Call" else node
+            )
             if cls.kind(callable_node) not in {"Name", "Attribute"}:
                 continue
             dotted = cls.dotted_name(callable_node)
@@ -132,7 +138,9 @@ class FlextInfraNamespaceRulesBase:
             if imported is None:
                 continue
             qualified = f"{imported}.{suffix}" if separator else imported
-            resolved[cls.line(callable_node), getattr(callable_node, "col_offset", 0)] = frozenset({qualified})
+            resolved[
+                cls.line(callable_node), getattr(callable_node, "col_offset", 0)
+            ] = frozenset({qualified})
         return resolved
 
     @staticmethod

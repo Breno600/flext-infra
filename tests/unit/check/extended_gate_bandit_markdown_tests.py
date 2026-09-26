@@ -40,7 +40,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
         self, tmp_path: Path
     ) -> None:
         """A project without ``src`` declares no package to audit (d94decf10)."""
-        _, project_dir = u.Tests.create_checker_project(tmp_path)
+        project_dir = u.Tests.mk_project(tmp_path, "p1")
 
         result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
 

@@ -40,10 +40,7 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         return r[bool].ok(report.passed)
 
     def __call__(
-        self,
-        workspace: p.Infra.RopeWorkspaceDsl,
-        visit: m.Infra.RopeModuleVisit,
-        /,
+        self, workspace: p.Infra.RopeWorkspaceDsl, visit: m.Infra.RopeModuleVisit, /
     ) -> p.Result[m.Infra.RopeCallbackOutcome]:
         """Validate one module supplied by the shared Rope owner callback."""
         project_root = self.repository_root.resolve()
@@ -143,8 +140,7 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
     def callback_binding(self) -> m.Infra.RopeCallbackBinding:
         """Bind this validator to its exact files before Rope builds syntax trees."""
         return m.Infra.RopeCallbackBinding(
-            callback=self,
-            file_paths=self._eligible_project_files(self.rope),
+            callback=self, file_paths=self._eligible_project_files(self.rope)
         )
 
     @staticmethod

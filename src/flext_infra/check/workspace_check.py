@@ -31,9 +31,7 @@ class FlextInfraWorkspaceChecker(
         exclude=True, description="Shared Rope cycle injected by api.py"
     )
     model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        arbitrary_types_allowed=True,
+        validate_by_name=True, validate_by_alias=True, arbitrary_types_allowed=True
     )
 
     @override
@@ -215,9 +213,7 @@ class FlextInfraWorkspaceChecker(
         return self._write_reports_and_summary(resolved_gates, report_base, outcome)
 
     def _run_rope_gate_cycle(
-        self,
-        targets: t.SequenceOf[m.Infra.CheckProjectTarget],
-        gates: t.StrSequence,
+        self, targets: t.SequenceOf[m.Infra.CheckProjectTarget], gates: t.StrSequence
     ) -> p.Result[t.VariadicTuple[m.Infra.RopeCallbackOutcome]]:
         """Execute every Rope-backed gate callback in one workspace cycle."""
         callbacks: t.MutableSequenceOf[m.Infra.RopeCallbackBinding] = []
@@ -225,9 +221,7 @@ class FlextInfraWorkspaceChecker(
             for gate_id in gates:
                 gate = self._registry.create(gate_id, self._repository_root)
                 if isinstance(gate, p.Infra.RopeCheckGate):
-                    callbacks.append(
-                        gate.rope_callback_binding(target.path, self.rope)
-                    )
+                    callbacks.append(gate.rope_callback_binding(target.path, self.rope))
         if not callbacks:
             return r[t.VariadicTuple[m.Infra.RopeCallbackOutcome]].ok(())
         cycle_result = self.rope.cycle(

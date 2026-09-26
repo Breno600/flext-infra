@@ -36,14 +36,10 @@ class FlextInfraNamespaceGate(FlextInfraGate):
         )
 
     def rope_callback_binding(
-        self,
-        project_dir: Path,
-        rope: p.Infra.RopeWorkspaceDsl,
+        self, project_dir: Path, rope: p.Infra.RopeWorkspaceDsl
     ) -> m.Infra.RopeCallbackBinding:
         """Return the namespace callback bound to one project and shared Rope."""
-        validator = FlextInfraNamespaceValidator(
-            repository_root=project_dir, rope=rope
-        )
+        validator = FlextInfraNamespaceValidator(repository_root=project_dir, rope=rope)
         return validator.callback_binding()
 
     def check_rope_outcomes(

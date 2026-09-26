@@ -56,8 +56,6 @@ class TestsFlextInfraWorkspaceInit:
 
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path, rope=rope_workspace
-        ).run_projects(
-            ["project-a"], [c.Infra.LINT], reports_dir=reports_file
-        )
+        ).run_projects(["project-a"], [c.Infra.LINT], reports_dir=reports_file)
 
         tm.fail(result)

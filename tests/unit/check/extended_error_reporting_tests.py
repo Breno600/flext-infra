@@ -64,9 +64,7 @@ class TestsFlextInfraGateErrorReporting:
 
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path, rope=rope_workspace
-        ).run_projects(
-            ["p1"], [c.Infra.FORMAT], reports_dir=tmp_path / "reports"
-        )
+        ).run_projects(["p1"], [c.Infra.FORMAT], reports_dir=tmp_path / "reports")
 
         tm.ok(result)
         project = result.value[0]
@@ -109,9 +107,7 @@ class TestsFlextInfraGateErrorReporting:
 
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path, rope=rope_workspace
-        ).run_projects(
-            ["p1"], [c.Infra.MYPY], reports_dir=tmp_path / "reports"
-        )
+        ).run_projects(["p1"], [c.Infra.MYPY], reports_dir=tmp_path / "reports")
 
         tm.ok(result)
         project = result.value[0]
@@ -154,9 +150,7 @@ class TestsFlextInfraGateErrorReporting:
 
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path, rope=rope_workspace
-        ).run_projects(
-            ["p1"], [c.Infra.MARKDOWN], reports_dir=tmp_path / "reports"
-        )
+        ).run_projects(["p1"], [c.Infra.MARKDOWN], reports_dir=tmp_path / "reports")
 
         tm.ok(result)
         tm.that(result.value[0].passed, eq=False)

@@ -172,16 +172,14 @@ class TestsFlextInfraInfraRopeService:
                 entry.file_path.resolve() for entry in rope.modules()
             )
             report = tm.ok(
-                rope.cycle(
-                    (
-                        m.Infra.RopeCallbackBinding(
-                            callback=rewrite, file_paths=file_paths
-                        ),
-                        m.Infra.RopeCallbackBinding(
-                            callback=collect, file_paths=file_paths
-                        ),
-                    )
-                )
+                rope.cycle((
+                    m.Infra.RopeCallbackBinding(
+                        callback=rewrite, file_paths=file_paths
+                    ),
+                    m.Infra.RopeCallbackBinding(
+                        callback=collect, file_paths=file_paths
+                    ),
+                ))
             )
 
         tm.that(observed, eq=['VALUE = "after"\n'])

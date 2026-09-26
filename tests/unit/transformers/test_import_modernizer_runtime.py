@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import sys
 from typing import TYPE_CHECKING
 
@@ -159,12 +160,11 @@ class Row(BaseModel):
         # still validates live - without a cold interpreter per assertion.
         sys.path.insert(0, str(tmp_path))
         try:
-            from derived_consumer import Row
-
             from flext_infra import m as owner
 
+            row_model = importlib.import_module("derived_consumer").Row
             tm.that(owner is m_fleet, eq=True)
-            tm.that(Row.model_validate_json('{"value": "live"}').value, eq="live")
+            tm.that(row_model.model_validate_json('{"value": "live"}').value, eq="live")
         finally:
             sys.path.remove(str(tmp_path))
             sys.modules.pop("derived_consumer", None)

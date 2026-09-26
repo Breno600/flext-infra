@@ -18,9 +18,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
     """Reject untyped boundaries, legacy Pydantic, and concrete wiring."""
 
     @classmethod
-    def check_contracts(
-        cls, tree: p.AttributeProbe, filepath: Path
-    ) -> t.StrSequence:
+    def check_contracts(cls, tree: p.AttributeProbe, filepath: Path) -> t.StrSequence:
         """Return contract and clean-architecture violations."""
         posix = filepath.as_posix()
         if any(

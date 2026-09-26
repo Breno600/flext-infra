@@ -209,9 +209,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
             projects = self._state.discovered_projects
             return FlextInfraCodegenFixer(
-                repository_root=ctx.repository_root,
-                dry_run=dry_run,
-                rope=self.rope,
+                repository_root=ctx.repository_root, dry_run=dry_run, rope=self.rope
             ).fix_workspace(projects=projects)
 
         def _emit(results: t.SequenceOf[m.Infra.AutoFixResult]) -> t.JsonMapping:

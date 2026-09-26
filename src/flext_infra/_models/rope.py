@@ -364,7 +364,9 @@ class FlextInfraModelsRope:
         ]
         resource: Annotated[
             t.Infra.RopeResource,
-            m.Field(exclude=True, description="Live Rope resource for reads and writes"),
+            m.Field(
+                exclude=True, description="Live Rope resource for reads and writes"
+            ),
         ]
         tree: Annotated[
             t.Infra.RopeAstNode,
@@ -404,7 +406,9 @@ class FlextInfraModelsRope:
         ]
         file_paths: Annotated[
             frozenset[Path],
-            m.Field(description="Exact modules accepted before semantic materialization"),
+            m.Field(
+                description="Exact modules accepted before semantic materialization"
+            ),
         ]
         changes: Annotated[
             t.VariadicTuple[str],
