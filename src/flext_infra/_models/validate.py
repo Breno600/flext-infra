@@ -12,17 +12,6 @@ from . import FlextInfraModelsMixins as mm
 from ._defaults import FlextInfraModelsDefaults
 
 
-def _default_fresh_import_entry_points() -> FlextInfraModelsCore.FreshImportEntryPoints:
-    """Default factory for the fresh-import entry-points payload.
-
-    Module-level on purpose: neither a qualified nor a bare reference to the
-    nested model resolves inside the class body at definition time (class
-    scopes do not nest, and the outer class is still being defined), so the
-    deferred lookup must live outside it.
-    """
-    return FlextInfraModelsCore.FreshImportEntryPoints()
-
-
 class FlextInfraModelsCore:
     """Models for core infrastructure services (subprocess, validation).
 
@@ -74,8 +63,7 @@ class FlextInfraModelsCore:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
 
         project: FlextInfraModelsCore.FreshImportEntryPoints = m.Field(
-            default_factory=_default_fresh_import_entry_points,
-            description="Executable metadata from the published project table",
+            description="Executable metadata from the published project table"
         )
 
     class SkillRuleEvaluationContext(m.ArbitraryTypesModel):

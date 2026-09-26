@@ -150,6 +150,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             smoke = u.Cli.run_raw(
                 [sys.executable, "-W", "error", "-"],
                 cwd=self.repository_root,
+                timeout=c.Infra.TIMEOUT_SHORT,
                 env=env,
                 input_data=probe.code,
             )

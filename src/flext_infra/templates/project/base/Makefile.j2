@@ -752,7 +752,7 @@ profile-gen: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); status = profile.runcall(main, sys.argv[2:]); profile.dump_stats(sys.argv[1]); raise SystemExit(status)' \
 		"$(PROJECT_SCRATCH_ROOT)/profiles/lazy-init.pstats" codegen lazy-init \
-		--repository-root "$(PROJECT_ROOT)" --module flext_infra --dry-run
+		--repository-root "$(PROJECT_ROOT)" --module {{ dist | replace('-', '_') }} --dry-run
 
 .PHONY: profile-gen-report
 profile-gen-report: _builtin_require_environment

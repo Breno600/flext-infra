@@ -34,12 +34,7 @@ class FlextInfraModelsDepsToolConfig(
     class ModConfig(m.ArbitraryTypesModel):
         """Declarative policy for the unified modernize verb ``mod``."""
 
-        @staticmethod
-        def _default_phases() -> FlextInfraModelsDepsToolConfig.ModPhasesConfig:
-            return FlextInfraModelsDepsToolConfig.ModPhasesConfig()
-
         phases: FlextInfraModelsDepsToolConfig.ModPhasesConfig = m.Field(
-            default_factory=_default_phases,
             description="Phase toggles read from config/tooling.yaml.",
         )
 
@@ -574,17 +569,9 @@ class FlextInfraModelsDepsToolConfig(
             description="Glob patterns excluded from Markdown quality checks."
         )
 
-        @staticmethod
-        def _default_prettier() -> (
-            FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig
-        ):
-            """Resolve the policy owner after the enclosing model is defined."""
-            return FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig()
-
         prettier: Annotated[
             FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig,
             m.Field(
-                default_factory=_default_prettier,
                 description="Prettier formatting policy projected into .prettierrc.",
             ),
         ]
@@ -733,12 +720,7 @@ class FlextInfraModelsDepsToolConfig(
             alias="lazy-init", description="Declarative lazy-init generation policy."
         )
 
-        @staticmethod
-        def _default_mod() -> FlextInfraModelsDepsToolConfig.ModConfig:
-            return FlextInfraModelsDepsToolConfig.ModConfig()
-
         mod: FlextInfraModelsDepsToolConfig.ModConfig = m.Field(
-            default_factory=_default_mod,
             description="Declarative make-mod phase policy.",
         )
 

@@ -621,7 +621,9 @@ class FlextInfraCodegenConformExecute(
             return r[bool].ok(False)
         for root in sorted(roots):
             result = u.Cli.run_raw(
-                (c.Infra.CLI_DIRENV, "allow", str(root)), cwd=root, timeout=60
+                (c.Infra.CLI_DIRENV, "allow", str(root)),
+                cwd=root,
+                timeout=c.Infra.TIMEOUT_SHORT,
             )
             if result.failure:
                 return r[bool].from_failure(result)

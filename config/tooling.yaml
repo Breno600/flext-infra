@@ -1,6 +1,10 @@
 Infra:
   tooling:
     # flext-j47u (codex): canonical validated tooling and suppression-policy SSOT.
+    mod:
+      phases:
+        # Component toggles for make mod (rule: toggles are data, not flags).
+        import-alignment: true
     tools:
       codespell:
         check-filenames: true
@@ -769,8 +773,3 @@ ManagedArtifacts:
       src/flext_infra/_utilities/_mypy_supervisor.py:
         - suspicious-subprocess-import
         - subprocess-without-shell-equals-true
-
-mod:
-  phases:
-    # Component toggles for make mod (rule: toggles are data, not flags).
-    import-alignment: true
