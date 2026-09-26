@@ -24,8 +24,9 @@ class TestsFlextInfraRefactorMainCli:
 
     _FUTURE_INIT = "from __future__ import annotations\n"
 
-    # The letter is declared in __all__ but never bound: the fix binds it to
-    # the declared facade class. An undeclared letter is never inferred.
+    # The letter is published in __all__ but never bound: the published
+    # declaration is the defect, so the fix un-publishes it. A runtime alias
+    # is never inferred from the module's file family.
     _MISSING_RUNTIME_ALIAS_MODULE = (
         "from __future__ import annotations\n\n"
         '__all__: list[str] = ["FlextDemoModels", "m"]\n\n'

@@ -31,10 +31,14 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             and entry.delegate == "render"
             and Path(entry.destination).parts
         }
-        # A package:false repository (a solo workspace root) never
-        # materializes the package source dir: its manifest declares no
+        # An existing package:false repository (a solo workspace root)
+        # materializes no package source dir: its manifest declares no
         # importable package, so analyzers must not include it — pyright
         # fails hard on an include entry whose directory does not exist.
+        # The atomic scaffold path never passes ``package=False``: its own
+        # manifest renders the source tree, and dropping ``src`` there made
+        # the first plan fall back to disk discovery for mypy/pyrefly search
+        # paths, which oscillates once the scaffold's directory chain exists.
         source_dir = config.Infra.tooling.tools.pyright.path_rules.source_dir
         return tuple(
             directory

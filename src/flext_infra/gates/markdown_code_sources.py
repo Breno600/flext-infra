@@ -19,6 +19,15 @@ if TYPE_CHECKING:
     from flext_infra import t
 
 
+def is_syntax_broken(code: str, origin: Path) -> bool:
+    """True when one embedded source does not compile (documentation fragment)."""
+    try:
+        compile(code, str(origin), "exec")
+    except SyntaxError:
+        return True
+    return False
+
+
 def source_name(relative_posix: str, index: int) -> str:
     """Encode one block's documentation location into a temp source filename."""
     return c.Infra.MARKDOWN_CODE_SOURCE_FORMAT.format(
@@ -46,9 +55,15 @@ def write_fenced_block_sources(
             if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
         ):
             source_text = match.group("code")
-            # An invalid block in a python fence is a documentation defect; the
-            # skip marker is the declared way to keep a non-runnable snippet.
-            compile(source_text, str(md_path), "exec")
+            # A python fence that cannot compile is a documentation fragment,
+            # not a formatting subject: its syntax findings belong to the
+            # flext-tests markdown validator (MD-001 with approved
+            # exceptions), and the ``notest`` marker is the declared way to
+            # keep a deliberate non-Python snippet out of every probe. The
+            # fragment keeps its enumeration slot so a later parseable block
+            # never shifts its source name.
+            if is_syntax_broken(source_text, md_path):
+                continue
             name = source_name(relative_posix, index)
             (target_dir / name).write_text(source_text, c.Cli.ENCODING_DEFAULT)
             origin_by_source[name] = (
@@ -97,6 +112,7 @@ def write_docstring_sources(
 
 
 __all__: list[str] = [
+    "is_syntax_broken",
     "source_name",
     "write_docstring_sources",
     "write_fenced_block_sources",

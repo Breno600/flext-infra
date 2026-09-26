@@ -74,6 +74,12 @@ class FlextInfraPyprojectModernizerRun:
             # false "missing" or "ambiguous" project further down.
             state = self._read_document_state(path / c.PYPROJECT_FILENAME)
             if state.failure:
+                # A declared member's unreadable pyproject is a broken
+                # workspace contract, not a selectable absence: the canonical
+                # docs-scope reader owns the typed error for invalid TOML and
+                # names the offending file, and that raise must leave the run
+                # instead of being demoted into an exit-code log line.
+                _ = u.Infra.project_state(path)
                 return result_type.fail(
                     f"workspace subproject {path} has an unreadable pyproject: "
                     f"{state.error}"

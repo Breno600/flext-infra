@@ -24,6 +24,7 @@ from flext_infra import c, m, u
 
 from .base_gate import FlextInfraGate
 from .markdown_code_sources import (
+    is_syntax_broken,
     source_name,
     write_docstring_sources,
     write_fenced_block_sources,
@@ -54,15 +55,6 @@ def _ignore_filtered(
         )
 
     return tuple(path for path in markdown_files if not _excluded(path))
-
-
-def _is_syntax_broken(code: str, origin: Path) -> bool:
-    """True when one embedded source does not compile (documentation fragment)."""
-    try:
-        compile(code, str(origin), "exec")
-    except SyntaxError:
-        return True
-    return False
 
 
 if TYPE_CHECKING:
@@ -243,7 +235,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
             ):
                 code = match.group("code")
-                if _is_syntax_broken(code, md_path):
+                if is_syntax_broken(code, md_path):
                     continue
                 staged.append((index, code))
             if not staged:
@@ -275,7 +267,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 """Splice one formatted block; fragments and markers stay verbatim."""
                 keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
                     "info"
-                ) or _is_syntax_broken(match.group("code"), origin_path)
+                ) or is_syntax_broken(match.group("code"), origin_path)
                 if keep:
                     return match.group(0)
                 return match.group(0).replace(match.group("code"), next(replacements))

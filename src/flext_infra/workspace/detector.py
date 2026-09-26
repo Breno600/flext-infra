@@ -376,7 +376,13 @@ class FlextInfraWorkspaceDetector(
         # The manifest is the identity authority: the provider key is the one
         # the repository itself declares and the declared URL organization was
         # just reconciled against the live origin, so no catalog may override
-        # either.
+        # either. Package participation stays an observed fact for a
+        # manifest-less checkout (the observed state IS the identity): the
+        # canonical layout resolution returns the typed "not a Python package
+        # project" signal for such roots, and declaring a package there made
+        # the fresh-import guard demand an importable layout no repository
+        # publishes. A flext-* checkout that cannot resolve its package fails
+        # the discovery contract loudly instead of being declared one.
         return r[m.Infra.RepositoryRef].ok(
             m.Infra.RepositoryRef(
                 name=project_name,
@@ -387,7 +393,7 @@ class FlextInfraWorkspaceDetector(
                 provider=provider_result.value,
                 kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
                 codegen=c.Infra.CodegenKind.CONFORM,
-                package=True,
+                package=u.Infra.layout(repository_root) is not None,
                 editable=composed,
                 read_only=False,
             )

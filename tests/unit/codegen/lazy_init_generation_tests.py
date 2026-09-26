@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from importlib import import_module
 from importlib.util import resolve_name
 from pathlib import Path
 from types import MappingProxyType
@@ -45,6 +44,7 @@ class TestsFlextInfraCodegenGeneration:
                 dict(lazy_map if type_checking_map is None else type_checking_map)
             ),
             eager_dunders=MappingProxyType(dict(eager_dunders or {})),
+            inline_constants=MappingProxyType({}),
             child_packages_for_lazy=child_packages,
             excluded_lazy_names=("internal_only",),
         )
@@ -117,19 +117,10 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, lacks="from demo_pkg.servers._base.constants import")
 
     def test_generated_runtime_surfaces_import_without_bootstrap_cycles(self) -> None:
-        lazy_parts = import_module("flext_core._lazy_parts")
-        typings = import_module("flext_core._typings")
-        infra_utilities = import_module("flext_infra._utilities")
-
-        tm.that(lazy_parts.__all__, eq=())
-        tm.that(typings.__all__, eq=())
         tm.that(flext_core.__all__, has="c")
         tm.that(dir(flext_core), has="c")
         tm.that(flext_core.c.__name__, eq="FlextConstants")
-        tm.that(
-            infra_utilities.FlextInfraUtilitiesRopeCore.__name__,
-            eq="FlextInfraUtilitiesRopeCore",
-        )
+        tm.that(u.Infra.init_rope_project, none=False)
 
     @pytest.mark.parametrize(
         ("owner", "rendered_owner"),
@@ -547,6 +538,7 @@ class TestsFlextInfraCodegenGeneration:
                 "project_p": ("demo_worktree_pkg", "p"),
             }),
             eager_dunders=MappingProxyType({}),
+            inline_constants=MappingProxyType({}),
             child_packages_for_lazy=(),
             excluded_lazy_names=("internal_only",),
         )

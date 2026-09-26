@@ -35,31 +35,31 @@ type Nested[Value] = Permuted[Value, list[Value]]
 class Order(m.FrozenModel):
     """A validated order."""
 
-    sku: str = m.Field(description="Order stock keeping unit")
-    quantity: int = m.Field(default=1, description="Ordered unit quantity")
-    tags: t.VariadicTuple[str] = m.Field(default=(), description="Order tags")
+    sku: str = m.Field(description="Stock keeping unit of the ordered item.")
+    quantity: int = m.Field(default=1, description="Number of units ordered.")
+    tags: t.VariadicTuple[str] = m.Field(default=(), description="Order labels.")
     permuted: Permuted[int, str] = m.Field(
-        default=("tag", 1), description="Alias with permuted parameters"
+        default=("tag", 1), description="Order type parameter permutation."
     )
     repeated: Repeated[int] = m.Field(
-        default=(1, 2), description="Alias with a repeated parameter"
+        default=(1, 2), description="Order type parameter repetition."
     )
     unused: Unused[str, int] = m.Field(
-        default=(), description="Alias with an unused parameter"
+        default=(), description="Order type parameter tail."
     )
     identity: Identity[str] = m.Field(
-        default="identity", description="Identity alias value"
+        default="identity", description="Order type parameter identity."
     )
     nested: Nested[int] = m.Field(
-        default=([1], 1), description="Nested specialized alias value"
+        default=([1], 1), description="Order type parameter nesting."
     )
-    factory: type[str] = m.Field(default=str, description="Order value factory")
+    factory: type[str] = m.Field(default=str, description="Order factory type.")
 
 
 class Shipment(m.FrozenModel):
     """A validated shipment referencing its order."""
 
-    order: Order | None = m.Field(default=None, description="Order being shipped")
+    order: Order | None = m.Field(default=None, description="Shipped order.")
 
 
 type Payload = Order | Shipment
@@ -244,9 +244,9 @@ def test_check_only_reports_drift(member_root: Path) -> None:
     models_path = member_root / "src" / MEMBER / "models.py"
     models_path.write_text(
         MODELS.replace(
-            '    sku: str = m.Field(description="Order stock keeping unit")',
-            '    sku: str = m.Field(description="Order stock keeping unit")\n'
-            '    weight: float = m.Field(description="Order shipping weight")',
+            'sku: str = m.Field(description="Stock keeping unit of the ordered item.")',
+            'sku: str = m.Field(description="Stock keeping unit of the ordered item.")\n'
+            '    weight: float = m.Field(default=1.0, description="Drift probe weight.")',
         ),
         encoding="utf-8",
     )
