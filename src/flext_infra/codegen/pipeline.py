@@ -27,6 +27,10 @@ class FlextInfraCodegenPipeline(
 ):
     """Run the full codegen pipeline directly from the validated CLI model."""
 
+    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
+        exclude=True, description="Shared Rope cycle injected by the composition root"
+    )
+
     _state: m.Infra.CodegenPipelineState = u.PrivateAttr(
         default_factory=m.Infra.CodegenPipelineState
     )
@@ -39,8 +43,8 @@ class FlextInfraCodegenPipeline(
 
         pipeline_result = cli.pipeline(
             stages,
-            context=cli.stage_context(
-                self.repository_root,
+            context=m.Cli.PipelineStageContext(
+                repository_root=self.repository_root,
                 settings={
                     c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run or not self.apply_changes
                 },
@@ -85,7 +89,11 @@ class FlextInfraCodegenPipeline(
         builds the output payload from the action's return value.
         """
         return r[m.Cli.PipelineStageResult].ok(
-            cli.stage_result(stage_id, output=emit(action()))
+            m.Cli.PipelineStageResult(
+                stage_id=stage_id,
+                status=c.Cli.PipelineStageStatus.OK,
+                output=emit(action()),
+            )
         )
 
     # ------------------------------------------------------------------

@@ -204,15 +204,11 @@ class FlextInfraConstantsCheck:
             ),
             "imports subprocess — use cli.run / cli.capture",
         ),
-        (
-            re.compile(r"^\s*print\(", re.MULTILINE),
-            "uses u.Cli.print() — use cli.print",
-        ),
-        (
-            re.compile(r"^\s*sys\.exit\(", re.MULTILINE),
-            "uses sys.exit() — use cli.exit()",
-        ),
     )
+    BOUNDARY_CALL_RULES: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
+        "print": "uses u.Cli.print() — use cli.print",
+        "sys.exit": "uses sys.exit() — use cli.exit()",
+    })
     # The boundary gate's own rule-definition source files legitimately contain the
     # forbidden-pattern strings as DETECTION RULES (not as usage); exempt them from
     # self-scanning so the detector does not flag its own catalog.

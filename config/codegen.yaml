@@ -343,24 +343,9 @@ Infra:
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
       fmt_gates: [markdown-format]
-      # Explicit policy suspension; validators remain strict when invoked.
-      # Local, CI, and hooks derive their active gates from this same owner.
-      check_gate_suspensions:
-        - gate: duplication
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: codemod
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: boundary
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: namespace
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: runtime-census
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
+      # No quality gate is suspended: every local and CI invocation exercises
+      # the same complete policy set before a change can be proposed.
+      check_gate_suspensions: []
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /
       # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
@@ -811,6 +796,7 @@ Infra:
       canonical_root_dirs:
         - .mise
         - bin
+        - infra
         - src
         - tests
         - docs
@@ -1250,7 +1236,7 @@ Infra:
             runtime: ["click>=8.3.3,<8.4", typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
-            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.10.3, rope>=1.14.0, pytest>=9.1.1, mkdocs>=1.6.1]
+            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, rope>=1.15.0, pytest>=9.1.1, mkdocs>=1.6.1]
           - upstream: flext_cli
             project: flext-tests
             runtime: [flext-cli, flext-infra, pytest>=9.1.1, pytest-timeout>=2.4.0, docker>=7.2.0, python-on-whales>=0.81.0]

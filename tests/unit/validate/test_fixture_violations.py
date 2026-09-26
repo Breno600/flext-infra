@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
+from flext_infra.api import infra
 from tests import u
 
 
@@ -95,7 +96,7 @@ class TestsFlextInfraFixtureViolations:
             module_source=u.Tests.namespace_fixture(fixture_name),
             module_name=module_name,
         )
-        result = u.Tests.namespace_validator().validate_project(root)
+        result = infra.validate_namespace(root)
         tm.that(result.success, eq=True)
         tm.that(not result.value.passed, eq=True)
         u.Tests.assert_namespace_violation_contains(root, expected_violation_substr)

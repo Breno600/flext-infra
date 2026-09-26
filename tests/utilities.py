@@ -9,7 +9,6 @@ from flext_tests import FlextTestsUtilities, tm
 from flext_core import r
 from flext_infra import FlextInfraUtilities, config
 from flext_infra.codegen import FlextInfraCodegenConform
-from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
 from tests import c, m, p, t
 from tests.utilities_codegen import TestsFlextInfraUtilitiesCodegenMixin
 from tests.utilities_deps import TestsFlextInfraUtilitiesDepsMixin
@@ -317,18 +316,11 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             return project_root, target
 
         @staticmethod
-        def namespace_validator() -> FlextInfraNamespaceValidator:
-            """Return a fresh namespace validator for an observable test run."""
-            return FlextInfraNamespaceValidator()
-
-        @staticmethod
         def validate_namespace_project(root: Path) -> m.Infra.ValidationReport:
             """Validate one project and require the public result to succeed."""
-            result = (
-                TestsFlextInfraUtilities.Tests.namespace_validator().validate_project(
-                    root
-                )
-            )
+            from flext_infra.api import infra
+
+            result = infra.validate_namespace(root)
             tm.ok(result)
             return result.value
 

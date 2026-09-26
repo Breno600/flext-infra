@@ -6,10 +6,10 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m
+from flext_infra.api import infra
 
 if TYPE_CHECKING:
     from flext_infra import t
-from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.codegen.census import FlextInfraCodegenCensus
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
@@ -44,9 +44,7 @@ class CodegenRoutes(CliRouteBase):
                 name=c.Infra.VERB_RUN,
                 help_text="Run workspace quality gates",
                 model_cls=m.Infra.RunCommand,
-                handler=CliRouteBase.result_handler(
-                    FlextInfraWorkspaceChecker.execute_payload
-                ),
+                handler=CliRouteBase.result_handler(infra.check),
             ),
             m.Cli.ResultCommandRoute(
                 name="fix-pyrefly-settings",

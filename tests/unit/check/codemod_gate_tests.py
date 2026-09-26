@@ -15,6 +15,8 @@ from tests import u
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from flext_infra import p
+
 
 class TestsFlextInfraCodemodGate:
     """Separate native scanner failures from observable policy diagnostics."""
@@ -110,14 +112,16 @@ class TestsFlextInfraCodemodGate:
             gate.check_files((missing,), project, context)
 
     def test_workspace_pipeline_reports_observations_without_functional_errors(
-        self, tmp_path: Path
+        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
     ) -> None:
         project = self._project(tmp_path)
         (project / "src" / "subject.py").write_text("second(1)\n", encoding="utf-8")
         reports = tmp_path / "reports"
 
         results = tm.ok(
-            FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            FlextInfraWorkspaceChecker(
+                repository_root=tmp_path, rope=rope_workspace
+            ).run_projects(
                 [project.name], ["codemod"], reports_dir=reports
             )
         )

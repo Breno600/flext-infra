@@ -83,6 +83,32 @@ class TestsFlextInfraAbstractionBoundaryGate:
 
         tm.that(result.result.passed, eq=True)
 
+    def test_live_print_call_is_flagged(self, tmp_path: Path) -> None:
+        project = self._project(
+            tmp_path, name="flext-demo", filename="logic.py", src="print('live')\n"
+        )
+
+        result = u.Tests.run_gate_check(
+            FlextInfraAbstractionBoundaryGate, tmp_path, project
+        )
+
+        tm.that(not result.result.passed, eq=True)
+        tm.that(any("cli.print" in issue.message for issue in result.issues), eq=True)
+
+    def test_embedded_print_source_is_not_live_behavior(self, tmp_path: Path) -> None:
+        project = self._project(
+            tmp_path,
+            name="flext-demo",
+            filename="logic.py",
+            src='PAYLOAD = """print(\'embedded\')"""\n',
+        )
+
+        result = u.Tests.run_gate_check(
+            FlextInfraAbstractionBoundaryGate, tmp_path, project
+        )
+
+        tm.that(result.result.passed, eq=True)
+
     def test_declared_boundary_owner_passes_by_design(self, tmp_path: Path) -> None:
         """A declared boundary owner is exempt: the gate passes with no issues."""
         owner = min(c.Infra.BOUNDARY_SKIP_PROJECTS)

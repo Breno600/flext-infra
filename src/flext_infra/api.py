@@ -8,6 +8,8 @@ from flext_core import r
 from flext_infra import m, t, u
 
 from .base import s
+from .check.workspace_check import FlextInfraWorkspaceChecker
+from .validate.namespace_validator import FlextInfraNamespaceValidator
 from .workspace.environment_beads import FlextInfraWorkspaceEnvironmentSync
 from .workspace.rope import FlextInfraRopeWorkspace
 
@@ -32,6 +34,22 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentSync, s[t.JsonDict]):
             self.repository_root if repository_root is None else repository_root
         )
         return FlextInfraRopeWorkspace.open_workspace(resolved_root)
+
+    def check(self, request: m.Infra.RunCommand) -> p.Result[bool]:
+        """Compose one shared Rope cycle and execute every requested gate."""
+        with FlextInfraRopeWorkspace.open_workspace(request.repository_root) as rope:
+            return FlextInfraWorkspaceChecker(
+                repository_root=request.repository_root, rope=rope
+            ).execute_payload(request)
+
+    def validate_namespace(
+        self, repository_root: Path
+    ) -> p.Result[m.Infra.ValidationReport]:
+        """Validate one project through a single composed Rope cycle."""
+        with FlextInfraRopeWorkspace.open_workspace(repository_root) as rope:
+            return FlextInfraNamespaceValidator(
+                repository_root=repository_root, rope=rope
+            ).build_report()
 
     @staticmethod
     def project_context(cwd: Path) -> p.Result[m.Infra.WorkspaceProjectContext]:

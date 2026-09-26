@@ -44,7 +44,7 @@ class FlextInfraNamespaceRules(
                 source=source,
             ),
             *cls.check_imports(tree, filepath, package_name=package_name),
-            *cls.check_contracts(tree, filepath, source=source),
+            *cls.check_contracts(tree, filepath),
         )
 
 

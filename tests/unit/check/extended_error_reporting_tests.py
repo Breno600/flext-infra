@@ -19,7 +19,7 @@ from tests import c, m, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
+    from tests import p, t
 
 
 class TestsFlextInfraGateErrorReporting:
@@ -45,7 +45,10 @@ class TestsFlextInfraGateErrorReporting:
 
     @pytest.mark.slow
     def test_workspace_checker_emits_ruff_stderr_without_findings(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """A real formatter configuration error remains visible without issues."""
         project_dir = u.Tests.mk_project(
@@ -59,7 +62,9 @@ class TestsFlextInfraGateErrorReporting:
         )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+        result = FlextInfraWorkspaceChecker(
+            repository_root=tmp_path, rope=rope_workspace
+        ).run_projects(
             ["p1"], [c.Infra.FORMAT], reports_dir=tmp_path / "reports"
         )
 
@@ -78,7 +83,10 @@ class TestsFlextInfraGateErrorReporting:
 
     @pytest.mark.slow
     def test_workspace_checker_emits_mypy_plugin_traceback(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         """Mypy's real plugin loader failure survives structured-output parsing."""
         project_dir = u.Tests.mk_project(
@@ -99,7 +107,9 @@ class TestsFlextInfraGateErrorReporting:
         )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+        result = FlextInfraWorkspaceChecker(
+            repository_root=tmp_path, rope=rope_workspace
+        ).run_projects(
             ["p1"], [c.Infra.MYPY], reports_dir=tmp_path / "reports"
         )
 
@@ -132,6 +142,7 @@ class TestsFlextInfraGateErrorReporting:
         readme: str,
         config_text: str | None,
         expected: t.StrSequence,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "p1")
         (project_dir / "README.md").write_text(readme, encoding="utf-8")
@@ -141,7 +152,9 @@ class TestsFlextInfraGateErrorReporting:
             )
         u.Tests.initialize_git_repo(project_dir)
 
-        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+        result = FlextInfraWorkspaceChecker(
+            repository_root=tmp_path, rope=rope_workspace
+        ).run_projects(
             ["p1"], [c.Infra.MARKDOWN], reports_dir=tmp_path / "reports"
         )
 

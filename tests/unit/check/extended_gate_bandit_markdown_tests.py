@@ -37,7 +37,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(result.issues[0].code, eq="B101")
 
     def test_bandit_rejects_missing_source_scope(self, tmp_path: Path) -> None:
-        _, project_dir = u.Tests.create_checker_project(tmp_path)
+        project_dir = u.Tests.mk_project(tmp_path, "p1")
 
         result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
 
@@ -47,7 +47,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
 
     def test_bandit_scans_large_tree_with_sanitized_path(self, tmp_path: Path) -> None:
         """The workspace interpreter runs Bandit without any PATH-provided tool."""
-        _, project_dir = u.Tests.create_checker_project(tmp_path, with_src=True)
+        project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         for index in range(51):
             (project_dir / c.Infra.DEFAULT_SRC_DIR / f"module_{index}.py").write_text(
                 "def identity(value):\n    return value\n", encoding="utf-8"

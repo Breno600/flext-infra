@@ -256,6 +256,19 @@ class TestsFlextInfraCodegenLayout:
         tm.that("data" in paths, eq=False)
         tm.that("external-docs" in paths, eq=False)
 
+    def test_infrastructure_root_is_canonical(self, tmp_path: Path) -> None:
+        """Pulumi and Ansible share the canonical root infrastructure directory."""
+        project = build_loose_project(tmp_path)
+        infrastructure = project / "infra"
+        infrastructure.mkdir()
+        (infrastructure / "Pulumi.yaml").write_text("name: fixture\n", encoding="utf-8")
+        engine = layout_engine(tmp_path)
+
+        report = engine.check_project(project)
+
+        paths = {finding.path for finding in report.findings}
+        tm.that("infra" in paths, eq=False)
+
     def test_declared_repositories_are_canonical_root_entries(
         self, tmp_path: Path
     ) -> None:
