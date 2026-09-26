@@ -195,6 +195,34 @@ class TestsFlextInfraRuntimeAliasDeclarations:
                 u.Infra.declared_facade_owner(rope.rope_project, resource), none=True
             )
 
+    def test_api_does_not_republish_inherited_service_alias(
+        self, tmp_path: Path
+    ) -> None:
+        """A root service alias does not become an alias of its API subclass."""
+        repository, package = self._workspace(tmp_path)
+        (package / c.Infra.INIT_PY).write_text(
+            "from .owner import Parent as s\n__all__ = ['s']\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        source = package / "api.py"
+        source.write_text(
+            "from flext_declarations import s\n"
+            "class Api(s):\n    pass\n"
+            "__all__ = ['Api']\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        with infra.rope_workspace(repository) as rope:
+            resource = tm.not_none(rope.resource(source))
+            tm.that(
+                u.Infra.published_facade_owner(rope.rope_project, resource), none=True
+            )
+            tm.that(
+                u.Infra.publication_policy(
+                    source, rope_project=rope.rope_project
+                ).expected_alias,
+                none=True,
+            )
+
     def test_publication_preserves_inherited_settings_without_inventing_alias(
         self, tmp_path: Path
     ) -> None:
