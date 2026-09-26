@@ -75,15 +75,7 @@ class FlextInfraBanditGate(FlextInfraGate):
         if not result.stdout.strip():
             issues.append(self._parse_error_issue("bandit produced no JSON output"))
             return False, issues
-        try:
-            parsed_payload = self._parse_bandit_payload(result.stdout)
-        except c.EXC_VALIDATION_TYPE as err:
-            issues.append(
-                self._parse_error_issue(
-                    f"Tool output parsing failed: {type(err).__name__}"
-                )
-            )
-            return False, issues
+        parsed_payload = self._parse_bandit_payload(result.stdout)
         if parsed_payload.failure:
             issues.append(
                 self._parse_error_issue(

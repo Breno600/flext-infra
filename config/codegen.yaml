@@ -61,7 +61,7 @@ Infra:
       ast_grep_version: latest
       # ast-grep's native binary is selected by its npm lifecycle script.
       # Mise's embedded aube installer omits it and emits a warning per scan.
-      npm_package_manager: npm
+      npm_package_manager: aube
       gitleaks_version: latest
       kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
@@ -348,24 +348,7 @@ Infra:
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
       fmt_gates: [markdown-format]
-      # Explicit policy suspension; validators remain strict when invoked.
-      # Local, CI, and hooks derive their active gates from this same owner.
-      check_gate_suspensions:
-        - gate: duplication
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: codemod
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: boundary
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: namespace
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: runtime-census
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
+      check_gate_suspensions: []
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /
       # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
