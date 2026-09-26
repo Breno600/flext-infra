@@ -93,11 +93,11 @@ Read those skills and root `AGENTS.md`; this file adds only FLEXT domain law.
 - Invoke the standard Make verbs directly. Mutating verbs mutate by default with zero
   variables; agents never add `WHAT=` or `PROJECT=` to setup, generation, repair,
   formatting, checking, or testing.
-- Provision and update dependency environments exclusively through `make setup`. Correct
-  its canonical generator when setup fails; never install or resolve packages manually
-  to make the next gate pass. The operator cutover removes `APPLY`, `uv.lock` and
-  `mise.lock` from producers and consumers, including regeneration and required-input
-  paths, not only version control.
+- Only `make upg` resolves newer dependencies and writes the committed `uv.lock`,
+  `mise.lock`, and Mise runtime pin. `make setup` provisions the physical workspace
+  environment from those frozen inputs. Generation and runtime verbs neither install
+  nor upgrade dependencies. Correct the canonical generator when this lifecycle fails;
+  never install or resolve packages manually to make the next gate pass.
 - Adopt concurrent work by fix-forward. Fetch each repository's integration tip, absorb
   it with `git merge --no-ff`, and preserve all compatible work. Publish through that
   integration branch and measure the remote merge SHA; a local merge or an old gate
