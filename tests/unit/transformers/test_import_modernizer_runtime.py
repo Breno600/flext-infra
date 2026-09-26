@@ -158,9 +158,7 @@ class Row(BaseModel):
 
         # In-process probe (RC2): the runtime contract is what the subprocess
         # asserted - the declared facade stays the owner and the moved model
-        # still validates live - without a cold interpreter per assertion. The
-        # consumer exists only at runtime, so it is imported by name inside the
-        # scope that owns its import root.
+        # still validates live - without a cold interpreter per assertion.
         def forget_consumer() -> None:
             sys.modules.pop("derived_consumer", None)
 
@@ -271,6 +269,12 @@ print(RuntimeRow.model_validate_json('{"value": "runtime"}').value)
             with pytest.raises(ValueError, match="capture ancestral binding"):
                 transformer.transform(project, resource)
         tm.that(path.read_text(encoding="utf-8"), eq=source)
-        probe = "from ancestral_consumer import build\nprint(build())\n"
+        # The ancestor's BaseModel identity, not its relationship to pydantic,
+        # is this repository's contract: the dependency owns that hierarchy.
+        probe = (
+            f"from {c.Infra.PKG_CORE_UNDERSCORE} import m\n"
+            "from ancestral_consumer import build\n"
+            "print(build() is m.BaseModel)\n"
+        )
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
         tm.that(outcome.stdout.strip(), eq="True")

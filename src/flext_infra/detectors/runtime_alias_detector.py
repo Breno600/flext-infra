@@ -32,7 +32,22 @@ class FlextInfraRuntimeAliasDetector:
             raise ValueError(message)
         source = resource.read()
         matches = u.Infra.runtime_alias_bindings(source, alias=family)
-        if not matches or family not in u.Infra.public_export_names_source(source):
+        exports = u.Infra.public_export_names_source(source)
+        if not matches and family in exports:
+            # The letter is published but nothing binds it. The published
+            # declaration is the defect: the fix un-publishes it instead of
+            # materializing a binding the module never declared.
+            return [
+                m.Infra.RuntimeAliasViolation(
+                    file=str(file_path),
+                    kind="unbound",
+                    alias=family,
+                    detail=(
+                        f"__all__ publishes {family!r} without a runtime binding"
+                    ),
+                )
+            ]
+        if not matches or family not in exports:
             return [
                 m.Infra.RuntimeAliasViolation(
                     file=str(file_path),
