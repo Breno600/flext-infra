@@ -8,7 +8,6 @@
 
 <!-- AUTO-GENERATED — DO NOT EDIT MANUALLY -->
 
-- Package: `flext_infra`
 - Version: `0.12.0`
 - Description: FLEXT Infrastructure Tooling - Build automation, code generation, and
   workspace management
@@ -35,5 +34,5 @@
 
 ## Next Pages
 
-- [Public API](public-api.md)
-- [Module Index](modules/index.md)
+- [Workspace Module Pages](projects/index.md)
+- [Project Catalog](../../projects/generated/catalog.md)

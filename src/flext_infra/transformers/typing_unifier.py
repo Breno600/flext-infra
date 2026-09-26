@@ -19,7 +19,7 @@ from libcst.metadata import (
     ScopeProvider,
 )
 
-from flext_infra import c, u
+from flext_infra import c, t, u
 
 from .._utilities.transformer_base import FlextInfraRopeTransformer
 from ._canonical_t_import import FlextInfraEnsureCanonicalTImportMixin
@@ -28,8 +28,6 @@ from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from flext_infra import t
 
 
 class FlextInfraRefactorTypingUnifier(
@@ -157,6 +155,7 @@ class FlextInfraRefactorTypingUnifier(
                 and u.Infra.package_name(self._file_path).split(".", maxsplit=1)[0]
                 == module_name
                 and not u.Infra.has_runtime_alias_import(source, "t")
+                and not u.Infra.has_runtime_alias_import(source)
             ):
                 msg = (
                     "typing unification requires proven runtime availability of its "

@@ -795,15 +795,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
             # The bootstrap shell delegates to recursive make through mise exec.
             # The `+` prefix is required to preserve GNU Make's jobserver FDs.
             "\t+@set -eu;",
-            # Managed tools reach the setup lifecycle by RUNNING it inside the
-            # bootstrapped Mise, not by the old inline PATH computation: the
-            # toolchain is installed at its latest release and the lifecycle
-            # is executed through `mise exec`, so nothing needs an ambient mise
-            # and nothing hand-assembles a managed PATH any more.
+            # Runtime tool identity is exercised through the public status
+            # regression, including an invalid ambient Mise configuration.
             'mise_exec project "$$latest_mise" -C "$$project_root" install --yes',
-            '"$$latest_mise" -C "$$project_root" exec -- env',
             "SETUP_DIRENV=$$direnv_executable",
-            'desired_python=$$("$(SETUP_MISE)" -C "$(PROJECT_ROOT)" which python)',
             '$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"',
             '$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"',
             '$(UV) sync --project "$(PROJECT_ROOT)"',

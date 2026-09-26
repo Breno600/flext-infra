@@ -122,7 +122,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
                         node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
                     ):
                         identity = f"{module}.{node.name}"
-                        bindings.setdefault(identity, set()).add(identity)
+                        # A runtime declaration replaces an earlier imported name in
+                        # the same module. Keeping both fabricated an ambiguity for
+                        # the canonical ``from upstream import u; u = Facade`` shape.
+                        bindings[identity] = {identity}
                     elif isinstance(node, ast.Assign | ast.AnnAssign):
                         targets = (
                             node.targets
@@ -137,7 +140,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
                                     if isinstance(node.value, ast.Name)
                                     else identity
                                 )
-                                bindings.setdefault(identity, set()).add(destination)
+                                # Module assignments are runtime rebinding, not an
+                                # additional possible source. The last declaration is
+                                # the single Python authority for the public name.
+                                bindings[identity] = {destination}
                     elif isinstance(node, ast.If):
                         type_only = (
                             isinstance(node.test, ast.Name)

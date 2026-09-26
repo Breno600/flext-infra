@@ -731,6 +731,12 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that((root / c.Infra.DIR_TESTS).is_dir(), eq=True)
         self._assert_sonarcloud_scope(rendered)
 
+        tm.that(
+            config.Infra.codegen.sonarcloud.exclusions,
+            has="**/.mise/locks/**",
+            msg="Mise dependency sidecars are committed generated inputs, not source",
+        )
+
     def test_sonarcloud_tests_root_is_always_materialized_by_conform(
         self, infra_git_repo: Path
     ) -> None:
