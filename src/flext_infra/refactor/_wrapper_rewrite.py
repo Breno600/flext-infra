@@ -82,6 +82,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         accumulator.per_project_changes[project_name] += 1
         accumulator.per_project_replacements[project_name] += replacements
         if not self.effective_dry_run and core_updated != source:
+            accumulator.expected_sources[file_path] = source
             accumulator.updates[file_path] = core_updated
 
     @staticmethod

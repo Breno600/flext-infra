@@ -768,8 +768,16 @@ class FlextInfraUtilitiesCodegenNamespace:
             source_cache[violation.module] = cls._read_source_lines(
                 project_path, violation.module
             )
-        return m.Infra.ViolationKey.from_violation(
-            violation, source_cache[violation.module]
+        source_lines = source_cache[violation.module]
+        context = "\n".join(
+            source_lines[
+                max(0, violation.line - 2) : min(len(source_lines), violation.line + 3)
+            ]
+        )
+        return m.Infra.ViolationKey(
+            module=violation.module,
+            rule=violation.rule,
+            content_hash=u.Cli.sha256_content(context),
         )
 
 

@@ -8,12 +8,10 @@ from typing import TYPE_CHECKING, override
 
 from libcst.metadata import QualifiedNameSource, Scope
 
-from flext_infra import c, u
+from flext_infra import c, t, u
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
-
-    from flext_infra import t
 
 
 class FlextInfraRefactorImportFacades:
@@ -59,7 +57,7 @@ class FlextInfraRefactorImportFacades:
             return len(self.entries)
 
     def __init__(self) -> None:
-        self.identities: t.MutableMappingKV[tuple[str, str], bool] = {}
+        self.identities: t.MutableMappingKV[t.Pair[str, str], bool] = {}
 
     def require_available(self, scope: Scope, alias: str) -> bool:
         """Reject lexical capture before introducing or reusing a facade name."""

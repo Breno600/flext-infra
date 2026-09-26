@@ -63,7 +63,7 @@ class FlextInfraBanditGate(FlextInfraGate):
         self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
-        _ = project_dir, ctx
+        del project_dir, ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         if not u.Cli.process_succeeded(result.outcome) and not result.stdout.strip():
             issues.append(

@@ -11,14 +11,11 @@ from __future__ import annotations
 
 import ast
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, override
+from typing import override
 
-from flext_infra import c, u
+from flext_infra import c, t, u
 
 from .._utilities.transformer_base import FlextInfraRopeTransformer
-
-if TYPE_CHECKING:
-    from flext_infra import t
 
 
 class FlextInfraRefactorCompatibilityAlias(FlextInfraRopeTransformer):

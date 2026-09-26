@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar
 
 import libcst as cst
 from libcst.metadata import QualifiedNameSource, Scope
 
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra import t
 
 
 class FlextInfraRefactorTypingUnifierRewriteMixin:
@@ -49,7 +48,7 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
             self.widen = widen
             self.changes: list[str] = []
             self.requires_t = False
-            self.replaced_symbols: list[tuple[cst.BaseExpression, str]] = []
+            self.replaced_symbols: list[t.Pair[cst.BaseExpression, str]] = []
             self.module = cst.Module(body=())
 
         def qualified_name(self, node: cst.BaseExpression) -> str | None:

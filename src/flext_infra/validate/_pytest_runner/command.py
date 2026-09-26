@@ -128,6 +128,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         selected_node_ids: t.StrSequence | None = None,
         *,
         serialize: bool = False,
+        whole_target: bool = False,
         execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin)."""
@@ -145,7 +146,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         )
         return self._suite_argv(
             report_dir,
-            targets=(tuple(selection) if selection else (str(self.target),)),
+            targets=(
+                (str(self.target),)
+                if whole_target or selection is None
+                else tuple(selection)
+            ),
             workers=workers,
             trailing=(
                 *self._plugin_policy_args(execution_mode=execution_mode),
