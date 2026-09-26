@@ -7,7 +7,7 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_infra import c, m, t
+from flext_infra import c, t
 
 from ._docs_scope_state import FlextInfraUtilitiesDocsScopeStateMixin
 from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
@@ -189,20 +189,6 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         if project_name == f"{c.Infra.PKG_PREFIX_HYPHEN}tests":
             return "test"
         return "domain"
-
-    @staticmethod
-    def docs_aggregate_root(scope: m.Infra.DocScope) -> bool:
-        """Whether one docs scope publishes the aggregate workspace contract.
-
-        Only the root label or a manifest whose typed role is ``workspace``
-        qualifies. Every governed standalone project carries the same manifest
-        file and stays a project scope, so generate and validate share this one
-        predicate instead of testing for the file.
-        """
-        return (
-            scope.name == c.Infra.RK_ROOT
-            or FlextInfraUtilitiesWorkspaceManifest.is_fleet_umbrella(scope.path)
-        )
 
     @staticmethod
     def required_project_files() -> t.StrSequence:
