@@ -49,11 +49,18 @@ class FlextInfraPytestCollection:
         if session.config.getoption(
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION
         ):
-            order = {
-                node_id: index for index, node_id in enumerate(session.config.args)
-            }
+            from flext_infra import c, m, u
+
+            manifest_path = u.Infra.env_lookup(c.Infra.PYTEST_ENV_COLLECTION_MANIFEST)
+            if not manifest_path:
+                msg = "Runner collection requires its canonical selection manifest"
+                raise ValueError(msg)
+            manifest = m.Infra.PytestCollectionManifest.model_validate_json(
+                Path(manifest_path).read_text(encoding="utf-8")
+            )
+            order = {node_id: index for index, node_id in enumerate(manifest.node_ids)}
             collected = [item.nodeid for item in session.items]
-            if len(order) != len(session.config.args) or len(set(collected)) != len(
+            if len(order) != len(manifest.node_ids) or len(set(collected)) != len(
                 collected
             ):
                 msg = "Runner collection manifest contains duplicate node IDs"
@@ -75,9 +82,11 @@ class FlextInfraPytestCollection:
         target = u.Infra.env_lookup(c.Infra.PYTEST_ENV_COLLECTION_MANIFEST)
         if target is None:
             return
-        if not target or not session.config.getoption("collectonly"):
-            msg = "collection manifest requires a path and collect-only execution"
+        if not target:
+            msg = "collection manifest requires a nonempty path"
             raise ValueError(msg)
+        if not session.config.getoption("collectonly"):
+            return
         manifest = m.Infra.PytestCollectionManifest(
             node_ids=tuple(item.nodeid for item in session.items)
         )

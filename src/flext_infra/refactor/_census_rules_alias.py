@@ -75,6 +75,38 @@ class FlextInfraRefactorCensusRulesAliasMixin(FlextInfraRefactorCensusRulesShare
         for detector_violation in FlextInfraRuntimeAliasDetector.detect_file(
             ctx, policy=convention.module_policy
         ):
+            if detector_violation.kind == "unbound":
+                # A published letter nothing binds is repaired by un-publishing
+                # it: binding the family class here would infer the alias from
+                # the module's file family, never from the module itself.
+                violations.append(
+                    self._raw_violation(
+                        project=project_name,
+                        object_name=detector_violation.alias,
+                        object_kind="assignment",
+                        kind="runtime_alias",
+                        file_path=file_path,
+                        line=detector_violation.line,
+                        description=detector_violation.detail,
+                        fixable=True,
+                        fix_action="remove_stale_runtime_alias_export",
+                    )
+                )
+                fixes.append(
+                    m.Infra.Fix(
+                        object_name=detector_violation.alias,
+                        action="remove_stale_runtime_alias_export",
+                        source_file=str(file_path),
+                        files_changed=1,
+                        applied=self._fix_key(
+                            file_path,
+                            detector_violation.alias,
+                            "remove_stale_runtime_alias_export",
+                        )
+                        in applied,
+                    )
+                )
+                continue
             object_name = runtime_target_name if fixable else detector_violation.alias
             object_kind = runtime_target_kind if fixable else "assignment"
             if selected_kinds and object_kind not in selected_kinds:

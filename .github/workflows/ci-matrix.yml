@@ -58,6 +58,7 @@ jobs:
         run: >-
           docker build
           -f tests/fixtures/ci/docker/${{ matrix.distro }}.Dockerfile
+          --build-context git=.git
           --secret id=github_token,env=GITHUB_TOKEN
           -t ci-matrix-${{ matrix.distro }}
           .

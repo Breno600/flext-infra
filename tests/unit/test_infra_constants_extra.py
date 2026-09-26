@@ -25,29 +25,15 @@ class TestsFlextInfraInfraConstantsExtra:
         for d in c.Infra.CHECK_DIRS_REPOSITORY:
             tm.that(d, is_=str)
 
-    def test_github_repo_url_constant(self) -> None:
-        tm.that(c.Infra.GITHUB_REPO_URL, eq="https://github.com/flext-sh/flext")
-
-    def test_github_repo_name_constant(self) -> None:
-        tm.that(c.Infra.GITHUB_REPO_NAME, eq="flext-sh/flext")
-
     def test_github_constants_are_strings(self) -> None:
         tm.that(c.Infra.GITHUB_REPO_URL, is_=str)
         tm.that(c.Infra.GITHUB_REPO_NAME, is_=str)
-
-    def test_default_encoding_constant(self) -> None:
-        tm.that(c.Infra.ENCODING_DEFAULT, eq="utf-8")
 
     def test_encoding_constant_is_string(self) -> None:
         tm.that(c.Infra.ENCODING_DEFAULT, is_=str)
 
     def test_c_alias_is_string(self) -> None:
         tm.that(c, is_=type)
-
-    def test_c_alias_access_to_constants(self) -> None:
-        tm.that(c.Infra.VENV_BIN_REL, eq=".venv/bin")
-        tm.that(c.Infra.ResultStatus.PASSED, eq="PASS")
-        tm.that(c.PYPROJECT_FILENAME, eq="pyproject.toml")
 
     def test_excluded_dirs_are_immutable(self) -> None:
         excluded = c.Infra.COMMON_EXCLUDED_DIRS

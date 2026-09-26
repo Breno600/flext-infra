@@ -128,24 +128,31 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         selected_node_ids: t.StrSequence | None = None,
         *,
         serialize: bool = False,
+        whole_target: bool = False,
         execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin)."""
         pytest = config.Infra.tooling.tools.pytest
         selection = selected_node_ids or None
-        # A single selected test has no distribution work.  Starting xdist for
-        # it only adds two interpreter lifecycles and can consume the enclosing
-        # test's complete slow-test budget after the two collection processes.
-        # Cold and warm caches still share the same explicit manifest.
-        workers = (
-            "0"
-            if serialize
-            or (selected_node_ids is not None and len(selected_node_ids) <= 1)
-            else str(self.parallel_worker_budget(pytest))
-        )
+        # An empty selection needs no workers, and a selection smaller than the
+        # worker budget never needs more workers than items: every extra worker
+        # only pays startup cost for an empty queue. Explicit serial execution
+        # remains available to callers; cold and warm cache runs share the same
+        # manifest.
+        budget = self.parallel_worker_budget(pytest)
+        if serialize or selected_node_ids == ():
+            workers = "0"
+        elif selection:
+            workers = str(min(budget, len(selection)))
+        else:
+            workers = str(budget)
         return self._suite_argv(
             report_dir,
-            targets=(tuple(selection) if selection else (str(self.target),)),
+            targets=(
+                (str(self.target),)
+                if whole_target or selection is None
+                else tuple(selection)
+            ),
             workers=workers,
             trailing=(
                 *self._plugin_policy_args(execution_mode=execution_mode),
