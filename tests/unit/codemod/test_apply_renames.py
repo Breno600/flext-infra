@@ -97,9 +97,15 @@ class TestsFlextInfraApplyRenames:
 
     @staticmethod
     def _declare_campaign_override(config_dir: Path) -> None:
-        """Copy the tracked configs and overlay one config-relative campaign."""
-        for tracked in FlextInfraConfig.ssot_config_dir().glob("*.yaml"):
-            shutil.copy(tracked, config_dir / tracked.name)
+        """Copy the packaged config tree and overlay one config-relative campaign.
+
+        The whole tree travels, not only its top-level YAML: campaign lists the
+        packaged config declares live under ``rules/`` and resolve against the
+        overriding directory.
+        """
+        shutil.copytree(
+            FlextInfraConfig.ssot_config_dir(), config_dir, dirs_exist_ok=True
+        )
         tm.ok(
             u.Cli.atomic_write_text_file(
                 config_dir / "renames.csv",
@@ -240,4 +246,14 @@ class TestsFlextInfraApplyRenames:
         tm.that(self._run_mod(mod_workspace, apply=True), eq=0)
         tm.that(consumer.read_bytes(), eq=first)
         tm.that(guide.read_bytes(), eq=first_guide)
-        tm.that(self._run_mod(mod_workspace, apply=False), eq=0)
+        # mod's check mode also fails on the fixture's deliberate detection-only
+        # governance finding, so convergence is proven by the rename engine's
+        # own check mode over the same packaged lists.
+        config_dir = FlextInfraConfig.ssot_config_dir()
+        for (
+            campaign
+        ) in FlextInfraConfig.fetch_global().Infra.refactor_csv_campaigns.campaigns:
+            pending = tm.ok(
+                self._run_engine(config_dir / campaign.csv, mod_workspace, apply=False)
+            )
+            tm.that(pending.occurrences, eq=0)
