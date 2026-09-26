@@ -86,12 +86,14 @@ class FlextInfraCodemodSemanticApply:
             "import_alignment_files": len(alignment.value),
             "future_annotations": len(future_annotations),
         }
-        residue = cls._check_residue(
-            "future-annotations",
-            r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
-                cls._phase_future_annotations(root, preflight, working)
-            ),
-        )
+        residue = r[bool].ok(True)
+        if future_annotations:
+            residue = cls._check_residue(
+                "future-annotations",
+                r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
+                    cls._phase_future_annotations(root, preflight, working)
+                ),
+            )
         # Class nesting establishes declaration scopes before references are
         # normalized; aliases and private imports follow those owner changes.
         for phase in c.Infra.SemanticCutoverPhase:
@@ -108,27 +110,29 @@ class FlextInfraCodemodSemanticApply:
                 return r[bool].from_failure(planned)
             cls._apply_plan(working, planned.value, changed)
             counts[phase] = len(planned.value)
-            residue = cls._check_residue(
-                phase,
-                u.Infra.plan_semantic_cutover(
+            if planned.value:
+                residue = cls._check_residue(
                     phase,
-                    rope_workspace=rope_workspace,
-                    sources=working,
-                    findings=preflight.entries,
-                ),
-            )
+                    u.Infra.plan_semantic_cutover(
+                        phase,
+                        rope_workspace=rope_workspace,
+                        sources=working,
+                        findings=preflight.entries,
+                    ),
+                )
             if phase is c.Infra.SemanticCutoverPhase.CLASS_NESTING:
                 deferred = cls._deferred_model_edits(working)
                 cls._apply_plan(working, deferred, changed)
                 counts["deferred_models"] = len(deferred)
-                residue = residue.flat_map(
-                    lambda _: cls._check_residue(
-                        "deferred-models",
-                        r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
-                            cls._deferred_model_edits(working)
-                        ),
+                if deferred:
+                    residue = residue.flat_map(
+                        lambda _: cls._check_residue(
+                            "deferred-models",
+                            r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(
+                                cls._deferred_model_edits(working)
+                            ),
+                        )
                     )
-                )
             if residue.failure:
                 return r[bool].from_failure(residue)
             cli.display_text(f"mod: semantic phase {phase} complete")
@@ -136,6 +140,10 @@ class FlextInfraCodemodSemanticApply:
             "mod: semantic cutover "
             + " ".join(f"{name}={count}" for name, count in counts.items())
         )
+        if not changed:
+            # Every phase just planned against this identical source snapshot.
+            # With no publication there is no second state to validate.
+            return r[bool].ok(True)
 
         def validate_published() -> p.Result[bool]:
             published = dict(cls._source_inventory(root, preflight))

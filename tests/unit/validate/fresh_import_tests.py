@@ -138,10 +138,8 @@ class TestsFlextInfraFreshImport:
 
         tm.fail(result, has=f"missing public export contract for {package.name}")
 
-    def test_declared_script_follows_configured_posture(self, tmp_path: Path) -> None:
-        """A declared script whose target lacks main warns or blocks per SSOT."""
-        from flext_infra import config
-
+    def test_declared_script_without_main_fails(self, tmp_path: Path) -> None:
+        """A declared script whose target lacks main blocks publication."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_probe_script"
         package.mkdir(parents=True)
         initializer = package / c.Infra.INIT_PY
@@ -168,8 +166,7 @@ class TestsFlextInfraFreshImport:
                 publications=(publication,), repository_roots=(tmp_path,)
             )
         )
-        warns = config.Infra.codegen.fresh_import_entry_points_warn_only
-        tm.that(report.passed, eq=warns)
+        tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="console_scripts/probe=")
         tm.that(report.violations[0], has="has no attribute 'main'")
 
@@ -177,8 +174,6 @@ class TestsFlextInfraFreshImport:
         self, tmp_path: Path
     ) -> None:
         """A missing export surfacing through a loadable script is never warn."""
-        from flext_infra import config
-
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_probe_script"
         package.mkdir(parents=True)
         initializer = package / c.Infra.INIT_PY
@@ -207,7 +202,6 @@ class TestsFlextInfraFreshImport:
                 publications=(publication,), repository_roots=(tmp_path,)
             )
         )
-        _ = config.Infra.codegen.fresh_import_entry_points_warn_only
         tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="ImportError")
 
