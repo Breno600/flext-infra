@@ -28,7 +28,7 @@
 - Public symbol exports: `CliDispatchService`, `CliRouteBase`, `CliRouteService`,
   `CodegenRoutes`, `FlextInfra`, `FlextInfraAbstractionBoundaryGate`,
   `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraApplyRenames`,
-  `FlextInfraBanditGate`, `FlextInfraBooleanLogicFixer` (+198 more)
+  `FlextInfraBanditGate`, `FlextInfraBooleanLogicFixer` (+199 more)
 - Exported module shortcuts: `check`, `codegen`, `codemod`, `deps`, `detectors`, `docs`,
   `fixers`, `gates` (+7 more)
 - Generated module pages: `203`

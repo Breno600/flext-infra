@@ -92,7 +92,14 @@ class FlextInfraCodegenLazyInitPlanner(
                 else c.Infra.LazyInitAction.SKIP
             )
             return self._publish_plan(
-                m.Infra.LazyInitPlan(context=context, action=residue_action)
+                m.Infra.LazyInitPlan(
+                    context=context,
+                    action=residue_action,
+                    lazy_map={},
+                    type_checking_map={},
+                    eager_dunders={},
+                    inline_constants={},
+                )
             )
         is_test_child_package = (
             context.surface == c.Infra.DIR_TESTS
@@ -134,7 +141,14 @@ class FlextInfraCodegenLazyInitPlanner(
             eager_dunders.pop(name, None)
         if not lazy_map and not eager_dunders:
             return self._publish_plan(
-                m.Infra.LazyInitPlan(context=context, action=empty_action)
+                m.Infra.LazyInitPlan(
+                    context=context,
+                    action=empty_action,
+                    lazy_map={},
+                    type_checking_map={},
+                    eager_dunders={},
+                    inline_constants={},
+                )
             )
         excluded_lazy_names: t.StrSequence = ()
         is_facade_root = self._is_facade_root(context)
@@ -230,6 +244,7 @@ class FlextInfraCodegenLazyInitPlanner(
             lazy_map=dict(lazy_map),
             type_checking_map=type_checking_map,
             eager_dunders=eager_dunders,
+            inline_constants={},
             wildcard_runtime_modules=(),
             child_packages_for_lazy=child_lazy,
             excluded_lazy_names=excluded_lazy_names,

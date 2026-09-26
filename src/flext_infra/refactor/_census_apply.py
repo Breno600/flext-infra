@@ -80,7 +80,18 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
             parse_failures: list[m.Infra.ParseFailureViolation] = []
             ctx = self._detector_context(rope, file_path, parse_failures=parse_failures)
             changed = False
-            if action == "rewrite_runtime_alias":
+            if action == "remove_stale_runtime_alias_export":
+                source = rope.source(file_path)
+                alias = next(iter(object_names))
+                updated = u.Infra.remove_runtime_alias_export(source, alias=alias)
+                if updated == source:
+                    continue
+                resource = rope.resource(file_path)
+                if resource is None:
+                    continue
+                resource.write(updated)
+                changed = True
+            elif action == "rewrite_runtime_alias":
                 convention = rope.convention(file_path)
                 alias = convention.module_policy.expected_alias
                 target_name = convention.module_policy.expected_family

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import sys
 from typing import TYPE_CHECKING
 
@@ -154,14 +155,18 @@ class Row(BaseModel):
         )
         updated, _changes = transformer.apply_to_source(source)
         (tmp_path / "derived_consumer.py").write_text(updated, encoding="utf-8")
-        probe = (
-            "from derived_consumer import Row, m\n"
-            "from flext_infra import m as owner\n"
-            "print(m is owner)\n"
-            'print(Row.model_validate_json(\'{"value": "live"}\').value)\n'
-        )
-        outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
-        tm.that(outcome.stdout.splitlines(), eq=["True", "live"])
+
+        def forget_consumer() -> None:
+            sys.modules.pop("derived_consumer", None)
+
+        with tm.scope(python_paths=[str(tmp_path)], cleanup=[forget_consumer]):
+            consumer = importlib.import_module("derived_consumer")
+            owner = importlib.import_module("flext_infra").m
+            tm.that(consumer.m is owner, eq=True)
+            tm.that(
+                consumer.Row.model_validate_json('{"value": "live"}').value,
+                eq="live",
+            )
 
     def test_exported_binding_requires_its_consumer_cutover(self) -> None:
         """A public re-export cannot disappear from an import-only source rewrite."""
@@ -261,6 +266,12 @@ print(RuntimeRow.model_validate_json('{"value": "runtime"}').value)
             with pytest.raises(ValueError, match="capture ancestral binding"):
                 transformer.transform(project, resource)
         tm.that(path.read_text(encoding="utf-8"), eq=source)
-        probe = "from ancestral_consumer import build\nprint(build())\n"
+        # The ancestor's BaseModel identity, not its relationship to pydantic,
+        # is this repository's contract: the dependency owns that hierarchy.
+        probe = (
+            f"from {c.Infra.PKG_CORE_UNDERSCORE} import m\n"
+            "from ancestral_consumer import build\n"
+            "print(build() is m.BaseModel)\n"
+        )
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
         tm.that(outcome.stdout.strip(), eq="True")

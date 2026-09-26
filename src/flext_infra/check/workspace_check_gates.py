@@ -244,6 +244,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
         result = m.Infra.ProjectResult(project=project_name)
 
         stages: t.MutableSequenceOf[m.Cli.PipelineStageSpec] = []
+        previous_gate_id: str | None = None
         for gate_id in gates:
             gate_instance = self._registry.create(gate_id, self._repository_root)
             if gate_instance is None:
@@ -254,8 +255,12 @@ class FlextInfraWorkspaceCheckGatesMixin:
                     handler=self._make_gate_handler(
                         gate_instance, project_dir, ctx, result.gates
                     ),
+                    depends_on=(previous_gate_id,)
+                    if ctx.fail_fast and previous_gate_id is not None
+                    else (),
                 )
             )
+            previous_gate_id = gate_id
 
         if not stages:
             return result

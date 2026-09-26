@@ -117,14 +117,26 @@ class FlextInfraUtilitiesRopeModulePatch:
             del lines[binding.lineno - 1 : binding.end_lineno]
         return "".join(lines).rstrip() + f"\n\n{alias} = {target_name}\n"
 
-    @staticmethod
-    def _ensure_all_entry(source: str, *, name: str) -> str:
-        """Publish the name using the canonical export parser and exact AST span."""
+    @classmethod
+    def remove_runtime_alias_export(cls, source: str, *, alias: str) -> str:
+        """Return source with one published alias letter removed from ``__all__``.
+
+        The owner of a declared-but-unbound letter is the declaration itself:
+        removing the letter repairs the published surface without inventing a
+        runtime binding the module never wrote.
+        """
         exports = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
             source
         )
-        if name in exports:
+        if alias not in exports:
             return source
+        return cls._rewrite_all_declaration(
+            source, names=[name for name in exports if name != alias]
+        )
+
+    @staticmethod
+    def _rewrite_all_declaration(source: str, *, names: list[str]) -> str:
+        """Publish exactly ``names`` through the canonical ``__all__`` rewrite."""
         declarations = [
             node
             for node in ast.parse(source).body
@@ -139,7 +151,7 @@ class FlextInfraUtilitiesRopeModulePatch:
         if len(declarations) > 1:
             message = "ambiguous __all__ declarations during facade repair"
             raise ValueError(message)
-        rendered = f"__all__: list[str] = {[*exports, name]!r}\n"
+        rendered = f"__all__: list[str] = {names!r}\n"
         if not declarations:
             return source.rstrip() + "\n\n" + rendered
         declaration = declarations[0]
@@ -164,6 +176,18 @@ class FlextInfraUtilitiesRopeModulePatch:
             raise ValueError(message)
         lines[declaration.lineno - 1 : declaration.end_lineno] = [rendered]
         return "".join(lines)
+
+    @staticmethod
+    def _ensure_all_entry(source: str, *, name: str) -> str:
+        """Publish the name using the canonical export parser and exact AST span."""
+        exports = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
+            source
+        )
+        if name in exports:
+            return source
+        return FlextInfraUtilitiesRopeModulePatch._rewrite_all_declaration(
+            source, names=[*exports, name]
+        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesRopeModulePatch"]

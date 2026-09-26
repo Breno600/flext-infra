@@ -33,6 +33,26 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
     class Tests(TestsFlextInfraConstantsScanMixin, FlextTestsConstants.Tests):
         """Flat constants optimized for data-driven infra tests."""
 
+        DIRENV_SESSION_ENV_KEYS: ClassVar[t.StrSequence] = (
+            "DIRENV_DIFF",
+            "DIRENV_DIR",
+            "DIRENV_FILE",
+            "DIRENV_IN_ENVRC",
+            "DIRENV_WATCHES",
+            "DIRENV_STDERR",
+            "DIRENV_LOG_ERROR",
+            "DIRENV_LOG_FILTER",
+        )
+        """Direnv session state an outer activation exports to its children.
+
+        ``direnv exec`` reverts the inherited ``DIRENV_DIFF`` before evaluating
+        the target ``.envrc``, so a test-declared override of any variable the
+        outer activation touched (``MISE_DATA_DIR``, for one) is silently
+        discarded and the fixture contract is evaluated against the host
+        runtime instead. Isolated runs must therefore start from a parent
+        environment with no inherited direnv session at all.
+        """
+
         GIT_LOCAL_ENV_KEYS: ClassVar[t.StrSequence] = (
             "GIT_ALTERNATE_OBJECT_DIRECTORIES",
             "GIT_CONFIG",
@@ -103,6 +123,7 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
             "WHAT",
             "REPOSITORY_ROOT",
             *FlextInfraConstants.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            *DIRENV_SESSION_ENV_KEYS,
             # The host's Gas City identity selects the generated .envrc beads
             # branch; a fixture project declares no city, so the owner-declared
             # identity variable never crosses into an isolated run.

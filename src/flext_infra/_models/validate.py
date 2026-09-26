@@ -9,7 +9,6 @@ from flext_cli import m, u
 
 from .. import c, t
 from . import FlextInfraModelsMixins as mm
-from ._defaults import FlextInfraModelsDefaults
 
 
 class FlextInfraModelsCore:
@@ -42,19 +41,18 @@ class FlextInfraModelsCore:
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
 
-        scripts: t.StrMapping = m.Field(
-            default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
-            description="Declared console entrypoints",
+        scripts: t.StrMapping | None = m.Field(
+            default=None, description="Declared console entrypoints when present"
         )
-        gui_scripts: t.StrMapping = m.Field(
-            default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
+        gui_scripts: t.StrMapping | None = m.Field(
+            default=None,
             alias="gui-scripts",
-            description="Declared graphical entrypoints",
+            description="Declared graphical entrypoints when present",
         )
-        entry_points: t.MappingKV[str, t.StrMapping] = m.Field(
-            default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
+        entry_points: t.MappingKV[str, t.StrMapping] | None = m.Field(
+            default=None,
             alias="entry-points",
-            description="Declared plugin entrypoint groups",
+            description="Declared plugin entrypoint groups when present",
         )
 
     class FreshImportMetadata(m.Value):
@@ -126,6 +124,17 @@ class FlextInfraModelsCore:
                 msg = "collection manifest requires nonempty unique node IDs"
                 raise ValueError(msg)
             return self
+
+    class PytestSelectionPlan(m.Value):
+        """One validated selection and its canonical manifest artifact."""
+
+        manifest_path: Path = m.Field(description="Canonical node-ID manifest")
+        node_ids: t.StrTuple = m.Field(
+            description="Selected node IDs in execution order"
+        )
+        whole_target: bool = m.Field(
+            description="Whether the selection covers the complete test target"
+        )
 
     class PytestRunContext(m.Value):
         """Immutable execution identity shared by a phase's native receipts."""

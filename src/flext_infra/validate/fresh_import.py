@@ -88,11 +88,13 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                     f"invalid published pyproject in {layout.project_root}"
                 )
             metadata = m.Infra.FreshImportMetadata.model_validate(payload).project
-            groups = (
-                ("console_scripts", metadata.scripts),
-                ("gui_scripts", metadata.gui_scripts),
-                *metadata.entry_points.items(),
-            )
+            groups: list[t.Pair[str, t.StrMapping]] = []
+            if metadata.scripts is not None:
+                groups.append(("console_scripts", metadata.scripts))
+            if metadata.gui_scripts is not None:
+                groups.append(("gui_scripts", metadata.gui_scripts))
+            if metadata.entry_points is not None:
+                groups.extend(metadata.entry_points.items())
             for group, entries in groups:
                 for name, value in entries.items():
                     probes.append(

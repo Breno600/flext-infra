@@ -7,14 +7,13 @@ the parent already provides. Deleting it is behaviour-preserving.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import override
 
 import libcst as cst
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from flext_infra import t
 
-if TYPE_CHECKING:
-    from flext_infra import t
+from .._utilities.transformer_base import FlextInfraRopeTransformer
 
 
 class FlextInfraRefactorMroRemover(FlextInfraRopeTransformer):

@@ -28,18 +28,9 @@ class FlextInfraModelsCodegenScaffoldModels:
     class CensusReport(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Aggregated census report for a single project."""
 
-        @staticmethod
-        def _violations_default() -> list[
-            FlextInfraModelsCodegenScaffoldModels.CensusViolation
-        ]:
-            """Violations default."""
-            return []
-
         violations: Annotated[
             Sequence[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
-            m.Field(
-                default_factory=_violations_default, description="Detected violations"
-            ),
+            m.Field(default_factory=list, description="Detected violations"),
         ]
         total: Annotated[t.NonNegativeInt, m.Field(description="Total violation count")]
         fixable: Annotated[

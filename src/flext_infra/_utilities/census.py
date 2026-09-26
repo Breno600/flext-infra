@@ -699,8 +699,9 @@ class FlextInfraUtilitiesRefactorCensus:
         the ``flext_infra.codegen.lazy_init`` import cycle while still
         giving gates a chance to verify post-cascade correctness.
         """
+        source_cache: MutableMapping[Path, str] = {}
         planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
-            rope, candidate
+            rope, candidate, source_cache=source_cache
         )
         if planned.failure:
             if planned.error_code == _UNSUPPORTED_SIMPLE_REMOVAL_CODE:
@@ -718,6 +719,7 @@ class FlextInfraUtilitiesRefactorCensus:
             updates,
             request=m.Infra.ProtectedSourceWritesRequest(
                 workspace=workspace,
+                expected_sources={path: source_cache[path] for path in updates},
                 gates=gates,
                 post_write=_post_write,
                 skip_pytest=True,

@@ -167,6 +167,10 @@ class TestsFlextInfraFreshImport:
                 generated_init=True,
             ),
             action=c.Infra.LazyInitAction.WRITE,
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
@@ -208,6 +212,10 @@ class TestsFlextInfraFreshImport:
                 generated_init=True,
             ),
             action=c.Infra.LazyInitAction.WRITE,
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
@@ -263,6 +271,10 @@ class TestsFlextInfraFreshImport:
                 generated_init=True,
             ),
             action=c.Infra.LazyInitAction.WRITE,
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
@@ -302,6 +314,10 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             exports=exports,
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
@@ -341,6 +357,10 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             exports=("value",),
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
@@ -389,6 +409,10 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             exports=("value",),
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
@@ -437,6 +461,10 @@ class TestsFlextInfraFreshImport:
                 ),
                 action=c.Infra.LazyInitAction.WRITE,
                 exports=exports,
+                lazy_map={},
+                type_checking_map={},
+                eager_dunders={},
+                inline_constants={},
             )
             for pkg_dir, current_pkg, exports in (
                 (subpackage, f"{package.name}.sub", ("leaf",)),

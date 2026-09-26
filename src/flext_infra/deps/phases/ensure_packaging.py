@@ -45,27 +45,54 @@ class FlextInfraEnsurePackagingPhase:
         module_paths = tuple(
             f"{c.Infra.DEFAULT_SRC_DIR}/{module}.py" for module in root_modules
         )
-        builder = (
-            m.Infra.DepsToml
-            .PhaseConfigBuilder("packaging")
-            .table("hatch", "build", "targets")
-            .nested("wheel", lists=(("packages", package_paths),))
-            .nested(
-                "sdist",
-                lists=(("only-include", (*package_paths, *module_paths, *data_dirs)),),
-            )
-        )
+        toml = m.Infra.DepsToml
         force_include = tuple(
             (data_dir, f"{package_name}/{data_dir}") for data_dir in data_dirs
         ) + tuple(
             (module_path, f"{module}.py")
             for module_path, module in zip(module_paths, root_modules, strict=True)
         )
-        if force_include:
-            builder = builder.nested("wheel", "force-include", values=force_include)
-        else:
-            builder = builder.nested("wheel", deprecated_keys=("force-include",))
-        return builder.build()
+        return toml.PhaseConfig(
+            name="packaging",
+            table_path=("hatch", "build", "targets"),
+            nested_tables=(
+                toml.PhaseConfig(
+                    name="packaging",
+                    root_path=(),
+                    table_path=("wheel",),
+                    operations=(toml.ListOp(key="packages", values=package_paths),),
+                ),
+                toml.PhaseConfig(
+                    name="packaging",
+                    root_path=(),
+                    table_path=("sdist",),
+                    operations=(
+                        toml.ListOp(
+                            key="only-include",
+                            values=(*package_paths, *module_paths, *data_dirs),
+                        ),
+                    ),
+                ),
+                (
+                    toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("wheel", "force-include"),
+                        operations=tuple(
+                            toml.SetOp(key=key, value=value)
+                            for key, value in force_include
+                        ),
+                    )
+                    if force_include
+                    else toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("wheel",),
+                        operations=(toml.RemoveOp(key="force-include"),),
+                    )
+                ),
+            ),
+        )
 
     def apply_payload(
         self,

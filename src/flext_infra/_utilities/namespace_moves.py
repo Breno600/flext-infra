@@ -476,7 +476,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 source_file: "\n".join(filtered_lines).rstrip() + "\n",
             },
             request=m.Infra.ProtectedSourceWritesRequest(
-                workspace=project_root, keep_backup=True, gates=gates
+                workspace=project_root,
+                expected_sources={target_file: target_source, source_file: source},
+                keep_backup=True,
+                gates=gates,
             ),
         )
         if not ok:
@@ -736,7 +739,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 source_file: "\n".join(updated_source_lines).rstrip() + "\n",
             },
             request=m.Infra.ProtectedSourceWritesRequest(
-                workspace=project_root, keep_backup=True, gates=gates
+                workspace=project_root,
+                expected_sources={target_file: target_source, source_file: source},
+                keep_backup=True,
+                gates=gates,
             ),
         )
         if not ok:
