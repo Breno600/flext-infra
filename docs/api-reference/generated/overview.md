@@ -11,10 +11,26 @@
 - Version: `0.12.0`
 - Description: FLEXT Infrastructure Tooling - Build automation, code generation, and
   workspace management
-- Governed projects: `0`
-- Project classes: _none_
-
-Generated from workspace discovery, `pyproject.toml`, public exports, and docstrings.
+- Doc summary: Flext Infra package.
+- Classifiers: Development Status :: 3 - Alpha, Framework :: Pydantic :: 2, Framework ::
+  Pydantic, Intended Audience :: Developers, Operating System :: OS Independent,
+  Programming Language :: Python :: 3 :: Only, Programming Language :: Python :: 3.13,
+  Topic :: Software Development :: Build Tools, Topic :: Software Development :: Code
+  Generators, Typing :: Typed
+- Project class: `infra`
+- Keywords: `automation`, `codegen`, `flext`, `infrastructure`, `tooling`
+- Main facades: `FlextInfra`, `FlextInfraAbstractionBoundaryGate`,
+  `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraApplyRenames`,
+  `FlextInfraBanditGate`, `FlextInfraBooleanLogicFixer`, `FlextInfraCProfileReport`,
+  `FlextInfraCanonicalAliasGate` (+179 more)
+- Alias exports: `c`, `d`, `e`, `h`, `m`, `p`, `r`, `s`, `t`, `u`, `x`
+- Public symbol exports: `CliDispatchService`, `CliRouteBase`, `CliRouteService`,
+  `CodegenRoutes`, `FlextInfra`, `FlextInfraAbstractionBoundaryGate`,
+  `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraApplyRenames`,
+  `FlextInfraBanditGate`, `FlextInfraBooleanLogicFixer` (+199 more)
+- Exported module shortcuts: `check`, `codegen`, `codemod`, `deps`, `detectors`, `docs`,
+  `fixers`, `gates` (+7 more)
+- Generated module pages: `203`
 
 ## Next Pages
 

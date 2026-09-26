@@ -814,3 +814,38 @@ class TestsFlextInfraLazyInitHelpers:
         after = self._generated_init(package_root)
         tm.that(after, eq=before)
         tm.that(after, lacks="Shared")
+
+    def test_duplicate_facade_letter_fails_before_generation(
+        self, tmp_path: Path
+    ) -> None:
+        """Two same-level owners of one facade letter stop the phase pre-effect.
+
+        The letter channel is governed exactly like every public name: when two
+        modules of one package both declare the same letter, nothing can decide
+        which one owns it, so planning refuses loudly and names the collision
+        instead of silently electing a winner behind the disagreement.
+        """
+        repository_root, package_root = self._workspace(tmp_path)
+        before = self._generated_init(package_root)
+        for module_name, class_name in (
+            ("constants", "AlphaConstants"),
+            ("culture", "CultureConstants"),
+        ):
+            (package_root / f"{module_name}.py").write_text(
+                "from __future__ import annotations\n\n"
+                f"class {class_name}:\n    pass\n\n"
+                f"c = {class_name}\n\n"
+                f'__all__: list[str] = ["{class_name}", "c"]\n',
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+
+        planned = u.Tests.plan_lazy_init(repository_root)
+
+        tm.that(planned.failure, eq=True)
+        tm.that(planned.error, has="ambiguous")
+        # The refusal is PRE-EFFECT: no facade gains either contested owner.
+        after = self._generated_init(package_root)
+        tm.that(after, eq=before)
+        tm.that(after, lacks="AlphaConstants")
+        tm.that(after, lacks="CultureConstants")
+        tm.that(after, lacks='"c"')

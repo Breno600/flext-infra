@@ -59,7 +59,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             root_modules=project.root_modules,
             root_packages=project.root_packages,
             declared_python_dirs=self._scaffold_python_dirs(
-                codegen.templates.entries, profile, package=repository.package
+                codegen.templates.entries, profile
             ),
             declared_python_dirs_are_complete=(
                 profile is not c.Infra.MakeProfile.WORKSPACE

@@ -76,6 +76,31 @@ class FlextInfraCodegenConformExecute(
             )
             if source.failure:
                 return r[m.Infra.CodegenResult].from_failure(source)
+            # The project's declared scaffold source is validated before any
+            # filesystem effect: a silent acceptance would materialize a whole
+            # tree whose declared provenance was never a direct Git
+            # requirement, and the declaration is the scaffold's provenance
+            # input, not decoration.
+            declared = (
+                initial_workspace.project.flext_source
+                if initial_workspace.project is not None
+                else None
+            )
+            if declared is not None:
+                distribution = config.Infra.codegen.infra_repository.distribution
+                if u.Infra.dep_name(declared) != distribution:
+                    return r[m.Infra.CodegenResult].fail(
+                        f"scaffold source must declare {distribution}: {declared}"
+                    )
+                parsed = u.Infra.declared_git_source(declared)
+                if parsed.failure:
+                    return r[m.Infra.CodegenResult].from_failure(parsed)
+                requirement_url, requirement_ref = parsed.value
+                if not requirement_url.startswith("https://") or not requirement_ref:
+                    return r[m.Infra.CodegenResult].fail(
+                        "infrastructure source must declare an HTTPS Git URL "
+                        f"and ref: {declared}"
+                    )
         # The supplied WorkspaceSpec already owns the declared integration branch.
         # Require it before materialization instead of a second divergent input.
         if (
