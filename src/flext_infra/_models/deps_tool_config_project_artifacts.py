@@ -27,23 +27,15 @@ class FlextInfraModelsDepsToolConfigProjectArtifacts(
         Ruff: Annotated[
             FlextInfraModelsDepsToolConfigProjectRuff.ProjectRuffConfig,
             m.Field(description="Ruff additions owned by the current project."),
-        ] = m.Field(
-            default_factory=FlextInfraModelsDepsToolConfigProjectRuff.ProjectRuffConfig
-        )
+        ]
         Mise: Annotated[
             FlextInfraModelsDepsToolConfigProjectMise.ProjectMiseConfig,
             m.Field(description="Mise additions owned by the current project."),
-        ] = m.Field(
-            default_factory=FlextInfraModelsDepsToolConfigProjectMise.ProjectMiseConfig
-        )
+        ]
         Gitignore: Annotated[
             FlextInfraModelsDepsToolConfigProjectGitignore.ProjectGitignoreConfig,
             m.Field(description="Ignore patterns owned by the current project."),
-        ] = m.Field(
-            default_factory=(
-                FlextInfraModelsDepsToolConfigProjectGitignore.ProjectGitignoreConfig
-            )
-        )
+        ]
 
     class ProjectManagedArtifactsResolution(m.ArbitraryTypesModel):
         """Composed project configuration plus selector provenance."""

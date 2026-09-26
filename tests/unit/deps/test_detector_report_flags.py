@@ -10,7 +10,8 @@ from flext_tests import tm
 
 from tests import c, u
 
-pytestmark = pytest.mark.slow
+# Real dependency discovery provisions a consumer from external package sources.
+pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraDepsDetectorReportFlags:

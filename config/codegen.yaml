@@ -185,6 +185,7 @@ Infra:
     # config/codegen-overrides.yaml, which the generated workflow materializes
     # before `make setup` (which otherwise fails on HTTPS submodule clone).
     ci_private_submodules: {}
+    ci_private_dependency_auth: {}
 
     # Actions ride their upstream floating major tag: setup converges on the
     # newest compatible release, never on an immutability SHA or patch pin.
@@ -294,6 +295,9 @@ Infra:
         - "**/*.egg-info/**"
         - "**/.pytest_cache/**"
         - "**/.reports/**"
+        # Mise v2 dependency sidecars are generated, digest-attested package-manager
+        # inputs. They stay committed for frozen replay but are not project source.
+        - "**/.mise/locks/**"
         - "**/node_modules/**"
         - "**/.scannerwork/**"
       cpd_exclusions:

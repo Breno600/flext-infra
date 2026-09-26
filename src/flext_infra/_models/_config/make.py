@@ -15,7 +15,6 @@ from ..._constants import (
     FlextInfraConstantsDocs,
     FlextInfraConstantsMake,
 )
-from .._defaults import FlextInfraModelsDefaults
 from .contract import FlextInfraConfigModelsContract
 
 
@@ -504,10 +503,7 @@ class FlextInfraConfigModelsMake:
             Mapping[
                 t.NonEmptyStr, FlextInfraConfigModelsMake.CustomHandlerPolicyOverride
             ],
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
-                description="Per-profile overrides of the custom handler policy",
-            ),
+            m.Field(description="Per-profile overrides of the custom handler policy"),
         ]
         project_check_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],

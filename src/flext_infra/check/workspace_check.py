@@ -137,8 +137,8 @@ class FlextInfraWorkspaceChecker(
         if requested:
             return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
                 tuple(
-                    m.Infra.CheckProjectTarget.from_workspace_name(
-                        params.repository_root, project_name
+                    m.Infra.CheckProjectTarget(
+                        name=project_name, path=params.repository_root / project_name
                     )
                     for project_name in requested
                 )
@@ -246,8 +246,8 @@ class FlextInfraWorkspaceChecker(
                 targets.append(project)
                 continue
             targets.append(
-                m.Infra.CheckProjectTarget.from_workspace_name(
-                    self._repository_root, project
+                m.Infra.CheckProjectTarget(
+                    name=project, path=self._repository_root / project
                 )
             )
         return tuple(targets)

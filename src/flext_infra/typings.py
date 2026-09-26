@@ -15,14 +15,14 @@ from __future__ import annotations
 
 import collections.abc
 
-from flext_cli import FlextCliTypes
+from flext_cli import t as cli_t
 
 from ._typings.adapters import FlextInfraTypesAdapters
 from ._typings.base import FlextInfraTypesBase
 from ._typings.rope import FlextInfraTypesRope
 
 
-class FlextInfraTypes(FlextCliTypes):
+class FlextInfraTypes(cli_t):
     """Type namespace for flext-infra; extends FlextTypes via FLEXT.
 
     Infra-specific types are nested under the ``Infra`` inner class to

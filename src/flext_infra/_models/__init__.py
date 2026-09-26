@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from ._config.beads import FlextInfraConfigModelsBeads
     from ._config.contexts import FlextInfraConfigModelsContexts
     from ._config.contract import FlextInfraConfigModelsContract
-    from ._config.infra import FlextInfraConfigModelsInfra
     from ._config.make import FlextInfraConfigModelsMake
     from ._config.provider import FlextInfraConfigModelsProvider
     from ._config.release import FlextInfraConfigModelsRelease
@@ -32,7 +31,6 @@ if TYPE_CHECKING:
     from ._config.static import FlextInfraConfigModelsStatic
     from ._config.templates import FlextInfraConfigModelsTemplates
     from ._config.workspace import FlextInfraConfigModelsWorkspace
-    from ._defaults import FlextInfraModelsDefaults
     from ._git.identity import FlextInfraModelsGitIdentity
     from ._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
     from .base import FlextInfraModelsBase
@@ -92,7 +90,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraConfigModelsBeads",
     "FlextInfraConfigModelsContexts",
     "FlextInfraConfigModelsContract",
-    "FlextInfraConfigModelsInfra",
     "FlextInfraConfigModelsMake",
     "FlextInfraConfigModelsProvider",
     "FlextInfraConfigModelsRelease",
@@ -115,7 +112,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsCodegenTransactionModels",
     "FlextInfraModelsCodemod",
     "FlextInfraModelsCore",
-    "FlextInfraModelsDefaults",
     "FlextInfraModelsDeps",
     "FlextInfraModelsDepsToml",
     "FlextInfraModelsDepsToolConfig",
@@ -175,7 +171,6 @@ _LAZY_IMPORTS = MappingProxyType(
             "._config.beads": ("FlextInfraConfigModelsBeads",),
             "._config.contexts": ("FlextInfraConfigModelsContexts",),
             "._config.contract": ("FlextInfraConfigModelsContract",),
-            "._config.infra": ("FlextInfraConfigModelsInfra",),
             "._config.make": ("FlextInfraConfigModelsMake",),
             "._config.provider": ("FlextInfraConfigModelsProvider",),
             "._config.release": ("FlextInfraConfigModelsRelease",),
@@ -185,7 +180,6 @@ _LAZY_IMPORTS = MappingProxyType(
             "._config.static": ("FlextInfraConfigModelsStatic",),
             "._config.templates": ("FlextInfraConfigModelsTemplates",),
             "._config.workspace": ("FlextInfraConfigModelsWorkspace",),
-            "._defaults": ("FlextInfraModelsDefaults",),
             "._git": ("_git",),
             "._git.identity": ("FlextInfraModelsGitIdentity",),
             "._git.worktree_facts": ("FlextInfraModelsGitWorktreeFacts",),

@@ -58,6 +58,7 @@ jobs:
         run: >-
           docker build
           -f tests/fixtures/ci/docker/{% raw %}${{ matrix.distro }}{% endraw %}.Dockerfile
+          --build-context git=.git
           --secret id=github_token,env=GITHUB_TOKEN
           -t ci-matrix-{% raw %}${{ matrix.distro }}{% endraw %}
           .

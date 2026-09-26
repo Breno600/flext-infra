@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast, override
+from typing import cast, override
 
 import libcst as cst
 from libcst.metadata import (
@@ -16,14 +16,11 @@ from libcst.metadata import (
     ScopeProvider,
 )
 
-from flext_infra import c, u
+from flext_infra import c, t, u
 
 from .._utilities.transformer_base import FlextInfraRopeTransformer
 from ._import_facades import FlextInfraRefactorImportFacades
 from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
-
-if TYPE_CHECKING:
-    from flext_infra import t
 
 
 class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
