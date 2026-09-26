@@ -20,13 +20,12 @@ from __future__ import annotations
 
 import ast
 import re
-from typing import TYPE_CHECKING, ClassVar, final, override
+from typing import ClassVar, final, override
+
+from flext_infra import t
 
 from .._utilities.transformer_base import FlextInfraRopeTransformer
 from ._rewrite import FlextInfraSourceRewrite, FlextInfraSourceRewriter
-
-if TYPE_CHECKING:
-    from flext_infra import t
 
 _PRIMITIVE_TOKENS: frozenset[str] = frozenset({
     "str",

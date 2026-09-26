@@ -9,7 +9,6 @@ from flext_cli import m
 
 from flext_infra import t
 
-from .._defaults import FlextInfraModelsDefaults
 from ..deps import FlextInfraModelsDepsToolConfig
 from .artifact import FlextInfraConfigModelsArtifact
 from .contract import FlextInfraConfigModelsContract
@@ -51,15 +50,13 @@ class FlextInfraConfigModelsRoot:
         sed_patterns: Annotated[
             FlextInfraConfigModelsArtifact.SedPatternsSpec,
             m.Field(
-                default_factory=FlextInfraConfigModelsArtifact.SedPatternsSpec,
-                description="Declared literal replacement patterns for mass refactoring",
+                description="Declared literal replacement patterns for mass refactoring"
             ),
         ]
         refactor_csv_campaigns: Annotated[
             FlextInfraConfigModelsArtifact.RefactorCsvCampaignsSpec,
             m.Field(
-                default_factory=FlextInfraConfigModelsArtifact.RefactorCsvCampaignsSpec,
-                description="Declared CSV-driven rename campaigns for the mod verb",
+                description="Declared CSV-driven rename campaigns for the mod verb"
             ),
         ]
 
@@ -84,17 +81,11 @@ class FlextInfraConfigModelsRoot:
 
         checkout_submodules_overrides: Annotated[
             Mapping[str, str],
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
-                description="Per-distribution checkout submodule override paths",
-            ),
+            m.Field(description="Per-distribution checkout submodule override paths"),
         ]
         ci_private_submodules: Annotated[
             Mapping[str, t.JsonMapping],
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
-                description="Per-distribution private submodule CI contracts",
-            ),
+            m.Field(description="Per-distribution private submodule CI contracts"),
         ]
         make: Annotated[
             FlextInfraConfigModelsRoot._MakeOverridesSection | None,
@@ -110,10 +101,7 @@ class FlextInfraConfigModelsRoot:
 
         custom_handler_profile_overrides: Annotated[
             Mapping[str, t.JsonMapping],
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
-                description="Per-profile custom handler policy overrides",
-            ),
+            m.Field(description="Per-profile custom handler policy overrides"),
         ]
 
     class _LayoutOverridesSection(FlextInfraConfigModelsContract.ConfigContract):
@@ -121,10 +109,7 @@ class FlextInfraConfigModelsRoot:
 
         project_overrides: Annotated[
             Mapping[str, t.JsonMapping],
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
-                description="Per-project layout override deltas",
-            ),
+            m.Field(description="Per-project layout override deltas"),
         ]
 
     class CodegenOverridesSpec(FlextInfraConfigModelsContract.ConfigContract):

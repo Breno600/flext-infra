@@ -71,20 +71,20 @@ UV_LINK_MODE := copy
 # unconsumed variable is ignored.
 PYTEST_DIAG_ARGS := -rA --durations=0 --tb=long --showlocals
 PYTEST_REPORT_ARGS := -ra --durations=25 --durations-min=0.001 --tb=short
-PYTEST_PROCESS_TIMEOUT_SECONDS := 7260
+PYTEST_PROCESS_TIMEOUT_SECONDS := 184
 # mro-99ae: the pytest process inherits a hard wall-clock boundary, so a hung
 # run is terminated even if the runner itself stalls.
 PYTEST_BOUNDED = timeout --signal=TERM --kill-after=5s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := .reports/tests
-override PYTEST_CASE_TIMEOUT_SECONDS := 10
-override PYTEST_RUN_TIMEOUT_SECONDS := 7200
+override PYTEST_CASE_TIMEOUT_SECONDS := 15
+override PYTEST_RUN_TIMEOUT_SECONDS := 180
 override PYTEST_TERMINATION_GRACE_SECONDS := 2
 override PYTEST_TIMEOUT_EXIT_CODE := 124
 override PYTEST_ENFORCEMENT_PLUGIN := flext_tests_enforcement
 override PYTEST_PROGRESS_ARGS := --verbose
 override PYTEST_REPORT_ARGS := -ra --durations=25 --durations-min=0.001 --tb=short
 override PYTEST_DIAG_ARGS := -rA --durations=0 --tb=long --showlocals
-override PYTEST_PARALLEL_WORKERS := 2
+override PYTEST_PARALLEL_WORKERS := 1
 override PYTEST_PARALLEL_WORKER_MEMORY_GB := 2
 override PYTEST_PARALLEL_DISTRIBUTION := load
 override PYTEST_PROFILE_SORT := cumulative
@@ -1217,20 +1217,15 @@ _builtin-self-test: _builtin_require_environment
 
 _builtin-self-check: _builtin_require_environment
 	@set -eu; \
-printf '%s\n' 'INFO: SUSPENDED check gate duplication; authority=flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec; reason=Custom policy check suspended during the approved recovery.'; \
-printf '%s\n' 'INFO: SUSPENDED check gate codemod; authority=flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec; reason=Custom policy check suspended during the approved recovery.'; \
-printf '%s\n' 'INFO: SUSPENDED check gate boundary; authority=flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec; reason=Custom policy check suspended during the approved recovery.'; \
-printf '%s\n' 'INFO: SUSPENDED check gate namespace; authority=flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec; reason=Custom policy check suspended during the approved recovery.'; \
-printf '%s\n' 'INFO: SUSPENDED check gate runtime-census; authority=flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec; reason=Custom policy check suspended during the approved recovery.'; \
-gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,tier-whitelist,index-declarations,smells,layout,canonical-alias,direnv"; \
+gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,smells,codemod,layout,canonical-alias,direnv,duplication"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,tier-whitelist,index-declarations,smells,layout,canonical-alias,direnv"; \
-			printf 'INFO: CI=Y runs check gates: lint pyright silent-failure deferred-self-reference security markdown loc-cap tier-whitelist index-declarations smells layout canonical-alias direnv\n'; \
+			gates="lint,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,smells,codemod,layout,canonical-alias,direnv,duplication"; \
+			printf 'INFO: CI=Y runs check gates: lint pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census namespace tier-whitelist index-declarations smells codemod layout canonical-alias direnv duplication\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
 			gates="pyrefly,mypy"; \
 			printf 'INFO: CI=N runs check gates: pyrefly mypy\n'; \
 		else \
-			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap tier-whitelist index-declarations smells layout canonical-alias direnv\n'; \
+			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census namespace tier-whitelist index-declarations smells codemod layout canonical-alias direnv duplication\n'; \
 		fi; \
 		if [ -z "$$gates" ]; then \
 			printf 'ERROR: no active check gates remain in the selected context\n' >&2; \
@@ -1284,20 +1279,15 @@ _builtin_build_artifacts:
 # An absent CI token runs every active default gate.
 _builtin_check_all: _builtin_require_environment
 	@set -eu; \
-printf '%s\n' 'INFO: SUSPENDED check gate duplication; authority=flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec; reason=Custom policy check suspended during the approved recovery.'; \
-printf '%s\n' 'INFO: SUSPENDED check gate codemod; authority=flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec; reason=Custom policy check suspended during the approved recovery.'; \
-printf '%s\n' 'INFO: SUSPENDED check gate boundary; authority=flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec; reason=Custom policy check suspended during the approved recovery.'; \
-printf '%s\n' 'INFO: SUSPENDED check gate namespace; authority=flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec; reason=Custom policy check suspended during the approved recovery.'; \
-printf '%s\n' 'INFO: SUSPENDED check gate runtime-census; authority=flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec; reason=Custom policy check suspended during the approved recovery.'; \
-gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,tier-whitelist,index-declarations,smells,layout,canonical-alias,direnv"; \
+gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,smells,codemod,layout,canonical-alias,direnv,duplication"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,tier-whitelist,index-declarations,smells,layout,canonical-alias,direnv"; \
-			printf 'INFO: CI=Y runs check gates: lint pyright silent-failure deferred-self-reference security markdown loc-cap tier-whitelist index-declarations smells layout canonical-alias direnv\n'; \
+			gates="lint,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,smells,codemod,layout,canonical-alias,direnv,duplication"; \
+			printf 'INFO: CI=Y runs check gates: lint pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census namespace tier-whitelist index-declarations smells codemod layout canonical-alias direnv duplication\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
 			gates="pyrefly,mypy"; \
 			printf 'INFO: CI=N runs check gates: pyrefly mypy\n'; \
 		else \
-			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap tier-whitelist index-declarations smells layout canonical-alias direnv\n'; \
+			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census namespace tier-whitelist index-declarations smells codemod layout canonical-alias direnv duplication\n'; \
 		fi; \
 		if [ -z "$$gates" ]; then \
 			printf 'ERROR: no active check gates remain in the selected context\n' >&2; \

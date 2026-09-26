@@ -192,7 +192,10 @@ class TestsFlextInfraUtilitiesProtectedEdit:
         result = u.Infra.protected_source_writes(
             {left_file: "VALUE = 2\n", right_file: "VALUE = 20\n"},
             request=m.Infra.ProtectedSourceWritesRequest(
-                workspace=tmp_path, gates=("lint",), skip_pytest=True
+                workspace=tmp_path,
+                expected_sources={left_file: "VALUE = 1\n", right_file: "VALUE = 10\n"},
+                gates=("lint",),
+                skip_pytest=True,
             ),
         )
 

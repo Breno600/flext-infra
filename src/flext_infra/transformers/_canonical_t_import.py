@@ -8,12 +8,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import c, u
+from flext_infra import c, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from flext_infra import t
 
 
 class FlextInfraEnsureCanonicalTImportMixin:

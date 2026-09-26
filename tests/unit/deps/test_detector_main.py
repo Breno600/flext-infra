@@ -10,7 +10,9 @@ from flext_tests import tm
 from flext_infra import config, main
 from tests import c, u
 
-pytestmark = pytest.mark.slow
+# The fixture resolves and installs a real consumer environment from Git/index
+# sources; this is an external integration boundary owned by ``test-full``.
+pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraDepsDetectorMain:
