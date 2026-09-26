@@ -173,6 +173,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 config_spec,
                 contract,
                 profile=target.make_profile,
+                beads_enabled=target.beads is not None,
             )
             if governed.failure:
                 return r[m.Infra.CodegenPlan].from_failure(governed)

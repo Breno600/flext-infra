@@ -215,9 +215,9 @@ class FlextInfraConfigModelsWorkspace:
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Workspace name")]
         beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsProjectSpec,
-            m.Field(description="Repository-local Beads identity"),
-        ]
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(description="Repository-local Beads identity when enabled"),
+        ] = None
         gascity_enabled: Annotated[
             bool,
             m.Field(

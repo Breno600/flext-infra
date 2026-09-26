@@ -233,7 +233,7 @@ class FlextInfraWorkspaceDetector(
         repository_root: Path,
         *,
         observed: m.Infra.RepositoryRef,
-        beads: m.Infra.BeadsProjectSpec,
+        beads: m.Infra.BeadsProjectSpec | None,
     ) -> p.Result[t.Triple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None]]:
         """Load a selected repository manifest and reconcile it with Git truth.
 
@@ -291,23 +291,26 @@ class FlextInfraWorkspaceDetector(
         # The manifest is the provider-identity authority: its declared URL was
         # just reconciled against the live Git origin above, so the declared
         # provider key rides with it and no catalog lookup may override it.
-        if manifest.ledger_id is not None and manifest.ledger_id != beads.database:
+        if manifest.ledger_id is not None and (
+            beads is None or manifest.ledger_id != beads.database
+        ):
             return r[
                 tuple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None]
             ].fail(
                 "workspace manifest ledger_id contradicts Beads identity "
-                f"({manifest_path}): {manifest.ledger_id!r} != {beads.database!r}"
+                f"({manifest_path}): {manifest.ledger_id!r} != "
+                f"{beads.database if beads is not None else None!r}"
             )
         if (
             manifest.ledger_prefix is not None
-            and manifest.ledger_prefix != beads.issue_prefix
+            and (beads is None or manifest.ledger_prefix != beads.issue_prefix)
         ):
             return r[
                 tuple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None]
             ].fail(
                 "workspace manifest ledger_prefix contradicts Beads identity "
                 f"({manifest_path}): {manifest.ledger_prefix!r} != "
-                f"{beads.issue_prefix!r}"
+                f"{beads.issue_prefix if beads is not None else None!r}"
             )
         overlay = next(
             (
@@ -401,7 +404,7 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def _load_subprojects(
-        cls, repository_root: Path, *, workspace_beads: m.Infra.BeadsProjectSpec
+        cls, repository_root: Path, *, workspace_beads: m.Infra.BeadsProjectSpec | None
     ) -> p.Result[
         t.Pair[t.VariadicTuple[m.Infra.RepositoryRef], t.VariadicTuple[Path]]
     ]:
@@ -450,7 +453,7 @@ class FlextInfraWorkspaceDetector(
         path: Path,
         *,
         integration_branch: str | None = None,
-        workspace_beads: m.Infra.BeadsProjectSpec,
+        workspace_beads: m.Infra.BeadsProjectSpec | None,
     ) -> p.Result[m.Infra.RepositoryRef | Path]:
         """Load one governed entry, or its declared path for external entries.
 
@@ -517,11 +520,13 @@ class FlextInfraWorkspaceDetector(
             return result_type.ok(path)
         route_error = (
             cls._composed_beads_identity_error(subproject_root, workspace_beads)
-            if (subproject_root / c.Infra.BEADS_DIRNAME).is_symlink()
+            if workspace_beads is not None
+            and (subproject_root / c.Infra.BEADS_DIRNAME).is_symlink()
             else None
         )
         if (
-            route_error is None
+            workspace_beads is not None
+            and route_error is None
             and not (subproject_root / c.Infra.BEADS_DIRNAME).is_symlink()
         ):
             beads = cls.load_beads_spec(subproject_root)
@@ -539,13 +544,16 @@ class FlextInfraWorkspaceDetector(
             return result_type.from_failure(repository)
         if not u.Infra.workspace_manifest_path(subproject_root).is_file():
             return result_type.ok(repository.value)
-        member_beads = cls.load_beads_spec(subproject_root)
-        if member_beads.failure:
-            return result_type.from_failure(member_beads)
+        member_beads: m.Infra.BeadsProjectSpec | None = None
+        if workspace_beads is not None:
+            loaded_member_beads = cls.load_beads_spec(subproject_root)
+            if loaded_member_beads.failure:
+                return result_type.from_failure(loaded_member_beads)
+            member_beads = loaded_member_beads.value
         manifest = cls._manifest_repository_ref(
             subproject_root,
             observed=repository.value.model_copy(update={"path": Path()}),
-            beads=member_beads.value,
+            beads=member_beads,
         )
         if manifest.failure:
             return result_type.from_failure(manifest)
@@ -575,10 +583,36 @@ class FlextInfraWorkspaceDetector(
         identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=resolved_root))
         if identity.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(identity)
-        beads_result = cls.load_beads_spec(resolved_root)
+        declared_manifest = cls.load_workspace_manifest(resolved_root)
+        if declared_manifest.failure:
+            return r[m.Infra.WorkspaceSpec].from_failure(declared_manifest)
+        manifest = declared_manifest.value[0] if declared_manifest.value else None
+        overlay = (
+            next(
+                (
+                    item
+                    for item in manifest.repository_policy_overlays
+                    if item.project == manifest.repository.distribution
+                ),
+                None,
+            )
+            if manifest is not None
+            else None
+        )
+        beads_enabled = overlay is None or overlay.beads_enabled
+        if not beads_enabled and overlay is not None and overlay.gascity_enabled:
+            return r[m.Infra.WorkspaceSpec].fail(
+                "Gas City requires Beads participation in the repository policy"
+            )
+        beads: m.Infra.BeadsProjectSpec | None = None
+        if beads_enabled:
+            beads_result = cls.load_beads_spec(resolved_root)
+            if beads_result.failure:
+                return r[m.Infra.WorkspaceSpec].from_failure(beads_result)
+            beads = beads_result.value
         member_root = identity.value.primary_root
         member_beads = member_root / c.Infra.BEADS_DIRNAME
-        if identity.value.is_attached_submodule and member_beads.is_symlink():
+        if beads_enabled and identity.value.is_attached_submodule and member_beads.is_symlink():
             superproject_root = identity.value.superproject_root
             if superproject_root is None:
                 return r[m.Infra.WorkspaceSpec].fail(
@@ -621,16 +655,13 @@ class FlextInfraWorkspaceDetector(
                     "composed project must follow the workspace Beads ledger: "
                     f"{route_error}"
                 )
-            beads_result = r[m.Infra.BeadsProjectSpec].ok(inherited_beads.value)
-        if beads_result.failure:
-            return r[m.Infra.WorkspaceSpec].from_failure(beads_result)
-        beads = beads_result
+            beads = inherited_beads.value
         repository = cls._local_repository_ref(
             resolved_root, composed=identity.value.is_attached_submodule
         )
         if repository.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(repository)
-        topology = cls._load_subprojects(resolved_root, workspace_beads=beads.value)
+        topology = cls._load_subprojects(resolved_root, workspace_beads=beads)
         if topology.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(topology)
         subprojects, external = topology.value
@@ -644,18 +675,23 @@ class FlextInfraWorkspaceDetector(
             }
         )
         declared_repository = cls._manifest_repository_ref(
-            resolved_root, observed=observed_repository, beads=beads.value
+            resolved_root, observed=observed_repository, beads=beads
         )
         if declared_repository.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(declared_repository)
         repository_ref, gascity_enabled, declared_project = declared_repository.value
-        declared_manifest = cls.load_workspace_manifest(resolved_root)
-        if declared_manifest.failure:
-            return r[m.Infra.WorkspaceSpec].from_failure(declared_manifest)
+        if beads is not None:
+            workspace_name = beads.workspace
+        else:
+            if manifest is None:
+                return r[m.Infra.WorkspaceSpec].fail(
+                    "workspace identity requires a manifest or Beads configuration"
+                )
+            workspace_name = manifest.name
         return r[m.Infra.WorkspaceSpec].ok(
             m.Infra.WorkspaceSpec(
-                name=beads.value.workspace,
-                beads=beads.value,
+                name=workspace_name,
+                beads=beads,
                 gascity_enabled=gascity_enabled,
                 repository=repository_ref,
                 project=declared_project,
