@@ -104,6 +104,12 @@ Infra:
           # docs and the codegen fixed point stays stable.
           - docs/api-reference/generated/**
           - docs/projects/generated/**
+          # Pandoc-fenced authoring sources (fonte.md): the fenced-div markers
+          # are runtime syntax (class attribution), not prose. Prettier's
+          # rewrap merges `::: {.class}` onto the content line and the motor
+          # loses the declared classes (style-specimen contract); the author
+          # owns the fences and the renderer owns their meaning.
+          - "**/fonte.md"
       ruff:
         # P0 law: lint covers every tracked Python surface. No excludes over
         # legado, examples, tests, or scripts code anywhere in this config.
