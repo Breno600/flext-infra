@@ -59,6 +59,3 @@ class TestsFlextInfraCodegenMakeRuntimeIdentity:
         tm.that(result.stdout, has="application-environment-preserved")
         tm.that(result.stderr, lacks="invalid-host")
         tm.that(lock.read_bytes(), eq=lock_before)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenMakeRuntimeIdentity"]
