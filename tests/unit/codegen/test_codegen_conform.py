@@ -52,14 +52,18 @@ class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
         if not journal_path.is_file():
             return planned
         scenario = request.root.name
-        if scenario == "cas":
+        if scenario in {"cas", "source-race"}:
             marker = request.root / ".lifecycle-cas"
             if marker.read_bytes() != b"before\n":
                 return planned
             before = tm.ok(u.Cli.atomic_read_binary_file_state(marker, required=True))
             marker.write_bytes(b"foreign\n")
-            failed = u.Cli.atomic_write_binary_file_guarded(
-                before, b"owned\n", permission_mode=tm.not_none(before.mode)
+            failed = (
+                u.Cli.atomic_verify_binary_file_states((before,))
+                if scenario == "source-race"
+                else u.Cli.atomic_write_binary_file_guarded(
+                    before, b"owned\n", permission_mode=tm.not_none(before.mode)
+                )
             )
             tm.fail(failed)
             return r[m.Infra.CodegenPlan].from_failure(failed)
@@ -110,7 +114,7 @@ class TestsFlextInfraCodegenConform:
         published = root / c.Infra.MAKEFILE_FILENAME
         original = published.read_bytes() + b"\n# recoverable drift\n"
         published.write_bytes(original)
-        if scenario == "cas":
+        if scenario in {"cas", "source-race"}:
             (root / ".lifecycle-cas").write_bytes(b"before\n")
         identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)))
         journal = FlextInfraMiseWorkspacePlanner.journal_path(identity)
@@ -123,6 +127,7 @@ class TestsFlextInfraCodegenConform:
             "exception-replaced",
             "failure-mixed",
             "cas",
+            "source-race",
             "lazy-failure",
             "docs-failure",
         ],
@@ -159,6 +164,7 @@ class TestsFlextInfraCodegenConform:
             failed = execute(request)
             expected = {
                 "cas": "atomic destination content changed",
+                "source-race": "atomic source changed",
                 "lazy-failure": "refusing obsolete root-support symlink",
             }.get(scenario, "failed after begin")
             tm.fail(failed, has=expected)
@@ -182,7 +188,8 @@ class TestsFlextInfraCodegenConform:
                 tuple(path.read_bytes() for path in tmp_path.rglob("foreign.bin")),
                 eq=(b"foreign staging\n",),
             )
-        elif scenario == "cas":
+        elif scenario in {"cas", "source-race"}:
+            tm.that((root / ".lifecycle-cas").read_bytes(), eq=b"foreign\n")
             tm.that(capsys.readouterr().out, lacks="mode=converge")
 
     def test_public_scaffold_exception_restores_bootstrap_state(

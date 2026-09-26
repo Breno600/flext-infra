@@ -47,6 +47,9 @@ class FlextInfraCodegenLazyInitPlannerBase(m.ArbitraryTypesModel):
     _module_file_by_name: MutableMapping[str, Path] = u.PrivateAttr(
         default_factory=dict
     )
+    _project_layout_cache: MutableMapping[Path, m.Infra.RopeProjectLayout] = (
+        u.PrivateAttr(default_factory=dict)
+    )
     _version_module_name: str = u.PrivateAttr(
         default_factory=lambda: f"{c.Infra.DUNDER_VERSION}.py"
     )
@@ -210,7 +213,9 @@ class FlextInfraCodegenLazyInitPlanner(
         for entry in declared_entries:
             module_path = entry.file_path
             policy = u.Infra.publication_policy(
-                module_path, rope_project=self.rope_workspace.rope_project
+                module_path,
+                rope_project=self.rope_workspace.rope_project,
+                project_layout=self._project_layout_for(context.pkg_dir),
             )
             alias = policy.expected_alias
             family = policy.expected_family

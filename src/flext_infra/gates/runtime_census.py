@@ -32,7 +32,9 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
         """Run the runtime census scoped to ``project_dir``."""
         _ = ctx
         started = time.monotonic()
-        validator = FlextInfraRuntimeCensusValidator(repository_root=project_dir)
+        validator = FlextInfraRuntimeCensusValidator(
+            repository_root=project_dir, project_filter=project_dir.name
+        )
         # ``build_report`` (not ``execute``) keeps violations structured so the
         # gate can grade a broken invocation separately from found violations.
         report_result = validator.build_report()

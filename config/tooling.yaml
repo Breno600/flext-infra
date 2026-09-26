@@ -594,11 +594,8 @@ Infra:
         testmon-database-filename: .testmondata
         testmon-lock-filename: cache.lock
         # flext-j47u (codex): scaffold/modernizer consume one complete pytest model.
-        # OPERATOR LAW flext-38p39 (2026-08-13), reaffirmed by flext-09686
-        # measurement. 10s per case, 60s for an explicitly slow case.
-        # A case that does not fit is a TEST DEFECT and is
-        # OPTIMIZED; raising the ceiling to accommodate it is forbidden and is
-        # itself a violation. Fifteen seconds still fails a blocked filesystem
+        # A case that does not fit is a test defect to optimize. Fifteen
+        # seconds still fails a blocked filesystem
         # operation quickly without pretending that an uninterruptible host
         # fsync can obey a five-second Python signal deadline. The aggregate
         # budget below independently terminates an incomplete full suite.
