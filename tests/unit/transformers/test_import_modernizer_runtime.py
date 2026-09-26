@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, infra, u
+from flext_infra import c, infra, m, u
 from flext_infra.transformers.import_modernizer import (
     FlextInfraRefactorImportModernizer,
 )
@@ -156,20 +156,12 @@ class Row(BaseModel):
         updated, _changes = transformer.apply_to_source(source)
         (tmp_path / "derived_consumer.py").write_text(updated, encoding="utf-8")
 
-        # In-process probe (RC2): the runtime contract is what the subprocess
-        # asserted - the declared facade stays the owner and the moved model
-        # still validates live - without a cold interpreter per assertion.
+        # The rewritten consumer imports the real facade and validates a row.
         sys.path.insert(0, str(tmp_path))
         try:
-            derived = importlib.import_module("derived_consumer")
-
-        with tm.scope(python_paths=[str(tmp_path)], cleanup=[forget_consumer]):
             consumer = importlib.import_module("derived_consumer")
-            owner = importlib.import_module("flext_infra").m
-
-            row_model = derived.Row
-
-            tm.that(owner is m_fleet, eq=True)
+            row_model = consumer.Row
+            tm.that(row_model.__mro__[1] is m.BaseModel, eq=True)
             tm.that(row_model.model_validate_json('{"value": "live"}').value, eq="live")
         finally:
             sys.path.remove(str(tmp_path))

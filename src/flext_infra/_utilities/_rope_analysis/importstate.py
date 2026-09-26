@@ -416,7 +416,16 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
                 continue
             if binding.get_object() is not target:
                 continue
-            aliases = cls._declared_class_aliases(target)
+            aliases = frozenset(
+                alias
+                for alias in cls._declared_class_aliases(target)
+                if alias in exports
+                and (alias_binding := attributes.get(alias)) is not None
+                and FlextInfraUtilitiesRopeAnalysisAstHelpers.local_name(
+                    alias_binding, resource
+                )
+                and alias_binding.get_object() is target
+            )
             if not aliases and infer_missing:
                 aliases = missing_aliases or cls._inherited_class_aliases(
                     target, visited=frozenset()
