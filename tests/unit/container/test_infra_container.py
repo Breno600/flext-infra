@@ -15,7 +15,6 @@ from contextlib import redirect_stdout
 from io import StringIO
 from pathlib import Path
 
-import pytest
 from flext_tests import tm
 
 from flext_core import FlextContainer
@@ -24,13 +23,6 @@ from tests import u
 
 class TestsFlextInfraContainerInfraContainer:
     """Exercise container lifecycle and shared namespace behavior."""
-
-    pytestmark = pytest.mark.usefixtures("setup")
-
-    @pytest.fixture
-    def setup(self) -> None:
-        """Ensure container is configured before each test."""
-        FlextContainer().initialize_di_components()
 
     def test_container_is_process_singleton(self) -> None:
         """FlextContainer returns the same process-wide instance."""

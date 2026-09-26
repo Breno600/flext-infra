@@ -59,14 +59,23 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         deselected = 0
         inventory_count = None
         if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
-            inventory = m.Infra.PytestCollectionManifest.model_validate_json(
-                (log.parent / "testmon-inventory.json").read_text(encoding="utf-8")
+            selection_plan = m.Infra.PytestSelectionPlan.model_validate_json(
+                (log.parent / "selection-plan.json").read_text(encoding="utf-8")
             )
             selected = (
-                inventory
+                m.Infra.PytestCollectionManifest.model_validate_json(
+                    selection_plan.manifest_path.read_text(encoding="utf-8")
+                )
                 if context.execution_mode == c.Infra.PytestExecutionMode.FULL
                 else m.Infra.PytestCollectionManifest.model_validate_json(
                     (log.parent / "testmon-selection.json").read_text(encoding="utf-8")
+                )
+            )
+            inventory = (
+                selected
+                if selection_plan.whole_target
+                else m.Infra.PytestCollectionManifest.model_validate_json(
+                    (log.parent / "testmon-inventory.json").read_text(encoding="utf-8")
                 )
             )
             if not set(selected.node_ids).issubset(inventory.node_ids):

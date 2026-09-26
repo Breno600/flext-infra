@@ -10,7 +10,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import FlextCliProtocols
+from flext_cli import p as cli_p
 
 from ._protocols.base import FlextInfraProtocolsBase
 from ._protocols.check import FlextInfraProtocolsCheck
@@ -21,7 +21,7 @@ from ._protocols.rope import FlextInfraProtocolsRope
 from ._protocols.rope_runtime import FlextInfraProtocolsRopeRuntime
 
 
-class FlextInfraProtocols(FlextCliProtocols):
+class FlextInfraProtocols(cli_p):
     """Structural contracts for flext-infra utilities and services.
 
     All parent protocols (Result, Config, DI, Service, etc.) are inherited

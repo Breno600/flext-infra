@@ -4,14 +4,27 @@
 from __future__ import annotations
 
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
-__all__: tuple[str, ...] = ()
+if TYPE_CHECKING:
+    from .test_codegen_make_runtime_identity import (
+        TestsFlextInfraCodegenMakeRuntimeIdentity,
+    )
+
+
+__all__: tuple[str, ...] = ("TestsFlextInfraCodegenMakeRuntimeIdentity",)
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
-        MappingProxyType({}), alias_groups=MappingProxyType({}), sort_keys=False
+        MappingProxyType({
+            ".test_codegen_make_runtime_identity": (
+                "TestsFlextInfraCodegenMakeRuntimeIdentity",
+            )
+        }),
+        alias_groups=MappingProxyType({}),
+        sort_keys=False,
     )
 )
 

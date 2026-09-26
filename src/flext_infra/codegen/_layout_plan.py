@@ -125,12 +125,17 @@ class FlextInfraCodegenLayoutPlanMixin:
     def _override_root_names(
         override: m.Infra.LayoutProjectOverrideSpec | None,
     ) -> frozenset[str]:
-        """Root names owned by per-project override rules (never generic rules)."""
+        """Root names owned by per-project override rules (never generic rules).
+
+        Declared ``keep_root_files`` are owned too: they are exempt from the
+        generic loose-root classification instead of being archived or moved.
+        """
         if override is None:
             return frozenset()
         return frozenset({
             *(Path(move.source).parts[0] for move in override.moves),
             *override.archive_empty_dirs,
+            *override.keep_root_files,
         })
 
     def _classify_root_entry(

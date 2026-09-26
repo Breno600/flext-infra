@@ -8,7 +8,6 @@
 
 <!-- AUTO-GENERATED — DO NOT EDIT MANUALLY -->
 
-- Package: `flext_infra`
 - Version: `0.12.0`
 - Description: FLEXT Infrastructure Tooling - Build automation, code generation, and
   workspace management
@@ -28,12 +27,12 @@
 - Public symbol exports: `CliDispatchService`, `CliRouteBase`, `CliRouteService`,
   `CodegenRoutes`, `FlextInfra`, `FlextInfraAbstractionBoundaryGate`,
   `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraApplyRenames`,
-  `FlextInfraBanditGate`, `FlextInfraBooleanLogicFixer` (+198 more)
+  `FlextInfraBanditGate`, `FlextInfraBooleanLogicFixer` (+199 more)
 - Exported module shortcuts: `check`, `codegen`, `codemod`, `deps`, `detectors`, `docs`,
   `fixers`, `gates` (+7 more)
 - Generated module pages: `203`
 
 ## Next Pages
 
-- [Public API](public-api.md)
-- [Module Index](modules/index.md)
+- [Workspace Module Pages](projects/index.md)
+- [Project Catalog](../../projects/generated/catalog.md)
