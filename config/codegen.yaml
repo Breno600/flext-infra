@@ -2100,7 +2100,7 @@ Infra:
         - source: base/config/workspace.yaml.j2
           destination: config/workspace.yaml
           profiles: [workspace, standalone]
-          delegate: manifest
+          delegate: render
           overwrite: false
       # Repository-local Beads identity. conform requires this file to
       # exist before it can plan, so a scaffolded project that never

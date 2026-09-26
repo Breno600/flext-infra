@@ -10,6 +10,7 @@ from flext_tests import tm
 from flext_infra import c, config
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.layout import FlextInfraCodegenLayout
+from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
 from tests import u
 from tests.unit.codegen.layout_fixture import (
     archive_root,
@@ -98,14 +99,28 @@ class TestsFlextInfraCodegenLayoutGitignore:
             if item.gitignore_additions
         )
         root = tmp_path / f"{owner}{directory_suffix}"
-        u.Tests.WorktreeFixture.initialize_governed_project(
-            root,
-            owner,
-            workspace="fixture-workspace",
-            database="fixture-database",
-            issue_prefix="fixture-prefix",
+        repository = u.Tests.repository_ref(owner)
+        project = u.Tests.project_spec(owner)
+        tm.ok(
+            FlextInfraCodegenProjectNew(
+                flext_source=u.Tests.flext_source(),
+                name=owner,
+                kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
+                output_root=root,
+                provider=repository.provider,
+                repository_url=repository.url,
+                repository_branch=u.Tests.provider_branch(),
+                flext_repository_url=u.Tests.repository_ref(config.Infra.name).url,
+                flext_repository_ref=u.Tests.provider_branch(),
+                license=project.license,
+                author_name=project.author_name,
+                author_email=project.author_email,
+                upstream=project.upstream,
+                year=project.year,
+                apply_changes=True,
+            ).execute()
         )
-        u.Tests.commit_git_changes(root, "Declare project identity")
+        u.Tests.commit_git_changes(root, "Declare scaffolded project identity")
         tm.ok(
             FlextInfraCodegenConform.execute_request(
                 u.Tests.conform_request(
