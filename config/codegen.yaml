@@ -2097,10 +2097,11 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
-        - source: base/config/workspace.yaml.j2
-          destination: config/workspace.yaml
+      # New-project declaration is serialized once from WorkspaceManifestSpec.
+      # Existing-tree conform reads this file as input and never overwrites it.
+        - destination: config/workspace.yaml
           profiles: [workspace, standalone]
-          delegate: render
+          delegate: manifest
           overwrite: false
       # Repository-local Beads identity. conform requires this file to
       # exist before it can plan, so a scaffolded project that never

@@ -69,6 +69,8 @@ class TestsFlextInfraCodegenLayout:
         declaration = m.Infra.CodegenOverridesSpec.model_validate({
             "Infra": {
                 "codegen": {
+                    "checkout_submodules_overrides": {},
+                    "ci_private_submodules": {},
                     "layout": {
                         "project_overrides": {
                             distribution: override.model_dump(mode="json")

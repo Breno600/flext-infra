@@ -654,7 +654,7 @@ class TestsFlextInfraCodegenCiMatrix:
         )
         header = rendered.split("\n\n", 1)[0]
         tm.that(header.startswith("# @flext-regenerate: make gen\n"), eq=True)
-        tm.that(header, has=entry.source.as_posix())
+        tm.that(header, has=tm.not_none(entry.source).as_posix())
         properties = {
             key: value
             for key, _, value in (

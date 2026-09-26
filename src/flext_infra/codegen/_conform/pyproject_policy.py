@@ -28,7 +28,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             Path(entry.destination).parts[0]
             for entry in entries
             if profile in entry.profiles
-            and entry.delegate == "render"
+            and entry.delegate == c.Infra.TemplateDelegate.RENDER
             and Path(entry.destination).parts
         }
         # An existing package:false repository (a solo workspace root)

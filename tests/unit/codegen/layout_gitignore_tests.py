@@ -120,15 +120,9 @@ class TestsFlextInfraCodegenLayoutGitignore:
                 apply_changes=True,
             ).execute()
         )
-        u.Tests.commit_git_changes(root, "Declare scaffolded project identity")
-        tm.ok(
-            FlextInfraCodegenConform.execute_request(
-                u.Tests.conform_request(
-                    root,
-                    scope=c.Infra.CodegenConformScope.SELF,
-                    mode=c.Infra.CodegenConformMode.APPLY,
-                )
-            )
+        tm.that(
+            (root / c.CONFIG_DIR_NAME / c.Infra.WORKSPACE_MANIFEST_FILENAME).is_file(),
+            eq=True,
         )
 
         entries = (root / c.Infra.GITIGNORE).read_text(encoding="utf-8").splitlines()

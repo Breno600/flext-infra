@@ -155,7 +155,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 entry
                 for entry in codegen.templates.entries
                 if entry.destination == managed.path.as_posix()
-                and entry.delegate == "render"
+                and entry.delegate == c.Infra.TemplateDelegate.RENDER
             )
             if not entries:
                 continue
@@ -164,6 +164,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     f"managed file requires exactly one render template: {managed.path}"
                 )
             entry = entries[0]
+            if entry.source is None:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                    f"managed render entry has no template source: {managed.path}"
+                )
             relative = Path(entry.destination)
             if relative.is_absolute() or ".." in relative.parts:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
