@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import sys
 from typing import TYPE_CHECKING
 
@@ -154,14 +155,23 @@ class Row(BaseModel):
         )
         updated, _changes = transformer.apply_to_source(source)
         (tmp_path / "derived_consumer.py").write_text(updated, encoding="utf-8")
-        probe = (
-            "from derived_consumer import Row, m\n"
-            "from flext_infra import m as owner\n"
-            "print(m is owner)\n"
-            'print(Row.model_validate_json(\'{"value": "live"}\').value)\n'
-        )
-        outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
-        tm.that(outcome.stdout.splitlines(), eq=["True", "live"])
+
+        # In-process probe (RC2): the runtime contract is what the subprocess
+        # asserted - the declared facade stays the owner and the moved model
+        # still validates live - without a cold interpreter per assertion. The
+        # consumer exists only at runtime, so it is imported by name inside the
+        # scope that owns its import root.
+        def forget_consumer() -> None:
+            sys.modules.pop("derived_consumer", None)
+
+        with tm.scope(python_paths=[str(tmp_path)], cleanup=[forget_consumer]):
+            consumer = importlib.import_module("derived_consumer")
+            owner = importlib.import_module("flext_infra").m
+
+            tm.that(owner is m_fleet, eq=True)
+            tm.that(
+                consumer.Row.model_validate_json('{"value": "live"}').value, eq="live"
+            )
 
     def test_exported_binding_requires_its_consumer_cutover(self) -> None:
         """A public re-export cannot disappear from an import-only source rewrite."""
