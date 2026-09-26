@@ -95,6 +95,7 @@ class FlextInfraWorkspaceChecker(
             reports_dir=params.reports_dir_path,
             apply_fixes=params.apply,
             check_only=params.check_only,
+            fail_fast=params.fail_fast,
             ruff_args=tuple(self.parse_tool_args(params.ruff_args)),
             pyright_args=tuple(self.parse_tool_args(params.pyright_args)),
         )
@@ -180,7 +181,7 @@ class FlextInfraWorkspaceChecker(
         gates: t.StrSequence,
         *,
         reports_dir: Path | None = None,
-        fail_fast: bool = False,
+        fail_fast: bool = c.Infra.CHECK_FAIL_FAST_DEFAULT,
         ctx: m.Infra.GateContext | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
         """Run selected gates for multiple projects."""
@@ -194,12 +195,15 @@ class FlextInfraWorkspaceChecker(
         dir_ensure = u.Cli.ensure_dir(report_base)
         if dir_ensure.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(dir_ensure)
-        effective_ctx = (
-            ctx
-            or m.Infra.GateContext(
-                repository_root=self._repository_root, reports_dir=report_base
+        effective_ctx = ctx or m.Infra.GateContext(
+            repository_root=self._repository_root,
+            reports_dir=report_base,
+            fail_fast=fail_fast,
+        )
+        if effective_ctx.fail_fast != fail_fast:
+            return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
+                "gate context fail_fast disagrees with the requested project policy"
             )
-        ).model_copy(update={"fail_fast": fail_fast})
         targets = self._project_targets(projects)
         rope_outcomes_result = self._run_rope_gate_cycle(targets, resolved_gates)
         if rope_outcomes_result.failure:

@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 class FlextInfraConstantsCheck:
     """Check infrastructure constants."""
 
+    CHECK_FAIL_FAST_DEFAULT: ClassVar[bool] = False
+    """Run every independent quality gate unless fail-fast is requested."""
+
     PYTEST_SELECTED_COLLECTION_OPTION: ClassVar[str] = "--flext-selected-collection"
 
     @unique

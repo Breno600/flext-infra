@@ -60,7 +60,6 @@ class FlextInfraModelsMixins:
                 )
             ),
         ] = None
-        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = False
         verbose: Annotated[bool, m.Field(description="Verbose output")] = False
 
         @property

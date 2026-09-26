@@ -691,7 +691,7 @@ def real_docs_project(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]:
+def semantic_rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]:
     """Create a real rope workspace with semantic-analysis fixtures."""
     repository_root = tmp_path / "rope_workspace"
     package_root = repository_root / "src" / "rope_demo"
@@ -727,10 +727,10 @@ def rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]:
 
 @pytest.fixture
 def models_resource(
-    rope_workspace: t.Pair[t.Infra.RopeProject, Path],
+    semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic models fixture module."""
-    rope_project, repository_root = rope_workspace
+    rope_project, repository_root = semantic_rope_workspace
     resource = u.Infra.get_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "models.py"
     )
@@ -740,10 +740,10 @@ def models_resource(
 
 @pytest.fixture
 def services_resource(
-    rope_workspace: t.Pair[t.Infra.RopeProject, Path],
+    semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic services fixture module."""
-    rope_project, repository_root = rope_workspace
+    rope_project, repository_root = semantic_rope_workspace
     resource = u.Infra.get_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "services.py"
     )
