@@ -36,6 +36,9 @@ class FlextInfraCodegenLazyInit(
     """
 
     _modified_files: t.Infra.StrSet = u.PrivateAttr(default_factory=set)
+    project_scope_root: Path | None = m.Field(
+        default=None, description="Project root selected by self-scoped conformance"
+    )
 
     @property
     def modified_files(self) -> t.StrSequence:
@@ -110,12 +113,24 @@ class FlextInfraCodegenLazyInit(
         """Build immutable plans from one stable Rope workspace snapshot."""
         workspace_index = rope.workspace_index
         resolved_repository_root = self.repository_root.resolve()
+        selected_project_root = (
+            self.project_scope_root.resolve()
+            if self.project_scope_root is not None
+            else None
+        )
         indexed_package_dirs = tuple(
             sorted(
                 (
                     package_dir.resolve()
                     for package_dir in workspace_index.package_dirs
                     if package_dir.is_relative_to(resolved_repository_root)
+                    and (
+                        selected_project_root is None
+                        or workspace_index.packages_by_dir[
+                            str(package_dir)
+                        ].project_root
+                        == selected_project_root
+                    )
                     and not frozenset(
                         package_dir.relative_to(resolved_repository_root).parts
                     )

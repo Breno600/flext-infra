@@ -437,6 +437,10 @@ class FlextInfraMiseArtifactsVerification:
     ) -> p.Result[bool]:
         """Prove one published phase from its authenticated analysis receipt."""
         destination_paths = frozenset(file.path for file in analysis.files)
+        u.Cli.info(
+            f"phase={analysis.phase} verify inputs={len(analysis.inputs)} "
+            f"destinations={len(analysis.files)}"
+        )
         source_state = cls.states_current(
             tuple(
                 state

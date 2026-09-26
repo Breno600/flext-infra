@@ -575,8 +575,8 @@ Infra:
     # mro-operator-20260918b: governance content (.agents/.claude) and direnv
     # runtime state stay visible to the editor and watcher — removed from the
     # default vscode/watch excludes; source_scan keeps its dotdir skip.
-      - {name: .agents, vscode_exclude: false, watch_exclude: false}
-      - {name: .beads}
+      - {name: .agents, source_scan_ignore: true, vscode_exclude: false, watch_exclude: false}
+      - {name: .beads, source_scan_ignore: true}
       - {name: .benchmarks}
     # mro-0wuz: archive-not-delete target for the layout engine; the generated
     # .gitignore projection must never track archived loose files.
@@ -1239,7 +1239,7 @@ Infra:
             runtime: [flext-web, httpx>=0.28.1, msgpack>=1.2.2]
           - upstream: flext_core
             project: flext-auth
-            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.14.0]
+            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.0]
           - upstream: flext_core
             project: flext-cli
           # click floor mirrors the shared fleet lock (8.3.3); meltano upstream
@@ -1256,19 +1256,19 @@ Infra:
             runtime: [flext-cli, grpcio>=1.84.0]
           - upstream: flext_cli
             project: flext-observability
-            runtime: [flext-cli, flask>=3.1.3, starlette>=1.6.0, psutil>=7.2.2]
+            runtime: [flext-cli, flask>=3.1.3, starlette>=1.7.0, psutil>=7.2.2]
           - upstream: flext_cli
             project: flext-plugin
             runtime: [flext-cli]
           - upstream: flext_cli
             project: flext-quality
-            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.5, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
+            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.53.0, fastapi>=0.141.1, starlette>=1.6.0, werkzeug>=3.1.8]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.8]
           - upstream: flext_cli
             project: flext-db-oracle
-            runtime: [flext-cli, oracledb>=26.0.0, sqlalchemy>=2.0.54]
+            runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]
           - upstream: flext_cli
             project: flext-ldif
             runtime: [flext-cli]
