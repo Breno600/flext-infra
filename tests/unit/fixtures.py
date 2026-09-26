@@ -39,24 +39,17 @@ def _modernizer_workspace_pyproject(*members: str) -> str:
 
 
 def _write_modernizer_codegen_config(workspace: Path) -> None:
-    """Give the workspace its own governed SSOT so ``--rewrite-constraints``.
+    """Copy the valid governed SSOT into the isolated modernizer owner.
 
-    stays inside the fixture (flext-eles2): the floor writer resolves its
-    target from the modernizer's own ``repository_root``, never the real
-    flext-infra checkout, so every isolated workspace needs a minimal
-    ``config/codegen.yaml`` of its own.
+    Constraint rewriting validates the complete typed codegen contract and
+    must never write the installed infrastructure checkout (flext-eles2).
     """
     config_dir = workspace / c.Infra.CODEGEN_CONFIG_DIR
     config_dir.mkdir(parents=True, exist_ok=True)
-    (config_dir / c.Infra.CODEGEN_CONFIG_FILENAME).write_text(
+    (config_dir / c.Infra.CODEGEN_CONFIG_FILENAME).write_bytes(
         (
-            "Infra:\n"
-            "  codegen:\n"
-            "    scaffold:\n"
-            "      project:\n"
-            "        dependency_profiles: []\n"
-        ),
-        encoding="utf-8",
+            _PROJECT_ROOT / c.Infra.CODEGEN_CONFIG_DIR / c.Infra.CODEGEN_CONFIG_FILENAME
+        ).read_bytes()
     )
 
 
