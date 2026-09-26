@@ -98,6 +98,12 @@ consumer paths first, then make tests verify that contract. Never alter the envi
 to preserve an obsolete fixture or treat a passing test as proof of integrated runtime
 behavior.
 
+Generation performs one transaction per invocation. A changed source fails with its
+original diagnostic after authenticated rollback; it is never replanned automatically.
+Journal contention waits only for native EACCES/EAGAIN/EWOULDBLOCK and retains the lock file's
+identity. Other lease errors escape unchanged. Every Mise warning and failed declared
+entrypoint blocks publication; no message classifier converts either to success.
+
 Configuration declares `latest`; only `make upg` resolves newer releases and writes
 the committed `uv.lock` and `mise.lock`. `make setup`, `make gen` and `make fmt` never
 upgrade: they install frozen from those locks (the CI path). Fix the

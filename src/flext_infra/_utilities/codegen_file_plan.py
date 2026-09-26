@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import difflib
+import errno
 import fcntl
 import os
 import time
@@ -28,7 +29,7 @@ class FlextInfraUtilitiesCodegenFilePlan:
     """Derive generated-file effects from immutable planning data."""
 
     class JournalLeaseTimeoutError(TimeoutError):
-        """Another process holds the journal lease; acquisition failed fast."""
+        """Another process held the journal lease past the acquisition deadline."""
 
         def __init__(self, lock_file: Path) -> None:
             self.lock_file = str(lock_file)
@@ -50,6 +51,8 @@ class FlextInfraUtilitiesCodegenFilePlan:
         refusal manufactured spurious ``JournalLeaseTimeoutError`` failures
         under ordinary multi-agent traffic. The wait stays bounded, so a truly
         wedged holder still fails loud rather than hanging forever.
+        Only native contention (EACCES, EAGAIN or EWOULDBLOCK) enters this wait;
+        every other acquisition error escapes unchanged.
         """
         lock_path = journal_path.with_name(f"{journal_path.name}.lock")
         lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -60,6 +63,12 @@ class FlextInfraUtilitiesCodegenFilePlan:
                 try:
                     fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except OSError as error:
+                    if error.errno not in {
+                        errno.EACCES,
+                        errno.EAGAIN,
+                        errno.EWOULDBLOCK,
+                    }:
+                        raise
                     if time.monotonic() >= deadline:
                         raise FlextInfraUtilitiesCodegenFilePlan.JournalLeaseTimeoutError(
                             lock_path
