@@ -228,6 +228,20 @@ class FlextInfraModelsDepsToolConfig(
                 description="Pytest-xdist scheduler for full runs.",
             ),
         ]
+        parallel_worker_min_items: Annotated[
+            int,
+            m.Field(
+                alias="parallel-worker-min-items",
+                gt=0,
+                description=(
+                    "Minimum selected node count before xdist workers are"
+                    " spawned; each worker pays a full interpreter and plugin"
+                    " boot, measured well past the tests it then runs for a"
+                    " small selection, so a selection below this floor runs"
+                    " serialized in the invoking process instead."
+                ),
+            ),
+        ]
         profile_sort: Annotated[
             Literal[
                 "calls",

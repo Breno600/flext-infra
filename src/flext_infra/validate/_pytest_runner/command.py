@@ -133,14 +133,19 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         """Build the testmon suite argv (never the cov plugin)."""
         pytest = config.Infra.tooling.tools.pytest
         selection = selected_node_ids or None
-        # A single selected test has no distribution work.  Starting xdist for
-        # it only adds two interpreter lifecycles and can consume the enclosing
-        # test's complete slow-test budget after the two collection processes.
-        # Cold and warm caches still share the same explicit manifest.
+        # A small selection has no distribution work worth its cost.  Every
+        # xdist worker pays a full interpreter and plugin boot, measured well
+        # past the wall time it then saves for a handful of tests, and its
+        # teardown can consume the enclosing test's complete slow-test budget
+        # after that boot.  Cold and warm caches still share the explicit
+        # manifest below the configured floor.
         workers = (
             "0"
             if serialize
-            or (selected_node_ids is not None and len(selected_node_ids) <= 1)
+            or (
+                selected_node_ids is not None
+                and len(selected_node_ids) < pytest.parallel_worker_min_items
+            )
             else str(self.parallel_worker_budget(pytest))
         )
         return self._suite_argv(
