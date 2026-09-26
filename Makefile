@@ -1589,6 +1589,20 @@ profile-census-report: _builtin_require_environment
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(35)' \
 		"$(PROJECT_SCRATCH_ROOT)/profiles/runtime-census.pstats"
 
+.PHONY: profile-gen
+profile-gen: _builtin_require_environment
+	@mkdir -p "$(PROJECT_SCRATCH_ROOT)/profiles"
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); status = profile.runcall(main, sys.argv[2:]); profile.dump_stats(sys.argv[1]); raise SystemExit(status)' \
+		"$(PROJECT_SCRATCH_ROOT)/profiles/lazy-init.pstats" codegen lazy-init \
+		--repository-root "$(PROJECT_ROOT)" --module flext_infra --dry-run
+
+.PHONY: profile-gen-report
+profile-gen-report: _builtin_require_environment
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
+		"$(PROJECT_SCRATCH_ROOT)/profiles/lazy-init.pstats"
+
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
 		'$(MAKE_PROFILE)' '$(PROJECT_ROOT)' '$(RUNTIME_ROOT)'
