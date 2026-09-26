@@ -33,7 +33,7 @@ def rendered_project(tmp_path_factory: pytest.TempPathFactory) -> Path:
     the expensive scaffold is provisioned once per module instead of once per
     case. Cases that prove repeated-render behavior render their own roots.
     """
-    return TestsFlextInfraCodegenCiMatrix._render_project(
+    return TestsFlextInfraCodegenCiMatrix.render_project(
         tmp_path_factory.mktemp("ci-matrix-render")
     )
 
@@ -42,7 +42,7 @@ class TestsFlextInfraCodegenCiMatrix:
     """Prove codegen emits the CI matrix workflow and distro Dockerfiles."""
 
     @staticmethod
-    def _render_project(root: Path) -> Path:
+    def render_project(root: Path) -> Path:
         """Render one fresh internal_flext project into root and return it."""
         service = FlextInfraCodegenProjectNew(
             flext_source=u.Tests.flext_source(),
@@ -300,7 +300,7 @@ class TestsFlextInfraCodegenCiMatrix:
         self, tmp_path: Path
     ) -> None:
         """Empty private_submodules include must not accumulate blank lines."""
-        root = self._render_project(tmp_path / "member")
+        root = self.render_project(tmp_path / "member")
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
         )
@@ -322,7 +322,7 @@ class TestsFlextInfraCodegenCiMatrix:
                 "      # Why: GitHub runners expose umask 002, so git checkout materializes"
             ),
         )
-        root2 = self._render_project(tmp_path / "member-again")
+        root2 = self.render_project(tmp_path / "member-again")
         workflow2 = (root2 / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
         )
@@ -470,14 +470,14 @@ class TestsFlextInfraCodegenCiMatrix:
 
     def test_dockerfiles_render_byte_idempotently(self, tmp_path: Path) -> None:
         """Repeated project generation preserves the generated Dockerfiles."""
-        root = self._render_project(tmp_path / "external")
+        root = self.render_project(tmp_path / "external")
         before = {
             distro: (
                 root / "tests" / "fixtures" / "ci" / "docker" / f"{distro}.Dockerfile"
             ).read_bytes()
             for distro in ("ubuntu", "debian", "fedora", "alpine", "arch")
         }
-        self._render_project(root)
+        self.render_project(root)
         after = {
             distro: (
                 root / "tests" / "fixtures" / "ci" / "docker" / f"{distro}.Dockerfile"
