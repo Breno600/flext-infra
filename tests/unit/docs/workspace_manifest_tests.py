@@ -93,13 +93,6 @@ class TestsFlextInfraWorkspaceManifest:
         tm.that(written.is_file(), eq=True)
         tm.that(u.Infra.is_fleet_umbrella(tmp_path), eq=False)
 
-    @staticmethod
-    def _scope(root: Path) -> m.Infra.DocScope:
-        """Return the docs scope a standalone checkout of ``root`` resolves to."""
-        return m.Infra.DocScope(
-            name=_PROBE, path=root, report_dir=root / ".reports" / "docs"
-        )
-
     def test_a_standalone_manifest_keeps_the_project_docs_contract(
         self, tmp_path: Path
     ) -> None:
@@ -110,7 +103,7 @@ class TestsFlextInfraWorkspaceManifest:
         aggregate catalog its topology never publishes.
         """
         u.Tests.write_standalone_workspace_manifest(tmp_path, _PROBE)
-        scope = self._scope(tmp_path)
+        scope = m.Infra.DocScope(name=_PROBE, path=tmp_path, report_dir=tmp_path)
 
         tm.that(u.Infra.docs_aggregate_root(scope), eq=False)
         tm.that(
@@ -125,7 +118,7 @@ class TestsFlextInfraWorkspaceManifest:
         u.Tests.write_standalone_workspace_manifest(
             tmp_path, _PROBE, role=c.Infra.MakeProfile.WORKSPACE
         )
-        scope = self._scope(tmp_path)
+        scope = m.Infra.DocScope(name=_PROBE, path=tmp_path, report_dir=tmp_path)
 
         tm.that(u.Infra.docs_aggregate_root(scope), eq=True)
         tm.that(
