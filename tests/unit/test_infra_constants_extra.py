@@ -47,7 +47,7 @@ class TestsFlextInfraInfraConstantsExtra:
     def test_c_alias_access_to_constants(self) -> None:
         tm.that(c.Infra.VENV_BIN_REL, eq=".venv/bin")
         tm.that(c.Infra.ResultStatus.PASSED, eq="PASS")
-        tm.that(c.Infra.PYPROJECT_FILENAME, eq="pyproject.toml")
+        tm.that(c.PYPROJECT_FILENAME, eq="pyproject.toml")
 
     def test_excluded_dirs_are_immutable(self) -> None:
         excluded = c.Infra.COMMON_EXCLUDED_DIRS

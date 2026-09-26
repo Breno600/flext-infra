@@ -29,7 +29,7 @@ This section is generated from public exports and real docstrings.
 
 - Primary facades: `FlextInfra`, `FlextInfraAbstractionBoundaryGate`,
   `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraApplyRenames`,
-  `FlextInfraBanditGate`, `FlextInfraBooleanLogicFixer` (+182 more)
-- Generated module pages: `204`
+  `FlextInfraBanditGate`, `FlextInfraBooleanLogicFixer` (+181 more)
+- Generated module pages: `203`
 
 Back to [project docs](../index.md).

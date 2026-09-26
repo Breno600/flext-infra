@@ -276,7 +276,7 @@ class FlextInfraRefactorDeclarativeEnforcement:
         parent = parent_map.get(id(node))
         if parent is None:
             return False
-        if not hasattr(parent, "_fields"):
+        if not u.Infra.is_ast_node(parent):
             return False
         parent_kind = u.Infra.node_kind(parent)
         return parent_kind in {"arguments", "arg", "keyword", "AnnAssign"} or (

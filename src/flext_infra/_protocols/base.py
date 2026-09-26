@@ -611,7 +611,7 @@ class FlextInfraProtocolsBase(Protocol):
         pip_check: m.Infra.PipCheckReport | None
         dependency_limits: m.Infra.DependencyLimitsInfo | None
 
-        def model_dump(self) -> t.MappingKV[str, t.Infra.InfraValue]:
+        def model_dump(self) -> t.MappingKV[str, t.JsonValue]:
             """Serialize report model payload."""
             ...
 
@@ -620,7 +620,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Service for JSON serialization and persistence."""
 
         def write_json(
-            self, path: Path, payload: t.MappingKV[str, t.Infra.InfraValue]
+            self, path: Path, payload: t.MappingKV[str, t.JsonValue]
         ) -> p.Result[bool]:
             """Write payload to JSON file."""
             ...
@@ -629,7 +629,7 @@ class FlextInfraProtocolsBase(Protocol):
     class ProjectReportLike(Protocol):
         """Protocol for project-level dependency report contracts."""
 
-        def model_dump(self) -> t.MappingKV[str, t.Infra.InfraValue]:
+        def model_dump(self) -> t.MappingKV[str, t.JsonValue]:
             """Serialize project report payload."""
             ...
 
@@ -649,6 +649,12 @@ class FlextInfraProtocolsBase(Protocol):
             """Run deptry on a project and return issues."""
             ...
 
+        def govern_deptry_issues(
+            self, project_path: Path, issues: t.SequenceOf[t.JsonMapping]
+        ) -> p.Result[t.SequenceOf[t.JsonMapping]]:
+            """Drop findings the governed dependency profile makes policy."""
+            ...
+
         def build_project_report(
             self, project_name: str, deptry_issues: t.SequenceOf[t.JsonMapping]
         ) -> FlextInfraProtocolsBase.ProjectReportLike:
@@ -661,16 +667,12 @@ class FlextInfraProtocolsBase(Protocol):
 
         def load_dependency_limits(
             self, limits_path: Path | None = None
-        ) -> t.MappingKV[str, t.Infra.InfraValue]:
+        ) -> t.MappingKV[str, t.JsonValue]:
             """Load dependency limits from TOML file."""
             ...
 
         def get_required_typings(
-            self,
-            project_path: Path,
-            limits_path: Path | None = None,
-            *,
-            include_mypy: bool = True,
+            self, project_path: Path, limits_path: Path | None = None
         ) -> p.Result[m.Infra.TypingsReport]:
             """Get required typing libraries for a project."""
             ...

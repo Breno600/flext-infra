@@ -104,7 +104,7 @@ class FlextInfraUtilitiesDocsRender:
         return "\n".join(rendered)
 
     @staticmethod
-    def _is_object_list(value: t.Infra.InfraValue | None) -> bool:
+    def _is_object_list(value: t.JsonValue | None) -> bool:
         """Type guard: narrow one infra value to a mutable sequence."""
         return isinstance(value, list)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -111,6 +112,14 @@ class TestsFlextInfraCodegenMakeAuthentication:
         )
         empty_config = tmp_path / "empty-gh-config"
         empty_config.mkdir()
+        # The host gh reads its stored credential from the system keyring even
+        # with an empty GH_CONFIG_DIR, so the fixture provisions the credential
+        # source itself: a gh that holds no credential and fails like gh does.
+        gh_bin = tmp_path / "gh-without-credential"
+        u.Tests.write_executable(
+            gh_bin / "gh",
+            "#!/bin/sh\nprintf 'no oauth token found for github.com\\n' >&2\nexit 1\n",
+        )
         if verb == "status":
             tm.ok(u.Tests.create_python_environment(project_root))
             (project_root / "custom.mk").write_text(
@@ -129,12 +138,20 @@ class TestsFlextInfraCodegenMakeAuthentication:
                     "GITHUB_ENTERPRISE_TOKEN": "",
                     "GH_HOST": "github.com",
                     "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
+                    "PATH": os.pathsep.join((str(gh_bin), os.environ["PATH"])),
+                    # gh reads a stored credential from the session keyring
+                    # over D-Bus even with an empty GH_CONFIG_DIR, and finds
+                    # the session bus on its own when the variable is unset;
+                    # a bus address inside the sandbox leaves it none.
+                    "DBUS_SESSION_BUS_ADDRESS": f"unix:path={tmp_path / 'no-bus'}",
                 },
             )
         )
         if verb in {"setup", "upg"}:
             tm.that(process.outcome.raw_return_code, ne=0)
             tm.that(process.stderr, has="gh credential source failed")
+            tm.that(process.stderr, lacks="missing or empty")
+            tm.that(process.stderr, lacks="mise.version")
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that((project_root / ".venv").exists(), eq=verb == "status")

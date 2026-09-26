@@ -283,7 +283,7 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
                 c.Infra.MYPY,
                 c.Infra.DEFAULT_SRC_DIR,
                 "--config-file",
-                c.Infra.PYPROJECT_FILENAME,
+                c.PYPROJECT_FILENAME,
                 "--no-error-summary",
             )),
             cwd=project_dir,
@@ -317,7 +317,7 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
                 c.Infra.CHECK,
                 c.Infra.DEFAULT_SRC_DIR,
                 "--config",
-                c.Infra.PYPROJECT_FILENAME,
+                c.PYPROJECT_FILENAME,
             ],
             cwd=project_dir,
         )

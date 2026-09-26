@@ -10,6 +10,7 @@ from pathlib import Path
 
 from flext_infra import c, m, t
 
+from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
 from .discovery import FlextInfraUtilitiesDiscovery
 from .namespace import FlextInfraUtilitiesCodegenNamespace
 from .namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
@@ -537,10 +538,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(source)
         lines = source.splitlines()
         module_ast = pymodule.get_ast()
-        if not hasattr(module_ast, "_fields"):
+        if not FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(module_ast):
             return source
         for node in getattr(module_ast, "body", ()) or ():
-            if not hasattr(node, "_fields"):
+            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(node):
                 continue
             if c.Infra.DUNDER_ALL not in (
                 FlextInfraUtilitiesRopeAnalysis.assignment_target_names(node)
@@ -777,13 +778,11 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         # only the first made every tests-tree move unresolvable.
         module_name = ""
         for root in (project_root / c.Infra.DEFAULT_SRC_DIR, project_root):
-            try:
+            if target_file.is_relative_to(root):
                 module_name = ".".join(
                     target_file.relative_to(root).with_suffix("").parts
                 )
-            except ValueError:
-                continue
-            break
+                break
         if not module_name:
             return None
         import_line = f"from {module_name} import {', '.join(referenced_aliases)}"
@@ -831,7 +830,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         )
         runtime_aliases = u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
         moved_ast = moved_pymodule.get_ast()
-        if not hasattr(moved_ast, "_fields"):
+        if not FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(moved_ast):
             return ()
         moved_aliases: set[str] = set()
         for node in FlextInfraUtilitiesRopeAnalysis.walk_ast_nodes(moved_ast):

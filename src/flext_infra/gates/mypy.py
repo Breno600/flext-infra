@@ -78,7 +78,7 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     def _resolve_config(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
         """Resolve Mypy settings from the project, then the workspace."""
-        pyproject_name: str = c.Infra.PYPROJECT_FILENAME
+        pyproject_name: str = c.PYPROJECT_FILENAME
         proj_py = project_dir / pyproject_name
         doc = u.Cli.toml_read(proj_py)
         if doc is not None:
@@ -175,7 +175,7 @@ class FlextInfraMypyGate(FlextInfraGate):
                 False,
                 (
                     m.Infra.Issue(
-                        file=c.Infra.PYPROJECT_FILENAME,
+                        file=c.PYPROJECT_FILENAME,
                         line=1,
                         column=1,
                         code="mypy-resource-limit",
@@ -220,7 +220,7 @@ class FlextInfraMypyGate(FlextInfraGate):
                 message = f"mypy exited with code {result.outcome.raw_return_code} without JSON diagnostics"
             issues.append(
                 m.Infra.Issue(
-                    file=c.Infra.PYPROJECT_FILENAME,
+                    file=c.PYPROJECT_FILENAME,
                     line=1,
                     column=1,
                     code="mypy-exec",

@@ -147,7 +147,7 @@ class TestsFlextInfraFreshImport:
         initializer = package / c.Infra.INIT_PY
         initializer.write_text("__all__ = ()\n", encoding=c.Cli.ENCODING_DEFAULT)
         (package / "cli.py").write_text("VALUE = 1\n", encoding=c.Cli.ENCODING_DEFAULT)
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-probe-script"\nversion = "1.0"\n\n'
             f'[project.scripts]\nprobe = "{package.name}.cli:main"\n',
             encoding="utf-8",
@@ -186,7 +186,7 @@ class TestsFlextInfraFreshImport:
         (package / "cli.py").write_text(
             "from flext_probe_script import gone\n", encoding=c.Cli.ENCODING_DEFAULT
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-probe-script"\nversion = "1.0"\n\n'
             f'[project.scripts]\nprobe = "{package.name}.cli:main"\n',
             encoding="utf-8",
@@ -242,7 +242,7 @@ class TestsFlextInfraFreshImport:
             "def main():\n    raise RuntimeError('entrypoint must not execute')\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-import-probe"\nversion = "1.0"\n'
             f'[project.scripts]\nprobe = "{package.name}.consumer:main"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
@@ -281,7 +281,7 @@ class TestsFlextInfraFreshImport:
             + f"__all__ = {exports!r}\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-import-probe"\nversion = "1.0"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
@@ -320,7 +320,7 @@ class TestsFlextInfraFreshImport:
             "from .dependency import value\n__all__ = ('value',)\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-import-probe"\nversion = "1.0"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
@@ -368,7 +368,7 @@ class TestsFlextInfraFreshImport:
             "__all__ = ('value', 'phantom_export')\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-import-probe"\nversion = "1.0"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
@@ -415,7 +415,7 @@ class TestsFlextInfraFreshImport:
         (subpackage / c.Infra.INIT_PY).write_text(
             "leaf = 1\n__all__ = ('leaf',)\n", encoding=c.Cli.ENCODING_DEFAULT
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-import-probe"\nversion = "1.0"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )

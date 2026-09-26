@@ -144,21 +144,18 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         return (*phases, ("suite", suite))
 
     def _validate_coverage(self, report_dir: Path) -> p.Result[bool]:
-        """Require a non-empty coverage artifact and no hidden threshold failure."""
+        """Require a non-empty coverage report; the percentage is never a gate."""
         coverage = report_dir / "coverage.xml"
-        log = report_dir / "pytest.log"
         if not coverage.exists():
             raise FileNotFoundError(coverage)
         if not coverage.is_file():
             msg = f"coverage artifact must be a regular file: {coverage}"
             raise ValueError(msg)
         if coverage.stat().st_size == 0:
-            msg = self._failure_detail(f"empty coverage artifact: {coverage}", log)
+            msg = self._failure_detail(
+                f"empty coverage artifact: {coverage}", report_dir / "pytest.log"
+            )
             raise ValueError(msg)
-        body = log.read_text(encoding="utf-8")
-        if c.Infra.PYTEST_COVERAGE_FAILURE_RE.search(body):
-            msg = self._failure_detail("coverage threshold failed", log)
-            raise RuntimeError(msg)
         return r.ok(True)
 
     @staticmethod

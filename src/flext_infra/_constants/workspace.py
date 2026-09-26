@@ -149,5 +149,13 @@ class FlextInfraConstantsWorkspace:
     )
     "Checkout path segments renamed when mirrored into the scratch identity."
 
+    PROPAGATION_BRANCH: ClassVar[str] = "propagation/flext-infra"
+    "One lane per member carries the workspace's flext-infra projections."
+    PROPAGATION_COMMIT_SUBJECT: ClassVar[str] = (
+        "chore(infra): propagate the workspace flext-infra"
+    )
+    PROPAGATION_REPORT_KEY: ClassVar[str] = "propagation"
+    "Report directory holding each member lane's pull-request body."
+
 
 __all__: list[str] = ["FlextInfraConstantsWorkspace"]

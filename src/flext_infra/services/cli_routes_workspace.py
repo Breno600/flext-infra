@@ -14,6 +14,7 @@ from flext_infra.workspace.environment_provenance import (
 )
 from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
 from flext_infra.workspace.orchestrator import FlextInfraOrchestratorService
+from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 
 from .cli_route_base import CliRouteBase
 from .cli_routes_refactor import RefactorRoutes
@@ -106,6 +107,14 @@ class WorkspaceRoutes(RefactorRoutes):
                         FlextInfraOrchestratorService,
                         CliRouteBase.result_handler(
                             FlextInfraOrchestratorService.execute_command
+                        ),
+                    ),
+                    (
+                        "propagate",
+                        "Publish this workspace's flext-infra to every member",
+                        FlextInfraWorkspacePropagation,
+                        CliRouteBase.result_handler(
+                            FlextInfraWorkspacePropagation.execute_command
                         ),
                     ),
                     (

@@ -74,9 +74,17 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
 
     @classmethod
     def _governed_roots(cls, repository_root: Path) -> frozenset[Path]:
-        """Return every declared governed project root, resolved."""
+        """Return every declared governed project root, resolved.
+
+        The authority is the same election the Rope opener uses
+        (``discover_rope_project_roots``): a candidate the session indexes is
+        governed by definition, so the index filter and the opened project set
+        can never disagree about a sibling repository.
+        """
         return frozenset(
-            FlextInfraUtilitiesProjectDiscovery.governed_project_roots(repository_root)
+            FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots(
+                repository_root
+            )
         )
 
     @staticmethod
@@ -203,10 +211,9 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             resolved_file_path = file_path.resolve()
             if cls._is_generated_init_stub(resolved_file_path):
                 continue
-            try:
-                resource_path = resolved_file_path.relative_to(resolved_root).as_posix()
-            except ValueError:
+            if not resolved_file_path.is_relative_to(resolved_root):
                 continue
+            resource_path = resolved_file_path.relative_to(resolved_root).as_posix()
             package_dir = resolved_file_path.parent
             is_package_init = resolved_file_path.name in {
                 c.Infra.INIT_PY,

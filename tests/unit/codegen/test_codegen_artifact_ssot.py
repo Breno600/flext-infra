@@ -105,10 +105,12 @@ class TestsFlextInfraCodegenArtifactSsot:
             ".agents/projection.json",
             ".agents/aihub-hooks/antigravity-preinvocation.py",
             ".agents/skills/flext-development/SKILL.md",
+            ".claude/settings.json",
             ".claude/skills/flext-development/SKILL.md",
             ".codex/hooks.json",
             ".cursor/hooks.json",
             ".github/skills/flext-development/SKILL.md",
+            ".gemini/settings.json",
             ".opencode/skills/flext-development/SKILL.md",
         )
         for relative_path in tracked:
@@ -117,11 +119,7 @@ class TestsFlextInfraCodegenArtifactSsot:
                 eq=True,
                 msg=f"{profile.value}: {relative_path} must be trackable",
             )
-        for relative_path in (
-            ".claude/settings.json",
-            ".claude/settings.local.json",
-            ".gemini/settings.json",
-        ):
+        for relative_path in (".claude/settings.local.json",):
             tm.that(
                 u.Tests.is_tracked_under(rendered, relative_path),
                 eq=False,

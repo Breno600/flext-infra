@@ -64,8 +64,20 @@ class FlextInfraGate:
         started = time.monotonic()
         check_dirs = self._get_check_dirs(project_dir, ctx)
         if not check_dirs:
-            return self._skip_result(project_dir, started)
+            return self._empty_targets_result(project_dir, started)
         return self._execute_check_command(project_dir, ctx, check_dirs, started)
+
+    def _empty_targets_result(
+        self, project_dir: Path, started: float
+    ) -> m.Infra.GateExecution:
+        """Outcome when a gate collects no check targets.
+
+        Failing loud is the default: a selected gate with no inputs did not
+        establish acceptance. A gate whose targets are conditional on the
+        project topology (absent by declared design, not by accident)
+        overrides this with a neutral skip naming the condition.
+        """
+        return self._skip_result(project_dir, started)
 
     def check_files(
         self, files: t.SequenceOf[Path], project_dir: Path, ctx: m.Infra.GateContext
@@ -114,7 +126,7 @@ class FlextInfraGate:
     def _tool_failure_issue(self, scan: p.Cli.CommandOutput) -> m.Infra.Issue:
         """Scanner absence/crash must never read as a clean pass."""
         return m.Infra.Issue(
-            file=c.Infra.PYPROJECT_FILENAME,
+            file=c.PYPROJECT_FILENAME,
             line=1,
             column=0,
             code=self.gate_id,
@@ -564,7 +576,7 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
         if files_result.failure:
             return self._build_single_issue_result(
                 project_dir,
-                Path(c.Infra.PYPROJECT_FILENAME),
+                Path(c.PYPROJECT_FILENAME),
                 files_result.error or self.scan_error_message,
                 passed=False,
                 started=started,

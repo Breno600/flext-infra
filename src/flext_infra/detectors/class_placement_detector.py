@@ -267,7 +267,7 @@ class FlextInfraClassPlacementDetector:
 
         ``None`` for a private, exempt, or non-constant binding.
         """
-        if not hasattr(target, "_fields"):
+        if not u.Infra.is_ast_node(target):
             return None
         target_name = u.Infra.name_of(target)
         if not target_name or target_name.startswith("_"):
@@ -348,7 +348,7 @@ class FlextInfraClassPlacementDetector:
                 ):
                     continue
                 target = getattr(node, "target", None)
-                if not hasattr(target, "_fields"):
+                if not u.Infra.is_ast_node(target):
                     continue
                 target_name = u.Infra.name_of(target)
                 line = getattr(node, "lineno", 1)
@@ -376,7 +376,7 @@ class FlextInfraClassPlacementDetector:
             return True
         if kind == "Call":
             func = getattr(value, "func", None)
-            if not hasattr(func, "_fields"):
+            if not u.Infra.is_ast_node(func):
                 return False
             func_name = u.Infra.name_of(func)
             if func_name in c.Infra.CLASSVAR_ALLOWED_CALLS:

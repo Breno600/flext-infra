@@ -16,7 +16,10 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
 
     @staticmethod
     def _scaffold_python_dirs(
-        entries: t.SequenceOf[p.Infra.TemplateEntrySpec], profile: c.Infra.MakeProfile
+        entries: t.SequenceOf[p.Infra.TemplateEntrySpec],
+        profile: c.Infra.MakeProfile,
+        *,
+        package: bool = True,
     ) -> t.StrSequence:
         """Return Python roots the selected scaffold manifest actually creates."""
         # Derive future roots from both
@@ -28,10 +31,15 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             and entry.delegate == "render"
             and Path(entry.destination).parts
         }
+        # A package:false repository (a solo workspace root) never
+        # materializes the package source dir: its manifest declares no
+        # importable package, so analyzers must not include it — pyright
+        # fails hard on an include entry whose directory does not exist.
+        source_dir = config.Infra.tooling.tools.pyright.path_rules.source_dir
         return tuple(
             directory
             for directory in config.Infra.tooling.tools.pyright.path_rules.env_dirs
-            if directory in generated_roots
+            if directory in generated_roots and (package or directory != source_dir)
         )
 
     @classmethod
@@ -69,19 +77,22 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         repository: m.Infra.RepositoryRef,
         target: m.Infra.RepositoryConformTarget,
         codegen: m.Infra.CodegenConfigSpec,
+        workspace: m.Infra.WorkspaceSpec,
     ) -> t.VariadicTuple[m.Infra.UvScopedDependencyExclusionSpec]:
         """Return the uv dependency exclusions routed to one repository.
 
-        Workspace root owns resolution for attached subprojects (uv reads
-        exclude-dependencies only from the workspace root). Subprojects still
-        receive their own routed excludes for standalone CI clones.
+        An exclusion drops a reverse edge onto a project installed from its
+        local checkout. It applies only where that project is local: the
+        repository itself or, at a workspace root (uv reads
+        exclude-dependencies only from the root), one of its declared
+        members. Routing an exclusion for an absent project would drop the
+        only edge that installs it.
         """
+        local = {repository.distribution}
         if target.make_profile is c.Infra.MakeProfile.WORKSPACE:
-            return tuple(codegen.uv_exclude_dependencies)
+            local.update(member.distribution for member in workspace.subprojects)
         return tuple(
-            item
-            for item in codegen.uv_exclude_dependencies
-            if item.project == repository.distribution
+            item for item in codegen.uv_exclude_dependencies if item.project in local
         )
 
     @staticmethod

@@ -72,7 +72,7 @@ class FlextInfraUtilitiesCodemodRules:
 
     @staticmethod
     def _project(root: Path) -> p.Result[t.Pair[str, t.StrSequence]]:
-        pyproject = root / c.Infra.PYPROJECT_FILENAME
+        pyproject = root / c.PYPROJECT_FILENAME
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:
             return r[t.Pair[str, t.StrSequence]].from_failure(document)

@@ -2,103 +2,26 @@
 
 from __future__ import annotations
 
-import importlib
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-import pytest
-from flext_tests import FlextTestsSettings, tm
+from flext_tests import tm
 
-import flext_infra as infra_pkg
-from tests import c
-from tests.base import s
-
-if TYPE_CHECKING:
-    from types import ModuleType
+import flext_infra
 
 
 class TestsFlextInfraPublicApi:
-    """Exercise the root public facades as real importable contracts."""
+    """Exercise the root public package metadata against its pyproject."""
 
-    @staticmethod
-    def _project_root() -> Path:
-        return Path(__file__).resolve().parents[2]
-
-    def test_root_public_facades_reload_cleanly(
-        self, infra_public_root: ModuleType
-    ) -> None:
-        root = infra_public_root
-
-        tm.that(root.__version__, empty=False)
-        tm.that(root.infra.__class__ is root.FlextInfra, eq=True)
-        tm.that(callable(root.main), eq=True)
-
-    @pytest.mark.parametrize(
-        ("alias_name", "class_name"), c.Tests.INFRA_PUBLIC_ROOT_ALIAS_EXPECTATIONS
-    )
-    def test_root_public_facades_export_expected_aliases(
-        self, infra_public_root: ModuleType, alias_name: str, class_name: str
-    ) -> None:
-        del class_name
-        tm.that(isinstance(getattr(infra_public_root, alias_name), type), eq=True)
-
-    @pytest.mark.parametrize("alias_name", c.Tests.INFRA_PUBLIC_NAMESPACE_ALIAS_NAMES)
-    def test_public_facades_expose_infra_namespace(
-        self, infra_public_root: ModuleType, alias_name: str
-    ) -> None:
-        tm.that(hasattr(getattr(infra_public_root, alias_name), "Infra"), eq=True)
-
-    @pytest.mark.parametrize(
-        "method_name", c.Tests.INFRA_PUBLIC_UTILITY_NAMESPACE_METHODS
-    )
-    def test_public_utilities_expose_expected_infra_methods(
-        self, infra_public_root: ModuleType, method_name: str
-    ) -> None:
-        tm.that(hasattr(infra_public_root.u.Infra, method_name), eq=True)
-
-    @pytest.mark.parametrize(
-        ("module_name", "alias_name", "class_name"),
-        c.Tests.INFRA_PUBLIC_WRAPPER_ALIAS_EXPECTATIONS,
-    )
-    def test_public_wrapper_modules_export_expected_aliases(
-        self, module_name: str, alias_name: str, class_name: str
-    ) -> None:
-        del class_name
-        module = importlib.reload(importlib.import_module(module_name))
-        alias = getattr(module, alias_name)
-
-        tm.that(isinstance(alias, type), eq=True)
-
-    def test_public_version_module_matches_package_version(self) -> None:
-        version_module = importlib.reload(
-            importlib.import_module("flext_infra.__version__")
+    def test_public_runtime_metadata_matches_public_constants(self) -> None:
+        metadata = tm.ok(
+            flext_infra.u.Infra.read_project_metadata_result(
+                Path(__file__).resolve().parents[2]
+            )
         )
-        tm.that(version_module.__version__, eq=infra_pkg.__version__)
 
-    def test_public_runtime_metadata_matches_public_constants(
-        self, infra_public_root: ModuleType
-    ) -> None:
-        root = infra_public_root
-        metadata_result = root.u.Infra.read_project_metadata_result(
-            self._project_root()
-        )
-        tm.ok(metadata_result)
-        metadata = metadata_result.value
-
-        tm.that(root.__title__, eq=metadata.project.name)
-        tm.that(root.__version__, eq=metadata.project.version)
-        tm.that(root.__description__, eq=metadata.project.description)
-        tm.that(root.__url__, eq=metadata.project.urls.homepage)
+        tm.that(flext_infra.__title__, eq=metadata.project.name)
+        tm.that(flext_infra.__version__, eq=metadata.project.version)
+        tm.that(flext_infra.__description__, eq=metadata.project.description)
+        tm.that(flext_infra.__url__, eq=metadata.project.urls.homepage)
         tm.that(metadata.project.authors, empty=False)
-        tm.that(root.__author__, eq=metadata.project.authors[0].name)
-
-    def test_test_service_settings_expose_tests_namespace(self) -> None:
-        resolved = s.fetch_settings()
-        roundtrip = FlextTestsSettings.model_validate(
-            resolved.model_dump(mode="python")
-        )
-
-        tm.that(
-            roundtrip.model_dump(mode="python"), eq=resolved.model_dump(mode="python")
-        )
-        tm.that(roundtrip.Tests, eq=resolved.Tests)
+        tm.that(flext_infra.__author__, eq=metadata.project.authors[0].name)

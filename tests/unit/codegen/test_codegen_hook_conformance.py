@@ -99,10 +99,14 @@ class TestsFlextInfraCodegenHookConformance:
             if hook.is_file():
                 tm.that(hook.read_text(encoding="utf-8"), lacks=f"--hook-type={stage}")
 
-    def test_generated_hooks_use_one_make_sequence_per_stage(
+    def test_generated_hooks_use_one_strict_shell_per_workflow_step(
         self, infra_git_repo: Path
     ) -> None:
-        """Each enabled stage runs its Make sequence in one strict shell."""
+        """Each enabled stage runs every declared verb in its own strict shell.
+
+        The template gives each Make verb its own hook so the pre-commit runner
+        reports per-step status natively.
+        """
         root = infra_git_repo
         make = config.Infra.codegen.make.model_copy(
             update={"pre_commit": True, "pre_push": True}
@@ -114,7 +118,12 @@ class TestsFlextInfraCodegenHookConformance:
             )
         )
         tm.ok(u.Cli.atomic_write_text_file(root / ".pre-commit-config.yaml", rendered))
-        expected = int(make.pre_commit) + int(make.pre_push)
+        expected = sum(
+            1
+            for step in make.workflow
+            for context in ("pre_commit", "pre_push")
+            if context in step.contexts
+        )
         tm.that(rendered.count("bash -eu -o pipefail -c"), eq=expected)
         tm.that(rendered, lacks=".local")
 
@@ -258,7 +267,12 @@ class TestsFlextInfraCodegenHookConformance:
                 ),
             )
         )
-        expected = len({"pre_commit", "pre_push"})
+        expected = sum(
+            1
+            for step in make.workflow
+            for context in ("pre_commit", "pre_push")
+            if context in step.contexts
+        )
         tm.that(both.count("bash -eu -o pipefail -c"), eq=expected)
 
         commit_only = tm.ok(
@@ -272,7 +286,7 @@ class TestsFlextInfraCodegenHookConformance:
                 ),
             )
         )
-        tm.that(commit_only, has="stages: [pre-commit, pre-merge-commit]")
+        tm.that(commit_only, has="stages: [pre-commit]")
         tm.that(commit_only, lacks="stages: [pre-push]")
 
     def test_standalone_hook_config_is_not_retired(self, tmp_path: Path) -> None:

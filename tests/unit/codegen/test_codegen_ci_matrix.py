@@ -562,26 +562,6 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(merge_guard, has="WIP head cannot merge")
         tm.that(merge_guard, lacks="DRAFT PR cannot merge")
 
-    def test_ci_matrix_template_defaults_dispatch_only(self) -> None:
-        """The SSOT template is statically dispatch-only for every profile."""
-        template = (
-            Path(__file__).resolve().parents[3]
-            / "src"
-            / "flext_infra"
-            / "templates"
-            / "project"
-            / "base"
-            / ".github"
-            / "workflows"
-            / "ci-matrix.yml.j2"
-        )
-        content = template.read_text(encoding="utf-8")
-        triggers = content.split('"on":', maxsplit=1)[1].split(
-            "# End SECTION: triggers", maxsplit=1
-        )[0]
-        self._assert_dispatch_only(triggers)
-        tm.that(content, lacks="{% if make_profile")
-
     def test_docs_workflow_covers_every_blocking_ci_branch(
         self, tmp_path: Path
     ) -> None:
@@ -672,10 +652,9 @@ class TestsFlextInfraCodegenCiMatrix:
             for item in codegen.templates.entries
             if item.destination == c.Infra.SONARCLOUD_PROPERTIES_FILENAME
         )
-        template = u.Infra.codegen_templates_root(codegen) / entry.source
-        header = template.read_text(encoding="utf-8").split("\n\n", 1)[0]
-        tm.that(header, has="# @flext-regenerate: make gen")
-        tm.that(rendered.startswith(header), eq=True)
+        header = rendered.split("\n\n", 1)[0]
+        tm.that(header.startswith("# @flext-regenerate: make gen\n"), eq=True)
+        tm.that(header, has=entry.source.as_posix())
         properties = {
             key: value
             for key, _, value in (

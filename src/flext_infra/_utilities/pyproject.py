@@ -68,7 +68,7 @@ class FlextInfraUtilitiesPyproject:
         (``live_pyproject_text``); the file is never written here.
         """
         live = FlextInfraUtilitiesPyproject.live_pyproject_text(
-            project_root / c.Infra.PYPROJECT_FILENAME
+            project_root / c.PYPROJECT_FILENAME
         )
         if live.failure:
             return r[p.ProjectMetadata].from_failure(live)
@@ -79,7 +79,7 @@ class FlextInfraUtilitiesPyproject:
         if payload is None:
             return r[p.ProjectMetadata].fail(
                 f"cannot read project metadata from {project_root}: "
-                f"{c.Infra.PYPROJECT_FILENAME} is not valid TOML"
+                f"{c.PYPROJECT_FILENAME} is not valid TOML"
             )
         try:
             document = u.PyprojectDocument.model_validate(payload)
@@ -271,7 +271,7 @@ class FlextInfraUtilitiesPyproject:
     def tool_flext_meta(project_root: Path) -> t.JsonMapping:
         """Return the normalized ``tool.flext`` table from a project root."""
         payload = FlextInfraUtilitiesPyproject.pyproject_payload(
-            project_root / c.Infra.PYPROJECT_FILENAME
+            project_root / c.PYPROJECT_FILENAME
         )
         tool = payload.get(c.Infra.TOOL)
         if not isinstance(tool, dict):
@@ -347,7 +347,7 @@ class FlextInfraUtilitiesPyproject:
     def project_package_name(project_root: Path) -> str:
         """Return the primary Python package name for a project root."""
         payload = FlextInfraUtilitiesPyproject.pyproject_payload(
-            project_root / c.Infra.PYPROJECT_FILENAME
+            project_root / c.PYPROJECT_FILENAME
         )
         docs_meta = FlextInfraUtilitiesPyproject.docs_meta_from_payload(payload)
         return FlextInfraUtilitiesPyproject.package_name_from_payload(

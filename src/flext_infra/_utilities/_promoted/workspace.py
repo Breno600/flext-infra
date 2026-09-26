@@ -32,7 +32,7 @@ class FlextInfraUtilitiesPromotedWorkspace:
         resolved = start.resolve()
         for candidate in (resolved, *resolved.parents):
             if (candidate / c.Infra.DIR_SCRIPTS).is_dir() and (
-                candidate / c.Infra.PYPROJECT_FILENAME
+                candidate / c.PYPROJECT_FILENAME
             ).is_file():
                 return candidate
         return None

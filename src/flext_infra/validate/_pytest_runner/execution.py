@@ -347,7 +347,7 @@ class FlextInfraPytestRunnerExecution(
 
         testmon 2.x refuses branch coverage through the cov plugin, so the
         coverage pass is its own process: no selection pass, no cache traffic.
-        The coverage artifact and any threshold failure are validated here.
+        The coverage artifact is validated here; coverage is reported, never gated.
         """
         report_dir = self._report_directory()
         self._write_run_context(

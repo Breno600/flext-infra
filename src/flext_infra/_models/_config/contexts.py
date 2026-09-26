@@ -111,6 +111,25 @@ class FlextInfraConfigModelsContexts:
             t.NonEmptyStr,
             m.Field(description="mise-owned uv version used by bootstrap validation"),
         ]
+        mise_lockfile_platforms: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Platforms carried by artifact-tool lock entries"),
+        ]
+        qlty_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for qlty")
+        ]
+        jscpd_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for jscpd")
+        ]
+        prettier_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for Prettier")
+        ]
+        scc_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for scc")
+        ]
+        waza_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for Waza")
+        ]
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,
             m.Field(description="Generated Make command contract"),

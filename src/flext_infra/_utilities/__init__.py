@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from ._git.scope import FlextInfraUtilitiesGitScopeMixin
     from ._git.semantic_identity import FlextInfraUtilitiesGitSemanticIdentityMixin
     from ._git.semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
+    from ._git.semantic_lane import FlextInfraUtilitiesGitSemanticLaneMixin
     from ._git.semantic_paths import FlextInfraUtilitiesGitSemanticPathsMixin
     from ._git.semantic_publish import FlextInfraUtilitiesGitSemanticPublishMixin
     from ._git.semantic_refs import FlextInfraUtilitiesGitSemanticRefsMixin
@@ -64,9 +65,7 @@ if TYPE_CHECKING:
     from ._pyproject.requirements import FlextInfraUtilitiesPyprojectRequirements
     from ._pyproject.toml_phases import FlextInfraUtilitiesPyprojectTomlPhases
     from ._pyproject.uv_sources import FlextInfraUtilitiesPyprojectUvSources
-    from ._rope.pep695_patch import FlextInfraUtilitiesRopePep695Patch
     from ._rope.project import FlextInfraRopeProject
-    from ._rope.signature_patch import FlextInfraUtilitiesRopeSignaturePatch
     from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
     from ._rope_analysis.base import FlextInfraUtilitiesRopeAnalysisBase
     from ._rope_analysis.exports import FlextInfraUtilitiesRopeAnalysisExports
@@ -265,6 +264,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitScopeMixin",
     "FlextInfraUtilitiesGitSemanticIdentityMixin",
     "FlextInfraUtilitiesGitSemanticIndexMixin",
+    "FlextInfraUtilitiesGitSemanticLaneMixin",
     "FlextInfraUtilitiesGitSemanticPathsMixin",
     "FlextInfraUtilitiesGitSemanticPublishMixin",
     "FlextInfraUtilitiesGitSemanticRefsMixin",
@@ -348,13 +348,11 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesRopeInventory",
     "FlextInfraUtilitiesRopeMethodOrderMixin",
     "FlextInfraUtilitiesRopeModulePatch",
-    "FlextInfraUtilitiesRopePep695Patch",
     "FlextInfraUtilitiesRopeRuntime",
     "FlextInfraUtilitiesRopeRuntimeBase",
     "FlextInfraUtilitiesRopeRuntimeModules",
     "FlextInfraUtilitiesRopeRuntimeRefactors",
     "FlextInfraUtilitiesRopeRuntimeTypes",
-    "FlextInfraUtilitiesRopeSignaturePatch",
     "FlextInfraUtilitiesRopeSource",
     "FlextInfraUtilitiesRopeStructure",
     "FlextInfraUtilitiesSafety",
@@ -419,6 +417,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._git.scope": ("FlextInfraUtilitiesGitScopeMixin",),
             "._git.semantic_identity": ("FlextInfraUtilitiesGitSemanticIdentityMixin",),
             "._git.semantic_index": ("FlextInfraUtilitiesGitSemanticIndexMixin",),
+            "._git.semantic_lane": ("FlextInfraUtilitiesGitSemanticLaneMixin",),
             "._git.semantic_paths": ("FlextInfraUtilitiesGitSemanticPathsMixin",),
             "._git.semantic_publish": ("FlextInfraUtilitiesGitSemanticPublishMixin",),
             "._git.semantic_refs": ("FlextInfraUtilitiesGitSemanticRefsMixin",),
@@ -464,9 +463,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._pyproject.toml_phases": ("FlextInfraUtilitiesPyprojectTomlPhases",),
             "._pyproject.uv_sources": ("FlextInfraUtilitiesPyprojectUvSources",),
             "._rope": ("_rope",),
-            "._rope.pep695_patch": ("FlextInfraUtilitiesRopePep695Patch",),
             "._rope.project": ("FlextInfraRopeProject",),
-            "._rope.signature_patch": ("FlextInfraUtilitiesRopeSignaturePatch",),
             "._rope_analysis": ("_rope_analysis",),
             "._rope_analysis.asthelpers": (
                 "FlextInfraUtilitiesRopeAnalysisAstHelpers",

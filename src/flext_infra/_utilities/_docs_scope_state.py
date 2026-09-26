@@ -28,7 +28,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         silent fallback to directory-name.
         """
         root = FlextInfraUtilitiesDocsScopeStateMixin.absolute_lexical(project_root)
-        pyproject_path = root / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = root / c.PYPROJECT_FILENAME
         snapshot = u.Cli.atomic_read_binary_file_state(pyproject_path, required=False)
         if snapshot.failure:
             raise ValueError(

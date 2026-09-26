@@ -202,7 +202,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
     def _failure_issue(message: str | None) -> m.Infra.Issue:
         """Represent malformed or absent scanner output as a blocking issue."""
         return m.Infra.Issue(
-            file=c.Infra.PYPROJECT_FILENAME,
+            file=c.PYPROJECT_FILENAME,
             line=1,
             column=0,
             code=FlextInfraSmellsGate.gate_id,

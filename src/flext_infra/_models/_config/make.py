@@ -98,6 +98,16 @@ class FlextInfraConfigModelsMake:
                 )
             ),
         ] = False
+        profiles: Annotated[
+            t.VariadicTuple[FlextInfraConstantsCodegenProject.MakeProfile],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Make profiles whose generated Makefile declares the verb; "
+                    "a verb exists only where its operation applies"
+                ),
+            ),
+        ] = tuple(FlextInfraConstantsCodegenProject.MakeProfile)
 
     class MakeWorkflowStepSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One canonical workflow step."""
@@ -593,6 +603,21 @@ class FlextInfraConfigModelsMake:
                 msg = (
                     "make workflow verbs are not declared public verbs: "
                     f"{', '.join(sorted(unknown_workflow))}"
+                )
+                raise ValueError(msg)
+            # Every profile renders the workflow, so a workflow verb must exist
+            # in every profile's Makefile.
+            partial_workflow = sorted(
+                verb.name
+                for verb in self.verbs
+                if verb.name in workflow_verbs
+                and set(verb.profiles)
+                != set(FlextInfraConstantsCodegenProject.MakeProfile)
+            )
+            if partial_workflow:
+                msg = (
+                    "make workflow verbs must exist in every profile: "
+                    f"{', '.join(partial_workflow)}"
                 )
                 raise ValueError(msg)
             unknown_fmt_gates = set(self.fmt_gates) - set(

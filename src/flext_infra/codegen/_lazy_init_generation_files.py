@@ -57,7 +57,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
         }
         template_paths = set(FlextInfraCodegenGeneration.init_template_paths())
         project_metadata_paths = {
-            entry.project_root.resolve() / c.Infra.PYPROJECT_FILENAME
+            entry.project_root.resolve() / c.PYPROJECT_FILENAME
             for entry in index.packages_by_dir.values()
             if entry.project_root is not None
         }

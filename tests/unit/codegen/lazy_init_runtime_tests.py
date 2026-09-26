@@ -154,7 +154,7 @@ class TestsFlextInfraLazyInitRuntime:
     def test_internal_facade_requires_its_local_declaration(
         self, tmp_path: Path
     ) -> None:
-        """Repair a missing local alias without substituting the parent class."""
+        """A local declaration replaces the inherited alias from the package root."""
         repository, package = u.Tests.create_lazy_init_workspace(
             tmp_path, project_name="flext-local", package_name="flext_local"
         )
@@ -180,7 +180,7 @@ class TestsFlextInfraLazyInitRuntime:
                     encoding=c.Cli.ENCODING_DEFAULT
                 )
             ),
-            eq=False,
+            eq=True,
         )
         with infra.rope_workspace(repository) as rope:
             policy = rope.convention(facet).module_policy

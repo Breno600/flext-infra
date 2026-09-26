@@ -39,7 +39,7 @@ class TestsFlextInfraCodegenLayout:
                     ),
                 ],
                 cwd=project,
-                remove_env_keys=("FLEXT_INFRA_CONFIG_DIR",),
+                env={"FLEXT_INFRA_CONFIG_DIR": str(FlextInfraConfig.ssot_config_dir())},
             )
         )
         tm.that(
@@ -77,12 +77,16 @@ class TestsFlextInfraCodegenLayout:
                 }
             }
         })
-        config_dir = project / FlextInfraConfig.CONFIG_DIR
-        config_dir.mkdir(exist_ok=True)
+        org_overlay = (
+            project
+            / c.Infra.CODEGEN_CONFIG_DIR
+            / c.Infra.CODEGEN_ORG_OVERRIDES_FILENAME
+        )
+        tm.that(org_overlay.is_relative_to(tmp_path), eq=True)
+        org_overlay.parent.mkdir(exist_ok=True)
         tm.ok(
             u.Cli.yaml_dump(
-                config_dir / c.Infra.CODEGEN_ORG_OVERRIDES_FILENAME,
-                declaration.model_dump(mode="json", exclude_none=True),
+                org_overlay, declaration.model_dump(mode="json", exclude_none=True)
             )
         )
 

@@ -10,6 +10,7 @@ import re
 from collections import abc
 from enum import Enum
 from importlib import import_module
+from importlib.util import find_spec
 from pathlib import Path
 from types import UnionType
 from typing import (
@@ -168,12 +169,13 @@ class FlextInfraCodegenProtocolModelAnnotations:
         """Return the existing public facade path for an identical runtime type."""
         for prefix, probe in target.facade_probes:
             module_path, _, attribute = probe.rpartition(".")
-            try:
-                module = import_module(module_path)
-            except ImportError:
-                # A member without that facade surface cannot hold the value;
-                # probing continues with the next surface.
+            # A member without that facade surface cannot hold the value;
+            # probing continues with the next surface. A surface that exists
+            # but fails to import is a real defect and escapes.
+            package = module_path.partition(".")[0]
+            if find_spec(package) is None or find_spec(module_path) is None:
                 continue
+            module = import_module(module_path)
             facade = getattr(module, attribute, None)
             if facade is None:
                 continue

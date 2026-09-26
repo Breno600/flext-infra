@@ -76,7 +76,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 passed=False,
                 issues=(
                     m.Infra.Issue(
-                        file=c.Infra.PYPROJECT_FILENAME,
+                        file=c.PYPROJECT_FILENAME,
                         line=1,
                         column=0,
                         code=self.gate_id,

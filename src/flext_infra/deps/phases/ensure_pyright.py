@@ -165,7 +165,7 @@ class FlextInfraEnsurePyrightConfigPhase:
             )
         )
         for env_dir in project_roots:
-            if (repository_root / env_dir / c.Infra.PYPROJECT_FILENAME).is_file():
+            if (repository_root / env_dir / c.PYPROJECT_FILENAME).is_file():
                 continue
             expected_envs.append(
                 self._env_entry(

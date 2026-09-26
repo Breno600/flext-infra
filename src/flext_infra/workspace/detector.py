@@ -507,7 +507,7 @@ class FlextInfraWorkspaceDetector(
             return result_type.fail(
                 f"governed subproject checkout is missing: {path.as_posix()}"
             )
-        if not (subproject_root / c.Infra.PYPROJECT_FILENAME).is_file():
+        if not (subproject_root / c.PYPROJECT_FILENAME).is_file():
             return result_type.ok(path)
         route_error = (
             cls._composed_beads_identity_error(subproject_root, workspace_beads)

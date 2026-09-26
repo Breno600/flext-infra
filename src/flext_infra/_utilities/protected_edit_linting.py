@@ -58,7 +58,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         if c.Infra.CODE_FRAME_RE.match(line) or c.Infra.CODE_FRAME_BODY_RE.match(line):
             return ""
 
-        def normalize_unused_import(match: t.Infra.RegexMatch) -> str:
+        def normalize_unused_import(match: t.RegexMatch) -> str:
             imported_name = match.group(1).rsplit(".", maxsplit=1)[-1]
             return f"`{imported_name}` imported but unused"
 
@@ -207,7 +207,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         )
         if (
             tool_name == c.Infra.PYREFLY
-            and (project_config := command_cwd / c.Infra.PYPROJECT_FILENAME).is_file()
+            and (project_config := command_cwd / c.PYPROJECT_FILENAME).is_file()
         ):
             command = (*command, "--config", str(project_config))
         return (

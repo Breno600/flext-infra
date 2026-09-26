@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 from flext_tests import tm
-from pydantic import ValidationError
 
 from flext_infra import config
 from tests import c, m, t, u
@@ -92,7 +91,7 @@ class TestsFlextInfraCodegenMakeGateSuspensions:
             [row, row] if invalid == "duplicate" else [row]
         )
 
-        with pytest.raises(ValidationError):
+        with pytest.raises(m.ValidationError):
             m.Infra.MakeSpec.model_validate(payload)
 
     @pytest.mark.slow

@@ -35,7 +35,7 @@ class FlextInfraWorkspaceBeadsEnvironmentMixin(FlextInfraWorkspaceEnvironmentMix
         """Dispatch beads workspaces, then heal the direnv allow state."""
         if (
             request.beads is not None
-            and not (request.repository_root / c.Infra.PYPROJECT_FILENAME).is_file()
+            and not (request.repository_root / c.PYPROJECT_FILENAME).is_file()
         ):
             beads_result = cls._sync_beads_environment(request)
             if beads_result.failure:

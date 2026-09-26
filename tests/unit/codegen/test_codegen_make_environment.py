@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -12,7 +13,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from tests import c, m, u
+from tests import c, m, t, u
 
 pytestmark = pytest.mark.slow
 
@@ -170,12 +171,18 @@ class TestsFlextInfraCodegenMakeEnvironment:
     # it after the incremental test phase.
     @pytest.mark.remote
     def test_generated_make_uses_profile_runtime_venv_under_hostile_env(
-        self, tmp_path: Path, profile: c.Infra.MakeProfile, *, provisioned: bool
+        self,
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+        profile: c.Infra.MakeProfile,
+        *,
+        provisioned: bool,
     ) -> None:
         """Every generated shell receives the profile-resolved runtime venv."""
-        project_root, runtime_root = u.Tests.render_make_environment(
-            tmp_path, profile, bootstrap=True
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile], tmp_path, profile
         )
+        runtime_root = project_root
         source_marker = project_root / "source-marker"
         source_marker.write_text("preserve project source", encoding="utf-8")
         previous_environment_marker = runtime_root / ".venv" / "old-environment"
@@ -284,29 +291,19 @@ class TestsFlextInfraCodegenMakeEnvironment:
     # the offline unit gate; make test-full includes this remote boundary.
     @pytest.mark.remote
     def test_setup_provisions_environment_before_project_runtime(
-        self, tmp_path: Path, profile: c.Infra.MakeProfile
+        self,
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+        profile: c.Infra.MakeProfile,
     ) -> None:
         """Setup creates the venv and syncs dependencies before any runtime use."""
         project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, profile, bootstrap=True
         )
-        hostile_venv = tmp_path / "hostile" / ".venv"
-        hostile_bin = hostile_venv / "bin"
-        hostile_bin.mkdir(parents=True)
-        hostile_uv = hostile_bin / "uv"
-        sentinel = hostile_venv / "sentinel"
-        sentinel.write_text("untouched\n", encoding="utf-8")
-        active_env = {
-            "PATH": f"{hostile_bin}:{os.environ['PATH']}",
-            "UV": str(hostile_uv),
-            "UV_BIN": str(hostile_uv),
-            "UV_PROJECT": str(hostile_venv.parent),
-            "UV_PROJECT_ENVIRONMENT": str(hostile_venv),
-            "FLEXT_INFRA_PYTHON": str(hostile_bin / "python"),
-            "VIRTUAL_ENV": str(hostile_venv),
-        }
+        hostile_venv = tmp_path / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
+        (hostile_venv / "bin").mkdir(parents=True)
+        active_env = u.Tests.hostile_uv_environment(hostile_venv)
         tm.that((project_root / ".venv").exists(), eq=False)
-        lock_path = project_root / c.Infra.UV_LOCK_FILENAME
         # Without a committed lock, setup never resolves: uv refuses loudly.
         unlocked = tm.ok(
             u.Tests.run_isolated_make(
@@ -314,61 +311,33 @@ class TestsFlextInfraCodegenMakeEnvironment:
             )
         )
         tm.that(u.Cli.process_succeeded(unlocked.outcome), eq=False)
-        tm.that(lock_path.exists(), eq=False)
-        # `upg` is the only resolver: it writes both locks and provisions the
-        # environment frozen from them.
-        upgraded = tm.ok(
-            u.Tests.run_isolated_make(
-                ["--no-print-directory", "upg"], cwd=project_root, env=active_env
-            )
-        )
+        tm.that((project_root / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
+
+        # `upg` is the only resolver: the run's template was upgraded under the
+        # same foreign environment with a declared post-upg hook. It wrote both
+        # locks, provisioned the environment frozen from them, and ran the
+        # hook inside the activated environment, exactly as setup runs post-setup.
+        template = resolved_make_templates[profile]
+        receipts = template.parent.parent
+        upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
+        tm.that(upgraded.stdout, has="upg-hook-ran")
+        for lock in (c.Infra.UV_LOCK_FILENAME, c.Infra.MISE_LOCK_FILENAME):
+            tm.that((template / lock).is_file(), eq=True)
+        tm.that((template / ".venv" / "pyvenv.cfg").is_file(), eq=True)
+        template_hostile = receipts / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
         tm.that(
-            u.Cli.process_succeeded(upgraded.outcome),
-            eq=True,
-            msg=upgraded.stdout + upgraded.stderr,
+            (template_hostile / "sentinel").read_text(encoding="utf-8"),
+            eq="untouched\n",
         )
-        tm.that(lock_path.is_file(), eq=True)
-        tm.that((project_root / c.Infra.MISE_LOCK_FILENAME).is_file(), eq=True)
-        tm.that((project_root / ".venv" / "pyvenv.cfg").is_file(), eq=True)
-        tm.that(sentinel.read_text(encoding="utf-8"), eq="untouched\n")
-        tm.that(tuple(hostile_bin.iterdir()), eq=())
-        tm.that((hostile_venv / "pyvenv.cfg").exists(), eq=False)
-        tm.that((hostile_venv.parent / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
+        tm.that(tuple((template_hostile / "bin").iterdir()), eq=())
+        tm.that((template_hostile / "pyvenv.cfg").exists(), eq=False)
+        tm.that((template_hostile.parent / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
 
         # A cold CI storage must install every tool without auto-locking. A warm
         # storage would skip installation and conceal an absent locked-mode guard.
-        make = config.Infra.codegen.make
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                project_root / "custom.mk",
-                ".PHONY: post-setup\npost-setup:\n"
-                '\t@test -x "$(MAKE_COMMAND)"\n'
-                '\t@test "$(MAKE_COMMAND)" = "$(SELF_MAKE_EXECUTABLE)"\n'
-                f'\t@test "$({make.ci.variable})" = "{make.ci.value}"\n'
-                "\t@printf '%s\\n' 'ci-runtime-provisioned'\n",
-            )
-        )
-        cold_storage = tmp_path / "cold-mise-storage"
-        tm.that(cold_storage.exists(), eq=False)
         bootstrap = u.Infra.mise_bootstrap_environment()
-        ci_env = {
-            **active_env,
-            make.ci.variable: make.ci.value,
-            bootstrap.storage_root_variable: str(cold_storage),
-        }
-        sidecar_root = project_root / ".mise" / "locks"
-        locked_paths = (
-            lock_path,
-            project_root / c.Infra.MISE_LOCK_FILENAME,
-            project_root / c.Infra.MISE_VERSION_PIN_FILENAME,
-            *(path for path in sidecar_root.rglob("*") if path.is_file()),
-        )
-        locked_before = {path: path.read_bytes() for path in locked_paths}
-        locked = tm.ok(
-            u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup"], cwd=project_root, env=ci_env
-            )
-        )
+        cold_storage = receipts / c.Tests.COLD_MISE_STORAGE
+        locked = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_CI_RECEIPT)
         tm.that(
             u.Cli.process_succeeded(locked.outcome),
             eq=True,
@@ -382,19 +351,20 @@ class TestsFlextInfraCodegenMakeEnvironment:
             if name == "MISE_INSTALLS_DIR"
         )
         tm.that(any(install_root.iterdir()), eq=True)
-        tm.that({path: path.read_bytes() for path in locked_paths}, eq=locked_before)
-        tm.that(
-            {path for path in sidecar_root.rglob("*") if path.is_file()},
-            eq={path for path in locked_paths if path.is_relative_to(sidecar_root)},
+        resolved_locks = self._locks(template)
+        ci_checkout = (
+            receipts / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT / profile.value / template.name
         )
+        tm.that(self._locks(ci_checkout), eq=resolved_locks)
 
         # A new dependency declaration makes the committed lock stale: setup
         # fails instead of re-resolving, and the lock stays untouched.
+        checkout = u.Tests.resolved_make_checkout(template, tmp_path / "stale", profile)
         dependency_root = tmp_path / "external-runtime"
         u.Tests.WorktreeFixture.write_python_project(
             dependency_root, "external-runtime"
         )
-        pyproject_path = project_root / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = checkout / c.PYPROJECT_FILENAME
         document = u.Tests.toml_doc(pyproject_path.read_text(encoding="utf-8"))
         project = tm.not_none(u.Cli.toml_table_child(document, "project"))
         project["dependencies"] = [
@@ -402,13 +372,32 @@ class TestsFlextInfraCodegenMakeEnvironment:
             f"external-runtime @ {dependency_root.as_uri()}",
         ]
         tm.ok(u.Cli.atomic_write_text_file(pyproject_path, u.Cli.toml_dumps(document)))
+        make = config.Infra.codegen.make
         stale = tm.ok(
             u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup"], cwd=project_root, env=ci_env
+                ["--no-print-directory", "setup"],
+                cwd=checkout,
+                env={
+                    **active_env,
+                    make.ci.variable: make.ci.value,
+                    bootstrap.storage_root_variable: str(cold_storage),
+                },
             )
         )
         tm.that(u.Cli.process_succeeded(stale.outcome), eq=False)
-        tm.that({path: path.read_bytes() for path in locked_paths}, eq=locked_before)
+        tm.that(self._locks(checkout), eq=resolved_locks)
+
+    @staticmethod
+    def _locks(root: Path) -> t.MappingKV[str, bytes]:
+        """Return every lock artifact ``make upg`` owns, keyed by relative path."""
+        sidecars = root / ".mise" / "locks"
+        paths = (
+            root / c.Infra.UV_LOCK_FILENAME,
+            root / c.Infra.MISE_LOCK_FILENAME,
+            root / c.Infra.MISE_VERSION_PIN_FILENAME,
+            *(path for path in sidecars.rglob("*") if path.is_file()),
+        )
+        return {path.relative_to(root).as_posix(): path.read_bytes() for path in paths}
 
     def test_setup_fails_when_the_tracked_mise_launcher_is_missing(
         self, tmp_path: Path
@@ -684,6 +673,50 @@ class TestsFlextInfraCodegenMakeEnvironment:
             self._recipe_targets_containing(makefile, "lock --bump"),
             eq={"_bootstrap_setup_tools"},
         )
+        toolchain = config.Infra.codegen.toolchain
+        artifact_selectors = (
+            "python",
+            "uv",
+            "kubectl",
+            "helm",
+            "kind",
+            "direnv",
+            "taplo",
+            "ast-grep",
+            "gitleaks",
+            toolchain.scc_selector,
+            "kubeconform",
+            "node",
+            "go",
+            "make",
+            toolchain.qlty_selector,
+            toolchain.jscpd_selector,
+            toolchain.waza_selector,
+        )
+        lock_invocations = re.findall(r"lock --bump ([^;]+);", makefile)
+        tm.that(
+            tuple(tuple(shlex.split(arguments)) for arguments in lock_invocations),
+            eq=(artifact_selectors, (toolchain.prettier_selector,)),
+        )
+        for selector in (
+            toolchain.qlty_selector,
+            toolchain.jscpd_selector,
+            toolchain.prettier_selector,
+            toolchain.scc_selector,
+            toolchain.waza_selector,
+        ):
+            tm.that(makefile, has=f'"{selector}"')
+        platform_matrix = ",".join(toolchain.mise_lockfile_platforms)
+        tm.that(
+            makefile,
+            has=[
+                f'mise_lockfile_platforms="{platform_matrix}";',
+                '$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"}',
+                'mise_lockfile_platforms=; \\\n\t\tmise_checked "$$scratch/lock-npm-prettier.log"',
+                'mise_checked "$$scratch/lock-npm-prettier.log"',
+                f'mise_lockfile_platforms="{platform_matrix}"; \\\n\tfi;',
+            ],
+        )
         tm.that(makefile, has='if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then')
         resolve_assignments = re.findall(
             r"^(?:([\w-]+): )?TOOL_BOOTSTRAP_RESOLVE :=[ ]?(.*)$",
@@ -705,7 +738,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tool_config = mise_toml.get("tool_config")
         assert isinstance(settings, Mapping)
         assert isinstance(tool_config, Mapping)
-        toolchain = config.Infra.codegen.toolchain
         tm.that(settings.get("lockfile"), eq=toolchain.mise_lockfile)
         tm.that(settings.get("locked"), eq=toolchain.mise_locked)
         tm.that(tool_config.get("locked"), eq=toolchain.mise_locked)
@@ -769,7 +801,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             # is executed through `mise exec`, so nothing needs an ambient mise
             # and nothing hand-assembles a managed PATH any more.
             'mise_exec project "$$latest_mise" -C "$$project_root" install --yes',
-            "upgrade --no-prune python",
             '"$$latest_mise" -C "$$project_root" exec -- env',
             "SETUP_DIRENV=$$direnv_executable",
             'desired_python=$$("$(SETUP_MISE)" -C "$(PROJECT_ROOT)" which python)',
@@ -791,7 +822,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             "--no-install-project",
             '--editable "$(PROJECT_ROOT)"',
             "pip install",
-            "upgrade --no-prune python",
         ):
             tm.that(makefile, lacks=forbidden)
         checkout_command = re.search(

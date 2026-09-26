@@ -524,7 +524,7 @@ class TestsFlextInfraCodegenGeneration:
         project_root = tmp_path / "0.12.0-dev"
         wrapper_root = project_root / "examples"
         wrapper_root.mkdir(parents=True)
-        (project_root / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_root / c.PYPROJECT_FILENAME).write_text(
             f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n{isort_table}',
             encoding="utf-8",
         )
@@ -577,7 +577,7 @@ class TestsFlextInfraCodegenGeneration:
         table = (
             "[tool.ruff.lint.isort]\nknown-first-party = []\n" if declared_empty else ""
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\n{table}',
             encoding="utf-8",
         )
@@ -615,7 +615,7 @@ class TestsFlextInfraCodegenGeneration:
         """Invalid Ruff configuration cannot become a derived namespace list."""
         package = tmp_path / "src" / "sample"
         package.mkdir(parents=True)
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "sample"\nversion = "1.0.0"\n'
             f"[tool.ruff.lint.isort]\nknown-first-party = {projected}\n",
             encoding="utf-8",

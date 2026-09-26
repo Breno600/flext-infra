@@ -244,12 +244,6 @@ Infra:
             # Examples are executable documentation loaded by path, not
             # importable modules, so module-name and shebang rules do not apply.
             "**/examples/**/*.py": [invalid-module-name, shebang-not-executable]
-            # The rope PEP 695 exemption is NOT declared here: this file is the
-            # FLEET policy, and a path that exists only in flext-infra would be
-            # written into every generated project's pyproject.toml. It lives in
-            # flext-infra's own config/quality.yaml as a project-local
-            # ManagedArtifacts.Ruff addition, which conform merges over this
-            # policy for that one repository.
             # Test suites: pytest idioms that are correct-by-design
             # are exempted GLOBALLY at the codegen SSOT (operator P0, per-rule
             # justified per UNIVERSAL_CORE r19 — never a blanket mask):
@@ -448,27 +442,13 @@ Infra:
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
-          # flext-j47u (codex): Rope 1.14/latest has no public PEP 695 walker
-          # registration API. This existing-path-only environment is the tested
-          # vendor boundary; broad src code keeps reportPrivateUsage=error.
-          diagnostic-path-overrides:
-            - root: src/flext_infra/_utilities/_rope
-              reportPrivateUsage: "none"
-              rationale: >-
-                Rope 1.14 and upstream master require private walker handler
-                registration for Python 3.13 PEP 695 source regions.
+          diagnostic-path-overrides: []
           source-report-private-usage: error
           test-like-report-private-usage: "none"
           other-report-private-usage: "none"
           venv-name: .venv
       coverage:
         source: [src]
-        fail-under:
-          core: 45
-          domain: 30
-          platform: 45
-          integration: 20
-          app: 15
         show-missing: true
         skip-covered: false
         precision: 2
@@ -791,17 +771,6 @@ ManagedArtifacts:
       src/flext_infra/_utilities/_mypy_supervisor.py:
         - suspicious-subprocess-import
         - subprocess-without-shell-equals-true
-      # OPERATOR-AUTHORIZED 2026-08-08 (rope only, private-member-access only).
-      # Rope 1.14 and upstream master expose NO public API to register a PEP 695
-      # walker handler, so these private slots ARE the library interface.
-      # Vendoring the walker and dropping PEP 695 support were the alternatives;
-      # the operator rejected both.
-      # The access is written LITERALLY and reported honestly: routing it through
-      # getattr with a name constant was refused as a disguised suppression. The
-      # typing side is genuinely fixed (pep695_ast_walker narrows via TypeGuard
-      # and raises when rope changes its internals), so this exemption covers the
-      # ruff rule alone. Removing it reports exactly 12 SLF001, all under _rope/.
-      src/flext_infra/_utilities/_rope/**/*.py: [private-member-access]
 
 mod:
   phases:

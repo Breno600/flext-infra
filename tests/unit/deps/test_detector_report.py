@@ -25,7 +25,11 @@ class TestsFlextInfraDepsDetectorReport:
         )
         arguments = ("--output", str(destination)) if custom else ()
         outcome = tm.ok(u.Tests.run_real_detector(root, "--no-pip-check", *arguments))
-        tm.that(u.Cli.process_succeeded(outcome.outcome), eq=True, msg=outcome.stderr)
+        tm.that(
+            u.Cli.process_succeeded(outcome.outcome),
+            eq=True,
+            msg=f"{outcome.stdout}\n{outcome.stderr}",
+        )
         tm.that(destination.is_file(), eq=True)
         report = u.Cli.json_as_mapping(tm.ok(u.Cli.json_read(destination)))
         tm.that(u.Cli.json_as_mapping(report.get("projects")), keys=[root.name])

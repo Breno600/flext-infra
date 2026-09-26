@@ -13,69 +13,6 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
     """Expose typed predicates for Rope runtime objects."""
 
     @classmethod
-    def patched_ast_walker(cls) -> type[p.AttributeProbe]:
-        """Return rope's internal AST walker class.
-
-        Stays a generic probe like every other resolver here; the PEP 695
-        patch binds it to p.Infra.PatchingASTWalker at its own vendor
-        boundary, which is the only place that knows which contract it needs.
-        """
-        return cls.runtime_type("rope.refactor.patchedast", "_PatchingASTWalker")
-
-    @staticmethod
-    def _is_pep695_walker(
-        walker: type[p.AttributeProbe],
-    ) -> TypeGuard[type[p.Infra.PatchingASTWalker]]:
-        """Narrow rope's walker to the PEP 695 handler contract."""
-        return all(
-            hasattr(walker, slot) for slot in ("_handle_function_def_node", "_ClassDef")
-        )
-
-    @classmethod
-    def pep695_ast_walker(cls) -> type[p.Infra.PatchingASTWalker]:
-        """Return rope's AST walker bound to the PEP 695 handler contract.
-
-        The generic ``patched_ast_walker`` probe cannot express the handler
-        slots the PEP 695 patch replaces, so every access to them read as a
-        missing attribute. The contract is checked HERE, once, and a walker
-        that does not carry the slots fails loudly instead of being asserted
-        into a shape it does not have.
-        """
-        walker = cls.runtime_type("rope.refactor.patchedast", "_PatchingASTWalker")
-        if not cls._is_pep695_walker(walker):
-            msg = (
-                "rope _PatchingASTWalker is missing the PEP 695 handler slots: "
-                "the installed rope version changed its internals"
-            )
-            raise TypeError(msg)
-        return walker
-
-    @staticmethod
-    def _is_signature_walker(
-        walker: type[p.AttributeProbe],
-    ) -> TypeGuard[type[p.Infra.PatchingASTWalker]]:
-        """Narrow rope's walker to the signature handler contract."""
-        return all(hasattr(walker, slot) for slot in ("_arguments", "_arg"))
-
-    @classmethod
-    def signature_ast_walker(cls) -> type[p.Infra.PatchingASTWalker]:
-        """Return rope's AST walker bound to the signature handler contract.
-
-        Same vendor-boundary reasoning as ``pep695_ast_walker``: the generic
-        probe cannot express the ``_arguments``/``_arg`` slots the signature
-        patch replaces, so the contract is checked here and a walker that
-        changed its internals fails loudly.
-        """
-        walker = cls.runtime_type("rope.refactor.patchedast", "_PatchingASTWalker")
-        if not cls._is_signature_walker(walker):
-            msg = (
-                "rope _PatchingASTWalker is missing the signature handler "
-                "slots: the installed rope version changed its internals"
-            )
-            raise TypeError(msg)
-        return walker
-
-    @classmethod
     def is_resource(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopeResource]:
         return isinstance(value, cls.runtime_type("rope.base.resources", "File"))
 

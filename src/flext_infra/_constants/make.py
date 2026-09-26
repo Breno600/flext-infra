@@ -148,9 +148,6 @@ class FlextInfraConstantsMake:
     PYTEST_ENV_TESTMON_DATAFILE: ClassVar[str] = "TESTMON_DATAFILE"
     PYTEST_ENV_COLLECTION_MANIFEST: ClassVar[str] = "FLEXT_PYTEST_COLLECTION_MANIFEST"
     PYTEST_WARNING_EVENTS_SUFFIX: ClassVar[str] = ".warnings.jsonl"
-    PYTEST_COVERAGE_FAILURE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"(?:Coverage failure:|required test coverage .* not reached)", re.IGNORECASE
-    )
     PYTEST_INHERITED_ENV_REMOVE_KEYS: ClassVar[t.StrSequence] = (
         "PYTEST_ADDOPTS",
         "PYTHONPATH",

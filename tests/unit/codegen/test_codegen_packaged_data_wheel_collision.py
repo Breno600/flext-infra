@@ -53,7 +53,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             f"{infra_distribution} @ git+{u.Tests.provider().base_url}"
             f"/{infra_distribution}.git@{u.Tests.provider_branch()}"
         )
-        (root / c.Infra.PYPROJECT_FILENAME).write_text(
+        (root / c.PYPROJECT_FILENAME).write_text(
             "[project]\n"
             f'name = "{FIXTURE_DISTRIBUTION}"\n'
             'version = "0.1.0"\n'
@@ -90,7 +90,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
     @staticmethod
     def _wheel_target(root: Path) -> t.JsonMapping:
         """Read the rendered wheel target of the conformed project."""
-        manifest = (root / c.Infra.PYPROJECT_FILENAME).read_text(encoding="utf-8")
+        manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         return u.Tests.toml_table_at(
             manifest, c.Infra.TOOL, "hatch", "build", "targets", "wheel"
         )
@@ -108,7 +108,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
     @staticmethod
     def _sdist_only_include(root: Path) -> t.JsonList:
         """Read the rendered sdist only-include list of the conformed project."""
-        manifest = (root / c.Infra.PYPROJECT_FILENAME).read_text(encoding="utf-8")
+        manifest = (root / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
         sdist = u.Tests.toml_table_at(
             manifest, c.Infra.TOOL, "hatch", "build", "targets", "sdist"
         )

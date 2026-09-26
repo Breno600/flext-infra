@@ -58,7 +58,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
             ("import time; a = bytearray(128 * 1024**2); time.sleep(30)", 64, 10, 137),
         ],
     )
-    @pytest.mark.skipif(sys.platform != "darwin", reason="native Darwin RSS supervisor")
     def test_darwin_supervisor_enforces_limits(
         self, source: str, memory_mb: int, seconds: int, expected: int
     ) -> None:
@@ -67,7 +66,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
             memory_limit_mb=memory_mb, timeout_seconds=seconds
         )
         result = u.Cli.run_raw(
-            u.Infra.mypy_limited_command((sys.executable, "-c", source), limit),
+            u.Infra.mypy_limited_command(
+                (sys.executable, "-c", source), limit, host_system="Darwin"
+            ),
             timeout=u.Infra.mypy_runner_timeout(limit),
         )
         tm.ok(result)
@@ -76,7 +77,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
     @pytest.mark.parametrize(
         ("tail", "expected"), [("sys.exit(7)", 7), ("time.sleep(30)", 124)]
     )
-    @pytest.mark.skipif(sys.platform != "darwin", reason="native Darwin process groups")
     def test_darwin_supervisor_cleans_resistant_descendant(
         self, tail: str, expected: int
     ) -> None:
@@ -91,7 +91,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
         limit = m.Infra.MypyResourceLimit(memory_limit_mb=512, timeout_seconds=2)
         result = u.Cli.run_raw(
-            u.Infra.mypy_limited_command((sys.executable, "-c", source), limit),
+            u.Infra.mypy_limited_command(
+                (sys.executable, "-c", source), limit, host_system="Darwin"
+            ),
             timeout=u.Infra.mypy_runner_timeout(limit),
         )
         tm.ok(result)
@@ -102,9 +104,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
         state = remaining.value.stdout.strip()
         tm.that(not state or state.startswith("Z"), eq=True)
 
-    @pytest.mark.skipif(
-        sys.platform != "darwin", reason="native Darwin signal forwarding"
-    )
     def test_darwin_supervisor_forwards_termination(self) -> None:
         """Preserve external termination and reap the running workload."""
         limit = m.Infra.MypyResourceLimit(memory_limit_mb=512, timeout_seconds=20)
@@ -116,6 +115,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
                     "import time; print('ready', flush=True); time.sleep(30)",
                 ),
                 limit,
+                host_system="Darwin",
             )
         )
         tm.ok(started)

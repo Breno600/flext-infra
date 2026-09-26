@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from .environment_provenance import FlextInfraWorkspaceEnvironmentProvenance
     from .flext_binding import FlextInfraFlextBindingService
     from .orchestrator import FlextInfraOrchestratorService
+    from .propagation import FlextInfraWorkspacePropagation
     from .rope import FlextInfraRopeWorkspace
 
 
@@ -38,6 +39,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspaceGovernanceMixin",
     "FlextInfraWorkspaceOrchestratorDiscoveryMixin",
     "FlextInfraWorkspaceOrchestratorExecutionMixin",
+    "FlextInfraWorkspacePropagation",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -60,6 +62,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".environment_provenance": ("FlextInfraWorkspaceEnvironmentProvenance",),
             ".flext_binding": ("FlextInfraFlextBindingService",),
             ".orchestrator": ("FlextInfraOrchestratorService",),
+            ".propagation": ("FlextInfraWorkspacePropagation",),
             ".rope": ("FlextInfraRopeWorkspace",),
         }),
         alias_groups=MappingProxyType({}),

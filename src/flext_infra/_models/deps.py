@@ -216,6 +216,15 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         python_version: Annotated[
             str | None, m.Field(None, description="Python version")
         ] = None
+        untyped_imports_followed: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Governed mypy follow_untyped_imports policy; when true, "
+                    "missing stubs are not findings"
+                )
+            ),
+        ]
 
     class ProjectRuntimeReport(m.ArbitraryTypesModel):
         """Project runtime dependency and typings report."""

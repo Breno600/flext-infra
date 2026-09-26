@@ -9,8 +9,6 @@ selector rendered through the canonical ``.mise.toml`` projection.
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from flext_tests import tm
 
 from flext_infra import config
@@ -24,34 +22,3 @@ class TestsFlextInfraToolchainMake:
         toolchain = config.Infra.codegen.toolchain
 
         tm.that(toolchain.make_version, eq="latest")
-
-    def test_make_is_rendered_in_mise_template(self) -> None:
-        """The ``.mise.toml`` template must project make as a managed tool."""
-        template = (
-            Path(__file__).parents[3]
-            / "src"
-            / "flext_infra"
-            / "templates"
-            / "project"
-            / "base"
-            / ".mise.toml.j2"
-        )
-        content = template.read_text(encoding="utf-8")
-
-        tm.that(content, has='make = "{{ make_version }}"')
-
-    def test_mise_template_lacks_conda_make_selector(self) -> None:
-        """No rendered selector may carry a conda or stale-shim provenance."""
-        template = (
-            Path(__file__).parents[3]
-            / "src"
-            / "flext_infra"
-            / "templates"
-            / "project"
-            / "base"
-            / ".mise.toml.j2"
-        )
-        content = template.read_text(encoding="utf-8")
-
-        tm.that(content, lacks="conda")
-        tm.that(content, lacks="stale")

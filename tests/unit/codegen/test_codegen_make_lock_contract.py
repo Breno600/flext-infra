@@ -28,7 +28,12 @@ class TestsFlextInfraCodegenMakeLockContract:
         lock.write_bytes((Path(__file__).resolve().parents[3] / lock.name).read_bytes())
         paths = (
             lock,
-            root / c.Infra.MISE_LOCK_FILENAME,
+            # Unlocked fleet mode commits no mise.lock; the SSOT decides.
+            *(
+                (root / c.Infra.MISE_LOCK_FILENAME,)
+                if config.Infra.codegen.toolchain.mise_lockfile
+                else ()
+            ),
             root / c.Infra.MISE_VERSION_PIN_FILENAME,
             *(path for path in (root / ".mise" / "locks").rglob("*") if path.is_file()),
         )
@@ -47,6 +52,10 @@ class TestsFlextInfraCodegenMakeLockContract:
         )
 
         tm.that({path: path.read_bytes() for path in paths}, eq=before)
+        tm.that(
+            (root / c.Infra.MISE_LOCK_FILENAME).exists(),
+            eq=config.Infra.codegen.toolchain.mise_lockfile,
+        )
 
     def test_direnv_isolates_nested_checkout_from_parent_mise_config(
         self, tmp_path: Path
@@ -102,7 +111,11 @@ class TestsFlextInfraCodegenMakeLockContract:
         sidecars = root / ".mise" / "locks"
         paths = (
             root / bootstrap.version_pin_file,
-            root / bootstrap.lock_file,
+            *(
+                (root / bootstrap.lock_file,)
+                if config.Infra.codegen.toolchain.mise_lockfile
+                else ()
+            ),
             *(path for path in sidecars.rglob("*") if path.is_file()),
         )
         before = {path: path.read_bytes() for path in paths}
@@ -141,6 +154,10 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(identity.stderr + process.stderr, lacks="mise WARN")
         tm.that({path: path.read_bytes() for path in paths}, eq=before)
         tm.that(
+            (root / c.Infra.MISE_LOCK_FILENAME).exists(),
+            eq=config.Infra.codegen.toolchain.mise_lockfile,
+        )
+        tm.that(
             {path for path in sidecars.rglob("*") if path.is_file()},
             eq={path for path in paths if path.is_relative_to(sidecars)},
         )
@@ -154,7 +171,12 @@ class TestsFlextInfraCodegenMakeLockContract:
         )
         bootstrap = u.Infra.mise_bootstrap_environment()
         cold_storage = tmp_path / "unprovisioned-mise"
-        tm.that(cold_storage.exists(), eq=False)
+        release = (root / bootstrap.version_pin_file).read_text(encoding="utf-8")
+        # The host's direnv launcher may itself be a Mise shim that provisions
+        # direnv into the storage it is handed; the activation contract is only
+        # that the pinned Mise runtime is never installed.
+        template = bootstrap.runtime_install_relative_template
+        pinned_runtime = cold_storage / template.format(release=release.strip())
 
         process = tm.ok(
             u.Cli.run_raw(
@@ -166,9 +188,9 @@ class TestsFlextInfraCodegenMakeLockContract:
         )
 
         tm.that(u.Cli.process_succeeded(process.outcome), eq=False)
-        tm.that(process.stderr, has="missing pinned Mise runtime")
+        tm.that(process.stderr, has=f"missing pinned Mise runtime {pinned_runtime}")
         tm.that(process.stderr, has="run make setup")
-        tm.that(cold_storage.exists(), eq=False)
+        tm.that(pinned_runtime.exists(), eq=False)
 
     @pytest.mark.parametrize("pin_content", [None, "latest\n", " \n", "1.2.3\n4.5.6\n"])
     def test_direnv_rejects_unresolved_runtime_pin(
@@ -203,6 +225,9 @@ class TestsFlextInfraCodegenMakeLockContract:
                 (verb.name, None)
                 for verb in config.Infra.codegen.make.verbs
                 if verb.name not in {"help", "clean", "upg"}
+                # The rendered Makefile is standalone: it declares only the
+                # verbs whose operation applies to that profile.
+                and c.Infra.MakeProfile.STANDALONE in verb.profiles
             ),
             ("status", ""),
             ("status", " \n"),

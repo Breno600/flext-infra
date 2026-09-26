@@ -320,10 +320,10 @@ class FlextInfraUtilitiesRelease:
         the platform packages test against each other, counting them would
         report the whole workspace as one cycle.
         """
-        pyproject = path / c.Infra.PYPROJECT_FILENAME
+        pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.StrSequence].fail(
-                f"release project has no {c.Infra.PYPROJECT_FILENAME}: {path}"
+                f"release project has no {c.PYPROJECT_FILENAME}: {path}"
             )
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:

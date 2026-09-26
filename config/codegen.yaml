@@ -2,6 +2,10 @@ Infra:
   codegen:
     # NOTE(mro-wkii.17.5, agent implement_manifest): declarative SSOT for deterministic project conformance.
     version: 1
+    # Projections no template renders any more; generation removes the
+    # generated copy from every consumer (renamed: install-git-hooks.sh ->
+    # validate-git-hook.sh).
+    retired_projections: [.github/scripts/install-git-hooks.sh]
 
     # Operator law 2026-09-22: the pyproject template declares `.cli:main`
     # for every distribution while most member cli facades predate that
@@ -63,12 +67,13 @@ Infra:
       gitleaks_version: latest
       kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
-      # false: the fleet runs unlocked and current — tools resolve at setup
-      # time against the newest published release; no committed mise.lock.
-      # (The integration lane pinned-lock state diverged from the newer-mise
-      # aube lock graph; unlocked mode is the adopted fleet contract here.)
-      mise_lockfile: false
-      mise_locked: false
+      # true (operator lock law 2026-09-24, reaffirmed 2026-09-25 over #860):
+      # the committed lock written by `make upg` pins every tool and setup
+      # installs frozen from it. The lock is read only by the pinned mise
+      # release `upg` recorded in mise.version, so an older ambient mise
+      # never parses a newer lockfile format.
+      mise_lockfile: true
+      mise_locked: true
       # Projection: .mise.toml [settings] lockfile_platforms. The platforms the
       # CI matrix runs on (ubuntu, macos, windows runners, x64 and arm64);
       # `make upg` resolves these plus the current host, which mise always adds.
@@ -343,8 +348,7 @@ Infra:
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
       fmt_gates: [markdown-format]
-      # No quality gate is suspended: every local and CI invocation exercises
-      # the same complete policy set before a change can be proposed.
+      # No quality gate is suspended: local and CI run the same complete policy.
       check_gate_suspensions: []
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /
@@ -500,6 +504,11 @@ Infra:
           description: Provision the declared environment and hooks.
         - name: upg
           description: Resolve the newest declared releases and write the uv and mise locks.
+        # Workspace-only (topology owns applicability): a standalone Makefile
+        # never declares it. Never merges; a rerun continues the same lanes.
+        - name: propagate
+          description: Apply this workspace's flext-infra to every declared member (conform, then lock) and publish one pull-request lane per member whose projections or lock change; unchanged members publish nothing.
+          profiles: [workspace]
         - name: build
           description: Build the project distribution artifacts.
         - name: check
@@ -965,6 +974,10 @@ Infra:
         owner: codegen
         policy: full
         mode: 493 # 0o755
+      - path: .github/scripts/validate-git-hook.sh
+        owner: codegen
+        policy: full
+        mode: 493 # 0o755
       - path: .github/scripts/flext-law-loop.sh
         owner: codegen
         policy: full
@@ -1236,7 +1249,7 @@ Infra:
             runtime: ["click>=8.3.3,<8.4", typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
-            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, rope>=1.15.0, pytest>=9.1.1, mkdocs>=1.6.1]
+            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
           - upstream: flext_cli
             project: flext-tests
             runtime: [flext-cli, flext-infra, pytest>=9.1.1, pytest-timeout>=2.4.0, docker>=7.2.0, python-on-whales>=0.81.0]
@@ -1367,11 +1380,9 @@ Infra:
             - "!.opencode/**"
             - "!/config/"
             - "!.claude/CLAUDE.md"
-            - "!.claude/settings.json"
             - "!.agents/"
             - "!.agents/**"
             - ".agents/skills/*/report.json"
-            - "!.claude/settings.local.json"
         - name: "Dispatcher-based command surface (Make SSOT)"
           profiles: [workspace]
           patterns:
@@ -1501,8 +1512,8 @@ Infra:
       # the live workspace topology and can never diverge from each other.
       # `.claude/*` re-blocked the whole directory AFTER the whitelist above
       # had unblocked it, and in gitignore the last matching rule wins — so
-      # every governed provider artifact (.claude/settings.json, the skill
-      # surfaces) became untrackable. Local session data is named explicitly
+      # every governed provider artifact (the skill surfaces) became
+      # untrackable. Local session data is named explicitly
       # instead of re-blocking the directory that the whitelist just opened.
         - name: "BLOCK: AI/Agent Local Data (NEVER track these)"
           patterns:
@@ -1548,16 +1559,17 @@ Infra:
       # -- the generated bytes are authoritative, customized only through a
       # config override at their owner, and tracked so a clone reproduces them
       # exactly. Per-operator configuration is not: hook wiring, governance
-      # manifests and agent settings reference machine-absolute paths of the
+      # manifests and local agent settings reference machine-absolute paths of the
       # operator who last ran the catalog generator, so they reach a checkout
       # as runtime state and are never recorded in any workspace. Every
       # machine-written settings/hooks surface and its digest sidecar is
       # blocked by name. No profiles key: this holds for every role.
         - name: "Agent hooks and operator config (runtime state, never source)"
-          # settings.json stays out of this runtime-state block: the governed
-          # provider-projections section (and its tests) own it as a tracked
-          # governance artifact, and in gitignore the last matching rule wins,
-          # so a name block here silently re-ignored the whitelisted file.
+          # settings.json projections are portable governance and stay
+          # trackable; settings.local.json and the digest sidecars wire
+          # machine-absolute paths, so they are named here. This block follows
+          # the provider-tree whitelists and the last matching gitignore rule
+          # wins.
           patterns:
             - ".github/hooks/"
             - "*/.hooks.json.agents-governance.json"
@@ -1907,6 +1919,11 @@ Infra:
         - source: base/.github/scripts/check-cqrs-compliance.sh.j2
           destination: .github/scripts/check-cqrs-compliance.sh
           profiles: [workspace]
+          delegate: render
+          overwrite: false
+        - source: base/.github/scripts/validate-git-hook.sh.j2
+          destination: .github/scripts/validate-git-hook.sh
+          profiles: [workspace, standalone]
           delegate: render
           overwrite: false
         - source: base/.github/scripts/flext-law-loop.sh.j2

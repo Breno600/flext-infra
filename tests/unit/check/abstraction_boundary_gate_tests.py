@@ -95,12 +95,12 @@ class TestsFlextInfraAbstractionBoundaryGate:
         tm.that(not result.result.passed, eq=True)
         tm.that(any("cli.print" in issue.message for issue in result.issues), eq=True)
 
-    def test_embedded_print_source_is_not_live_behavior(self, tmp_path: Path) -> None:
+    def test_print_detection_ignores_embedded_source_text(self, tmp_path: Path) -> None:
         project = self._project(
             tmp_path,
             name="flext-demo",
             filename="logic.py",
-            src='PAYLOAD = """print(\'embedded\')"""\n',
+            src="PAYLOAD = 'print(\"fixture\")\\n'\n",
         )
 
         result = u.Tests.run_gate_check(

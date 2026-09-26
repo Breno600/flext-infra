@@ -20,7 +20,7 @@ from ..base import s
 class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
     """Open one shared Rope workspace with cached public DSL methods."""
 
-    _IDENTIFIER_PATTERN: ClassVar[t.Infra.RegexPattern] = c.Infra.IDENTIFIER_PATTERN
+    _IDENTIFIER_PATTERN: ClassVar[t.RegexPattern] = c.Infra.IDENTIFIER_PATTERN
 
     rope_repository_root_override: Annotated[
         Path | None,

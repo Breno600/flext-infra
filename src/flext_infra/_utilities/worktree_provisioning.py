@@ -121,7 +121,7 @@ class FlextInfraWorktreeProvisioning:
         gitlinks = cls._prepare_governed_gitlinks(lane)
         if gitlinks.failure:
             return gitlinks
-        if not (lane / c.Infra.PYPROJECT_FILENAME).is_file():
+        if not (lane / c.PYPROJECT_FILENAME).is_file():
             return r[bool].ok(True)
         venv_name = config.Infra.tooling.tools.pyright.path_rules.venv_name
         lane_venv = lane / venv_name

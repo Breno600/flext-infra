@@ -145,9 +145,15 @@ class TestsFlextInfraCodegenMakeContracts:
         u.Tests.write_executable(
             root / ".venv" / "bin" / "python", "#!/bin/sh\nexit 0\n"
         )
+        # `check` also requires the Mise pin (db516968e).
+        u.Tests.copy_tracked_mise_seeds(root)
         outcome = u.Cli.run_raw(["make", "-C", str(root), "check", ""])
         output = tm.ok(outcome)
-        tm.that(u.Cli.process_succeeded(output.outcome), eq=True)
+        tm.that(
+            u.Cli.process_succeeded(output.outcome),
+            eq=True,
+            msg=output.stdout + output.stderr,
+        )
         combined = output.stdout + output.stderr
         pre_at = combined.find("HOOK_PRE")
         body_at = combined.find("HANDLER_BODY")
