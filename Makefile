@@ -1530,7 +1530,7 @@ _builtin_fmt_all: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "markdown-format" --projects . --apply
 
 _builtin_fix_all: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint,markdown,markdown-code,canonical-alias,smells" --projects . --apply --report-findings
+	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint,markdown,markdown-code,canonical-alias" --projects . --apply --report-findings
 
 # Catalog-driven enforcement fixes: every ENFORCE rule whose fix action is
 # declared safe, applied through its registered adapter.

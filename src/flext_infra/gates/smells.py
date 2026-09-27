@@ -10,12 +10,6 @@ from typing import TYPE_CHECKING, ClassVar, override
 from flext_core import r
 from flext_infra import c, m, settings, u
 from flext_infra.gates.base_gate import FlextInfraGate
-from flext_infra.transformers.smells.boolean_logic import FlextInfraBooleanLogicFixer
-
-from ..transformers.smells.base import FlextInfraSmellFixer
-
-# flext-0ftd.3.5: the empty package initializer is not a compatibility export;
-# consume the declaration at its canonical owner after the lazy-init cutover.
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -31,50 +25,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     gate_id: ClassVar[str] = "smells"
     gate_name: ClassVar[str] = "Code Smells"
-    can_fix: ClassVar[bool] = True
     scanner_binary: ClassVar[str] = c.Infra.QLTY_BINARY
 
     # flext-pulj: process results stay structural outside the Pydantic boundary.
     _scan_cache: ClassVar[MutableMapping[str, p.Cli.CommandOutput]] = {}
-
-    @override
-    def fix(self, project_dir: Path, ctx: m.Infra.GateContext) -> m.Infra.GateExecution:
-        """Apply AST-based fixers for auto-fixable smell findings.
-
-        Runs the same scan as ``check()``, then attempts a registered fixer
-        for every issue whose code has ``auto=true`` in flext-core metadata.
-        Only rewrites files when a fixer actually changes the source.
-        """
-        if ctx.check_only or not ctx.apply_fixes:
-            return self._check_only_fix_result(project_dir)
-        started = time.monotonic()
-        scan = self._workspace_scan(project_dir)
-        issues = self._scanned_issues(scan, project_dir)
-        auto_issues = [issue for issue in issues if self._is_auto_fixable(issue)]
-        changes: list[str] = []
-        for issue in auto_issues:
-            tag = c.Infra.SMELLS_RULE_TAGS.get(issue.code, "")
-            fixer = (
-                FlextInfraBooleanLogicFixer()
-                if tag == FlextInfraBooleanLogicFixer.tag
-                else FlextInfraSmellFixer.smell_fixer_for(tag)
-            )
-            if fixer is None:
-                continue
-            fixed, fix_changes = fixer.fix(project_dir, issue)
-            if fixed:
-                changes.extend(fix_changes)
-        self._scan_cache.pop(self._scan_key(project_dir), None)
-        verified_scan = self._workspace_scan(project_dir)
-        remaining = self._scanned_issues(verified_scan, project_dir)
-        return self._build_check_gate_execution(
-            project_dir,
-            passed=not remaining,
-            issues=remaining,
-            raw_output="\n".join(changes) if changes else verified_scan.stderr,
-            started=started,
-            errors=[issue.formatted for issue in remaining] if remaining else (),
-        )
 
     def _scanned_issues(
         self, scan: p.Cli.CommandOutput, project_dir: Path
@@ -104,12 +58,6 @@ class FlextInfraSmellsGate(FlextInfraGate):
         if not issues and not u.Cli.process_succeeded(scan.outcome):
             return (self._tool_failure_issue(scan),)
         return issues
-
-    @staticmethod
-    def _is_auto_fixable(issue: m.Infra.Issue) -> bool:
-        """Return True when flext-core marks this smell tag as auto-fixable."""
-        tag = c.Infra.SMELLS_RULE_TAGS.get(issue.code, "")
-        return tag in FlextInfraSmellFixer.auto_fixable_smell_tags()
 
     @override
     def check(
@@ -174,12 +122,11 @@ class FlextInfraSmellsGate(FlextInfraGate):
         )
 
     def _scan_command(self, binary: str, project_dir: Path) -> t.StrSequence:
-        """Scan every file of the selected scope, whatever the git diff says.
+        """Name the selected project's paths explicitly; qlty scans them in full.
 
-        Qlty analyzes only changed files unless ``--all`` is passed, even when
-        explicit paths are given; dropping it made the verdict depend on the
-        checkout's diff against upstream (a CI merge checkout read as clean).
-        Paths only narrow the scope to the selected project.
+        Qlty rejects ``--all`` together with explicit ``[PATHS]`` ("the argument
+        '--all' cannot be used with specified [PATHS]"): explicit paths are the
+        complete scope, so the flag is dropped only in that form.
         """
         if not self._project_scoped(project_dir):
             return (binary, *c.Infra.SMELLS_QLTY_ARGS)
@@ -190,7 +137,15 @@ class FlextInfraSmellsGate(FlextInfraGate):
         if not paths:
             message = f"smells: no check targets for {project_dir}"
             raise ValueError(message)
-        return (binary, *c.Infra.SMELLS_QLTY_ARGS, *paths)
+        return (
+            binary,
+            *(
+                arg
+                for arg in c.Infra.SMELLS_QLTY_ARGS
+                if arg != c.Infra.SMELLS_QLTY_ALL_ARG
+            ),
+            *paths,
+        )
 
     @staticmethod
     def _unrunnable_scan_output(stderr: str) -> p.Cli.CommandOutput:

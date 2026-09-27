@@ -98,7 +98,6 @@ class FlextInfraConstantsMake:
         "markdown",
         "markdown-code",
         "canonical-alias",
-        "smells",
     )
     # markdown-format is deliberately absent: prettier is a formatter, so the
     # gate's mutating side is owned by `make fmt` (check = `prettier --check`),

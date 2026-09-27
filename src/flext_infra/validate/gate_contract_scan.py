@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import u
+from flext_infra import t, u
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import p
 
 
 class FlextInfraGateContractScanMixin:
