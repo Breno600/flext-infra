@@ -126,6 +126,16 @@ class FlextInfraWorkspaceCheckGatesMixin:
     _registry: FlextInfraGateRegistry
     _default_reports_dir: Path
     _gate_logger: ClassVar[p.Logger] = u.fetch_logger(__name__)
+    _check_policy: m.Infra.CheckPolicySpec
+
+    def _observe_findings(self, execution: m.Infra.GateExecution) -> bool:
+        """Accept observation only for complete findings under the disabled gate."""
+        return (
+            not self._check_policy.enforcement_enabled
+            and execution.result.gate in self._check_policy.gates
+            and bool(execution.issues)
+            and not any(issue.code == "TOOL_ERROR" for issue in execution.issues)
+        )
 
     def _isolate_context(
         self, ctx: m.Infra.GateContext, target: m.Infra.CheckProjectTarget
@@ -196,7 +206,11 @@ class FlextInfraWorkspaceCheckGatesMixin:
             project_passed: bool = project_result.passed
             if not project_passed:
                 failed += 1
-                if fail_fast:
+                if fail_fast and any(
+                    not execution.result.passed
+                    and not self._observe_findings(execution)
+                    for execution in project_result.gates.values()
+                ):
                     break
         return m.Infra.LoopOutcome(
             results=tuple(results),
@@ -305,20 +319,13 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 gate=gate_id,
                 passed=execution.result.passed,
             )
-            warning = (
-                not execution.result.passed and gate_id in c.Infra.WARNING_GATE_IDS
-            )
+            observed = self._observe_findings(execution)
             u.Cli.gate_result(
                 gate_id,
                 execution.error_count,
-                passed=execution.result.passed or warning,
+                passed=execution.result.passed,
                 elapsed=execution.result.duration,
             )
-            if execution.issues and gate_id in c.Infra.WARNING_GATE_IDS:
-                u.Cli.info(
-                    f"WARNING (non-blocking): {gate_id} reported "
-                    f"{len(execution.issues)} finding(s) for {project_name}"
-                )
             if not execution.result.passed:
                 for finding in execution.result.errors:
                     u.Cli.info(finding)
@@ -328,19 +335,16 @@ class FlextInfraWorkspaceCheckGatesMixin:
                     or any(issue.code == "TOOL_ERROR" for issue in execution.issues)
                 ):
                     u.Cli.info(execution.raw_output)
-                if warning:
-                    # Operator law 2026-09-22: census/structural flood gates
-                    # report findings without blocking the verdict; their
-                    # debts stay owned by beads, not by CI redness.
+                if observed:
                     u.Cli.info(
-                        f"WARNING (non-blocking): {gate_id} reported "
-                        f"{execution.error_count} findings for {project_name}"
+                        f"OBSERVE: {gate_id}: global enforcement disabled; "
+                        f"{len(execution.issues)} findings retained, not conformance"
                     )
                     return r[m.Cli.PipelineStageResult].ok(
                         cli.stage_result(
                             gate_id,
                             status=c.Cli.PipelineStageStatus.OK,
-                            output={"warnings": execution.error_count},
+                            output={"observed_findings": len(execution.issues)},
                         )
                     )
                 return r[m.Cli.PipelineStageResult].fail(

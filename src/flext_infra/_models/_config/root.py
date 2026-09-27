@@ -59,7 +59,7 @@ class FlextInfraConfigModelsRoot:
             FlextInfraConfigModelsArtifact.CheckPolicySpec,
             m.Field(
                 default_factory=FlextInfraConfigModelsArtifact.CheckPolicySpec,
-                description="Quality-gate blocking policy (warning gates)",
+                description="Producer-owned global activation policy for finding gates",
             ),
         ]
         refactor_csv_campaigns: Annotated[

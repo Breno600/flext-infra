@@ -88,6 +88,8 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             msg = f"family part has no Rope scope: {path}"
             raise ValueError(msg)
         owner_name = workspace.convention(path).module_policy.expected_family
+        if owner_name is None:
+            return 0
         owner_scope = next(
             (
                 item

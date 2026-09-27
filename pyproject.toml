@@ -206,6 +206,10 @@ warn_unreachable = true
 warn_unused_ignores = true
 follow_imports = "normal"
 
+[[tool.mypy.overrides]]
+module = ["rope", "rope.*"]
+follow_untyped_imports = true
+
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true

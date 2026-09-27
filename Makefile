@@ -531,7 +531,8 @@ SHARED_RUNTIME := $(if $(filter-out $(PROJECT_ROOT),$(RUNTIME_ROOT)),1,$(if $(st
 # resolves dependency floors from pyproject on every setup, in CI exactly as
 # locally. `--upgrade` advances existing local resolutions; `--refresh` re-reads
 # branch metadata instead of retaining a cached tip (operator 2026-09-14).
-UV_SYNC_FLAGS := $(if $(SHARED_RUNTIME),--all-packages --reinstall-package flext-infra ,)--all-extras --all-groups --upgrade --refresh
+UV_ENVIRONMENT_FLAGS := $(if $(SHARED_RUNTIME),--all-packages --reinstall-package flext-infra ,)--all-extras --all-groups
+UV_SYNC_FLAGS := $(UV_ENVIRONMENT_FLAGS) --upgrade --refresh
 
 ifeq ($(GEN_INIT_ONLY),)
 -include custom.mk
@@ -796,7 +797,7 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'setup' 'Provision the declared environment and hooks.';
 
-	@printf '  %-16s %s\n' 'deps' 'Upgrade, lock, and conform every declared dependency.';
+	@printf '  %-16s %s\n' 'deps' 'Upgrade, conform, and install every declared dependency.';
 
 	@printf '  %-16s %s\n' 'build' 'Build the project distribution artifacts.';
 
@@ -1026,6 +1027,7 @@ _builtin_deps_upgrade: _builtin_require_environment
 	$(PROJECT_FLEXT_INFRA) deps modernize --repository-root "$(PROJECT_ROOT)" \
 		--apply --rewrite-constraints "$$@"
 	$(call _run_for_all_projects,--check)
+	$(UV) sync --project "$(PROJECT_ROOT)" $(UV_ENVIRONMENT_FLAGS) --locked --link-mode "$(UV_LINK_MODE)"
 
 
 # _builtin-self-* targets serve the workspace root itself (project selector

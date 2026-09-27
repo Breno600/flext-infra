@@ -49,7 +49,7 @@ class TestsFlextInfraWorkspaceChecker:
         tm.fail(result)
         tm.that(result.error, is_=str)
         tm.that(result.error, is_=str)
-        tm.that(result.error, has="Use execute_command() directly")
+        tm.that(result.error, has="Use check_payload() directly")
 
     def test_cli_returns_error_without_discovered_projects(
         self, tmp_path: Path

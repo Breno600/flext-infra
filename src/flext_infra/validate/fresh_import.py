@@ -164,8 +164,11 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             output = smoke.value
             if u.Cli.process_succeeded(output.outcome):
                 continue
+            outcome = m.Cli.ProcessOutcome.model_validate(
+                output.outcome, from_attributes=True
+            )
             detail = (
-                f"{probe.subject}: {output.outcome.model_dump_json()}\n"
+                f"{probe.subject}: {outcome.model_dump_json()}\n"
                 f"stdout:\n{output.stdout}\nstderr:\n{output.stderr}"
             )
             if (

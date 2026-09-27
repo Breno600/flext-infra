@@ -300,7 +300,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             file=c.Infra.PYPROJECT_FILENAME,
             line=1,
             column=0,
-            code=FlextInfraDuplicationGate.gate_id,
+            code="TOOL_ERROR",
             message=message or "jscpd returned no parseable report",
             severity=str(c.Infra.GateSeverity.ERROR.value),
         )

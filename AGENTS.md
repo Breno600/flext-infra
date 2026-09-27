@@ -85,21 +85,54 @@ creating another tracker.
 
 ## Commands
 
+Suppression policy is owned by `config/tooling.yaml`, including its operator-authority
+notice. Its existing suppression rules are canonical and protected: every addition,
+removal or scope change requires prior explicit operator authorization for that specific
+change. Do not infer authorization from cleanup, extermination, strictness or green-CI
+requests. Preserve this policy in generators and consumers; no local override may change
+its effective coverage. This operator rule takes precedence over generic suppression
+removal instructions. Analyzers remain blocking under the canonical suppression policy.
+
+Global enforcement activation is declared by `Infra.check_policy` in the producer's
+`config/tooling.yaml`. It starts disabled: covered checks still execute and retain
+their original findings. Observation does not establish conformance. Only operator
+reactivation enables blocking for those conformity findings. Ruff (including formatting
+and Markdown code), Pyrefly, Mypy and Pyright always block. The policy rejects their
+inclusion in observational gates. Broken tools and invocations always fail. Consumer
+repositories do not override this global verdict policy.
+
+The approved development contract is `make dev`: setup, gen, upd, clean, setup,
+gen, fix, fmt, check, tests. With `CI=Y`, it runs setup, gen, fix, fmt, check.
+Pre-commit runs upd, fix, fmt, check with all four analyzers; inherited CI settings
+must not weaken its checks. One typed producer declaration owns these sequences.
+Repeated steps execute independently and stop on the first failure.
+
+`make upd` updates the Mise bootstrap, declared tools and UV packages, applies
+the global compatibility overrides, locks and installs the resolved versions.
+`make setup` installs the committed locks without upgrading; gen and clean preserve
+locks, the external Testmon database and protected evidence. Version uv.lock,
+mise.lock and required backend sidecars. Missing or inconsistent locks fail loudly.
+Compatibility exceptions are one mutable declarative producer list, projected to
+all applicable consumers: initially Prettier 3.5.3, Qlty 0.642.0,
+pydantic-settings<2.15 and structlog<26. Keep the declared Python minor line.
+
+The test verb preserves Testmon incremental selection and the same external database.
+An empty selection remains empty; collection-only inventory proves cache-hit
+deselections and never becomes a full-suite execution.
+
 Correct runtime behavior is the authority. Exercise the real setup, generation and
 consumer paths first, then make tests verify that contract. Never alter the environment
 to preserve an obsolete fixture or treat a passing test as proof of integrated runtime
 behavior.
 
-Provisioning and dependency updates run exclusively through `make setup`. Fix its
-configuration/templates when the lifecycle is wrong; do not install, resolve or
-synchronize dependencies manually. The current operator contract removes `APPLY`,
-`uv.lock` and `mise.lock` throughout producers and consumers. Git dependencies follow
-each repository's declared integration branch tip unless `project.dependency_revisions`
-in `config/workspace.yaml` declares a full commit SHA for that external provider
-dependency. Codegen renders these pins into every dependency group and the matching uv
-transitive overrides; local workspace members cannot be overridden. Publish the validated change through
-a merge-commit PR into that integration branch and verify the remote merge SHA before
-claiming delivery.
+Provisioning and dependency updates run only through their root Make owners. Fix
+configuration/templates instead of installing or resolving dependencies manually.
+Checkouts integrate on the declared integration branch. Internal Git dependencies
+consume the literal latest tag, advanced by publication only after validated
+integration; locks record the exact commit. Missing tags fail without a branch
+fallback. Fork updates consume published versions, never implicit upstream merges.
+Publish through a reviewed merge-commit PR with green CI on the exact candidate,
+then verify the integrated SHA before claiming delivery or starting the next phase.
 
 Every checkout owns its physical `.venv` directory. Setup and runtime verbs reject
 symlinked environments before bootstrap, environment activation, or hooks; they never
@@ -110,9 +143,7 @@ interpreter symlinks inside the environment remain valid; the environment itself
 belong to this workspace.
 
 ```bash
-make setup
-make check
-make test
+make dev
 make build
 ```
 

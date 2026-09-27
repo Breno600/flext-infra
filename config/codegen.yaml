@@ -424,6 +424,7 @@ Infra:
       # gates as CI: mypy pyright security markdown smells). This bans
       # broken code from ever being committed. pre-push adds gen+test.
         - {verb: setup, contexts: [local, ci]}
+        - {verb: deps, contexts: [local]}
         - {verb: gen, contexts: [local, pre_push]}
         - {verb: fmt, contexts: [local, pre_commit]}
         - {verb: fix, contexts: [local, pre_commit]}
@@ -517,7 +518,7 @@ Infra:
         - name: setup
           description: Provision the declared environment and hooks.
         - name: deps
-          description: Upgrade, lock, and conform every declared dependency.
+          description: Upgrade, conform, and install every declared dependency.
         - name: build
           description: Build the project distribution artifacts.
         - name: check

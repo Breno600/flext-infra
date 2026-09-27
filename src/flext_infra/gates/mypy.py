@@ -215,17 +215,13 @@ class FlextInfraMypyGate(FlextInfraGate):
             )
         issues.extend(self._checker_stderr_issues(result, project_dir))
         if (not issues) and not u.Cli.process_succeeded(result.outcome):
-            message = (result.stderr or result.stdout).strip()
-            if not message:
-                message = f"mypy exited with code {result.outcome.raw_return_code} without JSON diagnostics"
             issues.append(
-                m.Infra.Issue(
+                self._command_error_issue(
+                    result,
+                    tool="mypy",
                     file=c.Infra.PYPROJECT_FILENAME,
                     line=1,
                     column=1,
-                    code="mypy-exec",
-                    message=message,
-                    severity=c.Infra.ERROR,
                 )
             )
         return (

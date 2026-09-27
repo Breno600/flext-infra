@@ -209,11 +209,16 @@ module = [
   {{ item | tojson }},
 {% endfor %}
 ]
+{% if override.disable_error_codes %}
 disable_error_code = [
 {% for item in override.disable_error_codes %}
   {{ item | tojson }},
 {% endfor %}
 ]
+{% endif %}
+{% if override.follow_untyped_imports is not none %}
+follow_untyped_imports = {{ override.follow_untyped_imports | lower }}
+{% endif %}
 {% endfor %}
 
 [tool.pydantic-mypy]

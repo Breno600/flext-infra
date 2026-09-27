@@ -60,16 +60,17 @@ class FlextInfraToolTablesPhase:
             if mypy.exclude
             else builder.deprecated(c.Infra.EXCLUDE)
         )
-        builder = builder.value(
-            "overrides",
-            u.normalize_to_json_value([
-                {
-                    "module": list(entry.modules),
-                    "disable_error_code": list(entry.disable_error_codes),
-                }
-                for entry in mypy.overrides
-            ]),
-        )
+        overrides: t.JsonList = []
+        for entry in mypy.overrides:
+            modules: t.JsonList = list(entry.modules)
+            override: t.JsonDict = {"module": modules}
+            if entry.disable_error_codes:
+                codes: t.JsonList = list(entry.disable_error_codes)
+                override["disable_error_code"] = codes
+            if entry.follow_untyped_imports is not None:
+                override["follow_untyped_imports"] = entry.follow_untyped_imports
+            overrides.append(override)
+        builder = builder.value("overrides", overrides)
         settings: t.MappingKV[str, t.JsonValue] = {
             **mypy.boolean_settings,
             **mypy.string_settings,

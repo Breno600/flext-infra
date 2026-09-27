@@ -101,8 +101,15 @@ cache-clearing bypasses are prohibited.
 
 - The first exception, traceback, and non-zero exit propagate unchanged.
 - Warnings, skips, empty output, and missing tools are failures.
-- No retry, fallback, suppression, normalization, partial run, or alternate raw tool
-  path can replace the canonical verb.
+- No retry, fallback, unauthorized suppression, normalization, partial run, or alternate
+  raw tool path can replace the canonical verb.
+- Suppression rules in [`config/tooling.yaml`](../../config/tooling.yaml) are canonical
+  and protected by its operator-authority notice and [`AGENTS.md`](../../AGENTS.md). Any
+  addition, removal or scope change requires prior explicit operator authorization for
+  that specific change. Neither automated repairs nor a request for green CI may alter
+  them. Generators and consumers preserve the policy without local overrides.
+- Ruff, Pyrefly, Mypy and Pyright always block diagnostics under that canonical policy;
+  only conformity findings can be observational while global enforcement is disabled.
 
 ## Scope and generation
 

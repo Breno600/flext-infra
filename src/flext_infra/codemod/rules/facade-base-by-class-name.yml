@@ -1,30 +1,6 @@
-# A facade extends its parent by the class name the parent declares
-# (flext-dv1ga, 2026-09-23; generator-declarations law 1 and 5).
-#
-# A facade module that imports its parent's short letter, subclasses it, and
-# then rebinds the same letter to the subclass binds that letter twice:
-#
-#     from flext_cli import m
-#     class FlextMeltanoModels(m): ...
-#     m = FlextMeltanoModels
-#
-# Type checkers then read `m` as a variable, not a class alias, and every
-# annotation spelled `m.X` (and `t.X`, `c.X`, ...) through that facade resolves
-# to Unknown. The same defect hides behind a private import alias with an
-# annotated rebind (`from flext_cli import m as _cli_m` ...
-# `m: type[FlextInfraModels] = FlextInfraModels`): the annotation declares a
-# variable. The canonical shape imports the parent class and rebinds the letter
-# as a plain alias:
-#
-#     from flext_cli import FlextCliModels
-#     class FlextMeltanoModels(FlextCliModels): ...
-#     m = FlextMeltanoModels
-#
-# Detection-only. The class name is never inferred from package naming: the
-# semantic `facade-base` phase of `make mod` derives it from the parent module
-# that declares the letter in its own `__all__` and rewrites the import, the
-# base, and the rebind in one transaction. Modules that extend a letter without
-# rebinding it (`class FlextInfra(s[...])`) never match.
+# Facades inherit through public letters with separate parent/local bindings.
+# Detect colliding imports and annotated local rebinds. Concrete facade imports
+# belong to canonical alias enforcement; this gate never demands them.
 id: facade-base-by-class-name
 language: python
 severity: error
@@ -41,6 +17,19 @@ rule:
         field: right
         kind: identifier
         pattern: $C
+    - any:
+        - has:
+            field: type
+            regex: .
+        - inside:
+            kind: module
+            stopBy: end
+            has:
+              kind: import_from_statement
+              has:
+                field: name
+                kind: dotted_name
+                pattern: $L
     - inside:
         kind: expression_statement
         inside:
@@ -82,9 +71,8 @@ rule:
                   kind: identifier
                   pattern: $B
 message: >-
-  Facade `$C` extends the parent letter `$B` and rebinds `$L`; extend the class
-  the parent declares for `$L` in its own `__all__` and rebind `$L = $C`.
+  Facade `$C` must inherit through a distinct parent alias and publish `$L = $C`
+  as a plain type alias, without rebinding the imported parent name.
 note: >-
-  Run `make mod`: the facade-base semantic phase derives the parent class name
-  from the parent module's `__all__` and rewrites the import, the base, and an
-  annotated rebind atomically.
+  Run `make mod`: the facade-base phase keeps the public letter import, separates
+  its parent binding, and removes an annotated local rebind atomically.

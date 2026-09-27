@@ -1,4 +1,4 @@
-"""Concrete-syntax rewrite that extends a facade by its parent's class name."""
+"""Concrete-syntax rewrite preserving public parent imports and plain aliases."""
 
 from __future__ import annotations
 
@@ -13,18 +13,15 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
-    """Preserve layout while a facade base moves from letter to class."""
+    """Preserve layout while separating the parent and local facade aliases."""
 
     class _FacadeBaseTransformer(cst.CSTTransformer):
-        """Swap the letter import and base for the parent's declared class."""
+        """Bind the public parent letter under its distinct import alias."""
 
-        def __init__(
-            self, *, shape: t.Quad[str, str, str, str], owner: str, owner_bound: bool
-        ) -> None:
+        def __init__(self, *, shape: t.Quad[str, str, str, str], owner: str) -> None:
             super().__init__()
             self.module, self.imported, self.local, self.facade = shape
             self.owner = owner
-            self.owner_bound = owner_bound
             self.depth = 0
 
         @override
@@ -97,9 +94,12 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
                 )
                 if name != self.imported or bound != self.local:
                     retained.append(updated)
-                elif not self.owner_bound:
+                else:
                     retained.append(
-                        updated.with_changes(name=cst.Name(self.owner), asname=None)
+                        updated.with_changes(
+                            name=cst.Name(self.imported),
+                            asname=cst.AsName(name=cst.Name(self.owner)),
+                        )
                     )
             if not retained:
                 return cst.RemoveFromParent()
@@ -131,22 +131,13 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
 
     @classmethod
     def _rewrite_facade_base_source(
-        cls,
-        source: str,
-        *,
-        shape: t.Quad[str, str, str, str],
-        owner: str,
-        owner_bound: bool,
+        cls, source: str, *, shape: t.Quad[str, str, str, str], owner: str
     ) -> str:
         """Return the facade source extending ``owner`` with its layout kept."""
         return (
             cst
             .parse_module(source)
-            .visit(
-                cls._FacadeBaseTransformer(
-                    shape=shape, owner=owner, owner_bound=owner_bound
-                )
-            )
+            .visit(cls._FacadeBaseTransformer(shape=shape, owner=owner))
             .code
         )
 

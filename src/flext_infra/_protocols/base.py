@@ -549,26 +549,6 @@ class FlextInfraProtocolsBase(Protocol):
             """Canonical template rendering delegate."""
             ...
 
-    @classmethod
-    def is_public_python_module_file(cls, file_name: str) -> bool:
-        """Return whether a file names a public Python module."""
-        ...
-
-    @staticmethod
-    def runtime_singleton_export(file_name: str) -> str | None:
-        """Return the public singleton exported by a runtime module."""
-        ...
-
-    @staticmethod
-    def ordered_namespace_exports(*, export_names: t.StrSequence) -> t.StrSequence:
-        """Order root-package exports with alias hierarchy preserved."""
-        ...
-
-    @classmethod
-    def matches_project_namespace_package(cls, package_name: str) -> bool:
-        """Return whether a package is a governed project namespace root."""
-        ...
-
     @runtime_checkable
     class Validator(Protocol):
         """Contract for validation services."""

@@ -29,6 +29,14 @@ proprietários caducos do handoff.
 
 ## Começar pela decisão pendente
 
+Antes de alterar configuração dos analisadores, leia a autoridade do operador em
+[`config/tooling.yaml`](../../config/tooling.yaml) e a regra em
+[`AGENTS.md`](../../AGENTS.md). As supressões canônicas estão protegidas: adicionar,
+remover ou mudar seu alcance exige autorização prévia e explícita para a mudança
+específica. Pedidos gerais de limpeza, extermínio ou CI verde não são autorização.
+Projeções e configurações locais devem preservar a política. Os quatro analisadores
+continuam bloqueantes para os diagnósticos emitidos sob essa política.
+
 O runtime correto define o comportamento; os testes verificam esse contrato. Extermine
 mocks, ferramentas falsas, acesso a funções privadas e asserções que só verificam como o
 código foi escrito. Substitua-os por entradas e efeitos observáveis através das

@@ -1,13 +1,20 @@
 Infra:
-  # Operator law 2026-09-22: flext-infra's own census/namespace debt stays
-  # visible but never blocks CI; findings print as warnings and the reports
-  # still record them. Root-cause repair continues at the owning campaigns.
+  # Only conformity is observational; all four native analyzers always block.
   check_policy:
-    # flext-1pquc: the model-facade composition debt (~99 no-any-return)
-    # is fleet-visible since the check-complement CI step; it warns while
-    # the debt is ground down at its owner.
-    warning_gates: [runtime-census, namespace, mypy]
+    enforcement_enabled: false
+    gates:
+      - markdown
+      - namespace
+      - runtime-census
+      - silent-failure
+      - duplication
+      - tier-whitelist
   tooling:
+    # OPERATOR AUTHORITY (2026-09-24): suppression rules in this file are canonical.
+    # Every addition, removal or scope change requires prior explicit operator
+    # authorization for that specific change. Cleanup, extermination and green-CI
+    # requests are not authorization. Consumers and generators must preserve this
+    # policy, never override it locally or change an analyzer's effective coverage.
     # flext-j47u (codex): canonical validated tooling and suppression-policy SSOT.
     tools:
       codespell:
@@ -350,10 +357,13 @@ Infra:
           valid-type: Mypy rejects facade namespaces used as owners in valid PEP 695 aliases.
         string-settings:
           follow_imports: normal
-        # No module overrides: this repository owns no foreign module. A
-        # stale override for a module absent from the fleet (dcdoc) shipped
-        # here and silently exempted nothing — removed 2026-09-22 (flext-t5uhw).
-        overrides: []
+        # Operator-authorized 2026-09-24: analyze Rope's installed source even
+        # without py.typed. This enables analysis, without disabling diagnostics
+        # or changing any canonical suppression rule.
+        overrides:
+          - modules: [rope, rope.*]
+            follow-untyped-imports: true
+            justification: https://mypy.readthedocs.io/en/stable/config_file.html#confval-follow_untyped_imports
       pydantic-mypy:
         init_forbid_extra: true
         init_typed: true

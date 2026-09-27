@@ -27,7 +27,7 @@ class TestsFlextInfraPytestRunner:
         expressions = []
         for command in (
             runner.build_selection_command(),
-            runner.build_selection_command(complete=True),
+            runner.build_inventory_command(),
             runner.build_command(report),
             runner.build_coverage_command(report),
         ):
@@ -52,9 +52,11 @@ class TestsFlextInfraPytestRunner:
         names = []
         for command in (
             runner.build_selection_command(),
-            runner.build_selection_command(complete=True),
             suite_command,
+            runner.build_command(report, ("tests/test_runtime.py::test_runtime",)),
         ):
+            assert "--testmon-forceselect" in command
+            assert "--testmon-noselect" not in command
             env_index = command.index("--testmon-env")
             names.append(command[env_index + 1])
         assert len(set(names)) == 1
@@ -147,11 +149,13 @@ class TestsFlextInfraPytestRunner:
         for node_id in (line for line in selection.splitlines() if line):
             tm.that(command, has=node_id)
         tm.that(command, has="--no-cov")
-        tm.that(command, has="--testmon --testmon-noselect")
+        tm.that(command, has="--testmon --testmon-forceselect")
         tm.that((reports_root / latest_name / "coverage.xml").is_file(), eq=False)
 
+        cache_identity = testmon_db.stat().st_ino
         second_exit = tm.ok(self._runner_for(cached_runner_project).execute())
         tm.that(second_exit, eq=0)
+        tm.that(testmon_db.stat().st_ino, eq=cache_identity)
         second_summary = self._summary(reports_root)
         tm.that(
             second_summary,

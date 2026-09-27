@@ -408,15 +408,6 @@ class FlextInfraConfigModelsContexts:
         upstream: Annotated[
             t.NonEmptyStr, m.Field(description="Upstream FLEXT facade module")
         ]
-        upstream_facades: Annotated[
-            Mapping[t.NonEmptyStr, t.NonEmptyStr],
-            m.Field(
-                description=(
-                    "Facade class the upstream declares for each letter in the "
-                    "__all__ that binds it; scaffolded facades extend that class"
-                )
-            ),
-        ]
         inherited_facets: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
