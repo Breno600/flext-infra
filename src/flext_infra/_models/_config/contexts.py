@@ -460,6 +460,15 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        cli_module: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether the package ships its cli entry module; see the "
+                    "ProjectSpec namesake."
+                )
+            ),
+        ]
         runtime_dependency_overlay: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -673,6 +682,18 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        cli_module: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether the package ships its cli entry module. A scaffold "
+                    "renders the cli seed in the same plan; an existing checkout "
+                    "derives the fact from its source tree. The default console "
+                    "script is declared only then, because conform loads every "
+                    "declared entry point in its fresh-import stage."
+                ),
+            ),
+        ] = True
         runtime_dependency_overlay: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
