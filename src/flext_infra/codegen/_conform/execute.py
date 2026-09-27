@@ -490,7 +490,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             lambda: self._validate_managed_fixed_point(
                 request,
                 with_docs.value,
-                transaction,
                 owned_lazy_analysis,
                 docs_analysis,
                 verified_plan,
@@ -643,7 +642,6 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         self,
         request: m.Infra.CodegenConformRequest,
         session: m.Infra.CodegenTransactionSession,
-        transaction: FlextInfraCodegenTransaction,
         lazy_analysis: m.Infra.CodegenPhaseAnalysis,
         docs_analysis: m.Infra.CodegenPhaseAnalysis,
         verified_plan: list[m.Infra.CodegenPlan],
@@ -672,11 +670,15 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 f"codegen publication did not reach a fixed point: {paths}\n{drift}"
             )
         u.Cli.info("stage=verify-lazy-init-receipt")
-        lazy_fixed_point = transaction.validate_phase_analysis_locked(lazy_analysis)
+        lazy_fixed_point = FlextInfraCodegenTransaction.validate_phase_analysis_locked(
+            lazy_analysis
+        )
         if lazy_fixed_point.failure:
             return r[bool].from_failure(lazy_fixed_point)
         u.Cli.info("stage=verify-docs-receipt")
-        docs_fixed_point = transaction.validate_phase_analysis_locked(docs_analysis)
+        docs_fixed_point = FlextInfraCodegenTransaction.validate_phase_analysis_locked(
+            docs_analysis
+        )
         if docs_fixed_point.failure:
             return r[bool].from_failure(docs_fixed_point)
         mise = FlextInfraCodegenMiseArtifacts(repository_root=request.root)

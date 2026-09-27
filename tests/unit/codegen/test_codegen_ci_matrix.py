@@ -512,7 +512,7 @@ class TestsFlextInfraCodegenCiMatrix:
     def test_host_legs_bootstrap_only_through_make_setup(
         self, rendered_project: Path
     ) -> None:
-        """MacOS and Windows bootstrap through the same Make surface."""
+        """MacOS and Windows bootstrap and run one lifecycle through Make."""
         root = rendered_project
         content = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
             encoding="utf-8"
@@ -523,8 +523,9 @@ class TestsFlextInfraCodegenCiMatrix:
         windows = content.split("\n  windows:", maxsplit=1)[1]
         for host in (macos, windows):
             tm.that(host, has="run: CI=Y make setup")
-            tm.that(host, has="run: CI=Y make help")
-        tm.that(windows.count("shell: bash"), eq=3)
+        verbs = [re.findall(r"CI=Y make (\S+)", host) for host in (macos, windows)]
+        tm.that(verbs[0], eq=verbs[1])
+        tm.that(windows.count("shell: bash"), eq=windows.count("run:"))
 
     def test_runtime_jobs_supply_the_native_github_credential(
         self, rendered_project: Path

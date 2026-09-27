@@ -75,16 +75,20 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         self,
         project_path: Path,
         *,
-        deps_service: p.Infra.DepsService,
-        typing_deps: p.Infra.TypingsDepsService | None,
         venv_bin: Path,
         limits_path: Path,
         params: m.Infra.DetectCommand,
-        do_typings: bool,
         projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]],
     ) -> p.Result[bool]:
         """Run deptry + optional typings detection/apply for one project."""
         detector = self._detector
+        deps_service = detector.deps
+        typing_deps = (
+            deps_service
+            if isinstance(deps_service, p.Infra.TypingsDepsService)
+            else None
+        )
+        do_typings = params.typings or params.apply_typings
         project_name = project_path.name
         if not params.quiet:
             detector.log.info("deps_deptry_running", project=project_name)

@@ -21,32 +21,6 @@ class FlextInfraRefactorCensusObjectsMixin:
     """
 
     @staticmethod
-    def _raw_violation(
-        *,
-        project: str,
-        object_name: str,
-        object_kind: str,
-        kind: str,
-        file_path: Path,
-        line: int,
-        description: str,
-        fixable: bool = False,
-        fix_action: str = "",
-    ) -> m.Infra.Violation:
-        """Raw violation."""
-        return m.Infra.Violation(
-            project=project,
-            object_name=object_name,
-            object_kind=object_kind,
-            kind=kind,
-            file_path=str(file_path),
-            line=line,
-            fixable=fixable,
-            fix_action=fix_action,
-            description=description,
-        )
-
-    @staticmethod
     def _selected_families(family_names: t.StrSequence | None) -> frozenset[str]:
         """Return the selected families."""
         if not family_names:
@@ -66,12 +40,12 @@ class FlextInfraRefactorCensusObjectsMixin:
         fix_action: str = "",
     ) -> m.Infra.Violation:
         """Violation."""
-        return FlextInfraRefactorCensusObjectsMixin._raw_violation(
+        return m.Infra.Violation(
             project=item.project,
             object_name=item.name,
             object_kind=item.kind,
             kind=kind,
-            file_path=Path(item.file_path),
+            file_path=item.file_path,
             line=item.line,
             description=description,
             fixable=fixable,

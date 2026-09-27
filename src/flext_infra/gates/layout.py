@@ -55,7 +55,6 @@ class FlextInfraLayoutGate(FlextInfraGate):
             issues=issues,
             raw_output="\n".join(issue.formatted for issue in issues),
             started=started,
-            ctx=ctx,
         )
 
 

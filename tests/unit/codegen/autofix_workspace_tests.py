@@ -54,6 +54,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
             },
         )
         u.Tests.declare_workspace_projects(tmp_path, (managed_project.name,))
+        u.Tests.provision_checkout(managed_project)
         fixer = FlextInfraCodegenFixer(repository_root=tmp_path)
         results = fixer.fix_workspace()
         project_names = [res.project for res in results]

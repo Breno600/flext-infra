@@ -23,7 +23,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         versions: t.StrMapping,
     ) -> p.Result[m.Infra.BuildRecord]:
         """Build one project; its fail-loud error becomes its failed, logged record."""
-        name, path = target
+        name = target[0]
         log = self._release_dir(ctx.repository_root, ctx.tag) / f"build-{name}.log"
         try:
             with TemporaryDirectory(prefix=f"{name}-", dir=log.parent) as temporary:
@@ -39,7 +39,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         written = self._write_release_text(
             log, (built.error or "release build failed") + "\n"
         )
-        return written.map(lambda _: self._record(name, path, log, exit_code=1))
+        return written.map(lambda _: self._record(target, log, exit_code=1))
 
     def _build_staged(
         self,
@@ -75,16 +75,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         if ctx.dry_run:
             return self._write_release_text(
                 log, f"release metadata staged and validated: {name}\n"
-            ).map(
-                lambda _: self._record(
-                    name,
-                    path,
-                    log,
-                    exit_code=0,
-                    snapshot=snapshot,
-                    source_license_sha256=license_sha256,
-                )
-            )
+            ).map(lambda _: self._record(target, log, exit_code=0, source=staged.value))
         dist = temporary / "dist"
         build = u.Cli.run_raw(
             [
@@ -113,12 +104,10 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         if not u.Cli.process_succeeded(build.value.outcome):
             return r[m.Infra.BuildRecord].ok(
                 self._record(
-                    name,
-                    path,
+                    target,
                     log,
                     exit_code=build.value.outcome.raw_return_code,
-                    snapshot=snapshot,
-                    source_license_sha256=license_sha256,
+                    source=staged.value,
                 )
             )
         artifacts = self._persist_artifacts(
@@ -130,13 +119,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         )
         return artifacts.map(
             lambda built: self._record(
-                name,
-                path,
-                log,
-                exit_code=0,
-                artifacts=built,
-                snapshot=snapshot,
-                source_license_sha256=license_sha256,
+                target, log, exit_code=0, artifacts=built, source=staged.value
             )
         )
 

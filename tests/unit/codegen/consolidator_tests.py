@@ -114,6 +114,7 @@ class TestsFlextInfraCodegenConsolidator:
             'from __future__ import annotations\n\nVALUE = "demo"\n', encoding="utf-8"
         )
         u.Tests.declare_workspace_projects(repository_root, ("flext-demo",))
+        u.Tests.provision_checkout(repository_root)
         return repository_root
 
     def _write_wrapper_consumer(self, repository_root: Path, segment: str) -> Path:

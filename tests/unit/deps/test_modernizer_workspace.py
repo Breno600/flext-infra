@@ -8,7 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraPyprojectModernizer, config, main, u as infra_u
-from tests import c, u
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -182,7 +182,11 @@ class TestsFlextInfraDepsModernizerWorkspace:
                 tomlsort_sort_first=sort_first,
             )
         )
-        rendered = tm.ok(modernizer.conform_source(source, path=pyproject))
+        rendered = tm.ok(
+            modernizer.conform_source(
+                source, path=pyproject, topology=m.Infra.PyprojectDeclaredTopology()
+            )
+        )
         tm.that(rendered.count("[project]"), eq=1)
         payload = u.Cli.toml_mapping_from_text(rendered)
         tm.that(payload, none=False)

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -32,6 +30,27 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
     _PYI_SUFFIX: ClassVar[str] = ".pyi"
 
     if TYPE_CHECKING:
+        include_local_scopes: bool
+
+        @property
+        def project_names(self) -> t.StrSequence | None:
+            """Selected projects of the composed census service."""
+            ...
+
+        @property
+        def kind_names(self) -> t.StrSequence | None:
+            """Normalized symbol-kind filters of the census service."""
+            ...
+
+        @property
+        def rule_names(self) -> t.StrSequence | None:
+            """Normalized violation-rule filters of the census service."""
+            ...
+
+        @property
+        def family_names(self) -> t.StrSequence | None:
+            """Normalized family filters of the census service."""
+            ...
 
         @staticmethod
         def _selected_families(family_names: t.StrSequence | None) -> frozenset[str]:
@@ -44,12 +63,7 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             module: m.Infra.RopeModuleIndexEntry,
             scan_config: m.Infra.ScanConfig,
             *,
-            project_objects: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Object]],
-            project_violations: t.MappingKV[
-                str, t.MutableSequenceOf[m.Infra.Violation]
-            ],
-            project_fixes: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Fix]],
-            report_projects: set[str],
+            findings: m.Infra.ScanFindings,
         ) -> None:
             """Scan through the composed census collection mixin."""
             ...
@@ -58,12 +72,8 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             self,
             rope: p.Infra.RopeWorkspaceDsl,
             *,
-            project_objects: t.MappingKV[str, t.SequenceOf[m.Infra.Object]],
-            project_violations: t.MappingKV[str, t.SequenceOf[m.Infra.Violation]],
-            project_fixes: t.MappingKV[str, t.SequenceOf[m.Infra.Fix]],
-            report_projects: set[str],
-            rule_names: t.StrSequence | None,
-            selected_rules: frozenset[str] | None,
+            findings: m.Infra.ScanFindings,
+            scan_config: m.Infra.ScanConfig,
         ) -> m.Infra.WorkspaceReport:
             """Assemble through the composed census collection mixin."""
             ...
@@ -202,17 +212,14 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         )
 
     def _collect_report(
-        self,
-        rope: p.Infra.RopeWorkspaceDsl,
-        *,
-        project_names: t.StrSequence | None,
-        kind_names: t.StrSequence | None,
-        family_names: t.StrSequence | None,
-        rule_names: t.StrSequence | None,
-        include_local_scopes: bool,
-        applied: frozenset[str],
+        self, rope: p.Infra.RopeWorkspaceDsl, *, applied: frozenset[str]
     ) -> m.Infra.WorkspaceReport:
         """Scan selected modules then assemble the workspace census report."""
+        project_names = self.project_names
+        kind_names = self.kind_names
+        rule_names = self.rule_names
+        include_local_scopes = self.include_local_scopes
+        family_names = self.family_names
         selected_families = self._selected_families(family_names)
         selected_rules: frozenset[str] | None = (
             frozenset(rule_names) if rule_names else None
@@ -232,33 +239,17 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             include_local_scopes=include_local_scopes,
             applied=applied,
         )
-        project_objects: MutableMapping[str, list[m.Infra.Object]] = defaultdict(list)
-        project_violations: MutableMapping[str, list[m.Infra.Violation]] = defaultdict(
-            list
+        findings = m.Infra.ScanFindings(
+            project_objects={},
+            project_violations={},
+            project_fixes={},
+            report_projects=set(),
         )
-        project_fixes: MutableMapping[str, list[m.Infra.Fix]] = defaultdict(list)
-        report_projects: set[str] = set()
         for module in self._modules_for_rules(
             rope, project_names=project_names, rule_names=rule_names
         ):
-            self._scan_module(
-                rope,
-                module,
-                scan_config,
-                project_objects=project_objects,
-                project_violations=project_violations,
-                project_fixes=project_fixes,
-                report_projects=report_projects,
-            )
-        return self._assemble_report(
-            rope,
-            project_objects=project_objects,
-            project_violations=project_violations,
-            project_fixes=project_fixes,
-            report_projects=report_projects,
-            rule_names=rule_names,
-            selected_rules=selected_rules,
-        )
+            self._scan_module(rope, module, scan_config, findings=findings)
+        return self._assemble_report(rope, findings=findings, scan_config=scan_config)
 
 
 __all__: list[str] = ["FlextInfraRefactorCensusCollectHelpersMixin"]

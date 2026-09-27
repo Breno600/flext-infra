@@ -160,20 +160,20 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         ) != len(renamed):
             msg = f"family wrapper prefix collision is ambiguous: {path}:{wrapper_name}"
             raise ValueError(msg)
-        wrapper = owner_scope.get_defined_names()[wrapper_name]
+        flatten = m.Infra.FamilyWrapperFlatten(
+            project=project,
+            owner_name=owner_name,
+            wrapper_name=wrapper_name,
+            wrapper=owner_scope.get_defined_names()[wrapper_name],
+            names=renamed,
+        )
         candidate_rewrites: dict[Path, list[m.Infra.SourceRewrite]] = {}
         for consumer, source in sources.items():
             if source.startswith(c.Infra.AUTOGEN_HEADERS):
                 continue
             resource = project.get_resource(consumer.relative_to(root).as_posix())
             blocked, changes = cls._family_consumer_rewrites(
-                project,
-                resource,
-                source,
-                owner_name=owner_name,
-                wrapper_name=wrapper_name,
-                wrapper=wrapper,
-                names=renamed,
+                resource, source, flatten=flatten
             )
             if blocked:
                 # A consumer treats the wrapper as a real entity; preserve the

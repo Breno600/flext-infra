@@ -116,11 +116,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         result: p.Cli.CommandOutput,
         origin: dict[str, t.Pair[str, int]],
         *,
-        default_code: str,
         default_message: str,
         file_pattern: re.Pattern[str],
     ) -> t.SequenceOf[m.Infra.Issue]:
-        """Translate one ruff result into origin-mapped gate findings.
+        """Translate one ruff result into origin-mapped findings coded with this gate.
 
         A failed run without mapped findings never reads as a clean pass: the
         tool-level error becomes the finding.
@@ -132,7 +131,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 self._origin_issue(
                     origin,
                     match.group("file"),
-                    code=default_code,
+                    code=self.gate_id,
                     message=default_message,
                     line=int(match.groupdict().get("line", 1) or 1),
                 )
@@ -182,7 +181,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                         project_dir,
                         formatted,
                         origin,
-                        default_code=self.gate_id,
                         default_message=(
                             "embedded block does not survive the format round-trip"
                         ),
@@ -197,7 +195,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                         project_dir,
                         formatted,
                         origin,
-                        default_code=self.gate_id,
                         default_message=(
                             "embedded code is not ruff-formatted (repair belongs to `make fix`)"
                         ),
@@ -321,13 +318,12 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 started,
                 message=f"{self.gate_id}: no embedded documentation code found",
             )
-        return self._build_check_gate_execution(
+        return self._build_gate_execution(
             project_dir,
-            passed=passed,
+            verdict=passed,
             issues=issues,
             raw_output="\n".join(issue.formatted for issue in issues),
             started=started,
-            accept_reported_issues=True,
         )
 
 

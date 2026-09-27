@@ -62,24 +62,24 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         )
         with u.Infra.open_project(project_root) as rope_project:
             for filepath in files:
-                tree_result = self._parse_file(rope_project, filepath)
-                if tree_result.failure:
+                module_result = self._parse_file(rope_project, filepath)
+                if module_result.failure:
                     rel = filepath.relative_to(project_root)
                     violations.append(
                         f"[NS-PARSE-001] {rel}:1 — "
-                        f"{tree_result.error or 'Rope AST unavailable'}"
+                        f"{module_result.error or 'Rope AST unavailable'}"
                     )
                     continue
-                tree = tree_result.value
                 rel = filepath.relative_to(project_root)
                 violations.extend(
                     self.check_module(
-                        tree,
+                        m.Infra.ParsedPythonModule(
+                            source=filepath.read_text(encoding=c.Cli.ENCODING_DEFAULT),
+                            tree=module_result.value,
+                        ),
                         rel,
                         class_stem=prefix,
                         package_name=package_name,
-                        source=filepath.read_text(encoding=c.Cli.ENCODING_DEFAULT),
-                        is_test_file=self._is_test_file(rel),
                         policy=u.Infra.publication_policy(
                             filepath, rope_project=rope_project
                         ),
@@ -129,8 +129,8 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
 
     def _parse_file(
         self, rope_project: t.Infra.RopeProject, path: Path
-    ) -> p.Result[t.Infra.RopeAstNode]:
-        """Return the AST module for ``path`` via rope.
+    ) -> p.Result[t.Infra.RopePyModule]:
+        """Return the parsed Rope module for ``path``.
 
         ``r.ok(module)`` on success. ``r.fail(reason)`` when the resource
         cannot be fetched, the module fails to parse, or rope returns no
@@ -140,19 +140,18 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         try:
             resource = u.Infra.fetch_python_resource(rope_project, path)
         except c.EXC_OS_SYNTAX as exc:
-            return r[t.Infra.RopeAstNode].fail(
+            return r[t.Infra.RopePyModule].fail(
                 f"fetch_python_resource raised: {exc!s}", exception=exc
             )
         if resource is None:
-            return r[t.Infra.RopeAstNode].fail(f"no rope resource for {path}")
+            return r[t.Infra.RopePyModule].fail(f"no rope resource for {path}")
         try:
             pymodule = u.Infra.resolve_pymodule(rope_project, resource)
         except c.EXC_OS_SYNTAX as exc:
-            return r[t.Infra.RopeAstNode].fail(
+            return r[t.Infra.RopePyModule].fail(
                 f"resolve_pymodule raised: {exc!s}", exception=exc
             )
-        ast_module = pymodule.get_ast()
-        return r[t.Infra.RopeAstNode].ok(ast_module)
+        return r[t.Infra.RopePyModule].ok(pymodule)
 
     @staticmethod
     def _layout_violations(package_dir: Path | None) -> t.StrSequence:
@@ -193,11 +192,6 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
                     f"[NS-LAYOUT-{len(messages) + 1:03d}] {family} must begin with base.py"
                 )
         return tuple(messages)
-
-    @staticmethod
-    def _is_test_file(rel_path: Path) -> bool:
-        """Return True when the file lives under the project's ``tests/`` tree."""
-        return any(part == c.Infra.DIR_TESTS for part in rel_path.parts)
 
 
 __all__: list[str] = ["FlextInfraNamespaceValidator"]

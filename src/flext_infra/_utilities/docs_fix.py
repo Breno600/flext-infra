@@ -157,10 +157,13 @@ class FlextInfraUtilitiesDocsFix:
         FlextInfraUtilitiesDocs.docs_write_phase_reports(
             scope,
             phase="fix",
-            heading="Docs Fix Report",
-            columns=("file", "link_fixes", "toc_updates"),
-            rows=tuple((item.file, str(item.links), str(item.toc)) for item in items),
-            items=items,
+            table=m.Cli.TableRenderRequest(
+                title="Docs Fix Report",
+                columns=("file", "link_fixes", "toc_updates"),
+                rows=tuple(
+                    (item.file, str(item.links), str(item.toc)) for item in items
+                ),
+            ),
             apply=apply,
         )
 

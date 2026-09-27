@@ -13,7 +13,7 @@ from flext_tests import tm
 from flext_infra import config
 from flext_infra.check import FlextInfraGateRegistry
 from flext_infra.gates import FlextInfraCanonicalAliasGate
-from tests import c, m
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -26,6 +26,7 @@ class TestsFlextInfraGateRegistry:
         (project_dir / "pyproject.toml").write_text(
             '[project]\nname = "flext-infra"\nversion = "0.1.0"\n', encoding="utf-8"
         )
+        u.Tests.provision_checkout(project_dir)
         return FlextInfraCanonicalAliasGate(tmp_path).fix(
             project_dir,
             m.Infra.GateContext(
@@ -120,6 +121,7 @@ class TestsFlextInfraGateRegistry:
         (project_dir / "pyproject.toml").write_text(
             '[project]\nname = "flext-infra"\nversion = "0.1.0"\n', encoding="utf-8"
         )
+        u.Tests.provision_checkout(project_dir)
         gate = FlextInfraCanonicalAliasGate(tmp_path)
         context = m.Infra.GateContext(
             repository_root=tmp_path, reports_dir=tmp_path / "reports", apply_fixes=True

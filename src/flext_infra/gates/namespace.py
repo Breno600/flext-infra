@@ -24,6 +24,7 @@ class FlextInfraNamespaceGate(FlextInfraGate):
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
         """Run NS-000..003 validation scoped to ``project_dir``."""
+        _ = ctx
         started = time.monotonic()
         validator = FlextInfraNamespaceValidator()
         report_result = validator.validate_project(project_dir)
@@ -34,11 +35,10 @@ class FlextInfraNamespaceGate(FlextInfraGate):
                 passed=False,
                 errors=[report_result.error or "namespace validation failed"],
                 started=started,
-                ctx=ctx,
             )
         violations: list[str] = [] if passed else list(report_result.value.violations)
         return self._build_project_error_gate_result(
-            project_dir, passed=passed, errors=violations, started=started, ctx=ctx
+            project_dir, passed=passed, errors=violations, started=started
         )
 
 

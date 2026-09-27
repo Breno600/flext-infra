@@ -122,7 +122,6 @@ class TestsFlextInfraRuntimeAliasDeclarations:
                     u.Infra.resolve_pymodule(rope.rope_project, resource).get_ast(),
                     source.relative_to(repository),
                     class_stem=layout.class_stem,
-                    is_test_file=False,
                     source=repaired,
                     policy=policy,
                 ),
