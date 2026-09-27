@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, u
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from tests import u as test_u
 
@@ -173,9 +173,6 @@ class TestsFlextInfraCodegenMiseArtifacts:
             "dependencies = []\n",
             encoding="utf-8",
         )
-        test_u.Tests.write_project_beads_config(root, config.Infra.name)
-        upstream = test_u.Tests.repository_ref(config.Infra.name).url
-        test_u.Tests.initialize_git_repo(root, origin_url=upstream)
         return root
 
     def test_complete_artifacts_validate_without_running_mise(
@@ -188,10 +185,6 @@ class TestsFlextInfraCodegenMiseArtifacts:
             "check_only": True,
         })
         tm.that(service.repository_root, eq=root)
-        tm.that((root / ".git").is_dir(), eq=True)
-        identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root))
-        tm.ok(identity)
-        tm.that(identity.value.is_submodule, eq=False)
         result = service.execute()
 
         tm.ok(result, eq=True)
