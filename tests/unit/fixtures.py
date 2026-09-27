@@ -148,12 +148,24 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     # invocation is receipted next to the boundary.
     environment = tm.ok(u.Tests.create_python_environment(root))
     _ = environment
+    u.Tests.copy_tracked_mise_seeds(root)
     u.Tests.write_executable(
         root / c.Infra.VENV_BIN_REL / c.Infra.DEPTRY,
         "#!/bin/sh\n"
         'printf "%s\\n" "$*" >> "$0.invocations.log"\n'
         'printf \'{"issues": []}\\n\'\n'
         "exit 0\n",
+    )
+    u.Tests.write_executable(
+        root / c.Infra.VENV_BIN_REL / "uv",
+        "#!/bin/sh\n"
+        'printf "%s\\n" "$*" >> "$0.invocations.log"\n'
+        'printf \'{"issues": []}\\n\'\n'
+        "exit 0\n",
+    )
+    (root / "uv.lock").write_text(
+        'version = 1\nrequires-python = ">=3.13"\n\n[options]\nexclude-newer = ""\n',
+        encoding=c.Cli.ENCODING_DEFAULT,
     )
     tm.that((root / c.Infra.VENV_BIN_REL / c.Infra.DEPTRY).is_file(), eq=True)
     (root / "limits.toml").write_text(
