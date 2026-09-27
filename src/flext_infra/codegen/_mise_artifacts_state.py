@@ -591,6 +591,15 @@ class FlextInfraMiseArtifactsState:
                 )
                 if authorized.failure:
                     return r[bool].from_failure(authorized)
+        # Foreign residents inside recorded temporary trees never block the
+        # restore itself. The journal receipt authenticates the destinations;
+        # staging residue revokes only the cleanup, which still fails closed
+        # after the rollback (guarded deletion refuses unmanifested or
+        # non-empty trees), so a mixed recovery retains the journal and the
+        # foreign bytes instead of stranding published destinations behind
+        # them. Pre-restore authentication of every recorded tree and resident
+        # aborted the rollback before it started, which replaced the tested
+        # mixed outcome with a lost publication.
         return r[bool].ok(True)
 
     @classmethod

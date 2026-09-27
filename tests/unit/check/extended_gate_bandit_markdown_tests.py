@@ -36,14 +36,17 @@ class TestsFlextInfraBanditAndMarkdownGates:
 
         tm.that(result.issues[0].code, eq="B101")
 
-    def test_bandit_rejects_missing_source_scope(self, tmp_path: Path) -> None:
+    def test_bandit_without_source_tree_has_no_audit_surface(
+        self, tmp_path: Path
+    ) -> None:
+        """A project without ``src`` declares no package to audit (d94decf10)."""
         _, project_dir = u.Tests.create_checker_project(tmp_path)
 
         result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
 
-        tm.that(result.result.passed, eq=False)
-        tm.that(len(result.result.errors), eq=1)
-        tm.that(len(result.issues), eq=0)
+        tm.that(result.result.passed, eq=True)
+        tm.that(result.result.errors, empty=True)
+        tm.that(result.issues, empty=True)
 
     def test_bandit_scans_large_tree_with_sanitized_path(self, tmp_path: Path) -> None:
         """The workspace interpreter runs Bandit without any PATH-provided tool."""

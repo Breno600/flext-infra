@@ -35,21 +35,31 @@ type Nested[Value] = Permuted[Value, list[Value]]
 class Order(m.FrozenModel):
     """A validated order."""
 
-    sku: str
-    quantity: int = 1
-    tags: t.VariadicTuple[str] = ()
-    permuted: Permuted[int, str] = ("tag", 1)
-    repeated: Repeated[int] = (1, 2)
-    unused: Unused[str, int] = ()
-    identity: Identity[str] = "identity"
-    nested: Nested[int] = ([1], 1)
-    factory: type[str] = str
+    sku: str = m.Field(description="Stock keeping unit of the ordered item.")
+    quantity: int = m.Field(default=1, description="Number of units ordered.")
+    tags: t.VariadicTuple[str] = m.Field(default=(), description="Order labels.")
+    permuted: Permuted[int, str] = m.Field(
+        default=("tag", 1), description="Order type parameter permutation."
+    )
+    repeated: Repeated[int] = m.Field(
+        default=(1, 2), description="Order type parameter repetition."
+    )
+    unused: Unused[str, int] = m.Field(
+        default=(), description="Order type parameter tail."
+    )
+    identity: Identity[str] = m.Field(
+        default="identity", description="Order type parameter identity."
+    )
+    nested: Nested[int] = m.Field(
+        default=([1], 1), description="Order type parameter nesting."
+    )
+    factory: type[str] = m.Field(default=str, description="Order factory type.")
 
 
 class Shipment(m.FrozenModel):
     """A validated shipment referencing its order."""
 
-    order: Order | None = None
+    order: Order | None = m.Field(default=None, description="Shipped order.")
 
 
 type Payload = Order | Shipment
@@ -233,7 +243,12 @@ def test_check_only_reports_drift(member_root: Path) -> None:
     assert _service(member_root, apply=True).execute().success
     models_path = member_root / "src" / MEMBER / "models.py"
     models_path.write_text(
-        MODELS.replace("sku: str", "sku: str\n    weight: float"), encoding="utf-8"
+        MODELS.replace(
+            'sku: str = m.Field(description="Stock keeping unit of the ordered item.")',
+            'sku: str = m.Field(description="Stock keeping unit of the ordered item.")\n'
+            '    weight: float = m.Field(default=1.0, description="Drift probe weight.")',
+        ),
+        encoding="utf-8",
     )
     for name in [key for key in sys.modules if key.startswith(MEMBER)]:
         del sys.modules[name]

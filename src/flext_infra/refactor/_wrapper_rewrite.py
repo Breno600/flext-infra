@@ -82,6 +82,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         accumulator.per_project_changes[project_name] += 1
         accumulator.per_project_replacements[project_name] += replacements
         if not self.effective_dry_run and core_updated != source:
+            accumulator.expected_sources[file_path] = source
             accumulator.updates[file_path] = core_updated
 
     @staticmethod
@@ -108,18 +109,17 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
             ):
                 continue
             parent_attr = getattr(node, "value", None)
-            if not hasattr(parent_attr, "_fields"):
+            if not u.Infra.ast_node(parent_attr):
                 continue
             if (
-                parent_attr is None
-                or u.Infra.node_kind(parent_attr) != "Attribute"
+                u.Infra.node_kind(parent_attr) != "Attribute"
                 or getattr(parent_attr, "attr", "") != "Core"
             ):
                 continue
             base_name = getattr(parent_attr, "value", None)
-            if not hasattr(base_name, "_fields"):
+            if not u.Infra.ast_node(base_name):
                 continue
-            if base_name is None or u.Infra.node_kind(base_name) != "Name":
+            if u.Infra.node_kind(base_name) != "Name":
                 continue
             base_id = getattr(base_name, "id", "")
             if base_id not in runtime_aliases:

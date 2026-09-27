@@ -18,3 +18,21 @@ snapshots:
       style: primary
       start: 0
       end: 48
+  import flext_core._models:
+    labels:
+    - source: import flext_core._models
+      style: primary
+      start: 0
+      end: 25
+  import flext_core._utilities.guards as guards:
+    labels:
+    - source: import flext_core._utilities.guards as guards
+      style: primary
+      start: 0
+      end: 45
+  import os, flext_core._typings:
+    labels:
+    - source: import os, flext_core._typings
+      style: primary
+      start: 0
+      end: 30

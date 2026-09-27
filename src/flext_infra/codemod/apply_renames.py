@@ -128,12 +128,21 @@ class FlextInfraApplyRenames:
         roots: t.SequenceOf[Path],
         pairs: t.SequenceOf[t.Pair[str, str]],
     ) -> p.Result[bool]:
-        """Rewrite code nodes first, then remaining text occurrences."""
+        """Rewrite code nodes first, then remaining text occurrences.
+
+        The structural pass is bound to Python: without a declared language
+        ast-grep parses every file under the roots with its extension's
+        grammar, and a dotted pattern then matches whole prose paragraphs in
+        Markdown and replaces them with the new name. Every other text file is
+        owned by the word-boundary pass below.
+        """
         root_args = tuple(str(root) for root in roots)
         for old, new in pairs:
             run_result = u.Cli.run_raw((
                 c.Infra.SG,
                 "run",
+                "--lang",
+                c.Infra.PYTHON,
                 "-p",
                 old,
                 "-r",

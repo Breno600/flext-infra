@@ -58,7 +58,8 @@ class FlextInfraConstantsMake:
     MYPY_MEMORY_LIMIT_MB_ENV: ClassVar[str] = "MYPY_MEMORY_LIMIT_MB"
     MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
     MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 600
+    MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
+    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 100
     MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
     PRLIMIT_COMMAND: ClassVar[str] = "prlimit"
     PRLIMIT_ADDRESS_SPACE_OPTION: ClassVar[str] = "--as"
@@ -97,7 +98,6 @@ class FlextInfraConstantsMake:
         "markdown",
         "markdown-code",
         "canonical-alias",
-        "smells",
     )
     # markdown-format is deliberately absent: prettier is a formatter, so the
     # gate's mutating side is owned by `make fmt` (check = `prettier --check`),
@@ -150,9 +150,6 @@ class FlextInfraConstantsMake:
     PYTEST_ENV_TESTMON_DATAFILE: ClassVar[str] = "TESTMON_DATAFILE"
     PYTEST_ENV_COLLECTION_MANIFEST: ClassVar[str] = "FLEXT_PYTEST_COLLECTION_MANIFEST"
     PYTEST_WARNING_EVENTS_SUFFIX: ClassVar[str] = ".warnings.jsonl"
-    PYTEST_COVERAGE_FAILURE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"(?:Coverage failure:|required test coverage .* not reached)", re.IGNORECASE
-    )
     PYTEST_INHERITED_ENV_REMOVE_KEYS: ClassVar[t.StrSequence] = (
         "PYTEST_ADDOPTS",
         "PYTHONPATH",

@@ -26,11 +26,10 @@ class FlextInfraUtilitiesManagedConflicts:
     def pyproject_managed_file() -> p.Result[m.Infra.ManagedFileSpec]:
         """Return the pyproject ManagedFileSpec. Missing declaration is a bug."""
         for item in FlextInfraConfig.fetch_global().Infra.codegen.managed_files:
-            if item.path.as_posix() == c.Infra.PYPROJECT_FILENAME:
+            if item.path.as_posix() == c.PYPROJECT_FILENAME:
                 return r[m.Infra.ManagedFileSpec].ok(item)
         return r[m.Infra.ManagedFileSpec].fail(
-            "codegen.yaml templates.managed_files must declare "
-            f"{c.Infra.PYPROJECT_FILENAME}"
+            f"codegen.yaml templates.managed_files must declare {c.PYPROJECT_FILENAME}"
         )
 
     @classmethod

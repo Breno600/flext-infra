@@ -25,14 +25,11 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
         """Snapshot one target and bind it to exact desired bytes and mode."""
         project = root.expanduser().absolute()
         path = (project / relative_path).absolute()
-        # Generation owns the destination directory of every artifact it
-        # declares. Reading the before-state of a declared file whose parent
-        # does not exist yet fails on the missing parent rather than reporting
-        # an absent file, so a repository that has never rendered a nested
-        # artifact — `.beads/config.yaml` on a fresh clone — could not even be
-        # planned. Materializing the empty destination is idempotent and is the
-        # generator's own responsibility.
-        path.parent.mkdir(parents=True, exist_ok=True)
+        # Planning is read-only: an optional read of a destination whose parent
+        # chain is not materialized reports absence (no parent identity), and
+        # the generation transaction journals and creates every destination
+        # parent before staging. Creating directories here made a CHECK plan
+        # mutate the tree and the next plan diverge from the first.
         before = u.Cli.atomic_read_binary_file_state(path, required=False)
         if before.failure:
             return r[m.Infra.CodegenFilePlan].from_failure(before)
@@ -111,12 +108,28 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
     def retired_projection_plans(
         cls, root: Path, profile: c.Infra.MakeProfile
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Plan removal of generated projections excluded from this profile."""
+        """Plan removal of generated projections this profile no longer renders.
+
+        A projection retires either because its template entry excludes this
+        profile or because no template renders it any more (a renamed or
+        deleted template, declared in ``retired_projections``). Either way only
+        a file carrying the generated marker is removed.
+        """
         planned: list[m.Infra.CodegenFilePlan] = []
-        for entry in config.Infra.codegen.templates.entries:
-            if profile in entry.profiles or "{" in entry.destination:
-                continue
-            path = root / Path(entry.destination)
+        destinations: list[str] = [
+            entry.destination
+            for entry in config.Infra.codegen.templates.entries
+            if profile not in entry.profiles and "{" not in entry.destination
+        ]
+        for retired in config.Infra.codegen.retired_projections:
+            relative = Path(retired)
+            if relative.is_absolute() or ".." in relative.parts:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                    f"retired projection must be a normalized relative path: {retired}"
+                )
+            destinations.append(retired)
+        for destination in destinations:
+            path = root / Path(destination)
             if not path.is_file():
                 continue
             current = u.Cli.files_read_text(path)

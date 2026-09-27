@@ -157,7 +157,7 @@ class FlextInfraUtilitiesRefactorCensus:
         resource = rope.resource(file_path)
         if resource is None:
             return ()
-        declared_imports = FlextInfraUtilitiesRopeAnalysis.get_declared_module_imports(
+        declared_imports = FlextInfraUtilitiesRopeAnalysis.resolve_declared_module_imports(
             rope.rope_project, resource
         )
         alias_names = tuple(
@@ -305,18 +305,18 @@ class FlextInfraUtilitiesRefactorCensus:
         resource = rope.resource(file_path)
         if resource is None:
             return ()
-        attributes = FlextInfraUtilitiesRopeCore.get_pymodule(
+        attributes = FlextInfraUtilitiesRopeCore.resolve_pymodule(
             rope.rope_project, resource
         ).get_attributes()
         target_pyname = attributes.get(target_name)
-        if target_pyname is None or FlextInfraUtilitiesRopeRuntime.is_imported_name(
+        if target_pyname is None or FlextInfraUtilitiesRopeRuntime.imported_name(
             target_pyname
         ):
             return ()
         target_object = target_pyname.get_object()
         alias_names: set[str] = set()
         for name, pyname in attributes.items():
-            if name == target_name or FlextInfraUtilitiesRopeRuntime.is_imported_name(
+            if name == target_name or FlextInfraUtilitiesRopeRuntime.imported_name(
                 pyname
             ):
                 continue
@@ -528,7 +528,7 @@ class FlextInfraUtilitiesRefactorCensus:
         multi_line = c.Infra.DUNDER_ALL_MULTI_LINE_RE
         quoted_target = {f'"{name}"', f"'{name}'"}
 
-        def _rewrite_single(match: t.Infra.RegexMatch) -> str:
+        def _rewrite_single(match: t.RegexMatch) -> str:
             """Rewrite single."""
             body: str = t.Infra.STR_ADAPTER.validate_python(match.group("body"))
             entries = [entry.strip() for entry in body.split(",") if entry.strip()]
@@ -542,7 +542,7 @@ class FlextInfraUtilitiesRefactorCensus:
                 result = f"{prefix}[{', '.join(remaining)}]"
             return result
 
-        def _rewrite_multi(match: t.Infra.RegexMatch) -> str:
+        def _rewrite_multi(match: t.RegexMatch) -> str:
             """Rewrite multi."""
             body: str = t.Infra.STR_ADAPTER.validate_python(match.group("body"))
             if "\n" not in body:
@@ -699,8 +699,9 @@ class FlextInfraUtilitiesRefactorCensus:
         the ``flext_infra.codegen.lazy_init`` import cycle while still
         giving gates a chance to verify post-cascade correctness.
         """
+        source_cache: MutableMapping[Path, str] = {}
         planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
-            rope, candidate
+            rope, candidate, source_cache=source_cache
         )
         if planned.failure:
             if planned.error_code == _UNSUPPORTED_SIMPLE_REMOVAL_CODE:
@@ -718,6 +719,7 @@ class FlextInfraUtilitiesRefactorCensus:
             updates,
             request=m.Infra.ProtectedSourceWritesRequest(
                 workspace=workspace,
+                expected_sources={path: source_cache[path] for path in updates},
                 gates=gates,
                 post_write=_post_write,
                 skip_pytest=True,

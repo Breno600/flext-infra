@@ -1,0 +1,95 @@
+# Test law: a test exercises the real collaborator, never a scripted double.
+#
+# A double replaces a real owner with a stand-in, so the test stops proving what
+# the code does. This rule is the single owner of the mock-library law and
+# covers every entry point of it:
+#
+#   * importing a mock library in any spelling (`unittest.mock`, the `mock`
+#     backport, `pytest_mock`);
+#   * the pytest-mock `mocker` fixture requested as a parameter;
+#   * constructing a double (`Mock`, `MagicMock`, `AsyncMock`, `PropertyMock`,
+#     `NonCallableMock`, `NonCallableMagicMock`, `create_autospec`) or patching
+#     (`patch`, `patch.object`, `patch.dict`, `patch.multiple`), bare or through
+#     the `mock` / `unittest.mock` module;
+#   * the monkeypatch verbs that replace an attribute or an item (`setattr`,
+#     `setitem`, `delattr`, `delitem`) on the pytest `monkeypatch` fixture or on
+#     a `pytest.MonkeyPatch.context()` binding.
+#
+# Isolating the process environment is the opposite of a double: the real code
+# runs against a sandbox the test owns. `setenv`, `delenv`, `chdir` and
+# `syspath_prepend` therefore stay legal.
+#
+# Legitimate homonyms keep their contract: a bare `patch(...)` or `Mock(...)`
+# call is a double only in a module that imports a mock library, so an HTTP
+# client's `client.patch(url)` or a project class named `Mock*` elsewhere is
+# never reported. The receiver of a monkeypatch verb must be the pytest fixture
+# or a MonkeyPatch context binding, so `node.setattr(...)` on an unrelated API is
+# never reported.
+#
+# Detection-only: the replacement is a public-surface test with real fixtures,
+# which a rewrite cannot author. A violating test is deleted and its behaviour
+# re-covered through the public facade.
+id: ban-test-doubles
+language: Python
+severity: error
+files:
+  - "**/tests/**/*.py"
+  - "**/examples/**/*.py"
+  - "**/conftest.py"
+utils:
+  mock-library-module:
+    inside:
+      kind: module
+      stopBy: end
+      has:
+        stopBy: end
+        any:
+          - kind: import_statement
+            regex: '^import\s+(?:unittest\.mock|mock|pytest_mock)\b'
+          - kind: import_from_statement
+            regex: '^from\s+(?:unittest\.mock|unittest|mock|pytest_mock)\s+import\b'
+rule:
+  any:
+    - kind: import_statement
+      regex: '^import\s+(?:unittest\.mock|mock|pytest_mock)\b'
+    - kind: import_from_statement
+      regex: '^from\s+(?:unittest\.mock|mock|pytest_mock)\s+import\b'
+    - kind: import_from_statement
+      regex: '^from\s+unittest\s+import\s+(?:[^\n]*[\s,(])?mock\b'
+    - all:
+        - kind: identifier
+        - regex: "^mocker$"
+        - inside:
+            kind: parameters
+            stopBy: end
+    - all:
+        - kind: call
+        - has:
+            field: function
+            regex: '^(?:unittest\.)?mock\.(?:patch(?:\.(?:object|dict|multiple))?|Mock|MagicMock|AsyncMock|PropertyMock|NonCallableMock|NonCallableMagicMock|create_autospec)$'
+    - all:
+        - kind: call
+        - has:
+            field: function
+            regex: '^(?:patch(?:\.(?:object|dict|multiple))?|Mock|MagicMock|AsyncMock|PropertyMock|NonCallableMock|NonCallableMagicMock|create_autospec)$'
+        - matches: mock-library-module
+    - all:
+        - pattern: $CTX.$VERB($$$ARGS)
+        - any:
+            - has:
+                field: function
+                has:
+                  field: object
+                  regex: "^monkeypatch$"
+            - inside:
+                kind: with_statement
+                stopBy: end
+                regex: 'MonkeyPatch\.context\(\)\s+as\s+'
+constraints:
+  VERB:
+    regex: "^(?:setattr|setitem|delattr|delitem)$"
+message: >-
+  Test doubles are forbidden: mock libraries, the mocker fixture, Mock/patch
+  constructors and monkeypatch attribute/item replacement hide the real owner.
+  Delete the test and re-cover the behaviour through the public facade with
+  real typed fixtures.

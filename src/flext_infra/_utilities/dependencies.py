@@ -28,7 +28,7 @@ from flext_infra import c, t
 from .pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import m, p
 
 
 class FlextInfraUtilitiesDependencies:
@@ -195,7 +195,7 @@ class FlextInfraUtilitiesDependencies:
         suffix: str = "",
     ) -> t.SequenceOf[Path]:
         """Resolve runtime, local, and test dependency resources in order."""
-        pyproject = project_root / c.Infra.PYPROJECT_FILENAME
+        pyproject = project_root / c.PYPROJECT_FILENAME
         payload = u.Cli.toml_read_json(pyproject).unwrap()
         project_name = canonicalize_name(
             FlextInfraUtilitiesPyproject.project_name_from_payload(
@@ -446,7 +446,7 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def _append_requirement_names(
-        cls, *, raw_requirements: t.Infra.InfraValue, names: set[str]
+        cls, *, raw_requirements: t.JsonValue, names: set[str]
     ) -> None:
         """Append requirement names."""
         if not isinstance(raw_requirements, list):
@@ -459,7 +459,7 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def _append_mapping_dependency_names(
-        cls, *, raw_mapping: t.Infra.InfraValue, names: set[str]
+        cls, *, raw_mapping: t.JsonValue, names: set[str]
     ) -> None:
         """Append mapping dependency names."""
         if not isinstance(raw_mapping, Mapping):
@@ -539,7 +539,7 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def flext_dependency_namespaces_from_payload(
-        cls, payload: t.MappingKV[str, t.Infra.InfraValue]
+        cls, payload: t.MappingKV[str, t.JsonValue]
     ) -> t.StrSequence:
         """Extract every declared ``flext-*`` dependency as a Python namespace."""
         # flext-j47u (codex): FLEXT dependencies are first-party contracts even
@@ -552,6 +552,81 @@ class FlextInfraUtilitiesDependencies:
                 if name == "flext" or name.startswith(c.Infra.PKG_PREFIX_HYPHEN)
             )
         )
+
+    @staticmethod
+    def dependency_profile_upstreams(
+        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        *,
+        distribution: str,
+        runtime_names: t.Infra.StrSet,
+    ) -> t.StrSequence:
+        """Return the most specific shared profile upstreams one project selects.
+
+        The root of the dependency tree declares no upstream distribution: a
+        distribution that IS a profile's upstream owns that profile. Otherwise
+        every shared profile whose upstream is a runtime dependency is a
+        candidate, and a candidate implied by another candidate's runtime is
+        dropped. One entry is the governed selection; none means no declared
+        profile governs the project; several are an ambiguous declaration.
+        """
+        shared = tuple(item for item in profiles if item.project is None)
+        own = next(
+            (
+                item
+                for item in shared
+                if item.upstream.replace("_", "-") == distribution
+            ),
+            None,
+        )
+        candidates = (
+            (own,)
+            if own is not None
+            else tuple(
+                item
+                for item in shared
+                if item.upstream.replace("_", "-") in runtime_names
+            )
+        )
+        runtime_of = {
+            item.upstream: {
+                name
+                for dependency in item.runtime
+                if (name := FlextInfraUtilitiesDependencies.dep_name(dependency))
+            }
+            for item in candidates
+        }
+        return tuple(
+            item.upstream
+            for item in candidates
+            if not any(
+                item.upstream.replace("_", "-") in runtime_of[other.upstream]
+                for other in candidates
+                if other is not item
+            )
+        )
+
+    @staticmethod
+    def dependency_profile_rows(
+        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        *,
+        upstream: str,
+        distribution: str,
+    ) -> t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec]:
+        """Return the shared upstream profile followed by the project's additions.
+
+        Empty when the upstream declares no shared profile.
+        """
+        base = next(
+            (
+                item
+                for item in profiles
+                if item.project is None and item.upstream == upstream
+            ),
+            None,
+        )
+        if base is None:
+            return ()
+        return (base, *(item for item in profiles if item.project == distribution))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]

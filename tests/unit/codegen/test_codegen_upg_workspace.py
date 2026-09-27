@@ -70,7 +70,7 @@ class TestsFlextInfraCodegenUpgWorkspace:
             artifact
             for artifact in plan.files
             if artifact.path
-            in {root / c.Infra.MAKEFILE_FILENAME, root / c.Infra.PYPROJECT_FILENAME}
+            in {root / c.Infra.MAKEFILE_FILENAME, root / c.PYPROJECT_FILENAME}
         )
         tm.that(len(artifacts), eq=2)
         tm.ok(
@@ -80,7 +80,7 @@ class TestsFlextInfraCodegenUpgWorkspace:
         )
         u.Tests.git_bootstrap(root, ("submodule", "deinit", "--force", "--all"))
         checkout = root / member.path
-        tm.that((checkout / c.Infra.PYPROJECT_FILENAME).exists(), eq=False)
+        tm.that((checkout / c.PYPROJECT_FILENAME).exists(), eq=False)
         tm.that((root / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
 
         process = tm.ok(
@@ -96,7 +96,7 @@ class TestsFlextInfraCodegenUpgWorkspace:
             eq=True,
             msg=process.stdout + process.stderr,
         )
-        tm.that((checkout / c.Infra.PYPROJECT_FILENAME).is_file(), eq=True)
+        tm.that((checkout / c.PYPROJECT_FILENAME).is_file(), eq=True)
         tm.that(
             tm.ok(
                 u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=checkout)

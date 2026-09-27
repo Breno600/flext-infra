@@ -22,7 +22,13 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
     def snapshot_config_sources(
         cls, project_dir: Path
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Capture one stable, physical, direct ``config/*.yaml`` file set."""
+        """Capture one stable, physical, direct ``config/*.yaml`` file set.
+
+        A project root that is not materialized yet (a scaffold planned
+        read-only) owns no config sources, exactly like an absent ``config/``.
+        """
+        if not project_dir.exists() and not project_dir.is_symlink():
+            return r[tuple[m.Cli.AtomicFileState, ...]].ok(())
         project_identity = cls._required_directory_identity(
             project_dir, purpose="project root"
         )
@@ -103,7 +109,12 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         return m.Infra.ProjectManagedArtifactsSnapshot(
             sources=(),
             resolution=m.Infra.ProjectManagedArtifactsResolution(
-                artifacts=m.Infra.ProjectManagedArtifactsConfig(), mise_tool_sources={}
+                artifacts=m.Infra.ProjectManagedArtifactsConfig(
+                    Ruff=m.Infra.ProjectRuffConfig(per_file_ignores={}),
+                    Mise=m.Infra.ProjectMiseConfig(tools={}),
+                    Gitignore=m.Infra.ProjectGitignoreConfig(patterns=()),
+                ),
+                mise_tool_sources={},
             ),
         )
 
@@ -272,11 +283,15 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 "ManagedArtifacts": managed
             })
             artifacts = project_config.ManagedArtifacts
-            for pattern, rules in artifacts.Ruff.per_file_ignores.items():
-                ruff_ignores.setdefault(pattern, set()).update(rules)
-            for pattern in artifacts.Gitignore.patterns:
-                if pattern not in gitignore_patterns:
-                    gitignore_patterns.append(pattern)
+            if artifacts.Ruff is not None:
+                for pattern, rules in artifacts.Ruff.per_file_ignores.items():
+                    ruff_ignores.setdefault(pattern, set()).update(rules)
+            if artifacts.Gitignore is not None:
+                for pattern in artifacts.Gitignore.patterns:
+                    if pattern not in gitignore_patterns:
+                        gitignore_patterns.append(pattern)
+            if artifacts.Mise is None:
+                continue
             for selector, tool in artifacts.Mise.tools.items():
                 previous = mise_sources.get(selector)
                 if previous is not None:

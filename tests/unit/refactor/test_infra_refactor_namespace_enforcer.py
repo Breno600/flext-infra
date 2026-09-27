@@ -36,8 +36,10 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=True
         )
 
-        tm.that(report.total_facades_missing, eq=0)
-        tm.that(report.total_import_violations, eq=0)
+        tm.that(
+            all(status.exists for status in report.projects[0].facade_statuses), eq=True
+        )
+        tm.that(report.projects[0].import_violations, empty=True)
         tm.that((pkg / "constants.py").exists(), eq=True)
         tm.that((pkg / "typings.py").exists(), eq=True)
         tm.that((pkg / "protocols.py").exists(), eq=True)
@@ -65,8 +67,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False
         )
 
-        tm.that(report.total_manual_typing_violations, gt=0)
-        tm.that(report.total_compatibility_alias_violations, gt=0)
+        tm.that(report.projects[0].manual_typing_violations, empty=False)
+        tm.that(report.projects[0].compatibility_alias_violations, empty=False)
 
     def test_namespace_enforcer_splits_foreign_canonical_aliases(
         self, tmp_path: Path
@@ -118,8 +120,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         project_report = report.projects[0]
-        tm.that(report.total_compatibility_alias_violations, eq=0)
-        tm.that(report.total_foreign_canonical_alias_violations, gt=0)
+        tm.that(project_report.compatibility_alias_violations, empty=True)
+        tm.that(project_report.foreign_canonical_alias_violations, empty=False)
         tm.that(project_report.compatibility_alias_violations, empty=True)
         tm.that(project_report.foreign_canonical_alias_violations, empty=False)
         violation_paths = {
@@ -146,7 +148,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False
         )
 
-        tm.that(report.total_manual_protocol_violations, eq=1)
         project_report = report.projects[0]
         violations = project_report.manual_protocol_violations
         tm.that(len(violations), eq=1)
@@ -169,7 +170,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False
         )
 
-        tm.that(report.total_internal_import_violations, gt=0)
+        tm.that(report.projects[0].internal_import_violations, empty=False)
         rendered = FlextInfraNamespaceEnforcer.render_text(report)
         tm.that(rendered, has="Internal import violations:")
 
@@ -267,7 +268,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False
         )
 
-        tm.that(report.total_internal_import_violations, eq=0)
+        tm.that(report.projects[0].internal_import_violations, empty=True)
 
     def test_namespace_enforcer_flags_cross_package_private_import_from_scripts_tree(
         self, tmp_path: Path
@@ -302,7 +303,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False
         )
 
-        tm.that(report.total_internal_import_violations, eq=1)
+        tm.that(len(report.projects[0].internal_import_violations), eq=1)
         violation = report.projects[0].internal_import_violations[0]
         tm.that(violation.file.replace("\\", "/"), has="scripts/helper.py")
 
@@ -341,7 +342,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False
         )
 
-        tm.that(report.total_internal_import_violations, eq=0)
+        tm.that(report.projects[0].internal_import_violations, empty=True)
 
     def test_namespace_enforce_does_not_expose_in_place_diff(self) -> None:
         """Keep in-place diff outside the namespace-enforce input contract."""
@@ -607,7 +608,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=True
         )
 
-        tm.that(report.total_manual_protocol_violations, eq=0)
+        tm.that(report.projects[0].manual_protocol_violations, empty=True)
         protocols_file = pkg / "protocols.py"
         tm.that(protocols_file.exists(), eq=True)
 
@@ -638,8 +639,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         )
 
         tm.that(report.has_violations, eq=True)
-        tm.that(report.total_manual_protocol_violations, eq=0)
-        tm.that(report.total_loose_objects, gt=0)
+        tm.that(report.projects[0].manual_protocol_violations, empty=True)
+        tm.that(report.projects[0].loose_objects, empty=False)
         tm.that((pkg / "protocols.py").exists(), eq=True)
         tm.that(
             (pkg / "protocols.py").read_text(encoding="utf-8"),
@@ -668,17 +669,23 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False
         )
 
-        tm.that(report.total_cyclic_imports, gte=1)
+        tm.that(report.projects[0].cyclic_imports, empty=False)
 
-    def test_namespace_enforcer_detects_missing_runtime_alias_outside_src(
-        self, tmp_path: Path
+    @pytest.mark.parametrize(
+        ("declaration", "violations"),
+        [("", 0), ('__all__: list[str] = ["DemoConstants", "c"]\n\n', 1)],
+    )
+    def test_namespace_enforcer_does_not_infer_alias_from_external_filename(
+        self, tmp_path: Path, declaration: str, violations: int
     ) -> None:
-        """Detect a missing runtime alias outside the src tree."""
+        """Only a letter declared in ``__all__`` is owed; never one from a filename."""
         workspace, project, _pkg = u.Tests.namespace_workspace(tmp_path)
         scripts_dir = project / "scripts"
         scripts_dir.mkdir(parents=True)
         _ = (scripts_dir / "constants.py").write_text(
-            "from __future__ import annotations\n\nclass DemoConstants:\n    pass\n",
+            "from __future__ import annotations\n\n"
+            f"{declaration}"
+            "class DemoConstants:\n    pass\n",
             encoding="utf-8",
         )
 
@@ -686,7 +693,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False
         )
 
-        tm.that(report.total_runtime_alias_violations, gt=0)
+        tm.that(len(report.projects[0].runtime_alias_violations), eq=violations)
 
     def test_namespace_enforcer_respects_tool_flext_namespace_scan_dirs(
         self, tmp_path: Path
@@ -733,7 +740,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=False
         )
 
-        tm.that(report.total_manual_protocol_violations, eq=0)
+        tm.that(report.projects[0].manual_protocol_violations, empty=True)
 
     def test_namespace_enforcer_apply_keeps_script_shebang_when_adding_future(
         self, tmp_path: Path

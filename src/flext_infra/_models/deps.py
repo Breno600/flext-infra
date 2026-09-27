@@ -8,7 +8,6 @@ from typing import Annotated, ClassVar
 from flext_core import m
 from flext_infra import t
 
-from ._defaults import FlextInfraModelsDefaults
 from .deps_toml import FlextInfraModelsDepsToml
 from .deps_tool_config import FlextInfraModelsDepsToolConfig
 from .mixins import FlextInfraModelsMixins as mm
@@ -216,6 +215,15 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         python_version: Annotated[
             str | None, m.Field(None, description="Python version")
         ] = None
+        untyped_imports_followed: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Governed mypy follow_untyped_imports policy; when true, "
+                    "missing stubs are not findings"
+                )
+            ),
+        ]
 
     class ProjectRuntimeReport(m.ArbitraryTypesModel):
         """Project runtime dependency and typings report."""
@@ -234,8 +242,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
 
         workspace: Annotated[str, m.Field(description="Workspace name")]
         projects: t.MappingKV[str, FlextInfraModelsDeps.ProjectRuntimeReport] = m.Field(
-            default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
-            description="Per-project reports",
+            description="Per-project reports"
         )
         pip_check: FlextInfraModelsDeps.PipCheckReport | None = m.Field(
             None, description="Pip check report", validate_default=True

@@ -2,14 +2,10 @@ Infra:
   codegen:
     # NOTE(mro-wkii.17.5, agent implement_manifest): declarative SSOT for deterministic project conformance.
     version: 1
-
-    # Operator law 2026-09-22: the pyproject template declares `.cli:main`
-    # for every distribution while most member cli facades predate that
-    # contract. Until the fleet converges the facades (bead
-    # flext-1pquc, gen-fixed-point campaign), declared-script import
-    # failures warn instead of failing the conformance transaction.
-    # Package-export probes stay blocking either way.
-    fresh_import_entry_points_warn_only: true
+    # Projections no template renders any more; generation removes the
+    # generated copy from every consumer (renamed: install-git-hooks.sh ->
+    # validate-git-hook.sh).
+    retired_projections: [.github/scripts/install-git-hooks.sh]
 
     # Per-module scc code-LOC ceiling. Operator instruction 2026-09-07:
     # the former 1000-LOC allowance stands (supersedes the 200 constant).
@@ -26,16 +22,6 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
-      state_directory_name: .flext-runtime
-      scratch_namespace: scratch
-      # Scratch (TMPDIR, test basetemp, Mise bootstrap staging) never lives
-      # inside a versioned tree: in workspace mode the sibling state root sits
-      # under the superproject, so every sandbox became a tracked-scope of the
-      # enclosing repository. The scratch root is the platform home plus this
-      # path, mirroring the absolute checkout path below it (storage law).
-      scratch_home_relative: tmp
-      pycache_namespace: pycache
-      mise_namespace: mise-artifacts
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -59,7 +45,14 @@ Infra:
       kind_version: latest
       direnv_version: latest
       taplo_version: latest
+      # The npm CLI publishes a native musl binary; the GitHub CLI release does
+      # not. One selector therefore covers the declared Linux libc variants.
+      ast_grep_selector: npm:@ast-grep/cli
       ast_grep_version: latest
+      # ast-grep's native binary is selected by its npm lifecycle script.
+      # The embedded aube installer preserves the locked dependency graph;
+      # the approved package lifecycle is declared in the mise projection.
+      npm_package_manager: aube
       gitleaks_version: latest
       kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
@@ -77,6 +70,7 @@ Infra:
       # mise safe mode ignores project [settings].
       mise_lockfile_platforms:
         - linux-x64
+        - linux-x64-musl
         - linux-arm64
         - macos-x64
         - macos-arm64
@@ -95,6 +89,7 @@ Infra:
       # one per platform, so `mise lock` recorded no URL for them.
       jscpd_asset_patterns:
         linux-x64: jscpd-linux-x64-gnu.tar.gz
+        linux-x64-musl: jscpd-linux-x64-musl.tar.gz
         linux-arm64: jscpd-linux-arm64-gnu.tar.gz
         macos-x64: jscpd-darwin-x64.tar.gz
         macos-arm64: jscpd-darwin-arm64.tar.gz
@@ -186,6 +181,7 @@ Infra:
     # config/codegen-overrides.yaml, which the generated workflow materializes
     # before `make setup` (which otherwise fails on HTTPS submodule clone).
     ci_private_submodules: {}
+    ci_private_dependency_auth: {}
 
     # Actions ride their upstream floating major tag: setup converges on the
     # newest compatible release, never on an immutability SHA or patch pin.
@@ -295,6 +291,9 @@ Infra:
         - "**/*.egg-info/**"
         - "**/.pytest_cache/**"
         - "**/.reports/**"
+        # Mise v2 dependency sidecars are generated, digest-attested package-manager
+        # inputs. They stay committed for frozen replay but are not project source.
+        - "**/.mise/locks/**"
         - "**/node_modules/**"
         - "**/.scannerwork/**"
       cpd_exclusions:
@@ -327,6 +326,7 @@ Infra:
         discovery_scope: none
 
     make:
+      examples_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -344,6 +344,13 @@ Infra:
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
       fmt_gates: [markdown-format]
+      check_gate_suspensions:
+        - gate: namespace
+          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
+          reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
+        - gate: codemod
+          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
+          reason: "Structural codemod backlog is applied through make mod after the fleet is green."
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /
       # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
@@ -387,8 +394,8 @@ Infra:
         # CI=N owns the complementary local check gates; absent uses testmon
         # for incremental developer runs.
         #
-        # The set is the SLOW whole-program type checkers, matching
-        # PROJECT_CHECK_GATES_LOCAL_VALUES: those are the gates worth deferring
+        # The set is the SLOW whole-program type checkers: those are the gates
+        # worth deferring
         # off the fast CI leg, and they are what CI=N exists to own. `lint` is
         # not here -- ruff is cheap, so making CI skip it buys nothing and
         # leaves the fast leg without a linter.
@@ -425,7 +432,6 @@ Infra:
           - .benchmarks
           - .hypothesis
         root_dirs:
-          - .flext-runtime
           - build
           - dist
           - htmlcov
@@ -498,8 +504,16 @@ Infra:
           description: Provision the declared environment and hooks.
         - name: upg
           description: Resolve the newest declared releases and write the uv and mise locks.
+        # Workspace-only (topology owns applicability): a standalone Makefile
+        # never declares it. Never merges; a rerun continues the same lanes.
+        - name: propagate
+          description: Apply this workspace's flext-infra to every declared member (conform, then lock) and publish one pull-request lane per member whose projections or lock change; unchanged members publish nothing.
+          profiles: [workspace]
         - name: build
           description: Build the project distribution artifacts.
+        - name: examples
+          description: Run the workspace public runtime examples.
+          profiles: [workspace]
         - name: check
           description: Run every configured non-test gate.
         - name: test
@@ -569,8 +583,8 @@ Infra:
     # mro-operator-20260918b: governance content (.agents/.claude) and direnv
     # runtime state stay visible to the editor and watcher — removed from the
     # default vscode/watch excludes; source_scan keeps its dotdir skip.
-      - {name: .agents, vscode_exclude: false, watch_exclude: false}
-      - {name: .beads}
+      - {name: .agents, source_scan_ignore: true, vscode_exclude: false, watch_exclude: false}
+      - {name: .beads, source_scan_ignore: true}
       - {name: .benchmarks}
     # mro-0wuz: archive-not-delete target for the layout engine; the generated
     # .gitignore projection must never track archived loose files.
@@ -594,7 +608,6 @@ Infra:
       - {name: .omo}
       - {name: .pylance_cache, vscode_exclude: false}
       - {name: .pytest_cache, source_scan_ignore: true}
-      - {name: .flext-runtime, source_scan_ignore: true}
       - {name: .testmondata, is_dir: false, source_scan_ignore: true}
       - {name: .testmondata-wal, is_dir: false, source_scan_ignore: true}
       - {name: .testmondata-shm, is_dir: false, source_scan_ignore: true}
@@ -697,13 +710,6 @@ Infra:
         githubPullRequests.autoRepositoryDetection: true
         githubPullRequests.ignoreSubmodules: false
       list_settings:
-        python-envs.workspaceSearchPaths:
-          - ./.venv
-          - ./*/.venv
-        ruff.interpreter:
-          - ${workspaceFolder}/.venv/bin/python
-        ruff.path:
-          - ${workspaceFolder}/.venv/bin/ruff
         markdownlint.lintWorkspaceGlobs:
           - "!**/.git/**"
           - "!**/.planning/**"
@@ -737,9 +743,6 @@ Infra:
         "[markdown]":
           editor.defaultFormatter: esbenp.prettier-vscode
           editor.formatOnSave: false
-        terminal.integrated.env.linux:
-          PATH: ${workspaceFolder}/.venv/bin:${env:PATH}
-          VIRTUAL_ENV: ${workspaceFolder}/.venv
       stripped_keys:
       # Pylance emits settingsNotOverridable diagnostics (severity=warning) when
       # these keys appear in .vscode/settings.json alongside a [tool.pyright] section
@@ -966,6 +969,10 @@ Infra:
         owner: codegen
         policy: full
         mode: 493 # 0o755
+      - path: .github/scripts/validate-git-hook.sh
+        owner: codegen
+        policy: full
+        mode: 493 # 0o755
       - path: .github/scripts/flext-law-loop.sh
         owner: codegen
         policy: full
@@ -1031,6 +1038,13 @@ Infra:
         owner: pre-commit
         policy: full
       - path: .python-version
+        owner: codegen
+        policy: full
+    # The docs auditor's placeholder/forbidden-term lists are fleet policy: one
+    # template owns them, so the placeholder and forbidden-term checks in
+    # _auditor_checks.py enforce on every governed repository instead of
+    # silently reading an absent file as empty lists.
+      - path: docs/docs_config.json
         owner: codegen
         policy: full
     # Qlty refuses to scan without a repository configuration. Keep the
@@ -1229,7 +1243,7 @@ Infra:
             runtime: [flext-web, httpx>=0.28.1, msgpack>=1.2.2]
           - upstream: flext_core
             project: flext-auth
-            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.14.0]
+            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.0]
           - upstream: flext_core
             project: flext-cli
           # click floor mirrors the shared fleet lock (8.3.3); meltano upstream
@@ -1237,7 +1251,7 @@ Infra:
             runtime: ["click>=8.3.3,<8.4", typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
-            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, rope>=1.14.0, pytest>=9.1.1, mkdocs>=1.6.1]
+            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
           - upstream: flext_cli
             project: flext-tests
             runtime: [flext-cli, flext-infra, pytest>=9.1.1, pytest-timeout>=2.4.0, docker>=7.2.0, python-on-whales>=0.81.0]
@@ -1246,19 +1260,19 @@ Infra:
             runtime: [flext-cli, grpcio>=1.84.0]
           - upstream: flext_cli
             project: flext-observability
-            runtime: [flext-cli, flask>=3.1.3, starlette>=1.6.0, psutil>=7.2.2]
+            runtime: [flext-cli, flask>=3.1.3, starlette>=1.7.0, psutil>=7.2.2]
           - upstream: flext_cli
             project: flext-plugin
             runtime: [flext-cli]
           - upstream: flext_cli
             project: flext-quality
-            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.5, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
+            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.53.0, fastapi>=0.141.1, starlette>=1.6.0, werkzeug>=3.1.8]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.8]
           - upstream: flext_cli
             project: flext-db-oracle
-            runtime: [flext-cli, oracledb>=26.0.0, sqlalchemy>=2.0.54]
+            runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]
           - upstream: flext_cli
             project: flext-ldif
             runtime: [flext-cli]
@@ -1368,11 +1382,9 @@ Infra:
             - "!.opencode/**"
             - "!/config/"
             - "!.claude/CLAUDE.md"
-            - "!.claude/settings.json"
             - "!.agents/"
             - "!.agents/**"
             - ".agents/skills/*/report.json"
-            - "!.claude/settings.local.json"
         - name: "Dispatcher-based command surface (Make SSOT)"
           profiles: [workspace]
           patterns:
@@ -1502,8 +1514,8 @@ Infra:
       # the live workspace topology and can never diverge from each other.
       # `.claude/*` re-blocked the whole directory AFTER the whitelist above
       # had unblocked it, and in gitignore the last matching rule wins — so
-      # every governed provider artifact (.claude/settings.json, the skill
-      # surfaces) became untrackable. Local session data is named explicitly
+      # every governed provider artifact (the skill surfaces) became
+      # untrackable. Local session data is named explicitly
       # instead of re-blocking the directory that the whitelist just opened.
         - name: "BLOCK: AI/Agent Local Data (NEVER track these)"
           patterns:
@@ -1549,16 +1561,17 @@ Infra:
       # -- the generated bytes are authoritative, customized only through a
       # config override at their owner, and tracked so a clone reproduces them
       # exactly. Per-operator configuration is not: hook wiring, governance
-      # manifests and agent settings reference machine-absolute paths of the
+      # manifests and local agent settings reference machine-absolute paths of the
       # operator who last ran the catalog generator, so they reach a checkout
       # as runtime state and are never recorded in any workspace. Every
       # machine-written settings/hooks surface and its digest sidecar is
       # blocked by name. No profiles key: this holds for every role.
         - name: "Agent hooks and operator config (runtime state, never source)"
-          # settings.json stays out of this runtime-state block: the governed
-          # provider-projections section (and its tests) own it as a tracked
-          # governance artifact, and in gitignore the last matching rule wins,
-          # so a name block here silently re-ignored the whitelisted file.
+          # settings.json projections are portable governance and stay
+          # trackable; settings.local.json and the digest sidecars wire
+          # machine-absolute paths, so they are named here. This block follows
+          # the provider-tree whitelists and the last matching gitignore rule
+          # wins.
           patterns:
             - ".github/hooks/"
             - "*/.hooks.json.agents-governance.json"
@@ -1910,6 +1923,11 @@ Infra:
           profiles: [workspace]
           delegate: render
           overwrite: false
+        - source: base/.github/scripts/validate-git-hook.sh.j2
+          destination: .github/scripts/validate-git-hook.sh
+          profiles: [workspace, standalone]
+          delegate: render
+          overwrite: false
         - source: base/.github/scripts/flext-law-loop.sh.j2
           destination: .github/scripts/flext-law-loop.sh
           profiles: [workspace]
@@ -1949,6 +1967,13 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true
+      # Static docs-auditor policy: no Jinja vars; the docs scope policy and
+      # the auditor read it as data (docs_policy_list).
+        - source: base/docs/docs_config.json.j2
+          destination: docs/docs_config.json
+          profiles: [workspace, standalone]
+          delegate: render
+          overwrite: false
         - source: base/gitignore.j2
           destination: .gitignore
           profiles: [workspace, standalone]
@@ -2005,12 +2030,14 @@ Infra:
       # ledger is reached by the declared city endpoint, never by a link.
         - source: base/beads-config.yaml.j2
           destination: .beads/config.yaml
+          requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
       # Static repository-local storage, database, and endpoint projection.
         - source: base/beads-metadata.json.j2
           destination: .beads/metadata.json
+          requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
@@ -2092,6 +2119,7 @@ Infra:
       # rendered it could not be conformed at all.
         - source: base/config/beads.yaml.j2
           destination: config/beads.yaml
+          requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true

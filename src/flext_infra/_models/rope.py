@@ -14,7 +14,6 @@ from flext_cli import m
 from .. import c, p, t
 from . import FlextInfraModelsMixins as mm
 from ._codegen.base import FlextInfraCodegen
-from ._defaults import FlextInfraModelsDefaults
 
 
 class FlextInfraModelsRope:
@@ -123,7 +122,7 @@ class FlextInfraModelsRope:
         module: t.NonEmptyStr = m.Field(description="Imported module path")
         member: str = m.Field(default="", description="Imported member")
         local_name: t.NonEmptyStr = m.Field(description="Bound local name")
-        is_from_import: bool = m.Field(description="From-import marker")
+        from_import_info: bool = m.Field(description="From-import marker")
 
     class IgnoredRegion(mm.PositiveLineMixin, m.ContractModel):
         """One Rope-classified string or comment region in source text."""
@@ -158,19 +157,11 @@ class FlextInfraModelsRope:
             m.Field(description="Local classes discovered in the module"),
         ] = ()
         declared_imports: Annotated[
-            t.StrMapping,
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
-                description="Declared import targets by name",
-            ),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+            t.StrMapping, m.Field(description="Declared import targets by name")
+        ]
         semantic_imports: Annotated[
-            t.StrMapping,
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
-                description="Resolved import targets by name",
-            ),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+            t.StrMapping, m.Field(description="Resolved import targets by name")
+        ]
 
     class RopeModuleIndexEntry(m.ContractModel):
         """Generic Rope-backed index entry for one Python module resource."""
@@ -261,32 +252,22 @@ class FlextInfraModelsRope:
         ] = ()
         packages_by_dir: Annotated[
             t.MappingKV[str, FlextInfraModelsRope.RopePackageIndexEntry],
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
-                description="Package entries keyed by absolute directory path",
-            ),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+            m.Field(description="Package entries keyed by absolute directory path"),
+        ]
         modules_by_path: Annotated[
             t.MappingKV[str, FlextInfraModelsRope.RopeModuleIndexEntry],
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
-                description="Module entries keyed by absolute file path",
-            ),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+            m.Field(description="Module entries keyed by absolute file path"),
+        ]
         package_dir_by_name: Annotated[
             t.MappingKV[str, Path],
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
-                description="Importable package directory keyed by package name",
-            ),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+            m.Field(description="Importable package directory keyed by package name"),
+        ]
         project_package_by_root: Annotated[
             t.StrMapping,
             m.Field(
-                default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
-                description="Canonical source package name keyed by project root path",
+                description="Canonical source package name keyed by project root path"
             ),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+        ]
 
     class RopeProjectLayout(m.ContractModel):
         """Canonical project layout derived once for Rope-backed codegen flows."""

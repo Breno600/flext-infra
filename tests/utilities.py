@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 from pathlib import Path
 
 from flext_tests import FlextTestsUtilities, tm
@@ -23,8 +25,6 @@ from tests.utilities_gates import TestsFlextInfraUtilitiesGatesMixin
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 from tests.utilities_promoted import TestsFlextInfraUtilitiesPromotedMixin
 from tests.utilities_release import TestsFlextInfraUtilitiesReleaseMixin
-from tests.utilities_replay import TestsFlextInfraUtilitiesReplayRunnerMixin
-from tests.utilities_replay_sequence import TestsFlextInfraUtilitiesReplaySequenceMixin
 from tests.utilities_toml import TestsFlextInfraUtilitiesTomlMixin
 from tests.utilities_workspace_env import TestsFlextInfraUtilitiesWorkspaceEnvMixin
 
@@ -34,8 +34,6 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
 
     class Tests(
         TestsFlextInfraUtilitiesTomlMixin,
-        TestsFlextInfraUtilitiesReplayRunnerMixin,
-        TestsFlextInfraUtilitiesReplaySequenceMixin,
         TestsFlextInfraUtilitiesProjectFixtureMixin,
         TestsFlextInfraUtilitiesWorkspaceFixtureMixin,
         TestsFlextInfraUtilitiesToolingFixtureMixin,
@@ -190,7 +188,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             if bootstrap:
                 paths.update(
                     project_root / name
-                    for name in (c.Infra.PYPROJECT_FILENAME, c.Infra.MISE_TOML_FILENAME)
+                    for name in (c.PYPROJECT_FILENAME, c.Infra.MISE_TOML_FILENAME)
                 )
             artifacts = tuple(
                 file
@@ -250,6 +248,73 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     )
                 )
             return project_root, repository_root
+
+        @staticmethod
+        def resolved_make_checkout(
+            template: Path, parent: Path, profile: c.Infra.MakeProfile
+        ) -> Path:
+            """Check out a resolved ``make upg`` template as a fresh repository.
+
+            The checkout carries the source and locks the upgrade wrote, never
+            the template's environment or Git store; frozen setup provisions
+            its own environment from those locks.
+            """
+            root = parent / profile.value / template.name
+            shutil.copytree(
+                template,
+                root,
+                symlinks=True,
+                ignore=shutil.ignore_patterns(".venv", ".git"),
+            )
+            u.Tests.initialize_git_repo(
+                root, origin_url=u.Tests.repository_ref(root.name, role=profile).url
+            )
+            tm.ok(
+                u.Cli.run_checked(
+                    ["git", "config", "remote.origin.skipDefaultUpdate", "true"],
+                    cwd=root,
+                )
+            )
+            tm.that((root / ".venv").exists(), eq=False)
+            return root
+
+        @staticmethod
+        def hostile_uv_environment(hostile_venv: Path) -> t.StrMapping:
+            """Point every uv and interpreter selector at a foreign environment."""
+            hostile_bin = hostile_venv / "bin"
+            return {
+                "PATH": f"{hostile_bin}:{os.environ['PATH']}",
+                "UV": str(hostile_bin / "uv"),
+                "UV_BIN": str(hostile_bin / "uv"),
+                "UV_PROJECT": str(hostile_venv.parent),
+                "UV_PROJECT_ENVIRONMENT": str(hostile_venv),
+                "FLEXT_INFRA_PYTHON": str(hostile_bin / "python"),
+                "VIRTUAL_ENV": str(hostile_venv),
+            }
+
+        @staticmethod
+        def command_receipt(path: Path) -> m.Cli.CommandOutput:
+            """Read one recorded provisioning command outcome."""
+            return m.Cli.CommandOutput.model_validate_json(
+                path.read_text(encoding="utf-8")
+            )
+
+        @staticmethod
+        def infra_source_checkout(parent: Path) -> Path:
+            """Copy this repository's Git-visible inputs into a fresh Git checkout."""
+            source = Path(__file__).resolve().parents[1]
+            root = parent / config.Infra.name
+            paths = tm.not_none(u.Infra.git_tracked_scope_paths(source))
+            tm.that(bool(paths), eq=True)
+            for path in paths:
+                destination = root / path.relative_to(source)
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                _ = shutil.copy2(path, destination, follow_symlinks=False)
+            tm.that((root / ".venv").exists(), eq=False)
+            u.Tests.initialize_git_repo(
+                root, origin_url=u.Tests.repository_ref(config.Infra.name).url
+            )
+            return root
 
         @staticmethod
         def materialize_docs_bundle(

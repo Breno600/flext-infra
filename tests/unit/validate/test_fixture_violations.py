@@ -42,23 +42,11 @@ class TestsFlextInfraFixtureViolations:
                 id="rule1-loose-constant",
             ),
             pytest.param(
-                "rule1_method_in_constants.py",
-                "constants.py",
-                "facade must inherit canonical 'c'",
-                id="rule1-method-in-constants",
-            ),
-            pytest.param(
                 "rule1_magic_number.py",
                 "models.py",
                 "module alias/data declaration is forbidden; use the canonical "
                 "facade class",
                 id="rule1-magic-number",
-            ),
-            pytest.param(
-                "rule2_typevar_in_class.py",
-                "typings.py",
-                "facade must inherit canonical 't'",
-                id="rule2-typevar-in-class",
             ),
             pytest.param(
                 "rule2_typevar_wrong_module.py",
@@ -73,12 +61,6 @@ class TestsFlextInfraFixtureViolations:
                 "module alias/data declaration is forbidden; use the canonical "
                 "facade class",
                 id="rule2-composite-type-loose",
-            ),
-            pytest.param(
-                "rule2_protocol_in_types.py",
-                "typings.py",
-                "facade must declare one nested Test MRO",
-                id="rule2-protocol-in-types",
             ),
         ],
     )

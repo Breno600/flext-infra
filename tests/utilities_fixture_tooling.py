@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 from flext_infra import u
-from tests import c, m, p, t
+from tests import c, p, t
 
 
 class TestsFlextInfraUtilitiesToolingFixtureMixin:
@@ -24,6 +24,22 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
     def make_read_only(path: Path) -> None:
         """Make one fixture path read-only."""
         path.chmod(0o444)
+
+    @staticmethod
+    def isolated_mise_bootstrap_storage(project_root: Path) -> Path:
+        """Provision one hermetic Mise bootstrap storage for a fixture run.
+
+        The product contract (``u.Infra.mise_bootstrap_environment``) names
+        ``MISE_DATA_DIR`` the storage root variable; a fixture that passes it
+        makes the real bootstrap hermetic instead of racing the shared
+        operator storage, and only a cold storage exercises the credential
+        boundaries a warm install silently skips. The directory sits beside
+        — never inside — the fixture checkout the generated Make rejects as
+        storage, and inside the pytest-managed tree so teardown reclaims it.
+        """
+        storage = project_root.parent / "mise-data"
+        storage.mkdir(parents=True, exist_ok=True)
+        return storage
 
     @staticmethod
     def copy_tracked_mise_seeds(root: Path, *, source_root: Path | None = None) -> None:
@@ -73,20 +89,15 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         capture: bool = True,
     ) -> p.Result[p.Cli.CommandOutput]:
         """Run Make without undeclared state inherited from outer pytest."""
-        # The host's Gas City identity selects the generated .envrc beads
-        # branch; a fixture project declares no city, so the owner-declared
-        # identity variable never crosses into the isolated run.
-        isolated_keys = (
-            *c.Tests.MAKE_ISOLATION_ENV_KEYS,
-            m.Infra.BeadsWorkspaceEnvironmentSpec().identity_var,
-        )
         return u.Cli.run_raw(
             [c.Infra.MAKE, *args],
             cwd=cwd,
             env=env,
             capture=capture,
             remove_env_keys=tuple(
-                key for key in isolated_keys if env is None or key not in env
+                key
+                for key in c.Tests.MAKE_ISOLATION_ENV_KEYS
+                if env is None or key not in env
             ),
         )
 

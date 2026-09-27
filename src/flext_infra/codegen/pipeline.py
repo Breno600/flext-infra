@@ -109,7 +109,7 @@ class FlextInfraCodegenPipeline(
         skipped = sum(len(result.violations_skipped) for result in fix_results)
 
         if self.output_format == c.Cli.OutputFormats.JSON:
-            payload: t.Infra.MutableInfraMapping = {
+            payload: t.MutableJsonMapping = {
                 "census_before": {
                     "total_violations": before_violations,
                     "total_fixable": before_fixable,

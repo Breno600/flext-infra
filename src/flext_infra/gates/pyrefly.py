@@ -43,7 +43,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
             c.Infra.CHECK,
             *target_args,
             "--config",
-            c.Infra.PYPROJECT_FILENAME,
+            c.PYPROJECT_FILENAME,
             "--python-interpreter-path",
             sys.executable,
             "--output-format",
@@ -116,7 +116,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
                 )
             issues.append(
                 m.Infra.Issue(
-                    file=c.Infra.PYPROJECT_FILENAME,
+                    file=c.PYPROJECT_FILENAME,
                     line=1,
                     column=1,
                     code="pyrefly-exec",

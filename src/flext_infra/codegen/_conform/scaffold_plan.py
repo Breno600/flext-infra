@@ -31,7 +31,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 f"scaffold workspace has no project metadata: {workspace.name}"
             )
         profile = target.make_profile
-        pyproject = root / c.Infra.PYPROJECT_FILENAME
+        pyproject = root / c.PYPROJECT_FILENAME
         managed_artifacts = u.Infra.empty_snapshot()
         # New and existing repositories share the exact same
         # root-scoped modernizer pipeline, so first generation is a fixed point.
@@ -95,6 +95,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             for entry in codegen.templates.entries
             if profile in entry.profiles
             and (not entry.requires_release_protocol or target.publishes_release)
+            and (not entry.requires_beads or workspace.beads is not None)
             and (
                 contract.destinations is None
                 or entry.destination in contract.destinations
@@ -131,19 +132,9 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         for entry, destination in scaffold_entries:
             if entry.delegate != "render":
                 continue
-            if destination == c.Infra.PYPROJECT_FILENAME and not contract.pyproject:
+            if destination == c.PYPROJECT_FILENAME and not contract.pyproject:
                 continue
-            if not contract.delegates and destination != c.Infra.PYPROJECT_FILENAME:
-                continue
-            if (
-                destination == c.Infra.BEADS_METADATA_RELPATH
-                and not (root / destination).is_file()
-            ):
-                # Why (flext-l2296 family): the ledger metadata is minted by
-                # Beads at first use, so a fresh clone legitimately lacks it.
-                # Planning the absent runtime artifact failed the gen check
-                # gate on every clean checkout. When present, the render below
-                # stays identity-preserving.
+            if not contract.delegates and destination != c.PYPROJECT_FILENAME:
                 continue
             rendered = self._rendered_artifact_source(
                 templates_root=templates_root,

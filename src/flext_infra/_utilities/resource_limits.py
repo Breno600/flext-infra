@@ -67,13 +67,16 @@ class FlextInfraUtilitiesResourceLimits:
 
     @staticmethod
     def mypy_limited_command(
-        command: t.StrSequence, limit: m.Infra.MypyResourceLimit | None = None
+        command: t.StrSequence,
+        limit: m.Infra.MypyResourceLimit | None = None,
+        *,
+        host_system: str | None = None,
     ) -> t.StrSequence:
-        """Prefix one Mypy command with validated memory and wall-time limits."""
+        """Prefix one Mypy command with limits for the selected host system."""
         validated_limit = (
             limit or FlextInfraUtilitiesResourceLimits.mypy_resource_limit()
         )
-        if platform.system() == "Darwin":
+        if (host_system or platform.system()) == "Darwin":
             return (
                 sys.executable,
                 str(Path(__file__).with_name("_mypy_supervisor.py")),

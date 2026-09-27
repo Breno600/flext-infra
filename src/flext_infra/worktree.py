@@ -65,7 +65,7 @@ class FlextInfraWorktreeService(s[str]):
         resolved_primary = primary_root.resolve()
         outermost_project = resolved_primary
         for candidate in resolved_primary.parents:
-            if (candidate / c.Infra.PYPROJECT_FILENAME).is_file():
+            if (candidate / c.PYPROJECT_FILENAME).is_file():
                 outermost_project = candidate
             if (candidate / ".git").exists():
                 break
@@ -263,7 +263,7 @@ class FlextInfraWorktreeService(s[str]):
                     created_oid.error or "failed to retain created branch identity",
                 )
             created_branch_oid = created_oid.value.oid
-        pyproject = lane / c.Infra.PYPROJECT_FILENAME
+        pyproject = lane / c.PYPROJECT_FILENAME
         if pyproject.is_file():
             metadata = u.Infra.read_project_metadata_result(lane)
             if metadata.failure:

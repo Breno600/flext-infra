@@ -15,8 +15,11 @@ rule:
     - pattern: hasattr($O, "$ATTR")
     - pattern: setattr($O, "$ATTR", $$$V)
 constraints:
+  # One leading underscore then a letter: a private name. Dunders are the
+  # public Python data model (__module__, __all__, __annotations__), not a
+  # bypass of any owner facade.
   ATTR:
-    regex: "^_[A-Za-z_]"
+    regex: "^_[A-Za-z]"
 message: >-
   Private-attribute probe: getattr/hasattr/setattr on a single-underscore
   name bypasses the owner facade; declare the surface publicly or go through

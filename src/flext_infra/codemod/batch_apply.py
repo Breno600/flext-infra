@@ -191,16 +191,23 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
     ) -> t.SequenceOf[m.Infra.ApplyRenamesInput]:
         """Resolve configured rename campaigns into engine inputs anchored at root.
 
-        Campaign paths are declared repository-root-relative so the config SSOT
-        stays independent of the caller's working directory.
+        The rename list is resolved against the config directory that declares
+        it, which ships inside the package: every consumer repository applies
+        the same list without carrying a copy. Scan roots stay
+        repository-root-relative because they select the tree being rewritten.
         """
         campaigns = (
             FlextInfraConfig.fetch_global().Infra.refactor_csv_campaigns.campaigns
         )
+        config_dir = FlextInfraConfig.ssot_config_dir()
         inputs: list[m.Infra.ApplyRenamesInput] = []
         for campaign in campaigns:
             csv_declared = Path(campaign.csv)
-            csv = csv_declared if csv_declared.is_absolute() else root / csv_declared
+            csv = (
+                csv_declared
+                if csv_declared.is_absolute()
+                else config_dir / csv_declared
+            )
             roots = tuple(
                 str(path if path.is_absolute() else root / path)
                 for path in (Path(value) for value in campaign.roots)

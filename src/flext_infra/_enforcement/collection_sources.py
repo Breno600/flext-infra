@@ -7,10 +7,7 @@ from typing import TYPE_CHECKING
 
 from flext_infra import c, m, u
 
-from .collection_base import (
-    FlextInfraEnforcementCollectionBase,
-    FlextInfraEnforcementEvaluation,
-)
+from .collection_base import FlextInfraEnforcementCollectionBase
 from .metadata import FlextInfraEnforcementMetadata
 from .selection import FlextInfraEnforcementSelection
 
@@ -31,7 +28,7 @@ class FlextInfraEnforcementSourceCollectors(
 
     def collect_project(
         self, project_dir: Path, rules: t.SequenceOf[m.EnforcementRuleSpec]
-    ) -> FlextInfraEnforcementEvaluation:
+    ) -> m.Infra.EnforcementEvaluation:
         """Collect rule probes for one project using one shared dispatcher.
 
         Tests-tier source kinds (``flext_tests_validator``) never reach this
@@ -67,7 +64,9 @@ class FlextInfraEnforcementSourceCollectors(
             collected, errors = self.collect_declarative(project_dir, declarative_rules)
             violations.extend(collected)
             failures.extend(errors)
-        return FlextInfraEnforcementEvaluation(violations, failures)
+        return m.Infra.EnforcementEvaluation(
+            violations=tuple(violations), failures=tuple(failures)
+        )
 
     def collect_python_file_probes(
         self, project_dir: Path, rule: m.EnforcementRuleSpec

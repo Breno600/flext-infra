@@ -41,10 +41,10 @@ class FlextInfraFlextBindingService:
     @staticmethod
     def _declared_distributions(consumer_root: Path) -> p.Result[t.VariadicTuple[str]]:
         """Return the distribution names the consumer declares as dependencies."""
-        manifest = consumer_root / c.Infra.PYPROJECT_FILENAME
+        manifest = consumer_root / c.PYPROJECT_FILENAME
         if not manifest.is_file():
             return r[t.VariadicTuple[str]].fail(
-                f"consumer has no {c.Infra.PYPROJECT_FILENAME}: {consumer_root}"
+                f"consumer has no {c.PYPROJECT_FILENAME}: {consumer_root}"
             )
         payload_result = u.Cli.toml_read_json(manifest)
         payload: t.JsonMapping = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(

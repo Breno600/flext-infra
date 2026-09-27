@@ -232,24 +232,25 @@ class FlextInfraUtilitiesCodegenNamespace:
         package_name = (
             project.package_name
             if project is not None and project.package_name
-            else FlextInfraUtilitiesDiscovery.package_name(resolved_root)
+            else FlextInfraUtilitiesDiscovery.project_package_name(resolved_root)
         )
         if not package_name:
             return None
         if project is not None and project.name:
             project_name = project.name
-        elif (resolved_root / c.Infra.PYPROJECT_FILENAME).is_file():
+        elif (resolved_root / c.PYPROJECT_FILENAME).is_file():
             project_name = FlextInfraUtilitiesDocsScope.project_name_from_payload(
                 resolved_root,
                 FlextInfraUtilitiesDocsScope.project_payload(resolved_root),
             )
         else:
             project_name = resolved_root.name
-        class_name_source = (
-            project_name
-            if project_name != resolved_root.name
-            else package_name.split(".", maxsplit=1)[0].replace("_", "-")
-        )
+        # The facade class stem carries the PACKAGE identity, never the
+        # checkout directory: a linked worktree or renamed clone is the same
+        # project (same declared package), so deriving from project_name or
+        # the directory name made the namespace enforcement demand a
+        # different prefix per checkout shape.
+        class_name_source = package_name.split(".", maxsplit=1)[0].replace("_", "-")
         src_dir = resolved_root / c.Infra.DEFAULT_SRC_DIR
         package_dir = src_dir / Path(*package_name.split("."))
         return m.Infra.RopeProjectLayout(
@@ -266,7 +267,11 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @classmethod
     def _resolve_family(
-        cls, file_path: Path, *, rope_project: t.Infra.RopeProject
+        cls,
+        file_path: Path,
+        *,
+        rope_project: t.Infra.RopeProject,
+        project_layout: m.Infra.RopeProjectLayout | None = None,
     ) -> t.Quad[str | None, str | None, str | None, t.StrSequence]:
         """Return (family_alias, expected_family, expected_alias, family_tokens)."""
         family_alias = next(
@@ -291,9 +296,13 @@ class FlextInfraUtilitiesCodegenNamespace:
                 else None
             )
         )
-        project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
+        project_root = (
+            project_layout.project_root
+            if project_layout is not None
+            else FlextInfraUtilitiesDiscovery.project_root(file_path)
+        )
         if project_root is not None:
-            layout = cls.layout(project_root)
+            layout = project_layout or cls.layout(project_root)
             direct_tier = file_path.parent.parent == project_root
             public_root = layout is not None and file_path.parent == layout.package_dir
             # A stub is never a facade source: Rope loads only Python sources,
@@ -309,7 +318,7 @@ class FlextInfraUtilitiesCodegenNamespace:
                 owner = FlextInfraUtilitiesRopeAnalysis.published_facade_owner(
                     rope_project, resource
                 )
-                if owner is not None:
+                if owner is not None and owner[0] in declared_exports:
                     expected_alias, expected_family = owner
         family_tokens: t.StrSequence = (expected_family,) if expected_family else ()
         return family_alias, expected_family, expected_alias, family_tokens
@@ -363,12 +372,18 @@ class FlextInfraUtilitiesCodegenNamespace:
         )
 
     @classmethod
-    def _resolve_project_prefix(cls, file_path: Path) -> str:
+    def _resolve_project_prefix(
+        cls, file_path: Path, *, project_layout: m.Infra.RopeProjectLayout | None = None
+    ) -> str:
         """Derive the class-stem prefix for one file inside a project."""
-        project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
+        project_root = (
+            project_layout.project_root
+            if project_layout is not None
+            else FlextInfraUtilitiesDiscovery.project_root(file_path)
+        )
         if project_root is None:
             return ""
-        layout = cls.layout(project_root)
+        layout = project_layout or cls.layout(project_root)
         if layout is None:
             return ""
         class_stem: str = layout.class_stem
@@ -391,6 +406,7 @@ class FlextInfraUtilitiesCodegenNamespace:
         rope_project: t.Infra.RopeProject,
         rel_path: Path | None = None,
         current_pkg: str = "",
+        project_layout: m.Infra.RopeProjectLayout | None = None,
     ) -> m.Infra.NamespaceModulePolicy:
         """Derive publication from existing declarations, without repair inference."""
         package_name = current_pkg or FlextInfraUtilitiesDiscovery.package_name(
@@ -400,7 +416,9 @@ class FlextInfraUtilitiesCodegenNamespace:
         package_parts = tuple(part for part in package_name.split(".") if part)
 
         family_alias, expected_family, expected_alias, family_tokens = (
-            cls._resolve_family(file_path, rope_project=rope_project)
+            cls._resolve_family(
+                file_path, rope_project=rope_project, project_layout=project_layout
+            )
         )
         (
             is_fixture_module,
@@ -463,12 +481,18 @@ class FlextInfraUtilitiesCodegenNamespace:
                 and len(name) <= c.Infra.MAX_ALIAS_LENGTH
             )
         )
-        project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
+        project_root = (
+            project_layout.project_root
+            if project_layout is not None
+            else FlextInfraUtilitiesDiscovery.project_root(file_path)
+        )
         return m.Infra.NamespaceModulePolicy(
             enforce_contract=enforce_contract,
             export_symbols=export_symbols,
             include_in_lazy_init=include_in_lazy_init,
-            project_prefix=cls._resolve_project_prefix(file_path),
+            project_prefix=cls._resolve_project_prefix(
+                file_path, project_layout=project_layout
+            ),
             expected_alias=expected_alias,
             expected_family=expected_family,
             is_internal_namespace=project_root is not None
@@ -558,7 +582,7 @@ class FlextInfraUtilitiesCodegenNamespace:
         selected = tuple(
             project
             for project in discovered
-            if (project.path / c.Infra.PYPROJECT_FILENAME).exists()
+            if (project.path / c.PYPROJECT_FILENAME).exists()
         )
         return r[t.SequenceOf[m.Infra.ProjectInfo]].ok(selected)
 
@@ -629,7 +653,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             return
         with FlextInfraUtilitiesRopeCore.open_project(file_path.parent) as rope_project:
             resource: t.Infra.RopeResource | None = (
-                FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, file_path
                 )
             )
@@ -637,7 +661,7 @@ class FlextInfraUtilitiesCodegenNamespace:
                 return
             source = resource.read()
             class_infos = sorted(
-                FlextInfraUtilitiesRopeAnalysis.get_class_info(rope_project, resource),
+                FlextInfraUtilitiesRopeAnalysis.resolve_class_info(rope_project, resource),
                 key=operator.attrgetter("line"),
             )
             if not class_infos:
@@ -768,8 +792,16 @@ class FlextInfraUtilitiesCodegenNamespace:
             source_cache[violation.module] = cls._read_source_lines(
                 project_path, violation.module
             )
-        return m.Infra.ViolationKey.from_violation(
-            violation, source_cache[violation.module]
+        source_lines = source_cache[violation.module]
+        context = "\n".join(
+            source_lines[
+                max(0, violation.line - 2) : min(len(source_lines), violation.line + 3)
+            ]
+        )
+        return m.Infra.ViolationKey(
+            module=violation.module,
+            rule=violation.rule,
+            content_hash=u.Cli.sha256_content(context),
         )
 
 

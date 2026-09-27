@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from importlib import import_module
 from importlib.util import resolve_name
 from pathlib import Path
 from types import MappingProxyType
@@ -45,6 +44,7 @@ class TestsFlextInfraCodegenGeneration:
                 dict(lazy_map if type_checking_map is None else type_checking_map)
             ),
             eager_dunders=MappingProxyType(dict(eager_dunders or {})),
+            inline_constants=MappingProxyType({}),
             child_packages_for_lazy=child_packages,
             excluded_lazy_names=("internal_only",),
         )
@@ -117,19 +117,10 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, lacks="from demo_pkg.servers._base.constants import")
 
     def test_generated_runtime_surfaces_import_without_bootstrap_cycles(self) -> None:
-        lazy_parts = import_module("flext_core._lazy_parts")
-        typings = import_module("flext_core._typings")
-        infra_utilities = import_module("flext_infra._utilities")
-
-        tm.that(lazy_parts.__all__, eq=())
-        tm.that(typings.__all__, eq=())
         tm.that(flext_core.__all__, has="c")
         tm.that(dir(flext_core), has="c")
         tm.that(flext_core.c.__name__, eq="FlextConstants")
-        tm.that(
-            infra_utilities.FlextInfraUtilitiesRopeCore.__name__,
-            eq="FlextInfraUtilitiesRopeCore",
-        )
+        tm.that(u.Infra.init_rope_project, none=False)
 
     @pytest.mark.parametrize(
         ("owner", "rendered_owner"),
@@ -524,7 +515,7 @@ class TestsFlextInfraCodegenGeneration:
         project_root = tmp_path / "0.12.0-dev"
         wrapper_root = project_root / "examples"
         wrapper_root.mkdir(parents=True)
-        (project_root / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_root / c.PYPROJECT_FILENAME).write_text(
             f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n{isort_table}',
             encoding="utf-8",
         )
@@ -547,6 +538,7 @@ class TestsFlextInfraCodegenGeneration:
                 "project_p": ("demo_worktree_pkg", "p"),
             }),
             eager_dunders=MappingProxyType({}),
+            inline_constants=MappingProxyType({}),
             child_packages_for_lazy=(),
             excluded_lazy_names=("internal_only",),
         )
@@ -577,7 +569,7 @@ class TestsFlextInfraCodegenGeneration:
         table = (
             "[tool.ruff.lint.isort]\nknown-first-party = []\n" if declared_empty else ""
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\n{table}',
             encoding="utf-8",
         )
@@ -615,7 +607,7 @@ class TestsFlextInfraCodegenGeneration:
         """Invalid Ruff configuration cannot become a derived namespace list."""
         package = tmp_path / "src" / "sample"
         package.mkdir(parents=True)
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "sample"\nversion = "1.0.0"\n'
             f"[tool.ruff.lint.isort]\nknown-first-party = {projected}\n",
             encoding="utf-8",

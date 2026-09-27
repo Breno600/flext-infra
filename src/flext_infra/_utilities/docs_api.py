@@ -33,7 +33,7 @@ class FlextInfraUtilitiesDocsApi:
     )
 
     @staticmethod
-    def _string_values(value: t.Infra.InfraValue | None) -> t.StrSequence:
+    def _string_values(value: t.JsonValue | None) -> t.StrSequence:
         """Normalize one infra sequence payload into strings."""
         if value is None:
             return []
@@ -41,7 +41,7 @@ class FlextInfraUtilitiesDocsApi:
         return [str(item) for item in items]
 
     @staticmethod
-    def _string_mapping(value: t.Infra.InfraValue | None) -> t.StrMapping:
+    def _string_mapping(value: t.JsonValue | None) -> t.StrMapping:
         """Normalize one infra mapping payload into string keys and values."""
         if value is None:
             return {}
@@ -388,12 +388,12 @@ class FlextInfraUtilitiesDocsApi:
                 )
                 if not module_file.exists():
                     continue
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, module_file
                 )
                 if resource is None:
                     continue
-                pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(
+                pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                     rope_project, resource
                 )
                 if export_name in pymodule.get_attributes():
