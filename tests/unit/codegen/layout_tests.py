@@ -78,7 +78,9 @@ class TestsFlextInfraCodegenLayout:
             }
         })
         org_overlay = (
-            project / c.Infra.CODEGEN_CONFIG_DIR / c.Infra.CODEGEN_ORG_OVERRIDES_FILENAME
+            project
+            / c.Infra.CODEGEN_CONFIG_DIR
+            / c.Infra.CODEGEN_ORG_OVERRIDES_FILENAME
         )
         tm.that(org_overlay.is_relative_to(tmp_path), eq=True)
         org_overlay.parent.mkdir(exist_ok=True)
