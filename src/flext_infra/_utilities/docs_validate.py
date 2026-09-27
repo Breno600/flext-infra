@@ -120,9 +120,7 @@ class FlextInfraUtilitiesDocsValidate:
             # orchestrator root) has no generator that can produce it, so
             # requiring it is an unsatisfiable contract, not a docs defect.
             required = [
-                rel_path
-                for rel_path in required
-                if "/generated/" not in rel_path
+                rel_path for rel_path in required if "/generated/" not in rel_path
             ]
         missing: t.MutableSequenceOf[str] = []
         for rel_path in sorted(set(required)):

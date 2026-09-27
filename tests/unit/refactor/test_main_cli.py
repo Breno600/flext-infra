@@ -27,7 +27,7 @@ class TestsFlextInfraRefactorMainCli:
     # The letter is published in __all__ but never bound: the published
     # declaration is the defect, so the fix un-publishes it. A runtime alias
     # is never inferred from the module's file family.
-    _MISSING_RUNTIME_ALIAS_MODULE = (
+    _UNBOUND_RUNTIME_ALIAS_EXPORT_MODULE = (
         "from __future__ import annotations\n\n"
         '__all__: list[str] = ["FlextDemoModels", "m"]\n\n'
         "class FlextDemoModels:\n"
@@ -261,6 +261,7 @@ class TestsFlextInfraRefactorMainCli:
         cls, workspace: Path, *, rules: str, kinds: str | None = None
     ) -> None:
         """Run one applying census through the CLI, asserting a clean exit."""
+        u.Tests.provision_checkout(workspace)
         args = [
             "census",
             "--repository-root",
@@ -430,16 +431,19 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(source, lacks='"m"')
         tm.that(source, lacks="m = FlextDemoModels")
 
-    def test_refactor_census_binds_declared_runtime_alias(self, tmp_path: Path) -> None:
-        """A letter declared in ``__all__`` receives its derived facade binding."""
+    def test_refactor_census_removes_unbound_declared_runtime_alias_export(
+        self, tmp_path: Path
+    ) -> None:
+        """An unbound letter is removed from ``__all__``, never inferred."""
         workspace, module_path = self._build_module_workspace(
-            tmp_path, self._MISSING_RUNTIME_ALIAS_MODULE
+            tmp_path, self._UNBOUND_RUNTIME_ALIAS_EXPORT_MODULE
         )
 
         self._apply_census(workspace, rules="runtime_alias")
 
         source = module_path.read_text(encoding="utf-8")
-        tm.that(source, has="m = FlextDemoModels")
+        tm.that(source, lacks='"m"')
+        tm.that(source, lacks="m = FlextDemoModels")
 
     def test_refactor_census_reports_duplicate_runtime_alias(
         self, tmp_path: Path
@@ -564,6 +568,7 @@ class TestsFlextInfraRefactorMainCli:
         self, tmp_path: Path
     ) -> None:
         workspace = self._build_test_only_workspace(tmp_path)
+        u.Tests.initialize_git_repo(workspace)
 
         report = u.Tests.census_report(
             workspace, kinds=("function",), rules=("unused",)
