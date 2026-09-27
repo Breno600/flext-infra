@@ -42,9 +42,7 @@ class FlextInfraRuntimeAliasDetector:
                     file=str(file_path),
                     kind="unbound",
                     alias=family,
-                    detail=(
-                        f"__all__ publishes {family!r} without a runtime binding"
-                    ),
+                    detail=(f"__all__ publishes {family!r} without a runtime binding"),
                 )
             ]
         if not matches or family not in exports:
