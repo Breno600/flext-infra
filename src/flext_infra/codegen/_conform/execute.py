@@ -598,6 +598,8 @@ class FlextInfraCodegenConformExecute(
         for entry in config.Infra.codegen.templates.entries:
             if profile not in entry.profiles:
                 continue
+            if entry.requires_beads and workspace.beads is None:
+                continue
             destination = entry.destination.format(
                 package_name=project.package_name, ns=project.namespace_attribute
             )
