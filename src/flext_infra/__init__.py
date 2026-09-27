@@ -242,10 +242,6 @@ if TYPE_CHECKING:
     from .validate.gate_contract import FlextInfraGateContractValidator
     from .validate.gate_contract_checks import FlextInfraGateContractChecksMixin
     from .validate.gate_contract_content import FlextInfraGateContractContentMixin
-    from .validate.gate_contract_errors import (
-        GateContractInfraError,
-        GateContractUsageError,
-    )
     from .validate.gate_contract_report import FlextInfraGateContractReportMixin
     from .validate.gate_contract_scan import FlextInfraGateContractScanMixin
     from .validate.import_cycles import FlextInfraValidateImportCycles
@@ -471,8 +467,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspacePropagation",
     "FlextInfraWorktreeService",
     "FlextInfraWrapperRootNamespaceRefactor",
-    "GateContractInfraError",
-    "GateContractUsageError",
     "RefactorRoutes",
     "ValidationCommandRoutes",
     "ValidationRoutes",
@@ -769,10 +763,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".validate.gate_contract": ("FlextInfraGateContractValidator",),
             ".validate.gate_contract_checks": ("FlextInfraGateContractChecksMixin",),
             ".validate.gate_contract_content": ("FlextInfraGateContractContentMixin",),
-            ".validate.gate_contract_errors": (
-                "GateContractInfraError",
-                "GateContractUsageError",
-            ),
             ".validate.gate_contract_report": ("FlextInfraGateContractReportMixin",),
             ".validate.gate_contract_scan": ("FlextInfraGateContractScanMixin",),
             ".validate.import_cycles": ("FlextInfraValidateImportCycles",),
