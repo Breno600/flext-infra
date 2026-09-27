@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -36,8 +37,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             workspace_contract, "exclude_docs"
         )
         project_scopes = [scope for scope in scopes if scope.path != repository_root]
-        catalog_entries: t.MutableSequenceOf[MutableMapping[str, str]] = []
-        class_counts: MutableMapping[str, int] = {}
+        catalog_entries: t.MutableSequenceOf[m.Infra.DocsCatalogEntry] = []
         scope_modules: MutableMapping[str, list[str]] = {}
         src_paths: t.MutableSequenceOf[str] = []
         root_api: list[t.Pair[Path, str]] = []
@@ -64,9 +64,6 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                         )
                     )
                 continue
-            class_counts[scope.project_class] = (
-                class_counts.get(scope.project_class, 0) + 1
-            )
             analyzed_contract = FlextInfraUtilitiesDocsApi.public_contract(
                 scope.path, scope.package_name
             )
@@ -78,13 +75,16 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             scope_modules[scope.name] = (
                 FlextInfraUtilitiesDocsGenerateRootMixin._module_names(scope)
             )
-            catalog_entries.append({
-                "name": scope.name,
-                "project_class": scope.project_class,
-                "package_name": scope.package_name,
-                "description": str(project_contract.get("description", "")).strip(),
-                "api_page": f"../../api-reference/generated/{scope.name}.md",
-            })
+            catalog_entries.append(
+                m.Infra.DocsCatalogEntry(
+                    name=scope.name,
+                    project_class=scope.project_class,
+                    package_name=scope.package_name,
+                    description=str(project_contract.get("description", "")).strip(),
+                    api_page=f"../../api-reference/generated/{scope.name}.md",
+                )
+            )
+        class_counts = Counter(entry.project_class for entry in catalog_entries)
         rendered: list[t.Pair[Path, str]] = [
             *root_api,
             (
@@ -98,7 +98,10 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 FlextInfraUtilitiesDocsRender.docs_root_overview_page(
                     workspace_contract,
                     project_count=len(project_scopes),
-                    class_counts=class_counts,
+                    class_counts=tuple(
+                        m.Infra.DocsClassCount(project_class=name, count=count)
+                        for name, count in sorted(class_counts.items())
+                    ),
                 ),
             ),
             (
@@ -108,7 +111,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 ),
             ),
         ]
-        projects_index_entries: t.MutableSequenceOf[MutableMapping[str, str]] = []
+        projects_index_entries: t.MutableSequenceOf[m.Infra.DocsProjectIndexEntry] = []
         for scope in project_scopes:
             rendered.append((
                 repository_root / "docs/api-reference/generated" / f"{scope.name}.md",
@@ -137,10 +140,11 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                         module_name, module_name
                     ),
                 ))
-            projects_index_entries.append({
-                "name": scope.name,
-                "module_count": str(len(module_names)),
-            })
+            projects_index_entries.append(
+                m.Infra.DocsProjectIndexEntry(
+                    name=scope.name, module_count=len(module_names)
+                )
+            )
         rendered.append((
             repository_root / "docs/api-reference/generated/projects/index.md",
             FlextInfraUtilitiesDocsRender.docs_root_projects_index(
@@ -174,17 +178,6 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         ))
 
     @staticmethod
-    def _is_workspace_root_scope(scope: m.Infra.DocScope) -> bool:
-        """Whether one scope is the root of a manifest-carrying repository.
-
-        Mirrors the validate-side contract (docs_validate.docs_missing_required_paths):
-        a root that carries its own workspace manifest is the workspace scope
-        regardless of the scope label, so the generate side must route it to the
-        root publisher exactly the way validate demands the root contract.
-        """
-        return (scope.path / "config" / "workspace.yaml").is_file()
-
-    @staticmethod
     def docs_scope_artifacts(
         scope: m.Infra.DocScope,
         *,
@@ -193,10 +186,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
     ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
         """Return the rendered artifact inventory for one docs scope."""
-        if (
-            scope.name == c.Infra.RK_ROOT
-            or FlextInfraUtilitiesDocsGenerateRootMixin._is_workspace_root_scope(scope)
-        ):
+        if scope.name == c.Infra.RK_ROOT:
             return FlextInfraUtilitiesDocsGenerateRootMixin.docs_root_artifacts(
                 repository_root, aggregate_scopes
             )

@@ -11,7 +11,6 @@ from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
 from flext_infra.validate.import_cycles import FlextInfraValidateImportCycles
 from flext_infra.validate.inventory import FlextInfraInventoryService
 from flext_infra.validate.lazy_map_freshness import FlextInfraValidateLazyMapFreshness
-from flext_infra.validate.manual_command import FlextInfraManualCommandValidator
 from flext_infra.validate.metadata_discipline import (
     FlextInfraValidateMetadataDiscipline,
 )
@@ -120,12 +119,6 @@ class ValidationCommandRoutes(CliRouteBase):
                     "Guard 8: centralized metadata parser discipline",
                     FlextInfraValidateMetadataDiscipline,
                     FlextInfraValidateMetadataDiscipline.execute,
-                ),
-                (
-                    "manual-cmd",
-                    "Manual-command blocker (§5): pre-commit config drift gate",
-                    FlextInfraManualCommandValidator,
-                    FlextInfraManualCommandValidator.execute,
                 ),
             )
         )

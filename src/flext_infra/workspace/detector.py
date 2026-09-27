@@ -26,8 +26,20 @@ class FlextInfraWorkspaceDetector(
 
     @staticmethod
     def _beads_path(repository_root: Path) -> Path:
-        """Return the mandatory repository-local Beads identity path."""
+        """Return the repository-local Beads identity path when enabled."""
         return repository_root / c.CONFIG_DIR_NAME / c.Infra.BEADS_CONFIG_FILENAME
+
+    @staticmethod
+    def _beads_enabled(manifest: m.Infra.WorkspaceManifestSpec) -> bool:
+        """Resolve Beads participation from the manifest's matched policy."""
+        return next(
+            (
+                overlay.beads_enabled
+                for overlay in manifest.repository_policy_overlays
+                if overlay.project == manifest.repository.distribution
+            ),
+            True,
+        )
 
     @classmethod
     def _composed_beads_identity_error(
@@ -376,6 +388,13 @@ class FlextInfraWorkspaceDetector(
             else c.Infra.MakeProfile.STANDALONE
         )
         project_name = metadata.value.project.name
+        _, separator, repository_name = u.Infra.git_remote_identity(
+            origin.value
+        ).partition("/")
+        if not separator or not repository_name:
+            return r[m.Infra.RepositoryRef].fail(
+                f"Git origin does not identify a repository: {origin.value}"
+            )
         # The manifest is the identity authority: the provider key is the one
         # the repository itself declares and the declared URL organization was
         # just reconciled against the live origin, so no catalog may override
@@ -388,7 +407,7 @@ class FlextInfraWorkspaceDetector(
         # the discovery contract loudly instead of being declared one.
         return r[m.Infra.RepositoryRef].ok(
             m.Infra.RepositoryRef(
-                name=project_name,
+                name=repository_name,
                 distribution=project_name,
                 url=effective_url,
                 path=path,
@@ -542,7 +561,10 @@ class FlextInfraWorkspaceDetector(
         )
         if repository.failure:
             return result_type.from_failure(repository)
-        if not u.Infra.workspace_manifest_path(subproject_root).is_file():
+        member_manifest = cls.load_workspace_manifest(subproject_root)
+        if member_manifest.failure:
+            return result_type.from_failure(member_manifest)
+        if not member_manifest.value:
             return result_type.ok(repository.value)
         member_beads: m.Infra.BeadsProjectSpec | None = None
         if workspace_beads is not None:
@@ -776,7 +798,7 @@ class FlextInfraWorkspaceDetector(
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Load exclusions for governed repositories; ignore ungoverned trees."""
         resolved_root = repository_root.expanduser().resolve()
-        if not cls._beads_path(resolved_root).is_file():
+        if not u.Infra.workspace_manifest_path(resolved_root).is_file():
             return r[t.VariadicTuple[Path]].ok(())
         # External analysis exclusions are declared exclusively by this
         # checkout's own .gitmodules. A composed project may follow its Beads

@@ -180,7 +180,7 @@ export TESTMON_DATAFILE
 ifneq ($(GEN_INIT_ONLY),)
 override REPOSITORY_ROOT := $(MAKEFILE_ROOT)
 else
-override REPOSITORY_ROOT := $(shell cd "$(MAKEFILE_ROOT)" && root=$$(git rev-parse --show-superproject-working-tree) && if [ -n "$$root" ]; then cd "$$root" && pwd -P; else pwd -P; fi)
+override REPOSITORY_ROOT := $(shell cd "$(MAKEFILE_ROOT)" && if root=$$(git rev-parse --show-superproject-working-tree); then if [ -n "$$root" ]; then cd "$$root" && pwd -P; else pwd -P; fi; else status=$$?; if [ "$$status" -ne 1 ]; then exit "$$status"; fi; pwd -P; fi)
 ifneq ($(.SHELLSTATUS),0)
 $(error Cannot resolve the physical workspace for $(MAKEFILE_ROOT))
 endif
@@ -231,7 +231,10 @@ override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
 # Attached members retain their own lock inputs for standalone consumption.
 override MISE_VERSION_PIN := $(RUNTIME_ROOT)/{{ mise_bootstrap.version_pin_file }}
 ifneq ($(wildcard $(MISE_VERSION_PIN)),)
-export MISE_VERSION := $(strip $(file < $(MISE_VERSION_PIN)))
+override export MISE_VERSION := $(strip $(shell cat "$(MISE_VERSION_PIN)"))
+ifneq ($(.SHELLSTATUS),0)
+$(error Cannot read the pinned Mise release from $(MISE_VERSION_PIN))
+endif
 endif
 # End SECTION: profile routing
 
@@ -284,10 +287,13 @@ PROJECT_TOOL_EXEC = $(SHELL) -c '$(subst ','"'"',$(PROJECT_TOOL_RUNTIME))' --
 # selects its lifecycle and resolution through target-specific variables.
 TOOL_BOOTSTRAP_LIFECYCLE := _setup_lifecycle
 TOOL_BOOTSTRAP_RESOLVE :=
-{{ tool_bootstrap_recipe("_bootstrap_setup_tools", "$(PROJECT_ROOT)", "$(SETUP_MISE)", uv_version, "$(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)", mise_bootstrap, make, mise_lockfile_platforms, qlty_selector, jscpd_selector, prettier_selector, scc_selector, waza_selector) }}
+{{ tool_bootstrap_recipe("_bootstrap_setup_tools", "$(PROJECT_ROOT)", "$(SETUP_MISE)", uv_version, "$(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)", mise_bootstrap, make, ast_grep_selector) }}
 
 ifeq ($(MAKE_PROFILE),workspace)
-CODEGEN_SCOPE := all
+# One repository owns each GitHub CI run. The umbrella still owns the full
+# fleet cycle when Make runs outside GitHub Actions.
+GITHUB_CI_SELF := $(filter true,$(GITHUB_ACTIONS))
+CODEGEN_SCOPE := $(if $(GITHUB_CI_SELF),self,all)
 ALLOWED_PROJECTS := . $(WORKSPACE_SUBPROJECTS)
 else
 CODEGEN_SCOPE := self
@@ -342,7 +348,10 @@ WORKSPACE_ORCHESTRATE = $(UV_RUN) python -m flext_infra {{ workspace_cli_group }
 # _builtin-self-* targets, so all 32 distributions execute their own gates
 # (plan contract: no member of the fleet is excluded from required cycles).
 DEFAULT_PROJECTS := $(WORKSPACE_SUBPROJECTS) .
-SELECTED_PROJECTS := $(DEFAULT_PROJECTS)
+# GitHub validates the repository that owns this workflow. Member repositories
+# run their own CI; the umbrella's local lifecycle remains the fleet gate.
+# GITHUB_ACTIONS stays true in both CI=Y and CI=N check partitions.
+SELECTED_PROJECTS := $(if $(GITHUB_CI_SELF),.,$(DEFAULT_PROJECTS))
 WORKSPACE_PROJECT_ARGS := $(foreach project,$(SELECTED_PROJECTS),--projects $(project))
 DOCS_PROJECT_ARGS := $(foreach project,$(SELECTED_PROJECTS),--projects $(project))
 
@@ -413,13 +422,10 @@ define _dispatch
 endef
 {% endif %}
 
-define _run_for_all_projects
-	@set -eu; \
-	for project in $(SELECTED_PROJECTS); do \
-		if [ "$$project" = "." ]; then project_root="$(PROJECT_ROOT)"; \
-		else project_root="$(PROJECT_ROOT)/$$project"; fi; \
-		$(UV) lock --project "$$project_root" $(1); \
-	done
+# uv resolves the containing workspace and writes its single uv.lock. Invoking
+# it once per member re-resolves that same lock for every member.
+define _lock_project
+	@$(UV) lock --project "$(PROJECT_ROOT)" $(1)
 endef
 
 .PHONY: $(PUBLIC_VERBS) $(addprefix _builtin-,$(PUBLIC_VERBS))
@@ -574,7 +580,7 @@ _upg_lifecycle: _builtin_setup_submodules
 	case " $(CUSTOM_DECLARED_TARGETS) " in \
 		*" pre-upg "*) $(SELF_MAKE) pre-upg ;; \
 	esac
-	$(call _run_for_all_projects,--upgrade --refresh)
+	$(call _lock_project,--upgrade --refresh)
 	@$(SELF_MAKE) _builtin_setup_environment
 	@set -eu; \
 	selected="$(strip $(SELECTED_PROJECTS))"; \
@@ -584,9 +590,9 @@ _upg_lifecycle: _builtin_setup_submodules
 	$(PROJECT_FLEXT_INFRA) deps modernize --repository-root "$(PROJECT_ROOT)" \
 		--apply --rewrite-constraints "$$@"
 	@$(SELF_MAKE) gen
-	$(call _run_for_all_projects,)
+	$(call _lock_project,)
 	@$(SELF_MAKE) _builtin_setup_environment
-	$(call _run_for_all_projects,--check)
+	$(call _lock_project,--check)
 	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated
 
@@ -601,7 +607,12 @@ _upg_activated:
 # _builtin-self-* targets serve the workspace root itself (project selector
 # `.` from the orchestrator). They apply the same member-style gate recipes to
 # PROJECT_ROOT without recursing into submodules, so the root distribution
-# runs its own evidence in the global cycles.
+# runs its own evidence in the global cycles. Where the standalone profile's
+# `_builtin-*_all` twin owns the identical body, the self target delegates to
+# that twin so the gate-selection shell block is emitted exactly once; the
+# workspace profile emits the root-local body because its `_all` twin
+# recurses into members instead.
+{% if make_profile == "workspace" %}
 _builtin-self-test: _builtin_require_environment
 {{ test_report_recipe(
     runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
@@ -623,11 +634,30 @@ _builtin-self-fmt: _builtin_require_environment
 _builtin-self-fix: _builtin_require_environment
 {{ fix_body() }}
 
+# Catalog-driven enforcement fixes: every ENFORCE rule whose fix action is
+# declared safe, applied through its registered adapter.
 _builtin-self-fix-enforcement: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
 
 _builtin-self-build:
 	@$(UV) build --project "$(PROJECT_ROOT)"
+{% else %}
+# Standalone: the `_all` twins own the one emitted body (SSOT); each carries
+# its own `_builtin_require_environment` edge.
+_builtin-self-test: _builtin_test_all
+
+_builtin-self-check: _builtin_check_all
+
+_builtin-self-test-full: _builtin_test_full_all
+
+_builtin-self-fmt: _builtin_fmt_all
+
+_builtin-self-fix: _builtin_fix_all
+
+_builtin-self-fix-enforcement: _builtin_fix_enforcement
+
+_builtin-self-build: _builtin_build_artifacts
+{% endif %}
 
 _builtin-self-clean: _builtin_clean_generated
 
@@ -721,9 +751,43 @@ _builtin_sonarcloud_sync_all: _builtin_sonarcloud_sync_project
 _builtin_run_default: _builtin_require_environment
 	@$(UV_RUN) $(PROJECT_NAME) $(ARGS)
 
+# Profile the real runtime-census gate through the same installed CLI selected
+# by the root dispatcher. The report remains in the external runtime state.
+.PHONY: profile-census
+profile-census: _builtin_require_environment
+	@mkdir -p "$(PROJECT_SCRATCH_ROOT)/profiles"
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); status = profile.runcall(main, sys.argv[2:]); profile.dump_stats(sys.argv[1]); raise SystemExit(status)' \
+		"$(PROJECT_SCRATCH_ROOT)/profiles/runtime-census.pstats" check run \
+		--repository-root "$(PROJECT_ROOT)" --gates runtime-census --projects .
+
+.PHONY: profile-census-report
+profile-census-report: _builtin_require_environment
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(35)' \
+		"$(PROJECT_SCRATCH_ROOT)/profiles/runtime-census.pstats"
+
+.PHONY: profile-gen
+profile-gen: _builtin_require_environment
+	@mkdir -p "$(PROJECT_SCRATCH_ROOT)/profiles"
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); status = profile.runcall(main, sys.argv[2:]); profile.dump_stats(sys.argv[1]); raise SystemExit(status)' \
+		"$(PROJECT_SCRATCH_ROOT)/profiles/lazy-init.pstats" codegen lazy-init \
+		--repository-root "$(PROJECT_ROOT)" --module {{ dist | replace('-', '_') }} --dry-run
+
+.PHONY: profile-gen-report
+profile-gen-report: _builtin_require_environment
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
+		"$(PROJECT_SCRATCH_ROOT)/profiles/lazy-init.pstats"
+
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
 		'$(MAKE_PROFILE)' '$(PROJECT_ROOT)' '$(RUNTIME_ROOT)'
+{% if make_profile == "workspace" %}
+	@printf 'selected_projects=%s\ncodegen_scope=%s\n' \
+		'$(strip $(SELECTED_PROJECTS))' '$(CODEGEN_SCOPE)'
+{% endif %}
 	@$(PROJECT_TOOL_EXEC) $(SHELL) -c 'command -v uv'
 	@$(UV) --version
 	@if [ -x "$(RUNTIME_PYTHON)" ]; then \
@@ -794,8 +858,8 @@ _builtin_release_publish: _builtin_require_environment
 # point. Only `upg` resolves and rewrites the locks; gen installs nothing and
 # never runs another writer before or after conform's journal.
 _builtin_gen_init:
-	@$(PROJECT_FLEXT_INFRA) codegen init --repository-root "$(PROJECT_ROOT)" --apply
-	@$(PROJECT_FLEXT_INFRA) codegen init --repository-root "$(PROJECT_ROOT)" --check
+	@$(PROJECT_FLEXT_INFRA) codegen init --repository-root "$(PROJECT_ROOT)"
+	@$(PROJECT_FLEXT_INFRA) codegen init --repository-root "$(PROJECT_ROOT)" --check-only
 
 _builtin_gen_all:
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope "$(CODEGEN_SCOPE)" --mode apply

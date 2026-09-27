@@ -73,7 +73,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             )
             inventory = (
                 selected
-                if selection_plan.whole_target
+                if not selection_plan.inventory_collected
                 else m.Infra.PytestCollectionManifest.model_validate_json(
                     (log.parent / "testmon-inventory.json").read_text(encoding="utf-8")
                 )
@@ -137,8 +137,15 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         """Read each subprocess receipt once in execution order."""
         phases: t.MutableSequenceOf[t.Pair[str, m.Infra.PytestDiagnostics]] = []
         if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
+            selection_plan = m.Infra.PytestSelectionPlan.model_validate_json(
+                (report_dir / "selection-plan.json").read_text(encoding="utf-8")
+            )
             names = (
-                ("selection", "inventory")
+                (
+                    ("selection", "inventory")
+                    if selection_plan.inventory_collected
+                    else ("selection",)
+                )
                 if context.execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
                 else ("inventory",)
             )

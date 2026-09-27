@@ -24,7 +24,7 @@ from typing import ClassVar, final, override
 
 from flext_infra import t
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from .rope_transformer import FlextInfraRopeTransformer
 from ._rewrite import FlextInfraSourceRewrite, FlextInfraSourceRewriter
 
 _PRIMITIVE_TOKENS: frozenset[str] = frozenset({

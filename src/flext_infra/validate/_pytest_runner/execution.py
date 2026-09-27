@@ -117,7 +117,10 @@ class FlextInfraPytestRunnerExecution(
         else:
             whole_target = True
         return m.Infra.PytestSelectionPlan(
-            manifest_path=manifest_path, node_ids=node_ids, whole_target=whole_target
+            manifest_path=manifest_path,
+            node_ids=node_ids,
+            whole_target=whole_target,
+            inventory_collected=complete or verify_inventory,
         )
 
     def _process_deadline(self) -> p.Cli.ProcessDeadline:

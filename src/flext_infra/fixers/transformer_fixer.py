@@ -34,7 +34,7 @@ from .base import FlextInfraFixerAdapter
 if TYPE_CHECKING:
     from flext_infra import p, t
 
-    from .._utilities.transformer_base import FlextInfraRopeTransformer
+    from ..transformers.rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):

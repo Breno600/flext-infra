@@ -15,7 +15,7 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # out to for the flext-infra git+https requirement, make invokes the verbs.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       bash ca-certificates curl git make \
+       bash ca-certificates curl git libatomic1 make \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --create-home --shell /bin/bash runner
 # End SECTION: base packages

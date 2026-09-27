@@ -12,20 +12,13 @@ from pathlib import Path
 from typing import Annotated, ClassVar, override
 
 from flext_core import r
-from flext_infra import c, config, m, p, t, u
+from flext_infra import c, m, p, t, u
 
 from ..base import FlextInfraServiceBase
 
 
 class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
     """Verify consumers and publication contracts without inherited import state."""
-
-    # Subject markers of the declared script groups the pyproject template
-    # emits for every distribution; their probes are the warn-only class.
-    _ENTRY_POINT_MARKERS: ClassVar[t.StrSequence] = (
-        ": console_scripts/",
-        ": gui_scripts/",
-    )
 
     packages: Annotated[
         t.StrSequence, m.Field(description="Packages to validate in fresh subprocesses")
@@ -152,8 +145,6 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 )
             )
         env = self._workspace_import_env(tuple(layout.src_dir for layout in layouts))
-        warned: list[str] = []
-        warn_entry_points = config.Infra.codegen.fresh_import_entry_points_warn_only
         for probe in probes:
             # The probe source travels on stdin: a workspace probe carries every
             # owned publication and outgrows the kernel's single-argument limit
@@ -161,6 +152,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             smoke = u.Cli.run_raw(
                 [sys.executable, "-W", "error", "-"],
                 cwd=self.repository_root,
+                timeout=c.Infra.TIMEOUT_SHORT,
                 env=env,
                 input_data=probe.code,
             )
@@ -176,19 +168,6 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 f"{probe.subject}: {outcome.model_dump_json()}\n"
                 f"stdout:\n{output.stdout}\nstderr:\n{output.stderr}"
             )
-            if (
-                warn_entry_points
-                and self._is_entry_point_probe(probe.subject)
-                and self._declared_script_debt(detail, probe.subject)
-            ):
-                # Operator law 2026-09-22: declared-script debt (the template
-                # emits `.cli:main` for every distribution) warns instead of
-                # failing the transaction; the debt stays bead-tracked until
-                # the facades converge to the canonical main shape. Contract
-                # violations surfacing through a working module — an omitted
-                # export, a lost dependency — never fall into this class.
-                warned.append(detail)
-                continue
             return r[m.Infra.ValidationReport].ok(
                 m.Infra.ValidationReport(
                     passed=False,
@@ -196,43 +175,12 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                     summary=f"fresh-import failed: {probe.subject}",
                 )
             )
-        if warned:
-            self.logger.info(
-                "fresh_import_entry_points_warned",
-                warned=len(warned),
-                posture="warn_only",
-            )
-        passed_count = len(probes) - len(warned)
-        summary = f"{passed_count} fresh-import probe(s) passed; {len(warned)} entry point(s) warned"
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=True, violations=tuple(warned), summary=summary
+                passed=True,
+                violations=(),
+                summary=f"{len(probes)} fresh-import probe(s) passed",
             )
-        )
-
-    @classmethod
-    def _is_entry_point_probe(cls, subject: str) -> bool:
-        """Whether one probe exercises a declared console/gui script entry."""
-        return any(marker in subject for marker in cls._ENTRY_POINT_MARKERS)
-
-    @staticmethod
-    def _declared_script_debt(detail: str, subject: str) -> bool:
-        """Whether one entry-point failure is the declared-script debt class.
-
-        Debt means the declared target itself is broken: the module is absent
-        or the declared attribute is missing — the shape the pyproject
-        template emits unconditionally. Anything else that surfaces through a
-        loading module (an omitted export, a lost dependency) stays blocking.
-        """
-        declared_module = subject.rsplit("=", 1)[-1].split(":", 1)[0]
-        lines = [line for line in detail.splitlines() if line.strip()]
-        if not lines:
-            return False
-        tail = lines[-1].lstrip()
-        if tail.startswith("AttributeError:"):
-            return True
-        return tail.startswith("ModuleNotFoundError:") and (
-            f"No module named '{declared_module}'" in tail
         )
 
     def _workspace_import_env(
