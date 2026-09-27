@@ -126,8 +126,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         managed Makefile renders into its help block, so a caller controls
         real rendered content through the declaration the loader validates.
 
-        ``gascity_enabled`` declares the repository policy overlay's Gas City
-        participation; ``None`` writes no overlay at all (the fleet default).
+        ``gascity_enabled`` declares the Gas City participation of a repository
+        that participates in Beads; ``None`` writes no overlay at all (the fleet
+        default). An overlay states every participation explicitly: its Beads
+        default is off, and Gas City requires Beads.
         """
         repository = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
             name, role=role
@@ -159,7 +161,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 update={
                     "repository_policy_overlays": (
                         m.Infra.RepositoryPolicyOverlaySpec(
-                            project=name, gascity_enabled=gascity_enabled
+                            project=name,
+                            beads_enabled=True,
+                            gascity_enabled=gascity_enabled,
                         ),
                     )
                 }

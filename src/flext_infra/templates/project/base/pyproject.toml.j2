@@ -76,8 +76,10 @@ dev = [
   {{ flext_requirement(item) }},
 {% endfor %}
 ]
+{% if cli_module %}
 [project.scripts]
 {{ dist }} = "{{ package_name }}.cli:main"
+{% endif %}
 {% if repository %}
 
 [project.urls]

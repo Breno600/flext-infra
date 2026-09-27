@@ -140,6 +140,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 documentation=documentation,
                 repository_root_rel=".",
                 year=codegen.scaffold.project.copyright_year,
+                cli_module=(
+                    repository_root
+                    / c.Infra.DEFAULT_SRC_DIR
+                    / package_name
+                    / c.Infra.CODEGEN_CLI_MODULE_FILENAME
+                ).is_file(),
             )
         )
 
@@ -370,6 +376,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 inherited_facets=project.inherited_facets,
                 root_packages=project.root_packages,
                 root_modules=project.root_modules,
+                cli_module=project.cli_module,
                 runtime_dependency_overlay=project.runtime_dependency_overlay,
                 description=project.description,
                 version=version_result.value,
