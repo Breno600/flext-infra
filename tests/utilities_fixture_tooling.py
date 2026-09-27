@@ -8,6 +8,7 @@ from pathlib import Path
 
 from flext_infra import u
 from tests import c, p, t
+from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 
 
 class TestsFlextInfraUtilitiesToolingFixtureMixin:
@@ -21,18 +22,21 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         )
 
     @staticmethod
-    def provision_runtime_tools(root: Path, *tool_names: str) -> None:
-        """Expose the setup-provisioned tools in a fixture checkout's environment.
+    def provision_checkout(root: Path) -> None:
+        """Make a fixture root a checkout whose environment owns the edit tools.
 
-        Managed tools resolve fail-closed from the checkout's runtime
-        environment (``u.Infra.runtime_environment_dir``). A fixture checkout
+        Protected edits resolve ruff, pyrefly, python and pytest fail-closed
+        from the checkout's runtime environment
+        (``u.Infra.runtime_environment_dir``), which requires a Git checkout.
+        The fixture becomes one through the single fixture Git owner and
         receives the real binaries this suite was provisioned with, linked
         inside the pytest-managed tree; a missing tool fails the fixture.
         """
+        TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
         provisioned = Path(sys.executable).parent
         bin_dir = u.Infra.runtime_environment_dir(root) / provisioned.name
         bin_dir.mkdir(parents=True, exist_ok=True)
-        for name in tool_names:
+        for name in (c.Infra.RUFF, c.Infra.PYREFLY, c.Infra.PYTHON, c.Infra.PYTEST):
             source = provisioned / name
             if not source.is_file():
                 msg = f"setup did not provision {name}: {source}"
