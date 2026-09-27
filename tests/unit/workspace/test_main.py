@@ -5,9 +5,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
-from flext_infra import c, main as infra_main
+from flext_infra import c, config, main as infra_main
 from flext_infra.workspace import (
     FlextInfraOrchestratorService,
     FlextInfraWorkspaceDetector,
@@ -98,34 +99,65 @@ class TestsFlextInfraWorkspaceMain:
         """The public command rejects an undeclared operation."""
         tm.that(self._workspace_main(["orchestrate", "--verb", "legacy-check"]), eq=1)
 
+    @pytest.mark.parametrize("verb", ["check", "test", "test-full"])
+    @pytest.mark.parametrize("exit_code", [0, 7])
     def test_workspace_orchestrate_passes_repository_root_to_member(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
+        capfd: pytest.CaptureFixture[str],
+        verb: str,
+        exit_code: int,
     ) -> None:
         """Attached members receive the workspace root as REPOSITORY_ROOT."""
         member_root = tmp_path / "demo-a"
         member_root.mkdir()
         sentinel = member_root / "observed-repository-root.txt"
         (member_root / c.Infra.MAKEFILE_FILENAME).write_text(
-            "check:\n"
+            f"{verb}:\n"
             "\t@printf '%s\\n' '$(REPOSITORY_ROOT)'"
-            " > observed-repository-root.txt\n",
+            " > observed-repository-root.txt\n"
+            f"\t@exit {exit_code}\n",
             encoding=c.Infra.ENCODING_DEFAULT,
         )
         service = FlextInfraOrchestratorService(
-            repository_root=tmp_path, verb=c.Infra.VERB_CHECK, projects=("demo-a",)
+            repository_root=tmp_path, verb=verb, projects=("demo-a",)
         )
         previous = Path.cwd()
         os.chdir(tmp_path)
         try:
-            result = service.orchestrate(("demo-a",), c.Infra.VERB_CHECK)
+            result = service.orchestrate(("demo-a",), verb)
         finally:
             os.chdir(previous)
 
-        tm.ok(result)
+        if exit_code:
+            tm.fail(result, has=f"demo-a exit={exit_code}")
+        else:
+            tm.ok(result)
         tm.that(
             sentinel.read_text(encoding=c.Infra.ENCODING_DEFAULT).strip(),
             eq=str(tmp_path.resolve()),
         )
+        captured = capfd.readouterr()
+        output = captured.out + captured.err
+        summary = next(
+            line for line in output.splitlines() if line.startswith("summary scope=")
+        )
+        tm.that(
+            summary,
+            has=[
+                f"passed={int(exit_code == 0)}",
+                f"failed={int(exit_code != 0)}",
+                f"exit={exit_code}",
+                "result_scope=command_exit",
+            ],
+        )
+        reason = config.Infra.codegen.make.policy_check_suspension_reason
+        tm.that("custom_policy_enforcement=suspended" in summary, eq=reason is not None)
+        if reason is not None:
+            tm.that(
+                output,
+                has=["SUSPENDED", reason, "do not certify full policy execution"],
+            )
 
     def test_workspace_orchestrator_declares_enforcement_fix(self) -> None:
         """The generated workspace Make handler has a matching public allowlist."""

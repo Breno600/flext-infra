@@ -17,6 +17,42 @@ from .mixins import FlextInfraModelsMixins as mm
 class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsToml):
     """Models for dependency detection and modernization reporting."""
 
+    class DependencyMarkerEnvironment(m.Value):
+        """PEP 508 marker facts reported by the consumer interpreter."""
+
+        implementation_name: Annotated[
+            str, m.Field(description="Interpreter implementation name.")
+        ]
+        implementation_version: Annotated[
+            str, m.Field(description="Interpreter implementation version.")
+        ]
+        os_name: Annotated[str, m.Field(description="Consumer operating system name.")]
+        platform_machine: Annotated[
+            str, m.Field(description="Consumer machine architecture.")
+        ]
+        platform_release: Annotated[
+            str, m.Field(description="Consumer operating system release.")
+        ]
+        platform_system: Annotated[
+            str, m.Field(description="Consumer operating system family.")
+        ]
+        platform_version: Annotated[
+            str, m.Field(description="Consumer operating system version.")
+        ]
+        platform_python_implementation: Annotated[
+            str, m.Field(description="Consumer Python implementation display name.")
+        ]
+        python_full_version: Annotated[
+            str,
+            m.Field(description="Consumer complete Python version including patch."),
+        ]
+        python_version: Annotated[
+            str, m.Field(description="Consumer Python major and minor version.")
+        ]
+        sys_platform: Annotated[
+            str, m.Field(description="Consumer Python platform identifier.")
+        ]
+
     class DetectCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra deps detect``.
 

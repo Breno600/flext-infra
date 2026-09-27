@@ -37,11 +37,15 @@ class FlextInfraWorkspaceCheckReportsMixin:
             "|---|---:|---:|",
         ]
         for project in results:
-            status = "PASS" if project.passed else "FAIL"
+            status = project.status
             lines.append(f"| {project.project} | {status} | {project.total_errors} |")
         lines.extend(["", "## Details", ""])
         for project in results:
             lines.append(f"### {project.project}")
+            lines.extend(
+                f"- {suspension.gate}: SUSPENDED / NOT RUN — {suspension.reason}"
+                for suspension in project.suspended
+            )
             for gate in gates:
                 execution = project.gates.get(gate)
                 if execution is None:
@@ -100,6 +104,9 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     information_uri=FlextInfraVersion.__url__,
                     rules=tuple(rules_by_id.values()),
                     results=tuple(sarif_results),
+                    suspended=tuple(
+                        item for project in results for item in project.suspended
+                    ),
                 ),
             )
         )
@@ -132,7 +139,8 @@ class FlextInfraWorkspaceCheckReportsMixin:
                 f"failed to write sarif report: {exc}", exception=exc
             )
         total_errors = sum(project.total_errors for project in results)
-        success = len(results) - outcome.failed
+        success = sum(project.passed for project in results)
+        suspended_projects = sum(bool(project.suspended) for project in results)
         u.Cli.summary(
             m.Infra.SummaryStats(
                 verb=c.Infra.VERB_CHECK,
@@ -143,6 +151,11 @@ class FlextInfraWorkspaceCheckReportsMixin:
                 elapsed=outcome.total_elapsed,
             )
         )
+        if suspended_projects:
+            u.Cli.info(
+                f"{suspended_projects} project(s) contain SUSPENDED / NOT RUN policy checks; "
+                "active-check acceptance is not full-scope validation."
+            )
         u.Cli.info(f"Reports: {md_path}")
         u.Cli.info(f"         {sarif_path}")
         if total_errors > 0:

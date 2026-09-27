@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from enum import StrEnum, unique
 from types import MappingProxyType
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, Literal
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -43,54 +43,83 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SILENT_FAILURE: ClassVar[str] = "silent-failure"
-    SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
-        "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
-        "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
-        "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
-        "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
-        "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
+    GATE_METADATA: ClassVar[
+        t.MappingKV[str, tuple[str, str, Literal["external", "policy"]]]
+    ] = MappingProxyType({
+        "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/", "external"),
+        "format": (
+            "Ruff Formatter",
+            "https://docs.astral.sh/ruff/formatter/",
+            "external",
+        ),
+        "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly", "external"),
+        "mypy": ("Mypy", "https://mypy.readthedocs.io/", "external"),
+        "pyright": ("Pyright", "https://github.com/microsoft/pyright", "external"),
         "silent-failure": (
             "Flext Silent Failure Detector",
             "internal://flext-infra/silent-failure",
+            "policy",
         ),
         "deferred-self-reference": (
             "Flext Deferred Self Reference Detector",
             "internal://flext-infra/deferred-self-reference",
+            "policy",
         ),
-        "security": ("Bandit", "https://bandit.readthedocs.io/"),
-        "markdown": ("rumdl", "https://rumdl.dev/"),
-        "markdown-format": ("Prettier", "https://prettier.io/"),
-        "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
-        "loc-cap": ("scc", "https://github.com/boyter/scc"),
+        "security": ("Bandit", "https://bandit.readthedocs.io/", "external"),
+        "markdown": ("rumdl", "https://rumdl.dev/", "external"),
+        "markdown-format": ("Prettier", "https://prettier.io/", "external"),
+        "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/", "external"),
+        "loc-cap": ("scc", "https://github.com/boyter/scc", "policy"),
         "boundary": (
             "Flext Abstraction Boundary Auditor",
             "internal://flext-infra/abstraction-boundary",
+            "policy",
         ),
         "runtime-census": (
             "Flext Runtime Enforcement Census",
             "internal://flext-infra/runtime-census",
+            "policy",
         ),
-        "namespace": ("Flext Namespace Rule Gate", "internal://flext-infra/namespace"),
+        "namespace": (
+            "Flext Namespace Rule Gate",
+            "internal://flext-infra/namespace",
+            "policy",
+        ),
         "tier-whitelist": (
             "Flext Tier Whitelist Gate",
             "internal://flext-infra/tier-whitelist",
+            "policy",
         ),
         "index-declarations": (
             "Flext Index Declarations Gate",
             "internal://flext-infra/index-declarations",
+            "policy",
         ),
-        "smells": ("Flext Code Smell Detector", "internal://flext-infra/smells"),
-        "codemod": ("ast-grep", AST_GREP_DOCS_URL),
-        "layout": ("Flext Project Layout Gate", "internal://flext-infra/layout"),
+        "smells": (
+            "Flext Code Smell Detector",
+            "internal://flext-infra/smells",
+            "policy",
+        ),
+        "codemod": ("ast-grep", AST_GREP_DOCS_URL, "policy"),
+        "layout": (
+            "Flext Project Layout Gate",
+            "internal://flext-infra/layout",
+            "policy",
+        ),
         "canonical-alias": (
             "Flext Canonical Alias Detector",
             "internal://flext-infra/canonical-alias",
+            "policy",
         ),
         "direnv": (
             "Flext Direnv Environment Contract Gate",
             "internal://flext-infra/direnv",
+            "policy",
         ),
-        "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
+        "duplication": ("jscpd", "https://github.com/kucherenko/jscpd", "policy"),
+    })
+    SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
+        gate: (metadata[0], metadata[1]) for gate, metadata in GATE_METADATA.items()
     })
     ALLOWED_GATES: ClassVar[frozenset[str]] = frozenset(SARIF_TOOL_INFO)
     "Gate identifiers — derived from SARIF_TOOL_INFO keys (single SSOT)."

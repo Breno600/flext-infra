@@ -37,13 +37,12 @@ class TestsFlextInfraRunProjects:
 
         tm.fail(result)
 
-    def test_missing_projects_are_skipped(self, tmp_path: Path) -> None:
+    def test_missing_projects_are_rejected(self, tmp_path: Path) -> None:
         result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
             ["nonexistent"], ["lint"], reports_dir=tmp_path / "reports"
         )
 
-        tm.ok(result)
-        tm.that(result.value, eq=())
+        tm.fail(result, has="selected project is unavailable")
 
     @pytest.mark.parametrize(
         "report_name",

@@ -10,7 +10,7 @@ from typing import ClassVar
 from flext_cli import cli
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, config, m, p, t, u
 from flext_infra.gates.abstraction_boundary import FlextInfraAbstractionBoundaryGate
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.base_gate import FlextInfraGate
@@ -163,12 +163,15 @@ class FlextInfraWorkspaceCheckGatesMixin:
             project_dir, resolved_gates, project_ctx
         )
         elapsed = time.monotonic() - start
-        u.Cli.status(
-            c.Infra.VERB_CHECK,
-            target.name,
-            result=project_result.passed,
-            elapsed=elapsed,
-        )
+        if project_result.suspended:
+            u.Cli.info(f"{target.name}: {project_result.status} ({elapsed:.2f}s)")
+        else:
+            u.Cli.status(
+                c.Infra.VERB_CHECK,
+                target.name,
+                result=project_result.passed,
+                elapsed=elapsed,
+            )
         return project_result
 
     def _run_project_loop(
@@ -193,7 +196,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 skipped += 1
                 continue
             results.append(project_result)
-            project_passed: bool = project_result.passed
+            project_passed: bool = project_result.accepted
             if not project_passed:
                 failed += 1
                 if fail_fast:
@@ -241,13 +244,33 @@ class FlextInfraWorkspaceCheckGatesMixin:
     ) -> m.Infra.ProjectResult:
         """Run gates for one project as independent DAG stages."""
         project_name = project_dir.name
-        result = m.Infra.ProjectResult(project=project_name)
+        suspension_reason = config.Infra.codegen.make.policy_check_suspension_reason
+        suspended = (
+            tuple(
+                m.Infra.GateSuspension(
+                    project=project_name, gate=gate, reason=suspension_reason
+                )
+                for gate in gates
+                if suspension_reason is not None
+                and c.Infra.GATE_METADATA[gate][2] == "policy"
+            )
+            if not ctx.apply_fixes
+            else ()
+        )
+        result = m.Infra.ProjectResult(project=project_name, suspended=suspended)
+        suspended_ids = {item.gate for item in suspended}
 
         stages: t.MutableSequenceOf[m.Cli.PipelineStageSpec] = []
         for gate_id in gates:
+            if gate_id in suspended_ids:
+                u.Cli.info(
+                    f"{project_name}: {gate_id} SUSPENDED / NOT RUN: {suspension_reason}"
+                )
+                continue
             gate_instance = self._registry.create(gate_id, self._repository_root)
             if gate_instance is None:
-                continue
+                msg = f"{gate_id} gate not registered"
+                raise RuntimeError(msg)
             stages.append(
                 cli.stage(
                     gate_id,
@@ -263,6 +286,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
         cli.pipeline(
             stages, context=cli.stage_context(project_dir), logger=self._gate_logger
         )
+        missing = set(gates) - suspended_ids - result.gates.keys()
+        if missing:
+            msg = f"quality gates did not execute: {', '.join(sorted(missing))}"
+            raise RuntimeError(msg)
         return result
 
     # ------------------------------------------------------------------

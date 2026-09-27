@@ -152,6 +152,11 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         @property
+        def branch(self) -> str | None:
+            """Member branch declared by its owning .gitmodules, when present."""
+            ...
+
+        @property
         def path(self) -> Path:
             """Repository path relative to its workspace root."""
             ...
@@ -199,6 +204,11 @@ class FlextInfraProtocolsBase(Protocol):
     @runtime_checkable
     class ProjectSpec(Protocol):
         """Scaffold-only project metadata consumed by initial generation."""
+
+        @property
+        def dependency_sources(self) -> t.StrMapping:
+            """Explicit direct Git requirements keyed by dependency distribution."""
+            ...
 
         @property
         def dependency_revisions(self) -> t.StrMapping:

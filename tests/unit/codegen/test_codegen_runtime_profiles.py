@@ -68,6 +68,9 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             if item.project is None and item.upstream == upstream
         )
         owned_name = tm.not_none(u.Infra.dep_name(profile.runtime[0]))
+        owned_source = (
+            f"git+{u.Tests.repository_ref(owned_name).url}@{u.Tests.provider_branch()}"
+        )
         custom = (
             "custom-runtime[feature]>=2; python_version < '3.14'",
             "custom-runtime[feature]>=3; python_version >= '3.14'",
@@ -78,7 +81,7 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         )
         declared = tm.ok(
             u.Cli.json_dumps([
-                f"{owned_name.upper().replace('-', '_')}[old]==0",
+                f"{owned_name.upper().replace('-', '_')}[old] @ {owned_source}",
                 *custom,
             ])
         )
@@ -132,7 +135,15 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         expected = tm.ok(
             u.Infra.pyproject_dependencies_conform(
                 '[project]\nname = "sample-member"\ndependencies = '
-                + tm.ok(u.Cli.json_dumps([*profile.runtime]))
+                + tm.ok(
+                    u.Cli.json_dumps(
+                        list(
+                            u.Tests.declared_requirements(
+                                profile.runtime, distribution="sample-member"
+                            )
+                        )
+                    )
+                )
                 + "\n",
                 workspace=tm.ok(
                     FlextInfraWorkspaceDetector.load_workspace_spec(member)

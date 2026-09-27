@@ -365,9 +365,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 if profile is c.Infra.MakeProfile.WORKSPACE
                 else ()
             )
-            gitlinks = self._managed_gitlinks(
-                workspace, codegen, repository_root=repository_root
-            )
+            gitlinks = self._managed_gitlinks(workspace)
             if gitlinks.failure:
                 return r[p.Model].from_failure(gitlinks)
             return r[p.Model].ok(

@@ -8,6 +8,7 @@ is detected from live Git or declared explicitly by a caller.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -22,6 +23,30 @@ _GIT_URL_SCHEME_PREFIX = "git+"
 
 class FlextInfraUtilitiesRepository:
     """Resolve detected identity and branch policy for one governed repository."""
+
+    @classmethod
+    def declared_dependency_sources(
+        cls, sources: t.StrMapping
+    ) -> p.Result[Mapping[str, t.Pair[str, str]]]:
+        """Validate explicit dependency overrides through the Git source owner."""
+        parsed_sources: dict[str, t.Pair[str, str]] = {}
+        for name, requirement in sources.items():
+            if (
+                FlextInfraUtilitiesDependencies.dep_name(name) != name
+                or FlextInfraUtilitiesDependencies.dep_name(requirement) != name
+            ):
+                return r[Mapping[str, t.Pair[str, str]]].fail(
+                    f"dependency source must match its distribution key: {name}"
+                )
+            parsed = cls.declared_git_source(requirement)
+            if parsed.failure:
+                return r[Mapping[str, t.Pair[str, str]]].from_failure(parsed)
+            url, ref = parsed.value
+            canonical = cls.validate_git_remote_url(url)
+            if canonical.failure:
+                return r[Mapping[str, t.Pair[str, str]]].from_failure(canonical)
+            parsed_sources[name] = canonical.value, ref
+        return r[Mapping[str, t.Pair[str, str]]].ok(parsed_sources)
 
     @staticmethod
     def declared_git_source(requirement: str) -> p.Result[t.Pair[str, str]]:
@@ -189,7 +214,19 @@ class FlextInfraUtilitiesRepository:
     ) -> p.Result[t.Pair[str, str]]:
         """Detect the infrastructure distribution's canonical URL and ref."""
         from flext_infra import u
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
+        manifests = FlextInfraWorkspaceDetector.load_workspace_manifest(repository_root)
+        if manifests.failure:
+            return r[t.Pair[str, str]].from_failure(manifests)
+        if manifests.value and manifests.value[0].project is not None:
+            overrides = cls.declared_dependency_sources(
+                manifests.value[0].project.dependency_sources
+            )
+            if overrides.failure:
+                return r[t.Pair[str, str]].from_failure(overrides)
+            if distribution in overrides.value:
+                return r[t.Pair[str, str]].ok(overrides.value[distribution])
         metadata = u.Infra.read_project_metadata_result(repository_root)
         if metadata.success and metadata.value.project.name == distribution:
             origin = u.Infra.git_remote_url(

@@ -567,6 +567,14 @@ class FlextInfraConfigModelsContexts:
     class ProjectSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Deterministic project metadata required to materialize a new tree."""
 
+        dependency_sources: Annotated[
+            Mapping[t.NonEmptyStr, t.NonEmptyStr],
+            m.Field(
+                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
+                description="Explicit direct Git requirements keyed by dependency distribution",
+            ),
+        ]
+
         dependency_revisions: Annotated[
             Mapping[t.NonEmptyStr, Annotated[str, m.Field(pattern=r"^[0-9a-f]{40}$")]],
             m.Field(
@@ -722,6 +730,12 @@ class FlextInfraConfigModelsContexts:
             t.NonEmptyStr,
             m.Field(description="Canonical GitHub clone URL ending in .git"),
         ]
+        branch: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                description="Member's declared Git branch from its owning .gitmodules"
+            ),
+        ] = None
         path: Annotated[
             Path, m.Field(description="POSIX path relative to its workspace root")
         ]

@@ -70,7 +70,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         )
 
     def build_selection_command(
-        self, *, complete: bool = False
+        self,
+        *,
+        complete: bool = False,
+        report_dir: Path | None = None,
+        coverage: bool = False,
     ) -> t.VariadicTuple[str]:
         """Build the read-only argv that resolves the testmon selection once.
 
@@ -79,20 +83,29 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         sets, which xdist aborts with "Different tests were collected". This
         pass runs no test and writes nothing.
         """
+        testmon = (
+            ()
+            if coverage
+            else (
+                "--testmon",
+                "--testmon-nocollect",
+                "--testmon-noselect" if complete else "--testmon-forceselect",
+                "--testmon-env",
+                f"'{_toolchain_testmon_environment()}'",
+            )
+        )
+        artifact = "inventory" if complete else "selection"
         return (
             sys.executable,
             "-m",
             "pytest",
             str(self.target),
-            "--testmon",
-            "--testmon-nocollect",
-            # Why: the external-gate deselection is a ``-m`` expression, and
-            # testmon deactivates its selection whenever ``-m`` is present;
-            # ``--testmon-forceselect`` is testmon's declared override for
-            # exactly that case (never combined with ``--testmon-noselect``).
-            *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
-            "--testmon-env",
-            f"'{_toolchain_testmon_environment()}'",
+            *testmon,
+            *(
+                (f"--report-log={report_dir / (artifact + '-events.jsonl')}",)
+                if report_dir is not None
+                else ()
+            ),
             "--collect-only",
             "-q",
             *self._plugin_policy_args(),
@@ -116,15 +129,13 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin)."""
         pytest = config.Infra.tooling.tools.pytest
-        selection = selected_node_ids or None
-        # Nothing selected means nothing to distribute across workers; a cold
-        # cache serializes the seeding run so every worker would otherwise see
-        # a different testmon set.
-        workers = (
-            "0"
-            if serialize or selected_node_ids == ()
-            else str(self.parallel_worker_budget(pytest))
-        )
+        if selected_node_ids is not None and not selected_node_ids:
+            msg = "an empty testmon selection is a cache hit, not a suite"
+            raise ValueError(msg)
+        selection = selected_node_ids
+        # Serialize cold-cache seeding to avoid workers observing different
+        # testmon state while the database is populated.
+        workers = "0" if serialize else str(self.parallel_worker_budget(pytest))
         return self._suite_argv(
             report_dir,
             targets=(tuple(selection) if selection else (str(self.target),)),
@@ -139,7 +150,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         )
 
     def build_coverage_command(
-        self, report_dir: Path, *, serialize: bool = False
+        self,
+        report_dir: Path,
+        *,
+        serialize: bool = False,
+        selected_node_ids: t.StrSequence | None = None,
     ) -> t.VariadicTuple[str]:
         """Build the whole-suite coverage argv (never the testmon plugin).
 
@@ -151,7 +166,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         workers = "0" if serialize else str(self.parallel_worker_budget(pytest))
         return self._suite_argv(
             report_dir,
-            targets=(str(self.target),),
+            targets=tuple(selected_node_ids)
+            if selected_node_ids
+            else (str(self.target),),
             workers=workers,
             trailing=(
                 f"--cov={self.root / c.Infra.DEFAULT_SRC_DIR}",

@@ -92,6 +92,7 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
 
         reference = workspace.subprojects[0]
         tm.that(reference.path, eq=Path("apps/member"))
+        tm.that(reference.branch, eq=u.Tests.integration_branch(parent))
         tm.that(reference.editable, eq=True)
         tm.that(reference.extra_verbs, eq=(verb,))
         tm.that(reference.script_dispatch, eq=dispatch)

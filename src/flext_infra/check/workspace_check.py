@@ -112,7 +112,7 @@ class FlextInfraWorkspaceChecker(
                 f"{len(run_result.value)}/{len(project_targets)}"
             )
         failed_projects = [
-            project for project in run_result.value if not project.passed
+            project for project in run_result.value if not project.accepted
         ]
         if failed_projects:
             failed_names = ", ".join(project.project for project in failed_projects)
@@ -189,6 +189,17 @@ class FlextInfraWorkspaceChecker(
                 resolved_gates_result
             )
         resolved_gates = resolved_gates_result.value
+        targets = self._project_targets(projects)
+        if not targets:
+            return r[t.SequenceOf[m.Infra.ProjectResult]].fail("no projects selected")
+        for target in targets:
+            if (
+                not target.path.is_dir()
+                or not (target.path / c.Infra.PYPROJECT_FILENAME).is_file()
+            ):
+                return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
+                    f"selected project is unavailable: {target.name} ({target.path})"
+                )
         report_base = reports_dir or self._default_reports_dir
         dir_ensure = u.Cli.ensure_dir(report_base)
         if dir_ensure.failure:
@@ -197,10 +208,7 @@ class FlextInfraWorkspaceChecker(
             repository_root=self._repository_root, reports_dir=report_base
         )
         outcome = self._run_project_loop(
-            self._project_targets(projects),
-            resolved_gates,
-            effective_ctx,
-            fail_fast=fail_fast,
+            targets, resolved_gates, effective_ctx, fail_fast=fail_fast
         )
         return self._write_reports_and_summary(resolved_gates, report_base, outcome)
 

@@ -35,6 +35,43 @@ class FlextInfraUtilitiesDependencies:
     """Static helpers for inspecting dependency declarations in pyproject payloads."""
 
     @staticmethod
+    def active_requirement(
+        requirement: str, *, environment: t.StrMapping | None = None
+    ) -> str | None:
+        """Validate a requirement and evaluate markers on the physical Python host."""
+        parsed = Requirement(requirement)
+        return (
+            str(parsed)
+            if parsed.marker is None
+            or parsed.marker.evaluate(
+                environment=dict(environment) if environment is not None else None
+            )
+            else None
+        )
+
+    @staticmethod
+    def dependency_extras(requirements: t.StrSequence, name: str) -> str:
+        """Return the union of requested extras for one active dependency."""
+        extras: set[str] = set()
+        for requirement in requirements:
+            parsed = Requirement(requirement)
+            if canonicalize_name(parsed.name) == name:
+                extras.update(parsed.extras)
+        return f"[{','.join(sorted(extras))}]" if extras else ""
+
+    @staticmethod
+    def dependency_constraint(requirement: str, *, replace_source: bool = False) -> str:
+        """Keep additive version bounds while extras remain on installation inputs."""
+        parsed = Requirement(requirement)
+        source = (
+            f" @ {parsed.url}"
+            if parsed.url and not replace_source
+            else str(parsed.specifier)
+        )
+        marker = f"; {parsed.marker}" if parsed.marker is not None else ""
+        return f"{parsed.name}{source}{marker}"
+
+    @staticmethod
     def dep_name(requirement: str, *, active_only: bool = False) -> str | None:
         """Extract one normalized dependency name, optionally evaluating markers."""
         text = requirement.strip()

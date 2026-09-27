@@ -195,6 +195,7 @@ allow_redefinition = true
 check_untyped_defs = true
 explicit_package_bases = true
 extra_checks = true
+follow_untyped_imports = true
 local_partial_types = true
 namespace_packages = true
 no_implicit_reexport = true

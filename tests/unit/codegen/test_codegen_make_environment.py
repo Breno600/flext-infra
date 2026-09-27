@@ -20,6 +20,63 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
+    @pytest.mark.parametrize("attached", [False, True])
+    def test_direnv_resolves_the_physical_environment_owner(
+        self, tmp_path: Path, *, attached: bool
+    ) -> None:
+        """Standalone roles share their physical superproject's environment path."""
+        parent = tmp_path / "workspace"
+        u.Tests.WorktreeFixture.initialize_governed_project(
+            parent,
+            "fixture-workspace",
+            workspace="fixture-workspace",
+            database="fixture_workspace",
+            issue_prefix="fixture-workspace",
+        )
+        project, _ = self._render_makefile(
+            parent if attached else tmp_path / "independent",
+            c.Infra.MakeProfile.STANDALONE,
+        )
+        if attached:
+            u.Tests.WorktreeFixture.attach_submodule(
+                parent,
+                project,
+                distribution="fixture-project",
+                relative_path=project.relative_to(parent).as_posix(),
+            )
+        (project / ".envrc.local").write_text(
+            'export OBSERVED_VENV_DIR="${VENV_DIR}"\n', encoding="utf-8"
+        )
+        tm.ok(
+            u.Cli.run_checked((c.Infra.CLI_DIRENV, "allow", str(project)), cwd=project)
+        )
+        try:
+            result = tm.ok(
+                u.Cli.run_raw(
+                    (
+                        c.Infra.CLI_DIRENV,
+                        "exec",
+                        str(project),
+                        "printenv",
+                        "OBSERVED_VENV_DIR",
+                    ),
+                    cwd=project,
+                    remove_env_keys=(
+                        m.Infra.BeadsWorkspaceEnvironmentSpec().identity_var,
+                    ),
+                )
+            )
+        finally:
+            tm.ok(
+                u.Cli.run_checked(
+                    (c.Infra.CLI_DIRENV, "deny", str(project)), cwd=project
+                )
+            )
+        tm.that(result.outcome.raw_return_code, eq=0, msg=result.stderr)
+        tm.that(
+            result.stdout.strip(), eq=str((parent if attached else project) / ".venv")
+        )
+
     @staticmethod
     def _render_makefile(
         tmp_path: Path,

@@ -9,6 +9,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, m, t
+from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import u
 
@@ -288,6 +289,52 @@ class TestsFlextInfraRepositoryLocalTopology:
             parent, member, distribution="fixture-member", relative_path="apps/member"
         )
         return member
+
+    def test_root_generation_preserves_declared_members_without_checkouts(
+        self, tmp_path: Path
+    ) -> None:
+        """Root-only CI planning preserves local topology without initializing members."""
+        member = self._attached_member(tmp_path)
+        root = member.parents[1]
+        before = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        (manifest,) = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(root))
+        declared = manifest.model_copy(update={"members": before.subprojects})
+        tm.ok(
+            u.Cli.yaml_dump(
+                root / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME,
+                declared.model_dump(mode="json"),
+            )
+        )
+        request = u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.CHECK,
+        )
+        first = tm.ok(
+            FlextInfraCodegenConform(repository_root=root, request=request).plan(
+                request
+            )
+        )
+        relative = member.relative_to(root).as_posix()
+        tm.ok(
+            u.Cli.run_checked(
+                (c.Infra.GIT, "submodule", "deinit", "-f", "--", relative), cwd=root
+            )
+        )
+
+        after = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        second = tm.ok(
+            FlextInfraCodegenConform(repository_root=root, request=request).plan(
+                request
+            )
+        )
+
+        assert after.subprojects == before.subprojects
+        assert not after.external_dependency_paths
+        assert second.repositories == first.repositories == (after.repository,)
+        assert second.files == first.files
+        assert not (member / c.Infra.PYPROJECT_FILENAME).exists()
+        assert not (member / c.Infra.GIT_DIR).exists()
 
     def test_composed_self_load_records_its_workspace_checkout(
         self, tmp_path: Path
@@ -607,6 +654,9 @@ class TestsFlextInfraRepositoryLocalTopology:
     ) -> None:
         """Honor the .gitmodules overlay: flext-managed=false is never governed."""
         root = u.Tests.WorktreeFixture.governed_workspace(tmp_path, "overlay-external")
+        _ = u.Tests.WorktreeFixture.override_repository_manifest(
+            root, {"role": c.Infra.MakeProfile.WORKSPACE}
+        )
         (root / "external-fork").mkdir()
         (root / c.Infra.GITMODULES).write_text(
             '[submodule "external-fork"]\n'
@@ -628,6 +678,9 @@ class TestsFlextInfraRepositoryLocalTopology:
     ) -> None:
         """Accept a governed checkout declared on the published integration line."""
         root = u.Tests.WorktreeFixture.governed_workspace(tmp_path, "integration-line")
+        _ = u.Tests.WorktreeFixture.override_repository_manifest(
+            root, {"role": c.Infra.MakeProfile.WORKSPACE}
+        )
         baseline = tm.ok(u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=root))
         tm.ok(
             u.Cli.run_checked(
@@ -682,8 +735,9 @@ class TestsFlextInfraRepositoryLocalTopology:
     def test_gitmodule_rejects_unknown_provider_without_raw_url(
         self, tmp_path: Path
     ) -> None:
-        """Reject unknown declared_repository ownership before inspecting its checkout."""
+        """Reject a foreign origin identity without exposing its private host."""
         root = u.Tests.WorktreeFixture.governed_workspace(tmp_path, "unknown-provider")
+        _ = u.Tests.WorktreeFixture.attach_member_child(root)
         raw_host_marker = "private-submodule-host"
         (root / c.Infra.GITMODULES).write_text(
             '[submodule "fixture-child"]\n'

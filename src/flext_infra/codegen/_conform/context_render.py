@@ -32,9 +32,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             if profile is c.Infra.MakeProfile.WORKSPACE
             else ()
         )
-        gitlinks = self._managed_gitlinks(
-            workspace, codegen, repository_root=repository_root
-        )
+        gitlinks = self._managed_gitlinks(workspace)
         if gitlinks.failure:
             return r[m.Infra.MakeRenderContext].from_failure(gitlinks)
         extra_verbs = self._merge_extra_verbs(
@@ -463,30 +461,18 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
     @staticmethod
     def _managed_gitlinks(
         workspace: m.Infra.WorkspaceSpec,
-        codegen: m.Infra.CodegenConfigSpec,
-        *,
-        repository_root: Path,
     ) -> p.Result[t.VariadicTuple[m.Infra.ManagedGitlinkSpec]]:
-        """Resolve detected member baselines only for mutable governed subprojects."""
+        """Render authenticated Git declarations independently of checkout presence."""
         resolved: list[m.Infra.ManagedGitlinkSpec] = []
         for repository in workspace.subprojects:
-            # A governed member follows its workspace's declared line unless
-            # its own manifest declares otherwise (the ``.`` gitmodule branch).
-            branch = u.Infra.resolve_integration_branch(
-                repository_root / repository.path,
-                preference=codegen.branch_policy.integration_branch_preference,
-                declared=(
-                    workspace.integration.branch
-                    if workspace.integration is not None
-                    else None
-                ),
-            )
-            if branch.failure:
-                return r[t.VariadicTuple[m.Infra.ManagedGitlinkSpec]].from_failure(
-                    branch
+            if repository.branch is None:
+                return r[t.VariadicTuple[m.Infra.ManagedGitlinkSpec]].fail(
+                    f"workspace member has no declared Git branch: {repository.path}"
                 )
             resolved.append(
-                m.Infra.ManagedGitlinkSpec(repository=repository, branch=branch.value)
+                m.Infra.ManagedGitlinkSpec(
+                    repository=repository, branch=repository.branch
+                )
             )
         return r[t.VariadicTuple[m.Infra.ManagedGitlinkSpec]].ok(tuple(resolved))
 

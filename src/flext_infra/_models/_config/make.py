@@ -420,6 +420,21 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
+        policy_check_suspension_reason: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(
+                description="Operator authority for not executing custom policy checks"
+            ),
+        ] = None
+
+        upgrade_workflow: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                min_length=1,
+                description="Ordered public operations for explicit upgrades",
+            ),
+        ]
+
         ruff: Annotated[
             FlextInfraConfigModelsMake.MakeRuffSpec,
             m.Field(description="Ruff CLI flags for fmt/fix/check Make verbs"),
@@ -542,9 +557,9 @@ class FlextInfraConfigModelsMake:
             config singleton builds eagerly at import, so every entrypoint died
             on that contradiction. The real invariant is enforced structurally
             in the template, which excludes `setup` from
-            `_builtin_require_environment` (`$(filter-out setup,$(PUBLIC_VERBS))`
-            and `{% raw %}{% for verb in make.verbs if verb.name != "setup" %}{% endraw %}`),
-            so `setup` never depends on the environment it exists to create.
+            `_builtin_require_environment`, along with composite lifecycles
+            that begin with setup. Provisioning never depends on the environment
+            it exists to create.
             """
             declared = {verb.name for verb in self.verbs}
             if len(declared) != len(self.verbs):
@@ -569,6 +584,16 @@ class FlextInfraConfigModelsMake:
                 msg = (
                     "make workflow verbs are not declared public verbs: "
                     f"{', '.join(sorted(unknown_workflow))}"
+                )
+                raise ValueError(msg)
+            lifecycle_steps = {*workflow_verbs, *self.upgrade_workflow}
+            invalid_lifecycle = (lifecycle_steps - declared) | (
+                lifecycle_steps & {"dev", "upg"}
+            )
+            if invalid_lifecycle:
+                msg = (
+                    "invalid recursive or undeclared lifecycle steps: "
+                    f"{', '.join(sorted(invalid_lifecycle))}"
                 )
                 raise ValueError(msg)
             unknown_fmt_gates = set(self.fmt_gates) - set(

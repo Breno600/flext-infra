@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, MutableMapping
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_cli import r, u
@@ -19,6 +20,217 @@ if TYPE_CHECKING:
 
 class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirements):
     """Keep managed uv sources only as the root local-workspace overlay."""
+
+    @classmethod
+    def active_session_requirements(
+        cls, document: t.Cli.TomlDocument, *, environment: t.StrMapping | None = None
+    ) -> t.VariadicTuple[str]:
+        """Read strictly parsed requirements active on the consumer's physical host."""
+        return tuple(
+            active
+            for item in cls._document_requirement_lines(document).unwrap()
+            if (
+                active := FlextInfraUtilitiesDependencies.active_requirement(
+                    item, environment=environment
+                )
+            )
+            is not None
+        )
+
+    @classmethod
+    def session_dependency_requirements(
+        cls,
+        document: t.Cli.TomlDocument,
+        workspace: p.Infra.WorkspaceSpec,
+        *,
+        selected: t.StrSequence,
+        consumer_root: Path,
+        environment: t.StrMapping | None = None,
+    ) -> p.Result[t.Pair[t.VariadicTuple[str], t.VariadicTuple[str]]]:
+        """Preserve consumer resolution declarations during a local binding."""
+        tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
+        if (
+            tool is not None
+            and u.Cli.toml_table_child(tool, c.Infra.POETRY) is not None
+        ):
+            return r[t.Pair[t.VariadicTuple[str], t.VariadicTuple[str]]].fail(
+                "session binding requires PEP 621/735 dependency declarations"
+            )
+        requirements = cls._document_requirement_lines(document).unwrap()
+        uv = u.Cli.toml_table_child(tool, "uv") if tool is not None else None
+        explicit: list[str] = []
+        if uv is not None:
+            explicit = list(u.Cli.toml_as_string_list(uv.get("override-dependencies")))
+        local_sources = cls.session_workspace_sources(
+            document,
+            workspace,
+            consumer_root=consumer_root,
+            selected=selected,
+            environment=environment,
+        )
+        if local_sources.failure:
+            return r[t.Pair[t.VariadicTuple[str], t.VariadicTuple[str]]].from_failure(
+                local_sources
+            )
+        sources = FlextInfraUtilitiesRepository.declared_dependency_sources(
+            workspace.project.dependency_sources if workspace.project else {}
+        ).unwrap()
+        declared_revisions = (
+            workspace.project.dependency_revisions if workspace.project else {}
+        )
+        requirements, explicit = [
+            [
+                cls.canonical_requirement(
+                    item,
+                    sources=sources,
+                    revisions=declared_revisions,
+                    workspace_dependencies={},
+                ).unwrap()
+                if FlextInfraUtilitiesDependencies.dep_name(item)
+                in {*sources, *declared_revisions}
+                and FlextInfraUtilitiesDependencies.dep_name(item)
+                not in {*selected, *local_sources.value}
+                else item
+                for item in group
+            ]
+            for group in (requirements, explicit)
+        ]
+        revisions = cls._dependency_overrides(
+            workspace, requirements=requirements
+        ).unwrap()
+        revision_names = {
+            FlextInfraUtilitiesDependencies.dep_name(item) for item in revisions
+        }
+        revisions = tuple(
+            item
+            for item in requirements
+            if FlextInfraUtilitiesDependencies.dep_name(item) in revision_names
+        )
+        explicit = [
+            item
+            for item in explicit
+            if FlextInfraUtilitiesDependencies.dep_name(item) not in revision_names
+        ]
+        overrides = [
+            *(
+                item
+                for item in (
+                    *explicit,
+                    *revisions,
+                    *(
+                        item
+                        for item in requirements
+                        if FlextInfraUtilitiesDependencies.dep_name(item) in sources
+                    ),
+                )
+                if FlextInfraUtilitiesDependencies.dep_name(item)
+                not in local_sources.value
+            ),
+            *(
+                f"{name} @ {path.as_uri()}"
+                for name, path in local_sources.value.items()
+            ),
+        ]
+        overrides = [
+            item
+            for item in overrides
+            if FlextInfraUtilitiesDependencies.active_requirement(
+                item, environment=environment
+            )
+            is not None
+        ]
+        override_names = {
+            FlextInfraUtilitiesDependencies.dep_name(item) for item in overrides
+        }
+        constraints = [
+            FlextInfraUtilitiesDependencies.dependency_constraint(
+                item,
+                replace_source=FlextInfraUtilitiesDependencies.dep_name(item)
+                in {*selected, *local_sources.value},
+            )
+            for item in requirements
+            if FlextInfraUtilitiesDependencies.dep_name(item) not in override_names
+            or FlextInfraUtilitiesDependencies.dep_name(item)
+            in {*selected, *local_sources.value}
+        ]
+        return r[t.Pair[t.VariadicTuple[str], t.VariadicTuple[str]]].ok((
+            tuple(
+                dict.fromkeys(
+                    item
+                    for item in overrides
+                    if FlextInfraUtilitiesDependencies.dep_name(item) not in selected
+                )
+            ),
+            tuple(
+                dict.fromkeys(
+                    item
+                    for item in (
+                        *constraints,
+                        *cls._declared_uv_constraint_dependencies(document),
+                    )
+                    if FlextInfraUtilitiesDependencies.active_requirement(
+                        item, environment=environment
+                    )
+                    is not None
+                )
+            ),
+        ))
+
+    @classmethod
+    def session_workspace_sources(
+        cls,
+        document: t.Cli.TomlDocument,
+        workspace: p.Infra.WorkspaceSpec,
+        *,
+        consumer_root: Path,
+        selected: t.StrSequence,
+        environment: t.StrMapping | None = None,
+    ) -> p.Result[t.MappingKV[str, Path]]:
+        """Authenticate canonical local workspace sources against declared members."""
+        tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
+        uv = u.Cli.toml_table_child(tool, "uv") if tool is not None else None
+        sources = u.Cli.toml_table_child(uv, "sources") if uv is not None else None
+        members = {member.distribution: member for member in workspace.subprojects}
+        declared = {
+            FlextInfraUtilitiesDependencies.dep_name(item)
+            for item in cls.active_session_requirements(
+                document, environment=environment
+            )
+        }
+        local: dict[str, Path] = {}
+        if sources is not None:
+            normalized_sources = u.Cli.toml_as_mapping(sources)
+            if normalized_sources is None:
+                return r[t.MappingKV[str, Path]].fail(
+                    "session binding dependency sources must be a TOML mapping"
+                )
+            for name, source in normalized_sources.items():
+                if name in selected or name not in declared:
+                    continue
+                member = members.get(name)
+                if (
+                    not isinstance(source, Mapping)
+                    or source.get("workspace") is not True
+                    or tuple(source) != ("workspace",)
+                    or member is None
+                ):
+                    return r[t.MappingKV[str, Path]].fail(
+                        f"session binding cannot resolve unselected dependency sources: {name}"
+                    )
+                declared_path = consumer_root.resolve() / member.path
+                path = declared_path.resolve()
+                if path != declared_path or not path.is_relative_to(
+                    consumer_root.resolve()
+                ):
+                    return r[t.MappingKV[str, Path]].fail(
+                        f"session binding requires a physical workspace member: {name}: {declared_path}"
+                    )
+                if not (path / c.Infra.PYPROJECT_FILENAME).is_file():
+                    return r[t.MappingKV[str, Path]].fail(
+                        f"session binding workspace member is not provisioned: {name}: {path}"
+                    )
+                local[name] = path
+        return r[t.MappingKV[str, Path]].ok(local)
 
     @classmethod
     def _declared_uv_constraint_dependencies(

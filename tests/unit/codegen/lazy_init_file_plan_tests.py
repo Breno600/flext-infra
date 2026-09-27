@@ -4,13 +4,103 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
-from tests import c, u
+from flext_infra.codegen import FlextInfraCodegenConform
+from flext_infra.workspace import FlextInfraWorkspaceDetector
+from tests import c, m, u
 
 
 class TestsFlextInfraCodegenLazyInitFilePlans:
     """Prove lazy-init describes effects without owning publication."""
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize("scope", tuple(c.Infra.CodegenConformScope))
+    def test_lazy_publication_owns_exact_conform_repositories(
+        self, tmp_path: Path, scope: c.Infra.CodegenConformScope
+    ) -> None:
+        """Root and nested Git repositories retain their selected publication scope."""
+        root = tmp_path / "flext-scope-root"
+        member = root / "apps" / "flext-scope-member"
+        packages: list[Path] = []
+        for repository in (root, member):
+            _, package = u.Tests.create_lazy_init_workspace(
+                repository.parent,
+                project_name=repository.name,
+                package_name=repository.name.replace("-", "_"),
+            )
+            packages.append(package)
+            u.Tests.initialize_git_repo(
+                repository, origin_url=u.Tests.repository_ref(repository.name).url
+            )
+            u.Tests.standalone_workspace(repository, repository.name)
+            u.Tests.write_lazy_init_namespace_module(
+                package / "models.py",
+                class_name=u.derive_class_stem(repository.name) + "Models",
+                alias="m",
+            )
+            u.Tests.commit_git_changes(repository, "Seed scope fixture")
+        u.Tests.WorktreeFixture.attach_submodule(
+            root,
+            member,
+            distribution=member.name,
+            relative_path=member.relative_to(root).as_posix(),
+        )
+        for repository in (root, member):
+            observed = tm.ok(
+                FlextInfraWorkspaceDetector.load_workspace_spec(repository)
+            )
+            manifest = m.Infra.WorkspaceManifestSpec(
+                version=c.Infra.WORKSPACE_MANIFEST_VERSION,
+                name=observed.repository.name,
+                repository=observed.repository,
+                project=u.Tests.project_spec(observed.repository.name),
+            )
+            tm.ok(
+                u.Cli.yaml_dump(
+                    u.Infra.workspace_manifest_path(repository),
+                    manifest.model_dump(mode="json"),
+                )
+            )
+        workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        request = u.Tests.conform_request(
+            root, scope=scope, mode=c.Infra.CodegenConformMode.CHECK
+        )
+        plan = tm.ok(
+            FlextInfraCodegenConform(
+                repository_root=root, request=request, initial_workspace=workspace
+            ).plan(request)
+        )
+        selected = tuple(
+            (root / repository.path).resolve() for repository in plan.repositories
+        )
+        expected = (
+            {root.resolve()}
+            if scope is c.Infra.CodegenConformScope.SELF
+            else {member.resolve()}
+            if scope is c.Infra.CodegenConformScope.DECLARED
+            else {root.resolve(), member.resolve()}
+        )
+        tm.that(set(selected), eq=expected)
+        before = {
+            package / c.Infra.INIT_PY: (package / c.Infra.INIT_PY).read_bytes()
+            for package in packages
+        }
+        analysis = tm.ok(
+            u.Tests.create_lazy_init_service(root).plan_files(repository_roots=selected)
+        )
+        tm.that({file.project for file in analysis.files}, eq=expected)
+        tm.that({path: path.read_bytes() for path in before}, eq=before)
+        applied = request.model_copy(update={"mode": c.Infra.CodegenConformMode.APPLY})
+        tm.ok(FlextInfraCodegenConform.execute_request(applied, workspace))
+        for repository, package in zip((root, member), packages, strict=True):
+            initializer = package / c.Infra.INIT_PY
+            tm.that(
+                initializer.read_bytes() != before[initializer],
+                eq=repository.resolve() in expected,
+            )
+        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
 
     def test_plan_files_binds_init_and_sidecar_effects_without_writing(
         self, tmp_path: Path

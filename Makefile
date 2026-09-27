@@ -93,7 +93,6 @@ override TRACKED_MISE := $(PROJECT_ROOT)/bin/mise.cmd
 else
 override TRACKED_MISE := $(PROJECT_ROOT)/bin/mise
 endif
-override SETUP_MISE := $(TRACKED_MISE)
 override export FLEXT_PYTEST_TARGET_RAW := tests
 PROJECT_STATE_ROOT := $(abspath $(PROJECT_ROOT)/../.flext-runtime/$(notdir $(PROJECT_ROOT)))
 # Scratch never lives inside a versioned tree: the home scratch root mirrors
@@ -111,10 +110,10 @@ TESTMON_DATAFILE := $(PROJECT_STATE_ROOT)/testmon/.testmondata
 export TESTMON_DATAFILE
 # === SECTION: REPOSITORY_ROOT isolation (managed) ===
 # Source: physical checkout topology; caller variables cannot select a workspace.
-ifneq ($(filter standalone,$(MAKE_PROFILE))$(GEN_INIT_ONLY),)
+ifneq ($(GEN_INIT_ONLY),)
 override REPOSITORY_ROOT := $(MAKEFILE_ROOT)
 else
-override REPOSITORY_ROOT := $(shell cd "$(MAKEFILE_ROOT)" && root=$$(git rev-parse --show-superproject-working-tree) && if [ -n "$$root" ]; then cd "$$root" && pwd -P; else pwd -P; fi)
+override REPOSITORY_ROOT := $(shell cd "$(MAKEFILE_ROOT)" && if [ -e .git ]; then root=$$(git rev-parse --show-superproject-working-tree) || exit $$?; if [ -n "$$root" ]; then cd "$$root" || exit $$?; fi; fi; pwd -P)
 ifneq ($(.SHELLSTATUS),0)
 $(error Cannot resolve the physical workspace for $(MAKEFILE_ROOT))
 endif
@@ -122,8 +121,8 @@ endif
 # End SECTION: REPOSITORY_ROOT isolation
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary.
-PUBLIC_VERBS := help setup deps build check test fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
-BUILTIN_VERBS := help setup deps build check test fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
+PUBLIC_VERBS := help setup dev upg deps build check test test-full fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
+BUILTIN_VERBS := help setup dev upg deps build check test test-full fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -145,7 +144,6 @@ MYPY_PATHS := $(strip $(foreach d,src tests examples,$(if $(wildcard $(PROJECT_R
 
 # === SECTION: project tool owner (managed) ===
 # Source: the repository's declared Mise toolchain, provisioned by make setup.
-override UV := "$(SETUP_MISE)" -C "$(PROJECT_ROOT)" exec -- uv
 CALLER_PATH := $(PATH)
 CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 # End SECTION: project tool owner
@@ -154,6 +152,12 @@ CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 # Source: repository topology. workspace has .gitmodules; standalone does not.
 # Attached members share their Git superproject runtime; standalone owns itself.
 override RUNTIME_ROOT := $(REPOSITORY_ROOT)
+ifeq ($(OS),Windows_NT)
+override SETUP_MISE := $(RUNTIME_ROOT)/bin/mise.cmd
+else
+override SETUP_MISE := $(RUNTIME_ROOT)/bin/mise
+endif
+override UV := "$(SETUP_MISE)" -C "$(RUNTIME_ROOT)" exec -- uv
 # End SECTION: profile routing
 
 override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
@@ -191,6 +195,7 @@ override VIRTUAL_ENV := $(RUNTIME_VENV)
 override PATH := $(RUNTIME_BIN):$(SANITIZED_CALLER_PATH)
 unexport UV
 export FLEXT_INFRA_PYTHON UV_PROJECT UV_PROJECT_ENVIRONMENT VIRTUAL_ENV PATH
+export FLEXT
 
 .PHONY: _bootstrap_setup_tools
 
@@ -202,7 +207,7 @@ _bootstrap_setup_tools:
 		printf 'ERROR: missing generated mise launcher: %s; run make gen\n' "$(SETUP_MISE)" >&2; \
 		exit 2; \
 	fi; \
-	project_root="$(PROJECT_ROOT)"; \
+	project_root="$(RUNTIME_ROOT)"; \
 	mise="$(SETUP_MISE)"; \
 	mise_storage_root="$(MISE_DATA_DIR)"; \
 	caller_home="$${HOME:-}"; \
@@ -451,12 +456,17 @@ fi; \
 		"SETUP_DIRENV_XDG_DATA_HOME=$$caller_xdg_data_home" \
 		"CI=$(CI)" $(SELF_MAKE) _setup_lifecycle
 
+ifeq ($(strip $(CI)),Y)
+CODEGEN_SCOPE := self
+ALLOWED_PROJECTS := .
+else
 ifeq ($(MAKE_PROFILE),workspace)
 CODEGEN_SCOPE := all
 ALLOWED_PROJECTS := . $(WORKSPACE_SUBPROJECTS)
 else
 CODEGEN_SCOPE := self
 ALLOWED_PROJECTS := .
+endif
 endif
 
 # Workspace-root gate verbs fan out across declared members through the generic
@@ -468,14 +478,14 @@ endif
 # the configured Python minor line to a newer patch.
 SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	$(REQUIRE_WORKSPACE_ENVIRONMENT); \
-	desired_python=$$("$(SETUP_MISE)" -C "$(PROJECT_ROOT)" which python); \
+	desired_python=$$("$(SETUP_MISE)" -C "$(RUNTIME_ROOT)" which python); \
 	if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
 		$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"; \
 	elif [ "$$(readlink -f "$(RUNTIME_PYTHON)")" != "$$(readlink -f "$$desired_python")" ]; then \
 		printf 'setup: replacing environment for Python %s\n' "$$desired_python"; \
 		$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
 	fi; \
-	$(UV) sync --project "$(PROJECT_ROOT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
+	$(UV) sync --project "$(SETUP_PROJECT_ROOT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
 	XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" allow "$(PROJECT_ROOT)"; \
 	for member in $(WORKSPACE_SUBPROJECTS); do \
@@ -506,7 +516,11 @@ WORKSPACE_ORCHESTRATE = $(UV_RUN) python -m flext_infra workspace orchestrate
 # Workspace runs include the root project itself: `.` maps to the
 # _builtin-self-* targets, so all 32 distributions execute their own gates
 # (plan contract: no member of the fleet is excluded from required cycles).
+ifeq ($(strip $(CI)),Y)
+DEFAULT_PROJECTS := .
+else
 DEFAULT_PROJECTS := $(WORKSPACE_SUBPROJECTS) .
+endif
 SELECTED_PROJECTS := $(DEFAULT_PROJECTS)
 WORKSPACE_PROJECT_ARGS := $(foreach project,$(SELECTED_PROJECTS),--projects $(project))
 DOCS_PROJECT_ARGS := $(foreach project,$(SELECTED_PROJECTS),--projects $(project))
@@ -515,7 +529,7 @@ DOCS_PROJECT_ARGS := $(foreach project,$(SELECTED_PROJECTS),--projects $(project
 # workspace or creating a dependency-resolution file during a runtime command.
 UV_RUN := env -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u PROJECT_ROOT PYTHONPATH="$(PROJECT_ROOT)/src" $(UV) run --no-project --python "$(RUNTIME_PYTHON)"
 override PROJECT_INFRA_PYTHONPATH := $(MAKEFILE_ROOT)/src
-PROJECT_INFRA_RUN := if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; "$(SETUP_MISE)" -C "$(PROJECT_ROOT)" exec -- env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
+PROJECT_INFRA_RUN := if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; "$(SETUP_MISE)" -C "$(RUNTIME_ROOT)" exec -- env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
 PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev
 # profile; setup resolves the declared dependency branches at their current tips.
@@ -531,7 +545,13 @@ SHARED_RUNTIME := $(if $(filter-out $(PROJECT_ROOT),$(RUNTIME_ROOT)),1,$(if $(st
 # resolves dependency floors from pyproject on every setup, in CI exactly as
 # locally. `--upgrade` advances existing local resolutions; `--refresh` re-reads
 # branch metadata instead of retaining a cached tip (operator 2026-09-14).
+ifeq ($(strip $(CI)),Y)
+SETUP_PROJECT_ROOT := $(PROJECT_ROOT)
+UV_SYNC_FLAGS := --no-sources --no-editable --all-extras --all-groups --upgrade --refresh
+else
+SETUP_PROJECT_ROOT := $(RUNTIME_ROOT)
 UV_SYNC_FLAGS := $(if $(SHARED_RUNTIME),--all-packages --reinstall-package flext-infra ,)--all-extras --all-groups --upgrade --refresh
+endif
 
 ifeq ($(GEN_INIT_ONLY),)
 -include custom.mk
@@ -599,6 +619,15 @@ test: _builtin_require_workspace
 _activated-test: _builtin_require_environment
 
 	$(call RUN_PUBLIC,test)
+
+
+test-full: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-test-full
+
+.PHONY: _activated-test-full
+_activated-test-full: _builtin_require_environment
+
+	$(call RUN_PUBLIC,test-full)
 
 
 fmt: _builtin_require_workspace
@@ -763,6 +792,38 @@ _activated-sonarcloud-sync: _builtin_require_environment
 	$(call RUN_PUBLIC,sonarcloud-sync)
 
 
+# Composite lifecycles start with setup and must work before an environment exists.
+dev upg: _builtin_require_workspace
+	$(call RUN_PUBLIC,$@)
+
+_builtin-dev:
+
+	+@$(SELF_MAKE) setup
+
+	+@$(SELF_MAKE) gen
+
+	+@$(SELF_MAKE) fmt
+
+	+@$(SELF_MAKE) fix
+
+	+@$(SELF_MAKE) check
+
+	+@$(SELF_MAKE) test
+
+	+@$(SELF_MAKE) build
+
+
+_builtin-upg:
+
+	+@$(SELF_MAKE) setup
+
+	+@$(SELF_MAKE) deps
+
+	+@$(SELF_MAKE) setup
+
+	+@$(SELF_MAKE) gen
+
+
 # Repository-owned extra verbs dispatch exactly like canonical ones: the
 # project declares them (help, .PHONY) and must also be able to run them.
 
@@ -771,6 +832,30 @@ _activated-sonarcloud-sync: _builtin_require_environment
 # to build), but it still runs the pre-/post-setup lifecycle hooks so a project
 # declaring them in the custom handler surface is actually honoured.
 setup: _bootstrap_setup_tools
+_bootstrap_setup_tools: _require_binding_mode
+
+.PHONY: _require_binding_mode _builtin_flext_binding
+_require_binding_mode:
+	@if [ -n "$(strip $(FLEXT))" ] && [ "$(strip $(CI))" = "Y" ]; then \
+		printf 'ERROR: FLEXT local editable binding is incompatible with CI=Y\n' >&2; exit 2; \
+	fi
+
+_builtin_flext_binding: _require_binding_mode
+	@set -eu; if [ -n "$(strip $(FLEXT))" ]; then \
+		supplier=$$(cd "$(FLEXT)" && pwd -P); \
+		supplier_runtime=$$(git -C "$$supplier" rev-parse --show-superproject-working-tree); \
+		if [ -z "$$supplier_runtime" ]; then supplier_runtime="$$supplier"; fi; \
+		supplier_venv="$$supplier_runtime/$(patsubst $(RUNTIME_ROOT)/%,%,$(RUNTIME_VENV))"; \
+		supplier_python="$$supplier_runtime/$(patsubst $(RUNTIME_ROOT)/%,%,$(RUNTIME_PYTHON))"; \
+		if [ -L "$$supplier_venv" ] || [ ! -f "$$supplier_venv/pyvenv.cfg" ] || [ ! -x "$$supplier_python" ]; then \
+			printf 'ERROR: FLEXT requires its own provisioned physical environment: %s\n' "$$supplier_venv" >&2; exit 2; \
+		fi; \
+		cd "$$supplier"; \
+		env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT -u PROJECT_ROOT -u REPOSITORY_ROOT -u FLEXT_INFRA_PYTHON \
+			"$$supplier_python" -m flext_infra workspace flext-binding \
+			--repository-root "$(RUNTIME_ROOT)" --flext-root "$$supplier" \
+			--python "$(RUNTIME_PYTHON)"; \
+	fi
 
 .PHONY: _setup_lifecycle
 _setup_lifecycle:
@@ -779,6 +864,7 @@ _setup_lifecycle:
 		*" pre-setup "*) $(SELF_MAKE) pre-setup ;; \
 	esac
 	@$(SELF_MAKE) _builtin_setup_environment
+	@$(SELF_MAKE) _builtin_flext_binding
 	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _setup_activated
 
@@ -796,13 +882,19 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'setup' 'Provision the declared environment and hooks.';
 
+	@printf '  %-16s %s\n' 'dev' 'Execute the configured local setup, generation, quality, test, and build lifecycle.';
+
+	@printf '  %-16s %s\n' 'upg' 'Provision tools, upgrade dependency declarations, resync, and regenerate.';
+
 	@printf '  %-16s %s\n' 'deps' 'Upgrade, lock, and conform every declared dependency.';
 
 	@printf '  %-16s %s\n' 'build' 'Build the project distribution artifacts.';
 
 	@printf '  %-16s %s\n' 'check' 'Run every configured non-test gate.';
 
-	@printf '  %-16s %s\n' 'test' 'Run the complete suite through the persistent testmon cache.';
+	@printf '  %-16s %s\n' 'test' 'Run the incremental selection through the persistent testmon cache.';
+
+	@printf '  %-16s %s\n' 'test-full' 'Run incremental tests first, then the complete suite through the same testmon cache.';
 
 	@printf '  %-16s %s\n' 'fmt' 'Apply ruff format --preview and ruff check --fix --unsafe-fixes --preview. Ruff is the rule; change code, never ruff.';
 
@@ -845,6 +937,10 @@ _builtin-help:
 # reconciler validates every initialized checkout before mutation, initializes
 # only missing modules, and preserves declared branches that fix forward beyond
 # the recorded gitlink.
+ifeq ($(strip $(CI)),Y)
+.PHONY: _builtin_setup_submodules
+_builtin_setup_submodules:
+else
 .PHONY: _builtin_setup_submodules
 
 # === SECTION: submodule setup (managed) ===
@@ -868,7 +964,7 @@ _builtin-help:
 _builtin_setup_submodules:
 	@set -eu; \
 	umask 022; \
-	root="$(PROJECT_ROOT)"; \
+	root="$(RUNTIME_ROOT)"; \
 	if [ ! -f "$$root/.gitmodules" ]; then exit 0; fi; \
 	profile="$(MAKE_PROFILE)"; \
 	if [ "$$profile" = "workspace" ]; then \
@@ -978,6 +1074,7 @@ _builtin_setup_submodules:
 	for child_path in $$managed; do \
 		validate_submodule "$$root" "$$child_path"; \
 	done
+endif
 
 _builtin_require_environment: _builtin_require_workspace
 # Documenting the interface (`make help`) must not require the interpreter it
@@ -1055,6 +1152,16 @@ _builtin-self-check: _builtin_require_environment
 		fi; \
 		$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "$$gates" --projects .
 
+_builtin-self-test-full: _builtin-self-test
+
+	@set -eu; \
+		test_tmp_parent="$(PROJECT_SCRATCH_ROOT)/pytest"; \
+		mkdir -p "$$test_tmp_parent"; \
+		test_tmp=$$(mktemp -d "$$test_tmp_parent/invocation.XXXXXX"); \
+		cleanup_test_tmp() { rm -rf "$$test_tmp"; }; \
+		trap cleanup_test_tmp EXIT INT TERM; \
+		TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full
+
 _builtin-self-fmt: _builtin_require_environment
 	@$(UV_RUN) ruff format --preview $(RUFF_PATHS)
 	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "markdown-format" --projects . --apply
@@ -1116,6 +1223,17 @@ _builtin_test_all: _builtin_require_environment
 # lint repair belongs to `make fix`. Only a real tool failure (exit >= 2)
 # breaks the verb; a formatter's residual findings stay reportable and are
 # enforced by `make check`.
+_builtin_test_full:
+	@$(MAKE) --no-print-directory test
+
+	@set -eu; \
+		test_tmp_parent="$(PROJECT_SCRATCH_ROOT)/pytest"; \
+		mkdir -p "$$test_tmp_parent"; \
+		test_tmp=$$(mktemp -d "$$test_tmp_parent/invocation.XXXXXX"); \
+		cleanup_test_tmp() { rm -rf "$$test_tmp"; }; \
+		trap cleanup_test_tmp EXIT INT TERM; \
+		TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full
+
 _builtin_fmt_all: _builtin_require_environment
 	@$(UV_RUN) ruff format --preview $(RUFF_PATHS)
 	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "markdown-format" --projects . --apply
@@ -1223,6 +1341,7 @@ _builtin-deps: _builtin_deps_upgrade
 _builtin-build: _builtin_build_artifacts
 _builtin-check: _builtin_check_all
 _builtin-test: _builtin_test_all
+_builtin-test-full: _builtin_test_full
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
 _builtin-fix-enforcement: _builtin_fix_enforcement

@@ -66,18 +66,28 @@ class FlextInfraCodegenLazyInit(
             )
         return r[bool].ok(True)
 
-    def plan_files(self) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
-        """Return one complete immutable lazy-init analysis receipt."""
+    def plan_files(
+        self, *, repository_roots: t.SequenceOf[Path] | None = None
+    ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
+        """Plan selected repository owners, or the whole workspace when omitted."""
         self._modified_files.clear()
         if not self.repository_root.is_dir():
             return r[m.Infra.CodegenPhaseAnalysis].fail(
                 f"lazy-init workspace is not a directory: {self.repository_root}"
             )
+        if repository_roots is not None:
+            for root in repository_roots:
+                if not root.is_dir() or not root.resolve().is_relative_to(
+                    self.repository_root.resolve()
+                ):
+                    return r[m.Infra.CodegenPhaseAnalysis].fail(
+                        f"lazy-init repository is outside the workspace or missing: {root}"
+                    )
         started_at = perf_counter()
         u.Cli.info(
             f"lazy-init: planning read-only artifacts for {self.repository_root}"
         )
-        planned = self._plan_in_workspace()
+        planned = self._plan_in_workspace(repository_roots=repository_roots)
         if planned.failure:
             return r[m.Infra.CodegenPhaseAnalysis].from_failure(planned)
         analysis = planned.value
@@ -93,7 +103,9 @@ class FlextInfraCodegenLazyInit(
         )
         return r[m.Infra.CodegenPhaseAnalysis].ok(analysis)
 
-    def _plan_in_workspace(self) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
+    def _plan_in_workspace(
+        self, *, repository_roots: t.SequenceOf[Path] | None = None
+    ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Open Rope once and propagate every planner or filesystem failure.
 
         Retries the entire planning cycle when snapshot verification detects
@@ -105,7 +117,7 @@ class FlextInfraCodegenLazyInit(
         last_failure: p.Result[m.Infra.CodegenPhaseAnalysis] | None = None
         for attempt in range(max_retries + 1):
             try:
-                result = self._plan_attempt()
+                result = self._plan_attempt(repository_roots=repository_roots)
             except c.EXC_OS_VALUE as exc:
                 return r[m.Infra.CodegenPhaseAnalysis].fail_op(
                     "lazy-init planning", exc
@@ -131,15 +143,20 @@ class FlextInfraCodegenLazyInit(
             "lazy-init planning failed after retries"
         )
 
-    def _plan_attempt(self) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
+    def _plan_attempt(
+        self, *, repository_roots: t.SequenceOf[Path] | None = None
+    ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Run one planning cycle inside its own Rope workspace."""
         with FlextInfraRopeWorkspace.open_workspace(
             self.repository_root, rope_repository_root=self.repository_root
         ) as rope:
-            return self._plan_open_workspace(rope)
+            return self._plan_open_workspace(rope, repository_roots=repository_roots)
 
     def _plan_open_workspace(
-        self, rope: FlextInfraRopeWorkspace
+        self,
+        rope: FlextInfraRopeWorkspace,
+        *,
+        repository_roots: t.SequenceOf[Path] | None = None,
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Build immutable plans from one stable Rope workspace snapshot."""
         workspace_index = rope.workspace_index
@@ -159,6 +176,18 @@ class FlextInfraCodegenLazyInit(
                 reverse=True,
             )
         )
+        if repository_roots is not None:
+            selected_roots = frozenset(path.resolve() for path in repository_roots)
+            selected_packages: list[Path] = []
+            for package_dir in indexed_package_dirs:
+                package = rope.package(package_dir)
+                if package is None or package.project_root is None:
+                    return r[m.Infra.CodegenPhaseAnalysis].fail(
+                        f"lazy-init package has no repository owner: {package_dir}"
+                    )
+                if package.project_root.resolve() in selected_roots:
+                    selected_packages.append(package_dir)
+            indexed_package_dirs = tuple(selected_packages)
         target_package_dir: Path | None = None
         if self.target_module:
             mapped_package_dir = workspace_index.package_dir_by_name.get(

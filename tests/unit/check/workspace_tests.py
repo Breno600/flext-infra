@@ -123,21 +123,20 @@ class TestsFlextInfraWorkspaceChecker:
         tm.fail(result)
 
     def test_run_projects_with_missing_projects(self, tmp_path: Path) -> None:
-        """Test that run_projects handles missing project directories gracefully."""
+        """A missing requested project cannot produce successful empty execution."""
         checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
         result = checker.run_projects(
             ["nonexistent"], ["lint"], reports_dir=tmp_path / "reports"
         )
-        tm.ok(result)
-        tm.that(result.value, eq=[])
+        tm.fail(result, has="selected project is unavailable")
 
-    def test_run_projects_creates_reports_dir(self, tmp_path: Path) -> None:
-        """Test that run_projects creates reports directory if missing."""
+    def test_run_projects_rejects_empty_selection(self, tmp_path: Path) -> None:
+        """An empty selection is not a completed quality check."""
         checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
         reports_dir = tmp_path / "reports"
         result = checker.run_projects([], ["lint"], reports_dir=reports_dir)
-        tm.ok(result)
-        tm.that(reports_dir.exists(), eq=True)
+        tm.fail(result, has="no projects selected")
+        tm.that(reports_dir.exists(), eq=False)
 
     def test_lint_returns_gate_result(self, tmp_path: Path) -> None:
         """Test that lint() returns a GateResult."""

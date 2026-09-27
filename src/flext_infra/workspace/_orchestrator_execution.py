@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, config, m, p, t, u
 
 
 class FlextInfraWorkspaceOrchestratorExecutionMixin:
@@ -86,11 +86,25 @@ class FlextInfraWorkspaceOrchestratorExecutionMixin:
             return r[t.SequenceOf[p.Cli.CommandOutput]].from_failure(preflight)
         results: t.MutableSequenceOf[p.Cli.CommandOutput] = []
         total = len(projects)
+        suspension_reason = (
+            config.Infra.codegen.make.policy_check_suspension_reason
+            if verb in {c.Infra.VERB_CHECK, "test", "test-full"}
+            else None
+        )
+        # PASS and passed remain command-exit fields for existing consumers.
+        # They do not certify which checks or tests a child actually executed.
+        result_scope = "result_scope=command_exit"
+        if suspension_reason is not None:
+            result_scope += " custom_policy_enforcement=suspended"
+            u.Cli.emit_raw(
+                f"Custom policy enforcement is SUSPENDED: {suspension_reason}. "
+                "Successful command exits do not certify full policy execution.\n"
+            )
         # flext-9v0d: emit a deterministic, machine-parseable orchestration report
         # so a caller can attribute every project outcome and the child exit code.
         u.Cli.emit_raw(
             f"scope={c.Infra.RK_WORKSPACE} verb={verb} "
-            f"projects={','.join(projects)}" + "\n"
+            f"projects={','.join(projects)} {result_scope}\n"
         )
         # Why (operator 2026-09-14): one failing project never hides the rest of
         # the fleet; every project runs, the summary names every failure, and the
@@ -106,7 +120,7 @@ class FlextInfraWorkspaceOrchestratorExecutionMixin:
             state = "PASS" if succeeded else "FAIL"
             u.Cli.emit_raw(
                 f"[{idx}/{total}] {state} {project} {verb} "
-                f"exit={code} duration={cmd_output.duration:.2f}s\n"
+                f"exit={code} duration={cmd_output.duration:.2f}s {result_scope}\n"
             )
             if not succeeded:
                 if not failures:
@@ -117,7 +131,7 @@ class FlextInfraWorkspaceOrchestratorExecutionMixin:
         u.Cli.emit_raw(
             f"summary scope={c.Infra.RK_WORKSPACE} verb={verb} total={total} "
             f"completed={total} passed={total - len(failures)} "
-            f"failed={len(failures)} exit={first_failure_code}\n"
+            f"failed={len(failures)} exit={first_failure_code} {result_scope}\n"
         )
         if failures:
             return r[t.SequenceOf[p.Cli.CommandOutput]].fail(

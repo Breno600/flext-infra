@@ -316,6 +316,9 @@ Infra:
           allow_redefinition: true
           namespace_packages: true
           explicit_package_bases: true
+          # Analyze installed dependency sources even without a py.typed marker.
+          # https://mypy.readthedocs.io/en/stable/config_file.html#confval-follow_untyped_imports
+          follow_untyped_imports: true
           check_untyped_defs: true
           extra_checks: true
           local_partial_types: true

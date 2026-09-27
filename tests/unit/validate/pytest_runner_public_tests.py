@@ -155,7 +155,109 @@ class TestsFlextInfraPytestRunner:
         second_summary = self._summary(reports_root)
         tm.that(
             second_summary,
-            has=["executed=0", "deselected=1", "cache_restored=True", "exit=0"],
+            has=[
+                "result=cache_hit",
+                "executed=0",
+                "deselected=1",
+                "cache_restored=True",
+                "exit=0",
+            ],
+        )
+        second_name = tm.ok(u.Cli.files_read_text(reports_root / "latest.txt")).strip()
+        cached = m.Infra.TestmonRunAccounting.model_validate_json(
+            tm.ok(u.Cli.files_read_text(reports_root / second_name / "accounting.json"))
+        )
+        assert cached.cache_hit
+        assert cached.inventory == cached.deselected
+        assert not cached.selected
+        assert not cached.executed
+        assert not (reports_root / second_name / "junit.xml").exists()
+
+        (cached_runner_project / cache.target_directory / "test_added.py").write_text(
+            "def test_added() -> None:\n    assert 1 + 1 == 2\n", encoding="utf-8"
+        )
+        assert tm.ok(self._runner_for(cached_runner_project).execute()) == 0
+        incremental_name = tm.ok(
+            u.Cli.files_read_text(reports_root / "latest.txt")
+        ).strip()
+        incremental = m.Infra.TestmonRunAccounting.model_validate_json(
+            tm.ok(
+                u.Cli.files_read_text(
+                    reports_root / incremental_name / "accounting.json"
+                )
+            )
+        )
+        assert incremental.executed_count == 1
+        assert incremental.deselected == cached.inventory
+        assert set(incremental.inventory) == set(incremental.selected) | set(
+            incremental.deselected
+        )
+
+        assert tm.ok(self._runner_for(cached_runner_project).execute_full()) == 0
+        full_name = tm.ok(u.Cli.files_read_text(reports_root / "latest.txt")).strip()
+        full = m.Infra.TestmonRunAccounting.model_validate_json(
+            tm.ok(u.Cli.files_read_text(reports_root / full_name / "accounting.json"))
+        )
+        assert full.mode == "full"
+        assert not full.cache_hit
+        assert set(full.executed) == set(incremental.inventory)
+        assert full.database == cached.database
+        assert not full.deselected
+        assert (reports_root / full_name / "cache-before.json").is_file()
+        assert (reports_root / full_name / "cache-after.json").is_file()
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize(
+        "category", ["UserWarning", "MroViolation", "SmellViolation"]
+    )
+    def test_native_warning_events_remain_visible_and_policy_suspension_is_bounded(
+        self, cached_runner_project: Path, category: str
+    ) -> None:
+        """One multiline native warning is one event, with a bounded policy decision."""
+        cache = config.Infra.codegen.make.testmon_cache
+        warning_class = category if category == "UserWarning" else f"e.{category}"
+        (cached_runner_project / cache.target_directory / "test_warning.py").write_text(
+            "import warnings\nfrom flext_core import e\n\n"
+            "def test_warning() -> None:\n"
+            f"    warnings.warn('first line\\nsecond line', {warning_class}, stacklevel=1)\n",
+            encoding="utf-8",
+        )
+        exit_code = tm.ok(self._runner_for(cached_runner_project).execute())
+        suspended = (
+            category != "UserWarning"
+            and config.Infra.codegen.make.policy_check_suspension_reason is not None
+        )
+        assert (exit_code == 0) == suspended
+        reports = cached_runner_project / cache.reports_directory
+        latest = tm.ok(u.Cli.files_read_text(reports / "latest.txt")).strip()
+        summary = self._summary(reports)
+        assert "warnings=1\n" in summary
+        assert f"suspended_policy_warnings={int(suspended)}\n" in summary
+        warnings = tm.ok(u.Cli.files_read_text(reports / latest / "warnings.txt"))
+        assert "first line\nsecond line" in warnings
+
+    @pytest.mark.slow
+    def test_setup_failure_is_accounted_without_a_call_phase(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A failed fixture accounts for its selected node and preserves later outcomes."""
+        cache = config.Infra.codegen.make.testmon_cache
+        (cached_runner_project / cache.target_directory / "test_setup.py").write_text(
+            "import pytest\n\n@pytest.fixture\ndef broken():\n"
+            "    raise RuntimeError('setup failure evidence')\n\n"
+            "def test_setup(broken):\n    assert broken\n",
+            encoding="utf-8",
+        )
+        assert tm.ok(self._runner_for(cached_runner_project).execute()) != 0
+        reports = cached_runner_project / cache.reports_directory
+        latest = tm.ok(u.Cli.files_read_text(reports / "latest.txt")).strip()
+        accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+            tm.ok(u.Cli.files_read_text(reports / latest / "accounting.json"))
+        )
+        assert set(accounting.selected) == set(accounting.executed)
+        assert accounting.executed_count == 2
+        assert "setup failure evidence" in tm.ok(
+            u.Cli.files_read_text(reports / latest / "errors.txt")
         )
 
     @pytest.mark.slow
@@ -280,6 +382,76 @@ class TestsFlextInfraPytestRunner:
         tm.that("--testmon" in command, eq=False)
 
     @pytest.mark.slow
+    def test_collection_skip_blocks_full_execution_and_incremental_cache_hit(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A skipped module cannot disappear when execution receives explicit node ids."""
+        cache = config.Infra.codegen.make.testmon_cache
+        (
+            cached_runner_project / cache.target_directory / "test_collection_skip.py"
+        ).write_text(
+            "import pytest\n"
+            "pytest.skip('original collection skip reason', allow_module_level=True)\n",
+            encoding="utf-8",
+        )
+        reports = cached_runner_project / cache.reports_directory
+        for complete in (True, False):
+            runner = self._runner_for(cached_runner_project)
+            exit_code = tm.ok(runner.execute_full() if complete else runner.execute())
+            assert exit_code != 0
+            latest = tm.ok(u.Cli.files_read_text(reports / "latest.txt")).strip()
+            report = reports / latest
+            skips = tm.ok(u.Cli.files_read_text(report / "skipped-tests.txt"))
+            assert "original collection skip reason" in skips
+            assert "inventory-events.jsonl" in skips
+            accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+                tm.ok(u.Cli.files_read_text(report / "accounting.json"))
+            )
+            assert accounting.cache_hit == (not complete)
+            assert "collection_skipped=0\n" not in self._summary(reports)
+
+    @pytest.mark.slow
+    def test_failed_coverage_suite_preserves_original_failure_and_accounting(
+        self, cached_runner_project: Path
+    ) -> None:
+        """No-cov-on-fail omits coverage without hiding the failed test evidence."""
+        cache = config.Infra.codegen.make.testmon_cache
+        (
+            cached_runner_project / cache.target_directory / "test_coverage_failure.py"
+        ).write_text(
+            "def test_coverage_failure() -> None:\n"
+            "    assert False, 'original coverage suite failure'\n",
+            encoding="utf-8",
+        )
+
+        exit_code = tm.ok(self._runner_for(cached_runner_project).execute_coverage())
+
+        assert exit_code == pytest.ExitCode.TESTS_FAILED
+        reports = cached_runner_project / cache.reports_directory
+        latest = tm.ok(u.Cli.files_read_text(reports / "latest.txt")).strip()
+        report = reports / latest
+        accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+            tm.ok(u.Cli.files_read_text(report / "accounting.json"))
+        )
+        outcome = m.Cli.ProcessOutcome.model_validate_json(
+            tm.ok(u.Cli.files_read_text(report / "suite-outcome.json"))
+        )
+        assert accounting.mode == "coverage"
+        assert set(accounting.executed) == set(accounting.selected)
+        assert accounting.executed_count == len(accounting.inventory) == 2
+        assert outcome.raw_return_code == exit_code
+        assert not outcome.timed_out
+        assert outcome.forwarded_signal is None
+        assert not (report / "coverage.xml").exists()
+        assert "original coverage suite failure" in tm.ok(
+            u.Cli.files_read_text(report / "failed-tests.txt")
+        )
+        assert "original coverage suite failure" in tm.ok(
+            u.Cli.files_read_text(report / "pytest.log")
+        )
+        assert "failed=1\n" in self._summary(reports)
+
+    @pytest.mark.slow
     def test_collection_policy_error_fails_loud_and_names_the_offender(
         self, policy_violation_project: Path
     ) -> None:
@@ -298,9 +470,8 @@ class TestsFlextInfraPytestRunner:
         """The coverage pass also exits non-zero on the same policy violation."""
         runner = self._runner_for(policy_violation_project)
 
-        exit_code = tm.ok(runner.execute_coverage())
-
-        tm.that(exit_code, ne=0)
+        with pytest.raises(RuntimeError, match="FLEXT slow timeout policy"):
+            runner.execute_coverage()
 
 
 __all__: list[str] = []

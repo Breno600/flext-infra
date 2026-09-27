@@ -402,6 +402,14 @@ class FlextInfraWorkspaceDetector(
         result_type = r[tuple[tuple[m.Infra.RepositoryRef, ...], t.VariadicTuple[Path]]]
         if declared.failure:
             return result_type.from_failure(declared)
+        manifest = cls.load_workspace_manifest(repository_root)
+        if manifest.failure:
+            return result_type.from_failure(manifest)
+        declared_members = {
+            member.path: member
+            for document in manifest.value
+            for member in document.members
+        }
         subprojects: list[m.Infra.RepositoryRef] = []
         external: list[Path] = []
         seen: set[Path] = set()
@@ -426,6 +434,7 @@ class FlextInfraWorkspaceDetector(
                 path,
                 integration_branch=integration_branch,
                 workspace_beads=workspace_beads,
+                declared_member=declared_members.get(path),
             )
             if loaded.failure:
                 return result_type.from_failure(loaded)
@@ -443,6 +452,7 @@ class FlextInfraWorkspaceDetector(
         *,
         integration_branch: str | None = None,
         workspace_beads: m.Infra.BeadsProjectSpec,
+        declared_member: m.Infra.RepositoryRef | None = None,
     ) -> p.Result[m.Infra.RepositoryRef | Path]:
         """Load one governed entry, or its declared path for external entries.
 
@@ -490,6 +500,37 @@ class FlextInfraWorkspaceDetector(
             return result_type.fail(
                 f"subproject escapes workspace root: {path.as_posix()}"
             )
+        if declared_branch == ".":
+            current = u.Infra.git_current_branch(
+                m.Infra.GitRepoRequest(repo_root=repository_root)
+            )
+            if current.failure:
+                return result_type.from_failure(current)
+            declared_branch = current.value.text.strip()
+            if not declared_branch:
+                return result_type.fail(
+                    f"submodule branch = . requires a named superproject branch: {path}"
+                )
+        if declared_member is not None:
+            if u.Infra.git_remote_identity(
+                declared_member.url
+            ) != u.Infra.git_remote_identity(declared_url):
+                return result_type.fail(
+                    f"workspace member URL differs from .gitmodules: {path}"
+                )
+            if (
+                declared_member.package
+                and not (subproject_root / c.Infra.PYPROJECT_FILENAME).is_file()
+            ):
+                if (subproject_root / c.Infra.GIT_DIR).exists():
+                    return result_type.fail(
+                        f"declared Python member checkout has no pyproject: {path}"
+                    )
+                # A declared member keeps its identity when CI deliberately omits
+                # the checkout. Runtime scope is selected separately from topology.
+                return result_type.ok(
+                    declared_member.model_copy(update={"branch": declared_branch})
+                )
         if not subproject_root.is_dir():
             # An indexed gitlink whose checkout was never initialized is an
             # intentionally absent working tree: Git already records the
@@ -529,6 +570,9 @@ class FlextInfraWorkspaceDetector(
         )
         if repository.failure:
             return result_type.from_failure(repository)
+        repository = r[m.Infra.RepositoryRef].ok(
+            repository.value.model_copy(update={"branch": declared_branch})
+        )
         if not u.Infra.workspace_manifest_path(subproject_root).is_file():
             return result_type.ok(repository.value)
         member_beads = cls.load_beads_spec(subproject_root)
@@ -585,7 +629,12 @@ class FlextInfraWorkspaceDetector(
                 return r[m.Infra.WorkspaceSpec].fail(
                     f"Git submodule escapes its superproject: {member_root}"
                 )
-            baseline = u.Infra.repository_baseline_branch(superproject_root)
+            baseline = u.Infra.repository_baseline_branch(
+                superproject_root,
+                preference=(
+                    config.Infra.codegen.branch_policy.integration_branch_preference
+                ),
+            )
             loaded_member = cls._load_subproject(
                 superproject_root,
                 member_path,

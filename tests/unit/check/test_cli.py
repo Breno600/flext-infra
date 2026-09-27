@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, main
+from flext_infra import c, config, m, main
 from flext_infra.check import FlextInfraWorkspaceChecker
 from tests import u
 
@@ -58,6 +58,90 @@ class TestsFlextInfraWorkspaceCheckCli:
             c.Infra.LINT,
         ])
         tm.fail(result, has=f"duplicate gate '{c.Infra.LINT}'")
+
+    @pytest.mark.parametrize(
+        ("source", "expected_exit"), [("value = 1\n", 0), ("def broken(:\n", 1)]
+    )
+    def test_policy_suspension_preserves_active_lint_and_report_scope(
+        self, tmp_path: Path, source: str, expected_exit: int
+    ) -> None:
+        """Only active tool results decide acceptance; reports retain suspensions."""
+        workspace = self._create_workspace(tmp_path)
+        _ = self._write_module(workspace, "flext-core", source)
+        reason = config.Infra.codegen.make.policy_check_suspension_reason
+        policy_gates = [
+            gate
+            for gate, metadata in c.Infra.GATE_METADATA.items()
+            if reason is not None and metadata[2] == "policy"
+        ]
+        reports = tmp_path / "reports"
+        exit_code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(workspace),
+            "--projects",
+            "flext-core",
+            "--reports-dir",
+            str(reports),
+            "--gates",
+            ",".join([c.Infra.LINT, *policy_gates]),
+        ])
+        tm.that(exit_code, eq=expected_exit)
+        report = m.Infra.SarifReport.model_validate_json(
+            (reports / c.Infra.CHECK_REPORT_SARIF_FILENAME).read_text(encoding="utf-8")
+        )
+        tm.that({item.gate for item in report.runs[0].suspended}, eq=set(policy_gates))
+        tm.that(
+            all(item.reason == reason for item in report.runs[0].suspended), eq=True
+        )
+        tm.that(bool(report.runs[0].results), eq=bool(expected_exit))
+        markdown = (reports / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
+            encoding="utf-8"
+        )
+        tm.that("SUSPENDED / NOT RUN" in markdown, eq=bool(policy_gates))
+
+    def test_policy_only_request_is_not_a_passing_execution(
+        self, tmp_path: Path
+    ) -> None:
+        """A fully suspended request records no fabricated gate execution."""
+        workspace = self._create_workspace(tmp_path)
+        policies = ["namespace"]
+        result = FlextInfraWorkspaceChecker(repository_root=workspace).run_projects(
+            ["flext-core"], policies, reports_dir=tmp_path / "reports"
+        )
+        tm.ok(result)
+        project = result.value[0]
+        if config.Infra.codegen.make.policy_check_suspension_reason is not None:
+            tm.that(project.gates, empty=True)
+            tm.that(project.passed, eq=False)
+            tm.that(project.accepted, eq=True)
+            tm.that(project.status, eq="SUSPENDED / NOT RUN")
+        else:
+            tm.that(set(project.gates), eq=set(policies))
+            tm.that(project.suspended, empty=True)
+
+    @pytest.mark.parametrize("include_existing", [False, True])
+    def test_unavailable_requested_project_fails_cli(
+        self, tmp_path: Path, *, include_existing: bool
+    ) -> None:
+        """A valid sibling does not conceal an unavailable requested project."""
+        workspace = self._create_workspace(tmp_path)
+        arguments = [
+            "check",
+            "run",
+            "--repository-root",
+            str(workspace),
+            "--gates",
+            c.Infra.LINT,
+            "--projects",
+            "missing",
+            "--reports-dir",
+            str(tmp_path / "reports"),
+        ]
+        if include_existing:
+            arguments.extend(["--projects", "flext-core"])
+        tm.that(main(arguments), eq=1)
 
     @pytest.mark.parametrize(
         ("source", "expected_exit"),

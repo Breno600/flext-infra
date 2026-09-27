@@ -339,7 +339,7 @@ class FlextInfraCodegenConformExecute(
         return any(marker in message for marker in c.Infra.CONFORM_SOURCE_RACE_MARKERS)
 
     def _lazy_phase(
-        self, request: m.Infra.CodegenConformRequest
+        self, request: m.Infra.CodegenConformRequest, plan: m.Infra.CodegenPlan
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Single lazy-init analysis pass per conform invocation.
 
@@ -348,7 +348,12 @@ class FlextInfraCodegenConformExecute(
         ADR-014: lazy-init ownership stays inside conform's
         transaction.
         """
-        return FlextInfraCodegenLazyInit(repository_root=request.root).plan_files()
+        return FlextInfraCodegenLazyInit(repository_root=request.root).plan_files(
+            repository_roots=tuple(
+                (request.root / repository.path).resolve()
+                for repository in plan.repositories
+            )
+        )
 
     def _execute_managed_locked_prepared(
         self,
@@ -395,7 +400,7 @@ class FlextInfraCodegenConformExecute(
                 return r[m.Infra.CodegenResult].fail(
                     f"codegen drift detected: {paths}\n{report}"
                 )
-            lazy_analysis = self._lazy_phase(request)
+            lazy_analysis = self._lazy_phase(request, plan)
             if lazy_analysis.failure:
                 return r[m.Infra.CodegenResult].from_failure(lazy_analysis)
             lazy_changed = tuple(
@@ -456,7 +461,7 @@ class FlextInfraCodegenConformExecute(
         session: m.Infra.CodegenTransactionSession,
     ) -> p.Result[m.Infra.CodegenResult]:
         """Complete every post-begin phase through prepared-state recovery."""
-        lazy_analysis = self._lazy_phase(request)
+        lazy_analysis = self._lazy_phase(request, plan)
         if lazy_analysis.failure:
             aborted = transaction.abort_locked(
                 session, lazy_analysis.error or "lazy-init planning failed"

@@ -9,8 +9,8 @@ from flext_cli import m
 
 from flext_infra import t
 
+from .. import FlextInfraModelsDepsToolConfig
 from .._defaults import FlextInfraModelsDefaults
-from ..deps import FlextInfraModelsDepsToolConfig
 from .artifact import FlextInfraConfigModelsArtifact
 from .contract import FlextInfraConfigModelsContract
 from .release import FlextInfraConfigModelsRelease

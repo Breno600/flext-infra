@@ -179,5 +179,5 @@ class FlextInfraCodemodGate(FlextInfraGate):
         _ = ctx
         rules = self._rule_paths(project_dir)
         rule_path = rules[0] if rules else project_dir
-        issues = self._issues_from_scan(result, rule_path.name)
+        issues = self._observational_findings(result, rule_path.name)
         return not issues, issues

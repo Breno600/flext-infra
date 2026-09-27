@@ -8,6 +8,8 @@
 source, and conform fails loudly on source-less internal dependencies. The
 scaffold seeds the source from the declared FLEXT dependency line; the
 dependency lists are CUSTOM afterwards, so the declaration then rules. -#}
+{# Workspace member names are resolved by the pyproject conformer from each
+   member's declared URL and branch; the FLEXT family line does not own them. #}
 {%- macro flext_requirement(item) -%}
 {%- set bare = item is string and item.startswith("flext-") and item.replace("-", "").replace("_", "").isalnum() -%}
 {%- if bare -%}

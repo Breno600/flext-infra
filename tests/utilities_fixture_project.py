@@ -99,6 +99,7 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             name=name,
             distribution=name,
             url=f"{provider.base_url.rstrip('/')}/{name}.git",
+            branch=TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch(),
             path=resolved_path,
             role=resolved_role,
             provider=provider.name,

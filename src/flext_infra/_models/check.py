@@ -191,6 +191,14 @@ class FlextInfraModelsCheck:
                 1 for issue in self.issues if issue.severity.lower() == c.Infra.ERROR
             )
 
+    class GateSuspension(mm.ProjectNameMixin, m.ContractModel):
+        """Authorized policy non-execution, never a successful gate result."""
+
+        gate: str = m.Field(description="Registered policy gate that was not executed")
+        reason: t.NonEmptyStr = m.Field(
+            description="Operator authorization explaining the policy suspension"
+        )
+
     class ProjectResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Aggregated gate results for a single project.
 
@@ -202,12 +210,37 @@ class FlextInfraModelsCheck:
         gates: MutableMapping[str, FlextInfraModelsCheck.GateExecution] = m.Field(
             default_factory=dict, description="Gate name to execution mapping"
         )
+        suspended: t.VariadicTuple[FlextInfraModelsCheck.GateSuspension] = m.Field(
+            default_factory=tuple, description="Policy checks explicitly not executed"
+        )
 
         @m.computed_field
         @property
         def passed(self) -> bool:
-            """Whether every gate passed."""
-            return all(v.result.passed for v in self.gates.values())
+            """Whether the complete requested scope executed and passed."""
+            return bool(self.gates) and not self.suspended and self.accepted
+
+        @m.computed_field
+        @property
+        def accepted(self) -> bool:
+            """Whether active checks passed, accounting for authorized suspensions."""
+            return bool(self.gates or self.suspended) and all(
+                execution.result.passed for execution in self.gates.values()
+            )
+
+        @m.computed_field
+        @property
+        def status(self) -> str:
+            """Distinguish active acceptance from a fully executed passing scope."""
+            if not self.accepted:
+                return "FAIL"
+            if self.suspended:
+                return (
+                    "ACTIVE CHECKS PASS / SUSPENDED"
+                    if self.gates
+                    else "SUSPENDED / NOT RUN"
+                )
+            return "PASS"
 
         @m.computed_field
         @property
@@ -387,11 +420,16 @@ class FlextInfraModelsCheck:
         results: t.VariadicTuple[FlextInfraModelsCheck.SarifResult] = m.Field(
             default_factory=tuple, description="Run results"
         )
+        suspended: t.VariadicTuple[FlextInfraModelsCheck.GateSuspension] = m.Field(
+            default_factory=tuple,
+            validation_alias=m.AliasPath("properties", "suspendedChecks"),
+            description="Authorized checks not executed in this run",
+        )
 
         @u.model_serializer
         def _serialize(self) -> t.JsonMapping:
             """Serialize."""
-            return {
+            payload: t.MutableJsonMapping = {
                 "tool": {
                     "driver": {
                         "name": self.tool_name,
@@ -405,6 +443,13 @@ class FlextInfraModelsCheck:
                     result.model_dump(by_alias=True) for result in self.results
                 ],
             }
+            if self.suspended:
+                payload["properties"] = {
+                    "suspendedChecks": [
+                        item.model_dump(mode="json") for item in self.suspended
+                    ]
+                }
+            return payload
 
     class SarifReport(m.ArbitraryTypesModel):
         """Complete SARIF 2.1.0 report; serializes and validates the same JSON."""

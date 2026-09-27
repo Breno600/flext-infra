@@ -105,6 +105,7 @@ class FlextInfraConstantsMake:
         "fix-enforcement",
         "sonarcloud-sync",
         "test",
+        "test-full",
     )
     ORCHESTRATOR_REMOVE_ENV_KEYS: ClassVar[t.StrSequence] = (
         "GNUMAKEFLAGS",

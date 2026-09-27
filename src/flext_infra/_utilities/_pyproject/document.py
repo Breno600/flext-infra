@@ -45,9 +45,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         cls,
         document: t.Cli.TomlDocument,
         *,
-        project_name: str,
         workspace: p.Infra.WorkspaceSpec,
-        workspace_mode: c.Infra.MakeProfile,
         invalid_render_error: str,
     ) -> p.Result[str]:
         """Validate dependency provenance, then render canonical TOML.
@@ -56,10 +54,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         public conformers: the message each reports for an unparsable render.
         """
         provenance_result = cls._validate_dependency_provenance(
-            document,
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
+            document, workspace=workspace
         )
         if provenance_result.failure:
             return r[str].from_failure(provenance_result)
@@ -123,9 +118,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             return r[str].from_failure(sources_result)
         return cls._rendered_conformed_document(
             source,
-            project_name=project_name,
             workspace=workspace,
-            workspace_mode=workspace_mode,
             invalid_render_error=(
                 "canonical pyproject rendering produced invalid TOML"
             ),
@@ -145,10 +138,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             return r[str].from_failure(parsed)
         source, project_name = parsed.value
         provenance_result = cls._validate_dependency_provenance(
-            source,
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
+            source, workspace=workspace
         )
         if provenance_result.failure:
             return r[str].from_failure(provenance_result)
@@ -161,6 +151,12 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             sources_result = cls._validate_root_uv_sources(source, workspace=workspace)
             if sources_result.failure:
                 return r[str].from_failure(sources_result)
+        cls._sync_workspace_dependency_group(
+            source,
+            project_name=project_name,
+            workspace=workspace,
+            workspace_mode=workspace_mode,
+        )
         normalized = cls._normalize_requirements(
             source,
             project_name=project_name,
@@ -170,12 +166,6 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         if normalized.failure:
             return r[str].from_failure(normalized)
-        cls._sync_workspace_dependency_group(
-            source,
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
-        )
         # On the dependency-only surface the declared document constraints are
         # the SSOT: they flow through the same uv-pin filter as the toolchain
         # path so a legacy `uv` cap is removed and every other constraint is
@@ -197,9 +187,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             return r[str].from_failure(sources_result)
         return cls._rendered_conformed_document(
             source,
-            project_name=project_name,
             workspace=workspace,
-            workspace_mode=workspace_mode,
             invalid_render_error="dependency conformance produced invalid TOML",
         )
 

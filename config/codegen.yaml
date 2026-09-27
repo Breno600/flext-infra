@@ -342,6 +342,7 @@ Infra:
         discovery_scope: none
 
     make:
+      policy_check_suspension_reason: Operator-authorized suspension of custom infra policies during the fleet restructuring (2026-09-24)
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -430,6 +431,8 @@ Infra:
       # never in CI. The CI test-only steps (testmon cache, test reports)
       # render only while a test row declares the ci context.
         - {verb: test, contexts: [local, pre_push]}
+        - {verb: build, contexts: [local]}
+      upgrade_workflow: [setup, deps, setup, gen]
       # Artifacts `make clean` removes. Read by Makefile.j2 for the cache
       # sweep and the root-level directory/file lists.
       clean:
@@ -513,6 +516,10 @@ Infra:
           description: Show the complete selector-free public interface.
         - name: setup
           description: Provision the declared environment and hooks.
+        - name: dev
+          description: Execute the configured local setup, generation, quality, test, and build lifecycle.
+        - name: upg
+          description: Provision tools, upgrade dependency declarations, resync, and regenerate.
         - name: deps
           description: Upgrade, lock, and conform every declared dependency.
         - name: build
@@ -520,7 +527,9 @@ Infra:
         - name: check
           description: Run every configured non-test gate.
         - name: test
-          description: Run the complete suite through the persistent testmon cache.
+          description: Run the incremental selection through the persistent testmon cache.
+        - name: test-full
+          description: Run incremental tests first, then the complete suite through the same testmon cache.
         - name: fmt
           description: Apply ruff format --preview and ruff check --fix --unsafe-fixes --preview. Ruff is the rule; change code, never ruff.
         - name: fix
