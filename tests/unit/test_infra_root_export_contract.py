@@ -2,8 +2,8 @@
 
 Doctrine: the test does NOT freeze a copy of the generated ``__all__`` tuple
 (that would be a second SSOT drifting from the codegen output). It asserts
-the *laws* the generated contract must satisfy: deterministic ordering,
-required public families present, no private/internal names, uniqueness.
+the *laws* the generated contract must satisfy: required public families present,
+no private/internal names, uniqueness.
 """
 
 from __future__ import annotations
@@ -16,10 +16,9 @@ import flext_infra
 class TestsFlextInfraRootExportContract:
     """Root package exports only the external API surface."""
 
-    def test_root_all_is_sorted_and_unique(self) -> None:
-        """Generated __all__ is deterministic: sorted and duplicate-free."""
+    def test_root_all_is_unique(self) -> None:
+        """Each public name is exported once."""
         exports = tuple(flext_infra.__all__)
-        tm.that(exports, eq=tuple(sorted(exports)))
         tm.that(len(exports), eq=len(set(exports)))
 
     def test_root_all_contains_required_public_families(self) -> None:

@@ -292,7 +292,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             )
         )
         project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
-        if project_root is not None:
+        if project_root is not None and file_path.suffix == c.Infra.EXT_PYTHON:
             layout = cls.layout(project_root)
             direct_tier = file_path.parent.parent == project_root
             public_root = layout is not None and file_path.parent == layout.package_dir
@@ -497,6 +497,9 @@ class FlextInfraUtilitiesCodegenNamespace:
             rel_path=rel_path,
             current_pkg=current_pkg,
         )
+        # Stub artifacts are census inputs, never runtime facade declarations.
+        if file_path.suffix != c.Infra.EXT_PYTHON:
+            return policy
         project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
         if project_root is None:
             return policy

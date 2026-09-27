@@ -171,19 +171,36 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         return manifest_path
 
     @staticmethod
+    def declared_requirements(
+        floors: t.StrSequence, *, distribution: str
+    ) -> t.StrSequence:
+        """Declare standalone requirement sources from the fixture's typed provider."""
+        branch = TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()
+        return tuple(
+            (
+                f"{requirement} @ git+"
+                f"{TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(requirement).url}@{branch}"
+                if requirement.startswith("flext-")
+                and requirement.replace("-", "").replace("_", "").isalnum()
+                else requirement
+            )
+            for requirement in floors
+            if u.Infra.dep_name(requirement) != distribution
+        )
+
+    @staticmethod
     def standalone_workspace(
         project_dir: Path, name: str = "flext-demo"
     ) -> m.Infra.WorkspaceSpec:
         """Materialize and load the canonical minimal standalone fixture."""
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
-        infra = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
-            config.Infra.name
+        requirements = (
+            TestsFlextInfraUtilitiesWorkspaceFixtureMixin.declared_requirements(
+                config.Infra.codegen.scaffold.project.dev, distribution=name
+            )
         )
-        branch = TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()
-        tests_ref = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
-            "flext-tests"
-        )
+        dev = tm.ok(u.Cli.json_dumps([*requirements]))
         package_root = project_dir / "src" / name.replace("-", "_")
         package_root.mkdir(parents=True, exist_ok=True)
         (package_root / "__init__.py").write_text("", encoding="utf-8")
@@ -194,8 +211,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             "dependencies = []\n"
             "[dependency-groups]\n"
-            f'dev = ["{infra.distribution} @ git+{infra.url}@{branch}", '
-            f'"{tests_ref.distribution} @ git+{tests_ref.url}@{branch}"]\n',
+            f"dev = {dev}\n",
             encoding="utf-8",
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
@@ -560,19 +576,23 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             cls, parent: Path, member: Path, *, distribution: str, relative_path: str
         ) -> None:
             """Declare and commit ``member`` as a real gitlink submodule of ``parent``."""
-            _ = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
+            observed = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(parent))
+            branch = TestsFlextInfraUtilitiesGitMixin.integration_branch(parent)
             (parent / c.Infra.GITMODULES).write_text(
                 f'[submodule "{distribution}"]\n'
                 f"\tpath = {relative_path}\n"
                 f"\turl = {cls.governed_repository_url(distribution)}\n"
                 "\tbranch = "
-                f"{TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()}\n",
+                f"{branch}\n",
                 encoding="utf-8",
             )
             # A workspace parent declares its own role as workspace: the
             # manifest must agree with the topology the detector observes.
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(
-                parent, parent.name, role=c.Infra.MakeProfile.WORKSPACE
+                parent,
+                observed.repository.distribution,
+                url=observed.repository.url,
+                role=c.Infra.MakeProfile.WORKSPACE,
             )
             member_head = TestsFlextInfraUtilitiesGitMixin.git_capture(
                 member, "rev-parse", c.Infra.GIT_HEAD
@@ -589,6 +609,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             )
             _ = TestsFlextInfraUtilitiesGitMixin.git_run(
                 parent, "commit", "--quiet", "-m", "attach member"
+            )
+            _ = TestsFlextInfraUtilitiesGitMixin.git_run(
+                parent, "submodule", "absorbgitdirs", relative_path
             )
 
         @classmethod

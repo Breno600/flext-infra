@@ -3,3 +3,6 @@ from __future__ import annotations
 
 class FlextTestTypes:
     pass
+
+t = FlextTestTypes
+__all__ = ["FlextTestTypes", "t"]

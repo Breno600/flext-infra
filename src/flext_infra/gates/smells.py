@@ -205,7 +205,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
             file=c.Infra.PYPROJECT_FILENAME,
             line=1,
             column=0,
-            code=FlextInfraSmellsGate.gate_id,
+            code="TOOL_ERROR",
             message=message or "qlty returned no parseable SARIF output",
             severity=str(c.Infra.GateSeverity.ERROR.value),
         )

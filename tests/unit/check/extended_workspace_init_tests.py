@@ -33,7 +33,7 @@ class TestsFlextInfraWorkspaceInit:
 
     def test_execute_returns_failure(self, tmp_path: Path) -> None:
         result = FlextInfraWorkspaceChecker(repository_root=tmp_path).execute()
-        tm.fail(result, has="Use execute_command() directly")
+        tm.fail(result, has="Use check_payload() directly")
 
     def test_resolve_gates_rejects_duplicate_explicit_gates(self) -> None:
         result = FlextInfraWorkspaceChecker.resolve_gates([

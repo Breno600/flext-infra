@@ -43,6 +43,15 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SILENT_FAILURE: ClassVar[str] = "silent-failure"
+    ALWAYS_BLOCKING_GATES: ClassVar[frozenset[str]] = frozenset({
+        LINT,
+        FORMAT,
+        MARKDOWN_CODE,
+        "mypy",
+        "pyrefly",
+        "pyright",
+    })
+    "Native analyzers cannot participate in observational conformity policy."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
         "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
         "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
@@ -100,32 +109,6 @@ class FlextInfraConstantsCheck:
     "SARIF 2.1.0 check report: the machine-readable findings owner of ``check run``."
     MUTATING_GATES: ClassVar[frozenset[str]] = frozenset({FORMAT})
     "Gates that rewrite files: owned by `fmt`/`fix`, never a read-only `check` vocabulary."
-    WARNING_GATE_IDS: ClassVar[frozenset[str]] = frozenset({
-        "markdown",
-        "mypy",
-        "namespace",
-        "runtime-census",
-        "silent-failure",
-        "duplication",
-        "tier-whitelist",
-        "pyrefly",
-    })
-    "Gates whose findings are reported without failing the check verdict. "
-    "Operator law 2026-09-22: the census/structural flood (namespace, "
-    "runtime-census, duplication, tier-whitelist) and pyrefly diagnostics "
-    "are warning-only for CI — the debts stay tracked in beads. Extended "
-    "the same day by the docs reorg session: the docs-lint backlog "
-    "(markdown/rumdl) and the sentinel-return backlog (silent-failure) "
-    "also warn. Stabilization close: mypy joins while the pre-existing "
-    "model-facade composition debt (flext-1pquc, ~99 no-any-return made "
-    "fleet-visible when the check complement step entered CI) is ground "
-    "down; the two REAL regressions behind the flood are already fixed at "
-    "root — allow_redefinition restored in the tooling SSOT and "
-    "pydantic-settings held <2.15 (its _env_prefix_target trips the "
-    "pydantic mypy plugin). CI blocks on the correctness gates (lint, "
-    "pyright, security, boundary) while every finding stays visible in "
-    "the run output and report artifacts."
-
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^\s*-->\s*(.+?):\d+:\d+\s*$"
     )

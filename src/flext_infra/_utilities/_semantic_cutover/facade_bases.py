@@ -1,12 +1,4 @@
-"""Semantic facade-base cutover: extend the parent by its declared class name.
-
-A facade module that imports its parent's short letter, subclasses it, and then
-rebinds the same letter to the subclass binds that letter twice. Type checkers
-then read the letter as a variable, so every ``m.X`` annotation reached through
-the facade resolves to Unknown. An annotated rebind (``m: type[X] = X``) has the
-same effect. This phase extends the class the parent declares for the letter in
-its own ``__all__`` and keeps the letter a plain alias of the facade.
-"""
+"""Separate public parent aliases from a facade's plain local type alias."""
 
 from __future__ import annotations
 
@@ -33,7 +25,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
     FlextInfraUtilitiesSemanticCutoverFacadeOwners,
     FlextInfraUtilitiesSemanticCutoverEdits,
 ):
-    """Rewire a facade that extends its parent's letter to the declared class."""
+    """Keep public parent imports distinct from local facade aliases."""
 
     @classmethod
     def _plan_facade_bases(
@@ -42,7 +34,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
         sources: t.MappingKV[Path, str],
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
-        """Plan the class-name base for every facade the detector selected."""
+        """Plan distinct parent bindings for every facade the detector selected."""
         selected = frozenset((root / finding.file).resolve() for finding in findings)
         items = tuple(
             item for item in cls._editable_sources(sources) if item[0] in selected
@@ -63,9 +55,9 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
         def rewrite(path: Path, source: str) -> t.Infra.TransformResult:
             shape = shapes[path]
             tree = ast.parse(source, filename=str(path))
-            owner = cls._facade_declared_owner(modules, shape[0], shape[1])
-            bound = cls._facade_bound_imports(tree, shape[0])
-            if owner in cls._facade_module_bindings(tree) - bound:
+            cls._facade_declared_owner(modules, shape[0], shape[1])
+            owner = f"upstream_{shape[1]}" if shape[1] == shape[2] else shape[2]
+            if owner != shape[2] and owner in cls._facade_module_bindings(tree):
                 msg = f"{owner} is already bound locally in {path}"
                 raise ValueError(msg)
             explicit = (
@@ -74,7 +66,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
                 else source
             )
             rewritten = cls._rewrite_facade_base_source(
-                explicit, shape=shape, owner=owner, owner_bound=owner in bound
+                explicit, shape=shape, owner=owner
             )
             if cls._facade_shape(path, ast.parse(rewritten)) is not None:
                 msg = f"facade base cutover left residue in {path}"
@@ -92,6 +84,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
         """Return ``(module, letter, local, facade)`` of a rebound letter base."""
         imports: MutableMapping[str, t.Triple[str, str, int]] = {}
         rebinds: MutableMapping[str, str] = {}
+        annotated: set[str] = set()
         for node in tree.body:
             if isinstance(node, ast.ImportFrom):
                 for imported in node.names:
@@ -113,6 +106,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
                 and isinstance(node.value, ast.Name)
             ):
                 rebinds[node.target.id] = node.value.id
+                annotated.add(node.target.id)
         shapes = {
             (module, imported, base.id, node.name, level)
             for node in tree.body
@@ -121,6 +115,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
             if isinstance(base, ast.Name) and base.id in imports
             for module, imported, level in (imports[base.id],)
             if rebinds.get(imported) == node.name
+            and (base.id == imported or imported in annotated)
         }
         if not shapes:
             return None
@@ -137,11 +132,11 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
     def _explicit_parent_reads(
         source: str, tree: ast.Module, letter: str, owner: str
     ) -> str:
-        """Spell the parent class wherever the letter is read before its rebind.
+        """Use the parent alias wherever the letter is read before its rebind.
 
         Until the rebind executes, every eager read of the letter (class
         bases, class bodies, decorators, defaults) evaluates the imported
-        parent, so writing the parent class there keeps runtime identical.
+        parent, so writing the distinct parent alias keeps runtime identical.
         Function and lambda bodies run after the rebind and keep the letter.
         """
         rebind_line = max(
@@ -183,19 +178,6 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
                 encoded[:column] + owner.encode() + encoded[column + len(letter) :]
             ).decode()
         return "".join(lines)
-
-    @staticmethod
-    def _facade_bound_imports(tree: ast.Module, module: str) -> frozenset[str]:
-        """Return names a module already imports unaliased from ``module``."""
-        return frozenset(
-            imported.name
-            for node in tree.body
-            if isinstance(node, ast.ImportFrom)
-            and not node.level
-            and node.module == module
-            for imported in node.names
-            if imported.asname is None
-        )
 
     @staticmethod
     def _facade_module_bindings(tree: ast.Module) -> frozenset[str]:

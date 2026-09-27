@@ -585,7 +585,12 @@ class FlextInfraWorkspaceDetector(
                 return r[m.Infra.WorkspaceSpec].fail(
                     f"Git submodule escapes its superproject: {member_root}"
                 )
-            baseline = u.Infra.repository_baseline_branch(superproject_root)
+            baseline = u.Infra.repository_baseline_branch(
+                superproject_root,
+                preference=(
+                    config.Infra.codegen.branch_policy.integration_branch_preference
+                ),
+            )
             loaded_member = cls._load_subproject(
                 superproject_root,
                 member_path,

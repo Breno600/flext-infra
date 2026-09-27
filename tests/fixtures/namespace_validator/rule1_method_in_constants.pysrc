@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 
-class FlextTestConstants(Constants):
+class FlextTestConstants:
     def create_name(self) -> str:
         return "name"
+
+c = FlextTestConstants
+__all__ = ["FlextTestConstants", "c"]

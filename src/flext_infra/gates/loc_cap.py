@@ -46,7 +46,7 @@ class FlextInfraLocCapGate(FlextInfraGate):
                         file="<scc>",
                         line=0,
                         column=0,
-                        code="LOC_CAP_EXEC",
+                        code="TOOL_ERROR",
                         message=result.stderr or "scc execution failed",
                         severity="ERROR",
                     ),

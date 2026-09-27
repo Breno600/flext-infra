@@ -118,7 +118,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 plan
                 for plan in publications
                 if plan.context.importable
-                and plan.action == c.Infra.LazyInitAction.WRITE
+                and plan.action
+                in {c.Infra.LazyInitAction.WRITE, c.Infra.LazyInitAction.SKIP}
                 and plan.context.pkg_dir.is_relative_to(layout.package_dir)
             )
             if not any(plan.context.pkg_dir == layout.package_dir for plan in owned):
@@ -164,8 +165,11 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             output = smoke.value
             if u.Cli.process_succeeded(output.outcome):
                 continue
+            outcome = m.Cli.ProcessOutcome.model_validate(
+                output.outcome, from_attributes=True
+            )
             detail = (
-                f"{probe.subject}: {output.outcome.model_dump_json()}\n"
+                f"{probe.subject}: {outcome.model_dump_json()}\n"
                 f"stdout:\n{output.stdout}\nstderr:\n{output.stderr}"
             )
             if (

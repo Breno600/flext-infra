@@ -678,7 +678,10 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         scripts_dir = project / "scripts"
         scripts_dir.mkdir(parents=True)
         _ = (scripts_dir / "constants.py").write_text(
-            "from __future__ import annotations\n\nclass DemoConstants:\n    pass\n",
+            "from __future__ import annotations\n"
+            "from flext_core import c as parent_c\n"
+            "class DemoConstants(parent_c):\n    pass\n"
+            "__all__ = ['DemoConstants']\n",
             encoding="utf-8",
         )
 

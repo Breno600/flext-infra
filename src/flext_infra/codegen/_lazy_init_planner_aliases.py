@@ -58,7 +58,7 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
             for module_path in sorted(pkg_dir.glob("*.py"))
             if module_path.name != c.Infra.INIT_PY and module_path.stem.isidentifier()
             if (
-                alias := u.Infra.publication_policy(
+                alias := u.Infra.policy(
                     module_path, rope_project=self.rope_workspace.rope_project
                 ).expected_alias
             )

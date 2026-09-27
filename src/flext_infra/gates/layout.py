@@ -1,8 +1,8 @@
 """Project-layout quality gate (flext-0wuz, epic flext-hzox).
 
 Reports layout-SSOT violations per project. Severity is config-driven
-(``codegen.yaml layout.severity``): ``warning`` reports without failing the
-pipeline; ``error`` fails on actionable (move/archive/gitignore) findings.
+(``codegen.yaml layout.severity``). Every finding remains a failed raw gate;
+the global check policy alone determines observational acceptance.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from typing import ClassVar, override
 
-from flext_infra import config, m, t
+from flext_infra import config, m
 from flext_infra.codegen.layout import FlextInfraCodegenLayout
 
 from .base_gate import FlextInfraGate
@@ -37,7 +37,6 @@ class FlextInfraLayoutGate(FlextInfraGate):
         engine = FlextInfraCodegenLayout(repository_root=ctx.repository_root)
         report = engine.check_project(project_dir)
         warning = spec.severity == "warning"
-        report_findings: t.VariadicTuple[m.Infra.LayoutFinding] = report.findings
         issues = tuple(
             m.Infra.Issue(
                 file=str(project_dir / finding.path),
@@ -47,14 +46,11 @@ class FlextInfraLayoutGate(FlextInfraGate):
                 message=finding.message,
                 severity="WARNING" if warning or finding.rule == "review" else "ERROR",
             )
-            for finding in report_findings
+            for finding in report.findings
         )
-        actionable: t.VariadicTuple[m.Infra.LayoutFinding] = report.actionable
-        blocking = tuple(finding for finding in actionable if not warning)
-        passed = warning or not blocking
         return self._build_check_gate_execution(
             project_dir,
-            passed=passed,
+            passed=not issues,
             issues=issues,
             raw_output="\n".join(issue.formatted for issue in issues),
             started=started,

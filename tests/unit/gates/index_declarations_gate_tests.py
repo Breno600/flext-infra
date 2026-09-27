@@ -15,8 +15,9 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import m, u
+from flext_infra import m
 from flext_infra.gates.index_declarations import FlextInfraIndexDeclarationsGate
+from tests import u
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -37,29 +38,26 @@ class TestsFlextInfraIndexDeclarationsGate:
         def run(
             *, orphan_gitlink: bool = False, declare_gitlink: bool = False
         ) -> m.Infra.GateResult:
-            u.Infra.git_init(m.Infra.GitRepoRequest(repo_root=tmp_path))
+            u.Tests.initialize_git_repo(tmp_path)
             (tmp_path / ".gitignore").write_text("ignored/\n", encoding="utf-8")
             (tmp_path / "kept.txt").write_text("kept\n", encoding="utf-8")
-            u.Infra.git_add_paths(
-                m.Infra.GitPathsRequest(
-                    repo_root=tmp_path, paths=[".gitignore", "kept.txt"]
-                )
-            )
+            u.Tests.git_run(tmp_path, "add", ".gitignore", "kept.txt")
             if orphan_gitlink:
                 nested = tmp_path / "nested"
                 nested.mkdir()
-                u.Infra.git_init(m.Infra.GitRepoRequest(repo_root=nested))
                 (nested / "file.txt").write_text("inner\n", encoding="utf-8")
-                u.Infra.git_add_paths(
-                    m.Infra.GitPathsRequest(repo_root=nested, paths=["file.txt"])
+                u.Tests.initialize_git_repo(nested)
+                head = u.Tests.git_capture(nested, "rev-parse", "HEAD").strip()
+                u.Tests.git_run(
+                    tmp_path,
+                    "update-index",
+                    "--add",
+                    "--cacheinfo",
+                    f"160000,{head},nested",
                 )
-                u.Infra.git_commit(
-                    m.Infra.GitCommitRequest(repo_root=nested, message="inner")
-                )
-                # Staging a directory that carries its own .git records a gitlink,
-                # with no .gitmodules section and no warning.
-                u.Infra.git_add_paths(
-                    m.Infra.GitPathsRequest(repo_root=tmp_path, paths=["nested"])
+                tm.that(
+                    u.Tests.git_capture(tmp_path, "ls-files", "--stage", "nested"),
+                    has=f"160000 {head} 0\tnested",
                 )
                 if declare_gitlink:
                     (tmp_path / ".gitmodules").write_text(
@@ -67,14 +65,8 @@ class TestsFlextInfraIndexDeclarationsGate:
                         "\turl = https://example.invalid/nested.git\n",
                         encoding="utf-8",
                     )
-                    u.Infra.git_add_paths(
-                        m.Infra.GitPathsRequest(
-                            repo_root=tmp_path, paths=[".gitmodules"]
-                        )
-                    )
-            u.Infra.git_commit(
-                m.Infra.GitCommitRequest(repo_root=tmp_path, message="seed")
-            )
+                    u.Tests.git_run(tmp_path, "add", ".gitmodules")
+            u.Tests.git_run(tmp_path, "commit", "-m", "seed")
             context = m.Infra.GateContext(
                 repository_root=tmp_path, reports_dir=tmp_path / ".reports"
             )

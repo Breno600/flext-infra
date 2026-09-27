@@ -117,10 +117,16 @@ class TestsFlextInfraScriptDispatchMakefile:
             ),
             script_dispatch=None,
         )
-        tm.that(rendered.count("\ndeploy:\n"), eq=1)
-        tm.that(
-            rendered.count("\n_activated-deploy: _builtin_require_environment\n"), eq=1
+        root = tmp_path / "public-help"
+        root.mkdir()
+        (root / c.Infra.MAKEFILE_FILENAME).write_text(rendered, encoding="utf-8")
+        output = tm.ok(
+            u.Tests.run_isolated_make(["--no-print-directory", "help"], cwd=root)
         )
+        tm.that(u.Cli.process_succeeded(output.outcome), eq=True)
+        tm.that(output.stderr, lacks="overriding recipe")
+        verbs = [line.split()[0] for line in output.stdout.splitlines() if line.strip()]
+        tm.that(verbs.count("deploy"), eq=1)
 
     def test_dispatch_routes_custom_what_before_allowlist(self, tmp_path: Path) -> None:
         """Custom ``_custom_<verb>`` handlers bypass the builtin allowlist.
@@ -152,89 +158,26 @@ class TestsFlextInfraScriptDispatchMakefile:
     def test_gen_replaces_codegen_as_the_single_conform_verb(
         self, tmp_path: Path
     ) -> None:
-        """``make gen`` is THE conform verb; ``codegen`` no longer exists.
-
-        The convergence spine fuses codegen+conform under the
-        single short ``gen`` verb: one verb, one meaning. The old ``codegen``
-        Make verb is fully replaced across config, rendered handlers, and the
-        regeneration header.
-        """
-        make_config = config.Infra.codegen.make
-        verb_names = {verb.name for verb in make_config.verbs}
-        tm.that("gen" in verb_names, eq=True)
-        tm.that("codegen" in verb_names, eq=False)
-        gen = next(verb for verb in make_config.verbs if verb.name == "gen")
-        # WHAT selectors were exterminated: one verb, one meaning, declared once.
-        tm.that(hasattr(gen, "default_what"), eq=False)
-        tm.that(hasattr(gen, "_apply_flag_exterminated"), eq=False)
-        tm.that("initialize" in verb_names, eq=True)
-        tm.that(hasattr(make_config, "serialization"), eq=False)
+        """The public help advertises gen and Make rejects the retired verb."""
         rendered = self._render_root_makefile(
             tmp_path, extra_verbs=(), script_dispatch=None
         )
-        public_line = next(
-            line for line in rendered.splitlines() if line.startswith("PUBLIC_VERBS :=")
+        root = tmp_path / "public-verbs"
+        root.mkdir()
+        (root / c.Infra.MAKEFILE_FILENAME).write_text(rendered, encoding="utf-8")
+        output = tm.ok(
+            u.Tests.run_isolated_make(["--no-print-directory", "help"], cwd=root)
         )
-        tm.that(" gen" in public_line, eq=True)
-        tm.that(" codegen" in public_line, eq=False)
-        tm.that("_DEFAULT_gen" in rendered, eq=False)
-        # S1 (operator law 2026-09-14): gen dispatches unconditionally to
-        # _builtin_gen_all; there is no CHECK_ONLY selector, no separate
-        # check-mode recipe, and no `conform` verb left at all.
-        tm.that("_builtin-gen: _builtin_gen_all" in rendered, eq=True)
-        tm.that("_builtin-conform" in rendered, eq=False)
-        tm.that("_builtin_gen_check" in rendered, eq=False)
-        tm.that("_builtin_gen_apply" in rendered, eq=False)
-        tm.that("_builtin_gen_init:" in rendered, eq=True)
-        tm.that("_builtin_gen_all:" in rendered, eq=True)
-        tm.that("_builtin_codegen_check" in rendered, eq=False)
-        tm.that("_builtin_codegen_apply" in rendered, eq=False)
-        builtin_line = next(
-            line
-            for line in rendered.splitlines()
-            if line.startswith("BUILTIN_VERBS :=")
+        tm.that(u.Cli.process_succeeded(output.outcome), eq=True)
+        verbs = {line.split()[0] for line in output.stdout.splitlines() if line.strip()}
+        tm.that("gen" in verbs, eq=True)
+        tm.that("initialize" in verbs, eq=True)
+        tm.that("codegen" in verbs, eq=False)
+        retired = tm.ok(
+            u.Tests.run_isolated_make(["--no-print-directory", "codegen"], cwd=root)
         )
-        tm.that(" gen" in builtin_line, eq=True)
-        tm.that(" codegen" in builtin_line, eq=False)
-        phony_line = next(
-            line
-            for line in rendered.splitlines()
-            if line.startswith(".PHONY:") and "_builtin_" in line
-        )
-        tm.that(phony_line, eq=".PHONY: _builtin_gen_init _builtin_gen_all")
-        # The one handler drives the conform engine (CLI namespace is unchanged).
-        gen_all_body = rendered.split("_builtin_gen_all:", 1)[1].split("\n\n", 1)[0]
-        tm.that(gen_all_body.count("codegen conform"), eq=1)
-        tm.that("--mode apply" in gen_all_body, eq=True)
-        tm.that("--mode check" in gen_all_body, eq=False)
-        tm.that(gen_all_body, has="$(PROJECT_FLEXT_INFRA)")
-        tm.that(
-            gen_all_body,
-            lacks=[
-                "_builtin_require_environment",
-                "$(FLEXT_INFRA_BOOTSTRAP)",
-                "codegen init",
-                "deps modernize",
-            ],
-        )
-        tm.that(gen_all_body, lacks="MISE_GITHUB_CREDENTIAL_COMMAND")
-        tm.that(
-            gen_all_body,
-            lacks=["codegen lazy-init", "docs generate", "_generated_docs"],
-        )
-        tm.that("define _generated_docs" in rendered, eq=False)
-        gen_init_body = rendered.split("_builtin_gen_init:", 1)[1].split("\n\n", 1)[0]
-        tm.that(gen_init_body.count("codegen init"), eq=2)
-        tm.that(gen_init_body, lacks=["codegen conform", "REPOSITORY_ROOT", "bd"])
-        # The regeneration contract published on every projection speaks gen.
-        tm.that("# @flext-regenerate: make gen" in rendered, eq=True)
-        # The custom-surface policy names gen (not codegen) for hooks/handlers.
-        handler_policies: dict[str, m.Infra.CustomHandlerPolicy] = dict(
-            config.Infra.codegen.make.custom_handler_policies
-        )
-        for policy in handler_policies.values():
-            tm.that("|gen|" in policy.target_pattern, eq=True)
-            tm.that("|codegen|" in policy.target_pattern, eq=False)
+        tm.that(u.Cli.process_succeeded(retired.outcome), eq=False)
+        tm.that(retired.stdout + retired.stderr, has="codegen")
 
     def test_make_initialize_requires_its_provisioned_interpreter(
         self, tmp_path: Path

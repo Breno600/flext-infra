@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from tests import c, t, u
@@ -388,95 +389,32 @@ class TestsFlextInfraLazyInitHelpers:
         )
         tm.that(check_service.modified_files, empty=True)
 
-    def test_root_aliases_follow_transitive_parent_exports_from_source(
-        self, tmp_path: Path
+    @pytest.mark.parametrize("parent", ["flext_core", "flext_cli"])
+    def test_root_inherits_real_parent_exports(
+        self, tmp_path: Path, parent: str
     ) -> None:
-        """Order inherited aliases by the canonical facade dependency chain."""
-        repository_root, package_root = u.Tests.create_lazy_init_workspace(
+        """Generated facades preserve real upstream identities and local ownership."""
+        repository, package = u.Tests.create_lazy_init_workspace(
             tmp_path, project_name="flext-meltano", package_name="flext_meltano"
         )
-        core_root = tmp_path / "flext-core" / c.Infra.DEFAULT_SRC_DIR / "flext_core"
-        core_root.mkdir(parents=True)
-        core_root.parent.parent.joinpath(c.Infra.PYPROJECT_FILENAME).write_text(
-            '[project]\nname = "flext-core"\nversion = "0.1.0"\n',
-            encoding=c.Cli.ENCODING_DEFAULT,
+        (package / "constants.py").write_text(
+            f"from {parent} import c as parent_c\n"
+            "class FlextMeltanoConstants(parent_c):\n    pass\n"
+            "c = FlextMeltanoConstants\n"
+            "__all__ = ('FlextMeltanoConstants', 'c')\n",
+            encoding="utf-8",
         )
-        core_root.joinpath(c.Infra.INIT_PY).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT
+        tm.that(u.Tests.run_lazy_init(repository), eq=0)
+        probe = (
+            f"import sys; sys.path.insert(0, {str(package.parent)!r}); "
+            f"import {parent} as parent; import flext_meltano as child; "
+            "from flext_meltano.constants import c; "
+            "print(child.c is c); print(issubclass(child.c, parent.c)); "
+            "print(child.r is parent.r); "
+            "print(all(hasattr(child, name) for name in child.__all__))"
         )
-        u.Tests.write_lazy_init_namespace_module(
-            core_root / "result.py",
-            class_name="FlextCoreResult",
-            alias="r",
-            docstring="Result.",
-        )
-        core_root.joinpath(c.Infra.CONSTANTS_PY).write_text(
-            "from __future__ import annotations\n\n"
-            "class FlextCoreConstants:\n"
-            "    pass\n\n"
-            '__all__: list[str] = ["FlextCoreConstants"]\n',
-            encoding=c.Cli.ENCODING_DEFAULT,
-        )
-        cli_root = tmp_path / "flext-cli" / c.Infra.DEFAULT_SRC_DIR / "flext_cli"
-        cli_root.mkdir(parents=True)
-        cli_root.parent.parent.joinpath(c.Infra.PYPROJECT_FILENAME).write_text(
-            '[project]\nname = "flext-cli"\nversion = "0.1.0"\n',
-            encoding=c.Cli.ENCODING_DEFAULT,
-        )
-        cli_root.joinpath(c.Infra.INIT_PY).write_text(
-            '__all__: list[str] = ["c", "r"]\n', encoding=c.Cli.ENCODING_DEFAULT
-        )
-        cli_root.joinpath(c.Infra.CONSTANTS_PY).write_text(
-            "from __future__ import annotations\n\n"
-            "from flext_core import FlextCoreConstants\n\n"
-            "class FlextCliConstants(FlextCoreConstants):\n"
-            "    pass\n\n"
-            '__all__: list[str] = ["FlextCliConstants"]\n',
-            encoding=c.Cli.ENCODING_DEFAULT,
-        )
-        package_root.joinpath(c.Infra.CONSTANTS_PY).write_text(
-            "from __future__ import annotations\n\n"
-            "from flext_cli import c\n\n"
-            "class FlextMeltanoConstants(c):\n"
-            "    pass\n\n"
-            '__all__: list[str] = ["FlextMeltanoConstants"]\n',
-            encoding=c.Cli.ENCODING_DEFAULT,
-        )
-
-        tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
-        init_content = self._generated_init(package_root)
-        exports_content = self._generated_init(package_root)
-
-        tm.that(init_content, lacks="_LAZY_MODULES")
-        tm.that(exports_content, has='"flext_cli": (')
-        tm.that(init_content, has="__all__: tuple[str, ...]")
-        tm.that(init_content, has="install_lazy_exports(")
-        tm.that(init_content, lacks="__unit__")
-        tm.that(init_content, lacks="_root_typing_parts")
-        ruff_ordered_aliases = ("c", "d", "e", "h", "m", "p", "r", "s", "t", "u", "x")
-        for alias_name in ruff_ordered_aliases:
-            tm.that(init_content, has=f'    "{alias_name}",')
-        has_all, public_exports = u.Tests.extract_lazy_init_exports(init_content)
-        tm.that(has_all, eq=True)
-        # __all__ follows RUF022; dependency order remains
-        # exclusively in the static facade imports.
-        alias_positions = tuple(
-            public_exports.index(alias) for alias in ruff_ordered_aliases
-        )
-        tm.that(alias_positions, eq=tuple(sorted(alias_positions)))
-        # ADR-018 p.1: the owner of a letter is the module that DECLARES it in
-        # its own ``__all__``. This facade extends the parent's ``c`` but
-        # declares only its class, so every letter here is inherited from the
-        # nearest declaring facade — ``c`` included. Extending a letter is not
-        # declaring it; the B1 fix writes the declaration when the module means
-        # to own it, and until then the generator propagates, never infers.
-        tm.that(
-            init_content.splitlines(),
-            has="    from flext_cli import d, e, h, m, p, r, s, t, u, x",
-        )
-        tm.that(init_content, has="FlextMeltanoConstants as c")
-        tm.that(exports_content, has='"flext_cli": (')
-        tm.that(exports_content, has='".constants": (')
+        imported = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=repository))
+        tm.that(imported.stdout.splitlines(), eq=["True"] * 4)
 
     def test_existing_root_composes_public_parent_aliases(self, tmp_path: Path) -> None:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
@@ -538,47 +476,6 @@ class TestsFlextInfraLazyInitHelpers:
 
         tm.that(generated, lacks='"x"')
         tm.that(generated, lacks='"flext_parent": ("x",)')
-
-    def test_installed_parent_alias_uses_the_nearest_actual_owner(
-        self, tmp_path: Path
-    ) -> None:
-        """Skip an importable parent that does not export the requested alias."""
-        repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-child", package_name="flext_child"
-        )
-        installed_root = tmp_path / "installed"
-        # The parents are what the active environment declares; their
-        # exports are read by path, never imported (the modules raise).
-        sys.path.insert(0, str(installed_root))
-        try:
-            nearest = installed_root / "nearest_parent"
-            owner = installed_root / "owner_parent"
-            nearest.mkdir(parents=True)
-            owner.mkdir(parents=True)
-            nearest.joinpath(c.Infra.INIT_PY).write_text(
-                '__all__ = ("c",)\nc = object()\nraise RuntimeError("must not import")\n',
-                encoding=c.Cli.ENCODING_DEFAULT,
-            )
-            owner.joinpath(c.Infra.INIT_PY).write_text(
-                '__all__ = ("r",)\nr = object()\nraise RuntimeError("must not import")\n',
-                encoding=c.Cli.ENCODING_DEFAULT,
-            )
-            package_root.joinpath(c.Infra.CONSTANTS_PY).write_text(
-                "from nearest_parent import c\n"
-                "from owner_parent import r\n\n"
-                "class FlextChildConstants(c):\n"
-                "    pass\n\n"
-                '__all__ = ("FlextChildConstants",)\n',
-                encoding=c.Cli.ENCODING_DEFAULT,
-            )
-
-            tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
-            generated = self._generated_init(package_root)
-
-            tm.that(generated, has='"owner_parent": ("r",)')
-            tm.that(generated, lacks='"nearest_parent": ("r",)')
-        finally:
-            sys.path.remove(str(installed_root))
 
     def test_non_flext_root_derives_inherited_aliases_beyond_stale_all(
         self, tmp_path: Path
@@ -644,45 +541,34 @@ class TestsFlextInfraLazyInitHelpers:
     def test_nested_tests_namespace_uses_public_test_facades(
         self, tmp_path: Path
     ) -> None:
-        """Generate nested test namespaces with their local publics."""
-        repository_root, package_root = self._workspace(tmp_path)
-        package_root.joinpath(c.Infra.RESULT_PY).write_text(
-            "from __future__ import annotations\n\nclass FlextDemoResult:\n    pass\n",
-            encoding=c.Cli.ENCODING_DEFAULT,
+        """Nested consumers expose their declared aliases through real imports."""
+        repository, _ = self._workspace(tmp_path)
+        unit = repository / "tests" / "unit"
+        unit.mkdir(parents=True)
+        (unit / "__init__.py").write_text("", encoding="utf-8")
+        for filename, alias, class_name in (
+            ("constants.py", "c", "TestsFlextDemoUnitConstants"),
+            ("models.py", "m", "TestsFlextDemoUnitModels"),
+        ):
+            (unit / filename).write_text(
+                f"from flext_tests import {alias} as parent\n"
+                f"class {class_name}(parent):\n    pass\n"
+                f"{alias} = {class_name}\n"
+                f"__all__ = ('{class_name}', '{alias}')\n",
+                encoding="utf-8",
+            )
+        tm.that(u.Tests.run_lazy_init(repository), eq=0)
+        probe = (
+            "from tests.unit import c, m; "
+            "from tests.unit.constants import TestsFlextDemoUnitConstants; "
+            "from tests.unit.models import TestsFlextDemoUnitModels; "
+            "from flext_tests import c as parent_c, m as parent_m; "
+            "print(c is TestsFlextDemoUnitConstants); "
+            "print(m is TestsFlextDemoUnitModels); "
+            "print(issubclass(c, parent_c)); print(issubclass(m, parent_m))"
         )
-        tests_unit_root = repository_root / c.Infra.DIR_TESTS / "unit"
-        tests_unit_root.mkdir(parents=True)
-        tests_unit_root.joinpath(c.Infra.INIT_PY).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT
-        )
-        # `__all__` is the publication contract on EVERY surface — a module
-        # that declares nothing publishes nothing, in tests exactly as in src.
-        # The fixture declares its publics like every other module here does,
-        # so what this test proves is the tests-namespace routing, not the
-        # unrelated question of undeclared symbols.
-        tests_unit_root.joinpath(c.Infra.CONSTANTS_PY).write_text(
-            "from __future__ import annotations\n\n"
-            "class TestsFlextDemoUnitConstants:\n"
-            "    pass\n\n"
-            '__all__: list[str] = ["TestsFlextDemoUnitConstants"]\n',
-            encoding=c.Cli.ENCODING_DEFAULT,
-        )
-        tests_unit_root.joinpath(c.Infra.MODELS_PY).write_text(
-            "from __future__ import annotations\n\n"
-            "class TestsFlextDemoUnitModels:\n"
-            "    pass\n\n"
-            '__all__: list[str] = ["TestsFlextDemoUnitModels"]\n',
-            encoding=c.Cli.ENCODING_DEFAULT,
-        )
-
-        tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
-        init_content = tests_unit_root.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
-        )
-        for public_name in c.Infra.TEST_RUNTIME_ALIAS_TARGETS:
-            tm.that(init_content, has=f'"{public_name}"')
-        tm.that(init_content, lacks="FlextDemoResult")
-        tm.that(tests_unit_root.joinpath("__unit__.py").exists(), eq=False)
+        imported = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=repository))
+        tm.that(imported.stdout.splitlines(), eq=["True"] * 4)
 
     def test_root_rejects_symbols_from_deep_descendant_packages(
         self, tmp_path: Path
@@ -710,6 +596,44 @@ class TestsFlextInfraLazyInitHelpers:
 
         tm.that(exports_content, has="FlextDemoHttpTransport")
         tm.that(exports_content, has='"services"')
+
+    def test_independent_packages_accept_same_export_name_without_warnings(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """A public name belongs to its package, not to a workspace-wide census."""
+        repository_root, package_root = self._workspace(tmp_path)
+        other_package = package_root.with_name("independent_package")
+        other_package.mkdir()
+        other_package.joinpath(c.Infra.INIT_PY).write_text(
+            "", encoding=c.Cli.ENCODING_DEFAULT
+        )
+        for package in (package_root, other_package):
+            package.joinpath("holder.py").write_text(
+                "class SharedPackageDeclaration:\n    pass\n\n"
+                '__all__ = ["SharedPackageDeclaration"]\n',
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+
+        tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
+        tm.that(u.Tests.run_lazy_init(repository_root, check_only=True), eq=0)
+        captured = capsys.readouterr()
+        tm.that(captured.out + captured.err, lacks="WARN:")
+
+    def test_unpublished_module_homonyms_do_not_compete_for_exports(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Independent implementation declarations need no global renaming."""
+        repository_root, package_root = self._workspace(tmp_path)
+        for module in ("first", "second"):
+            package_root.joinpath(f"{module}.py").write_text(
+                "class ModuleLocalDeclaration:\n    pass\n\n__all__: list[str] = []\n",
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+
+        tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
+        tm.that(u.Tests.run_lazy_init(repository_root, check_only=True), eq=0)
+        captured = capsys.readouterr()
+        tm.that(captured.out + captured.err, lacks="WARN:")
 
     def test_duplicate_public_export_fails_before_generation(
         self, tmp_path: Path

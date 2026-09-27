@@ -119,8 +119,6 @@ class TestsFlextInfraTransactionDirectoryJournal:
                 eq=before,
             )
         tm.that(layout.journal_path.exists(), eq=False)
-        # .state is durable by design (flext-v4fmn): the lease lock and the
-        # class receipts persist across transactions inside it.
         tm.that(layout.state_root.exists(), eq=False)
 
     @pytest.mark.parametrize("foreign_change", [False, True])
@@ -210,9 +208,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
             tm.that((root / "docs/generated").exists(), eq=True)
         else:
             tm.that((root / "docs").exists(), eq=False)
-        # .state is durable by design (flext-v4fmn): the lease lock and
-        # the class receipts persist across transactions inside it.
-        tm.that((root / ".state").exists(), eq=True)
+        tm.that((root / ".state").exists(), eq=False)
+        tm.that(journal.with_name(f"{journal.name}.lock").is_file(), eq=True)
         tm.that(artifacts.unix_launcher.parent.exists(), eq=not missing_launcher_parent)
 
     @pytest.mark.slow
@@ -605,9 +602,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
         )
 
         tm.ok(cleaned, eq=True)
-        # .state is durable by design (flext-v4fmn): the lease lock and the
-        # class receipts persist across transactions inside it.
-        tm.that((layout.scope_root / ".state").exists(), eq=True)
+        tm.that(transaction_root.exists(), eq=False)
+        tm.that(layout.state_root.exists(), eq=False)
 
     def test_nonempty_generated_directory_is_preserved_and_rejected(
         self, tmp_path: Path

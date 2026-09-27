@@ -8,13 +8,13 @@
 {%- set settings_import_line = "from flext_core import FlextSettings" -%}
 {%- set config_class_line = "class " ~ class_stem ~ "Config(FlextSettings, " ~ config_base_class ~ "):" -%}
 {%- set config_class_declaration = config_class_line if config_class_line | length <= tooling.tools.ruff.line_length else "class " ~ class_stem ~ "Config(\n    FlextSettings, " ~ config_base_class ~ "\n):" -%}
-{%- set namespace_field_line = "    " ~ class_stem ~ ": Annotated[" -%}
-{%- set namespace_field = namespace_field_line if namespace_field_line | length <= tooling.tools.ruff.line_length else "    " ~ class_stem ~ ": Annotated[" -%}
+{%- set namespace_field_line = "    " ~ ns ~ ": Annotated[" -%}
+{%- set namespace_field = namespace_field_line if namespace_field_line | length <= tooling.tools.ruff.line_length else "    " ~ ns ~ ": Annotated[" -%}
 """{{ class_stem }}Config — frozen config singleton for {{ package_name }} (ADR-005 §7).
 
-Model-less: business rules live in ``config/*.yaml`` under the ``{{ class_stem }}:`` key and
-are exposed through the open ``config.{{ class_stem }}`` namespace (``extra="allow"``), with
-no per-domain model. Access is ``config.{{ class_stem }}.<domain>[<key>...]``.
+Model-less: business rules live in ``config/*.yaml`` under the ``{{ ns }}:`` key and
+are exposed through the open ``config.{{ ns }}`` namespace (``extra="allow"``), with
+no per-domain model. Access is ``config.{{ ns }}.<domain>[<key>...]``.
 
 Copyright (c) {{ year }} {{ author_name }}. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -62,7 +62,7 @@ class {{ ns_name }}(m.BaseModel):
 {{ namespace_field }}
         {{ ns_name }},
         m.Field(
-            description="Open namespace exposing ``config/*.yaml`` under ``{{ class_stem }}``."
+            description="Open namespace exposing ``config/*.yaml`` under ``{{ ns }}``."
         ),
     ] = {{ ns_name }}()
 

@@ -55,7 +55,7 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
                 file=project_dir.name,
                 line=1,
                 column=1,
-                code=self.gate_id,
+                code="TOOL_ERROR",
                 message=files_result.error or "abstraction-boundary scan failed",
             )
             return self._build_check_gate_execution(
@@ -78,7 +78,7 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
         """Return boundary violations for a single file via the c.Infra catalog."""
         read = u.Cli.files_read_text(path)
         if read.failure:
-            return [self._issue(path, read.error or "unreadable source file")]
+            raise OSError(read.error or f"unreadable source file: {path}")
         text = read.value
         posix = str(path).replace("\\", "/")
         if any(frag in posix for frag in c.Infra.BOUNDARY_SELF_FILES):

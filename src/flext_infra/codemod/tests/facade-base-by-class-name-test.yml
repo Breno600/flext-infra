@@ -1,8 +1,8 @@
 id: facade-base-by-class-name
 valid:
   - |
-    from flext_cli import FlextCliModels
-    class FlextInfraModels(FlextCliModels):
+    from flext_cli import m as upstream_m
+    class FlextInfraModels(upstream_m):
         pass
     m = FlextInfraModels
   - |

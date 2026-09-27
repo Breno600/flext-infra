@@ -43,6 +43,7 @@ class FlextInfraTierWhitelistGate(FlextInfraGate):
                 project_dir,
                 passed=False,
                 errors=[report.error or "tier-whitelist validation failed"],
+                invocation_failed=True,
                 started=started,
                 ctx=ctx,
             )

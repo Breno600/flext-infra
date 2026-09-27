@@ -7,11 +7,11 @@ SPDX-License-Identifier: MIT
 {# NOTE (multi-agent, flext-wkii.17): no config/settings intermediary is generated. -#}
 from __future__ import annotations
 
-{# NOTE (flext-dv1ga): extend the class the upstream declares for `u` in its own __all__; the letter is rebound below as a plain alias. -#}
-from {{ upstream }} import {{ upstream_facades["u"] }}
+{# Public parent alias stays distinct from the local facade binding. -#}
+from {{ upstream }} import u as upstream_u
 
 
-class {{ class_stem }}Utilities({{ upstream_facades["u"] }}):
+class {{ class_stem }}Utilities(upstream_u):
     """{{ class_stem }} utilities extending the upstream facade."""
 
 

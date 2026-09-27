@@ -9,7 +9,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from collections import defaultdict
 from pathlib import Path
 from time import perf_counter
 from typing import TYPE_CHECKING, override
@@ -19,13 +18,10 @@ from flext_core import r
 from .. import c, config, m, u
 from ..workspace.rope import FlextInfraRopeWorkspace
 from ._execution import FlextInfraCodegenExecutionBase
-from ._lazy_init_class_receipts import FlextInfraCodegenLazyInitClassReceipts
 from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
 from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
 if TYPE_CHECKING:
-    from collections.abc import MutableMapping
-
     from .. import p, t
 
 
@@ -40,7 +36,6 @@ class FlextInfraCodegenLazyInit(
     """
 
     _modified_files: t.Infra.StrSet = u.PrivateAttr(default_factory=set)
-    _duplicate_class_names: int = u.PrivateAttr(default_factory=lambda: 0)
 
     @property
     def modified_files(self) -> t.StrSequence:
@@ -74,7 +69,6 @@ class FlextInfraCodegenLazyInit(
     def plan_files(self) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Return one complete immutable lazy-init analysis receipt."""
         self._modified_files.clear()
-        self._duplicate_class_names = 0
         if not self.repository_root.is_dir():
             return r[m.Infra.CodegenPhaseAnalysis].fail(
                 f"lazy-init workspace is not a directory: {self.repository_root}"
@@ -202,23 +196,6 @@ class FlextInfraCodegenLazyInit(
         snapshots = self._snapshot_planner_inputs(workspace_index)
         if snapshots.failure:
             return r[m.Infra.CodegenPhaseAnalysis].from_failure(snapshots)
-        receipts = FlextInfraCodegenLazyInitClassReceipts(resolved_repository_root)
-        duplicates = self._detect_duplicate_class_names(
-            rope,
-            package_dirs=package_dirs,
-            snapshots=snapshots.value,
-            receipts=receipts,
-        )
-        saved = receipts.save()
-        if saved.failure:
-            u.Cli.warning(f"lazy-init: class receipt save failed: {saved.error}")
-        if duplicates:
-            self._duplicate_class_names = len(duplicates)
-            details = "; ".join(
-                f"{name}: {', '.join(locations)}"
-                for name, locations in sorted(duplicates.items())
-            )
-            u.Cli.warning(f"lazy-init duplicate class names: {details}")
         planner = FlextInfraCodegenLazyInitPlanner(
             rope_workspace=rope, lazy_init=config.Infra.tooling.lazy_init
         )
@@ -287,78 +264,6 @@ class FlextInfraCodegenLazyInit(
             or package_dir.relative_to(repository_root).parts[: len(production_prefix)]
             == production_prefix
         )
-
-    @staticmethod
-    def _detect_duplicate_class_names(
-        rope: FlextInfraRopeWorkspace,
-        *,
-        package_dirs: t.SequenceOf[Path],
-        snapshots: MutableMapping[Path, m.Cli.AtomicFileState],
-        receipts: FlextInfraCodegenLazyInitClassReceipts,
-    ) -> t.MappingKV[str, t.StrSequence]:
-        """Return class-name collisions.
-
-        Scope rules:
-        - ``src/`` modules: duplicates forbidden across the entire workspace.
-        - ``tests/``/``scripts/``/``examples/``/``docs/`` modules: duplicates
-          forbidden only within the same owning project (they do not escape).
-
-        Per-module class names are content-addressed receipts: identical bytes
-        resolve from the cache instead of a Rope parse, and only the scan's
-        final duplicate set is computed globally per run.
-        """
-        scoped_modules: defaultdict[t.StrPair, set[str]] = defaultdict(set)
-        selected_package_dirs = frozenset(path.resolve() for path in package_dirs)
-        entries = rope.workspace_index.modules_by_path.values()
-        progress_interval = max(1, len(entries) // 20)
-        for index, entry in enumerate(entries, start=1):
-            if index == 1 or index == len(entries) or index % progress_interval == 0:
-                u.Cli.info(
-                    f"lazy-init: duplicate scan {index}/{len(entries)} — "
-                    f"{entry.file_path}"
-                )
-            if (
-                entry.package_dir.resolve() not in selected_package_dirs
-                or entry.is_package_init
-                or not entry.module_name
-            ):
-                continue
-            module_segments = frozenset(entry.module_name.split("."))
-            is_private_scope = bool(module_segments & c.Infra.NON_PUBLIC_LAZY_ROOTS)
-            scope_key = (
-                str(entry.project_root)
-                if is_private_scope and entry.project_root is not None
-                else ""
-            )
-            snapshot = snapshots.get(entry.file_path.resolve())
-            cached = (
-                receipts.class_names(snapshot.content)
-                if snapshot is not None and snapshot.content is not None
-                else None
-            )
-            if cached is not None:
-                class_names: t.StrSequence = cached
-            else:
-                # Collisions depend on declarations, not imported objects or MRO.
-                class_names = tuple(
-                    obj.name
-                    for obj in u.Infra.class_info_from_source(
-                        entry.file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-                    )
-                    if len(obj.name) >= c.Infra.DUPLICATE_CLASS_MIN_LEN
-                    and obj.name[0].isupper()
-                )
-                if snapshot is not None and snapshot.content is not None:
-                    receipts.record(snapshot.content, class_names)
-            for name in class_names:
-                scoped_modules[name, scope_key].add(entry.module_name)
-        return {
-            f"[{Path(scope_key).name}] {name}"
-            if scope_key
-            else f"[workspace] {name}": tuple(sorted(modules))
-            for (name, scope_key), modules in scoped_modules.items()
-            if len(modules) > 1
-        }
 
 
 __all__: list[str] = ["FlextInfraCodegenLazyInit"]

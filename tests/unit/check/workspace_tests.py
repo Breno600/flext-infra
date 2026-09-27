@@ -49,7 +49,7 @@ class TestsFlextInfraWorkspaceChecker:
         tm.fail(result)
         tm.that(result.error, is_=str)
         tm.that(result.error, is_=str)
-        tm.that(result.error, has="Use execute_command() directly")
+        tm.that(result.error, has="Use check_payload() directly")
 
     def test_cli_returns_error_without_discovered_projects(
         self, tmp_path: Path
@@ -123,21 +123,22 @@ class TestsFlextInfraWorkspaceChecker:
         tm.fail(result)
 
     def test_run_projects_with_missing_projects(self, tmp_path: Path) -> None:
-        """Test that run_projects handles missing project directories gracefully."""
+        """A missing selected project raises its filesystem failure."""
         checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
-        result = checker.run_projects(
-            ["nonexistent"], ["lint"], reports_dir=tmp_path / "reports"
-        )
-        tm.ok(result)
-        tm.that(result.value, eq=[])
+        with pytest.raises(FileNotFoundError):
+            checker.run_projects(
+                ["nonexistent"], ["lint"], reports_dir=tmp_path / "reports"
+            )
 
-    def test_run_projects_creates_reports_dir(self, tmp_path: Path) -> None:
-        """Test that run_projects creates reports directory if missing."""
+    def test_empty_selection_fails_before_creating_reports(
+        self, tmp_path: Path
+    ) -> None:
+        """Zero executed projects cannot publish a successful report."""
         checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
         reports_dir = tmp_path / "reports"
         result = checker.run_projects([], ["lint"], reports_dir=reports_dir)
-        tm.ok(result)
-        tm.that(reports_dir.exists(), eq=True)
+        tm.fail(result, has="selected no projects")
+        tm.that(reports_dir.exists(), eq=False)
 
     def test_lint_returns_gate_result(self, tmp_path: Path) -> None:
         """Test that lint() returns a GateResult."""

@@ -242,9 +242,7 @@ class TestsFlextInfraDirenvGate:
                 tmp_path, u.Tests.gate_context(tmp_path)
             )
             tm.that(execution.result.passed, eq=False)
-            tm.that(
-                TestsFlextInfraDirenvGate.issue_codes(execution), eq=["DIRENV_ACTIVATE"]
-            )
+            tm.that(TestsFlextInfraDirenvGate.issue_codes(execution), eq=["TOOL_ERROR"])
             tm.that(execution.issues[0].message, ne="")
 
 

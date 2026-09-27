@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 from flext_tests import tm
@@ -30,6 +31,9 @@ class TestsFlextInfraSemanticPhaseContract:
             "from __future__ import annotations\n", ""
         )
         path.write_text(source, encoding="utf-8")
+        u.Tests.initialize_git_repo(
+            root, origin_url=u.Tests.repository_ref(root.name).url
+        )
         finding = m.Infra.ModScanFinding(
             rule_file="require-future-annotations.yml",
             rule_id="require-future-annotations",
@@ -51,8 +55,25 @@ class TestsFlextInfraSemanticPhaseContract:
         )
         tm.ok(FlextInfraCodemodSemanticApply.apply(root, report))
         published = path.read_text(encoding="utf-8")
-        tm.that(published, has="from __future__ import annotations")
-        tm.that(published, has=f"    class {owner}Member")
+        imported = tm.ok(
+            u.Cli.run(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import importlib, sys; module = importlib.import_module(sys.argv[1]); "
+                        "owner = getattr(module, sys.argv[2]); "
+                        "print(hasattr(owner, sys.argv[3])); print(hasattr(module, sys.argv[3]))"
+                    ),
+                    f"{package.name}.constants",
+                    owner,
+                    f"{owner}Member",
+                ],
+                cwd=root,
+                env={"PYTHONPATH": str(package.parent)},
+            )
+        )
+        tm.that(imported.stdout.splitlines(), eq=["True", "False"])
         tm.ok(FlextInfraCodemodSemanticApply.apply(root, report))
         tm.that(path.read_text(encoding="utf-8"), eq=published)
 

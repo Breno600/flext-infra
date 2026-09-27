@@ -297,11 +297,12 @@ class TestsFlextInfraRepositoryLocalTopology:
 
         workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(member))
 
-        # Topology is the declared role alone; being checked out inside a
-        # workspace right now is the Git fact carried by ``editable``.
+        # Git owns attachment; the manifest owns editable dependency policy.
+        identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=member)))
+        tm.that(identity.is_attached_submodule, eq=True)
         tm.that(workspace.repository.path, eq=Path())
         tm.that(workspace.repository.role, eq=c.Infra.MakeProfile.STANDALONE)
-        tm.that(workspace.repository.editable, eq=True)
+        tm.that(workspace.repository.editable, eq=False)
         tm.that(workspace.beads.workspace, eq="parent-workspace")
 
     def test_composed_self_load_accepts_a_self_coordinate_manifest(
@@ -607,6 +608,9 @@ class TestsFlextInfraRepositoryLocalTopology:
     ) -> None:
         """Honor the .gitmodules overlay: flext-managed=false is never governed."""
         root = u.Tests.WorktreeFixture.governed_workspace(tmp_path, "overlay-external")
+        u.Tests.WorktreeFixture.override_repository_manifest(
+            root, {"role": c.Infra.MakeProfile.WORKSPACE}
+        )
         (root / "external-fork").mkdir()
         (root / c.Infra.GITMODULES).write_text(
             '[submodule "external-fork"]\n'
@@ -654,6 +658,9 @@ class TestsFlextInfraRepositoryLocalTopology:
             "\tbranch = develop\n",
             encoding="utf-8",
         )
+        u.Tests.WorktreeFixture.override_repository_manifest(
+            root, {"role": c.Infra.MakeProfile.WORKSPACE}
+        )
 
         workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
 
@@ -682,8 +689,9 @@ class TestsFlextInfraRepositoryLocalTopology:
     def test_gitmodule_rejects_unknown_provider_without_raw_url(
         self, tmp_path: Path
     ) -> None:
-        """Reject unknown declared_repository ownership before inspecting its checkout."""
+        """Reject a foreign declaration without exposing its host in diagnostics."""
         root = u.Tests.WorktreeFixture.governed_workspace(tmp_path, "unknown-provider")
+        u.Tests.WorktreeFixture.attach_member_child(root)
         raw_host_marker = "private-submodule-host"
         (root / c.Infra.GITMODULES).write_text(
             '[submodule "fixture-child"]\n'

@@ -46,21 +46,24 @@ class FlextInfraPytestRunnerExecution(
             },
         )
 
-    def _resolve_selection(
-        self, report_dir: Path, *, complete: bool = False
+    def _collect_node_ids(
+        self, report_dir: Path, *, inventory: bool = False
     ) -> t.StrSequence:
-        """Return the node ids testmon selects, resolved in one process."""
+        """Persist collection evidence; inventory never changes the selected set."""
         pytest_settings = config.Infra.tooling.tools.pytest
-        command = self.build_selection_command(complete=complete)
+        command = (
+            self.build_inventory_command()
+            if inventory
+            else self.build_selection_command()
+        )
+        phase = "inventory" if inventory else "selection"
         outcome = u.Cli.run_raw(
             command,
             cwd=self.root,
             timeout=pytest_settings.run_timeout_seconds,
             env=self._selection_env(),
         ).unwrap()
-        self._record_process_outcome(
-            report_dir, "inventory" if complete else "selection", outcome.outcome
-        )
+        self._record_process_outcome(report_dir, phase, outcome.outcome)
         # Exit code 5 is pytest's "no tests ran": testmon selected nothing.
         if (
             outcome.outcome.raw_return_code not in {0, 5}
@@ -68,26 +71,22 @@ class FlextInfraPytestRunnerExecution(
             or outcome.outcome.forwarded_signal is not None
         ):
             detail = (outcome.stderr or outcome.stdout).strip()
-            msg = f"testmon selection failed ({outcome.outcome.raw_return_code}): {detail}"
+            msg = (
+                f"testmon {phase} failed ({outcome.outcome.raw_return_code}): {detail}"
+            )
             raise RuntimeError(msg)
         node_ids = tuple(
             line.strip()
             for line in (outcome.stdout or "").splitlines()
             if "::" in line and not line.startswith(" ")
         )
-        artifact = "testmon-inventory" if complete else "testmon-selection"
+        artifact = f"testmon-{phase}"
         u.Cli.atomic_write_text_file(
             report_dir / f"{artifact}.txt", "\n".join(node_ids) + "\n"
         ).unwrap()
         u.Cli.atomic_write_text_file(
             report_dir / f"{artifact}.log", outcome.stdout or ""
         ).unwrap()
-        if not node_ids and not complete:
-            # The hot selection can be legitimately empty (all known tests
-            # clean); the complete inventory must then drive the suite, so its
-            # resolution is returned — discarding it ran the suite against the
-            # hot cache again and collected nothing.
-            return self._resolve_selection(report_dir, complete=True)
         return node_ids
 
     def _run_suite(
@@ -189,7 +188,9 @@ class FlextInfraPytestRunnerExecution(
             if not cache_restored:
                 msg = f"testmon preflight rejected cache: {pre_state.reason}"
                 raise RuntimeError(msg)
-        selection = self._resolve_selection(report_dir)
+        selection = self._collect_node_ids(report_dir)
+        if not selection:
+            self._collect_node_ids(report_dir, inventory=True)
         # A cold cache seeds deterministically only when one process writes it:
         # parallel workers each resolve testmon against an evolving database and
         # xdist aborts with "Different tests were collected". Serialize the

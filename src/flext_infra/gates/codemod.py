@@ -1,10 +1,9 @@
 """Codemod enforcement quality gate.
 
 Runs ``ast-grep scan`` with the codemod rules discovered via
-``importlib.resources`` cascade (ADR-014). Policy findings are observational:
-they are reported for migration tracking and never block the build (operator
-order 2026-09-24). Machinery failures — a broken rule plan or an ast-grep
-crash — remain blocking, because silent scrutiny loss is never acceptable.
+``importlib.resources`` cascade (ADR-014). Findings retain their raw verdict;
+the global check policy alone determines observational acceptance. Machinery
+failures remain blocking regardless of that policy.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -26,7 +25,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraCodemodGate(FlextInfraGate):
-    """Report codemod rule findings observationally across every project."""
+    """Report codemod rule findings across every project."""
 
     gate_id: ClassVar[str] = "codemod"
     gate_name: ClassVar[str] = "Codemod Enforcement"
@@ -55,7 +54,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                         file=c.Infra.PYPROJECT_FILENAME,
                         line=1,
                         column=0,
-                        code=self.gate_id,
+                        code="TOOL_ERROR",
                         message=planned.error or "ast-grep rule discovery failed",
                         severity=str(c.Infra.GateSeverity.ERROR.value),
                     ),
@@ -72,11 +71,13 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 project_dir,
                 timeout=self._check_timeout(project_dir, ctx),
             )
-            # ast-grep exits non-zero when it finds error-severity
-            # diagnostics, so an exit code alone never means a crash: the
-            # crash contract is a failed process with NO output at all.
+            # Match the canonical mod scanner's finding-exit contract. Other
+            # exits and interrupted invocations remain failures even with stdout.
             crashed = (
-                not u.Cli.process_succeeded(scan.outcome) and not scan.stdout.strip()
+                scan.outcome.raw_return_code not in {0, 1}
+                or scan.outcome.timed_out
+                or scan.outcome.forwarded_signal is not None
+                or (scan.outcome.raw_return_code == 1 and not scan.stdout.strip())
             )
             if crashed:
                 # A crashed scanner is a machinery failure: it stays blocking
@@ -86,7 +87,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
                         file=c.Infra.PYPROJECT_FILENAME,
                         line=1,
                         column=0,
-                        code=self.gate_id,
+                        code="TOOL_ERROR",
                         message=(
                             f"{ruleset.provider}: ast-grep execution failed — "
                             f"{scan.stderr or 'unknown error'}"
@@ -98,11 +99,7 @@ class FlextInfraCodemodGate(FlextInfraGate):
 
         return self._build_check_gate_execution(
             project_dir,
-            # Operator order (2026-09-24): codemod policy findings are
-            # observational — they are reported for migration tracking and
-            # never block the build. Machinery failures (a broken rule plan
-            # or an ast-grep crash) remain blocking above.
-            passed=not failures,
+            passed=not failures and not findings,
             issues=[*failures, *findings],
             raw_output=(
                 f"{len(planned.value.rules)} rules from "
@@ -179,5 +176,5 @@ class FlextInfraCodemodGate(FlextInfraGate):
         _ = ctx
         rules = self._rule_paths(project_dir)
         rule_path = rules[0] if rules else project_dir
-        issues = self._issues_from_scan(result, rule_path.name)
+        issues = self._observational_findings(result, rule_path.name)
         return not issues, issues

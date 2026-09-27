@@ -18,6 +18,22 @@ snapshots:
       style: secondary
       start: 66
       end: 84
+    - source: m
+      style: secondary
+      start: 22
+      end: 23
+    - source: from flext_cli import m
+      style: secondary
+      start: 0
+      end: 23
+    - source: |
+        from flext_cli import m
+        class FlextMeltanoModels(m):
+            pass
+        m = FlextMeltanoModels
+      style: secondary
+      start: 0
+      end: 85
     - source: |
         from flext_cli import m
         class FlextMeltanoModels(m):
@@ -90,6 +106,10 @@ snapshots:
       style: secondary
       start: 101
       end: 116
+    - source: type[FlextInfraTypes]
+      style: secondary
+      start: 77
+      end: 98
     - source: |
         from flext_cli import t as _cli_t
         class FlextInfraTypes(_cli_t):
@@ -171,6 +191,23 @@ snapshots:
       style: secondary
       start: 130
       end: 151
+    - source: m
+      style: secondary
+      start: 65
+      end: 66
+    - source: from flext_infra import m
+      style: secondary
+      start: 41
+      end: 66
+    - source: |
+        from flext_tests import FlextTestsModels
+        from flext_infra import m
+        class TestsFlextInfraModels(FlextTestsModels, m):
+            pass
+        m = TestsFlextInfraModels
+      style: secondary
+      start: 0
+      end: 152
     - source: |
         from flext_tests import FlextTestsModels
         from flext_infra import m

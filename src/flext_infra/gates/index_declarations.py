@@ -58,6 +58,7 @@ class FlextInfraIndexDeclarationsGate(FlextInfraGate):
                 project_dir,
                 passed=False,
                 errors=[errors.error or "index-declarations scan failed"],
+                invocation_failed=True,
                 started=started,
                 ctx=ctx,
             )

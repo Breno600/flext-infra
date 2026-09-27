@@ -75,7 +75,16 @@ class TestsFlextInfraDepsModernizerToolTables:
             eq=[
                 {
                     "module": list(entry.modules),
-                    "disable_error_code": list(entry.disable_error_codes),
+                    **(
+                        {"disable_error_code": list(entry.disable_error_codes)}
+                        if entry.disable_error_codes
+                        else {}
+                    ),
+                    **(
+                        {"follow_untyped_imports": entry.follow_untyped_imports}
+                        if entry.follow_untyped_imports is not None
+                        else {}
+                    ),
                 }
                 for entry in mypy_policy.overrides
             ],

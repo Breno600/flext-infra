@@ -832,10 +832,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
 
         process = tm.ok(
-            u.Cli.run_raw(
-                [c.Infra.MAKE, "--no-print-directory", "test"],
-                cwd=project_root,
-                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "test"], cwd=project_root
             )
         )
 

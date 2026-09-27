@@ -191,15 +191,21 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 alias="disable-error-codes",
                 description="Error codes disabled for these modules.",
             ),
-        ]
+        ] = ()
+        follow_untyped_imports: Annotated[
+            bool | None,
+            m.Field(
+                alias="follow-untyped-imports",
+                description="Analyze these installed modules even without py.typed.",
+            ),
+        ] = None
         justification: Annotated[
             str,
             m.Field(
                 description=(
-                    "Required citation (GitHub issue / PEP / mypy docs) justifying "
-                    "this override. AGENTS.md:319 forbids suppressions without "
-                    "evidence; leave empty only for strictly transitional overrides "
-                    "with a TODO in the module comment."
+                    "Source citation justifying the operator-authorized module "
+                    "policy. Every suppression addition, removal or scope change "
+                    "requires prior explicit operator authorization."
                 )
             ),
         ] = ""

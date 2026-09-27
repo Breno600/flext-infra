@@ -360,7 +360,7 @@ Infra:
       # (single-pass verb law: one operation per tool per verb).
       fmt_gates: [markdown-format]
       # Operator 2026-09-22: warn-only gate classification lives in the one
-      # gate SSOT (c.Infra.WARNING_GATE_IDS), not here — the verdict, the
+      # global policy (config/tooling.yaml:Infra.check_policy), not here — the verdict, the
       # runner rendering, and the reports read that single source.
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /

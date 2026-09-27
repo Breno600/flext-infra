@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
-from flext_infra import m
+from flext_infra import config, m
 from flext_infra.gates.layout import FlextInfraLayoutGate
 from tests import u
 from tests.unit.codegen.layout_fixture import (
@@ -140,53 +141,33 @@ class TestsFlextInfraCodegenLayout:
         tm.that(bool(execution.issues), eq=True)
         tm.that(all(issue.severity == "WARNING" for issue in execution.issues), eq=True)
 
-    def test_keep_root_files_override(self, tmp_path: Path) -> None:
-        """Declared keep_root_files stay at root without review findings."""
-        project = tmp_path / "ai-hub"
-        package_dir = project / "src" / "ai_hub"
-        package_dir.mkdir(parents=True)
-        (package_dir / "__init__.py").write_text("", encoding="utf-8")
-        (project / "pyproject.toml").write_text(
-            "[project]\nname='ai-hub'\nversion='0.1.0'\n", encoding="utf-8"
-        )
-        (project / "README.md").write_text("# ai-hub\n", encoding="utf-8")
-        (project / "UNIVERSAL_CORE.md").write_text("core\n", encoding="utf-8")
-        (project / "ECOSYSTEM.md").write_text("eco\n", encoding="utf-8")
-        engine = layout_engine(tmp_path)
-
-        report = engine.check_project(project)
-
-        paths = {finding.path for finding in report.findings}
-        tm.that("UNIVERSAL_CORE.md" in paths, eq=False)
-        tm.that("ECOSYSTEM.md" in paths, eq=False)
-
-    def test_override_resolves_by_declared_name_not_checkout_directory(
-        self, tmp_path: Path
+    @pytest.mark.parametrize("checkout_name", [None, "renamed-worktree"])
+    def test_declared_override_uses_project_identity(
+        self, tmp_path: Path, checkout_name: str | None
     ) -> None:
-        """A linked worktree of ai-hub keeps ai-hub's keep-list.
-
-        Overrides are keyed by ``[project].name``; the directory a project is
-        checked out in (``.claude/worktrees/<lane>``, a renamed clone) proves
-        nothing about its identity.
-        """
-        project = tmp_path / "fix-hook-runtime-p0"
-        package_dir = project / "src" / "ai_hub"
-        package_dir.mkdir(parents=True)
-        (package_dir / "__init__.py").write_text("", encoding="utf-8")
-        (project / "pyproject.toml").write_text(
-            "[project]\nname='ai-hub'\nversion='0.1.0'\n", encoding="utf-8"
+        """The canonical move applies regardless of the checkout directory name."""
+        name, override = next(
+            (name, override)
+            for name, override in config.Infra.codegen.layout.project_overrides.items()
+            if override.moves
         )
-        (project / "README.md").write_text("# ai-hub\n", encoding="utf-8")
-        (project / "UNIVERSAL_CORE.md").write_text("core\n", encoding="utf-8")
-        (project / "ECOSYSTEM.md").write_text("eco\n", encoding="utf-8")
-        engine = layout_engine(tmp_path)
-
-        report = engine.check_project(project)
-
-        tm.that(report.project, eq="ai-hub")
-        paths = {finding.path for finding in report.findings}
-        tm.that("UNIVERSAL_CORE.md" in paths, eq=False)
-        tm.that("ECOSYSTEM.md" in paths, eq=False)
+        move = override.moves[0]
+        project = tmp_path / (name if checkout_name is None else checkout_name)
+        package = project / "src" / name.replace("-", "_")
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text("", encoding="utf-8")
+        (project / "pyproject.toml").write_text(
+            f"[project]\nname='{name}'\nversion='0.1.0'\n", encoding="utf-8"
+        )
+        source = project / move.source
+        source.parent.mkdir(parents=True, exist_ok=True)
+        source.write_text("declared content\n", encoding="utf-8")
+        report = layout_engine(tmp_path).check_project(project)
+        finding = next(item for item in report.findings if item.path == move.source)
+        tm.that(report.project, eq=name)
+        tm.that(finding.rule, eq="move")
+        tm.that(finding.target, eq=move.target)
+        tm.that(source.read_text(encoding="utf-8"), eq="declared content\n")
 
     def test_special_and_reference_root_dirs_skipped(self, tmp_path: Path) -> None:
         """data/ is skipped; external-docs/ is allowed as reference corpus."""

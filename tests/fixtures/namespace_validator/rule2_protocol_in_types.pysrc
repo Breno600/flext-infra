@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 from typing import Protocol
+from flext_core import t as parent_t
 
 
-class FlextTestTypes(Types):
+class FlextTestTypes(parent_t):
     class ProtocolInsideTypes(Protocol):
         pass
+
+t = FlextTestTypes
+__all__ = ["FlextTestTypes", "t"]

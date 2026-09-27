@@ -85,6 +85,13 @@ creating another tracker.
 
 ## Commands
 
+Native Ruff, Pyrefly, Mypy and Pyright diagnostics always block acceptance.
+The operator-reaffirmed global conformity gate stays observational: execute its
+checks and retain every finding; do not mark them suspended or passed.
+`config/tooling.yaml` owns accepted suppressions; any addition, removal or scope
+change requires prior explicit operator authorization. The Rope source-analysis
+override is explicitly authorized and does not suppress diagnostics.
+
 Correct runtime behavior is the authority. Exercise the real setup, generation and
 consumer paths first, then make tests verify that contract. Never alter the environment
 to preserve an obsolete fixture or treat a passing test as proof of integrated runtime

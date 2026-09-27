@@ -27,6 +27,13 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenCiMatrix:
     """Prove codegen emits the CI matrix workflow and distro Dockerfiles."""
 
+    @pytest.fixture(scope="module")
+    def generated_project(self, tmp_path_factory: pytest.TempPathFactory) -> Path:
+        """Generate once for read-only consumers; mutation tests own separate roots."""
+        return self._render_project(
+            tmp_path_factory.mktemp("ci-projection") / "project"
+        )
+
     @staticmethod
     def _render_project(root: Path) -> Path:
         """Render one fresh internal_flext project into root and return it."""
@@ -83,14 +90,16 @@ class TestsFlextInfraCodegenCiMatrix:
                 continue
             tm.that(set(entry.profiles), eq={"workspace", "standalone"})
 
-    def test_ci_matrix_workflow_emitted(self, tmp_path: Path) -> None:
+    def test_ci_matrix_workflow_emitted(self, generated_project: Path) -> None:
         """Generated project carries .github/workflows/ci-matrix.yml."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         tm.that((root / ".github" / "workflows" / "ci-matrix.yml").is_file(), eq=True)
 
-    def test_latest_mise_is_owned_only_by_make_setup(self, tmp_path: Path) -> None:
+    def test_latest_mise_is_owned_only_by_make_setup(
+        self, generated_project: Path
+    ) -> None:
         """Generated workflows never install Mise or uv beside make setup."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         workflows = root / ".github" / "workflows"
 
         for workflow in workflows.glob("*.yml"):
@@ -116,9 +125,11 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that((root / "cubic.yaml").exists(), eq=False)
         tm.that((root / ".coderabbit.yaml").exists(), eq=False)
 
-    def test_ci_workflow_uses_immutable_action_catalog(self, tmp_path: Path) -> None:
+    def test_ci_workflow_uses_immutable_action_catalog(
+        self, generated_project: Path
+    ) -> None:
         """Every generated action reference resolves from the typed action SSOT."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         workflows = "\n".join(
             (root / ".github" / "workflows" / filename).read_text(encoding="utf-8")
             for filename in ("ci.yml", "ci-matrix.yml")
@@ -142,10 +153,10 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflows, lacks="soft-pass")
 
     def test_blocking_ci_bootstraps_only_through_make_setup(
-        self, tmp_path: Path
+        self, generated_project: Path
     ) -> None:
         """Generated blocking CI provisions every binary via the Make surface."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
         )
@@ -193,10 +204,10 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(jobs, has="Block WIP heads from protected integration branches")
 
     def test_blocking_ci_does_not_configure_github_cli_auth(
-        self, tmp_path: Path
+        self, generated_project: Path
     ) -> None:
         """FLEXT codegen never selects GitHub CLI authentication."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
         )
@@ -208,9 +219,11 @@ class TestsFlextInfraCodegenCiMatrix:
         setup_index = workflow.index("run: CI=Y make setup")
         tm.that(steps_index < setup_index, eq=True)
 
-    def test_rendered_workflow_python_commands_compile(self, tmp_path: Path) -> None:
+    def test_rendered_workflow_python_commands_compile(
+        self, generated_project: Path
+    ) -> None:
         """YAML block indentation must preserve executable Python command bodies."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         workflow = root / ".github" / "workflows" / "ci.yml"
         document = u.Cli.yaml_load_mapping(workflow)
         jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
@@ -231,9 +244,11 @@ class TestsFlextInfraCodegenCiMatrix:
                     compiled += 1
         tm.that(compiled, gt=0)
 
-    def test_rendered_pre_commit_uses_typed_hook_contexts(self, tmp_path: Path) -> None:
+    def test_rendered_pre_commit_uses_typed_hook_contexts(
+        self, generated_project: Path
+    ) -> None:
         """The generated staged hooks render the configured workflow partitions."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         hooks = (root / ".pre-commit-config.yaml").read_text(encoding="utf-8")
         workflow = config.Infra.codegen.make.workflow
         ci = config.Infra.codegen.make.ci
@@ -260,9 +275,11 @@ class TestsFlextInfraCodegenCiMatrix:
                 tm.that(hooks, lacks=f"id: {hook_id}")
         tm.that(hooks, lacks=f"export {ci.variable}={ci.value}")
 
-    def test_ci_workflow_cancels_superseded_ref_runs(self, tmp_path: Path) -> None:
+    def test_ci_workflow_cancels_superseded_ref_runs(
+        self, generated_project: Path
+    ) -> None:
         """Generated CI groups competing runs by workflow and ref."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
         )
@@ -322,9 +339,9 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(rendered_text, has="Init private workspace projects")
         tm.that(rendered_text.count("Init private workspace projects"), eq=2)
 
-    def test_ci_uses_typed_action_catalog(self, tmp_path: Path) -> None:
+    def test_ci_uses_typed_action_catalog(self, generated_project: Path) -> None:
         """Every generated action reference resolves from the typed action SSOT."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
         )
@@ -333,9 +350,11 @@ class TestsFlextInfraCodegenCiMatrix:
             if action.repository in workflow:
                 tm.that(workflow, has=f"{action.repository}@{action.version}")
 
-    def test_dependabot_does_not_delay_available_updates(self, tmp_path: Path) -> None:
+    def test_dependabot_does_not_delay_available_updates(
+        self, generated_project: Path
+    ) -> None:
         """Every declared ecosystem can select its newest available release."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
 
         document = u.Cli.yaml_load_mapping(root / ".github" / "dependabot.yml")
         updates = t.Cli.JSON_LIST_ADAPTER.validate_python(document["updates"])
@@ -379,9 +398,9 @@ class TestsFlextInfraCodegenCiMatrix:
             cooldown = t.Cli.JSON_MAPPING_ADAPTER.validate_python(update["cooldown"])
             tm.that(cooldown["default-days"], eq=7)
 
-    def test_distro_dockerfiles_emitted(self, tmp_path: Path) -> None:
+    def test_distro_dockerfiles_emitted(self, generated_project: Path) -> None:
         """Generated project carries one Dockerfile per supported distro."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         for distro in ("ubuntu", "debian", "fedora", "alpine", "arch"):
             tm.that(
                 (
@@ -396,10 +415,10 @@ class TestsFlextInfraCodegenCiMatrix:
             )
 
     def test_distro_bootstrap_is_fail_closed_and_self_contained(
-        self, tmp_path: Path
+        self, generated_project: Path
     ) -> None:
         """Every distro runs the canonical self-bootstrap fail-closed."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         for distro in ("ubuntu", "debian", "fedora", "alpine", "arch"):
             content = (
                 root / "tests" / "fixtures" / "ci" / "docker" / f"{distro}.Dockerfile"
@@ -427,10 +446,10 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(content, lacks='GITHUB_TOKEN="')
 
     def test_fedora_dockerfile_installs_libatomic_only_for_fedora(
-        self, tmp_path: Path
+        self, generated_project: Path
     ) -> None:
         """Fedora's generated Node runtime has its required atomic library."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         fedora = (
             root / "tests" / "fixtures" / "ci" / "docker" / "fedora.Dockerfile"
         ).read_text(encoding="utf-8")
@@ -459,9 +478,11 @@ class TestsFlextInfraCodegenCiMatrix:
         }
         tm.that(after, eq=before)
 
-    def test_ci_matrix_has_only_supported_generic_legs(self, tmp_path: Path) -> None:
+    def test_ci_matrix_has_only_supported_generic_legs(
+        self, generated_project: Path
+    ) -> None:
         """Generic Python CI emits only its complete cross-platform legs."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         workflow = root / ".github" / "workflows" / "ci-matrix.yml"
         tm.that(workflow.is_file(), eq=True)
         content = u.Cli.yaml_load_mapping(workflow)
@@ -471,9 +492,11 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(jobs, lacks="wsl")
         tm.that(jobs, lacks="kind")
 
-    def test_host_legs_bootstrap_only_through_make_setup(self, tmp_path: Path) -> None:
+    def test_host_legs_bootstrap_only_through_make_setup(
+        self, generated_project: Path
+    ) -> None:
         """MacOS and Windows bootstrap through the same Make surface."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         content = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
             encoding="utf-8"
         )
@@ -487,10 +510,10 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(windows.count("shell: bash"), eq=3)
 
     def test_workflow_ci_policy_matrix_default_dispatch_only(
-        self, tmp_path: Path
+        self, generated_project: Path
     ) -> None:
         """Blocking CI covers integration; matrix defaults to dispatch-only."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         branch = u.Tests.provider_branch()
         blocking = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
@@ -510,10 +533,10 @@ class TestsFlextInfraCodegenCiMatrix:
         self._assert_dispatch_only(triggers)
 
     def test_draft_wip_selects_no_jobs_and_review_blocks_wip_head(
-        self, tmp_path: Path
+        self, generated_project: Path
     ) -> None:
         """Draft is remote durability; only a promoted non-WIP head may land."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
         )
@@ -553,10 +576,10 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(content, lacks="{% if make_profile")
 
     def test_docs_workflow_covers_every_blocking_ci_branch(
-        self, tmp_path: Path
+        self, generated_project: Path
     ) -> None:
         """Docs validation follows the same governed branch lanes as CI."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         content = (root / ".github" / "workflows" / "docs.yml").read_text(
             encoding="utf-8"
         )
@@ -565,7 +588,7 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(content, has=f"      - {branch}")
 
     def test_docs_workflow_jobs_authenticate_toolchain_resolution(
-        self, tmp_path: Path
+        self, generated_project: Path
     ) -> None:
         """Every Docs job running make setup resolves the toolchain authenticated.
 
@@ -573,7 +596,7 @@ class TestsFlextInfraCodegenCiMatrix:
         resolves the moving @latest backends, so each job that provisions the
         toolchain carries the job token exactly like blocking CI.
         """
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         content = (root / ".github" / "workflows" / "docs.yml").read_text(
             encoding="utf-8"
         )
@@ -587,10 +610,10 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(job, has="MISE_GITHUB_TOKEN: ${{ github.token }}")
 
     def test_ci_matrix_check_uses_ci_token_and_never_runs_test(
-        self, tmp_path: Path
+        self, generated_project: Path
     ) -> None:
         """Matrix smoke is help+check under CI=Y; it must never run make test."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         matrix = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
             encoding="utf-8"
         )
@@ -616,9 +639,11 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(body, has="make setup")
             tm.that(body, has="RUN --mount=type=secret")
 
-    def test_makefile_normalizes_windows_runtime_paths(self, tmp_path: Path) -> None:
+    def test_makefile_normalizes_windows_runtime_paths(
+        self, generated_project: Path
+    ) -> None:
         """Generated POSIX Make resolves Windows uv and virtualenv executables."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         content = (root / "Makefile").read_text(encoding="utf-8")
         tm.that(content, has="ifeq ($(OS),Windows_NT)")
         tm.that(content, has='cygpath --path "$(CALLER_PATH)"')
@@ -675,9 +700,11 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(comments, has=exclusion.rule_key)
             tm.that(comments, has=exclusion.resource_key)
 
-    def test_sonarcloud_properties_projects_ssot_scope(self, tmp_path: Path) -> None:
+    def test_sonarcloud_properties_projects_ssot_scope(
+        self, generated_project: Path
+    ) -> None:
         """A generated project carries the SSOT SonarCloud scope and its tests root."""
-        root = self._render_project(tmp_path / "external")
+        root = generated_project
         rendered = (root / c.Infra.SONARCLOUD_PROPERTIES_FILENAME).read_text(
             encoding="utf-8"
         )

@@ -10,6 +10,7 @@ from flext_cli import m, u
 
 from ... import t
 from ..._constants import (
+    FlextInfraConstantsCheck,
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsSharedInfra,
 )
@@ -629,18 +630,39 @@ class FlextInfraConfigModelsArtifact:
         ] = ()
 
     class CheckPolicySpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Quality-gate blocking policy: warning gates report without failing."""
+        """Producer-owned activation policy exclusively for conformity findings."""
 
-        warning_gates: Annotated[
+        enforcement_enabled: Annotated[
+            bool,
+            m.Field(
+                strict=True,
+                description="Operator activation of blocking enforcement findings",
+            ),
+        ] = False
+        gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
                 description=(
-                    "Gate ids whose findings stay visible as warnings and never "
-                    "block the check verdict"
+                    "Conformity gate ids controlled by global activation; "
+                    "Ruff, Mypy, Pyrefly, Pyright and invocation failures always block"
                 ),
             ),
         ] = ()
+
+        @u.model_validator(mode="after")
+        def validate_observational_gates(self) -> Self:
+            """Reject policies that could weaken native analyzer acceptance."""
+            protected = (
+                frozenset(self.gates) & FlextInfraConstantsCheck.ALWAYS_BLOCKING_GATES
+            )
+            if protected:
+                msg = (
+                    "always-blocking analyzers cannot be observational gates: "
+                    f"{sorted(protected)}"
+                )
+                raise ValueError(msg)
+            return self
 
     class RenameCampaignSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One declared CSV-driven rename campaign applied by the mod verb."""

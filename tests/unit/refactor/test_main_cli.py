@@ -26,8 +26,9 @@ class TestsFlextInfraRefactorMainCli:
 
     _MISSING_RUNTIME_ALIAS_MODULE = (
         "from __future__ import annotations\n\n"
+        "from flext_core import m as parent_m\n\n"
         '__all__: list[str] = ["FlextDemoModels"]\n\n'
-        "class FlextDemoModels:\n"
+        "class FlextDemoModels(parent_m):\n"
         "    pass\n"
     )
 
@@ -409,15 +410,24 @@ class TestsFlextInfraRefactorMainCli:
     def test_refactor_census_apply_fixes_missing_runtime_alias(
         self, tmp_path: Path
     ) -> None:
-        workspace, module_path = self._build_module_workspace(
+        workspace, _ = self._build_module_workspace(
             tmp_path, self._MISSING_RUNTIME_ALIAS_MODULE
         )
 
         self._apply_census(workspace, rules="runtime_alias")
 
-        source = module_path.read_text(encoding="utf-8")
-        tm.that(source, has='"m"')
-        tm.that(source, has="m = FlextDemoModels")
+        imported = tm.ok(
+            u.Cli.run(
+                [
+                    sys.executable,
+                    "-c",
+                    "import flext_demo.models as models; print(models.m is models.FlextDemoModels)",
+                ],
+                cwd=workspace,
+                env={"PYTHONPATH": str(workspace / "src")},
+            )
+        )
+        tm.that(imported.stdout.strip(), eq="True")
 
     def test_refactor_census_reports_duplicate_runtime_alias(
         self, tmp_path: Path

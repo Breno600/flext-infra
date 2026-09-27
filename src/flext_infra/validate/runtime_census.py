@@ -36,27 +36,6 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         str | None, m.Field(description="Project filter (comma-separated)")
     ] = None
 
-    @staticmethod
-    def _package_name_for_project(project: p.Infra.ProjectInfo) -> str | None:
-        """Resolve the importable package name for a project root."""
-        layout = u.Infra.layout(project.path, project=project)
-        if layout is not None:
-            package_name: str = layout.package_name
-            return package_name
-        src_dir = project.path / c.Infra.DEFAULT_SRC_DIR
-        if not src_dir.is_dir():
-            return None
-        for child in sorted(src_dir.iterdir()):
-            if child.is_dir() and (child / c.Infra.INIT_PY).is_file():
-                child_name: str = child.name
-                return child_name
-        return None
-
-    @staticmethod
-    def _is_local_class(klass: type, module_name: str) -> bool:
-        """Return True when ``klass`` is defined in ``module_name`` (not imported)."""
-        return getattr(klass, "__module__", "") == module_name
-
     @classmethod
     def _walk_modules(cls, package_name: str) -> t.SequenceOf[str]:
         """Return all importable module names under ``package_name``."""
@@ -108,7 +87,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             ]
         violations: list[str] = []
         for _name, obj in inspect.getmembers(module, inspect.isclass):
-            if not self._is_local_class(obj, module.__name__):
+            if obj.__module__ != module.__name__:
                 continue
             report = u.check(obj)
             for violation in report.violations:
@@ -135,34 +114,13 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         self, project: p.Infra.ProjectInfo
     ) -> p.Result[m.Infra.ValidationReport]:
         """Run the runtime census for one project and return a merged report."""
-        package_name = self._package_name_for_project(project)
-        if package_name is None:
-            return r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(
-                    passed=True,
-                    violations=(),
-                    summary=f"{project.name}: no importable package found",
-                )
+        layout = u.Infra.layout(project.path, project=project)
+        if layout is None:
+            return r[m.Infra.ValidationReport].fail(
+                f"{project.name}: no declared importable package found"
             )
-        # Operator stability contract (2026-09-16): an unimportable package is
-        # a census violation to report, never a verb crash.
-        walked = r[t.SequenceOf[str]].create_from_callable(
-            lambda: self._walk_modules(package_name)
-        )
-        if walked.failure:
-            return r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(
-                    passed=False,
-                    violations=(
-                        (
-                            f"{package_name}: package import failed: "
-                            f"{type(walked.exception).__name__}: {walked.error}"
-                        ),
-                    ),
-                    summary=f"{project.name}: package import failed",
-                )
-            )
-        real_modules = list(walked.value)
+        package_name = layout.package_name
+        real_modules = list(self._walk_modules(package_name))
         if self.target_module is not None:
             real_modules = [
                 name
@@ -177,29 +135,14 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 name.split(".")
             )
         ]
+        if not real_modules:
+            return r[m.Infra.ValidationReport].fail(
+                f"runtime census selected no modules: package={package_name}, "
+                f"target={self.target_module!r}"
+            )
         all_reports: list[m.Infra.ValidationReport] = []
         for module_name in real_modules:
-            # Operator stability contract (2026-09-16): a module that cannot
-            # import is a census violation to report, never a verb crash —
-            # findings feed the generator, the Make verb completes.
-            checked = r[t.SequenceOf[m.Infra.ValidationReport]].create_from_callable(
-                lambda name=module_name: self._check_module(name)
-            )
-            if checked.success:
-                all_reports.extend(checked.value)
-            else:
-                all_reports.append(
-                    m.Infra.ValidationReport(
-                        passed=False,
-                        violations=(
-                            (
-                                f"{module_name}: import failed: "
-                                f"{type(checked.exception).__name__}: {checked.error}"
-                            ),
-                        ),
-                        summary=f"{module_name}: import failed",
-                    )
-                )
+            all_reports.extend(self._check_module(module_name))
         merged_violations = tuple(
             violation for report in all_reports for violation in report.violations
         )

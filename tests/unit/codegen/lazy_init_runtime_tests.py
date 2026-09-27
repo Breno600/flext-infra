@@ -168,20 +168,29 @@ class TestsFlextInfraLazyInitRuntime:
         examples.joinpath("__init__.py").write_text("", encoding=c.Cli.ENCODING_DEFAULT)
         facet = examples / "constants.py"
         facet.write_text(
-            "from flext_local.constants import Parent\n"
-            "class Local(Parent):\n    pass\n__all__ = ('Local',)\n",
+            "from flext_local.constants import c as parent_c\n"
+            "class Local(parent_c):\n    pass\n__all__ = ('Local',)\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
-        tm.that(
-            "c"
-            in u.Infra.public_export_names_source(
-                examples.joinpath("__init__.py").read_text(
-                    encoding=c.Cli.ENCODING_DEFAULT
-                )
-            ),
-            eq=False,
+        probe_env = dict(os.environ)
+        probe_env["PYTHONPATH"] = os.pathsep.join([
+            str(repository),
+            str(repository / c.Infra.DEFAULT_SRC_DIR),
+            *sys.path,
+        ])
+        before = tm.ok(
+            u.Cli.run(
+                [
+                    sys.executable,
+                    "-c",
+                    "import examples; print(hasattr(examples, 'c'))",
+                ],
+                env=probe_env,
+                cwd=repository,
+            )
         )
+        tm.that(before.stdout.strip(), eq="False")
         with infra.rope_workspace(repository) as rope:
             policy = rope.convention(facet).module_policy
             repaired = u.Infra.ensure_runtime_alias(
@@ -191,19 +200,13 @@ class TestsFlextInfraLazyInitRuntime:
             )
         facet.write_text(repaired, encoding=c.Cli.ENCODING_DEFAULT)
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
-        probe_env = dict(os.environ)
-        probe_env["PYTHONPATH"] = os.pathsep.join([
-            str(repository),
-            str(repository / c.Infra.DEFAULT_SRC_DIR),
-            *sys.path,
-        ])
         probe = (
             "import examples as generated\n"
             "import examples.constants as local\n"
             "import flext_local.constants as parent\n"
             "print(generated.c is local.Local)\n"
             "print(generated.c is not parent.Parent)\n"
-            "print(generated.c.__bases__ == (parent.Parent,))\n"
+            "print(issubclass(generated.c, parent.c))\n"
             "print(all(hasattr(generated, name) for name in generated.__all__))\n"
         )
         result = tm.ok(

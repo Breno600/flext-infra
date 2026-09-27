@@ -35,6 +35,17 @@ class FlextInfraDepsFloorProfileWriter:
         """
         ssot_path = root / c.Infra.CODEGEN_CONFIG_DIR / c.Infra.CODEGEN_CONFIG_FILENAME
 
+        # A standalone consumer (ai-hub, cosmos, product repos) carries no
+        # codegen SSOT and therefore owns no dependency_profiles floors: the
+        # rewrite has nothing to do there. A PRESENT but malformed SSOT keeps
+        # failing loud below — only absence is skippable.
+        if not ssot_path.is_file():
+            u.Cli.info(
+                "deps: no config/codegen.yaml SSOT — dependency_profiles floors "
+                "not rewritten"
+            )
+            return ()
+
         # Round-trip load preserves comments and ordering
         loaded = u.Cli.yaml_roundtrip_load_map(ssot_path)
         if loaded.failure:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -280,20 +281,27 @@ class TestsFlextInfraCodegenLazyInitService:
         service.apply_changes = True
 
         result = u.Tests.materialize_lazy_init(service)
-        generated = tests_init.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-
         tm.that(result.success, eq=True)
-        tm.that(generated, contains="TestsFlextTestsConstants")
-        tm.that(generated, contains="TestsFlextTestsUtilities")
-        tm.that(generated, contains="install_lazy_exports")
-        tm.that(generated, contains='"tm"')
-        tm.that(generated, lacks="TestsCollectedNoise")
-        tm.that(generated, lacks=".unit.test_noise")
-        child_generated = unit_root.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+        imported = tm.ok(
+            u.Cli.run(
+                [
+                    sys.executable,
+                    "-c",
+                    (
+                        "import tests; import tests.unit as unit; "
+                        "from tests.constants import c; from tests.utilities import u; "
+                        "print(tests.c is c); print(tests.u is u); "
+                        "print(hasattr(tests, 'TestsCollectedNoise')); "
+                        "print(unit.TestsCollectedNoise.__name__)"
+                    ),
+                ],
+                cwd=repository_root,
+            )
         )
-        tm.that(child_generated, contains="TestsCollectedNoise")
-        tm.that(child_generated, contains="install_lazy_exports")
+        tm.that(
+            imported.stdout.splitlines(),
+            eq=["True", "True", "False", "TestsCollectedNoise"],
+        )
 
     def test_check_mode_is_read_only_and_reports_drift(self, tmp_path: Path) -> None:
         """Check reports missing generated artifacts as a failure without writing."""

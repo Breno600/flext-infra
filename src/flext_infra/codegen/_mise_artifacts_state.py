@@ -515,26 +515,9 @@ class FlextInfraMiseArtifactsState:
     def _hosts_lease_lock(
         layout: m.Infra.MiseToolchainWorkspaceLayout, directory: Path
     ) -> bool:
-        """Whether the directory houses persistent state the cleanup must keep.
-
-        The journal lease lock and the lazy-init class-receipt cache are
-        persistent residents of the ignored state root: both survive
-        transactions by design (the lock keeps its file identity across runs;
-        the receipts are the content-addressed cache), so a directory
-        containing either is durable state, never a transient cleanup target.
-        """
-        candidates = [layout.journal_path.with_name(f"{layout.journal_path.name}.lock")]
-        state_root = next(
-            (
-                ancestor
-                for ancestor in (directory, *directory.parents)
-                if ancestor.name == c.Infra.TRANSACTION_STATE_DIRNAME
-            ),
-            None,
-        )
-        if state_root is not None:
-            candidates.append(state_root / c.Infra.LAZY_INIT_CLASS_RECEIPTS_RELPATH)
-        return any(path.is_relative_to(directory) for path in candidates)
+        """Keep the journal lease lock's file identity across transactions."""
+        lock_path = layout.journal_path.with_name(f"{layout.journal_path.name}.lock")
+        return lock_path.is_relative_to(directory)
 
     @classmethod
     def validate_transaction_roots(

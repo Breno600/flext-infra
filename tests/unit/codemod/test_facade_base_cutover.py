@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -29,7 +31,7 @@ class TestsFlextInfraFacadeBaseCutover:
             ),
         ],
     )
-    def test_rebound_letter_base_extends_the_declared_class(
+    def test_rebound_letter_base_preserves_public_parent_inheritance(
         self, tmp_path: Path, statement: str, base: str, rebind: str
     ) -> None:
         child, sources = self._workspace(
@@ -39,15 +41,13 @@ class TestsFlextInfraFacadeBaseCutover:
         edits = self._edits(tmp_path, sources, child)
         tm.that(tuple(edit.file_path for edit in edits), eq=(child.resolve(),))
         updated = edits[0].updated_source
-        tm.that(updated, has=f"from parent_pkg import {self.PARENT_CLASS}\n")
-        tm.that(updated, has=f"class ChildModels({self.PARENT_CLASS}):")
-        tm.that(updated, has="\nm = ChildModels\n")
-        tm.that(updated, lacks="import m")
-        tm.that(updated, lacks="type[ChildModels]")
+        self._verify_runtime(tmp_path, {**sources, child: updated})
         replanned = self._edits(tmp_path, {**sources, child: updated}, child)
         tm.that(replanned, empty=True)
 
-    def test_eager_letter_reads_spell_the_parent_class(self, tmp_path: Path) -> None:
+    def test_eager_and_deferred_letter_reads_keep_their_runtime_owners(
+        self, tmp_path: Path
+    ) -> None:
         child, sources = self._workspace(
             tmp_path,
             "from parent_pkg import m\n\n\nclass ChildModels(m):\n"
@@ -56,8 +56,14 @@ class TestsFlextInfraFacadeBaseCutover:
             "m = ChildModels\n",
         )
         updated = self._edits(tmp_path, sources, child)[0].updated_source
-        tm.that(updated, has=f"    base = {self.PARENT_CLASS}.BaseModel\n")
-        tm.that(updated, has="        return m.BaseModel\n")
+        self._verify_runtime(
+            tmp_path,
+            {**sources, child: updated},
+            assertions=(
+                "assert ChildModels.base is parent_m.BaseModel\n"
+                "assert ChildModels().later() is m.BaseModel\n"
+            ),
+        )
 
     def test_letter_base_without_rebind_is_untouched(self, tmp_path: Path) -> None:
         child, sources = self._workspace(
@@ -87,17 +93,19 @@ class TestsFlextInfraFacadeBaseCutover:
         tm.that(u.Infra.facade_classes("parent_pkg"), eq={"m": self.PARENT_CLASS})
 
     def _workspace(
-        self, tmp_path: Path, child_source: str, *, parent_exports: t.StrSequence = ()
+        self,
+        tmp_path: Path,
+        child_source: str,
+        *,
+        parent_exports: t.StrSequence | None = None,
     ) -> t.Pair[Path, t.MutableMappingKV[Path, str]]:
         """Declare a parent whose class name no package naming could infer."""
-        exports = parent_exports or (self.PARENT_CLASS, "m")
+        exports = (self.PARENT_CLASS, "m") if parent_exports is None else parent_exports
         parent = tmp_path / "parent/src/parent_pkg"
         child = tmp_path / "child/src/child_pkg/models.py"
         return child, {
             parent / "__init__.py": (
-                "from typing import TYPE_CHECKING\n"
-                "if TYPE_CHECKING:\n"
-                f"    from .models import {self.PARENT_CLASS}, m\n"
+                f"from .models import {self.PARENT_CLASS}, m\n"
                 f"__all__ = [{self.PARENT_CLASS!r}, 'm']\n"
             ),
             parent / "models.py": (
@@ -106,8 +114,40 @@ class TestsFlextInfraFacadeBaseCutover:
                 f"m = {self.PARENT_CLASS}\n"
                 f"__all__ = {list(exports)!r}\n"
             ),
+            parent.parent / "base_pkg.py": (
+                "class BaseFacade:\n    class BaseModel:\n        pass\n"
+                "m = BaseFacade\n"
+            ),
+            child.parent / "__init__.py": "",
             child: child_source,
         }
+
+    @staticmethod
+    def _verify_runtime(
+        root: Path, sources: t.MappingKV[Path, str], *, assertions: str = ""
+    ) -> None:
+        """Import and exercise the emitted public facade in a fresh interpreter."""
+        for path, source in sources.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(source, encoding="utf-8")
+        program = (
+            "from parent_pkg import m as parent_m\n"
+            "from child_pkg.models import ChildModels, m\n"
+            "assert issubclass(ChildModels, parent_m)\n"
+            "assert m is ChildModels\n"
+            "assert m.BaseModel is parent_m.BaseModel\n"
+        ) + assertions
+        result = u.Cli.run_raw(
+            [sys.executable, "-c", program],
+            cwd=root,
+            env={
+                "PYTHONPATH": os.pathsep.join((
+                    str(root / "parent/src"),
+                    str(root / "child/src"),
+                ))
+            },
+        ).unwrap()
+        tm.that(u.Cli.process_succeeded(result.outcome), eq=True)
 
     @staticmethod
     def _finding(file_path: Path) -> m.Infra.ModScanFinding:

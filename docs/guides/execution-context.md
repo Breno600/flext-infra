@@ -120,3 +120,17 @@ canônicos sem warnings ou findings residuais.
 O handoff final relaciona PRs, commits de merge e prova após integração aos Beads. Se
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
 declarar fechamento funcional.
+
+## Producer acceptance correction
+
+The global conformity activation policy lives in `config/tooling.yaml` under
+`Infra.check_policy`. Disabled enforcement retains raw conformity findings and never
+converts their severity or a broken invocation into success. Ruff, Pyrefly, Mypy and
+Pyright always block acceptance; consumers cannot override this policy. Canonical
+suppression entries require explicit operator authorization before any change. The
+authorized Rope override enables analysis without `py.typed`; it does not suppress
+diagnostics. Validate the producer before consuming its package.
+
+The operator reaffirmed observational execution on 2026-09-24: conformity checks still
+run. Do not replace their results with suspended or unexecuted entries. External
+analyzer failures remain blocking, including Markdown and security.

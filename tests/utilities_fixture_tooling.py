@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 from flext_infra import u
-from tests import c, p, t
+from tests import c, m, p, t
 
 
 class TestsFlextInfraUtilitiesToolingFixtureMixin:
@@ -115,7 +115,10 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
             capture=capture,
             remove_env_keys=tuple(
                 key
-                for key in c.Tests.MAKE_ISOLATION_ENV_KEYS
+                for key in (
+                    *c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                    m.Infra.BeadsWorkspaceEnvironmentSpec().identity_var,
+                )
                 if env is None or key not in env
             ),
         )

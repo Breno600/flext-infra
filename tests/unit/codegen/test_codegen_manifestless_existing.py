@@ -119,7 +119,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
     def test_root_distribution_owns_its_dependency_profile(
         self, tmp_path: Path
     ) -> None:
-        """The tree's root declares no flext dependency and still conforms."""
+        """The foundation needs no runtime parent and declares its tooling source."""
         profile = next(
             item
             for item in config.Infra.codegen.scaffold.project.dependency_profiles
@@ -132,6 +132,13 @@ class TestsFlextInfraCodegenManifestlessExisting:
             )
         )
         distribution = profile.upstream.replace("_", "-")
+        dev = tm.ok(
+            u.Cli.json_dumps([
+                *u.Tests.declared_requirements(
+                    config.Infra.codegen.scaffold.project.dev, distribution=distribution
+                )
+            ])
+        )
         root = tmp_path / distribution
         package = root / c.Infra.DEFAULT_SRC_DIR / profile.upstream
         package.mkdir(parents=True)
@@ -143,7 +150,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
                 f'description = "{distribution} root fixture"\n'
                 f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
                 'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
-                "dependencies = []\n",
+                f"dependencies = []\n[dependency-groups]\ndev = {dev}\n",
             )
         )
         u.Tests.write_project_beads_config(root, distribution)
@@ -169,7 +176,12 @@ class TestsFlextInfraCodegenManifestlessExisting:
             for dependency in profile.runtime
             if u.Infra.dep_name(dependency) != distribution
         )
-        tm.that(owned_runtime[0] in rendered, eq=True)
+        tm.that(
+            set(owned_runtime).issubset(
+                u.Tests.toml_strings_at(rendered, "project", "dependencies")
+            ),
+            eq=True,
+        )
 
 
 __all__: list[str] = ["TestsFlextInfraCodegenManifestlessExisting"]

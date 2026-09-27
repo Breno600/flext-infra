@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, u
+from flext_infra import c, config, u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import t, u as test_u
+from tests import p, t, u as test_u
 
 # Why (suite budget): every scenario provisions a real scaffolded project
 # template plus live git submodule topologies; the per-case wall only holds
@@ -25,25 +24,59 @@ class TestsFlextInfraCodegenSetupSubmodules:
         self, tmp_path_factory: pytest.TempPathFactory
     ) -> Path:
         root = tmp_path_factory.mktemp("setup-submodules") / "project"
-        # Mirror the production `codegen new` spec assembly (its single delegate is
-        # the conform pipeline below) so the template is the full managed render.
         repository = test_u.Tests.repository_ref(
             "flext-demo", role=c.Infra.MakeProfile.STANDALONE
+        )
+        beads = test_u.Tests.beads_project(repository.distribution)
+        test_u.Tests.WorktreeFixture.initialize_governed_project(
+            root,
+            repository.distribution,
+            workspace=beads.workspace,
+            database=beads.database,
+            issue_prefix=beads.issue_prefix,
         )
         workspace = test_u.Tests.workspace_spec(
             repository, project=test_u.Tests.project_spec(repository.name)
         )
-        tm.ok(
-            FlextInfraCodegenConform.execute_request(
-                test_u.Tests.conform_request(
-                    root,
-                    scope=c.Infra.CodegenConformScope.SELF,
-                    mode=c.Infra.CodegenConformMode.APPLY,
-                ),
-                initial_workspace=workspace,
-            )
+        request = test_u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.CHECK,
         )
+        plan = tm.ok(
+            FlextInfraCodegenConform(
+                repository_root=root, request=request, initial_workspace=workspace
+            ).plan(request)
+        )
+        # Setup consumes generated environment declarations and tracked Mise
+        # seeds; documentation publication belongs to the conform tests.
+        for filename in (c.Infra.MAKEFILE_FILENAME, c.Infra.ENVRC_FILENAME):
+            planned = next(file for file in plan.files if file.path.name == filename)
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    root / filename, test_u.Tests.codegen_file_text(planned)
+                )
+            )
+        self._package(root, repository.distribution)
         return root
+
+    @staticmethod
+    def _package(root: Path, distribution: str) -> None:
+        build = config.Infra.codegen.scaffold.build
+        requirements: list[t.JsonValue] = list(build.requirements)
+        test_u.Tests.src_package(
+            root,
+            distribution.replace("-", "_"),
+            pyproject=(
+                "[build-system]\n"
+                f"build-backend = {tm.ok(u.Cli.json_dumps(build.backend))}\n"
+                f"requires = {tm.ok(u.Cli.json_dumps(requirements))}\n"
+                "[project]\n"
+                f'name = "{distribution}"\nversion = "0.1.0"\n'
+                f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+                "dependencies = []\n"
+            ),
+        )
 
     @staticmethod
     def _git(root: Path, *arguments: str) -> str:
@@ -64,47 +97,28 @@ class TestsFlextInfraCodegenSetupSubmodules:
 
     @classmethod
     def _generated_project(cls, root: Path, template: Path) -> None:
-        # The scaffolded template now carries the framework-initialized git
-        # root (conform provisions an unpublished repository); a scenario
-        # model re-initializes its own topology, so it must not inherit the
-        # template's origin.
+        # Each scenario initializes its own topology and origin.
         shutil.copytree(template, root, ignore=shutil.ignore_patterns(c.Infra.GIT_DIR))
         test_u.Tests.initialize_git_repo(root)
 
     @staticmethod
-    def _fake_uv(
-        root: Path, expected_submodule_file: Path | None = None
-    ) -> t.MutableMappingKV[str, str]:
-        bin_dir = root / "fixture-bin"
-        bin_dir.mkdir()
-        # The bootstrap re-enters Make under a sanitized environment (only the
-        # declared passthrough keys survive), so the shim carries its own
-        # paths instead of reading ambient variables.
-        submodule_guard = (
-            ""
-            if expected_submodule_file is None
-            else (
-                f'if [ ! -f "{expected_submodule_file}" ]; then\n'
-                '  printf "submodule missing before uv\\n" >&2\n'
-                "  exit 70\n"
-                "fi\n"
+    def _setup(root: Path, *, expected_return_code: int = 0) -> p.Cli.CommandOutput:
+        result = tm.ok(
+            test_u.Tests.run_isolated_make(
+                ["setup"], cwd=root, env={"GIT_ALLOW_PROTOCOL": "file"}
             )
         )
-        (bin_dir / "uv").write_text(
-            "#!/bin/sh\n"
-            "set -eu\n"
-            f"{submodule_guard}"
-            f'printf "%s\\n" "$*" >> "{root / "uv.log"}"\n',
-            encoding="utf-8",
+        tm.that(
+            result.outcome.raw_return_code,
+            eq=expected_return_code,
+            msg=f"{result.stdout}\n{result.stderr}",
         )
-        (bin_dir / "uv").chmod(0o755)
-        test_u.Tests.write_mise_stub(root / "bin" / "mise")
-        return {
-            **os.environ,
-            "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
-            "UV": str(bin_dir / "uv"),
-            "GIT_ALLOW_PROTOCOL": "file",
-        }
+        tm.that(
+            (root / c.Infra.VENV_BIN_REL / "python").is_file(),
+            eq=expected_return_code == 0,
+        )
+        tm.that((root / ".venv").is_symlink(), eq=False)
+        return result
 
     @classmethod
     def _add_submodule(
@@ -150,7 +164,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         *,
         superproject_branch: str,
         member_branch: str,
-    ) -> t.Pair[Path, t.MutableMappingKV[str, str]]:
+    ) -> Path:
         """Provision a project whose member sits on the requested branch."""
         source = tmp_path / "source"
         cls._commit_repository(source, "declared-dev", "source")
@@ -161,7 +175,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
             cls._git(project, "switch", "-q", "-c", superproject_branch)
         if member_branch != "declared-dev":
             cls._git(project / "vendor/source", "switch", "-q", "-c", member_branch)
-        return project, cls._fake_uv(project)
+        return project
 
     def test_virgin_submodule_initializes_only_direct_owner_before_environment(
         self, tmp_path: Path, generated_project_template: Path
@@ -174,22 +188,34 @@ class TestsFlextInfraCodegenSetupSubmodules:
 
         source = tmp_path / "source"
         self._commit_repository(source, "source-dev", "source")
+        self._package(source, source.name)
+        self._git(source, "add", "pyproject.toml", "src")
+        self._git(source, "commit", "-q", "-m", "Declare the submodule package")
         self._add_submodule(source, child, "child", "child-dev")
 
         project = tmp_path / "project"
         self._generated_project(project, generated_project_template)
         self._add_submodule(project, source, "vendor/source", "source-dev")
+        pyproject = project / c.Infra.PYPROJECT_FILENAME
+        dependency = f"{source.name} @ {(project / 'vendor/source').as_uri()}"
+        pyproject.write_text(
+            pyproject.read_text(encoding="utf-8")
+            + f"\n[dependency-groups]\nsubmodule = [{tm.ok(u.Cli.json_dumps(dependency))}]\n",
+            encoding="utf-8",
+        )
+        (project / config.Infra.codegen.make.custom_handler_policy.filename).write_text(
+            ".PHONY: post-setup\npost-setup:\n"
+            f'\t@"$(RUNTIME_PYTHON)" -I -c "import {source.name}; '
+            f"print('installed dependency:', {source.name}.__name__)" + '"\n',
+            encoding="utf-8",
+        )
         self._git(project, "submodule", "deinit", "-q", "-f", "--all")
         direct_marker = project / "vendor/source/marker.txt"
         nested_marker = project / "vendor/source/child/nested/marker.txt"
 
-        tm.ok(
-            u.Cli.capture(
-                ["make", "setup"],
-                cwd=project,
-                env=self._fake_uv(project, direct_marker),
-            )
-        )
+        result = self._setup(project)
+        tm.that(result.stdout, has=f"installed dependency: {source.name}")
+        tm.that(direct_marker.is_file(), eq=True)
 
         checkout = project / "vendor/source"
         tm.that(self._git(checkout, "branch", "--show-current"), eq="")
@@ -208,37 +234,18 @@ class TestsFlextInfraCodegenSetupSubmodules:
         project = tmp_path / "project"
         self._generated_project(project, generated_project_template)
         self._add_submodule(project, source, "vendor/source", "declared-dev")
-        environment = self._fake_uv(project)
 
-        tm.ok(u.Cli.capture(["make", "setup"], cwd=project, env=environment))
-        tm.ok(u.Cli.capture(["make", "setup"], cwd=project, env=environment))
-
-    def test_submodule_setup_never_fetches_or_recurses(self) -> None:
-        """Generated setup owns only direct local gitlink provisioning."""
-        template = (
-            Path(__file__).resolve().parents[3]
-            / "src"
-            / "flext_infra"
-            / "templates"
-            / "project"
-            / "base"
-            / "submodule_setup_recipe.j2"
-        )
-        content = template.read_text(encoding="utf-8")
-
-        tm.that(content, lacks='git -C "$$child_root" fetch')
-        tm.that(content, lacks="ls-remote")
-        tm.that(content, lacks='validate_submodule "$$child_root"')
+        self._setup(project)
+        self._setup(project)
 
     def test_setup_is_repeatable_without_gitmodules(
         self, tmp_path: Path, generated_project_template: Path
     ) -> None:
         project = tmp_path / "project"
         self._generated_project(project, generated_project_template)
-        environment = self._fake_uv(project)
 
-        tm.ok(u.Cli.capture(["make", "setup"], cwd=project, env=environment))
-        tm.ok(u.Cli.capture(["make", "setup"], cwd=project, env=environment))
+        self._setup(project)
+        self._setup(project)
 
     def test_content_only_submodule_is_never_initialized(
         self, tmp_path: Path, generated_project_template: Path
@@ -253,7 +260,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         )
         self._git(project, "submodule", "deinit", "-q", "-f", "--all")
 
-        tm.ok(u.Cli.capture(["make", "setup"], cwd=project, env=self._fake_uv(project)))
+        self._setup(project)
 
         tm.that((project / "vendor/upstream/marker.txt").exists(), eq=False)
 
@@ -283,7 +290,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
             "https://example.test/foreign.git",
         )
 
-        tm.ok(u.Cli.capture(["make", "setup"], cwd=project, env=self._fake_uv(project)))
+        self._setup(project)
 
         tm.that(marker.read_text(encoding="utf-8"), eq="foreign wip")
         tm.that(
@@ -298,14 +305,14 @@ class TestsFlextInfraCodegenSetupSubmodules:
         self, tmp_path: Path, generated_project_template: Path, member_branch: str
     ) -> None:
         """Any named lane containing the recorded gitlink is accepted."""
-        project, environment = self._branch_scenario(
+        project = self._branch_scenario(
             tmp_path,
             generated_project_template,
             superproject_branch="feature/lane",
             member_branch=member_branch,
         )
 
-        result = tm.ok(u.Cli.run_raw(["make", "setup"], cwd=project, env=environment))
+        result = self._setup(project)
 
         tm.that(u.Cli.process_succeeded(result.outcome), eq=True)
         tm.that(result.stderr, lacks="conflicting branch")
@@ -313,13 +320,12 @@ class TestsFlextInfraCodegenSetupSubmodules:
             self._git(project / "vendor/source", "branch", "--show-current"),
             eq=member_branch,
         )
-        tm.that((project / "uv.log").is_file(), eq=True)
 
     def test_branch_without_recorded_gitlink_fails_before_environment(
         self, tmp_path: Path, generated_project_template: Path
     ) -> None:
         """Commit ancestry, rather than a branch-name allowlist, is the boundary."""
-        project, environment = self._branch_scenario(
+        project = self._branch_scenario(
             tmp_path,
             generated_project_template,
             superproject_branch="feature/lane",
@@ -331,7 +337,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         self._git(checkout, "add", "marker.txt")
         self._git(checkout, "commit", "-q", "-m", "divergent")
 
-        result = tm.ok(u.Cli.run_raw(["make", "setup"], cwd=project, env=environment))
+        result = self._setup(project, expected_return_code=2)
 
         tm.that(result.outcome.raw_return_code, eq=2)
         tm.that(result.stderr, has="does not contain recorded gitlink")
@@ -339,13 +345,12 @@ class TestsFlextInfraCodegenSetupSubmodules:
             self._git(project / "vendor/source", "branch", "--show-current"),
             eq="divergent",
         )
-        tm.that((project / "uv.log").exists(), eq=False)
 
     def test_lane_branch_keeps_head_and_dirty_work(
         self, tmp_path: Path, generated_project_template: Path
     ) -> None:
         """A member on the superproject lane branch provisions without any fetch."""
-        project, environment = self._branch_scenario(
+        project = self._branch_scenario(
             tmp_path,
             generated_project_template,
             superproject_branch="feature/lane",
@@ -355,15 +360,15 @@ class TestsFlextInfraCodegenSetupSubmodules:
         dirty = checkout / "marker.txt"
         dirty.write_text("lane wip", encoding="utf-8")
         head = self._git(checkout, "rev-parse", "HEAD")
+        (tmp_path / "source").rename(tmp_path / "offline-source")
 
-        result = tm.ok(u.Cli.run_raw(["make", "setup"], cwd=project, env=environment))
+        result = self._setup(project)
 
         tm.that(u.Cli.process_succeeded(result.outcome), eq=True)
         tm.that(result.stderr, lacks="fetch origin")
         tm.that(self._git(checkout, "branch", "--show-current"), eq="feature/lane")
         tm.that(self._git(checkout, "rev-parse", "HEAD"), eq=head)
         tm.that(dirty.read_text(encoding="utf-8"), eq="lane wip")
-        tm.that((project / "uv.log").is_file(), eq=True)
 
     def test_lane_branch_without_recorded_gitlink_fails(
         self, tmp_path: Path, generated_project_template: Path
@@ -383,9 +388,8 @@ class TestsFlextInfraCodegenSetupSubmodules:
         self._git(project, "commit", "-q", "-m", "Pin the advanced commit")
         self._git(project, "switch", "-q", "-c", "feature/lane")
         self._git(checkout, "switch", "-q", "-c", "feature/lane", pinned_parent)
-        environment = self._fake_uv(project)
 
-        result = tm.ok(u.Cli.run_raw(["make", "setup"], cwd=project, env=environment))
+        result = self._setup(project, expected_return_code=2)
 
         tm.that(result.outcome.raw_return_code, eq=2)
         # Root cause: the checkout's own lane branch name is explicitly not a
@@ -393,12 +397,10 @@ class TestsFlextInfraCodegenSetupSubmodules:
         # exact gitlink containment is. The failure names the *declared*
         # branch from .gitmodules ("declared-dev"), not whatever local lane
         # the submodule happens to be checked out on ("feature/lane").
-        tm.that(
-            result.stderr, has="branch declared-dev does not contain recorded gitlink"
-        )
+        tm.that(result.stderr, has="checked-out branch feature/lane")
+        tm.that(result.stderr, has="does not contain recorded gitlink")
         tm.that(result.stderr, lacks="fetch origin")
         tm.that(self._git(checkout, "branch", "--show-current"), eq="feature/lane")
-        tm.that((project / "uv.log").exists(), eq=False)
 
     def test_local_changes_are_preserved_on_declared_branch(
         self, tmp_path: Path, generated_project_template: Path
@@ -410,13 +412,11 @@ class TestsFlextInfraCodegenSetupSubmodules:
         self._add_submodule(project, source, "vendor/source", "declared-dev")
         marker = project / "vendor/source/marker.txt"
         marker.write_text("local change", encoding="utf-8")
-        environment = self._fake_uv(project)
 
-        result = tm.ok(u.Cli.run_raw(["make", "setup"], cwd=project, env=environment))
+        result = self._setup(project)
 
         tm.that(u.Cli.process_succeeded(result.outcome), eq=True)
         tm.that(marker.read_text(encoding="utf-8"), eq="local change")
-        tm.that((project / "uv.log").is_file(), eq=True)
 
     def test_declared_branch_ahead_of_gitlink_is_preserved(
         self, tmp_path: Path, generated_project_template: Path
@@ -433,7 +433,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         self._git(checkout, "commit", "-q", "-m", "Advance declared branch")
         advanced_head = self._git(checkout, "rev-parse", "HEAD")
 
-        tm.ok(u.Cli.capture(["make", "setup"], cwd=project, env=self._fake_uv(project)))
+        self._setup(project)
 
         tm.that(self._git(checkout, "branch", "--show-current"), eq="declared-dev")
         tm.that(self._git(checkout, "rev-parse", "HEAD"), eq=advanced_head)
@@ -455,7 +455,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         marker.write_text("third-party wip", encoding="utf-8")
         head = self._git(checkout, "rev-parse", "HEAD")
 
-        tm.ok(u.Cli.capture(["make", "setup"], cwd=project, env=self._fake_uv(project)))
+        self._setup(project)
 
         tm.that(self._git(checkout, "branch", "--show-current"), eq="fork-local")
         tm.that(self._git(checkout, "rev-parse", "HEAD"), eq=head)
@@ -481,7 +481,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         self._git(project, "commit", "-q", "-m", "Track superproject branch")
         self._git(project, "submodule", "deinit", "-q", "-f", "--all")
 
-        tm.ok(u.Cli.capture(["make", "setup"], cwd=project, env=self._fake_uv(project)))
+        self._setup(project)
 
         checkout = project / "vendor/source"
         tm.that(self._git(checkout, "branch", "--show-current"), eq="")
@@ -509,9 +509,8 @@ class TestsFlextInfraCodegenSetupSubmodules:
         self._git(project, "commit", "-q", "-m", "pin ahead of origin")
         dirty = checkout / "dirty.txt"
         dirty.write_text("preserve me", encoding="utf-8")
-        environment = self._fake_uv(project)
 
-        result = tm.ok(u.Cli.run_raw(["make", "setup"], cwd=project, env=environment))
+        result = self._setup(project)
 
         tm.that(u.Cli.process_succeeded(result.outcome), eq=True)
         tm.that(dirty.read_text(encoding="utf-8"), eq="preserve me")

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import shlex
-from collections.abc import Mapping
 from pathlib import Path
 from typing import override
 
@@ -28,16 +27,24 @@ class FlextInfraWorkspaceChecker(
     _repository_root: Path
     _registry: FlextInfraGateRegistry
     _default_reports_dir: Path
+    _check_policy: m.Infra.CheckPolicySpec
 
     def __init__(
         self,
         repository_root: Path | None = None,
         *,
         gate_runners: t.MappingKV[str, p.Cli.CommandRunner] | None = None,
+        check_policy: m.Infra.CheckPolicySpec | None = None,
     ) -> None:
         """Initialize workspace checker services and paths."""
+        policy = config.Infra.check_policy if check_policy is None else check_policy
+        unknown = frozenset(policy.gates) - c.Infra.ALLOWED_GATES
+        if unknown:
+            msg = f"global enforcement policy declares unknown gates: {sorted(unknown)}"
+            raise ValueError(msg)
         resolved_root = u.Infra.resolve_repository_root_or_cwd(repository_root)
         super().__init__(repository_root=resolved_root)
+        self._check_policy = policy
         self._repository_root = self.repository_root
         self._registry = FlextInfraGateRegistry(runners=gate_runners)
         report_dir = u.Cli.resolve_report_dir(
@@ -75,13 +82,18 @@ class FlextInfraWorkspaceChecker(
     @override
     def execute(self) -> p.Result[bool]:
         """Execute."""
-        return r[bool].fail("Use execute_command() directly")
+        return r[bool].fail("Use check_payload() directly")
 
     @classmethod
     def execute_payload(cls, params: m.Infra.RunCommand) -> p.Result[bool]:
         """Execute quality gates from the canonical check command payload."""
-        checker = cls(repository_root=params.repository_root)
-        project_targets_result = cls._resolve_project_targets(params)
+        return cls(repository_root=params.repository_root).check_payload(params)
+
+    def check_payload(self, params: m.Infra.RunCommand) -> p.Result[bool]:
+        """Execute with the injected producer policy and preserve raw diagnostics."""
+        if params.repository_root.resolve() != self._repository_root.resolve():
+            return r[bool].fail("check payload and checker repository roots differ")
+        project_targets_result = self._resolve_project_targets(params)
         if project_targets_result.failure:
             return r[bool].from_failure(project_targets_result)
         project_targets = project_targets_result.value
@@ -93,10 +105,10 @@ class FlextInfraWorkspaceChecker(
             reports_dir=params.reports_dir_path,
             apply_fixes=params.apply,
             check_only=params.check_only,
-            ruff_args=tuple(cls.parse_tool_args(params.ruff_args)),
-            pyright_args=tuple(cls.parse_tool_args(params.pyright_args)),
+            ruff_args=tuple(self.parse_tool_args(params.ruff_args)),
+            pyright_args=tuple(self.parse_tool_args(params.pyright_args)),
         )
-        run_result = checker.run_projects(
+        run_result = self.run_projects(
             projects=project_targets,
             gates=gates,
             reports_dir=params.reports_dir_path,
@@ -105,39 +117,12 @@ class FlextInfraWorkspaceChecker(
         )
         if run_result.failure:
             return r[bool].from_failure(run_result)
-        # Operator law 2026-09-22: warning-gate findings stay visible in the
-        # logs and reports but never decide the check verdict. The policy is
-        # owned by the CHECKED repository's config/tooling.yaml when it
-        # declares one (each repo warns its own known debt); the producer's
-        # declared policy is the fallback. Unknown gate ids fail closed so a
-        # typo cannot silently unblock.
-        policy_result = cls._repository_warning_policy(params.repository_root)
-        if policy_result.failure:
-            return r[bool].from_failure(policy_result)
-        warning_gates = policy_result.value
-        unknown_policy_gates = warning_gates - c.Infra.ALLOWED_GATES
-        if unknown_policy_gates:
-            return r[bool].fail(
-                "check policy declares unknown warning gates: "
-                f"{', '.join(sorted(unknown_policy_gates))}"
-            )
-        for project in run_result.value:
-            warned = sorted(
-                gate_id
-                for gate_id, execution in project.gates.items()
-                if gate_id in warning_gates and not execution.result.passed
-            )
-            if warned:
-                u.Cli.info(
-                    f"WARNING: {project.project} non-blocking gate findings: "
-                    f"{', '.join(warned)} (visible in reports; does not fail)"
-                )
         failed_projects = [
             project
             for project in run_result.value
             if any(
-                gate_id not in warning_gates and not execution.result.passed
-                for gate_id, execution in project.gates.items()
+                not execution.result.passed and not self._observe_findings(execution)
+                for execution in project.gates.values()
             )
         ]
         if failed_projects:
@@ -148,41 +133,6 @@ class FlextInfraWorkspaceChecker(
                 f"({total_findings} findings; see the check summary and reports)"
             )
         return r[bool].ok(True)
-
-    @staticmethod
-    def _repository_warning_policy(repository_root: Path) -> p.Result[frozenset[str]]:
-        """Resolve the checked repository's own warning-gate policy.
-
-        ``config/tooling.yaml`` under the checked repository declares the
-        gates whose known debt stays non-blocking FOR THAT REPOSITORY; a
-        repository that declares no policy inherits the producer's declared
-        default. Malformed per-repo declarations fail closed here instead of
-        silently widening the verdict.
-        """
-        policy_path = repository_root / "config" / "tooling.yaml"
-        if not policy_path.is_file():
-            return r[frozenset[str]].ok(
-                frozenset(config.Infra.check_policy.warning_gates)
-            )
-        loaded = u.Cli.config_load(policy_path, expand_env=False)
-        if loaded.failure:
-            return r[frozenset[str]].from_failure(loaded)
-        infra_section = loaded.value.data.get("Infra")
-        if not isinstance(infra_section, Mapping):
-            return r[frozenset[str]].ok(
-                frozenset(config.Infra.check_policy.warning_gates)
-            )
-        policy_section = infra_section.get("check_policy")
-        if policy_section is None:
-            return r[frozenset[str]].ok(
-                frozenset(config.Infra.check_policy.warning_gates)
-            )
-        validated = u.validate_value(m.Infra.CheckPolicySpec, policy_section)
-        if validated.failure:
-            return r[frozenset[str]].fail_op(
-                f"invalid check policy ({policy_path})", validated.error
-            )
-        return r[frozenset[str]].ok(frozenset(validated.value.warning_gates))
 
     @staticmethod
     def _resolve_project_targets(
@@ -240,6 +190,10 @@ class FlextInfraWorkspaceChecker(
         ctx: m.Infra.GateContext | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
         """Run selected gates for multiple projects."""
+        if not projects:
+            return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
+                "quality check selected no projects"
+            )
         resolved_gates_result = self.resolve_gates(gates)
         if resolved_gates_result.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(

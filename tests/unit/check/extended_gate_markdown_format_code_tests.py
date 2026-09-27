@@ -58,6 +58,9 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
 
     def test_format_gate_skips_neutrally_without_markdown(self, tmp_path: Path) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "markdown-format-empty")
+        (project_dir / c.Infra.PRETTIER_CONFIG_FILENAME).write_text(
+            self.PROSE_CONFIG, encoding="utf-8"
+        )
 
         result = u.Tests.check_gate_asserting(
             FlextInfraMarkdownFormatGate,
