@@ -81,41 +81,6 @@ class FlextInfraModelsDepsToolConfig(
     class PytestConfig(m.ArbitraryTypesModel):
         """Pytest baseline settings loaded from YAML."""
 
-        testmon_state_home_variable: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                alias="testmon-state-home-variable",
-                description="Required environment variable owning persistent test state.",
-            ),
-        ]
-        testmon_datafile_variable: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                alias="testmon-datafile-variable",
-                description="pytest-testmon environment variable selecting its database.",
-            ),
-        ]
-        testmon_namespace: Annotated[
-            Path,
-            m.Field(
-                alias="testmon-namespace",
-                description="Relative namespace below the persistent state home.",
-            ),
-        ]
-        testmon_database_filename: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                alias="testmon-database-filename",
-                description="pytest-testmon SQLite database filename.",
-            ),
-        ]
-        testmon_lock_filename: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                alias="testmon-lock-filename",
-                description="Exclusive writer lock filename beside the database.",
-            ),
-        ]
 
         # flext-j47u (codex): every rendered pytest value is validated config data.
         case_timeout_seconds: Annotated[
@@ -340,23 +305,6 @@ class FlextInfraModelsDepsToolConfig(
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
             """Keep item and termination budgets inside the hard invocation cap."""
-            if (
-                self.testmon_namespace.is_absolute()
-                or self.testmon_namespace == Path()
-                or ".." in self.testmon_namespace.parts
-            ):
-                msg = "pytest testmon namespace must be a non-empty relative path"
-                raise ValueError(msg)
-            for field_name, filename in (
-                ("database", self.testmon_database_filename),
-                ("lock", self.testmon_lock_filename),
-            ):
-                if Path(filename).name != filename or filename in {".", ".."}:
-                    msg = f"pytest testmon {field_name} filename must be one basename"
-                    raise ValueError(msg)
-            if self.testmon_database_filename == self.testmon_lock_filename:
-                msg = "pytest testmon database and lock filenames must differ"
-                raise ValueError(msg)
             if self.case_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest case timeout must be less than run timeout"
                 raise ValueError(msg)

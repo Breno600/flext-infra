@@ -29,7 +29,7 @@ class FlextInfraPytestRunnerExecution(
     def _inspect_cache(
         self, *, digest: str | None
     ) -> p.Result[m.Infra.TestmonCacheState]:
-        """Run the SQLite integrity owner for the external database."""
+        """Run the SQLite integrity owner for the testmon database."""
         return FlextInfraTestmonDbInspector(
             repository_root=self.root, db_path=self.testmon_db, pre_run_digest=digest
         ).execute()
@@ -40,7 +40,6 @@ class FlextInfraPytestRunnerExecution(
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
                 self.root / c.Infra.DEFAULT_SRC_DIR
             ),
-            c.Infra.PYTEST_ENV_TESTMON_DATAFILE: str(self.testmon_db),
         }
         if manifest is not None:
             overrides[c.Infra.PYTEST_ENV_COLLECTION_MANIFEST] = str(manifest)
@@ -298,7 +297,6 @@ class FlextInfraPytestRunnerExecution(
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
             ),
         )
-        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
         pre_digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
         cache_restored = False
         if pre_digest is not None:

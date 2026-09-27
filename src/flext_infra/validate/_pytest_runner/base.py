@@ -21,7 +21,6 @@ class FlextInfraPytestRunnerBase(s[int]):
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
-    testmon_db: Annotated[Path, m.Field(description="External persistent testmon DB.")]
     ci_context: Annotated[
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
@@ -42,14 +41,16 @@ class FlextInfraPytestRunnerBase(s[int]):
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
-            testmon_db=Path(
-                cls._environment_value(c.Infra.PYTEST_ENV_TESTMON_DATAFILE)
-            ),
         )
+
+    @property
+    def testmon_db(self) -> Path:
+        """Return pytest-testmon's own default database in the repository root."""
+        return self.root / config.Infra.codegen.make.testmon_cache.database_filename
 
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
-        """Require contained inputs and an external absolute cache path."""
+        """Require repository-contained target and report paths."""
         for name, path in (("target", self.target), ("reports", self.reports)):
             raw = str(path)
             if (
@@ -67,12 +68,6 @@ class FlextInfraPytestRunnerBase(s[int]):
         target_path = self.root / self.target
         if not target_path.is_dir() or target_path.is_symlink():
             msg = f"test target must be an existing directory: {self.target}"
-            raise ValueError(msg)
-        if not self.testmon_db.is_absolute():
-            msg = "TESTMON_DATAFILE must be absolute"
-            raise ValueError(msg)
-        if self.testmon_db.resolve().is_relative_to(self.root.resolve()):
-            msg = "TESTMON_DATAFILE must be outside the repository checkout"
             raise ValueError(msg)
         return self
 

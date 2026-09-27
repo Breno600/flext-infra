@@ -812,7 +812,7 @@ class FlextInfraWorkspaceDetector(
         # that carries .beads/.gitmodules but no .git (a test sandbox, a
         # scratch copy) is ungoverned; asking Git here would discover an
         # ancestor checkout and validate *its* submodules against *this*
-        # .gitmodules (sandbox escape observed under flext/.flext-runtime).
+        # .gitmodules (a sandbox nested inside a workspace checkout).
         if not (resolved_root / ".git").exists():
             return r[t.VariadicTuple[Path]].ok(())
         # Governance is declared, not matched: only a checkout that declares
