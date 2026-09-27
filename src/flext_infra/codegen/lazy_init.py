@@ -36,6 +36,9 @@ class FlextInfraCodegenLazyInit(
     """
 
     _modified_files: t.Infra.StrSet = u.PrivateAttr(default_factory=set)
+    project_scope_root: Path | None = m.Field(
+        default=None, description="Project root selected by self-scoped conformance"
+    )
 
     @property
     def modified_files(self) -> t.StrSequence:
@@ -94,42 +97,8 @@ class FlextInfraCodegenLazyInit(
         return r[m.Infra.CodegenPhaseAnalysis].ok(analysis)
 
     def _plan_in_workspace(self) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
-        """Open Rope once and propagate every planner or filesystem failure.
-
-        Retries the entire planning cycle when snapshot verification detects
-        concurrent input changes (RC-A: deterministic lazy-init under concurrency).
-        """
-        max_retries = (
-            self.lazy_init.planning_max_retries if hasattr(self, "lazy_init") else 1
-        )
-        last_failure: p.Result[m.Infra.CodegenPhaseAnalysis] | None = None
-        for attempt in range(max_retries + 1):
-            try:
-                result = self._plan_attempt()
-            except c.EXC_OS_VALUE as exc:
-                return r[m.Infra.CodegenPhaseAnalysis].fail_op(
-                    "lazy-init planning", exc
-                )
-            if result.success:
-                return result
-            # Retry only on snapshot verification failure (a concurrent input
-            # change). `failure` is the boolean predicate, so the previous form
-            # matched the marker against "True" and never retried; the message
-            # lives in `error`.
-            concurrent_change = "lazy-init source changed during planning" in (
-                result.error or ""
-            )
-            if concurrent_change and attempt < max_retries:
-                u.Cli.info(
-                    "lazy-init: concurrent change detected "
-                    f"(attempt {attempt + 1}/{max_retries + 1}), retrying"
-                )
-                last_failure = result
-                continue
-            return result
-        return last_failure or r[m.Infra.CodegenPhaseAnalysis].fail(
-            "lazy-init planning failed after retries"
-        )
+        """Plan once against a stable snapshot and expose the first failure."""
+        return self._plan_attempt()
 
     def _plan_attempt(self) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Run one planning cycle inside its own Rope workspace."""
@@ -144,12 +113,24 @@ class FlextInfraCodegenLazyInit(
         """Build immutable plans from one stable Rope workspace snapshot."""
         workspace_index = rope.workspace_index
         resolved_repository_root = self.repository_root.resolve()
+        selected_project_root = (
+            self.project_scope_root.resolve()
+            if self.project_scope_root is not None
+            else None
+        )
         indexed_package_dirs = tuple(
             sorted(
                 (
                     package_dir.resolve()
                     for package_dir in workspace_index.package_dirs
                     if package_dir.is_relative_to(resolved_repository_root)
+                    and (
+                        selected_project_root is None
+                        or workspace_index.packages_by_dir[
+                            str(package_dir)
+                        ].project_root
+                        == selected_project_root
+                    )
                     and not frozenset(
                         package_dir.relative_to(resolved_repository_root).parts
                     )

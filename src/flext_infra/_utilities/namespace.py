@@ -232,7 +232,7 @@ class FlextInfraUtilitiesCodegenNamespace:
         package_name = (
             project.package_name
             if project is not None and project.package_name
-            else FlextInfraUtilitiesDiscovery.package_name(resolved_root)
+            else FlextInfraUtilitiesDiscovery.project_package_name(resolved_root)
         )
         if not package_name:
             return None
@@ -266,7 +266,11 @@ class FlextInfraUtilitiesCodegenNamespace:
 
     @classmethod
     def _resolve_family(
-        cls, file_path: Path, *, rope_project: t.Infra.RopeProject
+        cls,
+        file_path: Path,
+        *,
+        rope_project: t.Infra.RopeProject,
+        project_layout: m.Infra.RopeProjectLayout | None = None,
     ) -> t.Quad[str | None, str | None, str | None, t.StrSequence]:
         """Return (family_alias, expected_family, expected_alias, family_tokens)."""
         family_alias = next(
@@ -291,9 +295,13 @@ class FlextInfraUtilitiesCodegenNamespace:
                 else None
             )
         )
-        project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
+        project_root = (
+            project_layout.project_root
+            if project_layout is not None
+            else FlextInfraUtilitiesDiscovery.project_root(file_path)
+        )
         if project_root is not None:
-            layout = cls.layout(project_root)
+            layout = project_layout or cls.layout(project_root)
             direct_tier = file_path.parent.parent == project_root
             public_root = layout is not None and file_path.parent == layout.package_dir
             # A stub is never a facade source: Rope loads only Python sources,
@@ -363,12 +371,18 @@ class FlextInfraUtilitiesCodegenNamespace:
         )
 
     @classmethod
-    def _resolve_project_prefix(cls, file_path: Path) -> str:
+    def _resolve_project_prefix(
+        cls, file_path: Path, *, project_layout: m.Infra.RopeProjectLayout | None = None
+    ) -> str:
         """Derive the class-stem prefix for one file inside a project."""
-        project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
+        project_root = (
+            project_layout.project_root
+            if project_layout is not None
+            else FlextInfraUtilitiesDiscovery.project_root(file_path)
+        )
         if project_root is None:
             return ""
-        layout = cls.layout(project_root)
+        layout = project_layout or cls.layout(project_root)
         if layout is None:
             return ""
         class_stem: str = layout.class_stem
@@ -391,6 +405,7 @@ class FlextInfraUtilitiesCodegenNamespace:
         rope_project: t.Infra.RopeProject,
         rel_path: Path | None = None,
         current_pkg: str = "",
+        project_layout: m.Infra.RopeProjectLayout | None = None,
     ) -> m.Infra.NamespaceModulePolicy:
         """Derive publication from existing declarations, without repair inference."""
         package_name = current_pkg or FlextInfraUtilitiesDiscovery.package_name(
@@ -400,7 +415,9 @@ class FlextInfraUtilitiesCodegenNamespace:
         package_parts = tuple(part for part in package_name.split(".") if part)
 
         family_alias, expected_family, expected_alias, family_tokens = (
-            cls._resolve_family(file_path, rope_project=rope_project)
+            cls._resolve_family(
+                file_path, rope_project=rope_project, project_layout=project_layout
+            )
         )
         (
             is_fixture_module,
@@ -463,12 +480,18 @@ class FlextInfraUtilitiesCodegenNamespace:
                 and len(name) <= c.Infra.MAX_ALIAS_LENGTH
             )
         )
-        project_root = FlextInfraUtilitiesDiscovery.project_root(file_path)
+        project_root = (
+            project_layout.project_root
+            if project_layout is not None
+            else FlextInfraUtilitiesDiscovery.project_root(file_path)
+        )
         return m.Infra.NamespaceModulePolicy(
             enforce_contract=enforce_contract,
             export_symbols=export_symbols,
             include_in_lazy_init=include_in_lazy_init,
-            project_prefix=cls._resolve_project_prefix(file_path),
+            project_prefix=cls._resolve_project_prefix(
+                file_path, project_layout=project_layout
+            ),
             expected_alias=expected_alias,
             expected_family=expected_family,
             is_internal_namespace=project_root is not None

@@ -628,10 +628,10 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(job, has="GITHUB_TOKEN: ${{ github.token }}")
             tm.that(job, has="MISE_GITHUB_TOKEN: ${{ github.token }}")
 
-    def test_ci_matrix_check_uses_ci_token_and_never_runs_test(
+    def test_ci_matrix_checks_each_distro_and_tests_ubuntu(
         self, rendered_project: Path
     ) -> None:
-        """Matrix smoke is help+check under CI=Y; it must never run make test."""
+        """Each distro's smoke is help+check; Ubuntu also runs the full lifecycle."""
         root = rendered_project
         matrix = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
             encoding="utf-8"
@@ -646,10 +646,8 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(smoke, has="make help")
         tm.that(smoke, has="make check")
         tm.that(smoke, lacks="} make test")
-        tm.that(
-            smoke,
-            has="ci-matrix proves bootstrap + check across distros; it never runs make test",
-        )
+        tm.that(smoke, has="make upg && make setup && make gen")
+        tm.that(smoke, has="make check && make test && make build")
         dockerfiles = list(
             (root / "tests" / "fixtures" / "ci" / "docker").glob("*.Dockerfile")
         )

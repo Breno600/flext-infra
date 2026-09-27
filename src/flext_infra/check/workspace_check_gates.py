@@ -239,9 +239,17 @@ class FlextInfraWorkspaceCheckGatesMixin:
     def _check_project_with_ctx(
         self, project_dir: Path, gates: t.StrSequence, ctx: m.Infra.GateContext
     ) -> m.Infra.ProjectResult:
-        """Run gates for one project as independent DAG stages."""
+        """Run gates for one project and surface the first failure in gate order.
+
+        Fixers mutate shared files, so an ``--apply`` run chains every gate on
+        the previous one. Read-only gates share no mutable state and run as one
+        parallel wave; the verdict still reads them in declared order and stops
+        at the first failing gate, so exactly one defect is reported.
+        """
         project_name = project_dir.name
         result = m.Infra.ProjectResult(project=project_name)
+        mutating = ctx.apply_fixes and not ctx.check_only
+        executions: MutableMapping[str, m.Infra.GateExecution] = {}
 
         stages: t.MutableSequenceOf[m.Cli.PipelineStageSpec] = []
         previous_gate_id: str | None = None
@@ -253,10 +261,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 cli.stage(
                     gate_id,
                     handler=self._make_gate_handler(
-                        gate_instance, project_dir, ctx, result.gates
+                        gate_instance, project_dir, ctx, executions
                     ),
                     depends_on=(previous_gate_id,)
-                    if ctx.fail_fast and previous_gate_id is not None
+                    if mutating and previous_gate_id is not None
                     else (),
                 )
             )
@@ -268,6 +276,25 @@ class FlextInfraWorkspaceCheckGatesMixin:
         cli.pipeline(
             stages, context=cli.stage_context(project_dir), logger=self._gate_logger
         )
+        for stage in stages:
+            execution = executions[stage.stage_id]
+            result.gates[stage.stage_id] = execution
+            u.Cli.gate_result(
+                stage.stage_id,
+                execution.error_count,
+                passed=execution.result.passed,
+                elapsed=execution.result.duration,
+            )
+            if not execution.result.passed:
+                for finding in execution.result.errors:
+                    u.Cli.info(finding)
+                # Missing or malformed findings must retain the producer's failure.
+                if execution.raw_output.strip() and (
+                    not execution.result.errors
+                    or any(issue.code == "TOOL_ERROR" for issue in execution.issues)
+                ):
+                    u.Cli.info(execution.raw_output)
+                break
         return result
 
     # ------------------------------------------------------------------
@@ -283,8 +310,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
     ) -> p.Cli.PipelineStage:
         """Build a pipeline stage handler that executes a single gate.
 
-        The handler writes GateExecution into *gates_sink* as a side-effect
-        (same pattern as _CodegenPipelineState in the codegen pipeline).
+        The handler only records the GateExecution into *gates_sink*; reporting
+        happens after the wave, in declared gate order.
         """
         gate_id = gate_instance.gate_id
         project_name = project_dir.name
@@ -304,27 +331,14 @@ class FlextInfraWorkspaceCheckGatesMixin:
             )
             execution = self._execute_gate(gate_instance, project_dir, gate_ctx)
             gates_sink[gate_id] = execution
-            self._gate_logger.debug(
+            self._gate_logger.info(
                 "gate_executed",
                 project=project_name,
                 gate=gate_id,
                 passed=execution.result.passed,
-            )
-            u.Cli.gate_result(
-                gate_id,
-                execution.error_count,
-                passed=execution.result.passed,
                 elapsed=execution.result.duration,
             )
             if not execution.result.passed:
-                for finding in execution.result.errors:
-                    u.Cli.info(finding)
-                # Missing or malformed findings must retain the producer's failure.
-                if execution.raw_output.strip() and (
-                    not execution.result.errors
-                    or any(issue.code == "TOOL_ERROR" for issue in execution.issues)
-                ):
-                    u.Cli.info(execution.raw_output)
                 return r[m.Cli.PipelineStageResult].fail(
                     f"{gate_id} failed for {project_name} "
                     f"with {len(execution.issues)} findings"

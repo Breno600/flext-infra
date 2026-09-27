@@ -465,6 +465,11 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         @property
+        def ast_grep_selector(self) -> str:
+            """Mise selector for the ast-grep CLI."""
+            ...
+
+        @property
         def ast_grep_version(self) -> str:
             """Exact ast-grep analyzer version."""
             ...
