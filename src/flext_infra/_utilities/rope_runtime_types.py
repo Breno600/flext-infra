@@ -53,9 +53,7 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         return isinstance(value, cls.runtime_type("rope.base.pyobjects", "PyClass"))
 
     @classmethod
-    def abstract_class(
-        cls, value: p.AttributeProbe
-    ) -> TypeGuard[t.Infra.RopePyObject]:
+    def abstract_class(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
         """Return whether ``value`` is a Rope abstract class object."""
         return isinstance(
             value, cls.runtime_type("rope.base.pyobjects", "AbstractClass")

@@ -450,9 +450,7 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(content, has="cp -R /source/. /workspace/")
             # The source tree arrives only through the read-only bind mount;
             # the one COPY brings .git from the named build context.
-            copies = [
-                line for line in content.splitlines() if line.startswith("COPY")
-            ]
+            copies = [line for line in content.splitlines() if line.startswith("COPY")]
             tm.that(len(copies), eq=1)
             tm.that(copies[0], has="--from=git")
             tm.that(copies[0], has="/workspace/.git/")
@@ -473,14 +471,10 @@ class TestsFlextInfraCodegenCiMatrix:
         root = rendered_project
         docker_dir = root / "tests" / "fixtures" / "ci" / "docker"
         for distro in ("ubuntu", "debian", "fedora"):
-            content = (docker_dir / f"{distro}.Dockerfile").read_text(
-                encoding="utf-8"
-            )
+            content = (docker_dir / f"{distro}.Dockerfile").read_text(encoding="utf-8")
             tm.that(content, has="libatomic", msg=distro)
         for distro in ("alpine", "arch"):
-            content = (docker_dir / f"{distro}.Dockerfile").read_text(
-                encoding="utf-8"
-            )
+            content = (docker_dir / f"{distro}.Dockerfile").read_text(encoding="utf-8")
             tm.that("libatomic" not in content, eq=True, msg=distro)
 
     def test_dockerfiles_render_byte_idempotently(self, tmp_path: Path) -> None:

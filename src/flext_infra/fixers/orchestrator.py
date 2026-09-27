@@ -21,7 +21,6 @@ from .rope_fixer import FlextInfraRopeFixerAdapter
 from .transformer_fixer import FlextInfraTransformerFixerAdapter
 
 if TYPE_CHECKING:
-
     from .base import FlextInfraFixerAdapter
 
 

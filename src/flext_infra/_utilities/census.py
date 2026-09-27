@@ -157,8 +157,10 @@ class FlextInfraUtilitiesRefactorCensus:
         resource = rope.resource(file_path)
         if resource is None:
             return ()
-        declared_imports = FlextInfraUtilitiesRopeAnalysis.resolve_declared_module_imports(
-            rope.rope_project, resource
+        declared_imports = (
+            FlextInfraUtilitiesRopeAnalysis.resolve_declared_module_imports(
+                rope.rope_project, resource
+            )
         )
         alias_names = tuple(
             local_name

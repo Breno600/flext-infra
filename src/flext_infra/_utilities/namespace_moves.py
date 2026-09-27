@@ -923,11 +923,15 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         with FlextInfraUtilitiesRopeCore.open_project(project_root) as rope_project:
             mappings: t.MutableSequenceOf[t.Triple[str, str, t.VariadicTuple[str]]] = []
             for source, target, names in moves:
-                source_resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                    rope_project, source
+                source_resource = (
+                    FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
+                        rope_project, source
+                    )
                 )
-                target_resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
-                    rope_project, target
+                target_resource = (
+                    FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
+                        rope_project, target
+                    )
                 )
                 if source_resource is None or target_resource is None:
                     continue

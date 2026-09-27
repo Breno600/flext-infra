@@ -197,9 +197,7 @@ class FlextInfraModelsMiseToolchain:
         ]
         npm_package_manager: Annotated[
             Literal["aube"],
-            m.Field(
-                description="Mise npm installer with a locked dependency graph"
-            ),
+            m.Field(description="Mise npm installer with a locked dependency graph"),
         ]
         qlty_selector: Annotated[
             t.NonEmptyStr,

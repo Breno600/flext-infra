@@ -593,11 +593,6 @@ Infra:
           # scripts/legado/dispatch.py.
           project-shared-search-paths: []
       pytest:
-        testmon-state-home-variable: XDG_STATE_HOME
-        testmon-datafile-variable: TESTMON_DATAFILE
-        testmon-namespace: flext/testmon
-        testmon-database-filename: .testmondata
-        testmon-lock-filename: cache.lock
         # flext-j47u (codex): scaffold/modernizer consume one complete pytest model.
         # A case that does not fit is a test defect to optimize. Fifteen
         # seconds still fails a blocked filesystem

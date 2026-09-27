@@ -225,9 +225,7 @@ class FlextInfraClassPlacementDetector:
                 if not isinstance(class_body, (list, tuple)):
                     return ()
                 return tuple(
-                    body_node
-                    for body_node in class_body
-                    if u.Infra.ast_node(body_node)
+                    body_node for body_node in class_body if u.Infra.ast_node(body_node)
                 )
         return ()
 

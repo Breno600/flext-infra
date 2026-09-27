@@ -56,7 +56,9 @@ class FlextInfraUtilitiesSemanticHelperReferences(
                 else None,
             )
             if expression is not None and path != request.target_file:
-                changed = runtime.build_string_module(project, updated, resource=resource)
+                changed = runtime.build_string_module(
+                    project, updated, resource=resource
+                )
                 updated, binding = runtime.import_binding(
                     project, changed, target.get_name(), request.class_name
                 )
@@ -176,7 +178,9 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             expression = quoted_imports.get(path)
             if expression is None:
                 resource = snapshot.get_resource(path.relative_to(root).as_posix())
-                module = runtime.build_string_module(snapshot, source, resource=resource)
+                module = runtime.build_string_module(
+                    snapshot, source, resource=resource
+                )
                 _, expression = runtime.import_binding(
                     snapshot, module, target, request.class_name
                 )

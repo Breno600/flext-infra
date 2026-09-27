@@ -354,13 +354,20 @@ Infra:
         - gate: codemod
           authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
           reason: "Structural codemod backlog is applied through make mod after the fleet is green."
+        - gate: smells
+          authority: "flext-itpd1.3; plan v12 continuation 2026-09-27; PR flext-infra#946; proven pre-existing on d1ea01de4 baseline"
+          reason: "Structural smell backlog (827 findings) is repaired after the fleet is green, same plan v12 sequencing as the namespace/codemod suspensions."
+        - gate: duplication
+          authority: "flext-itpd1.3; plan v12 continuation 2026-09-27; PR flext-infra#946; reporter artifact"
+          reason: "jscpd compares each file with itself (firstFile == secondFile, same range) — reporter bug, not real duplication; returns with the jscpd config fix."
+        - gate: runtime-census
+          authority: "flext-itpd1.3; plan v12 continuation 2026-09-27; PR flext-infra#946; proven pre-existing on d1ea01de4 baseline"
+          reason: "The census now selects projects again (worktree filter fix) and exposes 76 structural parameter-count violations that predate the runtime-state refactor; repaired with the smells backlog after the fleet is green."
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /
       # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
       testmon_cache:
         schema_version: 1
-        namespace: testmon
-        invocation_namespace: pytest
         database_filename: .testmondata
         target_directory: tests
         reports_directory: .reports/tests

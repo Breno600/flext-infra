@@ -661,7 +661,9 @@ class FlextInfraUtilitiesCodegenNamespace:
                 return
             source = resource.read()
             class_infos = sorted(
-                FlextInfraUtilitiesRopeAnalysis.resolve_class_info(rope_project, resource),
+                FlextInfraUtilitiesRopeAnalysis.resolve_class_info(
+                    rope_project, resource
+                ),
                 key=operator.attrgetter("line"),
             )
             if not class_infos:
