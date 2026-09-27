@@ -271,14 +271,18 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @classmethod
     def runtime_environment_dir(cls, project_root: Path) -> Path:
-        """Resolve the physical environment shared by an attached member and its root."""
+        """Resolve a project's physical environment outside its checkout."""
         resolved_project = project_root.resolve()
         runtime_root = resolved_project
         if (resolved_project / ".git").is_file():
             identity = FlextInfraUtilitiesGit.git_identity(
                 m.Infra.GitRepoRequest(repo_root=resolved_project)
             ).unwrap()
-            runtime_root = identity.superproject_root or resolved_project
+            superproject_root = identity.superproject_root
+            if superproject_root is not None and resolved_project.is_relative_to(
+                superproject_root
+            ):
+                runtime_root = superproject_root
         return cls.external_tool_state_dir(runtime_root, resolved_project, "venv")
 
 

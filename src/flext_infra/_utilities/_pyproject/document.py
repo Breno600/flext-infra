@@ -54,8 +54,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         public conformers: the message each reports for an unparsable render.
         """
         provenance_result = cls._validate_dependency_provenance(
-            document,
-            workspace=workspace,
+            document, workspace=workspace
         )
         if provenance_result.failure:
             return r[str].from_failure(provenance_result)
@@ -78,7 +77,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         namespace_scan_dirs: t.StrSequence | None = None,
         declared_sources: t.StrMapping | None = None,
     ) -> p.Result[str]:
-        """Return canonical TOML with autonomous dependencies and root workspace."""
+        """Return canonical TOML with each project's declared Git dependencies."""
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
             return r[str].from_failure(parsed)
@@ -86,8 +85,6 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         cls._sync_dependency_groups(
             source,
             project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
             required_dev_dependencies=required_dev_dependencies,
         )
         normalized = cls._normalize_requirements(
@@ -140,8 +137,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             return r[str].from_failure(parsed)
         source, project_name = parsed.value
         provenance_result = cls._validate_dependency_provenance(
-            source,
-            workspace=workspace,
+            source, workspace=workspace
         )
         if provenance_result.failure:
             return r[str].from_failure(provenance_result)
@@ -155,9 +151,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             if sources_result.failure:
                 return r[str].from_failure(sources_result)
         normalized = cls._normalize_requirements(
-            source,
-            workspace=workspace,
-            canonicalize_all=False,
+            source, workspace=workspace, canonicalize_all=False
         )
         if normalized.failure:
             return r[str].from_failure(normalized)

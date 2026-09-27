@@ -53,19 +53,14 @@ class FlextInfraAccessorMigrationRewriteMixin:
         changes: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
         for rule in self._AUTOMATED_RULES:
             updated_source, rule_changes = self._rename_symbol_tokens(
-                updated_source,
-                rule=rule,
-                file_path=py_file,
+                updated_source, rule=rule, file_path=py_file
             )
             changes.extend(rule_changes)
         return updated_source, changes
 
     @staticmethod
     def _rename_symbol_tokens(
-        source: str,
-        *,
-        rule: m.Infra.AccessorMigrationRule,
-        file_path: Path,
+        source: str, *, rule: m.Infra.AccessorMigrationRule, file_path: Path
     ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]:
         """Rename symbol tokens."""
         token_lines: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []

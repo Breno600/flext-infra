@@ -51,7 +51,9 @@ class TestsFlextInfraCodegenVscode:
         projected_path = str(doc[setting])
         tm.that(projected_path.startswith("${workspaceFolder}/"), eq=True)
         tm.that(
-            (project_root / projected_path.removeprefix("${workspaceFolder}/")).resolve(),
+            (
+                project_root / projected_path.removeprefix("${workspaceFolder}/")
+            ).resolve(),
             eq=infra_u.Infra.runtime_environment_dir(project_root),
         )
         search_paths = u.Tests.toml_strings(

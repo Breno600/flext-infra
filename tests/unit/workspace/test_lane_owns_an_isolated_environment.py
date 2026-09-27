@@ -40,9 +40,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
             '"$${GNUMAKEFLAGS-unset}" "$${PYTHONPATH-unset}" >> setup-runs.log\n',
             encoding="utf-8",
         )
-        (repository / ".gitignore").write_text(
-            "setup-runs.log\n", encoding="utf-8"
-        )
+        (repository / ".gitignore").write_text("setup-runs.log\n", encoding="utf-8")
         u.Tests.initialize_git_repo(repository)
         return repository
 
@@ -80,7 +78,9 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         self, tmp_path: Path
     ) -> None:
         repository = self._repository(tmp_path)
-        primary_sentinel = infra_u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
+        primary_sentinel = (
+            infra_u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
+        )
         primary_sentinel.parent.mkdir()
         primary_sentinel.write_text("untouched\n", encoding="utf-8")
         lane = self._lane(repository, "feature/isolated-environment")

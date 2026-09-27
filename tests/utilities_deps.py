@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from flext_infra import config, u
-from tests import c, m, p, t
+from tests import m, p, t
 
 
 class TestsFlextInfraUtilitiesDepsMixin:
@@ -42,8 +42,10 @@ class TestsFlextInfraUtilitiesDepsMixin:
         }
         if env is not None:
             environment.update(env)
-        python = runtime / ("Scripts" if os.name == "nt" else "bin") / (
-            "python.exe" if os.name == "nt" else "python"
+        python = (
+            runtime
+            / ("Scripts" if os.name == "nt" else "bin")
+            / ("python.exe" if os.name == "nt" else "python")
         )
         result = u.Cli.run_raw(
             [

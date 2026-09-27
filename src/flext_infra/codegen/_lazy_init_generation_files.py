@@ -49,9 +49,7 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
 
     @classmethod
     def _snapshot_planner_inputs(
-        cls,
-        index: m.Infra.RopeWorkspaceIndex,
-        package_dirs: t.SequenceOf[Path],
+        cls, index: m.Infra.RopeWorkspaceIndex, package_dirs: t.SequenceOf[Path]
     ) -> p.Result[MutableMapping[Path, m.Cli.AtomicFileState]]:
         """Snapshot Python, project, target, and template inputs before planning."""
         selected_dirs = frozenset(package_dirs)
