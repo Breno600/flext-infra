@@ -21,7 +21,6 @@ from libcst.metadata import (
 
 from flext_infra import c, t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 from ._canonical_t_import import FlextInfraEnsureCanonicalTImportMixin
 from ._import_facades import FlextInfraRefactorImportFacades
 from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
@@ -32,7 +31,7 @@ if TYPE_CHECKING:
 
 class FlextInfraRefactorTypingUnifier(
     FlextInfraEnsureCanonicalTImportMixin,
-    FlextInfraRopeTransformer,
+    u.Infra.Transformer,
     FlextInfraRefactorTypingUnifierRewriteMixin,
 ):
     """Unify bound type expressions and modernize module TypeAlias declarations."""

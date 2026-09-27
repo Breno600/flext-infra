@@ -76,6 +76,7 @@ from ._utilities.semantic_cutover import FlextInfraUtilitiesSemanticCutover
 from ._utilities.signature_rules import FlextInfraUtilitiesSignatureRules
 from ._utilities.silent_failure_ast import FlextInfraUtilitiesSilentFailureAst
 from ._utilities.transformer_header import FlextInfraUtilitiesTransformerHeader
+from ._utilities.transformer_base import FlextInfraRopeTransformer
 from ._utilities.versioning import FlextInfraUtilitiesVersioning
 from ._utilities.workspace_fingerprint import FlextInfraUtilitiesWorkspaceFingerprint
 from ._utilities.workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
@@ -163,6 +164,8 @@ class FlextInfraUtilities(cli_u):
         FlextInfraUtilitiesPrivateImportFacades,
     ):
         """Infrastructure-domain utilities - all methods exposed directly."""
+
+        Transformer = FlextInfraRopeTransformer
 
 
 u = FlextInfraUtilities

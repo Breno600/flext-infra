@@ -18,12 +18,11 @@ from libcst.metadata import (
 
 from flext_infra import c, t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 from ._import_facades import FlextInfraRefactorImportFacades
 from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
 
 
-class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
+class FlextInfraRefactorImportModernizer(u.Infra.Transformer):
     """Rewrite imports and bound uses atomically, including quoted type positions."""
 
     class _ImportStatements(cst.CSTTransformer):

@@ -34,7 +34,6 @@ from .base import FlextInfraFixerAdapter
 if TYPE_CHECKING:
     from flext_infra import p, t
 
-    from .._utilities.transformer_base import FlextInfraRopeTransformer
 
 
 class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
@@ -52,7 +51,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
 
     # Canonical transformer registry. New deterministic transformers register here.
     _TRANSFORMERS: ClassVar[
-        t.MutableMappingKV[str, type[FlextInfraRopeTransformer]]
+        t.MutableMappingKV[str, type[u.Infra.Transformer]]
     ] = {
         "compatibility_alias": FlextInfraRefactorCompatibilityAlias,
         "future_import": FlextInfraRefactorFutureImport,
@@ -232,7 +231,7 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
     def _fix_file(
         self,
         file_path: Path,
-        transformer_cls: type[FlextInfraRopeTransformer],
+        transformer_cls: type[u.Infra.Transformer],
         fix_action: m.EnforcementFixAction | None,
         ctx: m.Infra.FixEnforcementCommand,
         *,
@@ -360,10 +359,10 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
 
     @staticmethod
     def _build_transformer(
-        transformer_cls: type[FlextInfraRopeTransformer],
+        transformer_cls: type[u.Infra.Transformer],
         fix_action: m.EnforcementFixAction,
         file_path: Path,
-    ) -> FlextInfraRopeTransformer:
+    ) -> u.Infra.Transformer:
         """Instantiate a transformer with params declared in the catalog."""
         params = dict(fix_action.params)
         if transformer_cls is FlextInfraRefactorTypingUnifier:

@@ -9,13 +9,8 @@ if TYPE_CHECKING:
     from flext_infra import t
 
 
-class FlextInfraChangeTrackingTransformer:
-    """Mixin providing change-tracking with optional callback.
-
-    Provides ``changes`` list and ``_record_change`` method.
-    Subclasses that need a rope ``transform()`` contract should
-    inherit :class:`FlextInfraRopeTransformer` instead.
-    """
+class FlextInfraRopeTransformer:
+    """Base for rope transformers with change tracking and callback delivery."""
 
     def __init__(self, *, on_change: t.Infra.ChangeCallback = None) -> None:
         """Initialize change tracking with an optional callback."""
@@ -27,16 +22,6 @@ class FlextInfraChangeTrackingTransformer:
         self.changes.append(message)
         if self._on_change is not None:
             self._on_change(message)
-
-
-class FlextInfraRopeTransformer(FlextInfraChangeTrackingTransformer):
-    """Base for all rope transformers — tracks changes and invokes callback.
-
-    Subclasses that follow the ``read → apply_to_source → write`` pattern
-    need only implement ``apply_to_source`` and set ``_description``.
-    The default ``transform()`` handles the boilerplate.
-    """
-
     _description: str = "transformation"
 
     @abstractmethod
@@ -56,4 +41,4 @@ class FlextInfraRopeTransformer(FlextInfraChangeTrackingTransformer):
         return updated, changes
 
 
-__all__: list[str] = ["FlextInfraChangeTrackingTransformer"]
+__all__: list[str] = ["FlextInfraRopeTransformer"]

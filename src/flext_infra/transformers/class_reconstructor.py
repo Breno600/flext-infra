@@ -7,10 +7,9 @@ from typing import override
 
 from flext_infra import c, m, t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 
 
-class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
+class FlextInfraRefactorClassReconstructor(u.Infra.Transformer):
     """Reorder class methods based on declarative ordering configuration.
 
     Uses rope's ``PyClass.get_attributes()`` and ``Scope.get_start()`` /

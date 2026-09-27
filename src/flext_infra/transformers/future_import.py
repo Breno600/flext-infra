@@ -10,10 +10,9 @@ from typing import override
 
 from flext_infra import t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 
 
-class FlextInfraRefactorFutureImport(FlextInfraRopeTransformer):
+class FlextInfraRefactorFutureImport(u.Infra.Transformer):
     """Ensure the leading ``from __future__ import annotations`` line exists."""
 
     _description = "insert from __future__ import annotations"

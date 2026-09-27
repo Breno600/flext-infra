@@ -9,12 +9,11 @@ from __future__ import annotations
 import ast
 from typing import ClassVar, Literal, override
 
-from flext_infra import t
-
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from flext_infra import t, u
 
 
-class FlextInfraRefactorOpenEncoding(FlextInfraRopeTransformer):
+
+class FlextInfraRefactorOpenEncoding(u.Infra.Transformer):
     """Inject ``encoding="utf-8"`` into text-mode ``open()`` calls that omit it."""
 
     _description = "add encoding to text-mode open() calls"

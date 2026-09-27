@@ -9,9 +9,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, t
+from flext_infra import c, t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 from ._canonical_t_import import FlextInfraEnsureCanonicalTImportMixin
 
 if TYPE_CHECKING:
@@ -19,7 +18,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraRefactorPatternTransformer(
-    FlextInfraEnsureCanonicalTImportMixin, FlextInfraRopeTransformer
+    FlextInfraEnsureCanonicalTImportMixin, u.Infra.Transformer
 ):
     """Apply declarative regex substitutions declared in enforcement catalog rules.
 

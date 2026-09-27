@@ -7,12 +7,11 @@ from __future__ import annotations
 
 from typing import override
 
-from flext_infra import c, t
-
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from flext_infra import c, t, u
 
 
-class FlextInfraRefactorImportBypassRemover(FlextInfraRopeTransformer):
+
+class FlextInfraRefactorImportBypassRemover(u.Infra.Transformer):
     """Replace import bypass try/except blocks with the primary import."""
 
     @override

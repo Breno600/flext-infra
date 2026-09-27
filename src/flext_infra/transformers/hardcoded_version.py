@@ -9,12 +9,11 @@ from __future__ import annotations
 import re
 from typing import override
 
-from flext_infra import t
-
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from flext_infra import t, u
 
 
-class FlextInfraRefactorHardcodedVersion(FlextInfraRopeTransformer):
+
+class FlextInfraRefactorHardcodedVersion(u.Infra.Transformer):
     r"""Detect hardcoded ``__version__ = \"...\"`` assignments.
 
     This transformer is **not safe**: it only reports the violation because

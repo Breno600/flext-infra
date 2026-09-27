@@ -22,9 +22,8 @@ import ast
 import re
 from typing import ClassVar, final, override
 
-from flext_infra import t
+from flext_infra import t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 from ._rewrite import FlextInfraSourceRewrite, FlextInfraSourceRewriter
 
 _PRIMITIVE_TOKENS: frozenset[str] = frozenset({
@@ -49,7 +48,7 @@ def _is_serializable_annotation(annotation_text: str) -> bool:
 
 
 @final
-class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
+class FlextInfraRefactorDataclassModelizer(u.Infra.Transformer):
     """AST-driven transformer converting safe frozen dataclasses to m.FrozenModel."""
 
     _description = (

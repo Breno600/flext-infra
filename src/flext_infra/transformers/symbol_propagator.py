@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from typing import override
 
-from flext_infra import c, t
-
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from flext_infra import c, t, u
 
 
-class FlextInfraRefactorSymbolPropagator(FlextInfraRopeTransformer):
+
+class FlextInfraRefactorSymbolPropagator(u.Infra.Transformer):
     """Propagate import/symbol renames safely using rope import manipulation.
 
     Handles three kinds of rename:

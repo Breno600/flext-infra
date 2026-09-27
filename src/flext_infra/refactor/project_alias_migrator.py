@@ -15,13 +15,12 @@ import libcst as cst
 
 from flext_infra import c, m, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
-class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
+class FlextInfraRefactorProjectAliasMigrator(u.Infra.Transformer):
     """Migrate cross-project alias imports to the canonical policy owner.
 
     Rewrites ``import``/``from`` statements that reach a module through a

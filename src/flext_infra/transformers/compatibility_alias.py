@@ -15,10 +15,9 @@ from typing import override
 
 from flext_infra import c, t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 
 
-class FlextInfraRefactorCompatibilityAlias(FlextInfraRopeTransformer):
+class FlextInfraRefactorCompatibilityAlias(u.Infra.Transformer):
     """Remove compatibility aliases and rewrite references to canonical names."""
 
     _description = "remove compatibility aliases and rewrite references"

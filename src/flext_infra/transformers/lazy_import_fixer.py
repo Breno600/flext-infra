@@ -10,10 +10,9 @@ from typing import override
 
 from flext_infra import c, t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 
 
-class FlextInfraRefactorLazyImportFixer(FlextInfraRopeTransformer):
+class FlextInfraRefactorLazyImportFixer(u.Infra.Transformer):
     """Hoist function-local imports to module top while preserving ordering."""
 
     @override

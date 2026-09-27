@@ -11,12 +11,11 @@ from typing import override
 
 import libcst as cst
 
-from flext_infra import t
-
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from flext_infra import t, u
 
 
-class FlextInfraRefactorMroRemover(FlextInfraRopeTransformer):
+
+class FlextInfraRefactorMroRemover(u.Infra.Transformer):
     """Delete empty inner classes that re-inherit their enclosing class."""
 
     _description = "remove redundant inner namespace classes"

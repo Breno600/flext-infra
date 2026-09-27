@@ -244,23 +244,37 @@ class FlextInfraWorkspaceCheckGatesMixin:
         result = m.Infra.ProjectResult(project=project_name)
 
         stages: t.MutableSequenceOf[m.Cli.PipelineStageSpec] = []
-        previous_gate_id: str | None = None
-        for gate_id in gates:
-            gate_instance = self._registry.create(gate_id, self._repository_root)
-            if gate_instance is None:
-                continue
-            stages.append(
-                cli.stage(
-                    gate_id,
-                    handler=self._make_gate_handler(
-                        gate_instance, project_dir, ctx, result.gates
-                    ),
-                    depends_on=(previous_gate_id,)
-                    if ctx.fail_fast and previous_gate_id is not None
-                    else (),
+        previous_phase: t.StrSequence = ()
+        type_gate_ids = frozenset({
+            FlextInfraPyreflyGate.gate_id,
+            FlextInfraMypyGate.gate_id,
+            FlextInfraPyrightGate.gate_id,
+        })
+        index = 0
+        while index < len(gates):
+            gate_id = gates[index]
+            phase_end = index + 1
+            if gate_id in type_gate_ids:
+                while phase_end < len(gates) and gates[phase_end] in type_gate_ids:
+                    phase_end += 1
+            phase = tuple(gates[index:phase_end])
+            for phase_gate_id in phase:
+                gate_instance = self._registry.create(
+                    phase_gate_id, self._repository_root
                 )
-            )
-            previous_gate_id = gate_id
+                if gate_instance is None:
+                    continue
+                stages.append(
+                    cli.stage(
+                        phase_gate_id,
+                        handler=self._make_gate_handler(
+                            gate_instance, project_dir, ctx, result.gates
+                        ),
+                        depends_on=tuple(previous_phase) if ctx.fail_fast else (),
+                    )
+                )
+            previous_phase = phase
+            index = phase_end
 
         if not stages:
             return result

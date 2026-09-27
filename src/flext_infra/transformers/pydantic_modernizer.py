@@ -18,13 +18,12 @@ from __future__ import annotations
 import ast
 from typing import ClassVar, override
 
-from flext_infra import t
+from flext_infra import t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 from ._rewrite import FlextInfraSourceRewriter
 
 
-class FlextInfraRefactorPydanticModernizer(FlextInfraRopeTransformer):
+class FlextInfraRefactorPydanticModernizer(u.Infra.Transformer):
     """AST-driven transformer for Pydantic v2 migration."""
 
     _description = "migrate Pydantic v1/legacy patterns to v2 canonical forms"
