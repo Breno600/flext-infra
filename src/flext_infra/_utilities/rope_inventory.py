@@ -29,7 +29,9 @@ class FlextInfraUtilitiesRopeInventory:
     ) -> t.VariadicTuple[m.Infra.Object]:
         """Return all same-file defined objects for one Rope module."""
         try:
-            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
+            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
+                rope_project, resource
+            )
         except FlextInfraUtilitiesRopeRuntime.rope_runtime_errors() as exc:
             msg = (
                 "rope inventory failed to load "
@@ -355,10 +357,7 @@ class FlextInfraUtilitiesRopeInventory:
                 result = "attribute"
             elif scope_chain:
                 result = "local" if not name.isupper() else "constant"
-            elif (
-                FlextInfraUtilitiesRopeRuntime.defined_name(pyname)
-                and name.isupper()
-            ):
+            elif FlextInfraUtilitiesRopeRuntime.defined_name(pyname) and name.isupper():
                 result = "constant"
             else:
                 result = "assignment"

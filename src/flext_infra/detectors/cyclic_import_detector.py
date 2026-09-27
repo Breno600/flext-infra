@@ -61,7 +61,9 @@ class FlextInfraCyclicImportDetector:
                 )
                 if resolved_file in source_updates
                 else tuple(
-                    u.Infra.resolve_semantic_module_imports(rope_project, resource).values()
+                    u.Infra.resolve_semantic_module_imports(
+                        rope_project, resource
+                    ).values()
                 )
             )
             for semantic_target in semantic_targets:

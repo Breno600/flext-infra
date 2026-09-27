@@ -109,14 +109,18 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                             "repository)"
                         ),
                         FlextInfraCodegenLazyInit,
-                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenLazyInit.execute),
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraCodegenLazyInit.execute
+                        ),
                         "lazy-init complete",
                     ),
                     (
                         "census",
                         "Count namespace violations across workspace projects",
                         FlextInfraCodegenCensus,
-                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenCensus.execute),
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraCodegenCensus.execute
+                        ),
                         None,
                     ),
                     (
@@ -132,21 +136,27 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "auto-fix",
                         "Auto-fix namespace violations (move Finals/TypeVars)",
                         FlextInfraCodegenFixer,
-                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenFixer.execute),
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraCodegenFixer.execute
+                        ),
                         None,
                     ),
                     (
                         "py-typed",
                         "Create/remove PEP 561 py.typed markers",
                         FlextInfraCodegenPyTyped,
-                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenPyTyped.execute),
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraCodegenPyTyped.execute
+                        ),
                         "py-typed markers updated",
                     ),
                     (
                         "pipeline",
                         "Run full codegen pipeline",
                         FlextInfraCodegenPipeline,
-                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenPipeline.execute),
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraCodegenPipeline.execute
+                        ),
                         None,
                     ),
                     (
@@ -171,7 +181,9 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                         "layout",
                         "Check/apply the canonical project layout (SSOT-driven)",
                         FlextInfraCodegenLayout,
-                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenLayout.execute),
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraCodegenLayout.execute
+                        ),
                         "layout conformance complete",
                     ),
                     (

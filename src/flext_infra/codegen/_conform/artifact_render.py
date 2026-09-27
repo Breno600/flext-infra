@@ -227,10 +227,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[p.Model].ok(
                 m.Infra.EnvrcRenderSpec(
                     repository_root_rel=self._repository_root_rel(workspace),
-                    state_directory_name=codegen.toolchain.state_directory_name,
-                    scratch_namespace=codegen.toolchain.scratch_namespace,
-                    scratch_home_relative=(codegen.toolchain.scratch_home_relative),
-                    pycache_namespace=codegen.toolchain.pycache_namespace,
                     environment_path_prepends=(
                         codegen.toolchain.environment_path_prepends
                     ),
@@ -258,7 +254,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
         if destination == c.Infra.BEADS_CONFIG_RELPATH:
             if target.beads is None:
-                return r[p.Model].fail("Beads rendering requires enabled Beads identity")
+                return r[p.Model].fail(
+                    "Beads rendering requires enabled Beads identity"
+                )
             project_types = target.beads.custom_issue_types
             required_types = codegen.toolchain.beads.required_custom_types
             beads = codegen.toolchain.beads
@@ -279,7 +277,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             )
         if destination == c.Infra.BEADS_METADATA_RELPATH:
             if target.beads is None:
-                return r[p.Model].fail("Beads rendering requires enabled Beads identity")
+                return r[p.Model].fail(
+                    "Beads rendering requires enabled Beads identity"
+                )
             # Why: this marker is regenerated on every `make gen`, but the
             # ledger identity inside it is owned by the checkout, not by the
             # fleet SSOT. Rendering without it stripped the key, and Beads then
@@ -328,7 +328,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         ))
                     ),
                     python_version=codegen.toolchain.python_version,
-                    state_directory_name=codegen.toolchain.state_directory_name,
                     github_actions=codegen.github_actions,
                     make=codegen.make,
                     workspace_repositories=workspace_repositories,
@@ -393,9 +392,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     pytest=config.Infra.tooling.tools.pytest,
                     mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                     dist=dist,
-                    state_directory_name=codegen.toolchain.state_directory_name,
-                    scratch_namespace=codegen.toolchain.scratch_namespace,
-                    scratch_home_relative=codegen.toolchain.scratch_home_relative,
                     infra_cli=config.Infra.name,
                     make_profile=profile,
                     makefile_custom_include=c.Infra.MAKEFILE_CUSTOM_INCLUDE,

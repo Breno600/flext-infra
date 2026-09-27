@@ -64,10 +64,6 @@ class FlextInfraUtilitiesCodegen(
         """Return the sole typed context every generated ``.envrc`` renders from."""
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
-            state_directory_name=toolchain.state_directory_name,
-            scratch_namespace=toolchain.scratch_namespace,
-            scratch_home_relative=toolchain.scratch_home_relative,
-            pycache_namespace=toolchain.pycache_namespace,
             environment_path_prepends=toolchain.environment_path_prepends,
             mise_bootstrap=FlextInfraUtilitiesCodegen.mise_bootstrap_environment(),
         )

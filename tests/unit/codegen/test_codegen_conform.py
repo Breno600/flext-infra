@@ -880,7 +880,9 @@ class TestsFlextInfraCodegenConform:
         u.Tests.commit_git_changes(root, "Seed generated project")
         route = next(
             route
-            for route in FlextInfraCodegenRoutes.codegen_routes[c.Infra.CLI_GROUP_CODEGEN]
+            for route in FlextInfraCodegenRoutes.codegen_routes[
+                c.Infra.CLI_GROUP_CODEGEN
+            ]
             if route.name == "conform"
         )
         request = u.Tests.conform_request(
