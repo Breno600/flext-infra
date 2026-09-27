@@ -699,7 +699,9 @@ class FlextInfraUtilitiesDocsRender:
         """Return the generated root API overview page."""
         data = contract
         classes = (
-            ", ".join(f"`{entry.project_class}`={entry.count}" for entry in class_counts)
+            ", ".join(
+                f"`{entry.project_class}`={entry.count}" for entry in class_counts
+            )
             or "_none_"
         )
         return FlextInfraUtilitiesDocsRender._render_markdown([

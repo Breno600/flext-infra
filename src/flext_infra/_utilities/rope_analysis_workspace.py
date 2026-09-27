@@ -94,7 +94,9 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         directory: Path, repository_root: Path, governed_roots: frozenset[Path]
     ) -> bool:
         """Memoize Git boundaries by directory for one workspace index."""
-        if directory == repository_root or not directory.is_relative_to(repository_root):
+        if directory == repository_root or not directory.is_relative_to(
+            repository_root
+        ):
             return False
         return (
             ((directory / ".git").exists() or (directory / ".git").is_symlink())

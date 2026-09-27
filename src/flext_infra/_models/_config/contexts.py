@@ -115,8 +115,7 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Platforms carried by artifact-tool lock entries"),
         ]
         npm_package_manager: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Configured Mise installer for npm CLIs"),
+            t.NonEmptyStr, m.Field(description="Configured Mise installer for npm CLIs")
         ]
         qlty_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Configured Mise selector for qlty")
