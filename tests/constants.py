@@ -45,11 +45,13 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
         )
         """Direnv session state an outer activation exports to its children.
 
-        ``direnv exec`` reverts the inherited ``DIRENV_DIFF`` before evaluating
-        the target ``.envrc``, so a test-declared override of any variable the
-        outer activation touched (``MISE_DATA_DIR``, for one) is silently
-        discarded and the fixture contract is evaluated against the host
-        runtime instead. Isolated runs must therefore start from a parent
+        Test-only vocabulary: direnv is an external binary and the product
+        declares no Python constant for its session protocol, so no src owner
+        exists to import. ``direnv exec`` reverts the inherited ``DIRENV_DIFF``
+        before evaluating the target ``.envrc``, so a test-declared override of
+        any variable the outer activation touched (``MISE_DATA_DIR``, for one)
+        is silently discarded and the fixture contract is evaluated against the
+        host runtime instead. Isolated runs must therefore start from a parent
         environment with no inherited direnv session at all.
         """
 
@@ -95,13 +97,22 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
         )
         """direnv's loaded-activation protocol; ``direnv exec`` first reverts it.
 
-        An outer activation (the operator's shell) would otherwise undo the
-        variables a test hands to the activation under test.
+        Test-only vocabulary: direnv is an external binary and the product
+        declares no Python constant for its session protocol, so no src owner
+        exists to import. An outer activation (the operator's shell) would
+        otherwise undo the variables a test hands to the activation under test.
         """
 
         MAKE_ISOLATION_ENV_KEYS: ClassVar[t.StrSequence] = (
             *DIRENV_STATE_ENV_KEYS,
+            # BASH_ENV: Make's own recursive-invocation propagation variable
+            # (GNU Make protocol), declared by no Python constant.
             "BASH_ENV",
+            # Verb-selector and runtime variables below are declared by the
+            # generated Make surface (template-owned shell), not by Python
+            # constants — the template file is their only owner. FLEXT_ROOT
+            # guards a host-side legacy spelling of the repository root that
+            # no repository artifact declares.
             "CHANGED_ONLY",
             "CHECK_GATES",
             "CHECK_ONLY",
@@ -110,8 +121,9 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
             "FIX",
             "FLEXT_INFRA_PYTHON",
             "FLEXT_ROOT",
-            "FLEXT_STANDALONE",
-            "FLEXT_REPOSITORY_ROOT",
+            *FlextInfraConstants.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS,
+            FlextInfraConstants.Infra.ENV_VAR_STANDALONE,
+            FlextInfraConstants.Infra.ENV_VAR_REPOSITORY_ROOT,
             "MATCH",
             "PROJECT",
             "PROJECTS",
@@ -120,8 +132,8 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
             "RUFF_ARGS",
             "UV",
             "VALIDATE_GATES",
-            "WHAT",
-            "REPOSITORY_ROOT",
+            FlextInfraConstants.Infra.PromotedEnv.WHAT,
+            FlextInfraConstants.Infra.MAKE_REPOSITORY_ROOT,
             *FlextInfraConstants.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
             *DIRENV_SESSION_ENV_KEYS,
             # The host's Gas City identity selects the generated .envrc beads
@@ -131,7 +143,14 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
                 "identity_var"
             ].default,
         )
-        """Environment inherited from an outer Make invocation to discard in tests."""
+        """Environment inherited from an outer Make invocation to discard in tests.
+
+        Keys with a product owner are imported from that owner
+        (``ORCHESTRATOR_REMOVE_ENV_KEYS``, ``PYTEST_INHERITED_ENV_REMOVE_KEYS``,
+        ``ENV_VAR_*``, ``MAKE_REPOSITORY_ROOT``, ``PromotedEnv.WHAT``, the Beads
+        identity variable); the remainder are direnv/Git external protocols or
+        template-declared Make variables that no Python constant declares.
+        """
 
         # ClassVar, not Final: these rebindings live on a Pydantic model
         # class, and Pydantic 2.11 deprecates final-annotated defaults
