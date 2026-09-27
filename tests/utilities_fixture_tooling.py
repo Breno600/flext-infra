@@ -25,8 +25,8 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
     def provision_checkout(root: Path) -> None:
         """Make a fixture root a checkout whose environment owns the edit tools.
 
-        Protected edits resolve ruff, pyrefly, python and pytest fail-closed
-        from the checkout's runtime environment
+        Protected edits resolve every ``c.Infra.LINT_TOOLS`` executable plus
+        python and pytest fail-closed from the checkout's runtime environment
         (``u.Infra.runtime_environment_dir``), which requires a Git checkout.
         The fixture becomes one through the single fixture Git owner and
         receives the real binaries this suite was provisioned with, linked
@@ -36,7 +36,8 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         provisioned = Path(sys.executable).parent
         bin_dir = u.Infra.runtime_environment_dir(root) / provisioned.name
         bin_dir.mkdir(parents=True, exist_ok=True)
-        for name in (c.Infra.RUFF, c.Infra.PYREFLY, c.Infra.PYTHON, c.Infra.PYTEST):
+        tools = {command[0] for _, command in c.Infra.LINT_TOOLS}
+        for name in sorted(tools | {c.Infra.PYTHON, c.Infra.PYTEST}):
             source = provisioned / name
             if not source.is_file():
                 msg = f"setup did not provision {name}: {source}"
