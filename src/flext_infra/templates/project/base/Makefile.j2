@@ -119,6 +119,8 @@ PYTEST_PROCESS_TIMEOUT_SECONDS := {{ pytest_process_timeout_seconds }}
 # run is terminated even if the runner itself stalls.
 PYTEST_BOUNDED = {{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := {{ make.testmon_cache.reports_directory }}
+# Profiles sit beside the other reports of this checkout (.reports is ignored).
+PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := {{ pytest.case_timeout_seconds }}
 override PYTEST_RUN_TIMEOUT_SECONDS := {{ pytest.run_timeout_seconds }}
 override PYTEST_TERMINATION_GRACE_SECONDS := {{ pytest.termination_grace_seconds }}
@@ -155,19 +157,6 @@ override TRACKED_MISE := $(PROJECT_ROOT)/bin/mise
 endif
 override SETUP_MISE := $(TRACKED_MISE)
 override export FLEXT_PYTEST_TARGET_RAW := {{ make.testmon_cache.target_directory }}
-# Scratch never lives inside a versioned tree: the home scratch root mirrors
-# the absolute checkout path so a sandbox is never a tracked scope of any
-# enclosing repository (workspace or linked worktree). Checkouts nested in a
-# VCS directory rename that segment, so the mirror never contains one; two
-# substitution passes rename adjacent repeated segments too.
-ifeq ($(strip $(HOME)),)
-$(error HOME is required to derive the scratch root)
-endif
-PROJECT_SCRATCH_IDENTITY := $(abspath $(PROJECT_ROOT))/
-{% for segment, alias in scratch_identity_segment_aliases -%}
-PROJECT_SCRATCH_IDENTITY := $(subst /{{ segment }}/,/{{ alias }}/,$(subst /{{ segment }}/,/{{ alias }}/,$(PROJECT_SCRATCH_IDENTITY)))
-{% endfor -%}
-PROJECT_SCRATCH_ROOT := $(HOME)/{{ scratch_home_relative }}/{{ state_directory_name }}$(patsubst %/,%,$(PROJECT_SCRATCH_IDENTITY))/{{ scratch_namespace }}
 # === SECTION: REPOSITORY_ROOT isolation (managed) ===
 # Source: physical checkout topology; caller variables cannot select a workspace.
 # Operator law 2026-09-24 (flext-x8gn6): inside a workspace every make run, root
@@ -222,10 +211,6 @@ CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 # Source: repository topology. workspace has .gitmodules; standalone does not.
 # Attached members share their Git superproject runtime; standalone owns itself.
 override RUNTIME_ROOT := $(REPOSITORY_ROOT)
-RUNTIME_STATE_ROOT := $(abspath $(RUNTIME_ROOT)/../{{ state_directory_name }}/$(notdir $(RUNTIME_ROOT)))
-PROJECT_STATE_ROOT := $(if $(filter $(PROJECT_ROOT),$(RUNTIME_ROOT)),$(RUNTIME_STATE_ROOT),$(RUNTIME_STATE_ROOT)/$(patsubst $(RUNTIME_ROOT)/%,%,$(PROJECT_ROOT)))
-TESTMON_DATAFILE := $(PROJECT_STATE_ROOT)/{{ make.testmon_cache.namespace }}/{{ make.testmon_cache.database_filename }}
-export TESTMON_DATAFILE
 override export GIT_CEILING_DIRECTORIES := $(abspath $(RUNTIME_ROOT)/..)
 override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
 # The physical runtime owns both its environment and frozen tool identities.
@@ -239,7 +224,7 @@ endif
 endif
 # End SECTION: profile routing
 
-override RUNTIME_VENV := $(PROJECT_STATE_ROOT)/venv
+override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
@@ -748,27 +733,27 @@ _builtin_run_default: _builtin_require_environment
 	@$(UV_RUN) $(PROJECT_NAME) $(ARGS)
 
 # Profile the real runtime-census gate through the same installed CLI selected
-# by the root dispatcher. The report remains in the external runtime state.
+# by the root dispatcher. The report stays in this checkout's .reports tree.
 .PHONY: profile-census
 profile-census: _builtin_require_environment
-	@mkdir -p "$(PROJECT_SCRATCH_ROOT)/profiles"
+	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); status = profile.runcall(main, sys.argv[2:]); profile.dump_stats(sys.argv[1]); raise SystemExit(status)' \
-		"$(PROJECT_SCRATCH_ROOT)/profiles/runtime-census.pstats" check run \
+		"$(PROFILE_REPORTS_DIR)/runtime-census.pstats" check run \
 		--repository-root "$(PROJECT_ROOT)" --gates runtime-census --projects .
 
 .PHONY: profile-census-report
 profile-census-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(35)' \
-		"$(PROJECT_SCRATCH_ROOT)/profiles/runtime-census.pstats"
+		"$(PROFILE_REPORTS_DIR)/runtime-census.pstats"
 
 # Profile the checker process itself while retaining the canonical Mypy gate,
-# its resource limit, native source inventory, and external report directory.
+# its resource limit, native source inventory, and report directory.
 .PHONY: profile-mypy
 profile-mypy: _builtin_require_environment
-	@mkdir -p "$(PROJECT_SCRATCH_ROOT)/profiles"
-	@export FLEXT_MYPY_PROFILE_OUTPUT="$(PROJECT_SCRATCH_ROOT)/profiles/mypy.pstats"; \
+	@mkdir -p "$(PROFILE_REPORTS_DIR)"
+	@export FLEXT_MYPY_PROFILE_OUTPUT="$(PROFILE_REPORTS_DIR)/mypy.pstats"; \
 		$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" \
 		--gates mypy --projects . --report-findings
 
@@ -776,21 +761,21 @@ profile-mypy: _builtin_require_environment
 profile-mypy-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
-		"$(PROJECT_SCRATCH_ROOT)/profiles/mypy.pstats"
+		"$(PROFILE_REPORTS_DIR)/mypy.pstats"
 
 .PHONY: profile-gen
 profile-gen: _builtin_require_environment
-	@mkdir -p "$(PROJECT_SCRATCH_ROOT)/profiles"
+	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); status = profile.runcall(main, sys.argv[2:]); profile.dump_stats(sys.argv[1]); raise SystemExit(status)' \
-		"$(PROJECT_SCRATCH_ROOT)/profiles/lazy-init.pstats" codegen lazy-init \
+		"$(PROFILE_REPORTS_DIR)/lazy-init.pstats" codegen lazy-init \
 		--repository-root "$(PROJECT_ROOT)" --module {{ dist | replace('-', '_') }} --dry-run
 
 .PHONY: profile-gen-report
 profile-gen-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
-		"$(PROJECT_SCRATCH_ROOT)/profiles/lazy-init.pstats"
+		"$(PROFILE_REPORTS_DIR)/lazy-init.pstats"
 
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
