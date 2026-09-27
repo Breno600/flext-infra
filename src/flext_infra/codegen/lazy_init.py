@@ -174,7 +174,7 @@ class FlextInfraCodegenLazyInit(
             target_package_dir=target_package_dir,
             repository_root=resolved_repository_root,
         )
-        snapshots = self._snapshot_planner_inputs(workspace_index)
+        snapshots = self._snapshot_planner_inputs(workspace_index, package_dirs)
         if snapshots.failure:
             return r[m.Infra.CodegenPhaseAnalysis].from_failure(snapshots)
         planner = FlextInfraCodegenLazyInitPlanner(

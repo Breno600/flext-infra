@@ -421,7 +421,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
                 aliases = missing_aliases or cls._inherited_class_aliases(
                     target, visited=frozenset()
                 )
-            owners.update((alias, name) for alias in aliases)
+            owners.update((alias, name) for alias in aliases if alias in exports)
         if len(owners) > 1:
             message = (
                 f"ambiguous facade declaration in {resource.path}: {sorted(owners)}"

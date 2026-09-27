@@ -164,8 +164,7 @@ class Row(BaseModel):
             owner = importlib.import_module("flext_infra").m
             tm.that(consumer.m is owner, eq=True)
             tm.that(
-                consumer.Row.model_validate_json('{"value": "live"}').value,
-                eq="live",
+                consumer.Row.model_validate_json('{"value": "live"}').value, eq="live"
             )
 
     def test_exported_binding_requires_its_consumer_cutover(self) -> None:

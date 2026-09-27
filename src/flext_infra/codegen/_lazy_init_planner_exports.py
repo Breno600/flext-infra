@@ -35,9 +35,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         @staticmethod
         def _publish(name: str, *, allow_main: bool) -> bool: ...
 
-    def _project_layout_for(
-        self, pkg_dir: Path
-    ) -> m.Infra.RopeProjectLayout | None:
+    def _project_layout_for(self, pkg_dir: Path) -> m.Infra.RopeProjectLayout | None:
         """Reuse the project's canonical layout during one planning snapshot."""
         project_root = u.Infra.project_root(pkg_dir)
         if project_root is None:

@@ -37,9 +37,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
             )
         )
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True, msg=process.stderr)
-        selected = (
-            "." if github_actions == "true" else "infra-engine ."
-        )
+        selected = "." if github_actions == "true" else "infra-engine ."
         tm.that(process.stdout, has=f"selected_projects={selected}\n")
         scope = "self" if github_actions == "true" else "all"
         tm.that(process.stdout, has=f"codegen_scope={scope}\n")
