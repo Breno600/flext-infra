@@ -321,8 +321,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.ok(
             u.Cli.atomic_write_text_file(
                 project_root / "custom.mk",
-                ".PHONY: post-upg\npost-upg:\n"
-                "\t@printf '%s\\n' 'upg-hook-ran'\n",
+                ".PHONY: post-upg\npost-upg:\n\t@printf '%s\\n' 'upg-hook-ran'\n",
             )
         )
         upgraded = tm.ok(
@@ -992,8 +991,16 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-fmt: _builtin_fmt_all")
         tm.that(makefile, has="_builtin-fix: _builtin_fix_all")
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
+        tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
         tm.that(
             makefile, has="_builtin-self-fix-enforcement: _builtin_require_environment"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-namespace: _builtin_require_environment"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-accessors: _builtin_require_environment"
         )
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(

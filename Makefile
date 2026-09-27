@@ -146,8 +146,8 @@ endif
 # End SECTION: REPOSITORY_ROOT isolation
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary.
-PUBLIC_VERBS := help setup upg build check test test-full fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
-BUILTIN_VERBS := help setup upg build check test test-full fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
+PUBLIC_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
+BUILTIN_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -707,6 +707,28 @@ _activated-fix-enforcement: _builtin_require_environment
 
 
 
+fix-namespace: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fix-namespace
+
+.PHONY: _activated-fix-namespace
+_activated-fix-namespace: _builtin_require_environment
+
+	$(call RUN_PUBLIC,fix-namespace)
+
+
+
+
+fix-accessors: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-fix-accessors
+
+.PHONY: _activated-fix-accessors
+_activated-fix-accessors: _builtin_require_environment
+
+	$(call RUN_PUBLIC,fix-accessors)
+
+
+
+
 audit: _builtin_require_workspace
 	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-audit
 
@@ -918,6 +940,10 @@ _builtin-help:
 	@printf '  %-16s %s\n' 'fix' 'Apply ruff check --fix --unsafe-fixes --preview plus every other configured safe correction. Ruff is the rule; change code, never ruff.';
 
 	@printf '  %-16s %s\n' 'fix-enforcement' 'Apply the safe fix actions declared by the enforcement catalog.';
+
+	@printf '  %-16s %s\n' 'fix-namespace' 'Apply the canonical namespace enforcer to the selected workspace.';
+
+	@printf '  %-16s %s\n' 'fix-accessors' 'Migrate forbidden accessor names and every resolved consumer.';
 
 	@printf '  %-16s %s\n' 'audit' 'Inspect ownership, dependency, and generated-state health.';
 
@@ -1239,6 +1265,12 @@ _builtin-self-fix: _builtin_require_environment
 _builtin-self-fix-enforcement: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
 
+_builtin-self-fix-namespace: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor namespace-enforce --repository-root "$(PROJECT_ROOT)" --apply
+
+_builtin-self-fix-accessors: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor accessor-migrate --repository-root "$(PROJECT_ROOT)" --apply
+
 _builtin-self-build:
 	@$(UV) build --project "$(PROJECT_ROOT)"
 
@@ -1317,6 +1349,12 @@ _builtin_fix_all: _builtin_require_environment
 # declared safe, applied through its registered adapter.
 _builtin_fix_enforcement: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
+
+_builtin_fix_namespace: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor namespace-enforce --repository-root "$(PROJECT_ROOT)" --apply
+
+_builtin_fix_accessors: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor accessor-migrate --repository-root "$(PROJECT_ROOT)" --apply
 
 _builtin_sonarcloud_sync_all: _builtin_sonarcloud_sync_project
 
@@ -1416,6 +1454,8 @@ _builtin-test-full: _builtin_test_full_all
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
 _builtin-fix-enforcement: _builtin_fix_enforcement
+_builtin-fix-namespace: _builtin_fix_namespace
+_builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope "$(CODEGEN_SCOPE)" --mode check

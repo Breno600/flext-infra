@@ -5,10 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from pathlib import Path
 
-from flext_cli import u
 from flext_tests import tm
 
-from flext_infra import c, t
+from flext_infra import c, t, u
 
 from ._support import CodegenTestSupport
 
