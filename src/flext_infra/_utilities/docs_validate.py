@@ -13,7 +13,6 @@ from flext_infra import c, t
 from .docs import FlextInfraUtilitiesDocs
 from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_scope import FlextInfraUtilitiesDocsScope
-from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -100,10 +99,7 @@ class FlextInfraUtilitiesDocsValidate:
     @staticmethod
     def docs_missing_required_paths(scope: m.Infra.DocScope) -> t.StrSequence:
         """Return required docs paths that are still missing from one scope."""
-        is_workspace_root = FlextInfraUtilitiesWorkspaceManifest.is_fleet_umbrella(
-            scope.path
-        )
-        if scope.name == c.Infra.RK_ROOT or is_workspace_root:
+        if FlextInfraUtilitiesDocsScope.docs_aggregate_root(scope):
             required = [
                 "README.md",
                 "docs/index.md",

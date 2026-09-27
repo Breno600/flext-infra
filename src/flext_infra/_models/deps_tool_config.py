@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
@@ -223,6 +224,19 @@ class FlextInfraModelsDepsToolConfig(
                 description="Pytest-xdist scheduler for full runs.",
             ),
         ]
+        parallel_worker_overrides: Annotated[
+            Mapping[str, int],
+            m.Field(
+                alias="parallel-worker-overrides",
+                description=(
+                    "Per declared-project worker ceilings (``[project].name`` "
+                    "→ workers) resolved by the runner over the fleet-wide "
+                    "``parallel-workers`` default: a consumer whose measured "
+                    "suite cannot fit the single-worker process boundary "
+                    "declares its ceiling here, inside the fleet cycle."
+                ),
+            ),
+        ] = {}
         profile_sort: Annotated[
             Literal[
                 "calls",
