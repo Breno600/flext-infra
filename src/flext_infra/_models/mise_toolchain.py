@@ -109,29 +109,6 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
-        state_directory_name: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Runtime state directory beside the checkout"),
-        ]
-        scratch_namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="Scratch directory namespace")
-        ]
-        scratch_home_relative: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Home-relative scratch root; scratch never lives inside a "
-                    "versioned tree, so it mirrors the checkout path below it"
-                )
-            ),
-        ]
-        pycache_namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="Python bytecode cache namespace")
-        ]
-        mise_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Mise publication namespace under runtime state"),
-        ]
         uv_link_mode: Annotated[
             t.NonEmptyStr, m.Field(description="Portable uv installation link mode")
         ]

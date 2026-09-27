@@ -22,16 +22,6 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
-      state_directory_name: .flext-runtime
-      scratch_namespace: scratch
-      # Scratch (TMPDIR, test basetemp, Mise bootstrap staging) never lives
-      # inside a versioned tree: in workspace mode the sibling state root sits
-      # under the superproject, so every sandbox became a tracked-scope of the
-      # enclosing repository. The scratch root is the platform home plus this
-      # path, mirroring the absolute checkout path below it (storage law).
-      scratch_home_relative: tmp
-      pycache_namespace: pycache
-      mise_namespace: mise-artifacts
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -442,7 +432,6 @@ Infra:
           - .benchmarks
           - .hypothesis
         root_dirs:
-          - .flext-runtime
           - build
           - dist
           - htmlcov
@@ -615,7 +604,6 @@ Infra:
       - {name: .omo}
       - {name: .pylance_cache, vscode_exclude: false}
       - {name: .pytest_cache, source_scan_ignore: true}
-      - {name: .flext-runtime, source_scan_ignore: true}
       - {name: .testmondata, is_dir: false, source_scan_ignore: true}
       - {name: .testmondata-wal, is_dir: false, source_scan_ignore: true}
       - {name: .testmondata-shm, is_dir: false, source_scan_ignore: true}
@@ -669,7 +657,6 @@ Infra:
       - {name: .mcp.json, is_dir: false, vscode_exclude: false, watch_exclude: false}
       - {name: CLAUDE.local.md, is_dir: false, vscode_exclude: false, watch_exclude: false}
     vscode:
-      runtime_interpreter_setting: python.defaultInterpreterPath
       # Canonical .vscode/settings.json content injected with owner semantics:
       # scalar/list keys and artifact maps are exact; explicitly declared
       # non-artifact maps retain project extensions. Recursive "**" venv search
@@ -691,6 +678,7 @@ Infra:
         python.analysis.useNearestConfiguration: false
         python.analysis.usePerProjectEnvironments: false
         python.analysis.userFileIndexingLimit: 2000
+        python.defaultInterpreterPath: ${workspaceFolder}/.venv/bin/python
         python.languageServer: Pylance
         python.pyrefly.diagnosticMode: workspace
         python.pyrefly.disableLanguageServices: true
@@ -706,6 +694,7 @@ Infra:
         ruff.importStrategy: fromEnvironment
         ruff.lint.preview: true
         ruff.nativeServer: on
+        pyrefly.lspPath: ${workspaceFolder}/.venv/bin/pyrefly
         markdownlint.configFile: .markdownlint.json
         shellcheck.useWorkspaceRootAsCwd: true
         shellcheck.useRepositoryRootAsCwd: true
