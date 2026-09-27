@@ -20,13 +20,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         destination: str,
         rendered: str,
         *,
-        managed_artifacts: m.Infra.ProjectManagedArtifactsSnapshot | None = None,
-        workspace: m.Infra.WorkspaceSpec | None = None,
-        codegen: m.Infra.CodegenConfigSpec | None = None,
-        repository: m.Infra.RepositoryRef | None = None,
-        target: m.Infra.RepositoryConformTarget | None = None,
+        render_inputs: m.Infra.CodegenRenderInputs | None = None,
     ) -> p.Result[m.Infra.CodegenArtifactComposition]:
-        """Apply typed project overlays after canonical template rendering."""
+        """Apply typed project overlays after canonical template rendering.
+
+        Without ``render_inputs`` the committed project catalog overlays the
+        render and no pyproject conformance runs.
+        """
         if destination == c.PYPROJECT_FILENAME:
             live_path = repository_root / c.PYPROJECT_FILENAME
             live: str | None = None
@@ -43,30 +43,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             if overlaid.failure:
                 return r[m.Infra.CodegenArtifactComposition].from_failure(overlaid)
             rendered = overlaid.value
-            if workspace is not None and codegen is not None and repository is not None:
-                profile = (
-                    target.make_profile
-                    if target is not None
-                    else c.Infra.MakeProfile.STANDALONE
-                )
-                excludes = (
-                    cls.routed_uv_exclude_dependencies(
-                        repository=repository,
-                        target=target,
-                        codegen=codegen,
-                        workspace=workspace,
-                    )
-                    if target is not None
-                    else ()
-                )
+            if render_inputs is not None:
                 conformed = cls.conformed_pyproject_source(
-                    rendered,
-                    repository_root=repository_root,
-                    repository=repository,
-                    workspace=workspace,
-                    codegen=codegen,
-                    workspace_mode=profile,
-                    uv_exclude_dependencies=excludes,
+                    rendered, render_inputs=render_inputs
                 )
                 if conformed.failure:
                     return r[m.Infra.CodegenArtifactComposition].from_failure(conformed)
@@ -88,14 +67,15 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[m.Infra.CodegenArtifactComposition].ok(
                 m.Infra.CodegenArtifactComposition(rendered=rendered)
             )
-        resolved_artifacts = managed_artifacts
-        if resolved_artifacts is None:
+        if render_inputs is None:
             snapshot = u.Infra.snapshot_committed_project_managed_artifacts(
                 repository_root
             )
             if snapshot.failure:
                 return r[m.Infra.CodegenArtifactComposition].from_failure(snapshot)
             resolved_artifacts = snapshot.value
+        else:
+            resolved_artifacts = render_inputs.managed_artifacts
         composed = (
             u.Infra.compose_mise_toml_from_snapshot(
                 resolved_artifacts.sources, rendered
@@ -118,20 +98,12 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
     def _rendered_artifact_source(
         self,
+        render_inputs: m.Infra.CodegenRenderInputs,
         *,
-        templates_root: Path,
         template_relpath: Path,
-        failure_prefix: str,
-        dist: str,
-        repository: m.Infra.RepositoryRef,
-        repository_root: Path,
-        target: m.Infra.RepositoryConformTarget,
-        workspace: m.Infra.WorkspaceSpec,
-        codegen: m.Infra.CodegenConfigSpec,
         destination: str,
-        tooling_runtime: m.Infra.ToolingRuntimeContext,
+        failure_prefix: str,
         project_context: m.Infra.ProjectRenderContext | None,
-        managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
     ) -> p.Result[str]:
         """Resolve one artifact render context and render its template source.
 
@@ -140,21 +112,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         prepends to a render failure.
         """
         artifact_context = self._artifact_render_context(
-            dist=dist,
-            repository=repository,
-            repository_root=repository_root,
-            target=target,
-            workspace=workspace,
-            codegen=codegen,
-            destination=destination,
-            tooling_runtime=tooling_runtime,
-            project_context=project_context,
-            managed_artifacts=managed_artifacts,
+            render_inputs, destination=destination, project_context=project_context
         )
         if artifact_context.failure:
             return r[str].from_failure(artifact_context)
         rendered = u.Cli.template_render(
-            templates_root / template_relpath, artifact_context.value
+            u.Infra.codegen_templates_root(render_inputs.codegen) / template_relpath,
+            artifact_context.value,
         )
         if rendered.failure:
             return r[str].fail(
@@ -166,24 +130,21 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
     def _artifact_render_context(
         self,
+        render_inputs: m.Infra.CodegenRenderInputs,
         *,
-        dist: str,
-        repository: m.Infra.RepositoryRef,
-        repository_root: Path,
-        target: m.Infra.RepositoryConformTarget,
-        workspace: m.Infra.WorkspaceSpec,
-        codegen: m.Infra.CodegenConfigSpec,
         destination: str,
-        tooling_runtime: m.Infra.ToolingRuntimeContext,
         project_context: m.Infra.ProjectRenderContext | None,
-        managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
     ) -> p.Result[p.Model]:
         """Resolve one governed artifact to its canonical typed render input."""
+        target = render_inputs.target
+        workspace = render_inputs.workspace
+        codegen = render_inputs.codegen
+        repository = target.repository
+        repository_root = target.root
+        dist = repository.distribution
         if destination == c.Infra.GITIGNORE:
             project_patterns: t.StrSequence = (
-                managed_artifacts.artifacts.Gitignore.patterns
-                if managed_artifacts is not None
-                else ()
+                render_inputs.managed_artifacts.resolution.artifacts.Gitignore.patterns
             )
             return r[p.Model].ok(
                 m.Infra.GitignoreRenderSpec(
@@ -442,29 +403,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             # Existing repositories project custom routes from the same typed
             # Make contract as Makefile; they do not require scaffold-only
             # project metadata.
-            make_context = self.make_render_context(
-                repository,
-                target,
-                workspace,
-                codegen,
-                tooling_runtime=tooling_runtime,
-                repository_root=repository_root,
-            )
+            make_context = self.make_render_context(render_inputs)
             if make_context.failure:
                 return r[p.Model].from_failure(make_context)
             return r[p.Model].ok(make_context.value)
         if project_context is not None:
             return r[p.Model].ok(project_context)
-        context_result = self._project_render_context(
-            repository,
-            target,
-            workspace,
-            codegen,
-            tooling_runtime=tooling_runtime,
-            repository_root=repository_root,
-            managed_artifacts=managed_artifacts,
-            use_committed_artifacts=project_context is None,
-        )
+        context_result = self._project_render_context(render_inputs)
         if context_result.failure:
             return r[p.Model].from_failure(context_result)
         return r[p.Model].ok(context_result.value)

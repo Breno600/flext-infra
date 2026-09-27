@@ -147,14 +147,11 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                         msg = f"collection source changed during read: {state.path}"
                         raise ValueError(msg)
                     states[state.path] = state
-                revision = cls._docs_collect_revision(
+                incoming_revision = cls._docs_incoming_revision(
                     canonical,
                     source_root,
                     source,
-                    path,
                     artifacts,
-                    desired,
-                    states=states,
                     previous=next(
                         (
                             item
@@ -168,6 +165,9 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                         ),
                         None,
                     ),
+                )
+                revision = cls._docs_collect_revision(
+                    canonical, incoming_revision, artifacts, desired, states=states
                 )
                 key = (revision.identity, revision.digest)
                 if key not in observed:
@@ -272,19 +272,22 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         )
 
     @classmethod
-    def _docs_collect_revision(
+    def _docs_incoming_revision(
         cls,
         canonical: Path,
         source_root: Path,
         source: m.Infra.PlanCollectionSource,
-        path: Path,
         artifacts: t.VariadicTuple[m.Cli.AtomicFileState],
-        desired: t.MutableMappingKV[Path, bytes],
         *,
         previous: m.Infra.PlanCollectionRevision | None,
-        states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
     ) -> m.Infra.PlanCollectionRevision:
-        """Keep curated canonical text intact while recording incoming revisions."""
+        """Derive the revision one collected plan and its companions represent.
+
+        ``artifacts`` starts with the plan itself, followed by its companion
+        attachments; a previously recorded revision keeps its identity and its
+        canonical destination, which must stay inside ``canonical``.
+        """
+        path = artifacts[0].path
         identity = (
             previous.identity
             if previous is not None
@@ -302,30 +305,19 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             digest.update(name)
             digest.update(len(artifact.content).to_bytes(8, "big"))
             digest.update(artifact.content)
-        filename = f"{source.id}-{path.stem}-{identity[:16]}"
-        target = canonical / (
-            previous.canonical_path if previous is not None else Path(f"{filename}.md")
-        )
-        incoming = target.with_suffix("") / "incoming" / digest.hexdigest()
         plan = artifacts[0].content
         if plan is None:
             msg = f"plan content absent: {path}"
             raise ValueError(msg)
-        existing = cls.collection_capture(target, states)
-        desired[target] = existing.content if existing.content is not None else plan
-        desired[incoming / "plan.md"] = plan
-        attachment_names: list[str] = []
-        for attachment in artifacts[1:]:
-            if attachment.content is None:
-                msg = f"attachment content absent: {path}"
-                raise ValueError(msg)
-            attachment_path = attachment.path.relative_to(path.with_suffix(""))
-            desired[incoming / "attachments" / attachment_path] = attachment.content
-            attachment_names.append(attachment_path.as_posix())
         original, normalized = cls.collection_source_updated(
             plan, source.updated_fields
         )
-        revision = m.Infra.PlanCollectionRevision(
+        target = canonical / (
+            previous.canonical_path
+            if previous is not None
+            else Path(f"{source.id}-{path.stem}-{identity[:16]}.md")
+        )
+        return m.Infra.PlanCollectionRevision(
             identity=identity,
             provider=source.provider,
             source_id=source.id,
@@ -338,8 +330,40 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             source_updated_at_original=original,
             source_updated_at_utc=normalized,
             collected_at=datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-            attachments=tuple(attachment_names),
+            attachments=tuple(
+                attachment.path.relative_to(path.with_suffix("")).as_posix()
+                for attachment in artifacts[1:]
+            ),
         )
+
+    @classmethod
+    def _docs_collect_revision(
+        cls,
+        canonical: Path,
+        incoming_revision: m.Infra.PlanCollectionRevision,
+        artifacts: t.VariadicTuple[m.Cli.AtomicFileState],
+        desired: t.MutableMappingKV[Path, bytes],
+        *,
+        states: t.MutableMappingKV[Path, m.Cli.AtomicFileState],
+    ) -> m.Infra.PlanCollectionRevision:
+        """Keep curated canonical text intact while recording incoming revisions."""
+        target = canonical / incoming_revision.canonical_path
+        incoming = target.with_suffix("") / "incoming" / incoming_revision.digest
+        plan = artifacts[0].content
+        if plan is None:
+            msg = f"plan content absent: {artifacts[0].path}"
+            raise ValueError(msg)
+        existing = cls.collection_capture(target, states)
+        desired[target] = existing.content if existing.content is not None else plan
+        desired[incoming / "plan.md"] = plan
+        for name, attachment in zip(
+            incoming_revision.attachments, artifacts[1:], strict=True
+        ):
+            if attachment.content is None:
+                msg = f"attachment content absent: {artifacts[0].path}"
+                raise ValueError(msg)
+            desired[incoming / "attachments" / name] = attachment.content
+        revision = incoming_revision
         receipt_path = incoming / "provenance.json"
         receipt = cls.collection_capture(receipt_path, states)
         if receipt.content is not None:

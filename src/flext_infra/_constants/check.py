@@ -16,6 +16,8 @@ class FlextInfraConstantsCheck:
 
     CHECK_FAIL_FAST_DEFAULT: ClassVar[bool] = False
     """Run every independent quality gate unless fail-fast is requested."""
+    SERVICE_FAIL_FAST: ClassVar[bool] = True
+    """Stop mutating service workflows at the first failed project or rule."""
 
     PYTEST_SELECTED_COLLECTION_OPTION: ClassVar[str] = "--flext-selected-collection"
 

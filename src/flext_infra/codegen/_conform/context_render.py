@@ -16,16 +16,14 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
     """Typed Make and project render context projection."""
 
     def make_render_context(
-        self,
-        repository: m.Infra.RepositoryRef,
-        target: m.Infra.RepositoryConformTarget,
-        workspace: m.Infra.WorkspaceSpec,
-        codegen: m.Infra.CodegenConfigSpec,
-        *,
-        tooling_runtime: m.Infra.ToolingRuntimeContext,
-        repository_root: Path,
+        self, render_inputs: m.Infra.CodegenRenderInputs
     ) -> p.Result[m.Infra.MakeRenderContext]:
         """Build the typed context consumed by the generated Makefile."""
+        target = render_inputs.target
+        workspace = render_inputs.workspace
+        codegen = render_inputs.codegen
+        repository = target.repository
+        repository_root = target.root
         profile = target.make_profile
         subprojects = (
             tuple(workspace.subprojects)
@@ -59,7 +57,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 prlimit_address_space_option=c.Infra.PRLIMIT_ADDRESS_SPACE_OPTION,
                 timeout_command=c.Infra.TIMEOUT_COMMAND,
                 timeout_kill_after_seconds=c.Infra.TIMEOUT_KILL_AFTER_SECONDS,
-                tooling_runtime=tooling_runtime,
+                tooling_runtime=render_inputs.tooling_runtime,
                 dist=repository.distribution,
                 infra_cli=config.Infra.name,
                 python_version=codegen.toolchain.python_version,
@@ -150,18 +148,14 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         )
 
     def _project_render_context(
-        self,
-        repository: m.Infra.RepositoryRef,
-        target: m.Infra.RepositoryConformTarget,
-        workspace: m.Infra.WorkspaceSpec,
-        codegen: m.Infra.CodegenConfigSpec,
-        *,
-        tooling_runtime: m.Infra.ToolingRuntimeContext,
-        repository_root: Path,
-        managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
-        use_committed_artifacts: bool = True,
+        self, render_inputs: m.Infra.CodegenRenderInputs
     ) -> p.Result[m.Infra.ProjectRenderContext]:
         """Build the complete typed context consumed by project templates."""
+        target = render_inputs.target
+        workspace = render_inputs.workspace
+        codegen = render_inputs.codegen
+        repository = target.repository
+        repository_root = target.root
         if workspace.project is None:
             # Existing checkouts declare no scaffold metadata: derive the render
             # identity from the live project metadata instead of failing, so
@@ -225,14 +219,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 f"supported licenses: {supported}"
             )
         profile = target.make_profile
-        make_context = self.make_render_context(
-            repository,
-            target,
-            workspace,
-            codegen,
-            tooling_runtime=tooling_runtime,
-            repository_root=repository_root,
-        )
+        make_context = self.make_render_context(render_inputs)
         if make_context.failure:
             return r[m.Infra.ProjectRenderContext].from_failure(make_context)
         repository_provider = u.Infra.repository_provider(repository)
@@ -292,19 +279,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             if profile is not c.Infra.MakeProfile.WORKSPACE
             else ()
         )
-        catalog_artifacts = managed_artifacts
-        if use_committed_artifacts:
-            committed = u.Infra.load_committed_project_managed_artifacts(
-                repository_root
-            )
-            if committed.failure:
-                return r[m.Infra.ProjectRenderContext].from_failure(committed)
-            catalog_artifacts = committed.value
-        project_patterns: t.StrSequence = (
-            catalog_artifacts.artifacts.Gitignore.patterns
-            if catalog_artifacts is not None
-            else ()
-        )
+        # The planner resolved the catalog once per repository: the committed
+        # HEAD catalog for an existing tree, the empty one for a scaffold.
+        catalog_artifacts = render_inputs.managed_artifacts.resolution
+        project_patterns: t.StrSequence = catalog_artifacts.artifacts.Gitignore.patterns
         # The repository's own pyproject.toml is the version SSOT; the release
         # protocol is its only writer, so conform reads it and never syncs it.
         # A tree that has no pyproject yet is being created: it starts at the

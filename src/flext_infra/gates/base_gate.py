@@ -215,16 +215,10 @@ class FlextInfraGate:
             issues=issues,
             raw_output=self._raw_output(result),
             started=started,
-            ctx=ctx,
         )
 
     def _detected_gate_execution(
-        self,
-        project_dir: Path,
-        ctx: m.Infra.GateContext,
-        *,
-        issues: t.SequenceOf[m.Infra.Issue],
-        started: float,
+        self, project_dir: Path, *, issues: t.SequenceOf[m.Infra.Issue], started: float
     ) -> m.Infra.GateExecution:
         """Assemble one gate execution from detector-produced issues."""
         return self._build_check_gate_execution(
@@ -233,7 +227,43 @@ class FlextInfraGate:
             issues=issues,
             raw_output="\n".join(issue.formatted for issue in issues),
             started=started,
-            ctx=ctx,
+        )
+
+    def _gate_result(
+        self, project_dir: Path, *, passed: bool, errors: t.StrSequence, started: float
+    ) -> m.Infra.GateResult:
+        """Summarize one gate run: identity, verdict, report lines and duration."""
+        return m.Infra.GateResult(
+            gate=self.gate_id,
+            project=project_dir.name,
+            passed=passed,
+            errors=list(errors),
+            duration=round(time.monotonic() - started, 3),
+        )
+
+    def _build_gate_execution(
+        self,
+        project_dir: Path,
+        *,
+        verdict: bool,
+        issues: t.SequenceOf[m.Infra.Issue],
+        raw_output: str,
+        started: float,
+    ) -> m.Infra.GateExecution:
+        """Assemble a gate execution whose verdict the caller already decided.
+
+        Fix paths use it directly: reported issues are the residue a fixer
+        could not repair and do not decide acceptance.
+        """
+        return m.Infra.GateExecution(
+            result=self._gate_result(
+                project_dir,
+                passed=verdict,
+                errors=[issue.formatted for issue in issues],
+                started=started,
+            ),
+            issues=tuple(issues),
+            raw_output=raw_output,
         )
 
     def _build_check_gate_execution(
@@ -244,38 +274,18 @@ class FlextInfraGate:
         issues: t.SequenceOf[m.Infra.Issue],
         raw_output: str,
         started: float,
-        ctx: m.Infra.GateContext | None = None,
-        errors: t.StrSequence | None = None,
-        accept_reported_issues: bool = False,
-        observational_issues: t.SequenceOf[m.Infra.Issue] = (),
     ) -> m.Infra.GateExecution:
         """Assemble a gate execution from parsed check output.
 
-        Diagnostic presentation never overrides acceptance. ``errors``
-        overrides the default issue-derived report
-        lines (fix paths report applied changes there).
-        ``accept_reported_issues`` is the fix contract: reported issues are
-        the residue a fixer could not repair and do not decide acceptance.
-        Explicit observational findings remain visible in the report but do
-        not change the verdict of blocking ``issues`` or native execution.
+        Diagnostic presentation never overrides acceptance: any blocking issue
+        fails the gate even when the tool itself exited successfully.
         """
-        _ = ctx
-        verdict = passed and (accept_reported_issues or not issues)
-        return m.Infra.GateExecution(
-            result=m.Infra.GateResult(
-                gate=self.gate_id,
-                project=project_dir.name,
-                passed=verdict,
-                errors=(
-                    list(errors)
-                    if errors is not None
-                    else [issue.formatted for issue in issues]
-                ),
-                duration=round(time.monotonic() - started, 3),
-            ),
-            issues=tuple(issues),
-            observational_issues=tuple(observational_issues),
+        return self._build_gate_execution(
+            project_dir,
+            verdict=passed and not issues,
+            issues=issues,
             raw_output=raw_output,
+            started=started,
         )
 
     def _build_project_error_gate_result(
@@ -285,7 +295,6 @@ class FlextInfraGate:
         passed: bool,
         errors: t.SequenceOf[str],
         started: float,
-        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Preserve project-level failures as blocking structured diagnostics."""
         issues = [
@@ -305,7 +314,6 @@ class FlextInfraGate:
             issues=issues,
             raw_output="\n".join(errors),
             started=started,
-            ctx=ctx,
         )
 
     def _build_single_issue_result(
@@ -316,7 +324,6 @@ class FlextInfraGate:
         *,
         passed: bool,
         started: float,
-        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Build a gate execution from a single issue (scan-failure / fix-failure)."""
         issue = m.Infra.Issue(
@@ -333,7 +340,6 @@ class FlextInfraGate:
             issues=[issue],
             raw_output=issue.message,
             started=started,
-            ctx=ctx,
         )
 
     # ------------------------------------------------------------------
@@ -438,14 +444,12 @@ class FlextInfraGate:
         # A fixer repairs what it can and succeeds on its own exit status;
         # what remains is reported here and enforced by ``check``.
         _, issues = self._parse_check_output(result, project_dir, ctx)
-        return self._build_check_gate_execution(
+        return self._build_gate_execution(
             project_dir,
-            passed=u.Cli.process_succeeded(result.outcome),
+            verdict=u.Cli.process_succeeded(result.outcome),
             issues=issues,
             raw_output=self._raw_output(result),
             started=started,
-            ctx=ctx,
-            accept_reported_issues=True,
         )
 
     def _check_only_fix_result(self, project_dir: Path) -> m.Infra.GateExecution:
@@ -533,13 +537,11 @@ class FlextInfraGate:
     def _skip_result(self, project_dir: Path, started: float) -> m.Infra.GateExecution:
         """A selected gate with no inputs did not establish acceptance."""
         message = f"{self.gate_id}: no check targets were collected"
-        return self._build_check_gate_execution(
-            project_dir,
-            passed=False,
-            issues=(),
-            errors=(message,),
+        return m.Infra.GateExecution(
+            result=self._gate_result(
+                project_dir, passed=False, errors=(message,), started=started
+            ),
             raw_output=message,
-            started=started,
         )
 
     def _neutral_skip_result(
@@ -548,12 +550,7 @@ class FlextInfraGate:
         """An intentional skip (e.g. source package) that passes by design."""
         detail = message or f"{self.gate_id}: intentionally skipped"
         return self._build_check_gate_execution(
-            project_dir,
-            passed=True,
-            issues=(),
-            errors=(),
-            raw_output=detail,
-            started=started,
+            project_dir, passed=True, issues=(), raw_output=detail, started=started
         )
 
 

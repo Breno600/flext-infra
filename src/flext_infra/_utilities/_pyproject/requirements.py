@@ -47,7 +47,6 @@ class FlextInfraUtilitiesPyprojectRequirements:
         document: t.Cli.TomlDocument,
         *,
         workspace: p.Infra.WorkspaceSpec,
-        canonicalize_all: bool,
         declared_sources: t.StrMapping | None = None,
     ) -> p.Result[bool]:
         """Render internal requirements from their declared Git provenance."""
@@ -55,7 +54,6 @@ class FlextInfraUtilitiesPyprojectRequirements:
         normalized = cls._normalize_requirement_field(
             project,
             c.Infra.DEPENDENCIES,
-            canonicalize_all=canonicalize_all,
             revisions=workspace.project.dependency_revisions
             if workspace.project
             else {},
@@ -67,7 +65,6 @@ class FlextInfraUtilitiesPyprojectRequirements:
             group_result = cls._normalize_requirement_field(
                 section,
                 group_name,
-                canonicalize_all=canonicalize_all,
                 revisions=workspace.project.dependency_revisions
                 if workspace.project
                 else {},
@@ -83,7 +80,6 @@ class FlextInfraUtilitiesPyprojectRequirements:
         container: t.Cli.TomlDocument | t.Cli.TomlTable,
         key: str,
         *,
-        canonicalize_all: bool,
         revisions: t.StrMapping,
         declared_sources: t.StrMapping,
     ) -> p.Result[bool]:
@@ -108,9 +104,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
             if normalized.failure:
                 return r[bool].from_failure(normalized)
             normalized_items.append(normalized.value)
-        canonical = tuple(dict.fromkeys(normalized_items))
-        if canonicalize_all:
-            canonical = tuple(sorted(canonical, key=cls.dependency_order_key))
+        canonical = tuple(
+            sorted(dict.fromkeys(normalized_items), key=cls.dependency_order_key)
+        )
         u.Cli.toml_sync_string_list(container, key, canonical)
         return r[bool].ok(True)
 
@@ -266,31 +262,6 @@ class FlextInfraUtilitiesPyprojectRequirements:
         groups = u.Cli.toml_table_child(document, c.Infra.DEPENDENCY_GROUPS)
         if groups is not None:
             u.Cli.toml_remove_key_if_present(groups, "workspace")
-
-    @staticmethod
-    def _is_topology_repository_root(
-        *, project_name: str, workspace: p.Infra.WorkspaceSpec
-    ) -> bool:
-        """Identify the real multi-project root, not an autonomous repository."""
-        return bool(workspace.subprojects) and (
-            project_name == workspace.repository.distribution
-        )
-
-    @classmethod
-    def _is_workspace_context_root(
-        cls,
-        *,
-        project_name: str,
-        workspace: p.Infra.WorkspaceSpec,
-        workspace_mode: c.Infra.MakeProfile,
-    ) -> bool:
-        """Identify the root only when the active topology is a workspace."""
-        return (
-            workspace_mode is c.Infra.MakeProfile.WORKSPACE
-            and cls._is_topology_repository_root(
-                project_name=project_name, workspace=workspace
-            )
-        )
 
     @staticmethod
     def _validate_dependency_provenance(

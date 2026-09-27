@@ -172,16 +172,27 @@ class FlextInfraPyprojectModernizerDocument:
         canonical_dev: t.StrSequence,
         dry_run: bool,
         skip_comments: bool,
-        format_source: bool = True,
-        root_modules: t.StrSequence = (),
-        root_packages: t.StrSequence = (),
-        declared_python_dirs: t.StrSequence = (),
-        declared_python_dirs_are_complete: bool = False,
-        generated_python_roots: t.StrSequence = (),
-        project_kind: str | None = None,
-        analysis_exclusions: t.StrSequence | None = None,
     ) -> t.StrSequence:
-        """Run every phase over one parsed state; write unless ``dry_run``."""
+        """Run every phase over one discovered state; write unless ``dry_run``."""
+        return self._render_document_state(
+            state,
+            self._apply_document_phases(
+                state,
+                canonical_dev=canonical_dev,
+                topology=m.Infra.PyprojectDeclaredTopology(),
+            ),
+            dry_run=dry_run,
+            skip_comments=skip_comments,
+        )
+
+    def _apply_document_phases(
+        self,
+        state: m.Infra.PyprojectDocumentState,
+        *,
+        canonical_dev: t.StrSequence,
+        topology: m.Infra.PyprojectDeclaredTopology,
+    ) -> t.StrSequence:
+        """Run every managed phase, in order, over one parsed payload."""
         path, payload = state.pyproject_path, state.payload
         is_root = path.parent.resolve() == self.root.resolve()
         # Scaffold (pre-write) contexts have no on-disk project root yet: derive
@@ -191,13 +202,21 @@ class FlextInfraPyprojectModernizerDocument:
         paths_manager = (
             FlextInfraExtraPathsManager(
                 repository_root=self.root,
-                generated_python_roots=generated_python_roots,
-                analysis_exclusions=analysis_exclusions or (),
+                analysis_exclusions=topology.analysis_exclusions or (),
             )
             if exists
             else None
         )
-        resolved_kind = self._project_kind(path, payload, project_kind)
+        resolved_kind = self._project_kind(path, payload, topology.project_kind)
+        analyzer_context = m.Infra.PyprojectAnalyzerContext(
+            is_root=is_root,
+            repository_root=self.root if exists else None,
+            project_dir=path.parent if exists else None,
+            declared_python_dirs=topology.declared_python_dirs,
+            declared_python_dirs_are_complete=(
+                topology.declared_python_dirs_are_complete
+            ),
+        )
         tooling = config.Infra.tooling
         changes: t.MutableSequenceOf[str] = [
             *self._normalize_build_payload(payload),
@@ -207,26 +226,23 @@ class FlextInfraPyprojectModernizerDocument:
             # roots, so resolve Pyright first and converge in one pass.
             *FlextInfraEnsurePyrightConfigPhase(tooling).apply_payload(
                 payload,
-                is_root=is_root,
-                repository_root=self.root if exists else None,
-                project_dir=path.parent if exists else None,
+                context=analyzer_context,
                 project_kind=resolved_kind,
                 paths_manager=paths_manager,
-                declared_python_dirs=declared_python_dirs,
-                declared_python_dirs_are_complete=declared_python_dirs_are_complete,
-                analysis_exclusions=analysis_exclusions,
+                analysis_exclusions=topology.analysis_exclusions,
             ),
             # Declared roots are topology facts only during atomic creation;
             # normal modernization derives productive roots on disk.
             *FlextInfraEnsurePyreflyConfigPhase(tooling).apply_payload(
                 payload,
-                is_root=is_root,
-                project_dir=path.parent if exists else None,
-                paths_manager=paths_manager,
-                declared_python_dirs=declared_python_dirs,
-                declared_python_dirs_are_complete=(
-                    declared_python_dirs_are_complete or not exists
+                context=(
+                    analyzer_context
+                    if exists
+                    else analyzer_context.model_copy(
+                        update={"declared_python_dirs_are_complete": True}
+                    )
                 ),
+                paths_manager=paths_manager,
             ),
             *FlextInfraEnsureRuffConfigPhase(
                 tooling, self.managed_artifacts
@@ -234,8 +250,8 @@ class FlextInfraPyprojectModernizerDocument:
             *FlextInfraEnsurePackagingPhase(tooling).apply_payload(
                 payload,
                 path=path,
-                root_modules=root_modules,
-                root_packages=root_packages,
+                root_modules=topology.root_modules,
+                root_packages=topology.root_packages,
             ),
         ]
         if paths_manager is not None:
@@ -244,12 +260,25 @@ class FlextInfraPyprojectModernizerDocument:
                     payload, project_dir=path.parent, is_root=is_root
                 )
             )
-        doc = u.Cli.toml_document_from_mapping(payload)
+        return changes
+
+    def _render_document_state(
+        self,
+        state: m.Infra.PyprojectDocumentState,
+        changes: t.StrSequence,
+        *,
+        dry_run: bool,
+        skip_comments: bool,
+        format_source: bool = True,
+    ) -> t.StrSequence:
+        """Order, annotate, and format one payload; write unless ``dry_run``."""
+        path = state.pyproject_path
+        doc = u.Cli.toml_document_from_mapping(state.payload)
         self._reorder_document(doc, preferred_first=self.tomlsort_sort_first)
         rendered = doc.as_string()
+        comment_changes: t.StrSequence = ()
         if not skip_comments:
             rendered, comment_changes = FlextInfraInjectCommentsPhase().apply(rendered)
-            changes.extend(comment_changes)
         if format_source:
             formatted = u.Infra.format_toml_source(
                 rendered,
@@ -268,7 +297,7 @@ class FlextInfraPyprojectModernizerDocument:
             return ()
         if not dry_run:
             u.write_file(path, state.rendered, encoding=c.Cli.ENCODING_DEFAULT)
-        return changes
+        return [*changes, *comment_changes]
 
 
 __all__: list[str] = ["FlextInfraPyprojectModernizerDocument"]

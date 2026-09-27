@@ -114,10 +114,11 @@ class FlextInfraModelsCheck:
     class FixEnforcementCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-enforcement``."""
 
-        fail_fast: Annotated[
-            bool,
-            m.Field(description="Stop enforcement fixing after the first failure"),
-        ] = c.Infra.CHECK_FAIL_FAST_DEFAULT
+        @property
+        def fail_fast(self) -> bool:
+            """Share the service's fail-fast invariant with gate adapters."""
+            return c.Infra.SERVICE_FAIL_FAST
+
         rules: Annotated[
             t.StrSequence,
             m.Field(description="Comma-separated enforcement rule IDs to fix"),

@@ -42,19 +42,12 @@ class FlextInfraWorkspaceCheckGatesMixin:
     def _run_single_project(
         self,
         target: m.Infra.CheckProjectTarget,
-        index: int,
-        total: int,
         resolved_gates: t.StrSequence,
         ctx: m.Infra.GateContext,
         rope_outcomes: t.VariadicTuple[m.Infra.RopeCallbackOutcome],
-    ) -> m.Infra.ProjectResult | None:
-        """Check one project, returning None when the project should be skipped."""
+    ) -> m.Infra.ProjectResult:
+        """Check one project after the loop has validated its target."""
         project_dir = target.path
-        pyproject_path = project_dir / c.PYPROJECT_FILENAME
-        if not project_dir.is_dir() or not pyproject_path.exists():
-            u.Cli.progress(index, total, target.name, c.Infra.SeverityLevel.SKIP)
-            return None
-        u.Cli.progress(index, total, target.name, c.Infra.VERB_CHECK)
         project_ctx = self._isolate_context(ctx, target)
         _ = u.Cli.ensure_dir(project_ctx.reports_dir)
         start = time.monotonic()
@@ -86,12 +79,17 @@ class FlextInfraWorkspaceCheckGatesMixin:
         skipped = 0
         loop_start = time.monotonic()
         for index, target in enumerate(projects, 1):
-            project_result = self._run_single_project(
-                target, index, total, resolved_gates, ctx, rope_outcomes
-            )
-            if project_result is None:
+            if (
+                not target.path.is_dir()
+                or not (target.path / c.PYPROJECT_FILENAME).exists()
+            ):
+                u.Cli.progress(index, total, target.name, c.Infra.SeverityLevel.SKIP)
                 skipped += 1
                 continue
+            u.Cli.progress(index, total, target.name, c.Infra.VERB_CHECK)
+            project_result = self._run_single_project(
+                target, resolved_gates, ctx, rope_outcomes
+            )
             results.append(project_result)
             project_passed: bool = project_result.passed
             if not project_passed:
@@ -166,15 +164,12 @@ class FlextInfraWorkspaceCheckGatesMixin:
                     stage_id=gate_id,
                     depends_on=(
                         frozenset({previous_gate_id})
-                        if ctx.fail_fast and previous_gate_id is not None
+                        if (ctx.fail_fast or mutating) and previous_gate_id is not None
                         else frozenset()
                     ),
                     handler=self._make_gate_handler(
-                        gate_instance, project_dir, ctx, executions
+                        gate_instance, project_dir, ctx, executions, rope_outcomes
                     ),
-                    depends_on=(previous_gate_id,)
-                    if mutating and previous_gate_id is not None
-                    else (),
                 )
             )
             previous_gate_id = gate_id
@@ -182,7 +177,7 @@ class FlextInfraWorkspaceCheckGatesMixin:
         if not stages:
             return result
 
-        pipeline_result = cli.pipeline(
+        cli.pipeline(
             stages,
             context=m.Cli.PipelineStageContext(repository_root=project_dir),
             logger=self._gate_logger,
@@ -281,8 +276,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
 
         Single-pass verb law: the mutating verb runs exactly one operation per
         gate — never a check pass before or after the fix. The fix execution
-        already reports what its tool could not repair
-        (``accept_reported_issues=True``); enforcing that residue belongs to
+        already reports what its tool could not repair (the fix execution
+        takes the fixer's exit status as its verdict); enforcing that residue belongs to
         the read-only ``make check``. Gates without a fix contract fall
         through to their read-only check, so an ``--apply`` selection over a
         read-only gate still executes it instead of silently skipping.

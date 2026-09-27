@@ -78,7 +78,7 @@ class TestsFlextInfraCodegenLayout:
                         "project_overrides": {
                             distribution: override.model_dump(mode="json")
                         }
-                    }
+                    },
                 }
             }
         }

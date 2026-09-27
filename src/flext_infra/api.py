@@ -9,6 +9,9 @@ from flext_infra import m, t, u
 
 from .base import s
 from .check.workspace_check import FlextInfraWorkspaceChecker
+from .codegen.census import FlextInfraCodegenCensus
+from .codegen.fixer import FlextInfraCodegenFixer
+from .codegen.pipeline import FlextInfraCodegenPipeline
 from .validate.namespace_validator import FlextInfraNamespaceValidator
 from .workspace.environment_beads import FlextInfraWorkspaceEnvironmentSync
 from .workspace.rope import FlextInfraRopeWorkspace
@@ -41,6 +44,44 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentSync, s[t.JsonDict]):
             return FlextInfraWorkspaceChecker(
                 repository_root=request.repository_root, rope=rope
             ).execute_payload(request)
+
+    def codegen_census(self, request: m.Infra.CodegenCommand) -> p.Result[str]:
+        """Run the read-only census within the facade-owned Rope lifecycle."""
+        with self.rope_workspace(request.repository_root) as rope:
+            return FlextInfraCodegenCensus(
+                repository_root=request.repository_root,
+                apply_changes=request.apply,
+                check_only=request.check_only,
+                dry_run=request.dry_run,
+                output_format=request.output_format,
+                rope=rope,
+            ).execute()
+
+    def codegen_auto_fix(self, request: m.Infra.CodegenAutoFixCommand) -> p.Result[str]:
+        """Run namespace fixes within the facade-owned Rope lifecycle."""
+        with self.rope_workspace(request.repository_root) as rope:
+            return FlextInfraCodegenFixer(
+                repository_root=request.repository_root,
+                apply_changes=request.apply,
+                check_only=request.check_only,
+                dry_run=request.dry_run,
+                output_format=request.output_format,
+                selected_projects=request.project_names,
+                rules_only=request.rules_only,
+                rope=rope,
+            ).execute()
+
+    def codegen_pipeline(self, request: m.Infra.CodegenCommand) -> p.Result[str]:
+        """Run the codegen pipeline within the facade-owned Rope lifecycle."""
+        with self.rope_workspace(request.repository_root) as rope:
+            return FlextInfraCodegenPipeline(
+                repository_root=request.repository_root,
+                apply_changes=request.apply,
+                check_only=request.check_only,
+                dry_run=request.dry_run,
+                output_format=request.output_format,
+                rope=rope,
+            ).execute()
 
     def validate_namespace(
         self, repository_root: Path

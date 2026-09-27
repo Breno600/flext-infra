@@ -69,12 +69,9 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         for project_path in projects:
             project_result = self._run_project_detection(
                 project_path,
-                deps_service=deps_service,
-                typing_deps=typing_deps,
                 venv_bin=venv_bin,
                 limits_path=limits_path,
                 params=params,
-                do_typings=do_typings,
                 projects_report=projects_report,
             )
             if project_result.failure:

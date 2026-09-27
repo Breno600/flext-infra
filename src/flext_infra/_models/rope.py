@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, ClassVar
 
 from flext_cli import m
 
@@ -94,6 +94,12 @@ class FlextInfraModelsRope:
         end_line: Annotated[
             int, m.Field(ge=1, description="Final line in the Rope logical region")
         ]
+        start_offset: Annotated[
+            int, m.Field(ge=0, description="Source offset where the region starts")
+        ]
+        end_offset: Annotated[
+            int, m.Field(ge=0, description="Source offset where the region ends")
+        ]
         category: Annotated[
             c.Infra.StatementCategory,
             m.Field(description="Lexical category of the leading token"),
@@ -132,6 +138,51 @@ class FlextInfraModelsRope:
         text: t.NonEmptyStr = m.Field(description="Exact source region")
         is_comment: bool = m.Field(description="Comment marker")
 
+    class RopeSourceFacts(m.ArbitraryTypesModel):
+        """One Rope fact pass over a module source, shared by every static rule."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        source: Annotated[
+            str, m.Field(description="Exact module source the facts describe")
+        ]
+        imports: Annotated[
+            t.VariadicTuple[FlextInfraModelsRope.ImportFact],
+            m.Field(description="Normalized Rope import bindings of the module"),
+        ]
+        regions: Annotated[
+            t.VariadicTuple[FlextInfraModelsRope.IgnoredRegion],
+            m.Field(description="Rope-classified string and comment regions"),
+        ]
+        word_finder: Annotated[
+            p.Infra.RopeWorder,
+            m.Field(description="Rope word and call classifier over the same source"),
+        ]
+
+    class FamilyWrapperFlatten(m.ArbitraryTypesModel):
+        """Rope identity of one namespace wrapper flattened into its family owner."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        project: Annotated[
+            t.Infra.RopeProject,
+            m.Field(description="Rope snapshot project resolving every consumer"),
+        ]
+        owner_name: Annotated[
+            str, m.Field(description="Family owner class receiving promoted members")
+        ]
+        wrapper_name: Annotated[
+            str, m.Field(description="Declared name of the flattened namespace wrapper")
+        ]
+        wrapper: Annotated[
+            t.Infra.RopePyName,
+            m.Field(description="Rope identity of the flattened namespace wrapper"),
+        ]
+        names: Annotated[
+            t.StrMapping,
+            m.Field(description="Wrapper member names mapped to promoted names"),
+        ]
+
     class ConstantInfo(
         mm.NonNegativeLineMixin, mm.NestedClassPathMixin, m.ContractModel
     ):
@@ -147,6 +198,24 @@ class FlextInfraModelsRope:
         name: Annotated[str, m.Field(description="Symbol name")]
         kind: Annotated[
             str, m.Field(description="Symbol kind: class, function, assignment")
+        ]
+
+    class ConsolidatorScannedFile(m.ArbitraryTypesModel):
+        """One scanned module whose assignments match canonical constants."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        resource: Annotated[
+            t.Infra.RopeResource,
+            m.Field(description="Rope resource of the scanned module"),
+        ]
+        source: Annotated[
+            str,
+            m.Field(description="Source captured at scan; restored on failed gates"),
+        ]
+        matches: Annotated[
+            t.SequenceOf[t.Triple[FlextInfraModelsRope.SymbolInfo, str, str]],
+            m.Field(description="Matched symbol, canonical reference, and raw value"),
         ]
 
     class ModuleSemanticState(m.ContractModel):
@@ -451,9 +520,9 @@ class FlextInfraModelsRope:
             m.Field(description="Optional child scope object from rope"),
         ] = None
         rope_workspace: Annotated[
-            p.Infra.RopeWorkspaceDsl | None,
-            m.Field(description="Optional shared rope workspace/session handle"),
-        ] = None
+            p.Infra.RopeWorkspaceDsl,
+            m.Field(description="Shared rope workspace/session owning the resource"),
+        ]
 
     class RopeWorkspaceSession(m.ContractModel):
         """Public Rope workspace snapshot used by the service DSL."""

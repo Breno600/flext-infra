@@ -41,7 +41,6 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
                 files_result.error or self.scan_error_message,
                 passed=False,
                 started=started,
-                ctx=ctx,
             )
         rope_project = u.Infra.init_rope_project(project_dir)
         try:
@@ -55,7 +54,7 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
         finally:
             rope_project.close()
         return self._detected_gate_execution(
-            project_dir, ctx, issues=issues, started=started
+            project_dir, issues=issues, started=started
         )
 
     def _detect_file_issues(

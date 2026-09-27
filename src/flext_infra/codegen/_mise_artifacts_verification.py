@@ -85,12 +85,7 @@ class FlextInfraMiseArtifactsVerification:
                 )
             if directory.manifest is not None:
                 transition = cls._validate_manifest_transition(
-                    layout,
-                    journal,
-                    directory.manifest,
-                    observed.value,
-                    allow_registered_additions=True,
-                    created=created,
+                    layout, journal, directory.manifest, observed.value, created=created
                 )
                 if transition.failure:
                     return result_type.from_failure(transition)
@@ -129,11 +124,7 @@ class FlextInfraMiseArtifactsVerification:
                 f"temporary tree contains an unregistered alias: {directory.path}"
             )
         transition = cls._validate_manifest_transition(
-            layout,
-            journal,
-            directory.manifest,
-            observed.value,
-            allow_registered_additions=True,
+            layout, journal, directory.manifest, observed.value
         )
         if transition.failure:
             return result_type.from_failure(transition)
@@ -601,12 +592,15 @@ class FlextInfraMiseArtifactsVerification:
         authorized: m.Cli.AtomicPhysicalTreeManifest,
         observed: m.Cli.AtomicPhysicalTreeManifest,
         *,
-        allow_registered_additions: bool,
         created: t.VariadicTuple[
             m.Cli.AtomicFileState | m.Cli.AtomicDirectoryState
         ] = (),
     ) -> p.Result[bool]:
-        """Accept only stable objects and explicitly journaled file transitions."""
+        """Accept only stable objects and explicitly journaled file transitions.
+
+        An addition is admitted only as a registered transition: a created
+        receipt, a directory above a journaled file, or a journaled file.
+        """
         if not cls._same_directory_identity(authorized.root, observed.root):
             return r[bool].fail(
                 f"temporary tree root identity changed: {authorized.root.path}"
@@ -639,10 +633,6 @@ class FlextInfraMiseArtifactsVerification:
         additions = tuple(
             entry for path, entry in current.items() if path not in expected
         )
-        if additions and not allow_registered_additions:
-            return r[bool].fail(
-                f"unregistered temporary-tree entry exists: {additions[0].path}"
-            )
         authorized_files = set(file_specs.value)
         created_by_path = {receipt.path: receipt for receipt in created}
         for path in created_by_path:

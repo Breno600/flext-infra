@@ -223,29 +223,13 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def generate_test_module_skeleton(
-        *,
-        class_name: str,
-        base_class: str,
-        project_module: str,
-        alias: str,
-        namespace: str,
-        project_namespace: str,
-        docstring: str,
+        *, context: m.Infra.TestModuleSkeletonRenderContext
     ) -> str:
-        """Render one canonical test facade skeleton."""
+        """Render one canonical test facade skeleton from its validated context."""
         template_path = (
             Path(__file__).resolve().parent.parent
             / "templates"
             / c.Infra.TEMPLATE_TEST_MODULE_SKELETON
-        )
-        context = m.Infra.TestModuleSkeletonRenderContext(
-            class_name=class_name,
-            base_class=base_class,
-            project_module=project_module,
-            alias=alias,
-            namespace=namespace,
-            project_namespace=project_namespace,
-            docstring=docstring,
         )
         rendered: p.Result[str] = u.Cli.template_render(template_path, context)
         return rendered.unwrap()

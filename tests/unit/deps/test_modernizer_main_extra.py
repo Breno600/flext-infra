@@ -8,7 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraPyprojectModernizer
-from tests import c, u
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -252,7 +252,11 @@ class TestsFlextInfraDepsModernizerMainExtra:
         source = '[project]\nname = "sample"\nversion = "0.1.0"\n'
         modernizer = FlextInfraPyprojectModernizer(repository_root=tmp_path)
 
-        result = modernizer.conform_source(source, path=tmp_path / "pyproject.toml")
+        result = modernizer.conform_source(
+            source,
+            path=tmp_path / "pyproject.toml",
+            topology=m.Infra.PyprojectDeclaredTopology(),
+        )
 
         error = tm.fail(result)
         tm.that(error, has=["taplo format failed (1)", "invalid configuration", "/x/["])

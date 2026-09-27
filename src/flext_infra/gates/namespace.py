@@ -27,12 +27,12 @@ class FlextInfraNamespaceGate(FlextInfraGate):
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
         """Reject execution outside the injected shared Rope cycle."""
+        _ = ctx
         return self._build_project_error_gate_result(
             project_dir,
             passed=False,
             errors=["namespace gate requires the shared Rope cycle"],
             started=time.monotonic(),
-            ctx=ctx,
         )
 
     def rope_callback_binding(
@@ -49,6 +49,7 @@ class FlextInfraNamespaceGate(FlextInfraGate):
         outcomes: tuple[m.Infra.RopeCallbackOutcome, ...],
     ) -> m.Infra.GateExecution:
         """Build the namespace gate result from the owner cycle outcomes."""
+        _ = ctx
         started = time.monotonic()
         violations = [
             violation
@@ -59,11 +60,7 @@ class FlextInfraNamespaceGate(FlextInfraGate):
             for violation in outcome.violations
         ]
         return self._build_project_error_gate_result(
-            project_dir,
-            passed=not violations,
-            errors=violations,
-            started=started,
-            ctx=ctx,
+            project_dir, passed=not violations, errors=violations, started=started
         )
 
 

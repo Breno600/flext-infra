@@ -150,16 +150,7 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
             rule_obj = u.Cli.json_as_mapping(rule_obj_raw)
             if not rule_obj:
                 continue
-            self._evaluate_single_rule(
-                rule_obj,
-                context.skill_dir,
-                context.root,
-                context.mode,
-                context.include_globs,
-                context.exclude_globs,
-                counts,
-                violations,
-            )
+            self._evaluate_single_rule(rule_obj, context, counts, violations)
         return counts, tuple(violations)
 
     def _skill_report_model(

@@ -685,7 +685,7 @@ def models_resource(
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic models fixture module."""
     rope_project, repository_root = semantic_rope_workspace
-    resource = u.Infra.get_resource_from_path(
+    resource = u.Infra.resolve_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "models.py"
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
@@ -698,7 +698,7 @@ def services_resource(
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic services fixture module."""
     rope_project, repository_root = semantic_rope_workspace
-    resource = u.Infra.get_resource_from_path(
+    resource = u.Infra.resolve_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "services.py"
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)

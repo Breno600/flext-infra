@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-from flext_infra import c, config, p, t, u
+from flext_infra import c, config, m, p, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
@@ -59,18 +59,19 @@ class FlextInfraCodegenLayoutGitignoreMixin:
         if rendered.value == current:
             noop_status: t.Infra.LayoutStatus = "noop"
             return r[t.Infra.LayoutStatus].ok(noop_status)
-        planned = u.Infra.planned_file(
-            project_dir,
-            gitignore_path,
-            required=False,
+        before = u.Cli.atomic_read_binary_file_state(gitignore_path, required=False)
+        if before.failure:
+            return r[t.Infra.LayoutStatus].from_failure(before)
+        planned = m.Infra.CodegenFilePlan(
+            project=project_dir,
+            path=gitignore_path,
+            before=before.value,
             desired_content=rendered.value.encode(c.Cli.ENCODING_DEFAULT),
             desired_mode=0o644,
             owner="codegen",
             policy="full",
         )
-        if planned.failure:
-            return r[t.Infra.LayoutStatus].from_failure(planned)
-        written = publish_file_plan(planned.value, phase="layout")
+        written = publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
         applied_status: t.Infra.LayoutStatus = "applied"
@@ -103,18 +104,19 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             text += "\n"
         text += f"# {c.Infra.GITIGNORE_LAYOUT_SECTION_NAME}\n"
         text += "\n".join(missing) + "\n"
-        planned = u.Infra.planned_file(
-            project_dir,
-            gitignore_path,
-            required=False,
+        before = u.Cli.atomic_read_binary_file_state(gitignore_path, required=False)
+        if before.failure:
+            return r[t.Infra.LayoutStatus].from_failure(before)
+        planned = m.Infra.CodegenFilePlan(
+            project=project_dir,
+            path=gitignore_path,
+            before=before.value,
             desired_content=text.encode(c.Cli.ENCODING_DEFAULT),
             desired_mode=0o644,
             owner="codegen",
             policy="merge",
         )
-        if planned.failure:
-            return r[t.Infra.LayoutStatus].from_failure(planned)
-        written = publish_file_plan(planned.value, phase="layout")
+        written = publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
         applied_status: t.Infra.LayoutStatus = "applied"

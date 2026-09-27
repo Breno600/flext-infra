@@ -124,8 +124,6 @@ class TestsFlextInfraCodegenLayoutGitignore:
             (root / c.CONFIG_DIR_NAME / c.Infra.WORKSPACE_MANIFEST_FILENAME).is_file(),
             eq=True,
         )
-        (root / c.Infra.GITIGNORE).write_text(tm.ok(rendered), encoding="utf-8")
-
         entries = (root / c.Infra.GITIGNORE).read_text(encoding="utf-8").splitlines()
         missing = tuple(
             pattern

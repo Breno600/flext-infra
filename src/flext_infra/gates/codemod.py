@@ -157,13 +157,17 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 for finding in report.root
             )
 
-        return self._build_check_gate_execution(
-            project_dir,
-            # Operator order (2026-09-24): codemod policy findings are
-            # observational. Native scanner failures remain blocking.
-            passed=not failures,
-            issues=failures,
-            observational_issues=findings,
+        # Operator order (2026-09-24): codemod policy findings are
+        # observational. Native scanner failures remain blocking.
+        return m.Infra.GateExecution(
+            result=self._gate_result(
+                project_dir,
+                passed=not failures,
+                errors=[issue.formatted for issue in failures],
+                started=started,
+            ),
+            issues=tuple(failures),
+            observational_issues=tuple(findings),
             raw_output="\n".join((
                 (
                     f"{len(findings)} observational findings; "
@@ -171,7 +175,6 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 ),
                 *raw_output,
             )),
-            started=started,
         )
 
     @staticmethod

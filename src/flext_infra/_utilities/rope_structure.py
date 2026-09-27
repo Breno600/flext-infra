@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from rope.base import codeanalyze, simplify, worder
 
-from flext_infra import c, m, p, t
+from flext_infra import c, m, t
 
 from .rope_core import FlextInfraUtilitiesRopeCore
 from .rope_runtime import FlextInfraUtilitiesRopeRuntime
@@ -46,6 +46,8 @@ class FlextInfraUtilitiesRopeStructure:
                 m.Infra.LogicalStatement(
                     line=start,
                     end_line=end,
+                    start_offset=lines.get_line_start(start),
+                    end_offset=lines.get_line_end(end),
                     indent=indent,
                     category=category,
                     enclosing_kind=kind,
@@ -121,10 +123,14 @@ class FlextInfraUtilitiesRopeStructure:
         """Evaluate config rules in one Rope logical-statement pass."""
         if not source:
             return ()
-        lines = codeanalyze.SourceLinesAdapter(source)
-        regions = cls._ignored_regions(source, lines)
-        facts = cls._import_facts(module_imports)
-        word_finder = worder.Worder(source, True)
+        facts = m.Infra.RopeSourceFacts(
+            source=source,
+            imports=cls._import_facts(module_imports),
+            regions=cls._ignored_regions(
+                source, codeanalyze.SourceLinesAdapter(source)
+            ),
+            word_finder=worder.Worder(source, True),
+        )
         violations: t.VariadicTuple[m.Infra.PatternSmellViolation] = ()
         for statement in cls.logical_statements(source):
             for rule in rules:
@@ -132,10 +138,6 @@ class FlextInfraUtilitiesRopeStructure:
                     rule=rule,
                     statement=statement,
                     facts=facts,
-                    regions=regions,
-                    source=source,
-                    lines=lines,
-                    word_finder=word_finder,
                     project_name=project_name,
                 ):
                     continue
@@ -147,7 +149,7 @@ class FlextInfraUtilitiesRopeStructure:
                 )
                 if violation not in violations:
                     violations = (*violations, violation)
-        for region in regions:
+        for region in facts.regions:
             if not region.is_comment:
                 continue
             compact = "".join(region.text.casefold().split())
@@ -172,16 +174,14 @@ class FlextInfraUtilitiesRopeStructure:
         *,
         rule: m.Infra.StaticRuleSpec,
         statement: m.Infra.LogicalStatement,
-        facts: t.SequenceOf[m.Infra.ImportFact],
-        regions: t.SequenceOf[m.Infra.IgnoredRegion],
-        source: str,
-        lines: codeanalyze.SourceLinesAdapter,
-        word_finder: p.Infra.RopeWorder,
+        facts: m.Infra.RopeSourceFacts,
         project_name: str,
     ) -> bool:
         """Return whether one closed operator matches one Rope region."""
         statement_facts = tuple(
-            fact for fact in facts if statement.line <= fact.line <= statement.end_line
+            fact
+            for fact in facts.imports
+            if statement.line <= fact.line <= statement.end_line
         )
         if isinstance(rule, m.Infra.StaticImportModuleRule):
             return rule.owner_project != project_name and any(
@@ -198,14 +198,9 @@ class FlextInfraUtilitiesRopeStructure:
         if isinstance(rule, m.Infra.StaticAttributeRule):
             return any(
                 cls._primary_offsets(
-                    source,
-                    lines,
-                    statement,
-                    f"{fact.local_name}.{rule.member}",
-                    regions,
-                    word_finder,
+                    facts, statement, f"{fact.local_name}.{rule.member}"
                 )
-                for fact in facts
+                for fact in facts.imports
                 if not fact.from_import_info
                 and (
                     fact.module == rule.module
@@ -213,13 +208,11 @@ class FlextInfraUtilitiesRopeStructure:
                 )
             )
         if isinstance(rule, (m.Infra.StaticCallRule, m.Infra.StaticCallKeywordRule)):
-            offsets = cls._primary_offsets(
-                source, lines, statement, rule.name, regions, word_finder, called=True
-            )
+            offsets = cls._primary_offsets(facts, statement, rule.name, called=True)
             return bool(offsets) and (
                 isinstance(rule, m.Infra.StaticCallRule)
                 or any(
-                    not cls._call_has_keyword(source, offset, rule.keyword, word_finder)
+                    not cls._call_has_keyword(facts, offset, rule.keyword)
                     for offset in offsets
                 )
             )
@@ -234,35 +227,32 @@ class FlextInfraUtilitiesRopeStructure:
         return isinstance(rule, m.Infra.StaticAnnotatedStringRule) and (
             statement.category == c.Infra.StatementCategory.ANN_ASSIGN
             and cls.target_name(statement) == rule.name
-            and cls._string_assignment(statement, lines, regions)
+            and cls._string_assignment(statement, facts.regions)
         )
 
     @staticmethod
     def _primary_offsets(
-        source: str,
-        lines: codeanalyze.SourceLinesAdapter,
+        facts: m.Infra.RopeSourceFacts,
         statement: m.Infra.LogicalStatement,
         primary: str,
-        regions: t.SequenceOf[m.Infra.IgnoredRegion],
-        word_finder: p.Infra.RopeWorder,
         *,
         called: bool = False,
     ) -> t.VariadicTuple[int]:
         """Return Rope-verified primary offsets inside one logical region."""
-        start = lines.get_line_start(statement.line)
-        end = lines.get_line_end(statement.end_line)
         offsets: t.VariadicTuple[int] = ()
-        cursor = start
-        while (candidate := source.find(primary, cursor, end)) >= 0:
+        cursor = statement.start_offset
+        while (
+            candidate := facts.source.find(primary, cursor, statement.end_offset)
+        ) >= 0:
             cursor = candidate + len(primary)
             if any(
                 region.start_offset <= candidate < region.end_offset
-                for region in regions
+                for region in facts.regions
             ):
                 continue
             anchor = candidate + primary.rfind(".") + 1
-            if word_finder.get_primary_at(anchor) != primary or (
-                called and not word_finder.is_a_function_being_called(anchor)
+            if facts.word_finder.get_primary_at(anchor) != primary or (
+                called and not facts.word_finder.is_a_function_being_called(anchor)
             ):
                 continue
             offsets = (*offsets, anchor)
@@ -270,21 +260,21 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def _call_has_keyword(
-        source: str, call_offset: int, keyword: str, word_finder: p.Infra.RopeWorder
+        facts: m.Infra.RopeSourceFacts, call_offset: int, keyword: str
     ) -> bool:
         """Return whether Rope recognizes a required call keyword."""
-        start, end = word_finder.get_word_parens_range(call_offset)
+        start, end = facts.word_finder.get_word_parens_range(call_offset)
         cursor = start
-        while (candidate := source.find(keyword, cursor, end)) >= 0:
+        while (candidate := facts.source.find(keyword, cursor, end)) >= 0:
             cursor = candidate + len(keyword)
-            if word_finder.is_function_keyword_parameter(candidate):
+            if facts.word_finder.is_function_keyword_parameter(candidate):
                 return True
         return False
 
     @staticmethod
     def _import_facts(
         module_imports: t.Infra.RopeModuleImports,
-    ) -> t.SequenceOf[m.Infra.ImportFact]:
+    ) -> t.VariadicTuple[m.Infra.ImportFact]:
         """Validate Rope NormalImport/FromImport objects into immutable facts."""
         facts: t.VariadicTuple[m.Infra.ImportFact] = ()
         for statement in tuple(module_imports.imports):
@@ -321,7 +311,7 @@ class FlextInfraUtilitiesRopeStructure:
     @staticmethod
     def _ignored_regions(
         source: str, lines: codeanalyze.SourceLinesAdapter
-    ) -> t.SequenceOf[m.Infra.IgnoredRegion]:
+    ) -> t.VariadicTuple[m.Infra.IgnoredRegion]:
         """Validate Rope string/comment regions into immutable facts."""
         regions: t.VariadicTuple[m.Infra.IgnoredRegion] = ()
         for start, end, _metadata in simplify.ignored_regions(source):
@@ -342,7 +332,6 @@ class FlextInfraUtilitiesRopeStructure:
     @staticmethod
     def _string_assignment(
         statement: m.Infra.LogicalStatement,
-        lines: codeanalyze.SourceLinesAdapter,
         regions: t.SequenceOf[m.Infra.IgnoredRegion],
     ) -> bool:
         """Return whether an annotated assignment starts with a Rope string."""
@@ -350,7 +339,7 @@ class FlextInfraUtilitiesRopeStructure:
         head = FlextInfraUtilitiesRopeStructure._assignment_head(stripped)
         value = stripped[len(head) + 1 :].lstrip() if head is not None else ""
         relative = statement.text.find(value) if value else -1
-        offset = lines.get_line_start(statement.line) + relative
+        offset = statement.start_offset + relative
         return relative >= 0 and any(
             not region.is_comment and region.start_offset == offset
             for region in regions
