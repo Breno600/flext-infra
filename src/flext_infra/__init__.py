@@ -44,11 +44,9 @@ if TYPE_CHECKING:
     from .api import FlextInfra, infra
     from .base import FlextInfraServiceBase, s
     from .base_selection import FlextInfraProjectSelectionServiceBase
+    from .check.gate_registry import FlextInfraGateRegistry
     from .check.workspace_check import FlextInfraWorkspaceChecker
-    from .check.workspace_check_gates import (
-        FlextInfraGateRegistry,
-        FlextInfraWorkspaceCheckGatesMixin,
-    )
+    from .check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
     from .cli import FlextInfraCli, docs_main, main
     from .codegen.census import FlextInfraCodegenCensus
     from .codegen.codegen_generation import FlextInfraCodegenGeneration
@@ -147,7 +145,7 @@ if TYPE_CHECKING:
     from .fixers.transformer_fixer import FlextInfraTransformerFixerAdapter
     from .gates.abstraction_boundary import FlextInfraAbstractionBoundaryGate
     from .gates.bandit import FlextInfraBanditGate
-    from .gates.base_gate import FlextInfraGate, FlextInfraScannerGateMixin
+    from .gates.base_gate import FlextInfraGate
     from .gates.canonical_alias import FlextInfraCanonicalAliasGate
     from .gates.deferred_self_reference import FlextInfraDeferredSelfReferenceGate
     from .gates.direnv import FlextInfraDirenvGate
@@ -176,6 +174,7 @@ if TYPE_CHECKING:
     from .gates.ruff_format import FlextInfraRuffFormatGate
     from .gates.ruff_lint import FlextInfraRuffLintGate
     from .gates.runtime_census import FlextInfraRuntimeCensusGate
+    from .gates.scanner_gate import FlextInfraScannerGateMixin
     from .gates.silent_failure import FlextInfraSilentFailureGate
     from .gates.smells import FlextInfraSmellsGate
     from .gates.tier_whitelist import FlextInfraTierWhitelistGate
@@ -524,11 +523,9 @@ _LAZY_IMPORTS = MappingProxyType(
             ".base": ("FlextInfraServiceBase", "s"),
             ".base_selection": ("FlextInfraProjectSelectionServiceBase",),
             ".check": ("check",),
+            ".check.gate_registry": ("FlextInfraGateRegistry",),
             ".check.workspace_check": ("FlextInfraWorkspaceChecker",),
-            ".check.workspace_check_gates": (
-                "FlextInfraGateRegistry",
-                "FlextInfraWorkspaceCheckGatesMixin",
-            ),
+            ".check.workspace_check_gates": ("FlextInfraWorkspaceCheckGatesMixin",),
             ".cli": ("FlextInfraCli", "docs_main", "main"),
             ".codegen": ("codegen",),
             ".codegen.census": ("FlextInfraCodegenCensus",),
@@ -642,7 +639,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates": ("gates",),
             ".gates.abstraction_boundary": ("FlextInfraAbstractionBoundaryGate",),
             ".gates.bandit": ("FlextInfraBanditGate",),
-            ".gates.base_gate": ("FlextInfraGate", "FlextInfraScannerGateMixin"),
+            ".gates.base_gate": ("FlextInfraGate",),
             ".gates.canonical_alias": ("FlextInfraCanonicalAliasGate",),
             ".gates.deferred_self_reference": ("FlextInfraDeferredSelfReferenceGate",),
             ".gates.direnv": ("FlextInfraDirenvGate",),
@@ -671,6 +668,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.ruff_format": ("FlextInfraRuffFormatGate",),
             ".gates.ruff_lint": ("FlextInfraRuffLintGate",),
             ".gates.runtime_census": ("FlextInfraRuntimeCensusGate",),
+            ".gates.scanner_gate": ("FlextInfraScannerGateMixin",),
             ".gates.silent_failure": ("FlextInfraSilentFailureGate",),
             ".gates.smells": ("FlextInfraSmellsGate",),
             ".gates.tier_whitelist": ("FlextInfraTierWhitelistGate",),

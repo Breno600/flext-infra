@@ -32,7 +32,7 @@
   more)
 - Exported module shortcuts: `check`, `codegen`, `codemod`, `deps`, `detectors`, `docs`,
   `fixers`, `gates` (+7 more)
-- Generated module pages: `201`
+- Generated module pages: `203`
 
 ## Next Pages
 
