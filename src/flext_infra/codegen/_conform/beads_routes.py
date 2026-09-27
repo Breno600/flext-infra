@@ -35,6 +35,12 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
             return r[bool].from_failure(workspace_result)
         workspace = workspace_result.value
         owner = root / c.Infra.BEADS_DIRNAME
+        if workspace.beads is None:
+            if owner.exists() or owner.is_symlink():
+                return r[bool].fail(
+                    f"Beads is disabled but a ledger route exists: {owner}"
+                )
+            return r[bool].ok(True)
         # The ledger directory is a conform projection: absent before the
         # first render is normal; a link, or a non-directory, is not physical.
         if owner.is_symlink() or (owner.exists() and not owner.is_dir()):

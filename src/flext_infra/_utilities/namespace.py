@@ -318,7 +318,7 @@ class FlextInfraUtilitiesCodegenNamespace:
                 owner = FlextInfraUtilitiesRopeAnalysis.published_facade_owner(
                     rope_project, resource
                 )
-                if owner is not None:
+                if owner is not None and owner[0] in declared_exports:
                     expected_alias, expected_family = owner
         family_tokens: t.StrSequence = (expected_family,) if expected_family else ()
         return family_alias, expected_family, expected_alias, family_tokens
