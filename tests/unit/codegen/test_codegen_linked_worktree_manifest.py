@@ -71,8 +71,7 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         tm.that(
             u.Tests.codegen_file_text(makefile_plan), has="MAKE_PROFILE := standalone"
         )
-        beads = plan.workspace.beads
-        assert beads is not None
+        beads = tm.not_none(plan.workspace.beads)
         tm.that(beads.workspace, eq="lane-workspace")
         tm.that(beads.database, eq="lane-database")
         tm.that(beads.issue_prefix, eq="lane-prefix")

@@ -38,7 +38,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         if workspace.beads is None:
             if owner.exists() or owner.is_symlink():
                 return r[bool].fail(
-                    f"Beads is disabled but a ledger route exists: {owner}"
+                    f"Beads-disabled repository still has Beads state: {owner}"
                 )
             return r[bool].ok(True)
         # The ledger directory is a conform projection: absent before the
