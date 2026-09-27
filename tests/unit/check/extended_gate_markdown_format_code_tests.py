@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from flext_tests import tm
+from flext_tests import tm, tv
 
 from flext_infra import c, m
 from flext_infra.gates.markdown_code import FlextInfraMarkdownCodeGate
@@ -131,19 +131,6 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
             issues_len=issues_len,
         )
 
-    def test_code_gate_undeclared_fragment_fails_loud(self, tmp_path: Path) -> None:
-        """An unparseable python fence without ``notest`` is a documentation defect.
-
-        348534a84 retired the silent skip: the ``notest`` marker is the declared
-        opt-out, so an undeclared fragment escapes with its SyntaxError.
-        """
-        project_dir = u.Tests.mk_project(tmp_path, "markdown-code-broken")
-        (project_dir / "README.md").write_text(self.SYNTAX_BROKEN, encoding="utf-8")
-        context = m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path)
-
-        with pytest.raises(SyntaxError):
-            FlextInfraMarkdownCodeGate(tmp_path).check(project_dir, context)
-
     def test_code_gate_fix_splices_formatted_block_back(self, tmp_path: Path) -> None:
         """`make fix` formats fenced blocks whose round-trip recompiles cleanly."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-fix")
@@ -178,8 +165,10 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(result.result.passed, eq=True)
         tm.that(readme.read_text(encoding="utf-8"), eq=self.FRAGMENT_THEN_FORMATTED)
 
-    def test_code_gate_fix_refuses_undeclared_fragment(self, tmp_path: Path) -> None:
-        """``fix`` never rewrites a document whose fragment lacks ``notest``."""
+    def test_code_gate_fix_preserves_fragment_for_syntax_owner(
+        self, tmp_path: Path
+    ) -> None:
+        """Formatting preserves an invalid fence for the markdown validator."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-no-splice")
         readme = project_dir / "README.md"
         readme.write_text(self.SYNTAX_BROKEN, encoding="utf-8")
@@ -187,9 +176,14 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
             repository_root=tmp_path, reports_dir=tmp_path, apply_fixes=True
         )
 
-        with pytest.raises(SyntaxError):
-            FlextInfraMarkdownCodeGate(tmp_path).fix(project_dir, context)
+        FlextInfraMarkdownCodeGate(tmp_path).fix(project_dir, context)
         tm.that(readme.read_text(encoding="utf-8"), eq=self.SYNTAX_BROKEN)
+        syntax_report = tv.markdown(project_dir).unwrap()
+        tm.that(syntax_report.passed, eq=False)
+        tm.that(
+            any(item.rule_id == "MD-001" for item in syntax_report.violations),
+            eq=True,
+        )
 
     def test_code_gate_reports_unformatted_docstring_example(
         self, tmp_path: Path

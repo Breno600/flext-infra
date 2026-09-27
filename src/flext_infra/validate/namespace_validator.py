@@ -166,8 +166,6 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
             ("p", ("protocols.py",)),
             ("m", ("models.py",)),
             ("u", ("utilities.py",)),
-            ("base", ("base.py",)),
-            ("api", ("api.py",)),
             ("cli", ("cli.py",)),
         )
         for layer, filenames in required_files:
@@ -176,10 +174,17 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
                     f"[NS-LAYOUT-{len(messages) + 1:03d}] missing {layer} facade: "
                     + " or ".join(filenames)
                 )
-        if not (package_dir / "services").is_dir():
-            messages.append(
-                f"[NS-LAYOUT-{len(messages) + 1:03d}] missing services composition tree"
-            )
+        services_dir = package_dir / "services"
+        has_services = services_dir.is_dir() and any(
+            path.is_file() and path.suffix == ".py" and path.name != "__init__.py"
+            for path in services_dir.iterdir()
+        )
+        if has_services:
+            for layer in ("base", "api"):
+                if not (package_dir / f"{layer}.py").is_file():
+                    messages.append(
+                        f"[NS-LAYOUT-{len(messages) + 1:03d}] missing {layer} facade"
+                    )
         for family in ("_constants", "_typings", "_protocols", "_models", "_utilities"):
             if not (package_dir / family / "base.py").is_file():
                 messages.append(

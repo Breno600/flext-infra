@@ -49,20 +49,27 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
 
     @classmethod
     def _snapshot_planner_inputs(
-        cls, index: m.Infra.RopeWorkspaceIndex
+        cls,
+        index: m.Infra.RopeWorkspaceIndex,
+        package_dirs: t.SequenceOf[Path],
     ) -> p.Result[MutableMapping[Path, m.Cli.AtomicFileState]]:
         """Snapshot Python, project, target, and template inputs before planning."""
+        selected_dirs = frozenset(package_dirs)
         module_paths = {
-            entry.file_path.resolve() for entry in index.modules_by_path.values()
+            entry.file_path.resolve()
+            for entry in index.modules_by_path.values()
+            if entry.package_dir.resolve() in selected_dirs
         }
         template_paths = set(FlextInfraCodegenGeneration.init_template_paths())
         project_metadata_paths = {
             entry.project_root.resolve() / c.PYPROJECT_FILENAME
             for entry in index.packages_by_dir.values()
-            if entry.project_root is not None
+            if entry.project_root is not None and entry.package_dir in selected_dirs
         }
         init_paths = {
-            entry.init_path.resolve() for entry in index.packages_by_dir.values()
+            entry.init_path.resolve()
+            for entry in index.packages_by_dir.values()
+            if entry.package_dir in selected_dirs
         }
         return cls._snapshot_paths(
             module_paths | template_paths, init_paths | project_metadata_paths
@@ -183,7 +190,16 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
             if path not in target_paths and state.content is not None
         )
         bound = tuple(
-            by_path[path].model_copy(update={"source_states": source_states})
+            m.Infra.CodegenFilePlan(
+                project=by_path[path].project,
+                path=by_path[path].path,
+                before=by_path[path].before,
+                desired_content=by_path[path].desired_content,
+                desired_mode=by_path[path].desired_mode,
+                source_states=source_states,
+                owner=by_path[path].owner,
+                policy=by_path[path].policy,
+            )
             for path in sorted(by_path)
         )
         return r[tuple[m.Infra.CodegenFilePlan, ...]].ok(bound)

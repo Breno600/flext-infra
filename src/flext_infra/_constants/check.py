@@ -274,9 +274,10 @@ class FlextInfraConstantsCheck:
     QLTY_BINARY: ClassVar[str] = "qlty"
     QLTY_CONFIG_DIRNAME: ClassVar[str] = ".qlty"
     QLTY_CONFIG_FILENAME: ClassVar[str] = "qlty.toml"
+    SMELLS_QLTY_ALL_ARG: ClassVar[str] = "--all"
     SMELLS_QLTY_ARGS: ClassVar[t.StrSequence] = (
         "smells",
-        "--all",
+        SMELLS_QLTY_ALL_ARG,
         "--sarif",
         "--include-tests",
         "--no-snippets",

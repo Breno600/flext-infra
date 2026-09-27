@@ -605,14 +605,14 @@ Infra:
         # operation quickly without pretending that an uninterruptible host
         # fsync can obey a five-second Python signal deadline. The aggregate
         # budget below independently terminates an incomplete full suite.
-        case-timeout-seconds: 15
+        case-timeout-seconds: 10
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
         slow-timeout-seconds: 30
-        # A local suite that cannot finish within three minutes is a performance
+        # A local suite that cannot finish within two minutes is a performance
         # defect. The generated process wall is derived from this value and the
         # termination grace by the typed model; no second timeout source exists.
-        run-timeout-seconds: 180
+        run-timeout-seconds: 120
         termination-grace-seconds: 2
         # Operator decision 2026-09-26: one failure stops the invocation. The
         # next run starts from the corrected owner instead of accumulating a
@@ -635,6 +635,7 @@ Infra:
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
           cosmos-docgen: 4
+          flext-infra: 4
         # Reserve physical memory for each xdist worker and its child process
         # tree; this bound may reduce the tested ceiling on smaller hosts.
         parallel-worker-memory-gb: 2

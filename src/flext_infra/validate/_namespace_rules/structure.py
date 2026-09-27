@@ -206,7 +206,15 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
             messages.append(
                 f"{filepath}:{cls.line(outer)} — facade must compose one local namespace"
             )
-        elif not nested and not policy.inherited_namespaces:
+        elif (
+            not nested
+            and not policy.inherited_namespaces
+            and not (
+                filepath.stem == policy.expected_alias
+                and filepath.stem in c.Infra.NAMESPACE_SETTINGS_IMPORT_ALLOWED_OWNERS
+            )
+            and filepath.name != "base.py"
+        ):
             messages.append(
                 f"{filepath}:{cls.line(outer)} — facade must declare or inherit "
                 "a nested namespace through its actual MRO"
