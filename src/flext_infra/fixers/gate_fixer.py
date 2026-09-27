@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
-from flext_infra.check.workspace_check_gates import FlextInfraGateRegistry
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
 
 from .base import FlextInfraFixerAdapter
 

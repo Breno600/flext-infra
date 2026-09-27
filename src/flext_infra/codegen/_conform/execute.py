@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Self, override
+from typing import Self, override
 
 from flext_core import r
 
@@ -19,44 +19,15 @@ from .. import (
 from .plan import FlextInfraCodegenConformPlan
 
 
-class _ConformExecuteRoles:
-    if TYPE_CHECKING:
-        request: m.Infra.CodegenConformRequest | None
-        repository_root: Path
-        initial_workspace: m.Infra.WorkspaceSpec | None
+class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
+    """Transactional execution of conformance plans.
 
-        def plan(
-            self, request: m.Infra.CodegenConformRequest
-        ) -> p.Result[m.Infra.CodegenPlan]: ...
-
-        @staticmethod
-        def mise_config_plans(
-            plan: m.Infra.CodegenPlan,
-        ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]: ...
-
-        def conform_workspace_beads_routes(
-            self, request: m.Infra.CodegenConformRequest
-        ) -> p.Result[bool]: ...
-
-        @staticmethod
-        def owned_docs_files(
-            request: m.Infra.CodegenConformRequest,
-            files: t.SequenceOf[m.Infra.CodegenFilePlan],
-        ) -> t.VariadicTuple[m.Infra.CodegenFilePlan]: ...
-
-        @classmethod
-        def _owned_docs_directories(
-            cls,
-            request: m.Infra.CodegenConformRequest,
-            plan: m.Infra.CodegenPlan,
-            directories: t.SequenceOf[Path],
-        ) -> t.VariadicTuple[Path]: ...
-
-
-class FlextInfraCodegenConformExecute(
-    _ConformExecuteRoles, FlextInfraCodegenConformPlan
-):
-    """Transactional execution of conformance plans."""
+    The chain is linear in dependency order, so execution statically inherits
+    everything it calls: bootstrap (service root, request state) <- gitignore
+    <- docs ownership <- beads routes <- file plans <- pyproject policy <-
+    context render <- artifact render <- existing plan <- scaffold plan <- plan
+    <- execute.
+    """
 
     @classmethod
     def execute_request(

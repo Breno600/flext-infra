@@ -9,10 +9,7 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m
 
 from ... import t
-from ..._constants import (
-    FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsWorkspace,
-)
+from ..._constants import FlextInfraConstantsCodegenProject
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
 from .beads import FlextInfraConfigModelsBeads
 from .contract import FlextInfraConfigModelsContract
@@ -51,31 +48,7 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Typed pytest execution policy"),
         ]
 
-    class ScratchRootContext(FlextInfraConfigModelsContract.ConfigContract):
-        """Shared state and scratch roots every generated environment derives."""
-
-        state_directory_name: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="External runtime state directory beside checkout"),
-        ]
-        scratch_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Scratch namespace below the home scratch root"),
-        ]
-        scratch_home_relative: Annotated[
-            t.NonEmptyStr, m.Field(description="Home-relative scratch root")
-        ]
-        scratch_identity_segment_aliases: Annotated[
-            t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Checkout path segments renamed in the home scratch mirror "
-                    "so a scratch root never contains a VCS directory"
-                )
-            ),
-        ] = tuple(FlextInfraConstantsWorkspace.SCRATCH_IDENTITY_SEGMENT_ALIASES)
-
-    class MakefileRenderSpec(MakeCommandContext, ScratchRootContext):
+    class MakefileRenderSpec(MakeCommandContext):
         """Field-only render input for an existing repository Makefile."""
 
         mise_bootstrap: Annotated[
