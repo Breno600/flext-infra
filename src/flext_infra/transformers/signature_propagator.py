@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 
 from flext_infra import c, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from .rope_transformer import FlextInfraRopeTransformer
 
 if TYPE_CHECKING:
     from flext_infra import m, t
@@ -87,12 +87,12 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
         pymodule = u.Infra.parse_string_module(source)
         module_ast = u.Infra.ensure_ast_node(pymodule.get_ast())
         line_offsets = self._line_offsets(source)
-        edits: list[tuple[int, int, str]] = []
+        edits: list[t.Triple[int, int, str]] = []
         for node in u.Infra.walk_ast_nodes(module_ast):
             if u.Infra.node_kind(node) != "Call":
                 continue
             func = getattr(node, "func", None)
-            if not hasattr(func, "_fields"):
+            if not u.Infra.ast_node(func):
                 continue
             if u.Infra.name_of(func) != simple_name:
                 continue
@@ -169,7 +169,7 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
         return result, changed
 
     @staticmethod
-    def _drop_keyword(text: str, pattern: t.Infra.RegexPattern) -> t.Pair[str, int]:
+    def _drop_keyword(text: str, pattern: t.RegexPattern) -> t.Pair[str, int]:
         """Remove ``<name>=<value>[,]?`` occurrences from a call slice."""
         result = text
         drops = 0

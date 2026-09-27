@@ -13,6 +13,16 @@ valid:
     from flext_cli import m
     class FlextInfraModels(m):
         pass
+  - |
+    from flext_infra import p
+    class AiHubProtocols(p):
+        pass
+    p = AiHubProtocols
+  - |
+    from flext_infra import c as _infra_c
+    class AiHubConstants(_infra_c):
+        pass
+    c: type[AiHubConstants] = AiHubConstants
 invalid:
   - |
     from flext_cli import m

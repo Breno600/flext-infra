@@ -22,7 +22,7 @@ name: CI
 {%- for branch in ci_trigger_branches %}
       - {{ branch }}
 {%- endfor %}
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review, edited]
   workflow_call:
     secrets:
       CI_DEPENDENCIES_APP_ID:
@@ -56,6 +56,7 @@ jobs:
     timeout-minutes: 60
     env:
       {{ make.ci.variable }}: {{ make.ci.value }}
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
@@ -79,9 +80,11 @@ jobs:
       # generator carrying that project's concerns.
 {{ custom_steps }}
 {%- endif %}
-      # make setup is the only toolchain installer. It bootstraps the newest
-      # released Mise, installs the committed fleet toolchain, publishes that
-      # environment through GITHUB_PATH, and prepares the project runtime.
+      # make setup is the frozen installer. It bootstraps the committed Mise
+      # release and installs the fleet toolchain from the committed
+      # mise.lock and the dependencies frozen from the committed uv.lock,
+      # publishes that environment through GITHUB_PATH, and prepares the
+      # project runtime. CI never runs `make upg`: it never re-resolves.
 {%- if system_packages %}
 
       # Why: this repository's tests exercise a real external engine, and the
@@ -103,16 +106,6 @@ jobs:
 
 {%- for step in make.workflow if "ci" in step.contexts %}
       - name: {{ step.verb }} (blocking)
-{%- if step.verb == "setup" %}
-        # Why (resumption-f1 2026-09-11): GitHub-hosted runners share egress
-        # IPs, so the unauthenticated 60 req/h REST budget is exhausted before
-        # mise finishes resolving the moving @latest backends (observed 403 on
-        # beads/waza: setup died before any gate). The job token authenticates
-        # resolution without changing the moving-release toolchain contract.
-        env:
-          GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
-          MISE_GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
-{%- endif %}
         # Why (flext-v4p5): explicit CI=Y on every make invocation (job env is not enough for matrix/docker parity).
         run: {{ make.ci.variable }}={{ make.ci.value }} make {{ step.verb }}
 {%- if step.verb == "setup" %}
@@ -122,31 +115,22 @@ jobs:
         # sibling repos — unauthenticated fetches fail with "docs generation
         # source state is absent or unauthenticated". The job token
         # authenticates those reads without changing the toolchain contract.
-        env:
-          GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
-          MISE_GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
         run: |
           {{ make.ci.variable }}={{ make.ci.value }} make gen
           git status --short
-          test -z "$(git status --porcelain --untracked-files=all)"
+          test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
 
-      # Setup syncs against the committed lock and refreshes it in place (`uv
-      # sync`); the fleet runs unlocked, so the deps audit proves the resolved
-      # graph instead of preserving a frozen snapshot.
+      # Setup installs frozen from the committed uv.lock (`uv sync --locked`)
+      # and never rewrites it; the deps audit proves that locked graph.
       - name: deps check (blocking)
         run: {{ make.ci.variable }}={{ make.ci.value }} make audit
 {%- endif %}
 {%- if step.verb == "check" %}
 
-      # Why (aihub-v01jg): {{ make.ci.variable }}={{ make.ci.value }} runs ONE HALF of the gate set
-      # ({{ make.ci.check_gates | join(" ") }}); the complement
-      # ({{ make.ci.local_check_gates | join(" ") }}) is owned by
-      # {{ make.ci.variable }}={{ make.ci.local_value }} and, without this step, ran on developer
-      # machines only. That split let real defects reach main twice: five
-      # missing-attribute errors and an inconsistent-inheritance error, each
-      # green in CI and red locally. The two contexts are strict complements by
-      # construction, so running both here costs one extra pass and closes the
-      # hole rather than trusting everyone to run the other half by hand.
+      # Both blocking steps derive from the same active default universe.
+      # {{ make.ci.variable }}={{ make.ci.value }} runs {{ make.check_gates_ci | join(" ") }}.
+      # {{ make.ci.variable }}={{ make.ci.local_value }} runs {{ make.check_gates_local | join(" ") }}.
+      # The partitions are disjoint and together execute every active gate.
       - name: {{ step.verb }} complement (blocking)
         run: {{ make.ci.variable }}={{ make.ci.local_value }} make {{ step.verb }}
 {%- endif %}
@@ -156,7 +140,7 @@ jobs:
       - name: Candidate cleanliness (blocking)
         run: |
           git status --short
-          test -z "$(git status --porcelain --untracked-files=all)"
+          test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
 {%- if ci_tests.selected %}
 
       - name: Dump reports on failure
@@ -211,6 +195,7 @@ jobs:
     timeout-minutes: 30
     env:
       {{ make.ci.variable }}: {{ make.ci.value }}
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
@@ -228,10 +213,6 @@ jobs:
 {{ custom_steps }}
 {%- endif %}
       - name: Boot
-        # Toolchain resolution needs the same authenticated API budget as ci.
-        env:
-          GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
-          MISE_GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
         run: {{ make.ci.variable }}={{ make.ci.value }} make setup
       - name: Release plan and guard
         env:

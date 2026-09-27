@@ -134,6 +134,3 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
         tm.that(result.failure, eq=True)
         tm.that(result.error, contains="lazy-init target module not found")
         tm.that(init_path.read_bytes(), eq=before)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenLazyInitFilePlans"]

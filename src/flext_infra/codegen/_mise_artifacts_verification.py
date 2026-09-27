@@ -246,7 +246,7 @@ class FlextInfraMiseArtifactsVerification:
                 return r[bool].fail(
                     f"generation entry escapes its project: {entry.path}"
                 )
-            staging_paths: list[tuple[str, str]] = []
+            staging_paths: list[t.Pair[str, str]] = []
             if entry.original_backup is not None:
                 staging_paths.append(("backup", entry.original_backup))
             if entry.desired_staging is not None:
@@ -335,7 +335,7 @@ class FlextInfraMiseArtifactsVerification:
     @classmethod
     def states_current(
         cls,
-        states: tuple[m.Cli.AtomicFileState, ...],
+        states: t.VariadicTuple[m.Cli.AtomicFileState],
         *,
         journal: m.Infra.CodegenTransactionJournal | None = None,
     ) -> p.Result[bool]:
@@ -437,6 +437,10 @@ class FlextInfraMiseArtifactsVerification:
     ) -> p.Result[bool]:
         """Prove one published phase from its authenticated analysis receipt."""
         destination_paths = frozenset(file.path for file in analysis.files)
+        u.Cli.info(
+            f"phase={analysis.phase} verify inputs={len(analysis.inputs)} "
+            f"destinations={len(analysis.files)}"
+        )
         source_state = cls.states_current(
             tuple(
                 state
@@ -561,7 +565,7 @@ class FlextInfraMiseArtifactsVerification:
         source_before = cls.sources(plan)
         if source_before.failure:
             return source_before
-        replacements: MutableMapping[Path, tuple[bytes, int | None]] = {}
+        replacements: MutableMapping[Path, t.Pair[bytes, int | None]] = {}
         for publication in publications or ():
             replacement = publication.replacement
             if replacement is None or replacement.content is None:
@@ -711,13 +715,13 @@ class FlextInfraMiseArtifactsVerification:
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[
-        MutableMapping[Path, tuple[_JournalFileRole, m.Infra.CodegenJournalEntry]]
+        MutableMapping[Path, t.Pair[_JournalFileRole, m.Infra.CodegenJournalEntry]]
     ]:
         result_type = r[
             MutableMapping[Path, tuple[_JournalFileRole, m.Infra.CodegenJournalEntry]]
         ]
         specs: MutableMapping[
-            Path, tuple[_JournalFileRole, m.Infra.CodegenJournalEntry]
+            Path, t.Pair[_JournalFileRole, m.Infra.CodegenJournalEntry]
         ] = {}
         for entry in journal.entries:
             selectors: t.VariadicTuple[t.Pair[_JournalFileRole, str | None]] = (
@@ -867,7 +871,7 @@ class FlextInfraMiseArtifactsVerification:
     def _artifact_snapshot(
         cls,
         plan: m.Infra.MiseToolchainWorkspacePlan,
-        replacements: MutableMapping[Path, tuple[bytes, int | None]],
+        replacements: MutableMapping[Path, t.Pair[bytes, int | None]],
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         root_launchers: t.Pair[bytes, bytes] | None = None
         states: list[m.Cli.AtomicFileState] = []

@@ -23,7 +23,7 @@ class FlextInfraPromotedDiscovery(FlextInfraPromotedRegistry):
         cls,
         *,
         script_roots: Sequence[Path] | None = None,
-        spec: p.Infra.Promoted.WorkspaceSpec | None = None,
+        spec: p.Infra.PromotedWorkspaceSpec | None = None,
     ) -> Self:
         """Discover promoted commands from every configured script root.
 

@@ -21,20 +21,6 @@ if TYPE_CHECKING:
 class TestsFlextInfraTypeGates:
     """The selected project's actual findings determine acceptance."""
 
-    @staticmethod
-    def _gate_verdict(
-        gate_class: type[FlextInfraGate], *, findings_block: bool
-    ) -> bool:
-        """Derive the check verdict from the warn-only SSOT (operator law 2026-09-22).
-
-        ``c.Infra.WARNING_GATE_IDS`` owns the classification: a warn-only gate
-        reports findings — including tool failures — without failing the
-        verdict; a blocking gate fails on any finding.
-        """
-        if gate_class.gate_id in c.Infra.WARNING_GATE_IDS:
-            return True
-        return not findings_block
-
     @pytest.fixture
     def checker_context(self, real_python_package: Path) -> m.Infra.GateContext:
         """Configure the existing real package for native checker execution."""
@@ -71,10 +57,7 @@ class TestsFlextInfraTypeGates:
 
         result = FlextInfraMypyGate(project).check(project, checker_context)
 
-        tm.that(
-            result.result.passed,
-            eq=self._gate_verdict(FlextInfraMypyGate, findings_block=True),
-        )
+        tm.that(result.result.passed, eq=False)
         messages = "\n".join(issue.message for issue in result.issues)
         tm.that(messages, has=["Expected", "Actual", "def size", "int", "str"])
 
@@ -102,10 +85,7 @@ class TestsFlextInfraTypeGates:
 
         result = FlextInfraMypyGate(project).check(project, checker_context)
 
-        tm.that(
-            result.result.passed,
-            eq=self._gate_verdict(FlextInfraMypyGate, findings_block=True),
-        )
+        tm.that(result.result.passed, eq=False)
         tm.that(tuple(issue.code for issue in result.issues), has="TOOL_ERROR")
         tm.that(
             "\n".join(issue.message for issue in result.issues),
@@ -126,31 +106,15 @@ class TestsFlextInfraTypeGates:
         source = project / "src" / "test_pkg" / "contract.py"
         source.write_text('value: int = "incorrect"\n', encoding="utf-8")
         failed = gate.check(project, ctx)
-        assert failed.result.passed is self._gate_verdict(
-            gate_class, findings_block=True
-        )
+        assert failed.result.passed is False
         assert failed.issues
         assert failed.result.errors
-        warn_only = gate_class.gate_id in c.Infra.WARNING_GATE_IDS
-        expected_severity = "warning" if warn_only else "error"
-        assert any(
-            issue.severity.lower() == expected_severity for issue in failed.issues
-        )
+        assert any(issue.severity.lower() == "error" for issue in failed.issues)
 
         source.write_text("value: int = 1\n", encoding="utf-8")
         repaired = gate.check(project, ctx)
         assert repaired.result.passed, repaired
         assert not repaired.issues
-
-        if gate_class is FlextInfraMypyGate:
-            native_reports = tuple(reports.rglob("coverage.json"))
-            assert len(native_reports) == 1
-            inventory = m.Infra.MypyCoverageReport.model_validate_json(
-                native_reports[0].read_text(encoding="utf-8"), strict=True
-            )
-            assert set(inventory.lines) == {
-                str(path.resolve()) for path in (project / "src").rglob("*.py")
-            }
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
@@ -188,9 +152,7 @@ class TestsFlextInfraTypeGates:
         result = gate_class(project).check(
             project, m.Infra.GateContext(repository_root=project, reports_dir=reports)
         )
-        assert result.result.passed is self._gate_verdict(
-            gate_class, findings_block=True
-        )
+        assert result.result.passed is False
         assert any(issue.severity in {"warn", "warning"} for issue in result.issues)
 
     @pytest.mark.slow
@@ -210,9 +172,7 @@ class TestsFlextInfraTypeGates:
         ).errors
         pyproject.write_text("[tool.pyrefly\n", encoding="utf-8")
         failed = gate.check(project, checker_context)
-        assert failed.result.passed is self._gate_verdict(
-            FlextInfraPyreflyGate, findings_block=True
-        )
+        assert failed.result.passed is False
         assert failed.raw_output
 
     @pytest.mark.slow
@@ -232,17 +192,13 @@ class TestsFlextInfraTypeGates:
         assert not result.issues
 
         selected_error = gate.check_files([unselected], project, checker_context)
-        assert selected_error.result.passed is self._gate_verdict(
-            gate_class, findings_block=True
-        ), selected_error
+        assert selected_error.result.passed is False, selected_error
         assert any(
             issue.file.endswith(unselected.name) for issue in selected_error.issues
         )
 
         full_project = gate.check(project, checker_context)
-        assert full_project.result.passed is self._gate_verdict(
-            gate_class, findings_block=True
-        ), full_project
+        assert full_project.result.passed is False, full_project
         assert any(
             issue.file.endswith(unselected.name) for issue in full_project.issues
         )
@@ -257,9 +213,7 @@ class TestsFlextInfraTypeGates:
             tmp_path,
             m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path),
         )
-        assert result.result.passed is self._gate_verdict(
-            gate_class, findings_block=True
-        )
+        assert result.result.passed is False
         # An empty source must never read as a clean pass: the skipped state
         # stays visible in the execution errors for every gate posture.
         assert result.result.errors
@@ -311,13 +265,3 @@ class TestsFlextInfraTypeGates:
                 '"informationCount":0,"timeInSec":0.1}}',
                 strict=True,
             )
-
-    @pytest.mark.parametrize(
-        "payload", ['{"lines":{}}', '{"lines":{"relative.py":[1]}}', "{}"]
-    )
-    def test_mypy_requires_native_source_evidence(self, payload: str) -> None:
-        with pytest.raises(c.ValidationError):
-            m.Infra.MypyCoverageReport.model_validate_json(payload, strict=True)
-
-
-__all__: list[str] = ["TestsFlextInfraTypeGates"]

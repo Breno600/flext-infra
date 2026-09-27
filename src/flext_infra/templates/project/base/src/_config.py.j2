@@ -2,19 +2,17 @@
    namespace-holder singleton. The generator owns this contract; consumers never
    hand-author it. The base class is derived from the declared dependency profile
    (config_base_class/config_base_module), never guessed in-template. -#}
-{%- set ns_name = "_" ~ class_stem ~ "Namespace" -%}
 {%- set base_import_line = "from " ~ config_base_module ~ " import " ~ config_base_class ~ ", m" -%}
 {%- set base_import = base_import_line if base_import_line | length <= tooling.tools.ruff.line_length else "from " ~ config_base_module ~ " import (\n    " ~ config_base_class ~ ",\n    m,\n)" -%}
 {%- set settings_import_line = "from flext_core import FlextSettings" -%}
 {%- set config_class_line = "class " ~ class_stem ~ "Config(FlextSettings, " ~ config_base_class ~ "):" -%}
 {%- set config_class_declaration = config_class_line if config_class_line | length <= tooling.tools.ruff.line_length else "class " ~ class_stem ~ "Config(\n    FlextSettings, " ~ config_base_class ~ "\n):" -%}
-{%- set namespace_field_line = "    " ~ class_stem ~ ": Annotated[" -%}
-{%- set namespace_field = namespace_field_line if namespace_field_line | length <= tooling.tools.ruff.line_length else "    " ~ class_stem ~ ": Annotated[" -%}
+{%- set namespace_field_line = "    " ~ ns ~ ": Annotated[" -%}
+{%- set namespace_field = namespace_field_line if namespace_field_line | length <= tooling.tools.ruff.line_length else "    " ~ ns ~ ": Annotated[" -%}
 """{{ class_stem }}Config — frozen config singleton for {{ package_name }} (ADR-005 §7).
 
-Model-less: business rules live in ``config/*.yaml`` under the ``{{ class_stem }}:`` key and
-are exposed through the open ``config.{{ class_stem }}`` namespace (``extra="allow"``), with
-no per-domain model. Access is ``config.{{ class_stem }}.<domain>[<key>...]``.
+Business rules live in ``config/*.yaml`` under the ``{{ ns }}:`` key.
+The shared config declaration validates the ``config.{{ ns }}`` namespace.
 
 Copyright (c) {{ year }} {{ author_name }}. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -28,15 +26,13 @@ from typing import Annotated, Self
 
 {{ settings_import_line }}
 
-
-class {{ ns_name }}(m.BaseModel):
-    """Open, frozen namespace exposing every ``config/*.yaml`` domain model-less."""
-
-    model_config = m.ConfigDict(extra="allow", frozen=True)
+from ._models.config import (
+    {{ class_stem }}ConfigModels,
+)
 
 
 {{ config_class_declaration }}
-    """{{ class_stem }} config auto-loaded model-less from ``config/*.yaml``.
+    """{{ class_stem }} config auto-loaded and validated from ``config/*.yaml``.
 
     MRO carries ``FlextSettings`` FIRST (ENFORCE-042); the class stays a frozen,
     YAML-validated config singleton.
@@ -60,11 +56,11 @@ class {{ ns_name }}(m.BaseModel):
     __hash__ = object.__hash__
 
 {{ namespace_field }}
-        {{ ns_name }},
+        {{ class_stem }}ConfigModels.ConfigRoot.ConfigNamespace,
         m.Field(
-            description="Open namespace exposing ``config/*.yaml`` under ``{{ class_stem }}``."
+            description="Validated project configuration under ``{{ ns }}``."
         ),
-    ] = {{ ns_name }}()
+    ]
 
 
 config: {{ class_stem }}Config = {{ class_stem }}Config.fetch_global()

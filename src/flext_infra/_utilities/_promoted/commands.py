@@ -66,7 +66,7 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
     @classmethod
     def promoted_load_command(
         cls, path: Path, expected_verb: str, data: t.JsonMapping
-    ) -> p.Infra.Promoted.Command:
+    ) -> p.Infra.PromotedCommand:
         """Validate one header against its directory and file, once at ingress."""
         from flext_infra import m
 
@@ -96,7 +96,7 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
             if not isinstance(default, str):
                 cls.promoted_fail(message.PARAMS_DEFAULT_TYPE, path=path)
             params.append(
-                m.Infra.Promoted.Param(
+                m.Infra.PromotedParam(
                     name=cls._promoted_text(item, key.NAME, path),
                     help=cls._promoted_text(item, key.HELP, path),
                     required=required,
@@ -113,7 +113,7 @@ class FlextInfraUtilitiesPromotedCommands(FlextInfraUtilitiesPromotedWorkspace):
         mutates = data.get(key.MUTATES)
         if not isinstance(mutates, bool):
             cls.promoted_fail(message.REQUIRED_BOOL, path=path, key=key.MUTATES)
-        return m.Infra.Promoted.Command(
+        return m.Infra.PromotedCommand(
             verb=verb,
             what=what,
             domain=domain,

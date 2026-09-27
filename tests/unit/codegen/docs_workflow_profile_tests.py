@@ -39,6 +39,3 @@ class TestsFlextInfraCodegenDocsWorkflowProfile:
         docs = self._artifact(self._DOCS_DESTINATION)
 
         tm.that("standalone" in docs.profiles, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenDocsWorkflowProfile"]

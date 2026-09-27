@@ -4,6 +4,8 @@ valid:
   - present = hasattr(obj, "name")
   - value = getattr(obj, attr_name, None)
   - setattr(obj, "public_attr", value)
+  - module_name = getattr(klass, "__module__", "")
+  - exports = getattr(module, "__all__", None)
 invalid:
   - resolver = getattr(obj, "_get_service_settings_type", None)
   - present = hasattr(handler, "_private_state")

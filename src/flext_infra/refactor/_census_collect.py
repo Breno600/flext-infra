@@ -44,7 +44,7 @@ class FlextInfraRefactorCensusCollectMixin(
         ) -> None: ...
         @staticmethod
         def _include_object(
-            item: m.Infra.Census.Object,
+            item: m.Infra.Object,
             *,
             kind_names: t.StrSequence | None,
             selected_families: frozenset[str],
@@ -52,33 +52,31 @@ class FlextInfraRefactorCensusCollectMixin(
         ) -> bool: ...
         @staticmethod
         def _duplicate_groups(
-            project_objects: t.VariadicTuple[t.SequenceOf[m.Infra.Census.Object]],
-        ) -> t.VariadicTuple[m.Infra.Census.DuplicateGroup]: ...
+            project_objects: t.VariadicTuple[t.SequenceOf[m.Infra.Object]],
+        ) -> t.VariadicTuple[m.Infra.DuplicateGroup]: ...
         @staticmethod
-        def _object_key(item: m.Infra.Census.Object) -> str: ...
+        def _object_key(item: m.Infra.Object) -> str: ...
         def _project_report(
             self,
             project: str,
             *,
-            objects: t.VariadicTuple[m.Infra.Census.Object],
-            seed_violations: t.VariadicTuple[m.Infra.Census.Violation],
-            fixes: t.VariadicTuple[m.Infra.Census.Fix],
+            objects: t.VariadicTuple[m.Infra.Object],
+            seed_violations: t.VariadicTuple[m.Infra.Violation],
+            fixes: t.VariadicTuple[m.Infra.Fix],
             duplicate_keys: frozenset[str],
             rule_names: t.StrSequence | None,
             selected_rules: frozenset[str] | None = None,
-        ) -> m.Infra.Census.ProjectReport: ...
+        ) -> m.Infra.ProjectReport: ...
 
     def _scan_module(
         self,
         rope: p.Infra.RopeWorkspaceDsl,
         module: m.Infra.RopeModuleIndexEntry,
-        scan_config: m.Infra.Census.ScanConfig,
+        scan_config: m.Infra.ScanConfig,
         *,
-        project_objects: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Census.Object]],
-        project_violations: t.MappingKV[
-            str, t.MutableSequenceOf[m.Infra.Census.Violation]
-        ],
-        project_fixes: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Census.Fix]],
+        project_objects: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Object]],
+        project_violations: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Violation]],
+        project_fixes: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Fix]],
         report_projects: set[str],
     ) -> None:
         """Scan one module, accumulating objects/violations/fixes per project."""
@@ -86,8 +84,8 @@ class FlextInfraRefactorCensusCollectMixin(
         project = self._project_name_for_module(module, convention)
         if not project:
             return
-        module_objects: t.VariadicTuple[m.Infra.Census.Object] | None = None
-        objects: t.VariadicTuple[m.Infra.Census.Object] = ()
+        module_objects: t.VariadicTuple[m.Infra.Object] | None = None
+        objects: t.VariadicTuple[m.Infra.Object] = ()
         inventory_failed = False
         if scan_config.collect_object_inventory:
             try:
@@ -127,12 +125,7 @@ class FlextInfraRefactorCensusCollectMixin(
                 module.file_path,
                 objects=module_objects,
                 project_name=project,
-                applied=scan_config.applied,
-                kind_names=scan_config.kind_names,
-                rule_names=scan_config.rule_names,
-                selected_kinds=scan_config.selected_kinds,
-                selected_rules=scan_config.selected_rules,
-                convention=convention,
+                scan_config=scan_config,
             )
         except _ROPE_SAFE_EXCEPTIONS as exc:
             self._handle_rope_stage_failure(
@@ -149,13 +142,13 @@ class FlextInfraRefactorCensusCollectMixin(
         self,
         rope: p.Infra.RopeWorkspaceDsl,
         *,
-        project_objects: t.MappingKV[str, t.SequenceOf[m.Infra.Census.Object]],
-        project_violations: t.MappingKV[str, t.SequenceOf[m.Infra.Census.Violation]],
-        project_fixes: t.MappingKV[str, t.SequenceOf[m.Infra.Census.Fix]],
+        project_objects: t.MappingKV[str, t.SequenceOf[m.Infra.Object]],
+        project_violations: t.MappingKV[str, t.SequenceOf[m.Infra.Violation]],
+        project_fixes: t.MappingKV[str, t.SequenceOf[m.Infra.Fix]],
         report_projects: set[str],
         rule_names: t.StrSequence | None,
         selected_rules: frozenset[str] | None,
-    ) -> m.Infra.Census.WorkspaceReport:
+    ) -> m.Infra.WorkspaceReport:
         """Aggregate per-project scans into the final workspace census report."""
         duplicates = self._duplicate_groups(tuple(project_objects.values()))
         duplicate_keys = frozenset(
@@ -185,7 +178,7 @@ class FlextInfraRefactorCensusCollectMixin(
         )
         if self.effective_dry_run:
             project_reports = self._validated_project_reports(rope, project_reports)
-        return m.Infra.Census.WorkspaceReport(
+        return m.Infra.WorkspaceReport(
             projects=project_reports,
             total_objects=sum(report.objects_total for report in project_reports),
             total_violations=sum(report.violations_total for report in project_reports),

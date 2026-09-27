@@ -41,8 +41,8 @@ class FlextInfraPrivateImportBypassDetector:
         if res is None:
             return ()
         current_module = u.Infra.package_name(ctx.file_path)
-        declared_imports = u.Infra.get_declared_module_imports(ctx.rope_project, res)
-        semantic_imports = u.Infra.get_semantic_module_imports(ctx.rope_project, res)
+        declared_imports = u.Infra.resolve_declared_module_imports(ctx.rope_project, res)
+        semantic_imports = u.Infra.resolve_semantic_module_imports(ctx.rope_project, res)
         violations: list[m.Infra.PrivateImportBypassViolation] = []
         for local_name, fqn in semantic_imports.items():
             if "._" not in fqn:
@@ -105,7 +105,7 @@ class FlextInfraPrivateImportBypassDetector:
         if resource is None:
             return False
         try:
-            pymodule = u.Infra.get_pymodule(rope_project, resource)
+            pymodule = u.Infra.resolve_pymodule(rope_project, resource)
         except c.EXC_BROAD_IO_TYPE as exc:
             msg = (
                 f"private-import-bypass detector could not open facade module "

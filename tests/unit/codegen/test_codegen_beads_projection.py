@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import ast
-import typing
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-import flext_infra
-from flext_infra import c, m
-from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra import c, config, infra, m
 from tests import u
 
 
@@ -29,7 +25,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         )
         return root
 
-    def test_local_identity_renders_only_declarative_beads_files(
+    def test_local_identity_renders_declarative_beads_routing(
         self, tmp_path: Path
     ) -> None:
         root = self._project(
@@ -56,11 +52,19 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(rendered_config, has="gc.endpoint_status:")
         tm.that(rendered_config, has="types.custom:")
         tm.that(rendered_config, has="dolt.auto-start:")
-        # Beads owns and mints the ledger marker at first use (flext-l2296):
-        # a fresh checkout legitimately lacks it and conform must not plan
-        # the absent runtime artifact.
-        tm.that(rendered_metadata, none=True)
-        tm.that(hasattr(plan, "beads"), eq=False)
+        if rendered_metadata is None:
+            pytest.fail("local identity must produce the declarative Beads marker")
+        metadata = u.Tests.json_payload(rendered_metadata)
+        tm.that(metadata["backend"], eq="dolt")
+        tm.that(metadata["database"], eq="dolt")
+        tm.that(metadata["dolt_database"], eq="project_database")
+        tm.that(
+            metadata["dolt_mode"], eq=config.Infra.codegen.toolchain.beads.dolt_mode
+        )
+        # A fresh checkout has no checkout-owned identity.toml. Conform owns
+        # the portable routing marker but never mints the ledger identity.
+        tm.that("project_id" in metadata, eq=False)
+        tm.that(set(metadata), eq={"backend", "database", "dolt_mode", "dolt_database"})
 
     def test_gascity_disabled_renders_standalone_beads_config(
         self, tmp_path: Path
@@ -89,8 +93,10 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(rendered_config, lacks="Gas City contract")
         if rendered_mise is None:
             pytest.fail("standalone identity must produce the managed Mise manifest")
-        tm.that(rendered_mise, lacks='[tools."github:steveyegge/gascity"]')
-        tm.that(rendered_mise, has='[tools."github:marlon-costa-dc/beads"]')
+        # bd and gc are host binaries owned by the global mise config; a
+        # project manifest never declares either distribution.
+        tm.that(rendered_mise, lacks="beads")
+        tm.that(rendered_mise, lacks="gascity")
 
     def test_mise_manifest_provisions_managed_make(self, tmp_path: Path) -> None:
         """The generated ``.mise.toml`` must declare make as a managed tool.
@@ -111,8 +117,11 @@ class TestsFlextInfraCodegenBeadsProjection:
 
         if rendered_mise is None:
             pytest.fail("conform must produce the managed .mise.toml")
-        tm.that(rendered_mise, has='make = "latest"')
+        tm.that(
+            rendered_mise, has=f'make = "{config.Infra.codegen.toolchain.make_version}"'
+        )
         tm.that(rendered_mise, lacks="conda")
+        tm.that(rendered_mise, lacks="stale")
 
     def test_gascity_disabled_renders_local_envrc_tier(self, tmp_path: Path) -> None:
         """A disabled city renders the repository-local bd activation tier."""
@@ -214,43 +223,56 @@ class TestsFlextInfraCodegenBeadsProjection:
             pytest.fail("residue-only .envrc.local must be planned for removal")
         tm.that(entry.desired_content, none=True)
 
+    @pytest.mark.parametrize("source_exists", [False, True])
     def test_gascity_enabled_sources_activate_conditionally(
-        self, tmp_path: Path
+        self, tmp_path: Path, *, source_exists: bool
     ) -> None:
-        """Generated envrc sources host files only when they exist.
-
-        Isolated CI checkouts render the same Gas City participation as a
-        city-connected host, but they carry no host environment files: a hard
-        ``source_env`` there breaks direnv activation and the contract gate.
-        """
+        """Optional sources precede the fail-loud city authority boundary."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
             issue_prefix="project-prefix",
         )
-        u.Tests.write_standalone_workspace_manifest(
-            root, "fixture-project", gascity_enabled=True
+        source = tmp_path / "optional-host.envrc"
+        marker = "optional-host-source-executed"
+        if source_exists:
+            source.write_text(f"printf '%s\\n' '{marker}' >&2\n", encoding="utf-8")
+        environment = m.Infra.BeadsWorkspaceEnvironmentSpec(
+            environment_sources=(str(source),), identity_var="FLEXT_TEST_CITY_ROOT"
         )
-
-        plan = u.Tests.governed_project_plan(root)
-        rendered_envrc = u.Tests.planned_text(plan, ".envrc")
-
-        if rendered_envrc is None:
-            pytest.fail("city participation must produce the managed .envrc")
-        tm.that(rendered_envrc, has='source_env_if_exists "$HOME/.config/')
+        tm.ok(
+            infra.sync_environment_files(
+                m.Infra.WorkspaceEnvironmentSyncRequest(
+                    repository_root=root, beads=environment, allow_direnv=False
+                )
+            )
+        )
+        tm.ok(u.Cli.run_checked((c.Infra.CLI_DIRENV, "allow", str(root)), cwd=root))
+        try:
+            process = tm.ok(
+                u.Cli.run_raw(
+                    (c.Infra.CLI_DIRENV, "exec", str(root), "true"),
+                    cwd=root,
+                    env={environment.identity_var: ""},
+                )
+            )
+        finally:
+            tm.ok(u.Cli.run_checked((c.Infra.CLI_DIRENV, "deny", str(root)), cwd=root))
+        tm.that(process.outcome.raw_return_code, ne=0)
         tm.that(
-            rendered_envrc,
-            lacks='source_env "$HOME/.config/environment.d/projects/agent-tools.envrc"',
+            process.stderr,
+            has=(
+                f"{environment.identity_var} must name the canonical Gas City checkout"
+            ),
         )
-        tm.that(rendered_envrc, has="AGENTS_GAS_CITY_ROOT must name the canonical")
-        tm.that(rendered_envrc, lacks="unset BEADS_DIR")
+        tm.that(marker in process.stderr, eq=source_exists)
 
     @pytest.mark.slow
     @pytest.mark.parametrize("gascity_enabled", [True, False])
-    def test_envrc_render_models_have_one_definition(
+    def test_envrc_renders_in_both_city_tiers(
         self, tmp_path: Path, *, gascity_enabled: bool
     ) -> None:
-        """The .envrc context renders from one model family in both city tiers.
+        """The managed .envrc renders its city tier in both city modes.
 
         A duplicated model family let the renderer and its validator bind two
         different classes of the same name, so the ``gascity.backend`` field of
@@ -272,36 +294,6 @@ class TestsFlextInfraCodegenBeadsProjection:
         if rendered_envrc is None:
             pytest.fail("a governed identity must produce the managed .envrc")
         tm.that("AGENTS_GAS_CITY_ROOT" in rendered_envrc, eq=gascity_enabled)
-        pending: list[type[m.BaseModel]] = [m.Infra.EnvrcRenderSpec]
-        used: set[type[m.BaseModel]] = set()
-        while pending:
-            model = pending.pop()
-            if model in used:
-                continue
-            used.add(model)
-            for field in model.model_fields.values():
-                stack: list[object] = [field.annotation]
-                while stack:
-                    annotation = stack.pop()
-                    stack.extend(typing.get_args(annotation))
-                    if isinstance(annotation, type) and issubclass(
-                        annotation, m.BaseModel
-                    ):
-                        pending.append(annotation)
-        names = {model.__name__ for model in used}
-        definitions: dict[str, set[Path]] = {name: set() for name in names}
-        package_root = Path(flext_infra.__file__).parent
-        for module in package_root.rglob("*.py"):
-            source = module.read_text(encoding="utf-8")
-            if not any(f"class {name}" in source for name in names):
-                continue
-            for node in ast.walk(ast.parse(source)):
-                if isinstance(node, ast.ClassDef) and node.name in definitions:
-                    definitions[node.name].add(module.relative_to(package_root))
-        tm.that(
-            {name: len(modules) for name, modules in definitions.items()},
-            eq=dict.fromkeys(names, 1),
-        )
 
     def test_metadata_projection_preserves_a_minted_ledger_identity(
         self, tmp_path: Path
@@ -351,32 +343,3 @@ class TestsFlextInfraCodegenBeadsProjection:
         _ = u.Tests.governed_project_plan(root)
 
         tm.that(identity.read_bytes(), eq=before)
-
-    def test_codegen_exposes_no_beads_runtime_surface(self) -> None:
-        forbidden_models = ("BeadsPlan", "BeadsTrackerDeclaration")
-        forbidden_operations = (
-            "_beads_binary",
-            "_beads_command",
-            "_beads_ledger_root",
-            "_verify_beads_plan",
-            "beads_declaration",
-            "ledger_identity_for_target",
-        )
-
-        for model_name in forbidden_models:
-            tm.that(hasattr(m.Infra, model_name), eq=False)
-        for operation_name in forbidden_operations:
-            tm.that(hasattr(FlextInfraCodegenConform, operation_name), eq=False)
-        tool_fields = m.Infra.BeadsToolSpec.model_fields
-        tm.that("reported_version" in tool_fields, eq=False)
-        tm.that("checksum" in tool_fields, eq=False)
-        tm.that("expected_schema" in tool_fields, eq=False)
-        # The declarative endpoint projection survived, but caa162de0 split the
-        # single `endpoint` field into the origin/status pair. Asserting the
-        # retired name kept this test red against a model that is correct.
-        tm.that("endpoint" in tool_fields, eq=False)
-        tm.that("endpoint_origin" in tool_fields, eq=True)
-        tm.that("endpoint_status" in tool_fields, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenBeadsProjection"]

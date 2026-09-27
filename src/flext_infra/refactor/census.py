@@ -29,7 +29,7 @@ from ._census_validate import FlextInfraRefactorCensusValidateMixin
 
 
 class FlextInfraRefactorCensus(
-    FlextInfraProjectSelectionServiceBase[m.Infra.Census.WorkspaceReport],
+    FlextInfraProjectSelectionServiceBase[m.Infra.WorkspaceReport],
     FlextInfraRefactorCensusApplyMixin,
     FlextInfraRefactorCensusCollectMixin,
     FlextInfraRefactorCensusCollectHelpersMixin,
@@ -131,17 +131,17 @@ class FlextInfraRefactorCensus(
 
     def _execution_reports(
         self,
-    ) -> t.Pair[m.Infra.Census.WorkspaceReport, m.Infra.Census.WorkspaceReport | None]:
+    ) -> t.Pair[m.Infra.WorkspaceReport, m.Infra.WorkspaceReport | None]:
         """Collect the final report and the pre-apply impact-map report."""
         started = time.monotonic()
         applied = frozenset[str]()
-        impact_map_report: m.Infra.Census.WorkspaceReport | None = None
+        impact_map_report: m.Infra.WorkspaceReport | None = None
         rope_root = self._rope_root_for_selection()
         with FlextInfraRopeWorkspace.open_workspace(
             self.root, rope_repository_root=rope_root
         ) as rope:
 
-            def collect(applied: frozenset[str]) -> m.Infra.Census.WorkspaceReport:
+            def collect(applied: frozenset[str]) -> m.Infra.WorkspaceReport:
                 return self._collect_report(
                     rope,
                     project_names=self.project_names,
@@ -165,13 +165,13 @@ class FlextInfraRefactorCensus(
         )
         return finalized_report, impact_map_report
 
-    def build_report(self) -> m.Infra.Census.WorkspaceReport:
+    def build_report(self) -> m.Infra.WorkspaceReport:
         """Build the canonical workspace census report without CLI side effects."""
         report, _ = self._execution_reports()
         return report
 
     @override
-    def execute(self) -> p.Result[m.Infra.Census.WorkspaceReport]:
+    def execute(self) -> p.Result[m.Infra.WorkspaceReport]:
         """Execute the census with one shared Rope session."""
         report, impact_map_report = self._execution_reports()
         cli.display_text(self.render_text(report))
@@ -184,9 +184,9 @@ class FlextInfraRefactorCensus(
                 self.impact_map_output_path,
             )
             if impact_result.failure:
-                return r[m.Infra.Census.WorkspaceReport].from_failure(impact_result)
+                return r[m.Infra.WorkspaceReport].from_failure(impact_result)
             u.Cli.info(f"Impact map exported to: {self.impact_map_output_path}")
-        return r[m.Infra.Census.WorkspaceReport].ok(report)
+        return r[m.Infra.WorkspaceReport].ok(report)
 
 
 __all__: list[str] = ["FlextInfraRefactorCensus"]

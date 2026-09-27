@@ -49,9 +49,6 @@ class FlextInfraConfigModelsRender:
         python_version: Annotated[
             t.NonEmptyStr, m.Field(description="Python major.minor line")
         ]
-        state_directory_name: Annotated[
-            t.NonEmptyStr, m.Field(description="External runtime state directory name")
-        ]
         github_actions: Annotated[
             Mapping[str, FlextInfraConfigModelsProvider.GithubActionPinSpec],
             m.Field(description="Immutable GitHub Action catalog"),
@@ -199,12 +196,13 @@ class FlextInfraConfigModelsRender:
             m.Field(description="Strict Mise environment projected into containers"),
         ]
 
-    class EnvrcRenderSpec(FlextInfraConfigModelsContexts.ScratchRootContext):
+    class EnvrcRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input consumed only by the generated project ``.envrc``."""
 
-        pycache_namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="External bytecode cache namespace")
-        ]
+        repository_root_rel: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Project-relative owner of the runtime environment"),
+        ] = "."
         environment_path_prepends: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Project-relative executable paths"),

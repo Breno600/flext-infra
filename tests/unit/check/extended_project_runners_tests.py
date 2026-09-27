@@ -53,6 +53,3 @@ class TestsFlextInfraExtendedProjectRunners:
 
         tm.ok(result)
         tm.that(result.value.gate, eq=gate_method)
-
-
-__all__: list[str] = ["TestsFlextInfraExtendedProjectRunners"]

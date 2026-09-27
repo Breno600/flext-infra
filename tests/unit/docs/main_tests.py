@@ -58,6 +58,3 @@ class TestsFlextInfraDocsMain:
             ),
             eq=True,
         )
-
-
-__all__: list[str] = ["TestsFlextInfraDocsMain"]

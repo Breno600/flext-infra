@@ -221,6 +221,3 @@ class TestsFlextInfraSkillValidator:
 
         # Resolved templated baseline (counts.t=0) disallows the 1 real match.
         tm.that(report.passed, eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraSkillValidator"]

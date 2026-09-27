@@ -90,6 +90,3 @@ class TestsFlextInfraDocServer:
         tm.that(report.phase, eq="serve")
         tm.that(report.result, eq=c.Infra.ResultStatus.FAIL)
         tm.that(report.passed, eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraDocServer"]

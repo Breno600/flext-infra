@@ -6,14 +6,12 @@ from collections.abc import MutableMapping
 from sys import stdlib_module_names
 from typing import TYPE_CHECKING
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, m, t, u
 
 from ._codegen_generation_renderers import FlextInfraCodegenGenerationRenderersMixin
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from flext_infra import t
 
 
 # flext-wkii.17.26 (codex): Keep lazy loading only at the public package root and
@@ -285,13 +283,34 @@ class FlextInfraCodegenGenerationStandardMixin(
         prior behavior.
         """
         for candidate in (pkg_dir, *pkg_dir.parents):
-            if not (candidate / c.Infra.PYPROJECT_FILENAME).is_file():
+            if not (candidate / c.PYPROJECT_FILENAME).is_file():
                 continue
             metadata_result = u.Infra.read_project_metadata_result(candidate)
             if metadata_result.success:
                 return metadata_result.value.package_name
             return candidate.name.replace("-", "_")
         return None
+
+    @staticmethod
+    def _project_first_party_names(project_root: Path) -> t.StrSequence:
+        """Read strict Ruff policy, deriving namespaces only when it is absent."""
+        project_payload = u.Infra.pyproject_payload(
+            (project_root / c.PYPROJECT_FILENAME).resolve()
+        )
+        projected: t.JsonValue | None = project_payload.get("tool")
+        for section in ("ruff", "lint", "isort", "known-first-party"):
+            if projected is None:
+                break
+            if not isinstance(projected, dict):
+                msg = f"Ruff configuration before {section!r} must be a table"
+                raise TypeError(msg)
+            projected = projected.get(section)
+        if projected is not None:
+            return t.str_sequence_adapter().validate_python(projected, strict=True)
+        return (
+            *u.Infra.discover_first_party_namespaces(project_root),
+            *u.Infra.flext_dependency_namespaces_from_payload(project_payload),
+        )
 
     @classmethod
     def _root_context(cls, plan: m.Infra.LazyInitPlan) -> m.Infra.LazyInitRootRender:
@@ -317,6 +336,23 @@ class FlextInfraCodegenGenerationStandardMixin(
         project_pkg = cls._project_package_name(plan.context.pkg_dir)
         if project_pkg is not None:
             first_party_names.add(project_pkg)
+        # I001 parity is judged by THIS project's ruff table, so the render
+        # reads the same projected ``known-first-party`` list the linter reads
+        # (flext-3t4z2 S1). Deriving the set from declared dependencies races
+        # the deps projection: a pyproject whose tool tables predate a
+        # dependency wave renders one order while ruff enforces another, and
+        # the generated block fails I001 on every cycle. The derived set stays
+        # only as the fallback for projects without a projected table.
+        project_root = next(
+            (
+                candidate
+                for candidate in (plan.context.pkg_dir, *plan.context.pkg_dir.parents)
+                if (candidate / c.PYPROJECT_FILENAME).is_file()
+            ),
+            None,
+        )
+        if project_root is not None:
+            first_party_names.update(cls._project_first_party_names(project_root))
         type_checking_root_names = frozenset(first_party_names)
         type_checking_lines = "\n".join(
             cls.generate_type_checking(

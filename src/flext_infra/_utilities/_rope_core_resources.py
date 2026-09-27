@@ -18,7 +18,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
     """Filesystem-to-Rope resource helpers."""
 
     @staticmethod
-    def get_resource_from_path(
+    def resolve_resource_from_path(
         rope_project: t.Infra.RopeProject, file_path: Path
     ) -> t.Infra.RopeResource | None:
         """Return rope File for a filesystem Path, or None if outside project.
@@ -36,7 +36,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
             return None
         resource = rope_project.get_resource(str(resolved_path.relative_to(root)))
         return (
-            resource if FlextInfraUtilitiesRopeRuntime.is_resource(resource) else None
+            resource if FlextInfraUtilitiesRopeRuntime.file_resource(resource) else None
         )
 
     @staticmethod
@@ -56,7 +56,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
             skip_init_py=skip_init_py,
         ):
             return None
-        return FlextInfraUtilitiesRopeCoreResourcesMixin.get_resource_from_path(
+        return FlextInfraUtilitiesRopeCoreResourcesMixin.resolve_resource_from_path(
             rope_project, file_path
         )
 
@@ -97,7 +97,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
                 (
                     resource
                     for resource in rope_project.get_python_files()
-                    if FlextInfraUtilitiesRopeRuntime.is_resource(resource)
+                    if FlextInfraUtilitiesRopeRuntime.file_resource(resource)
                 ),
                 key=operator.attrgetter("path"),
             )

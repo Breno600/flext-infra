@@ -47,6 +47,3 @@ class ExtraPathsTestSupport:
         (root / "pyproject.toml").write_text(pyproject, encoding="utf-8")
         dep_root = cls.project(root, "flext-core", "flext_core")
         return root, dep_root
-
-
-__all__: list[str] = ["ExtraPathsTestSupport"]

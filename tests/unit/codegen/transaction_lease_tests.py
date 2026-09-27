@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import multiprocessing
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,6 +23,64 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraTransactionLease:
     """Keep live journal recovery behind the shared physical scope lease."""
+
+    @pytest.mark.parametrize("boundary", ["service", "cli"])
+    def test_native_acquisition_denial_escapes_without_waiting(
+        self, tmp_path: Path, boundary: str
+    ) -> None:
+        """A Python audit policy denial is not kernel lock contention.
+
+        The child installs a real audit hook instead of replacing flock.
+        The public service and CLI preserve the exception and its traceback;
+        the lease can then acquire the unchanged physical lock file.
+        """
+        root = test_u.Tests.git_repository(tmp_path)
+        script = (
+            "import errno, sys\n"
+            "from pathlib import Path\n"
+            "from flext_infra import m, u\n"
+            "from flext_infra.cli import main\n"
+            "from flext_infra.codegen import FlextInfraCodegenConform\n"
+            "from flext_infra.codegen import FlextInfraMiseWorkspacePlanner\n"
+            "root = Path(sys.argv[1])\n"
+            "identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)).unwrap()\n"
+            "journal = FlextInfraMiseWorkspacePlanner.journal_path(identity)\n"
+            "original = OSError(errno.EPERM, 'audit policy denies lease')\n"
+            "allowed = False\n"
+            "def policy(event, arguments):\n"
+            "    if event == 'fcntl.flock' and not allowed:\n"
+            "        raise original\n"
+            "sys.addaudithook(policy)\n"
+            "try:\n"
+            "    if sys.argv[2] == 'service':\n"
+            "        FlextInfraCodegenConform.execute_request(m.Infra.CodegenConformRequest(root=root))\n"
+            "    else:\n"
+            "        main(['codegen', 'conform', '--root', str(root), '--scope', 'self', '--mode', 'apply'])\n"
+            "except OSError as failure:\n"
+            "    assert failure is original\n"
+            "    assert failure.errno == errno.EPERM\n"
+            "    assert failure.__traceback__ is not None\n"
+            "else:\n"
+            "    raise AssertionError('denied lease did not escape the public boundary')\n"
+            "assert not journal.exists()\n"
+            "lock = journal.with_name(journal.name + '.lock')\n"
+            "before = lock.stat()\n"
+            "allowed = True\n"
+            "with u.Infra.codegen_transaction_lease(journal):\n"
+            "    after = lock.stat()\n"
+            "    assert (before.st_dev, before.st_ino) == (after.st_dev, after.st_ino)\n"
+        )
+        outcome = tm.ok(
+            u.Cli.run_raw(
+                [sys.executable, "-c", script, str(root), boundary],
+                timeout=config.Infra.tooling.tools.pytest.case_timeout_seconds,
+            )
+        )
+        tm.that(
+            u.Cli.process_succeeded(outcome.outcome),
+            eq=True,
+            msg=outcome.stdout + outcome.stderr,
+        )
 
     @staticmethod
     def _ok_path(scope: Path) -> p.Result[Path]:
@@ -224,6 +283,3 @@ class TestsFlextInfraTransactionLease:
             transaction.run_locked(prepare=False, operation=fail)
         tm.that(failure.value is original, eq=True)
         tm.ok(transaction.run_locked(prepare=False, operation=self._ok_path))
-
-
-__all__: list[str] = ["TestsFlextInfraTransactionLease"]

@@ -76,6 +76,3 @@ class TestsFlextInfraImportDag:
             FlextInfraValidateTestImportDag().build_report(project)
         )
         tm.that(report.passed, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraImportDag"]

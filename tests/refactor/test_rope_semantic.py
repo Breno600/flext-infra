@@ -18,14 +18,14 @@ class TestsFlextInfraRefactorRopeSemantic:
         self, rope_workspace: RopeWorkspace, services_resource: t.Infra.RopeResource
     ) -> None:
         proj, _ = rope_workspace
-        imports = u.Infra.get_semantic_module_imports(proj, services_resource)
+        imports = u.Infra.resolve_semantic_module_imports(proj, services_resource)
         tm.that(imports, has="Dog")
 
     def test_no_imports_returns_empty(
         self, rope_workspace: RopeWorkspace, models_resource: t.Infra.RopeResource
     ) -> None:
         proj, _ = rope_workspace
-        imports = u.Infra.get_semantic_module_imports(proj, models_resource)
+        imports = u.Infra.resolve_semantic_module_imports(proj, models_resource)
         # Expect: Path appears among the imported names
         tm.that(imports, has="Path")
         # Expect: Animal is defined locally, so it is absent from imports
@@ -35,7 +35,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         self, rope_workspace: RopeWorkspace, models_resource: t.Infra.RopeResource
     ) -> None:
         proj, _ = rope_workspace
-        classes = u.Infra.get_module_classes(proj, models_resource)
+        classes = u.Infra.resolve_module_classes(proj, models_resource)
         tm.that(classes, has="Animal")
         tm.that(classes, has="Dog")
 
@@ -43,7 +43,7 @@ class TestsFlextInfraRefactorRopeSemantic:
         self, rope_workspace: RopeWorkspace, services_resource: t.Infra.RopeResource
     ) -> None:
         proj, _ = rope_workspace
-        classes = u.Infra.get_module_classes(proj, services_resource)
+        classes = u.Infra.resolve_module_classes(proj, services_resource)
         # Dog is imported, not defined here
         tm.that(classes, lacks="Dog")
 
@@ -51,14 +51,14 @@ class TestsFlextInfraRefactorRopeSemantic:
         self, rope_workspace: RopeWorkspace, models_resource: t.Infra.RopeResource
     ) -> None:
         proj, _ = rope_workspace
-        bases = u.Infra.get_class_bases(proj, models_resource, "Dog")
+        bases = u.Infra.resolve_class_bases(proj, models_resource, "Dog")
         tm.that(bases, has="Animal")
 
     def test_no_bases_for_root_class(
         self, rope_workspace: RopeWorkspace, models_resource: t.Infra.RopeResource
     ) -> None:
         proj, _ = rope_workspace
-        bases = u.Infra.get_class_bases(proj, models_resource, "Animal")
+        bases = u.Infra.resolve_class_bases(proj, models_resource, "Animal")
         # object is implicit base, rope may or may not return it
         tm.that(bases, lacks="Dog")
 
@@ -66,14 +66,14 @@ class TestsFlextInfraRefactorRopeSemantic:
         self, rope_workspace: RopeWorkspace, models_resource: t.Infra.RopeResource
     ) -> None:
         proj, _ = rope_workspace
-        bases = u.Infra.get_class_bases(proj, models_resource, "DoesNotExist")
+        bases = u.Infra.resolve_class_bases(proj, models_resource, "DoesNotExist")
         tm.that(not bases, eq=True)
 
     def test_returns_public_methods(
         self, rope_workspace: RopeWorkspace, models_resource: t.Infra.RopeResource
     ) -> None:
         proj, _ = rope_workspace
-        methods = u.Infra.get_class_methods(proj, models_resource, "Dog")
+        methods = u.Infra.resolve_class_methods(proj, models_resource, "Dog")
         tm.that(methods, has="fetch")
         tm.that(methods["fetch"], eq="staticmethod")
         tm.that(methods, has="breed")
@@ -83,14 +83,14 @@ class TestsFlextInfraRefactorRopeSemantic:
         self, rope_workspace: RopeWorkspace, models_resource: t.Infra.RopeResource
     ) -> None:
         proj, _ = rope_workspace
-        methods = u.Infra.get_class_methods(proj, models_resource, "Dog")
+        methods = u.Infra.resolve_class_methods(proj, models_resource, "Dog")
         tm.that(methods, lacks="_wag")
 
     def test_includes_private_when_requested(
         self, rope_workspace: RopeWorkspace, models_resource: t.Infra.RopeResource
     ) -> None:
         proj, _ = rope_workspace
-        methods = u.Infra.get_class_methods(
+        methods = u.Infra.resolve_class_methods(
             proj, models_resource, "Dog", include_private=True
         )
         tm.that(methods, has="_wag")

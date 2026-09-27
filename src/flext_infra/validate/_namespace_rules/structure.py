@@ -10,14 +10,14 @@ from flext_infra import c, config, u
 from .base import FlextInfraNamespaceRulesBase
 
 if TYPE_CHECKING:
-    from flext_infra import m, t
+    from flext_infra import m, p, t
 
 
 class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
     """Enforce one-class modules and explicit facade composition."""
 
     @classmethod
-    def _is_functional_module(cls, tree: object) -> bool:
+    def _is_functional_module(cls, tree: p.AttributeProbe) -> bool:
         """Return whether a module only re-exports symbols or runs an entry.
 
         Why (cosmos-3flk9): the operational ``r/e/x/h/d/s`` re-export modules
@@ -82,7 +82,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
     @classmethod
     def check_structure(
         cls,
-        tree: object,
+        tree: p.AttributeProbe,
         filepath: Path,
         *,
         class_stem: str,
@@ -179,7 +179,11 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
 
     @classmethod
     def _facade_shape(
-        cls, tree: object, filepath: Path, *, policy: m.Infra.NamespaceModulePolicy
+        cls,
+        tree: p.AttributeProbe,
+        filepath: Path,
+        *,
+        policy: m.Infra.NamespaceModulePolicy,
     ) -> t.StrSequence:
         """Validate declared facade composition using real inherited namespaces."""
         if policy.expected_alias is None:
@@ -202,7 +206,15 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
             messages.append(
                 f"{filepath}:{cls.line(outer)} — facade must compose one local namespace"
             )
-        elif not nested and not policy.inherited_namespaces:
+        elif (
+            not nested
+            and not policy.inherited_namespaces
+            and not (
+                filepath.stem == policy.expected_alias
+                and filepath.stem in c.Infra.NAMESPACE_SETTINGS_IMPORT_ALLOWED_OWNERS
+            )
+            and filepath.name != "base.py"
+        ):
             messages.append(
                 f"{filepath}:{cls.line(outer)} — facade must declare or inherit "
                 "a nested namespace through its actual MRO"
@@ -221,8 +233,8 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
     @classmethod
     def _canonical_facade_alias(
         cls,
-        node: object,
-        tree: object,
+        node: p.AttributeProbe,
+        tree: p.AttributeProbe,
         *,
         policy: m.Infra.NamespaceModulePolicy,
         exports: t.StrSequence,
@@ -274,7 +286,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
         )
 
     @classmethod
-    def _dunder_assignment(cls, node: object) -> bool:
+    def _dunder_assignment(cls, node: p.AttributeProbe) -> bool:
         """Allow only the export manifest at module level."""
         targets = (
             getattr(node, "targets", ())
@@ -284,9 +296,9 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
         return any(cls.name_of(target) == "__all__" for target in targets)
 
     @classmethod
-    def _module_docstring(cls, node: t.Infra.RopeAstNode) -> bool:
+    def _module_docstring(cls, node: p.AttributeProbe) -> bool:
         """Return whether an expression is a module docstring."""
-        value: t.Infra.RopeAstNode | None = getattr(node, "value", None)
+        value: p.AttributeProbe = getattr(node, "value", None)
         # NOTE (multi-agent, flext-n6ge5): statements such as definitions and
         # ``pass`` have no expression value; keep node_kind strict for real nodes.
         if value is None:

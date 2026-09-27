@@ -72,10 +72,10 @@ class FlextInfraFixerAdapter:
     @staticmethod
     def _group_by_target(
         violations: t.SequenceOf[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]],
-    ) -> MutableMapping[str, list[tuple[m.EnforcementRuleSpec, p.AttributeProbe]]]:
+    ) -> MutableMapping[str, list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]]]:
         """Group violations by the fix target declared in their catalog action."""
         grouped: MutableMapping[
-            str, list[tuple[m.EnforcementRuleSpec, p.AttributeProbe]]
+            str, list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]]
         ] = {}
         for rule, probe in violations:
             fix_action = rule.fix_action

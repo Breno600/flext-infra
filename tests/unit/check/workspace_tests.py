@@ -152,6 +152,3 @@ class TestsFlextInfraWorkspaceChecker:
         result = checker.format(tmp_path)
         tm.that(result, is_=r)
         tm.ok(result)
-
-
-__all__: list[str] = ["TestsFlextInfraWorkspaceChecker"]

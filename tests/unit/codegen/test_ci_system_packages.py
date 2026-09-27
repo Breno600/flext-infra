@@ -48,6 +48,3 @@ class TestsFlextInfraCiSystemPackages:
         rendered = self._render_ci(system_packages=())
 
         tm.that(rendered, lacks=self.step_name)
-
-
-__all__: list[str] = ["TestsFlextInfraCiSystemPackages"]

@@ -122,7 +122,7 @@ class FlextInfraUtilitiesDocsFix:
         )
         link_count = 0
 
-        def replace_link(match: t.Infra.RegexMatch) -> str:
+        def replace_link(match: t.RegexMatch) -> str:
             """Replace link."""
             nonlocal link_count
             text, link = match.groups()

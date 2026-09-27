@@ -6,13 +6,17 @@ from flext_infra import c, m, p, t
 
 from ..rope_runtime_refactors import FlextInfraUtilitiesRopeRuntimeRefactors
 from ..rope_structure import FlextInfraUtilitiesRopeStructure
+from .family_type_references import FlextInfraUtilitiesSemanticFamilyTypeReferences
 
 
-class FlextInfraUtilitiesSemanticFamilyReferences:
+class FlextInfraUtilitiesSemanticFamilyReferences(
+    FlextInfraUtilitiesSemanticFamilyTypeReferences
+):
     """Use Rope occurrences, never textual wrapper-name substitutions."""
 
-    @staticmethod
+    @classmethod
     def _family_consumer_rewrites(
+        cls,
         project: p.Infra.RopeProject,
         resource: p.Infra.RopeResource,
         source: str,
@@ -82,7 +86,15 @@ class FlextInfraUtilitiesSemanticFamilyReferences:
                     edits.append(
                         m.Infra.SourceRewrite(start=start, end=end, text=replacement)
                     )
-        return (False, tuple(edits))
+        blocked, quoted = cls._family_quoted_rewrites(
+            project,
+            resource,
+            source,
+            owner_name=owner_name,
+            wrapper=wrapper,
+            names=names,
+        )
+        return (True, ()) if blocked else (False, (*edits, *quoted))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesSemanticFamilyReferences"]

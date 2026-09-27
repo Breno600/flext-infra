@@ -179,6 +179,7 @@ class FlextInfraConstantsSharedInfra:
     SONARCLOUD_API_AUTH_VALIDATE_PATH: ClassVar[str] = "/api/authentication/validate"
     SONARCLOUD_API_SETTINGS_VALUES_PATH: ClassVar[str] = "/api/settings/values"
     SONARCLOUD_API_SETTINGS_SET_PATH: ClassVar[str] = "/api/settings/set"
+    SONARCLOUD_API_SETTINGS_RESET_PATH: ClassVar[str] = "/api/settings/reset"
     "SonarCloud web API routes of the proven settings-sync contract."
     SONARCLOUD_PROJECT_KEY_SEPARATOR: ClassVar[str] = "_"
     "Joins organization and repository into the SonarCloud project key."
@@ -267,7 +268,6 @@ class FlextInfraConstantsSharedInfra:
     TIMEOUT_CI: ClassVar[int] = 900
 
     # --- Path constants (was: class Paths) ---
-    VENV_BIN_REL: ClassVar[str] = ".venv/bin"
     DEFAULT_SRC_DIR: ClassVar[str] = "src"
 
 

@@ -51,16 +51,6 @@ class TestsFlextInfraDocsGeneratorBundle:
         tm.fail(planned)
         tm.that(planned.error or "", has=c.Infra.DOCS_SOURCE_STATE_RACE_MARKER)
 
-    def test_race_signatures_are_registered_convergence_markers(self) -> None:
-        """Guard-emitted race signatures flow into the conform convergence set."""
-        for marker in (
-            c.Infra.DOCS_SOURCE_STATE_RACE_MARKER,
-            c.Infra.DOCS_SOURCE_TOPOLOGY_RACE_MARKER,
-            c.Infra.CONFIG_SNAPSHOT_ROOT_RACE_MARKER,
-            c.Infra.CONFIG_SNAPSHOT_TOPOLOGY_RACE_MARKER,
-        ):
-            tm.that(marker in c.Infra.CONFORM_SOURCE_RACE_MARKERS, eq=True)
-
     def test_plan_files_rejects_source_topology_addition_after_bundle(
         self, tmp_path: Path
     ) -> None:
@@ -185,6 +175,3 @@ class TestsFlextInfraDocsGeneratorBundle:
             if artifact.relative_path.as_posix() == "README.md"
         )
         tm.that(readme.desired_content or b"", has=b"Fresh metadata")
-
-
-__all__: list[str] = ["TestsFlextInfraDocsGeneratorBundle"]

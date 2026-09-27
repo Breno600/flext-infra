@@ -6,14 +6,11 @@ existing imports.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import override
 
-from flext_infra import c, u
+from flext_infra import c, t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from .rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraRefactorLazyImportFixer(FlextInfraRopeTransformer):
@@ -34,7 +31,7 @@ class FlextInfraRefactorLazyImportFixer(FlextInfraRopeTransformer):
 
     def scan_lines_for_hoist(
         self, lines: t.SequenceOf[str]
-    ) -> tuple[list[str], list[str]]:
+    ) -> t.Pair[list[str], list[str]]:
         """Scan source lines, hoist body-local imports, and keep remaining lines."""
         existing_imports: set[str] = set()
         hoisted: list[str] = []

@@ -218,6 +218,3 @@ class TestsFlextInfraDepsModernizerTooling:
         )
         tm.that(known_first_party, has="flext_core")
         tm.that(known_first_party, lacks="demo_migration_tool")
-
-
-__all__: list[str] = ["TestsFlextInfraDepsModernizerTooling"]

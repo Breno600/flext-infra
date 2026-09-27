@@ -24,7 +24,7 @@ from flext_infra import c, m, u
 
 from .base_gate import FlextInfraGate
 from .markdown_code_sources import (
-    TEST_SKIP_MARKER,
+    is_syntax_broken,
     source_name,
     write_docstring_sources,
     write_fenced_block_sources,
@@ -57,15 +57,6 @@ def _ignore_filtered(
     return tuple(path for path in markdown_files if not _excluded(path))
 
 
-def _is_syntax_broken(code: str, origin: Path) -> bool:
-    """True when one embedded source does not compile (documentation fragment)."""
-    try:
-        compile(code, str(origin), "exec")
-    except SyntaxError:
-        return True
-    return False
-
-
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
@@ -91,7 +82,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         documented block could never satisfy both surfaces at once.
         """
         args = ["format", "--no-cache", "--output-format", "concise"]
-        config_path = project_dir / c.Infra.PYPROJECT_FILENAME
+        config_path = project_dir / c.PYPROJECT_FILENAME
         args += (
             ["--config", str(config_path)] if config_path.is_file() else ["--isolated"]
         )
@@ -101,7 +92,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
     def _origin_issue(
         self,
-        origin: dict[str, tuple[str, int]],
+        origin: dict[str, t.Pair[str, int]],
         source: str,
         *,
         code: str,
@@ -123,7 +114,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         self,
         project_dir: Path,
         result: p.Cli.CommandOutput,
-        origin: dict[str, tuple[str, int]],
+        origin: dict[str, t.Pair[str, int]],
         *,
         default_code: str,
         default_message: str,
@@ -160,7 +151,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
     def _run_extracted(
         self, project_dir: Path, markdown_files: t.SequenceOf[Path], *, fix: bool
-    ) -> tuple[bool, bool, t.SequenceOf[m.Infra.Issue]]:
+    ) -> t.Triple[bool, bool, t.SequenceOf[m.Infra.Issue]]:
         """Run the single format operation over extracted sources.
 
         Returns ``(ran, passed, issues)``: ``ran`` is False when the project
@@ -241,10 +232,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
             for index, match in enumerate(
                 match
                 for match in c.Infra.MARKDOWN_PY_FENCE_RE.finditer(content)
-                if TEST_SKIP_MARKER not in match.group("info")
+                if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
             ):
                 code = match.group("code")
-                if _is_syntax_broken(code, md_path):
+                if is_syntax_broken(code, md_path):
                     continue
                 staged.append((index, code))
             if not staged:
@@ -274,9 +265,9 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 replacements: Iterator[str] = blocks_iter,
             ) -> str:
                 """Splice one formatted block; fragments and markers stay verbatim."""
-                keep = TEST_SKIP_MARKER in match.group("info") or _is_syntax_broken(
-                    match.group("code"), origin_path
-                )
+                keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
+                    "info"
+                ) or is_syntax_broken(match.group("code"), origin_path)
                 if keep:
                     return match.group(0)
                 return match.group(0).replace(match.group("code"), next(replacements))

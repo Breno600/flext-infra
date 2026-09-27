@@ -18,6 +18,3 @@ class TestsFlextInfraCheckMain:
         captured = capsys.readouterr()
         tm.that(exit_code, eq=0)
         tm.that(captured.out.lower(), has="usage:")
-
-
-__all__: list[str] = ["TestsFlextInfraCheckMain"]

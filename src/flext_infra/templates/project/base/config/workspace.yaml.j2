@@ -31,6 +31,7 @@ repository:
 {%- for verb in workspace_repository.extra_verbs %}
     - name: {{ verb.name | tojson }}
       description: {{ verb.description | tojson }}
+      produces_activation: {{ verb.produces_activation | tojson }}
 {%- endfor %}
 {%- endif %}
 {%- if workspace_repository.script_dispatch %}
@@ -100,6 +101,7 @@ members:
 {%- for verb in repository.extra_verbs %}
       - name: {{ verb.name | tojson }}
         description: {{ verb.description | tojson }}
+        produces_activation: {{ verb.produces_activation | tojson }}
 {%- endfor %}
 {%- endif %}
 {%- if repository.script_dispatch %}

@@ -193,7 +193,7 @@ class FlextInfraMiseRecovery:
     def _prepare_restore_candidates(
         self,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
-        actions: tuple[m.Infra.CodegenRecoveryAction, ...],
+        actions: t.VariadicTuple[m.Infra.CodegenRecoveryAction],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile | None]]:
         result_type = r[tuple[m.Infra.CodegenStagedFile | None, ...]]
         candidates: list[m.Infra.CodegenStagedFile | None] = []
@@ -288,7 +288,7 @@ class FlextInfraMiseRecovery:
     def _load_restore_candidates(
         self,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
-        actions: tuple[m.Infra.CodegenRecoveryAction, ...],
+        actions: t.VariadicTuple[m.Infra.CodegenRecoveryAction],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile | None]]:
         result_type = r[tuple[m.Infra.CodegenStagedFile | None, ...]]
         candidates: list[m.Infra.CodegenStagedFile | None] = []
@@ -335,8 +335,8 @@ class FlextInfraMiseRecovery:
 
     @staticmethod
     def _restore(
-        actions: tuple[m.Infra.CodegenRecoveryAction, ...],
-        candidates: tuple[m.Infra.CodegenStagedFile | None, ...],
+        actions: t.VariadicTuple[m.Infra.CodegenRecoveryAction],
+        candidates: t.VariadicTuple[m.Infra.CodegenStagedFile | None],
     ) -> p.Result[bool]:
         paired = tuple(zip(actions, candidates, strict=True))
         for action, candidate in reversed(paired):
@@ -356,7 +356,7 @@ class FlextInfraMiseRecovery:
         self,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
-        actions: tuple[m.Infra.CodegenRecoveryAction, ...],
+        actions: t.VariadicTuple[m.Infra.CodegenRecoveryAction],
     ) -> p.Result[bool]:
         by_path = {action.entry.path: action for action in actions}
         for entry in journal.entries:

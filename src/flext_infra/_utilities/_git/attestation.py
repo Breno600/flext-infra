@@ -102,10 +102,11 @@ class FlextInfraUtilitiesGitAttestationMixin(
         names = (".mise.toml", ".python-version", "pyproject.toml")
         tracked: list[str] = []
         for name in names:
-            try:
-                blob = commit.tree / name
-            except KeyError:
+            # An optional toolchain file absent from this commit contributes
+            # nothing to the digest; its absence is read, not caught.
+            if name not in commit.tree:
                 continue
+            blob = commit.tree / name
             tracked.append(f"{name}:{blob.hexsha}")
         content = "\n".join(tracked)
         return f"sha256:{u.Cli.sha256_content(content)}"

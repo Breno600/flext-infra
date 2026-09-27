@@ -10,7 +10,6 @@ from flext_cli import m, u
 
 from ... import t
 from ..._constants import FlextInfraConstantsRelease
-from .._defaults import FlextInfraModelsDefaults
 from .contexts import FlextInfraConfigModelsContexts
 from .contract import FlextInfraConfigModelsContract
 
@@ -83,10 +82,7 @@ class FlextInfraConfigModelsRelease:
                 t.NonEmptyStr,
                 FlextInfraConfigModelsRelease.ReleaseAutomationOverrideSpec,
             ],
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
-                description="Per-distribution deviations from the shared contract",
-            ),
+            m.Field(description="Per-distribution deviations from the shared contract"),
         ]
 
         @u.model_validator(mode="after")

@@ -165,7 +165,7 @@ class FlextInfraEnsurePyrightConfigPhase:
             )
         )
         for env_dir in project_roots:
-            if (repository_root / env_dir / c.Infra.PYPROJECT_FILENAME).is_file():
+            if (repository_root / env_dir / c.PYPROJECT_FILENAME).is_file():
                 continue
             expected_envs.append(
                 self._env_entry(
@@ -245,12 +245,6 @@ class FlextInfraEnsurePyrightConfigPhase:
             m.Infra.ProjectTypeOverrideConfig.model_validate(raw)
         )
         return validated
-
-    def _venv_settings(self, *, is_root: bool) -> t.StrMapping:
-        """Return the Pyright venv location for this topology."""
-        rules = self._tool_config.tools.pyright.path_rules
-        venv_path = "." if is_root else ".."
-        return {c.Infra.VENV_PATH: venv_path, "venv": rules.venv_name}
 
     def _expected_excludes(
         self, project_root: Path | None, analysis_exclusions: t.StrSequence | None
@@ -364,7 +358,7 @@ class FlextInfraEnsurePyrightConfigPhase:
         declared_python_dirs: t.StrSequence = (),
         declared_python_dirs_are_complete: bool = False,
         analysis_exclusions: t.StrSequence | None = None,
-    ) -> m.Infra.Deps.Toml.PhaseConfig:
+    ) -> m.Infra.DepsToml.PhaseConfig:
         """Build the managed pyright phase for one project context."""
         project_root = repository_root if is_root else project_dir
         expected_excludes = self._expected_excludes(project_root, analysis_exclusions)
@@ -408,61 +402,75 @@ class FlextInfraEnsurePyrightConfigPhase:
             project_dir=project_dir,
             project_roots=expected_roots,
         )
-        phase_builder = m.Infra.Deps.Toml.PhaseConfig.Builder("pyright").table(
-            c.Infra.PYRIGHT
-        )
-        if expected_excludes:
-            phase_builder = phase_builder.list(c.Infra.EXCLUDE, expected_excludes)
-        else:
-            phase_builder = phase_builder.deprecated(c.Infra.EXCLUDE)
-        if expected_ignores:
-            phase_builder = phase_builder.list(c.Infra.IGNORE, expected_ignores)
-        else:
-            phase_builder = phase_builder.deprecated(c.Infra.IGNORE)
-        if expected_includes:
-            phase_builder = phase_builder.list("include", expected_includes)
-        else:
-            phase_builder = phase_builder.deprecated("include")
+        toml = m.Infra.DepsToml
+        operations: t.MutableSequenceOf[
+            m.Infra.DepsToml.SetOp | m.Infra.DepsToml.ListOp | m.Infra.DepsToml.RemoveOp
+        ] = [
+            toml.ListOp(key=c.Infra.EXCLUDE, values=expected_excludes)
+            if expected_excludes
+            else toml.RemoveOp(key=c.Infra.EXCLUDE),
+            toml.ListOp(key=c.Infra.IGNORE, values=expected_ignores)
+            if expected_ignores
+            else toml.RemoveOp(key=c.Infra.IGNORE),
+            toml.ListOp(key="include", values=expected_includes)
+            if expected_includes
+            else toml.RemoveOp(key="include"),
+        ]
         if project_root is not None and paths_manager is not None:
-            phase_builder = phase_builder.list(
-                "extraPaths",
-                paths_manager.pyright_extra_paths(
-                    project_dir=project_root, is_root=is_root
-                ),
+            operations.append(
+                toml.ListOp(
+                    key="extraPaths",
+                    values=paths_manager.pyright_extra_paths(
+                        project_dir=project_root, is_root=is_root
+                    ),
+                )
             )
         if expected_stub_path is not None:
             existing = project_root / expected_stub_path if project_root else None
             if existing is not None and existing.is_dir():
-                phase_builder = phase_builder.value("stubPath", expected_stub_path)
+                operations.append(toml.SetOp(key="stubPath", value=expected_stub_path))
             else:
-                phase_builder = phase_builder.deprecated("stubPath")
+                operations.append(toml.RemoveOp(key="stubPath"))
         else:
-            phase_builder = phase_builder.deprecated("stubPath")
-        phase_builder = phase_builder.deprecated("venv").deprecated(c.Infra.VENV_PATH)
-        phase_builder = phase_builder.value(
-            "executionEnvironments",
-            [
-                u.normalize_to_json_value(self._environment_payload(expected_env))
-                for expected_env in expected_envs
-            ],
-        )
+            operations.append(toml.RemoveOp(key="stubPath"))
+        operations.extend((
+            toml.RemoveOp(key="venv"),
+            toml.RemoveOp(key=c.Infra.VENV_PATH),
+            toml.SetOp(
+                key="executionEnvironments",
+                value=[
+                    u.normalize_to_json_value(self._environment_payload(expected_env))
+                    for expected_env in expected_envs
+                ],
+            ),
+        ))
         if is_root:
-            for key, value in self._tool_config.tools.pyright.strict_settings.items():
-                phase_builder = phase_builder.value(key, value)
-            for key, value in self._tool_config.tools.pyright.extended_settings.items():
-                phase_builder = phase_builder.value(key, value)
-            return phase_builder.build()
-        for key, value in self._tool_config.tools.pyright.strict_settings.items():
-            phase_builder = phase_builder.value(key, value)
-        merged_settings: t.MutableStrMapping = {
-            **self._tool_config.tools.pyright.extended_settings
-        }
-        override = self._override_for_kind(project_kind)
-        if override is not None:
-            merged_settings.update(override.pyright)
-        for key, value in merged_settings.items():
-            phase_builder = phase_builder.value(key, value)
-        return phase_builder.build()
+            operations.extend(
+                toml.SetOp(key=key, value=value)
+                for settings in (
+                    self._tool_config.tools.pyright.strict_settings,
+                    self._tool_config.tools.pyright.extended_settings,
+                )
+                for key, value in settings.items()
+            )
+        else:
+            operations.extend(
+                toml.SetOp(key=key, value=value)
+                for key, value in self._tool_config.tools.pyright.strict_settings.items()
+            )
+            merged_settings: t.MutableStrMapping = {
+                **self._tool_config.tools.pyright.extended_settings
+            }
+            override = self._override_for_kind(project_kind)
+            if override is not None:
+                merged_settings.update(override.pyright)
+            operations.extend(
+                toml.SetOp(key=key, value=value)
+                for key, value in merged_settings.items()
+            )
+        return toml.PhaseConfig(
+            name="pyright", table_path=(c.Infra.PYRIGHT,), operations=tuple(operations)
+        )
 
     def apply(
         self,

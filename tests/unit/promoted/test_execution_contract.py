@@ -4,12 +4,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from flext_tests import tm
+
 from flext_infra import m
-from tests import u
+from tests import c, u
 
 
 class TestsFlextInfraPromotedExecutionContract:
     """Promoted contracts always execute without an effect selector."""
+
+    def test_workspace_configuration_and_promoted_facts_preserve_their_domains(
+        self, tmp_path: Path
+    ) -> None:
+        """Facade composition exposes both schemas without a name collision."""
+        repository = u.Tests.repository_ref("semantic-spec")
+        workspace = u.Tests.workspace_spec(repository)
+        facts = u.Infra.promoted_workspace_spec(tmp_path)
+        tm.that(workspace.repository, eq=repository)
+        tm.that(facts.root, eq=tmp_path)
+        tm.that(facts.scripts, eq=tmp_path / c.Infra.DIR_SCRIPTS)
 
     class TestsFlextInfraPromotedAlwaysExecutes:
         """Validate commands with and without declared domain parameters."""
@@ -27,13 +40,10 @@ class TestsFlextInfraPromotedExecutionContract:
             self, tmp_path: Path
         ) -> None:
             """A domain parameter remains part of the command's input contract."""
-            param = m.Infra.Promoted.Param(
+            param = m.Infra.PromotedParam(
                 name="TARGET", help="Destination", choices=("alpha", "beta")
             )
             command = u.Tests.promoted_command(
                 path=tmp_path / "scripts" / "probe" / "all.py", params=(param,)
             )
             u.Infra.promoted_validate_command_contract(command)
-
-
-__all__: list[str] = ["TestsFlextInfraPromotedExecutionContract"]

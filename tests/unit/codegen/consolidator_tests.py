@@ -206,6 +206,3 @@ class TestsFlextInfraCodegenConsolidator:
         tm.that(payload.total_applied, eq=0)
         tm.that(payload.total_failed, eq=0)
         tm.that(payload.files, eq=[])
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenConsolidator"]

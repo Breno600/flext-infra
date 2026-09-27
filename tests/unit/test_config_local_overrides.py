@@ -13,7 +13,7 @@ import pytest
 from flext_tests import tm
 
 from flext_core import e
-from flext_infra import FlextInfraConfig
+from flext_infra import FlextInfraConfig, c
 
 
 class TestsFlextInfraConfigLocalOverrides:
@@ -56,7 +56,7 @@ class TestsFlextInfraConfigLocalOverrides:
         anchor it last regardless of lexicographic position.
         """
         self._copy_tracked_configs(tmp_path)
-        (tmp_path / "codegen-overrides.local.yaml").write_text(
+        (tmp_path / c.Infra.CODEGEN_LOCAL_OVERRIDES_FILENAME).write_text(
             "Infra:\n  codegen:\n    loc_cap:\n      max_lines: 500\n", encoding="utf-8"
         )
         monkeypatch.setenv("FLEXT_INFRA_CONFIG_DIR", str(tmp_path))
@@ -72,7 +72,7 @@ class TestsFlextInfraConfigLocalOverrides:
     ) -> None:
         """A dict-typed registry gains the local entry and keeps tracked ones."""
         self._copy_tracked_configs(tmp_path)
-        (tmp_path / "codegen-overrides.local.yaml").write_text(
+        (tmp_path / c.Infra.CODEGEN_LOCAL_OVERRIDES_FILENAME).write_text(
             "Infra:\n"
             "  codegen:\n"
             "    layout:\n"
@@ -106,8 +106,12 @@ class TestsFlextInfraConfigLocalOverrides:
         """
         self._copy_tracked_configs(tmp_path)
         org_root = tmp_path / "org-repo"
-        (org_root / "config").mkdir(parents=True)
-        (org_root / "config" / "codegen-org.yaml").write_text(
+        (org_root / c.Infra.CODEGEN_CONFIG_DIR).mkdir(parents=True)
+        (
+            org_root
+            / c.Infra.CODEGEN_CONFIG_DIR
+            / c.Infra.CODEGEN_ORG_OVERRIDES_FILENAME
+        ).write_text(
             "Infra:\n"
             "  codegen:\n"
             "    make:\n"
@@ -138,7 +142,7 @@ class TestsFlextInfraConfigLocalOverrides:
     ) -> None:
         """The exterminated provider registry cannot come back through a merge."""
         self._copy_tracked_configs(tmp_path)
-        (tmp_path / "codegen-overrides.local.yaml").write_text(
+        (tmp_path / c.Infra.CODEGEN_LOCAL_OVERRIDES_FILENAME).write_text(
             "Infra:\n"
             "  codegen:\n"
             "    providers:\n"

@@ -148,6 +148,3 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         result = u.Infra.discover_projects(d)
         tm.ok(result)
         tm.that(result.value, empty=True)
-
-
-__all__: list[str] = ["TestsFlextInfraInfraMaintenancePythonVersion"]

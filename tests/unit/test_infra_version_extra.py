@@ -50,6 +50,3 @@ class TestsFlextInfraInfraVersionExtra:
     def test_public_package_version_info_is_tuple(self) -> None:
         """Test that module-level __version_info__ is a tuple."""
         tm.that(infra_pkg.__version_info__, is_=tuple)
-
-
-__all__: list[str] = ["TestsFlextInfraInfraVersionExtra"]

@@ -81,6 +81,15 @@ class FlextInfraUtilitiesQualifiedNames:
         return None
 
     @staticmethod
+    def module_expression(module: str) -> cst.Attribute | cst.Name:
+        """Build a typed LibCST expression for a dotted module name."""
+        parts = module.split(".")
+        expression: cst.Attribute | cst.Name = cst.Name(parts[0])
+        for part in parts[1:]:
+            expression = cst.Attribute(value=expression, attr=cst.Name(part))
+        return expression
+
+    @staticmethod
     def without_exports(
         value: cst.BaseExpression, names: t.Infra.Container[str]
     ) -> cst.BaseExpression:

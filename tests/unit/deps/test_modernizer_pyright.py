@@ -400,6 +400,3 @@ class TestsFlextInfraDepsModernizerPyright:
             ),
             eq=sorted(infra_u.Infra.analyzer_python_roots(tmp_path, declared)),
         )
-
-
-__all__: list[str] = ["TestsFlextInfraDepsModernizerPyright"]

@@ -22,7 +22,7 @@ class FlextInfraUtilitiesIterationProject:
         """Walk up from file_path to find the project root containing pyproject.toml."""
         current = file_path.parent
         for _ in range(10):
-            if (current / c.Infra.PYPROJECT_FILENAME).is_file():
+            if (current / c.PYPROJECT_FILENAME).is_file():
                 return current
             parent = current.parent
             if parent == current:

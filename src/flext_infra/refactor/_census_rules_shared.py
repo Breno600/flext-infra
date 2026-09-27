@@ -56,11 +56,11 @@ class FlextInfraRefactorCensusRulesSharedMixin:
             description: str,
             fixable: bool = False,
             fix_action: str = "",
-        ) -> m.Infra.Census.Violation: ...
+        ) -> m.Infra.Violation: ...
         @staticmethod
         def _named_object(
-            objects: t.VariadicTuple[m.Infra.Census.Object], name: str
-        ) -> m.Infra.Census.Object | None: ...
+            objects: t.VariadicTuple[m.Infra.Object], name: str
+        ) -> m.Infra.Object | None: ...
 
 
 __all__: list[str] = ["FlextInfraRefactorCensusRulesSharedMixin"]

@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from ._git.scope import FlextInfraUtilitiesGitScopeMixin
     from ._git.semantic_identity import FlextInfraUtilitiesGitSemanticIdentityMixin
     from ._git.semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
+    from ._git.semantic_lane import FlextInfraUtilitiesGitSemanticLaneMixin
     from ._git.semantic_paths import FlextInfraUtilitiesGitSemanticPathsMixin
     from ._git.semantic_publish import FlextInfraUtilitiesGitSemanticPublishMixin
     from ._git.semantic_refs import FlextInfraUtilitiesGitSemanticRefsMixin
@@ -64,9 +65,7 @@ if TYPE_CHECKING:
     from ._pyproject.requirements import FlextInfraUtilitiesPyprojectRequirements
     from ._pyproject.toml_phases import FlextInfraUtilitiesPyprojectTomlPhases
     from ._pyproject.uv_sources import FlextInfraUtilitiesPyprojectUvSources
-    from ._rope.pep695_patch import FlextInfraUtilitiesRopePep695Patch
     from ._rope.project import FlextInfraRopeProject
-    from ._rope.signature_patch import FlextInfraUtilitiesRopeSignaturePatch
     from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
     from ._rope_analysis.base import FlextInfraUtilitiesRopeAnalysisBase
     from ._rope_analysis.exports import FlextInfraUtilitiesRopeAnalysisExports
@@ -95,6 +94,12 @@ if TYPE_CHECKING:
     from ._semantic_cutover.family_references import (
         FlextInfraUtilitiesSemanticFamilyReferences,
     )
+    from ._semantic_cutover.family_type_references import (
+        FlextInfraUtilitiesSemanticFamilyTypeReferences,
+    )
+    from ._semantic_cutover.helper_references import (
+        FlextInfraUtilitiesSemanticHelperReferences,
+    )
     from ._semantic_cutover.nesting import FlextInfraUtilitiesSemanticCutoverNesting
     from ._semantic_cutover.nesting_cst import (
         FlextInfraUtilitiesSemanticCutoverNestingCst,
@@ -102,6 +107,7 @@ if TYPE_CHECKING:
     from ._semantic_cutover.nesting_references import (
         FlextInfraUtilitiesSemanticCutoverNestingReferences,
     )
+    from ._semantic_cutover.nesting_types import FlextInfraUtilitiesSemanticNestingTypes
     from ._semantic_cutover.private_import_cst import (
         FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
     )
@@ -196,9 +202,6 @@ if TYPE_CHECKING:
     from .semantic_cutover import FlextInfraUtilitiesSemanticCutover
     from .signature_rules import FlextInfraUtilitiesSignatureRules
     from .silent_failure_ast import FlextInfraUtilitiesSilentFailureAst
-    from .silent_failure_ast_base import FlextInfraUtilitiesSilentFailureAstBase
-    from .silent_failure_ast_rules import FlextInfraUtilitiesSilentFailureAstRules
-    from .transformer_base import FlextInfraChangeTrackingTransformer
     from .transformer_header import FlextInfraUtilitiesTransformerHeader
     from .transformer_header_parser import FlextInfraUtilitiesTransformerHeaderParser
     from .versioning import FlextInfraUtilitiesVersioning
@@ -209,7 +212,6 @@ if TYPE_CHECKING:
 
 
 __all__: tuple[str, ...] = (
-    "FlextInfraChangeTrackingTransformer",
     "FlextInfraMypyDarwinSupervisor",
     "FlextInfraRopeProject",
     "FlextInfraUtilitiesBase",
@@ -258,6 +260,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitScopeMixin",
     "FlextInfraUtilitiesGitSemanticIdentityMixin",
     "FlextInfraUtilitiesGitSemanticIndexMixin",
+    "FlextInfraUtilitiesGitSemanticLaneMixin",
     "FlextInfraUtilitiesGitSemanticPathsMixin",
     "FlextInfraUtilitiesGitSemanticPublishMixin",
     "FlextInfraUtilitiesGitSemanticRefsMixin",
@@ -341,13 +344,11 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesRopeInventory",
     "FlextInfraUtilitiesRopeMethodOrderMixin",
     "FlextInfraUtilitiesRopeModulePatch",
-    "FlextInfraUtilitiesRopePep695Patch",
     "FlextInfraUtilitiesRopeRuntime",
     "FlextInfraUtilitiesRopeRuntimeBase",
     "FlextInfraUtilitiesRopeRuntimeModules",
     "FlextInfraUtilitiesRopeRuntimeRefactors",
     "FlextInfraUtilitiesRopeRuntimeTypes",
-    "FlextInfraUtilitiesRopeSignaturePatch",
     "FlextInfraUtilitiesRopeSource",
     "FlextInfraUtilitiesRopeStructure",
     "FlextInfraUtilitiesSafety",
@@ -366,10 +367,11 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverPrivateImports",
     "FlextInfraUtilitiesSemanticFamilyFlatten",
     "FlextInfraUtilitiesSemanticFamilyReferences",
+    "FlextInfraUtilitiesSemanticFamilyTypeReferences",
+    "FlextInfraUtilitiesSemanticHelperReferences",
+    "FlextInfraUtilitiesSemanticNestingTypes",
     "FlextInfraUtilitiesSignatureRules",
     "FlextInfraUtilitiesSilentFailureAst",
-    "FlextInfraUtilitiesSilentFailureAstBase",
-    "FlextInfraUtilitiesSilentFailureAstRules",
     "FlextInfraUtilitiesTransformerHeader",
     "FlextInfraUtilitiesTransformerHeaderParser",
     "FlextInfraUtilitiesVersioning",
@@ -409,6 +411,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._git.scope": ("FlextInfraUtilitiesGitScopeMixin",),
             "._git.semantic_identity": ("FlextInfraUtilitiesGitSemanticIdentityMixin",),
             "._git.semantic_index": ("FlextInfraUtilitiesGitSemanticIndexMixin",),
+            "._git.semantic_lane": ("FlextInfraUtilitiesGitSemanticLaneMixin",),
             "._git.semantic_paths": ("FlextInfraUtilitiesGitSemanticPathsMixin",),
             "._git.semantic_publish": ("FlextInfraUtilitiesGitSemanticPublishMixin",),
             "._git.semantic_refs": ("FlextInfraUtilitiesGitSemanticRefsMixin",),
@@ -454,9 +457,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._pyproject.toml_phases": ("FlextInfraUtilitiesPyprojectTomlPhases",),
             "._pyproject.uv_sources": ("FlextInfraUtilitiesPyprojectUvSources",),
             "._rope": ("_rope",),
-            "._rope.pep695_patch": ("FlextInfraUtilitiesRopePep695Patch",),
             "._rope.project": ("FlextInfraRopeProject",),
-            "._rope.signature_patch": ("FlextInfraUtilitiesRopeSignaturePatch",),
             "._rope_analysis": ("_rope_analysis",),
             "._rope_analysis.asthelpers": (
                 "FlextInfraUtilitiesRopeAnalysisAstHelpers",
@@ -497,6 +498,12 @@ _LAZY_IMPORTS = MappingProxyType(
             "._semantic_cutover.family_references": (
                 "FlextInfraUtilitiesSemanticFamilyReferences",
             ),
+            "._semantic_cutover.family_type_references": (
+                "FlextInfraUtilitiesSemanticFamilyTypeReferences",
+            ),
+            "._semantic_cutover.helper_references": (
+                "FlextInfraUtilitiesSemanticHelperReferences",
+            ),
             "._semantic_cutover.nesting": (
                 "FlextInfraUtilitiesSemanticCutoverNesting",
             ),
@@ -505,6 +512,9 @@ _LAZY_IMPORTS = MappingProxyType(
             ),
             "._semantic_cutover.nesting_references": (
                 "FlextInfraUtilitiesSemanticCutoverNestingReferences",
+            ),
+            "._semantic_cutover.nesting_types": (
+                "FlextInfraUtilitiesSemanticNestingTypes",
             ),
             "._semantic_cutover.private_import_cst": (
                 "FlextInfraUtilitiesSemanticCutoverPrivateImportCst",
@@ -606,9 +616,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".semantic_cutover": ("FlextInfraUtilitiesSemanticCutover",),
             ".signature_rules": ("FlextInfraUtilitiesSignatureRules",),
             ".silent_failure_ast": ("FlextInfraUtilitiesSilentFailureAst",),
-            ".silent_failure_ast_base": ("FlextInfraUtilitiesSilentFailureAstBase",),
-            ".silent_failure_ast_rules": ("FlextInfraUtilitiesSilentFailureAstRules",),
-            ".transformer_base": ("FlextInfraChangeTrackingTransformer",),
             ".transformer_header": ("FlextInfraUtilitiesTransformerHeader",),
             ".transformer_header_parser": (
                 "FlextInfraUtilitiesTransformerHeaderParser",

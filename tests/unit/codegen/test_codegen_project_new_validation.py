@@ -29,6 +29,7 @@ class TestsFlextInfraCodegenProjectNewValidation:
         }
         resolved = {**defaults, **overrides}
         return FlextInfraCodegenProjectNew(
+            flext_source=u.Tests.flext_source(),
             name="flext-demo",
             kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
             output_root=root,

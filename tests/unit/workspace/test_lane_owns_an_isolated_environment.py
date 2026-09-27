@@ -6,10 +6,10 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, config
+from flext_infra import FlextInfraWorktreeService, c, config, u as infra_u
 from tests import u
 
-_VENV_NAME = config.Infra.tooling.tools.pyright.path_rules.venv_name
+_STATE_DIRECTORY = config.Infra.codegen.toolchain.state_directory_name
 
 
 class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
@@ -27,20 +27,21 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         (repository / "Makefile").write_text(
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
+            f"RUNTIME_VENV := $(abspath $(CURDIR)/../{_STATE_DIRECTORY}/$(notdir $(CURDIR))/venv)\n"
             ".PHONY: setup\n"
             "setup:\n"
             '\t@test "$(RUNTIME_ROOT)" = "$(PROJECT_ROOT)"\n'
             '\t@test -z "$(WORKSPACE)"\n'
             "\t@git -c protocol.file.allow=always submodule update --init\n"
-            f"\t@mkdir -p {_VENV_NAME}/bin\n"
-            f"\t@printf '#!/bin/sh\\n' > {_VENV_NAME}/bin/python\n"
-            f"\t@chmod +x {_VENV_NAME}/bin/python\n"
+            "\t@mkdir -p $(RUNTIME_VENV)/bin\n"
+            "\t@printf '#!/bin/sh\\n' > $(RUNTIME_VENV)/bin/python\n"
+            "\t@chmod +x $(RUNTIME_VENV)/bin/python\n"
             '\t@printf "%s|%s|%s|%s\\n" "$(CURDIR)" "$${MAKEFILES-unset}" '
             '"$${GNUMAKEFLAGS-unset}" "$${PYTHONPATH-unset}" >> setup-runs.log\n',
             encoding="utf-8",
         )
         (repository / ".gitignore").write_text(
-            f"{_VENV_NAME}\nsetup-runs.log\n", encoding="utf-8"
+            "setup-runs.log\n", encoding="utf-8"
         )
         u.Tests.initialize_git_repo(repository)
         return repository
@@ -79,7 +80,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         self, tmp_path: Path
     ) -> None:
         repository = self._repository(tmp_path)
-        primary_sentinel = repository / _VENV_NAME / "primary-sentinel"
+        primary_sentinel = infra_u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
         primary_sentinel.parent.mkdir()
         primary_sentinel.write_text("untouched\n", encoding="utf-8")
         lane = self._lane(repository, "feature/isolated-environment")
@@ -92,7 +93,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         ):
             tm.ok(FlextInfraWorktreeService.setup_lane(lane))
 
-        lane_venv = lane / _VENV_NAME
+        lane_venv = infra_u.Infra.runtime_environment_dir(lane)
         assert lane_venv.is_dir()
         assert not lane_venv.is_symlink()
         assert primary_sentinel.read_text(encoding="utf-8") == "untouched\n"
@@ -109,13 +110,14 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         target.mkdir()
         sentinel = target / "sentinel"
         sentinel.write_text("protected\n", encoding="utf-8")
-        (lane / _VENV_NAME).symlink_to(target, target_is_directory=True)
+        lane_venv = infra_u.Infra.runtime_environment_dir(lane)
+        lane_venv.parent.mkdir(parents=True, exist_ok=True)
+        lane_venv.symlink_to(target, target_is_directory=True)
 
-        tm.ok(FlextInfraWorktreeService.setup_lane(lane))
+        tm.fail(FlextInfraWorktreeService.setup_lane(lane), has="symlink")
 
         assert sentinel.read_text(encoding="utf-8") == "protected\n"
-        assert (lane / _VENV_NAME).is_dir()
-        assert not (lane / _VENV_NAME).is_symlink()
+        assert lane_venv.is_symlink()
 
     def test_setup_initializes_lane_gitlink_without_mutating_primary(
         self, tmp_path: Path
@@ -137,7 +139,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
     def test_existing_real_lane_environment_is_preserved(self, tmp_path: Path) -> None:
         repository = self._repository(tmp_path)
         lane = self._lane(repository, "feature/preserve-local")
-        sentinel = lane / _VENV_NAME / "sentinel"
+        sentinel = infra_u.Infra.runtime_environment_dir(lane) / "sentinel"
         sentinel.parent.mkdir()
         sentinel.write_text("local\n", encoding="utf-8")
 
@@ -151,8 +153,5 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         lane = self._lane(repository, "feature/git-only")
 
         assert lane.is_dir()
-        assert not (lane / _VENV_NAME).exists()
+        assert not infra_u.Infra.runtime_environment_dir(lane).exists()
         assert not (lane / "setup-runs.log").exists()
-
-
-__all__: list[str] = ["TestsFlextInfraLaneOwnsAnIsolatedEnvironment"]

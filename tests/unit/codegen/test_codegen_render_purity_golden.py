@@ -113,6 +113,3 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         spec: m.Infra.ProjectSpec = u.Tests.project_spec("year-owner")
 
         tm.that(spec.year, eq=year)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenRenderPurityGolden"]

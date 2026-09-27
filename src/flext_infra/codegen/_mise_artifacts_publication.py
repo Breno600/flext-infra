@@ -20,7 +20,7 @@ def _invalidate_project_document(path: Path) -> None:
     Why: flext-core caches the parsed pyproject per process keyed by root; a
     plan built right after publication must read the published document.
     """
-    if path.name == c.Infra.PYPROJECT_FILENAME:
+    if path.name == c.PYPROJECT_FILENAME:
         u.read_project_document_cached.cache_clear()
 
 

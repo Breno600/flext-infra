@@ -7,7 +7,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import FlextInfraWorktreeService, c, m
-from tests import t, u
+from tests import u
 
 
 class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
@@ -108,6 +108,3 @@ class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
             ),
             eq=str(expected_lane),
         )
-
-
-__all__: t.VariadicTuple[str] = ()

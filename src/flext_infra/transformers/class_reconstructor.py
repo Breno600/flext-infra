@@ -7,7 +7,7 @@ from typing import override
 
 from flext_infra import c, m, t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from .rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
@@ -44,10 +44,10 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
         except c.EXC_OS_SYNTAX:
             return source, list[str]()
         lines = source.splitlines(keepends=True)
-        edits: list[tuple[int, int, str]] = []
+        edits: list[t.Triple[int, int, str]] = []
         for class_name, class_pyname in pymodule.get_attributes().items():
             class_obj = class_pyname.get_object()
-            if not u.Infra.is_pyclass(class_obj):
+            if not u.Infra.abstract_class(class_obj):
                 continue
             block_edits = self._class_block_edits(
                 class_name=class_name, class_obj=class_obj, lines=lines
@@ -68,7 +68,7 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
         class_name: str,
         class_obj: t.Infra.RopePyObject,
         lines: t.SequenceOf[str],
-    ) -> list[tuple[int, int, str]]:
+    ) -> list[t.Triple[int, int, str]]:
         """Return reorder edits for each contiguous method block in one class."""
         method_chunks = self._collect_method_chunks(class_obj=class_obj, lines=lines)
         if len(method_chunks) < c.Infra.MIN_METHODS_FOR_REORDER:
@@ -80,7 +80,7 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
             return u.Infra.build_method_sort_key(item[0], self._order_config)
 
         source = "".join(lines)
-        edits: list[tuple[int, int, str]] = []
+        edits: list[t.Triple[int, int, str]] = []
         for block in self._contiguous_method_blocks(
             method_chunks=method_chunks, source=source
         ):
@@ -106,14 +106,14 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
 
     def _collect_method_chunks(
         self, *, class_obj: t.Infra.RopePyObject, lines: t.SequenceOf[str]
-    ) -> list[tuple[m.Infra.MethodInfo, int, int, str]]:
+    ) -> list[t.Quad[m.Infra.MethodInfo, int, int, str]]:
         """Collect ``(MethodInfo, start_offset, end_offset, source_chunk)`` ordered by line."""
         line_offsets = self._line_offsets(lines)
         source = "".join(lines)
-        raw: list[tuple[int, int, m.Infra.MethodInfo]] = []
+        raw: list[t.Triple[int, int, m.Infra.MethodInfo]] = []
         for method_name, method_pyname in class_obj.get_attributes().items():
             method_obj = method_pyname.get_object()
-            if not u.Infra.is_pyfunction(method_obj):
+            if not u.Infra.py_function(method_obj):
                 continue
             # flext-j47u (codex): Rope returns a tuple; only its line is optional.
             location = method_pyname.get_definition_location()
@@ -139,7 +139,7 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
             )
             raw.append((start_line, end_line, method_info))
         raw.sort(key=operator.itemgetter(0))
-        chunks: list[tuple[m.Infra.MethodInfo, int, int, str]] = []
+        chunks: list[t.Quad[m.Infra.MethodInfo, int, int, str]] = []
         for start_line, end_line, method_info in raw:
             block_start = line_offsets[start_line - 1]
             block_end = (
@@ -158,11 +158,11 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
         *,
         method_chunks: t.SequenceOf[t.Quad[m.Infra.MethodInfo, int, int, str]],
         source: str,
-    ) -> list[list[tuple[m.Infra.MethodInfo, int, int, str]]]:
+    ) -> list[list[t.Quad[m.Infra.MethodInfo, int, int, str]]]:
         """Split method chunks into reorderable blocks separated only by spacing/comments."""
         if not method_chunks:
             return []
-        blocks: list[list[tuple[m.Infra.MethodInfo, int, int, str]]] = [
+        blocks: list[list[t.Quad[m.Infra.MethodInfo, int, int, str]]] = [
             [method_chunks[0]]
         ]
         for chunk in method_chunks[1:]:

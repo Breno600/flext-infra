@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraConfig, m, main as infra_main, p, u
+from flext_infra import FlextInfraConfig, c, m, main as infra_main, p, u
+
+if TYPE_CHECKING:
+    from tests import t
 from flext_infra.codemod import FlextInfraApplyRenames
 
 
@@ -16,7 +20,7 @@ class TestsFlextInfraApplyRenames:
     """Exercise the rename engine and its configured campaign wiring."""
 
     @staticmethod
-    def _campaign(tmp_path: Path) -> tuple[Path, Path, Path]:
+    def _campaign(tmp_path: Path) -> t.Triple[Path, Path, Path]:
         """One workspace file, its driver CSV, and the scan root."""
         root = tmp_path / "campaign_ws"
         tm.ok(u.Cli.ensure_dir(root))
@@ -93,10 +97,22 @@ class TestsFlextInfraApplyRenames:
 
     @staticmethod
     def _declare_campaign_override(config_dir: Path) -> None:
-        """Copy the tracked configs and overlay one repository-root campaign."""
-        for tracked in FlextInfraConfig.ssot_config_dir().glob("*.yaml"):
-            shutil.copy(tracked, config_dir / tracked.name)
-        (config_dir / "codegen-overrides.local.yaml").write_text(
+        """Copy the packaged config tree and overlay one config-relative campaign.
+
+        The whole tree travels, not only its top-level YAML: campaign lists the
+        packaged config declares live under ``rules/`` and resolve against the
+        overriding directory.
+        """
+        shutil.copytree(
+            FlextInfraConfig.ssot_config_dir(), config_dir, dirs_exist_ok=True
+        )
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                config_dir / "renames.csv",
+                "old,new\ncampaign_token,campaign_renamed_token\n",
+            )
+        )
+        (config_dir / c.Infra.CODEGEN_LOCAL_OVERRIDES_FILENAME).write_text(
             "Infra:\n"
             "  refactor_csv_campaigns:\n"
             "    campaigns:\n"
@@ -105,7 +121,7 @@ class TestsFlextInfraApplyRenames:
         )
 
     @staticmethod
-    def _campaign_workspace(tmp_path: Path) -> tuple[Path, Path]:
+    def _campaign_workspace(tmp_path: Path) -> t.Pair[Path, Path]:
         """Seed the mod workspace with one pending campaign rename."""
         sample = tmp_path / "sample.py"
         tm.ok(
@@ -117,12 +133,6 @@ class TestsFlextInfraApplyRenames:
                 "\n"
                 "\n"
                 'CAMPAIGN_TOKEN: str = "campaign_token"\n',
-            )
-        )
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                tmp_path / "renames.csv",
-                "old,new\ncampaign_token,campaign_renamed_token\n",
             )
         )
         return sample, tmp_path / "config_override"
@@ -176,5 +186,74 @@ class TestsFlextInfraApplyRenames:
         tm.that(rewritten, has='"campaign_renamed_token"')
         tm.that(rewritten, lacks="campaign_token")
 
+    @staticmethod
+    def _shipped_pairs() -> t.SequenceOf[t.Pair[str, str]]:
+        """Read every old,new pair the packaged config declares."""
+        config_dir = FlextInfraConfig.ssot_config_dir()
+        campaigns = (
+            FlextInfraConfig.fetch_global().Infra.refactor_csv_campaigns.campaigns
+        )
+        tm.that(campaigns, empty=False)
+        pairs: list[t.Pair[str, str]] = []
+        for campaign in campaigns:
+            text = tm.ok(u.Cli.files_read_text(config_dir / campaign.csv))
+            rows = tm.ok(u.Cli.csv_loads(text))
+            pairs.extend((row[0], row[1]) for row in rows[1:])
+        return tuple(pairs)
 
-__all__: list[str] = ["TestsFlextInfraApplyRenames"]
+    @staticmethod
+    def _run_mod(root: Path, *, apply: bool) -> int:
+        """Invoke the public mod route with the packaged configuration."""
+        FlextInfraConfig.reset_for_testing()
+        try:
+            return infra_main([
+                "refactor",
+                "mod",
+                "--repository-root",
+                str(root),
+                *(("--apply",) if apply else ()),
+            ])
+        finally:
+            FlextInfraConfig.reset_for_testing()
+
+    @pytest.mark.slow
+    def test_shipped_campaigns_rewrite_a_consumer_and_reach_a_fixed_point(
+        self, mod_workspace: Path
+    ) -> None:
+        """Packaged campaigns rewrite a repository that carries no list copy."""
+        pairs = self._shipped_pairs()
+        consumer = mod_workspace / "consumer_names.py"
+        mentions = "".join(f"- {old}\n" for old, _new in pairs)
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                consumer,
+                f'"""Consumer module naming every retired symbol.\n\n{mentions}"""\n',
+            )
+        )
+        prose = "Prose paragraphs around a retired name keep every word.\n"
+        guide = mod_workspace / "guide.md"
+        tm.ok(u.Cli.atomic_write_text_file(guide, f"# Guide\n\n{prose}\n{mentions}"))
+
+        tm.that(self._run_mod(mod_workspace, apply=True), eq=0)
+        first = consumer.read_bytes()
+        first_guide = guide.read_bytes()
+        for rewritten in (first.decode("utf-8"), first_guide.decode("utf-8")):
+            for old, new in pairs:
+                tm.that(rewritten, has=f"- {new}\n")
+                tm.that(rewritten, lacks=f"- {old}\n")
+        tm.that(first_guide.decode("utf-8"), has=f"# Guide\n\n{prose}")
+
+        tm.that(self._run_mod(mod_workspace, apply=True), eq=0)
+        tm.that(consumer.read_bytes(), eq=first)
+        tm.that(guide.read_bytes(), eq=first_guide)
+        # mod's check mode also fails on the fixture's deliberate detection-only
+        # governance finding, so convergence is proven by the rename engine's
+        # own check mode over the same packaged lists.
+        config_dir = FlextInfraConfig.ssot_config_dir()
+        for (
+            campaign
+        ) in FlextInfraConfig.fetch_global().Infra.refactor_csv_campaigns.campaigns:
+            pending = tm.ok(
+                self._run_engine(config_dir / campaign.csv, mod_workspace, apply=False)
+            )
+            tm.that(pending.occurrences, eq=0)

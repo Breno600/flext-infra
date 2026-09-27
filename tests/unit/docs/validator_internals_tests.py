@@ -53,6 +53,3 @@ class TestsFlextInfraDocsValidatorInternals:
         tm.that(project_result.success, eq=True)
         tm.that(project_result.value is True, eq=True)
         tm.that((workspace / "flext-a/TODOS.md").exists(), eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraDocsValidatorInternals"]

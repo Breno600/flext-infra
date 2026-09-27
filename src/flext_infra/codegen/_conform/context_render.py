@@ -109,58 +109,21 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         runtime_names = {
             name for item in pep621.dependencies if (name := u.Infra.dep_name(item))
         }
-        profiles = codegen.scaffold.project.dependency_profiles
-        # The root of the dependency tree declares no upstream distribution:
-        # a distribution that IS a profile's upstream owns that profile.
-        own_profile = next(
-            (
-                item
-                for item in profiles
-                if item.project is None
-                and item.upstream.replace("_", "-") == repository.distribution
-            ),
-            None,
-        )
-        candidates = (
-            (own_profile,)
-            if own_profile is not None
-            else tuple(
-                item
-                for item in profiles
-                if item.project is None
-                and item.upstream.replace("_", "-") in runtime_names
-            )
-        )
-        # A profile whose upstream is itself a runtime dependency of another
-        # candidate is implied by it; the declared upstream is the most
-        # specific candidate, never the first catalog row that happens to match.
-        runtime_of = {
-            item.upstream: {
-                name
-                for dependency in item.runtime
-                if (name := u.Infra.dep_name(dependency))
-            }
-            for item in candidates
-        }
-        direct = tuple(
-            item
-            for item in candidates
-            if not any(
-                item.upstream.replace("_", "-") in runtime_of[other.upstream]
-                for other in candidates
-                if other is not item
-            )
+        direct = u.Infra.dependency_profile_upstreams(
+            codegen.scaffold.project.dependency_profiles,
+            distribution=repository.distribution,
+            runtime_names=runtime_names,
         )
         if len(direct) != 1:
             return r[m.Infra.ProjectSpec].fail(
                 "scaffold.project.dependency_profiles.upstream must match live "
-                f"dependencies exactly once at {repository_root}: "
-                f"{tuple(item.upstream for item in direct)}"
+                f"dependencies exactly once at {repository_root}: {tuple(direct)}"
             )
-        upstream = direct[0].upstream
+        upstream = direct[0]
         licenses = codegen.scaffold.project.supported_licenses
         return r[m.Infra.ProjectSpec].ok(
             m.Infra.ProjectSpec(
+                dependency_revisions={},
                 package_name=package_name,
                 class_stem=class_stem,
                 namespace=namespace,
@@ -177,6 +140,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 documentation=documentation,
                 repository_root_rel=".",
                 year=codegen.scaffold.project.copyright_year,
+                cli_module=(
+                    repository_root
+                    / c.Infra.DEFAULT_SRC_DIR
+                    / package_name
+                    / c.Infra.CODEGEN_CLI_MODULE_FILENAME
+                ).is_file(),
             )
         )
 
@@ -215,23 +184,16 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             project = project.model_copy(
                 update={"namespace_scan_dirs": workspace.namespace_scan_dirs}
             )
-        dependency_profile = next(
-            (
-                item
-                for item in codegen.scaffold.project.dependency_profiles
-                if item.project is None and item.upstream == project.upstream
-            ),
-            None,
+        rows = u.Infra.dependency_profile_rows(
+            codegen.scaffold.project.dependency_profiles,
+            upstream=project.upstream,
+            distribution=repository.distribution,
         )
-        if dependency_profile is None:
+        if not rows:
             return r[m.Infra.ProjectRenderContext].fail(
                 f"unsupported scaffold upstream: {project.upstream}"
             )
-        additions = tuple(
-            item
-            for item in codegen.scaffold.project.dependency_profiles
-            if item.project == repository.distribution
-        )
+        dependency_profile, *additions = rows
         if additions:
             dependency_profile = m.Infra.ScaffoldDependencyProfileSpec.model_validate({
                 **dependency_profile.model_dump(),
@@ -298,7 +260,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             repository_root=repository_root,
             bootstrap_source=(
                 workspace.flext_source
-                if not (repository_root / c.Infra.PYPROJECT_FILENAME).exists()
+                if not (repository_root / c.PYPROJECT_FILENAME).exists()
                 else None
             ),
         )
@@ -349,7 +311,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         # typed initial version and the protocol owns every change after that.
         version_result = (
             u.Infra.current_workspace_version(repository_root)
-            if (repository_root / c.Infra.PYPROJECT_FILENAME).is_file()
+            if (repository_root / c.PYPROJECT_FILENAME).is_file()
             else r[str].ok(config.Infra.initial_project_version)
         )
         if version_result.failure:
@@ -366,7 +328,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 gitignore_sections=u.Infra.gitignore_sections(
                     codegen,
                     profile=profile,
-                    project_name=repository_root.name,
+                    # The declared distribution is the project identity: a
+                    # scaffold renders before its pyproject exists, so the
+                    # render never reads it back from disk.
+                    project_name=repository.distribution,
                     workspace=workspace,
                     project_patterns=project_patterns,
                 ),
@@ -389,13 +354,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                     )
                 ),
                 environment_path_prepends=(codegen.toolchain.environment_path_prepends),
-                beads_tool_selector=codegen.toolchain.beads.selector,
-                beads_tool_version=codegen.toolchain.beads.version,
-                # prerelease is load-bearing: every fork release of bd carries a
-                # suffixed tag (-fdN) and mise refuses to resolve one unless
-                # told the release is a prerelease. Omitting it silently pinned
-                # every rig to upstream, which lacks the bd list cycle guard.
-                beads_tool_prerelease=codegen.toolchain.beads.prerelease,
                 beads=workspace.beads,
                 canonical_project_name=target.canonical_project_name,
                 const_name=project.constant_name,
@@ -418,6 +376,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 inherited_facets=project.inherited_facets,
                 root_packages=project.root_packages,
                 root_modules=project.root_modules,
+                cli_module=project.cli_module,
                 runtime_dependency_overlay=project.runtime_dependency_overlay,
                 description=project.description,
                 version=version_result.value,
@@ -433,6 +392,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 jscpd_version=codegen.toolchain.jscpd_version,
                 waza_version=codegen.toolchain.waza_version,
                 taplo_version=codegen.toolchain.taplo_version,
+                ast_grep_selector=codegen.toolchain.ast_grep_selector,
                 ast_grep_version=codegen.toolchain.ast_grep_version,
                 gitleaks_version=codegen.toolchain.gitleaks_version,
                 scc_version=codegen.toolchain.scc_version,
@@ -449,13 +409,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 repository_provider=repository.provider,
                 repository_git_url=repository.url,
                 repository_branch=integration_branch.value,
-                # A workspace root owns sources only for its actual members.
-                # External FLEXT dependencies still need their own Git source.
-                workspace_dependency_distributions=(
-                    tuple(member.distribution for member in workspace.subprojects)
-                    if profile is c.Infra.MakeProfile.WORKSPACE
-                    else ()
-                ),
                 year=project.year,
             )
         )

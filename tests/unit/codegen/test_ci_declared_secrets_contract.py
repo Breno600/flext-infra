@@ -93,6 +93,3 @@ class TestsFlextInfraCiDeclaredSecretsContract:
         for contract in declared.values():
             specification = t.Cli.JSON_MAPPING_ADAPTER.validate_python(contract)
             tm.that(specification["required"], eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraCiDeclaredSecretsContract"]

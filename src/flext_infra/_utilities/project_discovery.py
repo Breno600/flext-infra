@@ -195,7 +195,7 @@ class FlextInfraUtilitiesProjectDiscovery(
             for child in sorted(resolved_root.iterdir(), key=attrgetter("name"))
             if child.is_dir()
             and not child.name.startswith(".")
-            and (child / c.Infra.PYPROJECT_FILENAME).is_file()
+            and (child / c.PYPROJECT_FILENAME).is_file()
             and not cls._is_nonparticipant(child, resolved_root, nonparticipants)
         )
         return tuple(sorted({*declared, *direct}, key=Path.as_posix))
@@ -265,12 +265,21 @@ class FlextInfraUtilitiesProjectDiscovery(
             resolved_workspace.parent
             / FlextInfraConfig.fetch_global().Infra.codegen.toolchain.state_directory_name
             / resolved_workspace.name
-            / tool_name
         )
         relative_project = resolved_project.relative_to(resolved_workspace)
-        return (
-            state_root if relative_project == Path() else state_root / relative_project
-        )
+        return state_root / relative_project / tool_name
+
+    @classmethod
+    def runtime_environment_dir(cls, project_root: Path) -> Path:
+        """Resolve the physical environment shared by an attached member and its root."""
+        resolved_project = project_root.resolve()
+        runtime_root = resolved_project
+        if (resolved_project / ".git").is_file():
+            identity = FlextInfraUtilitiesGit.git_identity(
+                m.Infra.GitRepoRequest(repo_root=resolved_project)
+            ).unwrap()
+            runtime_root = identity.superproject_root or resolved_project
+        return cls.external_tool_state_dir(runtime_root, resolved_project, "venv")
 
 
 __all__: list[str] = ["FlextInfraUtilitiesProjectDiscovery"]

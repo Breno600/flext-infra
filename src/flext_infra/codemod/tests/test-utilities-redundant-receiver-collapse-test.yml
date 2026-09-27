@@ -9,6 +9,13 @@ valid:
     from tests import u
 
     value = u.Tests.codegen_file_text(plan)
+  - |
+    from flext_infra import u
+    from tests import u as test_u
+
+    def local_import_does_not_replace_the_module_binding():
+        from tests import u
+        return test_u.Tests.codegen_file_text(plan)
 invalid:
   - |
     from tests import u, u as test_u

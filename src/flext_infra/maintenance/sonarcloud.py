@@ -80,12 +80,6 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
             })
             for exclusion in sonarcloud.issue_exclusions
         )
-        if not values:
-            # The set API cannot store an empty property set; clearing it is a
-            # different endpoint outside the proven contract.
-            return r[m.Infra.SonarcloudSettingsPlan].fail(
-                "codegen.sonarcloud.issue_exclusions declares no exclusion to sync"
-            )
         if len(frozenset(values)) != len(values):
             return r[m.Infra.SonarcloudSettingsPlan].fail(
                 "codegen.sonarcloud.issue_exclusions repeats a rule/resource pair"
@@ -98,6 +92,52 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
                 setting_key=c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY,
                 field_values=values,
             )
+        )
+
+    @staticmethod
+    def settings_write_request(
+        plan: m.Infra.SonarcloudSettingsPlan,
+    ) -> m.Infra.SonarcloudSettingsWriteRequest:
+        """Select reset for an empty SSOT or set for its complete property set."""
+        if not plan.field_values:
+            return m.Infra.SonarcloudSettingsWriteRequest(
+                api_path=c.Infra.SONARCLOUD_API_SETTINGS_RESET_PATH,
+                form=(("component", plan.project_key), ("keys", plan.setting_key)),
+            )
+        return m.Infra.SonarcloudSettingsWriteRequest(
+            api_path=c.Infra.SONARCLOUD_API_SETTINGS_SET_PATH,
+            form=(
+                ("component", plan.project_key),
+                ("key", plan.setting_key),
+                *(
+                    ("fieldValues", value.model_dump_json(by_alias=True))
+                    for value in plan.field_values
+                ),
+            ),
+        )
+
+    @staticmethod
+    def current_field_values(
+        plan: m.Infra.SonarcloudSettingsPlan, current: m.Infra.SonarcloudSettingsValues
+    ) -> t.VariadicTuple[m.Infra.SonarcloudIssueFieldValue]:
+        """Read effective entries without excluding values inherited from a parent."""
+        return tuple(
+            value
+            for setting in current.settings
+            if setting.key == plan.setting_key
+            for value in setting.field_values
+        )
+
+    @classmethod
+    def in_sync_with(
+        cls,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        current: m.Infra.SonarcloudSettingsValues,
+    ) -> bool:
+        """Require every SSOT entry exactly once, regardless of server ordering."""
+        values = cls.current_field_values(plan, current)
+        return len(values) == len(plan.field_values) and frozenset(values) == frozenset(
+            plan.field_values
         )
 
     @staticmethod
@@ -163,25 +203,20 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
         current = self._server_values(plan, token.value)
         if current.failure:
             return r[bool].from_failure(current)
-        if plan.in_sync_with(current.value):
+        if self.in_sync_with(plan, current.value):
             u.Cli.info(f"sonarcloud-sync: {plan.project_key} already matches the SSOT")
             return r[bool].ok(False)
-        written = self._call(
-            plan,
-            token.value,
-            "POST",
-            c.Infra.SONARCLOUD_API_SETTINGS_SET_PATH,
-            plan.form_fields(),
-        )
+        request = self.settings_write_request(plan)
+        written = self._call(plan, token.value, "POST", request.api_path, request.form)
         if written.failure:
             return r[bool].from_failure(written)
         readback = self._server_values(plan, token.value)
         if readback.failure:
             return r[bool].from_failure(readback)
-        if not plan.in_sync_with(readback.value):
+        if not self.in_sync_with(plan, readback.value):
             held = ", ".join(
                 value.model_dump_json(by_alias=True)
-                for value in plan.current_field_values(readback.value)
+                for value in self.current_field_values(plan, readback.value)
             )
             return r[bool].fail(
                 f"sonarcloud-sync: {plan.project_key} readback differs from the "

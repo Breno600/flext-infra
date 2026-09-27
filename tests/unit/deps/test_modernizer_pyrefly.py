@@ -15,7 +15,7 @@ from flext_infra import (
     config,
 )
 from tests import t, u
-from tests.unit.deps import ExtraPathsTestSupport
+from tests.unit.deps.extra_paths_support import ExtraPathsTestSupport
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -57,8 +57,7 @@ class TestsFlextInfraModernizerPyrefly:
         self, tmp_path: Path
     ) -> None:
         """Keep shared analyzer config invariant across checkout topologies."""
-        rules = config.Infra.tooling.tools.pyright.path_rules
-        (tmp_path / rules.venv_name).mkdir()
+        u.Infra.runtime_environment_dir(tmp_path).mkdir(parents=True)
         child_origin = tmp_path / "child-origin"
         child_origin.mkdir()
         tm.ok(u.Cli.run_raw(["git", "init"], cwd=child_origin))
@@ -241,7 +240,7 @@ class TestsFlextInfraModernizerPyrefly:
             ).resolve_tooling_context(
                 project_name="flext-consumer",
                 package_name="flext_consumer",
-                path=project_dir / c.Infra.PYPROJECT_FILENAME,
+                path=project_dir / c.PYPROJECT_FILENAME,
                 declared_python_dirs=(source_dir,),
                 declared_python_dirs_are_complete=True,
             )
@@ -259,7 +258,7 @@ class TestsFlextInfraModernizerPyrefly:
         for directory in ("src", "tests"):
             (project_dir / directory).mkdir(parents=True)
         (project_dir / "src" / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
-        (project_dir / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_dir / c.PYPROJECT_FILENAME).write_text(
             "[tool.pyright]\ninclude = ['src']\n", encoding="utf-8"
         )
 
@@ -283,7 +282,7 @@ class TestsFlextInfraModernizerPyrefly:
             "", encoding="utf-8"
         )
         (project_dir / "scripts" / "check.py").write_text("", encoding="utf-8")
-        (project_dir / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_dir / c.PYPROJECT_FILENAME).write_text(
             "[tool.pyright]\n"
             "include = ['src', 'tests/unit/**/*.py', 'scripts/check.py']\n",
             encoding="utf-8",
@@ -317,6 +316,3 @@ class TestsFlextInfraModernizerPyrefly:
             list(u.Tests.strings(pyrefly["search-path"])),
             eq=[rules.source_dir, rules.project_root],
         )
-
-
-__all__: list[str] = ["TestsFlextInfraModernizerPyrefly"]

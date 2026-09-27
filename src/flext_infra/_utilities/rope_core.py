@@ -8,8 +8,6 @@ from pathlib import Path
 
 from flext_infra import config, t
 
-from ._rope.pep695_patch import FlextInfraUtilitiesRopePep695Patch
-from ._rope.signature_patch import FlextInfraUtilitiesRopeSignaturePatch
 from ._rope_core_pymodule import FlextInfraUtilitiesRopeCorePyModuleMixin
 from ._rope_core_resources import FlextInfraUtilitiesRopeCoreResourcesMixin
 from .project_discovery import FlextInfraUtilitiesProjectDiscovery
@@ -24,8 +22,6 @@ class FlextInfraUtilitiesRopeCore(
     @staticmethod
     def init_rope_project(repository_root: Path) -> t.Infra.RopeProject:
         """Create a project-scoped Rope session with no disk artifacts."""
-        FlextInfraUtilitiesRopePep695Patch.apply()
-        FlextInfraUtilitiesRopeSignaturePatch.apply()
         resolved_root = repository_root.resolve()
         return FlextInfraUtilitiesRopeCore._new_project(
             resolved_root, project_roots=(resolved_root,)
@@ -34,8 +30,6 @@ class FlextInfraUtilitiesRopeCore(
     @staticmethod
     def init_rope_workspace(repository_root: Path) -> t.Infra.RopeProject:
         """Create a Rope session spanning every project below a workspace root."""
-        FlextInfraUtilitiesRopePep695Patch.apply()
-        FlextInfraUtilitiesRopeSignaturePatch.apply()
         resolved_root = repository_root.resolve()
         project_roots = tuple(
             project_root

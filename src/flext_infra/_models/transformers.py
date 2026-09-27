@@ -12,7 +12,6 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from .. import t
-from ._defaults import FlextInfraModelsDefaults
 
 
 class FlextInfraModelsTransformers:
@@ -91,7 +90,7 @@ class FlextInfraModelsTransformers:
         alias_to_module: Annotated[
             t.StrMapping,
             m.Field(description="Alias names mapped to their source modules"),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+        ]
         category_a: Annotated[
             frozenset[str],
             m.Field(description="Top-level aliases that are informational only"),

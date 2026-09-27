@@ -93,7 +93,7 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             scope.path, analyzed_contract
         )
         module_names = FlextInfraUtilitiesDocsGenerateProjectMixin._module_names(scope)
-        rendered: list[tuple[Path, str]] = [
+        rendered: list[t.Pair[Path, str]] = [
             (
                 scope.path / "README.md",
                 FlextInfraUtilitiesDocsRender.docs_project_readme(scope, contract),

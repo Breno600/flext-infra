@@ -234,10 +234,20 @@ class TestsFlextInfraWorkspaceCheckCli:
             eq='"""Fixture module."""\n\nimport os\n\nvalue = 1\n',
         )
 
-    def test_run_cli_accepts_shared_dry_run_flag(self) -> None:
-        exit_code = main(["check", "--dry-run", "run", "--projects", "flext-core"])
+    def test_run_cli_accepts_shared_dry_run_flag(self, tmp_path: Path) -> None:
+        workspace = self._create_workspace(tmp_path)
+        _ = self._write_module(workspace, "flext-core", "value = 1\n")
+
+        exit_code = main([
+            "check",
+            "--dry-run",
+            "run",
+            "--repository-root",
+            str(workspace),
+            "--gates",
+            "lint",
+            "--projects",
+            "flext-core",
+        ])
 
         tm.that(exit_code, eq=0)
-
-
-__all__: t.StrSequence = ["TestsFlextInfraWorkspaceCheckCli"]

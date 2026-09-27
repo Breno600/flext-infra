@@ -180,7 +180,7 @@ class TestsFlextInfraUtilitiesGatesMixin:
         impact_map_output: str | None = None,
         apply_changes: bool = False,
         dry_run: bool = False,
-    ) -> m.Infra.Census.WorkspaceReport:
+    ) -> m.Infra.WorkspaceReport:
         """Execute one refactor census and unwrap its successful report."""
         result = FlextInfraRefactorCensus(
             repository_root=workspace,
@@ -192,13 +192,11 @@ class TestsFlextInfraUtilitiesGatesMixin:
             rules=rules,
         ).execute()
         tm.ok(result)
-        report: m.Infra.Census.WorkspaceReport = result.unwrap()
+        report: m.Infra.WorkspaceReport = result.unwrap()
         return report
 
     @staticmethod
-    def census_violations(
-        report: m.Infra.Census.WorkspaceReport,
-    ) -> list[m.Infra.Census.Violation]:
+    def census_violations(report: m.Infra.WorkspaceReport) -> list[m.Infra.Violation]:
         """Flatten every per-project violation of one census report."""
         return [
             violation for project in report.projects for violation in project.violations

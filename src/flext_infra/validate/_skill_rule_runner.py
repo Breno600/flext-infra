@@ -22,7 +22,7 @@ class FlextInfraSkillRuleRunnerMixin:
 
     def _evaluate_single_rule(
         self,
-        rule_obj: t.MappingKV[str, t.Infra.InfraValue],
+        rule_obj: t.MappingKV[str, t.JsonValue],
         skill_dir: Path,
         root: Path,
         mode: c.Infra.OperationMode,
@@ -55,7 +55,7 @@ class FlextInfraSkillRuleRunnerMixin:
 
     def _run_ast_grep_count(
         self,
-        rule: t.MappingKV[str, t.Infra.InfraValue],
+        rule: t.MappingKV[str, t.JsonValue],
         skill_dir: Path,
         project_path: Path,
         include_globs: t.StrSequence,
@@ -119,7 +119,7 @@ class FlextInfraSkillRuleRunnerMixin:
 
     def _run_custom_count(
         self,
-        rule: t.MappingKV[str, t.Infra.InfraValue],
+        rule: t.MappingKV[str, t.JsonValue],
         skill_dir: Path,
         project_path: Path,
         mode: c.Infra.OperationMode,

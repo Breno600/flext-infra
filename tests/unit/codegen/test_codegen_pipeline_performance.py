@@ -104,6 +104,3 @@ class TestsFlextInfraCodegenPipelinePerformance:
         # Second run should also succeed (cache should not corrupt output)
         result_2 = generator.plan_files()
         tm.that(result_2.success, eq=True, msg=f"Second run had errors: {result_2}")
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenPipelinePerformance"]

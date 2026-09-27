@@ -9,7 +9,6 @@ from flext_cli import m
 
 from ... import c, t
 from .. import FlextInfraModelsMixins as mm
-from .._defaults import FlextInfraModelsDefaults
 
 
 class FlextInfraModelsCodegenLazyInitModels:
@@ -54,29 +53,25 @@ class FlextInfraModelsCodegenLazyInitModels:
             description="Public exports for generated __init__.py.",
         )
         lazy_map: t.LazyAliasMap = m.Field(
-            default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
-            description="Lazy import map: export name to module/attribute target.",
+            description="Lazy import map: export name to module/attribute target."
         )
         type_checking_map: t.LazyAliasMap = m.Field(
-            default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
             description=(
                 "Type-checking import map used to publish static package attributes "
                 "without widening the runtime/public lazy export surface."
-            ),
+            )
         )
         eager_dunders: t.LazyAliasMap = m.Field(
-            default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
             description=(
                 "Dunder exports that must be eagerly imported at __init__.py "
                 "load time. Required for the ``__version__.py`` submodule case "
                 "where the submodule name collides with the dunder string it "
                 "exports — eager binding pins the canonical string in the "
                 "package dict before any submodule re-import can shadow it."
-            ),
+            )
         )
         inline_constants: t.StrMapping = m.Field(
-            default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
-            description="Inline constants emitted directly into __init__.py.",
+            description="Inline constants emitted directly into __init__.py."
         )
         wildcard_runtime_modules: t.StrSequence = m.Field(
             default_factory=tuple, description="Runtime wildcard import modules."

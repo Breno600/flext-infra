@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 from flext_tests import tm
 
 from flext_infra import config
 from tests import c, m
 
+if TYPE_CHECKING:
+    from tests import t
 
-def _spec_payload(**overrides: object) -> dict[str, object]:
+
+def _spec_payload(**overrides: t.JsonValue) -> dict[str, object]:
     """Build one valid synthetic spec payload; overrides mutate one field."""
     payload: dict[str, object] = {
         "actions": ["generate", "fix", "validate"],
@@ -60,6 +65,3 @@ class TestsFlextInfraMakeDocsActionsConfig:
             m.Infra.MakeDocsSpec.model_validate(
                 _spec_payload(warning_actions=["audit"])
             )
-
-
-__all__: list[str] = ["TestsFlextInfraMakeDocsActionsConfig"]

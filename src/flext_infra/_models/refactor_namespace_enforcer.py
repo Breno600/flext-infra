@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Self
+from typing import Annotated
 
 from flext_core import m
 from flext_infra import t
@@ -151,6 +151,25 @@ class FlextInfraModelsNamespaceEnforcer:
         fix_action: Annotated[
             str, m.Field(description="Recommended fix action identifier")
         ] = "manual"
+
+    class SilentFailureFinding(m.ContractModel):
+        """One silent-failure occurrence found in a module, with its optional fix."""
+
+        line: Annotated[t.NonNegativeInt, m.Field(description="1-based source line")]
+        column: Annotated[
+            t.NonNegativeInt, m.Field(description="0-based source column")
+        ]
+        kind: Annotated[t.NonEmptyStr, m.Field(description="Silent-failure kind")]
+        detail: Annotated[
+            t.NonEmptyStr, m.Field(description="Human-readable finding description")
+        ]
+        fix_action: Annotated[
+            t.NonEmptyStr, m.Field(description="Recommended fix action identifier")
+        ]
+        replacement: Annotated[
+            t.Triple[int, int, str] | None,
+            m.Field(description="Structural fix as (start, end, text) offsets"),
+        ] = None
 
     class ManualProtocolViolation(FileLineViolation):
         """Manual protocol violation."""
@@ -464,199 +483,12 @@ class FlextInfraModelsNamespaceEnforcer:
                 description="Per-project enforcement reports for the workspace.",
             ),
         ]
-        total_facades_missing: Annotated[
-            t.NonNegativeInt, m.Field(description="Total missing facades")
-        ] = 0
-        total_loose_objects: Annotated[
-            t.NonNegativeInt, m.Field(description="Total loose objects")
-        ] = 0
-        total_import_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total import violations")
-        ] = 0
-        total_namespace_source_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total namespace source violations")
-        ] = 0
-        total_internal_import_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total internal import violations")
-        ] = 0
-        total_consumer_import_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total consumer import grammar violations (R1)"),
-        ] = 0
-        total_private_import_bypass_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total private-import bypass violations"),
-        ] = 0
-        total_manual_protocol_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total manual protocol violations")
-        ] = 0
-        total_cyclic_imports: Annotated[
-            t.NonNegativeInt, m.Field(description="Total cyclic imports")
-        ] = 0
-        total_runtime_alias_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total runtime alias violations")
-        ] = 0
-        total_future_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total future annotations violations")
-        ] = 0
-        total_manual_typing_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total manual typing violations")
-        ] = 0
-        total_compatibility_alias_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total compatibility alias violations"),
-        ] = 0
-        total_foreign_canonical_alias_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total foreign canonical alias import violations"),
-        ] = 0
-        total_class_placement_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total class placement violations")
-        ] = 0
-        total_bare_except_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total bare `except:` violations")
-        ] = 0
-        total_print_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total `u.Cli.print()` violations")
-        ] = 0
-        total_breakpoint_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total `breakpoint()` / pdb violations"),
-        ] = 0
-        total_open_encoding_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total `open()` without encoding violations"),
-        ] = 0
-        total_dict_annotation_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total `dict` annotation violations")
-        ] = 0
-        total_typing_dict_attr_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total `typing.Dict` attribute violations"),
-        ] = 0
-        total_typing_dict_import_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total `from typing import Dict` violations"),
-        ] = 0
-        total_hardcoded_version_violations: Annotated[
-            t.NonNegativeInt,
-            m.Field(description="Total hardcoded `__version__` violations"),
-        ] = 0
-        total_type_ignore_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total `# type: ignore` violations")
-        ] = 0
-        total_noqa_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total `# noqa` violations")
-        ] = 0
-        total_inline_import_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total inline/lazy import violations")
-        ] = 0
-        total_silent_failure_violations: Annotated[
-            t.NonNegativeInt, m.Field(description="Total silent-failure violations")
-        ] = 0
-        total_parse_failures: Annotated[
-            t.NonNegativeInt, m.Field(description="Total parse failures")
-        ] = 0
-        total_files_scanned: Annotated[
-            t.NonNegativeInt, m.Field(description="Total files scanned")
-        ] = 0
-
-        @classmethod
-        def from_projects(
-            cls,
-            *,
-            workspace: str,
-            projects: t.SequenceOf[
-                FlextInfraModelsNamespaceEnforcer.ProjectEnforcementReport
-            ],
-        ) -> Self:
-            """From projects."""
-            return cls(
-                workspace=workspace,
-                projects=projects,
-                total_facades_missing=sum(
-                    1 for p in projects for f in p.facade_statuses if not f.exists
-                ),
-                total_loose_objects=sum(len(p.loose_objects) for p in projects),
-                total_import_violations=sum(len(p.import_violations) for p in projects),
-                total_namespace_source_violations=sum(
-                    len(p.namespace_source_violations) for p in projects
-                ),
-                total_internal_import_violations=sum(
-                    len(p.internal_import_violations) for p in projects
-                ),
-                total_consumer_import_violations=sum(
-                    len(p.consumer_import_violations) for p in projects
-                ),
-                total_private_import_bypass_violations=sum(
-                    len(p.private_import_bypass_violations) for p in projects
-                ),
-                total_manual_protocol_violations=sum(
-                    len(p.manual_protocol_violations) for p in projects
-                ),
-                total_cyclic_imports=sum(len(p.cyclic_imports) for p in projects),
-                total_runtime_alias_violations=sum(
-                    len(p.runtime_alias_violations) for p in projects
-                ),
-                total_future_violations=sum(len(p.future_violations) for p in projects),
-                total_manual_typing_violations=sum(
-                    len(p.manual_typing_violations) for p in projects
-                ),
-                total_compatibility_alias_violations=sum(
-                    len(p.compatibility_alias_violations) for p in projects
-                ),
-                total_foreign_canonical_alias_violations=sum(
-                    len(p.foreign_canonical_alias_violations) for p in projects
-                ),
-                total_class_placement_violations=sum(
-                    len(p.class_placement_violations) for p in projects
-                ),
-                total_bare_except_violations=sum(
-                    len(p.bare_except_violations) for p in projects
-                ),
-                total_print_violations=sum(len(p.print_violations) for p in projects),
-                total_breakpoint_violations=sum(
-                    len(p.breakpoint_violations) for p in projects
-                ),
-                total_open_encoding_violations=sum(
-                    len(p.open_encoding_violations) for p in projects
-                ),
-                total_dict_annotation_violations=sum(
-                    len(p.dict_annotation_violations) for p in projects
-                ),
-                total_typing_dict_attr_violations=sum(
-                    len(p.typing_dict_attr_violations) for p in projects
-                ),
-                total_typing_dict_import_violations=sum(
-                    len(p.typing_dict_import_violations) for p in projects
-                ),
-                total_hardcoded_version_violations=sum(
-                    len(p.hardcoded_version_violations) for p in projects
-                ),
-                total_type_ignore_violations=sum(
-                    len(p.type_ignore_violations) for p in projects
-                ),
-                total_noqa_violations=sum(len(p.noqa_violations) for p in projects),
-                total_inline_import_violations=sum(
-                    len(p.inline_import_violations) for p in projects
-                ),
-                total_silent_failure_violations=sum(
-                    len(p.silent_failure_violations) for p in projects
-                ),
-                total_parse_failures=sum(len(p.parse_failures) for p in projects),
-                total_files_scanned=sum(p.files_scanned for p in projects),
-            )
 
         @m.computed_field
         @property
         def has_violations(self) -> bool:
-            """Has violations."""
-            return any(
-                getattr(self, field_name) > 0
-                for field_name in type(self).model_fields
-                if field_name.startswith("total_")
-                and field_name != "total_files_scanned"
-            )
+            """Whether any project carries a violation."""
+            return any(project.has_violations for project in self.projects)
 
 
 __all__: list[str] = ["FlextInfraModelsNamespaceEnforcer"]

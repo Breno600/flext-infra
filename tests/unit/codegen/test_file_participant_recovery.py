@@ -267,6 +267,3 @@ class TestsFlextInfraFileParticipantRecovery:
             return r[bool].ok(True)
 
         tm.ok(owner.run_files_locked(roots, fail_session))
-
-
-__all__ = ["TestsFlextInfraFileParticipantRecovery"]

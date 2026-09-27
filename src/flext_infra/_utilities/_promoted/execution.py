@@ -20,7 +20,7 @@ class FlextInfraUtilitiesPromotedExecution(FlextInfraUtilitiesPromotedInvocation
     """Run one promoted command in its canonical command environment."""
 
     @classmethod
-    def promoted_run(cls, command: p.Infra.Promoted.Command) -> int:
+    def promoted_run(cls, command: p.Infra.PromotedCommand) -> int:
         """Run one promoted command from its owner root and stream it live.
 
         The single workspace venv is authoritative for every inherited command;

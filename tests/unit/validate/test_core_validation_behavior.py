@@ -9,10 +9,8 @@ from flext_tests import tm
 from flext_infra import config
 from tests import m, u
 
-from ._fixtures import TestsFlextInfraValidateNamespaceBase
 
-
-class TestsFlextInfraCoreValidationBehavior(TestsFlextInfraValidateNamespaceBase):
+class TestsFlextInfraCoreValidationBehavior:
     """Test suite for core validation behavior."""
 
     def test_public_project_layout_uses_flext_for_core_exception(
@@ -57,7 +55,7 @@ class TestsFlextInfraCoreValidationBehavior(TestsFlextInfraValidateNamespaceBase
         tm.ok(add_result)
         tm.that(u.Cli.process_succeeded(add_result.value.outcome), eq=True)
 
-        result = self.validator.validate_project(project_root)
+        result = u.Tests.namespace_validator().validate_project(project_root)
 
         tm.ok(result)
         tm.that(result.value.passed, eq=True)
@@ -77,11 +75,11 @@ class TestsFlextInfraCoreValidationBehavior(TestsFlextInfraValidateNamespaceBase
         module_source = u.Tests.namespace_fixture("rule0_valid.py").replace(
             "        pass\n", f"        pass\n{assignments}\n"
         )
-        root = self._create_namespace_project(
+        root = u.Tests.namespace_project(
             tmp_path, module_source=module_source, module_name="models.py"
         )
 
-        result = self.validator.validate_project(root)
+        result = u.Tests.namespace_validator().validate_project(root)
 
         tm.ok(result)
         locator = f"exceed the {cap} limit"
@@ -109,35 +107,32 @@ class TestsFlextInfraCoreValidationBehavior(TestsFlextInfraValidateNamespaceBase
         )
         tm.that(files, has=package_dir / "__init__.py")
         tm.that(files, has=package_dir / "__version__.py")
-        result = self.validator.validate_project(project_root)
+        result = u.Tests.namespace_validator().validate_project(project_root)
         tm.that(result.success, eq=True)
         tm.that(result.value.passed, eq=True)
         tm.that(result.value.violations, empty=True)
         tm.that(result.value.summary, has="files checked")
 
     def test_validate_returns_report(self, tmp_path: Path) -> None:
-        root = self._create_namespace_project(
+        root = u.Tests.namespace_project(
             tmp_path,
             module_source=u.Tests.namespace_fixture("rule0_valid.py"),
             module_name="constants.py",
         )
-        result = self.validator.validate_project(root)
+        result = u.Tests.namespace_validator().validate_project(root)
         tm.that(result.success, eq=True)
         tm.that(result.value, is_=m.Infra.ValidationReport)
         tm.that(result.value.summary, has="files checked")
 
     def test_violation_message_format(self, tmp_path: Path) -> None:
-        root = self._create_namespace_project(
+        root = u.Tests.namespace_project(
             tmp_path,
             module_source=u.Tests.namespace_fixture("rule0_no_class.py"),
             module_name="models.py",
         )
-        result = self.validator.validate_project(root)
+        result = u.Tests.namespace_validator().validate_project(root)
         tm.that(result.success, eq=True)
         tm.that(len(result.value.violations), gt=0)
         first = result.value.violations[0]
         tm.that(first, has="[NS-STRUCT-")
         tm.that(first, has="] src/flext_test/models.py:1 — ")
-
-
-__all__: list[str] = ["TestsFlextInfraCoreValidationBehavior"]

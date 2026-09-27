@@ -203,6 +203,7 @@ class TestsFlextInfraDocsGenerator:
             )
             / "flext-infra-fixture"
         )
+        u.Tests.write_standalone_workspace_manifest(workspace, "flext-infra-fixture")
         curated = workspace / "docs/README.md"
         curated_content = curated.read_bytes()
         request = m.Infra.DocsGenerateRequest(
@@ -219,6 +220,11 @@ class TestsFlextInfraDocsGenerator:
 
         result = generator.generate(request)
         tm.ok(result)
+        tm.that(
+            (workspace / "docs/api-reference/generated/public-api.md").is_file(),
+            eq=True,
+        )
+        tm.that((workspace / "docs/projects/generated/catalog.md").exists(), eq=False)
         tm.that([report.scope for report in result.value], eq=["flext-infra-fixture"])
         for report in result.value:
             tm.that(report.changed_files, eq=0)
@@ -547,6 +553,3 @@ class TestsFlextInfraDocsGenerator:
 
         with pytest.raises(ValueError, match="use HTTPS"):
             u.Infra.docs_url_scheme(target)
-
-
-__all__: list[str] = ["TestsFlextInfraDocsGenerator"]

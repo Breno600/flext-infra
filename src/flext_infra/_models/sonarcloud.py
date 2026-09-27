@@ -38,9 +38,9 @@ class FlextInfraModelsSonarcloud:
     class SonarcloudSetting(m.ContractModel):
         """One setting returned by ``api/settings/values``.
 
-        The endpoint also reports bookkeeping (for example ``inherited``) that
-        this contract does not consume; only ``key`` and ``fieldValues`` are
-        read, so the unread keys are ignored rather than forbidden.
+        ``fieldValues`` contains the effective value, including inherited
+        entries. Origin bookkeeping does not change which entries are active.
+        Unread metadata is ignored rather than forbidden.
         """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
@@ -64,7 +64,7 @@ class FlextInfraModelsSonarcloud:
 
         settings: Annotated[
             t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudSetting],
-            m.Field(description="Settings the project defines for the asked keys"),
+            m.Field(description="Effective settings for the requested keys"),
         ]
 
     class SonarcloudAuthentication(m.ContractModel):
@@ -91,43 +91,17 @@ class FlextInfraModelsSonarcloud:
         ]
         field_values: Annotated[
             t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudIssueFieldValue],
-            m.Field(min_length=1, description="Entries in SSOT order"),
+            m.Field(description="Entries in SSOT order; empty means reset"),
         ]
 
-        def current_field_values(
-            self, current: FlextInfraModelsSonarcloud.SonarcloudSettingsValues
-        ) -> t.VariadicTuple[FlextInfraModelsSonarcloud.SonarcloudIssueFieldValue]:
-            """Return the entries the server holds for this plan's setting key."""
-            return tuple(
-                value
-                for setting in current.settings
-                if setting.key == self.setting_key
-                for value in setting.field_values
-            )
+    class SonarcloudSettingsWriteRequest(m.ContractModel):
+        """One complete POST request selected from a validated settings plan."""
 
-        def in_sync_with(
-            self, current: FlextInfraModelsSonarcloud.SonarcloudSettingsValues
-        ) -> bool:
-            """Whether the server already holds exactly the SSOT entries.
-
-            The property set is compared as a set: the API replaces the whole
-            value, and the SSOT is validated duplicate-free, so order carries
-            no meaning for which issues are excluded.
-            """
-            return frozenset(self.current_field_values(current)) == frozenset(
-                self.field_values
-            )
-
-        def form_fields(self) -> t.VariadicTuple[t.Pair[str, str]]:
-            """Return the ``api/settings/set`` form, one ``fieldValues`` per entry."""
-            return (
-                ("component", self.project_key),
-                ("key", self.setting_key),
-                *(
-                    ("fieldValues", value.model_dump_json(by_alias=True))
-                    for value in self.field_values
-                ),
-            )
+        api_path: Annotated[t.NonEmptyStr, m.Field(description="Web API endpoint")]
+        form: Annotated[
+            t.VariadicTuple[t.Pair[str, str]],
+            m.Field(min_length=2, description="Ordered form fields for the endpoint"),
+        ]
 
 
 __all__: list[str] = ["FlextInfraModelsSonarcloud"]

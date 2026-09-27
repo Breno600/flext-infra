@@ -45,20 +45,20 @@ class FlextInfraRefactorCensusValidateMixin:
             description: str,
             fixable: bool = False,
             fix_action: str = "",
-        ) -> m.Infra.Census.Violation: ...
+        ) -> m.Infra.Violation: ...
 
     def _validated_project_reports(
         self,
         rope: p.Infra.RopeWorkspaceDsl,
-        project_reports: t.VariadicTuple[m.Infra.Census.ProjectReport],
-    ) -> t.VariadicTuple[m.Infra.Census.ProjectReport]:
+        project_reports: t.VariadicTuple[m.Infra.ProjectReport],
+    ) -> t.VariadicTuple[m.Infra.ProjectReport]:
         """Keep only removal candidates that pass the configured dry-run gates.
 
         Gate rejections are surfaced as explicit ``preview_rejected``
         violations so the census still completes with actionable output
         instead of aborting on the first rejected candidate.
         """
-        validated_reports: list[m.Infra.Census.ProjectReport] = []
+        validated_reports: list[m.Infra.ProjectReport] = []
         # Preview writes are restored before the next candidate, so one shared
         # source cache stays valid for the entire dry-run validation pass.
         source_cache: MutableMapping[Path, str] = {}
@@ -66,7 +66,7 @@ class FlextInfraRefactorCensusValidateMixin:
             if not report.removal_candidates:
                 validated_reports.append(report)
                 continue
-            validated_candidates_list: list[m.Infra.Census.RemovalCandidate] = []
+            validated_candidates_list: list[m.Infra.RemovalCandidate] = []
             validated_violations = list(report.violations)
             for candidate in report.removal_candidates:
                 preview_result = u.Infra.preview_simple_removal_candidate(

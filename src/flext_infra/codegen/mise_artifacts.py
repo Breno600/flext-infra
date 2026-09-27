@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
-    """Validate unlocked latest-version Mise declarations and launchers."""
+    """Validate latest-selector Mise declarations and the bootstrap launchers."""
 
     config_only: Annotated[
         bool,

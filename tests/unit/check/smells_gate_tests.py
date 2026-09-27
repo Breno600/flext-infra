@@ -7,7 +7,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import c
-from flext_infra.check.workspace_check_gates import FlextInfraGateRegistry
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.gates.smells import FlextInfraSmellsGate
 from tests import m, u
 
@@ -56,6 +56,3 @@ class TestsFlextInfraSmellsGate:
 
         tm.that(execution.result.passed, eq=True)
         tm.that(len(execution.issues), eq=0)
-
-
-__all__: list[str] = ["TestsFlextInfraSmellsGate"]

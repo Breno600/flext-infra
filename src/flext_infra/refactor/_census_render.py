@@ -16,7 +16,7 @@ class FlextInfraRefactorCensusRenderMixin:
     """
 
     @staticmethod
-    def _render_workspace_report(report: m.Infra.Census.WorkspaceReport) -> str:
+    def _render_workspace_report(report: m.Infra.WorkspaceReport) -> str:
         """Render workspace census report from typed model fields."""
         lines = [
             "Workspace Census Report",
@@ -64,7 +64,7 @@ class FlextInfraRefactorCensusRenderMixin:
         return "\n".join(lines)
 
     @staticmethod
-    def render_text(report: m.Infra.Census.WorkspaceReport) -> str:
+    def render_text(report: m.Infra.WorkspaceReport) -> str:
         """Render the canonical workspace census report."""
         return FlextInfraRefactorCensusRenderMixin._render_workspace_report(report)
 

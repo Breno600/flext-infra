@@ -94,6 +94,3 @@ class TestsFlextInfraGovernanceAuthority:
             "Repetitive manual call-site editing is prohibited",
         ):
             tm.that(law, has=required)
-
-
-__all__: list[str] = ["TestsFlextInfraGovernanceAuthority"]

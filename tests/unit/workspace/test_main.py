@@ -32,19 +32,13 @@ class TestsFlextInfraWorkspaceMain:
             encoding="utf-8",
         )
         u.Tests.write_project_beads_config(project_root, name)
+        u.Tests.write_workspace_manifest(project_root, name)
         u.Tests.initialize_git_repo(
             project_root, origin_url=u.Tests.repository_ref(name).url
         )
 
     def _write_workspace(self, repository_root: Path) -> None:
-        repository_root.mkdir(parents=True, exist_ok=True)
-        (repository_root / "pyproject.toml").write_text(
-            ('[project]\nname = "workspace"\nversion = "0.1.0"\n'), encoding="utf-8"
-        )
-        u.Tests.write_project_beads_config(repository_root, "workspace")
-        u.Tests.initialize_git_repo(
-            repository_root, origin_url=u.Tests.repository_ref("workspace").url
-        )
+        self._write_project(repository_root, "workspace")
         self._write_project(repository_root / "demo-a", "demo-a")
         u.Tests.WorktreeFixture.write_gitmodules(repository_root, ("demo-a",))
 
@@ -133,6 +127,3 @@ class TestsFlextInfraWorkspaceMain:
 
     def test_workspace_main_without_command_returns_failure(self) -> None:
         tm.that(self._workspace_main([]), eq=1)
-
-
-__all__: list[str] = ["TestsFlextInfraWorkspaceMain"]

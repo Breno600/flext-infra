@@ -13,6 +13,7 @@ from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from tests import c, m, p, t
 from tests.utilities_fixture_project import TestsFlextInfraUtilitiesProjectFixtureMixin
+from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 
 
 class TestsFlextInfraUtilitiesCodegenMixin:
@@ -35,9 +36,12 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                 *ruff_cfg.lint.ignored_rule_rationales,
             })
         )
-        rows = "\n".join(
-            f'"{pattern}" = [{", ".join(f'"{rule}"' for rule in rules)}]'
+        quoted_rules = {
+            pattern: ", ".join(f'"{rule}"' for rule in rules)
             for pattern, rules in sorted(ruff_cfg.lint.per_file_ignores.items())
+        }
+        rows = "\n".join(
+            f'"{pattern}" = [{names}]' for pattern, names in quoted_rules.items()
         )
         isort = ruff_cfg.lint.isort
         # Why: without the fleet's isort settings (combine-as-imports in
@@ -65,6 +69,62 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         """Build one codegen conform request; every default is the model's own."""
         return m.Infra.CodegenConformRequest(
             root=root, what=what, scope=scope, mode=mode
+        )
+
+    @staticmethod
+    def conform_plan(
+        root: Path, workspace: m.Infra.WorkspaceSpec
+    ) -> m.Infra.CodegenPlan:
+        """Plan one fixture workspace through the public conform boundary."""
+        request = TestsFlextInfraUtilitiesCodegenMixin.conform_request(root)
+        return tm.ok(
+            FlextInfraCodegenConform(
+                repository_root=root, request=request, initial_workspace=workspace
+            ).plan(request)
+        )
+
+    @staticmethod
+    def scaffold_plan(
+        root: Path, *, members: t.StrSequence = ()
+    ) -> m.Infra.CodegenPlan:
+        """Plan every artifact conform renders for a fresh repository scaffold.
+
+        Without members the fixture repository is standalone; each member
+        makes it a workspace composing that project, so generated surfaces
+        are observed exactly as the public codegen owner renders them.
+        """
+        fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
+        repository = fixture.repository_ref(
+            "fixture-project",
+            role=(
+                c.Infra.MakeProfile.WORKSPACE
+                if members
+                else c.Infra.MakeProfile.STANDALONE
+            ),
+        )
+        return TestsFlextInfraUtilitiesCodegenMixin.conform_plan(
+            root,
+            fixture.workspace_spec(
+                repository,
+                project=fixture.project_spec(repository.name),
+                subprojects=tuple(
+                    fixture.repository_ref(name, path=Path(name)) for name in members
+                ),
+            ),
+        )
+
+    @staticmethod
+    def scaffold_text(
+        root: Path, destination: str, *, members: t.StrSequence = ()
+    ) -> str:
+        """Return one rendered scaffold artifact, failing when it is not planned."""
+        return tm.not_none(
+            TestsFlextInfraUtilitiesCodegenMixin.planned_text(
+                TestsFlextInfraUtilitiesCodegenMixin.scaffold_plan(
+                    root, members=members
+                ),
+                destination,
+            )
         )
 
     @staticmethod
@@ -121,7 +181,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         (repository_root / "Makefile").write_text(
             "check:\n\t@true\n", encoding=c.Infra.ENCODING_DEFAULT
         )
-        (repository_root / c.Infra.PYPROJECT_FILENAME).write_text(
+        (repository_root / c.PYPROJECT_FILENAME).write_text(
             (
                 f'[project]\nname = "{project_name}"\nversion = "0.1.0"\n\n'
                 + TestsFlextInfraUtilitiesCodegenMixin.ruff_per_file_ignores_toml()
@@ -134,6 +194,11 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
             repository_root, project_name
         )
+        # Semantic publication authenticates every changed path against its Git
+        # checkout.  The shared workspace fixture therefore owns a real,
+        # repository-local identity instead of letting individual tests depend
+        # on whichever checkout happens to contain ``tmp_path``.
+        TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(repository_root)
         return (repository_root, package_root)
 
     @staticmethod
@@ -220,6 +285,15 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         )
         for plan in changed:
             before = u.Infra.codegen_file_before_state(plan)
+            if plan.desired_content is not None and (
+                before.failure or before.value.parent_inode is None
+            ):
+                # Planning is read-only, so a destination planned into an absent
+                # directory chain carries no parent identity. Like the
+                # transaction owner at apply, the publisher materializes the
+                # chain and reads the destination again before publishing.
+                plan.path.parent.mkdir(parents=True, exist_ok=True)
+                before = u.Cli.atomic_read_binary_file_state(plan.path)
             if before.failure:
                 return r[bool].from_failure(before)
             if plan.desired_content is None:
@@ -263,7 +337,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
     @staticmethod
     def extract_lazy_init_exports(source: str) -> t.Pair[bool, t.StrSequence]:
         """Read the published lazy export contract from generated source."""
-        assignments = dict(u.Infra.get_module_level_assignments(source))
+        assignments = dict(u.Infra.extract_module_level_assignments(source))
         all_value = assignments.get(c.Infra.DUNDER_ALL)
         if all_value is None:
             return (False, ())

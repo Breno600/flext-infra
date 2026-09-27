@@ -128,7 +128,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
         Callable[
             [
                 Path,
-                t.SequenceOf[tuple[m.EnforcementRuleSpec, p.AttributeProbe]],
+                t.SequenceOf[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]],
                 m.Infra.FixEnforcementCommand,
             ],
             m.Infra.ProjectFixResult,
@@ -354,7 +354,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
         def _step(
             target: m.Infra.FileFixTarget, detect_ctx: m.Infra.DetectorContext
         ) -> m.Infra.FileFixOutcome:
-            resource = u.Infra.get_resource_from_path(
+            resource = u.Infra.resolve_resource_from_path(
                 detect_ctx.rope_project, target.file_path
             )
             if resource is None:
@@ -583,7 +583,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
             )
             if not hoistable:
                 return m.Infra.FileFixOutcome(skipped=(empty_reason,))
-            resource = u.Infra.get_resource_from_path(
+            resource = u.Infra.resolve_resource_from_path(
                 detect_ctx.rope_project, target.file_path
             )
             if resource is None:
@@ -625,7 +625,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
         """Return source with hoistable inline import statements at module scope."""
         tree = ast.parse(source, filename=str(file_path))
         lines = source.splitlines(keepends=True)
-        line_ranges: list[tuple[int, int]] = []
+        line_ranges: list[t.Pair[int, int]] = []
         import_lines: list[str] = []
         for violation in violations:
             node = cls._find_inline_import_node(tree, violation.line)
@@ -816,7 +816,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
                 return m.Infra.FileFixOutcome(skipped=("rope resource not found",))
             class_infos = tuple(
                 class_info
-                for class_info in u.Infra.get_class_info(
+                for class_info in u.Infra.resolve_class_info(
                     detect_ctx.rope_project, resource
                 )
                 if not any(

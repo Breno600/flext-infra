@@ -91,6 +91,3 @@ class TestsFlextInfraMetadataDiscipline:
         (external / "bad.py").write_text("import tomllib\n", encoding="utf-8")
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.passed, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraMetadataDiscipline"]

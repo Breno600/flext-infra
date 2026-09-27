@@ -7,12 +7,10 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c
-
-from ._fixtures import TestsFlextInfraValidateNamespaceBase
+from tests import c, u
 
 
-class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
+class TestsFlextInfraModulePathRules:
     """Namespace rules key on the module path a project actually declares."""
 
     @pytest.mark.parametrize("family", ["c", "t", "p", "m", "u"])
@@ -31,7 +29,7 @@ class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
         # The test facade extends the parent package's family CLASS and
         # rebinds the letter locally; importing the letter itself would
         # shadow the binding and break the owner election.
-        root, _ = self._create_namespace_project_path(
+        root, _ = u.Tests.namespace_project_path(
             tmp_path,
             module_path=f"tests/{module}.py",
             module_source=(
@@ -42,7 +40,7 @@ class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
                 f'__all__: list[str] = ["TestsFlextTest{suffix}", "{target_alias}"]\n'
             ),
         )
-        report = self._validate_project(root)
+        report = u.Tests.validate_namespace_project(root)
         tm.that(report.passed, eq=valid_alias, msg=str(report.violations))
 
     @pytest.mark.parametrize(
@@ -221,18 +219,15 @@ class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
         expect_passed: bool | None,
     ) -> None:
         """Namespace rules key on the module path a project actually declares."""
-        root, target = self._create_namespace_project_path(
+        root, target = u.Tests.namespace_project_path(
             tmp_path, module_source=module_source, module_path=module_path
         )
-        self._assert_file_in_inventory(root, target)
+        u.Tests.assert_namespace_file_in_inventory(root, target)
 
-        report = self._validate_project(root)
+        report = u.Tests.validate_namespace_project(root)
 
         if expect_passed is not None:
             tm.that(report.passed, eq=expect_passed, msg=str(report.violations))
         tm.that(
             any(violation_substr in v for v in report.violations), eq=expect_violation
         )
-
-
-__all__: list[str] = ["TestsFlextInfraModulePathRules"]

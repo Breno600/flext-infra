@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from flext_tests import tm
 
 from flext_core import r
 from flext_infra import c, m, p, u
+
+if TYPE_CHECKING:
+    from tests import t
 from flext_infra.codemod import FlextInfraCodemodSemanticApply
 from flext_infra.transformers import publish_semantic_file_plans
 
@@ -17,7 +21,7 @@ class TestsSemanticPublication:
     """All files remain recoverable until the semantic consumer accepts them."""
 
     @staticmethod
-    def _plans(root: Path) -> tuple[m.Infra.SemanticFilePlan, ...]:
+    def _plans(root: Path) -> t.VariadicTuple[m.Infra.SemanticFilePlan]:
         plans: list[m.Infra.SemanticFilePlan] = []
         for name in ("first.py", "second.py"):
             path = root / name
@@ -165,6 +169,3 @@ class TestsSemanticPublication:
             mod_workspace, (repeated,)
         )
         tm.that(first.path.read_text(), eq=published)
-
-
-__all__: list[str] = ["TestsSemanticPublication"]

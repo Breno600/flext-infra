@@ -5,16 +5,14 @@ rule:
     pattern:
         context: |
             def _process_exit_result(
-                cmd: t.StrSequence,
-                return_code: int | None,
-                received_signals: list[int],
-                diagnostics: t.VariadicTuple[str],
+                cmd: $COMMAND_TYPE,
+                $$$PARAMETERS,
                 *,
-                timed_out: bool,
-                legacy_timeout: bool,
-                legacy_timeout_seconds: int | None,
-                timeout_exit_code: int,
-            ) -> p.Result[p.Cli.ProcessOutcome]:
+                timed_out: $TIMED_OUT_TYPE,
+                legacy_timeout: $LEGACY_TYPE,
+                legacy_timeout_seconds: $SECONDS_TYPE,
+                timeout_exit_code: $EXIT_CODE_TYPE,
+            ) -> $RESULT_TYPE:
                 $DOC
                 if legacy_timeout and timed_out:
                     $$$LEGACY_FAILURE
@@ -25,23 +23,21 @@ rule:
                 elif return_code is None:
                     $$$MISSING_EXIT
                 else:
-                    $$$NATIVE_EXIT
+                    $$$PROCESS_EXIT
                 $$$OUTCOME
         selector: function_definition
 fix: |
     def _process_exit_result(
-        return_code: int | None,
-        received_signals: list[int],
-        diagnostics: t.VariadicTuple[str],
+        $$$PARAMETERS,
         *,
-        timed_out: bool,
-    ) -> p.Result[p.Cli.ProcessOutcome]:
+        timed_out: $TIMED_OUT_TYPE,
+    ) -> $RESULT_TYPE:
         $DOC
         if received_signals:
             $$$SIGNAL_EXIT
         elif return_code is None:
             $$$MISSING_EXIT
         else:
-            $$$NATIVE_EXIT
+            $$$PROCESS_EXIT
         $$$OUTCOME
 message: Remove per-call timeout policy from the causal outcome owner.

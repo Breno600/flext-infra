@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from tests import c, u
@@ -190,7 +191,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
             project_name="flext-test-groups",
             package_name="flext_test_groups_child",
         )
-        pyproject = repository_root / c.Infra.PYPROJECT_FILENAME
+        pyproject = repository_root / c.PYPROJECT_FILENAME
         pyproject.write_text(
             pyproject.read_text(encoding=c.Infra.ENCODING_DEFAULT)
             + '\n[dependency-groups]\ncodegen = ["flext-infra"]\n'
@@ -225,7 +226,7 @@ class TestsFlextInfraLazyInitAliasInheritance:
         tm.that(u.Tests.run_lazy_init(repository_root, check_only=True), eq=0)
 
     def test_declared_parent_resolving_nowhere_fails_loud(self, tmp_path: Path) -> None:
-        """A declared parent that resolves nowhere in the environment is a typed failure."""
+        """A declared parent that resolves nowhere escapes as the first failure."""
         repository_root, child_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-test-ghost",
@@ -240,16 +241,13 @@ class TestsFlextInfraLazyInitAliasInheritance:
             encoding=c.Infra.ENCODING_DEFAULT,
         )
 
-        planned = u.Tests.plan_lazy_init(repository_root)
-
-        tm.that(planned.failure, eq=True)
-        tm.that(
-            planned.error,
-            contains=(
+        # Planning runs once and exposes the first failure with its traceback;
+        # nothing converts it into a result on the way out.
+        with pytest.raises(
+            ValueError,
+            match=(
                 "lazy-init: declared facade parent 'flext_ghost_parent_zzz'"
                 " resolves nowhere in the active environment"
             ),
-        )
-
-
-__all__: list[str] = ["TestsFlextInfraLazyInitAliasInheritance"]
+        ):
+            u.Tests.plan_lazy_init(repository_root)

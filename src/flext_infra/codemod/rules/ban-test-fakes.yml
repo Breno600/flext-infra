@@ -1,0 +1,77 @@
+# Test law: no hand-rolled double stands in for a project owner.
+#
+# `ban-test-doubles` owns mock libraries; this rule owns the doubles a test
+# writes by hand, which hide the real owner just as completely:
+#
+#   * a class named as a double — `Fake*`, `Stub*`, `Dummy*`, `Mock*`, `Spy*`
+#     prefixes or `*Fake`, `*Stub`, `*Dummy`, `*Mock`, `*Spy` suffixes, with or
+#     without a leading underscore;
+#   * a function named as a double — `fake_*`, `stub_*`, `dummy_*`, `mock_*`,
+#     `spy_*`, with or without a leading underscore;
+#   * a class that implements a project protocol from the `p` facade inside a
+#     test (`class Recorder(p.Cli.Runner)`): a test-local implementation of an
+#     owner contract is a double whatever its name. Protocols under `p.Tests`
+#     belong to the tests tier itself and are not project owners.
+#
+# Legitimate homonyms keep their contract: a pytest class whose name starts
+# with `Test` (e.g. `TestsFakeDetection`, which tests a fake detector) is a test
+# suite, not a double; words that merely start with the same letters
+# (`Stubborn`, `Mockup`, `Spyder`) are not a double prefix, because the prefix
+# must end at a word boundary (an uppercase letter, digit, underscore or the end
+# of the name).
+#
+# Detection-only: the replacement uses the real owner through public fixtures.
+# A test that cannot run without the double is deleted.
+id: ban-test-fakes
+language: Python
+severity: error
+files:
+  - "**/tests/**/*.py"
+  - "**/examples/**/*.py"
+  - "**/conftest.py"
+rule:
+  any:
+    - all:
+        - kind: class_definition
+        - has:
+            field: name
+            all:
+              - any:
+                  - regex: '^_*(?:Fake|Stub|Dummy|Mock|Spy)(?:[A-Z0-9_]|$)'
+                  - regex: '[a-z0-9](?:Fake|Stub|Dummy|Mock|Spy)$'
+              - not:
+                  regex: '^_*Test'
+    - all:
+        - kind: function_definition
+        - has:
+            field: name
+            regex: '^_*(?:fake|stub|dummy|mock|spy)(?:_|$)'
+    - all:
+        - kind: class_definition
+        - has:
+            field: superclasses
+            has:
+              kind: attribute
+              all:
+                - regex: '^p\.[A-Z]'
+                # `p.Tests.*` protocols are owned by the tests tier itself.
+                - not:
+                    regex: '^p\.Tests\.'
+        - not:
+            has:
+              field: name
+              regex: '^_*Test'
+        # A tier protocol facade (`class TestsFooProtocols(...)`) extends the
+        # project's protocol namespaces by MRO (`class Foo(p.Foo)`): that is a
+        # declaration of the tier's own contracts, not a double.
+        - not:
+            inside:
+              kind: class_definition
+              stopBy: end
+              has:
+                field: name
+                regex: 'Protocols$'
+message: >-
+  Hand-rolled test double: a Fake/Stub/Dummy/Mock/Spy class or function, or a
+  test-local implementation of a `p` protocol, stands in for the real owner.
+  Exercise the real owner through public fixtures, or delete the test.

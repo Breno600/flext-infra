@@ -11,7 +11,7 @@ from .base import FlextInfraNamespaceRulesBase
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t
+    from flext_infra import p, t
 
 
 class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
@@ -19,7 +19,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
 
     @classmethod
     def check_contracts(
-        cls, tree: object, filepath: Path, *, source: str
+        cls, tree: p.AttributeProbe, filepath: Path, *, source: str
     ) -> t.StrSequence:
         """Return contract and clean-architecture violations."""
         posix = filepath.as_posix()
@@ -47,7 +47,9 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
         return cls.violations("NS-CONTRACT", messages)
 
     @classmethod
-    def _function_contract(cls, node: object, filepath: Path) -> t.StrSequence:
+    def _function_contract(
+        cls, node: p.AttributeProbe, filepath: Path
+    ) -> t.StrSequence:
         """Require typed public input/output boundaries."""
         name = getattr(node, "name", "")
         if not isinstance(name, str) or (name.startswith("_") and name != "__init__"):
@@ -87,7 +89,9 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
         return tuple(messages)
 
     @classmethod
-    def _annotation_contract(cls, node: object, filepath: Path) -> t.StrSequence:
+    def _annotation_contract(
+        cls, node: p.AttributeProbe, filepath: Path
+    ) -> t.StrSequence:
         """Reject broad and legacy annotation vocabulary."""
         annotations: list[object] = []
         if cls.kind(node) == "AnnAssign" or cls.kind(node) == "arg":
@@ -108,7 +112,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
         return tuple(messages)
 
     @classmethod
-    def _annotation_type_names(cls, annotation: object) -> frozenset[str]:
+    def _annotation_type_names(cls, annotation: p.AttributeProbe) -> frozenset[str]:
         """Collect identifier names from an annotation, skipping call subtrees.
 
         Pydantic field metadata such as
@@ -133,7 +137,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
     @classmethod
     def _call_contract(
         cls,
-        node: object,
+        node: p.AttributeProbe,
         filepath: Path,
         imported_names: t.MappingKV[t.Pair[int, int], frozenset[str]],
     ) -> t.StrSequence:
@@ -161,7 +165,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
     @classmethod
     def _legacy_decorator(
         cls,
-        node: object,
+        node: p.AttributeProbe,
         filepath: Path,
         imported_names: t.MappingKV[t.Pair[int, int], frozenset[str]],
     ) -> t.StrSequence:
@@ -183,7 +187,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
         )
 
     @classmethod
-    def _composition_root(cls, tree: object, filepath: Path) -> t.StrSequence:
+    def _composition_root(cls, tree: p.AttributeProbe, filepath: Path) -> t.StrSequence:
         """Permit effectful construction only inside the public API class.
 
         Config/settings modules define canonical singletons at module level.

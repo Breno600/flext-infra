@@ -375,7 +375,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         violations: t.SequenceOf[m.Infra.CompatibilityAliasViolation],
         *,
         package_name: str,
-    ) -> tuple[
+    ) -> t.Pair[
         list[m.Infra.CompatibilityAliasViolation],
         list[m.Infra.CompatibilityAliasViolation],
     ]:

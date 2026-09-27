@@ -43,7 +43,7 @@ class FlextInfraCodemodSemanticApply:
 
     @classmethod
     def apply_transaction_paths(
-        cls, root: Path, edits: tuple[m.Infra.SemanticMigrationEdit, ...]
+        cls, root: Path, edits: t.VariadicTuple[m.Infra.SemanticMigrationEdit]
     ) -> None:
         """Publish the exact callback included in the existing progress fingerprint."""
         original = {edit.file_path: edit.original_source for edit in edits}

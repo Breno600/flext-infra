@@ -1,8 +1,7 @@
 """Project-layout quality gate (flext-0wuz, epic flext-hzox).
 
 Reports layout-SSOT violations per project. Severity is config-driven
-(``codegen.yaml layout.severity``): ``warning`` reports without failing the
-pipeline; ``error`` fails on actionable (move/archive/gitignore) findings.
+(``codegen.yaml layout.severity``); every reported finding fails the gate.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -49,9 +48,7 @@ class FlextInfraLayoutGate(FlextInfraGate):
             )
             for finding in report_findings
         )
-        actionable: t.VariadicTuple[m.Infra.LayoutFinding] = report.actionable
-        blocking = tuple(finding for finding in actionable if not warning)
-        passed = warning or not blocking
+        passed = not issues
         return self._build_check_gate_execution(
             project_dir,
             passed=passed,

@@ -6,7 +6,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m, u
 
@@ -64,8 +64,20 @@ class FlextInfraGate:
         started = time.monotonic()
         check_dirs = self._get_check_dirs(project_dir, ctx)
         if not check_dirs:
-            return self._skip_result(project_dir, started)
+            return self._empty_targets_result(project_dir, started)
         return self._execute_check_command(project_dir, ctx, check_dirs, started)
+
+    def _empty_targets_result(
+        self, project_dir: Path, started: float
+    ) -> m.Infra.GateExecution:
+        """Outcome when a gate collects no check targets.
+
+        Failing loud is the default: a selected gate with no inputs did not
+        establish acceptance. A gate whose targets are conditional on the
+        project topology (absent by declared design, not by accident)
+        overrides this with a neutral skip naming the condition.
+        """
+        return self._skip_result(project_dir, started)
 
     def check_files(
         self, files: t.SequenceOf[Path], project_dir: Path, ctx: m.Infra.GateContext
@@ -103,7 +115,7 @@ class FlextInfraGate:
             remove_env_keys=self._check_remove_env_keys(project_dir, ctx),
         )
         if u.Cli.process_succeeded(result.outcome):
-            self._validate_check_report(project_dir, ctx, targets)
+            self._validate_check_report(result, project_dir, ctx, targets)
         return self._parsed_gate_execution(project_dir, ctx, result, started)
 
     @classmethod
@@ -114,7 +126,7 @@ class FlextInfraGate:
     def _tool_failure_issue(self, scan: p.Cli.CommandOutput) -> m.Infra.Issue:
         """Scanner absence/crash must never read as a clean pass."""
         return m.Infra.Issue(
-            file=c.Infra.PYPROJECT_FILENAME,
+            file=c.PYPROJECT_FILENAME,
             line=1,
             column=0,
             code=self.gate_id,
@@ -224,16 +236,6 @@ class FlextInfraGate:
             ctx=ctx,
         )
 
-    @property
-    def _warn_only(self) -> bool:
-        """Operator ruling 2026-09-22: warn gates report, never block.
-
-        The classification lives in the one gate SSOT
-        (``c.Infra.WARNING_GATE_IDS``) so the verdict, the runner rendering,
-        and the reports can never disagree about which gates warn.
-        """
-        return self.gate_id in c.Infra.WARNING_GATE_IDS
-
     def _build_check_gate_execution(
         self,
         project_dir: Path,
@@ -245,6 +247,7 @@ class FlextInfraGate:
         ctx: m.Infra.GateContext | None = None,
         errors: t.StrSequence | None = None,
         accept_reported_issues: bool = False,
+        observational_issues: t.SequenceOf[m.Infra.Issue] = (),
     ) -> m.Infra.GateExecution:
         """Assemble a gate execution from parsed check output.
 
@@ -253,39 +256,15 @@ class FlextInfraGate:
         lines (fix paths report applied changes there).
         ``accept_reported_issues`` is the fix contract: reported issues are
         the residue a fixer could not repair and do not decide acceptance.
+        Explicit observational findings remain visible in the report but do
+        not change the verdict of blocking ``issues`` or native execution.
         """
         _ = ctx
-        if self._warn_only:
-            # One classification owns the verdict: downgrading the severity
-            # here makes the parsed verdict, the error count, and the report
-            # artifacts agree that these findings warn instead of block.
-            issues = [
-                issue.model_copy(
-                    update={"severity": c.Infra.GateSeverity.WARNING.value}
-                )
-                if issue.severity.lower() == c.Infra.GateSeverity.ERROR.value
-                else issue
-                for issue in issues
-            ]
-        error_free = not any(
-            issue.severity.lower() == c.Infra.GateSeverity.ERROR.value
-            for issue in issues
-        )
-        if self._warn_only:
-            verdict = accept_reported_issues or error_free
-        else:
-            verdict = passed and (accept_reported_issues or error_free)
+        verdict = passed and (accept_reported_issues or not issues)
         return m.Infra.GateExecution(
             result=m.Infra.GateResult(
                 gate=self.gate_id,
                 project=project_dir.name,
-                # A warning is, by definition, not a failure. This harness used
-                # to reject any issue whose severity was error OR warning, while
-                # error_count sums only error severity -- so a gate that
-                # deliberately renders findings as warnings failed while
-                # reporting zero errors, naming nothing the reader could act on.
-                # Verdict and count now derive from the same classification, so
-                # a gate's declared severity means what it says.
                 passed=verdict,
                 errors=(
                     list(errors)
@@ -295,6 +274,7 @@ class FlextInfraGate:
                 duration=round(time.monotonic() - started, 3),
             ),
             issues=tuple(issues),
+            observational_issues=tuple(observational_issues),
             raw_output=raw_output,
         )
 
@@ -306,17 +286,8 @@ class FlextInfraGate:
         errors: t.SequenceOf[str],
         started: float,
         ctx: m.Infra.GateContext,
-        advisory: bool = False,
     ) -> m.Infra.GateExecution:
-        """Build a gate result from project-level error strings (no per-file issues).
-
-        ``advisory`` grades the findings as warnings that are reported but do
-        not block acceptance (operator order 2026-09-22: the namespace and
-        runtime-census census machinery stays advisory until its structural
-        campaign converges). Invocation failures never pass through this
-        path: gates must keep hard failures blocking by building them with
-        ``advisory=False``.
-        """
+        """Preserve project-level failures as blocking structured diagnostics."""
         issues = [
             m.Infra.Issue(
                 file=str(project_dir),
@@ -324,13 +295,13 @@ class FlextInfraGate:
                 column=1,
                 code=self.gate_id,
                 message=error,
-                severity="WARNING" if advisory else "ERROR",
+                severity=c.Infra.GateSeverity.ERROR.value,
             )
             for error in errors
         ]
         return self._build_check_gate_execution(
             project_dir,
-            passed=passed or advisory,
+            passed=passed,
             issues=issues,
             raw_output="\n".join(errors),
             started=started,
@@ -414,10 +385,14 @@ class FlextInfraGate:
         return None
 
     def _validate_check_report(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
     ) -> None:
         """Validate native execution evidence against the exact submitted targets."""
-        _ = project_dir, ctx, targets
+        _ = result, project_dir, ctx, targets
 
     def _check_env(
         self, project_dir: Path, ctx: m.Infra.GateContext
@@ -582,56 +557,4 @@ class FlextInfraGate:
         )
 
 
-class FlextInfraScannerGateMixin(FlextInfraGate):
-    """Mixin for gates that detect per-file issues via a rope-backed scanner.
-
-    Subclasses provide ``scan_error_message`` and implement
-    ``_detect_file_issues``.  The shared ``check`` method handles file
-    discovery, rope-project lifecycle, and result assembly.
-    """
-
-    scan_error_message: ClassVar[str] = ""
-
-    @override
-    def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
-    ) -> m.Infra.GateExecution:
-        """Scan all Python files in ``project_dir`` and report detected issues."""
-        _ = ctx
-        started = time.monotonic()
-        files_result = u.Infra.iter_python_files(
-            m.Infra.SourceScanRequest(project_roots=(project_dir,))
-        )
-        if files_result.failure:
-            return self._build_single_issue_result(
-                project_dir,
-                Path(c.Infra.PYPROJECT_FILENAME),
-                files_result.error or self.scan_error_message,
-                passed=False,
-                started=started,
-                ctx=ctx,
-            )
-        rope_project = u.Infra.init_rope_project(project_dir)
-        try:
-            issues = [
-                issue
-                for file_path in files_result.value
-                for issue in self._detect_file_issues(
-                    file_path, project_dir, rope_project
-                )
-            ]
-        finally:
-            rope_project.close()
-        return self._detected_gate_execution(
-            project_dir, ctx, issues=issues, started=started
-        )
-
-    def _detect_file_issues(
-        self, file_path: Path, project_dir: Path, rope_project: t.Infra.RopeProject
-    ) -> t.SequenceOf[m.Infra.Issue]:
-        """Override in subclass to detect issues for a single file."""
-        _ = file_path, project_dir, rope_project
-        return ()
-
-
-__all__: list[str] = ["FlextInfraGate", "FlextInfraScannerGateMixin"]
+__all__: list[str] = ["FlextInfraGate"]

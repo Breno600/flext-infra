@@ -6,7 +6,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, config, infra, m, t, u
+from flext_infra import config, infra
+from tests import c, m, t, u
 
 
 class TestsFlextInfraFacadeEnvironmentSync:
@@ -27,12 +28,22 @@ class TestsFlextInfraFacadeEnvironmentSync:
         """Return one variable as the real direnv activation of ``workspace`` sees it.
 
         ``HOME`` is isolated so the activation creates its scratch root under the
-        test tree instead of the operator's home.
+        test tree instead of the operator's home; the inherited Mise storage
+        still provides the pinned runtime ``make setup`` installed.
         """
+        # A governed checkout is a Git work tree (activation resolves its
+        # runtime root from the Git superproject topology) carrying its Mise
+        # declaration, launcher, and release pin.
+        u.Tests.initialize_git_repo(workspace)
+        u.Tests.copy_tracked_mise_seeds(workspace)
         activation_env = {"HOME": str(home), **env}
+        isolation = c.Tests.DIRENV_STATE_ENV_KEYS
         tm.ok(
             u.Cli.run_checked(
-                ["direnv", "allow", str(workspace)], cwd=workspace, env=activation_env
+                ["direnv", "allow", str(workspace)],
+                cwd=workspace,
+                env=activation_env,
+                remove_env_keys=isolation,
             )
         )
         return tm.ok(
@@ -40,6 +51,7 @@ class TestsFlextInfraFacadeEnvironmentSync:
                 ["direnv", "exec", str(workspace), "printenv", name],
                 cwd=workspace,
                 env=activation_env,
+                remove_env_keys=isolation,
             )
         )
 
@@ -162,6 +174,3 @@ class TestsFlextInfraFacadeEnvironmentSync:
         )
         tm.ok(result)
         tm.that((workspace / ".envrc").exists(), eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraFacadeEnvironmentSync"]

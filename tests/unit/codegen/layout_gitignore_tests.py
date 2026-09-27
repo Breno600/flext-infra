@@ -74,16 +74,21 @@ class TestsFlextInfraCodegenLayoutGitignore:
         tm.that(rendered.value, has=f"{archive_root()}/")
 
     @pytest.mark.slow
-    def test_conform_materializes_layout_gitignore_additions(
-        self, tmp_path: Path
+    @pytest.mark.parametrize("directory_suffix", ["", "-lane"])
+    def test_rendered_gitignore_satisfies_layout_additions(
+        self, tmp_path: Path, directory_suffix: str
     ) -> None:
-        """``codegen conform`` renders the layout override additions into ``.gitignore``.
+        """The public gitignore renderer satisfies the layout consumer.
 
         The planner used to render ``base/gitignore.j2`` from its own section list
         without the layout override, so ``make gen`` never satisfied the layout gate
         and a governed member ended up hand-editing the projection. One owner now
         derives the sections for every renderer: after conform, the layout engine
         finds no missing gitignore pattern for a project declared in the SSOT.
+
+        The override is keyed by the declared ``[project].name``, never by the
+        checkout directory: a linked worktree named after its lane renders the same
+        additions (conform used ``repository_root.name`` and dropped them there).
         """
         owner, override = next(
             (name, item)
@@ -92,7 +97,7 @@ class TestsFlextInfraCodegenLayoutGitignore:
             )
             if item.gitignore_additions
         )
-        root = tmp_path / owner
+        root = tmp_path / f"{owner}{directory_suffix}"
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             owner,
@@ -100,16 +105,12 @@ class TestsFlextInfraCodegenLayoutGitignore:
             database="fixture-database",
             issue_prefix="fixture-prefix",
         )
-        u.Tests.commit_git_changes(root, "Declare project identity")
-        tm.ok(
-            FlextInfraCodegenConform.execute_request(
-                u.Tests.conform_request(
-                    root,
-                    scope=c.Infra.CodegenConformScope.SELF,
-                    mode=c.Infra.CodegenConformMode.APPLY,
-                )
-            )
+        rendered = FlextInfraCodegenConform.render_project_gitignore(
+            config.Infra.codegen,
+            profile=c.Infra.MakeProfile.STANDALONE,
+            project_name=owner,
         )
+        (root / c.Infra.GITIGNORE).write_text(tm.ok(rendered), encoding="utf-8")
 
         entries = (root / c.Infra.GITIGNORE).read_text(encoding="utf-8").splitlines()
         missing = tuple(
@@ -151,6 +152,3 @@ class TestsFlextInfraCodegenLayoutGitignore:
         paths = {finding.path for finding in report.findings}
         tm.that(local.name in paths, eq=False)
         tm.that(tracked.name in paths, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenLayoutGitignore"]

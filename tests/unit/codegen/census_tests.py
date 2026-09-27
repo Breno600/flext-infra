@@ -155,6 +155,3 @@ class TestsFlextInfraCodegenCensus:
         tm.fail(
             result, has="census is read-only; use flext-infra codegen auto-fix --apply"
         )
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenCensus"]

@@ -4,62 +4,14 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import TYPE_CHECKING
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
-if TYPE_CHECKING:
-    from .test_infra_transformer_cast_remover import (
-        TestsFlextInfraCastRemoverDeactivated,
-    )
-    from .test_infra_transformer_enforcement_fixers import (
-        TestsFlextInfraTransformersEnforcementFixers,
-    )
-    from .test_infra_transformer_mro_remover import (
-        TestsFlextInfraTransformersMroRemover,
-    )
-    from .test_infra_transformer_pydantic_modernizer import (
-        TestsFlextInfraTransformersPydanticModernizer,
-    )
-    from .test_infra_transformer_runtime_model_alias import (
-        TestsFlextInfraRuntimeModelAlias,
-    )
-    from .test_infra_transformer_typing_dict import TestsFlextInfraTypingDictDeactivated
-
-
-__all__: tuple[str, ...] = (
-    "TestsFlextInfraCastRemoverDeactivated",
-    "TestsFlextInfraRuntimeModelAlias",
-    "TestsFlextInfraTransformersEnforcementFixers",
-    "TestsFlextInfraTransformersMroRemover",
-    "TestsFlextInfraTransformersPydanticModernizer",
-    "TestsFlextInfraTypingDictDeactivated",
-)
+__all__: tuple[str, ...] = ()
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
-        MappingProxyType({
-            ".test_infra_transformer_cast_remover": (
-                "TestsFlextInfraCastRemoverDeactivated",
-            ),
-            ".test_infra_transformer_enforcement_fixers": (
-                "TestsFlextInfraTransformersEnforcementFixers",
-            ),
-            ".test_infra_transformer_mro_remover": (
-                "TestsFlextInfraTransformersMroRemover",
-            ),
-            ".test_infra_transformer_pydantic_modernizer": (
-                "TestsFlextInfraTransformersPydanticModernizer",
-            ),
-            ".test_infra_transformer_runtime_model_alias": (
-                "TestsFlextInfraRuntimeModelAlias",
-            ),
-            ".test_infra_transformer_typing_dict": (
-                "TestsFlextInfraTypingDictDeactivated",
-            ),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
+        MappingProxyType({}), alias_groups=MappingProxyType({}), sort_keys=False
     )
 )
 

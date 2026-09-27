@@ -20,7 +20,7 @@ from ..base import s
 class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
     """Open one shared Rope workspace with cached public DSL methods."""
 
-    _IDENTIFIER_PATTERN: ClassVar[t.Infra.RegexPattern] = c.Infra.IDENTIFIER_PATTERN
+    _IDENTIFIER_PATTERN: ClassVar[t.RegexPattern] = c.Infra.IDENTIFIER_PATTERN
 
     rope_repository_root_override: Annotated[
         Path | None,
@@ -44,19 +44,20 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         u.PrivateAttr(default_factory=dict)
     )
     _module_policy_cache: MutableMapping[
-        tuple[str, str, str], m.Infra.NamespaceModulePolicy
+        t.Triple[str, str, str], m.Infra.NamespaceModulePolicy
     ] = u.PrivateAttr(default_factory=dict)
     _module_convention_cache: MutableMapping[str, m.Infra.RopeModuleConvention] = (
         u.PrivateAttr(default_factory=dict)
     )
     _module_object_cache: MutableMapping[
-        tuple[str, bool, bool], tuple[m.Infra.Census.Object, ...]
+        t.Triple[str, bool, bool], t.VariadicTuple[m.Infra.Object]
     ] = u.PrivateAttr(default_factory=dict)
     _resource_cache: MutableMapping[str, t.Infra.RopeResource | None] = u.PrivateAttr(
         default_factory=dict
     )
     _name_index: (
-        MutableMapping[str, tuple[tuple[Path, str, t.VariadicTuple[int]], ...]] | None
+        MutableMapping[str, t.VariadicTuple[t.Triple[Path, str, t.VariadicTuple[int]]]]
+        | None
     ) = u.PrivateAttr(default_factory=lambda: None)
     _import_dependents_index: MutableMapping[str, t.VariadicTuple[Path]] | None = (
         u.PrivateAttr(default_factory=lambda: None)
@@ -176,7 +177,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         cached = self._resource_cache.get(cache_key)
         if cache_key in self._resource_cache:
             return cached
-        resource = u.Infra.get_resource_from_path(self.rope_project, file_path)
+        resource = u.Infra.resolve_resource_from_path(self.rope_project, file_path)
         self._resource_cache[cache_key] = resource
         return resource
 
@@ -256,7 +257,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         """
         if self._name_index is not None:
             return self._name_index
-        index: MutableMapping[str, list[tuple[Path, str, list[int]]]] = {}
+        index: MutableMapping[str, list[t.Triple[Path, str, list[int]]]] = {}
         for entry in self.workspace_index.modules_by_path.values():
             py_file = entry.file_path
             read = u.Cli.files_read_text(py_file)
@@ -300,7 +301,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         *,
         include_local_scopes: bool = True,
         include_references: bool = True,
-    ) -> t.SequenceOf[m.Infra.Census.Object]:
+    ) -> t.SequenceOf[m.Infra.Object]:
         """Return Rope-only discovered objects for one module path."""
         resolved_file = file_path.resolve()
         cache_key = (str(resolved_file), include_local_scopes, include_references)
@@ -453,7 +454,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
 
     def semantic(self, file_path: Path) -> m.Infra.ModuleSemanticState:
         """Return one cached semantic snapshot for a module path."""
-        state: m.Infra.ModuleSemanticState = u.Infra.get_module_semantic_state(
+        state: m.Infra.ModuleSemanticState = u.Infra.resolve_module_semantic_state(
             self.rope_project, self._resource_for(file_path)
         )
         return state
@@ -463,7 +464,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
     ) -> t.StrSequence:
         """Return public export names for one module path."""
         resolved_export_options = export_options or m.Infra.ExportOptions()
-        return u.Infra.get_module_export_names(
+        return u.Infra.resolve_module_export_names(
             self.rope_project,
             self._resource_for(file_path),
             export_options=resolved_export_options,

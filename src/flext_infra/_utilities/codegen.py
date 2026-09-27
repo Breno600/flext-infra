@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,7 +16,6 @@ from flext_infra import c, config, m, p, t
 from .codegen_facades import FlextInfraUtilitiesCodegenFacades
 from .codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
 from .gitignore import FlextInfraUtilitiesGitignore
-from .project_managed_artifacts import FlextInfraUtilitiesProjectManagedArtifacts
 
 
 class FlextInfraUtilitiesCodegen(
@@ -33,15 +33,30 @@ class FlextInfraUtilitiesCodegen(
     @staticmethod
     def mise_bootstrap_environment() -> m.Infra.MiseBootstrapEnvironmentSpec:
         """Return the single typed isolation contract used by setup and codegen."""
+        toolchain = config.Infra.codegen.toolchain
         return m.Infra.MiseBootstrapEnvironmentSpec(
             storage_root_variable=c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE,
-            fixed_environment=tuple(c.Infra.MISE_BOOTSTRAP_FIXED_ENVIRONMENT),
+            fixed_environment=(
+                *c.Infra.MISE_BOOTSTRAP_FIXED_ENVIRONMENT,
+                # Safe mode ignores project settings. Preserve the lock policy
+                # in the isolated runtime, including the global write guard.
+                ("MISE_LOCKFILE", str(toolchain.mise_lockfile).lower()),
+                ("MISE_LOCKED", str(toolchain.mise_locked).lower()),
+                (
+                    "MISE_LOCKFILE_PLATFORMS",
+                    ",".join(toolchain.mise_lockfile_platforms),
+                ),
+            ),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
             empty_files=tuple(c.Infra.MISE_BOOTSTRAP_EMPTY_FILES),
             passthrough_environment=tuple(
                 c.Infra.MISE_BOOTSTRAP_PASSTHROUGH_ENVIRONMENT
             ),
+            version_pin_file=c.Infra.MISE_VERSION_PIN_FILENAME,
+            lock_file=c.Infra.MISE_LOCK_FILENAME,
+            runtime_install_relative_template=c.Infra.MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE,
+            resolved_release_pattern=c.Infra.MISE_RELEASE_PATTERN,
         )
 
     @staticmethod
@@ -55,51 +70,6 @@ class FlextInfraUtilitiesCodegen(
             pycache_namespace=toolchain.pycache_namespace,
             environment_path_prepends=toolchain.environment_path_prepends,
             mise_bootstrap=FlextInfraUtilitiesCodegen.mise_bootstrap_environment(),
-        )
-
-    @staticmethod
-    def render_mise_toml(project_root: Path) -> p.Result[str]:
-        """Return the exact ``.mise.toml`` body ``make gen`` will publish.
-
-        The declaration is the canonical template rendered from
-        ``Infra.codegen.toolchain`` and overlaid with the repository's own
-        ``ManagedArtifacts.Mise`` tools -- the same two owners the conform
-        template loop reads, never the mutable on-disk projection.
-
-        ``make deps`` locks this body, so a selector that the config SSOT has
-        newly declared reaches the generated Mise declaration in the same cycle.
-        Locking the on-disk copy instead made the declaration unreachable: the
-        offline ``gen`` validator refuses to publish a config whose tool set the
-        lock lacks, and the lock could never gain a tool the published config
-        did not already carry. The two paths cannot silently diverge, because
-        that same validator compares this rendered tool set against the lock on
-        every ``gen``.
-        """
-        codegen_spec = config.Infra.codegen
-        entries = tuple(
-            entry
-            for entry in codegen_spec.templates.entries
-            if entry.destination == c.Infra.MISE_TOML_FILENAME
-            and entry.delegate == "render"
-        )
-        if len(entries) != 1:
-            return r[str].fail(
-                "codegen configuration must declare exactly one "
-                f"{c.Infra.MISE_TOML_FILENAME} render template"
-            )
-        templates_root = (
-            Path(__file__).resolve().parent.parent
-            / "templates"
-            / codegen_spec.templates.root
-        ).resolve()
-        source = (templates_root / entries[0].source).resolve()
-        if not source.is_relative_to(templates_root) or not source.is_file():
-            return r[str].fail(f"canonical Mise template is absent: {source}")
-        rendered = u.Cli.template_render(source, codegen_spec.toolchain)
-        if rendered.failure:
-            return r[str].from_failure(rendered)
-        return FlextInfraUtilitiesProjectManagedArtifacts.compose_mise_toml(
-            project_root, rendered.value
         )
 
     @staticmethod
@@ -178,7 +148,9 @@ class FlextInfraUtilitiesCodegen(
             for _name, relative in contract.persistent_environment
             if relative != "."
         }
-        relative_directories.add("bootstrap")
+        relative_directories.add(
+            Path(contract.runtime_install_relative_template).parent.as_posix()
+        )
         for relative in sorted(relative_directories):
             directory = physical_root / relative
             if directory.is_symlink():
@@ -200,13 +172,13 @@ class FlextInfraUtilitiesCodegen(
     @staticmethod
     def mise_runtime_install_path(storage_root: Path, release: str) -> p.Result[Path]:
         """Return the immutable persistent binary path for one exact release."""
-        components = release.split(".")
-        if len(components) != c.Infra.MISE_RELEASE_COMPONENT_COUNT or not all(
-            component.isdecimal() for component in components
-        ):
+        if re.fullmatch(c.Infra.MISE_RELEASE_PATTERN, release) is None:
             return r[Path].fail(f"invalid Mise runtime release: {release}")
         suffix = ".exe" if os.name == "nt" else ""
-        return r[Path].ok(storage_root / "bootstrap" / f"mise-{release}{suffix}")
+        relative = c.Infra.MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE.format(
+            release=release
+        )
+        return r[Path].ok(storage_root / f"{relative}{suffix}")
 
     @staticmethod
     def _create_mise_storage_directory(path: Path) -> p.Result[bool]:
@@ -316,7 +288,7 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def update_class_stack(
-        class_stack: t.MutableSequenceOf[tuple[str, int]],
+        class_stack: t.MutableSequenceOf[t.Pair[str, int]],
         stripped_line: str,
         indent: int,
     ) -> None:

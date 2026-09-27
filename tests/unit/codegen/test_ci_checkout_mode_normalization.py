@@ -43,6 +43,3 @@ class TestsFlextInfraCiCheckoutModeNormalization:
                 continue
             gate_at = commands.index(f"{ci.variable}={ci.value} make {step.verb}")
             tm.that(normalize_at < gate_at, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraCiCheckoutModeNormalization"]

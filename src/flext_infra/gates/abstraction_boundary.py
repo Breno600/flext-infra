@@ -113,6 +113,12 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         attr_seen: set[str] = set()
         for statement in ast.walk(tree):
+            if (
+                isinstance(statement, ast.Call)
+                and isinstance(statement.func, ast.Name)
+                and statement.func.id == "print"
+            ):
+                issues.append(self._issue(path, "uses print() — use cli.print"))
             if isinstance(statement, ast.Attribute) and isinstance(
                 statement.value, ast.Name
             ):
