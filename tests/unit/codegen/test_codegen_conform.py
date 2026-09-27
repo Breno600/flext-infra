@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import override
@@ -92,25 +93,38 @@ class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
 class TestsFlextInfraCodegenConform:
     """Prove one SSOT for project creation and existing-tree conformance."""
 
-    @staticmethod
-    def _lifecycle_fixture(
-        tmp_path: Path, scenario: str
-    ) -> tuple[Path, m.Infra.CodegenConformRequest, Path, bytes, Path]:
-        """Create one conformed tree, then introduce one recoverable publication."""
-        root = tmp_path / scenario
-        root.mkdir(parents=True)
+    @pytest.fixture(scope="module")
+    def conformed_template(self, tmp_path_factory: pytest.TempPathFactory) -> Path:
+        """Conform one real seed tree once per module; each scenario clones it.
+
+        Every recovery scenario begins its own transaction on a fresh clone of
+        this template, so the journal (which anchors inside the clone's Git
+        directory), staging, and CAS state under test are always the clone's
+        own; only the expensive seed apply is shared provisioning.
+        """
+        template = tmp_path_factory.mktemp("conform-template") / "conformed"
+        template.mkdir()
         u.Tests.initialize_git_repo(
-            root, origin_url=u.Tests.repository_ref(config.Infra.name).url
+            template, origin_url=u.Tests.repository_ref(config.Infra.name).url
         )
-        TestsFlextInfraConformSupport.seed_infra_package_tree(root)
-        workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
+        TestsFlextInfraConformSupport.seed_infra_package_tree(template)
+        workspace = TestsFlextInfraConformSupport.standalone_workspace(template)
         request = u.Tests.conform_request(
-            root,
+            template,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
         tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
-        u.Tests.commit_git_changes(root, "Seed conformed lifecycle fixture")
+        u.Tests.commit_git_changes(template, "Seed conformed lifecycle fixture")
+        return template
+
+    @staticmethod
+    def _lifecycle_fixture(
+        tmp_path: Path, scenario: str, template: Path
+    ) -> tuple[Path, m.Infra.CodegenConformRequest, Path, bytes, Path]:
+        """Clone the conformed template, then introduce one recoverable publication."""
+        root = tmp_path / scenario
+        shutil.copytree(template, root)
         published = root / c.Infra.MAKEFILE_FILENAME
         original = published.read_bytes() + b"\n# recoverable drift\n"
         published.write_bytes(original)
@@ -118,6 +132,11 @@ class TestsFlextInfraCodegenConform:
             (root / ".lifecycle-cas").write_bytes(b"before\n")
         identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)))
         journal = FlextInfraMiseWorkspacePlanner.journal_path(identity)
+        request = u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        )
         return root, request, published, original, journal
 
     @pytest.mark.parametrize(
@@ -133,11 +152,15 @@ class TestsFlextInfraCodegenConform:
         ],
     )
     def test_public_apply_recovers_only_authenticated_prepared_state(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], scenario: str
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        conformed_template: Path,
+        scenario: str,
     ) -> None:
         """Exercise post-begin failures through real filesystem and CAS state."""
         root, request, published, original, journal = self._lifecycle_fixture(
-            tmp_path, scenario
+            tmp_path, scenario, conformed_template
         )
         if scenario == "lazy-failure":
             package = root / "src" / "flext_demo"

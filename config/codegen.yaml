@@ -396,8 +396,8 @@ Infra:
         # CI=N owns the complementary local check gates; absent uses testmon
         # for incremental developer runs.
         #
-        # The set is the SLOW whole-program type checkers, matching
-        # PROJECT_CHECK_GATES_LOCAL_VALUES: those are the gates worth deferring
+        # The set is the SLOW whole-program type checkers: those are the gates
+        # worth deferring
         # off the fast CI leg, and they are what CI=N exists to own. `lint` is
         # not here -- ruff is cheap, so making CI skip it buys nothing and
         # leaves the fast leg without a linter.
@@ -1045,6 +1045,13 @@ Infra:
         owner: pre-commit
         policy: full
       - path: .python-version
+        owner: codegen
+        policy: full
+    # The docs auditor's placeholder/forbidden-term lists are fleet policy: one
+    # template owns them, so the placeholder and forbidden-term checks in
+    # _auditor_checks.py enforce on every governed repository instead of
+    # silently reading an absent file as empty lists.
+      - path: docs/docs_config.json
         owner: codegen
         policy: full
     # Qlty refuses to scan without a repository configuration. Keep the
@@ -1967,6 +1974,13 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true
+      # Static docs-auditor policy: no Jinja vars; the docs scope policy and
+      # the auditor read it as data (docs_policy_list).
+        - source: base/docs/docs_config.json.j2
+          destination: docs/docs_config.json
+          profiles: [workspace, standalone]
+          delegate: render
+          overwrite: false
         - source: base/gitignore.j2
           destination: .gitignore
           profiles: [workspace, standalone]

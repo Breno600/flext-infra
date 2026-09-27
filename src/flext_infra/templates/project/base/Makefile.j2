@@ -607,7 +607,12 @@ _upg_activated:
 # _builtin-self-* targets serve the workspace root itself (project selector
 # `.` from the orchestrator). They apply the same member-style gate recipes to
 # PROJECT_ROOT without recursing into submodules, so the root distribution
-# runs its own evidence in the global cycles.
+# runs its own evidence in the global cycles. Where the standalone profile's
+# `_builtin-*_all` twin owns the identical body, the self target delegates to
+# that twin so the gate-selection shell block is emitted exactly once; the
+# workspace profile emits the root-local body because its `_all` twin
+# recurses into members instead.
+{% if make_profile == "workspace" %}
 _builtin-self-test: _builtin_require_environment
 {{ test_report_recipe(
     runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
@@ -629,11 +634,30 @@ _builtin-self-fmt: _builtin_require_environment
 _builtin-self-fix: _builtin_require_environment
 {{ fix_body() }}
 
+# Catalog-driven enforcement fixes: every ENFORCE rule whose fix action is
+# declared safe, applied through its registered adapter.
 _builtin-self-fix-enforcement: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
 
 _builtin-self-build:
 	@$(UV) build --project "$(PROJECT_ROOT)"
+{% else %}
+# Standalone: the `_all` twins own the one emitted body (SSOT); each carries
+# its own `_builtin_require_environment` edge.
+_builtin-self-test: _builtin_test_all
+
+_builtin-self-check: _builtin_check_all
+
+_builtin-self-test-full: _builtin_test_full_all
+
+_builtin-self-fmt: _builtin_fmt_all
+
+_builtin-self-fix: _builtin_fix_all
+
+_builtin-self-fix-enforcement: _builtin_fix_enforcement
+
+_builtin-self-build: _builtin_build_artifacts
+{% endif %}
 
 _builtin-self-clean: _builtin_clean_generated
 
