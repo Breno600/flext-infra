@@ -114,7 +114,7 @@ class FlextInfraUtilitiesDiscovery(
         return ""
 
     @staticmethod
-    def is_pytest_test_module(file_path: Path) -> bool:
+    def pytest_test_module(file_path: Path) -> bool:
         """Return whether a file is a pytest test module, not a production module."""
         if c.Infra.DIR_TESTS not in file_path.parts:
             return False

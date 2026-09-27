@@ -51,6 +51,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         cls,
         source: str,
         *,
+        repository_root: Path,
         repository: m.Infra.RepositoryRef,
         workspace: m.Infra.WorkspaceSpec,
         codegen: m.Infra.CodegenConfigSpec,
@@ -60,6 +61,21 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         ],
     ) -> p.Result[str]:
         """Conform one pyproject source."""
+        flext_line = u.Infra.flext_integration_line(
+            codegen=codegen,
+            repository_root=repository_root,
+            bootstrap_source=(
+                workspace.flext_source
+                if not (repository_root / c.PYPROJECT_FILENAME).exists()
+                else None
+            ),
+        )
+        if flext_line.failure:
+            return r[str].from_failure(flext_line)
+        declared_sources = {
+            member.distribution: f"git+{member.url}@{flext_line.value.branch}"
+            for member in workspace.subprojects
+        }
         return u.Infra.pyproject_conform(
             source,
             workspace=workspace,
@@ -73,6 +89,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
                 if workspace.project is not None
                 else None
             ),
+            declared_sources=declared_sources,
         )
 
     @staticmethod

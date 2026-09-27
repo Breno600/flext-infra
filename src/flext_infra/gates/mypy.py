@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import ast
 import re
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
@@ -97,36 +99,63 @@ class FlextInfraMypyGate(FlextInfraGate):
     ) -> t.StrSequence:
         """Build check command."""
         cfg = self._resolve_config(project_dir, ctx)
-        return u.Infra.mypy_limited_command(
-            self._python_module_command(
-                c.Infra.MYPY,
-                *check_dirs,
-                "--config-file",
-                str(cfg),
-                "--output",
-                c.Infra.OUTPUT_JSON,
-                "--no-error-summary",
-                "--no-color-output",
-                "--linecoverage-report",
-                str(self._check_report_path(project_dir, ctx).parent),
-            )
+        command = self._python_module_command(
+            c.Infra.MYPY,
+            *check_dirs,
+            "--config-file",
+            str(cfg),
+            "--output",
+            c.Infra.OUTPUT_JSON,
+            "--no-error-summary",
+            "--no-color-output",
+            "--verbose",
         )
-
-    @override
-    def _check_report_path(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
-        """Keep Mypy's native source inventory within the existing report root."""
-        return ctx.reports_dir / f"{project_dir.name}-mypy" / "coverage.json"
+        profile_output = u.Cli.process_env().get(c.Infra.MYPY_PROFILE_OUTPUT_ENV)
+        if profile_output is not None:
+            destination = Path(profile_output)
+            if not destination.is_absolute() or not destination.parent.is_dir():
+                msg = "Mypy profile output requires an absolute path in an existing directory"
+                raise ValueError(msg)
+            command = (
+                sys.executable,
+                "-m",
+                "cProfile",
+                "-o",
+                str(destination),
+                *command[1:],
+            )
+        return u.Infra.mypy_limited_command(command)
 
     @override
     def _validate_check_report(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
     ) -> None:
-        """Account for every submitted target using Mypy's native source set."""
-        report = m.Infra.MypyCoverageReport.model_validate_json(
-            self._check_report_path(project_dir, ctx).read_text(encoding="utf-8"),
-            strict=True,
+        """Account for every submitted target from Mypy's native build trace."""
+        _ = ctx
+        source_lines = (
+            line for line in result.stderr.splitlines() if "Found source:" in line
         )
-        sources = tuple(Path(source).resolve() for source in report.lines)
+        sources: list[Path] = []
+        for line in source_lines:
+            match = re.search(r"Found source:\s+BuildSource\(path=(.+?), module=", line)
+            if match is None:
+                msg = f"Malformed Mypy native source entry: {line}"
+                raise ValueError(msg)
+            raw_path = ast.literal_eval(match.group(1))
+            if not isinstance(raw_path, str):
+                msg = f"Mypy native source path is not a string: {line}"
+                raise TypeError(msg)
+            sources.append((project_dir / raw_path).resolve())
+        if not sources:
+            msg = "Mypy native build trace contains no selected sources"
+            raise ValueError(msg)
+        if not any("Build finished in " in line for line in result.stderr.splitlines()):
+            msg = "Mypy native build trace lacks completion evidence"
+            raise ValueError(msg)
         submitted = tuple((project_dir / target).resolve() for target in targets)
         for target in submitted:
             if not any(

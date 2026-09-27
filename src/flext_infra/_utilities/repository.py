@@ -289,6 +289,7 @@ class FlextInfraUtilitiesRepository:
         returned as the source of ``distribution``.
         """
         from flext_infra import u
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
         from .pyproject_conform import FlextInfraUtilitiesPyprojectConform
 
@@ -318,6 +319,19 @@ class FlextInfraUtilitiesRepository:
                 requirements.extend(
                     FlextInfraUtilitiesPyprojectConform.raw_requirement_values(group)
                 )
+        declared_manifest = FlextInfraWorkspaceDetector.load_workspace_manifest(
+            pyproject_path.parent
+        )
+        if declared_manifest.failure:
+            return r[t.Pair[str, str]].from_failure(declared_manifest)
+        manifest_project = (
+            declared_manifest.value[0].project if declared_manifest.value else None
+        )
+        revisions: t.StrMapping = (
+            manifest_project.dependency_revisions
+            if manifest_project is not None
+            else {}
+        )
         lines: dict[t.Pair[str, str], str] = {}
         for requirement in requirements:
             name = FlextInfraUtilitiesDependencies.dep_name(requirement)
@@ -340,6 +354,14 @@ class FlextInfraUtilitiesRepository:
                     f"internal dependency source must be the {name} repository: "
                     f"{requirement}"
                 )
+            declared_revision = revisions.get(name)
+            if declared_revision is not None:
+                if ref != declared_revision:
+                    return r[t.Pair[str, str]].fail(
+                        f"declared revision differs from dependency source for {name}: "
+                        f"{declared_revision!r} != {ref!r}"
+                    )
+                continue
             lines.setdefault((url.removesuffix(suffix), ref), requirement)
         if len(lines) > 1:
             declared = "; ".join(sorted(lines.values()))

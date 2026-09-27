@@ -133,7 +133,7 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             # flext-i6nq.10: Literal __all__ requires every module alias binding.
             return False
         # A lowercase ``from mod import name`` (package-name alias like ``grpc``
-        # or a module-level function like ``smell_fixer_for``) is a real symbol
+        # or a lowercase module-level function) is a real symbol
         # that must stay statically visible; only skip a redundant self-import
         # from the root package itself.
         return mod == root_name and attr_name == export_name

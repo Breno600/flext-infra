@@ -5,13 +5,12 @@ from __future__ import annotations
 from typing import ClassVar
 
 from flext_infra import m, t
-from flext_infra.services.cli_route_base import CliRouteBase
+from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
 from flext_infra.validate.import_cycles import FlextInfraValidateImportCycles
 from flext_infra.validate.inventory import FlextInfraInventoryService
 from flext_infra.validate.lazy_map_freshness import FlextInfraValidateLazyMapFreshness
-from flext_infra.validate.manual_command import FlextInfraManualCommandValidator
 from flext_infra.validate.metadata_discipline import (
     FlextInfraValidateMetadataDiscipline,
 )
@@ -25,7 +24,7 @@ from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
 from flext_infra.validate.tier_whitelist import FlextInfraValidateTierWhitelist
 
 
-class ValidationCommandRoutes(CliRouteBase):
+class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
     """Own the complete validate command tuple."""
 
     validate_command_routes: ClassVar[t.VariadicTuple[m.Cli.ResultCommandRoute]] = (
@@ -34,7 +33,7 @@ class ValidationCommandRoutes(CliRouteBase):
                 name=route_name,
                 help_text=help_text,
                 model_cls=model_cls,
-                handler=CliRouteBase.result_handler(handler),
+                handler=FlextInfraCliRouteBase.result_handler(handler),
             )
             for route_name, help_text, model_cls, handler in (
                 (
@@ -121,15 +120,9 @@ class ValidationCommandRoutes(CliRouteBase):
                     FlextInfraValidateMetadataDiscipline,
                     FlextInfraValidateMetadataDiscipline.execute,
                 ),
-                (
-                    "manual-cmd",
-                    "Manual-command blocker (§5): pre-commit config drift gate",
-                    FlextInfraManualCommandValidator,
-                    FlextInfraManualCommandValidator.execute,
-                ),
             )
         )
     )
 
 
-__all__: list[str] = ["ValidationCommandRoutes"]
+__all__: list[str] = ["FlextInfraValidationCommandRoutes"]

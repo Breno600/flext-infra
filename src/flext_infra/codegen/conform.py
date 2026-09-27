@@ -11,13 +11,13 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import c, m, p, u
 
-from ._conform import FlextInfraCodegenConformBase
+from ._conform import FlextInfraCodegenConformExecute
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class FlextInfraCodegenConform(FlextInfraCodegenConformBase):
+class FlextInfraCodegenConform(FlextInfraCodegenConformExecute):
     """Plan every selected output, then atomically write only a clean plan."""
 
     @classmethod

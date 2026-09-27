@@ -125,7 +125,7 @@ class FlextInfraRefactorCensusObjectsMixin:
         return (
             item.kind in {"class", "function", "method"}
             and item.name.startswith(c.Infra.NAMESPACE_PYTEST_MODULE_PREFIX)
-            and u.Infra.is_pytest_test_module(Path(item.file_path))
+            and u.Infra.pytest_test_module(Path(item.file_path))
         )
 
     @classmethod

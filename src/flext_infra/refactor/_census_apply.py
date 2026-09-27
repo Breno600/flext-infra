@@ -295,7 +295,7 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
         if not violations:
             return False
         try:
-            pymodule = u.Infra.get_pymodule(rope.rope_project, resource)
+            pymodule = u.Infra.resolve_pymodule(rope.rope_project, resource)
             tree = pymodule.get_ast()
         except (*u.Infra.rope_runtime_errors(), TypeError) as exc:
             msg = (

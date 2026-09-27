@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, override
 
 from flext_infra import c, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from .rope_transformer import FlextInfraRopeTransformer
 
 if TYPE_CHECKING:
     from flext_infra import m, t
@@ -92,7 +92,7 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
             if u.Infra.node_kind(node) != "Call":
                 continue
             func = getattr(node, "func", None)
-            if not u.Infra.is_ast_node(func):
+            if not u.Infra.ast_node(func):
                 continue
             if u.Infra.name_of(func) != simple_name:
                 continue
