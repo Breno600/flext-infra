@@ -265,12 +265,9 @@ class FlextInfraUtilitiesProjectDiscovery(
             resolved_workspace.parent
             / FlextInfraConfig.fetch_global().Infra.codegen.toolchain.state_directory_name
             / resolved_workspace.name
-            / tool_name
         )
         relative_project = resolved_project.relative_to(resolved_workspace)
-        return (
-            state_root if relative_project == Path() else state_root / relative_project
-        )
+        return state_root / relative_project / tool_name
 
     @classmethod
     def runtime_environment_dir(cls, project_root: Path) -> Path:
@@ -282,7 +279,7 @@ class FlextInfraUtilitiesProjectDiscovery(
                 m.Infra.GitRepoRequest(repo_root=resolved_project)
             ).unwrap()
             runtime_root = identity.superproject_root or resolved_project
-        return cls.external_tool_state_dir(runtime_root, runtime_root, "venv")
+        return cls.external_tool_state_dir(runtime_root, resolved_project, "venv")
 
 
 __all__: list[str] = ["FlextInfraUtilitiesProjectDiscovery"]

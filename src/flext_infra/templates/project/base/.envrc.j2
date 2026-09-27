@@ -28,12 +28,12 @@ runtime_parent="$(cd "${RUNTIME_ROOT}/.." && pwd -P)"
 export GIT_CEILING_DIRECTORIES="${runtime_parent}"
 export MISE_CEILING_PATHS="${runtime_parent}"
 RUNTIME_STATE_ROOT="${runtime_parent}/{{ state_directory_name }}/${RUNTIME_ROOT##*/}"
-VENV_DIR="${RUNTIME_STATE_ROOT}/venv"
 if [[ "${PROJECT_ROOT}" == "${RUNTIME_ROOT}" ]]; then
   PROJECT_STATE_ROOT="${RUNTIME_STATE_ROOT}"
 else
-  PROJECT_STATE_ROOT="${RUNTIME_STATE_ROOT}/members/${PROJECT_ROOT##*/}"
+  PROJECT_STATE_ROOT="${RUNTIME_STATE_ROOT}/${PROJECT_ROOT#"${RUNTIME_ROOT}/"}"
 fi
+VENV_DIR="${PROJECT_STATE_ROOT}/venv"
 # Scratch never lives inside a versioned tree: the home scratch root mirrors
 # the absolute checkout path so a sandbox is never a tracked scope of any
 # enclosing repository (workspace or linked worktree). Checkouts nested in a

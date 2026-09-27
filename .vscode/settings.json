@@ -1,5 +1,5 @@
 {
-  "python.defaultInterpreterPath": "${workspaceFolder}/../../.flext-runtime/flext/venv",
+  "python.defaultInterpreterPath": "${workspaceFolder}/../../.flext-runtime/flext/flext-infra/venv",
   "files.autoSave": "afterDelay",
   "python.analysis.diagnosticMode": "workspace",
   "python.terminal.activateEnvInCurrentTerminal": true,

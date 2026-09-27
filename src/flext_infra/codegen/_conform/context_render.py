@@ -402,13 +402,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 repository_provider=repository.provider,
                 repository_git_url=repository.url,
                 repository_branch=integration_branch.value,
-                # A workspace root owns sources only for its actual members.
-                # External FLEXT dependencies still need their own Git source.
-                workspace_dependency_distributions=(
-                    tuple(member.distribution for member in workspace.subprojects)
-                    if profile is c.Infra.MakeProfile.WORKSPACE
-                    else ()
-                ),
                 year=project.year,
             )
         )

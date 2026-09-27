@@ -223,7 +223,7 @@ CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 # Attached members share their Git superproject runtime; standalone owns itself.
 override RUNTIME_ROOT := $(REPOSITORY_ROOT)
 RUNTIME_STATE_ROOT := $(abspath $(RUNTIME_ROOT)/../{{ state_directory_name }}/$(notdir $(RUNTIME_ROOT)))
-PROJECT_STATE_ROOT := $(if $(filter $(PROJECT_ROOT),$(RUNTIME_ROOT)),$(RUNTIME_STATE_ROOT),$(RUNTIME_STATE_ROOT)/members/$(notdir $(PROJECT_ROOT)))
+PROJECT_STATE_ROOT := $(if $(filter $(PROJECT_ROOT),$(RUNTIME_ROOT)),$(RUNTIME_STATE_ROOT),$(RUNTIME_STATE_ROOT)/$(patsubst $(RUNTIME_ROOT)/%,%,$(PROJECT_ROOT)))
 TESTMON_DATAFILE := $(PROJECT_STATE_ROOT)/{{ make.testmon_cache.namespace }}/{{ make.testmon_cache.database_filename }}
 export TESTMON_DATAFILE
 override export GIT_CEILING_DIRECTORIES := $(abspath $(RUNTIME_ROOT)/..)
@@ -239,7 +239,7 @@ endif
 endif
 # End SECTION: profile routing
 
-override RUNTIME_VENV := $(RUNTIME_STATE_ROOT)/venv
+override RUNTIME_VENV := $(PROJECT_STATE_ROOT)/venv
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
@@ -270,7 +270,7 @@ SANITIZED_CALLER_PATH :=
 endif
 endif
 override FLEXT_INFRA_PYTHON := $(RUNTIME_PYTHON)
-override UV_PROJECT := $(RUNTIME_ROOT)
+override UV_PROJECT := $(PROJECT_ROOT)
 override UV_PROJECT_ENVIRONMENT := $(RUNTIME_VENV)
 override VIRTUAL_ENV := $(RUNTIME_VENV)
 override PATH := $(RUNTIME_BIN):$(SANITIZED_CALLER_PATH)
@@ -367,20 +367,11 @@ override PROJECT_INFRA_PYTHONPATH := $(MAKEFILE_ROOT)/src
 PROJECT_INFRA_RUN = if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; $(PROJECT_TOOL_EXEC) env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
 PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev
-# profile; setup resolves the declared dependency branches at their current tips.
-# Keyed on the environment's OWNER, not on the caller's profile. A member has
-# no local venv -- RUNTIME_VENV belongs to the external runtime state -- so every checkout that
-# provisions a shared environment must describe the same contents. A member
-# syncing without --all-packages treats the siblings already installed there as
-# surplus and uninstalls them, undoing the root's provisioning and leaving
-# `uv sync --check` permanently divergent. A standalone project owns its venv
-# alone and has no workspace packages to include.
-SHARED_RUNTIME := $(if $(GITHUB_CI_SELF),,$(if $(filter-out $(PROJECT_ROOT),$(RUNTIME_ROOT)),1,$(if $(strip $(WORKSPACE_SUBPROJECTS)),1,)))
 # Setup installs frozen from the committed uv.lock and never re-resolves: it is
 # the CI path and must be stable. A missing or stale lock fails through uv's own
 # error; `make upg` is the only verb that resolves and rewrites it
 # (operator 2026-09-24).
-UV_SYNC_FLAGS := $(if $(SHARED_RUNTIME),--all-packages --reinstall-package flext-infra ,)--all-extras --all-groups --locked
+UV_SYNC_FLAGS := --all-extras --all-groups --locked
 
 ifeq ($(GEN_INIT_ONLY),)
 {{ makefile_custom_include }}

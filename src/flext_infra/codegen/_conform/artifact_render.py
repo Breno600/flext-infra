@@ -61,6 +61,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 )
                 conformed = cls.conformed_pyproject_source(
                     rendered,
+                    repository_root=repository_root,
                     repository=repository,
                     workspace=workspace,
                     codegen=codegen,
