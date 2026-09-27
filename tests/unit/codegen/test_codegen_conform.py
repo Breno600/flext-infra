@@ -108,7 +108,7 @@ class TestsFlextInfraCodegenConform:
             template, origin_url=u.Tests.repository_ref(config.Infra.name).url
         )
         TestsFlextInfraConformSupport.seed_infra_package_tree(template)
-        workspace = TestsFlextInfraConformSupport.standalone_workspace(template)
+        workspace = u.Tests.standalone_workspace(template, config.Infra.name)
         request = u.Tests.conform_request(
             template,
             scope=c.Infra.CodegenConformScope.SELF,
@@ -163,7 +163,7 @@ class TestsFlextInfraCodegenConform:
             tmp_path, scenario, conformed_template
         )
         if scenario == "lazy-failure":
-            package = root / "src" / "flext_demo"
+            package = root / "src" / config.Infra.name.replace("-", "_")
             obsolete = package / next(iter(sorted(c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES)))
             obsolete.symlink_to(root / "README.md")
         elif scenario == "docs-failure":

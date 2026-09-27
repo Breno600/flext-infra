@@ -148,8 +148,6 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 and repository.name == workspace.repository.name
             ):
                 repository_plan = self._plan_scaffold_repository(
-                    root=repository_root,
-                    repository=target.repository,
                     target=target,
                     workspace=local_workspace,
                     codegen=config_spec,
@@ -157,9 +155,6 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 )
             else:
                 repository_plan = self._plan_existing_repository(
-                    root=repository_root,
-                    repository_root=repository_root,
-                    repository=target.repository,
                     target=target,
                     workspace=local_workspace,
                     codegen=config_spec,
@@ -168,12 +163,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             if repository_plan.failure:
                 return r[m.Infra.CodegenPlan].from_failure(repository_plan)
             governed = self._complete_governed_plans(
-                repository_root,
-                repository_plan.value,
-                config_spec,
-                contract,
-                profile=target.make_profile,
-                beads_enabled=target.beads is not None,
+                target, repository_plan.value, config_spec, contract
             )
             if governed.failure:
                 return r[m.Infra.CodegenPlan].from_failure(governed)

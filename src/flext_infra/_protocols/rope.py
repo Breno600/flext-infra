@@ -42,6 +42,19 @@ class FlextInfraProtocolsRope(Protocol):
         def apply_to_source(self, source: str) -> t.Infra.TransformResult: ...
 
     @runtime_checkable
+    class RopeModuleCallback(Protocol):
+        """Validate or alter one module inside the owner Rope cycle."""
+
+        def __call__(
+            self,
+            workspace: FlextInfraProtocolsRope.RopeWorkspaceDsl,
+            visit: m.Infra.RopeModuleVisit,
+            /,
+        ) -> p.Result[m.Infra.RopeCallbackOutcome]:
+            """Return one typed validation or mutation outcome."""
+            ...
+
+    @runtime_checkable
     class RopeScopeDsl(Protocol):
         """Public scope contract for Rope semantic traversal."""
 
@@ -103,6 +116,13 @@ class FlextInfraProtocolsRope(Protocol):
         def modules(
             self, *, project_names: t.StrSequence | None = None
         ) -> t.SequenceOf[m.Infra.RopeModuleIndexEntry]: ...
+
+        def cycle(
+            self,
+            callbacks: t.SequenceOf[m.Infra.RopeCallbackBinding],
+            *,
+            project_names: t.StrSequence | None = None,
+        ) -> p.Result[m.Infra.RopeCycleReport]: ...
 
         def source(self, file_path: Path) -> str: ...
 
@@ -183,24 +203,15 @@ class FlextInfraProtocolsRope(Protocol):
 
     @runtime_checkable
     class CensusModuleRule(Protocol):
-        """Call contract shared by the symbol-indexed census rule scanners.
+        """Call contract shared by the structural census rule scanners.
 
-        Every structural census rule that consults the module symbol index is
-        invoked through this one contract, so the census dispatcher owns a
-        single call site instead of one hand-written block per rule.
+        Every structural census rule reads one module under census through
+        this one contract, so the census dispatcher owns a single call site
+        instead of one hand-written block per rule.
         """
 
         def __call__(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: t.VariadicTuple[m.Infra.Object] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: t.MappingKV[str, t.Pair[str, int]],
-            convention: m.Infra.RopeModuleConvention,
+            self, scan: m.Infra.ModuleScan
         ) -> tuple[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
 
 

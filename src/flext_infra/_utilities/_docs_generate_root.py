@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import c, m, t
 
-from ._docs_generate_plan import DocsRenderedArtifactTuple
 from ._docs_generate_project import FlextInfraUtilitiesDocsGenerateProjectMixin
 from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_contract import FlextInfraUtilitiesDocsContract
@@ -28,7 +27,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
     @staticmethod
     def docs_root_artifacts(
         repository_root: Path, scopes: t.SequenceOf[m.Infra.DocScope]
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Render aggregate root targets from the complete discovered project set."""
         workspace_contract = FlextInfraUtilitiesDocsContract.docs_workspace_contract(
             repository_root
@@ -51,9 +50,9 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 )
             )
             if src_exists.failure:
-                return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(
-                    src_exists
-                )
+                return r[
+                    t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]
+                ].from_failure(src_exists)
             if src_exists.value:
                 src_paths.append(src_dir.relative_to(repository_root).as_posix())
             if scope.path == repository_root:
@@ -159,7 +158,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             )
         )
         if api_pruned.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
                 api_pruned
             )
         projects_pruned = (
@@ -168,7 +167,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             )
         )
         if projects_pruned.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
                 projects_pruned
             )
         return FlextInfraUtilitiesDocsGenerateRootMixin.docs_normalize_artifacts((
@@ -184,7 +183,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         repository_root: Path,
         aggregate_scopes: t.SequenceOf[m.Infra.DocScope],
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Return the rendered artifact inventory for one docs scope.
 
         The scope label is the only topology input (see ``build_scopes``).

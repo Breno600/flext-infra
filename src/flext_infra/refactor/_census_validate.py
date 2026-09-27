@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import MutableMapping
-from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra import u
+from flext_infra import m, u
 
 if TYPE_CHECKING:
-    from flext_infra import m, p, t
+    from pathlib import Path
+
+    from flext_infra import p, t
 
 _log = u.fetch_logger(__name__)
 
@@ -18,8 +19,8 @@ class FlextInfraRefactorCensusValidateMixin:
     """Filter removal candidates through dry-run gates, surfacing rejections.
 
     Parent of FlextInfraRefactorCensusCollectMixin (its ``_assemble_report``
-    calls ``_validated_project_reports``); borrows root + dry-run flags + the
-    raw-violation builder from the facade and sibling mixins via FLEXT.
+    calls ``_validated_project_reports``); borrows root + dry-run flags from
+    the facade via FLEXT.
     """
 
     if TYPE_CHECKING:
@@ -33,19 +34,6 @@ class FlextInfraRefactorCensusValidateMixin:
 
         @property
         def dry_run_gate_names(self) -> t.StrSequence: ...
-        @staticmethod
-        def _raw_violation(
-            *,
-            project: str,
-            object_name: str,
-            object_kind: str,
-            kind: str,
-            file_path: Path,
-            line: int,
-            description: str,
-            fixable: bool = False,
-            fix_action: str = "",
-        ) -> m.Infra.Violation: ...
 
     def _validated_project_reports(
         self,
@@ -90,12 +78,12 @@ class FlextInfraRefactorCensusValidateMixin:
                         error=msg,
                     )
                     validated_violations.append(
-                        self._raw_violation(
+                        m.Infra.Violation(
                             project=report.project,
                             object_name=candidate.object_name,
                             object_kind=candidate.object_kind,
                             kind="preview_rejected",
-                            file_path=Path(candidate.file_path),
+                            file_path=candidate.file_path,
                             line=candidate.line,
                             description=msg,
                         )

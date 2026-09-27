@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from flext_infra import c, u
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import m, p, t
 
 
 class FlextInfraSkillRuleRunnerMixin:
@@ -23,15 +23,11 @@ class FlextInfraSkillRuleRunnerMixin:
     def _evaluate_single_rule(
         self,
         rule_obj: t.MappingKV[str, t.JsonValue],
-        skill_dir: Path,
-        root: Path,
-        mode: c.Infra.OperationMode,
-        include_globs: t.StrSequence,
-        exclude_globs: t.StrSequence,
+        context: m.Infra.SkillRuleEvaluationContext,
         counts: t.MutableIntMapping,
         violations: t.MutableSequenceOf[str],
     ) -> None:
-        """Evaluate one rule entry and accumulate counts/violations."""
+        """Evaluate one rule entry of the skill pass and accumulate its outcome."""
         rule_id = u.Cli.json_get_str_key(rule_obj, c.Infra.RK_ID)
         rule_type = u.Cli.json_get_str_key(rule_obj, "type")
         group = (
@@ -40,10 +36,16 @@ class FlextInfraSkillRuleRunnerMixin:
         match rule_type:
             case "ast-grep":
                 count = self._run_ast_grep_count(
-                    rule_obj, skill_dir, root, include_globs, exclude_globs
+                    rule_obj,
+                    context.skill_dir,
+                    context.root,
+                    context.include_globs,
+                    context.exclude_globs,
                 )
             case "custom":
-                count = self._run_custom_count(rule_obj, skill_dir, root, mode)
+                count = self._run_custom_count(
+                    rule_obj, context.skill_dir, context.root, context.mode
+                )
             case _:
                 return
         counts[group] = counts.get(group, 0) + count

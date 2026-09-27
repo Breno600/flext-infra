@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import shutil
 import stat
 import sys
@@ -222,26 +221,14 @@ class FlextInfraModGateEngine:
 
     @staticmethod
     def _run_tool(
-        root: Path,
-        command: t.StrSequence,
-        *,
-        env: t.StrMapping | None = None,
-        remove_env_keys: t.StrSequence = (),
-        finding_exit_code: int | None = None,
-        accept_source_apply_receipt: bool = False,
+        root: Path, command: t.StrSequence, *, finding_exit_code: int | None = None
     ) -> p.Result[p.Cli.CommandOutput]:
         """Run one AST tool and preserve its documented finding status."""
         sys.stderr.write(
             f"mod: start {' '.join(command[:2])} arguments={max(0, len(command) - 2)}\n"
         )
         sys.stderr.flush()
-        run = u.Cli.run_raw(
-            command,
-            cwd=root,
-            timeout=c.Infra.TIMEOUT_SHORT,
-            env=env,
-            remove_env_keys=remove_env_keys,
-        )
+        run = u.Cli.run_raw(command, cwd=root, timeout=c.Infra.TIMEOUT_SHORT)
         if run.failure:
             return r[p.Cli.CommandOutput].from_failure(run)
         output = run.value
@@ -267,18 +254,8 @@ class FlextInfraModGateEngine:
             )
         stderr = output.stderr.strip()
         if stderr:
-            if (
-                accept_source_apply_receipt
-                and FlextInfraModGateEngine._is_apply_receipt(stderr)
-            ):
-                return r[p.Cli.CommandOutput].ok(output)
             return r[p.Cli.CommandOutput].fail(stderr)
         return r[p.Cli.CommandOutput].ok(output)
-
-    @staticmethod
-    def _is_apply_receipt(stderr: str) -> bool:
-        """Recognize only ast-grep's successful source-apply receipt."""
-        return re.fullmatch(r"Applied [0-9]+ changes", stderr.strip()) is not None
 
     @staticmethod
     def _path_depth(path: Path) -> int:

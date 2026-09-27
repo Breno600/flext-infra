@@ -147,9 +147,11 @@ class TestsFlextInfraCodegenCensus:
             violation = tm.ok(result)
             tm.that(not violation.fixable, eq=True)
 
-    def test_execute_fails_when_apply_changes_requested(self, tmp_path: Path) -> None:
+    def test_execute_fails_when_apply_changes_requested(
+        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+    ) -> None:
         result = FlextInfraCodegenCensus(
-            repository_root=tmp_path, apply_changes=True
+            repository_root=tmp_path, apply_changes=True, rope=rope_workspace
         ).execute()
 
         tm.fail(

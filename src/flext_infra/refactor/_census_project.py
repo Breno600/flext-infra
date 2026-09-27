@@ -71,17 +71,16 @@ class FlextInfraRefactorCensusProjectMixin:
         self,
         project: str,
         *,
-        objects: t.VariadicTuple[m.Infra.Object],
-        seed_violations: t.VariadicTuple[m.Infra.Violation],
-        fixes: t.VariadicTuple[m.Infra.Fix],
+        findings: m.Infra.ScanFindings,
         duplicate_keys: frozenset[str],
-        rule_names: t.StrSequence | None,
-        selected_rules: frozenset[str] | None = None,
+        scan_config: m.Infra.ScanConfig,
     ) -> m.Infra.ProjectReport:
         """Project report."""
-        violations = list(seed_violations)
-        if selected_rules is None and rule_names:
-            selected_rules = frozenset(rule_names)
+        objects = tuple(findings.project_objects.get(project, ()))
+        violations = list(findings.project_violations.get(project, ()))
+        fixes = tuple(findings.project_fixes.get(project, ()))
+        rule_names = scan_config.rule_names
+        selected_rules = scan_config.selected_rules
         include_unused = self._include_rule(
             "unused", rule_names=rule_names, selected_rules=selected_rules
         )

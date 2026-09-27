@@ -86,11 +86,14 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
         filepath: Path,
         *,
         class_stem: str,
-        is_test_file: bool,
         policy: m.Infra.NamespaceModulePolicy,
         source: str,
     ) -> t.StrSequence:
-        """Return structural and logical-size violations for one module."""
+        """Return structural and logical-size violations for one module.
+
+        ``filepath`` is project-relative; a module under the project's
+        ``tests/`` tree expects its facade class to carry the ``Tests`` prefix.
+        """
         if filepath.name in {"__init__.py", "__version__.py"}:
             return ()
         if cls._is_functional_module(tree):
@@ -110,7 +113,7 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
             policy.expected_family
             if policy.expected_alias is not None and policy.expected_family is not None
             else f"Tests{class_stem}"
-            if is_test_file
+            if c.Infra.DIR_TESTS in filepath.parts
             else class_stem
         )
         if len(classes) < 1:
@@ -197,6 +200,8 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
             messages.append(
                 f"{filepath}:{cls.line(outer)} — facade must extend its declared owner"
             )
+        if policy.expected_alias not in c.Infra.FAMILY_DIRECTORIES:
+            return tuple(messages)
         nested = tuple(
             node
             for node in (getattr(outer, "body", ()) or ())

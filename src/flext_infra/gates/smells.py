@@ -293,13 +293,18 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @staticmethod
     def _enriched_message(code: str, sarif_text: str) -> str:
-        """Append the flext-core (problem, fix) law text when the tag exists."""
+        """Append the flext-core fix law text when the tag exists.
+
+        The SARIF text already states the concrete problem (name and count);
+        the core problem text is a census template whose placeholders qlty
+        does not supply, so only the fix is appended.
+        """
         tag = c.Infra.SMELLS_RULE_TAGS.get(code, "")
         text = c.ENFORCEMENT_RULES_TEXT.get(tag) if tag else None
         if text is None:
             return sarif_text
-        problem, fix = text
-        return f"{sarif_text} — {problem}. Fix: {fix}"
+        _, fix = text
+        return f"{sarif_text}. Fix: {fix}"
 
 
 __all__: list[str] = ["FlextInfraSmellsGate"]

@@ -14,6 +14,10 @@ from ..._constants import (
     FlextInfraConstantsSharedInfra,
 )
 from .. import FlextInfraModelsLayout
+from ..deps_tool_config import FlextInfraModelsDepsToolConfig
+from ..deps_tool_config_project_artifacts import (
+    FlextInfraModelsDepsToolConfigProjectArtifacts,
+)
 from .contexts import FlextInfraConfigModelsContexts
 from .contract import FlextInfraConfigModelsContract
 from .make import FlextInfraConfigModelsMake
@@ -102,6 +106,10 @@ class FlextInfraConfigModelsArtifact:
                 )
             ),
         ] = ()
+        fresh_import_workers: Annotated[
+            int,
+            m.Field(ge=1, le=16, description="Concurrent fresh-import subprocesses"),
+        ] = 1
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),
@@ -468,6 +476,35 @@ class FlextInfraConfigModelsArtifact:
             t.VariadicTuple[m.Cli.AtomicFileState],
             m.Field(description="Ordered immutable sources consumed by composition"),
         ] = ()
+
+    class CodegenRenderInputs(FlextInfraConfigModelsContract.ConfigContract):
+        """Resolved inputs shared by every governed render of one repository.
+
+        A conform planner resolves them once per repository; every template
+        render, overlay composition, and pyproject conformance of that
+        repository then reads these same values.
+        """
+
+        target: Annotated[
+            FlextInfraConfigModelsContexts.RepositoryConformTarget,
+            m.Field(description="Conformance identity and root being rendered"),
+        ]
+        workspace: Annotated[
+            FlextInfraConfigModelsWorkspace.WorkspaceSpec,
+            m.Field(description="Workspace manifest governing the repository"),
+        ]
+        codegen: Annotated[
+            FlextInfraConfigModelsArtifact.CodegenConfigSpec,
+            m.Field(description="Codegen contract the repository renders under"),
+        ]
+        tooling_runtime: Annotated[
+            FlextInfraModelsDepsToolConfig.ToolingRuntimeContext,
+            m.Field(description="Tooling values resolved for the repository"),
+        ]
+        managed_artifacts: Annotated[
+            FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectManagedArtifactsSnapshot,
+            m.Field(description="Project managed-artifact catalog overlaid on renders"),
+        ]
 
     class CodegenFilePlan(FlextInfraConfigModelsContract.ConfigContract):
         """Exact before state and desired state for one managed file."""

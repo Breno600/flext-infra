@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, override
 from flext_core import r
 from flext_core.__version__ import FlextVersion
 
-from .. import c, u
+from .. import c, m, u
 from ._execution import FlextInfraCodegenExecutionBase
 from ._mise_artifacts_publication import publish_file_plan
 
@@ -90,18 +90,19 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
                 generated += 1
                 continue
 
-            planned = u.Infra.planned_file(
-                project_info.path,
-                target,
-                required=False,
+            before = u.Cli.atomic_read_binary_file_state(target, required=False)
+            if before.failure:
+                return r[bool].from_failure(before)
+            planned = m.Infra.CodegenFilePlan(
+                project=project_info.path,
+                path=target,
+                before=before.value,
                 desired_content=content.encode(c.Cli.ENCODING_DEFAULT),
                 desired_mode=0o644,
                 owner="codegen",
                 policy="full",
             )
-            if planned.failure:
-                return r[bool].from_failure(planned)
-            write_result = publish_file_plan(planned.value, phase="version-file")
+            write_result = publish_file_plan(planned, phase="version-file")
             if write_result.failure:
                 return r[bool].from_failure(write_result)
             generated += 1

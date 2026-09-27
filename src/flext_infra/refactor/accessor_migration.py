@@ -76,19 +76,11 @@ class FlextInfraAccessorMigrationOrchestrator(
                 read = u.Cli.files_read_text(py_file)
                 if read.failure:
                     return r[m.Infra.AccessorMigrationReport].from_failure(read)
-                source = read.value
-                updated_source, automated_changes = self._apply_automated_rewrites(
-                    rope_project, py_file, source
-                )
-                warnings = list(self._collect_manual_warnings(py_file, source))
                 file_report = self._process_file(
+                    rope_project,
                     py_file,
-                    source=source,
-                    updated_source=updated_source,
-                    automated_changes=automated_changes,
-                    warnings=warnings,
-                    include_preview=(bool(automated_changes or warnings))
-                    and len(previews) < self.preview_limit,
+                    read.value,
+                    preview_available=len(previews) < self.preview_limit,
                 )
                 automated_change_count += len(file_report.automated_changes)
                 warning_count += len(file_report.warnings)

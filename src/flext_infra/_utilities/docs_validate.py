@@ -114,6 +114,16 @@ class FlextInfraUtilitiesDocsValidate:
             ]
         else:
             required = list(FlextInfraUtilitiesDocsScope.required_project_files())
+        if not scope.package_name:
+            # The api-reference generated surface is the mkdocstrings product
+            # over an importable package; a package-less scope (a workspace
+            # orchestrator root) has no generator that can produce it, so
+            # requiring it is an unsatisfiable contract, not a docs defect.
+            required = [
+                rel_path
+                for rel_path in required
+                if "/generated/" not in rel_path
+            ]
         missing: t.MutableSequenceOf[str] = []
         for rel_path in sorted(set(required)):
             if not (scope.path / rel_path).exists():

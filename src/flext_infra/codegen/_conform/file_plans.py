@@ -96,12 +96,18 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
     @staticmethod
     def _absent_file_plan(root: Path, path: Path) -> p.Result[m.Infra.CodegenFilePlan]:
         """Plan the removal of one retired projection."""
-        return u.Infra.planned_file(
-            root.expanduser().absolute(),
-            path.expanduser().absolute(),
-            required=True,
-            desired_content=None,
-            desired_mode=None,
+        target = path.expanduser().absolute()
+        before = u.Cli.atomic_read_binary_file_state(target, required=True)
+        if before.failure:
+            return r[m.Infra.CodegenFilePlan].from_failure(before)
+        return r[m.Infra.CodegenFilePlan].ok(
+            m.Infra.CodegenFilePlan(
+                project=root.expanduser().absolute(),
+                path=target,
+                before=before.value,
+                desired_content=None,
+                desired_mode=None,
+            )
         )
 
     @classmethod

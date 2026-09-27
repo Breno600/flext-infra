@@ -5,10 +5,8 @@ held to the ruff-format contract. This gate extracts fenced ``python`` blocks
 and doctest examples into one temporary source tree and runs ONE ruff format
 invocation per verb (single-pass law): ``check`` renders the format verdict
 read-only, ``fix`` — reached from ``make fix`` — writes formatting back into
-fenced blocks when every block of a file round-trips cleanly. Unparseable
-documentation fragments stay out of scope by design: their syntax findings
-belong to the flext-tests markdown validator (MD-001 with approved
-exceptions), and docstring write-back stays a human decision.
+fenced blocks when every block of a file round-trips cleanly. Invalid Python
+fences fail loudly; docstring write-back stays a human decision.
 """
 
 from __future__ import annotations
@@ -24,7 +22,6 @@ from flext_infra import c, m, u
 
 from .base_gate import FlextInfraGate
 from .markdown_code_sources import (
-    is_syntax_broken,
     source_name,
     write_docstring_sources,
     write_fenced_block_sources,
@@ -116,11 +113,10 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         result: p.Cli.CommandOutput,
         origin: dict[str, t.Pair[str, int]],
         *,
-        default_code: str,
         default_message: str,
         file_pattern: re.Pattern[str],
     ) -> t.SequenceOf[m.Infra.Issue]:
-        """Translate one ruff result into origin-mapped gate findings.
+        """Translate one ruff result into origin-mapped findings coded with this gate.
 
         A failed run without mapped findings never reads as a clean pass: the
         tool-level error becomes the finding.
@@ -132,7 +128,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 self._origin_issue(
                     origin,
                     match.group("file"),
-                    code=default_code,
+                    code=self.gate_id,
                     message=default_message,
                     line=int(match.groupdict().get("line", 1) or 1),
                 )
@@ -182,7 +178,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                         project_dir,
                         formatted,
                         origin,
-                        default_code=self.gate_id,
                         default_message=(
                             "embedded block does not survive the format round-trip"
                         ),
@@ -197,7 +192,6 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                         project_dir,
                         formatted,
                         origin,
-                        default_code=self.gate_id,
                         default_message=(
                             "embedded code is not ruff-formatted (repair belongs to `make fix`)"
                         ),
@@ -222,12 +216,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         ):
             content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
             relative_posix = md_path.relative_to(project_dir).as_posix()
-            # Enumerate every non-``notest`` fence exactly like
-            # ``write_fenced_block_sources``: the extraction index counts
-            # fragments that do not compile, so the splice must preserve that
-            # same index. Re-enumerating only parseable blocks shifted every
-            # later source name and silently skipped whole files whenever a
-            # fragment preceded a valid block.
+            # Keep the extraction index stable across every declared Python fence.
             staged: t.MutableSequenceOf[t.Pair[int, str]] = []
             for index, match in enumerate(
                 match
@@ -235,39 +224,25 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
             ):
                 code = match.group("code")
-                if is_syntax_broken(code, md_path):
-                    continue
+                compile(code, str(md_path), "exec")
                 staged.append((index, code))
             if not staged:
                 continue
             blocks: t.MutableSequenceOf[str] = []
-            round_trips = True
             for index, _original in staged:
                 source = sources_dir / source_name(relative_posix, index)
                 if not source.is_file():
-                    round_trips = False
-                    break
+                    raise FileNotFoundError(source)
                 formatted = source.read_text(c.Cli.ENCODING_DEFAULT)
-                try:
-                    compile(formatted, str(md_path), "exec")
-                except SyntaxError:
-                    round_trips = False
-                    break
+                compile(formatted, str(md_path), "exec")
                 blocks.append(formatted)
-            if not round_trips:
-                continue
             blocks_iter = iter(blocks)
 
             def _resubstitute(
-                match: re.Match[str],
-                *,
-                origin_path: Path = md_path,
-                replacements: Iterator[str] = blocks_iter,
+                match: re.Match[str], *, replacements: Iterator[str] = blocks_iter
             ) -> str:
-                """Splice one formatted block; fragments and markers stay verbatim."""
-                keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
-                    "info"
-                ) or is_syntax_broken(match.group("code"), origin_path)
+                """Splice one formatted block; declared skip markers stay verbatim."""
+                keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group("info")
                 if keep:
                     return match.group(0)
                 return match.group(0).replace(match.group("code"), next(replacements))
@@ -321,13 +296,12 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 started,
                 message=f"{self.gate_id}: no embedded documentation code found",
             )
-        return self._build_check_gate_execution(
+        return self._build_gate_execution(
             project_dir,
-            passed=passed,
+            verdict=passed,
             issues=issues,
             raw_output="\n".join(issue.formatted for issue in issues),
             started=started,
-            accept_reported_issues=True,
         )
 
 

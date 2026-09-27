@@ -28,7 +28,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             Path(entry.destination).parts[0]
             for entry in entries
             if profile in entry.profiles
-            and entry.delegate == "render"
+            and entry.delegate == c.Infra.TemplateDelegate.RENDER
             and Path(entry.destination).parts
         }
         # An existing package:false repository (a solo workspace root)
@@ -48,22 +48,15 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
 
     @classmethod
     def conformed_pyproject_source(
-        cls,
-        source: str,
-        *,
-        repository_root: Path,
-        repository: m.Infra.RepositoryRef,
-        workspace: m.Infra.WorkspaceSpec,
-        codegen: m.Infra.CodegenConfigSpec,
-        workspace_mode: c.Infra.MakeProfile,
-        uv_exclude_dependencies: t.VariadicTuple[
-            m.Infra.UvScopedDependencyExclusionSpec
-        ],
+        cls, source: str, *, render_inputs: m.Infra.CodegenRenderInputs
     ) -> p.Result[str]:
         """Conform one pyproject source."""
+        target = render_inputs.target
+        workspace = render_inputs.workspace
+        codegen = render_inputs.codegen
         flext_line = u.Infra.flext_integration_line_for_checkout(
             codegen=codegen,
-            repository_root=repository_root,
+            repository_root=target.root,
             workspace=workspace,
         )
         if flext_line.failure:
@@ -75,26 +68,21 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         return u.Infra.pyproject_conform(
             source,
             workspace=workspace,
-            workspace_mode=workspace_mode,
-            toolchain=codegen.toolchain,
             required_dev_dependencies=codegen.scaffold.project.dev,
-            uv_link_mode=cls.link_mode(repository, codegen.toolchain),
-            uv_exclude_dependencies=uv_exclude_dependencies,
-            namespace_scan_dirs=(
-                workspace.project.namespace_scan_dirs
-                if workspace.project is not None
-                else None
+            uv_resolution=m.Infra.UvResolutionSpec(
+                link_mode=cls.link_mode(target.repository, codegen.toolchain),
+                constraint_dependencies=tuple(
+                    codegen.toolchain.uv_constraint_dependencies
+                ),
+                exclude_dependencies=cls.routed_uv_exclude_dependencies(render_inputs),
+                environments=tuple(codegen.toolchain.uv_environments),
             ),
             declared_sources=declared_sources,
         )
 
     @staticmethod
     def routed_uv_exclude_dependencies(
-        *,
-        repository: m.Infra.RepositoryRef,
-        target: m.Infra.RepositoryConformTarget,
-        codegen: m.Infra.CodegenConfigSpec,
-        workspace: m.Infra.WorkspaceSpec,
+        render_inputs: m.Infra.CodegenRenderInputs,
     ) -> t.VariadicTuple[m.Infra.UvScopedDependencyExclusionSpec]:
         """Return the uv dependency exclusions routed to one repository.
 
@@ -105,11 +93,16 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         members. Routing an exclusion for an absent project would drop the
         only edge that installs it.
         """
-        local = {repository.distribution}
+        target = render_inputs.target
+        local = {target.repository.distribution}
         if target.make_profile is c.Infra.MakeProfile.WORKSPACE:
-            local.update(member.distribution for member in workspace.subprojects)
+            local.update(
+                member.distribution for member in render_inputs.workspace.subprojects
+            )
         return tuple(
-            item for item in codegen.uv_exclude_dependencies if item.project in local
+            item
+            for item in render_inputs.codegen.uv_exclude_dependencies
+            if item.project in local
         )
 
     @staticmethod

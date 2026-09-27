@@ -6,6 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
+from flext_infra.api import infra
 from tests import u
 
 
@@ -35,7 +36,7 @@ class TestsFlextInfraRule4Annotations:
             tmp_path, module_source=module_source, module_name="_settings.py"
         )
 
-        result = u.Tests.namespace_validator().validate_project(root)
+        result = infra.validate_namespace(root)
 
         tm.ok(result)
         tm.that(
@@ -56,7 +57,7 @@ class TestsFlextInfraRule4Annotations:
             tmp_path, module_source=module_source, module_name="services.py"
         )
 
-        result = u.Tests.namespace_validator().validate_project(root)
+        result = infra.validate_namespace(root)
 
         tm.ok(result)
         u.Tests.assert_namespace_violation_contains(root, "banned annotation")
@@ -82,12 +83,13 @@ class TestsFlextInfraRule4Annotations:
             tmp_path, module_source=module_source, module_name="api.py"
         )
 
-        result = u.Tests.namespace_validator().validate_project(root)
+        result = infra.validate_namespace(root)
 
         tm.ok(result)
         u.Tests.assert_namespace_no_violation_contains(
             root, "module alias/data declaration"
         )
+        u.Tests.assert_namespace_no_violation_contains(root, "nested namespace")
 
     def test_rule4_bare_module_annotation_is_not_import_time_wiring(
         self, tmp_path: Path
@@ -110,7 +112,7 @@ class TestsFlextInfraRule4Annotations:
             tmp_path, module_source=module_source, module_name="services.py"
         )
 
-        result = u.Tests.namespace_validator().validate_project(root)
+        result = infra.validate_namespace(root)
 
         tm.ok(result)
         u.Tests.assert_namespace_no_violation_contains(root, "import-time wiring")
@@ -129,7 +131,7 @@ class TestsFlextInfraRule4Annotations:
             tmp_path, module_source=module_source, module_name="services.py"
         )
 
-        result = u.Tests.namespace_validator().validate_project(root)
+        result = infra.validate_namespace(root)
 
         tm.ok(result)
         u.Tests.assert_namespace_violation_contains(root, "import-time wiring")

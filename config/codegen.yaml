@@ -7,6 +7,9 @@ Infra:
     # validate-git-hook.sh).
     retired_projections: [.github/scripts/install-git-hooks.sh]
 
+    # Fresh import probes are independent subprocesses within one validation.
+    fresh_import_workers: 3
+
     # Per-module scc code-LOC ceiling. Operator instruction 2026-09-07:
     # the former 1000-LOC allowance stands (supersedes the 200 constant).
     loc_cap:
@@ -351,6 +354,9 @@ Infra:
         - gate: codemod
           authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
           reason: "Structural codemod backlog is applied through make mod after the fleet is green."
+        - gate: smells
+          authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
+          reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /
       # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
@@ -795,6 +801,7 @@ Infra:
       canonical_root_dirs:
         - .mise
         - bin
+        - infra
         - src
         - tests
         - docs
@@ -2103,8 +2110,9 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
-        - source: base/config/workspace.yaml.j2
-          destination: config/workspace.yaml
+      # New-project declaration is serialized once from WorkspaceManifestSpec.
+      # Existing-tree conform reads this file as input and never overwrites it.
+        - destination: config/workspace.yaml
           profiles: [workspace, standalone]
           delegate: manifest
           overwrite: false

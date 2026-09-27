@@ -81,12 +81,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
 
     @staticmethod
     def _runtime_public_aliases(
-        tree: ast.Module,
-        *,
-        removals: t.MappingKV[str, set[str]],
-        obsolete_imports: t.MappingKV[str, set[str]],
-        replacements: t.StrMapping,
-        public_imports: t.StrMapping,
+        tree: ast.Module, plan: m.Infra.PrivateImportRewritePlan
     ) -> frozenset[str]:
         """Return facades required outside a ``TYPE_CHECKING`` boundary."""
         parents = {
@@ -114,14 +109,16 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             aliases: set[str] = set()
             for imported in node.names:
                 qualified = f"{node.module}.{imported.name}"
-                if imported.name in removals.get(node.module, set()):
-                    reference = replacements.get(qualified)
+                if imported.name in plan.removals.get(node.module, frozenset()):
+                    reference = plan.replacements.get(qualified)
                     if reference is not None:
                         aliases.add(reference.split(".", 1)[0])
-                elif imported.name in obsolete_imports.get(node.module, set()):
+                elif imported.name in plan.obsolete_imports.get(
+                    node.module, frozenset()
+                ):
                     aliases.add(imported.asname or imported.name)
                 elif (
-                    public_imports.get(imported.name) == node.module
+                    plan.public_imports.get(imported.name) == node.module
                     and imported.asname is None
                 ):
                     aliases.add(imported.name)
@@ -296,6 +293,18 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
                 ):
                     obsolete_imports.setdefault(package, set()).add(public_root_name)
                     replacements[f"{package}.{public_root_name}"] = facade_alias
+        plan = m.Infra.PrivateImportRewritePlan(
+            relative_imports=relative_imports,
+            relative_symbols={
+                key: frozenset(value) for key, value in relative_symbols.items()
+            },
+            removals={key: frozenset(value) for key, value in removals.items()},
+            obsolete_imports={
+                key: frozenset(value) for key, value in obsolete_imports.items()
+            },
+            replacements=replacements,
+            public_imports=public_imports,
+        )
         all_removals = {
             module: removals.get(module, set()) | obsolete_imports.get(module, set())
             for module in removals.keys() | obsolete_imports.keys()
@@ -306,32 +315,14 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
             )
         rewritten = cls._rewrite_private_import_source(
             cls._relocate_declared_exports(source, direct_specs),
-            relative_imports=relative_imports,
-            removals={key: frozenset(value) for key, value in removals.items()},
-            obsolete_imports={
-                key: frozenset(value) for key, value in obsolete_imports.items()
-            },
-            replacements=replacements,
-            public_imports=public_imports,
-            runtime_public_imports=cls._runtime_public_aliases(
-                tree,
-                removals=removals,
-                obsolete_imports=obsolete_imports,
-                replacements=replacements,
-                public_imports=public_imports,
-            ),
+            plan,
+            runtime_public_imports=cls._runtime_public_aliases(tree, plan),
         )
         for qualified in direct_specs:
             module, _, name = qualified.rpartition(".")
             all_removals.setdefault(module, set()).add(name)
         FlextInfraUtilitiesPrivateImportValidation.require_zero_private_import_residue(
-            rewritten,
-            file_path=file_path,
-            relative_imports=relative_imports,
-            relative_symbols=relative_symbols,
-            removals=all_removals,
-            replacements=replacements,
-            public_imports=public_imports,
+            rewritten, file_path=file_path, plan=plan, removals=all_removals
         )
         return rewritten, (
             *(
