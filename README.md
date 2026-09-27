@@ -58,7 +58,7 @@ verification).
   classes listed under Module Map above.
 - Public extensions exposed by this project: `FlextInfra`,
   `FlextInfraAbstractionBoundaryGate`, `FlextInfraAccessorMigrationOrchestrator`,
-  `FlextInfraApplyRenames`, `FlextInfraBanditGate`, `FlextInfraBooleanLogicFixer` (+182
+  `FlextInfraApplyRenames`, `FlextInfraBanditGate`, `FlextInfraBooleanLogicFixer` (+181
   more).
 - Library abstraction boundaries: see AGENTS.md §2.7.
 

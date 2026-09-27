@@ -267,10 +267,7 @@ if TYPE_CHECKING:
     from .validate.tier_whitelist import FlextInfraValidateTierWhitelist
     from .workspace.detector import FlextInfraWorkspaceDetector
     from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
-    from .workspace.environment_beads import (
-        FlextInfraWorkspaceBeadsEnvironmentMixin,
-        FlextInfraWorkspaceEnvironmentSync,
-    )
+    from .workspace.environment_beads import FlextInfraWorkspaceEnvironmentSync
     from .workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
     from .workspace.environment_provenance import (
         FlextInfraWorkspaceEnvironmentProvenance,
@@ -464,7 +461,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraValidateLazyMapFreshness",
     "FlextInfraValidateMetadataDiscipline",
     "FlextInfraValidateTierWhitelist",
-    "FlextInfraWorkspaceBeadsEnvironmentMixin",
     "FlextInfraWorkspaceCheckGatesMixin",
     "FlextInfraWorkspaceChecker",
     "FlextInfraWorkspaceDetector",
@@ -799,10 +795,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".workspace": ("workspace",),
             ".workspace.detector": ("FlextInfraWorkspaceDetector",),
             ".workspace.environment": ("FlextInfraWorkspaceEnvironmentMixin",),
-            ".workspace.environment_beads": (
-                "FlextInfraWorkspaceBeadsEnvironmentMixin",
-                "FlextInfraWorkspaceEnvironmentSync",
-            ),
+            ".workspace.environment_beads": ("FlextInfraWorkspaceEnvironmentSync",),
             ".workspace.environment_contracts": (
                 "FlextInfraWorkspaceEnvironmentContracts",
             ),
