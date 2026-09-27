@@ -385,9 +385,9 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Configured read-only PATH additions for direnv"),
         ] = ()
         beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsProjectSpec,
-            m.Field(description="Repository-local Beads identity"),
-        ]
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(description="Repository-local Beads identity when enabled"),
+        ] = None
         canonical_project_name: Annotated[
             t.NonEmptyStr, m.Field(description="Canonical PEP 621 project name")
         ]
@@ -856,9 +856,9 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Make profile inferred from live Git topology"),
         ]
         beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsProjectSpec,
-            m.Field(description="Repository-local Beads identity"),
-        ]
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(description="Repository-local Beads identity when enabled"),
+        ] = None
         project: Annotated[
             FlextInfraConfigModelsContexts.ProjectSpec | None,
             m.Field(

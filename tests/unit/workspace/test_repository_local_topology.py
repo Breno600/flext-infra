@@ -308,7 +308,9 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.that(workspace.repository.path, eq=Path())
         tm.that(workspace.repository.role, eq=c.Infra.MakeProfile.STANDALONE)
         tm.that(workspace.repository.editable, eq=True)
-        tm.that(workspace.beads.workspace, eq="parent-workspace")
+        beads = workspace.beads
+        assert beads is not None
+        tm.that(beads.workspace, eq="parent-workspace")
 
     def test_composed_self_load_accepts_a_self_coordinate_manifest(
         self, tmp_path: Path
