@@ -9,7 +9,7 @@
 	fi; \
 	caller_path="$$PATH"; \
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
-	caller_{{ name | lower }}="$({{ name }})"; \
+	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
 	if [ -z "$$mise_storage_root" ]; then \
 		if [ -n "$$caller_xdg_data_home" ]; then \

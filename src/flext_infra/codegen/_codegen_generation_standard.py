@@ -6,14 +6,12 @@ from collections.abc import MutableMapping
 from sys import stdlib_module_names
 from typing import TYPE_CHECKING
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, m, t, u
 
 from ._codegen_generation_renderers import FlextInfraCodegenGenerationRenderersMixin
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from flext_infra import t
 
 
 # flext-wkii.17.26 (codex): Keep lazy loading only at the public package root and
@@ -336,15 +334,20 @@ class FlextInfraCodegenGenerationStandardMixin(
             project_payload = u.Infra.pyproject_payload(
                 (project_root / c.Infra.PYPROJECT_FILENAME).resolve()
             )
-            projected = (
-                project_payload
-                .get("tool", {})
-                .get("ruff", {})
-                .get("lint", {})
-                .get("isort", {})
-                .get("known-first-party")
-            )
-            if projected:
+            table = project_payload
+            projected: t.StrSequence | None = None
+            for key in ("tool", "ruff", "lint", "isort"):
+                if key not in table:
+                    break
+                table = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(
+                    table[key], strict=True
+                )
+            else:
+                if "known-first-party" in table:
+                    projected = t.Infra.STR_SEQ_ADAPTER.validate_python(
+                        table["known-first-party"], strict=True
+                    )
+            if projected is not None:
                 first_party_names.update(projected)
             else:
                 first_party_names.update(

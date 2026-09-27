@@ -487,6 +487,8 @@ Infra:
           description: Run every configured non-test gate.
         - name: test
           description: Run the complete suite through the persistent testmon cache.
+        - name: tests
+          description: Run incremental tests, then the full suite with the same persistent testmon cache.
         - name: fmt
           description: Apply ruff format --preview and ruff check --fix --unsafe-fixes --preview. Ruff is the rule; change code, never ruff.
         - name: fix

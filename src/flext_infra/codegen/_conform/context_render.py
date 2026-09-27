@@ -9,7 +9,6 @@ from flext_core import r
 
 from ... import c, config, m, p, t, u
 from ...deps import FlextInfraEnsureRuffConfigPhase
-from .._layout_plan import FlextInfraCodegenLayoutPlanMixin
 from .pyproject_policy import FlextInfraCodegenConformPyprojectPolicy
 
 
@@ -367,9 +366,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 gitignore_sections=u.Infra.gitignore_sections(
                     codegen,
                     profile=profile,
-                    project_name=FlextInfraCodegenLayoutPlanMixin.layout_project_name(
-                        repository_root
-                    ),
+                    project_name=target.canonical_project_name,
                     workspace=workspace,
                     project_patterns=project_patterns,
                 ),

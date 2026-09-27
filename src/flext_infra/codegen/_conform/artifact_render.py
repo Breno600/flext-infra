@@ -7,7 +7,6 @@ from pathlib import Path
 from flext_core import r
 
 from ... import c, config, m, p, t, u
-from .._layout_plan import FlextInfraCodegenLayoutPlanMixin
 from .context_render import FlextInfraCodegenConformContextRender
 
 
@@ -181,9 +180,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     gitignore_sections=u.Infra.gitignore_sections(
                         codegen,
                         profile=target.make_profile,
-                        project_name=FlextInfraCodegenLayoutPlanMixin.layout_project_name(
-                            repository_root
-                        ),
+                        project_name=target.canonical_project_name,
                         workspace=workspace,
                         project_patterns=project_patterns,
                     )

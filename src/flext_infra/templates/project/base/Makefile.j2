@@ -52,6 +52,7 @@ ifeq ($(strip $(SELF_MAKE_EXECUTABLE)),)
 $(error Current Make executable has no physical path: $(MAKE_COMMAND))
 endif
 .DEFAULT_GOAL := help
+
 ifeq ($(filter command line override,$(origin SETUP_BOOTSTRAP_ONLY)),)
 ifneq ($(filter setup,$(MAKECMDGOALS)),)
 SETUP_BOOTSTRAP_ONLY := Y
@@ -63,6 +64,19 @@ ifneq ($(filter initialize,$(MAKECMDGOALS)),)
 GEN_INIT_ONLY := Y
 export GEN_INIT_ONLY
 endif
+endif
+
+# GitHub CLI owns authentication. Setup can provision before gh is available
+# or authenticated. Operations that use Mise require a validated credential
+# at dispatch, independently of setup flags inherited from another invocation.
+# Keep the value in the process environment, never in a rendered recipe.
+ifneq ($(strip $(filter-out help _activated-help _builtin-help clean _activated-clean _builtin-clean _builtin-self-clean,$(MAKECMDGOALS))),)
+override export GITHUB_TOKEN := $(shell if command -v gh >/dev/null 2>&1; then gh auth status --active --hostname "$${GH_HOST:-github.com}" >/dev/null && gh auth token --hostname "$${GH_HOST:-github.com}"; else exit 127; fi)
+ifneq ($(.SHELLSTATUS),0)
+override GITHUB_TOKEN :=
+endif
+override export GH_TOKEN := $(GITHUB_TOKEN)
+override export MISE_GITHUB_TOKEN := $(GITHUB_TOKEN)
 endif
 
 # === SECTION: project identity (managed) ===
@@ -363,6 +377,7 @@ endef
 
 .PHONY: $(PUBLIC_VERBS) $(addprefix _builtin-,$(PUBLIC_VERBS))
 .PHONY: _builtin_gen_init _builtin_gen_all
+$(addprefix _activated-,$(filter-out help setup clean,$(PUBLIC_VERBS))): _builtin_require_github_auth
 
 {# The exclusion is a statement about ENVIRONMENT DEPENDENCY, never about a
    name. `setup` is filtered above because it builds the environment it would
@@ -432,6 +447,16 @@ _builtin-help:
 # the recorded gitlink.
 {{ submodule_setup_recipe("_builtin_setup_submodules", "$(PROJECT_ROOT)") }}
 
+.PHONY: _builtin_require_github_auth
+_builtin_require_github_auth:
+	@if [ -z "$${GITHUB_TOKEN:-}" ]; then \
+		printf 'ERROR: GitHub authentication is required before invoking Mise\n' >&2; \
+		exit 1; \
+	fi
+
+$(addprefix _builtin-,$(filter-out help setup clean,$(BUILTIN_VERBS))): _builtin_require_github_auth
+_builtin-self-test _builtin-self-tests _builtin-self-check _builtin-self-fmt _builtin-self-fix _builtin-self-fix-enforcement _builtin-self-build _builtin-self-docs _builtin-self-sonarcloud-sync: _builtin_require_github_auth
+
 _builtin_require_environment: _builtin_require_workspace
 # Documenting the interface (`make help`) must not require the interpreter it
 # tells the operator how to provision. Only `make help` with no other goal
@@ -491,6 +516,13 @@ _builtin-self-test: _builtin_require_environment
     invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
+_builtin-self-tests: _builtin_require_environment
+	+@$(SELF_MAKE) _builtin-self-test
+{{ test_report_recipe(
+    runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full",
+    invocation_namespace=make.testmon_cache.invocation_namespace,
+) }}
+
 _builtin-self-check: _builtin_require_environment
 {{ local_check_body() }}
 
@@ -532,6 +564,9 @@ _builtin_check_all: _builtin_require_environment
 _builtin_test_all: _builtin_require_environment
 	@$(WORKSPACE_ORCHESTRATE) --verb test $(WORKSPACE_PROJECT_ARGS)
 
+_builtin_tests_all: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb tests $(WORKSPACE_PROJECT_ARGS)
+
 _builtin_fmt_all: _builtin_require_environment
 	@$(WORKSPACE_ORCHESTRATE) --verb fmt $(WORKSPACE_PROJECT_ARGS)
 
@@ -557,6 +592,13 @@ _builtin_check_all: _builtin_require_environment
 _builtin_test_all: _builtin_require_environment
 {{ test_report_recipe(
     runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
+    invocation_namespace=make.testmon_cache.invocation_namespace,
+) }}
+
+_builtin_tests_all: _builtin_require_environment
+	+@$(SELF_MAKE) test
+{{ test_report_recipe(
+    runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full",
     invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
@@ -671,6 +713,7 @@ _builtin-deps: _builtin_deps_upgrade
 _builtin-build: _builtin_build_artifacts
 _builtin-check: _builtin_check_all
 _builtin-test: _builtin_test_all
+_builtin-tests: _builtin_tests_all
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
 _builtin-fix-enforcement: _builtin_fix_enforcement

@@ -50,7 +50,9 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
         shapes = {
             path: found
             for path, source in items
-            if (found := cls._facade_shapes(path, ast.parse(source, filename=str(path))))
+            if (
+                found := cls._facade_shapes(path, ast.parse(source, filename=str(path)))
+            )
         }
         if not shapes:
             return r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]].ok(())

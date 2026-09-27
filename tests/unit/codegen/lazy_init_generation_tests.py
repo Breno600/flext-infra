@@ -75,8 +75,7 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, contains='".api": ("Demo",)')
         tm.that(content, contains="from .__version__ import __version__ as __version__")
         tm.that(
-            content,
-            contains='__all__: tuple[str, ...] = ("Demo", "__version__", "r")',
+            content, contains='__all__: tuple[str, ...] = ("Demo", "__version__", "r")'
         )
         tm.that(content, contains="if TYPE_CHECKING:")
         tm.that(content, contains="    from .api import Demo")
@@ -243,9 +242,7 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(init_content, "__init__.py", "exec")
         tm.that(init_content, contains="from flext_core.lazy import")
-        tm.that(
-            init_content, contains='__all__: tuple[str, ...] = ("Demo", "Nested")'
-        )
+        tm.that(init_content, contains='__all__: tuple[str, ...] = ("Demo", "Nested")')
         tm.that(init_content, contains="install_lazy_exports")
 
     def test_private_fixture_package_initializer_is_side_effect_free(self) -> None:
@@ -262,9 +259,7 @@ class TestsFlextInfraCodegenGeneration:
 
         compile(init_content, "__init__.py", "exec")
         tm.that(init_content, contains="from .settings import DemoFixture")
-        tm.that(
-            init_content, contains='__all__: tuple[str, ...] = ("DemoFixture",)'
-        )
+        tm.that(init_content, contains='__all__: tuple[str, ...] = ("DemoFixture",)')
         tm.that(init_content, contains="install_lazy_exports")
 
     def test_lazy_bootstrap_package_initializer_is_side_effect_free(self) -> None:

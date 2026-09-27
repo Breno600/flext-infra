@@ -21,6 +21,7 @@ ifeq ($(strip $(SELF_MAKE_EXECUTABLE)),)
 $(error Current Make executable has no physical path: $(MAKE_COMMAND))
 endif
 .DEFAULT_GOAL := help
+
 ifeq ($(filter command line override,$(origin SETUP_BOOTSTRAP_ONLY)),)
 ifneq ($(filter setup,$(MAKECMDGOALS)),)
 SETUP_BOOTSTRAP_ONLY := Y
@@ -32,6 +33,19 @@ ifneq ($(filter initialize,$(MAKECMDGOALS)),)
 GEN_INIT_ONLY := Y
 export GEN_INIT_ONLY
 endif
+endif
+
+# GitHub CLI owns authentication. Setup can provision before gh is available
+# or authenticated. Operations that use Mise require a validated credential
+# at dispatch, independently of setup flags inherited from another invocation.
+# Keep the value in the process environment, never in a rendered recipe.
+ifneq ($(strip $(filter-out help _activated-help _builtin-help clean _activated-clean _builtin-clean _builtin-self-clean,$(MAKECMDGOALS))),)
+override export GITHUB_TOKEN := $(shell if command -v gh >/dev/null 2>&1; then gh auth status --active --hostname "$${GH_HOST:-github.com}" >/dev/null && gh auth token --hostname "$${GH_HOST:-github.com}"; else exit 127; fi)
+ifneq ($(.SHELLSTATUS),0)
+override GITHUB_TOKEN :=
+endif
+override export GH_TOKEN := $(GITHUB_TOKEN)
+override export MISE_GITHUB_TOKEN := $(GITHUB_TOKEN)
 endif
 
 # === SECTION: project identity (managed) ===
@@ -122,8 +136,8 @@ endif
 # End SECTION: REPOSITORY_ROOT isolation
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary.
-PUBLIC_VERBS := help setup deps build check test fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
-BUILTIN_VERBS := help setup deps build check test fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
+PUBLIC_VERBS := help setup deps build check test tests fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
+BUILTIN_VERBS := help setup deps build check test tests fmt fix fix-enforcement audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -211,16 +225,16 @@ _bootstrap_setup_tools:
 		caller_xdg_data_home="$$caller_home/.local/share"; \
 	fi; \
 	caller_path="$$PATH"; \
-caller_comspec="$(COMSPEC)"; \
-caller_pathext="$(PATHEXT)"; \
-caller_systemroot="$(SYSTEMROOT)"; \
-caller_windir="$(WINDIR)"; \
-caller_github_token="$(GITHUB_TOKEN)"; \
-caller_gh_token="$(GH_TOKEN)"; \
-caller_mise_github_token="$(MISE_GITHUB_TOKEN)"; \
-caller_mise_github_credential_command="$(MISE_GITHUB_CREDENTIAL_COMMAND)"; \
-caller_mise_http_timeout="$(MISE_HTTP_TIMEOUT)"; \
-caller_mise_version="$(MISE_VERSION)"; \
+caller_comspec="$${COMSPEC:-}"; \
+caller_pathext="$${PATHEXT:-}"; \
+caller_systemroot="$${SYSTEMROOT:-}"; \
+caller_windir="$${WINDIR:-}"; \
+caller_github_token="$${GITHUB_TOKEN:-}"; \
+caller_gh_token="$${GH_TOKEN:-}"; \
+caller_mise_github_token="$${MISE_GITHUB_TOKEN:-}"; \
+caller_mise_github_credential_command="$${MISE_GITHUB_CREDENTIAL_COMMAND:-}"; \
+caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
+caller_mise_version="$${MISE_VERSION:-}"; \
 if [ -z "$$mise_storage_root" ]; then \
 		if [ -n "$$caller_xdg_data_home" ]; then \
 			mise_storage_root="$$caller_xdg_data_home/mise"; \
@@ -557,6 +571,7 @@ endef
 
 .PHONY: $(PUBLIC_VERBS) $(addprefix _builtin-,$(PUBLIC_VERBS))
 .PHONY: _builtin_gen_init _builtin_gen_all
+$(addprefix _activated-,$(filter-out help setup clean,$(PUBLIC_VERBS))): _builtin_require_github_auth
 
 
 
@@ -599,6 +614,15 @@ test: _builtin_require_workspace
 _activated-test: _builtin_require_environment
 
 	$(call RUN_PUBLIC,test)
+
+
+tests: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-tests
+
+.PHONY: _activated-tests
+_activated-tests: _builtin_require_environment
+
+	$(call RUN_PUBLIC,tests)
 
 
 fmt: _builtin_require_workspace
@@ -804,6 +828,8 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'test' 'Run the complete suite through the persistent testmon cache.';
 
+	@printf '  %-16s %s\n' 'tests' 'Run incremental tests, then the full suite with the same persistent testmon cache.';
+
 	@printf '  %-16s %s\n' 'fmt' 'Apply ruff format --preview and ruff check --fix --unsafe-fixes --preview. Ruff is the rule; change code, never ruff.';
 
 	@printf '  %-16s %s\n' 'fix' 'Apply ruff check --fix --unsafe-fixes --preview plus every other configured safe correction. Ruff is the rule; change code, never ruff.';
@@ -979,6 +1005,16 @@ _builtin_setup_submodules:
 		validate_submodule "$$root" "$$child_path"; \
 	done
 
+.PHONY: _builtin_require_github_auth
+_builtin_require_github_auth:
+	@if [ -z "$${GITHUB_TOKEN:-}" ]; then \
+		printf 'ERROR: GitHub authentication is required before invoking Mise\n' >&2; \
+		exit 1; \
+	fi
+
+$(addprefix _builtin-,$(filter-out help setup clean,$(BUILTIN_VERBS))): _builtin_require_github_auth
+_builtin-self-test _builtin-self-tests _builtin-self-check _builtin-self-fmt _builtin-self-fix _builtin-self-fix-enforcement _builtin-self-build _builtin-self-docs _builtin-self-sonarcloud-sync: _builtin_require_github_auth
+
 _builtin_require_environment: _builtin_require_workspace
 # Documenting the interface (`make help`) must not require the interpreter it
 # tells the operator how to provision. Only `make help` with no other goal
@@ -1041,6 +1077,17 @@ _builtin-self-test: _builtin_require_environment
 		cleanup_test_tmp() { rm -rf "$$test_tmp"; }; \
 		trap cleanup_test_tmp EXIT INT TERM; \
 		TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry
+
+_builtin-self-tests: _builtin_require_environment
+	+@$(SELF_MAKE) _builtin-self-test
+
+	@set -eu; \
+		test_tmp_parent="$(PROJECT_SCRATCH_ROOT)/pytest"; \
+		mkdir -p "$$test_tmp_parent"; \
+		test_tmp=$$(mktemp -d "$$test_tmp_parent/invocation.XXXXXX"); \
+		cleanup_test_tmp() { rm -rf "$$test_tmp"; }; \
+		trap cleanup_test_tmp EXIT INT TERM; \
+		TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full
 
 _builtin-self-check: _builtin_require_environment
 	@set -eu; \
@@ -1110,6 +1157,17 @@ _builtin_test_all: _builtin_require_environment
 		cleanup_test_tmp() { rm -rf "$$test_tmp"; }; \
 		trap cleanup_test_tmp EXIT INT TERM; \
 		TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry
+
+_builtin_tests_all: _builtin_require_environment
+	+@$(SELF_MAKE) test
+
+	@set -eu; \
+		test_tmp_parent="$(PROJECT_SCRATCH_ROOT)/pytest"; \
+		mkdir -p "$$test_tmp_parent"; \
+		test_tmp=$$(mktemp -d "$$test_tmp_parent/invocation.XXXXXX"); \
+		cleanup_test_tmp() { rm -rf "$$test_tmp"; }; \
+		trap cleanup_test_tmp EXIT INT TERM; \
+		TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
 # fmt_gates formatters run once through the checker's apply mode, and every
@@ -1223,6 +1281,7 @@ _builtin-deps: _builtin_deps_upgrade
 _builtin-build: _builtin_build_artifacts
 _builtin-check: _builtin_check_all
 _builtin-test: _builtin_test_all
+_builtin-tests: _builtin_tests_all
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
 _builtin-fix-enforcement: _builtin_fix_enforcement

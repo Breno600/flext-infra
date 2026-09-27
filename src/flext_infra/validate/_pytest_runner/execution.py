@@ -83,11 +83,10 @@ class FlextInfraPytestRunnerExecution(
             report_dir / f"{artifact}.log", outcome.stdout or ""
         ).unwrap()
         if not node_ids and not complete:
-            # The hot selection can be legitimately empty (all known tests
-            # clean); the complete inventory must then drive the suite, so its
-            # resolution is returned — discarding it ran the suite against the
-            # hot cache again and collected nothing.
-            return self._resolve_selection(report_dir, complete=True)
+            # Inventory proves the complete deselected set for a cache hit.
+            # It must not replace the empty incremental selection with a run
+            # of tests whose recorded inputs are unchanged.
+            self._resolve_selection(report_dir, complete=True)
         return node_ids
 
     def _run_suite(
@@ -178,6 +177,14 @@ class FlextInfraPytestRunnerExecution(
     @override
     def execute(self) -> p.Result[int]:
         """Execute one whole-suite cached or full testmon invocation."""
+        return self._execute_testmon(complete=False)
+
+    def execute_full(self) -> p.Result[int]:
+        """Execute the complete inventory using the same validated testmon database."""
+        return self._execute_testmon(complete=True)
+
+    def _execute_testmon(self, *, complete: bool) -> p.Result[int]:
+        """Keep incremental and complete runs on one process and evidence contract."""
         report_dir = self._report_directory()
         u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
         pre_digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
@@ -189,7 +196,7 @@ class FlextInfraPytestRunnerExecution(
             if not cache_restored:
                 msg = f"testmon preflight rejected cache: {pre_state.reason}"
                 raise RuntimeError(msg)
-        selection = self._resolve_selection(report_dir)
+        selection = self._resolve_selection(report_dir, complete=complete)
         # A cold cache seeds deterministically only when one process writes it:
         # parallel workers each resolve testmon against an evolving database and
         # xdist aborts with "Different tests were collected". Serialize the
