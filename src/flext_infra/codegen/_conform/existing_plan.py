@@ -164,6 +164,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     f"managed file requires exactly one render template: {managed.path}"
                 )
             entry = entries[0]
+            if entry.requires_beads and workspace.beads is None:
+                continue
             relative = Path(entry.destination)
             if relative.is_absolute() or ".." in relative.parts:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(

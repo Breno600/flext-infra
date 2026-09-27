@@ -2022,12 +2022,14 @@ Infra:
       # ledger is reached by the declared city endpoint, never by a link.
         - source: base/beads-config.yaml.j2
           destination: .beads/config.yaml
+          requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
       # Static repository-local storage, database, and endpoint projection.
         - source: base/beads-metadata.json.j2
           destination: .beads/metadata.json
+          requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
@@ -2109,6 +2111,7 @@ Infra:
       # rendered it could not be conformed at all.
         - source: base/config/beads.yaml.j2
           destination: config/beads.yaml
+          requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true
