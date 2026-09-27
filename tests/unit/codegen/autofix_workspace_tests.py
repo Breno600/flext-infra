@@ -15,7 +15,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra.codegen.fixer import FlextInfraCodegenFixer
-from tests import u
+from tests import c, u
 
 if TYPE_CHECKING:
     from tests import m
@@ -54,6 +54,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
             },
         )
         u.Tests.declare_workspace_projects(tmp_path, (managed_project.name,))
+        u.Tests.provision_runtime_tools(managed_project, c.Infra.RUFF)
         fixer = FlextInfraCodegenFixer(repository_root=tmp_path)
         results = fixer.fix_workspace()
         project_names = [res.project for res in results]

@@ -7,13 +7,10 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, ClassVar
+from typing import Annotated, ClassVar
 
 from flext_core import m, m as core_m
-from flext_infra import t
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import p, t
 
 
 class FlextInfraModelsEnforcement:

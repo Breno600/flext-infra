@@ -12,6 +12,14 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraUtilitiesProtectedEdit:
+    @pytest.fixture(autouse=True)
+    def provisioned_workspace(self, tmp_path: Path) -> None:
+        """The edited workspace is a checkout whose environment owns the tools."""
+        u.Tests.initialize_git_repo(tmp_path)
+        u.Tests.provision_runtime_tools(
+            tmp_path, c.Infra.RUFF, c.Infra.PYREFLY, c.Infra.PYTHON, c.Infra.PYTEST
+        )
+
     @pytest.mark.parametrize("batch", [False, True])
     def test_invalid_ruff_configuration_propagates_and_restores_source(
         self, tmp_path: Path, *, batch: bool

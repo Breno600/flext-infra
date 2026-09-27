@@ -21,6 +21,25 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         )
 
     @staticmethod
+    def provision_runtime_tools(root: Path, *tool_names: str) -> None:
+        """Expose the setup-provisioned tools in a fixture checkout's environment.
+
+        Managed tools resolve fail-closed from the checkout's runtime
+        environment (``u.Infra.runtime_environment_dir``). A fixture checkout
+        receives the real binaries this suite was provisioned with, linked
+        inside the pytest-managed tree; a missing tool fails the fixture.
+        """
+        provisioned = Path(sys.executable).parent
+        bin_dir = u.Infra.runtime_environment_dir(root) / provisioned.name
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        for name in tool_names:
+            source = provisioned / name
+            if not source.is_file():
+                msg = f"setup did not provision {name}: {source}"
+                raise FileNotFoundError(msg)
+            (bin_dir / name).symlink_to(source)
+
+    @staticmethod
     def make_read_only(path: Path) -> None:
         """Make one fixture path read-only."""
         path.chmod(0o444)
