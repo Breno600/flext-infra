@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, t
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 from ._canonical_t_import import FlextInfraEnsureCanonicalTImportMixin
+from .rope_transformer import FlextInfraRopeTransformer
 
 if TYPE_CHECKING:
     from pathlib import Path

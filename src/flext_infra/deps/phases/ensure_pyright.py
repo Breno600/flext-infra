@@ -246,12 +246,6 @@ class FlextInfraEnsurePyrightConfigPhase:
         )
         return validated
 
-    def _venv_settings(self, *, is_root: bool) -> t.StrMapping:
-        """Return the Pyright venv location for this topology."""
-        rules = self._tool_config.tools.pyright.path_rules
-        venv_path = "." if is_root else ".."
-        return {c.Infra.VENV_PATH: venv_path, "venv": rules.venv_name}
-
     def _expected_excludes(
         self, project_root: Path | None, analysis_exclusions: t.StrSequence | None
     ) -> t.StrSequence:

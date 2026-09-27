@@ -46,25 +46,11 @@ class FlextInfraUtilitiesPyprojectRequirements:
         cls,
         document: t.Cli.TomlDocument,
         *,
-        project_name: str,
         workspace: p.Infra.WorkspaceSpec,
-        workspace_mode: c.Infra.MakeProfile,
         canonicalize_all: bool,
+        declared_sources: t.StrMapping | None = None,
     ) -> p.Result[bool]:
-        """Render internal requirements for root workspace or detached operation."""
-        # Only the root expresses the active workspace overlay in its own
-        # requirements. A publishable project keeps its configured Git source
-        # so the same pyproject remains resolvable in a standalone checkout; uv
-        # replaces it with workspace=true from the workspace root.
-        workspace_dependencies = (
-            frozenset(project.distribution for project in workspace.subprojects)
-            if cls._is_workspace_context_root(
-                project_name=project_name,
-                workspace=workspace,
-                workspace_mode=workspace_mode,
-            )
-            else frozenset()
-        )
+        """Render internal requirements from their declared Git provenance."""
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
         normalized = cls._normalize_requirement_field(
             project,
@@ -73,7 +59,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             revisions=workspace.project.dependency_revisions
             if workspace.project
             else {},
-            workspace_dependencies=workspace_dependencies,
+            declared_sources=declared_sources or {},
         )
         if normalized.failure:
             return normalized
@@ -85,7 +71,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
                 revisions=workspace.project.dependency_revisions
                 if workspace.project
                 else {},
-                workspace_dependencies=workspace_dependencies,
+                declared_sources=declared_sources or {},
             )
             if group_result.failure:
                 return group_result
@@ -99,7 +85,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         *,
         canonicalize_all: bool,
         revisions: t.StrMapping,
-        workspace_dependencies: frozenset[str],
+        declared_sources: t.StrMapping,
     ) -> p.Result[bool]:
         """Normalize one dependency array and fail on model-less entries."""
         raw_value = u.Cli.toml_value(container, key)
@@ -117,7 +103,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         normalized_items: t.MutableSequenceOf[str] = []
         for item in items:
             normalized = cls._canonical_requirement(
-                item, revisions=revisions, workspace_dependencies=workspace_dependencies
+                item, revisions=revisions, declared_sources=declared_sources
             )
             if normalized.failure:
                 return r[bool].from_failure(normalized)
@@ -143,7 +129,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         requirement: str,
         *,
         revisions: t.StrMapping,
-        workspace_dependencies: frozenset[str],
+        declared_sources: t.StrMapping,
     ) -> p.Result[str]:
         """Render one internal requirement from its own declared Git source.
 
@@ -164,29 +150,26 @@ class FlextInfraUtilitiesPyprojectRequirements:
             return r[str].fail(f"invalid internal requirement: {requirement}")
         head = head_match.group("head").strip()
         marker_text = marker.strip()
-        if dependency_name in workspace_dependencies:
-            if "@" in requirement_part:
-                return r[str].fail(
-                    "workspace dependency declares a conflicting direct source: "
-                    f"{dependency_name}"
-                )
-            return r[str].ok(
-                f"{head}; {marker_text}" if separator and marker_text else head
-            )
         source = FlextInfraUtilitiesRepository.declared_git_source(requirement)
         if source.failure:
             return r[str].from_failure(source)
         url, declared_ref = source.value
         if not url:
-            return r[str].fail(
-                "internal flext dependency declares no direct git source and "
-                f"is not a workspace dependency: {dependency_name}"
+            declared = declared_sources.get(dependency_name)
+            if declared is None:
+                return r[str].fail(
+                    "internal flext dependency declares no direct git source: "
+                    f"{dependency_name}"
+                )
+            parsed = FlextInfraUtilitiesRepository.declared_git_source(
+                f"{head} @ {declared}"
             )
+            if parsed.failure:
+                return r[str].from_failure(parsed)
+            url, declared_ref = parsed.value
         ref = revisions.get(dependency_name, declared_ref)
-        # The declared source stays authoritative under a workspace root too:
-        # uv replaces it there with the root ``workspace = true`` overlay, and
-        # a member ``[tool.uv.sources]`` git entry is rejected by uv itself,
-        # so the inline form is the only valid dual-context declaration.
+        # The inline Git source is the sole provenance for each independent
+        # project lock, including the orchestration repository.
         inline = f"{head} @ git+{url}@{ref}"
         return r[str].ok(
             f"{inline}; {marker_text}" if separator and marker_text else inline
@@ -252,12 +235,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             )
         else:
             u.Cli.toml_remove_key_if_present(groups, "codegen")
-        cls._sync_workspace_dependency_group(
-            document,
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
-        )
+        cls._remove_workspace_dependency_group(document)
 
         if optional is not None:
             u.Cli.toml_remove_key_if_present(optional, str(c.Infra.DEV))
@@ -285,37 +263,14 @@ class FlextInfraUtilitiesPyprojectRequirements:
         )
 
     @classmethod
-    def _sync_workspace_dependency_group(
+    def _remove_workspace_dependency_group(
         cls,
         document: t.Cli.TomlDocument,
-        *,
-        project_name: str,
-        workspace: p.Infra.WorkspaceSpec,
-        workspace_mode: c.Infra.MakeProfile,
     ) -> None:
-        """Keep the generated workspace dependency group only at the root."""
-        repository_root = cls._is_workspace_context_root(
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
-        )
+        """Remove the retired workspace dependency group from every project."""
         groups = u.Cli.toml_table_child(document, c.Infra.DEPENDENCY_GROUPS)
-        if groups is None:
-            if not repository_root:
-                return
-            # The root dependency overlay is complete even when an older
-            # pyproject has no groups table yet.
-            groups = u.Cli.toml_ensure_table(document, c.Infra.DEPENDENCY_GROUPS)
-        if repository_root:
-            u.Cli.toml_sync_string_list(
-                groups,
-                "workspace",
-                tuple(
-                    sorted(project.distribution for project in workspace.subprojects)
-                ),
-            )
-            return
-        u.Cli.toml_remove_key_if_present(groups, "workspace")
+        if groups is not None:
+            u.Cli.toml_remove_key_if_present(groups, "workspace")
 
     @staticmethod
     def _is_topology_repository_root(
@@ -342,14 +297,11 @@ class FlextInfraUtilitiesPyprojectRequirements:
             )
         )
 
-    @classmethod
+    @staticmethod
     def _validate_dependency_provenance(
-        cls,
         document: t.Cli.TomlDocument,
         *,
-        project_name: str,
         workspace: p.Infra.WorkspaceSpec,
-        workspace_mode: c.Infra.MakeProfile,
     ) -> p.Result[bool]:
         """Require one internal dependency provenance for the active topology."""
         payload = u.Cli.toml_as_mapping(document)
@@ -362,11 +314,6 @@ class FlextInfraUtilitiesPyprojectRequirements:
         project = payload.get(c.Infra.PROJECT)
         if not isinstance(project, Mapping):
             return r[bool].fail("pyproject content must define [project]")
-        workspace_context_root = cls._is_workspace_context_root(
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
-        )
         for key in (c.Infra.DEPENDENCIES, c.Infra.OPTIONAL_DEPENDENCIES):
             value = project.get(key)
             if isinstance(value, Mapping):
@@ -382,20 +329,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
             dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
             if dependency_name not in member_names:
                 continue
-            # Root documents express the workspace overlay; publishable
-            # members keep the direct Git requirement so the same metadata
-            # resolves standalone. uv replaces it with the root workspace
-            # source when resolving the composed tree.
-            has_direct_source = "@" in requirement.partition(";")[0]
-            if workspace_context_root and has_direct_source:
-                return r[bool].fail(
-                    "workspace dependency declares a conflicting direct source: "
-                    f"{dependency_name}"
-                )
-            # Standalone provenance is manifest-owned: [tool.uv.sources] is
-            # rendered from the workspace member URL, so the requirement line
-            # stays a plain distribution name and the manifest URL must be
-            # HTTPS (fail-closed against ssh/file:// provenance).
+            # The manifest owns the Git URL; the requirement keeps its exact
+            # branch or locked revision in both root and standalone contexts.
             member = next(
                 (
                     item
@@ -409,6 +344,17 @@ class FlextInfraUtilitiesPyprojectRequirements:
                     "internal dependency manifest provenance must be HTTPS: "
                     f"{dependency_name} ({member.url})"
                 )
+            if member is not None and "@" in requirement.partition(";")[0]:
+                declared = FlextInfraUtilitiesRepository.declared_git_source(
+                    requirement
+                )
+                if declared.failure:
+                    return r[bool].from_failure(declared)
+                if declared.value[0] != member.url:
+                    return r[bool].fail(
+                        "internal dependency Git URL differs from manifest: "
+                        f"{dependency_name}"
+                    )
         return r[bool].ok(True)
 
 

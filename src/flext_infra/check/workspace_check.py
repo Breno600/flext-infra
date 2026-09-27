@@ -11,10 +11,8 @@ from flext_infra import c, config, m, p, t, u
 
 from ..base import FlextInfraServiceBase
 from ._workspace_check_reports import FlextInfraWorkspaceCheckReportsMixin
-from .workspace_check_gates import (
-    FlextInfraGateRegistry,
-    FlextInfraWorkspaceCheckGatesMixin,
-)
+from .gate_registry import FlextInfraGateRegistry
+from .workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
 
 
 class FlextInfraWorkspaceChecker(

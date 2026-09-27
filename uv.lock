@@ -394,7 +394,7 @@ wheels = [
 [[package]]
 name = "flext-cli"
 version = "0.12.0"
-source = { git = "https://github.com/flext-sh/flext-cli.git?rev=0.12.0-dev#61590846cf959631e681b934e4b37f46347530c1" }
+source = { git = "https://github.com/flext-sh/flext-cli.git?rev=0.12.0-dev#c249b14f6591e80b109770748f80d13ba42c1b7d" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },
@@ -421,7 +421,7 @@ dependencies = [
 [[package]]
 name = "flext-core"
 version = "0.12.0"
-source = { git = "https://github.com/flext-sh/flext-core.git?rev=0.12.0-dev#fe50ef07fd70c9ae333464c4f71a45b0568225e9" }
+source = { git = "https://github.com/flext-sh/flext-core.git?rev=0.12.0-dev#0e6ea41c090acdd2aa9c73e1ccfdf588cc0337a6" }
 dependencies = [
     { name = "annotated-types" },
     { name = "beartype" },

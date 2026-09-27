@@ -465,6 +465,11 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         @property
+        def ast_grep_selector(self) -> str:
+            """Mise selector for the ast-grep CLI."""
+            ...
+
+        @property
         def ast_grep_version(self) -> str:
             """Exact ast-grep analyzer version."""
             ...
@@ -671,7 +676,7 @@ class FlextInfraProtocolsBase(Protocol):
             """Load dependency limits from TOML file."""
             ...
 
-        def get_required_typings(
+        def analyze_required_typings(
             self, project_path: Path, limits_path: Path | None = None
         ) -> p.Result[m.Infra.TypingsReport]:
             """Get required typing libraries for a project."""

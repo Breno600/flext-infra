@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, infra, u
+from flext_infra import c, infra, m, u
 from flext_infra.transformers.import_modernizer import (
     FlextInfraRefactorImportModernizer,
 )

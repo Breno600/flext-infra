@@ -15,7 +15,7 @@ from typing import override
 
 from flext_infra import c, t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from .rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraRefactorCompatibilityAlias(FlextInfraRopeTransformer):

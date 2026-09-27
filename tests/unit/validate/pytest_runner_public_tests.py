@@ -81,6 +81,38 @@ class TestsFlextInfraPytestRunner:
             == names[-1]
         )
 
+    def test_worker_ceiling_defaults_without_declared_project(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A tree without ``[project].name`` takes the fleet-wide ceiling."""
+        policy = config.Infra.tooling.tools.pytest
+        runner = self._runner_for(cached_runner_project)
+        assert runner.parallel_worker_budget(policy) == policy.parallel_workers
+
+    def test_worker_ceiling_follows_the_declared_project_override(
+        self, cached_runner_project: Path
+    ) -> None:
+        """The runner resolves the declared project's override from the SSOT."""
+        policy = config.Infra.tooling.tools.pytest
+        assert policy.parallel_worker_overrides
+        declared_name = next(iter(policy.parallel_worker_overrides))
+        pyproject = cached_runner_project / "pyproject.toml"
+        pyproject.write_text(
+            pyproject.read_text(encoding="utf-8")
+            + f'\n[project]\nname = "{declared_name}"\nversion = "0.1.0"\n',
+            encoding="utf-8",
+        )
+        runner = self._runner_for(cached_runner_project)
+        report = (
+            cached_runner_project
+            / config.Infra.codegen.make.testmon_cache.reports_directory
+        )
+        budget = runner.parallel_worker_budget(policy)
+        assert budget == policy.parallel_worker_overrides[declared_name]
+        command = runner.build_command(report)
+        workers = command[command.index("-n") + 1]
+        assert workers == str(budget)
+
     @staticmethod
     def _runner_for(
         cached_runner_project: Path, *, ci_context: bool = False

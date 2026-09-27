@@ -102,17 +102,6 @@ class FlextInfraConfigModelsArtifact:
                 )
             ),
         ] = ()
-        fresh_import_entry_points_warn_only: Annotated[
-            bool,
-            m.Field(
-                description=(
-                    "Report declared console/gui script entry points that fail "
-                    "to import as fresh-import warnings instead of failing the "
-                    "conformance transaction; package-export probes always "
-                    "stay blocking"
-                )
-            ),
-        ] = False
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),

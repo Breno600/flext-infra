@@ -434,6 +434,9 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
+        examples_timeout_seconds: Annotated[
+            int, m.Field(gt=0, le=120, description="Workspace examples process deadline")
+        ]
         ruff: Annotated[
             FlextInfraConfigModelsMake.MakeRuffSpec,
             m.Field(description="Ruff CLI flags for fmt/fix/check Make verbs"),

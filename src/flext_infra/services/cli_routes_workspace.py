@@ -16,11 +16,11 @@ from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
 from flext_infra.workspace.orchestrator import FlextInfraOrchestratorService
 from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 
-from .cli_route_base import CliRouteBase
-from .cli_routes_refactor import RefactorRoutes
+from .cli_route_base import FlextInfraCliRouteBase
+from .cli_routes_refactor import FlextInfraRefactorRoutes
 
 
-class WorkspaceRoutes(RefactorRoutes):
+class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
     """Own refactor, release, and workspace routes."""
 
     @staticmethod
@@ -32,7 +32,7 @@ class WorkspaceRoutes(RefactorRoutes):
             consumer_root=params.repository_root,
             flext_root=params.flext_root,
             python=params.python,
-        ).map(CliRouteBase.as_route_value)
+        ).map(FlextInfraCliRouteBase.as_route_value)
 
     @staticmethod
     def _sync_environment(
@@ -43,19 +43,19 @@ class WorkspaceRoutes(RefactorRoutes):
             params.model_dump()
         )
         return FlextInfraWorkspaceEnvironmentSync.execute_request(request).map(
-            CliRouteBase.as_route_value
+            FlextInfraCliRouteBase.as_route_value
         )
 
     workspace_routes: ClassVar[
         MutableMapping[str, t.VariadicTuple[m.Cli.ResultCommandRoute]]
     ] = {
-        c.Infra.CLI_GROUP_REFACTOR: RefactorRoutes.refactor_routes,
+        c.Infra.CLI_GROUP_REFACTOR: FlextInfraRefactorRoutes.refactor_routes,
         c.Infra.CLI_GROUP_RELEASE: (
             m.Cli.ResultCommandRoute(
                 name=c.Infra.VERB_RUN,
                 help_text="Run release orchestration CLI flow",
                 model_cls=FlextInfraReleaseOrchestrator,
-                handler=CliRouteBase.result_handler(
+                handler=FlextInfraCliRouteBase.result_handler(
                     FlextInfraReleaseOrchestrator.execute_command
                 ),
                 success_message="Release completed successfully",
@@ -66,14 +66,14 @@ class WorkspaceRoutes(RefactorRoutes):
                 name="identity",
                 help_text="Report canonical Git checkout identity",
                 model_cls=m.Infra.GitRepoRequest,
-                handler=CliRouteBase.result_handler(u.Infra.git_identity),
+                handler=FlextInfraCliRouteBase.result_handler(u.Infra.git_identity),
                 success_message="workspace Git identity resolved",
             ),
             m.Cli.ResultCommandRoute(
                 name="verify-environment",
                 help_text="Verify live workspace editable provenance",
                 model_cls=m.Infra.WorkspaceEnvironmentRequest,
-                handler=CliRouteBase.result_handler(
+                handler=FlextInfraCliRouteBase.result_handler(
                     FlextInfraWorkspaceEnvironmentProvenance.execute_request
                 ),
                 success_message="workspace editable provenance verified",
@@ -97,7 +97,7 @@ class WorkspaceRoutes(RefactorRoutes):
                         "detect",
                         "Detect workspace or standalone mode",
                         FlextInfraWorkspaceDetector,
-                        CliRouteBase.result_handler(
+                        FlextInfraCliRouteBase.result_handler(
                             FlextInfraWorkspaceDetector.execute_command
                         ),
                     ),
@@ -105,7 +105,7 @@ class WorkspaceRoutes(RefactorRoutes):
                         "orchestrate",
                         "Run make verb across projects",
                         FlextInfraOrchestratorService,
-                        CliRouteBase.result_handler(
+                        FlextInfraCliRouteBase.result_handler(
                             FlextInfraOrchestratorService.execute_command
                         ),
                     ),
@@ -113,7 +113,7 @@ class WorkspaceRoutes(RefactorRoutes):
                         "propagate",
                         "Publish this workspace's flext-infra to every member",
                         FlextInfraWorkspacePropagation,
-                        CliRouteBase.result_handler(
+                        FlextInfraCliRouteBase.result_handler(
                             FlextInfraWorkspacePropagation.execute_command
                         ),
                     ),
@@ -129,4 +129,4 @@ class WorkspaceRoutes(RefactorRoutes):
     }
 
 
-__all__: list[str] = ["WorkspaceRoutes"]
+__all__: list[str] = ["FlextInfraWorkspaceRoutes"]

@@ -22,7 +22,7 @@ from flext_infra.refactor.signature_propagation import (
 from flext_infra.refactor.wrapper_root_namespace import (
     FlextInfraWrapperRootNamespaceRefactor,
 )
-from flext_infra.services.cli_route_base import CliRouteBase
+from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.transformers.dataclass_modelizer import (
     FlextInfraRefactorDataclassModelizer,
 )
@@ -31,7 +31,7 @@ from flext_infra.transformers.pydantic_modernizer import (
 )
 
 
-class RefactorRoutes(CliRouteBase):
+class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
     """Own the complete refactor command tuple."""
 
     refactor_routes: ClassVar[t.VariadicTuple[m.Cli.ResultCommandRoute]] = (
@@ -45,7 +45,7 @@ class RefactorRoutes(CliRouteBase):
             name="namespace-enforce",
             help_text="Scan workspace for namespace governance violations",
             model_cls=m.Infra.RefactorNamespaceEnforceInput,
-            handler=CliRouteBase.result_handler(
+            handler=FlextInfraCliRouteBase.result_handler(
                 FlextInfraNamespaceEnforcer.execute_command
             ),
         ),
@@ -53,7 +53,7 @@ class RefactorRoutes(CliRouteBase):
             name="census",
             help_text="Run a Rope-only workspace census for Python objects",
             model_cls=FlextInfraRefactorCensus,
-            handler=CliRouteBase.result_handler(
+            handler=FlextInfraCliRouteBase.result_handler(
                 FlextInfraRefactorCensus.execute_command
             ),
         ),
@@ -61,7 +61,7 @@ class RefactorRoutes(CliRouteBase):
             name="accessor-migrate",
             help_text="Preview or apply automated get_/set_/is_ migration",
             model_cls=m.Infra.AccessorMigrationInput,
-            handler=CliRouteBase.result_handler(
+            handler=FlextInfraCliRouteBase.result_handler(
                 FlextInfraAccessorMigrationOrchestrator.execute_payload
             ),
         ),
@@ -137,4 +137,4 @@ class RefactorRoutes(CliRouteBase):
     )
 
 
-__all__: list[str] = ["RefactorRoutes"]
+__all__: list[str] = ["FlextInfraRefactorRoutes"]

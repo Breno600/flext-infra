@@ -154,12 +154,12 @@ class FlextInfraProtocolsRope(Protocol):
         """Class contract shared by the Rope analysis mixins."""
 
         @staticmethod
-        def get_module_classes(
+        def resolve_module_classes(
             rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
         ) -> t.StrSequence: ...
 
         @staticmethod
-        def get_class_methods(
+        def resolve_class_methods(
             rope_project: t.Infra.RopeProject,
             resource: t.Infra.RopeResource,
             class_name: str,
@@ -177,7 +177,7 @@ class FlextInfraProtocolsRope(Protocol):
         def init_rope_workspace(repository_root: Path) -> t.Infra.RopeProject: ...
 
         @staticmethod
-        def get_resource_from_path(
+        def resolve_resource_from_path(
             rope_project: t.Infra.RopeProject, file_path: Path
         ) -> t.Infra.RopeResource | None: ...
 

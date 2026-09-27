@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraCodemodGate(FlextInfraGate):
-    """Report codemod rule findings observationally across every project."""
+    """Report codemod rule findings for the selected repository."""
 
     gate_id: ClassVar[str] = "codemod"
     gate_name: ClassVar[str] = "Codemod Enforcement"
@@ -36,8 +36,14 @@ class FlextInfraCodemodGate(FlextInfraGate):
     def check(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
-        """Run ast-grep scan with cascaded codemod rules."""
-        return self._execute_check_command(project_dir, ctx, (".",), time.monotonic())
+        """Run ast-grep only on this repository's first-class source roots."""
+        targets = (
+            *self._existing_check_dirs(project_dir),
+            *(path.name for path in project_dir.glob("*.py") if path.is_file()),
+        )
+        if not targets:
+            raise FileNotFoundError(project_dir)
+        return self._execute_check_command(project_dir, ctx, targets, time.monotonic())
 
     @override
     def check_files(

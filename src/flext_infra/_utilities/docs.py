@@ -72,7 +72,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             return [
                 path
                 for path in files
-                if not FlextInfraUtilitiesDocsScope.is_excluded_doc_path(
+                if not FlextInfraUtilitiesDocsScope.excluded_doc_path(
                     scope_root,
                     path.relative_to(scope_root / c.Infra.DIR_DOCS)
                     if path.is_relative_to(scope_root / c.Infra.DIR_DOCS)
@@ -85,7 +85,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             for path in files
             if not (
                 path.is_relative_to(docs_root)
-                and FlextInfraUtilitiesDocsScope.is_excluded_doc_path(
+                and FlextInfraUtilitiesDocsScope.excluded_doc_path(
                     scope_root, path.relative_to(docs_root)
                 )
             )

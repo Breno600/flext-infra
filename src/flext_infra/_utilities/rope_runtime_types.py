@@ -13,15 +13,15 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
     """Expose typed predicates for Rope runtime objects."""
 
     @classmethod
-    def is_resource(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopeResource]:
+    def file_resource(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopeResource]:
         return isinstance(value, cls.runtime_type("rope.base.resources", "File"))
 
     @classmethod
-    def is_pymodule(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyModule]:
+    def pymodule(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyModule]:
         return isinstance(value, cls.runtime_type("rope.base.pyobjectsdef", "PyModule"))
 
     @classmethod
-    def is_from_import(
+    def from_import_info(
         cls, value: p.AttributeProbe
     ) -> TypeGuard[t.Infra.RopeFromImport]:
         return isinstance(
@@ -30,7 +30,7 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         )
 
     @classmethod
-    def is_normal_import(
+    def normal_import_info(
         cls, value: p.AttributeProbe
     ) -> TypeGuard[t.Infra.RopeNormalImport]:
         return isinstance(
@@ -39,7 +39,7 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         )
 
     @classmethod
-    def is_assigned_name(
+    def assigned_name(
         cls, value: p.AttributeProbe
     ) -> TypeGuard[t.Infra.RopeAssignedName]:
         return isinstance(
@@ -47,13 +47,13 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         )
 
     @classmethod
-    def is_runtime_pyclass(
+    def runtime_pyclass(
         cls, value: p.AttributeProbe
     ) -> TypeGuard[t.Infra.RopePyObject]:
         return isinstance(value, cls.runtime_type("rope.base.pyobjects", "PyClass"))
 
     @classmethod
-    def is_abstract_class(
+    def abstract_class(
         cls, value: p.AttributeProbe
     ) -> TypeGuard[t.Infra.RopePyObject]:
         """Return whether ``value`` is a Rope abstract class object."""
@@ -62,24 +62,24 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         )
 
     @classmethod
-    def is_py_function(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
+    def py_function(cls, value: p.AttributeProbe) -> TypeGuard[t.Infra.RopePyObject]:
         """Return whether ``value`` is a Rope Python function object."""
         return isinstance(
             value, cls.runtime_type("rope.base.pyobjectsdef", "PyFunction")
         )
 
     @classmethod
-    def is_defined_name(cls, value: p.AttributeProbe) -> bool:
+    def defined_name(cls, value: p.AttributeProbe) -> bool:
         """Return whether ``value`` is a Rope defined name."""
         return isinstance(value, cls.runtime_type("rope.base.pynames", "DefinedName"))
 
     @classmethod
-    def is_imported_name(cls, value: p.AttributeProbe) -> bool:
+    def imported_name(cls, value: p.AttributeProbe) -> bool:
         """Return whether ``value`` is a Rope imported name."""
         return isinstance(value, cls.runtime_type("rope.base.pynames", "ImportedName"))
 
     @classmethod
-    def is_parameter_name(cls, value: p.AttributeProbe) -> bool:
+    def parameter_name(cls, value: p.AttributeProbe) -> bool:
         """Return whether ``value`` is a Rope parameter name."""
         return isinstance(
             value, cls.runtime_type("rope.base.pynamesdef", "ParameterName")

@@ -40,7 +40,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         if resource is None:
             msg = f"parent declaration source unavailable: {module_path}"
             raise ValueError(msg)
-        imports = u.Infra.get_declared_module_imports(
+        imports = u.Infra.resolve_declared_module_imports(
             self.rope_workspace.rope_project, resource
         )
         classes = u.Infra.class_info_from_source(resource.read())
@@ -103,7 +103,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         if resource is None:
             self._parent_package_cache[cache_key] = ()
             return ()
-        imports = u.Infra.get_declared_module_imports(
+        imports = u.Infra.resolve_declared_module_imports(
             self.rope_workspace.rope_project, resource
         )
         parents: list[str] = []

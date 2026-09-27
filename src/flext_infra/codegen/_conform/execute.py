@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Self, override
+from typing import Self, override
 
 from flext_core import r
 
@@ -19,44 +19,15 @@ from .. import (
 from .plan import FlextInfraCodegenConformPlan
 
 
-class _ConformExecuteRoles:
-    if TYPE_CHECKING:
-        request: m.Infra.CodegenConformRequest | None
-        repository_root: Path
-        initial_workspace: m.Infra.WorkspaceSpec | None
+class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
+    """Transactional execution of conformance plans.
 
-        def plan(
-            self, request: m.Infra.CodegenConformRequest
-        ) -> p.Result[m.Infra.CodegenPlan]: ...
-
-        @staticmethod
-        def mise_config_plans(
-            plan: m.Infra.CodegenPlan,
-        ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]: ...
-
-        def conform_workspace_beads_routes(
-            self, request: m.Infra.CodegenConformRequest
-        ) -> p.Result[bool]: ...
-
-        @staticmethod
-        def owned_docs_files(
-            request: m.Infra.CodegenConformRequest,
-            files: t.SequenceOf[m.Infra.CodegenFilePlan],
-        ) -> t.VariadicTuple[m.Infra.CodegenFilePlan]: ...
-
-        @classmethod
-        def _owned_docs_directories(
-            cls,
-            request: m.Infra.CodegenConformRequest,
-            plan: m.Infra.CodegenPlan,
-            directories: t.SequenceOf[Path],
-        ) -> t.VariadicTuple[Path]: ...
-
-
-class FlextInfraCodegenConformExecute(
-    _ConformExecuteRoles, FlextInfraCodegenConformPlan
-):
-    """Transactional execution of conformance plans."""
+    The chain is linear in dependency order, so execution statically inherits
+    everything it calls: bootstrap (service root, request state) <- gitignore
+    <- docs ownership <- beads routes <- file plans <- pyproject policy <-
+    context render <- artifact render <- existing plan <- scaffold plan <- plan
+    <- execute.
+    """
 
     @classmethod
     def execute_request(
@@ -313,7 +284,7 @@ class FlextInfraCodegenConformExecute(
         if prepared.failure:
             return r[m.Infra.CodegenResult].from_failure(prepared)
         try:
-            result = self._execute_managed_locked_cycles(
+            result = self._execute_managed_locked_prepared(
                 request, scope_root, transaction
             )
         except Exception as exc:
@@ -331,35 +302,6 @@ class FlextInfraCodegenConformExecute(
             )
         return result
 
-    def _execute_managed_locked_cycles(
-        self,
-        request: m.Infra.CodegenConformRequest,
-        scope_root: Path,
-        transaction: FlextInfraCodegenTransaction,
-    ) -> p.Result[m.Infra.CodegenResult]:
-        """Re-plan from the current tree while a mid-cycle source race persists."""
-        attempts = 0
-        result = r[m.Infra.CodegenResult].fail("unreached")
-        while attempts < c.Infra.CONFORM_SOURCE_RACE_CYCLES:
-            attempts += 1
-            result = self._execute_managed_locked_prepared(
-                request, scope_root, transaction
-            )
-            if result.success or not self._is_source_race(result.error):
-                return result
-            u.Cli.info(
-                "stage=publish mode=converge "
-                f"attempt={attempts}/{c.Infra.CONFORM_SOURCE_RACE_CYCLES} "
-                f"reason={result.error}; re-planning from current tree"
-            )
-        return result
-
-    @staticmethod
-    def _is_source_race(error: str | None) -> bool:
-        """Return whether one failure signature is a mid-cycle source mutation."""
-        message = error or ""
-        return any(marker in message for marker in c.Infra.CONFORM_SOURCE_RACE_MARKERS)
-
     def _lazy_phase(
         self, request: m.Infra.CodegenConformRequest
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
@@ -370,7 +312,14 @@ class FlextInfraCodegenConformExecute(
         ADR-014: lazy-init ownership stays inside conform's
         transaction.
         """
-        return FlextInfraCodegenLazyInit(repository_root=request.root).plan_files()
+        return FlextInfraCodegenLazyInit(
+            repository_root=request.root,
+            project_scope_root=(
+                request.root
+                if request.scope == c.Infra.CodegenConformScope.SELF
+                else None
+            ),
+        ).plan_files()
 
     def _execute_managed_locked_prepared(
         self,
@@ -598,6 +547,8 @@ class FlextInfraCodegenConformExecute(
         for entry in config.Infra.codegen.templates.entries:
             if profile not in entry.profiles:
                 continue
+            if entry.requires_beads and workspace.beads is None:
+                continue
             destination = entry.destination.format(
                 package_name=project.package_name, ns=project.namespace_attribute
             )
@@ -675,7 +626,9 @@ class FlextInfraCodegenConformExecute(
             return r[bool].ok(False)
         for root in sorted(roots):
             result = u.Cli.run_raw(
-                (c.Infra.CLI_DIRENV, "allow", str(root)), cwd=root, timeout=60
+                (c.Infra.CLI_DIRENV, "allow", str(root)),
+                cwd=root,
+                timeout=c.Infra.TIMEOUT_SHORT,
             )
             if result.failure:
                 return r[bool].from_failure(result)

@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import c as cli_c
+from flext_cli import FlextCliConstants
 
 from ._constants.base import FlextInfraConstantsBase
 from ._constants.census import FlextInfraConstantsCensus
@@ -28,7 +28,7 @@ from ._constants.source_code import FlextInfraConstantsSourceCode
 from ._constants.workspace import FlextInfraConstantsWorkspace
 
 
-class FlextInfraConstants(cli_c):
+class FlextInfraConstants(FlextCliConstants):
     """Infra constants facade — access via c.Infra.*."""
 
     class Infra(

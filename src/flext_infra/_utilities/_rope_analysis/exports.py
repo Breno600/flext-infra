@@ -83,7 +83,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         return name
 
     @staticmethod
-    def get_module_export_names(
+    def resolve_module_export_names(
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
         *,
@@ -108,7 +108,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         if cached is not None:
             export_names = cached
         else:
-            pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(rope_project, resource)
+            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
             export_names = FlextInfraUtilitiesRopeAnalysisExports._module_export_names(
                 export_options=resolved_export_options,
                 pymodule=pymodule,
@@ -277,7 +277,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
                 if name != c.Infra.DUNDER_ALL
                 and name.startswith("__")
                 and name.endswith("__")
-                and FlextInfraUtilitiesRopeRuntime.is_assigned_name(pyname)
+                and FlextInfraUtilitiesRopeRuntime.assigned_name(pyname)
                 and FlextInfraUtilitiesRopeAnalysisAstHelpers.local_name(
                     pyname, resource
                 )
@@ -295,7 +295,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         explicit_all_name = attributes.get(c.Infra.DUNDER_ALL)
         if (
             explicit_all_name is None
-            or not FlextInfraUtilitiesRopeRuntime.is_assigned_name(explicit_all_name)
+            or not FlextInfraUtilitiesRopeRuntime.assigned_name(explicit_all_name)
         ):
             return None
         assigned_all: t.Infra.RopeAssignedName = explicit_all_name
@@ -376,9 +376,9 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         guard_spans: t.SequenceOf[t.Pair[int, int]] = (),
     ) -> bool:
         """Return whether one Rope name is exportable under the options."""
-        if FlextInfraUtilitiesRopeRuntime.is_imported_name(pyname):
+        if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
             return False
-        if FlextInfraUtilitiesRopeRuntime.is_assigned_name(pyname):
+        if FlextInfraUtilitiesRopeRuntime.assigned_name(pyname):
             allow_assignments: bool = export_options.allow_assignments
             if not allow_assignments:
                 return False
@@ -391,12 +391,12 @@ class FlextInfraUtilitiesRopeAnalysisExports:
                 any(start <= line <= end for start, end in guard_spans)
                 for line in lines
             )
-        if not FlextInfraUtilitiesRopeRuntime.is_defined_name(pyname):
+        if not FlextInfraUtilitiesRopeRuntime.defined_name(pyname):
             return False
         obj = pyname.get_object()
-        if FlextInfraUtilitiesRopeRuntime.is_abstract_class(obj):
+        if FlextInfraUtilitiesRopeRuntime.abstract_class(obj):
             return True
-        if not FlextInfraUtilitiesRopeRuntime.is_py_function(obj):
+        if not FlextInfraUtilitiesRopeRuntime.py_function(obj):
             return False
         allow_main: bool = export_options.allow_main
         allow_functions: bool = export_options.allow_functions
@@ -454,7 +454,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         """Check a locally defined symbol; imported docs need module context."""
         pymodule = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(source)
         pyname = pymodule.get_attributes().get(symbol_name)
-        if pyname is None or not FlextInfraUtilitiesRopeRuntime.is_defined_name(pyname):
+        if pyname is None or not FlextInfraUtilitiesRopeRuntime.defined_name(pyname):
             return False
         obj = pyname.get_object()
         get_doc = getattr(obj, "get_doc", None)
