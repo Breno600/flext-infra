@@ -68,8 +68,13 @@ class FlextInfraDepsFloorProfileWriter:
             return ()
         (ssot_path,) = sources
 
-        # Round-trip load preserves comments and ordering
-        document = u.Cli.yaml_roundtrip_load_map(ssot_path).unwrap()
+        # Round-trip load preserves comments and ordering. A missing or
+        # unparseable owner is the same invalid-owner failure as a missing
+        # section below: one ValueError contract, original cause chained.
+        loaded = u.Cli.yaml_roundtrip_load_map(ssot_path)
+        if loaded.failure:
+            raise ValueError(loaded.error) from loaded.exception
+        document = loaded.value
 
         # Navigate to Infra.codegen.scaffold.project.dependency_profiles
         infra = document.get("Infra")
