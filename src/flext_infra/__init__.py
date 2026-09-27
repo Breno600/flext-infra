@@ -142,7 +142,6 @@ if TYPE_CHECKING:
     from .docs.server import FlextInfraDocServer
     from .docs.validator import FlextInfraDocValidator
     from .fixers.base import FlextInfraFixerAdapter
-    from .fixers.gate_fixer import FlextInfraGateFixerAdapter
     from .fixers.orchestrator import FlextInfraEnforcementFixerOrchestrator
     from .fixers.transformer_fixer import FlextInfraTransformerFixerAdapter
     from .gates.abstraction_boundary import FlextInfraAbstractionBoundaryGate
@@ -353,7 +352,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraGateContractReportMixin",
     "FlextInfraGateContractScanMixin",
     "FlextInfraGateContractValidator",
-    "FlextInfraGateFixerAdapter",
     "FlextInfraGateRegistry",
     "FlextInfraGitService",
     "FlextInfraImportAliasDetector",
@@ -636,7 +634,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".docs.validator": ("FlextInfraDocValidator",),
             ".fixers": ("fixers",),
             ".fixers.base": ("FlextInfraFixerAdapter",),
-            ".fixers.gate_fixer": ("FlextInfraGateFixerAdapter",),
             ".fixers.orchestrator": ("FlextInfraEnforcementFixerOrchestrator",),
             ".fixers.transformer_fixer": ("FlextInfraTransformerFixerAdapter",),
             ".gates": ("gates",),
