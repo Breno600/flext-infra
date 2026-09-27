@@ -146,10 +146,10 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         if resource is None:
             return r[t.Infra.RopeAstNode].fail(f"no rope resource for {path}")
         try:
-            pymodule = u.Infra.get_pymodule(rope_project, resource)
+            pymodule = u.Infra.resolve_pymodule(rope_project, resource)
         except c.EXC_OS_SYNTAX as exc:
             return r[t.Infra.RopeAstNode].fail(
-                f"get_pymodule raised: {exc!s}", exception=exc
+                f"resolve_pymodule raised: {exc!s}", exception=exc
             )
         ast_module = pymodule.get_ast()
         return r[t.Infra.RopeAstNode].ok(ast_module)

@@ -104,7 +104,7 @@ class TestsFlextInfraRopeSignaturePatch:
         module_path.write_text(source, encoding="utf-8")
 
         with FlextInfraRopeWorkspace.open_workspace(repository_root) as rope:
-            pymodule = u.Infra.get_string_module(
+            pymodule = u.Infra.build_string_module(
                 rope.rope_project, source, resource=rope.resource(module_path)
             )
             scope = u.Infra.scope_at(pymodule, source.index("values["))

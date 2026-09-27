@@ -676,7 +676,7 @@ class FlextInfraProtocolsBase(Protocol):
             """Load dependency limits from TOML file."""
             ...
 
-        def get_required_typings(
+        def analyze_required_typings(
             self, project_path: Path, limits_path: Path | None = None
         ) -> p.Result[m.Infra.TypingsReport]:
             """Get required typing libraries for a project."""

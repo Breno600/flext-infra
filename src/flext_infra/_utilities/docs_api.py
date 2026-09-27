@@ -388,12 +388,12 @@ class FlextInfraUtilitiesDocsApi:
                 )
                 if not module_file.exists():
                     continue
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, module_file
                 )
                 if resource is None:
                     continue
-                pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(
+                pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                     rope_project, resource
                 )
                 if export_name in pymodule.get_attributes():

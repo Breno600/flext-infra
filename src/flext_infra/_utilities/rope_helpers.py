@@ -14,7 +14,7 @@ class FlextInfraUtilitiesRopeHelpers(
     """Generic text, import-placement, and method-order helpers."""
 
     @staticmethod
-    def get_module_level_assignments(source: str) -> t.StrPairSequence:
+    def extract_module_level_assignments(source: str) -> t.StrPairSequence:
         """Return (name, value_str) for module-level simple assignments."""
         assignment_pattern = c.Infra.MODULE_ASSIGNMENT_RE
         results: list[t.StrPair] = []

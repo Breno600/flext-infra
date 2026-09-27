@@ -58,11 +58,11 @@ class FlextInfraRefactorClassvarConstantAutofix:
         class_module, class_name = class_full_name.rsplit(".", maxsplit=1)
         source_mod = project.get_module(class_module, project.root)
         source_resource = source_mod.get_resource()
-        if not u.Infra.is_resource(source_resource):
+        if not u.Infra.file_resource(source_resource):
             msg = f"{class_module} did not resolve to a file resource"
             raise TypeError(msg)
         pyclass = source_mod.get_attribute(class_name).get_object()
-        if not u.Infra.is_runtime_pyclass(pyclass):
+        if not u.Infra.runtime_pyclass(pyclass):
             msg = f"{class_full_name} did not resolve to a class"
             raise TypeError(msg)
         source_text = source_resource.read()
@@ -269,7 +269,7 @@ class FlextInfraRefactorClassvarConstantAutofix:
         if len(candidates) != 1:
             msg = f"constants module {constants_module} has multiple canonical owners"
             raise TypeError(msg)
-        target_resource = u.Infra.get_resource_from_path(project, candidates[0])
+        target_resource = u.Infra.resolve_resource_from_path(project, candidates[0])
         if target_resource is None:
             msg = f"constants module {constants_module} is outside the Rope project"
             raise TypeError(msg)
