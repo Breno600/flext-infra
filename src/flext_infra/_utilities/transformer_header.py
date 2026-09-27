@@ -105,9 +105,7 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
             module.body[1:] if ast.get_docstring(module) is not None else module.body
         )
         expected = (
-            frozenset({alias})
-            if alias is not None
-            else c.Infra.ENFORCEMENT_CANONICAL_ALIASES
+            frozenset({alias}) if alias is not None else c.ENFORCEMENT_CANONICAL_ALIASES
         )
         for node in header:
             if not isinstance(node, ast.ImportFrom | ast.Import):

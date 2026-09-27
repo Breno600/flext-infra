@@ -114,6 +114,9 @@ class FlextInfraConfigModelsContexts:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Platforms carried by artifact-tool lock entries"),
         ]
+        npm_package_manager: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise installer for npm CLIs")
+        ]
         qlty_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Configured Mise selector for qlty")
         ]
@@ -122,6 +125,9 @@ class FlextInfraConfigModelsContexts:
         ]
         prettier_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Configured Mise selector for Prettier")
+        ]
+        ast_grep_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for ast-grep")
         ]
         scc_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Configured Mise selector for scc")
@@ -505,6 +511,9 @@ class FlextInfraConfigModelsContexts:
         ]
         taplo_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
+        ]
+        ast_grep_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")
         ]
         ast_grep_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact ast-grep analyzer version")

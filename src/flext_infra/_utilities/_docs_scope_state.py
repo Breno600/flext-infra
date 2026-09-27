@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 
 from flext_cli import u
@@ -19,7 +20,7 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
 
     @staticmethod
     def _project_state(project_root: Path) -> mw.ProjectPyprojectState:
-        """Return freshly parsed pyproject state for one project root.
+        """Return project state bound to the current authenticated file bytes.
 
         When the pyproject is absent or empty, the returned state carries
         empty ``project_name``/``package_name`` (legitimate "not a project"
@@ -34,11 +35,21 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             raise ValueError(
                 snapshot.error or f"cannot inspect docs pyproject: {pyproject_path}"
             )
-        if snapshot.value.content is None:
+        return FlextInfraUtilitiesDocsScopeStateMixin._state_from_content(
+            root, pyproject_path, snapshot.value.content
+        ).model_copy(deep=True)
+
+    @staticmethod
+    @lru_cache(maxsize=128)
+    def _state_from_content(
+        root: Path, pyproject_path: Path, content: bytes | None
+    ) -> mw.ProjectPyprojectState:
+        """Parse once per byte-identical canonical pyproject snapshot."""
+        if content is None:
             payload: t.JsonMapping = {}
         else:
             try:
-                source = snapshot.value.content.decode(c.Cli.ENCODING_DEFAULT)
+                source = content.decode(c.Cli.ENCODING_DEFAULT)
             except UnicodeDecodeError as exc:
                 msg = f"docs pyproject is not valid UTF-8: {pyproject_path}"
                 raise ValueError(msg) from exc

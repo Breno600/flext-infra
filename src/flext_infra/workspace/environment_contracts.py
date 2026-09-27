@@ -8,12 +8,14 @@ after every generated write so a regression can never land silently.
 from __future__ import annotations
 
 import os
-import pwd
 import re
 from pathlib import Path
 from typing import Final
 
 from flext_infra import c, t
+
+if os.name != "nt":
+    import pwd
 
 _UNGUARDED_DIRENV_DIR: Final[re.Pattern[str]] = re.compile(
     r"\$\{?DIRENV_DIR(?![\s]*[:\-])"
@@ -73,8 +75,12 @@ class FlextInfraWorkspaceEnvironmentContracts:
             # under redirected homes where the referenced files legitimately
             # live only in the real account.
 
-            real_home = pwd.getpwuid(os.getuid()).pw_dir
-            return Path(real_home) / candidate.lstrip("/")
+            real_home = (
+                Path.home()
+                if os.name == "nt"
+                else Path(pwd.getpwuid(os.getuid()).pw_dir)
+            )
+            return real_home / candidate.lstrip("/")
         resolved = Path(candidate)
         if not resolved.is_absolute():
             resolved = root / resolved

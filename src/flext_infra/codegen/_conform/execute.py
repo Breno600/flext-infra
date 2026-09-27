@@ -313,7 +313,7 @@ class FlextInfraCodegenConformExecute(
         if prepared.failure:
             return r[m.Infra.CodegenResult].from_failure(prepared)
         try:
-            result = self._execute_managed_locked_cycles(
+            result = self._execute_managed_locked_prepared(
                 request, scope_root, transaction
             )
         except Exception as exc:
@@ -331,35 +331,6 @@ class FlextInfraCodegenConformExecute(
             )
         return result
 
-    def _execute_managed_locked_cycles(
-        self,
-        request: m.Infra.CodegenConformRequest,
-        scope_root: Path,
-        transaction: FlextInfraCodegenTransaction,
-    ) -> p.Result[m.Infra.CodegenResult]:
-        """Re-plan from the current tree while a mid-cycle source race persists."""
-        attempts = 0
-        result = r[m.Infra.CodegenResult].fail("unreached")
-        while attempts < c.Infra.CONFORM_SOURCE_RACE_CYCLES:
-            attempts += 1
-            result = self._execute_managed_locked_prepared(
-                request, scope_root, transaction
-            )
-            if result.success or not self._is_source_race(result.error):
-                return result
-            u.Cli.info(
-                "stage=publish mode=converge "
-                f"attempt={attempts}/{c.Infra.CONFORM_SOURCE_RACE_CYCLES} "
-                f"reason={result.error}; re-planning from current tree"
-            )
-        return result
-
-    @staticmethod
-    def _is_source_race(error: str | None) -> bool:
-        """Return whether one failure signature is a mid-cycle source mutation."""
-        message = error or ""
-        return any(marker in message for marker in c.Infra.CONFORM_SOURCE_RACE_MARKERS)
-
     def _lazy_phase(
         self, request: m.Infra.CodegenConformRequest
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
@@ -370,7 +341,14 @@ class FlextInfraCodegenConformExecute(
         ADR-014: lazy-init ownership stays inside conform's
         transaction.
         """
-        return FlextInfraCodegenLazyInit(repository_root=request.root).plan_files()
+        return FlextInfraCodegenLazyInit(
+            repository_root=request.root,
+            project_scope_root=(
+                request.root
+                if request.scope == c.Infra.CodegenConformScope.SELF
+                else None
+            ),
+        ).plan_files()
 
     def _execute_managed_locked_prepared(
         self,
@@ -675,7 +653,9 @@ class FlextInfraCodegenConformExecute(
             return r[bool].ok(False)
         for root in sorted(roots):
             result = u.Cli.run_raw(
-                (c.Infra.CLI_DIRENV, "allow", str(root)), cwd=root, timeout=60
+                (c.Infra.CLI_DIRENV, "allow", str(root)),
+                cwd=root,
+                timeout=c.Infra.TIMEOUT_SHORT,
             )
             if result.failure:
                 return r[bool].from_failure(result)

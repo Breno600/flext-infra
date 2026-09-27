@@ -7,14 +7,6 @@ Infra:
     # validate-git-hook.sh).
     retired_projections: [.github/scripts/install-git-hooks.sh]
 
-    # Operator law 2026-09-22: the pyproject template declares `.cli:main`
-    # for every distribution while most member cli facades predate that
-    # contract. Until the fleet converges the facades (bead
-    # flext-1pquc, gen-fixed-point campaign), declared-script import
-    # failures warn instead of failing the conformance transaction.
-    # Package-export probes stay blocking either way.
-    fresh_import_entry_points_warn_only: true
-
     # Per-module scc code-LOC ceiling. Operator instruction 2026-09-07:
     # the former 1000-LOC allowance stands (supersedes the 200 constant).
     loc_cap:
@@ -63,7 +55,13 @@ Infra:
       kind_version: latest
       direnv_version: latest
       taplo_version: latest
+      # The npm CLI publishes a native musl binary; the GitHub CLI release does
+      # not. One selector therefore covers the declared Linux libc variants.
+      ast_grep_selector: npm:@ast-grep/cli
       ast_grep_version: latest
+      # ast-grep's native binary is selected by its npm lifecycle script.
+      # Mise's embedded aube installer omits it and emits a warning per scan.
+      npm_package_manager: aube
       gitleaks_version: latest
       kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
@@ -81,6 +79,7 @@ Infra:
       # mise safe mode ignores project [settings].
       mise_lockfile_platforms:
         - linux-x64
+        - linux-x64-musl
         - linux-arm64
         - macos-x64
         - macos-arm64
@@ -99,6 +98,7 @@ Infra:
       # one per platform, so `mise lock` recorded no URL for them.
       jscpd_asset_patterns:
         linux-x64: jscpd-linux-x64-gnu.tar.gz
+        linux-x64-musl: jscpd-linux-x64-musl.tar.gz
         linux-arm64: jscpd-linux-arm64-gnu.tar.gz
         macos-x64: jscpd-darwin-x64.tar.gz
         macos-arm64: jscpd-darwin-arm64.tar.gz
@@ -352,6 +352,7 @@ Infra:
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
       fmt_gates: [markdown-format]
+      check_gate_suspensions: []
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /
       # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
@@ -395,8 +396,8 @@ Infra:
         # CI=N owns the complementary local check gates; absent uses testmon
         # for incremental developer runs.
         #
-        # The set is the SLOW whole-program type checkers, matching
-        # PROJECT_CHECK_GATES_LOCAL_VALUES: those are the gates worth deferring
+        # The set is the SLOW whole-program type checkers: those are the gates
+        # worth deferring
         # off the fast CI leg, and they are what CI=N exists to own. `lint` is
         # not here -- ruff is cheap, so making CI skip it buys nothing and
         # leaves the fast leg without a linter.
@@ -578,8 +579,8 @@ Infra:
     # mro-operator-20260918b: governance content (.agents/.claude) and direnv
     # runtime state stay visible to the editor and watcher — removed from the
     # default vscode/watch excludes; source_scan keeps its dotdir skip.
-      - {name: .agents, vscode_exclude: false, watch_exclude: false}
-      - {name: .beads}
+      - {name: .agents, source_scan_ignore: true, vscode_exclude: false, watch_exclude: false}
+      - {name: .beads, source_scan_ignore: true}
       - {name: .benchmarks}
     # mro-0wuz: archive-not-delete target for the layout engine; the generated
     # .gitignore projection must never track archived loose files.
@@ -1046,6 +1047,13 @@ Infra:
       - path: .python-version
         owner: codegen
         policy: full
+    # The docs auditor's placeholder/forbidden-term lists are fleet policy: one
+    # template owns them, so the placeholder and forbidden-term checks in
+    # _auditor_checks.py enforce on every governed repository instead of
+    # silently reading an absent file as empty lists.
+      - path: docs/docs_config.json
+        owner: codegen
+        policy: full
     # Qlty refuses to scan without a repository configuration. Keep the
     # blocking smells posture fleet-wide and generated from this SSOT.
       - path: .qlty/qlty.toml
@@ -1242,7 +1250,7 @@ Infra:
             runtime: [flext-web, httpx>=0.28.1, msgpack>=1.2.2]
           - upstream: flext_core
             project: flext-auth
-            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.14.0]
+            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.0]
           - upstream: flext_core
             project: flext-cli
           # click floor mirrors the shared fleet lock (8.3.3); meltano upstream
@@ -1259,19 +1267,19 @@ Infra:
             runtime: [flext-cli, grpcio>=1.84.0]
           - upstream: flext_cli
             project: flext-observability
-            runtime: [flext-cli, flask>=3.1.3, starlette>=1.6.0, psutil>=7.2.2]
+            runtime: [flext-cli, flask>=3.1.3, starlette>=1.7.0, psutil>=7.2.2]
           - upstream: flext_cli
             project: flext-plugin
             runtime: [flext-cli]
           - upstream: flext_cli
             project: flext-quality
-            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.5, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
+            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.53.0, fastapi>=0.141.1, starlette>=1.6.0, werkzeug>=3.1.8]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.8]
           - upstream: flext_cli
             project: flext-db-oracle
-            runtime: [flext-cli, oracledb>=26.0.0, sqlalchemy>=2.0.54]
+            runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]
           - upstream: flext_cli
             project: flext-ldif
             runtime: [flext-cli]
@@ -1966,6 +1974,13 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true
+      # Static docs-auditor policy: no Jinja vars; the docs scope policy and
+      # the auditor read it as data (docs_policy_list).
+        - source: base/docs/docs_config.json.j2
+          destination: docs/docs_config.json
+          profiles: [workspace, standalone]
+          delegate: render
+          overwrite: false
         - source: base/gitignore.j2
           destination: .gitignore
           profiles: [workspace, standalone]
