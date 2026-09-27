@@ -219,6 +219,7 @@ class FlextInfraConstantsCodegen(
         "MISE_GITHUB_TOKEN",
         "MISE_GITHUB_CREDENTIAL_COMMAND",
         "MISE_HTTP_TIMEOUT",
+        "FLEXT_MYPY_PROFILE_OUTPUT",
         # Launcher pin knob: hosts whose curl resolves through Mise shims
         # cannot resolve "latest" inside the sanitized bootstrap env; an
         # explicit MISE_VERSION skips that resolution entirely.

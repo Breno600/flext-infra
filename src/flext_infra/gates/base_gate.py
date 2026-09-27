@@ -115,7 +115,7 @@ class FlextInfraGate:
             remove_env_keys=self._check_remove_env_keys(project_dir, ctx),
         )
         if u.Cli.process_succeeded(result.outcome):
-            self._validate_check_report(project_dir, ctx, targets)
+            self._validate_check_report(result, project_dir, ctx, targets)
         return self._parsed_gate_execution(project_dir, ctx, result, started)
 
     @classmethod
@@ -385,10 +385,14 @@ class FlextInfraGate:
         return None
 
     def _validate_check_report(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
     ) -> None:
         """Validate native execution evidence against the exact submitted targets."""
-        _ = project_dir, ctx, targets
+        _ = result, project_dir, ctx, targets
 
     def _check_env(
         self, project_dir: Path, ctx: m.Infra.GateContext
