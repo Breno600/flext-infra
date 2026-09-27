@@ -197,6 +197,17 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
             project_dir, name
         )
+        # Provider identity is declared, never a checkout path: the governed
+        # HTTPS URL is the origin the manifest carries, so the workspace the
+        # detector loads satisfies the canonical-HTTPS provider gate (a bare
+        # ``str(root)`` origin reads as a path, not an identity).
+        TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(
+            project_dir,
+            origin_url=(
+                f"{TestsFlextInfraUtilitiesProjectFixtureMixin.provider().base_url.rstrip('/')}/"
+                f"{name}.git"
+            ),
+        )
         origin = tm.ok(
             u.Infra.git_remote_url(
                 m.Infra.GitRemoteUrlRequest(
