@@ -129,27 +129,20 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
         *,
         objects: t.VariadicTuple[m.Infra.Object] | None,
         project_name: str,
-        applied: frozenset[str],
-        kind_names: t.StrSequence | None,
-        rule_names: t.StrSequence | None,
-        selected_kinds: frozenset[str] | None = None,
-        selected_rules: frozenset[str] | None = None,
-        convention: m.Infra.RopeModuleConvention | None = None,
+        scan_config: m.Infra.ScanConfig,
     ) -> t.Pair[t.VariadicTuple[m.Infra.Violation], t.VariadicTuple[m.Infra.Fix]]:
         """Run every selected structural rule for one module and collect outcomes."""
-        resolved_convention = convention or rope.convention(file_path)
-        resolved_kinds = (
-            selected_kinds
-            if selected_kinds is not None
-            else (frozenset(kind_names) if kind_names else frozenset())
-        )
+        resolved_convention = rope.convention(file_path)
+        resolved_kinds = scan_config.selected_kinds or frozenset()
         symbol_index = self._lightweight_symbol_index(rope, file_path)
         violations: list[m.Infra.Violation] = []
         fixes: list[m.Infra.Fix] = []
 
         def selected(rule_name: str) -> bool:
             return self._include_rule(
-                rule_name, rule_names=rule_names, selected_rules=selected_rules
+                rule_name,
+                rule_names=scan_config.rule_names,
+                selected_rules=scan_config.selected_rules,
             )
 
         def run(rule_name: str, rule: p.Infra.CensusModuleRule) -> None:
@@ -160,7 +153,7 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
                 file_path,
                 project_name=project_name,
                 objects=objects,
-                applied=applied,
+                applied=scan_config.applied,
                 selected_kinds=resolved_kinds,
                 symbol_index=symbol_index,
                 convention=resolved_convention,
@@ -175,7 +168,7 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
                 file_path,
                 project_name=project_name,
                 objects=objects,
-                applied=applied,
+                applied=scan_config.applied,
                 selected_kinds=resolved_kinds,
                 convention=resolved_convention,
             )
@@ -190,10 +183,10 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
             rope,
             file_path,
             project_name=project_name,
-            applied=applied,
+            applied=scan_config.applied,
             selected_kinds=resolved_kinds,
-            selected_rules=selected_rules,
-            rule_names=rule_names,
+            selected_rules=scan_config.selected_rules,
+            rule_names=scan_config.rule_names,
             convention=resolved_convention,
         )
         violations.extend(v)

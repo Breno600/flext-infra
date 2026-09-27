@@ -53,12 +53,8 @@ class FlextInfraAccessorMigrationRewriteMixin:
         changes: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
         for rule in self._AUTOMATED_RULES:
             updated_source, rule_changes = self._rename_symbol_tokens(
-                rope_project,
-                resource,
                 updated_source,
-                source_name=rule.source_name,
-                replacement_name=rule.replacement_name,
-                reason=rule.reason,
+                rule=rule,
                 file_path=py_file,
             )
             changes.extend(rule_changes)
@@ -66,41 +62,35 @@ class FlextInfraAccessorMigrationRewriteMixin:
 
     @staticmethod
     def _rename_symbol_tokens(
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
         source: str,
         *,
-        source_name: str,
-        replacement_name: str,
-        reason: str,
+        rule: m.Infra.AccessorMigrationRule,
         file_path: Path,
     ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]:
         """Rename symbol tokens."""
         token_lines: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
         rewrite_ranges: t.MutableSequenceOf[t.Triple[int, int, str]] = []
         for token in generate_tokens(io.StringIO(source).readline):
-            if token.type != NAME or token.string != source_name:
+            if token.type != NAME or token.string != rule.source_name:
                 continue
             line, column = token.start
             start = FlextInfraAccessorMigrationRewriteMixin._offset_from_position(
                 source, line, column
             )
-            end = start + len(source_name)
-            rewrite_ranges.append((start, end, replacement_name))
+            end = start + len(rule.source_name)
+            rewrite_ranges.append((start, end, rule.replacement_name))
             token_lines.append(
                 m.Infra.AccessorMigrationChange(
                     file=str(file_path),
                     line=line,
-                    original_name=source_name,
-                    replacement_name=replacement_name,
+                    original_name=rule.source_name,
+                    replacement_name=rule.replacement_name,
                     automated=True,
-                    reason=reason,
+                    reason=rule.reason,
                 )
             )
         if not rewrite_ranges:
             return source, ()
-        del rope_project
-        del resource
         updated_source = source
         for start, end, replacement in sorted(
             rewrite_ranges, key=itemgetter(0), reverse=True

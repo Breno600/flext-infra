@@ -125,12 +125,7 @@ class FlextInfraRefactorCensusCollectMixin(
                 module.file_path,
                 objects=module_objects,
                 project_name=project,
-                applied=scan_config.applied,
-                kind_names=scan_config.kind_names,
-                rule_names=scan_config.rule_names,
-                selected_kinds=scan_config.selected_kinds,
-                selected_rules=scan_config.selected_rules,
-                convention=convention,
+                scan_config=scan_config,
             )
         except _ROPE_SAFE_EXCEPTIONS as exc:
             self._handle_rope_stage_failure(
