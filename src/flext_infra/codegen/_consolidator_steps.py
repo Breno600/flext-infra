@@ -60,14 +60,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         rope_project: t.Infra.RopeProject,
         python_file: Path,
         value_map: t.StrMapping,
-    ) -> (
-        t.Triple[
-            t.Infra.RopeResource,
-            str,
-            t.SequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]],
-        ]
-        | None
-    ):
+    ) -> m.Infra.ConsolidatorScannedFile | None:
         """Scan file."""
         resource = u.Infra.resolve_resource_from_path(rope_project, python_file)
         if resource is None:
@@ -80,7 +73,9 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         matches = self._match_assignments(assignments, source.splitlines(), value_map)
         if not matches:
             return None
-        return (resource, source, matches)
+        return m.Infra.ConsolidatorScannedFile(
+            resource=resource, source=source, matches=matches
+        )
 
     @staticmethod
     def _match_assignments(
@@ -116,19 +111,19 @@ class FlextInfraCodegenConsolidatorStepsMixin:
     def _apply_and_validate(
         cls,
         rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        scanned: m.Infra.ConsolidatorScannedFile,
         py_file: Path,
         workspace: Path,
         pkg_name: str,
-        backup: str,
-        matches: t.SequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]],
     ) -> t.Infra.EditResultWithDescs:
         """Apply and validate."""
+        resource = scanned.resource
+        backup = scanned.source
         src_lines = backup.splitlines(keepends=True)
         rel = py_file.relative_to(workspace)
         edits: t.MutableSequenceOf[t.Triple[int, int, str]] = []
         descs: t.MutableSequenceOf[str] = []
-        for symbol, ref, value in matches:
+        for symbol, ref, value in scanned.matches:
             line_number = symbol.line
             if line_number < 1 or line_number > len(src_lines):
                 continue

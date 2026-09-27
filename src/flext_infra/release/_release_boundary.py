@@ -91,27 +91,31 @@ class FlextInfraReleaseBoundaryMixin(FlextInfraProjectSelectionServiceBase[bool]
 
     @staticmethod
     def _record(
-        name: str,
-        path: Path,
+        target: t.Pair[str, Path],
         log: Path,
         *,
         exit_code: int,
         artifacts: t.SequenceOf[m.Infra.BuildArtifact] = (),
-        snapshot: m.Infra.SourceSnapshot | None = None,
-        source_license_sha256: str | None = None,
+        source: t.Pair[m.Infra.SourceSnapshot, str] | None = None,
     ) -> m.Infra.BuildRecord:
-        """Model one strict build record with absolute paths."""
+        """Model one strict build record with absolute paths.
+
+        ``target`` is the release target (project name, project path);
+        ``source`` is the staged source provenance -- its committed snapshot
+        and LICENSE digest -- which a record carries completely or not at all.
+        """
+        name, path = target
         return m.Infra.BuildRecord(
             project=name,
             path=str(path.resolve()),
             exit_code=exit_code,
             log=str(log.resolve()),
             artifacts=tuple(artifacts),
-            commit_oid=snapshot.commit_oid if snapshot is not None else None,
-            source_date_epoch=snapshot.source_date_epoch
-            if snapshot is not None
+            commit_oid=source[0].commit_oid if source is not None else None,
+            source_date_epoch=source[0].source_date_epoch
+            if source is not None
             else None,
-            source_license_sha256=source_license_sha256,
+            source_license_sha256=source[1] if source is not None else None,
         )
 
 

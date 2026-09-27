@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableSet
+from pathlib import Path
 from typing import Annotated, ClassVar
 
 from flext_core import m
-from flext_infra import c, t
+from flext_infra import c, p, t
 
 from .mixins import FlextInfraModelsMixins as mm
+from .rope import FlextInfraModelsRope
 
 
 class FlextInfraModelsCensus:
@@ -207,6 +210,69 @@ class FlextInfraModelsCensus:
         ]
         applied: Annotated[
             frozenset[str], m.Field(description="Fix keys already applied")
+        ]
+
+    class ModuleScan(mm.ProjectNameMixin, m.ArbitraryTypesModel):
+        """One module under census: its Rope session, identity, and scan filters.
+
+        Every structural census rule reads the same resolved module facts, so
+        the collector resolves them once and hands this scan to each rule.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        rope: Annotated[
+            p.Infra.RopeWorkspaceDsl,
+            m.Field(description="Shared Rope workspace session scanning the module"),
+        ]
+        file_path: Annotated[Path, m.Field(description="Module file under census")]
+        convention: Annotated[
+            FlextInfraModelsRope.RopeModuleConvention,
+            m.Field(description="Resolved naming and namespace convention"),
+        ]
+        objects: Annotated[
+            t.VariadicTuple[FlextInfraModelsCensus.Object] | None,
+            m.Field(
+                description="Module object inventory; None when it is not collected"
+            ),
+        ]
+        symbol_index: Annotated[
+            t.MappingKV[str, t.Pair[str, int]],
+            m.Field(description="Top-level symbol name to its (kind, line)"),
+        ]
+        scan_config: Annotated[
+            FlextInfraModelsCensus.ScanConfig,
+            m.Field(description="Resolved scan configuration of the collect"),
+        ]
+
+    class ScanFindings(m.ArbitraryTypesModel):
+        """Per-project census findings accumulated across the scanned modules.
+
+        The collector shares these accumulators with every module scan and
+        then assembles the workspace report from them.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        project_objects: Annotated[
+            t.MutableMappingKV[
+                str, t.MutableSequenceOf[FlextInfraModelsCensus.Object]
+            ],
+            m.Field(description="Object inventory accumulated per project"),
+        ]
+        project_violations: Annotated[
+            t.MutableMappingKV[
+                str, t.MutableSequenceOf[FlextInfraModelsCensus.Violation]
+            ],
+            m.Field(description="Rule violations accumulated per project"),
+        ]
+        project_fixes: Annotated[
+            t.MutableMappingKV[str, t.MutableSequenceOf[FlextInfraModelsCensus.Fix]],
+            m.Field(description="Proposed or applied fixes accumulated per project"),
+        ]
+        report_projects: Annotated[
+            MutableSet[str],
+            m.Field(description="Projects whose modules produced a census outcome"),
         ]
 
     class DuplicateGroup(m.ArbitraryTypesModel):

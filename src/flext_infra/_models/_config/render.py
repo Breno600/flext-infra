@@ -321,3 +321,25 @@ class FlextInfraConfigModelsRender:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Excluded transitive dependency names"),
         ]
+
+    class UvResolutionSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Resolver keys conform owns in one project's ``[tool.uv]`` table.
+
+        Every key is declared: an empty sequence removes it from the table.
+        """
+
+        link_mode: Annotated[str, m.Field(description="uv installation link mode")]
+        constraint_dependencies: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Declared constraints; the uv pin is never kept"),
+        ]
+        exclude_dependencies: Annotated[
+            t.VariadicTuple[
+                FlextInfraConfigModelsRender.UvScopedDependencyExclusionSpec
+            ],
+            m.Field(description="Scoped dependency exclusions routed to the project"),
+        ]
+        environments: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Resolved environment markers uv resolves for"),
+        ]

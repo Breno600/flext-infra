@@ -58,8 +58,7 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
                     scanned = self._scan_file(rope.rope_project, python_file, value_map)
                     if scanned is None:
                         continue
-                    resource, source, matches = scanned
-                    found += len(matches)
+                    found += len(scanned.matches)
                     rel_path = python_file.relative_to(self.repository_root)
                     if self.dry_run:
                         output_lines.extend(
@@ -67,17 +66,15 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
                                 f"  {rel_path}:{symbol.line}  {symbol.name} = "
                                 f"{value} -> {ref}"
                             )
-                            for symbol, ref, value in matches
+                            for symbol, ref, value in scanned.matches
                         )
                         continue
                     ok, changes, lines = self._apply_and_validate(
                         rope.rope_project,
-                        resource,
+                        scanned,
                         python_file,
                         self.repository_root,
                         project_layout.package_name,
-                        source,
-                        matches,
                     )
                     output_lines.extend(lines)
                     file_results.append(

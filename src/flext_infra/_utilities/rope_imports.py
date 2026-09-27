@@ -462,9 +462,12 @@ class FlextInfraUtilitiesRopeImports:
         source_module: str,
         target_module: str,
         aliases: t.StrSequence,
-        apply: bool,
     ) -> str | None:
-        """Move unaliased names from one absolute import to another using Rope."""
+        """Move unaliased names from one absolute import to another using Rope.
+
+        The relocated source is written to ``resource`` and returned; ``None``
+        means no import changed.
+        """
         aliases_to_move = frozenset(aliases)
         if not aliases_to_move:
             return None
@@ -497,8 +500,7 @@ class FlextInfraUtilitiesRopeImports:
             )
         if updated_source == original_source:
             return None
-        if apply:
-            resource.write(updated_source)
+        resource.write(updated_source)
         return updated_source
 
     @staticmethod

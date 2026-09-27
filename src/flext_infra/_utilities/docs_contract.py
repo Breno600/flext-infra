@@ -9,10 +9,11 @@ from typing import TYPE_CHECKING
 from markdown import Markdown
 from markdown.extensions.toc import slugify
 
+from flext_cli import u
+
 from flext_core import r
 from flext_infra import c, m, t
 
-from .._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
 from .._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
@@ -219,15 +220,20 @@ class FlextInfraUtilitiesDocsContract:
             return r[m.Infra.CodegenFilePlan].fail(
                 f"docs desired bytes and mode differ: {path}"
             )
-        return FlextInfraUtilitiesCodegenFilePlan.planned_file(
-            project,
-            path,
-            required=False,
-            desired_content=content,
-            desired_mode=desired_mode,
-            source_states=source_states,
-            owner="docs",
-            policy="full",
+        before = u.Cli.atomic_read_binary_file_state(path, required=False)
+        if before.failure:
+            return r[m.Infra.CodegenFilePlan].from_failure(before)
+        return r[m.Infra.CodegenFilePlan].ok(
+            m.Infra.CodegenFilePlan(
+                project=project,
+                path=path,
+                before=before.value,
+                desired_content=content,
+                desired_mode=desired_mode,
+                source_states=tuple(source_states),
+                owner="docs",
+                policy="full",
+            )
         )
 
     @staticmethod

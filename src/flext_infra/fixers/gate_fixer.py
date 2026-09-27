@@ -135,26 +135,26 @@ class FlextInfraGateFixerAdapter(FlextInfraFixerAdapter):
                 target=fix_action.target,
                 execution=execution,
             )
-        fixed: list[m.Infra.FixedViolation] = []
-        previewed: list[m.Infra.PreviewedViolation] = []
-        skipped: list[m.Infra.SkippedViolation] = []
-        failed: list[m.Infra.FailedFix] = []
         if execution.result.passed:
-            message = f"gate {fix_action.target} fix applied"
-            fixed_violation: m.Infra.FixedViolation = m.Infra.FixedViolation(
-                rule_id=rule.id, file_path=str(project_dir), message=message
+            return m.Infra.ProjectFixResult(
+                project=project_dir.name,
+                fixed=(
+                    m.Infra.FixedViolation(
+                        rule_id=rule.id,
+                        file_path=str(project_dir),
+                        message=f"gate {fix_action.target} fix applied",
+                    ),
+                ),
             )
-            fixed = [fixed_violation]
-        else:
-            failed = [
+        return m.Infra.ProjectFixResult(
+            project=project_dir.name,
+            failed=(
                 m.Infra.FailedFix(
                     rule_id=rule.id,
                     file_path=str(project_dir),
                     error=execution.raw_output or "gate fix failed",
-                )
-            ]
-        return self._build_project_fix_result(
-            project_dir, fixed, previewed, skipped, failed
+                ),
+            ),
         )
 
     def _preview_from_check(

@@ -44,7 +44,6 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
                 passed=False,
                 errors=[report_result.error or "runtime census failed"],
                 started=started,
-                ctx=ctx,
             )
         report = report_result.value
         return self._build_project_error_gate_result(
@@ -52,7 +51,6 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
             passed=report.passed,
             errors=list(report.violations),
             started=started,
-            ctx=ctx,
         )
 
 

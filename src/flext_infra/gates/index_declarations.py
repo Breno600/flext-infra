@@ -51,6 +51,7 @@ class FlextInfraIndexDeclarationsGate(FlextInfraGate):
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
         """Report every index entry the repository's declarations contradict."""
+        _ = ctx
         started = time.monotonic()
         errors = self._collect(project_dir)
         if errors.failure:
@@ -59,7 +60,6 @@ class FlextInfraIndexDeclarationsGate(FlextInfraGate):
                 passed=False,
                 errors=[errors.error or "index-declarations scan failed"],
                 started=started,
-                ctx=ctx,
             )
         defects = errors.unwrap()
         return self._build_project_error_gate_result(
@@ -67,7 +67,6 @@ class FlextInfraIndexDeclarationsGate(FlextInfraGate):
             passed=not defects,
             errors=list(defects),
             started=started,
-            ctx=ctx,
         )
 
     @staticmethod

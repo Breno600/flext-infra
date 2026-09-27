@@ -104,15 +104,13 @@ class TestsFlextInfraTransactionLease:
             before = tm.ok(
                 u.Cli.atomic_read_binary_file_state(config_path, required=True)
             )
-            plan = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    config_path,
-                    required=True,
-                    desired_content=before.content,
-                    desired_mode=before.mode,
-                    owner="mise",
-                )
+            plan = m.Infra.CodegenFilePlan(
+                project=root,
+                path=config_path,
+                before=before,
+                desired_content=before.content,
+                desired_mode=before.mode,
+                owner="mise",
             )
             session = tm.ok(transaction.begin_locked(scope_root, (plan,), (plan,)))
             ready.set()

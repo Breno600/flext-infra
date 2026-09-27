@@ -309,13 +309,10 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         if cached is not None:
             return cached
         objects = u.Infra.objects(
-            self.rope_project,
-            self._resource_for(resolved_file),
-            module_entry=self.module(resolved_file),
-            convention=self.convention(resolved_file),
+            self,
+            resolved_file,
             include_local_scopes=include_local_scopes,
             include_references=include_references,
-            rope_workspace=self,
         )
         self._module_object_cache[cache_key] = objects
         return objects

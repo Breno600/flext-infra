@@ -261,8 +261,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
 
         Single-pass verb law: the mutating verb runs exactly one operation per
         gate — never a check pass before or after the fix. The fix execution
-        already reports what its tool could not repair
-        (``accept_reported_issues=True``); enforcing that residue belongs to
+        already reports what its tool could not repair (the fix execution
+        takes the fixer's exit status as its verdict); enforcing that residue belongs to
         the read-only ``make check``. Gates without a fix contract fall
         through to their read-only check, so an ``--apply`` selection over a
         read-only gate still executes it instead of silently skipping.

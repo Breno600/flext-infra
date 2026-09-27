@@ -17,16 +17,14 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
     @classmethod
     def _family_consumer_rewrites(
         cls,
-        project: p.Infra.RopeProject,
         resource: p.Infra.RopeResource,
         source: str,
         *,
-        owner_name: str,
-        wrapper_name: str,
-        wrapper: p.Infra.RopePyName,
-        names: t.MappingKV[str, str],
+        flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, t.VariadicTuple[m.Infra.SourceRewrite]]:
         runtime = FlextInfraUtilitiesRopeRuntimeRefactors
+        project, wrapper, names = flatten.project, flatten.wrapper, flatten.names
+        wrapper_name = flatten.wrapper_name
         finder = runtime.create_occurrence_finder(
             project, wrapper_name, wrapper, imports=True, in_hierarchy=False
         )
@@ -75,7 +73,7 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
                             == c.Infra.RopeScopeKind.FUNCTION
                             for statement in statements
                         )
-                        parent = owner_name if in_function else ""
+                        parent = flatten.owner_name if in_function else ""
                     text = f"{parent}.{replacement}" if parent else replacement
                     edits.append(
                         m.Infra.SourceRewrite(
@@ -87,12 +85,7 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
                         m.Infra.SourceRewrite(start=start, end=end, text=replacement)
                     )
         blocked, quoted = cls._family_quoted_rewrites(
-            project,
-            resource,
-            source,
-            owner_name=owner_name,
-            wrapper=wrapper,
-            names=names,
+            resource, source, flatten=flatten
         )
         return (True, ()) if blocked else (False, (*edits, *quoted))
 

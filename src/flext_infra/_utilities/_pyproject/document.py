@@ -1,4 +1,4 @@
-"""Public pyproject conformers over the requirement and uv-source owners."""
+"""Public pyproject conformer over the requirement and uv-source owners."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from flext_cli import r, u
 
-from flext_infra import c, t
+from flext_infra import c, m, t
 
 from .uv_sources import FlextInfraUtilitiesPyprojectUvSources
 
@@ -41,43 +41,20 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         return r[t.Pair[t.Cli.TomlDocument, str]].ok((source, project_name_raw.strip()))
 
     @classmethod
-    def _rendered_conformed_document(
-        cls,
-        document: t.Cli.TomlDocument,
-        *,
-        workspace: p.Infra.WorkspaceSpec,
-        invalid_render_error: str,
-    ) -> p.Result[str]:
-        """Validate dependency provenance, then render canonical TOML.
-
-        ``invalid_render_error`` carries the only difference between the two
-        public conformers: the message each reports for an unparsable render.
-        """
-        provenance_result = cls._validate_dependency_provenance(
-            document, workspace=workspace
-        )
-        if provenance_result.failure:
-            return r[str].from_failure(provenance_result)
-        rendered = u.Cli.toml_dumps(document)
-        if u.Cli.toml_parse_text(rendered) is None:
-            return r[str].fail(invalid_render_error)
-        return r[str].ok(rendered)
-
-    @classmethod
     def pyproject_conform(
         cls,
         pyproject_content: str,
         *,
-        workspace: p.Infra.WorkspaceSpec,
-        workspace_mode: c.Infra.MakeProfile,
-        toolchain: p.Infra.ToolchainSpec,
+        workspace: m.Infra.WorkspaceSpec,
         required_dev_dependencies: t.StrSequence,
-        uv_link_mode: str | None = None,
-        uv_exclude_dependencies: t.SequenceOf[p.Model] = (),
-        namespace_scan_dirs: t.StrSequence | None = None,
+        uv_resolution: m.Infra.UvResolutionSpec,
         declared_sources: t.StrMapping | None = None,
     ) -> p.Result[str]:
-        """Return canonical TOML with autonomous dependencies and root workspace."""
+        """Return canonical TOML with autonomous dependencies and uv policy.
+
+        The workspace manifest owns the topology facts, including the
+        namespace production scope its project declares.
+        """
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
             return r[str].from_failure(parsed)
@@ -88,10 +65,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             required_dev_dependencies=required_dev_dependencies,
         )
         normalized = cls._normalize_requirements(
-            source,
-            workspace=workspace,
-            canonicalize_all=True,
-            declared_sources=declared_sources,
+            source, workspace=workspace, declared_sources=declared_sources
         )
         if normalized.failure:
             return r[str].from_failure(normalized)
@@ -100,86 +74,28 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         typecheck_paths = cls._sync_typecheck_paths(source)
         if typecheck_paths.failure:
             return r[str].from_failure(typecheck_paths)
-        namespace_scope = cls._sync_namespace_scope(source, namespace_scan_dirs)
+        namespace_scope = cls._sync_namespace_scope(
+            source,
+            workspace.project.namespace_scan_dirs
+            if workspace.project is not None
+            else None,
+        )
         if namespace_scope.failure:
             return r[str].from_failure(namespace_scope)
         sources_result = cls._sync_uv_sources(
-            source,
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
-            link_mode=uv_link_mode or toolchain.uv_link_mode,
-            exclude_dependencies=uv_exclude_dependencies,
-            uv_environments=toolchain.uv_environments,
-            constraint_dependencies=toolchain.uv_constraint_dependencies,
+            source, workspace=workspace, resolution=uv_resolution
         )
         if sources_result.failure:
             return r[str].from_failure(sources_result)
-        return cls._rendered_conformed_document(
-            source,
-            workspace=workspace,
-            invalid_render_error=(
-                "canonical pyproject rendering produced invalid TOML"
-            ),
-        )
-
-    @classmethod
-    def pyproject_dependencies_conform(
-        cls,
-        pyproject_content: str,
-        *,
-        workspace: p.Infra.WorkspaceSpec,
-        workspace_mode: c.Infra.MakeProfile,
-    ) -> p.Result[str]:
-        """Conform only internal requirements and their root workspace overlay."""
-        parsed = cls._parsed_pyproject(pyproject_content)
-        if parsed.failure:
-            return r[str].from_failure(parsed)
-        source, project_name = parsed.value
         provenance_result = cls._validate_dependency_provenance(
             source, workspace=workspace
         )
         if provenance_result.failure:
             return r[str].from_failure(provenance_result)
-        workspace_context_root = cls._is_workspace_context_root(
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
-        )
-        if workspace_context_root:
-            sources_result = cls._validate_root_uv_sources(source, workspace=workspace)
-            if sources_result.failure:
-                return r[str].from_failure(sources_result)
-        normalized = cls._normalize_requirements(
-            source, workspace=workspace, canonicalize_all=False
-        )
-        if normalized.failure:
-            return r[str].from_failure(normalized)
-        cls._remove_workspace_dependency_group(source)
-        # On the dependency-only surface the declared document constraints are
-        # the SSOT: they flow through the same uv-pin filter as the toolchain
-        # path so a legacy `uv` cap is removed and every other constraint is
-        # preserved verbatim.
-        sources_result = (
-            r[bool].ok(True)
-            if workspace_context_root
-            else cls._sync_uv_sources(
-                source,
-                project_name=project_name,
-                workspace=workspace,
-                workspace_mode=workspace_mode,
-                constraint_dependencies=cls._declared_uv_constraint_dependencies(
-                    source
-                ),
-            )
-        )
-        if sources_result.failure:
-            return r[str].from_failure(sources_result)
-        return cls._rendered_conformed_document(
-            source,
-            workspace=workspace,
-            invalid_render_error="dependency conformance produced invalid TOML",
-        )
+        rendered = u.Cli.toml_dumps(source)
+        if u.Cli.toml_parse_text(rendered) is None:
+            return r[str].fail("canonical pyproject rendering produced invalid TOML")
+        return r[str].ok(rendered)
 
     @staticmethod
     def _remove_legacy_tooling(document: t.Cli.TomlDocument) -> None:
