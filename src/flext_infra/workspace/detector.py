@@ -387,6 +387,13 @@ class FlextInfraWorkspaceDetector(
             else c.Infra.MakeProfile.STANDALONE
         )
         project_name = metadata.value.project.name
+        _, separator, repository_name = u.Infra.git_remote_identity(
+            origin.value
+        ).partition("/")
+        if not separator or not repository_name:
+            return r[m.Infra.RepositoryRef].fail(
+                f"Git origin does not identify a repository: {origin.value}"
+            )
         # The manifest is the identity authority: the provider key is the one
         # the repository itself declares and the declared URL organization was
         # just reconciled against the live origin, so no catalog may override
@@ -399,7 +406,7 @@ class FlextInfraWorkspaceDetector(
         # the discovery contract loudly instead of being declared one.
         return r[m.Infra.RepositoryRef].ok(
             m.Infra.RepositoryRef(
-                name=project_name,
+                name=repository_name,
                 distribution=project_name,
                 url=effective_url,
                 path=path,
