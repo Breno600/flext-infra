@@ -245,11 +245,12 @@ class FlextInfraUtilitiesCodegenNamespace:
             )
         else:
             project_name = resolved_root.name
-        class_name_source = (
-            project_name
-            if project_name != resolved_root.name
-            else package_name.split(".", maxsplit=1)[0].replace("_", "-")
-        )
+        # The facade class stem carries the PACKAGE identity, never the
+        # checkout directory: a linked worktree or renamed clone is the same
+        # project (same declared package), so deriving from project_name or
+        # the directory name made the namespace enforcement demand a
+        # different prefix per checkout shape.
+        class_name_source = package_name.split(".", maxsplit=1)[0].replace("_", "-")
         src_dir = resolved_root / c.Infra.DEFAULT_SRC_DIR
         package_dir = src_dir / Path(*package_name.split("."))
         return m.Infra.RopeProjectLayout(
