@@ -20,8 +20,8 @@ from typing import ClassVar, override
 
 from flext_infra import t
 
-from .rope_transformer import FlextInfraRopeTransformer
 from ._rewrite import FlextInfraSourceRewriter
+from .rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraRefactorPydanticModernizer(FlextInfraRopeTransformer):

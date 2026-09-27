@@ -231,8 +231,6 @@ if TYPE_CHECKING:
     from .transformers.pydantic_modernizer import FlextInfraRefactorPydanticModernizer
     from .transformers.rope_transformer import FlextInfraRopeTransformer
     from .transformers.signature_propagator import FlextInfraRefactorSignaturePropagator
-    from .transformers.smells.base import FlextInfraSmellFixer
-    from .transformers.smells.boolean_logic import FlextInfraBooleanLogicFixer
     from .transformers.symbol_propagator import FlextInfraRefactorSymbolPropagator
     from .transformers.typing_unifier import FlextInfraRefactorTypingUnifier
     from .typings import FlextInfraTypes, FlextInfraTypes as t
@@ -285,7 +283,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraAccessorMigrationOrchestrator",
     "FlextInfraApplyRenames",
     "FlextInfraBanditGate",
-    "FlextInfraBooleanLogicFixer",
     "FlextInfraCProfileReport",
     "FlextInfraCanonicalAliasGate",
     "FlextInfraClassPlacementDetector",
@@ -441,7 +438,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraSilentFailureGate",
     "FlextInfraSilentFailureValidator",
     "FlextInfraSkillValidator",
-    "FlextInfraSmellFixer",
     "FlextInfraSmellsGate",
     "FlextInfraSonarcloudSettingsSync",
     "FlextInfraStubSupplyChain",
@@ -751,8 +747,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".transformers.signature_propagator": (
                 "FlextInfraRefactorSignaturePropagator",
             ),
-            ".transformers.smells.base": ("FlextInfraSmellFixer",),
-            ".transformers.smells.boolean_logic": ("FlextInfraBooleanLogicFixer",),
             ".transformers.symbol_propagator": ("FlextInfraRefactorSymbolPropagator",),
             ".transformers.typing_unifier": ("FlextInfraRefactorTypingUnifier",),
             ".typings": ("FlextInfraTypes", "t"),
