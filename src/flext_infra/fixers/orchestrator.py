@@ -239,7 +239,6 @@ class FlextInfraEnforcementFixerOrchestrator(
             rules=self.rules,
             safe_only=self.safe_only,
             check_after=self.check_after and self.apply,
-            fail_fast=self.fail_fast,
         )
 
     @staticmethod

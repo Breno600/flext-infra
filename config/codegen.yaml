@@ -7,6 +7,9 @@ Infra:
     # validate-git-hook.sh).
     retired_projections: [.github/scripts/install-git-hooks.sh]
 
+    # Fresh import probes are independent subprocesses within one validation.
+    fresh_import_workers: 3
+
     # Per-module scc code-LOC ceiling. Operator instruction 2026-09-07:
     # the former 1000-LOC allowance stands (supersedes the 200 constant).
     loc_cap:
@@ -798,6 +801,7 @@ Infra:
       canonical_root_dirs:
         - .mise
         - bin
+        - infra
         - src
         - tests
         - docs
@@ -2106,8 +2110,9 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
-        - source: base/config/workspace.yaml.j2
-          destination: config/workspace.yaml
+      # New-project declaration is serialized once from WorkspaceManifestSpec.
+      # Existing-tree conform reads this file as input and never overwrites it.
+        - destination: config/workspace.yaml
           profiles: [workspace, standalone]
           delegate: manifest
           overwrite: false

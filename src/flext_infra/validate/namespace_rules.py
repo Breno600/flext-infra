@@ -23,30 +23,22 @@ class FlextInfraNamespaceRules(
 
     @classmethod
     def check_module(
-        cls,
-        module: m.Infra.ParsedPythonModule,
-        filepath: Path,
-        *,
-        class_stem: str,
-        package_name: str,
-        policy: m.Infra.NamespaceModulePolicy,
+        cls, visit: m.Infra.RopeModuleVisit, filepath: Path
     ) -> t.StrSequence:
-        """Evaluate the complete strict contract for one parsed Rope module.
-
-        ``filepath`` is project-relative; ``module`` carries the source text
-        and the Rope module whose AST every rule family inspects.
-        """
-        tree = module.tree.get_ast()
+        """Evaluate one shared Rope visit against its declared convention."""
+        layout = visit.convention.project_layout
         return (
             *cls.check_structure(
-                tree,
+                visit.tree,
                 filepath,
-                class_stem=class_stem,
-                policy=policy,
-                source=module.source,
+                class_stem=layout.class_stem if layout is not None else "",
+                policy=visit.convention.module_policy,
+                source=visit.source,
             ),
-            *cls.check_imports(tree, filepath, package_name=package_name),
-            *cls.check_contracts(tree, filepath, source=module.source),
+            *cls.check_imports(
+                visit.tree, filepath, package_name=visit.convention.package_name
+            ),
+            *cls.check_contracts(visit.tree, filepath),
         )
 
 

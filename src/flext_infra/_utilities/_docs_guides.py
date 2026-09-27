@@ -11,10 +11,7 @@ from flext_core import r
 from flext_infra import c, config, m, t
 
 from ._docs_command_contract import FlextInfraUtilitiesDocsCommandContractMixin
-from ._docs_generate_plan import (
-    DocsRenderedArtifactTuple,
-    FlextInfraUtilitiesDocsGeneratePlanMixin,
-)
+from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -75,7 +72,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         *,
         repository_root: Path,
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Plan root-owned guide projections from authenticated snapshot bytes."""
         from flext_infra import u
 
@@ -83,9 +80,9 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         destination_root = scope.path / c.Infra.DIR_DOCS / "guides"
         if source_root == destination_root:
             # Same-root inputs are authoritative, never their own projections.
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].ok(())
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].ok(())
         if not scope.path.is_relative_to(repository_root):
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].fail(
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                 f"docs guide scope escapes repository {repository_root}: {scope.path}"
             )
         sources: MutableMapping[Path, str] = {}
@@ -99,7 +96,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             ):
                 continue
             if state.content is None:
-                return r[t.VariadicTuple[DocsRenderedArtifactTuple]].fail(
+                return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"docs guide source is absent: {path}"
                 )
             content = state.content.decode(c.Cli.ENCODING_DEFAULT)
@@ -147,11 +144,13 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 legacy_ownership + "\n\n",
             )):
                 owned.add(path)
-        artifacts: list[DocsRenderedArtifactTuple] = []
+        artifacts: list[t.Infra.DocsRenderedArtifactTuple] = []
         expected_paths = {destination_root / path.name for path in sources}
         loaded = u.Infra.workspace_spec_load(repository_root)
         if loaded.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(loaded)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                loaded
+            )
         effective_verbs = (
             *config.Infra.codegen.make.verbs,
             *loaded.value.repository.extra_verbs,
@@ -159,7 +158,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         for source_path, source in sorted(sources.items()):
             destination = destination_root / source_path.name
             if destination in destinations and destination not in owned:
-                return r[t.VariadicTuple[DocsRenderedArtifactTuple]].fail(
+                return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"canonical guide collides with protected custom guide: {destination}"
                 )
             relative_path = source_path.relative_to(repository_root).as_posix()
