@@ -26,8 +26,7 @@ if TYPE_CHECKING:
 def governed_project(tmp_path: Path) -> Path:
     """Provide a valid project identity for package discovery."""
     (tmp_path / "pyproject.toml").write_text(
-        '[project]\nname = "test-helpers"\nversion = "0.1.0"\n',
-        encoding="utf-8",
+        '[project]\nname = "test-helpers"\nversion = "0.1.0"\n', encoding="utf-8"
     )
     return tmp_path
 
@@ -128,9 +127,7 @@ class TestsFlextInfraCodegenLazyInit:
             init_file.write_text(content, encoding="utf-8")
             return init_file
 
-        def test_check_only_does_not_modify_files(
-            self, governed_project: Path
-        ) -> None:
+        def test_check_only_does_not_modify_files(self, governed_project: Path) -> None:
             """Leave initializer bytes unchanged in check mode."""
             tests_init = self._create_init_file(
                 governed_project / "tests" / "helpers", self._VALID_TESTS_INIT

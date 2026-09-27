@@ -181,8 +181,7 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         syntax_report = tv.markdown(project_dir).unwrap()
         tm.that(syntax_report.passed, eq=False)
         tm.that(
-            any(item.rule_id == "MD-001" for item in syntax_report.violations),
-            eq=True,
+            any(item.rule_id == "MD-001" for item in syntax_report.violations), eq=True
         )
 
     def test_code_gate_reports_unformatted_docstring_example(
