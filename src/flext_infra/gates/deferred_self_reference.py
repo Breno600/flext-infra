@@ -24,13 +24,13 @@ from flext_infra.detectors.deferred_self_reference_detector import (
     FlextInfraDeferredSelfReferenceDetector,
 )
 
-from .base_gate import FlextInfraGate, FlextInfraScannerGateMixin
+from .scanner_gate import FlextInfraScannerGateMixin
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
-class FlextInfraDeferredSelfReferenceGate(FlextInfraScannerGateMixin, FlextInfraGate):
+class FlextInfraDeferredSelfReferenceGate(FlextInfraScannerGateMixin):
     """Block deferred self-reference and recursive models in any Python project."""
 
     gate_id: ClassVar[str] = "deferred-self-reference"

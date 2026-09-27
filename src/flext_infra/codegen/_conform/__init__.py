@@ -9,9 +9,7 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from ._request_fields import FlextInfraCodegenConformRequestFields
     from .artifact_render import FlextInfraCodegenConformArtifactRender
-    from .base import FlextInfraCodegenConformBase
     from .beads_routes import FlextInfraCodegenConformBeadsRoutes
     from .bootstrap import FlextInfraCodegenConformBootstrap
     from .context_render import FlextInfraCodegenConformContextRender
@@ -23,9 +21,10 @@ if TYPE_CHECKING:
     from .plan import FlextInfraCodegenConformPlan
     from .pyproject_policy import FlextInfraCodegenConformPyprojectPolicy
     from .scaffold_plan import FlextInfraCodegenConformScaffoldPlan
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformArtifactRender",
-    "FlextInfraCodegenConformBase",
     "FlextInfraCodegenConformBeadsRoutes",
     "FlextInfraCodegenConformBootstrap",
     "FlextInfraCodegenConformContextRender",
@@ -36,16 +35,13 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformGitignore",
     "FlextInfraCodegenConformPlan",
     "FlextInfraCodegenConformPyprojectPolicy",
-    "FlextInfraCodegenConformRequestFields",
     "FlextInfraCodegenConformScaffoldPlan",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
-            "._request_fields": ("FlextInfraCodegenConformRequestFields",),
             ".artifact_render": ("FlextInfraCodegenConformArtifactRender",),
-            ".base": ("FlextInfraCodegenConformBase",),
             ".beads_routes": ("FlextInfraCodegenConformBeadsRoutes",),
             ".bootstrap": ("FlextInfraCodegenConformBootstrap",),
             ".context_render": ("FlextInfraCodegenConformContextRender",),

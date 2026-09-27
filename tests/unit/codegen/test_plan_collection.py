@@ -432,6 +432,3 @@ class TestsFlextInfraPlanCollection:
             tm.that(
                 str(first_root).encode() not in (plan.desired_content or b""), eq=True
             )
-
-
-__all__: list[str] = ["TestsFlextInfraPlanCollection"]

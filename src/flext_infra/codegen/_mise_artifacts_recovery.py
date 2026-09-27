@@ -164,6 +164,13 @@ class FlextInfraMiseRecovery:
                 # geracao e a dona do arquivo e o reescreve. Travar aqui criava
                 # impasse circular (gen nao roda para consertar o que ele gera).
                 operation = "noop"
+            if operation == "restore" and self._staging_tree_is_absent(layout, entry):
+                # The staged rollback tree vanished whole (a crashed run
+                # removed it before the journal could be cleaned), so required
+                # reads under it can never succeed. The same anti-impasse law
+                # as an unrecognized state applies: the generation owns the
+                # file and rewrites it on the next apply pass.
+                operation = "noop"
             actions.append(
                 m.Infra.CodegenRecoveryAction(
                     entry=entry, current=current.value, operation=operation
@@ -171,14 +178,29 @@ class FlextInfraMiseRecovery:
             )
         return result_type.ok(tuple(actions))
 
+    @staticmethod
+    def _staging_tree_is_absent(
+        layout: m.Infra.MiseToolchainWorkspaceLayout, entry: m.Infra.CodegenJournalEntry
+    ) -> bool:
+        """Whether the entry's staged rollback tree is gone entirely."""
+        if entry.original_backup is None:
+            return False
+        backup = files.resolve_transaction(
+            layout, entry.original_backup, purpose="generation recovery backup"
+        )
+        return backup.failure or not backup.value.parent.is_dir()
+
     def _prepare_restore_candidates(
         self,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
-        actions: tuple[m.Infra.CodegenRecoveryAction, ...],
+        actions: t.VariadicTuple[m.Infra.CodegenRecoveryAction],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile | None]]:
         result_type = r[tuple[m.Infra.CodegenStagedFile | None, ...]]
         candidates: list[m.Infra.CodegenStagedFile | None] = []
         for action in actions:
+            if action.operation != "restore":
+                candidates.append(None)
+                continue
             if not action.entry.original_exists or action.entry.original_backup is None:
                 candidates.append(None)
                 continue
@@ -266,7 +288,7 @@ class FlextInfraMiseRecovery:
     def _load_restore_candidates(
         self,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
-        actions: tuple[m.Infra.CodegenRecoveryAction, ...],
+        actions: t.VariadicTuple[m.Infra.CodegenRecoveryAction],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenStagedFile | None]]:
         result_type = r[tuple[m.Infra.CodegenStagedFile | None, ...]]
         candidates: list[m.Infra.CodegenStagedFile | None] = []
@@ -313,8 +335,8 @@ class FlextInfraMiseRecovery:
 
     @staticmethod
     def _restore(
-        actions: tuple[m.Infra.CodegenRecoveryAction, ...],
-        candidates: tuple[m.Infra.CodegenStagedFile | None, ...],
+        actions: t.VariadicTuple[m.Infra.CodegenRecoveryAction],
+        candidates: t.VariadicTuple[m.Infra.CodegenStagedFile | None],
     ) -> p.Result[bool]:
         paired = tuple(zip(actions, candidates, strict=True))
         for action, candidate in reversed(paired):
@@ -334,7 +356,7 @@ class FlextInfraMiseRecovery:
         self,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
-        actions: tuple[m.Infra.CodegenRecoveryAction, ...],
+        actions: t.VariadicTuple[m.Infra.CodegenRecoveryAction],
     ) -> p.Result[bool]:
         by_path = {action.entry.path: action for action in actions}
         for entry in journal.entries:

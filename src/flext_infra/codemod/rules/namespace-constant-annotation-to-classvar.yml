@@ -1,0 +1,25 @@
+# Plain-annotated constants on a `Tests(FlextTestsConstants.Tests)` namespace
+# holder become pydantic fields (flext-gyqu7, 2026-09-23): `NAME: T = value`
+# on the FlextSettings-backed holder (ENFORCE-042) is a model field, not a
+# class constant, so class-level access and the holder contract break.
+#
+# Idempotent: ClassVar and Final annotations are excluded (Final is owned by
+# namespace-constant-final-to-classvar), so a rewritten member never re-matches.
+id: namespace-constant-annotation-to-classvar
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  all:
+    - pattern: "$NAME: $T = $V"
+    - matches: pydantic-namespace-constant
+constraints:
+  T:
+    not:
+      regex: "^(ClassVar|Final)(\\[|$)"
+fix: "$NAME: ClassVar[$T] = $V"
+message: >-
+  A constant on a FlextTestsConstants.Tests namespace holder must be a
+  ClassVar; a plain annotation makes it a pydantic field.

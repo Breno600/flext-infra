@@ -67,6 +67,9 @@ class FlextInfraConstantsRope:
     # tuples live in u.Infra (FlextInfraUtilitiesRopeRuntimeTypes), not in the
     # constants layer, to keep c.Infra declarative and cycle-free.
 
+    ROPE_IMPORTUTILS_MODULE: ClassVar[str] = "rope.refactor.importutils"
+    "Public Rope import planning and organization module."
+
     ROPE_IGNORED_RESOURCES: ClassVar[t.VariadicTuple[str]] = (
         ".venv",
         "venv",

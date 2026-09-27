@@ -180,18 +180,6 @@ class FlextInfraConstantsCodegenLazy:
         "main",
     )
     "Canonical dependency order for public aliases and operational entry points."
-    # flext-wkii.17 (Codex): static analyzers bind local facade classes, not rebinds.
-    PUBLIC_ROOT_TYPING_FACADE_SUFFIXES: ClassVar[t.MappingKV[str, str]] = (
-        MappingProxyType({
-            "c": "Constants",
-            "t": "Types",
-            "p": "Protocols",
-            "m": "Models",
-            "u": "Utilities",
-            "s": "ServiceBase",
-        })
-    )
-    "Named local facade suffixes used by generated TYPE_CHECKING aliases."
     ROOT_WRAPPER_SEGMENTS: ClassVar[frozenset[str]] = frozenset({
         "docs",
         "src",
@@ -200,8 +188,6 @@ class FlextInfraConstantsCodegenLazy:
         "scripts",
     })
     "Directory segments recognized as project-root wrapper paths."
-    DUPLICATE_CLASS_MIN_LEN: ClassVar[int] = 8
-    "Minimum class-name length for workspace-wide duplicate detection."
     TEST_RUNTIME_ALIAS_TARGETS: ClassVar[t.MappingKV[str, t.StrPair]] = (
         MappingProxyType({
             "c": ("flext_tests", "c"),

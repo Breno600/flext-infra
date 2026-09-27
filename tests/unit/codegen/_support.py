@@ -86,6 +86,3 @@ class CodegenTestSupport:
                 custom_steps=custom_steps,
                 has_devcontainer=has_devcontainer,
             )
-
-
-__all__ = ["CodegenTestSupport"]

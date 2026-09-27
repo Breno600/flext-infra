@@ -54,6 +54,3 @@ class TestsFlextInfraCodegenCiCustomSteps:
         tm.that(location.parts[0], eq=".github")
         tm.that("workflows" in location.parts, eq=False)
         tm.that(location.suffix, eq=".yml")
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenCiCustomSteps"]

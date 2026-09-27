@@ -101,6 +101,14 @@ class FlextInfraModelsCodegenRender:
             default_factory=str,
             description="Static declarations for public lazy exports.",
         )
+        blank_lines_before_exports: str = m.Field(
+            default="\n\n",
+            description=(
+                "Newlines separating the import section from the exports tuple; "
+                "roots without eager or static import blocks emit one blank line, "
+                "roots with them emit the two-line separation the formatter wants"
+            ),
+        )
         exports_tuple: t.NonEmptyStr = m.Field(
             description="Canonical rendered root ``__all__`` tuple."
         )
@@ -109,6 +117,13 @@ class FlextInfraModelsCodegenRender:
         )
         lazy_alias_mapping: t.NonEmptyStr = m.Field(
             description="Canonical rendered lazy alias mapping."
+        )
+        lazy_call_arguments: str = m.Field(
+            default="",
+            description=(
+                "Lazy-import call arguments joined on one continuation line when "
+                "they fit the line budget; empty keeps the exploded rendering"
+            ),
         )
 
     class StaticPackageInitRender(m.ArbitraryTypesModel):

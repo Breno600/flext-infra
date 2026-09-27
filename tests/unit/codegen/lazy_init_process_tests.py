@@ -35,7 +35,7 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(result, eq=0)
         tm.that(content, contains="build_lazy_import_map(")
         tm.that(content, contains="install_lazy_exports(")
-        tm.that(content, contains="__all__: t.VariadicTuple[str]")
+        tm.that(content, contains="__all__: tuple[str, ...]")
         tm.that(content, lacks="__unit__")
         compile(content, "__init__.py", "exec")
 
@@ -108,7 +108,7 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(apply_result, eq=0)
         for content in (level_two_content, level_three_content, level_four_content):
             tm.that(content, contains="install_lazy_exports(")
-            tm.that(content, contains="__all__: t.VariadicTuple[str]")
+            tm.that(content, contains="__all__: tuple[str, ...]")
         tm.that(level_four_content, contains="from .worker import FlextTestsWorker")
         tm.that(level_four_content, contains="FlextTestsWorker")
         tm.that(level_four_content, contains='"worker"')
@@ -140,7 +140,7 @@ class TestsFlextInfraLazyInitProcessing:
 
         tm.that(result, eq=0)
         generated = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-        tm.that(generated, has='__all__: t.VariadicTuple[str] = ("FlextTestsRuntime",)')
+        tm.that(generated, has='__all__: tuple[str, ...] = ("FlextTestsRuntime",)')
         tm.that(generated, has="from .runtime import FlextTestsRuntime")
         tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
         tm.that(init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=generated)
@@ -160,6 +160,3 @@ class TestsFlextInfraLazyInitProcessing:
 
         tm.that(result, eq=0)
         tm.that(unit_path.exists(), eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraLazyInitProcessing"]

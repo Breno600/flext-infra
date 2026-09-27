@@ -39,5 +39,25 @@ class FlextInfraUtilitiesGit(
     methods through two paths and every shared member becomes an override.
     """
 
+    @staticmethod
+    def git_attribute_pattern(path: str) -> str:
+        """Encode one literal path with Git's glob escaping and C quoting."""
+        literal = (
+            path
+            .replace("\\", "\\\\")
+            .replace("*", "\\*")
+            .replace("?", "\\?")
+            .replace("[", "\\[")
+        )
+        quoted = "".join(
+            chr(byte)
+            if chr(byte).isascii()
+            and chr(byte).isprintable()
+            and chr(byte) not in {'"', "\\"}
+            else f"\\{byte:03o}"
+            for byte in literal.encode("utf-8")
+        )
+        return f'"{quoted}"'
+
 
 __all__: list[str] = ["FlextInfraUtilitiesGit"]

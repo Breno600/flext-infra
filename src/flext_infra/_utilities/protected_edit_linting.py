@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import difflib
+import os
 from collections.abc import MutableMapping
 from itertools import islice
 from pathlib import Path
@@ -15,6 +16,7 @@ from flext_infra import c, m, t
 
 from .._config import FlextInfraConfig
 from .discovery import FlextInfraUtilitiesDiscovery
+from .project_discovery import FlextInfraUtilitiesProjectDiscovery
 from .resource_limits import FlextInfraUtilitiesResourceLimits
 
 
@@ -46,11 +48,16 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @staticmethod
     def _workspace_tool_command(workspace: Path, tool_name: str) -> t.StrSequence:
-        """Resolve one tool against the workspace venv before falling back to PATH."""
-        tool_path = (workspace.resolve() / c.Infra.VENV_BIN_REL / tool_name).resolve()
-        if tool_path.is_file():
-            return (str(tool_path),)
-        return (tool_name,)
+        """Resolve one tool from the managed external workspace environment."""
+        environment = FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
+            workspace
+        )
+        executable = tool_name + (".exe" if os.name == "nt" else "")
+        tool_path = environment / ("Scripts" if os.name == "nt" else "bin") / executable
+        if not tool_path.is_file():
+            msg = f"managed workspace tool is missing: {tool_path}"
+            raise FileNotFoundError(msg)
+        return (str(tool_path),)
 
     @staticmethod
     def _normalize_lint_line(line: str) -> str:
@@ -58,7 +65,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         if c.Infra.CODE_FRAME_RE.match(line) or c.Infra.CODE_FRAME_BODY_RE.match(line):
             return ""
 
-        def normalize_unused_import(match: t.Infra.RegexMatch) -> str:
+        def normalize_unused_import(match: t.RegexMatch) -> str:
             imported_name = match.group(1).rsplit(".", maxsplit=1)[-1]
             return f"`{imported_name}` imported but unused"
 
@@ -74,7 +81,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
     def snapshot_lint_gates() -> t.StrSequence:
         """Return the lint gates a protected edit validates its snapshots with.
 
-        One owner: ``make.ci.check_gates`` (config) — the budgeted gate set
+        One owner: ``make.check_gates_ci`` (config) — the active budgeted gate set
         whose strict complement is the slow whole-program checkers owned by
         ``make check CI=N``. A per-file snapshot validator never runs those.
         """
@@ -83,7 +90,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         }
         return tuple(
             gate
-            for gate in FlextInfraConfig.fetch_global().Infra.codegen.make.ci.check_gates
+            for gate in FlextInfraConfig.fetch_global().Infra.codegen.make.check_gates_ci
             if gate in lint_tool_gates
         )
 
@@ -131,7 +138,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         the SAME Ruff configuration for the same file.
         """
         for py_file in paths:
-            _ = u.Cli.run_checked(
+            output = u.Cli.run_raw(
                 [
                     *cls._workspace_tool_command(workspace, "ruff"),
                     c.Infra.CHECK,
@@ -140,7 +147,24 @@ class FlextInfraUtilitiesProtectedEditLinting:
                 ],
                 cwd=cls._command_cwd(py_file, workspace),
                 env=cls._command_env(),
+                remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
+                timeout=c.Infra.TIMEOUT_SHORT,
+            ).unwrap()
+            outcome = output.outcome
+            # Ruff's exit 1 means remaining findings, which the delta judge owns.
+            findings_remain = (
+                outcome.raw_return_code == 1
+                and not outcome.timed_out
+                and outcome.forwarded_signal is None
             )
+            if not u.Cli.process_succeeded(outcome) and not findings_remain:
+                detail = (output.stderr or output.stdout).strip()
+                msg = (
+                    f"ruff normalization failed for {py_file}: "
+                    f"exit={outcome.raw_return_code}, timed_out={outcome.timed_out}, "
+                    f"signal={outcome.forwarded_signal}: {detail}"
+                )
+                raise RuntimeError(msg)
 
     @staticmethod
     def _relative_path(py_file: Path, workspace: Path) -> Path:
@@ -190,7 +214,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         )
         if (
             tool_name == c.Infra.PYREFLY
-            and (project_config := command_cwd / c.Infra.PYPROJECT_FILENAME).is_file()
+            and (project_config := command_cwd / c.PYPROJECT_FILENAME).is_file()
         ):
             command = (*command, "--config", str(project_config))
         return (

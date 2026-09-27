@@ -8,9 +8,10 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import c, m, p, u
+from flext_infra import c, m, p, t, u
 from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from flext_infra.validate import FlextInfraValidateFreshImport
 from tests import u as test_u
 
 if TYPE_CHECKING:
@@ -19,6 +20,51 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraFileParticipantRecovery:
     """Recover prepared file-only journals through their physical owners."""
+
+    def test_fresh_import_failure_restores_published_initializer(
+        self, tmp_path: Path
+    ) -> None:
+        root = test_u.Tests.git_repository(tmp_path)
+        package = root / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
+        package.mkdir(parents=True)
+        initializer = package / c.Infra.INIT_PY
+        initializer.write_text("__all__ = ()\n", encoding=c.Cli.ENCODING_DEFAULT)
+        before = tm.ok(u.Cli.atomic_read_binary_file_state(initializer, required=True))
+        owner = FlextInfraCodegenTransaction(
+            FlextInfraCodegenMiseArtifacts(repository_root=root)
+        )
+        roots = {"@lazy-init": root}
+        publication = tm.ok(
+            u.Infra.planned_file(
+                root,
+                initializer,
+                required=True,
+                desired_content=b"__all__ = ('missing_export',)\n",
+                desired_mode=before.mode,
+                owner="lazy-init",
+            )
+        )
+        validator = FlextInfraValidateFreshImport(
+            repository_root=root, packages=(package.name,)
+        )
+
+        def publish(scope: Path) -> p.Result[t.VariadicTuple[Path]]:
+            session = tm.ok(owner.begin_files_locked(scope, roots, (before,)))
+            published = tm.ok(
+                owner.append_phase_locked(session, "lazy-init", (publication,))
+            )
+            return owner.commit_locked(published, validator.execute)
+
+        failed = owner.run_files_locked(roots, publish)
+
+        tm.fail(failed, has="missing_export")
+        tm.that(failed.error, has="Traceback")
+        restored = tm.ok(
+            u.Cli.atomic_read_binary_file_state(initializer, required=True)
+        )
+        tm.that(restored.content, eq=before.content)
+        tm.that(restored.mode, eq=before.mode)
+        tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
 
     def test_recovers_external_only_prepared_journal(self, tmp_path: Path) -> None:
         workspace = test_u.Tests.create_docs_workspace(tmp_path, project_names=())
@@ -221,6 +267,3 @@ class TestsFlextInfraFileParticipantRecovery:
             return r[bool].ok(True)
 
         tm.ok(owner.run_files_locked(roots, fail_session))
-
-
-__all__ = ["TestsFlextInfraFileParticipantRecovery"]

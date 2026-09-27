@@ -1,0 +1,34 @@
+id: namespace-constant-annotation-to-classvar
+snapshots:
+  ? |
+    from collections.abc import Mapping
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            TYPE_MAP: Mapping[str, str] = {"string": "VARCHAR2"}
+  : fixed: |
+      from collections.abc import Mapping
+      from flext_tests import FlextTestsConstants
+      class C:
+          class Tests(FlextTestsConstants.Tests):
+              TYPE_MAP: ClassVar[Mapping[str, str]] = {"string": "VARCHAR2"}
+    labels:
+    - source: 'TYPE_MAP: Mapping[str, str] = {"string": "VARCHAR2"}'
+      style: primary
+      start: 141
+      end: 193
+  ? |
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            EXPECTED_DATA_COUNT: int = 3
+  : fixed: |
+      from flext_tests import FlextTestsConstants
+      class C:
+          class Tests(FlextTestsConstants.Tests):
+              EXPECTED_DATA_COUNT: ClassVar[int] = 3
+    labels:
+    - source: 'EXPECTED_DATA_COUNT: int = 3'
+      style: primary
+      start: 105
+      end: 133

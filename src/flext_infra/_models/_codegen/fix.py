@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import MutableSet, Sequence
 from typing import Annotated, ClassVar, Literal
 
-from flext_cli import m, u
+from flext_cli import m
 
 from ... import t
 from .. import FlextInfraModelsMixins as mm
@@ -18,25 +18,14 @@ class FlextInfraModelsCodegenFixModels:
     class AutoFixResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Result of auto-fixing namespace violations for a project."""
 
-        # Enforcement exemption: MutableSequence accumulators are appended to
-        # as fixes proceed; fresh per-instance — no shared state.
-        @staticmethod
-        def _violations_default() -> list[
-            FlextInfraModelsCodegenScaffoldModels.CensusViolation
-        ]:
-            """Violations default."""
-            return []
-
         violations_fixed: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
-            m.Field(
-                default_factory=_violations_default, description="Fixed violations"
-            ),
+            m.Field(default_factory=list, description="Fixed violations"),
         ]
         violations_skipped: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             m.Field(
-                default_factory=_violations_default,
+                default_factory=list,
                 description="Skipped violations (not auto-fixable)",
             ),
         ]
@@ -101,6 +90,14 @@ class FlextInfraModelsCodegenFixModels:
             str | None,
             m.Field(description="Canonical namespace family suffix for the file."),
         ] = None
+        inherited_namespaces: t.StrSequence = m.Field(
+            default_factory=tuple,
+            description="Nested class attributes inherited unchanged through the actual facade MRO.",
+        )
+        is_internal_namespace: bool = m.Field(
+            default=False,
+            description="Whether the facade belongs to a discovered non-public root tier.",
+        )
         family_tokens: t.StrSequence = m.Field(
             default_factory=tuple,
             description="Accepted family markers for private namespace modules.",
@@ -180,32 +177,21 @@ class FlextInfraModelsCodegenFixModels:
         state.
         """
 
-        @staticmethod
-        def _violations_default() -> list[
-            FlextInfraModelsCodegenScaffoldModels.CensusViolation
-        ]:
-            """Violations default."""
-            return []
-
         violations_fixed: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             m.Field(
-                default_factory=_violations_default,
-                description="List of violations that were fixed",
+                default_factory=list, description="List of violations that were fixed"
             ),
         ] = m.Field(
-            default_factory=_violations_default,
-            description="List of violations that were fixed",
+            default_factory=list, description="List of violations that were fixed"
         )
         violations_skipped: Annotated[
             t.MutableSequenceOf[FlextInfraModelsCodegenScaffoldModels.CensusViolation],
             m.Field(
-                default_factory=_violations_default,
-                description="List of violations that were skipped",
+                default_factory=list, description="List of violations that were skipped"
             ),
         ] = m.Field(
-            default_factory=_violations_default,
-            description="List of violations that were skipped",
+            default_factory=list, description="List of violations that were skipped"
         )
         files_modified: Annotated[
             MutableSet[str],
@@ -251,17 +237,3 @@ class FlextInfraModelsCodegenFixModels:
         def __hash__(self) -> int:
             """Hash by stable business identity so keys work in sets and frozensets."""
             return hash((self.module, self.rule, self.content_hash))
-
-        @staticmethod
-        def from_violation(
-            violation: FlextInfraModelsCodegenScaffoldModels.CensusViolation,
-            source_lines: t.StrSequence,
-        ) -> FlextInfraModelsCodegenFixModels.ViolationKey:
-            """Build key from violation and source context (+-2 lines)."""
-            ctx_start = max(0, violation.line - 2)
-            ctx_end = min(len(source_lines), violation.line + 3)
-            context = "\n".join(source_lines[ctx_start:ctx_end])
-            content_hash = u.Cli.sha256_content(context)
-            return FlextInfraModelsCodegenFixModels.ViolationKey(
-                module=violation.module, rule=violation.rule, content_hash=content_hash
-            )

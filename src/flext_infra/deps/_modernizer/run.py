@@ -69,15 +69,24 @@ class FlextInfraPyprojectModernizerRun:
         aliases: MutableMapping[str, t.MutableSequenceOf[Path]] = {}
         for path in declared.values():
             aliases.setdefault(path.name, []).append(path)
-            state = self._read_document_state(path / c.Infra.PYPROJECT_FILENAME)
+            # A declared subproject whose pyproject cannot be read or named
+            # would otherwise vanish from the alias map and resurface as a
+            # false "missing" or "ambiguous" project further down.
+            state = self._read_document_state(path / c.PYPROJECT_FILENAME)
             if state.failure:
-                continue
-            try:
-                name = u.Infra.project_name_from_payload(
-                    state.value.pyproject_path, state.value.payload
+                # A declared member's unreadable pyproject is a broken
+                # workspace contract, not a selectable absence: the canonical
+                # docs-scope reader owns the typed error for invalid TOML and
+                # names the offending file, and that raise must leave the run
+                # instead of being demoted into an exit-code log line.
+                _ = u.Infra.project_state(path)
+                return result_type.fail(
+                    f"workspace subproject {path} has an unreadable pyproject: "
+                    f"{state.error}"
                 )
-            except c.EXC_TYPE_VALIDATION:
-                continue
+            name = u.Infra.project_name_from_payload(
+                state.value.pyproject_path, state.value.payload
+            )
             if path not in aliases.setdefault(name, []):
                 aliases[name].append(path)
         selected = [name for name in self.project_names or () if name != "."]
@@ -111,7 +120,7 @@ class FlextInfraPyprojectModernizerRun:
         if project_paths.failure:
             u.Cli.error(project_paths.error or "project selection failed")
             return 2
-        root_pyproject = self.root / c.Infra.PYPROJECT_FILENAME
+        root_pyproject = self.root / c.PYPROJECT_FILENAME
         root_state = self._read_document_state(root_pyproject)
         if root_state.failure:
             return 2
@@ -142,7 +151,7 @@ class FlextInfraPyprojectModernizerRun:
         drift_reported = False
         ordered = sorted(files)
         for index, file_path in enumerate(ordered, start=1):
-            u.Cli.progress(index, len(ordered), str(file_path), c.Infra.VERB_DEPS)
+            u.Cli.progress(index, len(ordered), str(file_path), c.Infra.CLI_GROUP_DEPS)
             state = (
                 root_state
                 if file_path.resolve() == root_pyproject.resolve()
@@ -208,6 +217,7 @@ class FlextInfraPyprojectModernizerRun:
             return 0
         profile_changes = (
             FlextInfraDepsFloorProfileWriter.rewrite_profiles_from_resolution(
+                root=self.root,
                 resolved_versions=u.Infra.resolved_dependency_versions(),
                 internal_names=tuple(
                     sorted({

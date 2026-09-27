@@ -34,7 +34,7 @@ class TestsFlextInfraConstantsScanMixin:
         ("warning: ignoring duplicate", 0),
         ("Success: 5 passed", 0),
     )
-    LOG_ERROR_PREFIX_RE: ClassVar[t.Infra.RegexPattern] = _re.compile(
+    LOG_ERROR_PREFIX_RE: ClassVar[t.RegexPattern] = _re.compile(
         r"^(ERROR|FAIL|error|E\s+AssertionError|FAILED)"
     )
     LOG_MIXED_SCENARIO_LINES: ClassVar[t.StrSequence] = (
@@ -44,10 +44,8 @@ class TestsFlextInfraConstantsScanMixin:
         "FAIL: test broken",
         "Total: 2 failed",
     )
-    SCANNER_HELLO_RE: ClassVar[t.Infra.RegexPattern] = _re.compile(
-        r"hello", _re.MULTILINE
-    )
-    LAZY_INIT_EXPORT_NAME_RE: ClassVar[t.Infra.RegexPattern] = _re.compile(
+    SCANNER_HELLO_RE: ClassVar[t.RegexPattern] = _re.compile(r"hello", _re.MULTILINE)
+    LAZY_INIT_EXPORT_NAME_RE: ClassVar[t.RegexPattern] = _re.compile(
         r'["\']([^"\']+)["\']'
     )
 

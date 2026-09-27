@@ -132,6 +132,3 @@ class TestsFlextInfraWorktreeBinding:
         )
 
         tm.that(tm.ok(planned), eq=())
-
-
-__all__: list[str] = ["TestsFlextInfraWorktreeBinding"]

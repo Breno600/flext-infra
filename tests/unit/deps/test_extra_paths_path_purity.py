@@ -19,8 +19,6 @@ from tests.unit.deps.extra_paths_support import ExtraPathsTestSupport
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
-
 
 class TestsFlextInfraExtraPathsArePure:
     """No emitted entry may address another project on the filesystem."""
@@ -89,6 +87,3 @@ class TestsFlextInfraExtraPathsArePure:
             ),
             eq=lane_manager.pyrefly_search_paths(project_dir=alone, is_root=False),
         )
-
-
-__all__: t.VariadicTuple[str] = ()

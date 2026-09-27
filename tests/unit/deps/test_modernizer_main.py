@@ -27,7 +27,7 @@ class TestsFlextInfraDepsModernizerMain:
         self, modernizer_workspace: Path
     ) -> None:
         """Invalid TOML fails closed with the offending path."""
-        pyproject = modernizer_workspace / c.Infra.PYPROJECT_FILENAME
+        pyproject = modernizer_workspace / c.PYPROJECT_FILENAME
         tm.fail(
             FlextInfraPyprojectModernizer(
                 repository_root=modernizer_workspace
@@ -46,9 +46,7 @@ class TestsFlextInfraDepsModernizerMain:
         exit_code = modernizer.run()
         tm.that(exit_code, eq=0)
         tm.that(
-            (modernizer_workspace / c.Infra.PYPROJECT_FILENAME).read_text(
-                encoding="utf-8"
-            ),
+            (modernizer_workspace / c.PYPROJECT_FILENAME).read_text(encoding="utf-8"),
             has='build-backend = "hatchling.build"',
         )
 

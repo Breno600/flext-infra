@@ -126,7 +126,7 @@ class FlextInfraModelsMixins:
             default=(),
             description=(
                 "Gate names for post-transform validation; empty selects the SSOT"
-                " snapshot gates (make.ci.check_gates)."
+                " snapshot gates (make.check_gates_ci)."
             ),
         )
 

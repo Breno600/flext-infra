@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from flext_cli import r, u
@@ -205,47 +205,25 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
                 u.Cli.toml_sync_value(uv, "exclude-dependencies", exclude_payload)
             else:
                 u.Cli.toml_remove_key_if_present(uv, "exclude-dependencies")
-        member_paths = tuple(member.path.as_posix() for member in workspace.subprojects)
-        # Only an actual multi-project owner declares a uv workspace. A leaf
-        # can also be a composed member; inserting an empty workspace there
-        # breaks execution from the parent with uv's nested-workspace error.
-        if repository_root and member_paths:
-            workspace_table = u.Cli.toml_table_child(uv, "workspace")
-            if workspace_table is None:
-                workspace_table = u.Cli.toml_ensure_table(uv, "workspace")
-            u.Cli.toml_sync_string_list(workspace_table, "members", member_paths)
-        else:
-            u.Cli.toml_remove_key_if_present(uv, "workspace")
+        # Each repository owns its own frozen lock and external environment.
+        # A root uv workspace would require every gitlink in root-only CI.
+        u.Cli.toml_remove_key_if_present(uv, "workspace")
         sources = u.Cli.toml_table_child(uv, "sources")
-        if sources is None and repository_root:
-            sources = u.Cli.toml_ensure_table(uv, "sources")
         if sources is None:
             if not repository_root and not tuple(uv):
                 u.Cli.toml_remove_key_if_present(tool, "uv")
             return r[bool].ok(True)
-        workspace_names = {member.distribution for member in workspace.subprojects}
         for source_name in tuple(sources):
-            # Member documents resolve internal siblings through the direct
-            # Git requirement; a git [tool.uv.sources] entry on a workspace
-            # member is rejected by uv itself, and only the root carries the
-            # workspace overlay.
-            if source_name.startswith("flext-") and (
-                not repository_root or source_name not in workspace_names
-            ):
+            if source_name.startswith("flext-"):
                 u.Cli.toml_remove_key_if_present(sources, source_name)
-        if repository_root:
-            for member in workspace.subprojects:
-                u.Cli.toml_sync_mapping_table(
-                    sources, member.distribution, {"workspace": True}
-                )
-        elif not tuple(sources):
+        if not tuple(sources):
             u.Cli.toml_remove_key_if_present(uv, "sources")
         if not repository_root and not tuple(uv):
             u.Cli.toml_remove_key_if_present(tool, "uv")
         return r[bool].ok(True)
 
     @staticmethod
-    def raw_requirement_values(raw: object) -> list[str]:
+    def raw_requirement_values(raw: p.AttributeProbe) -> list[str]:
         """Collect raw requirement strings from a dependencies value or group table.
 
         ``project.dependencies`` is one array while ``optional-dependencies``
@@ -263,20 +241,11 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
             return [item for item in raw if isinstance(item, str)]
         return []
 
-    @staticmethod
-    def _resolved_root_sources(
-        *, workspace: p.Infra.WorkspaceSpec
-    ) -> MutableMapping[str, MutableMapping[str, t.JsonValue]]:
-        """Resolve the workspace source overlay from the declared topology."""
-        return {
-            member.distribution: {"workspace": True} for member in workspace.subprojects
-        }
-
     @classmethod
     def _validate_root_uv_sources(
         cls, document: t.Cli.TomlDocument, *, workspace: p.Infra.WorkspaceSpec
     ) -> p.Result[bool]:
-        """Validate the root overlay without rewriting out-of-order TOML tables."""
+        """Reject retired root workspace state without rewriting TOML tables."""
         payload = u.Cli.toml_as_mapping(document)
         if payload is None:
             return r[bool].fail("pyproject document is not a TOML mapping")
@@ -297,40 +266,13 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
         declared = u.Cli.toml_as_string_list(uv.get("override-dependencies"))
         if tuple(declared) != overrides.value:
             return r[bool].fail("root dependency overrides differ from workspace SSOT")
-        uv_workspace = uv.get("workspace")
-        if not isinstance(uv_workspace, Mapping):
-            return r[bool].fail("root pyproject must define [tool.uv.workspace]")
-        validated_members: p.Result[t.StrSequence] = u.validate_value(
-            t.Infra.STR_SEQ_ADAPTER, uv_workspace.get("members"), strict=True
-        )
-        if validated_members.failure:
-            return r[bool].fail_op(
-                "validate root uv workspace package entries", validated_members.error
-            )
-        members = validated_members.value
-        expected_members = tuple(
-            member.path.as_posix() for member in workspace.subprojects
-        )
-        if tuple(members) != expected_members:
-            return r[bool].fail(
-                "root uv workspace package entries differ from workspace SSOT"
-            )
+        if "workspace" in uv:
+            return r[bool].fail("root pyproject retains retired uv workspace")
         sources = uv.get("sources")
-        if not isinstance(sources, Mapping):
-            return r[bool].fail("root pyproject must define [tool.uv.sources]")
-        expected_sources = cls._resolved_root_sources(workspace=workspace)
-        if tuple(sources) != tuple(expected_sources):
-            return r[bool].fail("root uv workspace sources differ from workspace SSOT")
-        for source_name, expected_source in expected_sources.items():
-            source = sources.get(source_name)
-            if (
-                not isinstance(source, Mapping)
-                or tuple(source) != tuple(expected_source)
-                or dict(source) != expected_source
-            ):
-                return r[bool].fail(
-                    f"root uv workspace sources differ from workspace SSOT: {source_name}"
-                )
+        if isinstance(sources, Mapping) and any(
+            source_name.startswith("flext-") for source_name in sources
+        ):
+            return r[bool].fail("root pyproject retains retired workspace sources")
         return r[bool].ok(True)
 
 

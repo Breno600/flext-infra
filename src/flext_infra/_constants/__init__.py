@@ -33,6 +33,8 @@ if TYPE_CHECKING:
     from .source_code import FlextInfraConstantsSourceCode
     from .validate import FlextInfraConstantsSharedInfra
     from .workspace import FlextInfraConstantsWorkspace
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraConstantsAdapters",
     "FlextInfraConstantsBase",

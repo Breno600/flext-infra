@@ -19,7 +19,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
     """Rope semantic import state, class discovery, and project-backed probes."""
 
     _SEMANTIC_STATE_CACHE: ClassVar[
-        MutableMapping[tuple[str, str, int], m.Infra.ModuleSemanticState]
+        MutableMapping[t.Triple[str, str, int], m.Infra.ModuleSemanticState]
     ] = {}
 
     @staticmethod
@@ -64,7 +64,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         )
 
     @staticmethod
-    def get_module_semantic_state(
+    def resolve_module_semantic_state(
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> m.Infra.ModuleSemanticState:
         """Return local classes plus declared and semantic imports in one pass.
@@ -81,7 +81,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         )
         if cached is not None:
             return cached
-        pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(rope_project, resource)
+        pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         state = FlextInfraUtilitiesRopeAnalysisImportState._module_semantic_state_from_pymodule(
             rope_project=rope_project, resource=resource, pymodule=pymodule
         )
@@ -145,7 +145,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             ):
                 continue
             obj = pyname.get_object()
-            if not FlextInfraUtilitiesRopeRuntime.is_abstract_class(obj):
+            if not FlextInfraUtilitiesRopeRuntime.abstract_class(obj):
                 continue
             location = pyname.get_definition_location()
             line = location[1] if location and location[1] else 1
@@ -205,11 +205,11 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
         current_package: str,
-    ) -> tuple[MutableMapping[str, str], MutableMapping[str, str]]:
+    ) -> t.Pair[MutableMapping[str, str], MutableMapping[str, str]]:
         """Return declared and semantic import maps for one module."""
         semantic_imports: MutableMapping[str, str] = {}
         declared_imports: MutableMapping[str, str] = {}
-        module_imports = FlextInfraUtilitiesRopeCore.get_module_imports(
+        module_imports = FlextInfraUtilitiesRopeCore.resolve_module_imports(
             rope_project, resource
         )
         raw_imports = getattr(module_imports, "imports", ())
@@ -246,7 +246,6 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
                 alias_name=alias_name,
                 alias_as=alias_as,
                 declared_imports=declared_imports,
-                module_name=module_name,
                 resolved_module=resolved_module,
                 semantic_imports=semantic_imports,
             )
@@ -255,12 +254,12 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
     def _resolved_import_module(
         *, current_package: str, module_name: str, level: int
     ) -> str:
-        """Resolve the module path represented by one Rope import info."""
+        """Resolve from-imports, including bare dots; invalid levels propagate."""
         return (
             FlextInfraUtilitiesRopeAnalysisImportState._resolve_import_module(
                 current_package=current_package, module_name=module_name, level=level
             )
-            if module_name
+            if module_name or level > 0
             else ""
         )
 
@@ -270,18 +269,15 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         alias_name: str,
         alias_as: str | None,
         declared_imports: MutableMapping[str, str],
-        module_name: str,
         resolved_module: str,
         semantic_imports: MutableMapping[str, str],
     ) -> None:
         """Merge one import alias into declared and semantic maps."""
         if alias_name == "*":
             return
-        if module_name:
+        if resolved_module:
             local_name = alias_as or alias_name
-            target = (
-                f"{resolved_module}.{alias_name}" if resolved_module else alias_name
-            )
+            target = f"{resolved_module}.{alias_name}"
         else:
             local_name = alias_as or alias_name.partition(".")[0]
             target = alias_name
@@ -296,7 +292,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
     ) -> int | None:
         """Return offset of symbol's definition via semantic analysis."""
         source = resource.read()
-        pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(rope_project, resource)
+        pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         return (
             FlextInfraUtilitiesRopeAnalysisImportState._definition_offset_from_pymodule(
                 pymodule=pymodule, source=source, symbol=symbol
@@ -325,37 +321,40 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         )
 
     @staticmethod
-    def get_semantic_module_imports(
+    def resolve_semantic_module_imports(
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.StrMapping:
         """Return {local_name: fully_qualified_name} for all imports in a module."""
         imports: t.StrMapping = (
-            FlextInfraUtilitiesRopeAnalysisImportState.get_module_semantic_state(
+            FlextInfraUtilitiesRopeAnalysisImportState.resolve_module_semantic_state(
                 rope_project, resource
             ).semantic_imports
         )
         return imports
 
     @staticmethod
-    def get_declared_module_imports(
+    def resolve_declared_module_imports(
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.StrMapping:
         """Return {local_name: declared import path} without resolving re-exports."""
-        imports: t.StrMapping = (
-            FlextInfraUtilitiesRopeAnalysisImportState.get_module_semantic_state(
-                rope_project, resource
-            ).declared_imports
+        module = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
+        imports, _ = FlextInfraUtilitiesRopeAnalysisImportState._module_import_maps(
+            rope_project=rope_project,
+            resource=resource,
+            current_package=FlextInfraUtilitiesRopeAnalysisImportState._package_name_for_module(
+                module.get_name(), resource
+            ),
         )
         return imports
 
     @staticmethod
-    def get_module_classes(
+    def resolve_module_classes(
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.StrSequence:
         """Return names of all classes defined in a module."""
         return tuple(
             class_info.name
-            for class_info in FlextInfraUtilitiesRopeAnalysisImportState.get_module_semantic_state(
+            for class_info in FlextInfraUtilitiesRopeAnalysisImportState.resolve_module_semantic_state(
                 rope_project, resource
             ).class_infos
         )
@@ -364,26 +363,67 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
     def declared_facade_owner(
         cls, rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.StrPair | None:
+        """Resolve declared or missing local aliases through actual inheritance."""
+        return cls._facade_owner(rope_project, resource, infer_missing=True)
+
+    @classmethod
+    def published_facade_owner(
+        cls, rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+    ) -> t.StrPair | None:
+        """Return only an existing class alias suitable for publication."""
+        return cls._facade_owner(rope_project, resource, infer_missing=False)
+
+    @classmethod
+    def _facade_owner(
+        cls,
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
+        *,
+        infer_missing: bool,
+    ) -> t.StrPair | None:
         """Resolve a published local class's alias from declarations and its MRO.
 
         The spelling of a module or class supplies no ownership information.
         An existing exported alias wins; otherwise the nearest declaring bases
         determine the missing declaration that the repair must publish locally.
         """
-        module = FlextInfraUtilitiesRopeCore.get_pymodule(rope_project, resource)
+        module = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         exports = FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
             resource.read()
         )
         attributes = module.get_attributes()
-        owners: set[tuple[str, str]] = set()
-        for info in cls.get_module_semantic_state(rope_project, resource).class_infos:
-            if info.name not in exports:
+        missing_aliases = frozenset(
+            name
+            for name in exports
+            if name.islower() and not name.startswith("_") and name not in attributes
+        )
+        owners: set[t.Pair[str, str]] = set()
+        scope = module.get_scope()
+        if scope is None:
+            msg = f"module has no declaration scope: {resource.path}"
+            raise ValueError(msg)
+        for child in scope.get_scopes():
+            if child.get_kind() != "Class":
                 continue
-            target = attributes[info.name].get_object()
-            aliases = cls._declared_class_aliases(target)
-            if not aliases:
-                aliases = cls._inherited_class_aliases(target, visited=frozenset())
-            owners.update((alias, info.name) for alias in aliases)
+            target = child.pyobject
+            name = target.get_name()
+            binding = attributes.get(name)
+            if name not in exports or binding is None:
+                continue
+            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.local_name(
+                binding, resource
+            ):
+                continue
+            if binding.get_object() is not target:
+                continue
+            # Rope can resolve an inherited class through its declaring module.
+            # An alias owned by that module is not published by this resource.
+            aliases = cls._declared_class_aliases(target) & frozenset(exports)
+            if not aliases and infer_missing:
+                aliases = missing_aliases or cls._inherited_class_aliases(
+                    target, visited=frozenset()
+                )
+            owners.update((alias, name) for alias in aliases if alias in exports)
         if len(owners) > 1:
             message = (
                 f"ambiguous facade declaration in {resource.path}: {sorted(owners)}"
@@ -404,10 +444,52 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             name
             for name, binding in module.get_attributes().items()
             if name in exports
+            and name != target.get_name()
             and name.islower()
             and not name.startswith("_")
+            and FlextInfraUtilitiesRopeAnalysisAstHelpers.local_name(binding, resource)
             and binding.get_object() is target
         )
+
+    @staticmethod
+    def inherited_facade_namespaces(
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
+        *,
+        class_name: str,
+    ) -> t.StrSequence:
+        """Prove nested namespace inheritance by Rope scope and attribute identity."""
+        module = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
+        target = module.get_attribute(class_name).get_object()
+        attributes = target.get_attributes()
+        names: set[str] = set()
+        pending = [
+            (base, frozenset({id(target)})) for base in target.get_superclasses()
+        ]
+        while pending:
+            base, ancestors = pending.pop()
+            if id(base) in ancestors:
+                message = f"cyclic facade namespace inheritance at {class_name}"
+                raise ValueError(message)
+            if (
+                not FlextInfraUtilitiesRopeRuntime.abstract_class(base)
+                or base.get_module() is None
+            ):
+                continue
+            scope = base.get_scope()
+            if scope is not None:
+                for child in scope.get_scopes():
+                    if child.get_kind() != "Class":
+                        continue
+                    nested = child.pyobject
+                    name = nested.get_name()
+                    binding = attributes.get(name)
+                    if binding is not None and binding.get_object() is nested:
+                        names.add(name)
+            pending.extend(
+                (parent, ancestors | {id(base)}) for parent in base.get_superclasses()
+            )
+        return tuple(sorted(names))
 
     @classmethod
     def _inherited_class_aliases(
@@ -420,7 +502,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             raise ValueError(message)
         aliases: set[str] = set()
         for base in target.get_superclasses():
-            if not FlextInfraUtilitiesRopeRuntime.is_abstract_class(base):
+            if not FlextInfraUtilitiesRopeRuntime.abstract_class(base):
                 continue
             declared = cls._declared_class_aliases(base)
             aliases.update(
@@ -430,35 +512,25 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         return frozenset(aliases)
 
     @staticmethod
-    def is_pyclass(obj: t.Infra.RopePyObject) -> bool:
-        """Return whether a rope object is a ``PyClass`` (abstract class type)."""
-        return FlextInfraUtilitiesRopeRuntime.is_abstract_class(obj)
-
-    @staticmethod
-    def is_pyfunction(obj: t.Infra.RopePyObject) -> bool:
-        """Return whether a rope object is a ``PyFunction``."""
-        return FlextInfraUtilitiesRopeRuntime.is_py_function(obj)
-
-    @staticmethod
-    def get_class_info(
+    def resolve_class_info(
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.SequenceOf[m.Infra.ClassInfo]:
         """Return ClassInfo (name, line, bases) for all classes in a module."""
         class_infos: t.SequenceOf[m.Infra.ClassInfo] = (
-            FlextInfraUtilitiesRopeAnalysisImportState.get_module_semantic_state(
+            FlextInfraUtilitiesRopeAnalysisImportState.resolve_module_semantic_state(
                 rope_project, resource
             ).class_infos
         )
         return class_infos
 
     @staticmethod
-    def get_class_symbol_count(
+    def count_class_symbols(
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
         class_name: str,
     ) -> int:
         """Return direct symbol count for a top-level class without semantic imports."""
-        pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(rope_project, resource)
+        pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         tree: t.Infra.RopeAstNode = pymodule.get_ast()
         class_body = FlextInfraUtilitiesRopeAnalysisAstHelpers.class_body_nodes(
             tree, class_name=class_name
@@ -468,13 +540,13 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         )
 
     @staticmethod
-    def get_class_bases(
+    def resolve_class_bases(
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
         class_name: str,
     ) -> t.StrSequence:
         """Return base class names for a given class in a module."""
-        for info in FlextInfraUtilitiesRopeAnalysisImportState.get_class_info(
+        for info in FlextInfraUtilitiesRopeAnalysisImportState.resolve_class_info(
             rope_project, resource
         ):
             if info.name == class_name:
@@ -482,7 +554,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         return ()
 
     @staticmethod
-    def get_class_methods(
+    def resolve_class_methods(
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,
         class_name: str,
@@ -490,7 +562,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         include_private: bool = False,
     ) -> t.StrMapping:
         """Return {method_name: kind} for methods of a class."""
-        pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(rope_project, resource)
+        pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         return FlextInfraUtilitiesRopeAnalysisImportState._class_methods_from_pymodule(
             class_name=class_name, include_private=include_private, pymodule=pymodule
         )
@@ -505,13 +577,13 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         if class_name not in attributes:
             return result
         obj = attributes[class_name].get_object()
-        if not FlextInfraUtilitiesRopeRuntime.is_abstract_class(obj):
+        if not FlextInfraUtilitiesRopeRuntime.abstract_class(obj):
             return result
         for name, pyname in obj.get_attributes().items():
             if not include_private and name.startswith("_"):
                 continue
             child = pyname.get_object()
-            if not FlextInfraUtilitiesRopeRuntime.is_py_function(child):
+            if not FlextInfraUtilitiesRopeRuntime.py_function(child):
                 continue
             result[name] = child.get_kind()
         return result
@@ -528,7 +600,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         if resource is None:
             rope_project.close()
             return None
-        pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(rope_project, resource)
+        pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         return pymodule, rope_project
 
     @classmethod
@@ -579,7 +651,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
             resource = pymodule.get_resource()
             if resource is None:
                 return target_map
-            declared = cls.get_declared_module_imports(rope_project, resource)
+            declared = cls.resolve_declared_module_imports(rope_project, resource)
             for local_name, declared_path in declared.items():
                 if local_name not in export_names:
                     continue
@@ -605,7 +677,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
     ) -> t.StrSequence:
         """Resolve parent ``Constants`` import targets via rope semantic state.
 
-        Uses ``get_module_semantic_state`` (PyObject-backed class info plus
+        Uses ``resolve_module_semantic_state`` (PyObject-backed class info plus
         ``get_module_imports`` declared-imports table) — no ``ast`` walks.
         """
         opened = cls._open_pymodule(project_root, constants_file)
@@ -622,7 +694,7 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
                     resource.read()
                 )
             }
-            state = cls.get_module_semantic_state(rope_project, resource)
+            state = cls.resolve_module_semantic_state(rope_project, resource)
         finally:
             rope_project.close()
         seen: set[str] = set()

@@ -40,6 +40,8 @@ if TYPE_CHECKING:
     from .project_classifier import FlextInfraProjectClassifier
     from .signature_propagation import FlextInfraRefactorSignaturePropagation
     from .wrapper_root_namespace import FlextInfraWrapperRootNamespaceRefactor
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraAccessorMigrationOrchestrator",
     "FlextInfraAccessorMigrationReportMixin",

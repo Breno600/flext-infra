@@ -72,7 +72,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             return [
                 path
                 for path in files
-                if not FlextInfraUtilitiesDocsScope.is_excluded_doc_path(
+                if not FlextInfraUtilitiesDocsScope.excluded_doc_path(
                     scope_root,
                     path.relative_to(scope_root / c.Infra.DIR_DOCS)
                     if path.is_relative_to(scope_root / c.Infra.DIR_DOCS)
@@ -85,7 +85,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             for path in files
             if not (
                 path.is_relative_to(docs_root)
-                and FlextInfraUtilitiesDocsScope.is_excluded_doc_path(
+                and FlextInfraUtilitiesDocsScope.excluded_doc_path(
                     scope_root, path.relative_to(docs_root)
                 )
             )
@@ -104,6 +104,46 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             return r[bool].fail(f"markdown write error: {exc}", exception=exc)
 
     @staticmethod
+    def docs_write_phase_reports(
+        scope: m.Infra.DocScope,
+        *,
+        phase: str,
+        heading: str,
+        columns: t.StrSequence,
+        rows: t.SequenceOf[t.StrSequence],
+        items: t.SequenceOf[m.Infra.DocsPhaseItemModel],
+        apply: bool,
+    ) -> None:
+        """Persist one phase summary and markdown report from owned rows."""
+        summary_payload = t.Cli.JSON_MAPPING_ADAPTER.validate_python({
+            c.Infra.RK_SUMMARY: {
+                c.Infra.RK_SCOPE: scope.name,
+                "changed_files": len(items),
+                "apply": apply,
+            },
+            "changes": [list(row) for row in rows],
+        })
+        _ = u.Cli.json_write(
+            scope.report_dir / f"{phase}-summary.json", summary_payload
+        )
+        header = "| " + " | ".join(columns) + " |"
+        divider = "|---|" + "---:|" * (len(columns) - 1)
+        _ = FlextInfraUtilitiesDocs.write_markdown(
+            scope.report_dir / f"{phase}-report.md",
+            [
+                f"# {heading}",
+                "",
+                f"Scope: {scope.name}",
+                f"Apply: {int(apply)}",
+                f"Changed files: {len(items)}",
+                "",
+                header,
+                divider,
+                *(" | ".join(row) + " |" for row in rows),
+            ],
+        )
+
+    @staticmethod
     def docs_write_fmt_reports(
         scope: m.Infra.DocScope,
         *,
@@ -111,31 +151,14 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
         apply: bool,
     ) -> None:
         """Persist the standard fmt summary and markdown report."""
-        changes_payload: t.JsonList = [
-            {c.Infra.RK_FILE: item.file} for item in items
-        ]
-        summary_payload = t.Cli.JSON_MAPPING_ADAPTER.validate_python({
-            c.Infra.RK_SUMMARY: {
-                c.Infra.RK_SCOPE: scope.name,
-                "changed_files": len(items),
-                "apply": apply,
-            },
-            "changes": changes_payload,
-        })
-        _ = u.Cli.json_write(scope.report_dir / "fmt-summary.json", summary_payload)
-        _ = FlextInfraUtilitiesDocs.write_markdown(
-            scope.report_dir / "fmt-report.md",
-            [
-                "# Docs Format Report",
-                "",
-                f"Scope: {scope.name}",
-                f"Apply: {int(apply)}",
-                f"Changed files: {len(items)}",
-                "",
-                "| file |",
-                "|---|",
-                *[f"| {item.file} |" for item in items],
-            ],
+        FlextInfraUtilitiesDocs.docs_write_phase_reports(
+            scope,
+            phase="fmt",
+            heading="Docs Format Report",
+            columns=("file",),
+            rows=[(item.file,) for item in items],
+            items=items,
+            apply=apply,
         )
 
     @staticmethod

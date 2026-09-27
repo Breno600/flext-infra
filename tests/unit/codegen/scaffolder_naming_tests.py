@@ -186,6 +186,3 @@ class TestsFlextInfraCodegenScaffolderNaming:
             tm.that(result.files_created, empty=True)
             tm.that(result.files_skipped, empty=True)
             tm.that(result.project, eq="empty-project")
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenScaffolderNaming"]

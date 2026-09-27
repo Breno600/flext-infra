@@ -15,6 +15,15 @@ class FlextInfraEnforcementSelection:
 
     _STUB_VIOLATION_FIELD: ClassVar[str] = "stub_file_violations"
 
+    _TESTS_TIER_SOURCE_KINDS: ClassVar[t.StrSequence] = ("flext_tests_validator",)
+    """Source kinds owned by the flext-tests pytest enforcement dispatcher.
+
+    ``tv.<method>`` validators execute inside flext-tests (the declared
+    dependency direction is tests -> infra); flext-infra never imports
+    ``flext_tests`` at runtime, so the infra engine neither collects nor
+    fixes these rules — the pytest tier gates them.
+    """
+
     @staticmethod
     def canonical_catalog() -> m.EnforcementCatalog:
         """Return the canonical flext-core enforcement catalog."""
@@ -29,13 +38,30 @@ class FlextInfraEnforcementSelection:
         wanted: t.StrSequence = (),
         safe_only: bool = True,
     ) -> t.VariadicTuple[m.EnforcementRuleSpec]:
-        """Return enabled fixable rules selected for fixer execution."""
+        """Return enabled fixable rules selected for fixer execution.
+
+        Tests-tier source kinds are excluded: their execution owner is the
+        flext-tests pytest dispatcher, not the infra engine. An explicit
+        request for one fails loud naming the tier owner.
+        """
         wanted_ids = frozenset(wanted)
         rule_catalog = catalog or cls.canonical_catalog()
-        candidates = tuple(
+        tests_tier_kinds = frozenset(cls._TESTS_TIER_SOURCE_KINDS)
+        fixable = tuple(
             rule
             for rule in rule_catalog.enabled_rules()
             if rule.fix_action is not None and (not wanted_ids or rule.id in wanted_ids)
+        )
+        tests_tier = [rule for rule in fixable if rule.source.kind in tests_tier_kinds]
+        if wanted_ids and tests_tier:
+            msg = (
+                "Requested rules are owned by the flext-tests pytest tier "
+                "(flext-infra never imports flext_tests at runtime): "
+                f"{', '.join(sorted(rule.id for rule in tests_tier))}"
+            )
+            raise ValueError(msg)
+        candidates = tuple(
+            rule for rule in fixable if rule.source.kind not in tests_tier_kinds
         )
         if wanted_ids:
             cls._validate_requested_rules(

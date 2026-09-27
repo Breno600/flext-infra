@@ -64,7 +64,7 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
             # as the smells gate for the generated qlty configuration).
             return self._build_single_issue_result(
                 project_dir,
-                Path(c.Infra.PYPROJECT_FILENAME),
+                Path(c.PYPROJECT_FILENAME),
                 (
                     f"generated {c.Infra.PRETTIER_CONFIG_FILENAME} is absent: "
                     f"{config_path}; run make gen"
@@ -81,7 +81,7 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
         """A missing provisioned binary is a tool error, never a clean pass."""
         return self._build_single_issue_result(
             project_dir,
-            Path(c.Infra.PYPROJECT_FILENAME),
+            Path(c.PYPROJECT_FILENAME),
             (
                 f"{c.Infra.PRETTIER_BINARY} not found on PATH; `make setup` "
                 "provisions it from codegen.toolchain.prettier_version"

@@ -8,8 +8,6 @@ from flext_cli import m
 
 from flext_infra import t
 
-from . import FlextInfraModelsDefaults
-
 
 class FlextInfraModelsDepsToolConfigProjectRuff:
     """Ruff configuration slice owned by one project."""
@@ -22,7 +20,7 @@ class FlextInfraModelsDepsToolConfigProjectRuff:
             m.Field(
                 description="Project-local per-file rules merged with global policy."
             ),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+        ]
 
 
 __all__: list[str] = ["FlextInfraModelsDepsToolConfigProjectRuff"]

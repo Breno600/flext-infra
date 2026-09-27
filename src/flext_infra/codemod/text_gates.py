@@ -68,7 +68,9 @@ class FlextInfraModTextGateEngine:
         return r[t.VariadicTuple[m.Infra.ModTextRule]].ok(tuple(rules))
 
     @staticmethod
-    def _build_rule(raw: object, source: Path) -> p.Result[m.Infra.ModTextRule]:
+    def _build_rule(
+        raw: p.AttributeProbe, source: Path
+    ) -> p.Result[m.Infra.ModTextRule]:
         """Validate one raw list entry into a frozen text rule."""
         if not isinstance(raw, dict):
             return r[m.Infra.ModTextRule].fail(
@@ -302,7 +304,7 @@ class FlextInfraModTextGateEngine:
     @classmethod
     def _rewrite_source(
         cls, source: str, target: str, rules: t.VariadicTuple[m.Infra.ModTextRule]
-    ) -> tuple[str, list[m.Infra.ModTextFinding], int]:
+    ) -> t.Triple[str, list[m.Infra.ModTextFinding], int]:
         """Rewrite one source text through every elected rule entry."""
         updated = source
         entries: list[m.Infra.ModTextFinding] = []

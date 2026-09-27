@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from .ensure_ruff import FlextInfraEnsureRuffConfigPhase
     from .inject_comments import FlextInfraInjectCommentsPhase
     from .tool_tables import FlextInfraToolTablesPhase
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraConsolidateGroupsPhase",
     "FlextInfraEnsurePackagingPhase",

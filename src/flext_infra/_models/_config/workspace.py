@@ -204,14 +204,20 @@ class FlextInfraConfigModelsWorkspace:
                 raise ValueError(msg)
             return self
 
+    class CodegenBootstrapSource(FlextInfraConfigModelsContract.ConfigContract):
+        """Explicit dependency provenance before a scaffold has project metadata."""
+
+        url: Annotated[t.NonEmptyStr, m.Field(description="Infrastructure Git URL")]
+        ref: Annotated[t.NonEmptyStr, m.Field(description="Infrastructure Git ref")]
+
     class WorkspaceSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Local identity plus topology read from this repository's Git inputs."""
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Workspace name")]
         beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsProjectSpec,
-            m.Field(description="Repository-local Beads identity"),
-        ]
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(description="Repository-local Beads identity when enabled"),
+        ] = None
         gascity_enabled: Annotated[
             bool,
             m.Field(
@@ -229,6 +235,15 @@ class FlextInfraConfigModelsWorkspace:
         project: Annotated[
             FlextInfraConfigModelsContexts.ProjectSpec | None,
             m.Field(description="Metadata required only when materializing a new tree"),
+        ] = None
+        flext_source: Annotated[
+            FlextInfraConfigModelsWorkspace.CodegenBootstrapSource | None,
+            m.Field(
+                description=(
+                    "FLEXT dependency source required before the first pyproject "
+                    "exists; generated dependencies own provenance afterwards."
+                )
+            ),
         ] = None
         namespace_scan_dirs: Annotated[
             t.StrSequence,

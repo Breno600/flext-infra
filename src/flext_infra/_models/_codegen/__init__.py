@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from .pipeline import FlextInfraModelsCodegenPipelineModels
     from .scaffold import FlextInfraModelsCodegenScaffoldModels
     from .transaction import FlextInfraModelsCodegenTransactionModels
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraCodegen",
     "FlextInfraModelsCodegenFixModels",

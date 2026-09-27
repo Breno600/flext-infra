@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import MutableMapping
+from collections.abc import Callable, MutableMapping
 from pathlib import Path
 
 from flext_cli import cli
@@ -43,14 +43,14 @@ class FlextInfraCodemodSemanticApply:
 
     @classmethod
     def apply_transaction_paths(
-        cls, root: Path, edits: tuple[m.Infra.SemanticMigrationEdit, ...]
+        cls, root: Path, edits: t.VariadicTuple[m.Infra.SemanticMigrationEdit]
     ) -> None:
         """Publish the exact callback included in the existing progress fingerprint."""
         original = {edit.file_path: edit.original_source for edit in edits}
         working = dict(original)
         changed: set[Path] = set()
         cls._apply_plan(working, edits, changed)
-        cls._publish(root, original, working, changed)
+        cls._publish(root, original, working, changed).unwrap()
         cli.display_text(f"mod: Rope transaction paths changed_files={len(changed)}")
 
     @classmethod
@@ -134,13 +134,17 @@ class FlextInfraCodemodSemanticApply:
         verified = cls._verify_fixed_point(root, working, preflight)
         if verified.failure:
             return verified
-        cls._publish(root, original, working, changed)
-        # Final fixed-point verification against the published sources.
-        published = dict(cls._source_inventory(root, preflight))
-        return cls._verify_fixed_point(root, published, preflight).flat_map(
-            lambda _: cls._check_residue(
-                "import-alignment", cls._phase_import_alignment(root, published)
+
+        def validate_published() -> p.Result[bool]:
+            published = dict(cls._source_inventory(root, preflight))
+            return cls._verify_fixed_point(root, published, preflight).flat_map(
+                lambda _: cls._check_residue(
+                    "import-alignment", cls._phase_import_alignment(root, published)
+                )
             )
+
+        return cls._publish(
+            root, original, working, changed, validator=validate_published
         )
 
     @classmethod
@@ -355,8 +359,14 @@ class FlextInfraCodemodSemanticApply:
         original: t.MappingKV[Path, str],
         updated: t.MappingKV[Path, str],
         changed: set[Path],
-    ) -> None:
-        """Preflight all physical identities before the first atomic write."""
+        *,
+        validator: Callable[[], p.Result[bool]] | None = None,
+    ) -> p.Result[bool]:
+        """Normalize and preflight every source before journaled publication."""
+        from ..refactor._census_apply_formatting import (
+            FlextInfraRefactorCensusApplyFormattingMixin,
+        )
+
         semantic_plans: list[m.Infra.SemanticFilePlan] = []
         consumer_first = sorted(changed, key=cls._path_key)
         for path in consumer_first:
@@ -371,7 +381,12 @@ class FlextInfraCodemodSemanticApply:
             project_root = u.Infra.project_root(path)
             if project_root is None:
                 project_root = root
-            new_content = updated[path].encode(c.Cli.ENCODING_DEFAULT)
+            normalized = FlextInfraRefactorCensusApplyFormattingMixin.normalize_source(
+                root, path, updated[path]
+            )
+            if normalized.failure:
+                return r[bool].from_failure(normalized)
+            new_content = normalized.value.encode(c.Cli.ENCODING_DEFAULT)
             if content == new_content:
                 continue
             semantic_plans.append(
@@ -385,20 +400,10 @@ class FlextInfraCodemodSemanticApply:
                 )
             )
         if not semantic_plans:
-            return
-        publish_semantic_file_plans(semantic_plans).unwrap()
-        # A structural move is not finished at the byte level: the canonical
-        # formatter owns import order and whitespace, and without this pass
-        # every module the cutover touched came back with findings a human
-        # then repaired by hand. The census apply path already owns this exact
-        # normalization; this is that owner, not a second one.
-        from ..refactor._census_apply_formatting import (
-            FlextInfraRefactorCensusApplyFormattingMixin,
-        )
-
-        FlextInfraRefactorCensusApplyFormattingMixin.normalize_touched_files(
-            plan.path for plan in semantic_plans
-        )
+            return validator() if validator is not None else r[bool].ok(True)
+        return publish_semantic_file_plans(
+            semantic_plans, repository_root=root, validator=validator
+        ).map(lambda _: True)
 
     @staticmethod
     def _path_key(path: Path) -> t.Pair[bool, str]:

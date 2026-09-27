@@ -11,6 +11,8 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from .identity import FlextInfraModelsGitIdentity
     from .worktree_facts import FlextInfraModelsGitWorktreeFacts
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraModelsGitIdentity",
     "FlextInfraModelsGitWorktreeFacts",

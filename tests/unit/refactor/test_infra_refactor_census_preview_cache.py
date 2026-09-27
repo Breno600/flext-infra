@@ -38,7 +38,7 @@ class TestsFlextInfraRefactorCensusPreview:
             ),
             encoding="utf-8",
         )
-        candidate = m.Infra.Census.RemovalCandidate(
+        candidate = m.Infra.RemovalCandidate(
             project="flext-demo",
             file_path=str(module_path.resolve()),
             line=6,
@@ -90,7 +90,7 @@ class TestsFlextInfraRefactorCensusPreview:
             ),
             encoding="utf-8",
         )
-        candidate = m.Infra.Census.RemovalCandidate(
+        candidate = m.Infra.RemovalCandidate(
             project="flext-demo",
             file_path=str(base_path.resolve()),
             line=3,
@@ -100,12 +100,12 @@ class TestsFlextInfraRefactorCensusPreview:
             reason="script_only",
             suggested_action="remove",
             script_reference_sites=(
-                m.Infra.Census.ReferenceSite(
+                m.Infra.ReferenceSite(
                     file_path=str(consumer_path.resolve()),
                     line=3,
                     surface=c.Infra.DIR_SCRIPTS,
                 ),
-                m.Infra.Census.ReferenceSite(
+                m.Infra.ReferenceSite(
                     file_path=str(consumer_path.resolve()),
                     line=11,
                     surface=c.Infra.DIR_SCRIPTS,
@@ -142,7 +142,7 @@ class TestsFlextInfraRefactorCensusPreview:
             "        return run()\n"
         )
         module_path.write_text(original_source, encoding="utf-8")
-        candidate = m.Infra.Census.RemovalCandidate(
+        candidate = m.Infra.RemovalCandidate(
             project="flext-demo",
             file_path=str(module_path.resolve()),
             line=6,
@@ -160,6 +160,3 @@ class TestsFlextInfraRefactorCensusPreview:
 
         tm.ok(preview)
         tm.that(module_path.read_text(encoding="utf-8"), eq=original_source)
-
-
-__all__: list[str] = ["TestsFlextInfraRefactorCensusPreview"]

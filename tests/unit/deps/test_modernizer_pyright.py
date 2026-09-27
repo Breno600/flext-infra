@@ -150,10 +150,13 @@ class TestsFlextInfraDepsModernizerPyright:
             sorted(u.Tests.toml_strings(pyright["exclude"])),
             eq=sorted(set(rules.default_excludes)),
         )
-        tm.that(
-            sorted(u.Tests.toml_strings(pyright["ignore"])),
-            eq=sorted({*rules.ignored_diagnostic_globs}),
-        )
+        if rules.ignored_diagnostic_globs:
+            tm.that(
+                sorted(u.Tests.toml_strings(pyright["ignore"])),
+                eq=sorted({*rules.ignored_diagnostic_globs}),
+            )
+        else:
+            tm.that(pyright, lacks="ignore")
         tm.that(list(u.Tests.toml_strings(pyright["include"])), eq=[rules.source_dir])
         tm.that(
             pyright["executionEnvironments"],
@@ -283,10 +286,13 @@ class TestsFlextInfraDepsModernizerPyright:
             tool_config_document, is_root=False, project_dir=project_dir
         )
 
-        tm.that(
-            sorted(u.Tests.toml_strings(pyright["ignore"])),
-            eq=sorted({*rules.ignored_diagnostic_globs}),
-        )
+        if rules.ignored_diagnostic_globs:
+            tm.that(
+                sorted(u.Tests.toml_strings(pyright["ignore"])),
+                eq=sorted({*rules.ignored_diagnostic_globs}),
+            )
+        else:
+            tm.that(pyright, lacks="ignore")
         tm.that(
             sorted(u.Tests.toml_strings(pyright["include"])),
             eq=sorted([rules.source_dir, rules.test_like_dirs[0]]),
@@ -394,6 +400,3 @@ class TestsFlextInfraDepsModernizerPyright:
             ),
             eq=sorted(infra_u.Infra.analyzer_python_roots(tmp_path, declared)),
         )
-
-
-__all__: list[str] = ["TestsFlextInfraDepsModernizerPyright"]

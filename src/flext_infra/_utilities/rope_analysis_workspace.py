@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import operator
 from collections.abc import MutableMapping
+from functools import lru_cache
 from pathlib import Path
 
 from flext_infra import c, config, m, t
@@ -74,14 +75,39 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
 
     @classmethod
     def _governed_roots(cls, repository_root: Path) -> frozenset[Path]:
-        """Return every declared governed project root, resolved."""
+        """Return every declared governed project root, resolved.
+
+        The authority is the same election the Rope opener uses
+        (``discover_rope_project_roots``): a candidate the session indexes is
+        governed by definition, so the index filter and the opened project set
+        can never disagree about a sibling repository.
+        """
         return frozenset(
-            FlextInfraUtilitiesProjectDiscovery.governed_project_roots(repository_root)
+            FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots(
+                repository_root
+            )
         )
 
     @staticmethod
+    @lru_cache(maxsize=32768)
+    def _foreign_directory(
+        directory: Path, repository_root: Path, governed_roots: frozenset[Path]
+    ) -> bool:
+        """Memoize Git boundaries by directory for one workspace index."""
+        if directory == repository_root or not directory.is_relative_to(
+            repository_root
+        ):
+            return False
+        return (
+            ((directory / ".git").exists() or (directory / ".git").is_symlink())
+            and directory not in governed_roots
+        ) or FlextInfraUtilitiesRopeAnalysisWorkspace._foreign_directory(
+            directory.parent, repository_root, governed_roots
+        )
+
+    @classmethod
     def _inside_nested_repository(
-        path: Path, repository_root: Path, *, governed_roots: frozenset[Path]
+        cls, path: Path, repository_root: Path, *, governed_roots: frozenset[Path]
     ) -> bool:
         """Exclude foreign nested Git checkouts, never declared governed members.
 
@@ -92,12 +118,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         own governed roots — an unrelated clone, an ad hoc worktree — is
         excluded.
         """
-        return any(
-            ((parent / ".git").exists() or (parent / ".git").is_symlink())
-            and parent not in governed_roots
-            for parent in path.parents
-            if parent != repository_root and parent.is_relative_to(repository_root)
-        )
+        return cls._foreign_directory(path.parent, repository_root, governed_roots)
 
     @classmethod
     def _is_pruned_walk_dir(
@@ -203,10 +224,9 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             resolved_file_path = file_path.resolve()
             if cls._is_generated_init_stub(resolved_file_path):
                 continue
-            try:
-                resource_path = resolved_file_path.relative_to(resolved_root).as_posix()
-            except ValueError:
+            if not resolved_file_path.is_relative_to(resolved_root):
                 continue
+            resource_path = resolved_file_path.relative_to(resolved_root).as_posix()
             package_dir = resolved_file_path.parent
             is_package_init = resolved_file_path.name in {
                 c.Infra.INIT_PY,
@@ -260,6 +280,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         cls, rope_project: t.Infra.RopeProject, repository_root: Path
     ) -> m.Infra.RopeWorkspaceIndex:
         """Build a generic Rope workspace index for package-oriented planning."""
+        cls._foreign_directory.cache_clear()
         resolved_root = repository_root.resolve()
         (
             modules_by_path,

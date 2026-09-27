@@ -69,10 +69,10 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         | None
     ):
         """Scan file."""
-        resource = u.Infra.get_resource_from_path(rope_project, python_file)
+        resource = u.Infra.resolve_resource_from_path(rope_project, python_file)
         if resource is None:
             return None
-        symbols = u.Infra.get_module_symbols(rope_project, resource)
+        symbols = u.Infra.resolve_module_symbols(rope_project, resource)
         assignments = [symbol for symbol in symbols if symbol.kind == "assignment"]
         if not assignments:
             return None
@@ -121,7 +121,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         workspace: Path,
         pkg_name: str,
         backup: str,
-        matches: t.SequenceOf[tuple[m.Infra.SymbolInfo, str, str]],
+        matches: t.SequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]],
     ) -> t.Infra.EditResultWithDescs:
         """Apply and validate."""
         src_lines = backup.splitlines(keepends=True)

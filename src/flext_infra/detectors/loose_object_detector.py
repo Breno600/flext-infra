@@ -27,7 +27,7 @@ class FlextInfraLooseObjectDetector:
             file_path=ctx.file_path, project_root=ctx.project_root
         ):
             return []
-        if u.Infra.is_pytest_test_module(ctx.file_path):
+        if u.Infra.pytest_test_module(ctx.file_path):
             return []
         if cls._is_generated_lazy_registry(ctx.file_path):
             return []
@@ -74,7 +74,7 @@ class FlextInfraLooseObjectDetector:
         # r/e/x/h/d/s re-exports, ``__main__`` stubs) carries no loose
         # object by law. Derived from the collected symbols — never a
         # filename list.
-        module_symbols = tuple(u.Infra.get_module_symbols(rope_project, res))
+        module_symbols = tuple(u.Infra.resolve_module_symbols(rope_project, res))
         facade_class_symbols = [
             symbol for symbol in module_symbols if symbol.kind == "class"
         ]

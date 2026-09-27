@@ -77,13 +77,6 @@ class FlextInfraModelsCheck:
         name: Annotated[str, m.Field(description="Display/project name")]
         path: Annotated[Path, m.Field(description="Resolved project root path")]
 
-        @classmethod
-        def from_workspace_name(
-            cls, repository_root: Path, project_name: str
-        ) -> FlextInfraModelsCheck.CheckProjectTarget:
-            """Build a target from the public run_projects name contract."""
-            return cls(name=project_name, path=repository_root / project_name)
-
     class MypyResourceLimit(m.ContractModel):
         """Validated memory and wall-time limits for every Mypy process."""
 
@@ -177,7 +170,11 @@ class FlextInfraModelsCheck:
             description="Gate result model"
         )
         issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
-            default_factory=tuple, description="Detected issues"
+            default_factory=tuple, description="Blocking gate diagnostics"
+        )
+        observational_issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
+            default_factory=tuple,
+            description="Explicitly observational findings, separate from failures",
         )
         raw_output: str = m.Field(
             "", description="Raw tool output", validate_default=True
@@ -190,6 +187,12 @@ class FlextInfraModelsCheck:
             return sum(
                 1 for issue in self.issues if issue.severity.lower() == c.Infra.ERROR
             )
+
+        @m.computed_field
+        @property
+        def observational_count(self) -> int:
+            """Number of reported findings outside the blocking verdict."""
+            return len(self.observational_issues)
 
     class ProjectResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Aggregated gate results for a single project.
@@ -214,6 +217,12 @@ class FlextInfraModelsCheck:
         def total_errors(self) -> int:
             """Total error-severity diagnostic count across all gates."""
             return sum(v.error_count for v in self.gates.values())
+
+        @m.computed_field
+        @property
+        def total_observations(self) -> int:
+            """Total observational finding count across all gates."""
+            return sum(v.observational_count for v in self.gates.values())
 
     class LoopOutcome(m.ArbitraryTypesModel):
         """Bundled results from the project-checking loop."""
@@ -337,7 +346,7 @@ class FlextInfraModelsCheck:
         rule_id: Annotated[
             str, m.Field(validation_alias="ruleId", description="Rule identifier")
         ]
-        level: Annotated[str, m.Field(description="Result level (error/warning)")]
+        level: Annotated[str, m.Field(description="Result level (error/warning/note)")]
         message: Annotated[
             str,
             m.Field(

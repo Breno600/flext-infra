@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from .beads import FlextInfraConfigModelsBeads
     from .contexts import FlextInfraConfigModelsContexts
     from .contract import FlextInfraConfigModelsContract
-    from .infra import FlextInfraConfigModelsInfra
     from .make import FlextInfraConfigModelsMake
     from .provider import FlextInfraConfigModelsProvider
     from .release import FlextInfraConfigModelsRelease
@@ -24,13 +23,14 @@ if TYPE_CHECKING:
     from .static import FlextInfraConfigModelsStatic
     from .templates import FlextInfraConfigModelsTemplates
     from .workspace import FlextInfraConfigModelsWorkspace
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraConfigModels",
     "FlextInfraConfigModelsArtifact",
     "FlextInfraConfigModelsBeads",
     "FlextInfraConfigModelsContexts",
     "FlextInfraConfigModelsContract",
-    "FlextInfraConfigModelsInfra",
     "FlextInfraConfigModelsMake",
     "FlextInfraConfigModelsProvider",
     "FlextInfraConfigModelsRelease",
@@ -50,7 +50,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".beads": ("FlextInfraConfigModelsBeads",),
             ".contexts": ("FlextInfraConfigModelsContexts",),
             ".contract": ("FlextInfraConfigModelsContract",),
-            ".infra": ("FlextInfraConfigModelsInfra",),
             ".make": ("FlextInfraConfigModelsMake",),
             ".provider": ("FlextInfraConfigModelsProvider",),
             ".release": ("FlextInfraConfigModelsRelease",),

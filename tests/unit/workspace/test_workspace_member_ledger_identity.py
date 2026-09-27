@@ -5,15 +5,78 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
+from flext_infra import c, config, m
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import t, u
 
 
 class TestsFlextInfraWorkspaceMemberLedgerIdentity:
     """Prove parent and member identities remain in their own coordinates."""
+
+    @pytest.mark.parametrize("root_produces_activation", [False, True])
+    @pytest.mark.parametrize("member_produces_activation", [False, True])
+    def test_manifest_render_preserves_each_activation_producer(
+        self,
+        tmp_path: Path,
+        *,
+        root_produces_activation: bool,
+        member_produces_activation: bool,
+    ) -> None:
+        """Render and reload both declared command boundaries without lost fields."""
+        root_verb = m.Infra.MakeVerbSpec(
+            name="fixture-runtime",
+            description="Produce the root activation inputs",
+            produces_activation=root_produces_activation,
+        )
+        member_verb = m.Infra.MakeVerbSpec(
+            name="fixture-runtime",
+            description="Produce the member activation inputs",
+            produces_activation=member_produces_activation,
+        )
+        repository = u.Tests.repository_ref(
+            "fixture-workspace", role=c.Infra.MakeProfile.WORKSPACE
+        ).model_copy(update={"extra_verbs": (root_verb,)})
+        member = u.Tests.repository_ref(
+            "fixture-member", path=Path("members/fixture-member")
+        ).model_copy(update={"extra_verbs": (member_verb,)})
+        project = u.Tests.project_spec(repository.distribution)
+        context: t.MutableMappingKV[str, t.JsonValue] = {
+            **project.model_dump(mode="json"),
+            "workspace_manifest_version": c.Infra.WORKSPACE_MANIFEST_VERSION,
+            "dist": repository.distribution,
+            "repository_provider": repository.provider,
+            "repository_git_url": repository.url,
+            "workspace_repository": repository.model_dump(mode="json"),
+            "workspace_repositories": [member.model_dump(mode="json")],
+            "ns": project.namespace,
+            "const_name": project.constant_name,
+            "ns_attr": project.namespace_attribute,
+            "env_prefix": project.environment_prefix,
+            "workspace_integration": None,
+            "workspace_policy_overlays": [],
+            "workspace_exclusions": [],
+        }
+        manifest = u.Infra.workspace_manifest_path(tmp_path)
+        entry = next(
+            entry
+            for entry in config.Infra.codegen.templates.entries
+            if entry.destination == manifest.relative_to(tmp_path).as_posix()
+        )
+        template = u.Infra.codegen_templates_root(config.Infra.codegen) / entry.source
+        environment = u.Cli.template_environment(template.parent)
+        rendered = environment.get_template(template.name).render(context)
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_text(rendered, encoding="utf-8")
+
+        loaded = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(tmp_path))
+
+        tm.that(loaded, len=1)
+        tm.that(loaded[0].repository.extra_verbs, eq=(root_verb,))
+        tm.that(loaded[0].members, len=1)
+        tm.that(loaded[0].members[0].extra_verbs, eq=(member_verb,))
 
     @staticmethod
     def _member_ledger_identity(member: Path) -> m.Infra.WorkspaceSpec:
@@ -121,8 +184,9 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
         member_beads.unlink()
         member_beads.mkdir()
         workspace = self._member_ledger_identity(member)
-        tm.that(workspace.beads.workspace, eq="member-workspace")
-        tm.that(workspace.beads.database, eq="member-database")
+        beads = tm.not_none(workspace.beads)
+        tm.that(beads.workspace, eq="member-workspace")
+        tm.that(beads.database, eq="member-database")
 
     def test_submodule_self_load_accepts_config_only_ledger(
         self, tmp_path: Path
@@ -131,7 +195,7 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
         member, _ = self._attach_member_to_workspace(tmp_path)
         (member / ".beads").unlink()
         workspace = self._member_ledger_identity(member)
-        tm.that(workspace.beads.workspace, eq="member-workspace")
+        tm.that(tm.not_none(workspace.beads).workspace, eq="member-workspace")
 
     def test_submodule_self_load_rejects_a_divergent_linked_identity(
         self, tmp_path: Path
@@ -150,6 +214,3 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
         tm.that(workspace.failure, eq=True)
         tm.that(str(workspace.error), has="member Beads routing identity differs")
         tm.that(str(workspace.error), has="rogue-workspace")
-
-
-__all__: t.VariadicTuple[str] = ()

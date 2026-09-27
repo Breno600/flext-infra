@@ -11,26 +11,28 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from . import _codegen
     from ._codegen.vscode import FlextInfraCodegenVscodeMixin
-    from .cli_dispatch import CliDispatchService
-    from .cli_route_base import CliRouteBase
-    from .cli_routes import CliRouteService
-    from .cli_routes_codegen import CodegenRoutes
-    from .cli_routes_refactor import RefactorRoutes
-    from .cli_routes_validate import ValidationRoutes
-    from .cli_routes_validate_commands import ValidationCommandRoutes
-    from .cli_routes_workspace import WorkspaceRoutes
+    from .cli_dispatch import FlextInfraCliDispatchService
+    from .cli_route_base import FlextInfraCliRouteBase
+    from .cli_routes import FlextInfraCliRouteService
+    from .cli_routes_codegen import FlextInfraCodegenRoutes
+    from .cli_routes_refactor import FlextInfraRefactorRoutes
+    from .cli_routes_validate import FlextInfraValidationRoutes
+    from .cli_routes_validate_commands import FlextInfraValidationCommandRoutes
+    from .cli_routes_workspace import FlextInfraWorkspaceRoutes
     from .codegen import FlextInfraCodegen
+
+
 __all__: tuple[str, ...] = (
-    "CliDispatchService",
-    "CliRouteBase",
-    "CliRouteService",
-    "CodegenRoutes",
+    "FlextInfraCliDispatchService",
+    "FlextInfraCliRouteBase",
+    "FlextInfraCliRouteService",
     "FlextInfraCodegen",
+    "FlextInfraCodegenRoutes",
     "FlextInfraCodegenVscodeMixin",
-    "RefactorRoutes",
-    "ValidationCommandRoutes",
-    "ValidationRoutes",
-    "WorkspaceRoutes",
+    "FlextInfraRefactorRoutes",
+    "FlextInfraValidationCommandRoutes",
+    "FlextInfraValidationRoutes",
+    "FlextInfraWorkspaceRoutes",
     "_codegen",
 )
 
@@ -39,14 +41,14 @@ _LAZY_IMPORTS = MappingProxyType(
         MappingProxyType({
             "._codegen": ("_codegen",),
             "._codegen.vscode": ("FlextInfraCodegenVscodeMixin",),
-            ".cli_dispatch": ("CliDispatchService",),
-            ".cli_route_base": ("CliRouteBase",),
-            ".cli_routes": ("CliRouteService",),
-            ".cli_routes_codegen": ("CodegenRoutes",),
-            ".cli_routes_refactor": ("RefactorRoutes",),
-            ".cli_routes_validate": ("ValidationRoutes",),
-            ".cli_routes_validate_commands": ("ValidationCommandRoutes",),
-            ".cli_routes_workspace": ("WorkspaceRoutes",),
+            ".cli_dispatch": ("FlextInfraCliDispatchService",),
+            ".cli_route_base": ("FlextInfraCliRouteBase",),
+            ".cli_routes": ("FlextInfraCliRouteService",),
+            ".cli_routes_codegen": ("FlextInfraCodegenRoutes",),
+            ".cli_routes_refactor": ("FlextInfraRefactorRoutes",),
+            ".cli_routes_validate": ("FlextInfraValidationRoutes",),
+            ".cli_routes_validate_commands": ("FlextInfraValidationCommandRoutes",),
+            ".cli_routes_workspace": ("FlextInfraWorkspaceRoutes",),
             ".codegen": ("FlextInfraCodegen",),
         }),
         alias_groups=MappingProxyType({}),

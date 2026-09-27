@@ -189,6 +189,3 @@ class TestsFlextInfraWorktreeFacts(u.Tests.WorktreeFixture):
         tm.that(plan.apply, eq=False)
         tm.that(plan.total_reclaim_bytes, eq=8)
         tm.that(len(plan.actions), eq=1)
-
-
-__all__: list[str] = ["TestsFlextInfraWorktreeFacts"]

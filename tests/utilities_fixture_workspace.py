@@ -126,8 +126,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         managed Makefile renders into its help block, so a caller controls
         real rendered content through the declaration the loader validates.
 
-        ``gascity_enabled`` declares the repository policy overlay's Gas City
-        participation; ``None`` writes no overlay at all (the fleet default).
+        ``gascity_enabled`` declares the Gas City participation of a repository
+        that participates in Beads; ``None`` writes no overlay at all (the fleet
+        default). An overlay states every participation explicitly: its Beads
+        default is off, and Gas City requires Beads.
         """
         repository = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
             name, role=role
@@ -159,7 +161,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 update={
                     "repository_policy_overlays": (
                         m.Infra.RepositoryPolicyOverlaySpec(
-                            project=name, gascity_enabled=gascity_enabled
+                            project=name,
+                            beads_enabled=True,
+                            gascity_enabled=gascity_enabled,
                         ),
                     )
                 }
@@ -181,6 +185,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             config.Infra.name
         )
         branch = TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()
+        tests_ref = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
+            "flext-tests"
+        )
         package_root = project_dir / "src" / name.replace("-", "_")
         package_root.mkdir(parents=True, exist_ok=True)
         (package_root / "__init__.py").write_text("", encoding="utf-8")
@@ -191,7 +198,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             "dependencies = []\n"
             "[dependency-groups]\n"
-            f'dev = ["{infra.distribution} @ git+{infra.url}@{branch}"]\n',
+            f'dev = ["{infra.distribution} @ git+{infra.url}@{branch}", '
+            f'"{tests_ref.distribution} @ git+{tests_ref.url}@{branch}"]\n',
             encoding="utf-8",
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
@@ -231,10 +239,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
     def required_beads(workspace: m.Infra.WorkspaceSpec) -> m.Infra.BeadsProjectSpec:
         """Return the ledger identity the observed loader must always resolve.
 
-        Every observed load owns a Beads identity — the loader rejects a
-        spec without one — so a test asserting that identity states the
-        contract here instead of reaching into the spec at each call site.
+        Callers use this only for fixtures that explicitly enable Beads.
         """
+        if workspace.beads is None:
+            msg = "test fixture requires Beads participation"
+            raise ValueError(msg)
         return workspace.beads
 
     @staticmethod
@@ -579,7 +588,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             # A workspace parent declares its own role as workspace: the
             # manifest must agree with the topology the detector observes.
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(
-                parent, parent.name, role=c.Infra.MakeProfile.WORKSPACE
+                parent,
+                cls.declared_manifest_name(parent),
+                role=c.Infra.MakeProfile.WORKSPACE,
             )
             member_head = TestsFlextInfraUtilitiesGitMixin.git_capture(
                 member, "rev-parse", c.Infra.GIT_HEAD
@@ -679,6 +690,22 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             )
             return pyproject
 
+        @staticmethod
+        def declared_manifest_name(root: Path) -> str:
+            """Return the name the root's manifest already declares.
+
+            The Git origin was minted from that distribution; the checkout
+            directory name is arbitrary in tmp fixtures and never the identity.
+            """
+            existing = root / "config" / "workspace.yaml"
+            if not existing.is_file():
+                return root.name
+            loaded = tm.ok(u.Cli.config_load(existing, expand_env=False))
+            loaded_name = loaded.data.get("name")
+            if isinstance(loaded_name, str) and loaded_name:
+                return loaded_name
+            return root.name
+
         @classmethod
         def write_gitmodules(cls, root: Path, projects: t.VariadicTuple[str]) -> Path:
             """Declare governed subprojects with the declared fixture contract."""
@@ -698,9 +725,20 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 encoding="utf-8",
             )
             # Declaring members makes this root a workspace: its own manifest
-            # must declare the same role or the detector rejects the drift.
+            # must declare the same role or the detector rejects the drift. The
+            # rewrite keeps the distribution the root already declared (its Git
+            # origin was minted from it); the checkout directory name is
+            # arbitrary in tmp fixtures and must never become the identity. A
+            # .gitmodules without members declares no topology change, so the
+            # root stays standalone.
+            declared = cls.declared_manifest_name(root)
+            role = (
+                c.Infra.MakeProfile.WORKSPACE
+                if projects
+                else c.Infra.MakeProfile.STANDALONE
+            )
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(
-                root, root.name, role=c.Infra.MakeProfile.WORKSPACE
+                root, declared, role=role
             )
             return path
 

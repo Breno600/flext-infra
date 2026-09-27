@@ -7,12 +7,10 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c
-
-from ._fixtures import TestsFlextInfraValidateNamespaceBase
+from tests import c, u
 
 
-class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
+class TestsFlextInfraModulePathRules:
     """Namespace rules key on the module path a project actually declares."""
 
     @pytest.mark.parametrize("family", ["c", "t", "p", "m", "u"])
@@ -23,18 +21,26 @@ class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
         """Test facades own Tests and their exact family alias, never loose aliases."""
         module = c.Infra.FAMILY_PUBLIC_MODULES[family]
         suffix = c.Infra.FAMILY_SUFFIXES[family]
+        # The negative case binds the alias to the IMPORTED parent class, not
+        # the local facade: the owner election accepts any locally-declared
+        # published alias, so only a foreign binding stays a violation.
         target_alias = family if valid_alias else "unrelated"
-        root, _ = self._create_namespace_project_path(
+        bound_class = f"TestsFlextTest{suffix}" if valid_alias else f"FlextTest{suffix}"
+        # The test facade extends the parent package's family CLASS and
+        # rebinds the letter locally; importing the letter itself would
+        # shadow the binding and break the owner election.
+        root, _ = u.Tests.namespace_project_path(
             tmp_path,
             module_path=f"tests/{module}.py",
             module_source=(
-                f"from flext_test import {family}\n\n"
-                f"class TestsFlextTest{suffix}({family}):\n"
-                f"    class Tests({family}.Tests):\n        pass\n\n"
-                f"{target_alias} = TestsFlextTest{suffix}\n"
+                f"from flext_test.{module} import FlextTest{suffix}\n\n"
+                f"class TestsFlextTest{suffix}(FlextTest{suffix}):\n"
+                f"    class Tests(FlextTest{suffix}.Tests):\n        pass\n\n"
+                f"{target_alias} = {bound_class}\n\n"
+                f'__all__: list[str] = ["TestsFlextTest{suffix}", "{target_alias}"]\n'
             ),
         )
-        report = self._validate_project(root)
+        report = u.Tests.validate_namespace_project(root)
         tm.that(report.passed, eq=valid_alias, msg=str(report.violations))
 
     @pytest.mark.parametrize(
@@ -79,8 +85,10 @@ class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
             ),
             pytest.param(
                 "tests/constants.py",
-                "from tests import m\n\nclass TestsFlextTestConstants:\n    pass\n",
-                "facade must inherit canonical 'c'",
+                "from tests import m\n\nclass TestsFlextTestConstants:\n    pass\n\n"
+                "c = TestsFlextTestConstants\n\n"
+                '__all__: list[str] = ["TestsFlextTestConstants", "c"]\n',
+                "facade must extend its declared owner",
                 True,
                 False,
                 id="rule3-test-constants-facade-shape-required",
@@ -109,8 +117,10 @@ class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
             ),
             pytest.param(
                 "tests/models.py",
-                "from tests import helper\n\nclass TestsFlextTestModels:\n    pass\n",
-                "facade must inherit canonical 'm'",
+                "from tests import helper\n\nclass TestsFlextTestModels:\n    pass\n\n"
+                "m = TestsFlextTestModels\n\n"
+                '__all__: list[str] = ["TestsFlextTestModels", "m"]\n',
+                "facade must extend its declared owner",
                 True,
                 False,
                 id="rule3-test-facade-imports-tests-package",
@@ -119,8 +129,10 @@ class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
                 "tests/models.py",
                 "from tests.conftest import helper\n\n"
                 "class TestsFlextTestModels:\n"
-                "    pass\n",
-                "facade must inherit canonical 'm'",
+                "    pass\n\n"
+                "m = TestsFlextTestModels\n\n"
+                '__all__: list[str] = ["TestsFlextTestModels", "m"]\n',
+                "facade must extend its declared owner",
                 True,
                 False,
                 id="rule3-test-facade-imports-conftest",
@@ -129,8 +141,10 @@ class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
                 "tests/models.py",
                 "from tests.fixtures import helper\n\n"
                 "class TestsFlextTestModels:\n"
-                "    pass\n",
-                "facade must inherit canonical 'm'",
+                "    pass\n\n"
+                "m = TestsFlextTestModels\n\n"
+                '__all__: list[str] = ["TestsFlextTestModels", "m"]\n',
+                "facade must extend its declared owner",
                 True,
                 False,
                 id="rule3-test-facade-imports-fixtures",
@@ -139,8 +153,10 @@ class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
                 "tests/models.py",
                 "from tests.unit.test_service import helper\n\n"
                 "class TestsFlextTestModels:\n"
-                "    pass\n",
-                "facade must inherit canonical 'm'",
+                "    pass\n\n"
+                "m = TestsFlextTestModels\n\n"
+                '__all__: list[str] = ["TestsFlextTestModels", "m"]\n',
+                "facade must extend its declared owner",
                 True,
                 False,
                 id="rule3-test-facade-imports-test-module",
@@ -203,18 +219,15 @@ class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
         expect_passed: bool | None,
     ) -> None:
         """Namespace rules key on the module path a project actually declares."""
-        root, target = self._create_namespace_project_path(
+        root, target = u.Tests.namespace_project_path(
             tmp_path, module_source=module_source, module_path=module_path
         )
-        self._assert_file_in_inventory(root, target)
+        u.Tests.assert_namespace_file_in_inventory(root, target)
 
-        report = self._validate_project(root)
+        report = u.Tests.validate_namespace_project(root)
 
         if expect_passed is not None:
             tm.that(report.passed, eq=expect_passed, msg=str(report.violations))
         tm.that(
             any(violation_substr in v for v in report.violations), eq=expect_violation
         )
-
-
-__all__: list[str] = ["TestsFlextInfraModulePathRules"]

@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from .discovery import FlextInfraPromotedDiscovery
     from .dispatch import FlextInfraPromotedDispatch
     from .registry import FlextInfraPromotedRegistry
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraPromotedBase",
     "FlextInfraPromotedDiscovery",

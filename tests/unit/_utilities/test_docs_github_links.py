@@ -342,6 +342,3 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
                 target="https://github.com/unknown/repo/blob/main/path.md",
             )
             tm.that(len(issues), eq=0)
-
-
-__all__: list[str] = ["TestsFlextInfraUtilitiesDocsGithubLinks"]

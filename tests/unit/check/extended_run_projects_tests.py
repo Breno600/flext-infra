@@ -21,6 +21,15 @@ if TYPE_CHECKING:
 class TestsFlextInfraRunProjects:
     """Verify project execution through the public checker methods."""
 
+    def test_empty_gate_selection_fails(self, tmp_path: Path) -> None:
+        project = u.Tests.mk_project(tmp_path, "p1", with_src=True)
+        (project / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
+        checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
+
+        result = checker.run_projects(["p1"], [], reports_dir=tmp_path / "reports")
+
+        tm.fail(result, has="at least one quality gate is required")
+
     def test_invalid_gates_fail(self, tmp_path: Path) -> None:
         result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
             ["p1"], ["invalid_gate"], reports_dir=tmp_path / "reports"
@@ -112,6 +121,3 @@ class TestsFlextInfraRunProjects:
 
         tm.ok(result)
         tm.that(len(result.value), eq=1)
-
-
-__all__: list[str] = ["TestsFlextInfraRunProjects"]

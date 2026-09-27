@@ -15,8 +15,6 @@ from tests import u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
-
 
 class TestsFlextInfraRealGateRunners:
     """Exercise real gate behavior through public gate APIs."""
@@ -127,6 +125,3 @@ class TestsFlextInfraRealGateRunners:
 
         tm.that(not result.result.passed, eq=True)
         tm.that(len(result.issues), gte=1)
-
-
-__all__: t.StrSequence = ["TestsFlextInfraRealGateRunners"]

@@ -132,6 +132,3 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         tm.that(updated, has="from tests import t")
         tm.that(updated, has="t.Tests.Testobject")
         tm.that(updated, lacks="Core.Tests")
-
-
-__all__: list[str] = ["TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow"]

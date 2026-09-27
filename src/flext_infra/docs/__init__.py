@@ -18,9 +18,12 @@ if TYPE_CHECKING:
     from .builder import FlextInfraDocBuilder
     from .collector import FlextInfraDocCollector
     from .fixer import FlextInfraDocFixer
+    from .formatter import FlextInfraDocFormatter
     from .generator import FlextInfraDocGenerator
     from .server import FlextInfraDocServer
     from .validator import FlextInfraDocValidator
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraDocAuditor",
     "FlextInfraDocAuditorChecksMixin",
@@ -29,6 +32,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraDocBuilder",
     "FlextInfraDocCollector",
     "FlextInfraDocFixer",
+    "FlextInfraDocFormatter",
     "FlextInfraDocGenerator",
     "FlextInfraDocGeneratorBundleMixin",
     "FlextInfraDocServer",
@@ -48,6 +52,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".builder": ("FlextInfraDocBuilder",),
             ".collector": ("FlextInfraDocCollector",),
             ".fixer": ("FlextInfraDocFixer",),
+            ".formatter": ("FlextInfraDocFormatter",),
             ".generator": ("FlextInfraDocGenerator",),
             ".server": ("FlextInfraDocServer",),
             ".validator": ("FlextInfraDocValidator",),

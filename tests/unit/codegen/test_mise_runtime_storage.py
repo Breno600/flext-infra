@@ -50,6 +50,3 @@ class TestsFlextInfraMiseRuntimeStorage:
 
         tm.fail(result)
         tm.that(candidate.exists(), eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraMiseRuntimeStorage"]

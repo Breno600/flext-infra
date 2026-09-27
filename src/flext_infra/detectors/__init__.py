@@ -31,6 +31,8 @@ if TYPE_CHECKING:
     from .private_import_bypass_detector import FlextInfraPrivateImportBypassDetector
     from .runtime_alias_detector import FlextInfraRuntimeAliasDetector
     from .silent_failure_detector import FlextInfraSilentFailureDetector
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraClassPlacementDetector",
     "FlextInfraCompatibilityAliasDetector",

@@ -222,7 +222,8 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     parse_failures=parse_failures,
                     project_name=project_name,
                     project_root=project_root,
-                )
+                ),
+                policy=u.Infra.policy(f, rope_project=rope_project),
             ),
             rewrite_fn=lambda _vs: u.Infra.rewrite_runtime_alias_violations(
                 py_files=py_files, gates=gates
@@ -374,7 +375,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         violations: t.SequenceOf[m.Infra.CompatibilityAliasViolation],
         *,
         package_name: str,
-    ) -> tuple[
+    ) -> t.Pair[
         list[m.Infra.CompatibilityAliasViolation],
         list[m.Infra.CompatibilityAliasViolation],
     ]:

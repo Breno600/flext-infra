@@ -76,7 +76,7 @@ class FlextInfraUtilitiesRopeStructure:
         if resource is None:
             return ()
         try:
-            pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(
+            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                 ctx.rope_project, resource
             )
             module_imports = FlextInfraUtilitiesRopeRuntime.module_imports_for_pymodule(
@@ -190,7 +190,7 @@ class FlextInfraUtilitiesRopeStructure:
             )
         if isinstance(rule, m.Infra.StaticImportMemberRule):
             return any(
-                fact.is_from_import
+                fact.from_import_info
                 and fact.module == rule.module
                 and fact.member == rule.member
                 for fact in statement_facts
@@ -206,7 +206,7 @@ class FlextInfraUtilitiesRopeStructure:
                     word_finder,
                 )
                 for fact in facts
-                if not fact.is_from_import
+                if not fact.from_import_info
                 and (
                     fact.module == rule.module
                     or fact.module.startswith(f"{rule.module}.")
@@ -290,7 +290,7 @@ class FlextInfraUtilitiesRopeStructure:
         for statement in tuple(module_imports.imports):
             line = statement.start_line if statement.start_line > 0 else 1
             info = statement.import_info
-            if FlextInfraUtilitiesRopeRuntime.is_normal_import(info):
+            if FlextInfraUtilitiesRopeRuntime.normal_import_info(info):
                 for module, alias in info.names_and_aliases:
                     facts = (
                         *facts,
@@ -298,10 +298,10 @@ class FlextInfraUtilitiesRopeStructure:
                             line=line,
                             module=module,
                             local_name=alias or module.partition(".")[0],
-                            is_from_import=False,
+                            from_import_info=False,
                         ),
                     )
-            elif FlextInfraUtilitiesRopeRuntime.is_from_import(info):
+            elif FlextInfraUtilitiesRopeRuntime.from_import_info(info):
                 for member, alias in info.names_and_aliases:
                     module_name = info.module_name
                     if not module_name:
@@ -313,7 +313,7 @@ class FlextInfraUtilitiesRopeStructure:
                             module=module_name,
                             member=member,
                             local_name=alias or member,
-                            is_from_import=True,
+                            from_import_info=True,
                         ),
                     )
         return facts
@@ -364,7 +364,7 @@ class FlextInfraUtilitiesRopeStructure:
 
     @staticmethod
     def _pop_exited_enclosers(
-        enclosers: t.MutableSequenceOf[tuple[int, c.Infra.RopeScopeKind, str]],
+        enclosers: t.MutableSequenceOf[t.Triple[int, c.Infra.RopeScopeKind, str]],
         indent: int,
     ) -> None:
         """Drop enclosers whose body the current indentation has left."""
@@ -374,7 +374,7 @@ class FlextInfraUtilitiesRopeStructure:
     @staticmethod
     def _push_encloser(
         *,
-        enclosers: t.MutableSequenceOf[tuple[int, c.Infra.RopeScopeKind, str]],
+        enclosers: t.MutableSequenceOf[t.Triple[int, c.Infra.RopeScopeKind, str]],
         category: c.Infra.StatementCategory,
         indent: int,
         text: str,
@@ -435,11 +435,23 @@ class FlextInfraUtilitiesRopeStructure:
                 if ":" in head
                 else c.Infra.StatementCategory.ASSIGN
             )
+        if FlextInfraUtilitiesRopeStructure._string_literal_headed(stripped):
+            # Docstrings carry parentheses in their prose; they are inert
+            # string-literal expressions, never executable calls.
+            return c.Infra.StatementCategory.OTHER
         return (
             c.Infra.StatementCategory.CALL
             if "(" in stripped
             else c.Infra.StatementCategory.OTHER
         )
+
+    @staticmethod
+    def _string_literal_headed(stripped: str) -> bool:
+        """Return whether a statement starts with a string literal."""
+        index = 0
+        while index < len(stripped) and stripped[index].lower() in "rbfu":
+            index += 1
+        return index < len(stripped) and stripped[index] in "'\""
 
     @staticmethod
     def _assignment_head(stripped: str) -> str | None:

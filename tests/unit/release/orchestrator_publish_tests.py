@@ -67,6 +67,3 @@ class TestsFlextInfraReleasePublish:
         tm.that(
             u.Tests.run_release_main(workspace, "--phase", "publish", "--apply"), ne=0
         )
-
-
-__all__: list[str] = ["TestsFlextInfraReleasePublish"]

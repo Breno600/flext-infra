@@ -69,6 +69,18 @@ class TestsFlextInfraRopeStructure:
 
         tm.that(by_line[5].category, eq=c.Infra.StatementCategory.TYPE_ALIAS)
 
+    def test_categorizes_parenthesized_docstring_as_inert(self) -> None:
+        source = (
+            "class Wrapper:\n"
+            '    """Facade (with parentheses) in the prose."""\n'
+            "\n"
+            "    Member: ClassVar[int] = 1\n"
+        )
+        statements = {s.line: s for s in u.Infra.logical_statements(source)}
+
+        tm.that(statements[2].category, eq=c.Infra.StatementCategory.OTHER)
+        tm.that(statements[4].category, eq=c.Infra.StatementCategory.ANN_ASSIGN)
+
     def test_categorizes_type_checking_guard(self) -> None:
         by_line = self._by_line()
 
@@ -104,6 +116,3 @@ class TestsFlextInfraRopeStructure:
 
         tm.that(statements[0].text, eq=self._MULTILINE_IMPORT.rstrip("\n"))
         tm.that(statements[0].category, eq=c.Infra.StatementCategory.FROM_IMPORT)
-
-
-__all__: list[str] = ["TestsFlextInfraRopeStructure"]

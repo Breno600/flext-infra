@@ -62,6 +62,19 @@ class TestsFlextInfraTierWhitelist:
         tm.that(report.passed, eq=True)
 
     @pytest.mark.parametrize(
+        "source", ["from .yaml import value\n", "from . import yaml\n"]
+    )
+    def test_relative_module_is_not_a_third_party_import(
+        self, tmp_path: Path, v: FlextInfraValidateTierWhitelist, source: str
+    ) -> None:
+        """A local module named like a library retains its package identity."""
+        pkg = u.Tests.write_package_init(tmp_path / "src" / "pkg", "").parent
+        tf(base_dir=pkg).create("value = 1\n", "yaml.py")
+        tf(base_dir=pkg).create(source, "consumer.py")
+        report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
+        tm.that(report.passed, eq=True, msg=str(report.violations))
+
+    @pytest.mark.parametrize(
         ("source", "filename", "expected_substring"),
         [
             ("from pydantic import BaseModel\n", "bad.py", "pydantic"),
@@ -117,6 +130,3 @@ class TestsFlextInfraTierWhitelist:
         u.Tests.write_package_init(tmp_path / "src" / "pkg", "")
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.summary, has="boundary")
-
-
-__all__: list[str] = ["TestsFlextInfraTierWhitelist"]

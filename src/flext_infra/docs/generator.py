@@ -16,7 +16,7 @@ from .base import FlextInfraDocServiceBase
 if TYPE_CHECKING:
     from flext_infra import p
 
-type _DocsScopePlan = tuple[m.Infra.DocScope, tuple[m.Infra.CodegenFilePlan, ...]]
+type _DocsScopePlan = t.Pair[m.Infra.DocScope, t.VariadicTuple[m.Infra.CodegenFilePlan]]
 
 
 class FlextInfraDocGenerator(

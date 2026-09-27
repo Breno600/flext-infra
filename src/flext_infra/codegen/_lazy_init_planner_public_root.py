@@ -30,10 +30,6 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
         # the plan is identical whichever root the planner was opened from.
         declared_contract = self._declared_root_contract(context)
 
-        u.Cli.info(
-            f"lazy-init: filtering exports for {context.current_pkg} ({context.pkg_dir}): export_names={len(export_names)}, lazy_map={len(lazy_map)}, eager_names={len(eager_names)}, declared_contract={len(declared_contract) if declared_contract else 0}"
-        )
-
         governed_lazy_map = {
             name: target
             for name, target in lazy_map.items()
@@ -44,9 +40,6 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
                 declared_contract=declared_contract,
             )
         }
-        u.Cli.info(
-            f"lazy-init: governed_lazy_map={len(governed_lazy_map)} after filtering"
-        )
         lazy_map.clear()
         lazy_map.update(governed_lazy_map)
         # The published surface is what the package actually delivers: the eager
@@ -66,7 +59,6 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
             for name, target in lazy_map.items()
             if name in public_export_names
         }
-        u.Cli.info(f"lazy-init: public_export_names={len(public_export_names)}")
         return public_export_names, filtered_lazy_map
 
     def _declared_root_contract(
@@ -80,8 +72,11 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
         if entry is not None and entry.descendant_child_dirs:
             return None
         constants_path = context.pkg_dir / c.Infra.CONSTANTS_PY
-        if self.rope_workspace.resource(constants_path) is not None:
-            imports = self.rope_workspace.semantic(constants_path).declared_imports
+        resource = self.rope_workspace.resource(constants_path)
+        if resource is not None:
+            imports = u.Infra.resolve_declared_module_imports(
+                self.rope_workspace.rope_project, resource
+            )
             if any(
                 name != "annotations" and not target.startswith("__future__")
                 for name, target in imports.items()
@@ -116,16 +111,39 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
             module_path == f"{root_pkg}._settings" and name.endswith("Settings")
         ):
             return True
-        if module_path == root_pkg:
-            return True
-        if module_path.startswith(f"{root_pkg}."):
-            # Any underscore-prefixed source segment
-            # marks the owner as private; the symbol stays behind its facade.
-            tail = module_path[len(root_pkg) + 1 :].split(".")
-            return not any(
-                part.startswith("_") and not part.startswith("__") for part in tail
-            )
-        return True
+        return not FlextInfraCodegenLazyInitPlannerPublicRootMixin._is_private_owner(
+            module_path, root_pkg=root_pkg
+        )
+
+    @staticmethod
+    def _is_private_owner(module_path: str, *, root_pkg: str) -> bool:
+        """Return whether a module below ``root_pkg`` sits behind a private segment.
+
+        Any underscore-prefixed source segment below the root marks the owner as
+        private; its symbols stay behind their facade and never widen the root ABI.
+        """
+        if not module_path.startswith(f"{root_pkg}."):
+            return False
+        tail = module_path[len(root_pkg) + 1 :].split(".")
+        return any(part.startswith("_") and not part.startswith("__") for part in tail)
+
+    @staticmethod
+    def _is_facade_root(context: m.Infra.LazyInitPackageContext) -> bool:
+        """Return whether a package is a public project root or the tests facade root."""
+        is_public_project_root = bool(
+            context.pkg_dir.parent.name == c.Infra.DEFAULT_SRC_DIR
+            and context.current_pkg
+            and "." not in context.current_pkg
+            # Why (flext-27a9e.1, multi-agent): governed consumers such as ai_hub
+            # are first-class project roots; package prefixes are not architecture.
+            and u.Infra.matches_project_namespace_package(context.current_pkg)
+        )
+        is_test_facade_root = (
+            context.current_pkg == c.Infra.DIR_TESTS
+            and context.pkg_dir.name == c.Infra.DIR_TESTS
+            and context.surface == c.Infra.DIR_TESTS
+        )
+        return is_public_project_root or is_test_facade_root
 
 
 __all__: list[str] = ["FlextInfraCodegenLazyInitPlannerPublicRootMixin"]

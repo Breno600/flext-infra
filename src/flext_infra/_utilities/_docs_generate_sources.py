@@ -81,7 +81,7 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
                 return r[t.VariadicTuple[Path]].from_failure(docs_root_present)
             fixed_paths = (
                 root / c.Infra.GITMODULES,
-                root / c.Infra.PYPROJECT_FILENAME,
+                root / c.PYPROJECT_FILENAME,
                 *(
                     (root / c.Infra.DIR_DOCS / c.Infra.DOCS_CONFIG_FILENAME,)
                     if docs_root_present.value

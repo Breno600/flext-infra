@@ -60,6 +60,3 @@ class TestsFlextInfraWorkspaceInit:
         )
 
         tm.fail(result)
-
-
-__all__: t.StrSequence = ["TestsFlextInfraWorkspaceInit"]

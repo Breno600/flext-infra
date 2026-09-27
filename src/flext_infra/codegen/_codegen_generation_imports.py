@@ -85,7 +85,10 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
         export_name, imported_name = item
         imported = imported_name or export_name
         category = 0 if imported.isupper() else 1 if imported[:1].isupper() else 2
-        return (category, imported), export_name != imported_name
+        # Ruff isort orders names inside a type group case-insensitively
+        # (``TEST_FACADE_BASES`` < ``TESTS_ROOT``): raw ASCII puts ``S`` (83)
+        # before ``_`` (95) and flips the pair, producing a gen/fmt flip-flop.
+        return (category, imported.casefold()), export_name != imported_name
 
     @staticmethod
     def _generate_import_lines(

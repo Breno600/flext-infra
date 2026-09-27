@@ -143,6 +143,3 @@ class TestsFlextInfraInfraRefactorRopeMigrations:
         tm.that(updated, has="NewName")
         tm.that(changes, empty=False)
         tm.that(file_path.read_text(encoding="utf-8"), eq=original_source)
-
-
-__all__: list[str] = ["TestsFlextInfraInfraRefactorRopeMigrations"]

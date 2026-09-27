@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from flext_core import m
-
 from flext_test._models.base import FlextTestModelsBase
 from flext_test._models.domain import FlextTestModelsDomain
 
 
-class FlextTestModels(m):
+class FlextTestModels(FlextTestModelsBase):
     class Test(FlextTestModelsBase, FlextTestModelsDomain):
         pass
 

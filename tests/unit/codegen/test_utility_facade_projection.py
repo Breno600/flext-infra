@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import u
+from flext_infra import c, u
 
 
 class TestsFlextInfraUtilityFacadeProjection:
@@ -20,15 +20,28 @@ class TestsFlextInfraUtilityFacadeProjection:
         path.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(path, source))
 
+    @pytest.mark.parametrize(
+        ("import_statement", "consumer_name"),
+        [
+            ("from flext_sample import u", "batch_apply.py"),
+            ("from .. import u", "batch_apply.py"),
+            ("from ..utilities import u", "batch_apply.py"),
+            ("from .. import u", "__init__.py"),
+            ("from ..utilities import u", "__init__.py"),
+        ],
+    )
     def test_projects_only_uniquely_discovered_missing_owner(
-        self, tmp_path: Path
+        self, tmp_path: Path, import_statement: str, consumer_name: str
     ) -> None:
         """Derive the required owner from the executable public consumer."""
         package = tmp_path / "src" / "flext_sample"
-        self._write(package / "__init__.py", "")
+        conflicted = (
+            c.Infra.AUTOGEN_HEADERS[0] + "\n<<<<<<< HEAD\n=======\n>>>>>>> incoming\n"
+        )
+        self._write(package / "__init__.py", conflicted)
         self._write(
-            package / "codemod" / "batch_apply.py",
-            "from flext_sample import u\n\nu.Sample.plan_cutover()\n",
+            package / "codemod" / consumer_name,
+            import_statement + "\n\nu.Sample.plan_cutover()\n",
         )
         self._write(
             package / "_utilities" / "semantic_cutover.py",
@@ -58,6 +71,24 @@ class TestsFlextInfraUtilityFacadeProjection:
         tm.that(
             "FlextSampleUtilitiesSemanticCutover" not in facade.read_text(), eq=True
         )
+        tm.that((package / "__init__.py").read_text(), eq=conflicted)
+
+    def test_unresolved_consumer_import_fails_before_projection(
+        self, tmp_path: Path
+    ) -> None:
+        """Unknown provenance is an error, never an empty owner selection."""
+        package = tmp_path / "src" / "flext_sample"
+        self._write(package / "__init__.py", "")
+        self._write(package / "_utilities" / "owner.py", "class Owner:\n    pass\n")
+        self._write(
+            package / "utilities.py", "class Facade:\n    class Sample:\n        pass\n"
+        )
+        self._write(
+            package / "consumer.py",
+            "from nonexistent_facade_owner import u\nu.Sample.required()\n",
+        )
+        with pytest.raises(ValueError, match="unresolved imported module"):
+            u.Infra.render_utility_facade(package)
 
     def test_rejects_ambiguous_method_ownership(self, tmp_path: Path) -> None:
         """Fail before projection when two local owners claim one method."""
@@ -101,6 +132,32 @@ class TestsFlextInfraUtilityFacadeProjection:
         package = tmp_path / "src" / "flext_sample"
         (package / "_utilities").mkdir(parents=True)
         tm.that(u.Infra.render_utility_facade(package), eq=None)
+
+    @pytest.mark.parametrize("generated", [True, False])
+    def test_initializer_ownership_controls_consumer_parsing(
+        self, tmp_path: Path, *, generated: bool
+    ) -> None:
+        """Only generated propagation is excluded from authored consumer analysis."""
+        package = tmp_path / "src" / "flext_sample"
+        self._write(package / "_utilities" / "owner.py", "class Owner:\n    pass\n")
+        original = (
+            "from flext_sample._utilities.owner import Owner\n"
+            "class Facade:\n    class Domain(Owner):\n        pass\n"
+            "u = Facade\n__all__ = ['Facade', 'u']\n"
+        )
+        self._write(package / "utilities.py", original)
+        conflicted = (
+            c.Infra.AUTOGEN_HEADERS[0] + "\n" if generated else ""
+        ) + "<<<<<<< HEAD\n=======\n>>>>>>> incoming\n"
+        initializer = package / c.Infra.INIT_PY
+        self._write(initializer, conflicted)
+
+        if generated:
+            tm.that(u.Infra.render_utility_facade(package), eq=original)
+        else:
+            with pytest.raises(SyntaxError):
+                u.Infra.render_utility_facade(package)
+        tm.that(initializer.read_text(), eq=conflicted)
 
     def test_facade_without_local_owners_is_complete(self, tmp_path: Path) -> None:
         """A pure re-export facade with no owners directory needs no projection."""
@@ -194,6 +251,3 @@ class TestsFlextInfraUtilityFacadeProjection:
         tm.that(facade.read_text(), eq=original)
         self._write(facade, updated)
         tm.that(u.Infra.render_utility_facade(package, family="p"), eq=updated)
-
-
-__all__: list[str] = ["TestsFlextInfraUtilityFacadeProjection"]

@@ -31,7 +31,7 @@ class FlextInfraAccessorMigrationOrchestrator(
         m.Field(
             description=(
                 "Comma-separated lint gates for preview/apply validation; empty"
-                " selects the SSOT snapshot gates (make.ci.check_gates)."
+                " selects the SSOT snapshot gates (make.check_gates_ci)."
             )
         ),
     ] = ""

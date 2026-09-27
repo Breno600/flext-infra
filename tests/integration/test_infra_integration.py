@@ -91,6 +91,3 @@ class TestsFlextInfraIntegrationInfraIntegration:
         capture_result = u.Cli.capture(["python3", "-c", "print('infra-ok')"])
         tm.ok(capture_result)
         tm.that(capture_result.value, eq="infra-ok")
-
-
-__all__: list[str] = ["TestsFlextInfraIntegrationInfraIntegration"]

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -71,7 +72,15 @@ class TestsFlextInfraDepsModernizerTooling:
             eq=frozenset({"examples", "scripts", "tests"}),
         )
         tm.that(tracked_surfaces.isdisjoint(tools.ruff.exclude), eq=True)
-        tm.that(tools.mypy.exclude, eq="")
+        # mypy's exclude is config-owned (tooling.yaml) and may legitimately
+        # hide non-tracked trees (e.g. legacy sources); the contract is that
+        # no exclude pattern ever matches a tracked surface.
+        for pattern in tools.mypy.exclude.split(","):
+            if pattern:
+                tm.that(
+                    any(re.match(pattern, surface) for surface in tracked_surfaces),
+                    eq=False,
+                )
         tm.that(frozenset(tools.pyright.path_rules.env_dirs), eq=tracked_surfaces)
         tm.that(
             hidden_globs.isdisjoint(tools.pyright.path_rules.default_excludes), eq=True
@@ -209,6 +218,3 @@ class TestsFlextInfraDepsModernizerTooling:
         )
         tm.that(known_first_party, has="flext_core")
         tm.that(known_first_party, lacks="demo_migration_tool")
-
-
-__all__: list[str] = ["TestsFlextInfraDepsModernizerTooling"]

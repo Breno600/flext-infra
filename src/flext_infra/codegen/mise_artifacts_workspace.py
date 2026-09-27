@@ -428,7 +428,7 @@ class FlextInfraMiseWorkspacePlanner:
 
     def _state_root(self, root: Path) -> p.Result[Path]:
         cursor = root.absolute()
-        for part in files.STATE_DIRECTORY.parts:
+        for part in c.Infra.MISE_ARTIFACTS_STATE_DIRECTORY.parts:
             cursor /= part
             if not cursor.exists() and not cursor.is_symlink():
                 continue

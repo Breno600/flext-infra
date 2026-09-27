@@ -126,7 +126,7 @@ class FlextInfraUtilitiesGitSemanticPathsMixin(
         """
         try:
             repo = cls._repo(request.repo_root)
-            repo.index.add(list(request.paths), force=True)
+            repo.git.add("--force", "--", *request.paths)
         except GitCommandError as exc:
             return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:

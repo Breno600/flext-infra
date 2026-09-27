@@ -81,7 +81,7 @@ class FlextInfraCodegenTransaction:
 
     @contextmanager
     def _lease_file_participants(
-        self, participants: tuple[m.Infra.CodegenFileParticipant, ...]
+        self, participants: t.VariadicTuple[m.Infra.CodegenFileParticipant]
     ) -> Generator[None]:
         """Serialize shared destinations across worktrees in stable path order."""
         for participant in participants:
@@ -327,7 +327,15 @@ class FlextInfraCodegenTransaction:
             return result_type.fail(
                 f"generation residue has no journal authority: {residue[0]}"
             )
-        transaction_directories = state.plan_transaction_directories(layout)
+        transaction_directories = state.plan_transaction_directories(
+            layout,
+            destinations=tuple(
+                item.path
+                for item in file_plans
+                if item.desired_content is not None
+                and u.Infra.codegen_file_requires_effect(item)
+            ),
+        )
         if transaction_directories.failure:
             return result_type.from_failure(transaction_directories)
         plan = self._planner.snapshot(layout, config_plans)

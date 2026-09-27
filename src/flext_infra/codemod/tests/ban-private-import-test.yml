@@ -4,7 +4,13 @@ valid:
   - from .repo import git_capture
   - from ._utilities.client import FlextApiClient
   - from .._models.base import FlextModelsBase as m
+  - import flext_core
+  - import os.path
+  - import __future__
 invalid:
+  - import flext_core._models
+  - import flext_core._utilities.guards as guards
+  - import os, flext_core._typings
   - from flext_core._models import FlextModels
   - from flext_core._protocols import FlextProtocols
   - from flext_core._decorators.runtime import FlextDecoratorsRuntime

@@ -12,11 +12,14 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
+from flext_infra import config
 from flext_infra.docs.auditor import FlextInfraDocAuditor
 from tests import m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from flext_infra import p
 
 
 class TestsFlextInfraAuditorDocstring:
@@ -24,6 +27,18 @@ class TestsFlextInfraAuditorDocstring:
 
     _FULL_COVERAGE_PERCENT = 100.0
     _PARTIAL_COVERAGE_THRESHOLD = 80.0
+
+    @staticmethod
+    def _audit_warns() -> bool:
+        """Read the audit posture from the same typed SSOT production reads."""
+        return "audit" in config.Infra.codegen.make.docs.warning_actions
+
+    def _assert_verdict(self, result: p.Result[bool]) -> None:
+        """The execute verdict follows the configured audit posture."""
+        if self._audit_warns():
+            tm.ok(result)
+        else:
+            tm.fail(result)
 
     _PACKAGE_INIT = '''"""Demo package."""
 
@@ -103,7 +118,8 @@ __all__ = ["documented_fn", "undocumented_fn"]
         report = FlextInfraDocAuditor().audit_scope(
             scope, params=m.Infra.AuditScopeParams(check="docstrings")
         )
-        tm.that(report.passed, eq=False)
+        warns = "audit" in config.Infra.codegen.make.docs.warning_actions
+        tm.that(report.passed, eq=warns)
         tm.that(report.items, empty=False)
 
         markdown = (report_dir / "audit-report.md").read_text(encoding="utf-8")
@@ -128,7 +144,7 @@ __all__ = ["documented_fn", "undocumented_fn"]
             repository_root=project, checks="docstrings"
         ).execute()
 
-        tm.fail(result)
+        self._assert_verdict(result)
         summary = u.Tests.json_payload(
             (project / ".reports/docs/audit-summary.json").read_text(encoding="utf-8")
         )
@@ -145,7 +161,7 @@ __all__ = ["documented_fn", "undocumented_fn"]
 
         result = FlextInfraDocAuditor(repository_root=project).execute()
 
-        tm.fail(result)
+        self._assert_verdict(result)
         summary = u.Tests.json_payload(
             (project / ".reports/docs/audit-summary.json").read_text(encoding="utf-8")
         )
@@ -154,14 +170,16 @@ __all__ = ["documented_fn", "undocumented_fn"]
         tm.that(summary["checks"], has="links")
         tm.that(u.Tests.number(summary["issues"]), gt=0)
 
-    def test_coverage_below_minimum_fails_the_audit(self, tmp_path: Path) -> None:
+    def test_coverage_below_minimum_follows_configured_posture(
+        self, tmp_path: Path
+    ) -> None:
         project = self._write_project(tmp_path)
 
         result = FlextInfraDocAuditor(
             repository_root=project, checks="docstrings", docstring_min=80.0
         ).execute()
 
-        tm.fail(result)
+        self._assert_verdict(result)
         summary = u.Tests.json_payload(
             (project / ".reports/docs/audit-summary.json").read_text(encoding="utf-8")
         )
@@ -176,17 +194,18 @@ __all__ = ["documented_fn", "undocumented_fn"]
             eq=True,
         )
 
-    def test_coverage_above_minimum_cannot_allow_findings(self, tmp_path: Path) -> None:
+    def test_coverage_above_minimum_keeps_every_finding(self, tmp_path: Path) -> None:
         project = self._write_project(tmp_path)
 
         result = FlextInfraDocAuditor(
             repository_root=project, checks="docstrings", docstring_min=40.0
         ).execute()
 
-        tm.fail(result)
-        tm.that(result.error, has="issues:")
+        self._assert_verdict(result)
+        if not self._audit_warns():
+            tm.that(result.error, has="issues:")
 
-    def test_no_threshold_still_rejects_missing_docstrings(
+    def test_no_threshold_still_reports_missing_docstrings(
         self, tmp_path: Path
     ) -> None:
         project = self._write_project(tmp_path)
@@ -195,8 +214,9 @@ __all__ = ["documented_fn", "undocumented_fn"]
             repository_root=project, checks="docstrings"
         ).execute()
 
-        tm.fail(result)
-        tm.that(result.error, has="issues:")
+        self._assert_verdict(result)
+        if not self._audit_warns():
+            tm.that(result.error, has="issues:")
 
     def test_coverage_floor_applies_with_other_selected_checks(
         self, tmp_path: Path
@@ -206,8 +226,9 @@ __all__ = ["documented_fn", "undocumented_fn"]
         result = FlextInfraDocAuditor(
             repository_root=project, checks="links", docstring_min=80.0
         ).execute()
-        tm.fail(result)
-        tm.that(result.error, has="below minimum")
+        self._assert_verdict(result)
+        if not self._audit_warns():
+            tm.that(result.error, has="below minimum")
 
     def test_fully_documented_package_passes(self, tmp_path: Path) -> None:
         """Repairing the finding, rather than lowering a floor, makes it pass."""
@@ -225,6 +246,3 @@ __all__ = ["documented_fn", "undocumented_fn"]
             repository_root=project, checks="docstrings", docstring_min=100.0
         ).execute()
         tm.ok(result)
-
-
-__all__: list[str] = ["TestsFlextInfraAuditorDocstring"]

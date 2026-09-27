@@ -64,6 +64,3 @@ class TestsFlextInfraReleaseCheckoutCredentials:
         tm.that(self.checkout_credentials(jobs["identity"]), eq=False)
         tm.that(self.checkout_credentials(jobs["version"]), eq=True)
         tm.that(self.checkout_credentials(jobs["publish"]), eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraReleaseCheckoutCredentials"]

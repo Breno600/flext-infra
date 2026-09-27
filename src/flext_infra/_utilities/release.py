@@ -41,7 +41,7 @@ class FlextInfraUtilitiesRelease:
             members = tuple(archive.getmembers())
         except tarfile.TarError as exc:
             return r[bool].fail_op("read release archive members", exc)
-        validated_members: list[tuple[tarfile.TarInfo, Path]] = []
+        validated_members: list[t.Pair[tarfile.TarInfo, Path]] = []
         for member in members:
             path_result = FlextInfraUtilitiesRelease.archive_member_path(member.name)
             if path_result.failure:
@@ -86,7 +86,7 @@ class FlextInfraUtilitiesRelease:
     def _write_validated_tar_tree(
         archive: tarfile.TarFile,
         staging: Path,
-        validated_members: Sequence[tuple[tarfile.TarInfo, Path]],
+        validated_members: Sequence[t.Pair[tarfile.TarInfo, Path]],
     ) -> p.Result[bool]:
         """Write prevalidated tar members into a staging directory."""
         for member, relative_path in validated_members:
@@ -154,7 +154,7 @@ class FlextInfraUtilitiesRelease:
         return r[c.Infra.VersionBump].ok(bump)
 
     @staticmethod
-    def is_release_subject(subject: str, version: str) -> bool:
+    def release_subject(subject: str, version: str) -> bool:
         """Whether ``subject`` is the protocol's release commit for ``version``.
 
         Matches the commit as the lane wrote it and as GitHub merged it, which
@@ -320,10 +320,10 @@ class FlextInfraUtilitiesRelease:
         the platform packages test against each other, counting them would
         report the whole workspace as one cycle.
         """
-        pyproject = path / c.Infra.PYPROJECT_FILENAME
+        pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.StrSequence].fail(
-                f"release project has no {c.Infra.PYPROJECT_FILENAME}: {path}"
+                f"release project has no {c.PYPROJECT_FILENAME}: {path}"
             )
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:

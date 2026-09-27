@@ -91,31 +91,8 @@ class FlextInfraProtocolsBase(Protocol):
     # These declaration-only
     # contracts preserve config-model field types across the public p/u facades.
     @runtime_checkable
-    class MiseToolSpec(Protocol):
-        """One exact mise backend selector and immutable version."""
-
-        @property
-        def selector(self) -> str:
-            """Canonical mise backend selector."""
-            ...
-
-        @property
-        def version(self) -> str:
-            """Exact tool version installed by mise."""
-            ...
-
-    @runtime_checkable
-    class ProtectedMiseToolSpec(MiseToolSpec, Protocol):
-        """Fleet-owned mise distribution identity."""
-
-        @property
-        def selector_patterns(self) -> t.StrSequence:
-            """Glob patterns identifying equivalent distributions."""
-            ...
-
-    @runtime_checkable
-    class BeadsToolSpec(ProtectedMiseToolSpec, Protocol):
-        """Canonical Beads distribution and Gas City projection contract."""
+    class BeadsToolSpec(Protocol):
+        """Beads ledger and Gas City projection contract."""
 
         @property
         def endpoint_origin(self) -> str:
@@ -239,6 +216,7 @@ class FlextInfraProtocolsBase(Protocol):
             """Repository-owned types beyond the Gas City baseline."""
             ...
 
+    @runtime_checkable
     class WorkspaceSpec(Protocol):
         """Workspace topology fields consumed by repository selection."""
 
@@ -276,6 +254,7 @@ class FlextInfraProtocolsBase(Protocol):
             """Workspace whose active interpreter provenance must be validated."""
             ...
 
+    @runtime_checkable
     class CodegenConform(Protocol):
         """Complete state and collaboration contract for conform partials."""
 
@@ -486,6 +465,11 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
         @property
+        def ast_grep_selector(self) -> str:
+            """Mise selector for the ast-grep CLI."""
+            ...
+
+        @property
         def ast_grep_version(self) -> str:
             """Exact ast-grep analyzer version."""
             ...
@@ -548,26 +532,6 @@ class FlextInfraProtocolsBase(Protocol):
         def delegate(self) -> str:
             """Canonical template rendering delegate."""
             ...
-
-    @classmethod
-    def is_public_python_module_file(cls, file_name: str) -> bool:
-        """Return whether a file names a public Python module."""
-        ...
-
-    @staticmethod
-    def runtime_singleton_export(file_name: str) -> str | None:
-        """Return the public singleton exported by a runtime module."""
-        ...
-
-    @staticmethod
-    def ordered_namespace_exports(*, export_names: t.StrSequence) -> t.StrSequence:
-        """Order root-package exports with alias hierarchy preserved."""
-        ...
-
-    @classmethod
-    def matches_project_namespace_package(cls, package_name: str) -> bool:
-        """Return whether a package is a governed project namespace root."""
-        ...
 
     @runtime_checkable
     class Validator(Protocol):
@@ -652,7 +616,7 @@ class FlextInfraProtocolsBase(Protocol):
         pip_check: m.Infra.PipCheckReport | None
         dependency_limits: m.Infra.DependencyLimitsInfo | None
 
-        def model_dump(self) -> t.MappingKV[str, t.Infra.InfraValue]:
+        def model_dump(self) -> t.MappingKV[str, t.JsonValue]:
             """Serialize report model payload."""
             ...
 
@@ -661,7 +625,7 @@ class FlextInfraProtocolsBase(Protocol):
         """Service for JSON serialization and persistence."""
 
         def write_json(
-            self, path: Path, payload: t.MappingKV[str, t.Infra.InfraValue]
+            self, path: Path, payload: t.MappingKV[str, t.JsonValue]
         ) -> p.Result[bool]:
             """Write payload to JSON file."""
             ...
@@ -670,7 +634,7 @@ class FlextInfraProtocolsBase(Protocol):
     class ProjectReportLike(Protocol):
         """Protocol for project-level dependency report contracts."""
 
-        def model_dump(self) -> t.MappingKV[str, t.Infra.InfraValue]:
+        def model_dump(self) -> t.MappingKV[str, t.JsonValue]:
             """Serialize project report payload."""
             ...
 
@@ -690,6 +654,12 @@ class FlextInfraProtocolsBase(Protocol):
             """Run deptry on a project and return issues."""
             ...
 
+        def govern_deptry_issues(
+            self, project_path: Path, issues: t.SequenceOf[t.JsonMapping]
+        ) -> p.Result[t.SequenceOf[t.JsonMapping]]:
+            """Drop findings the governed dependency profile makes policy."""
+            ...
+
         def build_project_report(
             self, project_name: str, deptry_issues: t.SequenceOf[t.JsonMapping]
         ) -> FlextInfraProtocolsBase.ProjectReportLike:
@@ -702,16 +672,12 @@ class FlextInfraProtocolsBase(Protocol):
 
         def load_dependency_limits(
             self, limits_path: Path | None = None
-        ) -> t.MappingKV[str, t.Infra.InfraValue]:
+        ) -> t.MappingKV[str, t.JsonValue]:
             """Load dependency limits from TOML file."""
             ...
 
-        def get_required_typings(
-            self,
-            project_path: Path,
-            limits_path: Path | None = None,
-            *,
-            include_mypy: bool = True,
+        def analyze_required_typings(
+            self, project_path: Path, limits_path: Path | None = None
         ) -> p.Result[m.Infra.TypingsReport]:
             """Get required typing libraries for a project."""
             ...

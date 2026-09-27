@@ -24,31 +24,53 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         / "base"
     )
 
+    _ROOT_TEMPLATE = (
+        Path(__file__).resolve().parents[3]
+        / "src"
+        / "flext_infra"
+        / "templates"
+        / "lazy_init_root.py.j2"
+    )
+
+    @staticmethod
+    def _empty_root_render() -> m.Infra.LazyInitRootRender:
+        return m.Infra.LazyInitRootRender(
+            autogen_header=c.Infra.AUTOGEN_HEADER,
+            docstring='"""Tests package."""',
+            exports_tuple="()",
+            lazy_module_mapping="        MappingProxyType({}),",
+            lazy_alias_mapping="        alias_groups=MappingProxyType({}),",
+            lazy_call_arguments=(
+                "MappingProxyType({}), alias_groups=MappingProxyType({}), "
+                "sort_keys=False"
+            ),
+        )
+
     @staticmethod
     def _workflow_spec(
         *,
         workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef],
         has_devcontainer: bool,
     ) -> m.Infra.GithubWorkflowRenderSpec:
-        spec = CodegenTestSupport.Ci.workflow_spec(
+        return CodegenTestSupport.Ci.workflow_spec(
             dist="demo",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
             ci_trigger_branches=CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
+            workspace_repositories=workspace_repositories,
+            has_devcontainer=has_devcontainer,
         )
-        return type(spec).model_validate({
-            **spec.model_dump(round_trip=True),
-            "workspace_repositories": workspace_repositories,
-            "has_devcontainer": has_devcontainer,
-        })
 
-    def test_standalone_pyproject_template_does_not_declare_empty_workspace(
-        self,
+    def test_standalone_pyproject_does_not_declare_empty_workspace(
+        self, tmp_path: Path
     ) -> None:
         """Keep standalone projects eligible for a real parent uv workspace."""
-        template = (self._TEMPLATES / "pyproject.toml.j2").read_text(encoding="utf-8")
+        rendered = u.Tests.scaffold_text(
+            tmp_path / "fixture-project", c.PYPROJECT_FILENAME
+        )
 
-        tm.that(template, lacks="[tool.uv.workspace]")
+        tm.that(rendered, has="[project]")
+        tm.that(rendered, lacks="[tool.uv.workspace]")
 
     def test_dependabot_render_has_one_terminal_newline(self) -> None:
         empty = tm.ok(
@@ -89,5 +111,32 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         for rendered in (without, with_devcontainer):
             tm.that(rendered, has="package-ecosystem: pip")
 
+    def test_empty_lazy_root_renders_joined_call_arguments(self) -> None:
+        """Keep empty-map roots a fixed point of ``make gen`` and ``make fix``.
 
-__all__: list[str] = ["TestsFlextInfraTemplateFormatterFixedPoint"]
+        The fixer joins call arguments that fit on one continuation line; a
+        template that always explodes them oscillates between the two verbs
+        and leaves every member checkout dirty after generation.
+        """
+        rendered = tm.ok(
+            u.Cli.template_render(self._ROOT_TEMPLATE, self._empty_root_render())
+        )
+
+        tm.that(
+            rendered,
+            has="    build_lazy_import_map(\n"
+            "        MappingProxyType({}), alias_groups=MappingProxyType({}), "
+            "sort_keys=False\n    )",
+        )
+        tm.that(rendered, lacks="sort_keys=False,")
+
+    def test_lazy_root_keeps_exploded_call_without_joined_arguments(self) -> None:
+        """Populated roots still render one argument per line."""
+        context = self._empty_root_render().model_copy(
+            update={"lazy_call_arguments": ""}
+        )
+
+        rendered = tm.ok(u.Cli.template_render(self._ROOT_TEMPLATE, context))
+
+        tm.that(rendered, has="        sort_keys=False,\n    )")
+        tm.that(rendered, lacks="sort_keys=False\n")

@@ -65,6 +65,3 @@ class TestsFlextInfraRefactorInfraRefactorProjectClassifier:
         classification = FlextInfraProjectClassifier(tmp_path).classify()
 
         tm.that(classification.project_kind, eq="app")
-
-
-__all__: list[str] = ["TestsFlextInfraRefactorInfraRefactorProjectClassifier"]

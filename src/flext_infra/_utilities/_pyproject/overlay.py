@@ -10,6 +10,7 @@ from flext_infra import c, t
 
 from ..dependencies import FlextInfraUtilitiesDependencies
 from ..managed_conflicts import FlextInfraUtilitiesManagedConflicts
+from .requirements import FlextInfraUtilitiesPyprojectRequirements
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -81,17 +82,22 @@ class FlextInfraUtilitiesPyprojectOverlay:
                     }
                     # Profiles own same-name requirements. CUSTOM requirements
                     # retain full specs, including distinct markers for one name.
-                    project[key] = [
-                        *dict.fromkeys((
-                            *required,
-                            *(
-                                item
-                                for item in custom
-                                if FlextInfraUtilitiesDependencies.dep_name(item)
-                                not in owned_names
-                            ),
-                        ))
-                    ]
+                    # Conformance uses this same order: overlay must not move
+                    # generated requirements ahead of preserved custom ones.
+                    project[key] = list[t.JsonValue](
+                        sorted(
+                            dict.fromkeys((
+                                *required,
+                                *(
+                                    item
+                                    for item in custom
+                                    if FlextInfraUtilitiesDependencies.dep_name(item)
+                                    not in owned_names
+                                ),
+                            )),
+                            key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
+                        )
+                    )
                 else:
                     project[key] = live_project[key]
         merged[c.Infra.PROJECT] = project

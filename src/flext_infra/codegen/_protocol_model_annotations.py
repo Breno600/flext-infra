@@ -10,6 +10,7 @@ import re
 from collections import abc
 from enum import Enum
 from importlib import import_module
+from importlib.util import find_spec
 from pathlib import Path
 from types import UnionType
 from typing import (
@@ -22,13 +23,13 @@ from typing import (
     get_origin,
 )
 
-from flext_infra import m, t
+from flext_infra import m, p, t
 
 
 class FlextInfraCodegenProtocolModelAnnotations:
     """Map validated runtime model types to public protocol-facade types."""
 
-    _ORIGINS: ClassVar[t.MappingKV[object, str]] = {
+    _ORIGINS: ClassVar[t.MappingKV[p.AttributeProbe, str]] = {
         list: "list",
         tuple: "tuple",
         dict: "dict",
@@ -95,9 +96,19 @@ class FlextInfraCodegenProtocolModelAnnotations:
             return cls.render(annotation.__value__, target)
         origin = get_origin(annotation)
         arguments = get_args(annotation)
+        if isinstance(origin, TypeAliasType):
+            bindings = dict(zip(origin.__type_params__, arguments, strict=True))
+            value = origin.__value__
+            for parameter, argument in bindings.items():
+                if value is parameter:
+                    return cls.render(argument, target)
+            parameters = getattr(value, "__parameters__", ())
+            if parameters:
+                value = value[tuple(bindings[parameter] for parameter in parameters)]
+            return cls.render(value, target)
         if origin is Annotated:
             return cls.render(arguments[0], target)
-        if origin is UnionType or origin is type:
+        if origin is UnionType:
             return " | ".join(cls.render(argument, target) for argument in arguments)
         if origin is Literal:
             return f"Literal[{', '.join(repr(argument) for argument in arguments)}]"
@@ -152,11 +163,22 @@ class FlextInfraCodegenProtocolModelAnnotations:
         raise TypeError(msg)
 
     @classmethod
-    def _facade_name(cls, value: object, target: ProtocolModelTarget) -> str | None:
+    def _facade_name(
+        cls, value: p.AttributeProbe, target: ProtocolModelTarget
+    ) -> str | None:
         """Return the existing public facade path for an identical runtime type."""
         for prefix, probe in target.facade_probes:
             module_path, _, attribute = probe.rpartition(".")
-            facade = getattr(import_module(module_path), attribute)
+            # A member without that facade surface cannot hold the value;
+            # probing continues with the next surface. A surface that exists
+            # but fails to import is a real defect and escapes.
+            package = module_path.partition(".")[0]
+            if find_spec(package) is None or find_spec(module_path) is None:
+                continue
+            module = import_module(module_path)
+            facade = getattr(module, attribute, None)
+            if facade is None:
+                continue
             for name in dir(facade):
                 if getattr(facade, name, None) is value:
                     return f"{prefix}.{name}"

@@ -26,5 +26,6 @@ sourced from code and docstrings.
 - [Troubleshooting](troubleshooting.md)
 - [Using flext cli](using-flext-cli.md)
 - [Using flext core](using-flext-core.md)
+- [Using flext tests](using-flext-tests.md)
 - [Back to project docs](../index.md)
 - [API Reference](../api-reference/README.md)

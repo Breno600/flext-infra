@@ -18,6 +18,8 @@ if TYPE_CHECKING:
     from .semantic_apply import FlextInfraCodemodSemanticApply
     from .snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
     from .text_gates import FlextInfraModTextGateEngine
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraApplyRenames",
     "FlextInfraCodemodAstScan",

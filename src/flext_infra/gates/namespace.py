@@ -29,7 +29,6 @@ class FlextInfraNamespaceGate(FlextInfraGate):
         report_result = validator.validate_project(project_dir)
         passed = report_result.success and report_result.value.passed
         if report_result.failure:
-            # A broken invocation is a blocking defect, not advisory residue.
             return self._build_project_error_gate_result(
                 project_dir,
                 passed=False,
@@ -37,17 +36,9 @@ class FlextInfraNamespaceGate(FlextInfraGate):
                 started=started,
                 ctx=ctx,
             )
-        # Operator order 2026-09-22: namespace-rule findings stay advisory
-        # (reported as warnings, non-blocking) until the structural namespace
-        # campaign converges; they must never hide a broken invocation.
         violations: list[str] = [] if passed else list(report_result.value.violations)
         return self._build_project_error_gate_result(
-            project_dir,
-            passed=passed,
-            errors=violations,
-            started=started,
-            ctx=ctx,
-            advisory=True,
+            project_dir, passed=passed, errors=violations, started=started, ctx=ctx
         )
 
 

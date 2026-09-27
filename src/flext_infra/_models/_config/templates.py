@@ -44,6 +44,10 @@ class FlextInfraConfigModelsTemplates:
                 ),
             ),
         ] = False
+        requires_beads: Annotated[
+            bool,
+            m.Field(description="Whether the projection requires Beads participation"),
+        ] = False
 
     class TemplatesSpec(FlextInfraConfigModelsContract.ConfigContract):
         """New-project scaffold root and its complete ordered manifest."""

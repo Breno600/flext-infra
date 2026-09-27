@@ -95,6 +95,16 @@ class FlextInfraCodegenProjectNew(
     license: Annotated[
         str, m.Field(min_length=1, description="SPDX project license identifier.")
     ]
+    flext_repository_url: Annotated[
+        str,
+        m.Field(
+            min_length=1, description="Git URL of the FLEXT infrastructure source."
+        ),
+    ]
+    flext_repository_ref: Annotated[
+        str,
+        m.Field(min_length=1, description="Git ref consumed from the FLEXT source."),
+    ]
     author_name: Annotated[
         str, m.Field(min_length=1, description="Author/maintainer display name.")
     ]
@@ -102,6 +112,13 @@ class FlextInfraCodegenProjectNew(
         str, m.Field(min_length=3, description="Author/maintainer email.")
     ]
     upstream: Annotated[str, m.Field(description="Upstream facade module (flext_cli).")]
+    flext_source: Annotated[
+        str,
+        m.Field(
+            min_length=1,
+            description="Direct Git infrastructure requirement used by the new project",
+        ),
+    ]
     year: Annotated[int, m.Field(ge=2025, description="Deterministic copyright year.")]
 
     @override
@@ -122,17 +139,31 @@ class FlextInfraCodegenProjectNew(
             return r[m.Infra.CodegenResult].fail(
                 "repository branch is required: declare --repository-branch"
             )
+        # Declared remotes are the only provenance a repository that does not
+        # exist yet can carry, so both URLs and the FLEXT ref are validated to
+        # a usable shape here — before any model, directory, or Git effect.
+        origin_url = u.Infra.validate_git_remote_url(repository_url)
+        if origin_url.failure:
+            return r[m.Infra.CodegenResult].from_failure(origin_url)
+        flext_url = u.Infra.validate_git_remote_url(self.flext_repository_url)
+        if flext_url.failure:
+            return r[m.Infra.CodegenResult].from_failure(flext_url)
+        flext_ref = self.flext_repository_ref.strip()
+        if not flext_ref:
+            return r[m.Infra.CodegenResult].fail(
+                "flext repository ref is required: declare --flext-repository-ref"
+            )
         package_name = self.package_name or self.name.replace("-", "_")
         class_stem = u.derive_class_stem(self.name)
         derived_namespace = class_stem.removeprefix("Flext")
         project_namespace = self.project_namespace or derived_namespace or class_stem
         alias = u.Infra.package_alias(package_name=package_name)
-        repository_page = repository_url.removesuffix(".git")
+        repository_page = origin_url.value.removesuffix(".git")
         repository = m.Infra.RepositoryRef(
             name=self.name,
             distribution=self.name,
             provider=self.provider,
-            url=repository_url,
+            url=origin_url.value,
             path=Path(),
             role=c.Infra.MakeProfile.STANDALONE,
             state=c.Infra.RepositoryState.ACTIVE,
@@ -144,6 +175,9 @@ class FlextInfraCodegenProjectNew(
         )
         workspace = m.Infra.WorkspaceSpec(
             name=self.name,
+            flext_source=m.Infra.CodegenBootstrapSource(
+                url=flext_url.value, ref=flext_ref
+            ),
             beads=m.Infra.BeadsProjectSpec(
                 version=c.Infra.BEADS_CONFIG_VERSION,
                 workspace=self.name,
@@ -160,9 +194,9 @@ class FlextInfraCodegenProjectNew(
             integration=m.Infra.WorkspaceIntegrationSpec(
                 provider=self.provider,
                 branch=repository_branch,
-                organization=u.Infra.git_remote_identity(repository_url).partition(
-                    "/"
-                )[0],
+                organization=u.Infra.git_remote_identity(repository_url).partition("/")[
+                    0
+                ],
                 base_url=repository_page.rsplit("/", maxsplit=1)[0],
             ),
             project=m.Infra.ProjectSpec(
@@ -181,10 +215,12 @@ class FlextInfraCodegenProjectNew(
                 author_name=self.author_name,
                 author_email=self.author_email,
                 upstream=self.upstream,
+                flext_source=self.flext_source,
                 homepage=repository_page,
                 documentation=repository_page,
                 repository_root_rel=".",
                 year=self.year,
+                dependency_revisions={},
             ),
         )
         request = m.Infra.CodegenConformRequest(

@@ -25,6 +25,10 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
             self, pkg_dir: Path, *, dir_exports: t.MappingKV[str, t.LazyAliasMap]
         ) -> m.Infra.LazyInitPlan: ...
 
+        def _declared_alias_names_for_package(
+            self, package_name: str
+        ) -> frozenset[str]: ...
+
     def _export_names_for_package(self, package_name: str) -> frozenset[str]:
         """Return all export names for a package (init + source plans)."""
         cached = self._package_exports_cache.get(package_name)
@@ -45,10 +49,12 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
             init_path = package_dir / c.Infra.INIT_PY
             if self.rope_workspace.resource(init_path) is None:
                 return frozenset()
-            if init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT).startswith(
-                c.Infra.AUTOGEN_HEADERS
-            ):
-                return frozenset()
+            source = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            # A generated __init__ is the parent's published ABI — what an
+            # importer sees — in the workspace exactly as when installed, so
+            # both scopes elect the same nearest re-exporting parent.
+            if source.startswith(c.Infra.AUTOGEN_HEADERS):
+                return frozenset(u.Infra.public_export_names_source(source))
             return frozenset(
                 self.rope_workspace.exports(
                     init_path,
@@ -75,43 +81,15 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
         return frozenset(u.Infra.public_export_names_source(source))
 
     def _source_export_names_for_package(self, package_name: str) -> frozenset[str]:
-        """Return a package's published export names, read from disk.
+        """Read indexed parent declarations from their authoritative siblings.
 
-        This answers one question for the alias resolver: which names does this
-        package publish? It is deliberately disk-bound. Planning the package to
-        answer it re-entered the walker with an empty export accumulator, so the
-        plan it produced described a package with no children — and that plan,
-        or the names taken from it, then stood in for the real one. The scan
-        collapsed from 624 names to 49 whenever alias inheritance was active,
-        which is what made the inherited facade letters look impossible to
-        restore and got them prohibited instead of repaired.
-
-        The published initializer is the right source: it is what an importer
-        actually sees, this run does not regenerate the package being probed,
-        and reading it costs nothing and cannot recurse.
+        Generated initializers are outputs of this plan, not declaration owners.
+        Reuse the same source inventory that elects inherited aliases; do not
+        recursively build a parent plan or retain its stale generated manifest.
         """
-        cached = self._source_exports_cache.get(package_name)
-        if cached is not None:
-            return cached
-        package_dir = self.rope_workspace.workspace_index.package_dir_by_name.get(
-            package_name
-        )
-        if package_dir is None:
+        if package_name not in self.rope_workspace.workspace_index.package_dir_by_name:
             return frozenset()
-        init_path = package_dir / c.Infra.INIT_PY
-        if not init_path.is_file():
-            return frozenset()
-        source = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-        # A generated initializer propagates, it never declares (ADR-018
-        # p.2): what it lists is this run's own output, so it can neither
-        # own an alias nor keep a stale one alive. Only a hand-written
-        # initializer is a declaration.
-        if source.startswith(c.Infra.AUTOGEN_HEADERS):
-            self._source_exports_cache[package_name] = frozenset()
-            return frozenset()
-        exports = frozenset(u.Infra.public_export_names_source(source))
-        self._source_exports_cache[package_name] = exports
-        return exports
+        return self._declared_alias_names_for_package(package_name)
 
     def _source_package_name(self, pkg_dir: Path, inherited_key: str) -> str:
         """Return the project-root package name for the given directory."""

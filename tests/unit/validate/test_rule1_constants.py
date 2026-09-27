@@ -4,23 +4,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ._fixtures import (
-    TestsFlextInfraNamespaceProjectFixture,
-    TestsFlextInfraValidateNamespaceBase,
-)
+from tests import u
 
 
-class TestsFlextInfraRule1ConstantsFacade(TestsFlextInfraValidateNamespaceBase):
+class TestsFlextInfraRule1ConstantsFacade:
     """Test suite for namespace validator Rule 1 (constants facade)."""
 
     def test_rule1_valid_constants_passes(self, tmp_path: Path) -> None:
-        fixture = TestsFlextInfraNamespaceProjectFixture()
-        root = fixture.create_project(
+        root = u.Tests.namespace_project(
             tmp_path,
-            module_source=fixture.valid_constants_module(),
+            module_source=u.Tests.namespace_fixture("rule1_valid_constants.pysrc"),
             module_name="constants.py",
         )
-        self._assert_valid(root)
-
-
-__all__: list[str] = ["TestsFlextInfraRule1ConstantsFacade"]
+        u.Tests.assert_namespace_valid(root)

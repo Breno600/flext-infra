@@ -33,6 +33,8 @@ if TYPE_CHECKING:
     from .phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
     from .phases.inject_comments import FlextInfraInjectCommentsPhase
     from .phases.tool_tables import FlextInfraToolTablesPhase
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraConfigFixer",
     "FlextInfraConfigFixerSteps",

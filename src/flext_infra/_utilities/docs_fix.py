@@ -122,7 +122,7 @@ class FlextInfraUtilitiesDocsFix:
         )
         link_count = 0
 
-        def replace_link(match: t.Infra.RegexMatch) -> str:
+        def replace_link(match: t.RegexMatch) -> str:
             """Replace link."""
             nonlocal link_count
             text, link = match.groups()
@@ -154,32 +154,14 @@ class FlextInfraUtilitiesDocsFix:
         apply: bool,
     ) -> None:
         """Persist the standard fix summary and markdown report."""
-        changes_payload: t.JsonList = [
-            {c.Infra.RK_FILE: item.file, "links": item.links, "toc": item.toc}
-            for item in items
-        ]
-        summary_payload = t.Cli.JSON_MAPPING_ADAPTER.validate_python({
-            c.Infra.RK_SUMMARY: {
-                c.Infra.RK_SCOPE: scope.name,
-                "changed_files": len(items),
-                "apply": apply,
-            },
-            "changes": changes_payload,
-        })
-        _ = u.Cli.json_write(scope.report_dir / "fix-summary.json", summary_payload)
-        _ = FlextInfraUtilitiesDocs.write_markdown(
-            scope.report_dir / "fix-report.md",
-            [
-                "# Docs Fix Report",
-                "",
-                f"Scope: {scope.name}",
-                f"Apply: {int(apply)}",
-                f"Changed files: {len(items)}",
-                "",
-                "| file | link_fixes | toc_updates |",
-                "|---|---:|---:|",
-                *[f"| {item.file} | {item.links} | {item.toc} |" for item in items],
-            ],
+        FlextInfraUtilitiesDocs.docs_write_phase_reports(
+            scope,
+            phase="fix",
+            heading="Docs Fix Report",
+            columns=("file", "link_fixes", "toc_updates"),
+            rows=tuple((item.file, str(item.links), str(item.toc)) for item in items),
+            items=items,
+            apply=apply,
         )
 
 

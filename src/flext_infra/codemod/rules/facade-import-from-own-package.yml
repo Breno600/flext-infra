@@ -14,12 +14,14 @@
 # `u.Infra.alias_locally_bound`. The import was the defect, never the call.
 #
 # Scoped by what the module actually does, not by where it lives. The facade
-# modules themselves must import the flext-cli letter in order to EXTEND it —
-# `class FlextInfraModels(m)` — and rewriting those would make a class inherit
-# from itself. So the rule fires only where the module reaches the nested
-# namespace that the base facade does not have: the import is wrong exactly
-# when `<letter>.Infra` appears in the same module. The duplicate flext_infra
-# import line this produces is merged by `make fix`.
+# modules themselves extend the flext-cli facade by the class name flext-cli
+# declares in its own `__all__` — `class FlextInfraModels(FlextCliModels)`,
+# never `class FlextInfraModels(m)`; the facade-base-by-class-name rule and the
+# facade-base semantic phase own that shape (2026-09-23, flext-dv1ga). This
+# rule therefore concerns only consumer modules: it fires where the module
+# reaches the nested namespace that the base facade does not have, so the
+# import is wrong exactly when `<letter>.Infra` appears in the same module. The
+# duplicate flext_infra import line this produces is merged by `make fix`.
 #
 # The private utilities tree is excluded: a member of `u.Infra` cannot bind its
 # own still-assembling facade at module import time, so there the canonical form

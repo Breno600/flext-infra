@@ -13,7 +13,7 @@ from flext_tests import tm
 from flext_infra import config
 from flext_infra.check import FlextInfraGateRegistry
 from flext_infra.gates import FlextInfraCanonicalAliasGate
-from tests import c, m, t
+from tests import c, m
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -237,6 +237,3 @@ class TestsFlextInfraGateRegistry:
         # check vocabulary AND from the fix vocabulary.
         tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_FIXABLE_GATE_IDS, eq=True)
         tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_GATE_IDS, eq=True)
-
-
-__all__: t.StrSequence = ["TestsFlextInfraGateRegistry"]

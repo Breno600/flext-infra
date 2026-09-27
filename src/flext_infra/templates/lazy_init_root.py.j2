@@ -13,17 +13,20 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 {{ runtime_import_lines }}
 {% endif %}{% if type_checking_lines %}
 {{ type_checking_lines }}
-{% endif -%}
-
-
-__all__: tuple[str, ...] = {{ exports_tuple }}
+{% endif %}{{ blank_lines_before_exports }}__all__: tuple[str, ...] = {{ exports_tuple }}
 
 _LAZY_IMPORTS = MappingProxyType(
+{%- if lazy_call_arguments %}
+    build_lazy_import_map(
+        {{ lazy_call_arguments }}
+    )
+{%- else %}
     build_lazy_import_map(
 {{ lazy_module_mapping }}
 {{ lazy_alias_mapping }}
         sort_keys=False,
     )
+{%- endif %}
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

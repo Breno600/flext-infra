@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from .command import FlextInfraPytestRunnerCommand
     from .execution import FlextInfraPytestRunnerExecution
     from .reports import FlextInfraPytestRunnerReports
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraPytestRunnerBase",
     "FlextInfraPytestRunnerCommand",

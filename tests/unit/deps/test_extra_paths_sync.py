@@ -206,6 +206,3 @@ class TestsFlextInfraDepsExtraPathsSync:
         tm.that(changes, eq=[])
         changes_again = manager.sync_doc(doc, project_dir=tmp_path, is_root=True)
         tm.that(changes_again, eq=[])
-
-
-__all__: list[str] = ["TestsFlextInfraDepsExtraPathsSync"]

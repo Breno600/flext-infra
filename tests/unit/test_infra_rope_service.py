@@ -72,7 +72,7 @@ class TestsFlextInfraInfraRopeService:
 
     def _module_objects_by_name(
         self, repository_root: Path, module_path: Path
-    ) -> t.MutableMappingKV[str, m.Infra.Census.Object]:
+    ) -> t.MutableMappingKV[str, m.Infra.Object]:
         """Index one module's non-local objects by their declared name."""
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             return {
@@ -285,10 +285,10 @@ class TestsFlextInfraInfraRopeService:
     def test_open_workspace_keeps_the_requested_repository_boundary(
         self, tmp_path: Path
     ) -> None:
-        """Only an explicit workspace call includes sibling repositories."""
+        """Only an explicit workspace call includes declared sibling repositories."""
         monorepo_root = tmp_path / "repo"
         monorepo_root.mkdir()
-        u.Tests.declare_workspace_projects(monorepo_root, ("flext-infra",))
+        u.Tests.declare_workspace_projects(monorepo_root, ("flext-infra", "flext-demo"))
         (
             repository_root,
             package_root,
@@ -864,6 +864,3 @@ class TestsFlextInfraInfraRopeService:
             eq={str(module_path)},
         )
         tm.that([site.line for site in candidate.runtime_reference_sites], eq=[6])
-
-
-__all__: list[str] = ["TestsFlextInfraInfraRopeService"]

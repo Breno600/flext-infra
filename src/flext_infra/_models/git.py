@@ -264,6 +264,22 @@ class FlextInfraModelsGit(
             t.NonEmptyStr, m.Field(description="Declared submodule branch")
         ]
 
+    class GitLaneRequest(m.ContractModel):
+        """One publication lane: ``branch`` carried from ``base`` to a pull request."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        branch: Annotated[t.NonEmptyStr, m.Field(description="Lane branch")]
+        base: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Integration branch the lane starts from and targets"),
+        ]
+        subject: Annotated[
+            t.NonEmptyStr, m.Field(description="Commit subject and pull-request title")
+        ]
+        body_file: Annotated[Path, m.Field(description="Pull-request body file")]
+
     class GitCheckoutPathsRequest(m.ContractModel):
         """Repository plus optional paths for checkout/restore operations."""
 

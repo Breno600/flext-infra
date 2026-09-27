@@ -104,6 +104,3 @@ class TestsFlextInfraAuditorCodeblocks:
         )
 
         tm.that(issues, eq=[])
-
-
-__all__: list[str] = ["TestsFlextInfraAuditorCodeblocks"]

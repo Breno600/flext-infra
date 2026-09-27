@@ -17,7 +17,6 @@ from flext_tests import tm
 
 import flext_infra
 from flext_infra import c, config
-from tests import t
 
 
 class TestsFlextInfraRootMakefileSingleOwner:
@@ -62,6 +61,3 @@ class TestsFlextInfraRootMakefileSingleOwner:
             config.Infra.codegen.make.clean.root_files,
             has="flext-infra-codegen-transaction-journal.json.lock",
         )
-
-
-__all__: t.VariadicTuple[str] = ()

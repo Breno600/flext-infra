@@ -146,6 +146,3 @@ class TestsFlextInfraDocsRender:
                 "        - api-reference/generated/**\n"
             ),
         )
-
-
-__all__: list[str] = ["TestsFlextInfraDocsRender"]

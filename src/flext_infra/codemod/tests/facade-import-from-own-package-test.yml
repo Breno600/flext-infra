@@ -4,9 +4,9 @@ valid:
     from flext_infra import c, m, p, t, u
     value = u.Infra.layout(root)
   - |
-    from flext_cli import m
+    from flext_cli import FlextCliModels
     from flext_infra import c, t
-    class FlextInfraModels(m):
+    class FlextInfraModels(FlextCliModels):
         pass
   - |
     from flext_cli import u

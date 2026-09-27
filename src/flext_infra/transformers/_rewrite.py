@@ -9,6 +9,10 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 @dataclass(frozen=True, slots=True)
@@ -19,12 +23,12 @@ class FlextInfraSourceRewrite:
     end: int
     text: str
 
-    def __lt__(self, other: object) -> bool:
+    def __lt__(self, other: p.AttributeProbe) -> bool:
         if not isinstance(other, FlextInfraSourceRewrite):
             return NotImplemented
         return (self.start, self.end) < (other.start, other.end)
 
-    def __gt__(self, other: object) -> bool:
+    def __gt__(self, other: p.AttributeProbe) -> bool:
         if not isinstance(other, FlextInfraSourceRewrite):
             return NotImplemented
         return (self.start, self.end) > (other.start, other.end)

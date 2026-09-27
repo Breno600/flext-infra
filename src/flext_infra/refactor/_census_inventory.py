@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import MutableMapping
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 from flext_infra import p, u
@@ -63,10 +64,12 @@ class FlextInfraRefactorCensusInventoryMixin:
         inventory: MutableMapping[str, list[str]] = defaultdict(list)
         for project in projects_result.unwrap():
             pkg_name = project.name.replace("-", "_")
-            try:
-                module = __import__(pkg_name)
-            except ImportError:
+            # A workspace member not installed in this interpreter holds no
+            # importable aliases; an installed one that fails to import is a
+            # real defect and escapes.
+            if find_spec(pkg_name) is None:
                 continue
+            module = __import__(pkg_name)
             import_name = pkg_name.replace("-", "_")
             for alias_name, module_name, _ in u.lazy_alias_suffixes(import_name):
                 if module_name.split(".", 1)[0] != import_name:
@@ -91,8 +94,8 @@ class FlextInfraRefactorCensusInventoryMixin:
 
     @classmethod
     def parent_alias_collisions(
-        cls, report: m.Infra.Census.WorkspaceReport, *, repository_root: Path
-    ) -> t.VariadicTuple[t.Pair[m.Infra.Census.Object, t.StrSequence]]:
+        cls, report: m.Infra.WorkspaceReport, *, repository_root: Path
+    ) -> t.VariadicTuple[t.Pair[m.Infra.Object, t.StrSequence]]:
         """Cross-reference workspace objects against upstream parent inventory.
 
         Returns ``(symbol, parent_paths)`` pairs where the consumer's
@@ -118,11 +121,9 @@ class FlextInfraRefactorCensusInventoryMixin:
 
         """
         inventory = cls._build_parent_inventory(repository_root)
-        collisions: list[tuple[m.Infra.Census.Object, t.StrSequence]] = []
+        collisions: list[t.Pair[m.Infra.Object, t.StrSequence]] = []
 
-        def collision_breadth(
-            entry: t.Pair[m.Infra.Census.Object, t.StrSequence],
-        ) -> int:
+        def collision_breadth(entry: t.Pair[m.Infra.Object, t.StrSequence]) -> int:
             return -len(entry[1])
 
         for project_report in report.projects:

@@ -81,6 +81,3 @@ class TestsFlextInfraPyprojectConformPreservesLintScope:
         missing = self._live_per_file_ignores() - self._ssot_per_file_ignores()
 
         tm.that(missing, eq=frozenset())
-
-
-__all__: list[str] = ["TestsFlextInfraPyprojectConformPreservesLintScope"]

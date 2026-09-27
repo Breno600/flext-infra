@@ -40,7 +40,7 @@ class FlextInfraCodegenCensus(s[str]):
         total_violations = sum(report.total for report in reports)
         total_fixable = sum(report.fixable for report in reports)
         if self.output_format == c.Cli.OutputFormats.JSON:
-            payload: t.Infra.MutableInfraMapping = {
+            payload: t.MutableJsonMapping = {
                 c.Infra.RK_PROJECTS: [report.model_dump() for report in reports],
                 "total_violations": total_violations,
                 "total_fixable": total_fixable,

@@ -313,6 +313,3 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         # The read-only guarantee is the worktree itself: a dry run forces
         # check_after=False, so no gate can rewrite a file behind the preview.
         tm.that(pre_status, eq=post_status)
-
-
-__all__: list[str] = ["TestsFlextInfraEnforcementFixerOrchestrator"]

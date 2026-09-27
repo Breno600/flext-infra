@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import stat
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
@@ -15,8 +15,6 @@ if TYPE_CHECKING:
 
 class FlextInfraMiseArtifactsFiles:
     """Exact filesystem-state primitives for Mise artifact transactions."""
-
-    STATE_DIRECTORY: Final[Path] = Path(".state") / "mise-artifacts"
 
     @classmethod
     def transaction_participants(

@@ -42,7 +42,7 @@ class TestsFlextInfraLazyInitTransforms:
         tm.that(result, eq=0)
         tm.that(init_content, has="from .mapper import FlextDemoUtilitiesMapper")
         tm.that(init_content, has="FlextDemoUtilitiesMapper")
-        tm.that(init_content, has="__all__: t.VariadicTuple[str]")
+        tm.that(init_content, has="__all__: tuple[str, ...]")
         tm.that(init_content, has="install_lazy_exports(")
         tm.that(init_content, lacks="__unit__")
 
@@ -123,7 +123,7 @@ class TestsFlextInfraLazyInitTransforms:
         tm.that(u.Cli.process_succeeded(imported.outcome), eq=True)
         tm.that(imported.stdout.strip(), eq="1.0.0|(1, 0, 0)")
         # flext-wkii.17 (Codex): version-only roots publish one static initializer.
-        tm.that(content, has="__all__: t.VariadicTuple[str]")
+        tm.that(content, has="__all__: tuple[str, ...]")
         tm.that(content, has='"__version__"')
         tm.that(content, has='"__version_info__"')
         tm.that(content, lacks="__unit__")

@@ -66,6 +66,22 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         after_lints = FlextInfraUtilitiesProtectedEditApply.lint_snapshots(
             tuple(updates), request.workspace, gates=request.gates
         )
+        dirty = tuple(
+            path
+            for path in updates
+            if FlextInfraUtilitiesProtectedEditApply.lint_new_errors(
+                before_lints[path], after_lints[path]
+            )
+        )
+        if dirty:
+            FlextInfraUtilitiesProtectedEditApply.ruff_fix_files(
+                dirty, request.workspace
+            )
+            after_lints.update(
+                FlextInfraUtilitiesProtectedEditApply.lint_snapshots(
+                    dirty, request.workspace, gates=request.gates
+                )
+            )
         for path in updates:
             new_errors = FlextInfraUtilitiesProtectedEditApply.lint_new_errors(
                 before_lints[path], after_lints[path]
@@ -208,24 +224,29 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         edit_completed = False
         try:
             request.edit_fn()
-            # Canonical normalization: the SAME tool that validates also fixes.
-            # Auto-fixable style fallout of a mechanical edit (blank lines,
-            # import order, stray pass) is repaired by ruff --fix, never by
-            # per-transform hand formatting.
-            FlextInfraUtilitiesProtectedEditApply.ruff_fix_files(
-                (py_file,), request.workspace
+            new_errors = FlextInfraUtilitiesProtectedEditApply.lint_new_errors(
+                before,
+                FlextInfraUtilitiesProtectedEditApply.lint_snapshot(
+                    py_file, request.workspace, gates=request.gates
+                ),
             )
+            # Normalize only an edit's new findings, then judge the repaired delta.
+            # A clean delta must not rewrite unrelated pre-existing style.
+            if new_errors:
+                FlextInfraUtilitiesProtectedEditApply.ruff_fix_files(
+                    (py_file,), request.workspace
+                )
+                new_errors = FlextInfraUtilitiesProtectedEditApply.lint_new_errors(
+                    before,
+                    FlextInfraUtilitiesProtectedEditApply.lint_snapshot(
+                        py_file, request.workspace, gates=request.gates
+                    ),
+                )
             edit_completed = True
         finally:
             if not edit_completed:
                 _restore()
 
-        new_errors = FlextInfraUtilitiesProtectedEditApply.lint_new_errors(
-            before,
-            FlextInfraUtilitiesProtectedEditApply.lint_snapshot(
-                py_file, request.workspace, gates=request.gates
-            ),
-        )
         test_fail: str | None = (
             None
             if new_errors
@@ -336,8 +357,10 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
                 path.write_text(updated_source, encoding=c.Cli.ENCODING_DEFAULT)
             if request.post_write is not None:
                 request.post_write()
-            FlextInfraUtilitiesProtectedEditApply.ruff_fix_files(
-                tuple(normalized_updates), request.workspace
+            ok, reports = (
+                FlextInfraUtilitiesProtectedEditApply._protected_write_reports(
+                    normalized_updates, before_sources, before_lints, request
+                )
             )
             write_completed = True
         finally:
@@ -346,9 +369,6 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
                     before_sources
                 )
 
-        ok, reports = FlextInfraUtilitiesProtectedEditApply._protected_write_reports(
-            normalized_updates, before_sources, before_lints, request
-        )
         if not ok:
             FlextInfraUtilitiesProtectedEditApply._restore_preview_sources(
                 before_sources

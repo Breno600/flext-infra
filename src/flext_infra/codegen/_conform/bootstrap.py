@@ -21,6 +21,10 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
         m.Infra.CodegenConformRequest | None,
         m.Field(default=None, exclude=True, description="Validated conform request"),
     ] = None
+    repository_root: Annotated[
+        Path,
+        m.Field(default=Path(), exclude=True, description="Conform repository root"),
+    ] = Path()
     initial_workspace: Annotated[
         m.Infra.WorkspaceSpec | None,
         m.Field(
@@ -102,7 +106,7 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                 | c.Infra.CodegenConformSurface.PYPROJECT
             ):
                 return m.Infra.CodegenConformSurfaceContract(
-                    destinations=frozenset({c.Infra.PYPROJECT_FILENAME}),
+                    destinations=frozenset({c.PYPROJECT_FILENAME}),
                     delegates=False,
                     custom=False,
                 )
@@ -110,6 +114,12 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                 return m.Infra.CodegenConformSurfaceContract(
                     destinations=frozenset({c.Infra.MAKEFILE_FILENAME}),
                     pyproject=False,
+                    custom=False,
+                )
+            case _:
+                return m.Infra.CodegenConformSurfaceContract(
+                    destinations=frozenset({c.PYPROJECT_FILENAME}),
+                    delegates=False,
                     custom=False,
                 )
 

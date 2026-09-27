@@ -7,14 +7,12 @@ from pathlib import Path
 from typing import override
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, config, m, p, t, u
 
 from ..base import FlextInfraServiceBase
 from ._workspace_check_reports import FlextInfraWorkspaceCheckReportsMixin
-from .workspace_check_gates import (
-    FlextInfraGateRegistry,
-    FlextInfraWorkspaceCheckGatesMixin,
-)
+from .gate_registry import FlextInfraGateRegistry
+from .workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
 
 
 class FlextInfraWorkspaceChecker(
@@ -60,6 +58,8 @@ class FlextInfraWorkspaceChecker(
     @staticmethod
     def resolve_gates(gates: t.StrSequence) -> p.Result[list[str]]:
         """Validate exact, unique requested gate names without normalization."""
+        if not gates:
+            return r[list[str]].fail("ERROR: at least one quality gate is required")
         resolved: list[str] = []
         for gate in gates:
             if not gate or gate != gate.strip():
@@ -86,7 +86,16 @@ class FlextInfraWorkspaceChecker(
         project_targets = project_targets_result.value
         # An omitted gate selection is the typed SSOT default: every default
         # check gate (the set an unset CI token runs), never an empty run.
-        gates = list(params.gates) or list(c.Infra.CANONICAL_DEFAULT_GATE_IDS)
+        if params.gates:
+            gates = list(params.gates)
+        else:
+            policy = config.Infra.codegen.make
+            gates = list(policy.check_gates_default)
+            for suspension in policy.check_gate_suspensions:
+                u.Cli.info(
+                    f"SUSPENDED check gate {suspension.gate}; "
+                    f"authority={suspension.authority}; reason={suspension.reason}"
+                )
         gate_ctx = m.Infra.GateContext(
             repository_root=params.repository_root,
             reports_dir=params.reports_dir_path,
@@ -104,12 +113,21 @@ class FlextInfraWorkspaceChecker(
         )
         if run_result.failure:
             return r[bool].from_failure(run_result)
+        if len(run_result.value) != len(project_targets):
+            return r[bool].fail(
+                "quality checks did not execute every requested project: "
+                f"{len(run_result.value)}/{len(project_targets)}"
+            )
         failed_projects = [
             project for project in run_result.value if not project.passed
         ]
         if failed_projects:
             failed_names = ", ".join(project.project for project in failed_projects)
-            total_findings = sum(project.total_errors for project in failed_projects)
+            total_findings = sum(
+                len(execution.issues)
+                for project in failed_projects
+                for execution in project.gates.values()
+            )
             return r[bool].fail(
                 f"quality checks failed for: {failed_names} "
                 f"({total_findings} findings; see the check summary and reports)"
@@ -125,8 +143,8 @@ class FlextInfraWorkspaceChecker(
         if requested:
             return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
                 tuple(
-                    m.Infra.CheckProjectTarget.from_workspace_name(
-                        params.repository_root, project_name
+                    m.Infra.CheckProjectTarget(
+                        name=project_name, path=params.repository_root / project_name
                     )
                     for project_name in requested
                 )
@@ -203,8 +221,8 @@ class FlextInfraWorkspaceChecker(
                 targets.append(project)
                 continue
             targets.append(
-                m.Infra.CheckProjectTarget.from_workspace_name(
-                    self._repository_root, project
+                m.Infra.CheckProjectTarget(
+                    name=project, path=self._repository_root / project
                 )
             )
         return tuple(targets)

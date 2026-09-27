@@ -57,6 +57,3 @@ class TestsFlextInfraCodemodBatchApplyValidation:
 
         with pytest.raises(RuntimeError, match="introduced 1 new actionable"):
             FlextInfraCodemodBatchApply.validate_fix_match(before, after)
-
-
-__all__: list[str] = ["TestsFlextInfraCodemodBatchApplyValidation"]

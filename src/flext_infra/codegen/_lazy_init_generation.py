@@ -50,18 +50,9 @@ class FlextInfraCodegenLazyInitGenerationMixin(
                     else pkg_dir
                 )
                 u.Cli.info(f"lazy-init: progress {idx}/{len(pkg_dirs)} — {rel_path}")
-            u.Cli.info(
-                f"lazy-init: _plan_all_inits iter {idx}: dir_exports id={id(dir_exports)}, size={len(dir_exports)}"
-            )
             plan = planner.build_plan(pkg_dir, dir_exports=dir_exports)
-            u.Cli.info(
-                f"lazy-init: _plan_all_inits after build_plan {idx}: dir_exports id={id(dir_exports)}, size={len(dir_exports)}"
-            )
             if plan.lazy_map:
                 dir_exports[str(pkg_dir.resolve())] = dict(plan.lazy_map)
-                u.Cli.info(
-                    f"lazy-init: _plan_all_inits added {pkg_dir}: dir_exports id={id(dir_exports)}, size={len(dir_exports)}"
-                )
             should_process = (
                 target_package_dir is None
                 or pkg_dir.resolve() == target_package_dir.resolve()

@@ -250,7 +250,6 @@ class FlextInfraPyprojectModernizerTooling:
             m.Infra.ToolingRuntimeContext,
             {
                 "project_kind": self._project_kind(path, payload, project_kind),
-                "coverage_fail_under": tools.coverage_fail_under,
                 "first_party": tools.first_party,
                 "mypy_path": (
                     derived_mypy_path
