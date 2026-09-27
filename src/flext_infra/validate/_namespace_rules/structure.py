@@ -200,6 +200,8 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
             messages.append(
                 f"{filepath}:{cls.line(outer)} — facade must extend its declared owner"
             )
+        if policy.expected_alias not in c.Infra.FAMILY_DIRECTORIES:
+            return tuple(messages)
         nested = tuple(
             node
             for node in (getattr(outer, "body", ()) or ())

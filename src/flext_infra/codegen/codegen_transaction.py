@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import secrets
-from collections.abc import Callable, Generator
-from contextlib import ExitStack, contextmanager
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import m, t, u
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 from ._codegen_staging import stage_file_plans
@@ -21,21 +20,22 @@ from ._mise_artifacts_staging import FlextInfraMiseStaging
 from ._mise_artifacts_state import FlextInfraMiseArtifactsState as state
 from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification as verify
 from .codegen_preconditions import FlextInfraCodegenPreconditions
+from .file_leases import FlextInfraCodegenFileLeases
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraCodegenTransaction:
+class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
     """Keep every generation phase recoverable until one final fixed point."""
 
     def __init__(self, owner: p.Infra.MiseArtifactsOwner) -> None:
         """Initialize the transaction with its configured Mise artifact owner."""
+        super().__init__()
         self._owner = owner
         self._planner = FlextInfraMiseWorkspacePlanner(owner)
         self._recovery = FlextInfraMiseRecovery()
         self._mise_staging = FlextInfraMiseStaging()
-        self._file_leases: dict[Path, m.Infra.CodegenFileParticipant] = {}
         self._journal_receipts: dict[Path, m.Cli.AtomicFileState] = {}
 
     def run_files_locked[T](
@@ -74,55 +74,13 @@ class FlextInfraCodegenTransaction:
                             "file capability identity changed before recovery"
                         )
                     participants[participant.root] = participant
-            with self._lease_file_participants(tuple(participants.values())):
+            with self._lease_file_participants(
+                tuple(participants.values()),
+                held_roots=frozenset({identity.value.repo_root.resolve()}),
+            ):
                 return self._run_locked_operation(
                     identity.value, prepare=True, operation=operation
                 )
-
-    @contextmanager
-    def _lease_file_participants(
-        self, participants: t.VariadicTuple[m.Infra.CodegenFileParticipant]
-    ) -> Generator[None]:
-        """Serialize shared destinations across worktrees in stable path order."""
-        for participant in participants:
-            physical = files.physical_directory_identity(participant.root).unwrap()
-            if physical != (participant.device, participant.inode):
-                msg = f"file publication root changed before lease: {participant.root}"
-                raise ValueError(msg)
-        acquired: set[Path] = set()
-        try:
-            with ExitStack() as stack:
-                for participant in sorted(
-                    participants, key=lambda item: str(item.root)
-                ):
-                    if participant.root in self._file_leases:
-                        continue
-                    # The lease is regenerable transaction state: it lives in
-                    # the root's ignored state directory, never beside tracked
-                    # content where it would surface as an untracked entry.
-                    lease_directory = (
-                        participant.root / c.Infra.TRANSACTION_STATE_DIRNAME
-                    )
-                    if lease_directory.is_symlink() or lease_directory.exists():
-                        files.physical_directory_identity(lease_directory).unwrap()
-                    lease_path = lease_directory / c.Infra.JOURNAL_NAME
-                    u.Cli.atomic_read_binary_file_state(
-                        lease_path.with_name(f"{lease_path.name}.lock"), required=False
-                    ).unwrap()
-                    stack.enter_context(u.Infra.codegen_transaction_lease(lease_path))
-                    files.physical_directory_identity(lease_directory).unwrap()
-                    acquired.add(participant.root)
-                    self._file_leases[participant.root] = participant
-                    physical = files.physical_directory_identity(
-                        participant.root
-                    ).unwrap()
-                    if physical != (participant.device, participant.inode):
-                        msg = f"file publication root changed during lease: {participant.root}"
-                        raise ValueError(msg)
-                yield
-        finally:
-            for root in acquired:
-                self._file_leases.pop(root)
 
     def begin_files_locked(
         self,

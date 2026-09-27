@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import c, u
+from flext_infra import c
 
 from .base import FlextInfraNamespaceRulesBase
 
@@ -18,9 +18,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
     """Reject untyped boundaries, legacy Pydantic, and concrete wiring."""
 
     @classmethod
-    def check_contracts(
-        cls, tree: p.AttributeProbe, filepath: Path, *, source: str
-    ) -> t.StrSequence:
+    def check_contracts(cls, tree: p.AttributeProbe, filepath: Path) -> t.StrSequence:
         """Return contract and clean-architecture violations."""
         posix = filepath.as_posix()
         if any(
@@ -29,7 +27,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
             # ADR-0018 stdlib island: no flext typing surface is importable.
             return []
         messages: list[str] = []
-        imported_names = u.Infra.imported_callable_names(source)
+        imported_names = cls.imported_callable_names(tree)
         for node in cls.walk(tree):
             kind = cls.kind(node)
             if kind in {"FunctionDef", "AsyncFunctionDef"}:

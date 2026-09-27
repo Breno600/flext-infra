@@ -723,7 +723,7 @@ class FlextInfraProtocolsBase(Protocol):
             *,
             output_format: str = "json",
             projects: t.SequenceOf[FlextInfraProtocolsBase.ProjectInfo] | None = None,
-        ) -> t.SequenceOf[m.Infra.CensusReport]:
+        ) -> p.Result[t.VariadicTuple[m.Infra.CensusReport]]:
             """Run census and return typed reports."""
             ...
 

@@ -54,6 +54,7 @@ if TYPE_CHECKING:
     from .codegen.conform import FlextInfraCodegenConform
     from .codegen.consolidator import FlextInfraCodegenConsolidator
     from .codegen.constants_quality_gate import FlextInfraCodegenQualityGate
+    from .codegen.file_leases import FlextInfraCodegenFileLeases
     from .codegen.fixer import FlextInfraCodegenFixer
     from .codegen.layout import FlextInfraCodegenLayout
     from .codegen.lazy_init import FlextInfraCodegenLazyInit
@@ -156,7 +157,6 @@ if TYPE_CHECKING:
     from .gates.markdown import FlextInfraMarkdownGate
     from .gates.markdown_code import FlextInfraMarkdownCodeGate
     from .gates.markdown_code_sources import (
-        is_syntax_broken,
         source_name,
         write_docstring_sources,
         write_fenced_block_sources,
@@ -290,6 +290,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenCensus",
     "FlextInfraCodegenConform",
     "FlextInfraCodegenConsolidator",
+    "FlextInfraCodegenFileLeases",
     "FlextInfraCodegenFixer",
     "FlextInfraCodegenGeneration",
     "FlextInfraCodegenLayout",
@@ -490,7 +491,6 @@ __all__: tuple[str, ...] = (
     "gates",
     "h",
     "infra",
-    "is_syntax_broken",
     "m",
     "main",
     "maintenance",
@@ -534,6 +534,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".codegen.conform": ("FlextInfraCodegenConform",),
             ".codegen.consolidator": ("FlextInfraCodegenConsolidator",),
             ".codegen.constants_quality_gate": ("FlextInfraCodegenQualityGate",),
+            ".codegen.file_leases": ("FlextInfraCodegenFileLeases",),
             ".codegen.fixer": ("FlextInfraCodegenFixer",),
             ".codegen.layout": ("FlextInfraCodegenLayout",),
             ".codegen.lazy_init": ("FlextInfraCodegenLazyInit",),
@@ -650,7 +651,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.markdown": ("FlextInfraMarkdownGate",),
             ".gates.markdown_code": ("FlextInfraMarkdownCodeGate",),
             ".gates.markdown_code_sources": (
-                "is_syntax_broken",
                 "source_name",
                 "write_docstring_sources",
                 "write_fenced_block_sources",
