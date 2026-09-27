@@ -122,7 +122,7 @@ class TestsFlextInfraTransactionLease:
             )
             tm.ok(
                 transaction.commit_locked(
-                    session, lambda: owner.validate_artifacts(root)
+                    session, lambda: owner.validate_artifacts(root, scope_root)
                 )
             )
             return r[bool].ok(True)
@@ -198,7 +198,10 @@ class TestsFlextInfraTransactionLease:
             )
             tm.ok(
                 FlextInfraCodegenTransaction(independent_owner).run_locked(
-                    prepare=True, operation=independent_owner.validate_artifacts
+                    prepare=True,
+                    operation=lambda scope: independent_owner.validate_artifacts(
+                        independent, scope
+                    ),
                 )
             )
             tm.that(journal_path.read_bytes(), eq=journal_before)
@@ -233,7 +236,7 @@ class TestsFlextInfraTransactionLease:
         owner = FlextInfraCodegenMiseArtifacts(repository_root=member)
         tm.ok(
             FlextInfraCodegenTransaction(owner).run_locked(
-                prepare=True, operation=lambda _scope: owner.validate_artifacts(member)
+                prepare=True, operation=lambda scope: owner.validate_artifacts(member, scope)
             )
         )
         tm.that(lock_path.stat().st_ino, eq=lock_after.st_ino)

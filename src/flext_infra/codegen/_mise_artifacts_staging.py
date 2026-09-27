@@ -40,14 +40,9 @@ class FlextInfraMiseStaging:
         ]
         if not plan.projects:
             return result_type.fail("Mise plan declares no projects")
-        runtime = plan.runtime_artifacts
         projected = tuple(
             state.content
-            for state in (
-                runtime.unix_launcher,
-                runtime.windows_launcher,
-                runtime.version_pin,
-            )
+            for state in plan.runtime_artifacts.states
             if state.content is not None
         )
         if len(projected) != len(c.Infra.ARTIFACT_SPECS):

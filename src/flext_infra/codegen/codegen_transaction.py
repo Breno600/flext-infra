@@ -361,22 +361,7 @@ class FlextInfraCodegenTransaction:
         )
         if source_states.failure:
             return result_type.from_failure(source_states)
-        runtime = plan.value.runtime_artifacts
-        mise_sources = (
-            *(
-                ("mise", source)
-                for project in plan.value.projects
-                for source in project.config.sources
-            ),
-            *(
-                ("mise", source)
-                for source in (
-                    runtime.unix_launcher,
-                    runtime.windows_launcher,
-                    runtime.version_pin,
-                )
-            ),
-        )
+        mise_sources = tuple(("mise", source) for source in plan.value.sources)
         all_sources = (*source_states.value, *mise_sources)
         source_barrier = verify.states_current(
             FlextInfraCodegenPreconditions.unique_states(

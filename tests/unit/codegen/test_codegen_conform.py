@@ -746,9 +746,13 @@ class TestsFlextInfraCodegenConform:
         tm.that((root / ".gitignore").is_file(), eq=True)
         tm.that((root / ".env.example").exists(), eq=False)
         tm.that(root / ".env.example" in applied.value.written_files, eq=False)
-        for name, mode in (("mise", 0o755), ("mise.cmd", 0o644)):
-            tm.that((root / "bin" / name).stat().st_mode & 0o777, eq=mode)
-        tm.ok(FlextInfraCodegenMiseArtifacts.validate_launchers(root))
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            tm.that((root / relative).stat().st_mode & 0o777, eq=mode)
+        tm.ok(
+            FlextInfraCodegenMiseArtifacts(repository_root=root).validate_artifacts(
+                root, root
+            )
+        )
 
         fixed_point = FlextInfraCodegenConform.execute_request(
             u.Tests.conform_request(

@@ -422,14 +422,7 @@ class FlextInfraMiseWorkspacePlanner:
         )
         if runtime.failure:
             return runtime
-        present = tuple(
-            state.content is not None
-            for state in (
-                runtime.value.unix_launcher,
-                runtime.value.windows_launcher,
-                runtime.value.version_pin,
-            )
-        )
+        present = tuple(state.content is not None for state in runtime.value.states)
         if all(present):
             return runtime
         if any(present):

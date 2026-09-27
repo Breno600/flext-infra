@@ -56,9 +56,7 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         for relative in (
             c.Infra.MISE_TOML_FILENAME,
             c.Infra.MISE_LOCK_FILENAME,
-            c.Infra.MISE_VERSION_PIN_FILENAME,
-            "bin/mise",
-            "bin/mise.cmd",
+            *c.Infra.ARTIFACT_NAMES,
         ):
             source = source_root / relative
             destination = root / relative

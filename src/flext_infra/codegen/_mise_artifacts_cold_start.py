@@ -44,11 +44,7 @@ class FlextInfraMiseColdStart:
         runtime = planner.runtime_artifacts(scope_root.value)
         if runtime.failure:
             return result_type.from_failure(runtime)
-        sources = (
-            runtime.value.unix_launcher,
-            runtime.value.windows_launcher,
-            runtime.value.version_pin,
-        )
+        sources = runtime.value.states
         plans: list[m.Infra.CodegenFilePlan] = []
         for source, (name, mode) in zip(sources, c.Infra.ARTIFACT_SPECS, strict=True):
             path = files.cold_start_directory() / Path(name).name

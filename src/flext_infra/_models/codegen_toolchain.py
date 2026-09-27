@@ -215,6 +215,12 @@ class FlextInfraModelsCodegenToolchain:
             m.Cli.AtomicFileState, m.Field(description="Observed Mise pin state")
         ]
 
+        @m.computed_field
+        @property
+        def states(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
+            """The triple in ``c.Infra.ARTIFACT_SPECS`` order."""
+            return (self.unix_launcher, self.windows_launcher, self.version_pin)
+
     class MiseToolchainWorkspacePlan(m.ArbitraryTypesModel):
         """One stable layout plus a coherent mutable-state snapshot."""
 
@@ -237,6 +243,15 @@ class FlextInfraModelsCodegenToolchain:
                 )
             ),
         ]
+
+        @m.computed_field
+        @property
+        def sources(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
+            """Every state the publication reads: declarations, then the triple."""
+            return (
+                *(state for project in self.projects for state in project.config.sources),
+                *self.runtime_artifacts.states,
+            )
 
         @u.model_validator(mode="after")
         def _validate_project_layouts(self) -> Self:

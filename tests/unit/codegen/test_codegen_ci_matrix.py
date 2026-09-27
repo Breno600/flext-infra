@@ -635,7 +635,7 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(setup_jobs, empty=False)
         for job in setup_jobs:
             tm.that(job, has="GITHUB_TOKEN: ${{ github.token }}")
-            tm.that(job, has="MISE_GITHUB_TOKEN: ${{ github.token }}")
+            tm.that(job, lacks="MISE_GITHUB_TOKEN")
 
     def test_ci_matrix_checks_each_distro_and_tests_ubuntu(
         self, rendered_project: Path
