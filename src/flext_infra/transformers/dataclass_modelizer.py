@@ -22,7 +22,7 @@ import ast
 import re
 from typing import TYPE_CHECKING, ClassVar, final, override
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from ..utilities import FlextInfraRopeTransformer
 from ._rewrite import FlextInfraSourceRewrite, FlextInfraSourceRewriter
 
 if TYPE_CHECKING:

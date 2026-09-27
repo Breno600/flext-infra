@@ -71,18 +71,19 @@ class Rows(RootModel[list["{base}"]]):
             _updated, changes = transformer.transform(rope.rope_project, resource)
         tm.that(bool(changes), eq=True)
         probe = f"""from typing import get_args, get_type_hints
+from flext_core import cli
 from pydantic import TypeAdapter
 from {c.Infra.PKG_CORE_UNDERSCORE} import m
 from import_consumer import PAYLOAD, Row, RowBase, Rows, describe, local
 row = Row.model_validate_json('{{"value": "live"}}')
 hints = get_type_hints(describe, include_extras=True)
-print(row.value, local("kept"))
-print(Row.model_fields["value"].description)
-print(hints["value"] is m.BaseModel, get_args(hints["return"])[0] is m.BaseModel)
-print(get_args(hints["return"])[1])
-print(PAYLOAD == {payload!r})
-print(TypeAdapter(RowBase).validate_python(row) is row)
-print(Rows.model_validate([row]).root[0] is row)
+cli.print(row.value, local("kept"))
+cli.print(Row.model_fields["value"].description)
+cli.print(hints["value"] is m.BaseModel, get_args(hints["return"])[0] is m.BaseModel)
+cli.print(get_args(hints["return"])[1])
+cli.print(PAYLOAD == {payload!r})
+cli.print(TypeAdapter(RowBase).validate_python(row) is row)
+cli.print(Rows.model_validate([row]).root[0] is row)
 """
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
         tm.that(
@@ -153,9 +154,10 @@ class Row(BaseModel):
         )
         updated, _changes = transformer.apply_to_source(source)
         (tmp_path / "derived_consumer.py").write_text(updated, encoding="utf-8")
-        probe = """from flext_infra import m
+        probe = """from flext_core import cli
+from flext_infra import m
 from derived_consumer import Row, m as owner
-print(owner is m, Row.model_validate_json('{"value": "live"}').value)
+cli.print(owner is m, Row.model_validate_json('{"value": "live"}').value)
 """
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
         tm.that(outcome.stdout.strip(), eq="True live")
@@ -202,9 +204,10 @@ class RuntimeRow(BaseModel):
         )
         updated, _changes = transformer.apply_to_source(source)
         (tmp_path / "conditional_consumer.py").write_text(updated, encoding="utf-8")
-        probe = """from conditional_consumer import build, RuntimeRow
-print(build(True), build(False))
-print(RuntimeRow.model_validate_json('{"value": "runtime"}').value)
+        probe = """from flext_core import cli
+from conditional_consumer import build, RuntimeRow
+cli.print(build(True), build(False))
+cli.print(RuntimeRow.model_validate_json('{"value": "runtime"}').value)
 """
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
         tm.that(outcome.stdout.splitlines(), eq=["branch other branch", "runtime"])

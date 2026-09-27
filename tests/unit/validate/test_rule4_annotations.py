@@ -6,10 +6,12 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from ._fixtures import TestsFlextInfraValidateNamespaceBase
+import tests.utilities
 
 
-class TestsFlextInfraRule4Annotations(TestsFlextInfraValidateNamespaceBase):
+class TestsFlextInfraRule4Annotations(
+    tests.utilities.TestsFlextInfraUtilities.TestsFlextInfraValidateNamespaceBase
+):
     """Test suite for namespace validator Rule 4 (annotations)."""
 
     def test_rule4_annotated_field_factory_not_flagged_as_banned(

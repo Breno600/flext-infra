@@ -7,12 +7,7 @@ from typing import TYPE_CHECKING
 
 from libcst.metadata import QualifiedNameSource, Scope
 
-from flext_infra import c
-
-from .._utilities.private_import_ancestry import (
-    FlextInfraUtilitiesPrivateImportAncestry,
-)
-from .._utilities.private_import_facades import FlextInfraUtilitiesPrivateImportFacades
+from flext_infra import c, u
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -53,10 +48,8 @@ class FlextInfraRefactorImportFacades:
         if imported != alias or not package:
             return False
         modules = cls._facade_sources(package, alias)
-        owners = FlextInfraUtilitiesPrivateImportFacades.discover(modules)
-        bindings, _exports = FlextInfraUtilitiesPrivateImportFacades.declared_exports(
-            modules
-        )
+        owners = u.Infra.discover(modules)
+        bindings, _exports = u.Infra.declared_exports(modules)
         roots = {
             f"{c.Infra.PKG_CORE_UNDERSCORE}.{file.removesuffix('.py')}.{root}"
             for _tree, letter, root, file in owners.get(c.Infra.PKG_CORE_UNDERSCORE, ())
@@ -66,14 +59,12 @@ class FlextInfraRefactorImportFacades:
             msg = f"canonical facade identity is not unique: {expected}"
             raise ValueError(msg)
         return (
-            FlextInfraUtilitiesPrivateImportFacades.public_reference(
+            u.Infra.public_reference(
                 owners=owners.get(package, ()),
                 package=package,
                 qualified=roots.pop(),
                 bindings=bindings,
-                class_bases=FlextInfraUtilitiesPrivateImportAncestry.class_bases(
-                    modules
-                ),
+                class_bases=u.Infra.class_bases(modules),
             )
             == alias
         )
@@ -83,7 +74,7 @@ class FlextInfraRefactorImportFacades:
         cls, package: str, alias: str
     ) -> t.MappingKV[str, t.Pair[str, bool]]:
         """Complete only the dependency ancestry of declared facade owners."""
-        modules = FlextInfraUtilitiesPrivateImportFacades.source_modules(
+        modules = u.Infra.source_modules(
             {},
             (
                 f"from {package} import {alias}",
@@ -92,7 +83,7 @@ class FlextInfraRefactorImportFacades:
         )
         inspected = {module.split(".", maxsplit=1)[0] for module in modules}
         while True:
-            owners = FlextInfraUtilitiesPrivateImportFacades.discover(modules)
+            owners = u.Infra.discover(modules)
             dependencies: set[str] = set()
             for facade_owners in owners.values():
                 for tree, _alias, _root, _file in facade_owners:
@@ -102,7 +93,7 @@ class FlextInfraRefactorImportFacades:
                 return modules
             inspected.update(dependencies)
             modules.update(
-                FlextInfraUtilitiesPrivateImportFacades.source_modules(
+                u.Infra.source_modules(
                     {},
                     tuple(
                         f"from {dependency} import *"

@@ -151,6 +151,3 @@ class TestsFlextInfraCodegenMakeGateSuspensions:
                     f"authority={suspension.authority}; reason={suspension.reason}"
                 ),
             )
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenMakeGateSuspensions"]

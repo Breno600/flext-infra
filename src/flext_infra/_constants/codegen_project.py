@@ -26,9 +26,7 @@ if TYPE_CHECKING:
 class FlextInfraConstantsCodegenProject:
     """Manifest + naming constants for project creation (flat in ``c.Infra.*``)."""
 
-    CODEGEN_LOCAL_OVERRIDES_FILENAME: ClassVar[str] = (
-        "codegen-overrides.local.yaml"
-    )
+    CODEGEN_LOCAL_OVERRIDES_FILENAME: ClassVar[str] = "codegen-overrides.local.yaml"
     CODEGEN_ORG_OVERRIDES_FILENAME: ClassVar[str] = "codegen-org.yaml"
 
     # These enums define the

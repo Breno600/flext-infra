@@ -149,6 +149,3 @@ class TestsFlextInfraCodegenMakeLockContract:
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(pin.exists(), eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenMakeLockContract"]

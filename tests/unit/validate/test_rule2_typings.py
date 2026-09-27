@@ -6,12 +6,12 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import u
-
-from ._fixtures import TestsFlextInfraValidateNamespaceBase
+from tests import u, utilities
 
 
-class TestsFlextInfraRule2TypingsFacade(TestsFlextInfraValidateNamespaceBase):
+class TestsFlextInfraRule2TypingsFacade(
+    utilities.TestsFlextInfraUtilities.TestsFlextInfraValidateNamespaceBase
+):
     """Test suite for namespace validator Rule 2 (typings facade)."""
 
     def test_rule2_valid_types_passes(self, tmp_path: Path) -> None:

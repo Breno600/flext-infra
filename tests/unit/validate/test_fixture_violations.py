@@ -7,12 +7,12 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import u
-
-from ._fixtures import TestsFlextInfraValidateNamespaceBase
+from tests import u, utilities
 
 
-class TestsFlextInfraFixtureViolations(TestsFlextInfraValidateNamespaceBase):
+class TestsFlextInfraFixtureViolations(
+    utilities.TestsFlextInfraUtilities.TestsFlextInfraValidateNamespaceBase
+):
     """Each namespace-rule fixture fails the project with its own message."""
 
     @pytest.mark.parametrize(

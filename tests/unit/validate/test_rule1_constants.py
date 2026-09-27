@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests import u
-
-from ._fixtures import TestsFlextInfraValidateNamespaceBase
+from tests import u, utilities
 
 
-class TestsFlextInfraRule1ConstantsFacade(TestsFlextInfraValidateNamespaceBase):
+class TestsFlextInfraRule1ConstantsFacade(
+    utilities.TestsFlextInfraUtilities.TestsFlextInfraValidateNamespaceBase
+):
     """Test suite for namespace validator Rule 1 (constants facade)."""
 
     def test_rule1_valid_constants_passes(self, tmp_path: Path) -> None:

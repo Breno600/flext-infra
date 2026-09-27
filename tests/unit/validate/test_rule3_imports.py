@@ -7,12 +7,12 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import u
-
-from ._fixtures import TestsFlextInfraValidateNamespaceBase
+from tests import u, utilities
 
 
-class TestsFlextInfraRule3ImportRules(TestsFlextInfraValidateNamespaceBase):
+class TestsFlextInfraRule3ImportRules(
+    utilities.TestsFlextInfraUtilities.TestsFlextInfraValidateNamespaceBase
+):
     """Test suite for namespace validator Rule 3 (import rules)."""
 
     @pytest.mark.parametrize(

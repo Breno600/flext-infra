@@ -187,6 +187,3 @@ class TestsFlextInfraCodemodGate:
         """An empty stream or malformed finding cannot be a clean native scan."""
         with pytest.raises(m.ValidationError):
             m.Infra.AstGrepReport.model_validate_json(payload)
-
-
-__all__: list[str] = ["TestsFlextInfraCodemodGate"]

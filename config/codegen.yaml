@@ -345,22 +345,7 @@ Infra:
       fmt_gates: [markdown-format]
       # Explicit policy suspension; validators remain strict when invoked.
       # Local, CI, and hooks derive their active gates from this same owner.
-      check_gate_suspensions:
-        - gate: duplication
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: codemod
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: boundary
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: namespace
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
-        - gate: runtime-census
-          authority: flext-itpd1.3 / operator 2026-09-24 / flext-xp6ec
-          reason: Custom policy check suspended during the approved recovery.
+      check_gate_suspensions: []
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /
       # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).

@@ -18,11 +18,7 @@ from libcst.metadata import (
 
 from flext_infra import c, u
 
-from .._utilities._semantic_cutover.family_type_references import (
-    FlextInfraUtilitiesSemanticFamilyTypeReferences,
-)
-from .._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from ..utilities import FlextInfraRopeTransformer
 from ._import_facades import FlextInfraRefactorImportFacades
 from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
 
@@ -80,14 +76,8 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
                 tuple[cst.Import | cst.ImportFrom, cst.Import | cst.ImportFrom, Scope]
             ] = []
             self.facades = FlextInfraRefactorImportFacades()
-            self.exports = FlextInfraUtilitiesRopeAnalysis.public_export_names_source(
-                source
-            )
-            self.type_ranges = (
-                FlextInfraUtilitiesSemanticFamilyTypeReferences.type_expression_ranges(
-                    source
-                )
-            )
+            self.exports = u.Infra.public_export_names_source(source)
+            self.type_ranges = u.Infra.type_expression_ranges(source)
             self.line_offsets = [0]
             for line in source.splitlines(keepends=True):
                 self.line_offsets.append(self.line_offsets[-1] + len(line))

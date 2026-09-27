@@ -237,7 +237,12 @@ if TYPE_CHECKING:
     from .transformers.symbol_propagator import FlextInfraRefactorSymbolPropagator
     from .transformers.typing_unifier import FlextInfraRefactorTypingUnifier
     from .typings import FlextInfraTypes, FlextInfraTypes as t
-    from .utilities import FlextInfraUtilities, FlextInfraUtilities as u
+    from .utilities import (
+        FlextInfraRopeTransformer,
+        FlextInfraUtilities,
+        FlextInfraUtilities as u,
+        FlextInfraUtilitiesSemanticFamilyTypeReferences,
+    )
     from .validate.cprofile_report import FlextInfraCProfileReport
     from .validate.fresh_import import FlextInfraValidateFreshImport
     from .validate.gate_contract import FlextInfraGateContractValidator
@@ -436,6 +441,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraReleaseOrchestrator",
     "FlextInfraReleaseOrchestratorPhases",
     "FlextInfraReleasePolicyRender",
+    "FlextInfraRopeTransformer",
     "FlextInfraRopeWorkspace",
     "FlextInfraRuffFormatGate",
     "FlextInfraRuffLintGate",
@@ -461,6 +467,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraTransformerFixerAdapter",
     "FlextInfraTypes",
     "FlextInfraUtilities",
+    "FlextInfraUtilitiesSemanticFamilyTypeReferences",
     "FlextInfraValidateFreshImport",
     "FlextInfraValidateImportCycles",
     "FlextInfraValidateLazyMapFreshness",
@@ -767,7 +774,12 @@ _LAZY_IMPORTS = MappingProxyType(
             ".transformers.symbol_propagator": ("FlextInfraRefactorSymbolPropagator",),
             ".transformers.typing_unifier": ("FlextInfraRefactorTypingUnifier",),
             ".typings": ("FlextInfraTypes", "t"),
-            ".utilities": ("FlextInfraUtilities", "u"),
+            ".utilities": (
+                "FlextInfraRopeTransformer",
+                "FlextInfraUtilities",
+                "FlextInfraUtilitiesSemanticFamilyTypeReferences",
+                "u",
+            ),
             ".validate": ("validate",),
             ".validate.cprofile_report": ("FlextInfraCProfileReport",),
             ".validate.fresh_import": ("FlextInfraValidateFreshImport",),

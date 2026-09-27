@@ -77,3 +77,23 @@ class TestsFlextInfraRopeSignaturePatch:
             objects = rope.objects(module_path)
 
         tm.that([item.name for item in objects], has="shapes")
+
+    def test_scope_at_walks_pep701_nested_quotes(self, tmp_path: Path) -> None:
+        """Rope resolves scope when an f-string expression reuses quote style."""
+        repository_root, package_root = u.Tests.create_lazy_init_workspace(
+            tmp_path, project_name="flext-demo", package_name="flext_demo"
+        )
+        module_path = package_root / "quoted.py"
+        source = (
+            "def render(values: dict[str, str]) -> str:\n"
+            '    return f"value={values["name"]}"\n'
+        )
+        module_path.write_text(source, encoding="utf-8")
+
+        with FlextInfraRopeWorkspace.open_workspace(repository_root) as rope:
+            pymodule = u.Infra.get_string_module(
+                rope.rope_project, source, resource=rope.resource(module_path)
+            )
+            scope = u.Infra.scope_at(pymodule, source.index("values["))
+
+        tm.that(scope, none=False)

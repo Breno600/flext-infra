@@ -30,8 +30,9 @@ FLEXT typing law forbids the getattr-dispatch/Any workaround.
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Callable
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from ..rope_runtime import FlextInfraUtilitiesRopeRuntime
 
@@ -64,6 +65,39 @@ class FlextInfraUtilitiesRopePep695Patch:
         walker = FlextInfraUtilitiesRopeRuntime.pep695_ast_walker()
         original_function_def: Callable[..., None] = walker._handle_function_def_node  # pyright: ignore[reportPrivateUsage]
         original_class_def: Callable[..., None] = walker._ClassDef  # pyright: ignore[reportPrivateUsage]
+
+        def _source_offset(
+            self: p.Infra.PatchingASTWalker, lineno: int, byte_offset: int
+        ) -> int:
+            """Translate the parser's UTF-8 column into Rope's character offset."""
+            line_start = self.lines.get_line_start(lineno)
+            line = self.source.source[line_start:].partition("\n")[0]
+            column = len(line.encode("utf-8")[:byte_offset].decode("utf-8"))
+            return line_start + column
+
+        def _joined_str(self: p.Infra.PatchingASTWalker, node: ast.JoinedStr) -> None:
+            """Patch PEP 701 f-strings from parser coordinates, not token guesses."""
+            start, end = self.source.consume_string()
+            for child in ast.walk(node):
+                if not isinstance(child, ast.expr):
+                    continue
+                patchable = cast("p.Infra.PatchingASTWalker.PatchableNode", child)
+                child_start = _source_offset(
+                    self, patchable.lineno, patchable.col_offset
+                )
+                child_end = _source_offset(
+                    self, patchable.end_lineno, patchable.end_col_offset
+                )
+                patchable.region = (child_start, child_end)
+                if self.children:
+                    patchable.sorted_children = [
+                        self.source.source[child_start:child_end]
+                    ]
+            patched_node = cast("p.Infra.PatchingASTWalker.PatchableNode", node)
+            patched_node.region = (start, end)
+            if self.children:
+                patched_node.sorted_children = [self.source.source[start:end]]
+            self.source.offset = end
 
         def _type_params_children(
             node: p.Infra.PatchingASTWalker.TypeParameterOwner,
@@ -206,6 +240,7 @@ class FlextInfraUtilitiesRopePep695Patch:
 
         walker._handle_function_def_node = _patched_function_def  # pyright: ignore[reportPrivateUsage]
         walker._ClassDef = _patched_class_def  # pyright: ignore[reportPrivateUsage]
+        walker._JoinedStr = _joined_str
         walker._TypeAlias = _type_alias
         walker._TypeVar = _type_var
         walker._ParamSpec = _param_spec

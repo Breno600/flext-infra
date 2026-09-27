@@ -116,6 +116,3 @@ class TestsFlextInfraCodegenUpgWorkspace:
         tm.that((checkout / ".venv").exists(), eq=False)
         pin = (root / c.Infra.MISE_VERSION_PIN_FILENAME).read_text().strip()
         tm.that(process.stdout, has=f"mise setup receipt={pin}")
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenUpgWorkspace"]

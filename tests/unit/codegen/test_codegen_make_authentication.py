@@ -158,6 +158,3 @@ class TestsFlextInfraCodegenMakeAuthentication:
         tm.that(process.outcome.raw_return_code, ne=0)
         tm.that(process.stdout + process.stderr, has="401")
         tm.that(process.stderr, lacks="gh credential source failed")
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenMakeAuthentication"]

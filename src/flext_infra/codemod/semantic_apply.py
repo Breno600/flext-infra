@@ -94,6 +94,7 @@ class FlextInfraCodemodSemanticApply:
             for phase in c.Infra.SemanticCutoverPhase:
                 if residue.failure:
                     return r[bool].from_failure(residue)
+                cli.display_text(f"mod: semantic phase {phase}")
                 planned = u.Infra.plan_semantic_cutover(
                     phase,
                     rope_workspace=rope_workspace,

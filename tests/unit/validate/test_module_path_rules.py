@@ -7,12 +7,12 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c
-
-from ._fixtures import TestsFlextInfraValidateNamespaceBase
+from tests import c, utilities
 
 
-class TestsFlextInfraModulePathRules(TestsFlextInfraValidateNamespaceBase):
+class TestsFlextInfraModulePathRules(
+    utilities.TestsFlextInfraUtilities.TestsFlextInfraValidateNamespaceBase
+):
     """Namespace rules key on the module path a project actually declares."""
 
     @pytest.mark.parametrize("family", ["c", "t", "p", "m", "u"])

@@ -164,6 +164,7 @@ class FlextInfraProtocolsRope(Protocol):
         # instead of reaching into an untyped probe.
         _handle_function_def_node: Callable[..., None]
         _ClassDef: Callable[..., None]
+        _JoinedStr: Callable[..., None]
         _arguments: Callable[..., None]
         _arg: Callable[..., None]
 
@@ -194,6 +195,19 @@ class FlextInfraProtocolsRope(Protocol):
 
             lineno: int
             col_offset: int
+
+        @runtime_checkable
+        class SourceSpanningNode(PositionedNode, Protocol):
+            """Complete parser span required to map a node back to source."""
+
+            end_lineno: int
+            end_col_offset: int
+
+        class PatchableNode(SourceSpanningNode, Protocol):
+            """Dynamic source metadata attached by Rope's patched AST walker."""
+
+            region: t.Pair[int, int]
+            sorted_children: list[str]
 
         @runtime_checkable
         class TypeParameterOwner(Protocol):
@@ -274,9 +288,13 @@ class FlextInfraProtocolsRope(Protocol):
             """Minimal source buffer contract exposed by rope patched AST walkers."""
 
             source: str
+            offset: int
+
+            def consume_string(self, end: int | None = None) -> t.Pair[int, int]: ...
 
         lines: FlextInfraProtocolsRope.PatchingASTWalker.SourceLines
         source: FlextInfraProtocolsRope.PatchingASTWalker.SourceBuffer
+        children: bool
         empty_tuple: p.AttributeProbe
 
         def _handle(
