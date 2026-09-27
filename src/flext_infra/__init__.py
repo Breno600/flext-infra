@@ -205,14 +205,14 @@ if TYPE_CHECKING:
     from .refactor.signature_propagation import FlextInfraRefactorSignaturePropagation
     from .refactor.wrapper_root_namespace import FlextInfraWrapperRootNamespaceRefactor
     from .release.orchestrator import FlextInfraReleaseOrchestrator
-    from .services.cli_dispatch import CliDispatchService
-    from .services.cli_route_base import CliRouteBase
-    from .services.cli_routes import CliRouteService
-    from .services.cli_routes_codegen import CodegenRoutes
-    from .services.cli_routes_refactor import RefactorRoutes
-    from .services.cli_routes_validate import ValidationRoutes
-    from .services.cli_routes_validate_commands import ValidationCommandRoutes
-    from .services.cli_routes_workspace import WorkspaceRoutes
+    from .services.cli_dispatch import FlextInfraCliDispatchService
+    from .services.cli_route_base import FlextInfraCliRouteBase
+    from .services.cli_routes import FlextInfraCliRouteService
+    from .services.cli_routes_codegen import FlextInfraCodegenRoutes
+    from .services.cli_routes_refactor import FlextInfraRefactorRoutes
+    from .services.cli_routes_validate import FlextInfraValidationRoutes
+    from .services.cli_routes_validate_commands import FlextInfraValidationCommandRoutes
+    from .services.cli_routes_workspace import FlextInfraWorkspaceRoutes
     from .services.codegen import FlextInfraCodegen
     from .transformers.class_reconstructor import FlextInfraRefactorClassReconstructor
     from .transformers.compatibility_alias import FlextInfraRefactorCompatibilityAlias
@@ -274,10 +274,6 @@ if TYPE_CHECKING:
 
 
 __all__: tuple[str, ...] = (
-    "CliDispatchService",
-    "CliRouteBase",
-    "CliRouteService",
-    "CodegenRoutes",
     "FlextInfra",
     "FlextInfraAbstractionBoundaryGate",
     "FlextInfraAccessorMigrationOrchestrator",
@@ -288,6 +284,9 @@ __all__: tuple[str, ...] = (
     "FlextInfraClassPlacementDetector",
     "FlextInfraCleanService",
     "FlextInfraCli",
+    "FlextInfraCliDispatchService",
+    "FlextInfraCliRouteBase",
+    "FlextInfraCliRouteService",
     "FlextInfraCodegen",
     "FlextInfraCodegenCensus",
     "FlextInfraCodegenConform",
@@ -306,6 +305,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenProtocolModels",
     "FlextInfraCodegenPyTyped",
     "FlextInfraCodegenQualityGate",
+    "FlextInfraCodegenRoutes",
     "FlextInfraCodegenScaffolder",
     "FlextInfraCodegenTransaction",
     "FlextInfraCodegenVersionFile",
@@ -418,6 +418,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorPatternTransformer",
     "FlextInfraRefactorProjectAliasMigrator",
     "FlextInfraRefactorPydanticModernizer",
+    "FlextInfraRefactorRoutes",
     "FlextInfraRefactorSignaturePropagation",
     "FlextInfraRefactorSignaturePropagator",
     "FlextInfraRefactorSymbolPropagator",
@@ -453,6 +454,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraValidateLazyMapFreshness",
     "FlextInfraValidateMetadataDiscipline",
     "FlextInfraValidateTierWhitelist",
+    "FlextInfraValidationCommandRoutes",
+    "FlextInfraValidationRoutes",
     "FlextInfraWorkspaceCheckGatesMixin",
     "FlextInfraWorkspaceChecker",
     "FlextInfraWorkspaceDetector",
@@ -461,12 +464,9 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspaceEnvironmentProvenance",
     "FlextInfraWorkspaceEnvironmentSync",
     "FlextInfraWorkspacePropagation",
+    "FlextInfraWorkspaceRoutes",
     "FlextInfraWorktreeService",
     "FlextInfraWrapperRootNamespaceRefactor",
-    "RefactorRoutes",
-    "ValidationCommandRoutes",
-    "ValidationRoutes",
-    "WorkspaceRoutes",
     "__author__",
     "__author_email__",
     "__description__",
@@ -708,14 +708,16 @@ _LAZY_IMPORTS = MappingProxyType(
             ".release": ("release",),
             ".release.orchestrator": ("FlextInfraReleaseOrchestrator",),
             ".services": ("services",),
-            ".services.cli_dispatch": ("CliDispatchService",),
-            ".services.cli_route_base": ("CliRouteBase",),
-            ".services.cli_routes": ("CliRouteService",),
-            ".services.cli_routes_codegen": ("CodegenRoutes",),
-            ".services.cli_routes_refactor": ("RefactorRoutes",),
-            ".services.cli_routes_validate": ("ValidationRoutes",),
-            ".services.cli_routes_validate_commands": ("ValidationCommandRoutes",),
-            ".services.cli_routes_workspace": ("WorkspaceRoutes",),
+            ".services.cli_dispatch": ("FlextInfraCliDispatchService",),
+            ".services.cli_route_base": ("FlextInfraCliRouteBase",),
+            ".services.cli_routes": ("FlextInfraCliRouteService",),
+            ".services.cli_routes_codegen": ("FlextInfraCodegenRoutes",),
+            ".services.cli_routes_refactor": ("FlextInfraRefactorRoutes",),
+            ".services.cli_routes_validate": ("FlextInfraValidationRoutes",),
+            ".services.cli_routes_validate_commands": (
+                "FlextInfraValidationCommandRoutes",
+            ),
+            ".services.cli_routes_workspace": ("FlextInfraWorkspaceRoutes",),
             ".services.codegen": ("FlextInfraCodegen",),
             ".transformers": ("transformers",),
             ".transformers.class_reconstructor": (
