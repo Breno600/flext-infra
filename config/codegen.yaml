@@ -336,6 +336,7 @@ Infra:
         discovery_scope: none
 
     make:
+      examples_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -521,6 +522,9 @@ Infra:
           profiles: [workspace]
         - name: build
           description: Build the project distribution artifacts.
+        - name: examples
+          description: Run the workspace public runtime examples.
+          profiles: [workspace]
         - name: check
           description: Run every configured non-test gate.
         - name: test
@@ -665,6 +669,7 @@ Infra:
       - {name: .mcp.json, is_dir: false, vscode_exclude: false, watch_exclude: false}
       - {name: CLAUDE.local.md, is_dir: false, vscode_exclude: false, watch_exclude: false}
     vscode:
+      runtime_interpreter_setting: python.defaultInterpreterPath
       # Canonical .vscode/settings.json content injected with owner semantics:
       # scalar/list keys and artifact maps are exact; explicitly declared
       # non-artifact maps retain project extensions. Recursive "**" venv search
@@ -686,7 +691,6 @@ Infra:
         python.analysis.useNearestConfiguration: false
         python.analysis.usePerProjectEnvironments: false
         python.analysis.userFileIndexingLimit: 2000
-        python.defaultInterpreterPath: ${workspaceFolder}/.venv/bin/python
         python.languageServer: Pylance
         python.pyrefly.diagnosticMode: workspace
         python.pyrefly.disableLanguageServices: true
@@ -702,7 +706,6 @@ Infra:
         ruff.importStrategy: fromEnvironment
         ruff.lint.preview: true
         ruff.nativeServer: on
-        pyrefly.lspPath: ${workspaceFolder}/.venv/bin/pyrefly
         markdownlint.configFile: .markdownlint.json
         shellcheck.useWorkspaceRootAsCwd: true
         shellcheck.useRepositoryRootAsCwd: true
@@ -714,13 +717,6 @@ Infra:
         githubPullRequests.autoRepositoryDetection: true
         githubPullRequests.ignoreSubmodules: false
       list_settings:
-        python-envs.workspaceSearchPaths:
-          - ./.venv
-          - ./*/.venv
-        ruff.interpreter:
-          - ${workspaceFolder}/.venv/bin/python
-        ruff.path:
-          - ${workspaceFolder}/.venv/bin/ruff
         markdownlint.lintWorkspaceGlobs:
           - "!**/.git/**"
           - "!**/.planning/**"
@@ -754,9 +750,6 @@ Infra:
         "[markdown]":
           editor.defaultFormatter: esbenp.prettier-vscode
           editor.formatOnSave: false
-        terminal.integrated.env.linux:
-          PATH: ${workspaceFolder}/.venv/bin:${env:PATH}
-          VIRTUAL_ENV: ${workspaceFolder}/.venv
       stripped_keys:
       # Pylance emits settingsNotOverridable diagnostics (severity=warning) when
       # these keys appear in .vscode/settings.json alongside a [tool.pyright] section

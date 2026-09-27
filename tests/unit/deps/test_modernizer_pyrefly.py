@@ -57,8 +57,7 @@ class TestsFlextInfraModernizerPyrefly:
         self, tmp_path: Path
     ) -> None:
         """Keep shared analyzer config invariant across checkout topologies."""
-        rules = config.Infra.tooling.tools.pyright.path_rules
-        (tmp_path / rules.venv_name).mkdir()
+        u.Infra.runtime_environment_dir(tmp_path).mkdir(parents=True)
         child_origin = tmp_path / "child-origin"
         child_origin.mkdir()
         tm.ok(u.Cli.run_raw(["git", "init"], cwd=child_origin))
