@@ -119,7 +119,7 @@ class FlextInfraClassPlacementDetector:
     ) -> t.VariadicTuple[t.Pair[m.Infra.ClassInfo, str]]:
         """Return public governed classes with their family letters."""
         results: list[t.Pair[m.Infra.ClassInfo, str]] = []
-        for ci in u.Infra.get_class_info(rope_project, resource):
+        for ci in u.Infra.resolve_class_info(rope_project, resource):
             if ci.name.startswith("_"):
                 continue
             family = u.Infra.class_family(ci)
@@ -191,7 +191,7 @@ class FlextInfraClassPlacementDetector:
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.SequenceOf[m.Infra.ClassInfo]:
         """Return public top-level classes from the current Rope AST."""
-        tree = u.Infra.get_pymodule(rope_project, resource).get_ast()
+        tree = u.Infra.resolve_pymodule(rope_project, resource).get_ast()
         classes: list[m.Infra.ClassInfo] = []
         for node in getattr(tree, "body", ()) or ():
             if u.Infra.node_kind(u.Infra.ensure_ast_node(node)) != "ClassDef":
@@ -227,7 +227,7 @@ class FlextInfraClassPlacementDetector:
                 return tuple(
                     body_node
                     for body_node in class_body
-                    if u.Infra.is_ast_node(body_node)
+                    if u.Infra.ast_node(body_node)
                 )
         return ()
 
@@ -243,7 +243,7 @@ class FlextInfraClassPlacementDetector:
         Includes explicit ``ClassVar[...]`` annotations and implicit
         UPPER_CASE assignments whose value looks like a canonical constant.
         """
-        pymodule = u.Infra.get_pymodule(rope_project, resource)
+        pymodule = u.Infra.resolve_pymodule(rope_project, resource)
         tree = pymodule.get_ast()
         body = FlextInfraClassPlacementDetector._class_body_nodes(
             tree, class_name=class_name
@@ -267,7 +267,7 @@ class FlextInfraClassPlacementDetector:
 
         ``None`` for a private, exempt, or non-constant binding.
         """
-        if not u.Infra.is_ast_node(target):
+        if not u.Infra.ast_node(target):
             return None
         target_name = u.Infra.name_of(target)
         if not target_name or target_name.startswith("_"):
@@ -329,7 +329,7 @@ class FlextInfraClassPlacementDetector:
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.SequenceOf[t.Pair[str, int]]:
         """Return module-level type aliases as (name, line) pairs."""
-        pymodule = u.Infra.get_pymodule(rope_project, resource)
+        pymodule = u.Infra.resolve_pymodule(rope_project, resource)
         tree = pymodule.get_ast()
         aliases: list[t.Pair[str, int]] = []
         for node in getattr(tree, "body", []) or []:
@@ -348,7 +348,7 @@ class FlextInfraClassPlacementDetector:
                 ):
                     continue
                 target = getattr(node, "target", None)
-                if not u.Infra.is_ast_node(target):
+                if not u.Infra.ast_node(target):
                     continue
                 target_name = u.Infra.name_of(target)
                 line = getattr(node, "lineno", 1)
@@ -376,7 +376,7 @@ class FlextInfraClassPlacementDetector:
             return True
         if kind == "Call":
             func = getattr(value, "func", None)
-            if not u.Infra.is_ast_node(func):
+            if not u.Infra.ast_node(func):
                 return False
             func_name = u.Infra.name_of(func)
             if func_name in c.Infra.CLASSVAR_ALLOWED_CALLS:

@@ -120,7 +120,7 @@ class TestsFlextInfraRuntimeAliasDeclarations:
             layout = tm.not_none(rope.layout(repository))
             tm.that(
                 FlextInfraNamespaceValidator.check_structure(
-                    u.Infra.get_pymodule(rope.rope_project, resource).get_ast(),
+                    u.Infra.resolve_pymodule(rope.rope_project, resource).get_ast(),
                     source.relative_to(repository),
                     class_stem=layout.class_stem,
                     is_test_file=False,
@@ -214,7 +214,7 @@ class TestsFlextInfraRuntimeAliasDeclarations:
         with infra.rope_workspace(repository) as rope:
             resource = tm.not_none(rope.resource(source))
             tm.that(
-                u.Infra.get_module_classes(rope.rope_project, resource), eq=("Api",)
+                u.Infra.resolve_module_classes(rope.rope_project, resource), eq=("Api",)
             )
             tm.that(
                 u.Infra.declared_facade_owner(rope.rope_project, resource), none=True
@@ -272,7 +272,7 @@ class TestsFlextInfraRuntimeAliasDeclarations:
             tm.that(policy.expected_alias, none=True)
             resource = tm.not_none(rope.resource(source))
             tm.that(
-                u.Infra.get_declared_module_imports(rope.rope_project, resource)[
+                u.Infra.resolve_declared_module_imports(rope.rope_project, resource)[
                     "Settings"
                 ],
                 eq="flext_declarations.Settings",

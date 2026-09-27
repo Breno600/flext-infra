@@ -653,7 +653,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             return
         with FlextInfraUtilitiesRopeCore.open_project(file_path.parent) as rope_project:
             resource: t.Infra.RopeResource | None = (
-                FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, file_path
                 )
             )
@@ -661,7 +661,7 @@ class FlextInfraUtilitiesCodegenNamespace:
                 return
             source = resource.read()
             class_infos = sorted(
-                FlextInfraUtilitiesRopeAnalysis.get_class_info(rope_project, resource),
+                FlextInfraUtilitiesRopeAnalysis.resolve_class_info(rope_project, resource),
                 key=operator.attrgetter("line"),
             )
             if not class_infos:
