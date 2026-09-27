@@ -221,10 +221,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 )
             )
         if destination == c.Infra.ENVRC_FILENAME:
-            # Conform targets always own a governed Beads identity, so the
-            # rendered tier is binary here: city server wiring when the
-            # repository declares city participation, the repository-local
-            # bd base otherwise.
+            # The workspace declaration owns whether a Beads route exists.
+            # A repository without one must not render ledger activation.
             return r[p.Model].ok(
                 m.Infra.EnvrcRenderSpec(
                     repository_root_rel=self._repository_root_rel(workspace),
@@ -237,9 +235,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     ),
                     mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                     gascity=(
-                        m.Infra.BeadsWorkspaceEnvironmentSpec()
-                        if target.gascity_enabled
-                        else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
+                        None
+                        if workspace.beads is None
+                        else (
+                            m.Infra.BeadsWorkspaceEnvironmentSpec()
+                            if target.gascity_enabled
+                            else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
+                        )
                     ),
                 )
             )
