@@ -54,8 +54,7 @@ class TestsFlextInfraRuntimeAliasDeclarations:
         with infra.rope_workspace(repository) as rope:
             resource = tm.not_none(rope.resource(source))
             tm.that(
-                u.Infra.published_facade_owner(rope.rope_project, resource),
-                none=True,
+                u.Infra.published_facade_owner(rope.rope_project, resource), none=True
             )
             tm.that(
                 u.Infra.publication_policy(

@@ -88,8 +88,8 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         escape — the function never returns ``None``.
         """
         rope_project = FlextInfraUtilitiesRopeAnalysisAstHelpers._shared_parse_project()
-        result: t.Infra.RopePyModule = FlextInfraUtilitiesRopeRuntime.build_string_module(
-            rope_project, source
+        result: t.Infra.RopePyModule = (
+            FlextInfraUtilitiesRopeRuntime.build_string_module(rope_project, source)
         )
         return result
 

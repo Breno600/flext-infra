@@ -497,35 +497,20 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that("UV ?= uv" in makefile, eq=False)
         # UV_RUN's environment binding is exercised by the real runtime test
         # above, including a parent uv workspace with a different default venv.
-        toolchain = config.Infra.codegen.toolchain
-        # The state root is a SIBLING of the checkout, never a directory inside
-        # it: derived from the Makefile's own PROJECT_ROOT so a verb invoked
-        # from a foreign CWD still writes beside the tree that owns the verb.
-        tm.that(
-            (
-                "PROJECT_STATE_ROOT := $(abspath $(PROJECT_ROOT)/../"
-                f"{toolchain.state_directory_name}/$(notdir $(PROJECT_ROOT)))"
-            )
-            in makefile,
-            eq=True,
-        )
-        # Root cause: storage law forbids scratch inside the versioned tree —
-        # PROJECT_SCRATCH_ROOT is HOME-rooted, mirroring the checkout identity
-        # (absolute path with VCS directory segments renamed) under it, never
-        # nested under PROJECT_STATE_ROOT.
-        tm.that(makefile, has="PROJECT_SCRATCH_IDENTITY := $(abspath $(PROJECT_ROOT))/")
-        for segment, alias in c.Infra.SCRATCH_IDENTITY_SEGMENT_ALIASES:
-            tm.that(makefile, has=f"$(subst /{segment}/,/{alias}/,")
+        # Nothing forces an external location (operator 2026-09-27): the
+        # environment is the runtime checkout's own, and temp files, bytecode
+        # and the testmon database use the tools' defaults.
         tm.that(
             makefile,
-            has=(
-                f"PROJECT_SCRATCH_ROOT := $(HOME)/{toolchain.scratch_home_relative}/"
-                f"{toolchain.state_directory_name}"
-                "$(patsubst %/,%,$(PROJECT_SCRATCH_IDENTITY))/"
-                f"{toolchain.scratch_namespace}"
-            ),
+            has=f"override RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}",
         )
-        tm.that('TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp"' in makefile, eq=True)
+        for forced in (
+            "PROJECT_STATE_ROOT",
+            "PROJECT_SCRATCH",
+            'TMPDIR="$$test_tmp"',
+            "TESTMON_DATAFILE",
+        ):
+            tm.that(makefile, lacks=forced)
         # Every gate the typed owner schedules by default reaches the runtime
         # in ONE `check run --gates` invocation. The Make layer no longer
         # publishes a per-gate selector, so the gate list itself is the
@@ -538,20 +523,11 @@ class TestsFlextInfraCodegenMakeEnvironment:
             eq=True,
         )
         tm.that("$(UV_RUN) actionlint" in makefile, eq=False)
-        tm.that('$(UV) sync --project "$(PROJECT_ROOT)"' in makefile, eq=True)
+        tm.that('$(UV) sync --project "$(UV_PROJECT)"' in makefile, eq=True)
         tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
-        # Bytecode still lands in the project state root and never inside the
-        # checkout. The Makefile stopped exporting it because the shell owns
-        # the interactive environment now, so the guarantee is proved at .envrc
-        # — its current owner — instead of being dropped with the old export.
         envrc = (project_root / ".envrc").read_text(encoding="utf-8")
-        tm.that(
-            envrc,
-            has=(
-                "export PYTHONPYCACHEPREFIX="
-                f'"${{PROJECT_STATE_ROOT}}/{toolchain.pycache_namespace}"'
-            ),
-        )
+        for forced in ("PYTHONPYCACHEPREFIX", "export TMPDIR", "PROJECT_STATE_ROOT"):
+            tm.that(envrc, lacks=forced)
 
     @pytest.mark.parametrize(
         "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]

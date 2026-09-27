@@ -81,12 +81,7 @@
 			*) printf 'ERROR: persistent Mise path escaped storage: %s\n' "$$persistent_physical" >&2; exit 2 ;; \
 		esac; \
 	done; \
-	scratch_parent="$(PROJECT_SCRATCH_ROOT)"; \
-	if [ -L "$$scratch_parent" ]; then \
-		printf 'ERROR: Mise scratch parent must not be a symlink: %s\n' "$$scratch_parent" >&2; exit 2; \
-	fi; \
-	mkdir -p "$$scratch_parent"; \
-	scratch=$$(mktemp -d "$$scratch_parent/mise-toolchain.XXXXXX"); \
+	scratch=$$(mktemp -d); \
 	trap 'find "$$scratch" -depth -delete' EXIT; \
 	mkdir -p{% for _name, relative in bootstrap.transient_environment if relative not in bootstrap.empty_files %} "$$scratch/{{ relative }}"{% endfor %}; \
 {% for relative in bootstrap.empty_files -%}

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, config, u as infra_u
+from flext_infra import c, config
 from flext_infra.services.codegen import FlextInfraCodegen
 from tests import u
 
@@ -47,12 +47,10 @@ class TestsFlextInfraCodegenVscode:
         doc = u.Tests.json_payload(result.value)
         tm.that("python.analysis.typeCheckingMode" in doc, eq=False)
         tm.that("python.analysis.diagnosticSeverityOverrides" in doc, eq=False)
-        setting = config.Infra.codegen.vscode.runtime_interpreter_setting
-        projected_path = str(doc[setting])
-        tm.that(projected_path.startswith("${workspaceFolder}/"), eq=True)
+        interpreter = "python.defaultInterpreterPath"
         tm.that(
-            (project_root / projected_path.removeprefix("${workspaceFolder}/")).resolve(),
-            eq=infra_u.Infra.runtime_environment_dir(project_root),
+            doc[interpreter],
+            eq=config.Infra.codegen.vscode.scalar_settings[interpreter],
         )
         search_paths = u.Tests.toml_strings(
             doc[c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY]

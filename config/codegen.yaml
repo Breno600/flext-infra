@@ -356,8 +356,6 @@ Infra:
       # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
       testmon_cache:
         schema_version: 1
-        namespace: testmon
-        invocation_namespace: pytest
         database_filename: .testmondata
         target_directory: tests
         reports_directory: .reports/tests

@@ -664,7 +664,7 @@ class FlextInfraConfigModelsContexts:
                     "derives the fact from its source tree. The default console "
                     "script is declared only then, because conform loads every "
                     "declared entry point in its fresh-import stage."
-                ),
+                )
             ),
         ] = True
         runtime_dependency_overlay: Annotated[

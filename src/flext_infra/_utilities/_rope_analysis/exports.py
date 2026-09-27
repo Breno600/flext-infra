@@ -108,7 +108,9 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         if cached is not None:
             export_names = cached
         else:
-            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
+            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
+                rope_project, resource
+            )
             export_names = FlextInfraUtilitiesRopeAnalysisExports._module_export_names(
                 export_options=resolved_export_options,
                 pymodule=pymodule,
