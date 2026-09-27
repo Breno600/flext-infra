@@ -15,8 +15,6 @@ from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 class FlextInfraUtilitiesRopeInventory:
     """Generic Rope-only inventory helpers for Python objects."""
 
-    get_pymodule = staticmethod(FlextInfraUtilitiesRopeCore.get_pymodule)
-
     @classmethod
     def objects(
         cls,
@@ -31,7 +29,7 @@ class FlextInfraUtilitiesRopeInventory:
     ) -> t.VariadicTuple[m.Infra.Object]:
         """Return all same-file defined objects for one Rope module."""
         try:
-            pymodule = cls.get_pymodule(rope_project, resource)
+            pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(rope_project, resource)
         except FlextInfraUtilitiesRopeRuntime.rope_runtime_errors() as exc:
             msg = (
                 "rope inventory failed to load "

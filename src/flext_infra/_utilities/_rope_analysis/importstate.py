@@ -512,16 +512,6 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
         return frozenset(aliases)
 
     @staticmethod
-    def is_pyclass(obj: t.Infra.RopePyObject) -> bool:
-        """Return whether a rope object is a ``PyClass`` (abstract class type)."""
-        return FlextInfraUtilitiesRopeRuntime.is_abstract_class(obj)
-
-    @staticmethod
-    def is_pyfunction(obj: t.Infra.RopePyObject) -> bool:
-        """Return whether a rope object is a ``PyFunction``."""
-        return FlextInfraUtilitiesRopeRuntime.is_py_function(obj)
-
-    @staticmethod
     def get_class_info(
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.SequenceOf[m.Infra.ClassInfo]:
