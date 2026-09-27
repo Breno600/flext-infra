@@ -221,7 +221,7 @@ class FlextInfraModelsMiseToolchain:
         npm_package_manager: Annotated[
             Literal["aube"],
             m.Field(
-                description="Mise npm installer that runs declared native CLI lifecycle scripts"
+                description="Mise npm installer with a locked dependency graph"
             ),
         ]
         qlty_selector: Annotated[

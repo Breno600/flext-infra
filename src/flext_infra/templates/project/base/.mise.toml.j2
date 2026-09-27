@@ -18,8 +18,8 @@ lockfile = {{ "true" if mise_lockfile else "false" }}
 locked = {{ "true" if mise_locked else "false" }}
 lockfile_platforms = [{% for platform in mise_lockfile_platforms %}"{{ platform }}"{{ ", " if not loop.last }}{% endfor %}]
 [settings.npm]
-# The configured ast-grep package is approved below to run its own native
-# binary-selection lifecycle; dependency scripts remain denied.
+# Aube replays the locked dependency graph. Only the configured ast-grep
+# package is approved below to run its native binary-selection lifecycle.
 package_manager = "{{ npm_package_manager }}"
 [tool_config]
 locked = {{ "true" if mise_locked else "false" }}
