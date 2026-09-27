@@ -118,9 +118,7 @@ class TestsFlextInfraCodegenMakeAuthentication:
         gh_bin = tmp_path / "gh-without-credential"
         u.Tests.write_executable(
             gh_bin / "gh",
-            "#!/bin/sh\n"
-            "printf 'no oauth token found for github.com\\n' >&2\n"
-            "exit 1\n",
+            "#!/bin/sh\nprintf 'no oauth token found for github.com\\n' >&2\nexit 1\n",
         )
         if verb == "status":
             tm.ok(u.Tests.create_python_environment(project_root))
@@ -141,6 +139,11 @@ class TestsFlextInfraCodegenMakeAuthentication:
                     "GH_HOST": "github.com",
                     "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
                     "PATH": os.pathsep.join((str(gh_bin), os.environ["PATH"])),
+                    # gh reads a stored credential from the session keyring
+                    # over D-Bus even with an empty GH_CONFIG_DIR, and finds
+                    # the session bus on its own when the variable is unset;
+                    # a bus address inside the sandbox leaves it none.
+                    "DBUS_SESSION_BUS_ADDRESS": f"unix:path={tmp_path / 'no-bus'}",
                 },
             )
         )
@@ -161,14 +164,30 @@ class TestsFlextInfraCodegenMakeAuthentication:
         project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
+        # The credential proves itself only where mise actually consults it:
+        # the GitHub artifact-attestation verification of a cold install. A
+        # warm storage skips installation entirely and would never reach the
+        # rejection, so the bootstrap runs on this fixture's own isolated
+        # Mise storage.
         process = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "upg"],
                 cwd=project_root,
-                env={"GH_TOKEN": "invalid-test-credential", "GITHUB_TOKEN": ""},
+                env={
+                    "GH_TOKEN": "invalid-test-credential",
+                    "GITHUB_TOKEN": "",
+                    u.Infra.mise_bootstrap_environment().storage_root_variable: str(
+                        u.Tests.isolated_mise_bootstrap_storage(project_root)
+                    ),
+                },
             )
         )
 
         tm.that(process.outcome.raw_return_code, ne=0)
-        tm.that(process.stdout + process.stderr, has="401")
+        # The loud failure must come from the mise backend stage itself. The
+        # exact GitHub response body is external evidence, not the contract:
+        # an invalid token measures `401 Unauthorized: Bad credentials`, and
+        # fleet-load rate limiting measures `403` with a rate-limit body — the
+        # run still dies loudly at the backend in both shapes.
+        tm.that(process.stdout + process.stderr, has="mise ERROR")
         tm.that(process.stderr, lacks="gh credential source failed")

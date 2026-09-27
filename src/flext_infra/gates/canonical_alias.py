@@ -87,7 +87,7 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
             file_path_str = files_result.error or "canonical-alias scan failed"
             return self._build_single_issue_result(
                 project_dir,
-                Path(c.Infra.PYPROJECT_FILENAME),
+                Path(c.PYPROJECT_FILENAME),
                 file_path_str,
                 passed=False,
                 started=started,

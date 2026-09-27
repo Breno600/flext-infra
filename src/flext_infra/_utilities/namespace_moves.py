@@ -72,7 +72,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                     file_path=file_path, source=source
                 ):
                     continue
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, file_path
                 )
                 if resource is None:
@@ -119,7 +119,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         )
         with FlextInfraUtilitiesRopeCore.open_project(repository_root) as rope_project:
             for file_path, moves in grouped.items():
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, file_path
                 )
                 if resource is None:
@@ -364,7 +364,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
     ) -> None:
         """Rewrite non-canonical facade imports using Rope rename (file-local)."""
         _ = gates
-        resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+        resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
             rope_project, file_path
         )
         if resource is None:
@@ -476,7 +476,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 source_file: "\n".join(filtered_lines).rstrip() + "\n",
             },
             request=m.Infra.ProtectedSourceWritesRequest(
-                workspace=project_root, keep_backup=True, gates=gates
+                workspace=project_root,
+                expected_sources={target_file: target_source, source_file: source},
+                keep_backup=True,
+                gates=gates,
             ),
         )
         if not ok:
@@ -538,10 +541,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(source)
         lines = source.splitlines()
         module_ast = pymodule.get_ast()
-        if not FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(module_ast):
+        if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(module_ast):
             return source
         for node in getattr(module_ast, "body", ()) or ():
-            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(node):
+            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(node):
                 continue
             if c.Infra.DUNDER_ALL not in (
                 FlextInfraUtilitiesRopeAnalysis.assignment_target_names(node)
@@ -736,7 +739,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 source_file: "\n".join(updated_source_lines).rstrip() + "\n",
             },
             request=m.Infra.ProtectedSourceWritesRequest(
-                workspace=project_root, keep_backup=True, gates=gates
+                workspace=project_root,
+                expected_sources={target_file: target_source, source_file: source},
+                keep_backup=True,
+                gates=gates,
             ),
         )
         if not ok:
@@ -830,7 +836,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         )
         runtime_aliases = u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
         moved_ast = moved_pymodule.get_ast()
-        if not FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(moved_ast):
+        if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(moved_ast):
             return ()
         moved_aliases: set[str] = set()
         for node in FlextInfraUtilitiesRopeAnalysis.walk_ast_nodes(moved_ast):
@@ -917,19 +923,19 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         with FlextInfraUtilitiesRopeCore.open_project(project_root) as rope_project:
             mappings: t.MutableSequenceOf[t.Triple[str, str, t.VariadicTuple[str]]] = []
             for source, target, names in moves:
-                source_resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                source_resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, source
                 )
-                target_resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                target_resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, target
                 )
                 if source_resource is None or target_resource is None:
                     continue
                 try:
-                    source_module = FlextInfraUtilitiesRopeCore.get_pymodule(
+                    source_module = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                         rope_project, source_resource
                     ).get_name()
-                    target_module = FlextInfraUtilitiesRopeCore.get_pymodule(
+                    target_module = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                         rope_project, target_resource
                     ).get_name()
                 except (
@@ -952,7 +958,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                         f"{resolved_py_file}"
                     )
                     raise ValueError(msg)
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, resolved_py_file
                 )
                 if resource is None:

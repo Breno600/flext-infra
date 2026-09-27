@@ -24,11 +24,19 @@ class TestsFlextInfraRefactorMainCli:
 
     _FUTURE_INIT = "from __future__ import annotations\n"
 
-    # The letter is declared in __all__ but never bound: the fix binds it to
-    # the declared facade class. An undeclared letter is never inferred.
+    # The letter is published in __all__ but never bound: the published
+    # declaration is the defect, so the fix un-publishes it. A runtime alias
+    # is never inferred from the module's file family.
     _MISSING_RUNTIME_ALIAS_MODULE = (
         "from __future__ import annotations\n\n"
         '__all__: list[str] = ["FlextDemoModels", "m"]\n\n'
+        "class FlextDemoModels:\n"
+        "    pass\n"
+    )
+
+    _UNDECLARED_RUNTIME_ALIAS_MODULE = (
+        "from __future__ import annotations\n\n"
+        '__all__: list[str] = ["FlextDemoModels"]\n\n'
         "class FlextDemoModels:\n"
         "    pass\n"
     )
@@ -411,8 +419,9 @@ class TestsFlextInfraRefactorMainCli:
     def test_refactor_census_does_not_infer_runtime_alias_from_filename(
         self, tmp_path: Path
     ) -> None:
+        """A module that declares no letter never acquires one from its name."""
         workspace, module_path = self._build_module_workspace(
-            tmp_path, self._MISSING_RUNTIME_ALIAS_MODULE
+            tmp_path, self._UNDECLARED_RUNTIME_ALIAS_MODULE
         )
 
         self._apply_census(workspace, rules="runtime_alias")
@@ -420,6 +429,17 @@ class TestsFlextInfraRefactorMainCli:
         source = module_path.read_text(encoding="utf-8")
         tm.that(source, lacks='"m"')
         tm.that(source, lacks="m = FlextDemoModels")
+
+    def test_refactor_census_binds_declared_runtime_alias(self, tmp_path: Path) -> None:
+        """A letter declared in ``__all__`` receives its derived facade binding."""
+        workspace, module_path = self._build_module_workspace(
+            tmp_path, self._MISSING_RUNTIME_ALIAS_MODULE
+        )
+
+        self._apply_census(workspace, rules="runtime_alias")
+
+        source = module_path.read_text(encoding="utf-8")
+        tm.that(source, has="m = FlextDemoModels")
 
     def test_refactor_census_reports_duplicate_runtime_alias(
         self, tmp_path: Path

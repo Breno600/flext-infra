@@ -87,11 +87,11 @@ class FlextInfraUtilitiesDocsScopeBuildMixin(
         # override here misrouted every scaffolded standalone project into
         # `_workspace_scopes`, collapsing its own docs scope onto an identical
         # root scope and silently dropping README.md/docs/index.md/guides.
-        has_workspace_topology = FlextInfraUtilitiesWorkspaceManifest.is_fleet_umbrella(
+        has_workspace_topology = FlextInfraUtilitiesWorkspaceManifest.fleet_umbrella(
             resolved_root
         )
         if (
-            (resolved_root / c.Infra.PYPROJECT_FILENAME).is_file()
+            (resolved_root / c.PYPROJECT_FILENAME).is_file()
             and not has_declared_members
             and not has_child_projects
             and not has_workspace_topology

@@ -332,9 +332,11 @@ class TestsFlextInfraPrivateImportCutover:
             sources[package / "other.py"] = sources[package / "api.py"]
         else:
             sources[package / "api.py"] += "Client = object\n"
+        # A shadowed re-export is rebound at runtime (``Client = object``), so
+        # the facade does not expose the private class at all.
         expected = (
             "no public facade exposes"
-            if case in {"unexposed", "homonym"}
+            if case in {"unexposed", "homonym", "shadowed"}
             else "ambiguous"
         )
 

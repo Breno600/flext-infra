@@ -61,13 +61,16 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             has_devcontainer=has_devcontainer,
         )
 
-    def test_standalone_pyproject_template_does_not_declare_empty_workspace(
-        self,
+    def test_standalone_pyproject_does_not_declare_empty_workspace(
+        self, tmp_path: Path
     ) -> None:
         """Keep standalone projects eligible for a real parent uv workspace."""
-        template = (self._TEMPLATES / "pyproject.toml.j2").read_text(encoding="utf-8")
+        rendered = u.Tests.scaffold_text(
+            tmp_path / "fixture-project", c.PYPROJECT_FILENAME
+        )
 
-        tm.that(template, lacks="[tool.uv.workspace]")
+        tm.that(rendered, has="[project]")
+        tm.that(rendered, lacks="[tool.uv.workspace]")
 
     def test_dependabot_render_has_one_terminal_newline(self) -> None:
         empty = tm.ok(

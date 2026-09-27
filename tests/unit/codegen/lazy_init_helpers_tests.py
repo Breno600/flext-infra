@@ -398,7 +398,7 @@ class TestsFlextInfraLazyInitHelpers:
         )
         core_root = tmp_path / "flext-core" / c.Infra.DEFAULT_SRC_DIR / "flext_core"
         core_root.mkdir(parents=True)
-        core_root.parent.parent.joinpath(c.Infra.PYPROJECT_FILENAME).write_text(
+        core_root.parent.parent.joinpath(c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-core"\nversion = "0.1.0"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
@@ -420,7 +420,7 @@ class TestsFlextInfraLazyInitHelpers:
         )
         cli_root = tmp_path / "flext-cli" / c.Infra.DEFAULT_SRC_DIR / "flext_cli"
         cli_root.mkdir(parents=True)
-        cli_root.parent.parent.joinpath(c.Infra.PYPROJECT_FILENAME).write_text(
+        cli_root.parent.parent.joinpath(c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-cli"\nversion = "0.1.0"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
@@ -543,46 +543,69 @@ class TestsFlextInfraLazyInitHelpers:
     def test_installed_parent_alias_uses_the_nearest_actual_owner(
         self, tmp_path: Path
     ) -> None:
-        """Skip an importable parent that does not export the requested alias."""
+        """An installed parent re-exporting a letter serves it, not its owner.
+
+        Each installed package has the published FLEXT shape (ADR-018 p.1-2):
+        a facade module declares its letter in its own ``__all__`` and the
+        package initializer only propagates it. The child inherits ``r``
+        through ``nearest_parent``, which re-exports it from the declaring
+        ``owner_parent``; the election names the nearest re-exporting parent
+        (operator ruling 2026-09-23). Every installed module raises on import,
+        so the planner can only read them by path.
+        """
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
             tmp_path, project_name="flext-child", package_name="flext_child"
         )
         installed_root = tmp_path / "installed"
-        # The parents are what the active environment declares; their
-        # exports are read by path, never imported (the modules raise).
+        guard = 'raise RuntimeError("must not import")\n'
         sys.path.insert(0, str(installed_root))
         try:
             nearest = installed_root / "nearest_parent"
             owner = installed_root / "owner_parent"
             nearest.mkdir(parents=True)
             owner.mkdir(parents=True)
-            nearest.joinpath(c.Infra.INIT_PY).write_text(
-                "from owner_parent import r\n\n"
-                "class NearestParentConstants:\n    pass\n\n"
-                "c = NearestParentConstants\n"
-                '__all__ = ("c", "r")\nraise RuntimeError("must not import")\n',
+            owner.joinpath("result.py").write_text(
+                "class OwnerParentResult:\n    pass\n\n"
+                "r = OwnerParentResult\n"
+                f'__all__ = ("OwnerParentResult", "r")\n{guard}',
                 encoding=c.Cli.ENCODING_DEFAULT,
             )
             owner.joinpath(c.Infra.INIT_PY).write_text(
-                "class OwnerParentResult:\n    pass\n\n"
-                "r = OwnerParentResult\n"
-                '__all__ = ("r",)\nraise RuntimeError("must not import")\n',
+                "from .result import OwnerParentResult, r\n\n"
+                f'__all__ = ("OwnerParentResult", "r")\n{guard}',
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+            nearest.joinpath(c.Infra.CONSTANTS_PY).write_text(
+                "class NearestParentConstants:\n    pass\n\n"
+                "c = NearestParentConstants\n"
+                f'__all__ = ("NearestParentConstants", "c")\n{guard}',
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+            nearest.joinpath(c.Infra.INIT_PY).write_text(
+                "from owner_parent import r\n\n"
+                "from .constants import NearestParentConstants, c\n\n"
+                f'__all__ = ("NearestParentConstants", "c", "r")\n{guard}',
                 encoding=c.Cli.ENCODING_DEFAULT,
             )
             package_root.joinpath(c.Infra.CONSTANTS_PY).write_text(
-                "from nearest_parent import c\n"
-                "\n"
-                "class FlextChildConstants(c):\n"
+                "from nearest_parent import NearestParentConstants\n\n"
+                "class FlextChildConstants(NearestParentConstants):\n"
                 "    pass\n\n"
-                '__all__ = ("FlextChildConstants",)\n',
+                "c = FlextChildConstants\n"
+                '__all__ = ("FlextChildConstants", "c")\n',
                 encoding=c.Cli.ENCODING_DEFAULT,
             )
 
             tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
             generated = self._generated_init(package_root)
+            entries, _refs = u.Infra.module_mapping_assignment_source(
+                generated, u.Infra.lazy_imports_name_source(generated)
+            )
+            sources = dict(entries)
 
-            tm.that(generated, has='"nearest_parent": ("c", "r")')
-            tm.that(generated, lacks='"owner_parent": ("r",)')
+            tm.that(sources.get("nearest_parent", ()), has="r")
+            tm.that(sources, lacks="owner_parent")
+            tm.that(u.Tests.run_lazy_init(repository_root, check_only=True), eq=0)
         finally:
             sys.path.remove(str(installed_root))
 
@@ -791,3 +814,38 @@ class TestsFlextInfraLazyInitHelpers:
         after = self._generated_init(package_root)
         tm.that(after, eq=before)
         tm.that(after, lacks="Shared")
+
+    def test_duplicate_facade_letter_fails_before_generation(
+        self, tmp_path: Path
+    ) -> None:
+        """Two same-level owners of one facade letter stop the phase pre-effect.
+
+        The letter channel is governed exactly like every public name: when two
+        modules of one package both declare the same letter, nothing can decide
+        which one owns it, so planning refuses loudly and names the collision
+        instead of silently electing a winner behind the disagreement.
+        """
+        repository_root, package_root = self._workspace(tmp_path)
+        before = self._generated_init(package_root)
+        for module_name, class_name in (
+            ("constants", "AlphaConstants"),
+            ("culture", "CultureConstants"),
+        ):
+            (package_root / f"{module_name}.py").write_text(
+                "from __future__ import annotations\n\n"
+                f"class {class_name}:\n    pass\n\n"
+                f"c = {class_name}\n\n"
+                f'__all__: list[str] = ["{class_name}", "c"]\n',
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+
+        planned = u.Tests.plan_lazy_init(repository_root)
+
+        tm.that(planned.failure, eq=True)
+        tm.that(planned.error, has="ambiguous")
+        # The refusal is PRE-EFFECT: no facade gains either contested owner.
+        after = self._generated_init(package_root)
+        tm.that(after, eq=before)
+        tm.that(after, lacks="AlphaConstants")
+        tm.that(after, lacks="CultureConstants")
+        tm.that(after, lacks='"c"')

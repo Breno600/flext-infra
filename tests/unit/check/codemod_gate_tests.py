@@ -24,7 +24,7 @@ class TestsFlextInfraCodemodGate:
         project = tmp_path / "scanner-contract"
         (project / "rules").mkdir(parents=True)
         (project / "src").mkdir()
-        (project / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "scanner-contract"\nversion = "1.0.0"\n'
             "dependencies = []\n",
             encoding="utf-8",

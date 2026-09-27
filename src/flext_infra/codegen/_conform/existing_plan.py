@@ -33,7 +33,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         """Conform every declared managed surface in an existing repository."""
         stage_started = time.monotonic()
         u.Cli.info(f"  stage=pyproject repository={repository.name}")
-        pyproject = root / c.Infra.PYPROJECT_FILENAME
+        pyproject = root / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                 f"existing repository has no pyproject.toml: {root}; "
@@ -132,6 +132,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         templates_root = u.Infra.codegen_templates_root(codegen)
         planned: list[m.Infra.CodegenFilePlan] = []
         for managed in codegen.managed_files:
+            if target.beads is None and managed.path.parts[:1] == (".beads",):
+                continue
             if not target.ci_enabled and managed.path.parts[:2] == (
                 ".github",
                 "workflows",
@@ -142,7 +144,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 and managed.path.as_posix() not in contract.destinations
             ):
                 continue
-            pyproject_skipped = managed.path == Path(c.Infra.PYPROJECT_FILENAME) and (
+            pyproject_skipped = managed.path == Path(c.PYPROJECT_FILENAME) and (
                 not contract.pyproject
                 or (
                     workspace.project is None
@@ -164,6 +166,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     f"managed file requires exactly one render template: {managed.path}"
                 )
             entry = entries[0]
+            if entry.requires_beads and workspace.beads is None:
+                continue
             relative = Path(entry.destination)
             if relative.is_absolute() or ".." in relative.parts:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -318,6 +322,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         contract: m.Infra.CodegenConformSurfaceContract,
         *,
         profile: c.Infra.MakeProfile,
+        beads_enabled: bool,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
         """Attach ownership metadata and represent every governed root artifact.
 
@@ -325,7 +330,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         pyproject-scoped surfaces (``DEPENDENCIES``/``PYPROJECT``) keep the plan
         restricted to what their own planners already produced.
         """
-        governed_by_path = {item.path: item for item in codegen.managed_files}
+        governed_by_path = {
+            item.path: item
+            for item in codegen.managed_files
+            if beads_enabled or item.path.parts[:1] != (".beads",)
+        }
         completed: list[m.Infra.CodegenFilePlan] = []
         represented: set[Path] = set()
         represented_indexes: MutableMapping[Path, int] = {}

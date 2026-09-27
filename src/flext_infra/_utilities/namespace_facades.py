@@ -47,7 +47,7 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
     @staticmethod
     def _compute_base_chains(*, project_root: Path) -> t.StrSequenceMapping:
         """Compute base chains."""
-        pyproject_path = project_root / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = project_root / c.PYPROJECT_FILENAME
         if not pyproject_path.exists():
             return MappingProxyType(dict[str, t.VariadicTuple[str]]())
         try:

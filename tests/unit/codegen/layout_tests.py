@@ -10,7 +10,7 @@ from flext_tests import tm
 
 from flext_infra import FlextInfraConfig, c, m
 from flext_infra.gates.layout import FlextInfraLayoutGate
-from tests import u
+from tests import t, u
 from tests.unit.codegen.layout_fixture import (
     archive_root,
     build_loose_project,
@@ -66,7 +66,10 @@ class TestsFlextInfraCodegenLayout:
         override = m.Infra.LayoutProjectOverrideSpec(
             keep_root_files=candidates[:keep_count]
         )
-        declaration = m.Infra.CodegenOverridesSpec.model_validate({
+        # The org overlay is a partial delta file; the real config loader
+        # deep-merges it and validates the merged result against the strict
+        # root model, which the layout subprocess below exercises.
+        overlay: t.JsonMapping = {
             "Infra": {
                 "codegen": {
                     "layout": {
@@ -76,15 +79,15 @@ class TestsFlextInfraCodegenLayout:
                     }
                 }
             }
-        })
-        config_dir = project / FlextInfraConfig.CONFIG_DIR
-        config_dir.mkdir(exist_ok=True)
-        tm.ok(
-            u.Cli.yaml_dump(
-                config_dir / c.Infra.CODEGEN_ORG_OVERRIDES_FILENAME,
-                declaration.model_dump(mode="json", exclude_none=True),
-            )
+        }
+        org_overlay = (
+            project
+            / c.Infra.CODEGEN_CONFIG_DIR
+            / c.Infra.CODEGEN_ORG_OVERRIDES_FILENAME
         )
+        tm.that(org_overlay.is_relative_to(tmp_path), eq=True)
+        org_overlay.parent.mkdir(exist_ok=True)
+        tm.ok(u.Cli.yaml_dump(org_overlay, overlay))
 
         report = cls._fresh_layout_report(project)
 

@@ -31,8 +31,6 @@ if TYPE_CHECKING:
     from .utilities_git import TestsFlextInfraUtilitiesGitMixin
     from .utilities_promoted import TestsFlextInfraUtilitiesPromotedMixin
     from .utilities_release import TestsFlextInfraUtilitiesReleaseMixin
-    from .utilities_replay import TestsFlextInfraUtilitiesReplayRunnerMixin
-    from .utilities_replay_sequence import TestsFlextInfraUtilitiesReplaySequenceMixin
     from .utilities_toml import TestsFlextInfraUtilitiesTomlMixin
     from .utilities_workspace_env import TestsFlextInfraUtilitiesWorkspaceEnvMixin
 
@@ -53,8 +51,6 @@ __all__: tuple[str, ...] = (
     "TestsFlextInfraUtilitiesProjectFixtureMixin",
     "TestsFlextInfraUtilitiesPromotedMixin",
     "TestsFlextInfraUtilitiesReleaseMixin",
-    "TestsFlextInfraUtilitiesReplayRunnerMixin",
-    "TestsFlextInfraUtilitiesReplaySequenceMixin",
     "TestsFlextInfraUtilitiesTomlMixin",
     "TestsFlextInfraUtilitiesToolingFixtureMixin",
     "TestsFlextInfraUtilitiesWorkspaceEnvMixin",
@@ -110,10 +106,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".utilities_git": ("TestsFlextInfraUtilitiesGitMixin",),
             ".utilities_promoted": ("TestsFlextInfraUtilitiesPromotedMixin",),
             ".utilities_release": ("TestsFlextInfraUtilitiesReleaseMixin",),
-            ".utilities_replay": ("TestsFlextInfraUtilitiesReplayRunnerMixin",),
-            ".utilities_replay_sequence": (
-                "TestsFlextInfraUtilitiesReplaySequenceMixin",
-            ),
             ".utilities_toml": ("TestsFlextInfraUtilitiesTomlMixin",),
             ".utilities_workspace_env": ("TestsFlextInfraUtilitiesWorkspaceEnvMixin",),
             "flext_tests": (

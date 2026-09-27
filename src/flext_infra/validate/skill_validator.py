@@ -46,7 +46,7 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
 
     def _apply_baseline_comparison(
         self,
-        rules: t.MappingKV[str, t.Infra.InfraValue],
+        rules: t.MappingKV[str, t.JsonValue],
         root: Path,
         skill_name: str,
         counts: t.IntMapping,
@@ -123,7 +123,7 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
 
     @staticmethod
     def _scan_globs(
-        scan_targets: t.MappingKV[str, t.Infra.InfraValue],
+        scan_targets: t.MappingKV[str, t.JsonValue],
     ) -> t.Pair[t.StrSequence, t.StrSequence]:
         """Return include and exclude glob lists from rules.yml scan targets."""
         include_globs = u.Infra.string_list(
@@ -133,9 +133,7 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
         return include_globs, exclude_globs
 
     @staticmethod
-    def _rules_list(
-        rules: t.MappingKV[str, t.Infra.InfraValue],
-    ) -> p.Result[t.JsonList]:
+    def _rules_list(rules: t.MappingKV[str, t.JsonValue]) -> p.Result[t.JsonList]:
         """Validate the rules.yml rules payload."""
         rules_list_obj = rules.get(c.Infra.RK_RULES, [])
         if not isinstance(rules_list_obj, list):

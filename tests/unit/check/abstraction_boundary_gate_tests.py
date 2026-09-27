@@ -83,6 +83,20 @@ class TestsFlextInfraAbstractionBoundaryGate:
 
         tm.that(result.result.passed, eq=True)
 
+    def test_print_detection_ignores_embedded_source_text(self, tmp_path: Path) -> None:
+        project = self._project(
+            tmp_path,
+            name="flext-demo",
+            filename="logic.py",
+            src="PAYLOAD = 'print(\"fixture\")\\n'\n",
+        )
+
+        result = u.Tests.run_gate_check(
+            FlextInfraAbstractionBoundaryGate, tmp_path, project
+        )
+
+        tm.that(result.result.passed, eq=True)
+
     def test_declared_boundary_owner_passes_by_design(self, tmp_path: Path) -> None:
         """A declared boundary owner is exempt: the gate passes with no issues."""
         owner = min(c.Infra.BOUNDARY_SKIP_PROJECTS)

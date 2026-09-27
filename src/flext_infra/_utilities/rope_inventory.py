@@ -15,8 +15,6 @@ from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 class FlextInfraUtilitiesRopeInventory:
     """Generic Rope-only inventory helpers for Python objects."""
 
-    get_pymodule = staticmethod(FlextInfraUtilitiesRopeCore.get_pymodule)
-
     @classmethod
     def objects(
         cls,
@@ -31,7 +29,7 @@ class FlextInfraUtilitiesRopeInventory:
     ) -> t.VariadicTuple[m.Infra.Object]:
         """Return all same-file defined objects for one Rope module."""
         try:
-            pymodule = cls.get_pymodule(rope_project, resource)
+            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
         except FlextInfraUtilitiesRopeRuntime.rope_runtime_errors() as exc:
             msg = (
                 "rope inventory failed to load "
@@ -202,7 +200,7 @@ class FlextInfraUtilitiesRopeInventory:
         """Sorted names."""
         candidates: list[t.Triple[int, str, t.Infra.RopePyName]] = []
         for name, pyname in names.items():
-            if FlextInfraUtilitiesRopeRuntime.is_imported_name(pyname):
+            if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
                 continue
             line = FlextInfraUtilitiesRopeInventory._definition_line(pyname, resource)
             if line is None:
@@ -311,9 +309,9 @@ class FlextInfraUtilitiesRopeInventory:
         if scope is not None:
             validated_existing_scope: p.Infra.RopeScopeDsl = scope
             return validated_existing_scope
-        if FlextInfraUtilitiesRopeRuntime.is_assigned_name(
+        if FlextInfraUtilitiesRopeRuntime.assigned_name(
             pyname
-        ) or FlextInfraUtilitiesRopeRuntime.is_parameter_name(pyname):
+        ) or FlextInfraUtilitiesRopeRuntime.parameter_name(pyname):
             return None
         getter = getattr(pyname.get_object(), "get_scope", None)
         candidate = getter() if callable(getter) else None
@@ -332,9 +330,9 @@ class FlextInfraUtilitiesRopeInventory:
     ) -> str:
         """Kind for."""
         result: str
-        if FlextInfraUtilitiesRopeRuntime.is_parameter_name(pyname):
+        if FlextInfraUtilitiesRopeRuntime.parameter_name(pyname):
             result = "parameter"
-        elif FlextInfraUtilitiesRopeRuntime.is_assigned_name(pyname):
+        elif FlextInfraUtilitiesRopeRuntime.assigned_name(pyname):
             if class_chain and len(scope_chain) == len(class_chain):
                 result = "attribute"
             elif scope_chain:
@@ -345,9 +343,9 @@ class FlextInfraUtilitiesRopeInventory:
                 result = "assignment"
         else:
             obj = pyname.get_object()
-            if FlextInfraUtilitiesRopeRuntime.is_abstract_class(obj):
+            if FlextInfraUtilitiesRopeRuntime.abstract_class(obj):
                 result = "class"
-            elif FlextInfraUtilitiesRopeRuntime.is_py_function(obj):
+            elif FlextInfraUtilitiesRopeRuntime.py_function(obj):
                 result = (
                     "method"
                     if class_chain and len(scope_chain) == len(class_chain)
@@ -358,7 +356,7 @@ class FlextInfraUtilitiesRopeInventory:
             elif scope_chain:
                 result = "local" if not name.isupper() else "constant"
             elif (
-                FlextInfraUtilitiesRopeRuntime.is_defined_name(pyname)
+                FlextInfraUtilitiesRopeRuntime.defined_name(pyname)
                 and name.isupper()
             ):
                 result = "constant"

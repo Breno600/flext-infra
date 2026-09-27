@@ -57,8 +57,9 @@ class FlextInfraPytestRunnerExecution(
         *,
         execution_mode: c.Infra.PytestExecutionMode,
         complete: bool = False,
-    ) -> t.StrSequence:
-        """Return the node ids testmon selects, resolved in one process."""
+        verify_inventory: bool = True,
+    ) -> m.Infra.PytestSelectionPlan:
+        """Return the typed testmon selection and its manifest owner."""
         artifact = "testmon-inventory" if complete else "testmon-selection"
         selection_log = report_dir / f"{artifact}.log"
         manifest_path = report_dir / f"{artifact}.json"
@@ -105,14 +106,22 @@ class FlextInfraPytestRunnerExecution(
         u.Cli.atomic_write_text_file(
             report_dir / f"{artifact}.txt", "\n".join(node_ids) + "\n"
         ).unwrap()
-        if not complete:
+        if not complete and verify_inventory:
             inventory = self._resolve_selection(
                 report_dir, complete=True, execution_mode=execution_mode
             )
-            if not set(node_ids).issubset(inventory):
+            if not set(node_ids).issubset(inventory.node_ids):
                 msg = "testmon selected node IDs outside the complete collection inventory"
                 raise RuntimeError(msg)
-        return node_ids
+            whole_target = node_ids == inventory.node_ids
+        else:
+            whole_target = True
+        return m.Infra.PytestSelectionPlan(
+            manifest_path=manifest_path,
+            node_ids=node_ids,
+            whole_target=whole_target,
+            inventory_collected=complete or verify_inventory,
+        )
 
     def _process_deadline(self) -> p.Cli.ProcessDeadline:
         """Use the entrypoint clock for selection, execution, and cleanup."""
@@ -124,7 +133,7 @@ class FlextInfraPytestRunnerExecution(
         )
 
     def _run_suite(
-        self, command: t.VariadicTuple[str], report_dir: Path
+        self, command: t.VariadicTuple[str], report_dir: Path, *, manifest_path: Path
     ) -> p.Cli.ProcessOutcome:
         """Execute one suite argv under the shared deadline and environment."""
         u.Cli.atomic_write_text_file(
@@ -134,7 +143,7 @@ class FlextInfraPytestRunnerExecution(
             command,
             report_dir / "pytest.log",
             cwd=self.root,
-            env=self._selection_env(),
+            env=self._selection_env(manifest_path),
             live=True,
             deadline=self._process_deadline(),
         ).unwrap()
@@ -298,9 +307,17 @@ class FlextInfraPytestRunnerExecution(
             if not cache_restored:
                 msg = f"testmon preflight rejected cache: {pre_state.reason}"
                 raise RuntimeError(msg)
-        selection = self._resolve_selection(
-            report_dir, complete=complete, execution_mode=execution_mode
+        selection_plan = self._resolve_selection(
+            report_dir,
+            complete=complete,
+            verify_inventory=pre_digest is not None,
+            execution_mode=execution_mode,
         )
+        u.Cli.atomic_write_text_file(
+            report_dir / "selection-plan.json",
+            selection_plan.model_dump_json(indent=2) + "\n",
+        ).unwrap()
+        selection = selection_plan.node_ids
         if not selection and not cache_restored:
             msg = "empty incremental selection requires an integrity-checked cache"
             raise RuntimeError(msg)
@@ -308,9 +325,14 @@ class FlextInfraPytestRunnerExecution(
         # enforces that manifest for both cold and warm caches while testmon
         # continues to collect dependencies through its xdist integration.
         command = self.build_command(
-            report_dir, selection, execution_mode=execution_mode
+            report_dir,
+            selection,
+            whole_target=selection_plan.whole_target,
+            execution_mode=execution_mode,
         )
-        outcome = self._run_suite(command, report_dir)
+        outcome = self._run_suite(
+            command, report_dir, manifest_path=selection_plan.manifest_path
+        )
         cache_hit = (
             not complete
             and outcome.raw_return_code
@@ -347,7 +369,7 @@ class FlextInfraPytestRunnerExecution(
 
         testmon 2.x refuses branch coverage through the cov plugin, so the
         coverage pass is its own process: no selection pass, no cache traffic.
-        The coverage artifact and any threshold failure are validated here.
+        The coverage artifact is validated here; coverage is reported, never gated.
         """
         report_dir = self._report_directory()
         self._write_run_context(
@@ -358,8 +380,16 @@ class FlextInfraPytestRunnerExecution(
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
             ),
         )
+        selection_plan = self._resolve_selection(
+            report_dir,
+            complete=True,
+            execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
+            verify_inventory=False,
+        )
         command = self.build_coverage_command(report_dir)
-        outcome = self._run_suite(command, report_dir)
+        outcome = self._run_suite(
+            command, report_dir, manifest_path=selection_plan.manifest_path
+        )
         if not u.Cli.process_succeeded(outcome):
             return r.ok(outcome.raw_return_code)
         self._validate_coverage(report_dir).unwrap()

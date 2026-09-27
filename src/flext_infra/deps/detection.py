@@ -127,7 +127,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         projects = [
             project.path
             for project in projects_info
-            if (project.path / c.Infra.PYPROJECT_FILENAME).exists()
+            if (project.path / c.PYPROJECT_FILENAME).exists()
         ]
         return r[t.SequenceOf[Path]].ok(sorted(projects))
 

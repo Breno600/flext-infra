@@ -268,7 +268,6 @@ class FlextInfraConstantsSharedInfra:
     TIMEOUT_CI: ClassVar[int] = 900
 
     # --- Path constants (was: class Paths) ---
-    VENV_BIN_REL: ClassVar[str] = ".venv/bin"
     DEFAULT_SRC_DIR: ClassVar[str] = "src"
 
 

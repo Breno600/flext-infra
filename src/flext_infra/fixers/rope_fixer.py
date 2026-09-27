@@ -354,7 +354,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
         def _step(
             target: m.Infra.FileFixTarget, detect_ctx: m.Infra.DetectorContext
         ) -> m.Infra.FileFixOutcome:
-            resource = u.Infra.get_resource_from_path(
+            resource = u.Infra.resolve_resource_from_path(
                 detect_ctx.rope_project, target.file_path
             )
             if resource is None:
@@ -583,7 +583,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
             )
             if not hoistable:
                 return m.Infra.FileFixOutcome(skipped=(empty_reason,))
-            resource = u.Infra.get_resource_from_path(
+            resource = u.Infra.resolve_resource_from_path(
                 detect_ctx.rope_project, target.file_path
             )
             if resource is None:
@@ -816,7 +816,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
                 return m.Infra.FileFixOutcome(skipped=("rope resource not found",))
             class_infos = tuple(
                 class_info
-                for class_info in u.Infra.get_class_info(
+                for class_info in u.Infra.resolve_class_info(
                     detect_ctx.rope_project, resource
                 )
                 if not any(

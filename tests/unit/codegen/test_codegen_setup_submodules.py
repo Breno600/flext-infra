@@ -9,37 +9,22 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, config, u
-from tests import p, u as test_u
+from tests import p, t, u as test_u
 
-# The module fixture resolves a real toolchain through Make upg; each scenario
-# provisions its own physical environment frozen from those dependency locks.
+# The run-scoped template resolves a real toolchain through Make upg before any
+# item starts; each scenario provisions its own physical environment frozen
+# from those resolved dependency locks.
 # Make test-full owns these external installer and Git integration scenarios.
 pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraCodegenSetupSubmodules:
-    @pytest.fixture(scope="module")
+    @pytest.fixture
     def generated_project_template(
-        self, tmp_path_factory: pytest.TempPathFactory
+        self, resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path]
     ) -> Path:
-        """Resolve source inputs once without lending the seed environment."""
-        # This public fixture publishes only setup inputs and the activation
-        # contract. Documentation publication remains in the conform scenarios.
-        root, _ = test_u.Tests.render_make_environment(
-            tmp_path_factory.mktemp("setup-submodules"),
-            c.Infra.MakeProfile.STANDALONE,
-            bootstrap=True,
-        )
-        process = tm.ok(
-            test_u.Tests.run_isolated_make(["--no-print-directory", "upg"], cwd=root)
-        )
-        tm.that(
-            u.Cli.process_succeeded(process.outcome),
-            eq=True,
-            msg=process.stdout + process.stderr,
-        )
-        tm.that((root / c.Infra.UV_LOCK_FILENAME).is_file(), eq=True)
-        return root
+        """Return the run's standalone consumer, resolved once by ``make upg``."""
+        return resolved_make_templates[c.Infra.MakeProfile.STANDALONE]
 
     @staticmethod
     def _git(root: Path, *arguments: str) -> str:
@@ -66,7 +51,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         test_u.Tests.copy_tracked_mise_seeds(root, source_root=template)
         for relative in (
             c.Infra.MAKEFILE_FILENAME,
-            c.Infra.PYPROJECT_FILENAME,
+            c.PYPROJECT_FILENAME,
             c.Infra.UV_LOCK_FILENAME,
             c.Infra.ENVRC_FILENAME,
             c.Infra.ENVRC_LOCAL_RELPATH,
@@ -189,7 +174,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
         nested_marker = project / "vendor/source/child/nested/marker.txt"
         # Hatchling consumes this real gitlink file while uv builds the package.
         # A setup that reaches the build before initialization fails natively.
-        pyproject = project / c.Infra.PYPROJECT_FILENAME
+        pyproject = project / c.PYPROJECT_FILENAME
         document = test_u.Tests.toml_doc(pyproject.read_text(encoding="utf-8"))
         metadata = tm.not_none(u.Cli.toml_table_child(document, "project"))
         metadata["readme"] = {

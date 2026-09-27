@@ -81,6 +81,38 @@ class TestsFlextInfraPytestRunner:
             == names[-1]
         )
 
+    def test_worker_ceiling_defaults_without_declared_project(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A tree without ``[project].name`` takes the fleet-wide ceiling."""
+        policy = config.Infra.tooling.tools.pytest
+        runner = self._runner_for(cached_runner_project)
+        assert runner.parallel_worker_budget(policy) == policy.parallel_workers
+
+    def test_worker_ceiling_follows_the_declared_project_override(
+        self, cached_runner_project: Path
+    ) -> None:
+        """The runner resolves the declared project's override from the SSOT."""
+        policy = config.Infra.tooling.tools.pytest
+        assert policy.parallel_worker_overrides
+        declared_name = next(iter(policy.parallel_worker_overrides))
+        pyproject = cached_runner_project / "pyproject.toml"
+        pyproject.write_text(
+            pyproject.read_text(encoding="utf-8")
+            + f'\n[project]\nname = "{declared_name}"\nversion = "0.1.0"\n',
+            encoding="utf-8",
+        )
+        runner = self._runner_for(cached_runner_project)
+        report = (
+            cached_runner_project
+            / config.Infra.codegen.make.testmon_cache.reports_directory
+        )
+        budget = runner.parallel_worker_budget(policy)
+        assert budget == policy.parallel_worker_overrides[declared_name]
+        command = runner.build_command(report)
+        workers = command[command.index("-n") + 1]
+        assert workers == str(budget)
+
     @staticmethod
     def _runner_for(
         cached_runner_project: Path, *, ci_context: bool = False
@@ -229,10 +261,10 @@ class TestsFlextInfraPytestRunner:
         )
 
     @pytest.mark.slow
-    def test_failed_cases_do_not_stop_remaining_cases(
+    def test_first_failure_stops_remaining_cases(
         self, cached_runner_project: Path
     ) -> None:
-        """Retain all failures and later outcomes in one persistent-cache run."""
+        """Expose the first failure and do not execute later failing cases."""
         cache = config.Infra.codegen.make.testmon_cache
         (
             cached_runner_project / cache.target_directory / "test_failures.py"
@@ -253,24 +285,23 @@ class TestsFlextInfraPytestRunner:
         tm.that(
             report,
             has=[
-                'tests="3"',
-                'failures="2"',
+                'tests="1"',
+                'failures="1"',
                 'errors="0"',
                 'skipped="0"',
-                'name="test_runtime"',
                 "first failure evidence",
-                "second failure evidence",
             ],
         )
+        tm.that(report, lacks=["second failure evidence", 'name="test_runtime"'])
         outcome = m.Cli.ProcessOutcome.model_validate_json(
             tm.ok(u.Cli.files_read_text(report_path.parent / "suite-outcome.json"))
         )
         tm.that(outcome.raw_return_code, eq=exit_code)
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
-        tm.that(self._summary(reports_root), has=["failed=2", "exit=1"])
+        tm.that(self._summary(reports_root), has=["failed=1", "exit=1"])
         events = tm.ok(u.Cli.files_read_text(report_path.parent / "events.jsonl"))
-        tm.that(events, has=["first failure evidence", "second failure evidence"])
+        tm.that(events, has="first failure evidence", lacks="second failure evidence")
 
     @pytest.mark.slow
     @pytest.mark.parametrize(

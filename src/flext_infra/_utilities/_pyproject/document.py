@@ -45,9 +45,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         cls,
         document: t.Cli.TomlDocument,
         *,
-        project_name: str,
         workspace: p.Infra.WorkspaceSpec,
-        workspace_mode: c.Infra.MakeProfile,
         invalid_render_error: str,
     ) -> p.Result[str]:
         """Validate dependency provenance, then render canonical TOML.
@@ -57,9 +55,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         """
         provenance_result = cls._validate_dependency_provenance(
             document,
-            project_name=project_name,
             workspace=workspace,
-            workspace_mode=workspace_mode,
         )
         if provenance_result.failure:
             return r[str].from_failure(provenance_result)
@@ -80,6 +76,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         uv_link_mode: str | None = None,
         uv_exclude_dependencies: t.SequenceOf[p.Model] = (),
         namespace_scan_dirs: t.StrSequence | None = None,
+        declared_sources: t.StrMapping | None = None,
     ) -> p.Result[str]:
         """Return canonical TOML with autonomous dependencies and root workspace."""
         parsed = cls._parsed_pyproject(pyproject_content)
@@ -95,13 +92,13 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         normalized = cls._normalize_requirements(
             source,
-            project_name=project_name,
             workspace=workspace,
-            workspace_mode=workspace_mode,
             canonicalize_all=True,
+            declared_sources=declared_sources,
         )
         if normalized.failure:
             return r[str].from_failure(normalized)
+        cls._remove_workspace_dependency_group(source)
         cls._remove_legacy_tooling(source)
         typecheck_paths = cls._sync_typecheck_paths(source)
         if typecheck_paths.failure:
@@ -123,9 +120,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             return r[str].from_failure(sources_result)
         return cls._rendered_conformed_document(
             source,
-            project_name=project_name,
             workspace=workspace,
-            workspace_mode=workspace_mode,
             invalid_render_error=(
                 "canonical pyproject rendering produced invalid TOML"
             ),
@@ -146,9 +141,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         source, project_name = parsed.value
         provenance_result = cls._validate_dependency_provenance(
             source,
-            project_name=project_name,
             workspace=workspace,
-            workspace_mode=workspace_mode,
         )
         if provenance_result.failure:
             return r[str].from_failure(provenance_result)
@@ -163,19 +156,12 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
                 return r[str].from_failure(sources_result)
         normalized = cls._normalize_requirements(
             source,
-            project_name=project_name,
             workspace=workspace,
-            workspace_mode=workspace_mode,
             canonicalize_all=False,
         )
         if normalized.failure:
             return r[str].from_failure(normalized)
-        cls._sync_workspace_dependency_group(
-            source,
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
-        )
+        cls._remove_workspace_dependency_group(source)
         # On the dependency-only surface the declared document constraints are
         # the SSOT: they flow through the same uv-pin filter as the toolchain
         # path so a legacy `uv` cap is removed and every other constraint is
@@ -197,9 +183,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             return r[str].from_failure(sources_result)
         return cls._rendered_conformed_document(
             source,
-            project_name=project_name,
             workspace=workspace,
-            workspace_mode=workspace_mode,
             invalid_render_error="dependency conformance produced invalid TOML",
         )
 

@@ -57,6 +57,11 @@ class TestsFlextInfraCodegenLazyInitService:
             project_name="flext-test-unrelated",
             package_name="flext_test_unrelated",
         )
+        # A multi-project root is a workspace that declares its members; an
+        # undeclared nested Git checkout is foreign and is never indexed.
+        u.Tests.declare_workspace_projects(
+            tmp_path, ("flext-test-selected", "flext-test-unrelated")
+        )
         u.Tests.write_lazy_init_namespace_module(
             selected_root / "models.py",
             class_name="FlextTestsSelectedModels",
@@ -382,6 +387,9 @@ class TestsFlextInfraCodegenLazyInitService:
         _, second_root = u.Tests.create_lazy_init_workspace(
             tmp_path, project_name="flext-test-second", package_name="flext_shared"
         )
+        u.Tests.declare_workspace_projects(
+            tmp_path, ("flext-test-first", "flext-test-second")
+        )
         u.Tests.write_lazy_init_namespace_module(
             first_root / "models.py", class_name="FlextTestsFirstModels", alias="m"
         )
@@ -464,7 +472,7 @@ class TestsFlextInfraCodegenLazyInitService:
             "format",
             "--check",
             "--config",
-            str(Path(__file__).resolve().parents[3] / c.Infra.PYPROJECT_FILENAME),
+            str(Path(__file__).resolve().parents[3] / c.PYPROJECT_FILENAME),
             "--line-length",
             str(c.Infra.MAX_LINE_LENGTH),
             str(package_root / c.Infra.INIT_PY),

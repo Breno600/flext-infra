@@ -104,7 +104,7 @@ class FlextInfraUtilitiesDocsRender:
         return "\n".join(rendered)
 
     @staticmethod
-    def _is_object_list(value: t.Infra.InfraValue | None) -> bool:
+    def _is_object_list(value: t.JsonValue | None) -> bool:
         """Type guard: narrow one infra value to a mutable sequence."""
         return isinstance(value, list)
 
@@ -694,13 +694,13 @@ class FlextInfraUtilitiesDocsRender:
         contract: t.JsonMapping,
         *,
         project_count: int,
-        class_counts: t.MappingKV[str, int],
+        class_counts: t.SequenceOf[m.Infra.DocsClassCount],
     ) -> str:
         """Return the generated root API overview page."""
         data = contract
         classes = (
             ", ".join(
-                f"`{name}`={count}" for name, count in sorted(class_counts.items())
+                f"`{entry.project_class}`={entry.count}" for entry in class_counts
             )
             or "_none_"
         )
@@ -724,7 +724,9 @@ class FlextInfraUtilitiesDocsRender:
         ])
 
     @staticmethod
-    def docs_root_projects_index(entries: t.SequenceOf[t.StrMapping]) -> str:
+    def docs_root_projects_index(
+        entries: t.SequenceOf[m.Infra.DocsProjectIndexEntry],
+    ) -> str:
         """Return the generated root index of per-project module pages."""
         lines: t.MutableSequenceOf[str] = [
             "# Workspace Module Pages",
@@ -739,15 +741,15 @@ class FlextInfraUtilitiesDocsRender:
             return FlextInfraUtilitiesDocsRender._render_markdown(lines)
         for entry in entries:
             lines.append(
-                f"- [{entry['name']}]({entry['name']}/modules/index.md)"
-                f" — `{entry['module_count']}` modules"
+                f"- [{entry.name}]({entry.name}/modules/index.md)"
+                f" — `{entry.module_count}` modules"
             )
         lines.append("")
         return FlextInfraUtilitiesDocsRender._render_markdown(lines)
 
     @staticmethod
     def docs_project_catalog_page(
-        entries: t.SequenceOf[t.StrMapping],
+        entries: t.SequenceOf[m.Infra.DocsCatalogEntry],
         *,
         exclude_docs: t.SequenceOf[str] | None = None,
     ) -> str:
@@ -756,21 +758,17 @@ class FlextInfraUtilitiesDocsRender:
         rows = [
             "| "
             + " | ".join([
-                f"[{entry['name']}]({entry['api_page']})",
+                f"[{entry.name}]({entry.api_page})",
+                FlextInfraUtilitiesDocsRender._escape_table_cell(entry.project_class),
+                f"`{entry.package_name}`",
                 FlextInfraUtilitiesDocsRender._escape_table_cell(
-                    entry["project_class"]
-                ),
-                f"`{entry['package_name']}`",
-                FlextInfraUtilitiesDocsRender._escape_table_cell(
-                    entry["description"] or "_not declared_"
+                    entry.description or "_not declared_"
                 ),
             ])
             + " |"
             for entry in entries
             if not any(
-                fnmatch.fnmatch(
-                    entry.get("api_page", "").removeprefix("../../"), pattern
-                )
+                fnmatch.fnmatch(entry.api_page.removeprefix("../../"), pattern)
                 for pattern in exclude_patterns
             )
         ]

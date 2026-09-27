@@ -71,21 +71,6 @@ class FlextInfraConstantsCodegen(
 
     TRANSACTION_ID_LENGTH: ClassVar[int] = 32
 
-    LAZY_INIT_CLASS_RECEIPTS_RELPATH: ClassVar[str] = (
-        "flext-infra/lazy-init-class-receipts.json"
-    )
-    """Regenerable class-receipt cache path under the ignored ``.state`` root."""
-
-    LAZY_INIT_CLASS_RECEIPTS_VERSION: ClassVar[int] = 3
-    """Receipt document schema version; a mismatch discards the cache.
-
-    Version 3 discards receipts rendered before dependency-closure alias
-    parity: inherited-alias discovery now reads each candidate package's
-    published initializer ABI instead of the wider declared ``__all__``
-    superset, so facets carrying phantom re-exports (names the owner root
-    never serves) must re-render once.
-    """
-
     SRC_MODULES: ClassVar[t.VariadicTuple[t.Quad[str, str, str, str]]] = (
         ("constants.py", "Constants", "FlextConstants", "Constants"),
         ("typings.py", "Types", "FlextTypes", "Type aliases"),
@@ -234,6 +219,7 @@ class FlextInfraConstantsCodegen(
         "MISE_GITHUB_TOKEN",
         "MISE_GITHUB_CREDENTIAL_COMMAND",
         "MISE_HTTP_TIMEOUT",
+        "FLEXT_MYPY_PROFILE_OUTPUT",
         # Launcher pin knob: hosts whose curl resolves through Mise shims
         # cannot resolve "latest" inside the sanitized bootstrap env; an
         # explicit MISE_VERSION skips that resolution entirely.

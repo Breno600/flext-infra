@@ -8,14 +8,16 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import config, infra
+from flext_infra import config, infra, u as infra_u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import c, m, t, u
+from tests import c, m, p, t, u
 
 _FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures"
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -38,24 +40,17 @@ def _modernizer_workspace_pyproject(*members: str) -> str:
 
 
 def _write_modernizer_codegen_config(workspace: Path) -> None:
-    """Give the workspace its own governed SSOT so ``--rewrite-constraints``.
+    """Copy the valid governed SSOT into the isolated modernizer owner.
 
-    stays inside the fixture (flext-eles2): the floor writer resolves its
-    target from the modernizer's own ``repository_root``, never the real
-    flext-infra checkout, so every isolated workspace needs a minimal
-    ``config/codegen.yaml`` of its own.
+    Constraint rewriting validates the complete typed codegen contract and
+    must never write the installed infrastructure checkout (flext-eles2).
     """
     config_dir = workspace / c.Infra.CODEGEN_CONFIG_DIR
     config_dir.mkdir(parents=True, exist_ok=True)
-    (config_dir / c.Infra.CODEGEN_CONFIG_FILENAME).write_text(
+    (config_dir / c.Infra.CODEGEN_CONFIG_FILENAME).write_bytes(
         (
-            "Infra:\n"
-            "  codegen:\n"
-            "    scaffold:\n"
-            "      project:\n"
-            "        dependency_profiles: []\n"
-        ),
-        encoding="utf-8",
+            _PROJECT_ROOT / c.Infra.CODEGEN_CONFIG_DIR / c.Infra.CODEGEN_CONFIG_FILENAME
+        ).read_bytes()
     )
 
 
@@ -72,16 +67,35 @@ def tool_config_document() -> m.Infra.ToolConfigDocument:
     return u.Tests.tool_config_document()
 
 
-@pytest.fixture(params=[("requests",)])
-def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Path:
-    """Provision a real isolated detector consumer through generated Make upgrade."""
-    modules = t.Infra.STR_SEQ_ADAPTER.validate_python(request.param)
-    distributions = {
-        "requests": "requests",
-        "dateutil": "python-dateutil",
-        "yaml": "pyyaml",
-    }
-    dependencies = ", ".join(f'"{distributions[name]}"' for name in modules)
+_DETECTOR_PROJECT_NAME = "detector-fixture"
+_DETECTOR_UPGRADE_RECEIPT = "upgrade-receipt.json"
+
+
+def _detector_template_parent(modules: t.StrSequence) -> Path:
+    """Return the run-scoped home of one resolved detector consumer.
+
+    The pytest invocation's temporary root is shared by every worker of one
+    run and removed with it, so each run resolves its own environment once.
+    """
+    return Path(tempfile.gettempdir()) / "detector-templates" / "-".join(modules)
+
+
+def _provision_detector_template(modules: t.StrSequence) -> None:
+    """Resolve one detector consumer through ``make upg`` and commit its locks.
+
+    ``make upg`` is the sole writer of a new consumer's locks; it resolves over
+    the network, so it runs once per run and dependency set, before any test
+    item starts. The command output is kept as the receipt every consumer of
+    the template asserts.
+    """
+    parent = _detector_template_parent(modules)
+    distributions = {"requests": "requests", "pytz": "pytz", "six": "six"}
+    # A governed FLEXT consumer declares exactly one runtime upstream profile;
+    # conform derives its project spec from it (context_render.py).
+    upstream = u.Tests.flext_source("flext-core")
+    dependencies = ", ".join(
+        f'"{name}"' for name in (upstream, *(distributions[name] for name in modules))
+    )
     infrastructure = tm.ok(
         u.Infra.configured_repository_ref(
             codegen=config.Infra.codegen, repository_root=_PROJECT_ROOT
@@ -93,23 +107,29 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
         )
     )
     root = u.Tests.mk_project(
-        tmp_path,
-        "detector-fixture",
+        parent,
+        _DETECTOR_PROJECT_NAME,
         with_src=True,
         pyproject=(
             '[build-system]\nrequires = ["hatchling"]\nbuild-backend = "hatchling.build"\n'
             '[project]\nname = "detector-fixture"\nversion = "0.1.0"\n'
+            'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             f"dependencies = [{dependencies}]\n"
             '[project.optional-dependencies]\nfeature = ["requests"]\n'
+            # A governed checkout declares every internal requirement with its
+            # own direct Git source; the scaffold dev SSOT includes flext-tests.
             '[dependency-groups]\ndev = ["deptry", "mypy", "pip", '
-            f'"{infrastructure.distribution} @ git+{infrastructure.url}@{integration.branch}"]\n'
+            f'"{infrastructure.distribution} @ git+{infrastructure.url}@{integration.branch}", '
+            f'"{u.Tests.flext_source("flext-tests")}"]\n'
+            "[tool.hatch.metadata]\nallow-direct-references = true\n"
             "[tool.mypy]\n"
             '[tool.deptry]\npep621_dev_dependency_groups = ["dev"]\n'
         ),
     )
     (root / "src" / "detector_fixture" / "__init__.py").write_text(
-        "\n".join(f"import {name}" for name in modules) + "\n", encoding="utf-8"
+        "\n".join(f"import {name}" for name in ("flext_core", *modules)) + "\n",
+        encoding="utf-8",
     )
     u.Tests.copy_tracked_mise_seeds(root)
     repository = u.Tests.repository_ref(
@@ -228,7 +248,6 @@ def real_python_package(tmp_path: Path) -> Path:
     (src_dir / "__init__.py").write_text('"""Test package."""\n__version__ = "0.1.0"\n')
     (src_dir / "identity.py").write_text(
         '"""Substantive unique source consumed by real scanner fixtures."""\n\n'
-        "from __future__ import annotations\n\n"
         "def normalize_identity(parts: tuple[str, ...]) -> str:\n"
         '    """Normalize one ordered identity without duplicated code."""\n'
         "    normalized = tuple(part.strip() for part in parts if part.strip())\n"
@@ -307,7 +326,7 @@ def mod_workspace(tmp_path: Path) -> Path:
     tm.ok(u.Cli.ensure_dir(workspace))
     tm.ok(
         u.Cli.atomic_write_text_file(
-            workspace / c.Infra.PYPROJECT_FILENAME,
+            workspace / c.PYPROJECT_FILENAME,
             (
                 "[project]\n"
                 f'name = "{workspace.name.replace("_", "-")}"\n'
@@ -402,7 +421,7 @@ def real_workspace(tmp_path: Path) -> Path:
 def modernizer_workspace(tmp_path: Path) -> Path:
     workspace = tmp_path / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
-    (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+    (workspace / c.PYPROJECT_FILENAME).write_text(
         _modernizer_workspace_pyproject(), encoding="utf-8"
     )
     u.Tests.write_beads_project(
@@ -414,7 +433,7 @@ def modernizer_workspace(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def modernizer_workspace_with_projects(modernizer_workspace: Path) -> Path:
-    (modernizer_workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+    (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
         _modernizer_workspace_pyproject("selected", "ignored"), encoding="utf-8"
     )
     selected = u.Tests.mk_project(
@@ -499,7 +518,7 @@ def models_resource(
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic models fixture module."""
     rope_project, repository_root = rope_workspace
-    resource = u.Infra.get_resource_from_path(
+    resource = u.Infra.resolve_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "models.py"
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
@@ -512,7 +531,7 @@ def services_resource(
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic services fixture module."""
     rope_project, repository_root = rope_workspace
-    resource = u.Infra.get_resource_from_path(
+    resource = u.Infra.resolve_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "services.py"
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)

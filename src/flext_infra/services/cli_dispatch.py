@@ -9,13 +9,13 @@ from flext_cli import cli as cli_facade
 
 from flext_infra import c, t, u
 
-from .cli_routes import CliRouteService
+from .cli_routes import FlextInfraCliRouteService
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class CliDispatchService(CliRouteService, type(cli_facade)):
+class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
     """Dispatch public command groups through their typed route models."""
 
     app_name: ClassVar[str] = "flext-infra"
@@ -104,4 +104,4 @@ class CliDispatchService(CliRouteService, type(cli_facade)):
         return 2 if error_message and u.Cli.cli_usage_error(error_message) else 1
 
 
-__all__: list[str] = ["CliDispatchService"]
+__all__: list[str] = ["FlextInfraCliDispatchService"]

@@ -9,18 +9,6 @@ from flext_cli import m, u
 
 from .. import c, t
 from . import FlextInfraModelsMixins as mm
-from ._defaults import FlextInfraModelsDefaults
-
-
-def _default_fresh_import_entry_points() -> FlextInfraModelsCore.FreshImportEntryPoints:
-    """Default factory for the fresh-import entry-points payload.
-
-    Module-level on purpose: neither a qualified nor a bare reference to the
-    nested model resolves inside the class body at definition time (class
-    scopes do not nest, and the outer class is still being defined), so the
-    deferred lookup must live outside it.
-    """
-    return FlextInfraModelsCore.FreshImportEntryPoints()
 
 
 class FlextInfraModelsCore:
@@ -53,19 +41,18 @@ class FlextInfraModelsCore:
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
 
-        scripts: t.StrMapping = m.Field(
-            default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
-            description="Declared console entrypoints",
+        scripts: t.StrMapping | None = m.Field(
+            default=None, description="Declared console entrypoints when present"
         )
-        gui_scripts: t.StrMapping = m.Field(
-            default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
+        gui_scripts: t.StrMapping | None = m.Field(
+            default=None,
             alias="gui-scripts",
-            description="Declared graphical entrypoints",
+            description="Declared graphical entrypoints when present",
         )
-        entry_points: t.MappingKV[str, t.StrMapping] = m.Field(
-            default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping,
+        entry_points: t.MappingKV[str, t.StrMapping] | None = m.Field(
+            default=None,
             alias="entry-points",
-            description="Declared plugin entrypoint groups",
+            description="Declared plugin entrypoint groups when present",
         )
 
     class FreshImportMetadata(m.Value):
@@ -74,8 +61,7 @@ class FlextInfraModelsCore:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
 
         project: FlextInfraModelsCore.FreshImportEntryPoints = m.Field(
-            default_factory=_default_fresh_import_entry_points,
-            description="Executable metadata from the published project table",
+            description="Executable metadata from the published project table"
         )
 
     class SkillRuleEvaluationContext(m.ArbitraryTypesModel):
@@ -94,7 +80,7 @@ class FlextInfraModelsCore:
         """Resolved inputs for one skill validation report."""
 
         rules: Annotated[
-            t.MappingKV[str, t.Infra.InfraValue], m.Field(description="Rules payload")
+            t.MappingKV[str, t.JsonValue], m.Field(description="Rules payload")
         ]
         root: Annotated[Path, m.Field(description="Repository root path")]
         skill_name: Annotated[str, m.Field(description="Skill folder name")]
@@ -138,6 +124,20 @@ class FlextInfraModelsCore:
                 msg = "collection manifest requires nonempty unique node IDs"
                 raise ValueError(msg)
             return self
+
+    class PytestSelectionPlan(m.Value):
+        """One validated selection and its canonical manifest artifact."""
+
+        manifest_path: Path = m.Field(description="Canonical node-ID manifest")
+        node_ids: t.StrTuple = m.Field(
+            description="Selected node IDs in execution order"
+        )
+        whole_target: bool = m.Field(
+            description="Whether the selection covers the complete test target"
+        )
+        inventory_collected: bool = m.Field(
+            description="Whether this run executed the complete inventory phase"
+        )
 
     class PytestRunContext(m.Value):
         """Immutable execution identity shared by a phase's native receipts."""

@@ -7,12 +7,10 @@ import os
 import sys
 from collections.abc import Iterator
 from pathlib import Path
-from types import ModuleType
 
 import pytest
 from flext_tests import tm
 
-import flext_infra as infra_pkg
 from flext_infra import config
 from tests import c, m, t, u
 
@@ -81,50 +79,6 @@ def installed_dependency_path(tmp_path: Path) -> Iterator[Path]:
     finally:
         sys.path.remove(str(location))
         importlib.invalidate_caches()
-
-
-@pytest.fixture
-def infra_public_root() -> Iterator[ModuleType]:
-    """Reload the root public package after clearing lazy-export caches.
-
-    Why (root cause, reload isolation): ``importlib.reload(flext_infra)``
-    re-executes the package ``__init__``, which re-imports ``pathlib`` and
-    binds a NEW ``Path`` class. Any ``Path`` instance created before the
-    reload keeps the OLD class, whose private slots (``_str``/``_drv``) no
-    longer match, so every later ``path.exists()`` on a pre-reload instance
-    raises ``AttributeError`` — corrupting every test that runs after this
-    fixture. The purge also drops the lazy-export registry the ``tests``
-    package shares, so ``tests.u`` resolved to the infra facade without
-    ``Tests``. Both module snapshots are restored after the fixture so the
-    process-global interpreter state is left exactly as found.
-    """
-    stdlib_snapshots = {
-        name: module
-        for name, module in sys.modules.items()
-        if name == "pathlib" or name.startswith("pathlib.")
-    }
-    wrapper_snapshots = {
-        name: sys.modules[name]
-        for name in c.Tests.INFRA_PUBLIC_WRAPPER_MODULES
-        if name in sys.modules
-    }
-    for name in c.Tests.INFRA_PUBLIC_WRAPPER_MODULES:
-        _ = sys.modules.pop(name, None)
-    try:
-        for export_name in c.Tests.INFRA_PUBLIC_ROOT_EXPORTS:
-            _ = infra_pkg.__dict__.pop(export_name, None)
-        yield importlib.reload(infra_pkg)
-    finally:
-        for name, module in stdlib_snapshots.items():
-            sys.modules[name] = module
-        # Why (review #355): a wrapper the reload imported but that was absent
-        # before the fixture must be dropped, not kept — leaving it would leak
-        # the reloaded module identity into later tests.
-        for name in c.Tests.INFRA_PUBLIC_WRAPPER_MODULES:
-            if name in wrapper_snapshots:
-                sys.modules[name] = wrapper_snapshots[name]
-            else:
-                _ = sys.modules.pop(name, None)
 
 
 def _is_collectable_test_module(collection_path: Path) -> bool:

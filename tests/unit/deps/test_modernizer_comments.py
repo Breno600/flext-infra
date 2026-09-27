@@ -100,7 +100,7 @@ class TestsFlextInfraDepsModernizerComments:
 
     def test_inject_comments_phase_repositions_marker_before_section(self) -> None:
         """Position a managed marker immediately before its section."""
-        rendered = '[tool.coverage.report]\nfail_under = 45\n# [MANAGED] pyrefly\n[tool.pyrefly]\npython-version = "3.13"'
+        rendered = '[tool.coverage.report]\nprecision = 2\n# [MANAGED] pyrefly\n[tool.pyrefly]\npython-version = "3.13"'
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
         lines = result.splitlines()
         pyrefly_idx = lines.index("[tool.pyrefly]")
@@ -115,14 +115,16 @@ class TestsFlextInfraDepsModernizerComments:
 
     def test_inject_comments_phase_marks_pytest_and_coverage_subtables(self) -> None:
         """Annotate governed pytest and coverage subtables from the SSOT."""
-        rendered = '[tool.pytest.ini_options]\nminversion = "8.0"\n[tool.coverage.report]\nfail_under = 45'
+        rendered = '[tool.pytest.ini_options]\nminversion = "8.0"\n[tool.coverage.report]\nprecision = 2'
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
         tm.that(result, has=self._owned_marker("tool.pytest.ini_options"))
         tm.that(result, has=self._owned_marker("tool.coverage.report"))
 
     def test_inject_comments_phase_deduplicates_family_markers(self) -> None:
         """Emit one marker for multiple tables in the same tool family."""
-        rendered = "[tool.coverage.run]\nbranch = true\n[tool.coverage.report]\nfail_under = 45"
+        rendered = (
+            "[tool.coverage.run]\nbranch = true\n[tool.coverage.report]\nprecision = 2"
+        )
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
         tm.that(result.count(self._owned_marker("tool.coverage")), eq=1)
 

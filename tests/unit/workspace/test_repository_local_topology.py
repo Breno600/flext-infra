@@ -77,6 +77,36 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.that(workspace.repository.kind, eq=c.Infra.ProjectKind.THIRD_PARTY_FORK)
         tm.that(workspace.repository.uv_link_mode, eq="clone")
 
+    def test_declared_beads_free_repository_loads_without_ledger(
+        self, tmp_path: Path
+    ) -> None:
+        """An explicit standalone policy needs no Beads or Gas City identity."""
+        root = self._self_named_governed_root(tmp_path, "without-beads")
+        observed = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        manifest: t.MutableMappingKV[str, t.JsonValue] = {
+            "version": c.Infra.WORKSPACE_MANIFEST_VERSION,
+            "name": observed.name,
+            "repository": observed.repository.model_dump(mode="json"),
+            "repository_policy_overlays": [{
+                "project": observed.repository.distribution,
+                "beads_enabled": False,
+                "gascity_enabled": False,
+            }],
+        }
+        tm.ok(
+            u.Cli.yaml_dump(
+                root / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME, manifest
+            )
+        )
+        (root / "config" / c.Infra.BEADS_CONFIG_FILENAME).unlink()
+        ledger = root / c.Infra.BEADS_DIRNAME
+        if ledger.is_dir():
+            shutil.rmtree(ledger)
+        workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        tm.that(workspace.name, eq=observed.name)
+        tm.that(workspace.beads, none=True)
+        tm.that(workspace.gascity_enabled, eq=False)
+
     def test_selected_workspace_manifest_rejects_git_contradiction(
         self, tmp_path: Path
     ) -> None:
@@ -308,7 +338,7 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.that(workspace.repository.path, eq=Path())
         tm.that(workspace.repository.role, eq=c.Infra.MakeProfile.STANDALONE)
         tm.that(workspace.repository.editable, eq=True)
-        tm.that(workspace.beads.workspace, eq="parent-workspace")
+        tm.that(tm.not_none(workspace.beads).workspace, eq="parent-workspace")
 
     def test_composed_self_load_accepts_a_self_coordinate_manifest(
         self, tmp_path: Path

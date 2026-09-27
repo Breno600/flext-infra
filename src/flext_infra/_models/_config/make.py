@@ -15,7 +15,6 @@ from ..._constants import (
     FlextInfraConstantsDocs,
     FlextInfraConstantsMake,
 )
-from .._defaults import FlextInfraModelsDefaults
 from .contract import FlextInfraConfigModelsContract
 
 
@@ -98,6 +97,16 @@ class FlextInfraConfigModelsMake:
                 )
             ),
         ] = False
+        profiles: Annotated[
+            t.VariadicTuple[FlextInfraConstantsCodegenProject.MakeProfile],
+            m.Field(
+                min_length=1,
+                description=(
+                    "Make profiles whose generated Makefile declares the verb; "
+                    "a verb exists only where its operation applies"
+                ),
+            ),
+        ] = tuple(FlextInfraConstantsCodegenProject.MakeProfile)
 
     class MakeWorkflowStepSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One canonical workflow step."""
@@ -425,6 +434,9 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
+        examples_timeout_seconds: Annotated[
+            int, m.Field(gt=0, le=120, description="Workspace examples process deadline")
+        ]
         ruff: Annotated[
             FlextInfraConfigModelsMake.MakeRuffSpec,
             m.Field(description="Ruff CLI flags for fmt/fix/check Make verbs"),
@@ -494,10 +506,7 @@ class FlextInfraConfigModelsMake:
             Mapping[
                 t.NonEmptyStr, FlextInfraConfigModelsMake.CustomHandlerPolicyOverride
             ],
-            m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
-                description="Per-profile overrides of the custom handler policy",
-            ),
+            m.Field(description="Per-profile overrides of the custom handler policy"),
         ]
         project_check_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
@@ -593,6 +602,21 @@ class FlextInfraConfigModelsMake:
                 msg = (
                     "make workflow verbs are not declared public verbs: "
                     f"{', '.join(sorted(unknown_workflow))}"
+                )
+                raise ValueError(msg)
+            # Every profile renders the workflow, so a workflow verb must exist
+            # in every profile's Makefile.
+            partial_workflow = sorted(
+                verb.name
+                for verb in self.verbs
+                if verb.name in workflow_verbs
+                and set(verb.profiles)
+                != set(FlextInfraConstantsCodegenProject.MakeProfile)
+            )
+            if partial_workflow:
+                msg = (
+                    "make workflow verbs must exist in every profile: "
+                    f"{', '.join(partial_workflow)}"
                 )
                 raise ValueError(msg)
             unknown_fmt_gates = set(self.fmt_gates) - set(

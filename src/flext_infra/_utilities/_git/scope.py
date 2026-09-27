@@ -154,7 +154,7 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin)
         tracked_gitlink = relative_prefix.removesuffix("/")
         if tracked_gitlink and tracked_gitlink in tracked_paths:
             return True
-        return f"{relative_prefix}{c.Infra.PYPROJECT_FILENAME}" in tracked_paths
+        return f"{relative_prefix}{c.PYPROJECT_FILENAME}" in tracked_paths
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitScopeMixin"]

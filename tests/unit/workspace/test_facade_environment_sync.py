@@ -31,13 +31,19 @@ class TestsFlextInfraFacadeEnvironmentSync:
         test tree instead of the operator's home; the inherited Mise storage
         still provides the pinned runtime ``make setup`` installed.
         """
-        # A governed checkout carries its Mise declaration, launcher, and
-        # release pin; activation refuses to run without the recorded pin.
+        # A governed checkout is a Git work tree (activation resolves its
+        # runtime root from the Git superproject topology) carrying its Mise
+        # declaration, launcher, and release pin.
+        u.Tests.initialize_git_repo(workspace)
         u.Tests.copy_tracked_mise_seeds(workspace)
         activation_env = {"HOME": str(home), **env}
+        isolation = c.Tests.DIRENV_STATE_ENV_KEYS
         tm.ok(
             u.Cli.run_checked(
-                ["direnv", "allow", str(workspace)], cwd=workspace, env=activation_env
+                ["direnv", "allow", str(workspace)],
+                cwd=workspace,
+                env=activation_env,
+                remove_env_keys=isolation,
             )
         )
         return tm.ok(
@@ -45,6 +51,7 @@ class TestsFlextInfraFacadeEnvironmentSync:
                 ["direnv", "exec", str(workspace), "printenv", name],
                 cwd=workspace,
                 env=activation_env,
+                remove_env_keys=isolation,
             )
         )
 

@@ -154,7 +154,7 @@ class FlextInfraUtilitiesRelease:
         return r[c.Infra.VersionBump].ok(bump)
 
     @staticmethod
-    def is_release_subject(subject: str, version: str) -> bool:
+    def release_subject(subject: str, version: str) -> bool:
         """Whether ``subject`` is the protocol's release commit for ``version``.
 
         Matches the commit as the lane wrote it and as GitHub merged it, which
@@ -320,10 +320,10 @@ class FlextInfraUtilitiesRelease:
         the platform packages test against each other, counting them would
         report the whole workspace as one cycle.
         """
-        pyproject = path / c.Infra.PYPROJECT_FILENAME
+        pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.StrSequence].fail(
-                f"release project has no {c.Infra.PYPROJECT_FILENAME}: {path}"
+                f"release project has no {c.PYPROJECT_FILENAME}: {path}"
             )
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:

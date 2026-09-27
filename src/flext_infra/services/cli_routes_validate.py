@@ -21,10 +21,10 @@ from flext_infra.maintenance.clean import FlextInfraCleanService
 from flext_infra.maintenance.python_version import FlextInfraPythonVersionEnforcer
 from flext_infra.maintenance.sonarcloud import FlextInfraSonarcloudSettingsSync
 
-from .cli_routes_validate_commands import ValidationCommandRoutes
+from .cli_routes_validate_commands import FlextInfraValidationCommandRoutes
 
 
-class ValidationRoutes(ValidationCommandRoutes):
+class FlextInfraValidationRoutes(FlextInfraValidationCommandRoutes):
     """Own documentation, GitHub workflow, maintenance, and validation routes."""
 
     validation_routes: ClassVar[
@@ -35,7 +35,7 @@ class ValidationRoutes(ValidationCommandRoutes):
                 name="collect",
                 help_text="Collect associated plan sources and publish authenticated projections",
                 model_cls=m.Infra.DocsCollectRequest,
-                handler=ValidationCommandRoutes.result_handler(
+                handler=FlextInfraValidationCommandRoutes.result_handler(
                     FlextInfraDocCollector.collect
                 ),
                 success_message="Configured plan sources collected and published",
@@ -44,7 +44,7 @@ class ValidationRoutes(ValidationCommandRoutes):
                 name="generate",
                 help_text="Generate project docs through the publication transaction",
                 model_cls=m.Infra.DocsGenerateRequest,
-                handler=ValidationCommandRoutes.result_handler(
+                handler=FlextInfraValidationCommandRoutes.result_handler(
                     FlextInfraDocGenerator.execute_request
                 ),
                 success_message="Generated documentation committed and verified",
@@ -54,7 +54,7 @@ class ValidationRoutes(ValidationCommandRoutes):
                     name=route_name,
                     help_text=help_text,
                     model_cls=model_cls,
-                    handler=ValidationCommandRoutes.result_handler(
+                    handler=FlextInfraValidationCommandRoutes.result_handler(
                         model_cls.execute_command
                     ),
                     success_message=success_message,
@@ -125,8 +125,8 @@ class ValidationRoutes(ValidationCommandRoutes):
                 success_message="SonarCloud issue exclusions match the SSOT",
             ),
         ),
-        c.Infra.CLI_GROUP_VALIDATE: ValidationCommandRoutes.validate_command_routes,
+        c.Infra.CLI_GROUP_VALIDATE: FlextInfraValidationCommandRoutes.validate_command_routes,
     }
 
 
-__all__: list[str] = ["ValidationRoutes"]
+__all__: list[str] = ["FlextInfraValidationRoutes"]

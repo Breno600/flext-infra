@@ -29,9 +29,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         )
 
         tm.that(modernizer.run(), eq=0)
-        return (modernizer_workspace / c.Infra.PYPROJECT_FILENAME).read_text(
-            encoding="utf-8"
-        )
+        return (modernizer_workspace / c.PYPROJECT_FILENAME).read_text(encoding="utf-8")
 
     @pytest.mark.parametrize(
         ("content", "expected"),
@@ -48,9 +46,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         workspace = tmp_path / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
         if content is not None:
-            (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
-                content, encoding="utf-8"
-            )
+            (workspace / c.PYPROJECT_FILENAME).write_text(content, encoding="utf-8")
         modernizer = FlextInfraPyprojectModernizer(repository_root=workspace)
         tm.that(modernizer.run(), eq=expected)
 
@@ -73,22 +69,27 @@ class TestsFlextInfraDepsModernizerMainExtra:
     def test_run_fails_when_selected_project_has_invalid_toml(
         self, modernizer_workspace_with_projects: Path
     ) -> None:
-        """Report invalid TOML from an explicitly selected declared member."""
+        """Invalid TOML in a declared member escapes before any write."""
         selected_pyproject = (
-            modernizer_workspace_with_projects / "selected" / c.Infra.PYPROJECT_FILENAME
+            modernizer_workspace_with_projects / "selected" / c.PYPROJECT_FILENAME
         )
         selected_pyproject.write_text("[invalid", encoding="utf-8")
+        root_pyproject = modernizer_workspace_with_projects / c.PYPROJECT_FILENAME
+        root_before = root_pyproject.read_bytes()
         modernizer = FlextInfraPyprojectModernizer(
             repository_root=modernizer_workspace_with_projects,
             apply_changes=True,
             skip_comments=True,
             skip_check=False,
         )
-        with pytest.raises(
-            ValueError, match="docs pyproject TOML is invalid"
-        ) as raised:
+
+        # The canonical docs-scope reader owns the typed invalid-TOML error and
+        # names the file; the run lets it leave instead of logging an exit code.
+        with pytest.raises(ValueError, match="docs pyproject TOML is invalid") as raised:
             modernizer.run()
         tm.that(str(raised.value), has=str(selected_pyproject))
+        tm.that(root_pyproject.read_bytes(), eq=root_before)
+        tm.that(selected_pyproject.read_text(encoding="utf-8"), eq="[invalid")
 
     def test_run_rewrite_constraints_uses_provisioned_runtime(
         self, modernizer_workspace: Path
@@ -110,7 +111,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         """Read runtime versions without creating a dependency lock in a member."""
         source_repository = modernizer_workspace.parent / "flext-core-source"
         source_repository.mkdir()
-        (source_repository / c.Infra.PYPROJECT_FILENAME).write_text(
+        (source_repository / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-core"\nversion = "0.12.0-dev"\n', encoding="utf-8"
         )
         package_init = source_repository / "src" / "flext_core" / "__init__.py"
@@ -118,7 +119,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         package_init.write_text('"""FLEXT Core test package."""\n', encoding="utf-8")
         u.Tests.initialize_git_repo(source_repository)
 
-        (modernizer_workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
             (
                 '[project]\nname = "workspace"\nversion = "0.1.0"\n'
                 'dependencies = ["requests>=2.0"]\n\n'
@@ -151,9 +152,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(exit_code, eq=0)
         tm.that((modernizer_workspace / "flext-core" / "uv.lock").exists(), eq=False)
         tm.that(
-            (modernizer_workspace / c.Infra.PYPROJECT_FILENAME).read_text(
-                encoding="utf-8"
-            ),
+            (modernizer_workspace / c.PYPROJECT_FILENAME).read_text(encoding="utf-8"),
             has='"requests>=2.0"',
         )
 
@@ -161,7 +160,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         self, modernizer_workspace: Path
     ) -> None:
         """Rewrite registry constraints while preserving internal dependencies."""
-        (modernizer_workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
             (
                 "[project]\n"
                 'name = "workspace"\n'
@@ -181,7 +180,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         package = member / "src" / "flext_core"
         package.mkdir(parents=True)
         (package / "__init__.py").write_text("", encoding="utf-8")
-        (member / c.Infra.PYPROJECT_FILENAME).write_text(
+        (member / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-core"\nversion = "0.12.0-dev"\n', encoding="utf-8"
         )
 
@@ -195,7 +194,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         self, modernizer_workspace: Path
     ) -> None:
         """Use installed versions as floors without imposing an artificial upper bound."""
-        (modernizer_workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
             (
                 "[project]\n"
                 'name = "workspace"\n'
@@ -229,7 +228,7 @@ class TestsFlextInfraDepsModernizerMainExtra:
         u.Tests.write_project_beads_config(workspace, "flext")
         external = tmp_path / "gruponos-data"
         (external / "src" / "gruponos_data").mkdir(parents=True)
-        external_pyproject = external / c.Infra.PYPROJECT_FILENAME
+        external_pyproject = external / c.PYPROJECT_FILENAME
         external_pyproject.write_text(
             "[project]\nname='gruponos-data'\ndependencies=['flext-core']\n",
             encoding="utf-8",

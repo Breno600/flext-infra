@@ -26,6 +26,22 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         path.chmod(0o444)
 
     @staticmethod
+    def isolated_mise_bootstrap_storage(project_root: Path) -> Path:
+        """Provision one hermetic Mise bootstrap storage for a fixture run.
+
+        The product contract (``u.Infra.mise_bootstrap_environment``) names
+        ``MISE_DATA_DIR`` the storage root variable; a fixture that passes it
+        makes the real bootstrap hermetic instead of racing the shared
+        operator storage, and only a cold storage exercises the credential
+        boundaries a warm install silently skips. The directory sits beside
+        — never inside — the fixture checkout the generated Make rejects as
+        storage, and inside the pytest-managed tree so teardown reclaims it.
+        """
+        storage = project_root.parent / "mise-data"
+        storage.mkdir(parents=True, exist_ok=True)
+        return storage
+
+    @staticmethod
     def copy_tracked_mise_seeds(root: Path, *, source_root: Path | None = None) -> None:
         """Copy declared Mise inputs from this checkout or a native upgrade seed.
 

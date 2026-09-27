@@ -140,7 +140,7 @@ class FlextInfraUtilitiesCodegenFacades:
                         resource = project.get_resource(
                             path.relative_to(pkg_dir.parent).as_posix()
                         )
-                        pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(
+                        pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                             project, resource
                         )
                     offset = sum(map(len, lines[: receiver.lineno - 1]))

@@ -6,7 +6,6 @@ from pathlib import Path
 
 from flext_infra import config, main, u
 from flext_infra.codegen import FlextInfraCodegenConform
-from flext_infra.release import FlextInfraReleasePolicyRender
 from tests import c, m, t
 from tests.utilities_fixture_project import TestsFlextInfraUtilitiesProjectFixtureMixin
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
@@ -17,12 +16,7 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
     @staticmethod
     def release_policy_root() -> Path:
-        """Return the packaged template root that owns the release policies.
-
-        The Gitleaks policy is a codegen template projected into every
-        repository; build constraints are rendered at release time from the
-        typed config SSOT (flext-gufl8) and have no repository projection.
-        """
+        """Return the packaged template root that owns the Gitleaks policy."""
         return (
             Path(__file__).resolve().parents[1]
             / "src"
@@ -30,18 +24,6 @@ class TestsFlextInfraUtilitiesReleaseMixin:
             / "templates"
             / "project"
             / "base"
-        )
-
-    @staticmethod
-    def release_build_constraints_text() -> str:
-        """Return the release-time constraints bytes for the current config.
-
-        Mirrors exactly what the release policy phase renders from
-        ``config.Infra.release.build_constraints`` — the single owner — so
-        tests derive digests from the same SSOT the protocol consumes.
-        """
-        return FlextInfraReleasePolicyRender.build_constraints(
-            config.Infra.release.build_constraints
         )
 
     @staticmethod
@@ -89,9 +71,8 @@ class TestsFlextInfraUtilitiesReleaseMixin:
             project_name=workspace.name,
         ).unwrap()
         (workspace / ".gitignore").write_text(gitignore, encoding="utf-8")
-        # Gitleaks is projected by codegen; build constraints are rendered
-        # from the typed config SSOT exactly as the release policy phase
-        # renders them (flext-gufl8) — no repository projection exists.
+        # Gitleaks is a codegen projection; build constraints render from the
+        # typed config SSOT at release time and have no repository projection.
         gitleaks_source = (
             TestsFlextInfraUtilitiesReleaseMixin.release_policy_root()
             / f"{c.Infra.RELEASE_GITLEAKS_CONFIG_PATH}.j2"
@@ -101,16 +82,16 @@ class TestsFlextInfraUtilitiesReleaseMixin:
             raise RuntimeError(
                 rendered_gitleaks.error or "release policy render failed: gitleaks"
             )
-        for policy_path, policy_text in (
-            (
-                "config/build-constraints.txt",
-                TestsFlextInfraUtilitiesReleaseMixin.release_build_constraints_text(),
-            ),
-            (c.Infra.RELEASE_GITLEAKS_CONFIG_PATH, rendered_gitleaks.value),
-        ):
-            policy_target = workspace / policy_path
-            policy_target.parent.mkdir(parents=True, exist_ok=True)
-            policy_target.write_text(policy_text, encoding="utf-8")
+        gitleaks_target = workspace / c.Infra.RELEASE_GITLEAKS_CONFIG_PATH
+        gitleaks_target.parent.mkdir(parents=True, exist_ok=True)
+        gitleaks_target.write_text(rendered_gitleaks.value, encoding="utf-8")
+        if not project_names:
+            # A standalone FLEXT repository publishes its own Python package;
+            # the release stamp's conform guard probes that layout in a fresh
+            # interpreter, so the fixture carries the package it releases.
+            root_package = workspace / c.Infra.DEFAULT_SRC_DIR / workspace.name
+            root_package.mkdir(parents=True, exist_ok=True)
+            (root_package / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         for name in project_names:
             project = workspace / name
             project.mkdir(parents=True, exist_ok=True)

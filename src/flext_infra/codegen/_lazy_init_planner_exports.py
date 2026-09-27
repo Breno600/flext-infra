@@ -22,6 +22,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
             tuple[str, bool, bool, bool, bool, bool], t.LazyAliasMap
         ]
         _version_module_name: str
+        _project_layout_cache: MutableMapping[Path, m.Infra.RopeProjectLayout]
 
         def _package_entry(
             self, pkg_dir: Path
@@ -33,6 +34,18 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
 
         @staticmethod
         def _publish(name: str, *, allow_main: bool) -> bool: ...
+
+    def _project_layout_for(self, pkg_dir: Path) -> m.Infra.RopeProjectLayout | None:
+        """Reuse the project's canonical layout during one planning snapshot."""
+        project_root = u.Infra.project_root(pkg_dir)
+        if project_root is None:
+            return None
+        layout = self._project_layout_cache.get(project_root)
+        if layout is None:
+            layout = u.Infra.layout(project_root)
+            if layout is not None:
+                self._project_layout_cache[project_root] = layout
+        return layout
 
     def _package_exports(
         self, context: m.Infra.LazyInitPackageContext
@@ -73,6 +86,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                 if child.name != c.Infra.INIT_PY
             ]
         index: t.MutableLazyAliasMap = {}
+        project_layout = self._project_layout_for(context.pkg_dir)
         # flext-i6nq.10: Generated support modules are output, never public input.
         # conftest.py is pytest-private: its hook variables (pytest_plugins) are
         # never public package ABI and must not enter the lazy export map.
@@ -120,6 +134,7 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                 rel_path=py_file.relative_to(context.pkg_dir),
                 current_pkg=context.current_pkg,
                 rope_project=self.rope_workspace.rope_project,
+                project_layout=project_layout,
             )
             entry = self.rope_workspace.module(py_file)
             if entry is None:

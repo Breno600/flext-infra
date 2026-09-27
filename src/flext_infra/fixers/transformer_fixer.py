@@ -34,7 +34,7 @@ from .base import FlextInfraFixerAdapter
 if TYPE_CHECKING:
     from flext_infra import p, t
 
-    from .._utilities.transformer_base import FlextInfraRopeTransformer
+    from ..transformers.rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
@@ -283,7 +283,14 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         transformer = self._build_transformer(
             transformer_cls=transformer_cls, fix_action=fix_action, file_path=file_path
         )
-        updated, changes = transformer.apply_to_source(source)
+        try:
+            updated, changes = transformer.apply_to_source(source)
+        except Exception as exc:
+            exc.add_note(
+                f"enforcement transformer {transformer_cls.__name__} failed for "
+                f"{file_path} (rule {rule_id})"
+            )
+            raise
         if not changes:
             return m.Infra.ProjectFixResult(
                 project=file_path.parent.name,

@@ -31,10 +31,14 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             and entry.delegate == "render"
             and Path(entry.destination).parts
         }
-        # A package:false repository (a solo workspace root) never
-        # materializes the package source dir: its manifest declares no
+        # An existing package:false repository (a solo workspace root)
+        # materializes no package source dir: its manifest declares no
         # importable package, so analyzers must not include it — pyright
         # fails hard on an include entry whose directory does not exist.
+        # The atomic scaffold path never passes ``package=False``: its own
+        # manifest renders the source tree, and dropping ``src`` there made
+        # the first plan fall back to disk discovery for mypy/pyrefly search
+        # paths, which oscillates once the scaffold's directory chain exists.
         source_dir = config.Infra.tooling.tools.pyright.path_rules.source_dir
         return tuple(
             directory
@@ -47,6 +51,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         cls,
         source: str,
         *,
+        repository_root: Path,
         repository: m.Infra.RepositoryRef,
         workspace: m.Infra.WorkspaceSpec,
         codegen: m.Infra.CodegenConfigSpec,
@@ -56,6 +61,21 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         ],
     ) -> p.Result[str]:
         """Conform one pyproject source."""
+        flext_line = u.Infra.flext_integration_line(
+            codegen=codegen,
+            repository_root=repository_root,
+            bootstrap_source=(
+                workspace.flext_source
+                if not (repository_root / c.PYPROJECT_FILENAME).exists()
+                else None
+            ),
+        )
+        if flext_line.failure:
+            return r[str].from_failure(flext_line)
+        declared_sources = {
+            member.distribution: f"git+{member.url}@{flext_line.value.branch}"
+            for member in workspace.subprojects
+        }
         return u.Infra.pyproject_conform(
             source,
             workspace=workspace,
@@ -69,6 +89,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
                 if workspace.project is not None
                 else None
             ),
+            declared_sources=declared_sources,
         )
 
     @staticmethod
@@ -77,19 +98,22 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         repository: m.Infra.RepositoryRef,
         target: m.Infra.RepositoryConformTarget,
         codegen: m.Infra.CodegenConfigSpec,
+        workspace: m.Infra.WorkspaceSpec,
     ) -> t.VariadicTuple[m.Infra.UvScopedDependencyExclusionSpec]:
         """Return the uv dependency exclusions routed to one repository.
 
-        Workspace root owns resolution for attached subprojects (uv reads
-        exclude-dependencies only from the workspace root). Subprojects still
-        receive their own routed excludes for standalone CI clones.
+        An exclusion drops a reverse edge onto a project installed from its
+        local checkout. It applies only where that project is local: the
+        repository itself or, at a workspace root (uv reads
+        exclude-dependencies only from the root), one of its declared
+        members. Routing an exclusion for an absent project would drop the
+        only edge that installs it.
         """
+        local = {repository.distribution}
         if target.make_profile is c.Infra.MakeProfile.WORKSPACE:
-            return tuple(codegen.uv_exclude_dependencies)
+            local.update(member.distribution for member in workspace.subprojects)
         return tuple(
-            item
-            for item in codegen.uv_exclude_dependencies
-            if item.project == repository.distribution
+            item for item in codegen.uv_exclude_dependencies if item.project in local
         )
 
     @staticmethod

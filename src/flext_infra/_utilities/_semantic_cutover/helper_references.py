@@ -56,7 +56,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
                 else None,
             )
             if expression is not None and path != request.target_file:
-                changed = runtime.get_string_module(project, updated, resource=resource)
+                changed = runtime.build_string_module(project, updated, resource=resource)
                 updated, binding = runtime.import_binding(
                     project, changed, target.get_name(), request.class_name
                 )
@@ -125,7 +125,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             )
             for path, expression in quoted_imports.items():
                 resource = snapshot.get_resource(path.relative_to(root).as_posix())
-                module = runtime.get_string_module(
+                module = runtime.build_string_module(
                     snapshot, prepared[path], resource=resource
                 )
                 prepared[path], binding = runtime.import_binding(
@@ -160,7 +160,8 @@ class FlextInfraUtilitiesSemanticHelperReferences(
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         root = Path(snapshot.root.real_path)
         origin = (
-            request.source_file.relative_to(root)
+            request.source_file
+            .relative_to(root)
             .with_suffix("")
             .as_posix()
             .replace("/", ".")
@@ -175,7 +176,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             expression = quoted_imports.get(path)
             if expression is None:
                 resource = snapshot.get_resource(path.relative_to(root).as_posix())
-                module = runtime.get_string_module(snapshot, source, resource=resource)
+                module = runtime.build_string_module(snapshot, source, resource=resource)
                 _, expression = runtime.import_binding(
                     snapshot, module, target, request.class_name
                 )
@@ -218,7 +219,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             for node in body
             if isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef)
         }
-        module = runtime.get_string_module(project, source, resource=resource)
+        module = runtime.build_string_module(project, source, resource=resource)
         imports = runtime.module_imports_for_pymodule(project, module)
         changed = False
         for statement in tuple(imports.imports):
@@ -284,7 +285,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
     ) -> str:
         """Resolve reexports to the original declaration before MoveGlobal cuts it."""
         runtime = FlextInfraUtilitiesRopeRuntimeModules
-        module = runtime.get_string_module(project, source, resource=resource)
+        module = runtime.build_string_module(project, source, resource=resource)
         imports = runtime.module_imports_for_pymodule(project, module)
         scope = original.get_scope()
         if scope is None:

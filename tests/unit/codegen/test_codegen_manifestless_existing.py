@@ -34,17 +34,46 @@ class TestsFlextInfraCodegenManifestlessExisting:
         seeded = {**preserved, "README.md": "# Existing repository\n"}
         pyproject_source = tm.ok(u.Cli.files_read_text(Path.cwd() / "pyproject.toml"))
         tm.ok(u.Cli.atomic_write_text_file(root / "pyproject.toml", pyproject_source))
-        # Fresh-import validation loads every declared entry point from the
-        # built candidate.  Seed the real package boundary so this repository
-        # fixture proves the installed pytest plugin instead of publishing a
-        # distribution that declares a module it deliberately omitted.
         package_name = u.Infra.project_package_name(Path.cwd())
-        tm.ok(
-            u.Cli.files_copy_directory(
-                Path.cwd() / c.Infra.DEFAULT_SRC_DIR / package_name,
-                root / c.Infra.DEFAULT_SRC_DIR / package_name,
-            )
+        package_init = root / c.Infra.DEFAULT_SRC_DIR / package_name / "__init__.py"
+        package_init.parent.mkdir(parents=True)
+        tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
+        # The copied manifest declares scripts and entry points; conform's
+        # fresh-import gate loads each one, so the seeded tree carries every
+        # declared target (module and attribute) inside its own package —
+        # never a copy of the whole production package.
+        manifest = tm.not_none(u.Cli.toml_mapping_from_text(pyproject_source))
+        project_table = u.Cli.json_as_mapping(
+            u.Cli.toml_mapping_child(manifest, "project")
         )
+        entry_groups = u.Cli.json_as_mapping(
+            u.Cli.toml_mapping_child(project_table, "entry-points")
+        )
+        declared_groups = (
+            u.Cli.json_as_mapping(u.Cli.toml_mapping_child(project_table, "scripts")),
+            u.Cli.json_as_mapping(
+                u.Cli.toml_mapping_child(project_table, "gui-scripts")
+            ),
+            *(u.Cli.json_as_mapping(group) for group in entry_groups.values()),
+        )
+        targets: dict[Path, set[str]] = {}
+        for entries in declared_groups:
+            for target in entries.values():
+                module_name, _, attribute = str(target).partition(":")
+                module_path = (
+                    root / c.Infra.DEFAULT_SRC_DIR / Path(*module_name.split("."))
+                ).with_suffix(".py")
+                targets.setdefault(module_path, set()).add(attribute.split(".")[0])
+        for module_path, attributes in targets.items():
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    module_path,
+                    "".join(
+                        f"class {attribute}:\n    pass\n\n\n"
+                        for attribute in sorted(attributes)
+                    ),
+                )
+            )
         vscode_settings = root / ".vscode" / "settings.json"
         vscode_settings.parent.mkdir()
         tm.ok(

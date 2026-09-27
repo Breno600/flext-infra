@@ -70,7 +70,7 @@ class FlextInfraRuntimeDevDependencyDetector(
     @override
     def execute(self) -> p.Result[bool]:
         """Execute dependency detection and generate workspace report."""
-        payload: MutableMapping[str, t.Infra.InfraValue] = {
+        payload: MutableMapping[str, t.JsonValue] = {
             "repository_root": str(self.root),
             "apply": self.apply_changes,
             "format": self.output_format,
