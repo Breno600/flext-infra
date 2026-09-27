@@ -65,7 +65,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentSync, s[t.JsonDict]):
                 m.Infra.WorkspaceProjectContext(cwd=resolved)
             )
         root = identity.value.repo_root
-        if not (root / "config" / "beads.yaml").is_file():
+        if not u.Infra.workspace_manifest_path(root).is_file():
             return r[m.Infra.WorkspaceProjectContext].ok(
                 m.Infra.WorkspaceProjectContext(cwd=resolved, identity=identity.value)
             )

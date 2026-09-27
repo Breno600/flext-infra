@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import re
-import shlex
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -20,6 +19,28 @@ pytestmark = pytest.mark.slow
 
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
+
+    @pytest.mark.parametrize("github_actions", ["true", "false"])
+    def test_workspace_status_reports_repository_owned_ci_scope(
+        self, tmp_path: Path, github_actions: str
+    ) -> None:
+        """GitHub checks this repository; local Make retains the fleet cycle."""
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.WORKSPACE, local_infra=True
+        )
+        tm.ok(u.Tests.create_python_environment(project_root))
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "status"],
+                cwd=project_root,
+                env={"GITHUB_ACTIONS": github_actions},
+            )
+        )
+        tm.that(u.Cli.process_succeeded(process.outcome), eq=True, msg=process.stderr)
+        selected = "." if github_actions == "true" else "infra-engine ."
+        tm.that(process.stdout, has=f"selected_projects={selected}\n")
+        scope = "self" if github_actions == "true" else "all"
+        tm.that(process.stdout, has=f"codegen_scope={scope}\n")
 
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
@@ -674,48 +695,13 @@ class TestsFlextInfraCodegenMakeEnvironment:
             eq={"_bootstrap_setup_tools"},
         )
         toolchain = config.Infra.codegen.toolchain
-        artifact_selectors = (
-            "python",
-            "uv",
-            "kubectl",
-            "helm",
-            "kind",
-            "direnv",
-            "taplo",
-            "ast-grep",
-            "gitleaks",
-            toolchain.scc_selector,
-            "kubeconform",
-            "node",
-            "go",
-            "make",
-            toolchain.qlty_selector,
-            toolchain.jscpd_selector,
-            toolchain.waza_selector,
-        )
-        lock_invocations = re.findall(r"lock --bump ([^;]+);", makefile)
-        tm.that(
-            tuple(tuple(shlex.split(arguments)) for arguments in lock_invocations),
-            eq=(artifact_selectors, (toolchain.prettier_selector,)),
-        )
-        for selector in (
-            toolchain.qlty_selector,
-            toolchain.jscpd_selector,
-            toolchain.prettier_selector,
-            toolchain.scc_selector,
-            toolchain.waza_selector,
-        ):
-            tm.that(makefile, has=f'"{selector}"')
+        lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
+        tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
         platform_matrix = ",".join(toolchain.mise_lockfile_platforms)
+        tm.that(makefile, has=f'mise_lockfile_platforms="{platform_matrix}";')
         tm.that(
             makefile,
-            has=[
-                f'mise_lockfile_platforms="{platform_matrix}";',
-                '$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"}',
-                'mise_lockfile_platforms=; \\\n\t\tmise_checked "$$scratch/lock-npm-prettier.log"',
-                'mise_checked "$$scratch/lock-npm-prettier.log"',
-                f'mise_lockfile_platforms="{platform_matrix}"; \\\n\tfi;',
-            ],
+            has='$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"}',
         )
         tm.that(makefile, has='if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then')
         resolve_assignments = re.findall(

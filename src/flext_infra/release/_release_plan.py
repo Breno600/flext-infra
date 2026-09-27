@@ -67,7 +67,7 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
         if history.failure:
             return r[m.Infra.ReleasePlan].from_failure(history)
         if latest != c.Infra.TAG_FORMAT.format(version=current) and any(
-            u.Infra.is_release_subject(subject, current) for subject in history.value
+            u.Infra.release_subject(subject, current) for subject in history.value
         ):
             # The release commit is merged and awaits its tag: nothing to bump.
             return r[m.Infra.ReleasePlan].ok(
@@ -157,7 +157,7 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
         if subjects.failure:
             return r[bool].from_failure(subjects)
         if base_version == version or any(
-            u.Infra.is_release_subject(subject, version) for subject in subjects.value
+            u.Infra.release_subject(subject, version) for subject in subjects.value
         ):
             return r[bool].ok(True)
         subject = c.Infra.RELEASE_COMMIT_SUBJECT.format(version=version)

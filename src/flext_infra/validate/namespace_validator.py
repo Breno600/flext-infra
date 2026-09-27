@@ -142,6 +142,32 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         return m.Infra.RopeCallbackBinding(
             callback=self, file_paths=self._eligible_project_files(self.rope)
         )
+        with u.Infra.open_project(project_root) as rope_project:
+            for filepath in files:
+                tree_result = self._parse_file(rope_project, filepath)
+                if tree_result.failure:
+                    rel = filepath.relative_to(project_root)
+                    violations.append(
+                        f"[NS-PARSE-001] {rel}:1 — "
+                        f"{tree_result.error or 'Rope AST unavailable'}"
+                    )
+                    continue
+                tree = tree_result.value
+                rel = filepath.relative_to(project_root)
+                violations.extend(
+                    self.check_module(
+                        tree,
+                        rel,
+                        class_stem=prefix,
+                        package_name=package_name,
+                        source=filepath.read_text(encoding=c.Cli.ENCODING_DEFAULT),
+                        is_test_file=self._is_test_file(rel),
+                        policy=u.Infra.publication_policy(
+                            filepath, rope_project=rope_project
+                        ),
+                    )
+                )
+        return self._validation_report(files=files, violations=violations)
 
     @staticmethod
     def _validation_report(
@@ -183,6 +209,33 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         scope = frozenset(str(item).strip() for item in declared if str(item).strip())
         return filepath.relative_to(project_root).parts[0] in scope
 
+    def _parse_file(
+        self, rope_project: t.Infra.RopeProject, path: Path
+    ) -> p.Result[t.Infra.RopeAstNode]:
+        """Return the AST module for ``path`` via rope.
+
+        ``r.ok(module)`` on success. ``r.fail(reason)`` when the resource
+        cannot be fetched, the module fails to parse, or rope returns no
+        ``PyModule``. Callers that want "skip silently" can collapse with
+        ``unwrap_or(None)`` or ``.failure``.
+        """
+        try:
+            resource = u.Infra.fetch_python_resource(rope_project, path)
+        except c.EXC_OS_SYNTAX as exc:
+            return r[t.Infra.RopeAstNode].fail(
+                f"fetch_python_resource raised: {exc!s}", exception=exc
+            )
+        if resource is None:
+            return r[t.Infra.RopeAstNode].fail(f"no rope resource for {path}")
+        try:
+            pymodule = u.Infra.resolve_pymodule(rope_project, resource)
+        except c.EXC_OS_SYNTAX as exc:
+            return r[t.Infra.RopeAstNode].fail(
+                f"resolve_pymodule raised: {exc!s}", exception=exc
+            )
+        ast_module = pymodule.get_ast()
+        return r[t.Infra.RopeAstNode].ok(ast_module)
+
     @staticmethod
     def _layout_violations(package_dir: Path | None) -> t.StrSequence:
         """Require the complete ordered facade and private-family layout."""
@@ -197,8 +250,6 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
             ("p", ("protocols.py",)),
             ("m", ("models.py",)),
             ("u", ("utilities.py",)),
-            ("base", ("base.py",)),
-            ("api", ("api.py",)),
             ("cli", ("cli.py",)),
         )
         for layer, filenames in required_files:
@@ -207,10 +258,17 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
                     f"[NS-LAYOUT-{len(messages) + 1:03d}] missing {layer} facade: "
                     + " or ".join(filenames)
                 )
-        if not (package_dir / "services").is_dir():
-            messages.append(
-                f"[NS-LAYOUT-{len(messages) + 1:03d}] missing services composition tree"
-            )
+        services_dir = package_dir / "services"
+        has_services = services_dir.is_dir() and any(
+            path.is_file() and path.suffix == ".py" and path.name != "__init__.py"
+            for path in services_dir.iterdir()
+        )
+        if has_services:
+            for layer in ("base", "api"):
+                if not (package_dir / f"{layer}.py").is_file():
+                    messages.append(
+                        f"[NS-LAYOUT-{len(messages) + 1:03d}] missing {layer} facade"
+                    )
         for family in ("_constants", "_typings", "_protocols", "_models", "_utilities"):
             if not (package_dir / family / "base.py").is_file():
                 messages.append(

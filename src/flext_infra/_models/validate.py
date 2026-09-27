@@ -135,6 +135,9 @@ class FlextInfraModelsCore:
         whole_target: bool = m.Field(
             description="Whether the selection covers the complete test target"
         )
+        inventory_collected: bool = m.Field(
+            description="Whether this run executed the complete inventory phase"
+        )
 
     class PytestRunContext(m.Value):
         """Immutable execution identity shared by a phase's native receipts."""

@@ -241,7 +241,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
                 raise TypeError(msg)
 
     @classmethod
-    def get_string_module(
+    def build_string_module(
         cls,
         rope_project: t.Infra.RopeProject,
         source: str,

@@ -50,7 +50,7 @@ class FlextInfraNamespaceSourceDetector:
                         ):
                             source_lines = source.splitlines()
                             violations: list[m.Infra.NamespaceSourceViolation] = []
-                            for from_import in u.Infra.get_absolute_from_imports(
+                            for from_import in u.Infra.resolve_absolute_from_imports(
                                 ctx.rope_project, resource
                             ):
                                 current_source = from_import.module_name

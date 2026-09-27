@@ -63,7 +63,7 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         mapping: t.JsonValue = t.json_dict_adapter().validate_python(converted_map)
         return mapping
 
-    def get_current_typings_from_pyproject(
+    def read_current_typings_from_pyproject(
         self, project_path: Path, *, include_dev: bool = True
     ) -> t.StrSequence:
         """Read CUSTOM typing requirements and the canonical development group."""
@@ -219,7 +219,7 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
             )
         return r[bool].ok(governed)
 
-    def get_required_typings(
+    def analyze_required_typings(
         self, project_path: Path, limits_path: Path | None = None
     ) -> p.Result[m.Infra.TypingsReport]:
         """Analyze project and generate typing stubs requirements report.
@@ -252,7 +252,7 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
             if package:
                 required_set.add(package)
         required_set -= exclude_set
-        current = self.get_current_typings_from_pyproject(project_path)
+        current = self.read_current_typings_from_pyproject(project_path)
         current_set = set(current)
         python_cfg = limits.get(c.Infra.PYTHON)
         version_val = (
@@ -270,7 +270,7 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
                 if followed.value
                 else sorted(
                     set(
-                        self.get_current_typings_from_pyproject(
+                        self.read_current_typings_from_pyproject(
                             project_path, include_dev=False
                         )
                     )

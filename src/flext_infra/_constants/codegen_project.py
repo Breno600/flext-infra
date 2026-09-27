@@ -28,6 +28,7 @@ class FlextInfraConstantsCodegenProject:
 
     CODEGEN_LOCAL_OVERRIDES_FILENAME: ClassVar[str] = "codegen-overrides.local.yaml"
     CODEGEN_ORG_OVERRIDES_FILENAME: ClassVar[str] = "codegen-org.yaml"
+    CODEGEN_CLI_MODULE_FILENAME: ClassVar[str] = "cli.py"
 
     # These enums define the
     # one public conform contract shared by new and existing repositories. The
@@ -151,20 +152,16 @@ class FlextInfraConstantsCodegenProject:
     ``u.Cli.toml_dot_path``; it is never written a second time.
     """
 
-    CONFORM_SOURCE_RACE_CYCLES: ClassVar[int] = 3
-    "Bounded conform convergence attempts after a mid-cycle source mutation."
     DOCS_SOURCE_STATE_RACE_MARKER: ClassVar[str] = (
         "docs source state changed during planning"
     )
     """Emitted by ``docs_verify_sources`` when one snapshotted docs source
-    changes content or physical identity inside the planning window; consumed
-    by the conform convergence classifier."""
+    changes content or physical identity inside the planning window."""
     DOCS_SOURCE_TOPOLOGY_RACE_MARKER: ClassVar[str] = (
         "docs source topology changed during planning"
     )
     """Emitted by ``docs_verify_sources`` when the discovered docs source set
-    gains or loses a file inside the planning window; consumed by the conform
-    convergence classifier."""
+    gains or loses a file inside the planning window."""
     CONFIG_SNAPSHOT_ROOT_RACE_MARKER: ClassVar[str] = (
         "project root changed during config snapshot"
     )
@@ -175,17 +172,6 @@ class FlextInfraConstantsCodegenProject:
     )
     """Emitted by ``snapshot_config_sources`` when the ``config/*.yaml`` set
     changes while its managed-artifact config is snapshotted."""
-    CONFORM_SOURCE_RACE_MARKERS: ClassVar[t.VariadicTuple[str]] = (
-        "atomic source changed",
-        "atomic destination parent is missing",
-        "atomic source has conflicting snapshots",
-        DOCS_SOURCE_STATE_RACE_MARKER,
-        DOCS_SOURCE_TOPOLOGY_RACE_MARKER,
-        CONFIG_SNAPSHOT_ROOT_RACE_MARKER,
-        CONFIG_SNAPSHOT_TOPOLOGY_RACE_MARKER,
-    )
-    "Failure signatures meaning the tree mutated under one locked conform cycle."
-
     WORKSPACE_MANIFEST_FILENAME: ClassVar[str] = "workspace.yaml"
     WORKSPACE_MANIFEST_VERSION: ClassVar[int] = 3
     UV_LOCK_FILENAME: ClassVar[str] = "uv.lock"

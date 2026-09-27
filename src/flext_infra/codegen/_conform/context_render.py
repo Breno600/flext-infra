@@ -140,6 +140,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 documentation=documentation,
                 repository_root_rel=".",
                 year=codegen.scaffold.project.copyright_year,
+                cli_module=(
+                    repository_root
+                    / c.Infra.DEFAULT_SRC_DIR
+                    / package_name
+                    / c.Infra.CODEGEN_CLI_MODULE_FILENAME
+                ).is_file(),
             )
         )
 
@@ -370,6 +376,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 inherited_facets=project.inherited_facets,
                 root_packages=project.root_packages,
                 root_modules=project.root_modules,
+                cli_module=project.cli_module,
                 runtime_dependency_overlay=project.runtime_dependency_overlay,
                 description=project.description,
                 version=version_result.value,
@@ -385,6 +392,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 jscpd_version=codegen.toolchain.jscpd_version,
                 waza_version=codegen.toolchain.waza_version,
                 taplo_version=codegen.toolchain.taplo_version,
+                ast_grep_selector=codegen.toolchain.ast_grep_selector,
                 ast_grep_version=codegen.toolchain.ast_grep_version,
                 gitleaks_version=codegen.toolchain.gitleaks_version,
                 scc_version=codegen.toolchain.scc_version,
@@ -401,13 +409,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 repository_provider=repository.provider,
                 repository_git_url=repository.url,
                 repository_branch=integration_branch.value,
-                # A workspace root owns sources only for its actual members.
-                # External FLEXT dependencies still need their own Git source.
-                workspace_dependency_distributions=(
-                    tuple(member.distribution for member in workspace.subprojects)
-                    if profile is c.Infra.MakeProfile.WORKSPACE
-                    else ()
-                ),
                 year=project.year,
             )
         )

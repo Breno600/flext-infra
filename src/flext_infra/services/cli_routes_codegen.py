@@ -24,18 +24,44 @@ from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
 from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
 
-from .cli_route_base import CliRouteBase
+from .cli_route_base import FlextInfraCliRouteBase
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
-class CodegenRoutes(CliRouteBase):
+class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
     """Own check, codegen, and dependency command routes."""
 
     codegen_routes: ClassVar[
         MutableMapping[str, t.VariadicTuple[m.Cli.ResultCommandRoute]]
     ] = {
+        c.Infra.CLI_GROUP_CHECK: (
+            m.Cli.ResultCommandRoute(
+                name=c.Infra.VERB_RUN,
+                help_text="Run workspace quality gates",
+                model_cls=m.Infra.RunCommand,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraWorkspaceChecker.execute_payload
+                ),
+            ),
+            m.Cli.ResultCommandRoute(
+                name="fix-pyrefly-settings",
+                help_text="Repair [tool.pyrefly] blocks",
+                model_cls=m.Infra.FixPyreflyConfigCommand,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraConfigFixer.execute_payload
+                ),
+            ),
+            m.Cli.ResultCommandRoute(
+                name="fix-enforcement",
+                help_text="Auto-fix enforcement-catalog violations",
+                model_cls=m.Infra.FixEnforcementCommand,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraEnforcementFixerOrchestrator.execute_payload
+                ),
+            ),
+        ),
         c.Infra.CLI_GROUP_CODEGEN: (
             m.Cli.ResultCommandRoute(
                 name="conform",
@@ -57,7 +83,7 @@ class CodegenRoutes(CliRouteBase):
                         "new",
                         "Create a new FLEXT project from the canonical templates",
                         FlextInfraCodegenProjectNew,
-                        CliRouteBase.result_handler(
+                        FlextInfraCliRouteBase.result_handler(
                             FlextInfraCodegenProjectNew.execute
                         ),
                         "project created",
@@ -66,7 +92,7 @@ class CodegenRoutes(CliRouteBase):
                         "init",
                         "Bootstrap only the canonical generated Makefile",
                         FlextInfraCodegenMakeBootstrap,
-                        CliRouteBase.result_handler(
+                        FlextInfraCliRouteBase.result_handler(
                             FlextInfraCodegenMakeBootstrap.execute
                         ),
                         "Makefile bootstrap complete",
@@ -80,21 +106,21 @@ class CodegenRoutes(CliRouteBase):
                             "repository)"
                         ),
                         FlextInfraCodegenLazyInit,
-                        CliRouteBase.result_handler(FlextInfraCodegenLazyInit.execute),
+                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenLazyInit.execute),
                         "lazy-init complete",
                     ),
                     (
                         "census",
                         "Count namespace violations across workspace projects",
                         FlextInfraCodegenCensus,
-                        CliRouteBase.result_handler(FlextInfraCodegenCensus.execute),
+                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenCensus.execute),
                         None,
                     ),
                     (
                         "scaffold",
                         "Generate missing base modules in src/ and tests/",
                         FlextInfraCodegenScaffolder,
-                        CliRouteBase.result_handler(
+                        FlextInfraCliRouteBase.result_handler(
                             FlextInfraCodegenScaffolder.execute
                         ),
                         None,
@@ -103,28 +129,28 @@ class CodegenRoutes(CliRouteBase):
                         "auto-fix",
                         "Auto-fix namespace violations (move Finals/TypeVars)",
                         FlextInfraCodegenFixer,
-                        CliRouteBase.result_handler(FlextInfraCodegenFixer.execute),
+                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenFixer.execute),
                         None,
                     ),
                     (
                         "py-typed",
                         "Create/remove PEP 561 py.typed markers",
                         FlextInfraCodegenPyTyped,
-                        CliRouteBase.result_handler(FlextInfraCodegenPyTyped.execute),
+                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenPyTyped.execute),
                         "py-typed markers updated",
                     ),
                     (
                         "pipeline",
                         "Run full codegen pipeline",
                         FlextInfraCodegenPipeline,
-                        CliRouteBase.result_handler(FlextInfraCodegenPipeline.execute),
+                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenPipeline.execute),
                         None,
                     ),
                     (
                         "constants-quality-gate",
                         "Run constants migration quality gate",
                         FlextInfraCodegenQualityGate,
-                        CliRouteBase.result_handler(
+                        FlextInfraCliRouteBase.result_handler(
                             FlextInfraCodegenQualityGate.execute
                         ),
                         "constants quality gate passed",
@@ -133,7 +159,7 @@ class CodegenRoutes(CliRouteBase):
                         "consolidate",
                         "Consolidate inline constants into c.Infra.* references",
                         FlextInfraCodegenConsolidator,
-                        CliRouteBase.result_handler(
+                        FlextInfraCliRouteBase.result_handler(
                             FlextInfraCodegenConsolidator.execute
                         ),
                         None,
@@ -142,14 +168,14 @@ class CodegenRoutes(CliRouteBase):
                         "layout",
                         "Check/apply the canonical project layout (SSOT-driven)",
                         FlextInfraCodegenLayout,
-                        CliRouteBase.result_handler(FlextInfraCodegenLayout.execute),
+                        FlextInfraCliRouteBase.result_handler(FlextInfraCodegenLayout.execute),
                         "layout conformance complete",
                     ),
                     (
                         "mise-artifacts",
                         "Validate the generated Mise bundle read-only",
                         FlextInfraCodegenMiseArtifacts,
-                        CliRouteBase.result_handler(
+                        FlextInfraCliRouteBase.result_handler(
                             FlextInfraCodegenMiseArtifacts.execute
                         ),
                         "Mise artifact validation complete",
@@ -158,7 +184,7 @@ class CodegenRoutes(CliRouteBase):
                         "version-file",
                         "Generate __version__.py from project-metadata SSOT",
                         FlextInfraCodegenVersionFile,
-                        CliRouteBase.result_handler(
+                        FlextInfraCliRouteBase.result_handler(
                             FlextInfraCodegenVersionFile.execute
                         ),
                         "version-file generation complete",
@@ -171,7 +197,7 @@ class CodegenRoutes(CliRouteBase):
                 name=route_name,
                 help_text=help_text,
                 model_cls=model_cls,
-                handler=CliRouteBase.result_handler(model_cls.execute),
+                handler=FlextInfraCliRouteBase.result_handler(model_cls.execute),
             )
             for route_name, help_text, model_cls in (
                 (
@@ -194,4 +220,4 @@ class CodegenRoutes(CliRouteBase):
     }
 
 
-__all__: list[str] = ["CodegenRoutes"]
+__all__: list[str] = ["FlextInfraCodegenRoutes"]

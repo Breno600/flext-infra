@@ -105,21 +105,6 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             Literal["error", "note"], m.Field(description="Mypy diagnostic severity")
         ]
 
-    class MypyCoverageReport(m.ContractModel):
-        """Native linecoverage report, including files with no covered lines."""
-
-        lines: Annotated[
-            t.MappingKV[str, t.SequenceOf[t.PositiveInt]],
-            m.Field(min_length=1, description="Covered lines by absolute source path"),
-        ]
-
-        @u.model_validator(mode="after")
-        def _validate_sources(self) -> Self:
-            if any(not Path(path).is_absolute() for path in self.lines):
-                msg = "Mypy coverage must identify absolute source paths"
-                raise ValueError(msg)
-            return self
-
     class PyrightPosition(m.ContractModel):
         """Zero-based native diagnostic position."""
 

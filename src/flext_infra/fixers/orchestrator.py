@@ -21,7 +21,6 @@ from .rope_fixer import FlextInfraRopeFixerAdapter
 from .transformer_fixer import FlextInfraTransformerFixerAdapter
 
 if TYPE_CHECKING:
-    from pathlib import Path
 
     from .base import FlextInfraFixerAdapter
 
@@ -171,20 +170,20 @@ class FlextInfraEnforcementFixerOrchestrator(
         results: list[m.Infra.ProjectFixResult] = []
         for adapter_cls, adapter_rules in self._group_by_adapter(rules).items():
             adapter = self._instantiate_adapter(adapter_cls)
-            violations, failures = self._collect_violations(
-                project_dir=project_dir, rules=adapter_rules
-            )
-            if failures:
+            evaluation = self._engine().collect_project(project_dir, adapter_rules)
+            if evaluation.failures:
                 results.append(
                     m.Infra.ProjectFixResult(
-                        project=project_dir.name, failed=tuple(failures)
+                        project=project_dir.name, failed=evaluation.failures
                     )
                 )
                 if self.fail_fast:
                     return tuple(results)
-            if not violations:
+            if not evaluation.violations:
                 continue
-            result = adapter.fix_project(project_dir, violations, self._command_ctx())
+            result = adapter.fix_project(
+                project_dir, evaluation.violations, self._command_ctx()
+            )
             results.append(result)
             if result.failed and self.fail_fast:
                 return tuple(results)
@@ -226,15 +225,6 @@ class FlextInfraEnforcementFixerOrchestrator(
     def _engine(self) -> FlextInfraEnforcementEngine:
         """Build the shared enforcement engine for this workspace."""
         return FlextInfraEnforcementEngine(self.repository_root)
-
-    def _collect_violations(
-        self, project_dir: Path, rules: t.SequenceOf[m.EnforcementRuleSpec]
-    ) -> t.Pair[
-        list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]], list[m.Infra.FailedFix]
-    ]:
-        """Collect violations for ``rules`` inside ``project_dir``."""
-        evaluation = self._engine().collect_project(project_dir, rules)
-        return evaluation.violations, evaluation.failures
 
     def _command_ctx(self) -> m.Infra.FixEnforcementCommand:
         """Build a command context for adapters from the service fields.

@@ -48,6 +48,10 @@ class FlextInfraConfigModelsTemplates:
                 ),
             ),
         ] = False
+        requires_beads: Annotated[
+            bool,
+            m.Field(description="Whether the projection requires Beads participation"),
+        ] = False
 
         @m.model_validator(mode="after")
         def validate_delegate_source(self) -> Self:

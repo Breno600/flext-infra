@@ -19,8 +19,10 @@ from flext_infra.workspace.environment_contracts import (
 from ..base import s
 
 
-class FlextInfraWorkspaceBeadsEnvironmentMixin(FlextInfraWorkspaceEnvironmentMixin):
-    """Generated beads-workspace activation + post-sync direnv allow."""
+class FlextInfraWorkspaceEnvironmentSync(
+    FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]
+):
+    """CLI-facing environment sync: beads-workspace activation + direnv allow."""
 
     _BEADS_ENVRC_TEMPLATE: ClassVar[str] = ".envrc.beads-workspace"
 
@@ -112,12 +114,6 @@ class FlextInfraWorkspaceBeadsEnvironmentMixin(FlextInfraWorkspaceEnvironmentMix
             )
         return r[bool].ok(True)
 
-
-class FlextInfraWorkspaceEnvironmentSync(
-    FlextInfraWorkspaceBeadsEnvironmentMixin, s[t.JsonDict]
-):
-    """CLI-facing service composing the full environment sync surface."""
-
     @classmethod
     def execute_request(
         cls, request: m.Infra.WorkspaceEnvironmentSyncRequest
@@ -131,7 +127,4 @@ class FlextInfraWorkspaceEnvironmentSync(
         )
 
 
-__all__: t.VariadicTuple[str] = (
-    "FlextInfraWorkspaceBeadsEnvironmentMixin",
-    "FlextInfraWorkspaceEnvironmentSync",
-)
+__all__: t.VariadicTuple[str] = ("FlextInfraWorkspaceEnvironmentSync",)

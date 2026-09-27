@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, override
 
 from flext_infra import c, t
 
-from .services.cli_dispatch import CliDispatchService
+from .services.cli_dispatch import FlextInfraCliDispatchService
 
 if TYPE_CHECKING:
     from flext_infra import m
 
 
-class FlextInfraCli(CliDispatchService):
+class FlextInfraCli(FlextInfraCliDispatchService):
     """Single CLI entry surface for every flext-infra command group."""
 
     @classmethod

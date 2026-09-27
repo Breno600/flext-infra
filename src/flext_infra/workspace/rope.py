@@ -180,7 +180,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         cached = self._resource_cache.get(cache_key)
         if cache_key in self._resource_cache:
             return cached
-        resource = u.Infra.get_resource_from_path(self.rope_project, file_path)
+        resource = u.Infra.resolve_resource_from_path(self.rope_project, file_path)
         self._resource_cache[cache_key] = resource
         return resource
 
@@ -500,7 +500,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
 
     def semantic(self, file_path: Path) -> m.Infra.ModuleSemanticState:
         """Return one cached semantic snapshot for a module path."""
-        state: m.Infra.ModuleSemanticState = u.Infra.get_module_semantic_state(
+        state: m.Infra.ModuleSemanticState = u.Infra.resolve_module_semantic_state(
             self.rope_project, self._resource_for(file_path)
         )
         return state
@@ -510,7 +510,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
     ) -> t.StrSequence:
         """Return public export names for one module path."""
         resolved_export_options = export_options or m.Infra.ExportOptions()
-        return u.Infra.get_module_export_names(
+        return u.Infra.resolve_module_export_names(
             self.rope_project,
             self._resource_for(file_path),
             export_options=resolved_export_options,

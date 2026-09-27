@@ -22,9 +22,7 @@ if TYPE_CHECKING:
         FlextInfraCodegenGenerationTypeCheckingMixin,
     )
     from ._codegen_staging import stage_file_plans
-    from ._conform._request_fields import FlextInfraCodegenConformRequestFields
     from ._conform.artifact_render import FlextInfraCodegenConformArtifactRender
-    from ._conform.base import FlextInfraCodegenConformBase
     from ._conform.beads_routes import FlextInfraCodegenConformBeadsRoutes
     from ._conform.bootstrap import FlextInfraCodegenConformBootstrap
     from ._conform.context_render import FlextInfraCodegenConformContextRender
@@ -96,7 +94,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenCensus",
     "FlextInfraCodegenConform",
     "FlextInfraCodegenConformArtifactRender",
-    "FlextInfraCodegenConformBase",
     "FlextInfraCodegenConformBeadsRoutes",
     "FlextInfraCodegenConformBootstrap",
     "FlextInfraCodegenConformContextRender",
@@ -107,7 +104,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConformGitignore",
     "FlextInfraCodegenConformPlan",
     "FlextInfraCodegenConformPyprojectPolicy",
-    "FlextInfraCodegenConformRequestFields",
     "FlextInfraCodegenConformScaffoldPlan",
     "FlextInfraCodegenConsolidator",
     "FlextInfraCodegenConsolidatorStepsMixin",
@@ -186,9 +182,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ),
             "._codegen_staging": ("stage_file_plans",),
             "._conform": ("_conform",),
-            "._conform._request_fields": ("FlextInfraCodegenConformRequestFields",),
             "._conform.artifact_render": ("FlextInfraCodegenConformArtifactRender",),
-            "._conform.base": ("FlextInfraCodegenConformBase",),
             "._conform.beads_routes": ("FlextInfraCodegenConformBeadsRoutes",),
             "._conform.bootstrap": ("FlextInfraCodegenConformBootstrap",),
             "._conform.context_render": ("FlextInfraCodegenConformContextRender",),

@@ -39,7 +39,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             return ()
         values: list[str] = []
         for element in getattr(node, "elts", ()) or ():
-            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(element):
+            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(element):
                 return ()
             element_kind = FlextInfraUtilitiesRopeAnalysisAstHelpers.node_kind(element)
             if element_kind == "Constant":
@@ -133,13 +133,13 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         function_name = (
             FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(func)
             if func is not None
-            and FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(func)
+            and FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(func)
             else ""
         )
         args = getattr(node, "args", ()) or ()
         if function_name in {"MappingProxyType", "build_lazy_import_map"} and args:
             first_arg = args[0]
-            if FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(first_arg):
+            if FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(first_arg):
                 return FlextInfraUtilitiesRopeAnalysisSourceScan.mapping_entries_refs(
                     first_arg
                 )
@@ -148,7 +148,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         entries: list[t.Pair[str, t.StrSequence]] = []
         refs: list[str] = []
         for argument in args:
-            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(argument):
+            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(argument):
                 continue
             next_entries, next_refs = (
                 FlextInfraUtilitiesRopeAnalysisSourceScan.mapping_entries_refs(argument)
@@ -168,19 +168,19 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         refs: list[str] = []
         for key_node, value_node in zip(keys, values, strict=False):
             if key_node is None:
-                if FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(value_node):
+                if FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(value_node):
                     ref_name = FlextInfraUtilitiesRopeAnalysisAstHelpers.name_of(
                         value_node
                     )
                     if ref_name:
                         refs.append(ref_name)
                 continue
-            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(key_node):
+            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(key_node):
                 continue
             key_value = getattr(key_node, "value", None)
             if not isinstance(key_value, str):
                 continue
-            if FlextInfraUtilitiesRopeAnalysisAstHelpers.is_ast_node(value_node):
+            if FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(value_node):
                 value_strings = (
                     FlextInfraUtilitiesRopeAnalysisSourceScan.literal_string_sequence(
                         value_node

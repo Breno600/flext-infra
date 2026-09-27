@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import difflib
+import os
 from collections.abc import MutableMapping
 from itertools import islice
 from pathlib import Path
@@ -15,6 +16,7 @@ from flext_infra import c, m, t
 
 from .._config import FlextInfraConfig
 from .discovery import FlextInfraUtilitiesDiscovery
+from .project_discovery import FlextInfraUtilitiesProjectDiscovery
 from .resource_limits import FlextInfraUtilitiesResourceLimits
 
 
@@ -46,11 +48,16 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @staticmethod
     def _workspace_tool_command(workspace: Path, tool_name: str) -> t.StrSequence:
-        """Resolve one tool against the workspace venv before falling back to PATH."""
-        tool_path = (workspace.resolve() / c.Infra.VENV_BIN_REL / tool_name).resolve()
-        if tool_path.is_file():
-            return (str(tool_path),)
-        return (tool_name,)
+        """Resolve one tool from the managed external workspace environment."""
+        environment = FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
+            workspace
+        )
+        executable = tool_name + (".exe" if os.name == "nt" else "")
+        tool_path = environment / ("Scripts" if os.name == "nt" else "bin") / executable
+        if not tool_path.is_file():
+            msg = f"managed workspace tool is missing: {tool_path}"
+            raise FileNotFoundError(msg)
+        return (str(tool_path),)
 
     @staticmethod
     def _normalize_lint_line(line: str) -> str:

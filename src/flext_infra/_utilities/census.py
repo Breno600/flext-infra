@@ -157,7 +157,7 @@ class FlextInfraUtilitiesRefactorCensus:
         resource = rope.resource(file_path)
         if resource is None:
             return ()
-        declared_imports = FlextInfraUtilitiesRopeAnalysis.get_declared_module_imports(
+        declared_imports = FlextInfraUtilitiesRopeAnalysis.resolve_declared_module_imports(
             rope.rope_project, resource
         )
         alias_names = tuple(
@@ -305,18 +305,18 @@ class FlextInfraUtilitiesRefactorCensus:
         resource = rope.resource(file_path)
         if resource is None:
             return ()
-        attributes = FlextInfraUtilitiesRopeCore.get_pymodule(
+        attributes = FlextInfraUtilitiesRopeCore.resolve_pymodule(
             rope.rope_project, resource
         ).get_attributes()
         target_pyname = attributes.get(target_name)
-        if target_pyname is None or FlextInfraUtilitiesRopeRuntime.is_imported_name(
+        if target_pyname is None or FlextInfraUtilitiesRopeRuntime.imported_name(
             target_pyname
         ):
             return ()
         target_object = target_pyname.get_object()
         alias_names: set[str] = set()
         for name, pyname in attributes.items():
-            if name == target_name or FlextInfraUtilitiesRopeRuntime.is_imported_name(
+            if name == target_name or FlextInfraUtilitiesRopeRuntime.imported_name(
                 pyname
             ):
                 continue

@@ -9,7 +9,7 @@ from flext_tests import tm
 
 from flext_infra import c, config, main
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from flext_infra.services.cli_routes import CliRouteService
+from flext_infra.services.cli_routes import FlextInfraCliRouteService
 from tests import u
 
 
@@ -56,7 +56,7 @@ class TestsFlextInfraCliRepositoryRootContract:
         """Reject stale recipes and hidden service aliases as well as CLI drift."""
         route = next(
             route
-            for route in CliRouteService.route_table_for(group)
+            for route in FlextInfraCliRouteService.route_table_for(group)
             if route.name == command
         )
         fields = route.model_cls.model_fields

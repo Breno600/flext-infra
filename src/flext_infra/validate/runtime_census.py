@@ -217,7 +217,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
 
     def build_report(self) -> p.Result[m.Infra.ValidationReport]:
         """Build one validation report for the selected workspace projects."""
-        projects_result = u.Infra.projects(self.repository_root)
+        projects_result = u.Infra.resolve_projects(self.repository_root, ())
         if projects_result.failure:
             return r[m.Infra.ValidationReport].from_failure(projects_result)
         projects = self._filtered_projects(projects_result.unwrap())

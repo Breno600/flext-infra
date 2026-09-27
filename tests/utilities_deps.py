@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from uuid import uuid4
 
@@ -34,16 +35,19 @@ class TestsFlextInfraUtilitiesDepsMixin:
         repository_root: Path | None = None,
     ) -> p.Result[p.Cli.CommandOutput]:
         """Run the public detector in its provisioned interpreter, without overrides."""
-        runtime = root / Path(c.Infra.VENV_BIN_REL).parent
+        runtime = u.Infra.runtime_environment_dir(root)
         environment = {
             "UV_PROJECT_ENVIRONMENT": str(runtime),
             "VIRTUAL_ENV": str(runtime),
         }
         if env is not None:
             environment.update(env)
+        python = runtime / ("Scripts" if os.name == "nt" else "bin") / (
+            "python.exe" if os.name == "nt" else "python"
+        )
         result = u.Cli.run_raw(
             [
-                str(runtime / "bin" / "python"),
+                str(python),
                 "-m",
                 "flext_infra",
                 "deps",

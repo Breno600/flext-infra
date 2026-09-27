@@ -9,11 +9,7 @@ dependency lists are CUSTOM afterwards, so the declaration then rules. -#}
 {%- macro flext_requirement(item) -%}
 {%- set bare = item is string and item.startswith("flext-") and item.replace("-", "").replace("_", "").isalnum() -%}
 {%- if bare -%}
-{%- if item in workspace_dependency_distributions -%}
-"{{ item }}"
-{%- else -%}
 "{{ item }} @ git+{{ flext_git_base_url }}/{{ item }}.git@{{ flext_git_branch }}"
-{%- endif -%}
 {%- else -%}
 {{ item | tojson }}
 {%- endif -%}
@@ -76,8 +72,10 @@ dev = [
   {{ flext_requirement(item) }},
 {% endfor %}
 ]
+{% if cli_module %}
 [project.scripts]
 {{ dist }} = "{{ package_name }}.cli:main"
+{% endif %}
 {% if repository %}
 
 [project.urls]

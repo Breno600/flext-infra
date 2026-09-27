@@ -7,7 +7,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import c
-from flext_infra.check.workspace_check_gates import FlextInfraGateRegistry
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.gates.smells import FlextInfraSmellsGate
 from tests import m, u
 

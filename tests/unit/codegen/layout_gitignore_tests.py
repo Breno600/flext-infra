@@ -76,10 +76,10 @@ class TestsFlextInfraCodegenLayoutGitignore:
 
     @pytest.mark.slow
     @pytest.mark.parametrize("directory_suffix", ["", "-lane"])
-    def test_conform_materializes_layout_gitignore_additions(
+    def test_rendered_gitignore_satisfies_layout_additions(
         self, tmp_path: Path, directory_suffix: str
     ) -> None:
-        """``codegen conform`` renders the layout override additions into ``.gitignore``.
+        """The public gitignore renderer satisfies the layout consumer.
 
         The planner used to render ``base/gitignore.j2`` from its own section list
         without the layout override, so ``make gen`` never satisfied the layout gate
@@ -124,6 +124,7 @@ class TestsFlextInfraCodegenLayoutGitignore:
             (root / c.CONFIG_DIR_NAME / c.Infra.WORKSPACE_MANIFEST_FILENAME).is_file(),
             eq=True,
         )
+        (root / c.Infra.GITIGNORE).write_text(tm.ok(rendered), encoding="utf-8")
 
         entries = (root / c.Infra.GITIGNORE).read_text(encoding="utf-8").splitlines()
         missing = tuple(

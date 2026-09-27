@@ -130,7 +130,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         project_name = project_path.name
         if not params.quiet:
             detector.log.info("deps_typings_detect_running", project=project_name)
-        typings_result = typing_deps.get_required_typings(
+        typings_result = typing_deps.analyze_required_typings(
             project_path, limits_path=limits_path
         )
         if typings_result.failure:

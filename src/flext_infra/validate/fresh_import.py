@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Annotated, ClassVar, override
 
 from flext_core import r
-from flext_infra import c, config, m, p, t, u
+from flext_infra import c, m, p, t, u
 
 from ..base import FlextInfraServiceBase
 
@@ -155,6 +155,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             return u.Cli.run_raw(
                 [sys.executable, "-W", "error", "-"],
                 cwd=self.repository_root,
+                timeout=c.Infra.TIMEOUT_SHORT,
                 env=env,
                 input_data=probe.code,
             )
