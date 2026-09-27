@@ -416,7 +416,9 @@ class FlextInfraUtilitiesRopeAnalysisImportState:
                 continue
             if binding.get_object() is not target:
                 continue
-            aliases = cls._declared_class_aliases(target)
+            # Rope can resolve an inherited class through its declaring module.
+            # An alias owned by that module is not published by this resource.
+            aliases = cls._declared_class_aliases(target) & frozenset(exports)
             if not aliases and infer_missing:
                 aliases = missing_aliases or cls._inherited_class_aliases(
                     target, visited=frozenset()
