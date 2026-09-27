@@ -174,7 +174,13 @@ class FlextInfraSmellsGate(FlextInfraGate):
         )
 
     def _scan_command(self, binary: str, project_dir: Path) -> t.StrSequence:
-        """Use Qlty's explicit paths for the selected CI project."""
+        """Scan every file of the selected scope, whatever the git diff says.
+
+        Qlty analyzes only changed files unless ``--all`` is passed, even when
+        explicit paths are given; dropping it made the verdict depend on the
+        checkout's diff against upstream (a CI merge checkout read as clean).
+        Paths only narrow the scope to the selected project.
+        """
         if not self._project_scoped(project_dir):
             return (binary, *c.Infra.SMELLS_QLTY_ARGS)
         paths = tuple(
@@ -184,15 +190,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
         if not paths:
             message = f"smells: no check targets for {project_dir}"
             raise ValueError(message)
-        return (
-            binary,
-            *(
-                arg
-                for arg in c.Infra.SMELLS_QLTY_ARGS
-                if arg != c.Infra.SMELLS_QLTY_ALL_ARG
-            ),
-            *paths,
-        )
+        return (binary, *c.Infra.SMELLS_QLTY_ARGS, *paths)
 
     @staticmethod
     def _unrunnable_scan_output(stderr: str) -> p.Cli.CommandOutput:

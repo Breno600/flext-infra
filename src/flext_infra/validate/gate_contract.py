@@ -63,10 +63,12 @@ class FlextInfraGateContractValidator(
     def execute(self) -> p.Result[bool]:
         """Execute validation as a service."""
         return self.run().flat_map(
-            lambda outcome: r[bool].ok(True)
-            if outcome.exit_code == int(c.Infra.ScriptExitCode.PASS)
-            else r[bool].fail(
-                f"gate contract found {outcome.violation_count} error(s)"
+            lambda outcome: (
+                r[bool].ok(True)
+                if outcome.exit_code == int(c.Infra.ScriptExitCode.PASS)
+                else r[bool].fail(
+                    f"gate contract found {outcome.violation_count} error(s)"
+                )
             )
         )
 
