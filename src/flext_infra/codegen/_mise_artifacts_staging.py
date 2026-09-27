@@ -1,4 +1,4 @@
-"""Destination-local staging for complete newest-Mise artifact sets."""
+"""Destination-local staging for complete Mise artifact projections."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from flext_core import r
 from flext_infra import c, m, u
 
 from ._mise_artifacts_candidates import publication_plan
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
 from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess as process
 
 if TYPE_CHECKING:
@@ -17,7 +16,12 @@ if TYPE_CHECKING:
 
 
 class FlextInfraMiseStaging:
-    """Build every replacement before the journal permits live publication."""
+    """Build every replacement before the journal permits live publication.
+
+    Generation never produces a launcher: every selected project receives the
+    exact bytes of the runtime root's `make upg` triple (the runtime root
+    itself receives its own bytes, a no-op publication).
+    """
 
     def stage(
         self, plan: m.Infra.MiseToolchainWorkspacePlan
@@ -27,7 +31,7 @@ class FlextInfraMiseStaging:
             t.VariadicTuple[m.Cli.AtomicDirectoryState],
         ]
     ]:
-        """Stage the packaged launcher fleet alongside each declaration."""
+        """Stage the runtime-root triple alongside each project's declaration."""
         result_type = r[
             tuple[
                 tuple[m.Infra.CodegenStagedFile, ...],
@@ -36,28 +40,21 @@ class FlextInfraMiseStaging:
         ]
         if not plan.projects:
             return result_type.fail("Mise plan declares no projects")
-        packaged = files.packaged_launchers()
-        if packaged.failure:
-            return result_type.from_failure(packaged)
-        return self._stage_projects(plan, packaged.value)
-
-    def _stage_projects(
-        self,
-        plan: m.Infra.MiseToolchainWorkspacePlan,
-        seed_launchers: t.VariadicTuple[bytes],
-    ) -> p.Result[
-        t.Pair[
-            t.VariadicTuple[m.Infra.CodegenStagedFile],
-            t.VariadicTuple[m.Cli.AtomicDirectoryState],
-        ]
-    ]:
-        """Stage the seed launcher pair into every selected project."""
-        result_type = r[
-            tuple[
-                tuple[m.Infra.CodegenStagedFile, ...],
-                tuple[m.Cli.AtomicDirectoryState, ...],
-            ]
-        ]
+        runtime = plan.runtime_artifacts
+        projected = tuple(
+            state.content
+            for state in (
+                runtime.unix_launcher,
+                runtime.windows_launcher,
+                runtime.version_pin,
+            )
+            if state.content is not None
+        )
+        if len(projected) != len(c.Infra.ARTIFACT_SPECS):
+            return result_type.fail(
+                "runtime Mise artifacts are incomplete; run make upg in "
+                f"{plan.layout.scope_root}"
+            )
         publications: list[m.Infra.CodegenStagedFile] = []
         directories: list[m.Cli.AtomicDirectoryState] = []
         for project in plan.projects:
@@ -67,7 +64,7 @@ class FlextInfraMiseStaging:
                 )
             stage_root = project.layout.transaction_root / "stage"
             staged = self._stage_project(
-                project, stage_root=stage_root, seed_launchers=seed_launchers
+                project, stage_root=stage_root, projected=projected
             )
             if staged.failure:
                 return result_type.from_failure(staged)
@@ -83,7 +80,7 @@ class FlextInfraMiseStaging:
         project: m.Infra.MiseToolchainProjectState,
         *,
         stage_root: Path,
-        seed_launchers: t.VariadicTuple[bytes],
+        projected: t.VariadicTuple[bytes],
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]:
         """Build one project and retain its guarded directory creation receipts."""
         result_type = r[tuple[m.Cli.AtomicDirectoryState, ...]]
@@ -107,7 +104,7 @@ class FlextInfraMiseStaging:
         if config_write.failure:
             return result_type.from_failure(config_write)
         for content, (name, mode) in zip(
-            seed_launchers, c.Infra.ARTIFACT_SPECS, strict=True
+            projected, c.Infra.ARTIFACT_SPECS, strict=True
         ):
             copied = process.write_new(stage_root / name, content, mode)
             if copied.failure:

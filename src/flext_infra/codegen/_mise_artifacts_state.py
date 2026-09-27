@@ -76,6 +76,7 @@ class FlextInfraMiseArtifactsState:
                         project.artifacts.config,
                         project.artifacts.unix_launcher,
                         project.artifacts.windows_launcher,
+                        project.artifacts.version_pin,
                     )
                 }
                 project_device = cls._hosting_device(project.root)
@@ -104,6 +105,7 @@ class FlextInfraMiseArtifactsState:
                     project.artifacts.config,
                     project.artifacts.unix_launcher,
                     project.artifacts.windows_launcher,
+                    project.artifacts.version_pin,
                 )
                 if artifact.parent != project.root
             )

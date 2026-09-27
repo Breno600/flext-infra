@@ -54,6 +54,10 @@ class FlextInfraUtilitiesCodegen(
                 c.Infra.MISE_BOOTSTRAP_PASSTHROUGH_ENVIRONMENT
             ),
             version_pin_file=c.Infra.MISE_VERSION_PIN_FILENAME,
+            version_pin_header=c.Infra.MISE_VERSION_PIN_HEADER,
+            version_pin_reader=c.Infra.MISE_VERSION_PIN_READER,
+            release_selector=c.Infra.MISE_RELEASE_SELECTOR,
+            artifact_specs=c.Infra.ARTIFACT_SPECS,
             lock_file=c.Infra.MISE_LOCK_FILENAME,
             runtime_install_relative_template=c.Infra.MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE,
             resolved_release_pattern=c.Infra.MISE_RELEASE_PATTERN,
@@ -164,6 +168,25 @@ class FlextInfraUtilitiesCodegen(
                     f"persistent Mise path escaped storage: {physical_directory}"
                 )
         return r[Path].ok(physical_root)
+
+    @staticmethod
+    def mise_pinned_release(content: str) -> p.Result[str]:
+        """Return the release a ``mise.version`` pin records: its sole data line.
+
+        Comment and blank lines are the generated header; the shell readers
+        apply the same rule through ``c.Infra.MISE_VERSION_PIN_READER``.
+        """
+        data = tuple(
+            line
+            for line in content.split("\n")
+            if line.strip() and not line.lstrip().startswith("#")
+        )
+        release = data[0] if len(data) == 1 else ""
+        if re.fullmatch(c.Infra.MISE_RELEASE_PATTERN, release) is None:
+            return r[str].fail(
+                f"pin records no resolved Mise release ({release or 'empty'})"
+            )
+        return r[str].ok(release)
 
     @staticmethod
     def mise_runtime_install_path(storage_root: Path, release: str) -> p.Result[Path]:

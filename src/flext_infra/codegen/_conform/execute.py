@@ -686,7 +686,9 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         else:
             project_layouts = plan.layout.projects
         for project_layout in project_layouts:
-            validated = mise.validate_artifacts(project_layout.root)
+            validated = mise.validate_artifacts(
+                project_layout.root, plan.layout.scope_root
+            )
             if validated.failure:
                 return r[bool].from_failure(validated)
         u.Cli.info("stage=verify-fresh-imports")
