@@ -24,7 +24,7 @@ from flext_infra.codegen import (
     FlextInfraMiseWorkspacePlanner,
 )
 from flext_infra.docs import FlextInfraDocGenerator
-from flext_infra.services.cli_routes_codegen import CodegenRoutes
+from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import c, m, p, t, u
 
@@ -880,7 +880,7 @@ class TestsFlextInfraCodegenConform:
         u.Tests.commit_git_changes(root, "Seed generated project")
         route = next(
             route
-            for route in CodegenRoutes.codegen_routes[c.Infra.CLI_GROUP_CODEGEN]
+            for route in FlextInfraCodegenRoutes.codegen_routes[c.Infra.CLI_GROUP_CODEGEN]
             if route.name == "conform"
         )
         request = u.Tests.conform_request(
