@@ -83,16 +83,19 @@ class FlextInfraRefactorCensus(
         return path
 
     @property
+    @override
     def kind_names(self) -> t.StrSequence | None:
         """Normalized symbol-kind filters."""
         return u.Infra.normalize_sequence_values(self.kinds)
 
     @property
+    @override
     def rule_names(self) -> t.StrSequence | None:
         """Normalized violation-rule filters."""
         return u.Infra.normalize_sequence_values(self.rules)
 
     @property
+    @override
     def family_names(self) -> t.StrSequence | None:
         """Normalized family filters."""
         return u.Infra.normalize_sequence_values(self.families)

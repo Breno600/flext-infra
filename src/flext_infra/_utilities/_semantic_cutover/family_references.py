@@ -84,9 +84,7 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
                     edits.append(
                         m.Infra.SourceRewrite(start=start, end=end, text=replacement)
                     )
-        blocked, quoted = cls._family_quoted_rewrites(
-            resource, source, flatten=flatten
-        )
+        blocked, quoted = cls._family_quoted_rewrites(resource, source, flatten=flatten)
         return (True, ()) if blocked else (False, (*edits, *quoted))
 
 

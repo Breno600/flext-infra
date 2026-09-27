@@ -75,11 +75,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         if ctx.dry_run:
             return self._write_release_text(
                 log, f"release metadata staged and validated: {name}\n"
-            ).map(
-                lambda _: self._record(
-                    target, log, exit_code=0, source=staged.value
-                )
-            )
+            ).map(lambda _: self._record(target, log, exit_code=0, source=staged.value))
         dist = temporary / "dist"
         build = u.Cli.run_raw(
             [

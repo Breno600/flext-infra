@@ -218,11 +218,7 @@ class FlextInfraGate:
         )
 
     def _detected_gate_execution(
-        self,
-        project_dir: Path,
-        *,
-        issues: t.SequenceOf[m.Infra.Issue],
-        started: float,
+        self, project_dir: Path, *, issues: t.SequenceOf[m.Infra.Issue], started: float
     ) -> m.Infra.GateExecution:
         """Assemble one gate execution from detector-produced issues."""
         return self._build_check_gate_execution(
@@ -234,12 +230,7 @@ class FlextInfraGate:
         )
 
     def _gate_result(
-        self,
-        project_dir: Path,
-        *,
-        passed: bool,
-        errors: t.StrSequence,
-        started: float,
+        self, project_dir: Path, *, passed: bool, errors: t.StrSequence, started: float
     ) -> m.Infra.GateResult:
         """Summarize one gate run: identity, verdict, report lines and duration."""
         return m.Infra.GateResult(

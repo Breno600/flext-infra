@@ -70,11 +70,7 @@ class FlextInfraRefactorSignaturePropagator(FlextInfraRopeTransformer):
         return source
 
     def _rewrite_calls(
-        self,
-        source: str,
-        *,
-        simple_name: str,
-        migration: m.Infra.SignatureMigration,
+        self, source: str, *, simple_name: str, migration: m.Infra.SignatureMigration
     ) -> str:
         """Rewrite keyword arguments in calls to ``simple_name`` via rope-located ranges."""
         pymodule = u.Infra.parse_string_module(source)

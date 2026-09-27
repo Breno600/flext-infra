@@ -126,9 +126,7 @@ class FlextInfraRefactorCensusCollectMixin(
                     project=project,
                     convention=convention,
                     objects=module_objects,
-                    symbol_index=self._lightweight_symbol_index(
-                        rope, module.file_path
-                    ),
+                    symbol_index=self._lightweight_symbol_index(rope, module.file_path),
                     scan_config=scan_config,
                 )
             )

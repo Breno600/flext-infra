@@ -74,9 +74,7 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
                 violations.extend(
                     self.check_module(
                         m.Infra.ParsedPythonModule(
-                            source=filepath.read_text(
-                                encoding=c.Cli.ENCODING_DEFAULT
-                            ),
+                            source=filepath.read_text(encoding=c.Cli.ENCODING_DEFAULT),
                             tree=module_result.value,
                         ),
                         rel,

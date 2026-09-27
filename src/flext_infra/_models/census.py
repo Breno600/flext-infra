@@ -255,9 +255,7 @@ class FlextInfraModelsCensus:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         project_objects: Annotated[
-            t.MutableMappingKV[
-                str, t.MutableSequenceOf[FlextInfraModelsCensus.Object]
-            ],
+            t.MutableMappingKV[str, t.MutableSequenceOf[FlextInfraModelsCensus.Object]],
             m.Field(description="Object inventory accumulated per project"),
         ]
         project_violations: Annotated[

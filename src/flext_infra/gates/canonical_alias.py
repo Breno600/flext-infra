@@ -153,11 +153,7 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
         if files_result.failure:
             message = files_result.error or "canonical-alias fix failed"
             return self._build_single_issue_result(
-                project_dir,
-                project_dir,
-                message,
-                passed=False,
-                started=started,
+                project_dir, project_dir, message, passed=False, started=started
             )
 
         rope_project = u.Infra.init_rope_project(project_dir)
@@ -311,12 +307,7 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
             raise RuntimeError(msg)
 
     def _fix_failure_result(
-        self,
-        *,
-        project_dir: Path,
-        file_path: Path,
-        message: str,
-        started: float,
+        self, *, project_dir: Path, file_path: Path, message: str, started: float
     ) -> m.Infra.GateExecution:
         """Build a failed fix result for local rewrite failures."""
         return self._build_single_issue_result(

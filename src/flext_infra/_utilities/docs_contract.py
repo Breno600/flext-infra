@@ -6,10 +6,9 @@ from collections.abc import Mapping
 from html import unescape
 from typing import TYPE_CHECKING
 
+from flext_cli import u
 from markdown import Markdown
 from markdown.extensions.toc import slugify
-
-from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, m, t
