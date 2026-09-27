@@ -15,13 +15,13 @@ from flext_infra.detectors.silent_failure_detector import (
     FlextInfraSilentFailureDetector,
 )
 
-from .base_gate import FlextInfraGate, FlextInfraScannerGateMixin
+from .scanner_gate import FlextInfraScannerGateMixin
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
-class FlextInfraSilentFailureGate(FlextInfraScannerGateMixin, FlextInfraGate):
+class FlextInfraSilentFailureGate(FlextInfraScannerGateMixin):
     """Block silent failure sentinels in any Python project under the workspace."""
 
     gate_id: ClassVar[str] = "silent-failure"

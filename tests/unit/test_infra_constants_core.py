@@ -11,7 +11,7 @@ from __future__ import annotations
 from flext_tests import tm
 
 from flext_infra import config
-from flext_infra.check.workspace_check_gates import FlextInfraGateRegistry
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from tests import c
 
 
