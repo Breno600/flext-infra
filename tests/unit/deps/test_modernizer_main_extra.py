@@ -85,7 +85,9 @@ class TestsFlextInfraDepsModernizerMainExtra:
 
         # The canonical docs-scope reader owns the typed invalid-TOML error and
         # names the file; the run lets it leave instead of logging an exit code.
-        with pytest.raises(ValueError, match="docs pyproject TOML is invalid") as raised:
+        with pytest.raises(
+            ValueError, match="docs pyproject TOML is invalid"
+        ) as raised:
             modernizer.run()
         tm.that(str(raised.value), has=str(selected_pyproject))
         tm.that(root_pyproject.read_bytes(), eq=root_before)

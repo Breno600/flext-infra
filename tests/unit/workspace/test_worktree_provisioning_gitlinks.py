@@ -10,7 +10,6 @@ from flext_infra import FlextInfraWorktreeService, c
 from tests import t, u
 
 
-
 class TestsFlextInfraWorktreeProvisioningGitlinks:
     """Prove governed gitlink materialization behaves under hostile lane state."""
 

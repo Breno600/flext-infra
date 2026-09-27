@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from pathlib import Path
 from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
@@ -80,7 +79,6 @@ class FlextInfraModelsDepsToolConfig(
 
     class PytestConfig(m.ArbitraryTypesModel):
         """Pytest baseline settings loaded from YAML."""
-
 
         # flext-j47u (codex): every rendered pytest value is validated config data.
         case_timeout_seconds: Annotated[

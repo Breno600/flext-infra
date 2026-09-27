@@ -45,7 +45,7 @@ class FlextInfraPytestRunnerBase(s[int]):
 
     @property
     def testmon_db(self) -> Path:
-        """Return pytest-testmon's own default database in the repository root."""
+        """Pytest-testmon's own default database in the repository root."""
         return self.root / config.Infra.codegen.make.testmon_cache.database_filename
 
     @u.model_validator(mode="after")
@@ -93,7 +93,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         """
         if not policy.parallel_worker_overrides:
             return policy.parallel_workers
-        pyproject_path = self.root / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
         try:
             name = u.Infra.project_name_from_payload(
                 pyproject_path, u.Infra.pyproject_payload(pyproject_path)

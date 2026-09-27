@@ -197,10 +197,7 @@ class FlextInfraUtilitiesSilentFailureAst:
 
     @classmethod
     def _guard_findings(
-        cls,
-        node: ast.If,
-        lines: t.StrSequence,
-        parents: t.MappingKV[ast.AST, ast.AST],
+        cls, node: ast.If, lines: t.StrSequence, parents: t.MappingKV[ast.AST, ast.AST]
     ) -> t.VariadicTuple[m.Infra.SilentFailureFinding]:
         result_name = cls._guard_info(node)
         if result_name is None:

@@ -366,7 +366,9 @@ class FlextInfraUtilitiesRopeSource:
         """
         source = resource.read()
         try:
-            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(rope_project, resource)
+            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
+                rope_project, resource
+            )
             tree = pymodule.get_ast()
         except c.EXC_BROAD_RUNTIME as exc:
             msg = f"silent failure sentinel AST collection failed for {resource.path}"

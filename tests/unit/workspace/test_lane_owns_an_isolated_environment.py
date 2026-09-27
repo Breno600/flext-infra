@@ -9,6 +9,7 @@ from flext_tests import tm
 from flext_infra import FlextInfraWorktreeService, c, u as infra_u
 from tests import u
 
+
 class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
     """Lane provisioning owns a real local environment, never a borrowed one."""
 
@@ -77,7 +78,9 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         self, tmp_path: Path
     ) -> None:
         repository = self._repository(tmp_path)
-        primary_sentinel = infra_u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
+        primary_sentinel = (
+            infra_u.Infra.runtime_environment_dir(repository) / "primary-sentinel"
+        )
         primary_sentinel.parent.mkdir()
         primary_sentinel.write_text("untouched\n", encoding="utf-8")
         lane = self._lane(repository, "feature/isolated-environment")

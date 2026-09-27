@@ -313,9 +313,8 @@ class FlextInfraWorkspaceDetector(
                 f"({manifest_path}): {manifest.ledger_id!r} != "
                 f"{beads.database if beads is not None else None!r}"
             )
-        if (
-            manifest.ledger_prefix is not None
-            and (beads is None or manifest.ledger_prefix != beads.issue_prefix)
+        if manifest.ledger_prefix is not None and (
+            beads is None or manifest.ledger_prefix != beads.issue_prefix
         ):
             return r[
                 tuple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None]
@@ -634,7 +633,11 @@ class FlextInfraWorkspaceDetector(
             beads = beads_result.value
         member_root = identity.value.primary_root
         member_beads = member_root / c.Infra.BEADS_DIRNAME
-        if beads_enabled and identity.value.is_attached_submodule and member_beads.is_symlink():
+        if (
+            beads_enabled
+            and identity.value.is_attached_submodule
+            and member_beads.is_symlink()
+        ):
             superproject_root = identity.value.superproject_root
             if superproject_root is None:
                 return r[m.Infra.WorkspaceSpec].fail(

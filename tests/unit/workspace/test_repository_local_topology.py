@@ -87,11 +87,13 @@ class TestsFlextInfraRepositoryLocalTopology:
             "version": c.Infra.WORKSPACE_MANIFEST_VERSION,
             "name": observed.name,
             "repository": observed.repository.model_dump(mode="json"),
-            "repository_policy_overlays": [{
-                "project": observed.repository.distribution,
-                "beads_enabled": False,
-                "gascity_enabled": False,
-            }],
+            "repository_policy_overlays": [
+                {
+                    "project": observed.repository.distribution,
+                    "beads_enabled": False,
+                    "gascity_enabled": False,
+                }
+            ],
         }
         tm.ok(
             u.Cli.yaml_dump(

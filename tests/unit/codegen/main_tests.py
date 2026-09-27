@@ -84,9 +84,7 @@ class TestsFlextInfraCodegenMain:
     @staticmethod
     def _mise_transaction_state(root: Path) -> t.Pair[Path, Path]:
         """Return the workspace journal and the Mise transaction state root."""
-        identity = u.Infra.git_identity(
-            m.Infra.GitRepoRequest(repo_root=root)
-        ).unwrap()
+        identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)).unwrap()
         return (
             identity.git_dir / c.Infra.JOURNAL_NAME,
             root / c.Infra.MISE_ARTIFACTS_STATE_DIRECTORY,
@@ -206,7 +204,9 @@ class TestsFlextInfraCodegenMain:
             """The root process entrypoint serves the route owner's declared help."""
             route = next(
                 item
-                for item in FlextInfraCliRouteService.route_table_for(c.Infra.CLI_GROUP_CODEGEN)
+                for item in FlextInfraCliRouteService.route_table_for(
+                    c.Infra.CLI_GROUP_CODEGEN
+                )
                 if item.name == "init"
             )
             result = u.Cli.run_raw([

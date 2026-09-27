@@ -429,7 +429,8 @@ class FlextInfraConfigModelsMake:
         """Complete generated Makefile public and extension contract."""
 
         examples_timeout_seconds: Annotated[
-            int, m.Field(gt=0, le=120, description="Workspace examples process deadline")
+            int,
+            m.Field(gt=0, le=120, description="Workspace examples process deadline"),
         ]
         ruff: Annotated[
             FlextInfraConfigModelsMake.MakeRuffSpec,

@@ -254,7 +254,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
         if destination == c.Infra.BEADS_CONFIG_RELPATH:
             if target.beads is None:
-                return r[p.Model].fail("Beads rendering requires enabled Beads identity")
+                return r[p.Model].fail(
+                    "Beads rendering requires enabled Beads identity"
+                )
             project_types = target.beads.custom_issue_types
             required_types = codegen.toolchain.beads.required_custom_types
             beads = codegen.toolchain.beads
@@ -275,7 +277,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             )
         if destination == c.Infra.BEADS_METADATA_RELPATH:
             if target.beads is None:
-                return r[p.Model].fail("Beads rendering requires enabled Beads identity")
+                return r[p.Model].fail(
+                    "Beads rendering requires enabled Beads identity"
+                )
             # Why: this marker is regenerated on every `make gen`, but the
             # ledger identity inside it is owned by the checkout, not by the
             # fleet SSOT. Rendering without it stripped the key, and Beads then

@@ -181,8 +181,6 @@ class FlextInfraUtilitiesPyprojectRequirements:
         document: t.Cli.TomlDocument,
         *,
         project_name: str,
-        workspace: p.Infra.WorkspaceSpec,
-        workspace_mode: c.Infra.MakeProfile,
         required_dev_dependencies: t.StrSequence,
     ) -> None:
         """Migrate optional dev dependencies and normalize declared groups."""
@@ -263,10 +261,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         )
 
     @classmethod
-    def _remove_workspace_dependency_group(
-        cls,
-        document: t.Cli.TomlDocument,
-    ) -> None:
+    def _remove_workspace_dependency_group(cls, document: t.Cli.TomlDocument) -> None:
         """Remove the retired workspace dependency group from every project."""
         groups = u.Cli.toml_table_child(document, c.Infra.DEPENDENCY_GROUPS)
         if groups is not None:
@@ -299,9 +294,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @staticmethod
     def _validate_dependency_provenance(
-        document: t.Cli.TomlDocument,
-        *,
-        workspace: p.Infra.WorkspaceSpec,
+        document: t.Cli.TomlDocument, *, workspace: p.Infra.WorkspaceSpec
     ) -> p.Result[bool]:
         """Require one internal dependency provenance for the active topology."""
         payload = u.Cli.toml_as_mapping(document)
