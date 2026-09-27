@@ -395,8 +395,8 @@ Infra:
         # CI=N owns the complementary local check gates; absent uses testmon
         # for incremental developer runs.
         #
-        # The set is the SLOW whole-program type checkers, matching
-        # PROJECT_CHECK_GATES_LOCAL_VALUES: those are the gates worth deferring
+        # The set is the SLOW whole-program type checkers: those are the gates
+        # worth deferring
         # off the fast CI leg, and they are what CI=N exists to own. `lint` is
         # not here -- ruff is cheap, so making CI skip it buys nothing and
         # leaves the fast leg without a linter.
