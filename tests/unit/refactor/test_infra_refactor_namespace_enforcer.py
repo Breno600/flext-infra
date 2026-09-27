@@ -230,7 +230,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         self, tmp_path: Path
     ) -> None:
         """Allow same-package imports used to assemble a facade."""
-        workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path, declare=False)
+        workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
         parts_pkg = pkg / "_parts"
         nested_pkg = pkg / "nested"
         parts_pkg.mkdir(parents=True)
@@ -319,7 +319,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "[tool.hatch.build.targets.wheel]\n"
                 "packages=['src/sample_pkg']\n"
             ),
-            declare=False,
         )
         parts_pkg = pkg / "_parts"
         tests_dir = project / "tests"
@@ -603,6 +602,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "from __future__ import annotations\nfrom typing import Protocol\n\nclass ServiceContract(Protocol):\n    def run(self) -> str:\n        ...\n\nclass ServiceImpl:\n    def run(self) -> str:\n        return 'ok'",
             encoding="utf-8",
         )
+        u.Tests.provision_checkout(workspace)
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
             apply=True
@@ -633,6 +633,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "        ...\n",
             encoding="utf-8",
         )
+        u.Tests.provision_checkout(workspace)
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
             apply=True
@@ -704,7 +705,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             pyproject=(
                 "[project]\nname='sample'\n\n[tool.flext.namespace]\nscan_dirs = ['src']\n"
             ),
-            declare=False,
         )
         examples_dir = project / "examples"
         examples_dir.mkdir(parents=True)

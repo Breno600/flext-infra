@@ -24,15 +24,6 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
             os.environ.pop(name, None)
 
     @staticmethod
-    def vscode_declared_search_paths() -> t.JsonList:
-        """Return the config-declared VS Code search paths as rendered JSON."""
-        return list(
-            config.Infra.codegen.vscode.list_settings[
-                c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY
-            ]
-        )
-
-    @staticmethod
     def repository_profile(root: Path) -> c.Infra.MakeProfile:
         """Return the Make profile derived from the repository itself."""
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector

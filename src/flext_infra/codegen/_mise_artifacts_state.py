@@ -532,9 +532,6 @@ class FlextInfraMiseArtifactsState:
         """Keep journal and participant lease identities across transactions."""
         lease_paths = (
             layout.journal_path,
-            layout.scope_root
-            / c.Infra.TRANSACTION_STATE_DIRNAME
-            / c.Infra.JOURNAL_NAME,
             *(
                 participant.root
                 / c.Infra.TRANSACTION_STATE_DIRNAME
