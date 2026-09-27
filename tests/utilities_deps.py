@@ -7,7 +7,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from flext_infra import config, u
-from tests import c, m, p, t
+from tests import m, p, t
 
 
 class TestsFlextInfraUtilitiesDepsMixin:
