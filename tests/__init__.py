@@ -10,6 +10,7 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from flext_cli import cli
+    from flext_infra import docs_main, infra, main
     from flext_tests import (
         api,
         config,
@@ -30,8 +31,6 @@ if TYPE_CHECKING:
         tv,
         x,
     )
-
-    from flext_infra import docs_main, infra, main
 
     from . import integration, refactor, unit
     from .base import TestsFlextInfraServiceBase, TestsFlextInfraServiceBase as s
