@@ -224,10 +224,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
     def required_beads(workspace: m.Infra.WorkspaceSpec) -> m.Infra.BeadsProjectSpec:
         """Return the ledger identity the observed loader must always resolve.
 
-        Every observed load owns a Beads identity — the loader rejects a
-        spec without one — so a test asserting that identity states the
-        contract here instead of reaching into the spec at each call site.
+        Callers use this only for fixtures that explicitly enable Beads.
         """
+        if workspace.beads is None:
+            msg = "test fixture requires Beads participation"
+            raise ValueError(msg)
         return workspace.beads
 
     @staticmethod

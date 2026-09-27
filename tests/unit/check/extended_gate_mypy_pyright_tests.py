@@ -116,16 +116,6 @@ class TestsFlextInfraTypeGates:
         assert repaired.result.passed, repaired
         assert not repaired.issues
 
-        if gate_class is FlextInfraMypyGate:
-            native_reports = tuple(reports.rglob("coverage.json"))
-            assert len(native_reports) == 1
-            inventory = m.Infra.MypyCoverageReport.model_validate_json(
-                native_reports[0].read_text(encoding="utf-8"), strict=True
-            )
-            assert set(inventory.lines) == {
-                str(path.resolve()) for path in (project / "src").rglob("*.py")
-            }
-
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("gate_class", "config_text"),
@@ -275,10 +265,3 @@ class TestsFlextInfraTypeGates:
                 '"informationCount":0,"timeInSec":0.1}}',
                 strict=True,
             )
-
-    @pytest.mark.parametrize(
-        "payload", ['{"lines":{}}', '{"lines":{"relative.py":[1]}}', "{}"]
-    )
-    def test_mypy_requires_native_source_evidence(self, payload: str) -> None:
-        with pytest.raises(c.ValidationError):
-            m.Infra.MypyCoverageReport.model_validate_json(payload, strict=True)

@@ -287,7 +287,7 @@ PROJECT_TOOL_EXEC = $(SHELL) -c '$(subst ','"'"',$(PROJECT_TOOL_RUNTIME))' --
 # selects its lifecycle and resolution through target-specific variables.
 TOOL_BOOTSTRAP_LIFECYCLE := _setup_lifecycle
 TOOL_BOOTSTRAP_RESOLVE :=
-{{ tool_bootstrap_recipe("_bootstrap_setup_tools", "$(PROJECT_ROOT)", "$(SETUP_MISE)", uv_version, "$(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)", mise_bootstrap, make, ast_grep_selector) }}
+{{ tool_bootstrap_recipe("_bootstrap_setup_tools", "$(PROJECT_ROOT)", "$(SETUP_MISE)", uv_version, "$(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)", mise_bootstrap, make) }}
 
 ifeq ($(MAKE_PROFILE),workspace)
 # One repository owns each GitHub CI run. The umbrella still owns the full
@@ -766,6 +766,21 @@ profile-census-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(35)' \
 		"$(PROJECT_SCRATCH_ROOT)/profiles/runtime-census.pstats"
+
+# Profile the checker process itself while retaining the canonical Mypy gate,
+# its resource limit, native source inventory, and external report directory.
+.PHONY: profile-mypy
+profile-mypy: _builtin_require_environment
+	@mkdir -p "$(PROJECT_SCRATCH_ROOT)/profiles"
+	@export FLEXT_MYPY_PROFILE_OUTPUT="$(PROJECT_SCRATCH_ROOT)/profiles/mypy.pstats"; \
+		$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" \
+		--gates mypy --projects . --report-findings
+
+.PHONY: profile-mypy-report
+profile-mypy-report: _builtin_require_environment
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
+		"$(PROJECT_SCRATCH_ROOT)/profiles/mypy.pstats"
 
 .PHONY: profile-gen
 profile-gen: _builtin_require_environment
