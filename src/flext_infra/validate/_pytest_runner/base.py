@@ -90,8 +90,32 @@ class FlextInfraPytestRunnerBase(s[int]):
             raise ValueError(msg)
         return memory_gb
 
+    def _declared_worker_ceiling(self, policy: PytestPolicy) -> int:
+        """Resolve the declared project's ceiling over the fleet default.
+
+        A tree without a declared ``[project].name`` (fixture projects, raw
+        workbenches) is an expected state and takes the fleet-wide default.
+        """
+        if not policy.parallel_worker_overrides:
+            return policy.parallel_workers
+        pyproject_path = self.root / c.Infra.PYPROJECT_FILENAME
+        try:
+            name = u.Infra.project_name_from_payload(
+                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+            )
+        except (TypeError, ValueError):
+            return policy.parallel_workers
+        return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
+
     def parallel_worker_budget(self, policy: PytestPolicy) -> int:
-        """Bound xdist by configuration, CPU, and physical memory."""
+        """Bound xdist by configuration, CPU, and physical memory.
+
+        The per-project override map (``[project].name`` → workers) is where
+        a consumer whose measured suite cannot fit the single-worker process
+        boundary declares its ceiling; the fleet-wide default stays one
+        worker so ``max-failures: 1`` remains exact everywhere else.
+        """
+        ceiling = self._declared_worker_ceiling(policy)
         cpu_count = os.cpu_count()
         if cpu_count is None or cpu_count <= 0:
             msg = "CPU capacity is unavailable"
@@ -100,7 +124,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         if memory_workers <= 0:
             msg = "physical memory cannot support one pytest worker"
             raise ValueError(msg)
-        return min(policy.parallel_workers, cpu_count, memory_workers)
+        return min(ceiling, cpu_count, memory_workers)
 
     def _report_directory(self) -> Path:
         """Create a collision-resistant report directory."""
