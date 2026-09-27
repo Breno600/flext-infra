@@ -221,10 +221,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 )
             )
         if destination == c.Infra.ENVRC_FILENAME:
-            # Conform targets always own a governed Beads identity, so the
-            # rendered tier is binary here: city server wiring when the
-            # repository declares city participation, the repository-local
-            # bd base otherwise.
+            # The workspace declaration owns whether a Beads route exists.
+            # A repository without one must not render ledger activation.
             return r[p.Model].ok(
                 m.Infra.EnvrcRenderSpec(
                     repository_root_rel=self._repository_root_rel(workspace),
@@ -237,9 +235,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     ),
                     mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                     gascity=(
-                        m.Infra.BeadsWorkspaceEnvironmentSpec()
-                        if target.gascity_enabled
-                        else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
+                        None
+                        if workspace.beads is None
+                        else (
+                            m.Infra.BeadsWorkspaceEnvironmentSpec()
+                            if target.gascity_enabled
+                            else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
+                        )
                     ),
                 )
             )
@@ -254,6 +256,10 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[p.Model].ok(m.Infra.ToolchainSpec(**toolchain_data))
 
         if destination == c.Infra.BEADS_CONFIG_RELPATH:
+            if target.beads is None:
+                return r[p.Model].fail(
+                    "Beads artifact selected for a repository with Beads disabled"
+                )
             project_types = target.beads.custom_issue_types
             required_types = codegen.toolchain.beads.required_custom_types
             beads = codegen.toolchain.beads
@@ -273,6 +279,10 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 )
             )
         if destination == c.Infra.BEADS_METADATA_RELPATH:
+            if target.beads is None:
+                return r[p.Model].fail(
+                    "Beads artifact selected for a repository with Beads disabled"
+                )
             # Why: this marker is regenerated on every `make gen`, but the
             # ledger identity inside it is owned by the checkout, not by the
             # fleet SSOT. Rendering without it stripped the key, and Beads then

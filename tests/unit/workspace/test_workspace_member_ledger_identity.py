@@ -184,8 +184,10 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
         member_beads.unlink()
         member_beads.mkdir()
         workspace = self._member_ledger_identity(member)
-        tm.that(workspace.beads.workspace, eq="member-workspace")
-        tm.that(workspace.beads.database, eq="member-database")
+        beads = workspace.beads
+        assert beads is not None
+        tm.that(beads.workspace, eq="member-workspace")
+        tm.that(beads.database, eq="member-database")
 
     def test_submodule_self_load_accepts_config_only_ledger(
         self, tmp_path: Path
@@ -194,7 +196,9 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
         member, _ = self._attach_member_to_workspace(tmp_path)
         (member / ".beads").unlink()
         workspace = self._member_ledger_identity(member)
-        tm.that(workspace.beads.workspace, eq="member-workspace")
+        beads = workspace.beads
+        assert beads is not None
+        tm.that(beads.workspace, eq="member-workspace")
 
     def test_submodule_self_load_rejects_a_divergent_linked_identity(
         self, tmp_path: Path

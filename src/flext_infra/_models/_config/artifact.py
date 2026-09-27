@@ -51,6 +51,10 @@ class FlextInfraConfigModelsArtifact:
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Fully modeled content of the ``vscode`` section of ``config/codegen.yaml``."""
 
+        runtime_interpreter_setting: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="VS Code key for the derived physical runtime venv"),
+        ]
         scalar_settings: Annotated[
             Mapping[str, str | bool | int],
             m.Field(description="VS Code scalar keys enforced on every project"),

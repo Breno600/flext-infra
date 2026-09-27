@@ -39,6 +39,31 @@ class TestsFlextInfraRuntimeAliasDeclarations:
         )
         return repository, package
 
+    def test_inherited_alias_is_not_a_published_api_binding(
+        self, tmp_path: Path
+    ) -> None:
+        """An API class can inherit a service facade without exporting its alias."""
+        repository, package = self._workspace(tmp_path)
+        source = package / "api.py"
+        source.write_text(
+            "from flext_declarations.owner import Parent\n"
+            "class Api(Parent):\n    pass\n"
+            "__all__ = ['Api']\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        with infra.rope_workspace(repository) as rope:
+            resource = tm.not_none(rope.resource(source))
+            tm.that(
+                u.Infra.published_facade_owner(rope.rope_project, resource),
+                none=True,
+            )
+            tm.that(
+                u.Infra.publication_policy(
+                    source, rope_project=rope.rope_project
+                ).expected_alias,
+                none=True,
+            )
+
     def test_repair_preserves_actual_mro_and_publishes_local_owner(
         self, tmp_path: Path
     ) -> None:

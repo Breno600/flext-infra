@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from .gate_contract import FlextInfraGateContractValidator
     from .gate_contract_checks import FlextInfraGateContractChecksMixin
     from .gate_contract_content import FlextInfraGateContractContentMixin
-    from .gate_contract_errors import GateContractInfraError, GateContractUsageError
     from .gate_contract_report import FlextInfraGateContractReportMixin
     from .gate_contract_scan import FlextInfraGateContractScanMixin
     from .import_cycles import FlextInfraValidateImportCycles
@@ -84,8 +83,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraValidateLazyMapFreshness",
     "FlextInfraValidateMetadataDiscipline",
     "FlextInfraValidateTierWhitelist",
-    "GateContractInfraError",
-    "GateContractUsageError",
     "_namespace_rules",
     "_pytest_runner",
 )
@@ -111,10 +108,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gate_contract": ("FlextInfraGateContractValidator",),
             ".gate_contract_checks": ("FlextInfraGateContractChecksMixin",),
             ".gate_contract_content": ("FlextInfraGateContractContentMixin",),
-            ".gate_contract_errors": (
-                "GateContractInfraError",
-                "GateContractUsageError",
-            ),
             ".gate_contract_report": ("FlextInfraGateContractReportMixin",),
             ".gate_contract_scan": ("FlextInfraGateContractScanMixin",),
             ".import_cycles": ("FlextInfraValidateImportCycles",),

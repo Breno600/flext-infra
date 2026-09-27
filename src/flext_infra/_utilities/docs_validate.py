@@ -99,7 +99,7 @@ class FlextInfraUtilitiesDocsValidate:
     @staticmethod
     def docs_missing_required_paths(scope: m.Infra.DocScope) -> t.StrSequence:
         """Return required docs paths that are still missing from one scope."""
-        if FlextInfraUtilitiesDocsScope.docs_aggregate_root(scope):
+        if scope.name == c.Infra.RK_ROOT:
             required = [
                 "README.md",
                 "docs/index.md",

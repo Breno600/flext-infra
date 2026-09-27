@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from .open_encoding import FlextInfraRefactorOpenEncoding
     from .pattern import FlextInfraRefactorPatternTransformer
     from .pydantic_modernizer import FlextInfraRefactorPydanticModernizer
+    from .rope_transformer import FlextInfraRopeTransformer
     from .signature_propagator import FlextInfraRefactorSignaturePropagator
     from .smells.base import FlextInfraSmellFixer
     from .smells.boolean_logic import FlextInfraBooleanLogicFixer
@@ -58,6 +59,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorSymbolPropagator",
     "FlextInfraRefactorTypingUnifier",
     "FlextInfraRefactorTypingUnifierRewriteMixin",
+    "FlextInfraRopeTransformer",
     "FlextInfraSmellFixer",
     "publish_semantic_file_plan",
     "publish_semantic_file_plans",
@@ -87,6 +89,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".open_encoding": ("FlextInfraRefactorOpenEncoding",),
             ".pattern": ("FlextInfraRefactorPatternTransformer",),
             ".pydantic_modernizer": ("FlextInfraRefactorPydanticModernizer",),
+            ".rope_transformer": ("FlextInfraRopeTransformer",),
             ".signature_propagator": ("FlextInfraRefactorSignaturePropagator",),
             ".smells": ("smells",),
             ".smells.base": ("FlextInfraSmellFixer",),

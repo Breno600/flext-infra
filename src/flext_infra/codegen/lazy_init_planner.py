@@ -19,8 +19,17 @@ from ._lazy_init_planner_public_root import (
 )
 
 
-class FlextInfraCodegenLazyInitPlannerBase(m.ArbitraryTypesModel):
-    """Pydantic state base for lazy-init planning."""
+class FlextInfraCodegenLazyInitPlanner(
+    m.ArbitraryTypesModel,
+    FlextInfraCodegenLazyInitPlannerAliasesMixin,
+    FlextInfraCodegenLazyInitPlannerExportsMixin,
+    FlextInfraCodegenLazyInitPlannerChildrenMixin,
+    FlextInfraCodegenLazyInitPlannerCollisionMixin,
+    FlextInfraCodegenLazyInitPlannerParentsMixin,
+    FlextInfraCodegenLazyInitPlannerCacheMixin,
+    FlextInfraCodegenLazyInitPlannerPublicRootMixin,
+):
+    """Resolve lazy-init plans using one shared Rope workspace index."""
 
     rope_workspace: Annotated[
         p.Infra.RopeWorkspaceDsl,
@@ -59,19 +68,6 @@ class FlextInfraCodegenLazyInitPlannerBase(m.ArbitraryTypesModel):
     def collision_count(self) -> int:
         """Number of unresolved export collisions found so far."""
         return self._collision_count
-
-
-class FlextInfraCodegenLazyInitPlanner(
-    FlextInfraCodegenLazyInitPlannerBase,
-    FlextInfraCodegenLazyInitPlannerAliasesMixin,
-    FlextInfraCodegenLazyInitPlannerExportsMixin,
-    FlextInfraCodegenLazyInitPlannerChildrenMixin,
-    FlextInfraCodegenLazyInitPlannerCollisionMixin,
-    FlextInfraCodegenLazyInitPlannerParentsMixin,
-    FlextInfraCodegenLazyInitPlannerCacheMixin,
-    FlextInfraCodegenLazyInitPlannerPublicRootMixin,
-):
-    """Resolve lazy-init plans using one shared Rope workspace index."""
 
     @override
     def build_plan(

@@ -336,6 +336,7 @@ Infra:
         discovery_scope: none
 
     make:
+      examples_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -397,8 +398,8 @@ Infra:
         # CI=N owns the complementary local check gates; absent uses testmon
         # for incremental developer runs.
         #
-        # The set is the SLOW whole-program type checkers, matching
-        # PROJECT_CHECK_GATES_LOCAL_VALUES: those are the gates worth deferring
+        # The set is the SLOW whole-program type checkers: those are the gates
+        # worth deferring
         # off the fast CI leg, and they are what CI=N exists to own. `lint` is
         # not here -- ruff is cheap, so making CI skip it buys nothing and
         # leaves the fast leg without a linter.
@@ -515,6 +516,9 @@ Infra:
           profiles: [workspace]
         - name: build
           description: Build the project distribution artifacts.
+        - name: examples
+          description: Run the workspace public runtime examples.
+          profiles: [workspace]
         - name: check
           description: Run every configured non-test gate.
         - name: test
@@ -659,6 +663,7 @@ Infra:
       - {name: .mcp.json, is_dir: false, vscode_exclude: false, watch_exclude: false}
       - {name: CLAUDE.local.md, is_dir: false, vscode_exclude: false, watch_exclude: false}
     vscode:
+      runtime_interpreter_setting: python.defaultInterpreterPath
       # Canonical .vscode/settings.json content injected with owner semantics:
       # scalar/list keys and artifact maps are exact; explicitly declared
       # non-artifact maps retain project extensions. Recursive "**" venv search
@@ -680,7 +685,6 @@ Infra:
         python.analysis.useNearestConfiguration: false
         python.analysis.usePerProjectEnvironments: false
         python.analysis.userFileIndexingLimit: 2000
-        python.defaultInterpreterPath: ${workspaceFolder}/.venv/bin/python
         python.languageServer: Pylance
         python.pyrefly.diagnosticMode: workspace
         python.pyrefly.disableLanguageServices: true
@@ -696,7 +700,6 @@ Infra:
         ruff.importStrategy: fromEnvironment
         ruff.lint.preview: true
         ruff.nativeServer: on
-        pyrefly.lspPath: ${workspaceFolder}/.venv/bin/pyrefly
         markdownlint.configFile: .markdownlint.json
         shellcheck.useWorkspaceRootAsCwd: true
         shellcheck.useRepositoryRootAsCwd: true
@@ -708,13 +711,6 @@ Infra:
         githubPullRequests.autoRepositoryDetection: true
         githubPullRequests.ignoreSubmodules: false
       list_settings:
-        python-envs.workspaceSearchPaths:
-          - ./.venv
-          - ./*/.venv
-        ruff.interpreter:
-          - ${workspaceFolder}/.venv/bin/python
-        ruff.path:
-          - ${workspaceFolder}/.venv/bin/ruff
         markdownlint.lintWorkspaceGlobs:
           - "!**/.git/**"
           - "!**/.planning/**"
@@ -748,9 +744,6 @@ Infra:
         "[markdown]":
           editor.defaultFormatter: esbenp.prettier-vscode
           editor.formatOnSave: false
-        terminal.integrated.env.linux:
-          PATH: ${workspaceFolder}/.venv/bin:${env:PATH}
-          VIRTUAL_ENV: ${workspaceFolder}/.venv
       stripped_keys:
       # Pylance emits settingsNotOverridable diagnostics (severity=warning) when
       # these keys appear in .vscode/settings.json alongside a [tool.pyright] section
@@ -1046,6 +1039,13 @@ Infra:
         owner: pre-commit
         policy: full
       - path: .python-version
+        owner: codegen
+        policy: full
+    # The docs auditor's placeholder/forbidden-term lists are fleet policy: one
+    # template owns them, so the placeholder and forbidden-term checks in
+    # _auditor_checks.py enforce on every governed repository instead of
+    # silently reading an absent file as empty lists.
+      - path: docs/docs_config.json
         owner: codegen
         policy: full
     # Qlty refuses to scan without a repository configuration. Keep the
@@ -1968,6 +1968,13 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true
+      # Static docs-auditor policy: no Jinja vars; the docs scope policy and
+      # the auditor read it as data (docs_policy_list).
+        - source: base/docs/docs_config.json.j2
+          destination: docs/docs_config.json
+          profiles: [workspace, standalone]
+          delegate: render
+          overwrite: false
         - source: base/gitignore.j2
           destination: .gitignore
           profiles: [workspace, standalone]
@@ -2024,12 +2031,14 @@ Infra:
       # ledger is reached by the declared city endpoint, never by a link.
         - source: base/beads-config.yaml.j2
           destination: .beads/config.yaml
+          requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
       # Static repository-local storage, database, and endpoint projection.
         - source: base/beads-metadata.json.j2
           destination: .beads/metadata.json
+          requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
@@ -2111,6 +2120,7 @@ Infra:
       # rendered it could not be conformed at all.
         - source: base/config/beads.yaml.j2
           destination: config/beads.yaml
+          requires_beads: true
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true

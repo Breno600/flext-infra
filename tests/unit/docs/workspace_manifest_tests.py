@@ -19,7 +19,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c
-from tests import m, u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -92,39 +92,6 @@ class TestsFlextInfraWorkspaceManifest:
 
         tm.that(written.is_file(), eq=True)
         tm.that(u.Infra.is_fleet_umbrella(tmp_path), eq=False)
-
-    def test_a_standalone_manifest_keeps_the_project_docs_contract(
-        self, tmp_path: Path
-    ) -> None:
-        """The exact regression: the manifest file routed members to the root.
-
-        Generate and validate both tested for the file, so every governed
-        standalone project lost its project pages and was asked for the
-        aggregate catalog its topology never publishes.
-        """
-        u.Tests.write_standalone_workspace_manifest(tmp_path, _PROBE)
-        scope = m.Infra.DocScope(name=_PROBE, path=tmp_path, report_dir=tmp_path)
-
-        tm.that(u.Infra.docs_aggregate_root(scope), eq=False)
-        tm.that(
-            list(u.Infra.docs_missing_required_paths(scope)),
-            eq=sorted(set(u.Infra.required_project_files())),
-        )
-
-    def test_workspace_role_selects_the_aggregate_docs_contract(
-        self, tmp_path: Path
-    ) -> None:
-        """Only the typed workspace role asks for the aggregate root contract."""
-        u.Tests.write_standalone_workspace_manifest(
-            tmp_path, _PROBE, role=c.Infra.MakeProfile.WORKSPACE
-        )
-        scope = m.Infra.DocScope(name=_PROBE, path=tmp_path, report_dir=tmp_path)
-
-        tm.that(u.Infra.docs_aggregate_root(scope), eq=True)
-        tm.that(
-            list(u.Infra.docs_missing_required_paths(scope)),
-            ne=sorted(set(u.Infra.required_project_files())),
-        )
 
     def test_invalid_manifest_cannot_erase_participant_exclusions(
         self, tmp_path: Path

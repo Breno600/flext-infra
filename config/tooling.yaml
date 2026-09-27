@@ -452,7 +452,6 @@ Infra:
           source-report-private-usage: error
           test-like-report-private-usage: "none"
           other-report-private-usage: "none"
-          venv-name: .venv
       coverage:
         source: [src]
         show-missing: true

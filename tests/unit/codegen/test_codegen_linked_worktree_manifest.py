@@ -71,9 +71,11 @@ class TestsFlextInfraCodegenLinkedWorktreeManifest:
         tm.that(
             u.Tests.codegen_file_text(makefile_plan), has="MAKE_PROFILE := standalone"
         )
-        tm.that(plan.workspace.beads.workspace, eq="lane-workspace")
-        tm.that(plan.workspace.beads.database, eq="lane-database")
-        tm.that(plan.workspace.beads.issue_prefix, eq="lane-prefix")
+        beads = plan.workspace.beads
+        assert beads is not None
+        tm.that(beads.workspace, eq="lane-workspace")
+        tm.that(beads.database, eq="lane-database")
+        tm.that(beads.issue_prefix, eq="lane-prefix")
         tm.that(all(item.path.is_relative_to(lane) for item in plan.files), eq=True)
         tm.that(
             tm.ok(FlextInfraWorkspaceDetector.resolve_repository_root(lane)),

@@ -116,7 +116,6 @@ override TRACKED_MISE := $(PROJECT_ROOT)/bin/mise
 endif
 override SETUP_MISE := $(TRACKED_MISE)
 override export FLEXT_PYTEST_TARGET_RAW := tests
-PROJECT_STATE_ROOT := $(abspath $(PROJECT_ROOT)/../.flext-runtime/$(notdir $(PROJECT_ROOT)))
 # Scratch never lives inside a versioned tree: the home scratch root mirrors
 # the absolute checkout path so a sandbox is never a tracked scope of any
 # enclosing repository (workspace or linked worktree). Checkouts nested in a
@@ -128,8 +127,6 @@ endif
 PROJECT_SCRATCH_IDENTITY := $(abspath $(PROJECT_ROOT))/
 PROJECT_SCRATCH_IDENTITY := $(subst /.git/,/_git/,$(subst /.git/,/_git/,$(PROJECT_SCRATCH_IDENTITY)))
 PROJECT_SCRATCH_ROOT := $(HOME)/tmp/.flext-runtime$(patsubst %/,%,$(PROJECT_SCRATCH_IDENTITY))/scratch
-TESTMON_DATAFILE := $(PROJECT_STATE_ROOT)/testmon/.testmondata
-export TESTMON_DATAFILE
 # === SECTION: REPOSITORY_ROOT isolation (managed) ===
 # Source: physical checkout topology; caller variables cannot select a workspace.
 # Operator law 2026-09-24 (flext-x8gn6): inside a workspace every make run, root
@@ -180,6 +177,10 @@ CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 # Source: repository topology. workspace has .gitmodules; standalone does not.
 # Attached members share their Git superproject runtime; standalone owns itself.
 override RUNTIME_ROOT := $(REPOSITORY_ROOT)
+RUNTIME_STATE_ROOT := $(abspath $(RUNTIME_ROOT)/../.flext-runtime/$(notdir $(RUNTIME_ROOT)))
+PROJECT_STATE_ROOT := $(if $(filter $(PROJECT_ROOT),$(RUNTIME_ROOT)),$(RUNTIME_STATE_ROOT),$(RUNTIME_STATE_ROOT)/members/$(notdir $(PROJECT_ROOT)))
+TESTMON_DATAFILE := $(PROJECT_STATE_ROOT)/testmon/.testmondata
+export TESTMON_DATAFILE
 override export GIT_CEILING_DIRECTORIES := $(abspath $(RUNTIME_ROOT)/..)
 override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
 # The physical runtime owns both its environment and frozen tool identities.
@@ -193,7 +194,7 @@ endif
 endif
 # End SECTION: profile routing
 
-override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
+override RUNTIME_VENV := $(RUNTIME_STATE_ROOT)/venv
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
@@ -769,9 +770,13 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	desired_python="$${SETUP_PYTHON:?missing Mise-resolved Python executable}"; \
 	if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
 		$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"; \
-	elif [ "$$(readlink -f "$(RUNTIME_PYTHON)")" != "$$(readlink -f "$$desired_python")" ]; then \
-		printf 'setup: replacing environment for Python %s\n' "$$desired_python"; \
-		$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
+	else \
+		installed_base=$$("$(RUNTIME_PYTHON)" -c 'from pathlib import Path; import sys; print(Path(sys.base_prefix).resolve())'); \
+		desired_base=$$("$$desired_python" -c 'from pathlib import Path; import sys; print(Path(sys.prefix).resolve())'); \
+		if [ "$$installed_base" != "$$desired_base" ]; then \
+			printf 'setup: replacing environment for Python %s\n' "$$desired_python"; \
+			$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
+		fi; \
 	fi; \
 	$(UV) sync --project "$(PROJECT_ROOT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
 	XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
@@ -821,7 +826,7 @@ PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev
 # profile; setup resolves the declared dependency branches at their current tips.
 # Keyed on the environment's OWNER, not on the caller's profile. A member has
-# no local venv -- RUNTIME_VENV is RUNTIME_ROOT/.venv -- so every checkout that
+# no local venv -- RUNTIME_VENV belongs to the external runtime state -- so every checkout that
 # provisions a shared environment must describe the same contents. A member
 # syncing without --all-packages treats the siblings already installed there as
 # surplus and uninstalls them, undoing the root's provisioning and leaving
@@ -1436,57 +1441,28 @@ _upg_activated:
 # _builtin-self-* targets serve the workspace root itself (project selector
 # `.` from the orchestrator). They apply the same member-style gate recipes to
 # PROJECT_ROOT without recursing into submodules, so the root distribution
-# runs its own evidence in the global cycles.
-_builtin-self-test: _builtin_require_environment
+# runs its own evidence in the global cycles. Where the standalone profile's
+# `_builtin-*_all` twin owns the identical body, the self target delegates to
+# that twin so the gate-selection shell block is emitted exactly once; the
+# workspace profile emits the root-local body because its `_all` twin
+# recurses into members instead.
 
-	@set -eu; \
-		test_tmp_parent="$(PROJECT_SCRATCH_ROOT)/pytest"; \
-		mkdir -p "$$test_tmp_parent"; \
-		test_tmp=$$(mktemp -d "$$test_tmp_parent/invocation.XXXXXX"); \
-		cleanup_test_tmp() { rm -rf "$$test_tmp"; }; \
-		trap cleanup_test_tmp EXIT INT TERM; \
-		TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry
+# Standalone: the `_all` twins own the one emitted body (SSOT); each carries
+# its own `_builtin_require_environment` edge.
+_builtin-self-test: _builtin_test_all
 
-_builtin-self-check: _builtin_require_environment
-	@set -eu; \
-gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,smells,codemod,layout,canonical-alias,direnv,duplication"; \
-		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,smells,codemod,layout,canonical-alias,direnv,duplication"; \
-			printf 'INFO: CI=Y runs check gates: lint pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census namespace tier-whitelist index-declarations smells codemod layout canonical-alias direnv duplication\n'; \
-		elif [ "$(strip $(CI))" = "N" ]; then \
-			gates="pyrefly,mypy"; \
-			printf 'INFO: CI=N runs check gates: pyrefly mypy\n'; \
-		else \
-			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census namespace tier-whitelist index-declarations smells codemod layout canonical-alias direnv duplication\n'; \
-		fi; \
-		if [ -z "$$gates" ]; then \
-			printf 'ERROR: no active check gates remain in the selected context\n' >&2; \
-			exit 2; \
-		fi; \
-		$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "$$gates" --projects .
+_builtin-self-check: _builtin_check_all
 
-_builtin-self-test-full: _builtin_require_environment
+_builtin-self-test-full: _builtin_test_full_all
 
-	@set -eu; \
-		test_tmp_parent="$(PROJECT_SCRATCH_ROOT)/pytest"; \
-		mkdir -p "$$test_tmp_parent"; \
-		test_tmp=$$(mktemp -d "$$test_tmp_parent/invocation.XXXXXX"); \
-		cleanup_test_tmp() { rm -rf "$$test_tmp"; }; \
-		trap cleanup_test_tmp EXIT INT TERM; \
-		TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full
+_builtin-self-fmt: _builtin_fmt_all
 
-_builtin-self-fmt: _builtin_require_environment
-	@$(UV_RUN) ruff format --preview $(RUFF_PATHS)
-	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "markdown-format" --projects . --apply
+_builtin-self-fix: _builtin_fix_all
 
-_builtin-self-fix: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "lint,markdown,markdown-code,canonical-alias,smells" --projects . --apply --report-findings
+_builtin-self-fix-enforcement: _builtin_fix_enforcement
 
-_builtin-self-fix-enforcement: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
+_builtin-self-build: _builtin_build_artifacts
 
-_builtin-self-build:
-	@$(UV) build --project "$(PROJECT_ROOT)"
 
 _builtin-self-clean: _builtin_clean_generated
 
@@ -1703,6 +1679,7 @@ _builtin_mod_apply: _builtin_require_environment
 # Selector-free public verbs map one-to-one to their canonical implementation;
 # each implementation owns one fixed operation.
 _builtin-build: _builtin_build_artifacts
+
 _builtin-check: _builtin_check_all
 _builtin-test: _builtin_test_all
 _builtin-test-full: _builtin_test_full_all

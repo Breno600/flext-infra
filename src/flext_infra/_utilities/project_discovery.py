@@ -272,5 +272,17 @@ class FlextInfraUtilitiesProjectDiscovery(
             state_root if relative_project == Path() else state_root / relative_project
         )
 
+    @classmethod
+    def runtime_environment_dir(cls, project_root: Path) -> Path:
+        """Resolve the physical environment shared by an attached member and its root."""
+        resolved_project = project_root.resolve()
+        runtime_root = resolved_project
+        if (resolved_project / ".git").is_file():
+            identity = FlextInfraUtilitiesGit.git_identity(
+                m.Infra.GitRepoRequest(repo_root=resolved_project)
+            ).unwrap()
+            runtime_root = identity.superproject_root or resolved_project
+        return cls.external_tool_state_dir(runtime_root, runtime_root, "venv")
+
 
 __all__: list[str] = ["FlextInfraUtilitiesProjectDiscovery"]

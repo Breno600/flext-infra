@@ -150,13 +150,6 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                     description="reportPrivateUsage value for non-source/non-test-like envs.",
                 ),
             ]
-            venv_name: Annotated[
-                str,
-                m.Field(
-                    alias="venv-name",
-                    description="Virtualenv directory name shared across pyright configs.",
-                ),
-            ]
 
         strict_settings: Annotated[
             t.StrMapping,

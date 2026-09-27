@@ -229,6 +229,7 @@ if TYPE_CHECKING:
     from .transformers.open_encoding import FlextInfraRefactorOpenEncoding
     from .transformers.pattern import FlextInfraRefactorPatternTransformer
     from .transformers.pydantic_modernizer import FlextInfraRefactorPydanticModernizer
+    from .transformers.rope_transformer import FlextInfraRopeTransformer
     from .transformers.signature_propagator import FlextInfraRefactorSignaturePropagator
     from .transformers.smells.base import FlextInfraSmellFixer
     from .transformers.smells.boolean_logic import FlextInfraBooleanLogicFixer
@@ -241,10 +242,6 @@ if TYPE_CHECKING:
     from .validate.gate_contract import FlextInfraGateContractValidator
     from .validate.gate_contract_checks import FlextInfraGateContractChecksMixin
     from .validate.gate_contract_content import FlextInfraGateContractContentMixin
-    from .validate.gate_contract_errors import (
-        GateContractInfraError,
-        GateContractUsageError,
-    )
     from .validate.gate_contract_report import FlextInfraGateContractReportMixin
     from .validate.gate_contract_scan import FlextInfraGateContractScanMixin
     from .validate.import_cycles import FlextInfraValidateImportCycles
@@ -266,10 +263,7 @@ if TYPE_CHECKING:
     from .validate.tier_whitelist import FlextInfraValidateTierWhitelist
     from .workspace.detector import FlextInfraWorkspaceDetector
     from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
-    from .workspace.environment_beads import (
-        FlextInfraWorkspaceBeadsEnvironmentMixin,
-        FlextInfraWorkspaceEnvironmentSync,
-    )
+    from .workspace.environment_beads import FlextInfraWorkspaceEnvironmentSync
     from .workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
     from .workspace.environment_provenance import (
         FlextInfraWorkspaceEnvironmentProvenance,
@@ -432,6 +426,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorSymbolPropagator",
     "FlextInfraRefactorTypingUnifier",
     "FlextInfraReleaseOrchestrator",
+    "FlextInfraRopeTransformer",
     "FlextInfraRopeWorkspace",
     "FlextInfraRuffFormatGate",
     "FlextInfraRuffLintGate",
@@ -462,7 +457,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraValidateLazyMapFreshness",
     "FlextInfraValidateMetadataDiscipline",
     "FlextInfraValidateTierWhitelist",
-    "FlextInfraWorkspaceBeadsEnvironmentMixin",
     "FlextInfraWorkspaceCheckGatesMixin",
     "FlextInfraWorkspaceChecker",
     "FlextInfraWorkspaceDetector",
@@ -473,8 +467,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspacePropagation",
     "FlextInfraWorktreeService",
     "FlextInfraWrapperRootNamespaceRefactor",
-    "GateContractInfraError",
-    "GateContractUsageError",
     "RefactorRoutes",
     "ValidationCommandRoutes",
     "ValidationRoutes",
@@ -755,6 +747,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".transformers.pydantic_modernizer": (
                 "FlextInfraRefactorPydanticModernizer",
             ),
+            ".transformers.rope_transformer": ("FlextInfraRopeTransformer",),
             ".transformers.signature_propagator": (
                 "FlextInfraRefactorSignaturePropagator",
             ),
@@ -770,10 +763,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".validate.gate_contract": ("FlextInfraGateContractValidator",),
             ".validate.gate_contract_checks": ("FlextInfraGateContractChecksMixin",),
             ".validate.gate_contract_content": ("FlextInfraGateContractContentMixin",),
-            ".validate.gate_contract_errors": (
-                "GateContractInfraError",
-                "GateContractUsageError",
-            ),
             ".validate.gate_contract_report": ("FlextInfraGateContractReportMixin",),
             ".validate.gate_contract_scan": ("FlextInfraGateContractScanMixin",),
             ".validate.import_cycles": ("FlextInfraValidateImportCycles",),
@@ -796,10 +785,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".workspace": ("workspace",),
             ".workspace.detector": ("FlextInfraWorkspaceDetector",),
             ".workspace.environment": ("FlextInfraWorkspaceEnvironmentMixin",),
-            ".workspace.environment_beads": (
-                "FlextInfraWorkspaceBeadsEnvironmentMixin",
-                "FlextInfraWorkspaceEnvironmentSync",
-            ),
+            ".workspace.environment_beads": ("FlextInfraWorkspaceEnvironmentSync",),
             ".workspace.environment_contracts": (
                 "FlextInfraWorkspaceEnvironmentContracts",
             ),
