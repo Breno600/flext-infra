@@ -98,7 +98,11 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def docs_missing_required_paths(scope: m.Infra.DocScope) -> t.StrSequence:
-        """Return required docs paths that are still missing from one scope."""
+        """Return required docs paths that are still missing from one scope.
+
+        The scope label is the only topology input: the scope builder assigns
+        ``root`` from the manifest's typed role (``is_fleet_umbrella``).
+        """
         if scope.name == c.Infra.RK_ROOT:
             required = [
                 "README.md",
