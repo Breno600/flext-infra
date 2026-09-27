@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
@@ -19,6 +20,16 @@ from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.fixture
+def governed_project(tmp_path: Path) -> Path:
+    """Provide a valid project identity for package discovery."""
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "test-helpers"\nversion = "0.1.0"\n',
+        encoding="utf-8",
+    )
+    return tmp_path
 
 
 class TestsFlextInfraCodegenLazyInit:
@@ -68,12 +79,12 @@ class TestsFlextInfraCodegenLazyInit:
             result = generator.plan_files()
             tm.that(result.success, eq=True)
 
-        def test_tests_dir_is_scanned(self, tmp_path: Path) -> None:
+        def test_tests_dir_is_scanned(self, governed_project: Path) -> None:
             """Scan test packages in check mode."""
             self._create_init_file(
-                tmp_path / "tests" / "helpers", self._VALID_TESTS_INIT
+                governed_project / "tests" / "helpers", self._VALID_TESTS_INIT
             )
-            generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
+            generator = FlextInfraCodegenLazyInit(repository_root=governed_project)
             result = generator.plan_files()
             tm.that(result.success, eq=True)
 
@@ -117,13 +128,15 @@ class TestsFlextInfraCodegenLazyInit:
             init_file.write_text(content, encoding="utf-8")
             return init_file
 
-        def test_check_only_does_not_modify_files(self, tmp_path: Path) -> None:
+        def test_check_only_does_not_modify_files(
+            self, governed_project: Path
+        ) -> None:
             """Leave initializer bytes unchanged in check mode."""
             tests_init = self._create_init_file(
-                tmp_path / "tests" / "helpers", self._VALID_TESTS_INIT
+                governed_project / "tests" / "helpers", self._VALID_TESTS_INIT
             )
             original_content = tests_init.read_text(encoding="utf-8")
-            generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
+            generator = FlextInfraCodegenLazyInit(repository_root=governed_project)
             tm.that(generator.plan_files().success, eq=True)
             tm.that(tests_init.read_text(encoding="utf-8"), eq=original_content)
 

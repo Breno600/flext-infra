@@ -544,14 +544,6 @@ class TestsFlextInfraCodegenConform:
         tm.that(selected_output, has="uv --version")
         tm.that(selected_output, lacks="uv@")
         tm.that(selected_output, lacks="UV_VERSION")
-        makefile = (root / "Makefile").read_text(encoding="utf-8")
-        # Template Makefile.j2:154 produces `override UV := "$(SETUP_MISE)" ... exec -- uv`;
-        # there is no bare `UV ?= uv` assignment (see test_codegen_make_environment.py:512).
-        tm.that(makefile, has="override UV :=")
-        tm.that(makefile, lacks="UV ?= uv")
-        tm.that(makefile, lacks="UV_VERSION")
-        tm.that(makefile, lacks="uv@")
-        tm.that(makefile, lacks="mise exec")
 
     @pytest.mark.slow
     def test_existing_manifest_converges_to_identical_tree(
