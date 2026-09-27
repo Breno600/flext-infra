@@ -6,10 +6,9 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, config
+from flext_infra import FlextInfraWorktreeService, c
 from tests import t, u
 
-_STATE_DIRECTORY = config.Infra.codegen.toolchain.state_directory_name
 
 
 class TestsFlextInfraWorktreeProvisioningGitlinks:
@@ -36,13 +35,16 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
             '[project]\nname = "fixture"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         (lane / "Makefile").write_text(
-            f"RUNTIME_VENV := $(abspath $(CURDIR)/../{_STATE_DIRECTORY}/$(notdir $(CURDIR))/venv)\n"
+            f"RUNTIME_VENV := $(CURDIR)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
             ".PHONY: setup\n"
             "setup:\n"
             "\t@mkdir -p $(RUNTIME_VENV)/bin\n"
             "\t@printf '#!/bin/sh\\n' > $(RUNTIME_VENV)/bin/python\n"
             "\t@chmod +x $(RUNTIME_VENV)/bin/python\n",
             encoding="utf-8",
+        )
+        (lane / ".gitignore").write_text(
+            f"{c.Infra.ENVIRONMENT_DIRECTORY}/\n", encoding="utf-8"
         )
         u.Tests.initialize_git_repo(lane)
         source = self._source(tmp_path, "member")

@@ -118,22 +118,13 @@ class TestsFlextInfraPytestRunner:
         cached_runner_project: Path, *, ci_context: bool = False
     ) -> FlextInfraPytestRunner:
         """Bind one runner to the fixture project's canonical cache paths."""
-        codegen = config.Infra.codegen
-        cache = codegen.make.testmon_cache
-        testmon_db = (
-            cached_runner_project.parent
-            / codegen.toolchain.state_directory_name
-            / cached_runner_project.name
-            / cache.namespace
-            / cache.database_filename
-        )
+        cache = config.Infra.codegen.make.testmon_cache
         return FlextInfraPytestRunner(
             repository_root=cached_runner_project,
             ci_context=ci_context,
             started_at_monotonic=time.monotonic(),
             target=cache.target_directory,
             reports=cache.reports_directory,
-            testmon_db=testmon_db,
         )
 
     @staticmethod
@@ -147,15 +138,9 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path
     ) -> None:
         """One public execution collects every test and publishes real evidence."""
-        codegen = config.Infra.codegen
-        cache = codegen.make.testmon_cache
-        testmon_db = (
-            cached_runner_project.parent
-            / codegen.toolchain.state_directory_name
-            / cached_runner_project.name
-            / cache.namespace
-            / cache.database_filename
-        )
+        cache = config.Infra.codegen.make.testmon_cache
+        # pytest-testmon keeps its own default database in the repository root.
+        testmon_db = cached_runner_project / cache.database_filename
         runner = self._runner_for(cached_runner_project)
 
         exit_code = tm.ok(runner.execute())

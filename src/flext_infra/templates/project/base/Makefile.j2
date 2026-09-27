@@ -255,7 +255,7 @@ SANITIZED_CALLER_PATH :=
 endif
 endif
 override FLEXT_INFRA_PYTHON := $(RUNTIME_PYTHON)
-override UV_PROJECT := $(PROJECT_ROOT)
+override UV_PROJECT := $(RUNTIME_ROOT)
 override UV_PROJECT_ENVIRONMENT := $(RUNTIME_VENV)
 override VIRTUAL_ENV := $(RUNTIME_VENV)
 override PATH := $(RUNTIME_BIN):$(SANITIZED_CALLER_PATH)
@@ -306,7 +306,7 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 			$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
 		fi; \
 	fi; \
-	$(UV) sync --project "$(PROJECT_ROOT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
+	$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
 	XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" allow "$(PROJECT_ROOT)"; \
 	for member in $(WORKSPACE_SUBPROJECTS); do \
@@ -597,7 +597,6 @@ _upg_activated:
 _builtin-self-test: _builtin_require_environment
 {{ test_report_recipe(
     runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
-    invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
 _builtin-self-check: _builtin_require_environment
@@ -606,7 +605,6 @@ _builtin-self-check: _builtin_require_environment
 _builtin-self-test-full: _builtin_require_environment
 {{ test_report_recipe(
     runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full",
-    invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
 _builtin-self-fmt: _builtin_require_environment
@@ -701,13 +699,11 @@ _builtin_check_all: _builtin_require_environment
 _builtin_test_all: _builtin_require_environment
 {{ test_report_recipe(
     runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
-    invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
 _builtin_test_full_all: _builtin_require_environment
 {{ test_report_recipe(
     runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full",
-    invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the

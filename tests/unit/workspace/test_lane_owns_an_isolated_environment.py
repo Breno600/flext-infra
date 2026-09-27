@@ -6,11 +6,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c, config, u as infra_u
+from flext_infra import FlextInfraWorktreeService, c, u as infra_u
 from tests import u
-
-_STATE_DIRECTORY = config.Infra.codegen.toolchain.state_directory_name
-
 
 class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
     """Lane provisioning owns a real local environment, never a borrowed one."""
@@ -27,7 +24,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
         (repository / "Makefile").write_text(
             "PROJECT_ROOT := $(CURDIR)\n"
             "RUNTIME_ROOT := $(PROJECT_ROOT)\n"
-            f"RUNTIME_VENV := $(abspath $(CURDIR)/../{_STATE_DIRECTORY}/$(notdir $(CURDIR))/venv)\n"
+            f"RUNTIME_VENV := $(CURDIR)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
             ".PHONY: setup\n"
             "setup:\n"
             '\t@test "$(RUNTIME_ROOT)" = "$(PROJECT_ROOT)"\n'
@@ -41,7 +38,7 @@ class TestsFlextInfraLaneOwnsAnIsolatedEnvironment:
             encoding="utf-8",
         )
         (repository / ".gitignore").write_text(
-            "setup-runs.log\n", encoding="utf-8"
+            f"setup-runs.log\n{c.Infra.ENVIRONMENT_DIRECTORY}/\n", encoding="utf-8"
         )
         u.Tests.initialize_git_repo(repository)
         return repository

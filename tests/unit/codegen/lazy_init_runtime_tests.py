@@ -46,7 +46,7 @@ class TestsFlextInfraLazyInitRuntime:
     @staticmethod
     def _generate_package(tmp_path: Path) -> t.Pair[Path, Path]:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-runtime", package_name="flext_runtime"
+            tmp_path, project_name="flext-lazy-demo", package_name="flext_lazy_demo"
         )
         package_root.joinpath("api.py").write_text(
             "from pathlib import Path\n"
@@ -65,9 +65,9 @@ class TestsFlextInfraLazyInitRuntime:
     ) -> None:
         repository_root, package_root = self._generate_package(tmp_path)
         with tm.scope(python_paths=[str(repository_root / c.Infra.DEFAULT_SRC_DIR)]):
-            package = importlib.import_module("flext_runtime")
+            package = importlib.import_module("flext_lazy_demo")
 
-            tm.that("flext_runtime.api" in sys.modules, eq=False)
+            tm.that("flext_lazy_demo.api" in sys.modules, eq=False)
             tm.that(package.__all__, eq=("FlextDemo", "primary"))
             tm.that(dir(package), eq=list(package.__all__))
             first = package.FlextDemo
