@@ -138,7 +138,7 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         return [str(item).strip() for item in raw if str(item).strip()]
 
     @staticmethod
-    def is_excluded_doc_path(project_root: Path, relative_path: Path) -> bool:
+    def excluded_doc_path(project_root: Path, relative_path: Path) -> bool:
         """Return whether a relative docs path is excluded by ``tool.flext.docs``."""
         candidate = relative_path.as_posix()
         for pattern in FlextInfraUtilitiesDocsScopePolicyMixin.docs_meta_list(
@@ -149,7 +149,7 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         return False
 
     @staticmethod
-    def is_governed_project(project_name: str, repository_root: Path) -> bool:
+    def governed_project(project_name: str, repository_root: Path) -> bool:
         """Return whether a project belongs to the governed FLEXT docs scope."""
         project_root = repository_root / project_name
         docs_meta = FlextInfraUtilitiesDocsScopePolicyMixin.project_docs_meta(

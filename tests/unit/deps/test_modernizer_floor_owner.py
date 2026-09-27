@@ -58,7 +58,9 @@ class TestsFlextInfraModernizerFloorOwner:
         tm.that(name, eq=u.Infra.dep_name(requirement))
         name = tm.not_none(name)
         original = source.read_text(encoding="utf-8")
-        stale = f"{name}>=0"
+        # ``>=0`` is a textual prefix of every 0.x floor the rewrite produces
+        # (``>=0.8.0``), so the stale sentinel must not prefix a real release.
+        stale = f"{name}>=0.0.0"
         source.write_text(
             original.replace(requirement, stale, 1) + "\n# Keep owner annotation.\n",
             encoding="utf-8",

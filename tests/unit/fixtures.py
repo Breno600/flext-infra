@@ -8,13 +8,14 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import config, infra
+from flext_infra import config, infra, u as infra_u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import c, m, p, t, u
 
@@ -350,7 +351,10 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     setup = tm.ok(u.Tests.run_isolated_make(["setup"], cwd=root, capture=False))
     u.Tests.record_dependency_command_output(setup)
     tm.that(u.Cli.process_succeeded(setup.outcome), eq=True, msg=setup.stderr)
-    tm.that((root / c.Infra.VENV_BIN_REL / c.Infra.DEPTRY).is_file(), eq=True)
+    runtime = infra_u.Infra.runtime_environment_dir(root)
+    executable = c.Infra.DEPTRY + (".exe" if os.name == "nt" else "")
+    tool_path = runtime / ("Scripts" if os.name == "nt" else "bin") / executable
+    tm.that(tool_path.is_file(), eq=True)
     (root / "limits.toml").write_text(
         "[typing_libraries]\nexclude = []\n", encoding="utf-8"
     )
@@ -681,7 +685,7 @@ def models_resource(
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic models fixture module."""
     rope_project, repository_root = rope_workspace
-    resource = u.Infra.get_resource_from_path(
+    resource = u.Infra.resolve_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "models.py"
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
@@ -694,7 +698,7 @@ def services_resource(
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic services fixture module."""
     rope_project, repository_root = rope_workspace
-    resource = u.Infra.get_resource_from_path(
+    resource = u.Infra.resolve_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "services.py"
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)

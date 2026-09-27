@@ -67,11 +67,9 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(audit_exit, eq=0)
 
     def test_run_fails_when_selected_project_has_invalid_toml(
-        self,
-        modernizer_workspace_with_projects: Path,
-        capsys: pytest.CaptureFixture[str],
+        self, modernizer_workspace_with_projects: Path
     ) -> None:
-        """Reject invalid TOML in a declared member before any write."""
+        """Invalid TOML in a declared member escapes before any write."""
         selected_pyproject = (
             modernizer_workspace_with_projects / "selected" / c.PYPROJECT_FILENAME
         )
@@ -85,8 +83,11 @@ class TestsFlextInfraDepsModernizerMainExtra:
             skip_check=False,
         )
 
-        tm.that(modernizer.run(), eq=2)
-        tm.that(capsys.readouterr().out, has=str(selected_pyproject))
+        # The canonical docs-scope reader owns the typed invalid-TOML error and
+        # names the file; the run lets it leave instead of logging an exit code.
+        with pytest.raises(ValueError, match="docs pyproject TOML is invalid") as raised:
+            modernizer.run()
+        tm.that(str(raised.value), has=str(selected_pyproject))
         tm.that(root_pyproject.read_bytes(), eq=root_before)
         tm.that(selected_pyproject.read_text(encoding="utf-8"), eq="[invalid")
 

@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import CliRouteService, c, config, main as infra_main
+from flext_infra import FlextInfraCliRouteService, c, config, main as infra_main
 from tests import t, u
 
 
@@ -210,7 +210,7 @@ class TestsFlextInfraCodegenMain:
             """The root process entrypoint serves the route owner's declared help."""
             route = next(
                 item
-                for item in CliRouteService.route_table_for(c.Infra.CLI_GROUP_CODEGEN)
+                for item in FlextInfraCliRouteService.route_table_for(c.Infra.CLI_GROUP_CODEGEN)
                 if item.name == "init"
             )
             result = u.Cli.run_raw([

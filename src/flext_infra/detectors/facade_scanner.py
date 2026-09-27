@@ -41,14 +41,14 @@ class FlextInfraScanner:
                 res = u.Infra.fetch_python_resource(rope_project, file_path)
                 if res is None:
                     continue
-                classes = u.Infra.get_module_classes(rope_project, res)
+                classes = u.Infra.resolve_module_classes(rope_project, res)
                 match = next(
                     (n for n in classes if n == expected or n.endswith(suffix)), None
                 )
                 if match is not None:
                     found_class = match
                     found_file = str(file_path)
-                    symbols = u.Infra.get_class_symbol_count(rope_project, res, match)
+                    symbols = u.Infra.count_class_symbols(rope_project, res, match)
                     break
             results.append(
                 m.Infra.FacadeStatus(

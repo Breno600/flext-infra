@@ -28,6 +28,7 @@ class FlextInfraConstantsCodegenProject:
 
     CODEGEN_LOCAL_OVERRIDES_FILENAME: ClassVar[str] = "codegen-overrides.local.yaml"
     CODEGEN_ORG_OVERRIDES_FILENAME: ClassVar[str] = "codegen-org.yaml"
+    CODEGEN_CLI_MODULE_FILENAME: ClassVar[str] = "cli.py"
 
     # These enums define the
     # one public conform contract shared by new and existing repositories. The

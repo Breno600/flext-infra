@@ -7,7 +7,7 @@ from collections.abc import Callable
 from flext_infra import p, t
 
 
-class CliRouteBase:
+class FlextInfraCliRouteBase:
     """Provide the common result-value widening contract for route handlers."""
 
     @staticmethod
@@ -22,9 +22,9 @@ class CliRouteBase:
         """Erase one concrete result payload at the heterogeneous route boundary."""
 
         def execute(params: TParams) -> p.Result[t.Cli.ResultValue]:
-            return handler(params).map(CliRouteBase.as_route_value)
+            return handler(params).map(FlextInfraCliRouteBase.as_route_value)
 
         return execute
 
 
-__all__: list[str] = ["CliRouteBase"]
+__all__: list[str] = ["FlextInfraCliRouteBase"]

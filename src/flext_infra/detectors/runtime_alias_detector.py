@@ -63,7 +63,7 @@ class FlextInfraRuntimeAliasDetector:
                     detail=f"Found {len(matches)} '{family} = ...' assignments",
                 )
             ]
-        module = u.Infra.get_pymodule(ctx.rope_project, resource)
+        module = u.Infra.resolve_pymodule(ctx.rope_project, resource)
         attributes = module.get_attributes()
         target = attributes.get(policy.expected_family or "")
         binding = attributes.get(family)

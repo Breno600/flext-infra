@@ -122,7 +122,7 @@ class FlextInfraModelsRope:
         module: t.NonEmptyStr = m.Field(description="Imported module path")
         member: str = m.Field(default="", description="Imported member")
         local_name: t.NonEmptyStr = m.Field(description="Bound local name")
-        is_from_import: bool = m.Field(description="From-import marker")
+        from_import_info: bool = m.Field(description="From-import marker")
 
     class IgnoredRegion(mm.PositiveLineMixin, m.ContractModel):
         """One Rope-classified string or comment region in source text."""

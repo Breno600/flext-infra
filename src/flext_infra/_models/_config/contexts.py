@@ -460,6 +460,15 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        cli_module: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether the package ships its cli entry module; see the "
+                    "ProjectSpec namesake."
+                )
+            ),
+        ]
         runtime_dependency_overlay: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -561,16 +570,6 @@ class FlextInfraConfigModelsContexts:
         repository_branch: Annotated[
             t.NonEmptyStr, m.Field(description="Canonical repository Git branch")
         ]
-        workspace_dependency_distributions: Annotated[
-            t.VariadicTuple[str],
-            m.Field(
-                description=(
-                    "Exact local distributions whose source is owned by this "
-                    "workspace root's uv overlay. Every external dependency and "
-                    "every standalone member retains its declared Git source."
-                )
-            ),
-        ] = ()
         year: Annotated[int, m.Field(description="Copyright year")]
 
         @m.field_validator("hatch_build_hook_path")
@@ -683,6 +682,18 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        cli_module: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether the package ships its cli entry module. A scaffold "
+                    "renders the cli seed in the same plan; an existing checkout "
+                    "derives the fact from its source tree. The default console "
+                    "script is declared only then, because conform loads every "
+                    "declared entry point in its fresh-import stage."
+                ),
+            ),
+        ] = True
         runtime_dependency_overlay: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(

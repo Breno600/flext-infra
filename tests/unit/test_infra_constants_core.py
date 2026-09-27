@@ -19,7 +19,6 @@ class TestsFlextInfraInfraConstantsCore:
     """Tests for Paths namespace constants."""
 
     def test_paths_constants_are_strings(self) -> None:
-        tm.that(c.Infra.VENV_BIN_REL, is_=str)
         tm.that(c.Infra.DEFAULT_SRC_DIR, is_=str)
 
     def test_files_constants_are_strings(self) -> None:

@@ -73,7 +73,7 @@ class FlextInfraNamespaceRulesBase:
         return f"{parent}.{leaf}" if parent else leaf
 
     @classmethod
-    def is_type_checking_guard(cls, node: p.AttributeProbe) -> bool:
+    def type_checking_guard(cls, node: p.AttributeProbe) -> bool:
         """Return whether a statement is exactly ``if TYPE_CHECKING``."""
         return (
             cls.kind(node) == "If"
@@ -88,7 +88,7 @@ class FlextInfraNamespaceRulesBase:
         guarded = {
             id(child)
             for node in cls.walk(tree)
-            if cls.is_type_checking_guard(node)
+            if cls.type_checking_guard(node)
             for child in cls.walk(node)
             if cls.kind(child) in {"Import", "ImportFrom"}
         }
