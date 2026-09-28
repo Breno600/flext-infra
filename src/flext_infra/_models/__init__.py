@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from .codegen_render import FlextInfraModelsCodegenRender
     from .codegen_toolchain import FlextInfraModelsCodegenToolchain
     from .codemod import FlextInfraModelsCodemod
-    from .config import FlextInfraConfigModels
+    from ._config import FlextInfraConfigModels
     from .deps import FlextInfraModelsDeps
     from .deps_toml import FlextInfraModelsDepsToml
     from .deps_tool_config import FlextInfraModelsDepsToolSettings
@@ -177,7 +177,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".codegen_render": ("FlextInfraModelsCodegenRender",),
             ".codegen_toolchain": ("FlextInfraModelsCodegenToolchain",),
             ".codemod": ("FlextInfraModelsCodemod",),
-            ".config": ("FlextInfraConfigModels",),
+            "._config.base": ("FlextInfraConfigModels",),
             ".deps": ("FlextInfraModelsDeps",),
             ".deps_toml": ("FlextInfraModelsDepsToml",),
             ".deps_tool_config": ("FlextInfraModelsDepsToolSettings",),
