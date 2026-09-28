@@ -52,6 +52,8 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
             [
                 c.Infra.GIT,
                 "tag",
+                "--merged",
+                c.Infra.GIT_HEAD,
                 "--list",
                 c.Infra.TAG_FORMAT.format(version="*"),
                 "--sort=-version:refname",

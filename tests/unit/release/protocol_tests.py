@@ -178,6 +178,27 @@ class TestsFlextInfraReleaseProtocol:
         tm.that(plan.previous_tag, eq="v0.1.0rc0")
         tm.that(plan.releasable, eq=True)
 
+    def test_plan_ignores_higher_tag_outside_integration_history(
+        self, tmp_path: Path
+    ) -> None:
+        """A release on an unrelated branch cannot select this lane's baseline."""
+        workspace = self._released_workspace(tmp_path)
+        tm.ok(
+            cli.run_checked(
+                [c.Infra.GIT, "switch", "-c", "unrelated-release"], cwd=workspace
+            )
+        )
+        self._commit_merge_subject(workspace, "chore(release): v9.0.0")
+        self._tag(workspace, "v9.0.0")
+        u.Tests.checkout_integration(workspace)
+        u.Tests.merge_pull_request(workspace, "fix: repair the integrated runtime")
+
+        plan = self._planned_release(workspace)
+
+        tm.that(plan.previous_tag, eq="v0.1.0")
+        tm.that(plan.next, eq="0.1.1")
+        tm.that(plan.releasable, eq=True)
+
     def test_final_version_is_ahead_of_its_own_prerelease_tag(
         self, tmp_path: Path
     ) -> None:
