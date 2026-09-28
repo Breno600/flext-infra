@@ -254,7 +254,7 @@ class TestsFlextInfraCodegenPyprojectConform:
             required_dev_dependencies=(),
             uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),
         )
-        tm.fail(result, has="internal flext dependency declares no direct git source")
+        tm.fail(result, has="internal dependency declares no direct git source")
 
     def test_standalone_canonicalizes_the_declared_git_source(self) -> None:
         """The declared requirement line is the only URL and branch authority."""

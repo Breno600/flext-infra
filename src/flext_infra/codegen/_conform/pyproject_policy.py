@@ -59,6 +59,23 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         )
         if flext_line.failure:
             return r[str].from_failure(flext_line)
+        if workspace.integration is None:
+            # Attached members render on the workspace's own integration line
+            # (a governed .gitmodules branch must equal it), derived from the
+            # checkout when the manifest does not declare it.
+            branch = u.Infra.resolve_integration_branch(
+                target.root,
+                preference=codegen.branch_policy.integration_branch_preference,
+            )
+            if branch.failure:
+                return r[str].from_failure(branch)
+            workspace = workspace.model_copy(
+                update={
+                    "integration": m.Infra.WorkspaceIntegrationSpec(
+                        provider=workspace.repository.provider, branch=branch.value
+                    )
+                }
+            )
         return u.Infra.pyproject_conform(
             source,
             workspace=workspace,
