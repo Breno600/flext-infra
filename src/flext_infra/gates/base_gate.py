@@ -277,15 +277,30 @@ class FlextInfraGate:
     ) -> m.Infra.GateExecution:
         """Assemble a gate execution from parsed check output.
 
-        Diagnostic presentation never overrides acceptance: any blocking issue
-        fails the gate even when the tool itself exited successfully.
+        Severity decides blockingness in one owner: error/warning findings
+        fail the gate; informational findings are receipts and travel as
+        observations (report-only), never overriding acceptance.
         """
-        return self._build_gate_execution(
-            project_dir,
-            verdict=passed and not issues,
-            issues=issues,
+        blocking = tuple(
+            issue
+            for issue in issues
+            if issue.severity.lower() in {"error", "warning", "warn"}
+        )
+        observational = tuple(
+            issue
+            for issue in issues
+            if issue.severity.lower() not in {"error", "warning", "warn"}
+        )
+        return m.Infra.GateExecution(
+            result=self._gate_result(
+                project_dir,
+                passed=passed and not blocking,
+                errors=[issue.formatted for issue in blocking],
+                started=started,
+            ),
+            issues=blocking,
+            observational_issues=observational,
             raw_output=raw_output,
-            started=started,
         )
 
     def _build_project_error_gate_result(
