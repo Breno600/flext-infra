@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 import pytest
@@ -39,6 +40,9 @@ class TestsFlextInfraDepsModernizerWorkspace:
         tm.that(external_pyproject.read_text(encoding="utf-8"), eq=original)
 
     def test_taplo_formats_toml_through_public_utility(self, tmp_path: Path) -> None:
+        u.Tests.write_mise_lock(
+            tmp_path, "taplo", u.Tests.pinned_mise_version(u.Tests.repo_mise_lock(), "taplo")
+        )
         config_path = tmp_path / ".taplo.toml"
         config_path.write_text('include = ["**/*.toml"]\n', encoding="utf-8")
         formatter = infra_u.Infra.format_toml_source
@@ -75,6 +79,9 @@ class TestsFlextInfraDepsModernizerWorkspace:
     def test_taplo_uses_nearest_existing_root_for_scaffold_path(
         self, tmp_path: Path
     ) -> None:
+        u.Tests.write_mise_lock(
+            tmp_path, "taplo", u.Tests.pinned_mise_version(u.Tests.repo_mise_lock(), "taplo")
+        )
         future_root = tmp_path / "future" / "project"
 
         formatted = tm.ok(
@@ -92,6 +99,55 @@ class TestsFlextInfraDepsModernizerWorkspace:
         # Why (flext-50qh0): the wrapper returns Taplo's stdout unchanged and
         # a formatted TOML document ends with the canonical trailing newline.
         tm.that(formatted, eq='name = "demo"\n')
+
+    def test_taplo_authenticates_the_locked_pin_not_the_selector(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A moving selector never authenticates: only the mise.lock pin does.
+
+        Why (flext-t7668): the identity probe used to accept any Taplo for
+        the ``latest`` selector, sending the shim's version resolution over
+        the network on a cold cache. A Taplo reporting a version that
+        differs from the pinned one must fail the format path.
+        """
+        u.Tests.write_mise_lock(tmp_path, "taplo", "0.9.9")
+        fake_bin = tmp_path / "bin"
+        fake_bin.mkdir()
+        (fake_bin / "taplo").write_text(
+            '#!/bin/sh\necho "taplo 0.10.0"\n', encoding="utf-8"
+        )
+        (fake_bin / "taplo").chmod(0o755)
+        monkeypatch.setenv(
+            "PATH", f"{fake_bin}{os.pathsep}{os.environ.get('PATH', '')}"
+        )
+
+        formatted = infra_u.Infra.format_toml_source(
+            'name="demo"\n',
+            path=tmp_path / "pyproject.toml",
+            toolchain_root=tmp_path,
+            taplo_version=config.Infra.codegen.toolchain.taplo_version,
+            process_timeout_seconds=(
+                config.Infra.tooling.tools.tomlsort.process_timeout_seconds
+            ),
+        )
+
+        error = tm.fail(formatted)
+        tm.that(error, has=["mise.lock pin", "expected=0.9.9", "observed=taplo 0.10.0"])
+
+    def test_taplo_fails_loud_without_a_committed_lock(self, tmp_path: Path) -> None:
+        """No mise.lock above the workspace means no offline generation."""
+        formatted = infra_u.Infra.format_toml_source(
+            'name="demo"\n',
+            path=tmp_path / "pyproject.toml",
+            toolchain_root=tmp_path,
+            taplo_version=config.Infra.codegen.toolchain.taplo_version,
+            process_timeout_seconds=(
+                config.Infra.tooling.tools.tomlsort.process_timeout_seconds
+            ),
+        )
+
+        error = tm.fail(formatted)
+        tm.that(error, has=["no mise.lock", "run make upg"])
 
     @pytest.mark.parametrize(
         ("content", "exists", "expected"),
