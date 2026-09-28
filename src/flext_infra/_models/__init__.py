@@ -88,6 +88,7 @@ __all__: t.VariadicTuple[str] = (
     "FlextInfraConfigModelsTemplates",
     "FlextInfraConfigModelsWorkspace",
     "FlextInfraModelsBase",
+    "FlextInfraModelsDefaults",
     "FlextInfraModelsCensus",
     "FlextInfraModelsCheck",
     "FlextInfraModelsCodegen",
