@@ -654,9 +654,9 @@ Infra:
         parallel-worker-overrides:
           cosmos-docgen: 4
           flext-infra: 4
-        # Reserve physical memory for each xdist worker and its child process
-        # tree; this bound may reduce the tested ceiling on smaller hosts.
-        parallel-worker-memory-gb: 2
+          # Reserve physical memory for each xdist worker and its child process
+          # tree; this bound may reduce the tested ceiling on smaller hosts.
+          parallel-worker-memory-gb: 2
         # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
         profile-sort: cumulative

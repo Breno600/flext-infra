@@ -15,6 +15,16 @@ class FlextInfraConstantsWorkspace:
     """Workspace infrastructure constants."""
 
     @unique
+    class BeadIssueStatus(StrEnum):
+        """Beads issue status values."""
+
+        OPEN = "open"
+        IN_PROGRESS = "in_progress"
+        BLOCKED = "blocked"
+        DEFERRED = "deferred"
+        CLOSED = "closed"
+
+    @unique
     class WorktreeOperation(StrEnum):
         """Private Git worktree primitives composed by the work saga."""
 
