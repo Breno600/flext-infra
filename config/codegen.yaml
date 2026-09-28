@@ -25,10 +25,21 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
-      # Runtime and scratch storage roots consumed by generated Makefiles.
+      # External runtime state directory (sibling of checkout, not inside it).
+      # Governs PROJECT_STATE_ROOT, PROJECT_SCRATCH_ROOT, PYTHONPYCACHEPREFIX.
       state_directory_name: ".flext-runtime"
+      # Scratch namespace for TMPDIR, test basetemp, Mise bootstrap staging.
+      # Never lives inside a versioned tree (storage law).
       scratch_namespace: "scratch"
+      # Scratch home-relative path: platform home plus this path mirrors the
+      # absolute checkout path below it. Workspace mode: sibling state root
+      # under superproject, so every sandbox became a tracked scope of the
+      # enclosing repository.
       scratch_home_relative: "tmp"
+      # Bytecode cache namespace under PROJECT_STATE_ROOT.
+      pycache_namespace: "pycache"
+      # Mise artifacts namespace under state directory.
+      mise_namespace: "mise-artifacts"
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
