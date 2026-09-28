@@ -10,6 +10,6 @@ rule:
   pattern: u.Infra.header_parser.$METHOD($$$ARGS)
 constraints:
   METHOD:
-    regex: '^(?:alias_locally_bound|alias_used|ensure_alias_import|ensure_future_annotations|has_alias_import)$'
+    regex: "^(?:alias_locally_bound|alias_used|ensure_alias_import|ensure_future_annotations|has_alias_import)$"
 fix: u.Infra.$METHOD($$$ARGS)
 message: Remove the header parser locator and call u.Infra directly.

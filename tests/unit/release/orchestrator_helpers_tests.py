@@ -281,6 +281,9 @@ class TestsFlextInfraReleaseHelpers:
     class TestsArtifactPersistence:
         """Atomic immutable artifact-set behavior."""
 
+        # Why (flext-oftik class): builds a real artifact twice (uv build); the
+        # SSOT slow budget (flext_slow_timeout_seconds) owns its ceiling.
+        @pytest.mark.slow
         @staticmethod
         def test_collision_preserves_complete_existing_set(tmp_path: Path) -> None:
             """Fail on immutable collision without partial or temporary output."""

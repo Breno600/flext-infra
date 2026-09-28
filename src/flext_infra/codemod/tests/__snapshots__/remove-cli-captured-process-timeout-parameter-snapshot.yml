@@ -6,7 +6,7 @@ snapshots:
         cmd: t.StrSequence,
         return_code: int | None,
         received_signals: list[int],
-        diagnostics: tuple[str, ...],
+        diagnostics: t.VariadicTuple[str],
         stdout_output: bytearray,
         stderr_output: bytearray,
         duration: float,
@@ -38,7 +38,7 @@ snapshots:
           cls,
           return_code: int | None,
           received_signals: list[int],
-          diagnostics: tuple[str, ...],
+          diagnostics: t.VariadicTuple[str],
           stdout_output: bytearray,
           stderr_output: bytearray,
           duration: float,
@@ -51,14 +51,12 @@ snapshots:
               received_signals,
               diagnostics,
               timed_out=timed_out,
-          ).map(
-              lambda outcome: m.Cli.CommandBytesOutput(
-                  stdout=bytes(stdout_output),
-                  stderr=bytes(stderr_output),
-                  outcome=outcome,
-                  duration=duration,
-              )
-          )
+          ).map(lambda outcome: m.Cli.CommandBytesOutput(
+              stdout=bytes(stdout_output),
+              stderr=bytes(stderr_output),
+              outcome=outcome,
+              duration=duration,
+          ))
 
     labels:
     - source: |-
@@ -67,7 +65,7 @@ snapshots:
             cmd: t.StrSequence,
             return_code: int | None,
             received_signals: list[int],
-            diagnostics: tuple[str, ...],
+            diagnostics: t.VariadicTuple[str],
             stdout_output: bytearray,
             stderr_output: bytearray,
             duration: float,
@@ -96,18 +94,4 @@ snapshots:
             )
       style: primary
       start: 0
-      end: 960
-  ? |
-    def _captured_process_result(command: str, *, timed_out: bool, timeout_exit_code: int) -> Result:
-        return outcome
-  : fixed: |+
-      def _captured_process_result(command: str, *, timed_out: bool) -> Result:
-          return outcome
-
-    labels:
-    - source: |-
-        def _captured_process_result(command: str, *, timed_out: bool, timeout_exit_code: int) -> Result:
-            return outcome
-      style: primary
-      start: 0
-      end: 116
+      end: 965

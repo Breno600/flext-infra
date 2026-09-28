@@ -5,13 +5,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from tests import c, u
 
 if TYPE_CHECKING:
-    from tests import p
+    from tests import p, t
 
 
 # NOTE (multi-agent, flext-wkii.17.15): prove scoped writes and read-only drift publicly.
@@ -26,7 +27,7 @@ class TestsFlextInfraCodegenLazyInitService:
         check_only: bool = True,
         apply_changes: bool = False,
         dry_run: bool = False,
-    ) -> tuple[FlextInfraCodegenLazyInit, p.Result[bool], Path, bytes]:
+    ) -> t.Quad[FlextInfraCodegenLazyInit, p.Result[bool], Path, bytes]:
         """Run one lazy-init pass without writing and return its observable drift."""
         u.Tests.write_lazy_init_namespace_module(
             package_root / "models.py", class_name="FlextTestsModels", alias="m"
@@ -55,6 +56,11 @@ class TestsFlextInfraCodegenLazyInitService:
             tmp_path,
             project_name="flext-test-unrelated",
             package_name="flext_test_unrelated",
+        )
+        # A multi-project root is a workspace that declares its members; an
+        # undeclared nested Git checkout is foreign and is never indexed.
+        u.Tests.declare_workspace_projects(
+            tmp_path, ("flext-test-selected", "flext-test-unrelated")
         )
         u.Tests.write_lazy_init_namespace_module(
             selected_root / "models.py",
@@ -285,7 +291,7 @@ class TestsFlextInfraCodegenLazyInitService:
         tm.that(generated, contains="TestsFlextTestsConstants")
         tm.that(generated, contains="TestsFlextTestsUtilities")
         tm.that(generated, contains="install_lazy_exports")
-        tm.that(generated, contains='"tm"')
+        tm.that(generated, lacks='"tm"')
         tm.that(generated, lacks="TestsCollectedNoise")
         tm.that(generated, lacks=".unit.test_noise")
         child_generated = unit_root.joinpath(c.Infra.INIT_PY).read_text(
@@ -381,6 +387,9 @@ class TestsFlextInfraCodegenLazyInitService:
         _, second_root = u.Tests.create_lazy_init_workspace(
             tmp_path, project_name="flext-test-second", package_name="flext_shared"
         )
+        u.Tests.declare_workspace_projects(
+            tmp_path, ("flext-test-first", "flext-test-second")
+        )
         u.Tests.write_lazy_init_namespace_module(
             first_root / "models.py", class_name="FlextTestsFirstModels", alias="m"
         )
@@ -431,7 +440,49 @@ class TestsFlextInfraCodegenLazyInitService:
             str(init_path),
         ])
         tm.that(ruff_check.success, eq=True)
-        tm.that(u.Cli.process_succeeded(ruff_check.value.outcome), eq=True)
+        tm.that(
+            u.Cli.process_succeeded(ruff_check.value.outcome),
+            eq=True,
+            msg=f"{ruff_check.value.stdout}\n{ruff_check.value.stderr}",
+        )
+
+    @pytest.mark.parametrize("width_offset", [-1, 0, 1])
+    def test_export_tuple_is_formatter_stable_at_line_width(
+        self, tmp_path: Path, width_offset: int
+    ) -> None:
+        """Public generation agrees with Ruff on both sides of its wrap boundary."""
+        repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
+        first, second = "FlextTestsFirst", "FlextTestsSecond"
+        compact = f'__all__: tuple[str, ...] = ("{first}", "{second}")'
+        second += "x" * (c.Infra.MAX_LINE_LENGTH + width_offset - len(compact))
+        package_root.joinpath("runner.py").write_text(
+            f'class {first}:\n    """First export."""\n\n'
+            f'class {second}:\n    """Second export."""\n\n'
+            f'__all__ = ["{first}", "{second}"]\n',
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        service = u.Tests.create_lazy_init_service(repository_root)
+        service.target_module = "flext_test_project"
+        service.apply_changes = True
+        result = u.Tests.materialize_lazy_init(service)
+        tm.that(result.success, eq=True)
+
+        formatted = u.Cli.run_raw([
+            c.Infra.RUFF,
+            "format",
+            "--check",
+            "--config",
+            str(Path(__file__).resolve().parents[3] / c.PYPROJECT_FILENAME),
+            "--line-length",
+            str(c.Infra.MAX_LINE_LENGTH),
+            str(package_root / c.Infra.INIT_PY),
+        ])
+        tm.that(formatted.success, eq=True)
+        tm.that(
+            u.Cli.process_succeeded(formatted.value.outcome),
+            eq=True,
+            msg=f"{formatted.value.stdout}\n{formatted.value.stderr}",
+        )
 
     def test_execute_command_rejects_publication_outside_conform(
         self, tmp_path: Path
@@ -447,14 +498,14 @@ class TestsFlextInfraCodegenLazyInitService:
         apply_service.target_module = "flext_test_project"
         apply_service.apply_changes = True
 
-        apply_result = FlextInfraCodegenLazyInit.execute_command(apply_service)
+        apply_result = apply_service.execute()
         applied_init = init_path.read_bytes()
         materialized = u.Tests.materialize_lazy_init(apply_service)
         check_service = u.Tests.create_lazy_init_service(repository_root)
         check_service.target_module = "flext_test_project"
         check_service.check_only = True
 
-        check_result = FlextInfraCodegenLazyInit.execute_command(check_service)
+        check_result = check_service.execute()
 
         tm.that(apply_result.success, eq=False)
         tm.that(apply_result.error, has="publication is owned by codegen conform")
@@ -527,20 +578,21 @@ class TestsFlextInfraCodegenLazyInitService:
     # it (stdlib-module-shadowing). Apply must remove generator-owned residue,
     # never write a new initializer, drop the child from the parent inventory
     # in the same pass, and a following check must be a byte fixed point.
-    def test_stdlib_shadowing_directory_is_never_a_generated_package(
-        self, tmp_path: Path
+    @pytest.mark.parametrize("directory_name", ["typing", "done-check", "class", "123"])
+    def test_invalid_directory_is_never_a_generated_package(
+        self, tmp_path: Path, directory_name: str
     ) -> None:
-        """A stdlib-named tests directory is skipped and its residue removed."""
+        """Unimportable and stdlib-shadowing directories lose generated residue."""
         repository_root, _package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         tests_root = repository_root / c.Infra.DIR_TESTS
         tests_root.mkdir()
         tests_init = tests_root / c.Infra.INIT_PY
         tests_init.write_text("", encoding=c.Cli.ENCODING_DEFAULT)
-        shadowing_root = tests_root / "typing"
+        shadowing_root = tests_root / directory_name
         shadowing_root.mkdir()
         residue_init = shadowing_root / c.Infra.INIT_PY
         residue_init.write_text(
-            f'{c.Infra.AUTOGEN_HEADER}\n"""Tests.typing package."""\n',
+            f'{c.Infra.AUTOGEN_HEADER}\n"""Generated package."""\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         shadowing_root.joinpath("test_contracts.py").write_text(
@@ -572,11 +624,8 @@ class TestsFlextInfraCodegenLazyInitService:
 
         tm.that(apply_result.success, eq=True)
         tm.that(residue_init.exists(), eq=False)
-        tm.that(generated_tests_init, lacks=".typing")
-        tm.that(generated_tests_init, lacks='"typing"')
+        tm.that(generated_tests_init, lacks=f".{directory_name}")
+        tm.that(generated_tests_init, lacks=f'"{directory_name}"')
         tm.that((nested_io_root / c.Infra.INIT_PY).exists(), eq=True)
         tm.that(check_result.success, eq=True)
         tm.that(check_service.modified_files, eq=())
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenLazyInitService"]

@@ -15,7 +15,7 @@ from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesDocsAudit(
@@ -74,10 +74,11 @@ class FlextInfraUtilitiesDocsAudit(
         scope: m.Infra.DocScope, section: str, key: str
     ) -> t.StrSequence:
         """Read one list of policy tokens from the minimal root docs settings."""
-        repository_root = (
-            scope.path if scope.name == c.Infra.RK_ROOT else scope.path.parent
-        )
-        payload = FlextInfraUtilitiesDocsScope.load_config(repository_root)
+        # Why: the scope's own declared `repository_root` (not a `.parent`
+        # heuristic) owns docs policy resolution — a workspace-root project
+        # scope IS its own repository root, and only a genuine member-project
+        # scope carries a `repository_root_override` set at scope build time.
+        payload = FlextInfraUtilitiesDocsScope.load_config(scope.repository_root)
         container = payload.get(section)
         if not isinstance(container, dict):
             return []

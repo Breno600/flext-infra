@@ -15,12 +15,13 @@ SPDX-License-Identifier: MIT
 {# NOTE (multi-agent, flext-wkii.19.1): config/settings foundation parts compose the single constants namespace. -#}
 from __future__ import annotations
 
-from {{ upstream }} import c
+{# NOTE (flext-dv1ga): extend the class the upstream declares for `c` in its own __all__; the letter is rebound below as a plain alias. -#}
+from {{ upstream }} import {{ upstream_facades["c"] }}
 
 {{ constants_imports }}
 
 
-class {{ class_stem }}Constants(c):
+class {{ class_stem }}Constants({{ upstream_facades["c"] }}):
     """{{ class_stem }} constants extending the upstream facade."""
 
 {{ constants_namespace_declaration }}

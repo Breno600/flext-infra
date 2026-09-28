@@ -31,11 +31,24 @@ class TestsFlextInfraUtilitiesGitMixin:
     def checkout_integration(repo_root: Path) -> str:
         """Move the fixture onto its integration branch and return its name."""
         branch = TestsFlextInfraUtilitiesGitMixin.integration_branch(repo_root)
-        tm.ok(
-            cli_facade.run_checked(
-                [c.Infra.GIT, "switch", "--create", branch], cwd=repo_root
-            )
+        already_on_branch = (
+            TestsFlextInfraUtilitiesGitMixin.git_capture(
+                repo_root, "branch", "--show-current"
+            ).strip()
+            == branch
         )
+        if already_on_branch:
+            return branch
+        # Why: the fixture may carry the branch locally already (the release
+        # workspace renames the checkout to the provider baseline); an absent
+        # branch is a legitimate answer of the ref owner, never a failed probe.
+        local_exists = TestsFlextInfraUtilitiesGitMixin.git_ref_exists(
+            repo_root, f"refs/heads/{branch}"
+        )
+        arguments = (
+            ("switch", branch) if local_exists else ("switch", "--create", branch)
+        )
+        tm.ok(cli_facade.run_checked([c.Infra.GIT, *arguments], cwd=repo_root))
         return branch
 
     @staticmethod
@@ -93,18 +106,18 @@ class TestsFlextInfraUtilitiesGitMixin:
         bootstrap(
             repo_root, ("remote", "set-url", c.Infra.GIT_ORIGIN, str(bare_remote))
         )
+        # The checkout carries the provider-declared integration branch, so the
+        # bare origin publishes that same line as its default target.
+        branch = TestsFlextInfraUtilitiesGitMixin.integration_branch(repo_root)
         tm.ok(
             u.Infra.git_push_upstream(
                 m.Infra.GitPushRequest(
-                    repo_root=repo_root,
-                    remote=c.Infra.GIT_ORIGIN,
-                    branch=c.Infra.GIT_MAIN,
+                    repo_root=repo_root, remote=c.Infra.GIT_ORIGIN, branch=branch
                 )
             )
         )
         bootstrap(
-            bare_remote,
-            ("symbolic-ref", c.Infra.GIT_HEAD, f"refs/heads/{c.Infra.GIT_MAIN}"),
+            bare_remote, ("symbolic-ref", c.Infra.GIT_HEAD, f"refs/heads/{branch}")
         )
         return bare_remote
 
@@ -177,7 +190,7 @@ class TestsFlextInfraUtilitiesGitMixin:
         remote error. This is the single owner of fixture Git identity;
         callers must not add ``origin`` themselves.
         """
-        baseline_branch = TestsFlextInfraUtilitiesProjectFixtureMixin.provider().branch
+        baseline_branch = TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()
         bootstrap = TestsFlextInfraUtilitiesGitMixin.git_bootstrap
         bootstrap(repo_root, ("init", "-b", c.Infra.GIT_MAIN))
         bootstrap(repo_root, ("config", "user.email", "tests@flext.local"))

@@ -21,4 +21,4 @@ rule:
 constraints:
   R:
     regex: '^r(?:\[.+\])?$'
-fix: '$R.fail(str($EXC), exception=$EXC)'
+fix: "$R.fail(str($EXC), exception=$EXC)"

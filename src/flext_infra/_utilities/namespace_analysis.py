@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_infra.constants import c
+from flext_infra import c
 
 from .discovery import FlextInfraUtilitiesDiscovery
 from .namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
@@ -36,10 +36,7 @@ class FlextInfraUtilitiesRefactorNamespaceFlext(
                 raise ValueError(msg)
             if resolved_file.name == c.Infra.PY_TYPED:
                 continue
-            try:
-                source = resolved_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            except c.EXC_OS_DECODING:
-                continue
+            source = resolved_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             if c.Infra.FUTURE_ANNOTATIONS in source:
                 continue
             lines = source.splitlines()

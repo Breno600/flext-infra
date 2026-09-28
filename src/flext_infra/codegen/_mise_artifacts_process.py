@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import os
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, settings, t, u
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -25,7 +26,7 @@ class FlextInfraMiseArtifactsProcess:
         def directory_key(path: Path) -> t.Pair[int, str]:
             return len(path.parts), path.as_posix()
 
-        if not os.environ.get("PATH"):
+        if not settings.Infra.system_path:
             return r[bool].fail("PATH is required for isolated Mise execution")
         if scratch.exists() or scratch.is_symlink():
             return r[bool].fail(f"isolated Mise runtime already exists: {scratch}")
@@ -66,11 +67,11 @@ class FlextInfraMiseArtifactsProcess:
         storage_root: Path,
         release: str,
         contract: m.Infra.MiseBootstrapEnvironmentSpec,
-    ) -> p.Result[dict[str, str]]:
+    ) -> p.Result[MutableMapping[str, str]]:
         """Build one isolated environment backed by release-addressed storage."""
         install_path = u.Infra.mise_runtime_install_path(storage_root, release)
         if install_path.failure:
-            return r[dict[str, str]].from_failure(install_path)
+            return r[MutableMapping[str, str]].from_failure(install_path)
         isolated = dict(contract.fixed_environment)
         isolated.update({
             name: str(scratch / relative)
@@ -87,15 +88,17 @@ class FlextInfraMiseArtifactsProcess:
             "MISE_INSTALL_PATH": str(install_path.value),
         })
         for name in contract.passthrough_environment:
-            if value := os.environ.get(name):
+            if value := u.Infra.env_lookup(name):
                 isolated[name] = value
-        credential_command = os.environ.get("MISE_GITHUB_CREDENTIAL_COMMAND")
+        credential_command = settings.Infra.mise_github_credential_command
         if credential_command:
             isolated["MISE_GITHUB_CREDENTIAL_COMMAND"] = credential_command
-        return r[dict[str, str]].ok(isolated)
+        return r[MutableMapping[str, str]].ok(isolated)
 
     @classmethod
-    def no_config_environment(cls, environment_values: t.StrMapping) -> dict[str, str]:
+    def no_config_environment(
+        cls, environment_values: t.StrMapping
+    ) -> MutableMapping[str, str]:
         """Select Mise's documented config-free mode for runtime-only commands."""
         result = dict(environment_values)
         result["MISE_NO_CONFIG"] = "1"
@@ -121,16 +124,7 @@ class FlextInfraMiseArtifactsProcess:
         if not u.Cli.process_succeeded(command_output.outcome):
             detail = output.strip() or f"exit {command_output.outcome.raw_return_code}"
             return r[str].fail(f"{operation} failed: {detail}")
-        # The version-update nag is informational, not a configuration warning:
-        # lock-free mode always resolves the newest published release.
-        real_warnings = tuple(
-            line
-            for line in output.splitlines()
-            if "mise WARN" in line
-            and "mise version" not in line
-            and "self-update" not in line
-        )
-        if real_warnings:
+        if "mise WARN" in output:
             return r[str].fail(f"{operation} emitted a warning: {output.strip()}")
         u.Cli.info(f"mise-toolchain: complete operation={operation}")
         return r[str].ok(command_output.stdout.strip())

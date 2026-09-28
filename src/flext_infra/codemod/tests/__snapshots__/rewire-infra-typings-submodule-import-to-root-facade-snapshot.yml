@@ -1,0 +1,9 @@
+id: rewire-infra-typings-submodule-import-to-root-facade
+snapshots:
+  from flext_infra.typings import t:
+    fixed: from flext_infra import t
+    labels:
+    - source: from flext_infra.typings import t
+      style: primary
+      start: 0
+      end: 33

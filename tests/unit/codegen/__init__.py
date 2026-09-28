@@ -4,87 +4,14 @@
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import TYPE_CHECKING
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
-if TYPE_CHECKING:
-    from flext_tests import c, d, e, h, m, p, r, s, t, td, tf, tk, tm, tv, u, x
-
-    from .layout_fixture import archive_root, build_loose_project, layout_engine
-    from .lazy_init_file_plan_tests import TestsFlextInfraCodegenLazyInitFilePlans
-    from .lazy_init_generation_tests import TestsFlextInfraCodegenGeneration
-    from .lazy_init_process_tests import TestsFlextInfraLazyInitProcessing
-    from .lazy_init_registry_wrapper_tests import TestsFlextInfraLazyInitCleanup
-    from .lazy_init_runtime_tests import TestsFlextInfraLazyInitRuntime
-    from .lazy_init_service_tests import TestsFlextInfraCodegenLazyInitService
-    from .test_codegen_hook_conformance import TestGitHookConformance
-    from .test_utility_facade_projection import TestsFlextInfraUtilityFacadeProjection
-__all__: tuple[str, ...] = (
-    "TestGitHookConformance",
-    "TestsFlextInfraCodegenGeneration",
-    "TestsFlextInfraCodegenLazyInitFilePlans",
-    "TestsFlextInfraCodegenLazyInitService",
-    "TestsFlextInfraLazyInitCleanup",
-    "TestsFlextInfraLazyInitProcessing",
-    "TestsFlextInfraLazyInitRuntime",
-    "TestsFlextInfraUtilityFacadeProjection",
-    "archive_root",
-    "build_loose_project",
-    "c",
-    "d",
-    "e",
-    "h",
-    "layout_engine",
-    "m",
-    "p",
-    "r",
-    "s",
-    "t",
-    "td",
-    "tf",
-    "tk",
-    "tm",
-    "tv",
-    "u",
-    "x",
-)
+__all__: tuple[str, ...] = ()
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
-        MappingProxyType({
-            ".layout_fixture": ("archive_root", "build_loose_project", "layout_engine"),
-            ".lazy_init_file_plan_tests": ("TestsFlextInfraCodegenLazyInitFilePlans",),
-            ".lazy_init_generation_tests": ("TestsFlextInfraCodegenGeneration",),
-            ".lazy_init_process_tests": ("TestsFlextInfraLazyInitProcessing",),
-            ".lazy_init_registry_wrapper_tests": ("TestsFlextInfraLazyInitCleanup",),
-            ".lazy_init_runtime_tests": ("TestsFlextInfraLazyInitRuntime",),
-            ".lazy_init_service_tests": ("TestsFlextInfraCodegenLazyInitService",),
-            ".test_codegen_hook_conformance": ("TestGitHookConformance",),
-            ".test_utility_facade_projection": (
-                "TestsFlextInfraUtilityFacadeProjection",
-            ),
-            "flext_tests": (
-                "c",
-                "d",
-                "e",
-                "h",
-                "m",
-                "p",
-                "r",
-                "s",
-                "t",
-                "td",
-                "tf",
-                "tk",
-                "tm",
-                "tv",
-                "u",
-                "x",
-            ),
-        }),
-        alias_groups=MappingProxyType({}),
-        sort_keys=False,
+        MappingProxyType({}), alias_groups=MappingProxyType({}), sort_keys=False
     )
 )
 

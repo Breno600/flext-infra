@@ -48,6 +48,3 @@ class TestsFlextInfraRootMakefileSingleOwner:
 
         tm.that(generic, has="{{ makefile_custom_include }}")
         tm.that(generic, lacks="workspace_custom.mk")
-
-
-__all__: tuple[str, ...] = ()

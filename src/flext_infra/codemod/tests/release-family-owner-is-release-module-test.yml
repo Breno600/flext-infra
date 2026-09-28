@@ -1,0 +1,7 @@
+id: release-family-owner-is-release-module
+valid:
+  - "policy: FlextInfraConfigModelsRelease.ReleasePolicySpec"
+  - "pins: FlextInfraConfigModelsArtifact.SedPatternSpec"
+invalid:
+  - "policy: FlextInfraConfigModelsArtifact.ReleasePolicySpec"
+  - "pins: t.VariadicTuple[FlextInfraConfigModelsArtifact.BuildConstraintSpec]"

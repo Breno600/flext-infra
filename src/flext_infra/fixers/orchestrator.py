@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Annotated, ClassVar, override
 
 from flext_core import r
@@ -20,9 +21,7 @@ from .rope_fixer import FlextInfraRopeFixerAdapter
 from .transformer_fixer import FlextInfraTransformerFixerAdapter
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-    from flext_infra.fixers.base import FlextInfraFixerAdapter
+    from .base import FlextInfraFixerAdapter
 
 
 class FlextInfraEnforcementFixerOrchestrator(
@@ -101,10 +100,14 @@ class FlextInfraEnforcementFixerOrchestrator(
         fails here, before any project is touched, naming rule and action —
         never a per-project failed fix discovered mid-run.
         """
-        catalog = catalog or FlextInfraEnforcementEngine.canonical_catalog()
+        resolved: m.EnforcementCatalog = (
+            catalog
+            if catalog is not None
+            else FlextInfraEnforcementEngine.canonical_catalog()
+        )
         adapterless = tuple(
             f"{rule.id} {rule.fix_action.kind}:{rule.fix_action.target}"
-            for rule in catalog.enabled_rules()
+            for rule in resolved.enabled_rules()
             if rule.fix_action is not None and not self._has_adapter(rule)
         )
         if adapterless:
@@ -165,20 +168,20 @@ class FlextInfraEnforcementFixerOrchestrator(
         results: list[m.Infra.ProjectFixResult] = []
         for adapter_cls, adapter_rules in self._group_by_adapter(rules).items():
             adapter = self._instantiate_adapter(adapter_cls)
-            violations, failures = self._collect_violations(
-                project_dir=project_dir, rules=adapter_rules
-            )
-            if failures:
+            evaluation = self._engine().collect_project(project_dir, adapter_rules)
+            if evaluation.failures:
                 results.append(
                     m.Infra.ProjectFixResult(
-                        project=project_dir.name, failed=tuple(failures)
+                        project=project_dir.name, failed=evaluation.failures
                     )
                 )
                 if self.fail_fast:
                     return tuple(results)
-            if not violations:
+            if not evaluation.violations:
                 continue
-            result = adapter.fix_project(project_dir, violations, self._command_ctx())
+            result = adapter.fix_project(
+                project_dir, evaluation.violations, self._command_ctx()
+            )
             results.append(result)
             if result.failed and self.fail_fast:
                 return tuple(results)
@@ -186,11 +189,11 @@ class FlextInfraEnforcementFixerOrchestrator(
 
     def _group_by_adapter(
         self, rules: t.SequenceOf[m.EnforcementRuleSpec]
-    ) -> dict[type[FlextInfraFixerAdapter], list[m.EnforcementRuleSpec]]:
+    ) -> MutableMapping[type[FlextInfraFixerAdapter], list[m.EnforcementRuleSpec]]:
         """Group preflighted rules by the adapter that owns their fix_action."""
-        grouped: dict[type[FlextInfraFixerAdapter], list[m.EnforcementRuleSpec]] = (
-            defaultdict(list)
-        )
+        grouped: MutableMapping[
+            type[FlextInfraFixerAdapter], list[m.EnforcementRuleSpec]
+        ] = defaultdict(list)
         for rule in rules:
             fix_action = rule.fix_action
             if fix_action is None:
@@ -207,8 +210,7 @@ class FlextInfraEnforcementFixerOrchestrator(
     ) -> type[FlextInfraFixerAdapter] | None:
         """Return the first adapter class that accepts ``fix_action``."""
         for adapter_cls in self._ADAPTER_CLASSES:
-            adapter = adapter_cls.__new__(adapter_cls)
-            if adapter.can_fix(fix_action):
+            if self._instantiate_adapter(adapter_cls).can_fix(fix_action):
                 return adapter_cls
         return None
 
@@ -221,76 +223,6 @@ class FlextInfraEnforcementFixerOrchestrator(
     def _engine(self) -> FlextInfraEnforcementEngine:
         """Build the shared enforcement engine for this workspace."""
         return FlextInfraEnforcementEngine(self.repository_root)
-
-    def _collect_violations(
-        self, project_dir: Path, rules: t.SequenceOf[m.EnforcementRuleSpec]
-    ) -> tuple[
-        list[tuple[m.EnforcementRuleSpec, p.AttributeProbe]], list[m.Infra.FailedFix]
-    ]:
-        """Collect violations for ``rules`` inside ``project_dir``."""
-        evaluation = self._engine().collect_project(project_dir, rules)
-        return evaluation.violations, evaluation.failures
-
-    def _collect_tests_validator_violations(
-        self, project_dir: Path, rule: m.EnforcementRuleSpec
-    ) -> tuple[
-        list[tuple[m.EnforcementRuleSpec, p.AttributeProbe]], list[m.Infra.FailedFix]
-    ]:
-        """Run the flext-tests validator method for ``rule``."""
-        return self._engine().collect_tests_validator(project_dir, rule)
-
-    def _collect_python_file_violations(
-        self, project_dir: Path, rule: m.EnforcementRuleSpec
-    ) -> tuple[
-        list[tuple[m.EnforcementRuleSpec, p.AttributeProbe]], list[m.Infra.FailedFix]
-    ]:
-        """Return one probe per Python file for transformer-backed detector rules.
-
-        Runtime detector rules backed by a deterministic source
-        transformer are applied project-wide; the transformer itself decides
-        whether each file needs a change. This keeps the orchestrator from
-        silently skipping rules whose detectors do not emit per-file probes.
-        """
-        return self._engine().collect_python_file_probes(project_dir, rule)
-
-    def _collect_declarative_violations(
-        self, project_dir: Path, rules: t.SequenceOf[m.EnforcementRuleSpec]
-    ) -> tuple[
-        list[tuple[m.EnforcementRuleSpec, p.AttributeProbe]], list[m.Infra.FailedFix]
-    ]:
-        """Return concrete probes by running the declarative engine per file.
-
-        Unlike the generic per-file probe, this asks the declarative engine
-        to actually inspect each file and emit violation probes with line
-        numbers and metadata. All ``rules`` are evaluated inside a single rope
-        project to avoid repeated project open/close overhead.
-        """
-        return self._engine().collect_declarative(project_dir, rules)
-
-    @staticmethod
-    def _stub_file_paths(project_dir: Path) -> t.VariadicTuple[Path]:
-        """Return source stub files while respecting canonical excluded dirs."""
-        return FlextInfraEnforcementEngine.stub_file_paths(project_dir)
-
-    def _collect_project_violations(
-        self, project_dir: Path, rule: m.EnforcementRuleSpec
-    ) -> list[tuple[m.EnforcementRuleSpec, p.AttributeProbe]]:
-        """Return one project-level probe for gate-backed fixes."""
-        return FlextInfraEnforcementEngine.collect_project_probe(project_dir, rule)
-
-    @staticmethod
-    def _probe_for_path(path: Path) -> p.AttributeProbe:
-        """Build the minimal structural probe consumed by fixer adapters."""
-        return FlextInfraEnforcementEngine.probe_for_path(path)
-
-    @staticmethod
-    def _collection_failure(
-        project_dir: Path, rule: m.EnforcementRuleSpec, message: str
-    ) -> m.Infra.FailedFix:
-        """Build a failed-fix record for collection/routing errors."""
-        return FlextInfraEnforcementEngine.collection_failure(
-            project_dir, rule, message
-        )
 
     def _command_ctx(self) -> m.Infra.FixEnforcementCommand:
         """Build a command context for adapters from the service fields.
@@ -307,7 +239,6 @@ class FlextInfraEnforcementFixerOrchestrator(
             rules=self.rules,
             safe_only=self.safe_only,
             check_after=self.check_after and self.apply,
-            fail_fast=self.fail_fast,
         )
 
     @staticmethod

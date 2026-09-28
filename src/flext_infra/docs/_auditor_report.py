@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import c, m
+from flext_infra import c, config, m
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -12,6 +12,16 @@ if TYPE_CHECKING:
 
 class FlextInfraDocAuditorReportMixin:
     """Mixin for documentation audit report construction."""
+
+    @staticmethod
+    def _audit_warning_posture() -> bool:
+        """Whether audit findings warn instead of failing the phase.
+
+        Operator law 2026-09-22: docs audit findings are warnings owned by
+        cleanup beads, never CI blockers, when ``make.docs.warning_actions``
+        lists ``audit``; the reports keep every finding either way.
+        """
+        return "audit" in config.Infra.codegen.make.docs.warning_actions
 
     def _audit_report(
         self,
@@ -29,7 +39,8 @@ class FlextInfraDocAuditorReportMixin:
             and docstring_coverage is not None
             and docstring_coverage.percent < params.docstring_min
         )
-        passed = issue_count == 0 and not coverage_breached
+        warning_posture = self._audit_warning_posture()
+        passed = (issue_count == 0 and not coverage_breached) or warning_posture
         result = c.Infra.ResultStatus.OK if passed else c.Infra.ResultStatus.FAIL
         message = (
             f"docstring coverage {docstring_coverage.percent}% below minimum "
@@ -37,6 +48,8 @@ class FlextInfraDocAuditorReportMixin:
             if coverage_breached and docstring_coverage is not None
             else "audit passed"
             if issue_count == 0
+            else f"audit passed with {issue_count} warning(s)"
+            if warning_posture
             else f"found {issue_count} issue(s)"
         )
         return m.Infra.DocsPhaseReport(
@@ -50,7 +63,7 @@ class FlextInfraDocAuditorReportMixin:
             ),
             message=message,
             checks=checks,
-            strict=True,
+            strict=not warning_posture,
             passed=passed,
             items=[
                 m.Infra.DocsPhaseItemModel(

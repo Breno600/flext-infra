@@ -6,12 +6,7 @@ warning usage in __init__, using regex analysis on source text.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from flext_infra import c
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra import c, t
 
 
 class FlextInfraRefactorDeprecatedRemover:

@@ -38,7 +38,7 @@ rule:
 constraints:
   R:
     regex: '^r(?:\[.+\])?$'
-fix: '$R.fail($MESSAGE, exception=$EXC)'
+fix: "$R.fail($MESSAGE, exception=$EXC)"
 ---
 id: fstring-fail-missing-exception-review
 language: python
@@ -81,7 +81,7 @@ rule:
 constraints:
   R:
     regex: '^r(?:\[.+\])?$'
-fix: '$R.fail($MESSAGE, $NAME=$VALUE, exception=$EXC)'
+fix: "$R.fail($MESSAGE, $NAME=$VALUE, exception=$EXC)"
 ---
 id: fstring-fail-missing-exception-positional-review
 language: python

@@ -9,14 +9,12 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_cli import r, u
 
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
 
 
 class FlextInfraUtilitiesRefactor:
@@ -30,20 +28,19 @@ class FlextInfraUtilitiesRefactor:
     """
 
     @staticmethod
-    def string_list(value: t.Infra.InfraValue | None) -> t.StrSequence:
+    def string_list(value: t.JsonValue | None) -> t.StrSequence:
         """Normalize policy fields that should contain string collections."""
         if value is None:
             return []
         if isinstance(value, str):
             return [value]
-        try:
-            return list(t.Infra.STR_SEQ_ADAPTER.validate_python(value))
-        except TypeError as exc:
-            msg = "expected list value"
-            raise TypeError(msg) from exc
-        except c.ValidationError as exc:
-            msg = "expected list value"
-            raise TypeError(msg) from exc
+        validated: p.Result[t.StrSequence] = u.validate_value(
+            t.Infra.STR_SEQ_ADAPTER, value
+        )
+        if validated.failure:
+            msg = f"expected list value: {validated.error}"
+            raise TypeError(msg) from validated.exception
+        return list(validated.value)
 
     @staticmethod
     def normalize_module_path(path_value: str | Path) -> str:
@@ -100,9 +97,9 @@ class FlextInfraUtilitiesRefactor:
                 f"findings={report.findings} entries={len(report.entries)} "
                 f"classified={classified}"
             )
-        repository_totals: dict[str, int] = {}
-        rule_totals: dict[str, int] = {}
-        class_totals: dict[c.Infra.ModScanFindingClass, int] = dict.fromkeys(
+        repository_totals: MutableMapping[str, int] = {}
+        rule_totals: MutableMapping[str, int] = {}
+        class_totals: MutableMapping[c.Infra.ModScanFindingClass, int] = dict.fromkeys(
             c.Infra.ModScanFindingClass, 0
         )
         for finding in report.entries:

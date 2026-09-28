@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import operator
+from collections.abc import MutableMapping
+from functools import lru_cache
 from pathlib import Path
 
-from flext_infra import config
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, config, m, t
 
+from .project_discovery import FlextInfraUtilitiesProjectDiscovery
 from .rope_core import FlextInfraUtilitiesRopeCore
 
 
@@ -73,22 +73,66 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             c.Infra.AUTOGEN_HEADERS
         )
 
+    @classmethod
+    def _governed_roots(cls, repository_root: Path) -> frozenset[Path]:
+        """Return every declared governed project root, resolved.
+
+        The authority is the same election the Rope opener uses
+        (``discover_rope_project_roots``): a candidate the session indexes is
+        governed by definition, so the index filter and the opened project set
+        can never disagree about a sibling repository.
+        """
+        return frozenset(
+            FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots(
+                repository_root
+            )
+        )
+
     @staticmethod
-    def _inside_nested_repository(path: Path, repository_root: Path) -> bool:
-        """Exclude nested Git repositories and registered worktrees from indexing."""
-        return any(
-            (parent / ".git").exists() or (parent / ".git").is_symlink()
-            for parent in path.parents
-            if parent != repository_root and parent.is_relative_to(repository_root)
+    @lru_cache(maxsize=32768)
+    def _foreign_directory(
+        directory: Path, repository_root: Path, governed_roots: frozenset[Path]
+    ) -> bool:
+        """Memoize Git boundaries by directory for one workspace index."""
+        if directory == repository_root or not directory.is_relative_to(
+            repository_root
+        ):
+            return False
+        return (
+            ((directory / ".git").exists() or (directory / ".git").is_symlink())
+            and directory not in governed_roots
+        ) or FlextInfraUtilitiesRopeAnalysisWorkspace._foreign_directory(
+            directory.parent, repository_root, governed_roots
         )
 
     @classmethod
-    def _is_pruned_walk_dir(cls, directory: Path, resolved_root: Path) -> bool:
+    def _inside_nested_repository(
+        cls, path: Path, repository_root: Path, *, governed_roots: frozenset[Path]
+    ) -> bool:
+        """Exclude foreign nested Git checkouts, never declared governed members.
+
+        A governed workspace member (a submodule declared in ``.gitmodules``,
+        or scanned as a candidate project) carries its own ``.git`` root by
+        design; that is not a foreign nested repository and must stay
+        indexed. Only a ``.git`` boundary that is not one of the workspace's
+        own governed roots — an unrelated clone, an ad hoc worktree — is
+        excluded.
+        """
+        return cls._foreign_directory(path.parent, repository_root, governed_roots)
+
+    @classmethod
+    def _is_pruned_walk_dir(
+        cls, directory: Path, resolved_root: Path, *, governed_roots: frozenset[Path]
+    ) -> bool:
         """Return whether the pruned stub walk must not descend into ``directory``."""
         return (
-            (directory / ".git").exists()
-            or (directory / ".git").is_symlink()
-            or cls._inside_nested_repository(directory, resolved_root)
+            (
+                ((directory / ".git").exists() or (directory / ".git").is_symlink())
+                and directory not in governed_roots
+            )
+            or cls._inside_nested_repository(
+                directory, resolved_root, governed_roots=governed_roots
+            )
             or bool(
                 set(directory.relative_to(resolved_root).parts) & cls._excluded_parts()
             )
@@ -104,12 +148,15 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         the exclusion names and the nested-repository classification at every
         depth instead, and never follows symlinked directories.
         """
+        governed_roots = cls._governed_roots(resolved_root)
         stub_paths: set[Path] = set()
         for parent, dir_names, file_names in resolved_root.walk():
             dir_names[:] = [
                 name
                 for name in dir_names
-                if not cls._is_pruned_walk_dir(parent / name, resolved_root)
+                if not cls._is_pruned_walk_dir(
+                    parent / name, resolved_root, governed_roots=governed_roots
+                )
             ]
             stub_paths.update(
                 (parent / name).resolve()
@@ -123,12 +170,13 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         cls, rope_project: t.Infra.RopeProject, resolved_root: Path
     ) -> t.VariadicTuple[Path]:
         """Return indexed sources, declared wrapper modules, and typing stubs."""
+        governed_roots = cls._governed_roots(resolved_root)
         python_paths = {
             path.resolve()
             for path in FlextInfraUtilitiesRopeCore.python_file_paths(rope_project)
             if not set(path.relative_to(resolved_root).parts) & cls._excluded_parts()
-            and not FlextInfraUtilitiesRopeAnalysisWorkspace._inside_nested_repository(
-                path, resolved_root
+            and not cls._inside_nested_repository(
+                path, resolved_root, governed_roots=governed_roots
             )
         }
         # flext-pulj (codex): Rope's source roots omit tests/examples/scripts;
@@ -142,8 +190,8 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
             for path in wrapper_root.rglob("*.py")
             if path.is_file()
             and not set(path.relative_to(resolved_root).parts) & cls._excluded_parts()
-            and not FlextInfraUtilitiesRopeAnalysisWorkspace._inside_nested_repository(
-                path, resolved_root
+            and not cls._inside_nested_repository(
+                path, resolved_root, governed_roots=governed_roots
             )
         }
         stub_paths = cls._pruned_stub_file_paths(resolved_root)
@@ -155,26 +203,30 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
     def _collect_modules(
         cls, rope_project: t.Infra.RopeProject, resolved_root: Path
     ) -> tuple[
-        dict[str, m.Infra.RopeModuleIndexEntry],
-        dict[Path, list[m.Infra.RopeModuleIndexEntry]],
-        dict[str, Path],
-        dict[str, str],
+        MutableMapping[str, m.Infra.RopeModuleIndexEntry],
+        MutableMapping[Path, list[m.Infra.RopeModuleIndexEntry]],
+        MutableMapping[str, Path],
+        MutableMapping[str, str],
         set[Path],
     ]:
         """Collect modules."""
-        modules_by_path: dict[str, m.Infra.RopeModuleIndexEntry] = {}
-        modules_by_dir: dict[Path, list[m.Infra.RopeModuleIndexEntry]] = {}
-        package_dir_by_name: dict[str, Path] = {}
-        project_package_by_root: dict[str, str] = {}
+        modules_by_path: MutableMapping[str, m.Infra.RopeModuleIndexEntry] = {}
+        modules_by_dir: MutableMapping[Path, list[m.Infra.RopeModuleIndexEntry]] = {}
+        package_dir_by_name: MutableMapping[str, Path] = {}
+        project_package_by_root: MutableMapping[str, str] = {}
         package_dirs: set[Path] = set()
-        for file_path in cls._python_and_stub_file_paths(rope_project, resolved_root):
+        # Hermetic index: iterate the discovery output in sorted path order so
+        # every derived structure (index, lazy maps, generated facades) is
+        # byte-identical across environments regardless of fs enumeration.
+        for file_path in sorted(
+            cls._python_and_stub_file_paths(rope_project, resolved_root), key=str
+        ):
             resolved_file_path = file_path.resolve()
             if cls._is_generated_init_stub(resolved_file_path):
                 continue
-            try:
-                resource_path = resolved_file_path.relative_to(resolved_root).as_posix()
-            except ValueError:
+            if not resolved_file_path.is_relative_to(resolved_root):
                 continue
+            resource_path = resolved_file_path.relative_to(resolved_root).as_posix()
             package_dir = resolved_file_path.parent
             is_package_init = resolved_file_path.name in {
                 c.Infra.INIT_PY,
@@ -228,6 +280,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         cls, rope_project: t.Infra.RopeProject, repository_root: Path
     ) -> m.Infra.RopeWorkspaceIndex:
         """Build a generic Rope workspace index for package-oriented planning."""
+        cls._foreign_directory.cache_clear()
         resolved_root = repository_root.resolve()
         (
             modules_by_path,
@@ -238,10 +291,10 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
         ) = cls._collect_modules(rope_project, resolved_root)
         sorted_package_dirs = tuple(sorted(package_dirs))
         package_dir_set = frozenset(sorted_package_dirs)
-        direct_children_by_dir: dict[Path, list[Path]] = {
+        direct_children_by_dir: MutableMapping[Path, list[Path]] = {
             package_dir: [] for package_dir in sorted_package_dirs
         }
-        descendants_by_dir: dict[Path, list[Path]] = {
+        descendants_by_dir: MutableMapping[Path, list[Path]] = {
             package_dir: [] for package_dir in sorted_package_dirs
         }
         for package_dir in sorted_package_dirs:
@@ -253,7 +306,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                     continue
                 if ancestor_dir in package_dir_set:
                     descendants_by_dir[ancestor_dir].append(package_dir)
-        packages_by_dir: dict[str, m.Infra.RopePackageIndexEntry] = {}
+        packages_by_dir: MutableMapping[str, m.Infra.RopePackageIndexEntry] = {}
         for package_dir in sorted_package_dirs:
             dir_modules = tuple(
                 sorted(

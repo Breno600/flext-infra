@@ -40,11 +40,30 @@ class FlextInfraBanditGate(FlextInfraGate):
         return [c.Infra.DEFAULT_SRC_DIR]
 
     @override
+    def _empty_targets_result(
+        self, project_dir: Path, started: float
+    ) -> m.Infra.GateExecution:
+        """No ``src`` tree means no Python package surface to audit.
+
+        A package:false workspace root declares no importable package, so
+        bandit has no legitimate target there; absence is topology, not a
+        lost scan.
+        """
+        return self._neutral_skip_result(
+            project_dir,
+            started,
+            message=(
+                f"{self.gate_id}: no src tree — package:false project declares "
+                "no Python package surface to audit"
+            ),
+        )
+
+    @override
     def _parse_check_output(
         self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
-        _ = project_dir, ctx
+        del project_dir, ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         if not u.Cli.process_succeeded(result.outcome) and not result.stdout.strip():
             issues.append(
@@ -56,15 +75,7 @@ class FlextInfraBanditGate(FlextInfraGate):
         if not result.stdout.strip():
             issues.append(self._parse_error_issue("bandit produced no JSON output"))
             return False, issues
-        try:
-            parsed_payload = self._parse_bandit_payload(result.stdout)
-        except c.EXC_VALIDATION_TYPE as err:
-            issues.append(
-                self._parse_error_issue(
-                    f"Tool output parsing failed: {type(err).__name__}"
-                )
-            )
-            return False, issues
+        parsed_payload = self._parse_bandit_payload(result.stdout)
         if parsed_payload.failure:
             issues.append(
                 self._parse_error_issue(
@@ -82,25 +93,21 @@ class FlextInfraBanditGate(FlextInfraGate):
         return u.Cli.process_succeeded(result.outcome), issues
 
     @staticmethod
-    def _parse_bandit_payload(
-        stdout: str,
-    ) -> p.Result[t.MappingKV[str, t.Infra.InfraValue]]:
+    def _parse_bandit_payload(stdout: str) -> p.Result[t.MappingKV[str, t.JsonValue]]:
         """Parse Bandit JSON stdout into a typed payload mapping."""
         parsed_result = u.Cli.json_parse(stdout)
         if parsed_result.failure:
-            return r[t.MappingKV[str, t.Infra.InfraValue]].from_failure(parsed_result)
+            return r[t.MappingKV[str, t.JsonValue]].from_failure(parsed_result)
         raw_payload = parsed_result.unwrap()
         if not isinstance(raw_payload, Mapping):
-            return r[t.MappingKV[str, t.Infra.InfraValue]].fail(
+            return r[t.MappingKV[str, t.JsonValue]].fail(
                 "Bandit output is not a JSON object"
             )
-        return r[t.MappingKV[str, t.Infra.InfraValue]].ok(
-            u.Cli.json_as_mapping(raw_payload)
-        )
+        return r[t.MappingKV[str, t.JsonValue]].ok(u.Cli.json_as_mapping(raw_payload))
 
     @staticmethod
     def _bandit_issues(
-        bandit_data: t.MappingKV[str, t.Infra.InfraValue],
+        bandit_data: t.MappingKV[str, t.JsonValue],
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Build typed gate issues from parsed Bandit result entries."""
         return tuple(

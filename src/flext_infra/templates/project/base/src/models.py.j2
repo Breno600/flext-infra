@@ -14,16 +14,17 @@ Copyright (c) {{ year }} {{ author_name }}. All rights reserved.
 SPDX-License-Identifier: MIT
 """
 
-{# NOTE (flext-j47u, codex): import the canonical upstream short alias, subclass
-   that exact facade, and publish the local facade under the same alias. -#}
+{# NOTE (flext-dv1ga): import the class the upstream declares for `m` in its own
+   __all__, subclass that exact facade, and publish the local facade under the
+   same letter as a plain alias. -#}
 from __future__ import annotations
 
-from {{ upstream }} import m
+from {{ upstream }} import {{ upstream_facades["m"] }}
 
 {{ model_imports }}
 
 
-class {{ class_stem }}Models(m):
+class {{ class_stem }}Models({{ upstream_facades["m"] }}):
     """{{ class_stem }} models extending the CLI model facade."""
 
 {{ models_namespace_declaration }}

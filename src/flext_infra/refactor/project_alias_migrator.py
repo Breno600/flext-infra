@@ -7,16 +7,15 @@ it from the local facade instead of from flext_core.
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 import libcst as cst
 
-from flext_infra import u
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from ..transformers.rope_transformer import FlextInfraRopeTransformer
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -78,7 +77,9 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
 
         @classmethod
         def insert_local_imports(
-            cls, tree: cst.Module, imports_to_add: dict[str, dict[str, str]]
+            cls,
+            tree: cst.Module,
+            imports_to_add: MutableMapping[str, MutableMapping[str, str]],
         ) -> cst.Module:
             """Prepend newly required local alias imports after __future__/docstring."""
             if not imports_to_add:
@@ -147,7 +148,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
 
         def __init__(self, import_root: str) -> None:
             self.import_root = import_root
-            self.existing_local: dict[str, set[str]] = {}
+            self.existing_local: MutableMapping[str, set[str]] = {}
             self._tc_stack = []
 
         @override
@@ -188,7 +189,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
             *,
             import_root: str,
             local_aliases: frozenset[str],
-            existing_local: dict[str, set[str]],
+            existing_local: MutableMapping[str, set[str]],
             alias_to_module: t.StrMapping,
             record_change: t.Infra.ChangeCallback,
         ) -> None:
@@ -197,7 +198,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
             self._existing_local = existing_local
             self._alias_to_module = alias_to_module
             self._record_change = record_change
-            self.imports_to_add: dict[str, dict[str, str]] = {}
+            self.imports_to_add: MutableMapping[str, MutableMapping[str, str]] = {}
             self.changes: list[str] = []
             self._tc_stack = []
 

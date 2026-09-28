@@ -4,101 +4,72 @@ from __future__ import annotations
 
 from flext_tests import tm
 
-from flext_infra.deps.phases.consolidate_groups import FlextInfraConsolidateGroupsPhase
+from flext_infra import FlextInfraConsolidateGroupsPhase, c
 from tests import t, u
 
 
 class TestsFlextInfraDepsModernizerConsolidate:
-    """Tests consolidate groups phase behavior."""
+    """Legacy optional and Poetry groups converge into one canonical dev group."""
 
     @staticmethod
-    def _consolidated_changes(
-        doc: t.Cli.TomlDocument, group: t.JsonMapping
-    ) -> t.StrSequence:
-        """Attach one poetry group table and run the consolidation phase."""
-        poetry = u.Cli.toml_table()
-        poetry["group"] = group
-        tool = u.Cli.toml_table()
-        tool["poetry"] = poetry
-        doc["tool"] = tool
-        changes = FlextInfraConsolidateGroupsPhase().apply(doc, [])
-        tm.that(changes, empty=False)
-        return changes
+    def _consolidated(
+        source: str, canonical_dev: t.StrSequence = ()
+    ) -> t.Pair[t.JsonMapping, t.StrSequence]:
+        """Consolidate one payload twice; return the payload and first changes."""
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload(source)
+        )
+        phase = FlextInfraConsolidateGroupsPhase()
+        changes = phase.apply_payload(payload, canonical_dev)
+        tm.that(phase.apply_payload(payload, canonical_dev), empty=True)
+        return payload, changes
 
-    def test_consolidate_groups_creates_dev_group(self) -> None:
-        """Verify consolidate groups creates dev group."""
-        doc = u.Cli.toml_document()
-        project = u.Cli.toml_table()
-        optional = u.Cli.toml_table()
-        project["optional-dependencies"] = optional
-        doc["project"] = project
-        changes = FlextInfraConsolidateGroupsPhase().apply(doc, [])
-        tm.that(changes, empty=False)
+    def test_missing_tables_create_dev_group_and_deptry_policy(self) -> None:
+        """An empty payload gains the dev group and the deptry dev-group policy."""
+        payload, changes = self._consolidated("")
+        tm.that(changes, has="tool.deptry.pep621_dev_dependency_groups set to ['dev']")
+        deptry = u.Tests.toml_mapping(u.Tests.toml_mapping(payload["tool"])["deptry"])
+        tm.that(
+            list(u.Tests.strings(deptry["pep621_dev_dependency_groups"])),
+            eq=[str(c.Infra.DEV)],
+        )
 
-    def test_consolidate_groups_removes_old_groups(self) -> None:
-        """Verify consolidate groups removes old groups."""
-        doc = u.Tests.toml_doc(
+    def test_legacy_optional_groups_merge_into_dev(self) -> None:
+        """Every legacy optional group merges into dev and is removed."""
+        legacy = c.Infra.LEGACY_DEV_DEPENDENCY_GROUPS
+        payload, changes = self._consolidated(
             "[project.optional-dependencies]\n"
-            'dev = ["pytest"]\n'
-            'docs = ["sphinx"]\n'
-            'test = ["coverage"]\n'
+            + "".join(f'{group} = ["requirement-{group}"]\n' for group in legacy),
+            canonical_dev=("pytest",),
         )
-        changes = FlextInfraConsolidateGroupsPhase().apply(doc, ["pytest"])
-        tm.that(any("removed" in change for change in changes), eq=True)
-
-    def test_consolidate_groups_merges_poetry_groups(self) -> None:
-        """Verify consolidate groups merges poetry groups."""
-        doc = u.Cli.toml_document()
-        project = u.Cli.toml_table()
-        optional = u.Cli.toml_table()
-        project["optional-dependencies"] = optional
-        doc["project"] = project
-        group = u.Cli.toml_table()
-        group["dev"] = {"dependencies": {"pytest": "^7.0"}}
-        group["docs"] = {"dependencies": {"sphinx": "^4.0"}}
-        _ = TestsFlextInfraDepsModernizerConsolidate._consolidated_changes(doc, group)
-
-    def test_consolidate_groups_sets_deptry_config(self) -> None:
-        """Verify consolidate groups sets deptry config."""
-        doc = u.Cli.toml_document()
-        project = u.Cli.toml_table()
-        project["optional-dependencies"] = u.Cli.toml_table()
-        doc["project"] = project
-        doc["tool"] = u.Cli.toml_table()
-        changes = FlextInfraConsolidateGroupsPhase().apply(doc, [])
-        tm.that(any("deptry" in change for change in changes), eq=True)
-
-    def test_consolidate_groups_handles_missing_tables(self) -> None:
-        """Verify consolidate groups handles missing tables."""
-        changes = FlextInfraConsolidateGroupsPhase().apply(u.Cli.toml_document(), [])
-        tm.that(changes, empty=False)
-
-    def test_consolidate_groups_phase_apply_removes_old_groups(self) -> None:
-        """Verify consolidate groups phase apply removes old groups."""
-        doc = u.Cli.toml_document()
-        project = u.Cli.toml_table()
-        optional = u.Cli.toml_table()
-        optional["dev"] = ["pytest"]
-        optional["docs"] = ["sphinx"]
-        optional["test"] = ["coverage"]
-        project["optional-dependencies"] = optional
-        doc["project"] = project
-        changes = FlextInfraConsolidateGroupsPhase().apply(doc, [])
+        optional = u.Tests.toml_mapping(
+            u.Tests.toml_mapping(payload["project"])["optional-dependencies"]
+        )
+        tm.that(set(optional), eq={str(c.Infra.DEV)})
         tm.that(
-            any("optional-dependencies.docs removed" in c for c in changes), eq=True
+            set(u.Tests.strings(optional[str(c.Infra.DEV)])),
+            eq={"pytest", *(f"requirement-{group}" for group in legacy)},
         )
-        tm.that(
-            any("optional-dependencies.test removed" in c for c in changes), eq=True
-        )
+        for group in legacy:
+            tm.that(changes, has=f"project.optional-dependencies.{group} removed")
 
-    def test_consolidate_groups_phase_apply_with_empty_poetry_group(self) -> None:
-        """Verify consolidate groups phase apply with empty poetry group."""
-        doc = u.Cli.toml_document()
-        project = u.Cli.toml_table()
-        project["optional-dependencies"] = u.Cli.toml_table()
-        doc["project"] = project
-        docs_group = u.Cli.toml_table()
-        docs_group["dependencies"] = u.Cli.toml_table()
-        group = u.Cli.toml_table()
-        group["docs"] = docs_group
-        _ = TestsFlextInfraDepsModernizerConsolidate._consolidated_changes(doc, group)
+    def test_legacy_poetry_groups_merge_into_dev_dependencies(self) -> None:
+        """Legacy Poetry group dependencies move under the dev group."""
+        legacy_group = c.Infra.LEGACY_DEV_DEPENDENCY_GROUPS[0]
+        payload, changes = self._consolidated(
+            f"[tool.poetry.group.{legacy_group}.dependencies]\n"
+            'legacy-requirement = "^1.0"\n'
+        )
+        groups = u.Tests.toml_mapping(
+            u.Tests.toml_mapping(u.Tests.toml_mapping(payload["tool"])["poetry"])[
+                "group"
+            ]
+        )
+        tm.that(groups, lacks=str(legacy_group))
+        tm.that(
+            u.Tests.toml_mapping(
+                u.Tests.toml_mapping(groups[str(c.Infra.DEV)])["dependencies"]
+            ),
+            eq={"legacy-requirement": "^1.0"},
+        )
+        tm.that(changes, has=f"tool.poetry.group.{legacy_group} removed")

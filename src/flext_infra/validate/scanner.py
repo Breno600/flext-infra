@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra.base import s
+
+from ..base import s
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -47,7 +48,7 @@ class FlextInfraTextPatternScanner(s[bool]):
 
     @staticmethod
     def _count_matches(
-        files: t.SequenceOf[Path], regex: t.Infra.RegexPattern
+        files: t.SequenceOf[Path], regex: t.RegexPattern
     ) -> p.Result[int]:
         """Count regex matches across files; surface any unreadable file as failure."""
         total = 0

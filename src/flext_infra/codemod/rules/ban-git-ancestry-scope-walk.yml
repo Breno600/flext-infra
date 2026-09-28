@@ -1,0 +1,43 @@
+# A hand-rolled `while` loop that walks `path.parent` testing `(P / ".git")`
+# to decide repository/scope boundaries duplicates the typed git-scope owner
+# (u.Infra.git_declared_submodule_paths / repository-root resolution from the
+# typed git context — rule coordination--shared-venv-guard). Evidence: X-30
+# (validate/tier_whitelist.py); current instance:
+# _utilities/_git/scope.py::_git_repo_root.
+#
+# LIMITATION (stated, not silently dropped): ast-grep cannot express "any loop
+# construct that walks toward the filesystem root testing .git" as one sound
+# pattern without dataflow analysis. This rule covers only the `while`-loop
+# shape the task specifies (`while $P != $P.parent:` family, generalized to
+# any `while` whose body both tests `(P / ".git").{exists,is_dir,is_file}()`
+# and reads `P.parent`, unified by ast-grep metavariable equality on $P). It
+# does NOT catch the `for candidate in root.parents:` shape (worktree.py
+# `_lanes_root`) or generator-expression walks over `.parents`
+# (`_utilities/rope_analysis_workspace.py`
+# `_inside_nested_repository`/`_is_pruned_walk_dir`) — those are a different
+# AST shape and would need a separate rule plus manual review to confirm they
+# are the same defect class rather than legitimate directory pruning.
+id: ban-git-ancestry-scope-walk
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+rule:
+  all:
+    - kind: while_statement
+    - has:
+        stopBy: end
+        any:
+          - pattern: ($P / ".git").exists()
+          - pattern: ($P / ".git").is_dir()
+          - pattern: ($P / ".git").is_file()
+    - has:
+        stopBy: end
+        pattern: $P.parent
+message: >-
+  [ban-git-ancestry-scope-walk] Hand-rolled while-loop walks path.parent
+  testing (P / ".git") to decide scope — fix: resolve the repository root /
+  submodule scope through the typed git owner
+  (u.Infra.git_declared_submodule_paths or the equivalent typed
+  repository-root read) instead of re-walking the filesystem · ref: rule
+  coordination--shared-venv-guard

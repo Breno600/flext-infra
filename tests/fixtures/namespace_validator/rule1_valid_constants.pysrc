@@ -1,0 +1,11 @@
+from __future__ import annotations
+
+from flext_core import c
+
+from flext_test._constants.base import FlextTestConstantsBase
+from flext_test._constants.domain import FlextTestConstantsDomain
+
+
+class FlextTestConstants(c):
+    class Test(FlextTestConstantsBase, FlextTestConstantsDomain):
+        pass

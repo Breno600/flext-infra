@@ -7,17 +7,16 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import m, u
+from flext_infra import m
 from flext_infra.refactor.declarative_enforcement import (
     FlextInfraRefactorDeclarativeEnforcement,
 )
-from tests import TestsFlextInfraUtilities as test_u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-    from flext_infra.typings import t
+    from flext_infra import p, t
 
 
 class TestsFlextInfraRefactorDeclarativeEnforcement:
@@ -42,7 +41,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         rule: m.EnforcementRuleSpec,
         file_name: str,
         source_text: str,
-    ) -> tuple[Path, t.SequenceOf[p.AttributeProbe]]:
+    ) -> t.Pair[Path, t.SequenceOf[p.AttributeProbe]]:
         """Write one fixture module and detect ``rule`` violations inside it."""
         source = tmp_path / file_name
         source.write_text(source_text, encoding="utf-8")
@@ -56,7 +55,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         """ENFORCE-090 probe is emitted for ``.pyi`` files."""
         stub, probes = self._detect(
             tmp_path,
-            rule=test_u.Tests.enforcement_rule("ENFORCE-090"),
+            rule=u.Tests.enforcement_rule("ENFORCE-090"),
             file_name="demo.pyi",
             source_text="x: int\n",
         )
@@ -87,7 +86,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         """ENFORCE-097 detects a bare integer inside a function body."""
         _source, probes = self._detect(
             tmp_path,
-            rule=test_u.Tests.enforcement_rule("ENFORCE-097"),
+            rule=u.Tests.enforcement_rule("ENFORCE-097"),
             file_name="demo.py",
             source_text=(
                 "from __future__ import annotations\n\ndef f() -> int:\n    return 42\n"
@@ -123,7 +122,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         """Default args, annotations, and module constants stay exempt."""
         _source, probes = self._detect(
             tmp_path,
-            rule=test_u.Tests.enforcement_rule("ENFORCE-097"),
+            rule=u.Tests.enforcement_rule("ENFORCE-097"),
             file_name="demo.py",
             source_text=source_text,
         )
@@ -133,7 +132,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         """ENFORCE-079 delegates to the class-placement detector."""
         _source, probes = self._detect(
             tmp_path,
-            rule=test_u.Tests.enforcement_rule("ENFORCE-079"),
+            rule=u.Tests.enforcement_rule("ENFORCE-079"),
             file_name="consumer.py",
             source_text=(
                 "from typing import ClassVar\n"
@@ -153,7 +152,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
             pytest.raises(RuntimeError, match="unable to resolve rope resource"),
         ):
             FlextInfraRefactorDeclarativeEnforcement.detect(
-                test_u.Tests.enforcement_rule("ENFORCE-097"),
+                u.Tests.enforcement_rule("ENFORCE-097"),
                 self._ctx(rope_project, missing),
             )
 
@@ -175,7 +174,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
             ctx = self._ctx(rope_project, source)
             ctx.project_name = "flext_infra"
             probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                test_u.Tests.enforcement_rule("ENFORCE-080"), ctx
+                u.Tests.enforcement_rule("ENFORCE-080"), ctx
             )
         tm.that(len(probes), eq=1)
         tm.that(getattr(probes[0], "object_name", ""), eq="c")
@@ -229,8 +228,8 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
             encoding="utf-8",
         )
 
-        report = test_u.Tests.census_report(workspace, rules=("ENFORCE-079",))
-        violations = test_u.Tests.census_violations(report)
+        report = u.Tests.census_report(workspace, rules=("ENFORCE-079",))
+        violations = u.Tests.census_violations(report)
 
         tm.that(len(violations), eq=1)
         tm.that(violations[0].kind, eq="classvar_constant")
@@ -244,8 +243,8 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
         stub = workspace / "src" / "demo_pkg" / "service.pyi"
         stub.write_text("x: int\n", encoding="utf-8")
 
-        report = test_u.Tests.census_report(workspace, rules=("ENFORCE-090",))
-        violations = test_u.Tests.census_violations(report)
+        report = u.Tests.census_report(workspace, rules=("ENFORCE-090",))
+        violations = u.Tests.census_violations(report)
 
         tm.that(len(violations), eq=1)
         tm.that(violations[0].kind, eq="stub_file")
@@ -258,14 +257,12 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
         stub = workspace / "src" / "demo_pkg" / "service.pyi"
         stub.write_text("x: int\n", encoding="utf-8")
 
-        test_u.Tests.census_report(
+        u.Tests.census_report(
             workspace, rules=("ENFORCE-090",), apply_changes=True, dry_run=True
         )
         tm.that(stub.exists(), eq=True)
 
-        test_u.Tests.census_report(
-            workspace, rules=("ENFORCE-090",), apply_changes=True
-        )
+        u.Tests.census_report(workspace, rules=("ENFORCE-090",), apply_changes=True)
         tm.that(stub.exists(), eq=False)
 
     def test_census_reports_enforce_097_magic_literal(self, tmp_path: Path) -> None:
@@ -279,8 +276,8 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
             encoding="utf-8",
         )
 
-        report = test_u.Tests.census_report(workspace, rules=("ENFORCE-097",))
-        violations = test_u.Tests.census_violations(report)
+        report = u.Tests.census_report(workspace, rules=("ENFORCE-097",))
+        violations = u.Tests.census_violations(report)
 
         tm.that(len(violations), eq=1)
         tm.that(violations[0].kind, eq="magic_literal")
@@ -298,8 +295,8 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
             encoding="utf-8",
         )
 
-        report = test_u.Tests.census_report(workspace, rules=("ENFORCE-080",))
-        violations = test_u.Tests.census_violations(report)
+        report = u.Tests.census_report(workspace, rules=("ENFORCE-080",))
+        violations = u.Tests.census_violations(report)
 
         tm.that(len(violations), eq=1)
         tm.that(violations[0].kind, eq="foreign_canonical_alias")

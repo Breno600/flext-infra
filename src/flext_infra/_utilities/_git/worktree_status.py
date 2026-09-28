@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING
 from git import GitCommandError, Repo
 
 from flext_core import r
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import m, t
 
 from .repo import FlextInfraUtilitiesGitRepo
 

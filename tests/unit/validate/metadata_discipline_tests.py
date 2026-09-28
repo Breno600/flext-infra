@@ -19,32 +19,28 @@ from tests import m
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
 
-
-@pytest.fixture
-def v() -> FlextInfraValidateMetadataDiscipline:
-    """Shared validator instance."""
-    return FlextInfraValidateMetadataDiscipline()
-
-
-def _seed_pkg(root: Path, name: str = "pkg") -> Path:
-    project_root = root / "flext-infra"
-    project_root.mkdir(parents=True, exist_ok=True)
-    (project_root / "pyproject.toml").write_text(
-        "[project]\nname = 'flext-infra'\nversion = '0.0.0'\n", encoding="utf-8"
-    )
-    package_root = project_root / "src" / "flext_infra"
-    package_root.mkdir(parents=True, exist_ok=True)
-    (package_root / "__init__.py").write_text("", encoding="utf-8")
-    pkg = package_root / name
-    pkg.mkdir(parents=True, exist_ok=True)
-    (pkg / "__init__.py").write_text("", encoding="utf-8")
-    return pkg
-
-
-class TestMetadataDiscipline:
+class TestsFlextInfraMetadataDiscipline:
     """Rogue metadata parser imports are blocked outside allowlist."""
+
+    @pytest.fixture
+    def v(self) -> FlextInfraValidateMetadataDiscipline:
+        """Shared validator instance."""
+        return FlextInfraValidateMetadataDiscipline()
+
+    def _seed_pkg(self, root: Path, name: str = "pkg") -> Path:
+        project_root = root / "flext-infra"
+        project_root.mkdir(parents=True, exist_ok=True)
+        (project_root / "pyproject.toml").write_text(
+            "[project]\nname = 'flext-infra'\nversion = '0.0.0'\n", encoding="utf-8"
+        )
+        package_root = project_root / "src" / "flext_infra"
+        package_root.mkdir(parents=True, exist_ok=True)
+        (package_root / "__init__.py").write_text("", encoding="utf-8")
+        pkg = package_root / name
+        pkg.mkdir(parents=True, exist_ok=True)
+        (pkg / "__init__.py").write_text("", encoding="utf-8")
+        return pkg
 
     def test_empty_workspace_passes(
         self, tmp_path: Path, v: FlextInfraValidateMetadataDiscipline
@@ -56,7 +52,7 @@ class TestMetadataDiscipline:
     def test_non_tomllib_import_passes(
         self, tmp_path: Path, v: FlextInfraValidateMetadataDiscipline
     ) -> None:
-        pkg = _seed_pkg(tmp_path)
+        pkg = self._seed_pkg(tmp_path)
         tf(base_dir=pkg).create("import json\n", "ok.py")
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.passed, eq=True)
@@ -64,7 +60,7 @@ class TestMetadataDiscipline:
     def test_direct_tomllib_import_fails(
         self, tmp_path: Path, v: FlextInfraValidateMetadataDiscipline
     ) -> None:
-        pkg = _seed_pkg(tmp_path)
+        pkg = self._seed_pkg(tmp_path)
         tf(base_dir=pkg).create("import tomllib\n", "bad.py")
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.passed, eq=False)
@@ -95,6 +91,3 @@ class TestMetadataDiscipline:
         (external / "bad.py").write_text("import tomllib\n", encoding="utf-8")
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.passed, eq=True)
-
-
-__all__: t.StrSequence = []

@@ -26,6 +26,7 @@ class FlextInfraTypesRope:
     type RopePyName = FlextInfraProtocolsRopeRuntime.RopePyName
     type RopeAssignedName = FlextInfraProtocolsRopeRuntime.RopeAssignedName
     type RopePyObject = FlextInfraProtocolsRopeRuntime.RopePyObject
+    type RopeAstNode = FlextInfraProtocolsRopeRuntime.RopeAstNode
     type RopeScope = FlextInfraProtocolsRopeRuntime.RopeScope
     type RopeFromImport = FlextInfraProtocolsRopeRuntime.RopeFromImport
     type RopeNormalImport = FlextInfraProtocolsRopeRuntime.RopeNormalImport

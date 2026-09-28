@@ -1,0 +1,5 @@
+id: rewire-infra-utilities-submodule-import-to-root-facade
+valid:
+  - from flext_infra import u
+invalid:
+  - from flext_infra.utilities import u

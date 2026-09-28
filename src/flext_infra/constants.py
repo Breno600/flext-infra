@@ -6,9 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import c
-
-from flext_infra import t
+from flext_cli import FlextCliConstants
 
 from ._constants.base import FlextInfraConstantsBase
 from ._constants.census import FlextInfraConstantsCensus
@@ -21,6 +19,8 @@ from ._constants.detectors import FlextInfraConstantsDetectors
 from ._constants.docs import FlextInfraConstantsDocs
 from ._constants.git import FlextInfraConstantsGit
 from ._constants.namespace import FlextInfraConstantsNamespace
+from ._constants.promoted import FlextInfraConstantsPromoted
+from ._constants.promoted_messages import FlextInfraConstantsPromotedMessages
 from ._constants.refactor import FlextInfraConstantsRefactor
 from ._constants.release import FlextInfraConstantsRelease
 from ._constants.rope import FlextInfraConstantsRope
@@ -28,7 +28,7 @@ from ._constants.source_code import FlextInfraConstantsSourceCode
 from ._constants.workspace import FlextInfraConstantsWorkspace
 
 
-class FlextInfraConstants(c):
+class FlextInfraConstants(FlextCliConstants):
     """Infra constants facade — access via c.Infra.*."""
 
     class Infra(
@@ -44,6 +44,8 @@ class FlextInfraConstants(c):
         FlextInfraConstantsDocs,
         FlextInfraConstantsGit,
         FlextInfraConstantsNamespace,
+        FlextInfraConstantsPromoted,
+        FlextInfraConstantsPromotedMessages,
         FlextInfraConstantsSourceCode,
         FlextInfraConstantsRefactor,
         FlextInfraConstantsRelease,
@@ -53,4 +55,5 @@ class FlextInfraConstants(c):
 
 
 c = FlextInfraConstants
-__all__: t.VariadicTuple[str] = ("FlextInfraConstants", "c")
+
+__all__: tuple[str, ...] = ("FlextInfraConstants", "c")

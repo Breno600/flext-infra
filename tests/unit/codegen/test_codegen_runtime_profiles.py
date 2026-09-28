@@ -11,10 +11,9 @@ from flext_infra import c, config, m
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import u
-from tests.unit.workspace import WorktreeFixture
 
 
-class TestCodegenRuntimeProfiles:
+class TestsFlextInfraCodegenRuntimeProfiles:
     @pytest.mark.parametrize(
         "upstream",
         tuple(
@@ -31,14 +30,14 @@ class TestCodegenRuntimeProfiles:
         root = tmp_path / "workspace"
         member = root / "sample-member" if composed else tmp_path / "sample-member"
         if composed:
-            WorktreeFixture.initialize_governed_project(
+            u.Tests.WorktreeFixture.initialize_governed_project(
                 root,
                 "sample-workspace",
                 workspace="sample-workspace",
                 database="sample_workspace",
                 issue_prefix="sample",
             )
-        pyproject = WorktreeFixture.initialize_governed_project(
+        pyproject = u.Tests.WorktreeFixture.initialize_governed_project(
             member,
             "sample-member",
             workspace="sample-workspace",
@@ -83,14 +82,21 @@ class TestCodegenRuntimeProfiles:
                 *custom,
             ])
         )
+        # The governed fixture already declares `dependencies`; replace that
+        # declaration instead of adding a second (invalid) key.
         pyproject.write_text(
-            pyproject.read_text(encoding="utf-8").replace(
-                "[project]\n", f"[project]\ndependencies = {declared}\n"
+            "".join(
+                f"dependencies = {declared}\n"
+                if line.startswith("dependencies = ")
+                else line
+                for line in pyproject.read_text(encoding="utf-8").splitlines(
+                    keepends=True
+                )
             ),
             encoding="utf-8",
         )
         if composed:
-            WorktreeFixture.attach_submodule(
+            u.Tests.WorktreeFixture.attach_submodule(
                 root,
                 member,
                 distribution="sample-member",
@@ -123,21 +129,38 @@ class TestCodegenRuntimeProfiles:
         rendered = u.Tests.codegen_file_text(
             next(item for item in first.files if item.path == pyproject)
         )
+        rendered_dependencies = set(
+            u.Tests.toml_strings_at(rendered, "project", "dependencies")
+        )
+        owned = rendered_dependencies - set(custom)
+        tm.that(rendered_dependencies, has=list(custom))
+        # The profile owns which runtime requirements are restored; the
+        # dependency conform owner (6086621bd) owns their canonical form, so the
+        # restored set must be names of the profile and a conform fixed point.
+        tm.that(
+            {u.Infra.dep_name(item) for item in owned},
+            eq={u.Infra.dep_name(item) for item in profile.runtime},
+        )
+        toolchain = config.Infra.codegen.toolchain
         expected = tm.ok(
-            u.Infra.pyproject_dependencies_conform(
+            u.Infra.pyproject_conform(
                 '[project]\nname = "sample-member"\ndependencies = '
-                + tm.ok(u.Cli.json_dumps([*profile.runtime]))
+                + u.Cli.toml_array(sorted(owned)).as_string()
                 + "\n",
-                providers=config.Infra.codegen.providers,
                 workspace=tm.ok(
                     FlextInfraWorkspaceDetector.load_workspace_spec(member)
                 ),
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
+                required_dev_dependencies=(),
+                uv_resolution=m.Infra.UvResolutionSpec(
+                    link_mode=toolchain.uv_link_mode,
+                    constraint_dependencies=tuple(toolchain.uv_constraint_dependencies),
+                    exclude_dependencies=(),
+                    environments=tuple(toolchain.uv_environments),
+                ),
             )
         )
         tm.that(
-            set(u.Tests.toml_strings_at(rendered, "project", "dependencies")),
-            eq={*u.Tests.toml_strings_at(expected, "project", "dependencies"), *custom},
+            set(u.Tests.toml_strings_at(expected, "project", "dependencies")), eq=owned
         )
         tm.that(first.workspace.repository, eq=before.repository)
         tm.that(first.workspace.subprojects, eq=before.subprojects)

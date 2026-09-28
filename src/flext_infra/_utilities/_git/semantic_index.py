@@ -4,16 +4,23 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from git import BaseIndexEntry, GitCommandError, Repo
+from git import (
+    BaseIndexEntry,
+    GitCommandError,
+    InvalidGitRepositoryError,
+    NoSuchPathError,
+    Repo,
+)
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m, t
 
 from .semantic_paths import FlextInfraUtilitiesGitSemanticPathsMixin
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from pathlib import Path
+
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesGitSemanticIndexMixin(
@@ -23,6 +30,42 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
 
     _GITLINK_MODE: ClassVar[str] = "160000"
     _STAGED_GITLINK_FIELDS: ClassVar[int] = 2
+    _STAGE_ENTRY_FIELDS: ClassVar[int] = 4
+
+    @classmethod
+    def git_committed_directory_blobs(
+        cls, repo_root: Path, relative_dir: str
+    ) -> p.Result[t.MappingKV[str, bytes]]:
+        """Read every blob directly under ``relative_dir`` in HEAD.
+
+        Git objects are immutable, so the content is returned by name without
+        a physical source state. A directory absent from HEAD is the typed
+        empty mapping; an unreadable repository or object fails loud.
+        """
+        try:
+            repo = Repo(repo_root, search_parent_directories=True)
+            tree = repo.head.commit.tree / relative_dir
+        except KeyError:
+            return r[t.MappingKV[str, bytes]].ok({})
+        except (
+            GitCommandError,
+            InvalidGitRepositoryError,
+            NoSuchPathError,
+            OSError,
+            ValueError,
+        ) as exc:
+            return r[t.MappingKV[str, bytes]].fail(
+                f"cannot open committed directory {relative_dir} at {repo_root}: {exc}",
+                exception=exc,
+            )
+        try:
+            return r[t.MappingKV[str, bytes]].ok({
+                blob.name: blob.data_stream.read() for blob in tree.blobs
+            })
+        except (OSError, ValueError) as exc:
+            return r[t.MappingKV[str, bytes]].fail_op(
+                f"read committed blobs {relative_dir} at {repo_root}", exc
+            )
 
     @classmethod
     def git_head_numstat(
@@ -157,6 +200,35 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
         return r[m.Infra.GitOidReport].fail(
             f"governed gitlink is absent from the index: {request.reference}"
         )
+
+    @classmethod
+    def git_index_gitlink_paths(cls, repository_root: Path) -> p.Result[t.StrSequence]:
+        """Return every path the index records as a gitlink (mode ``160000``).
+
+        Git records a directory that contains its own ``.git`` as a gitlink the
+        moment it is staged, with no warning and no ``.gitmodules`` entry. The
+        index is therefore the only place that knows the complete set; reading
+        it is how a caller compares what is recorded against what the
+        repository declares.
+        """
+        try:
+            repo = cls._repo(repository_root)
+            staged = repo.git.ls_files("--stage")
+        except (GitCommandError, InvalidGitRepositoryError, NoSuchPathError) as exc:
+            return r[t.StrSequence].fail(
+                f"failed to read the Git index: {exc}", exception=exc
+            )
+        except (OSError, ValueError) as exc:
+            return r[t.StrSequence].fail(
+                f"failed to read the Git index: {exc}", exception=exc
+            )
+        paths = tuple(
+            line.split(maxsplit=3)[3]
+            for line in staged.splitlines()
+            if line.startswith(cls._GITLINK_MODE)
+            and len(line.split(maxsplit=3)) == cls._STAGE_ENTRY_FIELDS
+        )
+        return r[t.StrSequence].ok(paths)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitSemanticIndexMixin"]

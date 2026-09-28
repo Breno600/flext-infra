@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, t, u
+from flext_infra import c, infra, m, p, t, u
 
 
 class TestsFlextInfraPrivateImportCutover:
@@ -68,13 +68,12 @@ class TestsFlextInfraPrivateImportCutover:
         if case == "shadowed":
             sources[consumer] += "c = 1\n"
         if case == "unique":
-            edits = self._plan(tmp_path, sources, consumer, statement)
+            edits = self._edits(tmp_path, sources, consumer, statement)
             tm.that(tuple(edit.file_path for edit in edits), eq=(consumer,))
             tm.that(edits[0].updated_source, has="from flext_sample import c")
             tm.that(edits[0].updated_source, has="profile = c.Profile.Value")
         else:
-            with pytest.raises(ValueError, match=case):
-                self._plan(tmp_path, sources, consumer, statement)
+            tm.fail(self._plan(tmp_path, sources, consumer, statement), has=case)
         for path, source in dependency_sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=source)
         tm.that(tuple(sources), eq=(consumer,))
@@ -100,7 +99,7 @@ class TestsFlextInfraPrivateImportCutover:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(source, encoding="utf-8")
 
-        edits = self._plan(tmp_path, consumer_sources, consumer, statement)
+        edits = self._edits(tmp_path, consumer_sources, consumer, statement)
 
         module = "sample" if root_export else "sample.api"
         tm.that(tuple(edit.file_path for edit in edits), eq=(consumer,))
@@ -199,16 +198,16 @@ class TestsFlextInfraPrivateImportCutover:
         sources = {consumer: f"{statement}\nvalue = Target.Value\n"}
 
         if expected.startswith("c."):
-            edits = self._plan(tmp_path, sources, consumer, statement)
+            edits = self._edits(tmp_path, sources, consumer, statement)
             tm.that(tuple(edit.file_path for edit in edits), eq=(consumer,))
             tm.that(edits[0].updated_source, has="from lexical_sample import c")
             tm.that(edits[0].updated_source, has=f"value = {expected}.Value")
             tm.that(edits[0].updated_source, lacks=statement)
         else:
-            with pytest.raises(
-                ValueError, match=expected or "no public facade exposes"
-            ):
-                self._plan(tmp_path, sources, consumer, statement)
+            tm.fail(
+                self._plan(tmp_path, sources, consumer, statement),
+                has=expected or "no public facade exposes",
+            )
         for path, source in dependency_sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=source)
 
@@ -219,7 +218,7 @@ class TestsFlextInfraPrivateImportCutover:
         package_import: bool = False,
         root_export: bool = False,
         renamed: bool = False,
-    ) -> tuple[Path, str, dict[Path, str]]:
+    ) -> t.Triple[Path, str, t.MutableMappingKV[Path, str]]:
         package = root / "sample/src/sample"
         public_name = "PublicClient" if renamed else "Client"
         sources = {
@@ -333,14 +332,15 @@ class TestsFlextInfraPrivateImportCutover:
             sources[package / "other.py"] = sources[package / "api.py"]
         else:
             sources[package / "api.py"] += "Client = object\n"
+        # A shadowed re-export is rebound at runtime (``Client = object``), so
+        # the facade does not expose the private class at all.
         expected = (
             "no public facade exposes"
-            if case in {"unexposed", "homonym"}
+            if case in {"unexposed", "homonym", "shadowed"}
             else "ambiguous"
         )
 
-        with pytest.raises(ValueError, match=expected):
-            self._plan(tmp_path, sources, consumer, statement)
+        tm.fail(self._plan(tmp_path, sources, consumer, statement), has=expected)
 
     @staticmethod
     def _finding(file_path: Path, text: str) -> m.Infra.ModScanFinding:
@@ -387,7 +387,7 @@ class TestsFlextInfraPrivateImportCutover:
         *,
         import_alias: str = "",
         root_bases: str = "",
-    ) -> tuple[Path, str, dict[Path, str]]:
+    ) -> t.Triple[Path, str, t.MutableMappingKV[Path, str]]:
         """Derive the consumer path, private import, and facade source of one family.
 
         Every name follows the FLEXT naming contract, so the case is declared
@@ -418,16 +418,31 @@ class TestsFlextInfraPrivateImportCutover:
         sources: t.MappingKV[Path, str],
         consumer_path: Path,
         *private_imports: str,
-    ) -> tuple[m.Infra.SemanticMigrationEdit, ...]:
+    ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         """Plan the cutover for every private import reported in the consumer."""
-        return u.Infra.plan_private_import_cutover(
-            root=tmp_path,
-            sources=sources,
-            findings=tuple(
-                cls._finding(consumer_path.relative_to(tmp_path), private_import)
-                for private_import in private_imports
-            ),
-        )
+        with infra.rope_workspace(tmp_path) as rope:
+            return u.Infra.plan_semantic_cutover(
+                c.Infra.SemanticCutoverPhase.PRIVATE_IMPORT,
+                rope_workspace=rope,
+                sources=sources,
+                findings=tuple(
+                    cls._finding(consumer_path.relative_to(tmp_path), private_import)
+                    for private_import in private_imports
+                ),
+            )
+
+    @classmethod
+    def _edits(
+        cls,
+        tmp_path: Path,
+        sources: t.MappingKV[Path, str],
+        consumer_path: Path,
+        *private_imports: str,
+    ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
+        """Return the successful plan's edits."""
+        planned = cls._plan(tmp_path, sources, consumer_path, *private_imports)
+        tm.ok(planned)
+        return planned.value
 
     @classmethod
     def _updated_source(
@@ -438,8 +453,9 @@ class TestsFlextInfraPrivateImportCutover:
         *private_imports: str,
     ) -> str:
         """Return the single planned edit's rewritten consumer source."""
-        edits = cls._plan(tmp_path, sources, consumer_path, *private_imports)
-        return edits[0].updated_source
+        return cls._edits(tmp_path, sources, consumer_path, *private_imports)[
+            0
+        ].updated_source
 
     def test_rewires_unique_public_facade_binding(self, tmp_path: Path) -> None:
         """Derive the nested facade path and remove the private import atomically."""
@@ -452,7 +468,7 @@ class TestsFlextInfraPrivateImportCutover:
             "manager: FlextSampleUtilitiesManagers.ServiceManagers\n"
         )
 
-        edits = self._plan(tmp_path, sources, consumer_path, private_import)
+        edits = self._edits(tmp_path, sources, consumer_path, private_import)
         tm.that(len(edits), eq=1)
         updated = edits[0].updated_source
 
@@ -514,8 +530,10 @@ class TestsFlextInfraPrivateImportCutover:
             "    return FlextSampleUtilitiesManagers.ServiceManagers or u\n"
         )
 
-        with pytest.raises(ValueError, match="public facade alias u is shadowed"):
-            self._plan(tmp_path, sources, consumer_path, private_import)
+        tm.fail(
+            self._plan(tmp_path, sources, consumer_path, private_import),
+            has="public facade alias u is shadowed",
+        )
 
     def test_accepts_alias_owned_by_removed_private_import(
         self, tmp_path: Path
@@ -564,7 +582,7 @@ class TestsFlextInfraPrivateImportCutover:
             ("protocols", "p", "FlextSampleProtocolsBase", "Protocol"),
             ("typings", "t", "FlextSampleTypesBase", "Type"),
         )
-        sources: dict[Path, str] = {}
+        sources: t.MutableMappingKV[Path, str] = {}
         private_imports: list[str] = []
         annotations: list[str] = []
         for layer, alias, private_class, nested_class in layers:
@@ -648,7 +666,7 @@ class TestsFlextInfraPrivateImportCutover:
             "from ._models.pydantic import FlextSampleModelsPydantic as mp"
         )
 
-        edits = self._plan(
+        edits = self._edits(
             tmp_path,
             {consumer_path: f"{relative_import}\n\nmodel = mp.BaseModel\n"},
             consumer_path,
@@ -727,6 +745,3 @@ class TestsFlextInfraPrivateImportCutover:
         )
         tm.that(updated, has="context = ulc.Context")
         tm.that(updated, lacks=private_import)
-
-
-__all__: list[str] = ["TestsFlextInfraPrivateImportCutover"]

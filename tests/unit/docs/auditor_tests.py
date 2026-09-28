@@ -19,46 +19,36 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@pytest.fixture
-def auditor() -> FlextInfraDocAuditor:
-    return FlextInfraDocAuditor()
+class TestsFlextInfraAuditor:
+    """Tests for the docs auditor and its static helpers."""
 
+    @pytest.fixture
+    def auditor(self) -> FlextInfraDocAuditor:
+        return FlextInfraDocAuditor()
 
-@pytest.fixture
-def normalize_link() -> Callable[[str], str]:
-    def _normalize(value: str) -> str:
-        normalized: str = u.Infra.docs_normalize_link(value)
-        return normalized
+    @pytest.fixture
+    def normalize_link(self) -> Callable[[str], str]:
+        def _normalize(value: str) -> str:
+            normalized: str = u.Infra.docs_normalize_link(value)
+            return normalized
 
-    return _normalize
+        return _normalize
 
+    @pytest.fixture
+    def should_skip_target(self) -> Callable[[str, str], bool]:
+        def _should_skip(link: str, target: str) -> bool:
+            should_skip: bool = u.Infra.docs_should_skip_target(link, target)
+            return should_skip
 
-@pytest.fixture
-def should_skip_target() -> Callable[[str, str], bool]:
-    def _should_skip(link: str, target: str) -> bool:
-        should_skip: bool = u.Infra.docs_should_skip_target(link, target)
-        return should_skip
+        return _should_skip
 
-    return _should_skip
+    @pytest.fixture
+    def is_external(self) -> Callable[[str], bool]:
+        def _is_external(value: str) -> bool:
+            external: bool = u.Infra.docs_is_external(value)
+            return external
 
-
-@pytest.fixture
-def is_external() -> Callable[[str], bool]:
-    def _is_external(value: str) -> bool:
-        external: bool = u.Infra.docs_is_external(value)
-        return external
-
-    return _is_external
-
-
-class TestAuditorCore:
-    """Tests for the docs auditor."""
-
-    def test_returns_flext_result(
-        self, auditor: FlextInfraDocAuditor, tmp_path: Path
-    ) -> None:
-        result = auditor.audit(tmp_path)
-        tm.that(result.success or result.failure, eq=True)
+        return _is_external
 
     def test_valid_scope_returns_success(
         self, auditor: FlextInfraDocAuditor, tmp_path: Path
@@ -66,13 +56,6 @@ class TestAuditorCore:
         workspace = u.Tests.create_docs_workspace(tmp_path)
         result = auditor.audit(workspace)
         tm.ok(result)
-
-    def test_report_structure(
-        self, auditor: FlextInfraDocAuditor, tmp_path: Path
-    ) -> None:
-        result = auditor.audit(tmp_path)
-        if result.success and result.value:
-            result.value[0]
 
     def test_issue_structure(self) -> None:
         issue = m.Infra.AuditIssue(
@@ -124,10 +107,6 @@ class TestAuditorCore:
 
     def test_issue_frozen(self) -> None:
         tm.that(m.Infra.AuditIssue.model_config.get("frozen"), eq=True)
-
-
-class TestAuditorNormalize:
-    """Additional tests for the docs auditor."""
 
     @pytest.mark.parametrize(
         ("raw", "expected"),

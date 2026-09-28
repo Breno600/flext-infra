@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Self, override
+from typing import TYPE_CHECKING, Annotated, override
 
-from flext_core import r, s
-from flext_infra import c, config, m, t, u
+from flext_core import r
+from flext_infra import c, m, s, t
 
 from ._orchestrator_discovery import FlextInfraWorkspaceOrchestratorDiscoveryMixin
 from ._orchestrator_execution import FlextInfraWorkspaceOrchestratorExecutionMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
+    from flext_infra.base import FlextInfraServiceBase
 
 
 class FlextInfraOrchestratorService(
@@ -37,28 +37,15 @@ class FlextInfraOrchestratorService(
     ] = None
 
     @m.computed_field
+    @override
     @property
     def root(self) -> Path:
         """Canonical workspace root."""
         return self.repository_root.resolve()
 
-    @u.model_validator(mode="after")
-    def _require_apply(self) -> Self:
-        """Require the sole Make effect authorization from the parent process."""
-        make = config.Infra.codegen.make
-        supplied = (
-            u.Cli.env_read(make.apply_variable, dict(os.environ)).unwrap().strip()
-        )
-        if supplied == make.apply_value:
-            return self
-        read_only_verbs = frozenset({"check", "test", "docs", "scan", "val", "build"})
-        if self.verb not in read_only_verbs:
-            msg = f"workspace orchestration requires {make.apply_variable}={make.apply_value}"
-            raise ValueError(msg)
-        return self
-
+    @override
     @classmethod
-    def execute_command(cls, params: Self) -> p.Result[bool]:
+    def execute_command(cls, params: FlextInfraServiceBase[bool]) -> p.Result[bool]:
         """Execute the already validated internal orchestration request."""
         return params.execute()
 

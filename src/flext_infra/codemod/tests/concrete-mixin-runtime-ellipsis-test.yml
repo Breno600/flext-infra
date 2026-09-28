@@ -20,6 +20,10 @@ valid:
     if TYPE_CHECKING:
         class RuntimeMixin:
             def run(self) -> int: ...
+  - |
+    class RuntimeMixin:
+        class RuntimeProtocol(Protocol):
+            def run(self) -> int: ...
 invalid:
   - |
     class RuntimeMixin:

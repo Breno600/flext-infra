@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import config, m, u
@@ -221,7 +222,8 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     parse_failures=parse_failures,
                     project_name=project_name,
                     project_root=project_root,
-                )
+                ),
+                policy=u.Infra.policy(f, rope_project=rope_project),
             ),
             rewrite_fn=lambda _vs: u.Infra.rewrite_runtime_alias_violations(
                 py_files=py_files, gates=gates
@@ -321,7 +323,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             rewrite_fn=None,
             apply=apply,
         )
-        smell_buckets: dict[str, list[m.Infra.PatternSmellViolation]] = {
+        smell_buckets: MutableMapping[str, list[m.Infra.PatternSmellViolation]] = {
             "bare_except": [],
             "print": [],
             "breakpoint": [],
@@ -373,7 +375,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         violations: t.SequenceOf[m.Infra.CompatibilityAliasViolation],
         *,
         package_name: str,
-    ) -> tuple[
+    ) -> t.Pair[
         list[m.Infra.CompatibilityAliasViolation],
         list[m.Infra.CompatibilityAliasViolation],
     ]:

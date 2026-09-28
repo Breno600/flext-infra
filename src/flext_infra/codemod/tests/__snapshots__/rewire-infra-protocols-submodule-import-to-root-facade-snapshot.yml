@@ -1,0 +1,9 @@
+id: rewire-infra-protocols-submodule-import-to-root-facade
+snapshots:
+  from flext_infra.protocols import p:
+    fixed: from flext_infra import p
+    labels:
+    - source: from flext_infra.protocols import p
+      style: primary
+      start: 0
+      end: 35

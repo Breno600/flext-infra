@@ -12,6 +12,6 @@ rule:
 constraints:
   METHOD:
     kind: identifier
-    regex: '^(?:snapshot_project_managed_artifacts|load_project_managed_artifacts|compose_mise_toml_from_snapshot|lock_platform_exclusions_from_snapshot|snapshot_config_sources)$'
+    regex: "^(?:snapshot_project_managed_artifacts|load_project_managed_artifacts|compose_mise_toml_from_snapshot|lock_platform_exclusions_from_snapshot|snapshot_config_sources)$"
 fix: u.Infra.$METHOD($$$ARGS)
 message: Consume project managed-artifact behavior through the canonical u.Infra facade.

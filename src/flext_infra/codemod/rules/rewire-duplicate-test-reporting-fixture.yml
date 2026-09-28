@@ -6,6 +6,6 @@ files:
   - "**/tests/unit/test_infra_reporting_extra.py"
 rule:
   kind: identifier
-  regex: '^service$'
+  regex: "^service$"
 fix: infra_reporting
 message: Use the reporting fixture already owned by tests/conftest.py.

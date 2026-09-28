@@ -1,8 +1,19 @@
-# @flext-generated: continuous
-# @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/pyproject.toml.j2
-# @flext-adjust: MANAGED=conflict_sections + overwrite_project_keys. CUSTOM=preserve_project_keys and [tool.*] outside conflict_sections. Never edit this projection.
-# @flext-regenerate: make gen APPLY=Y
-# {{ dist }} — generated pyproject (FLEXT standard; ADR-005 SSOT).
+{#- The generated-file header is not rendered here: the pyproject projection
+is a parse-merge-dump of this render and the live CUSTOM surface, which drops
+every comment. Its composition owner (compose_project_artifact) prepends the
+single header constant c.Infra.BANNER to the final projection. -#}
+{#- A bare internal flext-* entry is only a floor name: it declares no Git
+source, and conform fails loudly on source-less internal dependencies. The
+scaffold seeds the source from the declared FLEXT dependency line; the
+dependency lists are CUSTOM afterwards, so the declaration then rules. -#}
+{%- macro flext_requirement(item) -%}
+{%- set bare = item is string and item.startswith("flext-") and item.replace("-", "").replace("_", "").isalnum() -%}
+{%- if bare -%}
+"{{ item }} @ git+{{ flext_git_base_url }}/{{ item }}.git@{{ flext_git_branch }}"
+{%- else -%}
+{{ item | tojson }}
+{%- endif -%}
+{%- endmacro -%}
 
 # [MANAGED] build-system
 [build-system]
@@ -23,8 +34,11 @@ classifiers = [
 {% endfor %}
 ]
 dependencies = [
+{% for item in runtime_dependency_overlay %}
+  {{ flext_requirement(item) }},
+{% endfor %}
 {% for item in dependency_profile.runtime if item != dist %}
-  {{ item | tojson }},
+  {{ flext_requirement(item) }},
 {% endfor %}
 ]
 description = "{{ description }}"
@@ -50,16 +64,18 @@ name = "{{ author_name }}"
 [dependency-groups]
 codegen = [
 {% for item in dependency_profile.codegen if item != dist %}
-  {{ item | tojson }},
+  {{ flext_requirement(item) }},
 {% endfor %}
 ]
 dev = [
 {% for item in scaffold.project.dev if item != dist %}
-  {{ item | tojson }},
+  {{ flext_requirement(item) }},
 {% endfor %}
 ]
+{% if cli_module %}
 [project.scripts]
 {{ dist }} = "{{ package_name }}.cli:main"
+{% endif %}
 {% if repository %}
 
 [project.urls]
@@ -78,7 +94,6 @@ exclude_also = [
   {{ item | tojson }},
 {% endfor %}
 ]
-fail_under = {{ tooling_runtime.coverage_fail_under }}
 precision = {{ tooling.tools.coverage.precision }}
 show_missing = {{ tooling.tools.coverage.show_missing | lower }}
 skip_covered = {{ tooling.tools.coverage.skip_covered | lower }}
@@ -113,20 +128,40 @@ package_name = {{ package_name | tojson }}
 [tool.hatch.metadata]
 allow-direct-references = {{ tooling.tools.hatch.allow_direct_references | lower }}
 {% if make_profile != "workspace" %}
+{% if hatch_build_hook_path %}
+
+{# NOTE (multi-agent, flext-get3j): emit only the project-owned declaration. #}
+[tool.hatch.build.hooks.custom]
+path = {{ hatch_build_hook_path | tojson }}
+{% endif %}
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/{{ package_name }}"]
-{% if packaged_data_dirs %}
+packages = [
+  "src/{{ package_name }}",
+{% for package in root_packages %}
+  {{ ("src/" ~ package) | tojson }},
+{% endfor %}
+]
+{% if packaged_data_dirs or root_modules %}
 
 [tool.hatch.build.targets.wheel.force-include]
 {% for data_dir in packaged_data_dirs %}
 {{ data_dir | tojson }} = {{ (package_name ~ "/" ~ data_dir) | tojson }}
+{% endfor %}
+{% for module in root_modules %}
+{{ ("src/" ~ module ~ ".py") | tojson }} = {{ (module ~ ".py") | tojson }}
 {% endfor %}
 {% endif %}
 
 [tool.hatch.build.targets.sdist]
 only-include = [
   "src/{{ package_name }}",
+{% for package in root_packages %}
+  {{ ("src/" ~ package) | tojson }},
+{% endfor %}
+{% for module in root_modules %}
+  {{ ("src/" ~ module ~ ".py") | tojson }},
+{% endfor %}
 {% for data_dir in packaged_data_dirs %}
   {{ data_dir | tojson }},
 {% endfor %}
@@ -174,6 +209,7 @@ disable_error_code = [
   {{ item | tojson }},
 {% endfor %}
 ]
+follow_untyped_imports = {{ override.follow_untyped_imports | lower }}
 {% endfor %}
 
 [tool.pydantic-mypy]
@@ -303,6 +339,11 @@ exclude = [
 ]
 fix = {{ tooling.tools.ruff.fix | lower }}
 line-length = {{ tooling.tools.ruff.line_length }}
+namespace-packages = [
+{% for item in tooling.tools.ruff.namespace_packages %}
+  {{ item | tojson }},
+{% endfor %}
+]
 preview = {{ tooling.tools.ruff.preview | lower }}
 respect-gitignore = {{ tooling.tools.ruff.respect_gitignore | lower }}
 show-fixes = {{ tooling.tools.ruff.show_fixes | lower }}
@@ -397,9 +438,12 @@ whitelines = {{ tooling.tools.yamlfix.whitelines }}
 # [MANAGED] tool.uv
 [tool.uv]
 link-mode = "{{ uv_link_mode }}"
-exclude-newer = "{{ uv_exclude_newer }}"
-{# A bare exemption renders `false`. Conformance adds each declared identity
-   classified by the toolchain SSOT, independent of its dependency table. #}
-{% if dependency_cooldown_exclusions or dependency_cooldown_overrides %}
-exclude-newer-package = { {% for package in dependency_cooldown_exclusions if package not in dependency_cooldown_overrides %}{{ package }} = false{% if not loop.last or dependency_cooldown_overrides %}, {% endif %}{% endfor %}{% for package, cutoff in dependency_cooldown_overrides | dictsort %}{{ package }} = "{{ cutoff }}"{% if not loop.last %}, {% endif %}{% endfor %} }
+
+# [MANAGED] tool.flext.namespace
+{% if namespace_scan_dirs %}
+[tool.flext.namespace]
+# Production source roots the namespace validator enforces (cosmos-3flk9
+# decision A): tests host pytest conventions and scripts are thin command
+# surfaces, so projects declare their production scope here.
+scan_dirs = [{% for item in namespace_scan_dirs %}{{ item | tojson }}{{ ", " if not loop.last }}{% endfor %}]
 {% endif %}

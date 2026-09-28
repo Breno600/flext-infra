@@ -75,7 +75,7 @@ class FlextInfraModernizeOrchestrator:
         orchestrator = cls(transformer_factory, description=description)
         result = orchestrator.run(params)
         if result.failure:
-            return r[t.Cli.ResultValue].fail(result.error, error_code=result.error_code)
+            return r[t.Cli.ResultValue].from_failure(result)
         cls._display_results(result.value, dry_run=not params.apply)
         return r[t.Cli.ResultValue].ok(True)
 

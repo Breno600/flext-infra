@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
-from importlib.metadata import Distribution, distributions, packages_distributions
+import sys
+from collections.abc import Mapping, MutableMapping, Sequence
+from functools import lru_cache
+from importlib.metadata import Distribution, distributions
 from importlib.util import find_spec
 from pathlib import Path
 
-from flext_cli import p, r, u
+from flext_cli import u
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-from flext_infra import c, m, t
-
+from .. import c, m, p, r, t
 from .dependencies import FlextInfraUtilitiesDependencies
 
 
@@ -21,24 +22,28 @@ class FlextInfraUtilitiesCodemodRules:
     """Resolve universal, runtime-transitive, and local ast-grep rule layers."""
 
     @classmethod
+    @lru_cache(maxsize=1)
     def codemod_rule_plan(cls, root: Path) -> p.Result[m.Infra.CodemodRulePlan]:
-        """Build the sole executable rule plan for check and mutation."""
+        """Build the sole executable rule plan for check and mutation.
+
+        Cached per resolved root for the lifetime of one process: the composed
+        provider/rule catalog is invariant across the many ``scan()`` calls a
+        single ``mod`` invocation issues while converging to a fixed point, and
+        a fresh process (a new ``make mod`` run) always recomputes it from disk.
+        """
         project = cls._project(root)
         if project.failure:
             return r[m.Infra.CodemodRulePlan].from_failure(project)
         root_name, direct_runtime = project.value
         indexed = cls._distributions()
-        package_index = packages_distributions()
         runtime_closure = cls._runtime_closure(direct_runtime, indexed)
         universal = cls._providers(
             indexed,
-            package_index,
             scope=c.Infra.CODEMOD_SCOPE_UNIVERSAL,
             selected=frozenset(indexed).difference({root_name}),
         )
         runtime = cls._providers(
             indexed,
-            package_index,
             scope=c.Infra.CODEMOD_SCOPE_RUNTIME,
             selected=runtime_closure.difference({root_name}),
         )
@@ -48,7 +53,7 @@ class FlextInfraUtilitiesCodemodRules:
         runtime_order = cls._provider_order(runtime, indexed)
         if runtime_order.failure:
             return r[m.Infra.CodemodRulePlan].from_failure(runtime_order)
-        providers: list[tuple[str, Path]] = []
+        providers: list[t.Pair[str, Path]] = []
         for name in (*universal_order.value, *runtime_order.value):
             config = universal.get(name) or runtime.get(name)
             if config is None:
@@ -75,7 +80,7 @@ class FlextInfraUtilitiesCodemodRules:
 
     @staticmethod
     def _project(root: Path) -> p.Result[t.Pair[str, t.StrSequence]]:
-        pyproject = root / c.Infra.PYPROJECT_FILENAME
+        pyproject = root / c.PYPROJECT_FILENAME
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:
             return r[t.Pair[str, t.StrSequence]].from_failure(document)
@@ -112,9 +117,12 @@ class FlextInfraUtilitiesCodemodRules:
         ))
 
     @staticmethod
-    def _distributions() -> dict[str, Distribution]:
-        indexed: dict[str, Distribution] = {}
-        for installed in distributions():
+    def _distributions() -> MutableMapping[str, Distribution]:
+        indexed: MutableMapping[str, Distribution] = {}
+        # Import search paths may repeat the same physical directory. Query each
+        # directory once; distinct installations with the same name still fail.
+        paths = list(dict.fromkeys(str(Path(path).resolve()) for path in sys.path))
+        for installed in distributions(path=paths):
             raw_name = installed.metadata.get("Name")
             if not isinstance(raw_name, str) or not raw_name.strip():
                 continue
@@ -156,16 +164,16 @@ class FlextInfraUtilitiesCodemodRules:
     def _providers(
         cls,
         indexed: t.MappingKV[str, Distribution],
-        package_index: Mapping[str, Sequence[str]],
         *,
         scope: str,
         selected: frozenset[str],
-    ) -> dict[str, Path]:
-        providers: dict[str, Path] = {}
+    ) -> MutableMapping[str, Path]:
+        providers: MutableMapping[str, Path] = {}
         for name in sorted(selected):
-            if name not in indexed:
+            installed = indexed.get(name)
+            if installed is None:
                 continue
-            configs = cls._provider_configs(name, package_index)
+            configs = cls._provider_configs(installed)
             if configs.failure:
                 raise ValueError(configs.error or f"resolve codemod provider: {name}")
             if not configs.value:
@@ -204,38 +212,29 @@ class FlextInfraUtilitiesCodemodRules:
         return r[t.StrSequence].ok(ordered)
 
     @staticmethod
-    def _provider_configs(
-        distribution_name: str, package_index: Mapping[str, Sequence[str]]
-    ) -> p.Result[t.SequenceOf[Path]]:
-        configs: set[Path] = set()
-        for package_name, raw_distributions in package_index.items():
-            if distribution_name not in {
-                canonicalize_name(name) for name in raw_distributions
-            }:
-                continue
-            # Data and native distributions (ML runtimes, compiled wheels)
-            # expose directory names that are not importable modules; they
-            # cannot host codemod provider configs and are skipped, never
-            # treated as provider failures.
-            if not package_name or not all(
-                part.isidentifier()
-                for part in package_name.replace("/", ".").split(".")
-            ):
-                continue
-            spec = find_spec(package_name.replace("/", "."))
-            if spec is None:
-                continue
-            roots = tuple(Path(path) for path in spec.submodule_search_locations or ())
-            if not roots and spec.origin is not None:
-                roots = (Path(spec.origin).parent,)
-            configs.update(
-                root / c.Infra.CODEMOD_CONFIG_RELPATH
-                for root in roots
-                if (root / c.Infra.CODEMOD_CONFIG_RELPATH).is_file()
+    def _provider_configs(installed: Distribution) -> p.Result[t.SequenceOf[Path]]:
+        raw_name = installed.metadata.get("Name")
+        if not isinstance(raw_name, str) or not raw_name.strip():
+            return r[t.SequenceOf[Path]].fail(
+                "codemod provider distribution has no canonical name"
             )
+        package_name = canonicalize_name(raw_name).replace("-", "_")
+        if not package_name.isidentifier():
+            return r[t.SequenceOf[Path]].ok(())
+        spec = find_spec(package_name)
+        if spec is None:
+            return r[t.SequenceOf[Path]].ok(())
+        roots = tuple(Path(path) for path in spec.submodule_search_locations or ())
+        if not roots and spec.origin is not None:
+            roots = (Path(spec.origin).parent,)
+        configs = {
+            root / c.Infra.CODEMOD_CONFIG_RELPATH
+            for root in roots
+            if (root / c.Infra.CODEMOD_CONFIG_RELPATH).is_file()
+        }
         if len(configs) > 1:
             return r[t.SequenceOf[Path]].fail(
-                f"distribution exports multiple codemod configs: {distribution_name}"
+                f"distribution exports multiple codemod configs: {raw_name}"
             )
         return r[t.SequenceOf[Path]].ok(tuple(sorted(configs)))
 
@@ -271,7 +270,7 @@ class FlextInfraUtilitiesCodemodRules:
     def _compose(
         cls, providers: t.SequenceOf[t.Pair[str, Path]]
     ) -> p.Result[m.Infra.CodemodRulePlan]:
-        selected: dict[str, m.Infra.CodemodRule] = {}
+        selected: MutableMapping[str, m.Infra.CodemodRule] = {}
         rulesets: list[m.Infra.CodemodRuleset] = []
         provider_order: list[str] = []
         for provider, config in providers:
@@ -383,6 +382,11 @@ class FlextInfraUtilitiesCodemodRules:
                         return r[t.SequenceOf[m.Infra.CodemodRule]].from_failure(
                             canonical
                         )
+                    declared = cls._declared_expected(parsed_rule.value)
+                    if declared.failure:
+                        return r[t.SequenceOf[m.Infra.CodemodRule]].fail(
+                            f"{declared.error}: {resource}"
+                        )
                     rules.append(
                         m.Infra.CodemodRule(
                             id=rule_id,
@@ -390,9 +394,41 @@ class FlextInfraUtilitiesCodemodRules:
                             provider=provider,
                             resource=resource,
                             fixable="fix" in parsed_rule.value,
+                            expected=declared.value[0] if declared.value else None,
                         )
                     )
         return r[t.SequenceOf[m.Infra.CodemodRule]].ok(tuple(rules))
+
+    @staticmethod
+    def _declared_expected(
+        document: t.MappingKV[str, t.JsonValue],
+    ) -> p.Result[t.VariadicTuple[int]]:
+        """Read one rule's declared finding-count receipt from its metadata.
+
+        The receipt is the same contract the sed-by-list phase already owns
+        (``ModTextRule.expected``): a rule that declares how many findings it
+        must produce turns a silent drift — a guard that stopped matching, a
+        pattern that started over-matching — into a loud failure. ast-grep
+        rejects unknown top-level keys, so the declaration lives under the
+        ``metadata`` mapping it does accept. Absence is the empty tuple: a
+        declared `expected: 0` is a real receipt ("this rule must never match
+        again") and must not collapse into "no receipt declared".
+        """
+        metadata = document.get(c.Infra.CODEMOD_RULE_METADATA_KEY)
+        if metadata is None:
+            return r[t.VariadicTuple[int]].ok(())
+        if not isinstance(metadata, Mapping):
+            return r[t.VariadicTuple[int]].fail(
+                "ast-grep rule metadata must be a mapping"
+            )
+        expected = metadata.get(c.Infra.CODEMOD_TEXT_KEY_EXPECTED)
+        if expected is None:
+            return r[t.VariadicTuple[int]].ok(())
+        if not isinstance(expected, int) or isinstance(expected, bool) or expected < 0:
+            return r[t.VariadicTuple[int]].fail(
+                "ast-grep rule expected receipt must be a non-negative integer"
+            )
+        return r[t.VariadicTuple[int]].ok((expected,))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesCodemodRules"]

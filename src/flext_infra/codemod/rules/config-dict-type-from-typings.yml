@@ -1,22 +1,20 @@
-# FLEXT typing codemod: model_config ClassVar type MUST come from the typings
-# facade (t.ConfigDict), never from protocols (p.ConfigDict — FlextProtocols has
-# no ConfigDict) nor from models (m.ConfigDict — a model is never a type, §3.2).
+# FLEXT codemod: a model_config annotation must name the single owner of
+# ConfigDict, which is `m`. Both other spellings crash at import, because
+# neither FlextProtocols nor FlextTypes carries the member:
 #
 #   model_config: ClassVar[p.ConfigDict] = m.ConfigDict(...)   # defect
-#   model_config: ClassVar[m.ConfigDict] = m.ConfigDict(...)   # defect (m as type)
+#   model_config: ClassVar[t.ConfigDict] = m.ConfigDict(...)   # defect
 #                       ->
-#   model_config: ClassVar[t.ConfigDict] = m.ConfigDict(...)   # canonical
+#   model_config: ClassVar[m.ConfigDict] = m.ConfigDict(...)   # canonical
 #
-# ConfigDict is exposed as a t.* TypeAlias in flext-core (FlextTypes.ConfigDict);
-# p.* (protocols) does NOT carry it, so `p.ConfigDict` crashes at import
-# (AttributeError: FlextProtocols has no attribute ConfigDict) and `m.ConfigDict`
-# in an annotation violates the "model is never a type" law. The construction
-# value (right-hand side) legitimately stays `m.ConfigDict(...)` and is preserved
-# byte-for-byte via the $VAL metavariable.
+# `t` carried ConfigDict until flext-core consolidated ownership onto `m`; the
+# annotation is the same facade the construction value already uses, so the
+# rewrite never introduces an unbound name.
 #
-# Generalist + idempotent: matches only $WRONG in {p, m}; an already-correct
-# `t.ConfigDict` is not matched, so a re-scan finds zero matches. SettingsConfigDict
-# and other members are intentionally out of scope (distinct rule if ever needed).
+# Idempotent: only the two broken spellings match; a canonical module yields
+# zero matches on re-scan. The value must construct through `m.ConfigDict(...)`, so
+# the rewritten annotation never introduces an unbound name. SettingsConfigDict
+# is out of scope.
 id: config-dict-type-from-typings
 language: python
 severity: error
@@ -24,22 +22,12 @@ files:
   - "src/**/*.py"
   - "tests/**/*.py"
 rule:
-  pattern: "model_config: ClassVar[$WRONG.ConfigDict] = $VAL"
-  # F821-safety guard: only rewrite to t.ConfigDict when the module already
-  # imports `t` (module-level, so available to every class in the file). A
-  # module with no `t` import is handled by the detection-only companion rule
-  # config-dict-type-missing-t-import, which flags it before any rewrite.
-  inside:
-    stopBy: end
-    kind: module
-    has:
-      stopBy: end
-      matches: t-locally-bound
+  any:
+    - pattern: "model_config: ClassVar[p.ConfigDict] = $VAL"
+    - pattern: "model_config: ClassVar[t.ConfigDict] = $VAL"
 constraints:
-  WRONG:
-    regex: "^[pm]$"
-fix: "model_config: ClassVar[t.ConfigDict] = $VAL"
+  VAL:
+    regex: "^m\\.ConfigDict\\("
+fix: "model_config: ClassVar[m.ConfigDict] = $VAL"
 message: >-
-  model_config type must be the typings alias t.ConfigDict, not p.ConfigDict
-  (protocols has no ConfigDict -> import crash) nor m.ConfigDict (a model is
-  never a type). Construction value m.ConfigDict(...) is kept.
+  model_config annotation must be m.ConfigDict, the single owner of the member. Neither p.ConfigDict nor t.ConfigDict exists, so the module crashes at import. The construction value m.ConfigDict(...) is kept.

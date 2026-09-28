@@ -17,22 +17,34 @@ import pytest
 from flext_tests import tf, tm
 
 from flext_infra.validate.import_cycles import FlextInfraValidateImportCycles
-from tests import m, u
+from tests import m, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
 
+class TestsFlextInfraImportCycles:
+    """Import-cycle detection, summary content, and per-project scoping."""
 
-@pytest.fixture
-def v() -> FlextInfraValidateImportCycles:
-    """Shared validator instance."""
-    return FlextInfraValidateImportCycles()
+    @pytest.fixture
+    def v(self) -> FlextInfraValidateImportCycles:
+        """Shared validator instance."""
+        return FlextInfraValidateImportCycles()
 
-
-class TestImportCyclesValidatorCore:
-    """Cycle detection: passes clean trees, flags cycles."""
+    @staticmethod
+    def _seed_project(
+        workspace: Path, name: str, files: t.MappingKV[str, str], *, pkg: str = "tests"
+    ) -> Path:
+        project = workspace / name
+        pkg_dir = project / "src" / pkg
+        pkg_dir.mkdir(parents=True, exist_ok=True)
+        (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
+        (project / "pyproject.toml").write_text(
+            f'[project]\nname = "{name}"\nversion = "0.0.1"\n', encoding="utf-8"
+        )
+        for filename, content in files.items():
+            (pkg_dir / filename).write_text(content, encoding="utf-8")
+        return project
 
     def test_empty_workspace_passes(
         self, tmp_path: Path, v: FlextInfraValidateImportCycles
@@ -93,10 +105,6 @@ class TestImportCyclesValidatorCore:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.passed, eq=True)
 
-
-class TestImportCyclesValidatorSummary:
-    """Summary content: human-readable cycle descriptions."""
-
     def test_summary_reports_cycle_count(
         self, tmp_path: Path, v: FlextInfraValidateImportCycles
     ) -> None:
@@ -113,30 +121,6 @@ class TestImportCyclesValidatorSummary:
         u.Tests.write_package_init(tmp_path / "src" / "pkg", "")
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.summary, has="cycle")
-
-
-class TestImportCyclesPerProjectScope:
-    """Cycle detection scopes per project root (no cross-project merge).
-
-    Regression guard for the cross-project false positive: every governed
-    project ships a top-level ``tests`` package, and merging those namespaces
-    across projects used to synthesise cycles that never occur at runtime.
-    """
-
-    @staticmethod
-    def _seed_project(
-        workspace: Path, name: str, files: dict[str, str], *, pkg: str = "tests"
-    ) -> Path:
-        project = workspace / name
-        pkg_dir = project / "src" / pkg
-        pkg_dir.mkdir(parents=True, exist_ok=True)
-        (pkg_dir / "__init__.py").write_text("", encoding="utf-8")
-        (project / "pyproject.toml").write_text(
-            f'[project]\nname = "{name}"\nversion = "0.0.1"\n', encoding="utf-8"
-        )
-        for filename, content in files.items():
-            (pkg_dir / filename).write_text(content, encoding="utf-8")
-        return project
 
     def test_same_named_packages_across_projects_do_not_form_cycle(
         self, tmp_path: Path, v: FlextInfraValidateImportCycles
@@ -179,6 +163,3 @@ class TestImportCyclesPerProjectScope:
         tm.that(joined, has="tests.a")
         tm.that(joined, has="tests.b")
         tm.that(joined, lacks="[beta]")
-
-
-__all__: t.StrSequence = []

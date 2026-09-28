@@ -103,6 +103,3 @@ class TestsFlextInfraRepositoryBaselineBranch:
 
         tm.ok(builtin)
         tm.that(builtin.value, eq="dev")
-
-
-__all__: tuple[str, ...] = ()

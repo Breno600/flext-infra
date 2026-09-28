@@ -22,7 +22,7 @@ from git import (
 )
 
 from flext_core import r
-from flext_infra.constants import c
+from flext_infra import c
 
 if TYPE_CHECKING:
     from flext_infra import p

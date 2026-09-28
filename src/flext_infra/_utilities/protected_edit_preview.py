@@ -6,8 +6,7 @@ import operator
 from collections.abc import Callable, MutableMapping
 from pathlib import Path
 
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra import c, t
 
 from .protected_edit_linting import FlextInfraUtilitiesProtectedEditLinting
 
@@ -16,7 +15,9 @@ class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLi
     """Preview and revert-report helpers for protected edit workflows."""
 
     @staticmethod
-    def _normalized_source_updates(updates: t.MappingKV[Path, str]) -> dict[Path, str]:
+    def _normalized_source_updates(
+        updates: t.MappingKV[Path, str],
+    ) -> MutableMapping[Path, str]:
         """Return one update map keyed by resolved path in deterministic order."""
         return {
             path.resolve(): content

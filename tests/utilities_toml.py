@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from pathlib import Path
-from typing import override
 
 from flext_tests import tm
 
-from flext_infra import config, r, u
+from flext_core import r
+from flext_infra import config, u
 from tests import c, m, p, t
 
 
@@ -20,29 +19,8 @@ class TestsFlextInfraUtilitiesTomlMixin:
         """Decode the present text payload of a generated-file test plan."""
         return tm.not_none(plan.desired_content).decode(c.Cli.ENCODING_DEFAULT)
 
-    class TomlReaderSequence(p.Infra.TomlReader):
-        """Protocol-compatible TOML reader that replays typed results."""
-
-        def __init__(self, values: t.SequenceOf[p.Result[t.JsonMapping]]) -> None:
-            """Store the ordered TOML results for replay."""
-            self._values = list(values)
-            self._index = 0
-
-        @override
-        def read_plain(self, path: Path) -> p.Result[t.JsonMapping]:
-            del path
-            current = self._index
-            self._index = current + 1
-            if not self._values:
-                return r[t.JsonMapping].fail("toml reader sequence is empty")
-            return (
-                self._values[current]
-                if current < len(self._values)
-                else self._values[-1]
-            )
-
     @staticmethod
-    def infra_mapping(value: t.Infra.InfraMapping) -> t.JsonMapping:
+    def infra_mapping(value: t.JsonMapping) -> t.JsonMapping:
         """Provide the typed test helper `infra_mapping`."""
         result: t.JsonMapping = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(value)
         return result
@@ -74,7 +52,7 @@ class TestsFlextInfraUtilitiesTomlMixin:
         )
 
     @staticmethod
-    def infra_mapping_result(value: t.Infra.InfraMapping) -> p.Result[t.JsonMapping]:
+    def infra_mapping_result(value: t.JsonMapping) -> p.Result[t.JsonMapping]:
         """Provide the typed test helper `infra_mapping_result`."""
         return r[t.JsonMapping].ok(
             TestsFlextInfraUtilitiesTomlMixin.infra_mapping(value)
@@ -111,7 +89,7 @@ class TestsFlextInfraUtilitiesTomlMixin:
         if not isinstance(normalized, Mapping):
             msg = "normalized TOML document is not a mapping"
             raise TypeError(msg)
-        result: dict[str, t.JsonValue] = dict(normalized)
+        result: t.MutableMappingKV[str, t.JsonValue] = dict(normalized)
         return result
 
     @staticmethod
@@ -122,7 +100,7 @@ class TestsFlextInfraUtilitiesTomlMixin:
         if not isinstance(normalized, Mapping):
             msg = "normalized TOML value is not a mapping"
             raise TypeError(msg)
-        result: dict[str, t.JsonValue] = dict(normalized)
+        result: t.MutableMappingKV[str, t.JsonValue] = dict(normalized)
         return result
 
     @staticmethod

@@ -12,15 +12,14 @@ if TYPE_CHECKING:
     from tests import t
 
 
-def _run_maintenance(argv: t.StrSequence | None = None) -> int:
-    args = ["maintenance"]
-    if argv is not None:
-        args.extend(argv)
-    return infra_main(args)
-
-
 class TestsFlextInfraInfraMaintenanceCli:
     """Behavior contract for test_infra_maintenance_cli."""
 
+    def _run_maintenance(self, argv: t.StrSequence | None = None) -> int:
+        args = ["maintenance"]
+        if argv is not None:
+            args.extend(argv)
+        return infra_main(args)
+
     def test_maintenance_rejects_apply_flag(self) -> None:
-        tm.that(_run_maintenance(["--apply"]), eq=2)
+        tm.that(self._run_maintenance(["--apply"]), eq=2)

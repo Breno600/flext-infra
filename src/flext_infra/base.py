@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Annotated, ClassVar, Self, override
 
 from flext_core import r, s
-from flext_infra import c, m, p, settings, t, u
+from flext_infra import c, m, p, t, u
 
 from ._base_payload import FlextInfraCommandPayloadMixin
+from ._settings import settings
 
 
 class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
@@ -20,12 +21,12 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     apply/dry-run toggles, output formatting, and project filtering.
     """
 
-    model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+    model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
         validate_by_name=True, validate_by_alias=True
     )
 
     @classmethod
-    def _runtime_bootstrap_options(cls) -> p.RuntimeBootstrapOptions:
+    def runtime_bootstrap_options(cls) -> p.RuntimeBootstrapOptions:
         """Bootstrap service runtime using the shared CLI settings namespace."""
         # flext-j47u: configure the inherited runtime once; no settings proxy/property.
         return m.RuntimeBootstrapOptions(settings_type=type(settings))
@@ -114,7 +115,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     @property
     def fail_fast(self) -> bool:
         """Stop at the first failure as an invariant, never a CLI choice."""
-        return True
+        return c.Infra.SERVICE_FAIL_FAST
 
     @m.computed_field
     @property

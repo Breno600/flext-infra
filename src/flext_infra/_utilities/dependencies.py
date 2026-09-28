@@ -6,8 +6,8 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from importlib.metadata import requires
+from collections.abc import Callable, Mapping, MutableMapping
+from importlib.metadata import distributions, requires
 from importlib.resources import files
 from pathlib import Path
 from types import MappingProxyType
@@ -19,17 +19,16 @@ from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
 
 from flext_core import r
-from flext_infra.constants import c
 
 # Why: dependency_waves subscripts r[t.SequenceOf[t.StrSequence]] at runtime, so
 # the typings facade cannot be TYPE_CHECKING-only here. c -> t is a forward
 # facade import and stays cycle-free.
-from flext_infra.typings import t
+from flext_infra import c, t
 
 from .pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
+    from flext_infra import m, p
 
 
 class FlextInfraUtilitiesDependencies:
@@ -99,7 +98,7 @@ class FlextInfraUtilitiesDependencies:
         normalize: Callable[[str], str] = canonicalize_name,
     ) -> t.StrSequence:
         """Return a dependency-first order for any named dependency graph."""
-        graph: dict[str, tuple[str, ...]] = {}
+        graph: MutableMapping[str, t.VariadicTuple[str]] = {}
 
         def collect(dependency_name: str) -> None:
             normalized = normalize(dependency_name)
@@ -196,7 +195,7 @@ class FlextInfraUtilitiesDependencies:
         suffix: str = "",
     ) -> t.SequenceOf[Path]:
         """Resolve runtime, local, and test dependency resources in order."""
-        pyproject = project_root / c.Infra.PYPROJECT_FILENAME
+        pyproject = project_root / c.PYPROJECT_FILENAME
         payload = u.Cli.toml_read_json(pyproject).unwrap()
         project_name = canonicalize_name(
             FlextInfraUtilitiesPyproject.project_name_from_payload(
@@ -220,7 +219,7 @@ class FlextInfraUtilitiesDependencies:
                 prefix=distribution_prefix,
             )
         )
-        package_names: dict[str, str] = {
+        package_names: MutableMapping[str, str] = {
             name: name.replace("-", "_") for name in ordered
         }
         if not distribution_prefix or project_name.startswith(distribution_prefix):
@@ -251,7 +250,7 @@ class FlextInfraUtilitiesDependencies:
 
     @staticmethod
     def constraint_specifier(version: str) -> str:
-        """Return the resolved lock version as an open-ended dependency floor.
+        """Return the resolved installed version as an open-ended dependency floor.
 
         PEP 440 permits a local version label only with ``==`` or ``!=``, so a
         floor built straight from a locally tagged resolution is rejected by
@@ -260,7 +259,7 @@ class FlextInfraUtilitiesDependencies:
 
         A prerelease resolution is not a floor either: publishing ``>=X.Yb1``
         forces every downstream consumer onto that beta, which is how the fleet
-        ended up pinned to ``pydantic>=2.14.0b1`` from a single local lock. The
+        ended up pinned to ``pydantic>=2.14.0b1`` from a single runtime resolution. The
         empty string means "this resolution cannot serve as a public floor", and
         every caller keeps the declared constraint instead of rewriting it.
         """
@@ -276,55 +275,39 @@ class FlextInfraUtilitiesDependencies:
         return f">={public_version}"
 
     @classmethod
-    def locked_dependency_versions(
-        cls, lock_path: Path, *, sources: t.StrSequence = ("registry",)
-    ) -> t.MappingKV[str, str]:
-        """Return normalized package versions from one ``uv.lock`` file.
-
-        ``sources`` selects the lock source kinds to read (``registry`` by
-        default; ``git`` yields the siblings consumed through a pinned ref).
-        """
-        result: t.MappingKV[str, str] = {}
-        if lock_path.is_file():
-            raw_text = lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            payload_source = u.Cli.toml_mapping_from_text(raw_text)
-            if payload_source is not None:
-                payload = FlextInfraUtilitiesPyproject.validate_infra_payload(
-                    payload_source
-                )
-                raw_packages = payload.get("package")
-                if isinstance(raw_packages, list):
-                    versions: dict[str, str] = {}
-                    for raw_package in raw_packages:
-                        if not isinstance(raw_package, Mapping):
-                            continue
-                        raw_source = raw_package.get("source")
-                        if not isinstance(raw_source, Mapping) or not any(
-                            kind in raw_source for kind in sources
-                        ):
-                            continue
-                        raw_name = raw_package.get("name")
-                        raw_version = raw_package.get(c.Infra.VERSION)
-                        if not isinstance(raw_name, str) or not isinstance(
-                            raw_version, str
-                        ):
-                            continue
-                        dependency_name = cls.dep_name(raw_name)
-                        if dependency_name is None:
-                            continue
-                        versions[dependency_name] = raw_version.strip()
-                    result = dict(versions)
-        return result
+    def resolved_dependency_versions(cls) -> t.MappingKV[str, str]:
+        """Read registry versions from the provisioned runtime, never release provenance."""
+        versions: dict[str, str] = {}
+        for distribution in distributions():
+            if distribution.read_text("direct_url.json") is not None:
+                continue
+            name = distribution.metadata.get("Name")
+            if name is None:
+                msg = "Installed distribution has no Name metadata"
+                raise TypeError(msg)
+            normalized = cls.dep_name(name)
+            if normalized is None:
+                msg = f"Invalid installed distribution name: {name}"
+                raise ValueError(msg)
+            version = distribution.version
+            if normalized in versions and versions[normalized] != version:
+                msg = f"Ambiguous installed version: {normalized}"
+                raise ValueError(msg)
+            versions[normalized] = version
+        if not versions:
+            msg = "No registry packages found in the provisioned runtime"
+            raise ValueError(msg)
+        return versions
 
     @classmethod
     def rewrite_requirement_constraint(
         cls,
         requirement: str,
         *,
-        locked_versions: t.MappingKV[str, str],
+        resolved_versions: t.MappingKV[str, str],
         internal_names: t.StrSequence = (),
     ) -> str | None:
-        """Rewrite one PEP 621 requirement to the resolved uv.lock floor."""
+        """Rewrite one PEP 621 requirement to the resolved runtime floor."""
         result: str | None = None
         raw_text = requirement.strip()
         if raw_text:
@@ -341,7 +324,7 @@ class FlextInfraUtilitiesDependencies:
                         dependency_name is not None
                         and dependency_name not in internal_set
                     ):
-                        locked_version = locked_versions.get(dependency_name)
+                        locked_version = resolved_versions.get(dependency_name)
                         if locked_version is not None:
                             try:
                                 parsed = Requirement(requirement_part.strip())
@@ -375,7 +358,7 @@ class FlextInfraUtilitiesDependencies:
     @staticmethod
     def dedupe_specs(specs: t.StrSequence) -> t.StrSequence:
         """Return deterministic unique dependency specs keyed by normalized name."""
-        selected_by_name: dict[str, str] = {}
+        selected_by_name: MutableMapping[str, str] = {}
         for raw in specs:
             item = raw.strip()
             if not item:
@@ -463,7 +446,7 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def _append_requirement_names(
-        cls, *, raw_requirements: t.Infra.InfraValue, names: set[str]
+        cls, *, raw_requirements: t.JsonValue, names: set[str]
     ) -> None:
         """Append requirement names."""
         if not isinstance(raw_requirements, list):
@@ -476,7 +459,7 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def _append_mapping_dependency_names(
-        cls, *, raw_mapping: t.Infra.InfraValue, names: set[str]
+        cls, *, raw_mapping: t.JsonValue, names: set[str]
     ) -> None:
         """Append mapping dependency names."""
         if not isinstance(raw_mapping, Mapping):
@@ -523,7 +506,7 @@ class FlextInfraUtilitiesDependencies:
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
             # flext-j47u (codex): keep the empty mapping immutable and fully typed.
-            return MappingProxyType(dict[str, tuple[str, ...]]())
+            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
         return cls.project_dev_groups_from_payload(normalized)
 
     @classmethod
@@ -556,7 +539,7 @@ class FlextInfraUtilitiesDependencies:
 
     @classmethod
     def flext_dependency_namespaces_from_payload(
-        cls, payload: t.MappingKV[str, t.Infra.InfraValue]
+        cls, payload: t.MappingKV[str, t.JsonValue]
     ) -> t.StrSequence:
         """Extract every declared ``flext-*`` dependency as a Python namespace."""
         # flext-j47u (codex): FLEXT dependencies are first-party contracts even
@@ -569,6 +552,81 @@ class FlextInfraUtilitiesDependencies:
                 if name == "flext" or name.startswith(c.Infra.PKG_PREFIX_HYPHEN)
             )
         )
+
+    @staticmethod
+    def dependency_profile_upstreams(
+        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        *,
+        distribution: str,
+        runtime_names: t.Infra.StrSet,
+    ) -> t.StrSequence:
+        """Return the most specific shared profile upstreams one project selects.
+
+        The root of the dependency tree declares no upstream distribution: a
+        distribution that IS a profile's upstream owns that profile. Otherwise
+        every shared profile whose upstream is a runtime dependency is a
+        candidate, and a candidate implied by another candidate's runtime is
+        dropped. One entry is the governed selection; none means no declared
+        profile governs the project; several are an ambiguous declaration.
+        """
+        shared = tuple(item for item in profiles if item.project is None)
+        own = next(
+            (
+                item
+                for item in shared
+                if item.upstream.replace("_", "-") == distribution
+            ),
+            None,
+        )
+        candidates = (
+            (own,)
+            if own is not None
+            else tuple(
+                item
+                for item in shared
+                if item.upstream.replace("_", "-") in runtime_names
+            )
+        )
+        runtime_of = {
+            item.upstream: {
+                name
+                for dependency in item.runtime
+                if (name := FlextInfraUtilitiesDependencies.dep_name(dependency))
+            }
+            for item in candidates
+        }
+        return tuple(
+            item.upstream
+            for item in candidates
+            if not any(
+                item.upstream.replace("_", "-") in runtime_of[other.upstream]
+                for other in candidates
+                if other is not item
+            )
+        )
+
+    @staticmethod
+    def dependency_profile_rows(
+        profiles: t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec],
+        *,
+        upstream: str,
+        distribution: str,
+    ) -> t.SequenceOf[m.Infra.ScaffoldDependencyProfileSpec]:
+        """Return the shared upstream profile followed by the project's additions.
+
+        Empty when the upstream declares no shared profile.
+        """
+        base = next(
+            (
+                item
+                for item in profiles
+                if item.project is None and item.upstream == upstream
+            ),
+            None,
+        )
+        if base is None:
+            return ()
+        return (base, *(item for item in profiles if item.project == distribution))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDependencies"]

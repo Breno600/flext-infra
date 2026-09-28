@@ -6,7 +6,7 @@ files:
   - "**/tests/unit/test_infra_reporting_extra.py"
 rule:
   pattern:
-    context: 'def probe(value: type[u.Cli]) -> None: ...'
+    context: "def probe(value: type[u.Cli]) -> None: ..."
     selector: generic_type
 fix: u.Cli
 message: The canonical reporting fixture supplies a public CLI utility instance.

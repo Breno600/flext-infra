@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_infra import config, main, u
+from flext_infra.codegen import FlextInfraCodegenConform
 from tests import c, m, t
 from tests.utilities_fixture_project import TestsFlextInfraUtilitiesProjectFixtureMixin
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
@@ -15,13 +16,7 @@ class TestsFlextInfraUtilitiesReleaseMixin:
 
     @staticmethod
     def release_policy_root() -> Path:
-        """Return the packaged template root that owns the release policies.
-
-        The build-constraints and Gitleaks policies are codegen templates
-        projected into every repository; the release fixtures copy the same
-        bytes so the test workspace carries exactly what a generated
-        repository carries.
-        """
+        """Return the packaged template root that owns the Gitleaks policy."""
         return (
             Path(__file__).resolve().parents[1]
             / "src"
@@ -50,40 +45,53 @@ class TestsFlextInfraUtilitiesReleaseMixin:
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
             workspace, "workspace"
         )
+        source = TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source
         (workspace / "pyproject.toml").write_text(
             (
                 "[project]\n"
                 'name = "workspace"\n'
                 'description = "Release workflow fixture"\n'
                 f'version = "{version}"\n'
-                "dependencies = []\n"
+                'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
+                f'dependencies = ["{source("flext-core")}"]\n'
+                # The FLEXT line is detected from the declared infrastructure
+                # source, never cataloged: a governed checkout declares every
+                # internal requirement (the scaffold dev SSOT includes
+                # flext-tests) with its own direct Git source.
+                "\n[dependency-groups]\n"
+                f'dev = ["{source()}", "{source("flext-tests")}"]\n'
             ),
             encoding="utf-8",
         )
-        # Generated repositories ignore their report tree; the protocol's
-        # plan receipt must never count as a dirty checkout.
-        (workspace / ".gitignore").write_text(".reports/\n", encoding="utf-8")
-        policy_paths = (
-            c.Infra.RELEASE_BUILD_CONSTRAINTS_PATH,
-            c.Infra.RELEASE_GITLEAKS_CONFIG_PATH,
+        # The integration baseline uses the same ignore contract as its release
+        # lane, so local resolver state never becomes an untracked source file.
+        gitignore = FlextInfraCodegenConform.render_project_gitignore(
+            config.Infra.codegen,
+            profile=c.Infra.MakeProfile.STANDALONE,
+            project_name=workspace.name,
+        ).unwrap()
+        (workspace / ".gitignore").write_text(gitignore, encoding="utf-8")
+        # Gitleaks is a codegen projection; build constraints render from the
+        # typed config SSOT at release time and have no repository projection.
+        gitleaks_source = (
+            TestsFlextInfraUtilitiesReleaseMixin.release_policy_root()
+            / f"{c.Infra.RELEASE_GITLEAKS_CONFIG_PATH}.j2"
         )
-        # The policies are rendered exactly as codegen projects them into
-        # a generated repository: same template, same typed pins.
-        policy_context = m.Infra.ReleasePolicyRenderSpec(
-            build_constraints=config.Infra.release.build_constraints
-        )
-        for policy_path in policy_paths:
-            policy_source = (
-                TestsFlextInfraUtilitiesReleaseMixin.release_policy_root()
-                / (f"{policy_path}.j2")
+        rendered_gitleaks = u.Cli.template_render(gitleaks_source, config.Infra.release)
+        if rendered_gitleaks.failure:
+            raise RuntimeError(
+                rendered_gitleaks.error or "release policy render failed: gitleaks"
             )
-            rendered = u.Cli.template_render(policy_source, policy_context)
-            if rendered.failure:
-                msg = rendered.error or f"release policy render failed: {policy_path}"
-                raise RuntimeError(msg)
-            policy_target = workspace / policy_path
-            policy_target.parent.mkdir(parents=True, exist_ok=True)
-            policy_target.write_text(rendered.value, encoding="utf-8")
+        gitleaks_target = workspace / c.Infra.RELEASE_GITLEAKS_CONFIG_PATH
+        gitleaks_target.parent.mkdir(parents=True, exist_ok=True)
+        gitleaks_target.write_text(rendered_gitleaks.value, encoding="utf-8")
+        if not project_names:
+            # A standalone FLEXT repository publishes its own Python package;
+            # the release stamp's conform guard probes that layout in a fresh
+            # interpreter, so the fixture carries the package it releases.
+            root_package = workspace / c.Infra.DEFAULT_SRC_DIR / workspace.name
+            root_package.mkdir(parents=True, exist_ok=True)
+            (root_package / c.Infra.INIT_PY).write_text("", encoding="utf-8")
         for name in project_names:
             project = workspace / name
             project.mkdir(parents=True, exist_ok=True)
@@ -103,6 +111,7 @@ class TestsFlextInfraUtilitiesReleaseMixin:
                     'description = "Release member fixture"\n'
                     'version = "0.1.0"\n'
                     'license = "MIT"\n'
+                    'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                     'dependencies = ["flext-core @ '
                     'git+https://github.com/flext-sh/flext-core.git@0.12.0-dev"]\n'
                     "\n"

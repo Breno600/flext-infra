@@ -16,8 +16,6 @@ from tests import c, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
-
 
 class TestsFlextInfraUtilitiesLogParser:
     def test_missing_file_returns_zero_empty(self, tmp_path: Path) -> None:
@@ -122,7 +120,4 @@ class TestsFlextInfraUtilitiesLogParser:
 
     @pytest.mark.parametrize("line", c.Tests.LOG_ERROR_LINES)
     def test_error_lines_follow_prefix_rule(self, line: str) -> None:
-        tm.that(c.Tests.LOG_ERROR_PREFIX_RE.match(line), none=False)
-
-
-__all__: t.StrSequence = []
+        tm.that(c.Tests.LOG_ERROR_PREFIX_RE.match(line) is not None, eq=True)

@@ -8,16 +8,16 @@ from typing import TYPE_CHECKING
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra.models import m
+from flext_infra import m
 
-from .worktree_status import FlextInfraUtilitiesGitWorktreeStatusMixin
+from .worktree_facts import FlextInfraUtilitiesGitWorktreeFactsMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
 class FlextInfraUtilitiesGitWorktreeRootsMixin(
-    FlextInfraUtilitiesGitWorktreeStatusMixin
+    FlextInfraUtilitiesGitWorktreeFactsMixin
 ):
     """Own worktree roots operations."""
 

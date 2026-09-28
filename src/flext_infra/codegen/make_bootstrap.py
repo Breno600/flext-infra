@@ -5,21 +5,28 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import c, m
-from flext_infra.base import s
 
+from .. import c, m, u
+from ._execution import FlextInfraCodegenExecutionBase
 from .conform import FlextInfraCodegenConform
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from .. import p
 
 
-class FlextInfraCodegenMakeBootstrap(s[bool]):
+class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
     """Delegate one Makefile projection exclusively to codegen conform."""
 
     @override
     def execute(self) -> p.Result[bool]:
         """Apply or check only this checkout's canonical Makefile projection."""
+        # Why: `init` bootstraps a fresh checkout, so it must reject the same
+        # non-exact/unregistered-nested roots the Mise workspace planner
+        # rejects, through the shared `u.Infra.exact_worktree_root` owner.
+        requested = self.repository_root.expanduser().absolute()
+        identity = u.Infra.exact_worktree_root(requested)
+        if identity.failure:
+            return r[bool].from_failure(identity)
         mode = (
             c.Infra.CodegenConformMode.CHECK
             if self.effective_dry_run

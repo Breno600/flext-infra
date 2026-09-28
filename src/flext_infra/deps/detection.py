@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import override
 
@@ -56,7 +56,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         """Classify deptry issues by error code (DEP001-DEP004)."""
         groups = m.Infra.DeptryIssueGroups(dep001=[], dep002=[], dep003=[], dep004=[])
         for item in issues:
-            normalized_item: dict[str, t.Primitives | None] = {}
+            normalized_item: MutableMapping[str, t.Primitives | None] = {}
             for key, raw_value in item.items():
                 if raw_value is None:
                     normalized_item[key] = ""
@@ -127,7 +127,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         projects = [
             project.path
             for project in projects_info
-            if (project.path / c.Infra.PYPROJECT_FILENAME).exists()
+            if (project.path / c.PYPROJECT_FILENAME).exists()
         ]
         return r[t.SequenceOf[Path]].ok(sorted(projects))
 

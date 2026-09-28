@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Final
+from enum import StrEnum
+from typing import TYPE_CHECKING, ClassVar
 
 from .._constants.check import FlextInfraConstantsCheck
 
@@ -14,75 +15,115 @@ if TYPE_CHECKING:
 class FlextInfraConstantsMake:
     """One canonical vocabulary shared by generated Make and its services."""
 
-    MAKE_ASSIGNMENT_RE: Final[t.RegexPattern] = re.compile(
+    class PytestExecutionMode(StrEnum):
+        """Public operations whose test scope and accounting are distinct."""
+
+        INCREMENTAL = "incremental"
+        FULL = "full"
+        COVERAGE = "coverage"
+
+    class PytestCacheEnvironment(StrEnum):
+        """OS and pytest-testmon environment keys in the generated Make contract."""
+
+        DATA_HOME = "XDG_CACHE_HOME"
+        USER_HOME = "HOME"
+        DATABASE_FILE = "TESTMON_DATAFILE"
+
+    MAKE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^[A-Za-z_][A-Za-z0-9_]*\s*(?::?:|\?|\+)?="
     )
-    MAKE_DIRECTIVE_RE: Final[t.RegexPattern] = re.compile(
+    MAKE_DIRECTIVE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?:export|unexport|override|include|-include|sinclude|vpath)\b"
     )
-    MAKE_CONDITIONAL_RE: Final[t.RegexPattern] = re.compile(
+    MAKE_CONDITIONAL_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?:else\b|endif\b|ifeq\b|ifneq\b|ifdef\b|ifndef\b)"
     )
+    MAKE_REPOSITORY_ROOT: ClassVar[str] = "REPOSITORY_ROOT"
+    "Make variable the workspace orchestrator passes to attached members."
 
-    VERB_CHECK: Final[str] = "check"
-    VERB_DEPS: Final[str] = "deps"
-    VERB_TEST: Final[str] = "test"
-    VERB_CLEAN: Final[str] = "clean"
-    VERB_VALIDATE: Final[str] = "validate"
-    VERB_PUBLISH: Final[str] = "publish"
-    VERB_RUN: Final[str] = "run"
-    VERB_CHECKS: Final[str] = "checks"
+    VERB_CHECK: ClassVar[str] = "check"
+    VERB_TEST: ClassVar[str] = "test"
+    VERB_CLEAN: ClassVar[str] = "clean"
+    VERB_VALIDATE: ClassVar[str] = "validate"
+    VERB_PUBLISH: ClassVar[str] = "publish"
+    VERB_RUN: ClassVar[str] = "run"
+    VERB_CHECKS: ClassVar[str] = "checks"
+    VERB_SONARCLOUD_SYNC: ClassVar[str] = "sonarcloud-sync"
 
-    CLI_GROUP_CHECK: Final[str] = "check"
-    CLI_GROUP_CODEGEN: Final[str] = "codegen"
-    CLI_GROUP_DEPS: Final[str] = "deps"
-    CLI_GROUP_DOCS: Final[str] = "docs"
-    CLI_GROUP_MAINTENANCE: Final[str] = "maintenance"
-    CLI_GROUP_REFACTOR: Final[str] = "refactor"
-    CLI_GROUP_RELEASE: Final[str] = "release"
-    CLI_ROUTE_RELEASE: Final[str] = "release run"
-    CLI_GROUP_VALIDATE: Final[str] = "validate"
-    CLI_ROUTE_MAINTENANCE: Final[str] = "maintenance run"
-    CLI_GROUP_WORKSPACE: Final[str] = "workspace"
+    CLI_GROUP_CHECK: ClassVar[str] = "check"
+    CLI_GROUP_CODEGEN: ClassVar[str] = "codegen"
+    CLI_GROUP_DEPS: ClassVar[str] = "deps"
+    CLI_GROUP_DOCS: ClassVar[str] = "docs"
+    CLI_GROUP_MAINTENANCE: ClassVar[str] = "maintenance"
+    CLI_GROUP_REFACTOR: ClassVar[str] = "refactor"
+    CLI_GROUP_RELEASE: ClassVar[str] = "release"
+    CLI_ROUTE_RELEASE: ClassVar[str] = "release run"
+    CLI_GROUP_VALIDATE: ClassVar[str] = "validate"
+    CLI_ROUTE_MAINTENANCE: ClassVar[str] = "maintenance run"
+    CLI_GROUP_WORKSPACE: ClassVar[str] = "workspace"
 
-    MYPY_MEMORY_LIMIT_MB_ENV: Final[str] = "MYPY_MEMORY_LIMIT_MB"
-    MYPY_MEMORY_LIMIT_MB_DEFAULT: Final[int] = 6144
-    MYPY_TIMEOUT_SECONDS_ENV: Final[str] = "MYPY_TIMEOUT_SECONDS"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: Final[int] = 600
-    MYPY_TIMEOUT_GRACE_SECONDS: Final[int] = 10
-    PRLIMIT_COMMAND: Final[str] = "prlimit"
-    PRLIMIT_ADDRESS_SPACE_OPTION: Final[str] = "--as"
-    TIMEOUT_COMMAND: Final[str] = "timeout"
-    TIMEOUT_KILL_AFTER_SECONDS: Final[int] = 5
+    MYPY_MEMORY_LIMIT_MB_ENV: ClassVar[str] = "MYPY_MEMORY_LIMIT_MB"
+    MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
+    MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
+    MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
+    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 100
+    MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
+    PRLIMIT_COMMAND: ClassVar[str] = "prlimit"
+    PRLIMIT_ADDRESS_SPACE_OPTION: ClassVar[str] = "--as"
+    TIMEOUT_COMMAND: ClassVar[str] = "timeout"
+    TIMEOUT_KILL_AFTER_SECONDS: ClassVar[int] = 5
 
     # Every read-only gate this package implements, derived from the gate SSOT
     # (c.Infra.SARIF_TOOL_INFO) so registering a gate makes it reachable
     # through `make check` in the same edit and no second list can drift.
     # Mutating gates (`format`) are excluded: they rewrite files, so they are
-    # owned by `make fmt APPLY=Y` / `make fix APPLY=Y` and a read-only verb
+    # owned by `make fmt` / `make fix` and a read-only verb
     # must never invoke them.
-    CANONICAL_GATE_IDS: Final[t.VariadicTuple[str]] = tuple(
+    CANONICAL_GATE_IDS: ClassVar[t.VariadicTuple[str]] = tuple(
         gate
         for gate in FlextInfraConstantsCheck.SARIF_TOOL_INFO
         if gate not in FlextInfraConstantsCheck.MUTATING_GATES
     )
-    CANONICAL_DEFAULT_GATE_IDS: Final[t.VariadicTuple[str]] = CANONICAL_GATE_IDS
-    CANONICAL_FIXABLE_GATE_IDS: Final[t.VariadicTuple[str]] = (
+    # markdown-code and markdown-format stay allowed and explicitly invocable
+    # (`--gates markdown-code`), but are not default check gates: operator
+    # ruling 2026-09-18 (flext-uz0dt for markdown-code; flext-v4fmn for
+    # markdown-format) takes them out of the unset-CI default set pending
+    # review. markdown-format is structurally contradictory on the current
+    # generated docs: the gen render is not prettier-stable, so no commit can
+    # satisfy both `gen fixed point` and `prettier --check`.
+    CANONICAL_DEFAULT_GATE_IDS: ClassVar[t.VariadicTuple[str]] = tuple(
+        gate
+        for gate in CANONICAL_GATE_IDS
+        if gate
+        not in {
+            FlextInfraConstantsCheck.MARKDOWN_CODE,
+            FlextInfraConstantsCheck.MARKDOWN_FORMAT,
+        }
+    )
+    CANONICAL_FIXABLE_GATE_IDS: ClassVar[t.VariadicTuple[str]] = (
         "lint",
         "markdown",
+        "markdown-code",
         "canonical-alias",
-        "smells",
     )
-    ORCHESTRATED_VERBS: Final[t.StrSequence] = (
+    # markdown-format is deliberately absent: prettier is a formatter, so the
+    # gate's mutating side is owned by `make fmt` (check = `prettier --check`),
+    # never by `make fix` — one operation per tool per verb, never repeated.
+    ORCHESTRATED_VERBS: ClassVar[t.StrSequence] = (
         "build",
         "check",
         "clean",
         "docs",
         "fmt",
         "fix",
+        "fix-enforcement",
+        "fix-namespace",
+        "fix-accessors",
+        "sonarcloud-sync",
         "test",
+        "test-full",
     )
-    ORCHESTRATOR_REMOVE_ENV_KEYS: Final[t.StrSequence] = (
+    ORCHESTRATOR_REMOVE_ENV_KEYS: ClassVar[t.StrSequence] = (
         "GNUMAKEFLAGS",
         "MAKEFLAGS",
         "MAKEFILES",
@@ -103,26 +144,23 @@ class FlextInfraConstantsMake:
         "UV_PROJECT_ENVIRONMENT",
         "VIRTUAL_ENV",
     )
-    ORCHESTRATOR_ENV_NO_COLOR: Final[str] = "NO_COLOR"
-    ORCHESTRATOR_ENV_PATH: Final[str] = "PATH"
-    ORCHESTRATOR_ENV_PYTHONPATH: Final[str] = "PYTHONPATH"
-    ORCHESTRATOR_ENV_PATH_SEPARATOR: Final[str] = ":"
-    ORCHESTRATOR_ENV_MISE_SHIMS: Final[str] = "MISE_SHIMS"
-    ORCHESTRATOR_ENV_WORKSPACE_MISE_SHIMS: Final[str] = "WORKSPACE_MISE_SHIMS"
+    ORCHESTRATOR_ENV_NO_COLOR: ClassVar[str] = "NO_COLOR"
+    ORCHESTRATOR_ENV_PATH: ClassVar[str] = "PATH"
+    ORCHESTRATOR_ENV_PYTHONPATH: ClassVar[str] = "PYTHONPATH"
+    ORCHESTRATOR_ENV_PATH_SEPARATOR: ClassVar[str] = ":"
+    ORCHESTRATOR_ENV_MISE_SHIMS: ClassVar[str] = "MISE_SHIMS"
+    ORCHESTRATOR_ENV_WORKSPACE_MISE_SHIMS: ClassVar[str] = "WORKSPACE_MISE_SHIMS"
 
-    PYTEST_ENV_REPORTS: Final[str] = "FLEXT_PYTEST_REPORTS_RAW"
-    PYTEST_ENV_TARGET: Final[str] = "FLEXT_PYTEST_TARGET_RAW"
-    PYTEST_ENV_CI: Final[str] = "CI"
-    PYTEST_ENV_TESTMON_DATAFILE: Final[str] = "TESTMON_DATAFILE"
-    PYTEST_DESELECTED_RE: Final[t.RegexPattern] = re.compile(
-        r"(?P<count>[0-9]+)\s+deselected\b"
-    )
-    PYTEST_COVERAGE_FAILURE_RE: Final[t.RegexPattern] = re.compile(
-        r"(?:Coverage failure:|required test coverage .* not reached)", re.IGNORECASE
-    )
-    PYTEST_INHERITED_ENV_REMOVE_KEYS: Final[t.StrSequence] = (
+    PYTEST_ENV_REPORTS: ClassVar[str] = "FLEXT_PYTEST_REPORTS_RAW"
+    PYTEST_ENV_TARGET: ClassVar[str] = "FLEXT_PYTEST_TARGET_RAW"
+    PYTEST_ENV_CI: ClassVar[str] = "CI"
+    PYTEST_ENV_COLLECTION_MANIFEST: ClassVar[str] = "FLEXT_PYTEST_COLLECTION_MANIFEST"
+    PYTEST_ENV_TESTMON_DATAFILE: ClassVar[str] = "TESTMON_DATAFILE"
+    PYTEST_WARNING_EVENTS_SUFFIX: ClassVar[str] = ".warnings.jsonl"
+    PYTEST_INHERITED_ENV_REMOVE_KEYS: ClassVar[t.StrSequence] = (
         "PYTEST_ADDOPTS",
         "PYTHONPATH",
+        PYTEST_ENV_COLLECTION_MANIFEST,
     )
 
 

@@ -1,15 +1,16 @@
-"""Fail-closed jscpd duplicate-code detector."""
+"""Fail-closed jscpd duplicate-code detector (R2 consumer+family scope)."""
 
 from __future__ import annotations
 
 import ast
 import shutil
 import time
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, settings, t, u
 
 from .base_gate import FlextInfraGate
 
@@ -18,7 +19,12 @@ if TYPE_CHECKING:
 
 
 class FlextInfraDuplicationGate(FlextInfraGate):
-    """Report every clone owned by one project from a fresh workspace scan."""
+    """Report every clone owned by one project from a fresh workspace scan.
+
+    R2 extension: consumer+family scope via [tool.flext.project] config keys;
+    thresholds in config SSOT. Structural ban forms only for mechanisms with
+    a published canonical owner (derived from primitives set) — never per-site lists.
+    """
 
     gate_id: ClassVar[str] = "duplication"
     gate_name: ClassVar[str] = "Code Duplication"
@@ -26,9 +32,9 @@ class FlextInfraDuplicationGate(FlextInfraGate):
     scanner_binary: ClassVar[str] = c.Infra.JSCPD_BINARY
 
     # flext-pulj: process results stay structural outside the Pydantic boundary.
-    _scan_cache: ClassVar[dict[str, p.Cli.CommandOutput]] = {}
+    _scan_cache: ClassVar[MutableMapping[str, p.Cli.CommandOutput]] = {}
     _python_behavior_cache: ClassVar[
-        dict[tuple[str, int, int], tuple[tuple[int, int], ...]]
+        MutableMapping[t.Triple[str, int, int], t.VariadicTuple[t.Pair[int, int]]]
     ] = {}
 
     @override
@@ -38,7 +44,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         """Run and validate jscpd, then expose every owned clone as an error."""
         _ = ctx
         started = time.monotonic()
-        scan = self._scan_workspace()
+        scan = self._scan_workspace(project_dir)
         parsed = self._issues_from_report(scan, project_dir)
         issues = (
             parsed.value if parsed.success else (self._failure_issue(parsed.error),)
@@ -53,7 +59,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             started=started,
         )
 
-    def _scan_workspace(self) -> p.Cli.CommandOutput:
+    def _scan_workspace(self, project_dir: Path) -> p.Cli.CommandOutput:
         """Create one fresh report; tool, scope, and report failures escape."""
         binary = shutil.which(c.Infra.JSCPD_BINARY)
         if binary is None:
@@ -71,7 +77,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                     forwarded_signal=None,
                 ),
             )
-        scope = self._render_scope_dirs()
+        scope = self._render_scope_dirs(project_dir)
         if scope.failure:
             return m.Cli.CommandOutput(
                 stdout="",
@@ -88,7 +94,16 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                     raw_return_code=1, timed_out=False, forwarded_signal=None
                 ),
             )
-        config_path = self._render_config()
+        rendered_config = self._render_config(project_dir)
+        if rendered_config.failure:
+            return m.Cli.CommandOutput(
+                stdout="",
+                stderr=rendered_config.error or "project duplication config invalid",
+                outcome=m.Cli.ProcessOutcome(
+                    raw_return_code=1, timed_out=False, forwarded_signal=None
+                ),
+            )
+        config_path = rendered_config.value
         report_dir = self._repository_root / c.Infra.JSCPD_REPORT_DIRNAME
         report_path = report_dir / c.Infra.JSCPD_REPORT_FILENAME
         if report_path.is_symlink() or (
@@ -111,25 +126,41 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         result = self._run(cmd, self._repository_root, timeout=c.Infra.TIMEOUT_LONG)
         return self._load_report(report_dir, result)
 
-    def _render_scope_dirs(self) -> p.Result[t.StrSequence]:
+    def _render_scope_dirs(self, project_dir: Path) -> p.Result[t.StrSequence]:
         """Every discovered project's canonical scope plus declared extra trees.
 
+        R2: Extended to consumer+family scope via [tool.flext.project] config keys.
         Reuses the same workspace-topology discovery every other check-scoping
         path uses (``u.Infra.resolve_projects``) — never a second hardcoded
         project list. A project's manifest may declare additional
         ``repository.duplication_trees`` (e.g. Helm charts); those declared
         trees join the scan when they exist on disk.
         """
+        # Read project-specific config from [tool.flext.project]
+        project_config = self._read_project_config(project_dir)
+        if project_config.failure:
+            return r[t.StrSequence].from_failure(project_config)
+        scope_dirnames = project_config.value.scope
+
         discovered = u.Infra.resolve_projects(self._repository_root, ())
         if discovered.failure:
             return r[t.StrSequence].from_failure(discovered)
+        projects = (
+            tuple(
+                project
+                for project in discovered.value
+                if project.path.resolve() == project_dir.resolve()
+            )
+            if settings.Infra.github_actions
+            else discovered.value
+        )
         declared_trees = self._declared_duplication_trees()
         if declared_trees.failure:
             return r[t.StrSequence].from_failure(declared_trees)
         return r[t.StrSequence].ok(
             tuple(
                 str(project.path / candidate)
-                for project in discovered.value
+                for project in projects
                 for candidate in (
                     *self._existing_check_dirs(project.path),
                     *(
@@ -137,17 +168,53 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                         for tree in declared_trees.value
                         if (project.path / tree).is_dir()
                     ),
+                    *(
+                        dirname
+                        for dirname in scope_dirnames
+                        if (project.path / dirname).is_dir()
+                    ),
                 )
             )
         )
 
+    def _read_project_config(
+        self, project_dir: Path
+    ) -> p.Result[m.Infra.ProjectDuplicationOverrides]:
+        """Read ``[tool.flext.project.duplication]`` from pyproject.toml.
+
+        Why: a malformed manifest is a declared error, never an empty config —
+        silently returning the default model for a broken manifest would
+        disable the operator's overrides without a trace (silent-failure law).
+        An absent manifest or absent ``duplication`` table is not malformed;
+        it legitimately yields the default overrides.
+        """
+        pyproject_path = project_dir / "pyproject.toml"
+        if not pyproject_path.is_file():
+            return r[m.Infra.ProjectDuplicationOverrides].ok(
+                m.Infra.ProjectDuplicationOverrides()
+            )
+        loaded = u.Cli.config_load(pyproject_path, expand_env=False)
+        if loaded.failure:
+            return r[m.Infra.ProjectDuplicationOverrides].fail(
+                f"invalid project manifest ({pyproject_path}): {loaded.error}"
+            )
+        tool = u.Cli.json_as_mapping(loaded.value.data).get("tool", {})
+        flext = u.Cli.json_as_mapping(tool).get("flext", {})
+        project = u.Cli.json_as_mapping(flext).get("project", {})
+        duplication = u.Cli.json_as_mapping(project).get("duplication", {})
+        validated: p.Result[m.Infra.ProjectDuplicationOverrides] = u.validate_value(
+            m.Infra.ProjectDuplicationOverrides, u.Cli.json_as_mapping(duplication)
+        )
+        if validated.failure:
+            return r[m.Infra.ProjectDuplicationOverrides].fail_op(
+                f"[tool.flext.project.duplication] validation ({pyproject_path})",
+                validated.error,
+            )
+        return r[m.Infra.ProjectDuplicationOverrides].ok(validated.value)
+
     def _declared_duplication_trees(self) -> p.Result[t.StrSequence]:
         """Read ``repository.duplication_trees`` from the governed manifest."""
-        manifest_path = (
-            self._repository_root
-            / c.CONFIG_DIR_NAME
-            / c.Infra.WORKSPACE_MANIFEST_FILENAME
-        )
+        manifest_path = u.Infra.workspace_manifest_path(self._repository_root)
         if not manifest_path.is_file():
             return r[t.StrSequence].ok(())
         loaded = u.Cli.config_load(manifest_path, expand_env=False)
@@ -155,13 +222,15 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             return r[t.StrSequence].fail(
                 f"invalid workspace manifest ({manifest_path}): {loaded.error}"
             )
-        try:
-            manifest = m.Infra.WorkspaceManifestSpec.model_validate(loaded.value.data)
-        except c.ValidationError as exc:
+        validated: p.Result[m.Infra.WorkspaceManifestSpec] = u.validate_value(
+            m.Infra.WorkspaceManifestSpec, loaded.value.data
+        )
+        if validated.failure:
             return r[t.StrSequence].fail_op(
-                f"workspace manifest model validation ({manifest_path})", exc
+                f"workspace manifest model validation ({manifest_path})",
+                validated.error,
             )
-        return r[t.StrSequence].ok(tuple(manifest.repository.duplication_trees))
+        return r[t.StrSequence].ok(tuple(validated.value.repository.duplication_trees))
 
     def _scope_paths(self) -> t.StrSequence:
         """Resolve canonical source, test, config, and template roots once."""
@@ -177,13 +246,19 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             raise ValueError(msg)
         return scope
 
-    def _render_config(self) -> Path:
+    def _render_config(self, project_dir: Path) -> p.Result[Path]:
         """Materialize the jscpd config from this gate's typed SSOT.
 
+        R2: Reads thresholds from [tool.flext.project] config SSOT.
         A generated-at-scan-time projection, never a second hand-edited
         source; regenerating with unchanged constants produces byte-identical
         content (idempotent).
         """
+        project_config = self._read_project_config(project_dir)
+        if project_config.failure:
+            return r[Path].from_failure(project_config)
+        overrides = project_config.value
+
         config = m.Infra.JscpdConfig(
             absolute=True,
             formatsExts={
@@ -191,13 +266,13 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                 for name, extensions in c.Infra.JSCPD_FORMAT_EXTENSIONS.items()
             },
             ignore=tuple(c.Infra.JSCPD_IGNORE_PATTERNS),
-            minLines=c.Infra.JSCPD_MIN_LINES,
-            minTokens=c.Infra.JSCPD_MIN_TOKENS,
-            mode=c.Infra.JSCPD_MODE,
+            minLines=overrides.min_lines,
+            minTokens=overrides.min_tokens,
+            mode=overrides.mode,
             noColors=True,
             noTips=True,
             reporters=(c.Infra.OUTPUT_JSON,),
-            threshold=c.Infra.JSCPD_THRESHOLD_PERCENT,
+            threshold=overrides.threshold_percent,
         )
         config_path = (
             self._repository_root
@@ -207,7 +282,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         u.Cli.ensure_dir(config_path.parent).unwrap()
         rendered = config.model_dump_json(by_alias=True)
         u.Cli.atomic_write_text_file(config_path, rendered).unwrap()
-        return config_path
+        return r[Path].ok(config_path)
 
     @staticmethod
     def _load_report(
@@ -231,7 +306,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
     def _failure_issue(message: str | None) -> m.Infra.Issue:
         """Represent malformed or absent jscpd output as a blocking issue."""
         return m.Infra.Issue(
-            file=c.Infra.PYPROJECT_FILENAME,
+            file=c.PYPROJECT_FILENAME,
             line=1,
             column=0,
             code=FlextInfraDuplicationGate.gate_id,
@@ -256,7 +331,6 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         if parsed.failure:
             return r[tuple[m.Infra.Issue, ...]].from_failure(parsed)
         data = u.Cli.json_as_mapping(parsed.value)
-        prefix = str(project_dir)
         issues: list[m.Infra.Issue] = []
         for duplicate in u.Cli.json_deep_mapping_list(data, "duplicates"):
             first = u.Cli.json_deep_mapping(duplicate, "firstFile")
@@ -265,13 +339,25 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             second_name = u.Cli.json_pick_str(second, "name")
             if not cls._is_semantic_clone(duplicate, first, second):
                 continue
-            if first_name.startswith(prefix) and first_name != second_name:
+            # Ownership is path containment, never a string prefix: a sibling
+            # project whose directory name extends this one (``flext-x`` vs
+            # ``flext-x-extra``) shares the prefix but owns its own clones.
+            # ``startswith`` claimed those siblings and then raised ValueError
+            # from ``relative_to``, turning a real cross-project clone into a
+            # crashed gate.
+            if (
+                Path(first_name).is_relative_to(project_dir)
+                and first_name != second_name
+            ):
                 issues.append(
                     cls._issue_from_duplicate(
                         duplicate, first, first_name, second_name, project_dir
                     )
                 )
-            elif second_name.startswith(prefix) and second_name != first_name:
+            elif (
+                Path(second_name).is_relative_to(project_dir)
+                and second_name != first_name
+            ):
                 issues.append(
                     cls._issue_from_duplicate(
                         duplicate, second, second_name, first_name, project_dir

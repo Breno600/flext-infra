@@ -7,12 +7,9 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 
-from flext_infra import c, t
-
-from ._defaults import ImmutableEmptyMapping
-from ._git.identity import FlextInfraModelsGitIdentity
-from .config import FlextInfraConfigModels
-from .mixins import FlextInfraModelsMixins as mm
+from .. import c, t
+from . import FlextInfraConfigModels, FlextInfraModelsMixins as mm
+from ._git import FlextInfraModelsGitIdentity
 
 
 class FlextInfraModelsWorkspace:
@@ -26,14 +23,14 @@ class FlextInfraModelsWorkspace:
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(populate_by_name=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
     class WorkspaceProjectContext(m.ContractModel):
         """Canonical context derived from one runtime working directory."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         cwd: Annotated[Path, m.Field(description="Resolved submitted directory")]
         identity: Annotated[
@@ -56,7 +53,7 @@ class FlextInfraModelsWorkspace:
     class FlextBindingRequest(m.ContractModel):
         """Session request binding one consumer onto a flext worktree."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(populate_by_name=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
         repository_root: Annotated[Path, m.Field(description="Consumer project root")]
         flext_root: Annotated[
@@ -85,7 +82,7 @@ class FlextInfraModelsWorkspace:
     class ProjectInfo(mm.ProjectEntryNameMixin, m.ArbitraryTypesModel):
         """Discovered project metadata for workspace operations."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             frozen=True, validate_default=False
         )
 
@@ -112,6 +109,82 @@ class FlextInfraModelsWorkspace:
             m.Field(description="Whether the aggregate workspace declares this path"),
         ] = False
 
+    class WorkLaneParentContext(m.ContractModel):
+        """Resolved anchor a lane is nested under and based on."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        parent_lane: Annotated[
+            Path, m.Field(description="Workspace root or parent epic lane path")
+        ]
+        parent_bead: Annotated[
+            str, m.Field(description="Parent epic bead id; empty at the workspace root")
+        ] = ""
+        parent_branch: Annotated[
+            str, m.Field(description="Parent epic branch; empty at the workspace root")
+        ] = ""
+        base_branch: Annotated[
+            t.NonEmptyStr, m.Field(description="Branch the lane is created from")
+        ]
+
+    class WorkLaneIdentity(m.ContractModel):
+        """Canonical recursive identity of one workspace lane.
+
+        A lane always lives at ``<parent_lane>/.worktrees/<lane_dir>`` and is
+        always a worktree of the workspace-root repository. ``parent_lane`` is
+        the workspace root for a top-level epic and the immediate parent epic
+        lane for every other lane.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        bead: Annotated[t.NonEmptyStr, m.Field(description="Bead owning the lane")]
+        slug: Annotated[t.NonEmptyStr, m.Field(description="Kebab-case lane slug")]
+        kind: Annotated[
+            c.Infra.WorkKind, m.Field(description="GitFlow kind of this lane")
+        ]
+        branch: Annotated[t.NonEmptyStr, m.Field(description="Lane branch name")]
+        lane_dir: Annotated[
+            t.NonEmptyStr, m.Field(description="Directory name under .worktrees")
+        ]
+        lane_path: Annotated[Path, m.Field(description="Canonical lane worktree path")]
+        parent_lane: Annotated[
+            Path, m.Field(description="Workspace root or parent epic lane path")
+        ]
+        parent_bead: Annotated[
+            str, m.Field(description="Parent epic bead id; empty for top-level epics")
+        ] = ""
+        parent_branch: Annotated[
+            str, m.Field(description="Parent epic branch; empty for top-level epics")
+        ] = ""
+        base_branch: Annotated[
+            t.NonEmptyStr, m.Field(description="Branch this lane is based on")
+        ]
+
+        @property
+        def is_epic(self) -> bool:
+            """Whether this lane may own child lanes.
+
+            WorkKind is a StrEnum and the contract model stores enum values, so
+            the field arrives as its string form; normalizing before comparing
+            keeps this true for both storage shapes.
+            """
+            return c.Infra.WorkKind(self.kind) is c.Infra.WorkKind.EPIC
+
+    class WorkLaneReuse(m.ContractModel):
+        """Whether Git already owns the canonical lane, and where it sits.
+
+        Modelled instead of an optional payload because a success result never
+        carries ``None``: "no lane to reuse" is a state, not an absent value.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        reused: Annotated[
+            bool, m.Field(description="Git already owns the canonical lane")
+        ]
+        lane_path: Annotated[Path, m.Field(description="Canonical lane worktree path")]
+
     class ProjectPyprojectState(m.ArbitraryTypesModel):
         """Centralized parsed pyproject state reused across discovery services.
 
@@ -119,7 +192,7 @@ class FlextInfraModelsWorkspace:
         mutable state.
         """
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             frozen=True, validate_default=False
         )
 
@@ -127,10 +200,10 @@ class FlextInfraModelsWorkspace:
         pyproject_path: Annotated[Path, m.Field(description="Resolved pyproject path")]
         payload: Annotated[
             t.JsonMapping, m.Field(description="Parsed pyproject payload")
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
+        ]
         docs_meta: Annotated[
             t.JsonMapping, m.Field(description="Parsed tool.flext.docs payload")
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
+        ]
         project_name: Annotated[str, m.Field(description="Declared project name")] = ""
         package_name: Annotated[str, m.Field(description="Primary package name")] = ""
         dependency_names: Annotated[

@@ -6,8 +6,8 @@ valid:
     from flext_tests import u
 
     @pytest.fixture(autouse=True)
-    def isolate_cwd(tmp_path: Path) -> Generator[None]:
-        with u.Tests.Matchers.scope(cwd=tmp_path):
+    def isolate_cwd(test_path: Path) -> Generator[None]:
+        with u.Tests.Matchers.scope(cwd=test_path):
             yield
 invalid:
   - |

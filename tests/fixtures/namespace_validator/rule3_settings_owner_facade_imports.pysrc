@@ -1,0 +1,11 @@
+from __future__ import annotations
+
+from flext_test import m, t, u
+
+class FlextTestSettings(FlextTestSettingsBase):
+    class _Test(m.BaseModel):
+        bag: t.MappingKV[str, str] = m.Field(default_factory=dict)
+    @u.model_validator(mode='before')
+    @classmethod
+    def _lift(cls, data: t.JsonValue) -> t.JsonValue:
+        return data

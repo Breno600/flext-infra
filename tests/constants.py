@@ -11,18 +11,18 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from types import MappingProxyType
-from typing import TYPE_CHECKING, ClassVar, Final
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_tests import FlextTestsConstants
 
-from flext_infra import c
+from flext_infra import FlextInfraConstants
 from tests.constants_scan import TestsFlextInfraConstantsScanMixin
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
-class TestsFlextInfraConstants(FlextTestsConstants, c):
+class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
     """Constants for FLEXT infra tests - extends FlextTestsConstants.
 
     Architecture layer: Layer 0 foundation constants with infra test extensions.
@@ -33,7 +33,29 @@ class TestsFlextInfraConstants(FlextTestsConstants, c):
     class Tests(TestsFlextInfraConstantsScanMixin, FlextTestsConstants.Tests):
         """Flat constants optimized for data-driven infra tests."""
 
-        GIT_LOCAL_ENV_KEYS: Final[t.StrSequence] = (
+        DIRENV_SESSION_ENV_KEYS: ClassVar[t.StrSequence] = (
+            "DIRENV_DIFF",
+            "DIRENV_DIR",
+            "DIRENV_FILE",
+            "DIRENV_IN_ENVRC",
+            "DIRENV_WATCHES",
+            "DIRENV_STDERR",
+            "DIRENV_LOG_ERROR",
+            "DIRENV_LOG_FILTER",
+        )
+        """Direnv session state an outer activation exports to its children.
+
+        Test-only vocabulary: direnv is an external binary and the product
+        declares no Python constant for its session protocol, so no src owner
+        exists to import. ``direnv exec`` reverts the inherited ``DIRENV_DIFF``
+        before evaluating the target ``.envrc``, so a test-declared override of
+        any variable the outer activation touched (``MISE_DATA_DIR``, for one)
+        is silently discarded and the fixture contract is evaluated against the
+        host runtime instead. Isolated runs must therefore start from a parent
+        environment with no inherited direnv session at all.
+        """
+
+        GIT_LOCAL_ENV_KEYS: ClassVar[t.StrSequence] = (
             "GIT_ALTERNATE_OBJECT_DIRECTORIES",
             "GIT_CONFIG",
             "GIT_CONFIG_PARAMETERS",
@@ -52,20 +74,56 @@ class TestsFlextInfraConstants(FlextTestsConstants, c):
         )
         """Repository-local variables Git exports to hooks and aliases."""
 
-        MAKE_ISOLATION_ENV_KEYS: Final[t.StrSequence] = (
-            "APPLY",
+        MAKE_TEMPLATE_HOSTILE_VENV: ClassVar[str] = "hostile/.venv"
+        """Foreign environment beside a run-scoped ``make upg`` template."""
+
+        COLD_MISE_STORAGE: ClassVar[str] = "cold-mise-storage"
+        """Mise storage that starts empty, so every tool and lookup is fetched."""
+
+        MAKE_TEMPLATE_CI_CHECKOUT: ClassVar[str] = "ci"
+        """Home of the template checkout set up once in cold CI storage."""
+
+        MAKE_TEMPLATE_UPG_RECEIPT: ClassVar[str] = "upg-receipt.json"
+        """Recorded ``make upg`` outcome of one run-scoped template."""
+
+        MAKE_TEMPLATE_CI_RECEIPT: ClassVar[str] = "ci-setup-receipt.json"
+        """Recorded cold-storage CI ``make setup`` outcome of one template."""
+
+        DIRENV_STATE_ENV_KEYS: ClassVar[t.StrSequence] = (
+            "DIRENV_DIFF",
+            "DIRENV_DIR",
+            "DIRENV_FILE",
+            "DIRENV_WATCHES",
+        )
+        """direnv's loaded-activation protocol; ``direnv exec`` first reverts it.
+
+        Test-only vocabulary: direnv is an external binary and the product
+        declares no Python constant for its session protocol, so no src owner
+        exists to import. An outer activation (the operator's shell) would
+        otherwise undo the variables a test hands to the activation under test.
+        """
+
+        MAKE_ISOLATION_ENV_KEYS: ClassVar[t.StrSequence] = (
+            *DIRENV_STATE_ENV_KEYS,
+            # BASH_ENV: Make's own recursive-invocation propagation variable
+            # (GNU Make protocol), declared by no Python constant.
             "BASH_ENV",
+            # Verb-selector and runtime variables below are declared by the
+            # generated Make surface (template-owned shell), not by Python
+            # constants — the template file is their only owner. FLEXT_ROOT
+            # guards a host-side legacy spelling of the repository root that
+            # no repository artifact declares.
             "CHANGED_ONLY",
             "CHECK_GATES",
             "CHECK_ONLY",
-            "FAIL_FAST",
             "FILE",
             "FILES",
             "FIX",
             "FLEXT_INFRA_PYTHON",
             "FLEXT_ROOT",
-            "FLEXT_STANDALONE",
-            "FLEXT_REPOSITORY_ROOT",
+            *FlextInfraConstants.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS,
+            FlextInfraConstants.Infra.ENV_VAR_STANDALONE,
+            FlextInfraConstants.Infra.ENV_VAR_REPOSITORY_ROOT,
             "MATCH",
             "PROJECT",
             "PROJECTS",
@@ -74,72 +132,40 @@ class TestsFlextInfraConstants(FlextTestsConstants, c):
             "RUFF_ARGS",
             "UV",
             "VALIDATE_GATES",
-            "WHAT",
-            "REPOSITORY_ROOT",
-            *c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            FlextInfraConstants.Infra.PromotedEnv.WHAT,
+            FlextInfraConstants.Infra.MAKE_REPOSITORY_ROOT,
+            *FlextInfraConstants.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            *DIRENV_SESSION_ENV_KEYS,
         )
-        """Environment inherited from an outer Make invocation to discard in tests."""
+        """Environment inherited from an outer Make invocation to discard in tests.
 
-        RELEASE_PHASE_PLAN: Final[str] = c.Infra.ReleasePhase.PLAN
-        RELEASE_PHASE_VERSION: Final[str] = c.Infra.ReleasePhase.VERSION
-        RELEASE_PHASE_TAG: Final[str] = c.Infra.ReleasePhase.TAG
-        RELEASE_PHASE_BUILD: Final[str] = c.Infra.ReleasePhase.BUILD
-        RELEASE_PHASE_PUBLISH: Final[str] = c.Infra.ReleasePhase.PUBLISH
+        Keys with a product owner are imported from that owner
+        (``ORCHESTRATOR_REMOVE_ENV_KEYS``, ``PYTEST_INHERITED_ENV_REMOVE_KEYS``,
+        ``ENV_VAR_*``, ``MAKE_REPOSITORY_ROOT``, ``PromotedEnv.WHAT``); the
+        remainder are direnv/Git external protocols or
+        template-declared Make variables that no Python constant declares.
+        """
 
-        INFRA_PUBLIC_ROOT_EXPORTS: Final[t.StrSequence] = (
-            "FlextInfra",
-            "c",
-            "infra",
-            "m",
-            "main",
-            "p",
-            "s",
-            "t",
-            "u",
+        # ClassVar, not Final: these rebindings live on a Pydantic model
+        # class, and Pydantic 2.11 deprecates final-annotated defaults
+        # (filterwarnings=error turns that into a collection failure).
+        RELEASE_PHASE_PLAN: ClassVar[str] = FlextInfraConstants.Infra.ReleasePhase.PLAN
+        RELEASE_PHASE_VERSION: ClassVar[str] = (
+            FlextInfraConstants.Infra.ReleasePhase.VERSION
         )
-        INFRA_PUBLIC_WRAPPER_MODULES: Final[t.StrSequence] = (
-            "flext_infra.__version__",
-            "flext_infra.constants",
-            "flext_infra.models",
-            "flext_infra.protocols",
-            "flext_infra.typings",
-            "flext_infra.utilities",
+        RELEASE_PHASE_TAG: ClassVar[str] = FlextInfraConstants.Infra.ReleasePhase.TAG
+        RELEASE_PHASE_BUILD: ClassVar[str] = (
+            FlextInfraConstants.Infra.ReleasePhase.BUILD
         )
-        INFRA_PUBLIC_ROOT_ALIAS_EXPECTATIONS: ClassVar[tuple[tuple[str, str], ...]] = (
-            ("c", "FlextInfraConstants"),
-            ("m", "FlextInfraModels"),
-            ("p", "FlextInfraProtocols"),
-            ("s", "FlextInfraServiceBase"),
-            ("t", "FlextInfraTypes"),
-            ("u", "FlextInfraUtilities"),
-        )
-        INFRA_PUBLIC_WRAPPER_ALIAS_EXPECTATIONS: ClassVar[
-            tuple[tuple[str, str, str], ...]
-        ] = (
-            ("flext_infra.constants", "c", "FlextInfraConstants"),
-            ("flext_infra.models", "m", "FlextInfraModels"),
-            ("flext_infra.protocols", "p", "FlextInfraProtocols"),
-            ("flext_infra.typings", "t", "FlextInfraTypes"),
-            ("flext_infra.utilities", "u", "FlextInfraUtilities"),
-        )
-        INFRA_PUBLIC_NAMESPACE_ALIAS_NAMES: Final[t.StrSequence] = (
-            "c",
-            "m",
-            "p",
-            "t",
-            "u",
-        )
-        INFRA_PUBLIC_UTILITY_NAMESPACE_METHODS: Final[t.StrSequence] = (
-            "class_nesting_plan",
-            "current_workspace_version",
-            "parse_semver",
+        RELEASE_PHASE_PUBLISH: ClassVar[str] = (
+            FlextInfraConstants.Infra.ReleasePhase.PUBLISH
         )
 
-        WORKSPACE_PROJECT_NAME: Final[str] = "workspace"
-        DEMO_PROJECT_NAME: Final[str] = "demo-project"
-        PROJECT_A_NAME: Final[str] = "proj-a"
-        PROJECT_B_NAME: Final[str] = "proj-b"
-        PROJECT_NO_SRC_NAME: Final[str] = "no-src"
+        WORKSPACE_PROJECT_NAME: ClassVar[str] = "workspace"
+        DEMO_PROJECT_NAME: ClassVar[str] = "demo-project"
+        PROJECT_A_NAME: ClassVar[str] = "proj-a"
+        PROJECT_B_NAME: ClassVar[str] = "proj-b"
+        PROJECT_NO_SRC_NAME: ClassVar[str] = "no-src"
         PROJECT_MEMBERS_BY_SCENARIO: ClassVar[t.MappingKV[str, t.StrSequence]] = (
             MappingProxyType({
                 "single": (DEMO_PROJECT_NAME,),
@@ -148,47 +174,47 @@ class TestsFlextInfraConstants(FlextTestsConstants, c):
             })
         )
 
-        CODEGEN_NAMESPACE_FILES: Final[frozenset[str]] = frozenset({
+        CODEGEN_NAMESPACE_FILES: ClassVar[frozenset[str]] = frozenset({
             "__init__.py",
             "__version__.py",
             "py.typed",
         })
-        CODEGEN_SKIPPED_DIRS: Final[frozenset[str]] = frozenset({
+        CODEGEN_SKIPPED_DIRS: ClassVar[frozenset[str]] = frozenset({
             ".hidden",
             "vendor",
             "node_modules",
             ".venv",
         })
 
-        REFACTOR_SCAN_FILE_COUNT: Final[int] = 1000
-        REFACTOR_SCAN_MAX_SECONDS: Final[float] = 30.0
-        REFACTOR_MEMORY_FILE_COUNT: Final[int] = 500
-        REFACTOR_MEMORY_MAX_MB: Final[float] = 500.0
-        REFACTOR_RULE_ITERATIONS: Final[int] = 100
-        REFACTOR_RULE_MAX_SECONDS: Final[float] = 0.1
+        REFACTOR_SCAN_FILE_COUNT: ClassVar[int] = 1000
+        REFACTOR_SCAN_MAX_SECONDS: ClassVar[float] = 30.0
+        REFACTOR_MEMORY_FILE_COUNT: ClassVar[int] = 500
+        REFACTOR_MEMORY_MAX_MB: ClassVar[float] = 500.0
+        REFACTOR_RULE_ITERATIONS: ClassVar[int] = 100
+        REFACTOR_RULE_MAX_SECONDS: ClassVar[float] = 0.1
 
         # flext-perf.4: gen pipeline performance thresholds (lazy-init stage).
-        GEN_PIPELINE_PROJECT_COUNT: Final[int] = 20
-        GEN_PIPELINE_MODULES_PER_PROJECT: Final[int] = 5
-        GEN_PIPELINE_MAX_SECONDS: Final[float] = 30.0
-        GEN_PIPELINE_MEMORY_MAX_MB: Final[float] = 500.0
+        GEN_PIPELINE_PROJECT_COUNT: ClassVar[int] = 20
+        GEN_PIPELINE_MODULES_PER_PROJECT: ClassVar[int] = 5
+        GEN_PIPELINE_MAX_SECONDS: ClassVar[float] = 30.0
+        GEN_PIPELINE_MEMORY_MAX_MB: ClassVar[float] = 500.0
 
-        RELEASE_VERSION_BASE: Final[str] = "0.1.0"
-        RELEASE_VERSION_PATCH: Final[str] = "0.1.1"
-        RELEASE_VERSION_PRERELEASE: Final[str] = "0.1.0rc0"
-        RELEASE_PROJECTS: Final[tuple[str, str]] = ("flext-a", "flext-b")
+        RELEASE_VERSION_BASE: ClassVar[str] = "0.1.0"
+        RELEASE_VERSION_PATCH: ClassVar[str] = "0.1.1"
+        RELEASE_VERSION_PRERELEASE: ClassVar[str] = "0.1.0rc0"
+        RELEASE_PROJECTS: ClassVar[t.Pair[str, str]] = ("flext-a", "flext-b")
         # Fixture members depend on these siblings, so a release build must see
         # them to pin their declared versions.
-        RELEASE_INTERNAL_DEPENDENCIES: Final[tuple[str, str]] = (
+        RELEASE_INTERNAL_DEPENDENCIES: ClassVar[t.Pair[str, str]] = (
             "flext-core",
             "flext-tests",
         )
-        RELEASE_TAG_TARGET: Final[str] = "v1.0.0"
-        RELEASE_VERSION_TARGET: Final[str] = "1.0.0"
-        RELEASE_NOTES_HEADING: Final[str] = "# Release v1.0.0"
-        RELEASE_NOTES_CHANGE_LINE: Final[str] = "- fix: release flow"
-        RELEASE_INITIAL_CHANGE_LINE: Final[str] = "- Initial tagged release"
-        RELEASE_CHANGELOG_HEADER: Final[str] = "# Changelog\n\n"
+        RELEASE_TAG_TARGET: ClassVar[str] = "v1.0.0"
+        RELEASE_VERSION_TARGET: ClassVar[str] = "1.0.0"
+        RELEASE_NOTES_HEADING: ClassVar[str] = "# Release v1.0.0"
+        RELEASE_NOTES_CHANGE_LINE: ClassVar[str] = "- fix: release flow"
+        RELEASE_INITIAL_CHANGE_LINE: ClassVar[str] = "- Initial tagged release"
+        RELEASE_CHANGELOG_HEADER: ClassVar[str] = "# Changelog\n\n"
 
 
 c = TestsFlextInfraConstants

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from flext_tests import s as tests_s
+from flext_tests import FlextTestsServiceBase
 
 
-class TestsFlextInfraServiceBase(tests_s):
+class TestsFlextInfraServiceBase(FlextTestsServiceBase):
     """Infra test service base composed directly from flext-tests."""
 
     # NOTE (multi-agent, flext-wkii.17.14): flext-tests is the sole owner of

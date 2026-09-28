@@ -1,0 +1,69 @@
+id: rewire-infra-constants-submodule-import-to-root-facade
+language: Python
+severity: error
+files:
+  - "src/flext_infra/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: from flext_infra.constants import c
+fix: from flext_infra import c
+message: >-
+  Import the typed root facade `c` from flext_infra; the
+  flext_infra.constants submodule rebinds `c` over the imported
+  flext-cli facade, which type checkers resolve as Any.
+---
+id: rewire-infra-models-submodule-import-to-root-facade
+language: Python
+severity: error
+files:
+  - "src/flext_infra/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: from flext_infra.models import m
+fix: from flext_infra import m
+message: >-
+  Import the typed root facade `m` from flext_infra; the
+  flext_infra.models submodule rebinds `m` over the imported
+  flext-cli facade, which type checkers resolve as Any.
+---
+id: rewire-infra-protocols-submodule-import-to-root-facade
+language: Python
+severity: error
+files:
+  - "src/flext_infra/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: from flext_infra.protocols import p
+fix: from flext_infra import p
+message: >-
+  Import the typed root facade `p` from flext_infra; the
+  flext_infra.protocols submodule rebinds `p` over the imported
+  flext-cli facade, which type checkers resolve as Any.
+---
+id: rewire-infra-typings-submodule-import-to-root-facade
+language: Python
+severity: error
+files:
+  - "src/flext_infra/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: from flext_infra.typings import t
+fix: from flext_infra import t
+message: >-
+  Import the typed root facade `t` from flext_infra; the
+  flext_infra.typings submodule rebinds `t` over the imported
+  flext-cli facade, which type checkers resolve as Any.
+---
+id: rewire-infra-utilities-submodule-import-to-root-facade
+language: Python
+severity: error
+files:
+  - "src/flext_infra/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: from flext_infra.utilities import u
+fix: from flext_infra import u
+message: >-
+  Import the typed root facade `u` from flext_infra; the
+  flext_infra.utilities submodule rebinds `u` over the imported
+  flext-cli facade, which type checkers resolve as Any.

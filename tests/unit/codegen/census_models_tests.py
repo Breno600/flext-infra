@@ -10,25 +10,20 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from flext_tests import tm
 
 from tests import c, m
 
-if TYPE_CHECKING:
-    from tests import t
 
+class TestsFlextInfraCodegenCensusModels:
+    """Violation pattern and census report model contracts."""
 
-class TestViolationPattern:
     def test_named_groups_present(self) -> None:
         match = c.Infra.VIOLATION_PATTERN.match("[NS-001-001] src/file.py:10 — msg")
-        tm.that(match, none=False)
+        tm.that(match is not None, eq=True)
         if match is not None:
             tm.that(set(match.groupdict()), eq={"rule", "module", "line", "message"})
 
-
-class TestCensusViolationModel:
     def test_model_fields(self) -> None:
         v = m.Infra.CensusViolation(
             module="src/file.py",
@@ -43,8 +38,6 @@ class TestCensusViolationModel:
         tm.that(v.message, eq="Test message")
         tm.that(v.fixable, eq=True)
 
-
-class TestCensusReportModel:
     def test_empty_report(self) -> None:
         report = m.Infra.CensusReport(
             project="test-project", violations=[], total=0, fixable=0
@@ -74,6 +67,3 @@ class TestCensusReportModel:
         )
         tm.that(report.total, eq=3)
         tm.that(report.fixable, eq=2)
-
-
-__all__: t.StrSequence = []

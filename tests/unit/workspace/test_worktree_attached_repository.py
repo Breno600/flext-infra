@@ -8,10 +8,9 @@ from flext_tests import tm
 
 from flext_infra import FlextInfraWorktreeService, c, m
 from tests import u
-from tests.unit.workspace import WorktreeFixture
 
 
-class TestsAttachedRepositoryWorktree(WorktreeFixture):
+class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
     """Exercise Git's primary registry for an attached repository."""
 
     def test_attached_submodule_uses_one_primary_local_container(
@@ -109,6 +108,3 @@ class TestsAttachedRepositoryWorktree(WorktreeFixture):
             ),
             eq=str(expected_lane),
         )
-
-
-__all__: tuple[str, ...] = ()

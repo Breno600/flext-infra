@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import m, u
@@ -30,9 +31,17 @@ class FlextInfraAccessorMigrationReportMixin:
         @property
         def lint_tool_names(self) -> t.StrSequence: ...
 
+        def _apply_automated_rewrites(
+            self, rope_project: t.Infra.RopeProject, py_file: Path, source: str
+        ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]: ...
+
+        def _collect_manual_warnings(
+            self, py_file: Path, source: str
+        ) -> t.SequenceOf[m.Infra.AccessorMigrationChange]: ...
+
     @staticmethod
     def _accumulate_lint_totals(
-        totals: dict[str, int], snapshot: t.Infra.LintSnapshot
+        totals: MutableMapping[str, int], snapshot: t.Infra.LintSnapshot
     ) -> None:
         """Accumulate lint totals."""
         for tool, lines in snapshot.items():
@@ -40,18 +49,21 @@ class FlextInfraAccessorMigrationReportMixin:
 
     def _process_file(
         self,
+        rope_project: t.Infra.RopeProject,
         py_file: Path,
-        *,
         source: str,
-        updated_source: str,
-        automated_changes: t.SequenceOf[m.Infra.AccessorMigrationChange],
-        warnings: t.MutableSequenceOf[m.Infra.AccessorMigrationChange],
-        include_preview: bool,
+        *,
+        preview_available: bool,
     ) -> m.Infra.AccessorMigrationFile:
-        """Process file."""
-        lint_before: dict[str, t.StrSequence] = {}
-        lint_after: dict[str, t.StrSequence] = {}
-        new_lint_errors: dict[str, t.StrSequence] = {}
+        """Rewrite one file, collect its manual warnings and lint evidence."""
+        updated_source, automated_changes = self._apply_automated_rewrites(
+            rope_project, py_file, source
+        )
+        warnings = list(self._collect_manual_warnings(py_file, source))
+        include_preview = bool(automated_changes or warnings) and preview_available
+        lint_before: MutableMapping[str, t.StrSequence] = {}
+        lint_after: MutableMapping[str, t.StrSequence] = {}
+        new_lint_errors: MutableMapping[str, t.StrSequence] = {}
         before: t.Infra.LintSnapshot = {}
         after: t.Infra.LintSnapshot = {}
         if automated_changes:
@@ -121,7 +133,9 @@ class FlextInfraAccessorMigrationReportMixin:
         )
 
     @staticmethod
-    def _freeze_lints(snapshot: t.Infra.LintSnapshot) -> dict[str, t.StrSequence]:
+    def _freeze_lints(
+        snapshot: t.Infra.LintSnapshot,
+    ) -> MutableMapping[str, t.StrSequence]:
         """Freeze lints."""
         return {tool: tuple(lines) for tool, lines in snapshot.items()}
 

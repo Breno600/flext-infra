@@ -15,36 +15,37 @@ from flext_tests import tm
 from flext_infra import c
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import u
-from tests.unit.workspace import WorktreeFixture
 
 
-def _governed_project(root: Path, name: str) -> Path:
-    """Create one governed repository owned by the configured provider."""
-    WorktreeFixture.initialize_governed_project(
-        root,
-        name,
-        workspace=f"{name}-workspace",
-        database=f"{name}-database",
-        issue_prefix=f"{name}-prefix",
-    )
-    return root
-
-
-def _repoint_origin(root: Path, url: str) -> None:
-    """Rewrite ``origin`` the way the generated CI deploy-key step does."""
-    tm.ok(
-        u.Cli.run_checked([c.Infra.GIT, "remote", "set-url", "origin", url], cwd=root)
-    )
-
-
-class TestsProviderResolutionAcceptsSshRemotes:
+class TestsFlextInfraProviderResolutionAcceptsSshRemotes:
     """Every remote form for a governed repository resolves to its provider."""
+
+    @staticmethod
+    def _governed_project(root: Path, name: str) -> Path:
+        """Create one governed repository owned by the configured provider."""
+        u.Tests.WorktreeFixture.initialize_governed_project(
+            root,
+            name,
+            workspace=f"{name}-workspace",
+            database=f"{name}-database",
+            issue_prefix=f"{name}-prefix",
+        )
+        return root
+
+    @staticmethod
+    def _repoint_origin(root: Path, url: str) -> None:
+        """Rewrite ``origin`` the way the generated CI deploy-key step does."""
+        tm.ok(
+            u.Cli.run_checked(
+                [c.Infra.GIT, "remote", "set-url", "origin", url], cwd=root
+            )
+        )
 
     def test_ssh_origin_resolves(self, tmp_path: Path) -> None:
         """A plain SSH origin is the same repository as its HTTPS form."""
         organization = u.Tests.provider().organization
-        root = _governed_project(tmp_path / "ssh-origin", "ssh-origin")
-        _repoint_origin(root, f"git@github.com:{organization}/ssh-origin.git")
+        root = self._governed_project(tmp_path / "ssh-origin", "ssh-origin")
+        self._repoint_origin(root, f"git@github.com:{organization}/ssh-origin.git")
 
         spec = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
 
@@ -57,8 +58,8 @@ class TestsProviderResolutionAcceptsSshRemotes:
         member: the alias exists only so SSH can select a second identity file.
         """
         organization = u.Tests.provider().organization
-        root = _governed_project(tmp_path / "alias-origin", "alias-origin")
-        _repoint_origin(root, f"git@github-alias:{organization}/alias-origin.git")
+        root = self._governed_project(tmp_path / "alias-origin", "alias-origin")
+        self._repoint_origin(root, f"git@github-alias:{organization}/alias-origin.git")
 
         spec = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
 
@@ -66,8 +67,8 @@ class TestsProviderResolutionAcceptsSshRemotes:
 
     def test_foreign_organization_is_still_rejected(self, tmp_path: Path) -> None:
         """Accepting SSH must not make the organization stop discriminating."""
-        root = _governed_project(tmp_path / "foreign-origin", "foreign-origin")
-        _repoint_origin(
+        root = self._governed_project(tmp_path / "foreign-origin", "foreign-origin")
+        self._repoint_origin(
             root, "git@github-alias:organization-nobody-declares/foreign-origin.git"
         )
 

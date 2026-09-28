@@ -50,7 +50,7 @@ class FlextInfraPyrightGate(FlextInfraGate):
     @staticmethod
     def _has_project_pyright_config(project_dir: Path) -> bool:
         """Return whether pyproject.toml declares [tool.pyright]."""
-        doc = u.Cli.toml_read(project_dir / c.Infra.PYPROJECT_FILENAME)
+        doc = u.Cli.toml_read(project_dir / c.PYPROJECT_FILENAME)
         if doc is None:
             return False
         tool_table = u.Cli.toml_table_child(doc, c.Infra.TOOL)
@@ -82,7 +82,16 @@ class FlextInfraPyrightGate(FlextInfraGate):
                     column=0,
                 ),
             )
-        report = m.Infra.PyrightReport.model_validate_json(result.stdout, strict=True)
+        validated: p.Result[m.Infra.PyrightReport] = u.validate_value(
+            m.Infra.PyrightReport, result.stdout, from_json=True, strict=True
+        )
+        if validated.failure:
+            return False, (
+                self._malformed_report_issue(
+                    str(validated.error), tool=c.Infra.PYRIGHT, file=str(project_dir)
+                ),
+            )
+        report = validated.value
         issues: t.MutableSequenceOf[m.Infra.Issue] = [
             m.Infra.Issue(
                 file=diag.file,
@@ -104,7 +113,7 @@ class FlextInfraPyrightGate(FlextInfraGate):
                 )
             issues.append(
                 m.Infra.Issue(
-                    file=c.Infra.PYPROJECT_FILENAME,
+                    file=c.PYPROJECT_FILENAME,
                     line=1,
                     column=1,
                     code="pyright-exec",

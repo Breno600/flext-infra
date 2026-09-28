@@ -1,0 +1,5 @@
+from __future__ import annotations
+from flext_test import FlextTestModelsSomething
+
+class FlextTestModelsThing(Models):
+    pass

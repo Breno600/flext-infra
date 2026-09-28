@@ -6,10 +6,15 @@ from typing import TYPE_CHECKING, override
 
 from flext_cli import cli
 
-from flext_infra import c, m, p, r, t, u
-from flext_infra.base import FlextInfraServiceBase
+from flext_core import r
 
+from .. import c, m, p, t, u
+from ._execution import FlextInfraCodegenExecutionBase
+from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
+from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles
+from ._mise_artifacts_publication import publish_file_plan
 from ._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
+from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -18,9 +23,13 @@ _log = u.fetch_logger(__name__)
 
 
 class FlextInfraCodegenPipeline(
-    FlextInfraCodegenPipelineStagesMixin, FlextInfraServiceBase[str]
+    FlextInfraCodegenPipelineStagesMixin, FlextInfraCodegenExecutionBase[str]
 ):
     """Run the full codegen pipeline directly from the validated CLI model."""
+
+    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
+        exclude=True, description="Shared Rope cycle injected by the composition root"
+    )
 
     _state: m.Infra.CodegenPipelineState = u.PrivateAttr(
         default_factory=m.Infra.CodegenPipelineState
@@ -34,8 +43,8 @@ class FlextInfraCodegenPipeline(
 
         pipeline_result = cli.pipeline(
             stages,
-            context=cli.stage_context(
-                self.repository_root,
+            context=m.Cli.PipelineStageContext(
+                repository_root=self.repository_root,
                 settings={
                     c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run or not self.apply_changes
                 },
@@ -80,7 +89,11 @@ class FlextInfraCodegenPipeline(
         builds the output payload from the action's return value.
         """
         return r[m.Cli.PipelineStageResult].ok(
-            cli.stage_result(stage_id, output=emit(action()))
+            m.Cli.PipelineStageResult(
+                stage_id=stage_id,
+                status=c.Cli.PipelineStageStatus.OK,
+                output=emit(action()),
+            )
         )
 
     # ------------------------------------------------------------------
@@ -104,7 +117,7 @@ class FlextInfraCodegenPipeline(
         skipped = sum(len(result.violations_skipped) for result in fix_results)
 
         if self.output_format == c.Cli.OutputFormats.JSON:
-            payload: t.Infra.MutableInfraMapping = {
+            payload: t.MutableJsonMapping = {
                 "census_before": {
                     "total_violations": before_violations,
                     "total_fixable": before_fixable,
@@ -131,4 +144,11 @@ class FlextInfraCodegenPipeline(
         )
 
 
-__all__: list[str] = ["FlextInfraCodegenPipeline"]
+__all__: list[str] = [
+    "FlextInfraCodegenLazyInitGenerationMixin",
+    "FlextInfraCodegenLazyInitPlanner",
+    "FlextInfraCodegenPipeline",
+    "FlextInfraCodegenPipelineStagesMixin",
+    "FlextInfraMiseArtifactsFiles",
+    "publish_file_plan",
+]

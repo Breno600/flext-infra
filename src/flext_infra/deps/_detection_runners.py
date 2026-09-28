@@ -22,7 +22,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
         # Conversion helper provided by the concrete analyzer; declared for static
         # resolution only (runtime impl lives on the concrete via FLEXT).
         def _to_toml_config(
-            self, payload: t.MappingKV[str, t.Infra.InfraValue]
+            self, payload: t.MappingKV[str, t.JsonValue]
         ) -> t.JsonMapping: ...
 
     def _read_plain(self, path: Path) -> p.Result[t.JsonMapping]:
@@ -54,7 +54,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
         extend_exclude: t.StrSequence | None = None,
     ) -> p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]]:
         """Run deptry analysis on a project and parse JSON output."""
-        settings = config_path or project_path / c.Infra.PYPROJECT_FILENAME
+        settings = config_path or project_path / c.PYPROJECT_FILENAME
         if not settings.exists():
             return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].ok(([], 0))
         out_file = json_output_path or project_path / ".deptry-report.json"
@@ -80,15 +80,22 @@ class FlextInfraDependencyDetectionRunnersMixin:
                 return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].from_failure(
                     loaded_result
                 )
+            validation_failure: (
+                p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]] | None
+            ) = None
             if isinstance(loaded_result.value, list):
                 normalized_issues: t.MutableSequenceOf[t.JsonMapping] = []
-                for item in loaded_result.value:
+                for index, item in enumerate(loaded_result.value):
                     if not isinstance(item, Mapping):
-                        continue
+                        return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail(
+                            f"deptry JSON issue {index} must be a mapping"
+                        )
                     try:
                         typed_item = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(item)
-                    except c.ValidationError:
-                        continue
+                    except c.ValidationError as exc:
+                        return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail_op(
+                            "validate deptry issue", exc
+                        )
                     converted_issue = self._to_toml_config(typed_item)
                     if len(converted_issue) == len(typed_item):
                         normalized_issues.append(converted_issue)
@@ -100,6 +107,8 @@ class FlextInfraDependencyDetectionRunnersMixin:
                     return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail(
                         f"failed to cleanup deptry temp output: {exc}", exception=exc
                     )
+            if validation_failure is not None:
+                return validation_failure
         cmd_result: p.Cli.CommandOutput = result.value
         return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].ok((
             issues,
@@ -110,14 +119,21 @@ class FlextInfraDependencyDetectionRunnersMixin:
         self, project_path: Path
     ) -> p.Result[t.Pair[t.StrSequence, t.StrSequence]]:
         """Run mypy via the command runner to detect missing stubs and hint packages."""
+        # Why: current mypy emits ANSI color codes around quoted module/package
+        # names even when stdout is a pipe, splicing escape sequences inside
+        # the literal `for "name"` text that MYPY_STUB_RE/MYPY_HINT_RE match —
+        # silently zeroing every detected stub hint. `--no-color-output`
+        # matches the plain-text contract the regexes already assume (see
+        # gates/mypy.py, which disables color for the same reason).
         cmd = u.Infra.mypy_limited_command((
             sys.executable,
             "-m",
             c.Infra.MYPY,
             c.Infra.DEFAULT_SRC_DIR,
             "--config-file",
-            c.Infra.PYPROJECT_FILENAME,
+            c.PYPROJECT_FILENAME,
             "--no-error-summary",
+            "--no-color-output",
         ))
         result = self._run_raw(
             cmd, cwd=project_path, timeout=u.Infra.mypy_runner_timeout()

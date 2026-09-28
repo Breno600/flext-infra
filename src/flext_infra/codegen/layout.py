@@ -14,9 +14,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, override
 
-from flext_infra import c, m, p, r, t, u
-from flext_infra.base import s
+from flext_core import r
+from flext_infra import c, m, p, t, u
 
+from ..base import s
 from ._layout_apply import FlextInfraCodegenLayoutApplyMixin
 from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
 

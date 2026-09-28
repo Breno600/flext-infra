@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra import c, m, t, u
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import p
 
 
 class FlextInfraCodegenLazyInitGenerationRegistryMixin:
@@ -44,14 +45,14 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         try:
             paths = tuple(sorted(directory.glob(pattern)))
         except OSError as exc:
-            return r[tuple[Path, ...]].fail_op(operation, exc)
-        return r[tuple[Path, ...]].ok(paths)
+            return r[t.VariadicTuple[Path]].fail_op(operation, exc)
+        return r[t.VariadicTuple[Path]].ok(paths)
 
     def _cleanup_generated_support_file_states(
         self, plan: m.Infra.LazyInitPlan
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Return the complete physical file set selected for deletion."""
-        states: dict[Path, m.Cli.AtomicFileState] = {}
+        states: MutableMapping[Path, m.Cli.AtomicFileState] = {}
         for result in (
             self._obsolete_generated_file_states(plan),
             self._obsolete_root_support_states(plan),

@@ -53,7 +53,7 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
                 repository_root, extra_roots
             )
         except (OSError, TypeError, ValueError) as exc:
-            return r[tuple[Path, ...]].fail(
+            return r[t.VariadicTuple[Path]].fail(
                 f"docs workspace discovery failed: {exc}", exception=exc
             )
 
@@ -64,37 +64,39 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
         """Discover roots while the public boundary owns exception conversion."""
         root = FlextInfraUtilitiesDocsScopePathsMixin.absolute_lexical(repository_root)
         if not FlextInfraUtilitiesDocsScopePathsMixin.physical_directory_exists(root):
-            return r[tuple[Path, ...]].fail(f"docs repository root is missing: {root}")
+            return r[t.VariadicTuple[Path]].fail(
+                f"docs repository root is missing: {root}"
+            )
         manifest_path = root / c.Infra.GITMODULES
         manifest_before = u.Cli.atomic_read_binary_file_state(
             manifest_path, required=False
         )
         if manifest_before.failure:
-            return r[tuple[Path, ...]].from_failure(manifest_before)
+            return r[t.VariadicTuple[Path]].from_failure(manifest_before)
         declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(root)
         if declared.failure:
-            return r[tuple[Path, ...]].from_failure(declared)
+            return r[t.VariadicTuple[Path]].from_failure(declared)
         manifest_after = u.Cli.atomic_read_binary_file_state(
             manifest_path, required=False
         )
         if manifest_after.failure:
-            return r[tuple[Path, ...]].from_failure(manifest_after)
+            return r[t.VariadicTuple[Path]].from_failure(manifest_after)
         if manifest_after.value != manifest_before.value:
-            return r[tuple[Path, ...]].fail(
+            return r[t.VariadicTuple[Path]].fail(
                 f"docs repository topology changed during discovery: {manifest_path}"
             )
         candidates = [root]
         for declared_path in declared.value:
             selector = Path(declared_path)
             if selector.is_absolute() or ".." in selector.parts:
-                return r[tuple[Path, ...]].fail(
+                return r[t.VariadicTuple[Path]].fail(
                     f"invalid docs composed project path: {selector}"
                 )
             candidates.append(root / selector)
         for candidate in extra_roots:
             lexical = FlextInfraUtilitiesDocsScopePathsMixin.absolute_lexical(candidate)
             if not lexical.is_relative_to(root):
-                return r[tuple[Path, ...]].fail(
+                return r[t.VariadicTuple[Path]].fail(
                     f"docs source root escapes repository {root}: {lexical}"
                 )
             candidates.append(lexical)
@@ -105,7 +107,7 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
                 candidate
             )
         ]
-        return r[tuple[Path, ...]].ok(tuple(roots))
+        return r[t.VariadicTuple[Path]].ok(tuple(roots))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesDocsScopePathsMixin"]

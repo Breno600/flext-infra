@@ -11,7 +11,7 @@ from flext_tests import tm
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 
 
-class TestWorkspaceCheckerResolveGates:
+class TestsFlextInfraWorkspaceCheckerResolveGates:
     """Test FlextInfraWorkspaceChecker.resolve_gates."""
 
     def test_resolve_gates_type_is_rejected(self) -> None:

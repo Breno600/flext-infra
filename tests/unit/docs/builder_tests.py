@@ -20,14 +20,13 @@ if TYPE_CHECKING:
     from tests import t
 
 
-@pytest.fixture
-def builder() -> FlextInfraDocBuilder:
-    """Provide the public documentation builder service."""
-    return FlextInfraDocBuilder()
-
-
-class TestBuilderCore:
+class TestsFlextInfraBuilder:
     """Core build invocation tests."""
+
+    @pytest.fixture
+    def builder(self) -> FlextInfraDocBuilder:
+        """Provide the public documentation builder service."""
+        return FlextInfraDocBuilder()
 
     def test_build_with_valid_scope_returns_success(
         self, builder: FlextInfraDocBuilder, tmp_path: Path
@@ -52,7 +51,7 @@ class TestBuilderCore:
         self,
         builder: FlextInfraDocBuilder,
         tmp_path: Path,
-        kwargs: dict[str, str | list[str]],
+        kwargs: t.MappingKV[str, str | t.SequenceOf[str]],
     ) -> None:
         """Build runs with each option variant and returns a railway result."""
         if "output_dir" in kwargs:

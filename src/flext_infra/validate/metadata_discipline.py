@@ -35,17 +35,19 @@ class FlextInfraValidateMetadataDiscipline(FlextInfraRopeImportBoundaryBase):
     _SCAN_KIND: ClassVar[str] = "metadata-discipline"
 
     @override
-    def _is_in_scope(self, _file_path: Path) -> bool:
+    def _is_in_scope(self, _file_path: Path, *, repository_root: Path) -> bool:
         """Return True when path belongs to metadata-discipline enforcement scope."""
-        posix = _file_path.as_posix()
-        return any(marker in posix for marker in c.Infra.METADATA_TARGET_SCOPE_MARKERS)
+        rooted = self._rooted_posix(_file_path, repository_root)
+        return any(marker in rooted for marker in c.Infra.METADATA_TARGET_SCOPE_MARKERS)
 
     @override
-    def _is_allowlisted(self, _file_path: Path, _module_name: str) -> bool:
+    def _is_allowlisted(
+        self, _file_path: Path, _module_name: str, *, repository_root: Path
+    ) -> bool:
         """Return True when file path is in canonical metadata reader set."""
-        posix = _file_path.as_posix()
+        rooted = self._rooted_posix(_file_path, repository_root)
         return any(
-            marker in posix for marker in c.Infra.METADATA_ALLOWLIST_PATH_MARKERS
+            marker in rooted for marker in c.Infra.METADATA_ALLOWLIST_PATH_MARKERS
         )
 
     @override

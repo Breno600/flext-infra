@@ -51,10 +51,10 @@ note: >-
 rule:
   all:
     - kind: class_definition
-    - has: {field: name, pattern: $INNER}
+    - has: { field: name, pattern: $INNER }
     - has:
         field: superclasses
-        has: {pattern: $OUTER}
+        has: { pattern: $OUTER }
     - not:
         has:
           field: body
@@ -63,9 +63,9 @@ rule:
               any:
                 - kind: pass_statement
                 - kind: expression_statement
-                  has: {kind: ellipsis}
+                  has: { kind: ellipsis }
                 - kind: expression_statement
-                  has: {kind: string}
+                  has: { kind: string }
     - inside:
         kind: block
         has:
@@ -74,7 +74,7 @@ rule:
               - kind: class_definition
               - has:
                   field: superclasses
-                  has: {pattern: $OUTER}
+                  has: { pattern: $OUTER }
               - not:
                   has:
                     field: body
@@ -83,18 +83,18 @@ rule:
                         any:
                           - kind: pass_statement
                           - kind: expression_statement
-                            has: {kind: ellipsis}
+                            has: { kind: ellipsis }
                           - kind: expression_statement
-                            has: {kind: string}
+                            has: { kind: string }
     - inside:
         kind: block
         inside:
           kind: class_definition
-          has: {field: name, pattern: $OUTER}
+          has: { field: name, pattern: $OUTER }
     - not:
         has:
           field: superclasses
           has:
             kind: identifier
-            not: {pattern: $OUTER}
+            not: { pattern: $OUTER }
 fix: ""

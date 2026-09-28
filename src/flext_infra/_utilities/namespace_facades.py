@@ -11,9 +11,7 @@ from typing import ClassVar
 
 from flext_cli import u
 
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
 
 from .dependencies import FlextInfraUtilitiesDependencies
 from .namespace import FlextInfraUtilitiesCodegenNamespace
@@ -49,16 +47,16 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
     @staticmethod
     def _compute_base_chains(*, project_root: Path) -> t.StrSequenceMapping:
         """Compute base chains."""
-        pyproject_path = project_root / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = project_root / c.PYPROJECT_FILENAME
         if not pyproject_path.exists():
-            return MappingProxyType(dict[str, tuple[str, ...]]())
+            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
         try:
             raw = pyproject_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         except OSError:
-            return MappingProxyType(dict[str, tuple[str, ...]]())
+            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
         payload = u.Cli.toml_mapping_from_text(raw)
         if payload is None:
-            return MappingProxyType(dict[str, tuple[str, ...]]())
+            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
         dep_names = (
             FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
                 t.Infra.INFRA_MAPPING_ADAPTER.validate_python(payload)
@@ -87,7 +85,7 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
                     f"from {u.class_name_to_module(base)} import {base}"
                     for base in chain
                 )
-        suffix = c.Infra.FAMILY_SUFFIXES.get(family, "Utilities")
+        suffix = c.Infra.FAMILY_SUFFIXES[family]
         return f"from flext_core import Flext{suffix}"
 
     @staticmethod
@@ -99,7 +97,7 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
             chain = base_chains.get(family, [])
             if chain:
                 return ", ".join(chain)
-        suffix = c.Infra.FAMILY_SUFFIXES.get(family, "Utilities")
+        suffix = c.Infra.FAMILY_SUFFIXES[family]
         return f"Flext{suffix}"
 
     @staticmethod

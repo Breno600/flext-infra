@@ -20,11 +20,19 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
     gate_id: ClassVar[str] = c.Infra.FORMAT
     gate_name: ClassVar[str] = "Ruff Format"
     can_fix: ClassVar[bool] = True
-    check_module_command_prefix: ClassVar[t.StrSequence] = (
-        c.Infra.RUFF,
-        c.Infra.FORMAT,
-        *config.Infra.codegen.make.ruff.format_check,
-    )
+
+    @override
+    def _build_check_command(
+        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+    ) -> t.StrSequence:
+        """Build the format verdict command from the config-owned flags."""
+        _ = project_dir, ctx
+        return self._python_module_command(
+            c.Infra.RUFF,
+            c.Infra.FORMAT,
+            *config.Infra.codegen.make.ruff.format_check,
+            *check_dirs,
+        )
 
     @override
     def _get_check_dirs(

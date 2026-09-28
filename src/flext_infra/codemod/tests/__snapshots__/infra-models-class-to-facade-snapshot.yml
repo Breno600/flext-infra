@@ -1,0 +1,23 @@
+id: infra-models-class-to-facade
+snapshots:
+  ? |
+    from flext_infra import m
+    value: FlextInfraModelsWorkspace.ProjectInfo
+  : fixed: |
+      from flext_infra import m
+      value: m.Infra.ProjectInfo
+    labels:
+    - source: FlextInfraModelsWorkspace.ProjectInfo
+      style: primary
+      start: 33
+      end: 70
+    - source: from flext_infra import m
+      style: secondary
+      start: 0
+      end: 25
+    - source: |
+        from flext_infra import m
+        value: FlextInfraModelsWorkspace.ProjectInfo
+      style: secondary
+      start: 0
+      end: 71

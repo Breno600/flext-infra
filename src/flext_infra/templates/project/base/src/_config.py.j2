@@ -1,13 +1,22 @@
-{# NOTE (codex, flext-j47u): precompute exact compact/multiline source with zero render whitespace. -#}
-{%- set config_model_line = "from " ~ package_name ~ "._models.config import " ~ class_stem ~ "ConfigModels" -%}
-{%- set config_model_import = config_model_line if config_model_line | length <= tooling.tools.ruff.line_length else "from " ~ package_name ~ "._models.config import (\n    " ~ class_stem ~ "ConfigModels,\n)" -%}
-{%- set config_protocol_line = "    from " ~ package_name ~ "._protocols.config import " ~ class_stem ~ "ProtocolsConfig" -%}
-{%- set config_protocol_import = config_protocol_line if config_protocol_line | length <= tooling.tools.ruff.line_length else "    from " ~ package_name ~ "._protocols.config import (\n        " ~ class_stem ~ "ProtocolsConfig,\n    )" -%}
-{%- set config_class_line = "class _" ~ class_stem ~ "Config(FlextConfig, " ~ class_stem ~ "ConfigModels.ConfigRoot):" -%}
-{%- set config_class_declaration = config_class_line if config_class_line | length <= tooling.tools.ruff.line_length else "class _" ~ class_stem ~ "Config(\n    FlextConfig, " ~ class_stem ~ "ConfigModels.ConfigRoot\n):" -%}
-{%- set config_singleton_line = "config: " ~ class_stem ~ "ProtocolsConfig.Config = _" ~ class_stem ~ "Config()" -%}
-{%- set config_singleton_declaration = config_singleton_line if config_singleton_line | length <= tooling.tools.ruff.line_length else "config: " ~ class_stem ~ "ProtocolsConfig.Config = (\n    _" ~ class_stem ~ "Config()\n)" -%}
-"""Direct {{ class_stem }} config singleton export.
+{# ENFORCE-042 (2026-09-21): the fleet-converged _config.py is a FlextSettings-first
+   namespace-holder singleton. The generator owns this contract; consumers never
+   hand-author it. The base class is derived from the declared dependency profile
+   (config_base_class/config_base_module), never guessed in-template. The open
+   namespace field is the SHORT namespace ({{ ns }}) — the same key the
+   ``config/{{ ns }}.yaml`` owner declares and ``cli.py`` reads; the class stem
+   here would split the namespace in two and hand cli.py a raw dict. -#}
+{%- set ns_name = "_" ~ ns ~ "Namespace" -%}
+{%- set base_import_line = "from " ~ config_base_module ~ " import " ~ config_base_class ~ ", m" -%}
+{%- set base_import = base_import_line if base_import_line | length <= tooling.tools.ruff.line_length else "from " ~ config_base_module ~ " import (\n    " ~ config_base_class ~ ",\n    m,\n)" -%}
+{%- set settings_import_line = "from flext_core import FlextSettings" -%}
+{%- set config_class_line = "class " ~ class_stem ~ "Config(FlextSettings, " ~ config_base_class ~ "):" -%}
+{%- set config_class_declaration = config_class_line if config_class_line | length <= tooling.tools.ruff.line_length else "class " ~ class_stem ~ "Config(\n    FlextSettings, " ~ config_base_class ~ "\n):" -%}
+{%- set namespace_field_line = "    " ~ ns ~ ": Annotated[" -%}
+{%- set namespace_field = namespace_field_line if namespace_field_line | length <= tooling.tools.ruff.line_length else "    " ~ ns ~ ": Annotated[" -%}
+"""{{ class_stem }}Config — frozen config singleton for {{ package_name }} (ADR-005 §7).
+
+Business rules live in ``config/*.yaml`` under the ``{{ ns }}:`` key.
+The shared config declaration validates the ``config.{{ ns }}`` namespace.
 
 Copyright (c) {{ year }} {{ author_name }}. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -15,22 +24,50 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import Annotated, Self
 
-# NOTE (codex, flext-j47u): measure rendered lines so every project is Ruff-native.
-from flext_core import FlextConfig
-{{ config_model_import }}
+{{ base_import }}
 
-if TYPE_CHECKING:
-{{ config_protocol_import }}
+{{ settings_import_line }}
+
+from ._models.config import (
+    {{ class_stem }}ConfigModels,
+)
 
 
 {{ config_class_declaration }}
-    """Private source loader composed with the validated config root."""
+    """{{ class_stem }} config auto-loaded and validated from ``config/*.yaml``.
 
-    CONFIG_DIR: ClassVar[str] = "config"
+    MRO carries ``FlextSettings`` FIRST (ENFORCE-042); the class stays a frozen,
+    YAML-validated config singleton.
+    """
+
+    # ENFORCE-042 namespace-holder contract: ``FlextSettings`` contributes
+    # namespacing only — instance machinery stays plain object semantics so the
+    # settings singleton ``__new__`` cannot leak into the config singleton.
+    # Unlike never-instantiated namespace holders, ``__init__`` delegates to
+    # ``super()`` so the frozen, YAML-validated pydantic construction still
+    # runs, and the inherited pydantic ``__setattr__`` keeps the frozen guard.
+    def __new__(cls, *args: object, **kwargs: object) -> Self:
+        _ = args, kwargs
+        return object.__new__(cls)
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+
+    __eq__ = object.__eq__
+
+    __hash__ = object.__hash__
+
+{{ namespace_field }}
+        {{ class_stem }}ConfigModels.ConfigRoot.ConfigNamespace,
+        m.Field(
+            description="Open namespace exposing ``config/*.yaml`` under ``{{ ns }}``."
+        ),
+    ]
 
 
-{{ config_singleton_declaration }}
+config: {{ class_stem }}Config = {{ class_stem }}Config.fetch_global()
+"""Pre-instantiated frozen config singleton — ``from {{ package_name }} import config``."""
 
-__all__: list[str] = ["config"]
+__all__: list[str] = ["{{ class_stem }}Config", "config"]

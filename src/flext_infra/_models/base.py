@@ -14,7 +14,6 @@ from flext_cli import m
 
 from flext_infra import c, t
 
-from ._defaults import ImmutableEmptyMapping
 from .mixins import FlextInfraModelsMixins as mm
 
 
@@ -98,7 +97,7 @@ class FlextInfraModelsBase:
         # trailing newline every FLEXT module requires). ContractModel sets
         # str_strip_whitespace=True, which would corrupt written files, so the
         # canonical contract config is inherited with stripping disabled.
-        model_config: ClassVar[t.ConfigDict] = {
+        model_config: ClassVar[m.ConfigDict] = {
             **m.ContractModel.model_config,
             "str_strip_whitespace": False,
         }
@@ -124,9 +123,14 @@ class FlextInfraModelsBase:
             Path, m.Field(description="Repository root used for lint and pytest checks")
         ]
         expected_sources: Annotated[
-            t.MappingKV[Path, str],
-            m.Field(description="Expected current source bytes keyed by updated path"),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
+            t.MappingKV[Path, str | None],
+            m.Field(
+                description=(
+                    "Expected current source bytes keyed by updated path; None "
+                    "requires the path to be absent"
+                )
+            ),
+        ]
         keep_backup: Annotated[
             bool, m.Field(description="Whether to preserve .bak copies before editing")
         ] = False
@@ -185,5 +189,11 @@ class FlextInfraModelsBase:
             str, m.Field(description="Transformer class name to apply")
         ]
         gates: Annotated[
-            str, m.Field(description="Comma-separated gate names for post-validation")
-        ] = c.Infra.SAFE_EXECUTION_DEFAULT_GATES
+            str,
+            m.Field(
+                description=(
+                    "Comma-separated gate names for post-validation; empty selects"
+                    " the SSOT snapshot gates (make.check_gates_ci)."
+                )
+            ),
+        ] = ""

@@ -58,23 +58,55 @@ class FlextInfraDirenvGate(FlextInfraGate):
         violations = FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
             content.value, root=project_dir
         )
-        if violations:
-            issues = tuple(
-                m.Infra.Issue(
-                    file=c.Infra.ENVRC_FILENAME,
-                    line=0,
-                    column=0,
-                    code="DIRENV_CONTRACT",
-                    message=violation,
-                    severity="ERROR",
-                )
-                for violation in violations
+        issues = tuple(
+            m.Infra.Issue(
+                file=c.Infra.ENVRC_FILENAME,
+                line=0,
+                column=0,
+                code="DIRENV_CONTRACT",
+                message=violation,
+                severity="ERROR",
             )
+            for violation in violations
+        )
+        local = project_dir / c.Infra.ENVRC_LOCAL_RELPATH
+        if local.is_file():
+            local_read = u.Cli.files_read_text(local)
+            if local_read.failure:
+                issues = (
+                    *issues,
+                    m.Infra.Issue(
+                        file=c.Infra.ENVRC_LOCAL_RELPATH,
+                        line=0,
+                        column=0,
+                        code="DIRENV_READ",
+                        message=local_read.error or f"cannot read {local}",
+                        severity="ERROR",
+                    ),
+                )
+            else:
+                issues = (
+                    *issues,
+                    *(
+                        m.Infra.Issue(
+                            file=c.Infra.ENVRC_LOCAL_RELPATH,
+                            line=0,
+                            column=0,
+                            code="DIRENV_CONTRACT",
+                            message=violation,
+                            severity="ERROR",
+                        )
+                        for violation in FlextInfraWorkspaceEnvironmentContracts.envrc_local_contract_violations(
+                            local_read.value
+                        )
+                    ),
+                )
+        if issues:
             return self._build_check_gate_execution(
                 project_dir,
                 passed=False,
                 issues=issues,
-                raw_output="\n".join(violations),
+                raw_output="\n".join(issue.message for issue in issues),
                 started=started,
             )
         return super().check(project_dir, ctx)

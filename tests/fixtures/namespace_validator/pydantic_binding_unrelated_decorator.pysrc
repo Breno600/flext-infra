@@ -1,0 +1,7 @@
+from __future__ import annotations
+from unrelated import validator
+
+class FlextTestValidation:
+    @validator('value')
+    def validate(cls, value: str) -> str:
+        return value

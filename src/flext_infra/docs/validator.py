@@ -25,7 +25,7 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
             request.repository_root,
             projects=request.projects,
             output_dir=request.output_dir,
-            handler=lambda scope: self._validate_scope(scope, apply_mode=request.apply),
+            handler=lambda scope: self._validate_scope(scope, apply_mode=False),
         )
 
     @override
@@ -36,7 +36,6 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
                 repository_root=self.repository_root,
                 projects=self.selected_projects,
                 output_dir=self.output_dir,
-                apply=self.apply_changes,
             )
         )
         return self._propagate_phase_outcome(
@@ -100,6 +99,7 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
             phase="validate",
             scope=scope.name,
             result=status,
+            reason=message,
             message=message,
             missing_adr_skills=missing_adr_skills,
             todo_written=wrote_todo,

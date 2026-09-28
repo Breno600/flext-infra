@@ -13,7 +13,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import config, m, p, r, t, u
+from flext_core import r
+from flext_infra import config, m, p, t, u
 
 
 class FlextInfraCodegenLayoutFilesMixin:
@@ -64,18 +65,24 @@ class FlextInfraCodegenLayoutFilesMixin:
                 removed = self._remove_tracked_or_unlinked(project_dir, source)
                 if removed.failure:
                     return r[t.Pair[t.Infra.LayoutStatus, str]].from_failure(removed)
+                applied_status: t.Infra.LayoutStatus = "applied"
                 return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
-                    "applied",
+                    applied_status,
                     f"{base_message} (already archived; duplicate removed)",
                 ))
+            skipped_status: t.Infra.LayoutStatus = "skipped"
             return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
-                "skipped",
+                skipped_status,
                 f"{base_message} (archive target exists; manual review)",
             ))
         moved = self._archive_move(project_dir, source, target)
         if moved.failure:
             return r[t.Pair[t.Infra.LayoutStatus, str]].from_failure(moved)
-        return r[t.Pair[t.Infra.LayoutStatus, str]].ok(("applied", base_message))
+        final_applied_status: t.Infra.LayoutStatus = "applied"
+        return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
+            final_applied_status,
+            base_message,
+        ))
 
     def _move_path(
         self, project_dir: Path, source: Path, target: Path

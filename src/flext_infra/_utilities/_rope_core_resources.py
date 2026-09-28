@@ -11,14 +11,14 @@ from .._constants.validate import FlextInfraConstantsSharedInfra
 from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesRopeCoreResourcesMixin:
     """Filesystem-to-Rope resource helpers."""
 
     @staticmethod
-    def get_resource_from_path(
+    def resolve_resource_from_path(
         rope_project: t.Infra.RopeProject, file_path: Path
     ) -> t.Infra.RopeResource | None:
         """Return rope File for a filesystem Path, or None if outside project.
@@ -36,7 +36,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
             return None
         resource = rope_project.get_resource(str(resolved_path.relative_to(root)))
         return (
-            resource if FlextInfraUtilitiesRopeRuntime.is_resource(resource) else None
+            resource if FlextInfraUtilitiesRopeRuntime.file_resource(resource) else None
         )
 
     @staticmethod
@@ -46,7 +46,6 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
         *,
         skip_protected: bool = False,
         skip_settings: bool = False,
-        skip_alias_modules: bool = False,
         skip_init_py: bool = False,
     ) -> t.Infra.RopeResource | None:
         """Resolve a Python source as a Rope resource, or None when skipped."""
@@ -54,11 +53,10 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
             file_path,
             skip_protected=skip_protected,
             skip_settings=skip_settings,
-            skip_alias_modules=skip_alias_modules,
             skip_init_py=skip_init_py,
         ):
             return None
-        return FlextInfraUtilitiesRopeCoreResourcesMixin.get_resource_from_path(
+        return FlextInfraUtilitiesRopeCoreResourcesMixin.resolve_resource_from_path(
             rope_project, file_path
         )
 
@@ -68,7 +66,6 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
         *,
         skip_protected: bool,
         skip_settings: bool,
-        skip_alias_modules: bool,
         skip_init_py: bool,
     ) -> bool:
         """Return whether a path should be exposed as a Python Rope resource."""
@@ -88,11 +85,6 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
                 and file_path.name
                 in FlextInfraConstantsNamespace.NAMESPACE_SETTINGS_FILE_NAMES
             )
-            and not (
-                skip_alias_modules
-                and file_path.stem
-                in FlextInfraConstantsNamespace.NAMESPACE_CANONICAL_ALIAS_MODULE_STEMS
-            )
         )
 
     @staticmethod
@@ -105,7 +97,7 @@ class FlextInfraUtilitiesRopeCoreResourcesMixin:
                 (
                     resource
                     for resource in rope_project.get_python_files()
-                    if FlextInfraUtilitiesRopeRuntime.is_resource(resource)
+                    if FlextInfraUtilitiesRopeRuntime.file_resource(resource)
                 ),
                 key=operator.attrgetter("path"),
             )

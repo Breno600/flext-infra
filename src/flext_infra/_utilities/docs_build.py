@@ -10,16 +10,14 @@ from typing import TYPE_CHECKING, cast
 
 from flext_cli import u
 
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m
 
 from .docs import FlextInfraUtilitiesDocs
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-    from flext_infra import t
-    from flext_infra.protocols import p
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesDocsBuild:
@@ -60,11 +58,7 @@ class FlextInfraUtilitiesDocsBuild:
         load: p.Infra.MkDocsLoadConfig, settings: Path, site_dir: Path
     ) -> MutableMapping[str, p.AttributeProbe]:
         """Load and validate a MkDocs config mapping."""
-        config_raw = load(config_file_path=str(settings), site_dir=str(site_dir))
-        if not isinstance(config_raw, MutableMapping):
-            msg = "mkdocs.config.load_config did not return a mutable mapping"
-            raise OSError(msg)
-        return config_raw
+        return load(config_file_path=str(settings), site_dir=str(site_dir))
 
     @staticmethod
     def docs_mkdocs_config_files(scope: m.Infra.DocScope) -> t.VariadicTuple[Path]:

@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import os
 import stat
-from fnmatch import fnmatchcase
+from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_cli import u
 
 from flext_core import r
-from flext_infra import c, config, m, p, t
+from flext_infra import c, m, p, t
+
+from .git import FlextInfraUtilitiesGit
 
 
 class FlextInfraUtilitiesProjectManagedArtifacts:
@@ -20,7 +22,13 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
     def snapshot_config_sources(
         cls, project_dir: Path
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Capture one stable, physical, direct ``config/*.yaml`` file set."""
+        """Capture one stable, physical, direct ``config/*.yaml`` file set.
+
+        A project root that is not materialized yet (a scaffold planned
+        read-only) owns no config sources, exactly like an absent ``config/``.
+        """
+        if not project_dir.exists() and not project_dir.is_symlink():
+            return r[tuple[m.Cli.AtomicFileState, ...]].ok(())
         project_identity = cls._required_directory_identity(
             project_dir, purpose="project root"
         )
@@ -46,7 +54,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(stable_paths)
         if stable_paths.value != paths.value:
             return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                f"project config source topology changed: {config_dir}"
+                f"{c.Infra.CONFIG_SNAPSHOT_TOPOLOGY_RACE_MARKER}: {config_dir}"
             )
         stable_project = cls._required_directory_identity(
             project_dir, purpose="project root"
@@ -55,7 +63,7 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(stable_project)
         if stable_project.value != project_identity.value:
             return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                f"project root changed during config snapshot: {project_dir}"
+                f"{c.Infra.CONFIG_SNAPSHOT_ROOT_RACE_MARKER}: {project_dir}"
             )
         return r[tuple[m.Cli.AtomicFileState, ...]].ok(tuple(sources))
 
@@ -66,14 +74,14 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         try:
             state = path.lstat()
         except OSError as exc:
-            return r[tuple[int, ...]].fail_op(f"inspect {purpose}", exc)
+            return r[t.VariadicTuple[int]].fail_op(f"inspect {purpose}", exc)
         attributes = getattr(state, "st_file_attributes", 0)
         reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
         if not stat.S_ISDIR(state.st_mode) or attributes & reparse:
-            return r[tuple[int, ...]].fail(
+            return r[t.VariadicTuple[int]].fail(
                 f"{purpose} is not a physical directory: {path}"
             )
-        return r[tuple[int, ...]].ok(cls._directory_state_key(state))
+        return r[t.VariadicTuple[int]].ok(cls._directory_state_key(state))
 
     @classmethod
     def _config_directory_identity(
@@ -82,16 +90,18 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         try:
             state = config_dir.lstat()
         except FileNotFoundError:
-            return r[tuple[int, ...]].ok(())
+            return r[t.VariadicTuple[int]].ok(())
         except OSError as exc:
-            return r[tuple[int, ...]].fail_op("inspect project config directory", exc)
+            return r[t.VariadicTuple[int]].fail_op(
+                "inspect project config directory", exc
+            )
         attributes = getattr(state, "st_file_attributes", 0)
         reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0)
         if not stat.S_ISDIR(state.st_mode) or attributes & reparse:
-            return r[tuple[int, ...]].fail(
+            return r[t.VariadicTuple[int]].fail(
                 f"project config path is not a physical directory: {config_dir}"
             )
-        return r[tuple[int, ...]].ok(cls._directory_state_key(state))
+        return r[t.VariadicTuple[int]].ok(cls._directory_state_key(state))
 
     @staticmethod
     def empty_snapshot() -> m.Infra.ProjectManagedArtifactsSnapshot:
@@ -99,7 +109,12 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         return m.Infra.ProjectManagedArtifactsSnapshot(
             sources=(),
             resolution=m.Infra.ProjectManagedArtifactsResolution(
-                artifacts=m.Infra.ProjectManagedArtifactsConfig(), mise_tool_sources={}
+                artifacts=m.Infra.ProjectManagedArtifactsConfig(
+                    Ruff=m.Infra.ProjectRuffConfig(per_file_ignores={}),
+                    Mise=m.Infra.ProjectMiseConfig(tools={}),
+                    Gitignore=m.Infra.ProjectGitignoreConfig(patterns=()),
+                ),
+                mise_tool_sources={},
             ),
         )
 
@@ -112,15 +127,17 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 sorted(path for path in config_dir.iterdir() if path.suffix == ".yaml")
             )
         except OSError as exc:
-            return r[tuple[Path, ...]].fail_op("enumerate project config sources", exc)
+            return r[t.VariadicTuple[Path]].fail_op(
+                "enumerate project config sources", exc
+            )
         current = cls._config_directory_identity(config_dir)
         if current.failure:
-            return r[tuple[Path, ...]].from_failure(current)
+            return r[t.VariadicTuple[Path]].from_failure(current)
         if current.value != expected_identity:
-            return r[tuple[Path, ...]].fail(
+            return r[t.VariadicTuple[Path]].fail(
                 f"project config directory changed during snapshot: {config_dir}"
             )
-        return r[tuple[Path, ...]].ok(paths)
+        return r[t.VariadicTuple[Path]].ok(paths)
 
     @staticmethod
     def _directory_state_key(state: os.stat_result) -> t.VariadicTuple[int]:
@@ -134,35 +151,6 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
             state.st_mtime_ns,
             state.st_ctime_ns,
         )
-
-    @staticmethod
-    def validate_mise_tool_selectors(
-        selectors: t.StrSequence, *, source: Path
-    ) -> p.Result[bool]:
-        """Reject alternate distributions of fleet-owned tool identities."""
-        toolchain = config.Infra.codegen.toolchain
-        protected_tools = tuple(
-            (owner, getattr(toolchain, owner))
-            for owner in toolchain.protected_mise_tools
-        )
-        for selector in selectors:
-            for owner, tool in protected_tools:
-                if not any(
-                    fnmatchcase(selector, pattern) for pattern in tool.selector_patterns
-                ):
-                    continue
-                if selector == tool.selector:
-                    # Identity validation owns only the distribution question:
-                    # the canonical selector IS the fleet identity. Whether a
-                    # project may redeclare a tool the fleet template already
-                    # publishes is the composition owner's rule.
-                    continue
-                return r[bool].fail(
-                    "project Mise selector declares an alternate distribution "
-                    f"for fleet identity {owner!r}: {selector!r} in "
-                    f"{source}; canonical selector is {tool.selector!r}"
-                )
-        return r[bool].ok(True)
 
     @classmethod
     def load_project_managed_artifacts(
@@ -198,27 +186,89 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         )
 
     @classmethod
+    def load_committed_project_managed_artifacts(
+        cls, project_dir: Path
+    ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
+        """Load ManagedArtifacts from the project's committed ``HEAD`` catalog.
+
+        Render inputs are ``f(SSOT, templates, PINS)``. A worktree can carry
+        concurrent WIP, so codegen renders project overlays only from the
+        immutable commit catalog; uncommitted declarations never enter a
+        projection.
+        """
+        snapshot = cls.snapshot_committed_project_managed_artifacts(project_dir)
+        if snapshot.failure:
+            return r[m.Infra.ProjectManagedArtifactsResolution].from_failure(snapshot)
+        return r[m.Infra.ProjectManagedArtifactsResolution].ok(
+            snapshot.value.resolution
+        )
+
+    @classmethod
+    def snapshot_committed_project_managed_artifacts(
+        cls, project_dir: Path
+    ) -> p.Result[m.Infra.ProjectManagedArtifactsSnapshot]:
+        """Capture and parse the committed catalog without physical source states.
+
+        ``sources`` stays empty because Git objects are already immutable: they
+        must not enter the transaction's live-file source barrier, and their
+        object identity makes a physical re-read meaningless.
+        """
+        resolved = project_dir.expanduser().resolve()
+        blobs = FlextInfraUtilitiesGit.git_committed_directory_blobs(
+            resolved, c.CONFIG_DIR_NAME
+        )
+        if blobs.failure:
+            return r[m.Infra.ProjectManagedArtifactsSnapshot].fail(
+                f"cannot open committed project config catalog at {resolved}: "
+                f"{blobs.error}"
+            )
+        payloads: t.MutableMappingKV[Path, bytes] = {
+            resolved / c.CONFIG_DIR_NAME / name: content
+            for name, content in sorted(blobs.value.items())
+            if name.endswith(".yaml")
+        }
+        if not payloads:
+            return r[m.Infra.ProjectManagedArtifactsSnapshot].ok(cls.empty_snapshot())
+        resolution = cls._load_project_managed_artifacts_from_payloads(payloads)
+        if resolution.failure:
+            return r[m.Infra.ProjectManagedArtifactsSnapshot].from_failure(resolution)
+        return r[m.Infra.ProjectManagedArtifactsSnapshot].ok(
+            m.Infra.ProjectManagedArtifactsSnapshot(
+                sources=(), resolution=resolution.value
+            )
+        )
+
+    @classmethod
     def load_project_managed_artifacts_from_snapshot(
         cls, source_snapshot: t.VariadicTuple[m.Cli.AtomicFileState]
     ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
         """Parse one caller-owned immutable project YAML snapshot."""
-        if not source_snapshot:
+        payloads: t.MutableMappingKV[Path, bytes] = {}
+        for source_state in source_snapshot:
+            if source_state.content is None:
+                return r[m.Infra.ProjectManagedArtifactsResolution].fail(
+                    f"project config snapshot is absent: {source_state.path}"
+                )
+            payloads[source_state.path] = source_state.content
+        return cls._load_project_managed_artifacts_from_payloads(payloads)
+
+    @classmethod
+    def _load_project_managed_artifacts_from_payloads(
+        cls, payloads: t.MappingKV[Path, bytes]
+    ) -> p.Result[m.Infra.ProjectManagedArtifactsResolution]:
+        """Parse one immutable path-to-bytes project YAML catalog."""
+        if not payloads:
             return r[m.Infra.ProjectManagedArtifactsResolution].ok(
                 cls.empty_snapshot().resolution
             )
-        ruff_ignores: dict[str, set[str]] = {}
-        mise_tools: dict[str, m.Infra.ProjectMiseTool] = {}
-        mise_sources: dict[str, Path] = {}
+        ruff_ignores: MutableMapping[str, set[str]] = {}
+        mise_tools: MutableMapping[str, m.Infra.ProjectMiseTool] = {}
+        mise_sources: MutableMapping[str, Path] = {}
         gitignore_patterns: list[str] = []
 
-        for source_state in source_snapshot:
-            source = source_state.path
-            if source_state.content is None:
-                return r[m.Infra.ProjectManagedArtifactsResolution].fail(
-                    f"project config snapshot is absent: {source}"
-                )
+        for source, content in sorted(payloads.items()):
             try:
-                source_text = source_state.content.decode(c.Cli.ENCODING_DEFAULT)
+                source_text = content.decode(c.Cli.ENCODING_DEFAULT)
             except UnicodeDecodeError as exc:
                 return r[m.Infra.ProjectManagedArtifactsResolution].fail_op(
                     f"decode project config source {source}", exc
@@ -233,11 +283,15 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
                 "ManagedArtifacts": managed
             })
             artifacts = project_config.ManagedArtifacts
-            for pattern, rules in artifacts.Ruff.per_file_ignores.items():
-                ruff_ignores.setdefault(pattern, set()).update(rules)
-            for pattern in artifacts.Gitignore.patterns:
-                if pattern not in gitignore_patterns:
-                    gitignore_patterns.append(pattern)
+            if artifacts.Ruff is not None:
+                for pattern, rules in artifacts.Ruff.per_file_ignores.items():
+                    ruff_ignores.setdefault(pattern, set()).update(rules)
+            if artifacts.Gitignore is not None:
+                for pattern in artifacts.Gitignore.patterns:
+                    if pattern not in gitignore_patterns:
+                        gitignore_patterns.append(pattern)
+            if artifacts.Mise is None:
+                continue
             for selector, tool in artifacts.Mise.tools.items():
                 previous = mise_sources.get(selector)
                 if previous is not None:
@@ -268,14 +322,6 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         )
 
     @classmethod
-    def compose_mise_toml(cls, project_dir: Path, rendered: str) -> p.Result[str]:
-        """Snapshot project YAML and compose Mise from those exact bytes."""
-        source_snapshot = cls.snapshot_config_sources(project_dir)
-        if source_snapshot.failure:
-            return r[str].from_failure(source_snapshot)
-        return cls.compose_mise_toml_from_snapshot(source_snapshot.value, rendered)
-
-    @classmethod
     def compose_mise_toml_from_snapshot(
         cls, source_snapshot: t.VariadicTuple[m.Cli.AtomicFileState], rendered: str
     ) -> p.Result[str]:
@@ -283,26 +329,34 @@ class FlextInfraUtilitiesProjectManagedArtifacts:
         resolved = cls.load_project_managed_artifacts_from_snapshot(source_snapshot)
         if resolved.failure:
             return r[str].from_failure(resolved)
-        local_tools = resolved.value.artifacts.Mise.tools
+        return cls.compose_mise_toml_from_resolution(resolved.value, rendered)
+
+    @classmethod
+    def compose_mise_toml_from_resolution(
+        cls, resolution: m.Infra.ProjectManagedArtifactsResolution, rendered: str
+    ) -> p.Result[str]:
+        """Add local tools from one caller-owned immutable parsed catalog."""
+        local_tools = resolution.artifacts.Mise.tools
         if not local_tools:
             return r[str].ok(rendered)
-        for selector in local_tools:
-            selector_validation = cls.validate_mise_tool_selectors(
-                (selector,), source=resolved.value.mise_tool_sources[selector]
-            )
-            if selector_validation.failure:
-                return r[str].from_failure(selector_validation)
         doc = u.Cli.toml_parse_text(rendered)
         if doc is None:
             return r[str].fail("canonical .mise.toml template is invalid")
         tools = u.Cli.toml_ensure_table(doc, "tools")
         for selector, tool in local_tools.items():
             if selector in tools:
-                source = resolved.value.mise_tool_sources[selector]
-                return r[str].fail(
-                    "project Mise selector collides with fleet tool "
-                    f"{selector!r}: global .mise.toml template and {source}"
+                # Resilient composition (operator law 2026-09-18): a project
+                # declaring a tool the fleet now provides is promotion residue,
+                # never an ambiguous contract. The fleet SSOT wins, the stale
+                # local declaration is reported for removal, and generation
+                # keeps flowing instead of blocking every consumer.
+                source = resolution.mise_tool_sources[selector]
+                u.Cli.warning(
+                    "project Mise selector "
+                    f"{selector!r} ({source}) is now a fleet tool; "
+                    "the fleet version wins — remove the local declaration"
                 )
+                continue
             tools[selector] = tool.version
         return r[str].ok(u.Cli.toml_dumps(doc))
 

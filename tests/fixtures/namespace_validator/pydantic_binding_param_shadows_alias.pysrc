@@ -1,0 +1,7 @@
+from __future__ import annotations
+from collections.abc import Callable
+from pydantic import root_validator as validate
+
+class FlextTestValidation:
+    def execute(self, validate: Callable[[], None]) -> None:
+        validate()

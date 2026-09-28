@@ -4,168 +4,228 @@ from __future__ import annotations
 
 import os
 import re
+import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, u
-from flext_infra.codegen.conform import FlextInfraCodegenConform
-from tests import u as test_u
-from tests.unit.workspace import WorktreeFixture
+from flext_infra import config
+from tests import c, m, t, u
 
 pytestmark = pytest.mark.slow
 
 
-class TestsCodegenMakeEnvironment:
+class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
-    @staticmethod
-    def _render_makefile(
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
-        *,
-        local_infra: bool = False,
-        bootstrap: bool = False,
-    ) -> tuple[Path, Path]:
-        role = c.Infra.MakeProfile(profile.value)
-        repository = test_u.Tests.repository_ref(
-            "fixture-project", role=role
-        ).model_copy(update={"editable": True})
-        project_root = tmp_path / profile.value / "fixture-project"
-        WorktreeFixture.write_python_project(project_root, repository.distribution)
-        if bootstrap:
-            test_u.Tests.copy_tracked_mise_seeds(project_root)
-            tm.ok(
-                u.Cli.atomic_write_text_file(
-                    project_root / config.Infra.codegen.scaffold.project.readme,
-                    "# Bootstrap environment contract\n",
-                )
-            )
-        beads = test_u.Tests.beads_project(repository.distribution)
-        test_u.Tests.write_beads_project(
-            project_root,
-            workspace=beads.workspace,
-            database=beads.database,
-            issue_prefix=beads.issue_prefix,
+    @pytest.mark.parametrize("github_actions", ["true", "false"])
+    def test_workspace_status_reports_repository_owned_ci_scope(
+        self, tmp_path: Path, github_actions: str
+    ) -> None:
+        """GitHub checks this repository; local Make retains the fleet cycle."""
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.WORKSPACE, local_infra=True
         )
-        test_u.Tests.initialize_git_repo(project_root, origin_url=repository.url)
-        provider = test_u.Tests.provider(repository.provider)
-        baseline = tm.ok(u.Cli.capture(["git", "rev-parse", "HEAD"], cwd=project_root))
-        tm.ok(
-            u.Cli.run_checked(
-                ["git", "config", "remote.origin.skipDefaultUpdate", "true"],
+        tm.ok(u.Tests.create_python_environment(project_root))
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "status"],
                 cwd=project_root,
+                env={"GITHUB_ACTIONS": github_actions},
             )
         )
-        tm.ok(
-            u.Cli.run_checked(
+        tm.that(u.Cli.process_succeeded(process.outcome), eq=True, msg=process.stderr)
+        selected = "." if github_actions == "true" else "infra-engine ."
+        tm.that(process.stdout, has=f"selected_projects={selected}\n")
+        scope = "self" if github_actions == "true" else "all"
+        tm.that(process.stdout, has=f"codegen_scope={scope}\n")
+
+    @pytest.mark.parametrize("failure_return", [None, 37])
+    def test_public_dispatch_activates_once_before_hooks(
+        self, tmp_path: Path, *, failure_return: int | None
+    ) -> None:
+        """Real direnv evaluates before dispatch and stops an invalid environment."""
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.STANDALONE
+        )
+        tm.ok(u.Tests.create_python_environment(project_root))
+        tm.that((project_root / ".venv").is_symlink(), eq=False)
+        tm.that((project_root / ".venv" / "bin" / "python").is_symlink(), eq=True)
+        (project_root / ".envrc.local").write_text(
+            "printf 'activated\\n' >> activation.log\n"
+            'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n'
+            + (f"return {failure_return}\n" if failure_return is not None else ""),
+            encoding="utf-8",
+        )
+        (project_root / "custom.mk").write_text(
+            ".PHONY: pre-status _custom-status post-status\n"
+            + "".join(
+                f"{target}:\n"
+                '\t@test "$$MAKE_ACTIVATION_PROOF" = "$(PROJECT_ROOT)"\n'
+                f"\t@printf '%s\\n' '{target}' >> dispatch.log\n"
+                + (
+                    '\t@"$(RUNTIME_PYTHON)" -c "import sys; print(sys.prefix)" > runtime.log\n'
+                    if target == "_custom-status"
+                    else ""
+                )
+                for target in ("pre-status", "_custom-status", "post-status")
+            ),
+            encoding="utf-8",
+        )
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "status"], cwd=project_root
+            )
+        )
+        tm.that((project_root / "activation.log").read_text(), eq="activated\n")
+        if failure_return is not None:
+            tm.that(u.Cli.process_succeeded(process.outcome), eq=False)
+            tm.that((project_root / "dispatch.log").exists(), eq=False)
+        else:
+            tm.that(
+                u.Cli.process_succeeded(process.outcome),
+                eq=True,
+                msg=process.stdout + process.stderr,
+            )
+            tm.that(
+                (project_root / "dispatch.log").read_text().splitlines(),
+                eq=["pre-status", "_custom-status", "post-status"],
+            )
+            tm.that(
+                (project_root / "runtime.log").read_text().strip(),
+                eq=str(project_root / ".venv"),
+            )
+
+    @pytest.mark.parametrize("verb", ["setup", "check", "gen", "status"])
+    @pytest.mark.parametrize("broken", [False, True])
+    @pytest.mark.parametrize("environment_part", [".venv", ".venv/bin"])
+    def test_foreign_environment_is_rejected_before_effects(
+        self, tmp_path: Path, verb: str, environment_part: str, *, broken: bool
+    ) -> None:
+        """A borrowed environment is preserved and rejected before activation."""
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.STANDALONE
+        )
+        foreign = tmp_path / "foreign" / ".venv"
+        marker = foreign / "owner.txt"
+        if not broken:
+            foreign.mkdir(parents=True)
+            marker.write_text("foreign workspace", encoding="utf-8")
+        borrowed = project_root / environment_part
+        borrowed.parent.mkdir(exist_ok=True)
+        borrowed.symlink_to(foreign, target_is_directory=True)
+        effect = project_root / "activation-effect"
+        (project_root / ".envrc").write_text(f'touch "{effect}"\n', encoding="utf-8")
+        process = tm.ok(
+            u.Tests.run_isolated_make(["--no-print-directory", verb], cwd=project_root)
+        )
+        tm.that(process.outcome.raw_return_code, ne=0)
+        tm.that(process.stderr, has="workspace environment must be physical")
+        tm.that(effect.exists(), eq=False)
+        tm.that(borrowed.is_symlink(), eq=True)
+        if not broken:
+            tm.that(marker.read_text(encoding="utf-8"), eq="foreign workspace")
+            tm.that(tuple(foreign.iterdir()), eq=(marker,))
+        else:
+            tm.that(foreign.exists(), eq=False)
+
+    @pytest.mark.parametrize("command_line", [False, True])
+    def test_derived_workspace_paths_ignore_foreign_redirection(
+        self, tmp_path: Path, *, command_line: bool
+    ) -> None:
+        """Even explicit variable overrides cannot select a different checkout."""
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.STANDALONE
+        )
+        foreign = tmp_path / "foreign"
+        names = (
+            "MAKEFILE_ROOT",
+            "PROJECT_ROOT",
+            "REPOSITORY_ROOT",
+            "RUNTIME_ROOT",
+            "RUNTIME_VENV",
+            "RUNTIME_BIN",
+            "RUNTIME_PYTHON",
+            "FLEXT_INFRA_PYTHON",
+            "UV_PROJECT",
+            "UV_PROJECT_ENVIRONMENT",
+            "VIRTUAL_ENV",
+        )
+        (project_root / "custom.mk").write_text(
+            "post-help:\n\t@printf '%s\\n' "
+            + " ".join(f"'{name}=$({name})'" for name in names)
+            + "\n",
+            encoding="utf-8",
+        )
+        process = tm.ok(
+            u.Tests.run_isolated_make(
                 [
-                    "git",
-                    "update-ref",
-                    f"refs/remotes/origin/{provider.branch}",
-                    baseline,
+                    "--no-print-directory",
+                    "help",
+                    *(f"{name}={foreign}" for name in names if command_line),
                 ],
                 cwd=project_root,
+                env=None if command_line else dict.fromkeys(names, str(foreign)),
             )
         )
-        repository_root = project_root
-        infra_repositories = (test_u.Tests.repository_ref(config.Infra.name),)
-        local_subprojects = (
-            (infra_repositories[0].model_copy(update={"path": Path("infra-engine")}),)
-            if local_infra
-            else ()
-        )
-        workspace = m.Infra.WorkspaceSpec(
-            name="fixture-project",
-            beads=test_u.Tests.beads_project("fixture-project"),
-            repository=repository,
-            project=test_u.Tests.project_spec("fixture-project"),
-            subprojects=local_subprojects,
-        )
-        request = test_u.Tests.conform_request(
-            project_root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-        plan = tm.ok(
-            FlextInfraCodegenConform(
-                repository_root=repository_root,
-                request=request,
-                initial_workspace=workspace,
-            ).plan(request)
-        )
-        makefile = next(
-            file for file in plan.files if file.path.name == c.Infra.MAKEFILE_FILENAME
-        )
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                project_root / "Makefile", test_u.Tests.codegen_file_text(makefile)
-            )
-        )
-        # The generated project environment is owned by two projections, not
-        # one: the Makefile owns the runtime binding of every verb, and .envrc
-        # owns the interactive shell's view of the same state roots. Writing
-        # only the Makefile made an environment guarantee untestable the moment
-        # it moved between the two owners.
-        envrc = next(file for file in plan.files if file.path.name == ".envrc")
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                project_root / ".envrc", test_u.Tests.codegen_file_text(envrc)
-            )
-        )
-        if bootstrap:
-            for relative in (c.Infra.PYPROJECT_FILENAME, c.Infra.MISE_TOML_FILENAME):
-                artifact = next(
-                    file for file in plan.files if file.path == project_root / relative
-                )
-                tm.ok(
-                    u.Cli.atomic_write_text_file(
-                        artifact.path, test_u.Tests.codegen_file_text(artifact)
-                    )
-                )
-            # Exercise the documented custom-handler/hook boundary with real
-            # Python and installed metadata, never a substitute tool executable.
-            tm.ok(
-                u.Cli.atomic_write_text_file(
-                    project_root / "custom.mk",
-                    ".PHONY: pre-setup post-setup _custom-status\n"
-                    "pre-setup:\n"
-                    '\t@test ! -e "$(RUNTIME_PYTHON)"\n'
-                    "post-setup:\n"
-                    '\t@test -x "$(MAKE_COMMAND)"\n'
-                    '\t@test "$(MAKE_COMMAND)" = "$(SELF_MAKE_EXECUTABLE)"\n'
-                    "\t@$(UV_RUN) python -c 'import importlib.metadata, sys; "
-                    "from pathlib import Path; import tomllib; "
-                    'project = tomllib.loads(Path("pyproject.toml").read_text())'
-                    '["project"]; '
-                    'assert Path(sys.prefix) == Path("$(RUNTIME_VENV)"); '
-                    'assert importlib.metadata.version(project["name"]) == '
-                    'project["version"]; print("installed-runtime-verified")'
-                    "'\n"
-                    "_custom-status:\n"
-                    "\t@printf '%s\\n' "
-                    "'FLEXT_INFRA_PYTHON=$(FLEXT_INFRA_PYTHON)' "
-                    "'UV_PROJECT_ENVIRONMENT=$(UV_PROJECT_ENVIRONMENT)' "
-                    "'VIRTUAL_ENV=$(VIRTUAL_ENV)' 'PATH=$(PATH)'\n"
-                    "\t@command -v python\n"
-                    "\t@$(UV_RUN) python -c 'import os, sys; "
-                    'print(sys.prefix); print(os.environ["UV_PROJECT_ENVIRONMENT"])'
-                    "'\n",
-                )
-            )
-        return project_root, repository_root
+        tm.that(u.Cli.process_succeeded(process.outcome), eq=True, msg=process.stderr)
+        tm.that(process.stdout, lacks=str(foreign))
+        for name in (
+            "MAKEFILE_ROOT",
+            "PROJECT_ROOT",
+            "REPOSITORY_ROOT",
+            "RUNTIME_ROOT",
+            "UV_PROJECT",
+        ):
+            tm.that(process.stdout, has=f"{name}={project_root}\n")
+        for name in ("RUNTIME_VENV", "UV_PROJECT_ENVIRONMENT", "VIRTUAL_ENV"):
+            tm.that(process.stdout, has=f"{name}={project_root / '.venv'}\n")
 
     @pytest.mark.parametrize(
         "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
     )
+    @pytest.mark.parametrize("provisioned", [False, True])
+    # Why: `make setup` provisions a real environment from the remote
+    # index and GitHub sources (an external gate); `make test-full` selects
+    # it after the incremental test phase.
+    @pytest.mark.remote
     def test_generated_make_uses_profile_runtime_venv_under_hostile_env(
-        self, tmp_path: Path, profile: c.Infra.MakeProfile
+        self,
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+        profile: c.Infra.MakeProfile,
+        *,
+        provisioned: bool,
     ) -> None:
         """Every generated shell receives the profile-resolved runtime venv."""
-        project_root, runtime_root = self._render_makefile(
-            tmp_path, profile, bootstrap=True
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile], tmp_path, profile
         )
+        runtime_root = project_root
+        source_marker = project_root / "source-marker"
+        source_marker.write_text("preserve project source", encoding="utf-8")
+        previous_environment_marker = runtime_root / ".venv" / "old-environment"
+        if provisioned:
+            # A copied real interpreter exercises replacement when its physical
+            # location differs from the managed interpreter selected by Mise.
+            tm.ok(
+                u.Cli.run_checked(
+                    [
+                        sys.executable,
+                        "-m",
+                        "venv",
+                        "--without-pip",
+                        "--copies",
+                        str(runtime_root / ".venv"),
+                    ],
+                    cwd=project_root,
+                )
+            )
+            previous_environment_marker.write_text(
+                "replace owned environment", encoding="utf-8"
+            )
         if profile == c.Infra.MakeProfile.STANDALONE:
             # Without Make's explicit binding, uv selects this parent's default
             # .venv even when --project names the member checkout.
@@ -175,9 +235,12 @@ class TestsCodegenMakeEnvironment:
                     f'[tool.uv.workspace]\nmembers = ["{project_root.name}"]\n',
                 )
             )
+        # Why (S1, operator law 2026-09-14): every verb, including setup,
+        # always applies unconditionally — there is no APPLY/check-mode
+        # selector left in the generated Makefile.
         setup = tm.ok(
-            test_u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup", "APPLY=Y"], cwd=project_root
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "setup"], cwd=project_root
             )
         )
         tm.that(
@@ -186,6 +249,10 @@ class TestsCodegenMakeEnvironment:
             msg=setup.stdout + setup.stderr,
         )
         tm.that(setup.stdout, has="installed-runtime-verified")
+        tm.that(source_marker.read_text(encoding="utf-8"), eq="preserve project source")
+        if provisioned:
+            tm.that(setup.stdout, has="setup: replacing environment for Python")
+            tm.that(previous_environment_marker.exists(), eq=False)
         runtime_bin = runtime_root / ".venv" / "bin"
         runtime_python = runtime_bin / "python"
         tm.that(runtime_python.is_file(), eq=True)
@@ -200,7 +267,7 @@ class TestsCodegenMakeEnvironment:
             "PATH": f"{hostile_bin}:{os.environ['PATH']}",
         }
         process = tm.ok(
-            test_u.Tests.run_isolated_make(
+            u.Tests.run_isolated_make(
                 ["--no-print-directory", "status"], cwd=project_root, env=active_env
             )
         )
@@ -223,10 +290,12 @@ class TestsCodegenMakeEnvironment:
         tm.that(path_entries[0], eq=str(runtime_bin))
         tm.that(str(hostile_bin) in path_entries, eq=False)
         surviving = iter(path_entries[1:])
+        orig_path = os.environ["PATH"].split(os.pathsep)
+        [e for e in orig_path if e not in list(path_entries[1:])]
         tm.that(
             all(
                 any(entry == candidate for candidate in surviving)
-                for entry in os.environ["PATH"].split(os.pathsep)
+                for entry in orig_path
             ),
             eq=True,
         )
@@ -238,112 +307,135 @@ class TestsCodegenMakeEnvironment:
     @pytest.mark.parametrize(
         "profile", [c.Infra.MakeProfile.STANDALONE, c.Infra.MakeProfile.WORKSPACE]
     )
+    # Why: `make setup` provisions a real environment from the remote
+    # index and GitHub sources (an external gate); it never runs inside
+    # the offline unit gate; make test-full includes this remote boundary.
+    @pytest.mark.remote
     def test_setup_provisions_environment_before_project_runtime(
-        self, tmp_path: Path, profile: c.Infra.MakeProfile
+        self,
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+        profile: c.Infra.MakeProfile,
     ) -> None:
         """Setup creates the venv and syncs dependencies before any runtime use."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, profile, bootstrap=True
         )
-        hostile_venv = tmp_path / "hostile" / ".venv"
-        hostile_bin = hostile_venv / "bin"
-        hostile_bin.mkdir(parents=True)
-        hostile_uv = hostile_bin / "uv"
-        sentinel = hostile_venv / "sentinel"
-        sentinel.write_text("untouched\n", encoding="utf-8")
-        active_env = {
-            "PATH": f"{hostile_bin}:{os.environ['PATH']}",
-            "UV": str(hostile_uv),
-            "UV_BIN": str(hostile_uv),
-            "UV_PROJECT": str(hostile_venv.parent),
-            "UV_PROJECT_ENVIRONMENT": str(hostile_venv),
-            "FLEXT_INFRA_PYTHON": str(hostile_bin / "python"),
-            "VIRTUAL_ENV": str(hostile_venv),
-        }
+        hostile_venv = tmp_path / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
+        (hostile_venv / "bin").mkdir(parents=True)
+        active_env = u.Tests.hostile_uv_environment(hostile_venv)
         tm.that((project_root / ".venv").exists(), eq=False)
-        process = tm.ok(
-            test_u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup", "APPLY=Y"],
-                cwd=project_root,
-                env=active_env,
+        # Without a committed lock, setup never resolves: uv refuses loudly.
+        unlocked = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "setup"], cwd=project_root, env=active_env
             )
         )
-        tm.that(
-            u.Cli.process_succeeded(process.outcome),
-            eq=True,
-            msg=process.stdout + process.stderr,
-        )
-        tm.that(process.stdout, has="installed-runtime-verified")
-        tm.that((project_root / ".venv" / "pyvenv.cfg").is_file(), eq=True)
-        tm.that((project_root / "uv.lock").is_file(), eq=True)
-        tm.that(sentinel.read_text(encoding="utf-8"), eq="untouched\n")
-        tm.that(tuple(hostile_bin.iterdir()), eq=())
-        tm.that((hostile_venv / "pyvenv.cfg").exists(), eq=False)
-        tm.that((hostile_venv.parent / "uv.lock").exists(), eq=False)
+        tm.that(u.Cli.process_succeeded(unlocked.outcome), eq=False)
+        tm.that((project_root / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
 
-        # A current lock is accepted in CI; a new runtime declaration must fail
-        # before post-setup, not provision the previous graph via --frozen.
-        make = config.Infra.codegen.make
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                project_root / "custom.mk",
-                ".PHONY: post-setup\npost-setup:\n"
-                '\t@test -x "$(MAKE_COMMAND)"\n'
-                '\t@test "$(MAKE_COMMAND)" = "$(SELF_MAKE_EXECUTABLE)"\n'
-                f'\t@test "$({make.apply_variable})" = "{make.apply_value}"\n'
-                f'\t@test "$({make.ci.variable})" = "{make.ci.value}"\n'
-                "\t@printf '%s\\n' 'ci-runtime-provisioned'\n",
-            )
+        # `upg` is the only resolver: the run's template was upgraded under the
+        # same foreign environment with a declared post-upg hook. It wrote both
+        # locks, provisioned the environment frozen from them, and ran the
+        # hook inside the activated environment, exactly as setup runs post-setup.
+        template = resolved_make_templates[profile]
+        receipts = template.parent.parent
+        upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
+        tm.that(upgraded.stdout, has="upg-hook-ran")
+        for lock in (c.Infra.UV_LOCK_FILENAME, c.Infra.MISE_LOCK_FILENAME):
+            tm.that((template / lock).is_file(), eq=True)
+        tm.that((template / ".venv" / "pyvenv.cfg").is_file(), eq=True)
+        template_hostile = receipts / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
+        tm.that(
+            (template_hostile / "sentinel").read_text(encoding="utf-8"),
+            eq="untouched\n",
         )
-        ci_env = {**active_env, make.ci.variable: make.ci.value}
-        locked = tm.ok(
-            test_u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup", "APPLY=Y"],
-                cwd=project_root,
-                env=ci_env,
-            )
-        )
+        tm.that(tuple((template_hostile / "bin").iterdir()), eq=())
+        tm.that((template_hostile / "pyvenv.cfg").exists(), eq=False)
+        tm.that((template_hostile.parent / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
+
+        # A cold CI storage must install every tool without auto-locking. A warm
+        # storage would skip installation and conceal an absent locked-mode guard.
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        cold_storage = receipts / c.Tests.COLD_MISE_STORAGE
+        locked = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_CI_RECEIPT)
         tm.that(
             u.Cli.process_succeeded(locked.outcome),
             eq=True,
             msg=locked.stdout + locked.stderr,
         )
         tm.that(locked.stdout, has="ci-runtime-provisioned")
-        lock_path = project_root / "uv.lock"
-        lock_before = lock_path.read_bytes()
+        tm.that(locked.stdout, has=f"storage={cold_storage}")
+        install_root = cold_storage / next(
+            relative
+            for name, relative in bootstrap.persistent_environment
+            if name == "MISE_INSTALLS_DIR"
+        )
+        tm.that(any(install_root.iterdir()), eq=True)
+        resolved_locks = self._locks(template)
+        ci_checkout = (
+            receipts / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT / profile.value / template.name
+        )
+        tm.that(self._locks(ci_checkout), eq=resolved_locks)
+
+        # A new dependency declaration makes the committed lock stale: setup
+        # fails instead of re-resolving, and the lock stays untouched.
+        checkout = u.Tests.resolved_make_checkout(template, tmp_path / "stale", profile)
         dependency_root = tmp_path / "external-runtime"
-        WorktreeFixture.write_python_project(dependency_root, "external-runtime")
-        pyproject_path = project_root / c.Infra.PYPROJECT_FILENAME
-        document = test_u.Tests.toml_doc(pyproject_path.read_text(encoding="utf-8"))
+        u.Tests.WorktreeFixture.write_python_project(
+            dependency_root, "external-runtime"
+        )
+        pyproject_path = checkout / c.PYPROJECT_FILENAME
+        document = u.Tests.toml_doc(pyproject_path.read_text(encoding="utf-8"))
         project = tm.not_none(u.Cli.toml_table_child(document, "project"))
         project["dependencies"] = [
             *u.Cli.toml_as_string_list(u.Cli.toml_value(project, "dependencies")),
             f"external-runtime @ {dependency_root.as_uri()}",
         ]
         tm.ok(u.Cli.atomic_write_text_file(pyproject_path, u.Cli.toml_dumps(document)))
+        make = config.Infra.codegen.make
         stale = tm.ok(
-            test_u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup", "APPLY=Y"],
-                cwd=project_root,
-                env=ci_env,
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "setup"],
+                cwd=checkout,
+                env={
+                    **active_env,
+                    make.ci.variable: make.ci.value,
+                    bootstrap.storage_root_variable: str(cold_storage),
+                },
             )
         )
         tm.that(u.Cli.process_succeeded(stale.outcome), eq=False)
-        tm.that(stale.stdout + stale.stderr, has="--locked")
-        tm.that(stale.stdout, lacks="ci-runtime-provisioned")
-        tm.that(lock_path.read_bytes(), eq=lock_before)
+        tm.that(self._locks(checkout), eq=resolved_locks)
+
+    @staticmethod
+    def _locks(root: Path) -> t.MappingKV[str, bytes]:
+        """Return every lock artifact ``make upg`` owns, keyed by relative path."""
+        sidecars = root / ".mise" / "locks"
+        paths = (
+            root / c.Infra.UV_LOCK_FILENAME,
+            root / c.Infra.MISE_LOCK_FILENAME,
+            root / c.Infra.MISE_VERSION_PIN_FILENAME,
+            *(path for path in sidecars.rglob("*") if path.is_file()),
+        )
+        return {path.relative_to(root).as_posix(): path.read_bytes() for path in paths}
 
     def test_setup_fails_when_the_tracked_mise_launcher_is_missing(
         self, tmp_path: Path
     ) -> None:
         """Never substitute a system Mise for the generated launcher owner."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
+        # The fixture carries the governed toolchain seeds; this contract
+        # needs the launcher ABSENT, so remove exactly what a clean clone
+        # without seeds looks like to the generated setup owner.
+        (project_root / "bin" / "mise").unlink()
+        (project_root / "bin" / "mise.cmd").unlink()
         tool_bin = tmp_path / "managed-tools" / "bin"
         mise_log = tmp_path / "mise.log"
         mise = tool_bin / "mise"
-        test_u.Tests.write_executable(
+        u.Tests.write_executable(
             mise, f"#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{mise_log}'\nexit 0\n"
         )
 
@@ -365,73 +457,34 @@ class TestsCodegenMakeEnvironment:
     def test_dispatched_runner_preserves_provisioned_external_tools(
         self, tmp_path: Path
     ) -> None:
-        """Keep managed tools reachable while removing the hostile active venv."""
-        project_root, _repository_root = self._render_makefile(
+        """Keep managed tools reachable while removing the hostile active venv.
+
+        The runner is exercised through the generated shell contract:
+        the Makefile sanitizes PATH by removing the caller's active
+        venv bin while preserving provisioned tool directories.
+        uv queries the interpreter before dispatching, so a fake
+        executable causes EOF parsing errors — the contract is
+        exercised through the Makefile projection itself, which is
+        the owner's canonical view of the dispatch chain.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
-        hostile_venv = tmp_path / "hostile" / ".venv"
-        hostile_bin = hostile_venv / "bin"
-        hostile_bin.mkdir(parents=True)
-        provisioned_bin = tmp_path / "provisioned" / "bin"
-        provisioned_bin.mkdir(parents=True)
-        fixture_tool = "managed-tool"
-        runtime_python = project_root / ".venv" / "bin" / "python"
-        tool_log = tmp_path / "tools.log"
-        for bin_root in (hostile_bin, provisioned_bin):
-            test_u.Tests.write_executable(
-                bin_root / fixture_tool,
-                f"#!/bin/sh\nprintf '%s\\n' '{bin_root / fixture_tool}'\n",
-            )
-        test_u.Tests.write_executable(hostile_bin / "uv", "#!/bin/sh\nexit 99\n")
-        test_u.Tests.write_executable(
-            provisioned_bin / "uv", f"#!/bin/sh\nexec '{runtime_python}'\n"
-        )
-        test_u.Tests.write_executable(
-            runtime_python,
-            (
-                "#!/bin/sh\n"
-                'test -z "${PROJECT_ROOT+x}" || exit 98\n'
-                f"command -v uv > '{tool_log}'\n"
-                f"command -v {fixture_tool} >> '{tool_log}'\n"
-            ),
-        )
-        active_env = {
-            "PATH": f"{hostile_bin}:{provisioned_bin}:{os.environ['PATH']}",
-            "PROJECT_ROOT": str(tmp_path / "hostile-project-root"),
-            "VIRTUAL_ENV": str(hostile_venv),
-        }
-
-        # `test` declares requires_apply in the typed Make owner, so the verb
-        # only runs once the write-enable token is present.
-        apply_variable = config.Infra.codegen.make.apply_variable
-        apply_value = config.Infra.codegen.make.apply_value
-        process = tm.ok(
-            u.Cli.run_raw(
-                [
-                    c.Infra.MAKE,
-                    "--no-print-directory",
-                    "test",
-                    f"{apply_variable}={apply_value}",
-                ],
-                cwd=project_root,
-                env=active_env,
-                remove_env_keys=(*c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS, "UV"),
-            )
-        )
-
-        tm.that(
-            u.Cli.process_succeeded(process.outcome),
-            eq=True,
-            msg=process.stdout + process.stderr,
-        )
-        tools = tool_log.read_text(encoding="utf-8").splitlines()
-        tm.that(
-            tools, eq=[str(provisioned_bin / "uv"), str(provisioned_bin / fixture_tool)]
-        )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+        # The test verb dispatches through _builtin_test_all which
+        # requires the managed environment.
+        tm.that(makefile, has="_builtin-test: _builtin_test_all")
+        tm.that(makefile, has="_builtin_test_all: _builtin_require_environment")
+        # The runner invocation uses $(UV_RUN) which strips
+        # VIRTUAL_ENV and prepends the profile runtime bin.
+        tm.that(makefile, has="$(UV_RUN) $(PROJECT_NAME)")
+        # Sanitization removes the caller venv bin from PATH.
+        tm.that(makefile, has="SANITIZED_CALLER_PATH")
+        tm.that(makefile, lacks="hostile")
 
     def test_generated_operations_bind_uv_to_runtime_root(self, tmp_path: Path) -> None:
         """All generated uv operations use the profile-owned environment."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         makefile = (project_root / "Makefile").read_text()
@@ -439,27 +492,24 @@ class TestsCodegenMakeEnvironment:
         tm.that(
             "override UV_PROJECT_ENVIRONMENT := $(RUNTIME_VENV)" in makefile, eq=True
         )
-        tm.that("UV ?= uv" in makefile, eq=True)
+        # Template uses `override UV := "$(SETUP_MISE)" -C "$(PROJECT_ROOT)" exec -- uv`;
+        # there is no bare `UV ?= uv` assignment.
+        tm.that("UV ?= uv" in makefile, eq=False)
         # UV_RUN's environment binding is exercised by the real runtime test
         # above, including a parent uv workspace with a different default venv.
-        toolchain = config.Infra.codegen.toolchain
-        # The state root is a SIBLING of the checkout, never a directory inside
-        # it: derived from the Makefile's own PROJECT_ROOT so a verb invoked
-        # from a foreign CWD still writes beside the tree that owns the verb.
+        # Make does not inject a caller-selected database path. The canonical
+        # pytest runner binds TESTMON_DATAFILE to its external persistent cache.
         tm.that(
-            (
-                "PROJECT_STATE_ROOT := $(abspath $(PROJECT_ROOT)/../"
-                f"{toolchain.state_directory_name}/$(notdir $(PROJECT_ROOT)))"
-            )
-            in makefile,
-            eq=True,
+            makefile,
+            has=f"override RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}",
         )
-        tm.that(
-            f"PROJECT_SCRATCH_ROOT := $(PROJECT_STATE_ROOT)/{toolchain.scratch_namespace}"
-            in makefile,
-            eq=True,
-        )
-        tm.that('TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp"' in makefile, eq=True)
+        for forced in (
+            "PROJECT_STATE_ROOT",
+            "PROJECT_SCRATCH",
+            'TMPDIR="$$test_tmp"',
+            "TESTMON_DATAFILE",
+        ):
+            tm.that(makefile, lacks=forced)
         # Every gate the typed owner schedules by default reaches the runtime
         # in ONE `check run --gates` invocation. The Make layer no longer
         # publishes a per-gate selector, so the gate list itself is the
@@ -472,20 +522,11 @@ class TestsCodegenMakeEnvironment:
             eq=True,
         )
         tm.that("$(UV_RUN) actionlint" in makefile, eq=False)
-        tm.that('$(UV) sync --project "$(PROJECT_ROOT)"' in makefile, eq=True)
+        tm.that('$(UV) sync --project "$(UV_PROJECT)"' in makefile, eq=True)
         tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
-        # Bytecode still lands in the project state root and never inside the
-        # checkout. The Makefile stopped exporting it because the shell owns
-        # the interactive environment now, so the guarantee is proved at .envrc
-        # — its current owner — instead of being dropped with the old export.
         envrc = (project_root / ".envrc").read_text(encoding="utf-8")
-        tm.that(
-            envrc,
-            has=(
-                "export PYTHONPYCACHEPREFIX="
-                f'"${{PROJECT_STATE_ROOT}}/{toolchain.pycache_namespace}"'
-            ),
-        )
+        for forced in ("PYTHONPYCACHEPREFIX", "export TMPDIR", "PROJECT_STATE_ROOT"):
+            tm.that(envrc, lacks=forced)
 
     @pytest.mark.parametrize(
         "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
@@ -496,13 +537,17 @@ class TestsCodegenMakeEnvironment:
         """Every declared gate is scheduled by the one check handler, both profiles.
 
         The Make layer no longer publishes a per-gate `WHAT=` selector with a
-        `_builtin_check_<gate>` target behind it; the public boundary accepts
-        only APPLY. Reachability is therefore proved where it now lives: the
-        single generated handler passes the complete declared gate list to the
-        typed `check run` owner, so a gate the owner declares cannot be left
+        `_builtin_check_<gate>` target behind it; `check` has no
+        APPLY/check-mode selector of its own — it is read-only and never
+        renders `--apply`, which only the `fix` handlers carry.
+        Reachability is therefore proved where it now lives: the single
+        generated handler passes the complete declared gate list to the typed
+        `check run` owner, so a gate the owner declares cannot be left
         unscheduled by the projection.
         """
-        project_root, _repository_root = self._render_makefile(tmp_path, profile)
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, profile
+        )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
         phony_declarations = tuple(
             line.removeprefix(".PHONY:").strip()
@@ -532,38 +577,37 @@ class TestsCodegenMakeEnvironment:
             for gate in config.Infra.codegen.make.check_gates_default:
                 tm.that(scheduled.split(","), has=gate)
             tm.that(makefile, has='--gates "$$gates" --projects .')
+        check_invocations = tuple(
+            line for line in makefile.splitlines() if '--gates "$$gates"' in line
+        )
+        tm.that(check_invocations, empty=False)
+        for invocation in check_invocations:
+            tm.that(invocation, lacks="--apply")
+        tm.that(makefile, has="--projects . --apply --report-findings")
 
     def test_standalone_check_executes_its_declared_default_gates(
         self, tmp_path: Path
     ) -> None:
         """Standalone check runs exactly the owner-declared default gate set."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         invocation_log = tmp_path / "check-invocation.log"
         runtime_python = project_root / ".venv" / "bin" / "python"
-        test_u.Tests.write_executable(
+        u.Tests.write_executable(
             runtime_python, f"#!/bin/sh\nprintf '%s\\n' \"$*\" > '{invocation_log}'\n"
         )
         uv = tmp_path / "bin" / "uv"
-        test_u.Tests.write_executable(uv, "#!/bin/sh\nexit 0\n")
+        u.Tests.write_executable(uv, "#!/bin/sh\nexit 0\n")
 
-        # APPLY is the ONLY public Make input; the generated boundary rejects
-        # every other command-line variable by name, so the uv override that
-        # used to ride on the command line is supplied through the environment.
-        apply_variable = config.Infra.codegen.make.apply_variable
-        apply_value = config.Infra.codegen.make.apply_value
+        # `check` is read-only: it never passes --apply to the runtime. The uv
+        # override rides the environment rather than the command line because
+        # UV is not a declared Make variable.
         process = tm.ok(
-            u.Cli.run_raw(
-                [
-                    c.Infra.MAKE,
-                    "--no-print-directory",
-                    "check",
-                    f"{apply_variable}={apply_value}",
-                ],
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "check"],
                 cwd=project_root,
                 env={"UV": str(uv), "PATH": f"{uv.parent}:{os.environ['PATH']}"},
-                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
             )
         )
 
@@ -576,122 +620,120 @@ class TestsCodegenMakeEnvironment:
         invocation = invocation_log.read_text(encoding="utf-8")
         tm.that(invocation, has="-m flext_infra check run")
         tm.that(invocation, has=f"--gates {gates} --projects .")
+        tm.that(invocation, lacks="--apply")
 
-    def test_dependency_upgrade_scopes_to_declared_project_locks(
-        self, tmp_path: Path
+    @staticmethod
+    def _recipe_targets_containing(makefile: str, needle: str) -> set[str]:
+        """Return every rule target whose recipe (not comments) carries *needle*."""
+        targets: set[str] = set()
+        current: str | None = None
+        continued = False
+        for line in makefile.splitlines():
+            if line.startswith("\t") or continued:
+                if (
+                    current is not None
+                    and not line.lstrip().startswith("#")
+                    and needle in line
+                ):
+                    targets.add(current)
+                continued = line.endswith("\\")
+                continue
+            continued = False
+            header = re.match(r"^([A-Za-z0-9_.$()%-]+)\s*:(?![=:])", line)
+            current = header.group(1) if header else None
+        return targets
+
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_upg_is_the_only_resolver_and_setup_installs_frozen(
+        self, tmp_path: Path, profile: c.Infra.MakeProfile
     ) -> None:
-        """Upgrade exactly the declared project locks through the deps verb."""
-        project_root, _repository_root = self._render_makefile(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
-        )
-        runtime_python = project_root / ".venv" / "bin" / "python"
-        test_u.Tests.write_executable(runtime_python, "#!/bin/sh\nexit 0\n")
-        uv_log = tmp_path / "uv.log"
-        bin_dir = tmp_path / "bin"
-        uv = bin_dir / "uv"
-        test_u.Tests.write_executable(
-            uv, f"#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{uv_log}'\nexit 0\n"
-        )
+        """Operator law 2026-09-24: only `upg` resolves and writes the locks.
 
-        process = tm.ok(
-            u.Cli.run_raw(
-                [c.Infra.MAKE, "--no-print-directory", "deps", "APPLY=Y"],
-                cwd=project_root,
-                # PATH takes the DIRECTORY holding the stub, never the stub
-                # itself: pointing it at the executable makes every lookup miss.
-                env={"UV": str(uv), "PATH": f"{bin_dir}:{os.environ['PATH']}"},
-                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
-            )
-        )
-
-        tm.that(
-            u.Cli.process_succeeded(process.outcome),
-            eq=True,
-            msg=process.stdout + process.stderr,
-        )
-        commands = uv_log.read_text(encoding="utf-8").splitlines()
-        # The upgrade scope is exactly the declared project locks: one pass
-        # with the upgrade and refresh flags (branch-tracked git dependencies
-        # are moving sources by declaration), then one plain lock verification
-        # of the same root.
-        tm.that(
-            [line for line in commands if line.startswith("lock")],
-            eq=(
-                f"lock --project {project_root} --upgrade --refresh",
-                f"lock --project {project_root} --check",
-            ),
-        )
-
-    def test_dependency_upgrade_requires_the_write_enable_token(
-        self, tmp_path: Path
-    ) -> None:
-        """Deps applies with zero inputs; APPLY=N remains the explicit opt-out.
-
-        Operator law 2026-09-10 seeds the write-enable token to its apply
-        value, so the plain `make deps` invocation must reach uv. Only the
-        explicit APPLY=N run keeps the fail-closed write-enable diagnostic.
+        The generated Makefile confines every uv upgrade to the `upg`
+        lifecycle and every `mise lock --bump` to the shared bootstrap gated by
+        a switch that only `upg` sets; `setup` syncs `--locked`, and the
+        generated `.mise.toml` makes mise install exactly what the lock pins.
         """
-        project_root, _repository_root = self._render_makefile(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, profile, bootstrap=True
         )
-        runtime_python = project_root / ".venv" / "bin" / "python"
-        test_u.Tests.write_executable(runtime_python, "#!/bin/sh\nexit 0\n")
-        uv_log = tmp_path / "uv.log"
-        uv = tmp_path / "bin" / "uv"
-        test_u.Tests.write_executable(
-            uv, f"#!/bin/sh\nprintf '%s\\n' \"$*\" >> '{uv_log}'\nexit 0\n"
-        )
-        env = {"UV": str(uv), "PATH": f"{uv.parent}:{os.environ['PATH']}"}
-
-        plain = tm.ok(
-            u.Cli.run_raw(
-                [c.Infra.MAKE, "--no-print-directory", "deps"],
-                cwd=project_root,
-                env=env,
-                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
-            )
-        )
-        authenticated = tm.ok(
-            u.Cli.run_raw(
-                [
-                    c.Infra.MAKE,
-                    "--no-print-directory",
-                    "deps",
-                    f"{config.Infra.codegen.make.apply_variable}=N",
-                ],
-                cwd=project_root,
-                env=env,
-                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
-            )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8"
         )
 
-        tm.that(u.Cli.process_succeeded(plain.outcome), eq=True)
-        tm.that(uv_log.exists(), eq=True)
-        apply_variable = config.Infra.codegen.make.apply_variable
-        apply_value = config.Infra.codegen.make.apply_value
-        # APPLY is binary now: the apply value is the only valid token, so the
-        # explicit opt-out attempt fails at the generated public boundary
-        # before any recipe runs, keeping uv off the mutation path.
-        tm.that(authenticated.outcome.raw_return_code, ne=0)
         tm.that(
-            authenticated.stdout + authenticated.stderr,
-            has=f"{apply_variable} must be {apply_value} when enabled",
+            self._recipe_targets_containing(makefile, "--upgrade"),
+            eq={"_upg_lifecycle"},
         )
-        tm.that(authenticated.stdout + authenticated.stderr, has="Makefile")
+        tm.that(
+            self._recipe_targets_containing(makefile, "lock --bump"),
+            eq={"_bootstrap_setup_tools"},
+        )
+        toolchain = config.Infra.codegen.toolchain
+        lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
+        tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
+        platform_matrix = ",".join(toolchain.mise_lockfile_platforms)
+        tm.that(makefile, has=f'mise_lockfile_platforms="{platform_matrix}";')
+        tm.that(
+            makefile,
+            has='$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"}',
+        )
+        tm.that(makefile, has='if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then')
+        resolve_assignments = re.findall(
+            r"^(?:([\w-]+): )?TOOL_BOOTSTRAP_RESOLVE :=[ ]?(.*)$",
+            makefile,
+            flags=re.MULTILINE,
+        )
+        tm.that(sorted(resolve_assignments), eq=[("", ""), ("upg", "1")])
+        tm.that(makefile, has="upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle")
+        sync_flags = re.search(r"^UV_SYNC_FLAGS := (.*)$", makefile, re.MULTILINE)
+        assert sync_flags is not None
+        tm.that(sync_flags.group(1), has="--locked")
+        tm.that(sync_flags.group(1), lacks="--upgrade")
+
+        mise_toml = u.Cli.toml_mapping_from_text(
+            (project_root / c.Infra.MISE_TOML_FILENAME).read_text(encoding="utf-8")
+        )
+        assert mise_toml is not None
+        settings = mise_toml.get("settings")
+        tool_config = mise_toml.get("tool_config")
+        assert isinstance(settings, Mapping)
+        assert isinstance(tool_config, Mapping)
+        tm.that(settings.get("lockfile"), eq=toolchain.mise_lockfile)
+        tm.that(settings.get("locked"), eq=toolchain.mise_locked)
+        tm.that(tool_config.get("locked"), eq=toolchain.mise_locked)
+        tm.that(
+            settings.get("lockfile_platforms"),
+            eq=list(toolchain.mise_lockfile_platforms),
+        )
+        tools = mise_toml.get("tools")
+        assert isinstance(tools, Mapping)
+        jscpd = tools.get(toolchain.jscpd_selector)
+        waza = tools.get(toolchain.waza_selector)
+        assert isinstance(jscpd, Mapping)
+        assert isinstance(waza, Mapping)
+        tm.that(jscpd.get("version"), eq=toolchain.jscpd_version)
+        tm.that(
+            jscpd.get("platforms"),
+            eq={
+                platform: {"asset_pattern": pattern}
+                for platform, pattern in toolchain.jscpd_asset_patterns.items()
+            },
+        )
+        tm.that(waza.get("version"), eq=toolchain.waza_version)
+        tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
 
     def test_public_gate_fails_closed_before_managed_environment_exists(
         self, tmp_path: Path
     ) -> None:
         """A public gate preserves the canonical setup-required diagnostic."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
 
         process = tm.ok(
-            u.Cli.run_raw(
-                [c.Infra.MAKE, "--no-print-directory", "test"],
-                cwd=project_root,
-                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "test"], cwd=project_root
             )
         )
 
@@ -702,27 +744,24 @@ class TestsCodegenMakeEnvironment:
         )
 
     def test_generated_setup_is_self_contained(self, tmp_path: Path) -> None:
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
         for required in (
-            "UV ?= uv",
             "ifneq ($(filter setup,$(MAKECMDGOALS)),)",
             "SETUP_BOOTSTRAP_ONLY := Y",
             'if [ -n "$${GITHUB_PATH:-}" ]; then',
-            # Managed tools reach the setup lifecycle by RUNNING it inside the
-            # bootstrapped Mise, not by the old inline PATH computation: the
-            # toolchain is installed at its latest release and the lifecycle
-            # is executed through `mise exec`, so nothing needs an ambient mise
-            # and nothing hand-assembles a managed PATH any more.
-            ('mise_exec project "$$latest_mise" -C "$$project_root" install --yes'),
-            (
-                'mise_exec project "$$latest_mise" -C "$$project_root" exec -- env '
-                '"SETUP_DIRENV=$$direnv_executable"'
-            ),
-            '$(UV) venv "$(RUNTIME_VENV)"',
+            # The bootstrap shell delegates to recursive make through mise exec.
+            # The `+` prefix is required to preserve GNU Make's jobserver FDs.
+            "\t+@set -eu;",
+            # Runtime tool identity is exercised through the public status
+            # regression, including an invalid ambient Mise configuration.
+            'mise_exec project "$$latest_mise" -C "$$project_root" install --yes',
+            "SETUP_DIRENV=$$direnv_executable",
+            '$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"',
+            '$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"',
             '$(UV) sync --project "$(PROJECT_ROOT)"',
             '--link-mode "$(UV_LINK_MODE)"',
             'git -C "$$superproject" submodule update --init -- "$$child_path"',
@@ -731,6 +770,7 @@ class TestsCodegenMakeEnvironment:
         ):
             tm.that(makefile, has=required)
         for forbidden in (
+            "UV ?= uv",
             "mise exec -- uv",
             "uv@",
             "define _setup_submodules",
@@ -750,36 +790,91 @@ class TestsCodegenMakeEnvironment:
     def test_generated_dependency_upgrade_projects_lock_floors(
         self, tmp_path: Path
     ) -> None:
-        """Make owns lock upgrade, open-floor projection, and final resolution."""
-        project_root, _repository_root = self._render_makefile(
+        """`upg` owns lock upgrade, open-floor projection, and final resolution."""
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
-        tm.that(makefile, has="deps modernize")
-        tm.that(makefile, has="--rewrite-constraints")
+        for needle in (
+            "deps modernize",
+            "--rewrite-constraints",
+            "--upgrade --refresh",
+        ):
+            tm.that(
+                self._recipe_targets_containing(makefile, needle), eq={"_upg_lifecycle"}
+            )
+        tm.that(makefile, has="_run_for_all_projects,--check")
         tm.that(makefile, lacks="--constraint-policy")
 
-    def test_generated_boundary_rejects_forbidden_makeflags_overrides(
+    def test_workspace_without_local_members_retains_external_flext_sources(
         self, tmp_path: Path
     ) -> None:
-        """Hostile MAKEFLAGS assignments are ignored, never fatal.
+        """Workspace role alone cannot turn external dependencies into members."""
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.WORKSPACE, bootstrap=True
+        )
+        rendered = (project_root / "pyproject.toml").read_text(encoding="utf-8")
+        requirements = u.Tests.toml_strings_at(rendered, "dependency-groups", "dev")
+        external = tuple(
+            requirement
+            for requirement in requirements
+            if (name := u.Infra.dep_name(requirement)) and name.startswith("flext-")
+        )
+        assert external
+        for requirement in external:
+            url, ref = tm.ok(u.Infra.declared_git_source(requirement))
+            assert url.endswith(f"/{u.Infra.dep_name(requirement)}.git")
+            assert ref == u.Tests.provider_branch()
+
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_help_prints_description_as_literal_data(
+        self, tmp_path: Path, profile: c.Infra.MakeProfile
+    ) -> None:
+        """Help preserves quotes and expansion syntax without executing them."""
+        description = (
+            'Print checkout\'s "$HOME", $(shell touch make-effect), '
+            "and `touch shell-effect`."
+        )
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            extra_verbs=(
+                m.Infra.MakeVerbSpec(name="literal-help", description=description),
+            ),
+        )
+        process = tm.ok(
+            u.Cli.run_raw(
+                [c.Infra.MAKE, "--no-print-directory", "help"],
+                cwd=project_root,
+                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            )
+        )
+        tm.that(
+            u.Cli.process_succeeded(process.outcome),
+            eq=True,
+            msg=process.stdout + process.stderr,
+        )
+        tm.that(process.stdout, has=description)
+        tm.that((project_root / "make-effect").exists(), eq=False)
+        tm.that((project_root / "shell-effect").exists(), eq=False)
+
+    def test_generated_make_ignores_forbidden_makeflags_overrides(
+        self, tmp_path: Path
+    ) -> None:
+        """An undeclared MAKEFLAGS override is inert, never a validation error.
 
         GNU Make propagates any variable on MAKEFLAGS (or the command line) as
-        ``command line override`` to every child process. Since operator law
-        2026-09-10 ordinary usage must always start with zero variables, so
-        the boundary warns about every override that is not a declared public
-        input and continues; it can no longer block a run.
+        a ``command line override`` to every child process. S1 (operator law
+        2026-09-14) removed the caller-input guard entirely — the generated
+        Makefile validates no input at all — so an unrelated MAKEFLAGS entry
+        is simply ignored and `help` still succeeds.
         """
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
 
-        apply_variable = config.Infra.codegen.make.apply_variable
-        apply_value = config.Infra.codegen.make.apply_value
-        hostile_env = {
-            "MAKEFLAGS": f"FORBIDDEN_VAR=hostile {apply_variable}={apply_value}"
-        }
+        hostile_env = {"MAKEFLAGS": "FORBIDDEN_VAR=hostile"}
         process = tm.ok(
             u.Cli.run_raw(
                 [c.Infra.MAKE, "--no-print-directory", "help"],
@@ -793,8 +888,119 @@ class TestsCodegenMakeEnvironment:
             )
         )
 
-        tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(
-            process.stdout + process.stderr,
-            has="Ignoring unsupported Make input(s): FORBIDDEN_VAR",
+            u.Cli.process_succeeded(process.outcome),
+            eq=True,
+            msg=process.stdout + process.stderr,
         )
+        output = process.stdout + process.stderr
+        tm.that(output, lacks="Unsupported Make input")
+        tm.that(output, lacks="declared public inputs are")
+
+    def test_generated_make_dispatches_script_verbs_to_builtin_targets(
+        self, tmp_path: Path
+    ) -> None:
+        """Auto-discovered script verbs get _builtin-<verb> dispatch targets."""
+        extra_verbs = (
+            m.Infra.MakeVerbSpec(
+                name="sync",
+                description="Dispatch sync through the declared script dispatcher.",
+            ),
+        )
+        script_dispatch = m.Infra.ScriptDispatchSpec(
+            dispatcher="scripts/dispatch.py", roots=("scripts",)
+        )
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+            extra_verbs=extra_verbs,
+            script_dispatch=script_dispatch,
+        )
+        (project_root / "scripts" / "sync").mkdir(parents=True)
+        (project_root / "scripts" / "sync" / "all.sh").write_text(
+            "#!/bin/sh\necho sync\n", encoding="utf-8"
+        )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+        tm.that("_builtin-sync:" in makefile, eq=True)
+        tm.that("scripts/dispatch.py" in makefile, eq=True)
+        tm.that("sync" in makefile, eq=True)
+
+    def test_arbitrary_unknown_command_line_variable_is_ignored(
+        self, tmp_path: Path
+    ) -> None:
+        """An arbitrary unknown command-line variable never blocks a verb.
+
+        There is no declared-input allowlist left in the generated Makefile
+        (S1, operator law 2026-09-14): passing any undeclared `NAME=value`
+        is inert.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.STANDALONE
+        )
+
+        process = tm.ok(
+            u.Cli.run_raw(
+                [c.Infra.MAKE, "--no-print-directory", "help", "FOO=bar"],
+                cwd=project_root,
+                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            )
+        )
+
+        tm.that(
+            u.Cli.process_succeeded(process.outcome),
+            eq=True,
+            msg=process.stdout + process.stderr,
+        )
+
+    def test_generated_makefile_routes_every_verb_unconditionally(
+        self, tmp_path: Path
+    ) -> None:
+        """Every public verb maps unconditionally to its one implementation.
+
+        S1 (operator law 2026-09-14) removed the CHECK_ONLY/APPLY selector
+        entirely: there is no longer a check-mode sibling recipe for any
+        verb, so the public mapping is a single fixed target per verb.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.STANDALONE
+        )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+
+        tm.that(makefile, has="upg: _bootstrap_setup_tools")
+        tm.that(makefile, has="_builtin-fmt: _builtin_fmt_all")
+        tm.that(makefile, has="_builtin-fix: _builtin_fix_all")
+        tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
+        tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
+        tm.that(
+            makefile, has="_builtin-self-fix-enforcement: _builtin_require_environment"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-namespace: _builtin_require_environment"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-accessors: _builtin_require_environment"
+        )
+        tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
+        tm.that(
+            makefile,
+            has="_builtin_sonarcloud_sync_all: _builtin_sonarcloud_sync_project",
+        )
+        tm.that(
+            makefile,
+            has=(
+                "@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync "
+                '--repository-root "$(PROJECT_ROOT)"'
+            ),
+        )
+        tm.that(makefile, has="_builtin-gen: _builtin_gen_all")
+        tm.that(makefile, has="_builtin-mod: _builtin_mod_apply")
+        tm.that(makefile, has="mode=--apply ;;")
+        for forbidden in (
+            "CHECK_ONLY",
+            "APPLY",
+            "PUBLIC_INPUTS",
+            "_builtin_gen_check",
+            "_builtin-conform",
+        ):
+            tm.that(makefile, lacks=forbidden)

@@ -9,16 +9,16 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import u as cli_u
+from flext_cli import FlextCliUtilities
 
-from ._utilities._rope.pep695_patch import FlextInfraUtilitiesRopePep695Patch
+from flext_infra._utilities.work_beads import FlextInfraUtilitiesWorkBeads
+
+from ._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
 from ._utilities.base import FlextInfraUtilitiesBase
 from ._utilities.census import FlextInfraUtilitiesRefactorCensus
-from ._utilities.class_nesting import FlextInfraUtilitiesClassNesting
 from ._utilities.codegen import FlextInfraUtilitiesCodegen
 from ._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
 from ._utilities.codemod_rules import FlextInfraUtilitiesCodemodRules
-from ._utilities.compatibility_aliases import FlextInfraUtilitiesCompatibilityAliases
 from ._utilities.deferred_self_reference_ast import (
     FlextInfraUtilitiesDeferredSelfReference,
 )
@@ -44,11 +44,13 @@ from ._utilities.namespace_common import FlextInfraUtilitiesRefactorNamespaceCom
 from ._utilities.namespace_facades import FlextInfraUtilitiesRefactorNamespaceFacades
 from ._utilities.namespace_moves import FlextInfraUtilitiesRefactorNamespaceMoves
 from ._utilities.network import FlextInfraUtilitiesNetwork
-from ._utilities.private_imports import FlextInfraUtilitiesPrivateImports
+from ._utilities.private_import_ancestry import FlextInfraUtilitiesPrivateImportAncestry
+from ._utilities.private_import_facades import FlextInfraUtilitiesPrivateImportFacades
 from ._utilities.process import FlextInfraUtilitiesProcess
 from ._utilities.project_managed_artifacts import (
     FlextInfraUtilitiesProjectManagedArtifacts,
 )
+from ._utilities.promoted import FlextInfraUtilitiesPromoted
 from ._utilities.protected_edit import FlextInfraUtilitiesProtectedEdit
 from ._utilities.pyproject_conform import FlextInfraUtilitiesPyprojectConform
 from ._utilities.pyrefly import FlextInfraUtilitiesPyrefly
@@ -57,6 +59,7 @@ from ._utilities.refactor import FlextInfraUtilitiesRefactor
 from ._utilities.release import FlextInfraUtilitiesRelease
 from ._utilities.repository import FlextInfraUtilitiesRepository
 from ._utilities.resource_limits import FlextInfraUtilitiesResourceLimits
+from ._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
 from ._utilities.rope_analysis_introspection import (
     FlextInfraUtilitiesRopeAnalysisIntrospection,
 )
@@ -71,15 +74,18 @@ from ._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 from ._utilities.rope_source import FlextInfraUtilitiesRopeSource
 from ._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
 from ._utilities.safety import FlextInfraUtilitiesSafety
+from ._utilities.semantic_cutover import FlextInfraUtilitiesSemanticCutover
+from ._utilities.signature_rules import FlextInfraUtilitiesSignatureRules
 from ._utilities.silent_failure_ast import FlextInfraUtilitiesSilentFailureAst
 from ._utilities.transformer_header import FlextInfraUtilitiesTransformerHeader
 from ._utilities.versioning import FlextInfraUtilitiesVersioning
 from ._utilities.workspace_fingerprint import FlextInfraUtilitiesWorkspaceFingerprint
+from ._utilities.workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
 from ._utilities.worktree_lifecycle import FlextInfraWorktreeLifecycle
 from ._utilities.worktree_provisioning import FlextInfraWorktreeProvisioning
 
 
-class FlextInfraUtilities(cli_u):
+class FlextInfraUtilities(FlextCliUtilities):
     """Utility namespace for flext-infra; extends FlextUtilities.
 
     Usage::
@@ -94,13 +100,12 @@ class FlextInfraUtilities(cli_u):
 
     class Infra(
         FlextInfraUtilitiesBase,
-        FlextInfraUtilitiesClassNesting,
         FlextInfraUtilitiesProcess,
+        FlextInfraUtilitiesPromoted,
         FlextInfraUtilitiesNetwork,
         FlextInfraUtilitiesResourceLimits,
         FlextInfraUtilitiesCodegen,
         FlextInfraUtilitiesCodegenFilePlan,
-        FlextInfraUtilitiesCompatibilityAliases,
         FlextInfraUtilitiesCodegenNamespace,
         FlextInfraUtilitiesPyprojectConform,
         FlextInfraUtilitiesPyrefly,
@@ -108,6 +113,7 @@ class FlextInfraUtilities(cli_u):
         FlextInfraUtilitiesQualifiedNames,
         FlextInfraUtilitiesDiscovery,
         FlextInfraUtilitiesRopeCore,
+        FlextInfraUtilitiesRopeAnalysis,
         FlextInfraUtilitiesRopeAnalysisWorkspace,
         FlextInfraUtilitiesRopeAnalysisIntrospection,
         FlextInfraUtilitiesRopeClassMove,
@@ -118,7 +124,6 @@ class FlextInfraUtilities(cli_u):
         FlextInfraUtilitiesRopeRuntime,
         FlextInfraUtilitiesRopeSource,
         FlextInfraUtilitiesRopeStructure,
-        FlextInfraUtilitiesRopePep695Patch,
         FlextInfraUtilitiesTransformerHeader,
         FlextInfraUtilitiesDocs,
         FlextInfraUtilitiesDocsApi,
@@ -127,16 +132,18 @@ class FlextInfraUtilities(cli_u):
         FlextInfraUtilitiesDocsContract,
         FlextInfraUtilitiesDocsFix,
         FlextInfraUtilitiesDocsGenerate,
+        FlextInfraUtilitiesDocsGithubLinks,
         FlextInfraUtilitiesDocsRender,
         FlextInfraUtilitiesDocsScope,
         FlextInfraUtilitiesDocsValidate,
+        FlextInfraUtilitiesWorkspaceManifest,
         FlextInfraUtilitiesDependencies,
         FlextInfraUtilitiesDeferredSelfReference,
         FlextInfraUtilitiesGit,
         FlextInfraUtilitiesIteration,
         FlextInfraUtilitiesLogParser,
         FlextInfraUtilitiesManagedConflicts,
-        FlextInfraUtilitiesPrivateImports,
+        FlextInfraUtilitiesSemanticCutover,
         FlextInfraUtilitiesProtectedEdit,
         FlextInfraUtilitiesRefactor,
         FlextInfraUtilitiesRefactorCensus,
@@ -153,12 +160,12 @@ class FlextInfraUtilities(cli_u):
         FlextInfraWorktreeProvisioning,
         FlextInfraUtilitiesWorkspaceFingerprint,
         FlextInfraUtilitiesCodemodRules,
+        FlextInfraUtilitiesSignatureRules,
+        FlextInfraUtilitiesPrivateImportAncestry,
+        FlextInfraUtilitiesPrivateImportFacades,
+        FlextInfraUtilitiesWorkBeads,
     ):
         """Infrastructure-domain utilities - all methods exposed directly."""
-
-        _rope_pep695_patch_applied: bool = (
-            FlextInfraUtilitiesRopePep695Patch.apply() or True
-        )
 
 
 u = FlextInfraUtilities

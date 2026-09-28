@@ -2,21 +2,24 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-from flext_infra import c, config, m, t, u
-from flext_infra.base import s
+
+from .. import c, config, m, t, u
+from ._execution import FlextInfraCodegenExecutionBase
+from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
+from .mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from .. import p
 
 
-class FlextInfraCodegenMiseArtifacts(s[bool]):
-    """Validate unlocked latest-version Mise declarations and launchers."""
+class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
+    """Validate latest-selector Mise declarations and the upg-written launchers."""
 
     config_only: Annotated[
         bool,
@@ -52,7 +55,7 @@ class FlextInfraCodegenMiseArtifacts(s[bool]):
         raw_tools = payload.get("tools")
         if not isinstance(raw_tools, Mapping):
             return r[t.StrMapping].fail(".mise.toml must declare [tools]")
-        specifiers: dict[str, str] = {}
+        specifiers: MutableMapping[str, str] = {}
         for raw_selector, raw_tool in raw_tools.items():
             if not raw_selector.strip():
                 return r[t.StrMapping].fail(".mise.toml contains an invalid tool name")
@@ -84,82 +87,42 @@ class FlextInfraCodegenMiseArtifacts(s[bool]):
         return r[bool].ok(True)
 
     @classmethod
-    def validate_seed(cls, path: Path) -> p.Result[bool]:
-        """Validate one native staged bootstrap seed without executing live bytes."""
-        source = u.Cli.files_read_text(path)
-        if source.failure:
-            return r[bool].from_failure(source)
-        content = source.value
-        for declaration in (
-            c.Infra.MISE_UNLOCKED_RESOLUTION_URL,
-            c.Infra.MISE_UNLOCKED_FAIL_LOUD_CLAUSE,
-            c.Infra.MISE_UNLOCKED_CHECKSUM_URI,
-        ):
-            if declaration not in content:
-                return r[bool].fail(
-                    f"Mise seed lacks the unlocked resolution contract "
-                    f"({declaration}): {path}"
-                )
-        try:
-            mode = path.stat().st_mode
-        except OSError as exc:
-            return r[bool].fail(
-                f"cannot inspect generated Mise seed: {exc}", exception=exc
-            )
-        windows = path.name == c.Infra.MISE_WINDOWS_LAUNCHER_FILENAME
-        if not windows and not mode & 0o100:
-            return r[bool].fail("generated Unix Mise seed is not executable")
-        return r[bool].ok(True)
-
-    @classmethod
-    def validate_launchers(cls, root: Path) -> p.Result[bool]:
-        """Validate both generated launchers and their identical contract."""
-        shell = cls.validate_seed(
-            root / c.Infra.MISE_LAUNCHER_DIRECTORY / c.Infra.MISE_UNIX_LAUNCHER_FILENAME
-        )
-        windows = cls.validate_seed(
-            root
-            / c.Infra.MISE_LAUNCHER_DIRECTORY
-            / c.Infra.MISE_WINDOWS_LAUNCHER_FILENAME
-        )
-        if shell.failure or windows.failure:
-            return r[bool].fail(shell.error or windows.error or "invalid Mise launcher")
-        return r[bool].ok(True)
-
-    def validate_artifacts(self, project_root: Path) -> p.Result[bool]:
-        """Validate one project's committed Mise artifacts entirely offline."""
-        config_result = self._read_toml(project_root / ".mise.toml")
+    def _validate_config(cls, project_root: Path) -> p.Result[bool]:
+        """Validate the generated ``.mise.toml`` declaration offline."""
+        config_result = cls._read_toml(project_root / c.Infra.CONFIG_SPEC[0])
         if config_result.failure:
             return r[bool].from_failure(config_result)
-        tools_result = self._tool_specifiers(config_result.value)
+        tools_result = cls._tool_specifiers(config_result.value)
         if tools_result.failure:
             return r[bool].from_failure(tools_result)
-        suspended = self._validate_suspended_selectors(tools_result.value)
-        if suspended.failure:
-            return suspended
-        launcher_result = self.validate_launchers(project_root)
-        if launcher_result.failure:
-            return launcher_result
-        return r[bool].ok(True)
+        return cls._validate_suspended_selectors(tools_result.value)
+
+    def validate_artifacts(
+        self, project_root: Path, runtime_root: Path
+    ) -> p.Result[bool]:
+        """Validate one project's declaration, pin, and launchers offline.
+
+        The pin and launchers derive from the runtime root's `make upg`
+        output: every launcher bakes the pinned release, and a member's triple
+        is byte-identical to its runtime root's.
+        """
+        declared = self._validate_config(project_root)
+        if declared.failure:
+            return declared
+        return FlextInfraMiseArtifactsDerivation.validate(project_root, runtime_root)
 
     @override
     def execute(self) -> p.Result[bool]:
         """Validate generated Mise declarations and launchers entirely offline."""
-        config_result = self._read_toml(self.repository_root / ".mise.toml")
-        if config_result.failure:
-            return r[bool].from_failure(config_result)
-        tools_result = self._tool_specifiers(config_result.value)
-        if tools_result.failure:
-            return r[bool].from_failure(tools_result)
-        suspended = self._validate_suspended_selectors(tools_result.value)
-        if suspended.failure:
-            return suspended
-        if self.config_only:
-            return r[bool].ok(True)
-        launcher_result = self.validate_launchers(self.repository_root)
-        if launcher_result.failure:
-            return launcher_result
-        return r[bool].ok(True)
+        declared = self._validate_config(self.repository_root)
+        if declared.failure or self.config_only:
+            return declared
+        runtime_root = FlextInfraMiseWorkspacePlanner(self).scope_root()
+        if runtime_root.failure:
+            return r[bool].from_failure(runtime_root)
+        return FlextInfraMiseArtifactsDerivation.validate(
+            self.repository_root, runtime_root.value
+        )
 
 
 __all__: list[str] = ["FlextInfraCodegenMiseArtifacts"]

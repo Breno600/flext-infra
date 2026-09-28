@@ -43,7 +43,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
             c.Infra.CHECK,
             *target_args,
             "--config",
-            c.Infra.PYPROJECT_FILENAME,
+            c.PYPROJECT_FILENAME,
             "--python-interpreter-path",
             sys.executable,
             "--output-format",
@@ -65,8 +65,10 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrSequence:
         """Use configured search paths without Pyrefly's inherited-path warning."""
-        _ = project_dir, ctx
-        return (c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,)
+        return (
+            *super()._check_remove_env_keys(project_dir, ctx),
+            c.Infra.ORCHESTRATOR_ENV_PYTHONPATH,
+        )
 
     @override
     def _parse_check_output(
@@ -80,9 +82,19 @@ class FlextInfraPyreflyGate(FlextInfraGate):
                     result, tool=c.Infra.PYREFLY, file=str(json_file), line=0, column=0
                 ),
             )
-        report = m.Infra.PyreflyReport.model_validate_json(
-            json_file.read_text(encoding="utf-8"), strict=True
+        validated: p.Result[m.Infra.PyreflyReport] = u.validate_value(
+            m.Infra.PyreflyReport,
+            json_file.read_text(encoding="utf-8"),
+            from_json=True,
+            strict=True,
         )
+        if validated.failure:
+            return False, (
+                self._malformed_report_issue(
+                    str(validated.error), tool=c.Infra.PYREFLY, file=str(json_file)
+                ),
+            )
+        report = validated.value
         issues: t.MutableSequenceOf[m.Infra.Issue] = [
             m.Infra.Issue(
                 file=diag.path,
@@ -104,7 +116,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
                 )
             issues.append(
                 m.Infra.Issue(
-                    file=c.Infra.PYPROJECT_FILENAME,
+                    file=c.PYPROJECT_FILENAME,
                     line=1,
                     column=1,
                     code="pyrefly-exec",

@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import re
 import textwrap
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -57,11 +58,11 @@ class FlextInfraRefactorClassvarConstantAutofix:
         class_module, class_name = class_full_name.rsplit(".", maxsplit=1)
         source_mod = project.get_module(class_module, project.root)
         source_resource = source_mod.get_resource()
-        if not u.Infra.is_resource(source_resource):
+        if not u.Infra.file_resource(source_resource):
             msg = f"{class_module} did not resolve to a file resource"
             raise TypeError(msg)
         pyclass = source_mod.get_attribute(class_name).get_object()
-        if not u.Infra.is_runtime_pyclass(pyclass):
+        if not u.Infra.runtime_pyclass(pyclass):
             msg = f"{class_full_name} did not resolve to a class"
             raise TypeError(msg)
         source_text = source_resource.read()
@@ -151,7 +152,7 @@ class FlextInfraRefactorClassvarConstantAutofix:
         finder = u.Infra.create_occurrence_finder(
             project, plan.constant_name, pyname, imports=True, in_hierarchy=False
         )
-        rewrites: dict[str, list[tuple[int, int, str]]] = {}
+        rewrites: MutableMapping[str, list[t.Triple[int, int, str]]] = {}
         # Iterate over concrete project resources to avoid rope crashing when
         # an occurrence cannot be resolved to a resource (resource=None).
         for resource in project.get_python_files():
@@ -268,7 +269,7 @@ class FlextInfraRefactorClassvarConstantAutofix:
         if len(candidates) != 1:
             msg = f"constants module {constants_module} has multiple canonical owners"
             raise TypeError(msg)
-        target_resource = u.Infra.get_resource_from_path(project, candidates[0])
+        target_resource = u.Infra.resolve_resource_from_path(project, candidates[0])
         if target_resource is None:
             msg = f"constants module {constants_module} is outside the Rope project"
             raise TypeError(msg)
@@ -453,7 +454,9 @@ class FlextInfraRefactorClassvarConstantAutofix:
         )
 
     @classmethod
-    def _apply_edits(cls, text: str, edits: t.SequenceOf[tuple[int, int, str]]) -> str:
+    def _apply_edits(
+        cls, text: str, edits: t.SequenceOf[t.Triple[int, int, str]]
+    ) -> str:
         """Apply (start, end, replacement) edits to ``text`` in reverse order."""
         for start, end, replacement in sorted(edits, reverse=True):
             text = text[:start] + replacement + text[end:]
@@ -573,26 +576,12 @@ class FlextInfraRefactorClassvarConstantAutofix:
             if a != b:
                 break
             common += 1
-        ups = len(class_parts) - common - 1  # minus the source module itself
-        rel_parts = constants_parts[common:]
-        if ups == 0 and rel_parts == [constants_alias]:
-            import_line = f"from . import {constants_alias}\n"
-        elif ups == 0 and len(rel_parts) > 1:
-            import_line = f"from .{'.'.join(rel_parts[:-1])} import {constants_alias}\n"
-        elif ups == 0 and rel_parts:
-            import_line = f"from .{'.'.join(rel_parts)} import {constants_alias}\n"
-        elif ups > 0 and len(rel_parts) > 1:
-            import_line = (
-                f"from {'.' * ups}{'.'.join(rel_parts[:-1])} import {constants_alias}\n"
-            )
-        elif ups > 0 and rel_parts:
-            import_line = (
-                f"from {'.' * ups}{'.'.join(rel_parts)} import {constants_alias}\n"
-            )
-        elif ups > 0:
-            import_line = f"from {'.' * ups} import {constants_alias}\n"
+        if common:
+            parent = "." * (len(class_parts) - common)
+            parent += ".".join(constants_parts[common:-1])
         else:
-            import_line = f"from {constants_module} import {constants_alias}\n"
+            parent = ".".join(constants_parts[:-1])
+        import_line = f"from {parent} import {constants_alias}\n"
 
         lines = source.splitlines(keepends=True)
         existing = {line.strip() for line in lines}
@@ -691,7 +680,7 @@ class FlextInfraRefactorClassvarConstantAutofix:
             f"self.__class__.{constant_name}",
         )
         replacement = f"{constants_alias}.{constant_name}"
-        edits: list[tuple[int, int, str]] = []
+        edits: list[t.Triple[int, int, str]] = []
         for pattern in patterns:
             start = 0
             while True:

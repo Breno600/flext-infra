@@ -6,26 +6,16 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_tests import tm
 
 from flext_infra.validate.inventory import FlextInfraInventoryService
-from tests import m
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from tests import t
+from tests import m, u
 
 
-class TestInventoryServiceCore:
-    """Core tests for FlextInfraInventoryService."""
-
-    def test_init_creates_service(self) -> None:
-        """Service initializes with required attributes."""
-        service = FlextInfraInventoryService()
-        tm.that(service, none=False)
+class TestsFlextInfraInventory:
+    """Core, script-scanning, and report-generation tests for FlextInfraInventoryService."""
 
     def test_generate_empty_workspace(self, tmp_path: Path) -> None:
         """Empty workspace returns success with zero scripts."""
@@ -40,15 +30,6 @@ class TestInventoryServiceCore:
         output_dir = tmp_path / "reports"
         output_dir.mkdir()
         tm.ok(service.generate(tmp_path, output_dir=output_dir))
-
-    def test_generate_returns_flextresult(self, tmp_path: Path) -> None:
-        """Generate returns r type."""
-        service = FlextInfraInventoryService()
-        service.generate(tmp_path)
-
-
-class TestInventoryServiceScripts:
-    """Script scanning tests for FlextInfraInventoryService."""
 
     def test_generate_scans_python_scripts(self, tmp_path: Path) -> None:
         """Python scripts are detected."""
@@ -105,18 +86,25 @@ class TestInventoryServiceScripts:
         tm.that(report.total_scripts, eq=0)
 
     def test_generate_sorts_scripts_alphabetically(self, tmp_path: Path) -> None:
-        """Scripts are sorted alphabetically."""
+        """The written inventory lists scripts in sorted path order."""
         service = FlextInfraInventoryService()
+        output_dir = tmp_path / "reports"
+        output_dir.mkdir()
         scripts = tmp_path / "scripts"
         scripts.mkdir()
-        (scripts / "z_script.py").write_text("")
-        (scripts / "a_script.py").write_text("")
-        (scripts / "m_script.py").write_text("")
-        tm.ok(service.generate(tmp_path))
-
-
-class TestInventoryServiceReports:
-    """Report generation tests for FlextInfraInventoryService."""
+        for name in ("z_script.py", "a_script.py", "m_script.py"):
+            (scripts / name).write_text("")
+        report: m.Infra.InventoryReport = tm.ok(
+            service.generate(tmp_path, output_dir=output_dir)
+        )
+        payloads = [
+            tm.ok(u.Cli.json_read(Path(path))) for path in report.reports_written
+        ]
+        inventory = next(payload for payload in payloads if "scripts" in payload)
+        tm.that(
+            inventory["scripts"],
+            eq=["scripts/a_script.py", "scripts/m_script.py", "scripts/z_script.py"],
+        )
 
     def test_generate_returns_reports_written_list(self, tmp_path: Path) -> None:
         """Reports written is a list."""
@@ -155,6 +143,3 @@ class TestInventoryServiceReports:
             tm.that(result.failure, eq=True)
         finally:
             output_dir.chmod(0o755)
-
-
-__all__: t.StrSequence = []

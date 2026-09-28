@@ -1,0 +1,6 @@
+from __future__ import annotations
+
+VALUE = 1
+
+def helper() -> int:
+    return VALUE

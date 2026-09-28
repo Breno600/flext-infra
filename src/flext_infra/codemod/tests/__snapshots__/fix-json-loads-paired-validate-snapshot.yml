@@ -1,0 +1,16 @@
+id: fix-json-loads-paired-validate
+snapshots:
+  model = Model.model_validate(json.loads(raw)):
+    fixed: model = Model.model_validate_json(raw)
+    labels:
+    - source: Model.model_validate(json.loads(raw))
+      style: primary
+      start: 8
+      end: 45
+  payload = Sink.model_validate(json.loads(self._read(path))):
+    fixed: payload = Sink.model_validate_json(self._read(path))
+    labels:
+    - source: Sink.model_validate(json.loads(self._read(path)))
+      style: primary
+      start: 10
+      end: 59

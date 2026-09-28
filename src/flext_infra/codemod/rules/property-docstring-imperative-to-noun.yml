@@ -58,7 +58,7 @@ transform:
     replace:
       source: $DOC
       replace: '^(?:"""|\x27\x27\x27)(?:Return|Returns|Get|Gets|Set|Sets|Compute|Computes|Calculate|Calculates|Fetch|Fetches|Retrieve|Retrieves|Provide|Provides|Build|Builds|Generate|Generates|Create|Creates|Give|Gives|Yield|Yields|Produce|Produces)\s+'
-      by: ''
+      by: ""
   FIRST:
     substring: { source: $TAIL, startChar: 0, endChar: 1 }
   FIRST_UP:

@@ -1,0 +1,4 @@
+from tests import helper
+
+class TestsFlextTestModels:
+    pass

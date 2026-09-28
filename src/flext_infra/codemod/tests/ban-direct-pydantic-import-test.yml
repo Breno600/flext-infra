@@ -1,0 +1,10 @@
+id: ban-direct-pydantic-import
+valid:
+  - from flext_core import m
+  - import json
+  - from ai_hub import m, p, t, u
+invalid:
+  - import pydantic
+  - from pydantic import BaseModel
+  - import pydantic_settings
+  - from pydantic_settings import BaseSettings

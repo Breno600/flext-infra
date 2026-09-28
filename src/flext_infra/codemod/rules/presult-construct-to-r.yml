@@ -12,7 +12,7 @@ rule:
     has:
       matches: r-imported-from-flext
       stopBy: end
-fix: 'r[$T].ok($$$A)'
+fix: "r[$T].ok($$$A)"
 ---
 id: presult-construct-to-r-fail
 language: python
@@ -28,7 +28,7 @@ rule:
     has:
       matches: r-imported-from-flext
       stopBy: end
-fix: 'r[$T].fail($$$A)'
+fix: "r[$T].fail($$$A)"
 ---
 id: presult-construction-without-r-import
 language: python

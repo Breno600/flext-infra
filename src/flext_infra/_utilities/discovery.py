@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from functools import cache
+from collections.abc import MutableMapping
 from importlib import util as importlib_util
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
 
 from .namespace_config import FlextInfraUtilitiesNamespaceConfig
 from .project_discovery import FlextInfraUtilitiesProjectDiscovery
@@ -31,7 +29,9 @@ class FlextInfraUtilitiesDiscovery(
 ):
     """Canonical discovery helpers for path, package, and Rope-backed scans."""
 
-    _PARENT_CONSTANTS_FLEXT_CACHE: ClassVar[dict[tuple[str, bool], t.StrSequence]] = {}
+    _PARENT_CONSTANTS_FLEXT_CACHE: ClassVar[
+        MutableMapping[t.Pair[str, bool], t.StrSequence]
+    ] = {}
 
     @staticmethod
     def _workspace_project_roots(repository_root: str) -> t.VariadicTuple[Path]:
@@ -44,7 +44,7 @@ class FlextInfraUtilitiesDiscovery(
                 for name in child_names
                 if not name.startswith(".") and name not in c.Infra.PYPROJECT_SKIP_DIRS
             ]
-            if c.Infra.PYPROJECT_FILENAME in file_names:
+            if c.PYPROJECT_FILENAME in file_names:
                 nested_roots.add(directory.resolve())
         return tuple(sorted({resolved_root, *nested_roots}))
 
@@ -75,12 +75,9 @@ class FlextInfraUtilitiesDiscovery(
     @staticmethod
     def _relative_path_parts(resolved: Path, project_root: Path | None) -> t.StrTuple:
         """Return path parts relative to project root when possible."""
-        if project_root is None:
+        if project_root is None or not resolved.is_relative_to(project_root):
             return ()
-        try:
-            return resolved.relative_to(project_root).parts
-        except ValueError:
-            return ()
+        return resolved.relative_to(project_root).parts
 
     @staticmethod
     def _normalized_python_parts(resolved: Path, path_parts: t.StrTuple) -> t.StrTuple:
@@ -117,7 +114,7 @@ class FlextInfraUtilitiesDiscovery(
         return ""
 
     @staticmethod
-    def is_pytest_test_module(file_path: Path) -> bool:
+    def pytest_test_module(file_path: Path) -> bool:
         """Return whether a file is a pytest test module, not a production module."""
         if c.Infra.DIR_TESTS not in file_path.parts:
             return False
@@ -197,39 +194,20 @@ class FlextInfraUtilitiesDiscovery(
         )
 
     @staticmethod
-    def package_importable(package_name: str) -> bool:
-        """Return whether the active official environment resolves one package."""
-        # Standalone consumers inherit aliases
-        # from installed FLEXT artifacts; plain modules are never facade parents.
-        try:
-            spec = importlib_util.find_spec(package_name)
-        except ModuleNotFoundError:
-            # A missing parent package means the name cannot resolve here.
-            spec = None
-        return spec is not None and spec.submodule_search_locations is not None
+    def declared_package_dir(package_name: str) -> Path | None:
+        """Return the package directory the active environment declares for a name.
 
-    @classmethod
-    @cache
-    def installed_package_exports(cls, package_name: str) -> frozenset[str]:
-        """Return the explicit ABI published by one installed package root."""
-        try:
-            spec = importlib_util.find_spec(package_name)
-        except ModuleNotFoundError:
-            # A submodule name imports its parent first: a missing parent
-            # package means the name cannot resolve in this environment.
-            return frozenset()
-        except c.EXC_OS_TYPE_VALUE:
-            return frozenset()
-        if spec is None or spec.submodule_search_locations is None or not spec.origin:
-            return frozenset()
-        init_path = Path(spec.origin)
-        if not init_path.is_file():
-            return frozenset()
-        try:
-            source = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-        except OSError:
-            return frozenset()
-        return frozenset(cls.public_export_names_source(source))
+        One rule, no alternative source (R32): a name outside the repository
+        index is read from the environment the checkout declares (an editable
+        workspace member or the pinned distribution — `find_spec`, no import
+        executed). ``None`` is the typed absence: the name is not a package
+        in this environment (absent, or a plain module). A caller that
+        REQUIRES the package — a declared facade parent — raises.
+        """
+        spec = importlib_util.find_spec(package_name)
+        if spec is None or not spec.submodule_search_locations:
+            return None
+        return Path(next(iter(spec.submodule_search_locations)))
 
     @classmethod
     def discover_python_dirs(
@@ -311,7 +289,7 @@ class FlextInfraUtilitiesDiscovery(
         for parent in source.parents:
             if parent == project_dir:
                 return True
-            if (parent / c.Infra.PYPROJECT_FILENAME).is_file():
+            if (parent / c.PYPROJECT_FILENAME).is_file():
                 return False
         return False
 
@@ -348,7 +326,7 @@ class FlextInfraUtilitiesDiscovery(
                 root
                 for root in discovered
                 if root not in declared
-                and not (project_dir / root / c.Infra.PYPROJECT_FILENAME).is_file()
+                and not (project_dir / root / c.PYPROJECT_FILENAME).is_file()
             ),
         )
 
@@ -409,7 +387,7 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def rope_repository_root(cls, repository_root: Path) -> Path:
-        """Return the execution-context root for one conditional Rope scan."""
+        """Resolve a local project without expanding it to an ancestor workspace."""
         resolved_root = repository_root.resolve()
         execution_dir = (
             resolved_root if resolved_root.is_dir() else resolved_root.parent
@@ -418,7 +396,7 @@ class FlextInfraUtilitiesDiscovery(
         project_root = discovered_root
         if (
             resolved_root.is_dir()
-            and not (execution_dir / c.Infra.PYPROJECT_FILENAME).is_file()
+            and not (execution_dir / c.PYPROJECT_FILENAME).is_file()
         ):
             relative_parts = (
                 resolved_root.relative_to(discovered_root).parts
@@ -431,26 +409,8 @@ class FlextInfraUtilitiesDiscovery(
                 or relative_parts[0] not in c.Infra.ROOT_WRAPPER_SEGMENTS
             ):
                 project_root = resolved_root
-        ownership_root = (
-            project_root.resolve() if project_root is not None else resolved_root
-        )
-        from .git import FlextInfraUtilitiesGit
-
-        for candidate in (execution_dir, *execution_dir.parents):
-            if not (candidate / c.Infra.GITMODULES).is_file():
-                continue
-            if execution_dir == candidate:
-                return candidate.resolve()
-            declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(candidate)
-            if declared.failure:
-                continue
-            member_roots = tuple(
-                (candidate / path).resolve() for path in declared.value
-            )
-            if ownership_root == candidate or ownership_root in member_roots:
-                return candidate.resolve()
         if project_root is not None and (
-            (project_root / c.Infra.PYPROJECT_FILENAME).is_file()
+            (project_root / c.PYPROJECT_FILENAME).is_file()
             or (project_root / c.Infra.GIT_DIR).exists()
         ):
             return project_root
@@ -478,9 +438,9 @@ class FlextInfraUtilitiesDiscovery(
         all_files: list[Path] = []
         for scan_root in scan_roots:
             if scan_root.is_file():
-                if scan_root.name != c.Infra.PYPROJECT_FILENAME:
+                if scan_root.name != c.PYPROJECT_FILENAME:
                     return r[t.SequenceOf[Path]].fail(
-                        f"explicit project file must be {c.Infra.PYPROJECT_FILENAME}: {scan_root}"
+                        f"explicit project file must be {c.PYPROJECT_FILENAME}: {scan_root}"
                     )
                 all_files.append(scan_root)
                 continue
@@ -492,7 +452,7 @@ class FlextInfraUtilitiesDiscovery(
                 all_files.extend(
                     sorted(
                         path
-                        for path in scan_root.rglob(c.Infra.PYPROJECT_FILENAME)
+                        for path in scan_root.rglob(c.PYPROJECT_FILENAME)
                         if not any(
                             part.startswith(".") or part in effective_skip
                             for part in path.relative_to(scan_root).parts[:-1]
@@ -601,7 +561,7 @@ class FlextInfraUtilitiesDiscovery(
             if file_path.is_relative_to(package_dir / family_dir):
                 return dict.fromkeys(c.Infra.FLEXT_FAMILIES, allowed_sources)
         if file_path.name in {"base.py", c.Infra.NAMESPACE_PRIVATE_BASE_MODULE}:
-            return dict.fromkeys(c.Infra.ENFORCEMENT_CANONICAL_ALIASES, allowed_sources)
+            return dict.fromkeys(c.ENFORCEMENT_CANONICAL_ALIASES, allowed_sources)
         if file_path.name in c.Infra.NAMESPACE_SETTINGS_FILE_NAMES:
             return dict.fromkeys(c.Infra.FLEXT_FAMILIES, allowed_sources)
         return {}

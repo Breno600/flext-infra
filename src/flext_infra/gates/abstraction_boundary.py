@@ -38,9 +38,16 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
         """Scan one project's Python sources for abstraction-boundary breaches."""
+        _ = ctx
         started = time.monotonic()
         if project_dir.name in c.Infra.BOUNDARY_SKIP_PROJECTS:
-            return self._skip_result(project_dir, started)
+            # A declared boundary owner is exempt by design: an intentional
+            # skip passes, never a non-acceptance for missing targets.
+            return self._neutral_skip_result(
+                project_dir,
+                started,
+                message=f"{self.gate_id}: {project_dir.name} is a declared boundary owner",
+            )
         files_result = u.Infra.iter_python_files(
             m.Infra.SourceScanRequest(project_roots=(project_dir,))
         )
@@ -65,7 +72,7 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
             for issue in self._scan_file(file_path, project_dir.name)
         ]
         return self._detected_gate_execution(
-            project_dir, ctx, issues=issues, started=started
+            project_dir, issues=issues, started=started
         )
 
     def _scan_file(self, path: Path, project: str) -> t.SequenceOf[m.Infra.Issue]:
@@ -94,7 +101,7 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
             and project not in c.Infra.BOUNDARY_TOML_ALLOWED
         ):
             issues.append(
-                self._issue(path, "imports tomllib/tomlkit — use cli.read_toml_file")
+                self._issue(path, "imports tomllib/tomlkit — use u.Cli.toml_read_json")
             )
         issues.extend(self._ast_boundary_issues(path, text, posix))
         return issues
@@ -107,6 +114,12 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         attr_seen: set[str] = set()
         for statement in ast.walk(tree):
+            if isinstance(statement, ast.Call):
+                call_name = self._call_name(statement.func)
+                message = c.Infra.BOUNDARY_CALL_RULES.get(call_name)
+                if message is not None and message not in attr_seen:
+                    attr_seen.add(message)
+                    issues.append(self._issue(path, message))
             if isinstance(statement, ast.Attribute) and isinstance(
                 statement.value, ast.Name
             ):
@@ -135,6 +148,15 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
                     )
                 )
         return issues
+
+    @staticmethod
+    def _call_name(node: ast.expr) -> str:
+        """Return the qualified name for a directly named call target."""
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            return f"{node.value.id}.{node.attr}"
+        return ""
 
     def _issue(self, path: Path, message: str) -> m.Infra.Issue:
         """Build a boundary Issue anchored at the file head."""

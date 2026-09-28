@@ -1,0 +1,18 @@
+# Declarative sed-by-list rules for the make mod text phase.
+#
+# Each entry is one list-driven regex rewrite applied across the governed
+# scan surface (the same ast_grep_scan_targets scope as the ast-grep
+# cascade). The engine proves an exact expected-count receipt per rule and
+# reaches a rewrite fixed point before the canonical validate gate runs.
+#
+# rules:
+#   - id: example-rule-id          # unique text-rule identifier
+#     description: rewrite intent  # optional
+#     include: ["**/tests/**"]     # optional fnmatch globs
+#     exclude: ["**/legado/**"]    # optional fnmatch globs
+#     find: "regex pattern"        # required
+#     replace: "expansion"         # optional, default empty
+#     flags: ["MULTILINE"]         # optional names from CODEMOD_TEXT_FLAG_NAMES
+#     expected: 3                  # optional exact finding count receipt
+
+rules: []

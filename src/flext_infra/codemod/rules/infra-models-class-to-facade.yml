@@ -1,0 +1,38 @@
+# A consumer names the models facade, never the concrete namespace class
+# (flext-itpd1.3, 2026-09-19).
+#
+# `m.Infra.ProjectInfo` and `FlextInfraModelsWorkspace.ProjectInfo` are the same
+# object; the facade path is the one the project's typing law mandates, and it
+# is the only one that survives the class being moved between modules. The
+# models refactor did exactly that move and left consumers naming the concrete
+# class with no import for it, so the module raised NameError the first time
+# that line ran — invisible to a reader, because the expression looks perfectly
+# ordinary.
+#
+# The declaring modules are excluded: there the name is a definition, not a
+# consumer reference.
+id: infra-models-class-to-facade
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+ignores:
+  - "src/*/_models/**/*.py"
+  - "src/*/models.py"
+rule:
+  all:
+    - pattern: $CLS.$ATTR
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          matches: m-imported-from-flext
+constraints:
+  CLS:
+    regex: "^FlextInfraModels[A-Z][A-Za-z0-9]*$"
+fix: m.Infra.$ATTR
+message: >-
+  Name the models facade (m.Infra.*), not the concrete namespace class; the
+  concrete name breaks the moment the class changes module.

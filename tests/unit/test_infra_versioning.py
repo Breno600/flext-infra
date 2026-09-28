@@ -18,6 +18,8 @@ from flext_infra import u
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from tests import t
+
 
 class TestsFlextInfraInfraVersioning:
     """Behavior contract for test_infra_versioning."""
@@ -34,7 +36,7 @@ class TestsFlextInfraInfraVersioning:
         ids=["standard", "development", "release-candidate", "zero", "large"],
     )
     def test_parse_semver_valid(
-        self, version: str, expected: tuple[int, int, int]
+        self, version: str, expected: t.Triple[int, int, int]
     ) -> None:
         """Accept only supported canonical PEP 440 release spellings."""
         tm.ok(u.Infra.parse_semver(version), eq=expected)

@@ -1,0 +1,8 @@
+id: ban-ambient-environ-read
+valid:
+  - value = config.Infra.python_version
+  - value = settings.Infra.uv_project_environment
+invalid:
+  - value = os.environ["UV_PROJECT_ENVIRONMENT"]
+  - value = os.environ.get("UV_PROJECT_ENVIRONMENT", default)
+  - value = os.getenv("UV_PROJECT_ENVIRONMENT")

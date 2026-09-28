@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import ClassVar, override
+from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import m
 from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
 
 from .base_gate import FlextInfraGate
+
+if TYPE_CHECKING:
+    from flext_infra import p
 
 
 class FlextInfraNamespaceGate(FlextInfraGate):
@@ -23,18 +26,41 @@ class FlextInfraNamespaceGate(FlextInfraGate):
     def check(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
-        """Run NS-000..003 validation scoped to ``project_dir``."""
-        started = time.monotonic()
-        validator = FlextInfraNamespaceValidator()
-        report_result = validator.validate_project(project_dir)
-        passed = report_result.success and report_result.value.passed
-        errors: list[str] = []
-        if report_result.failure:
-            errors.append(report_result.error or "namespace validation failed")
-        elif not passed:
-            errors.extend(report_result.value.violations)
+        """Reject execution outside the injected shared Rope cycle."""
+        _ = ctx
         return self._build_project_error_gate_result(
-            project_dir, passed=passed, errors=errors, started=started, ctx=ctx
+            project_dir,
+            passed=False,
+            errors=["namespace gate requires the shared Rope cycle"],
+            started=time.monotonic(),
+        )
+
+    def rope_callback_binding(
+        self, project_dir: Path, rope: p.Infra.RopeWorkspaceDsl
+    ) -> m.Infra.RopeCallbackBinding:
+        """Return the namespace callback bound to one project and shared Rope."""
+        validator = FlextInfraNamespaceValidator(repository_root=project_dir, rope=rope)
+        return validator.callback_binding()
+
+    def check_rope_outcomes(
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        outcomes: tuple[m.Infra.RopeCallbackOutcome, ...],
+    ) -> m.Infra.GateExecution:
+        """Build the namespace gate result from the owner cycle outcomes."""
+        _ = ctx
+        started = time.monotonic()
+        violations = [
+            violation
+            for outcome in outcomes
+            if outcome.callback_id == self.gate_id
+            and outcome.project_root.resolve() == project_dir.resolve()
+            and outcome.applicable
+            for violation in outcome.violations
+        ]
+        return self._build_project_error_gate_result(
+            project_dir, passed=not violations, errors=violations, started=started
         )
 
 

@@ -12,6 +12,9 @@
 #
 # Detection-only: the correct replacement is to rename at the owner and
 # update every consumer in the same cutover.
+#
+# Exceptions for FLEXT facade aliases (single-letter) and workspace root
+# facade aliases (multi-letter canonical names used by lazy imports).
 
 id: ban-compat-alias
 language: Python
@@ -39,10 +42,18 @@ rule:
           - pattern: tm = $NEW
           - pattern: tv = $NEW
           - pattern: tt = $NEW
+          # Workspace root canonical facade aliases (required for lazy imports)
+          - pattern: config = $NEW
+          - pattern: settings = $NEW
+          - pattern: api = $NEW
+          - pattern: flext = $NEW
+          - pattern: main = $NEW
+          - pattern: base = $NEW
+          - pattern: cli = $NEW
 constraints:
   OLD:
     kind: identifier
-    regex: '^[A-Za-z][A-Za-z0-9_]+$'
+    regex: "^[A-Za-z][A-Za-z0-9_]+$"
   NEW:
     kind: identifier
     regex: '^[A-Za-z]\w*$'

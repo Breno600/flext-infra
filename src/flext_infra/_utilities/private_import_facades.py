@@ -3,18 +3,19 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import MutableMapping
 from importlib.util import find_spec, resolve_name
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra.constants import c
+from flext_infra import c
 
 from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
 
 if TYPE_CHECKING:
     from collections.abc import Set as AbstractSet
 
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesPrivateImportFacades:
@@ -23,13 +24,13 @@ class FlextInfraUtilitiesPrivateImportFacades:
     @staticmethod
     def source_modules(
         sources: t.MappingKV[Path, str], statements: t.SequenceOf[str]
-    ) -> dict[str, tuple[str, bool]]:
+    ) -> MutableMapping[str, t.Pair[str, bool]]:
         """Index editable sources and referenced installed packages without imports.
 
         Installed files are discovery inputs only. Resolving a top-level spec
         never imports its package initializer or dependency business modules.
         """
-        modules: dict[str, tuple[str, bool]] = {}
+        modules: MutableMapping[str, t.Pair[str, bool]] = {}
         for path, source in sorted(sources.items()):
             indices = [
                 index
@@ -81,10 +82,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
     @staticmethod
     def declared_exports(
         sources: t.MappingKV[str, t.Pair[str, bool]],
-    ) -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+    ) -> t.Pair[MutableMapping[str, set[str]], MutableMapping[str, set[str]]]:
         """Index declared public exports and module-scope import identities."""
-        bindings: dict[str, set[str]] = {}
-        exports: dict[str, set[str]] = {}
+        bindings: MutableMapping[str, set[str]] = {}
+        exports: MutableMapping[str, set[str]] = {}
         for module, (source, is_package) in sorted(sources.items()):
             package = module if is_package else module.rpartition(".")[0]
             tree = ast.parse(source, filename=module)
@@ -96,7 +97,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
             )
 
             def collect(
-                statements: list[ast.stmt],
+                statements: t.SequenceOf[ast.stmt],
                 package: str,
                 module: str,
                 lazy_exports: t.StrSequence,
@@ -121,7 +122,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
                         node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
                     ):
                         identity = f"{module}.{node.name}"
-                        bindings.setdefault(identity, set()).add(identity)
+                        # A runtime declaration replaces an earlier imported name in
+                        # the same module. Keeping both fabricated an ambiguity for
+                        # the canonical ``from upstream import u; u = Facade`` shape.
+                        bindings[identity] = {identity}
                     elif isinstance(node, ast.Assign | ast.AnnAssign):
                         targets = (
                             node.targets
@@ -136,7 +140,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
                                     if isinstance(node.value, ast.Name)
                                     else identity
                                 )
-                                bindings.setdefault(identity, set()).add(destination)
+                                # Module assignments are runtime rebinding, not an
+                                # additional possible source. The last declaration is
+                                # the single Python authority for the public name.
+                                bindings[identity] = {destination}
                     elif isinstance(node, ast.If):
                         type_only = (
                             isinstance(node.test, ast.Name)
@@ -160,7 +167,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
         qualified: str,
         bindings: t.MappingKV[str, set[str]],
         exports: t.MappingKV[str, set[str]],
-    ) -> tuple[str, str] | None:
+    ) -> t.Pair[str, str] | None:
         """Resolve re-export chains by identity, preferring an explicit root ABI."""
 
         def identities(name: str, visiting: frozenset[str]) -> set[str]:
@@ -182,7 +189,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
                 f"ambiguous private symbol identity for {qualified}: {sorted(expected)}"
             )
             raise ValueError(msg)
-        reverse: dict[str, set[str]] = {}
+        reverse: MutableMapping[str, set[str]] = {}
         for binding, targets in bindings.items():
             for target in targets:
                 reverse.setdefault(target, set()).add(binding)
@@ -232,7 +239,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
         sources: t.MappingKV[str, t.Pair[str, bool]],
     ) -> t.MappingKV[str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]]:
         """Discover facade aliases and roots from live source assignments."""
-        discovered: dict[str, list[tuple[ast.Module, str, str, str]]] = {}
+        discovered: MutableMapping[str, list[t.Quad[ast.Module, str, str, str]]] = {}
         for module, (source, is_package) in sorted(sources.items()):
             if is_package:
                 continue
@@ -288,7 +295,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
         package: str,
         qualified: str,
         bindings: t.MappingKV[str, set[str]],
-        class_bases: t.MappingKV[str, tuple[str, ...]],
+        class_bases: t.MappingKV[str, t.VariadicTuple[str]],
     ) -> str | None:
         """Resolve one private class to exactly one inherited facade path."""
         references: set[str] = set()
@@ -360,7 +367,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
 
     @staticmethod
     def facade_alias_binding(
-        *, owners: t.SequenceOf[tuple[ast.Module, str, str, str]], alias: str | None
+        *, owners: t.SequenceOf[t.Quad[ast.Module, str, str, str]], alias: str | None
     ) -> str | None:
         """Return the alias when the owning package publishes it as a facade.
 

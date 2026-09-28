@@ -4,14 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import zipfile
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_tests import tm
 
+from flext_infra import config
 from tests import c, u
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class TestsFlextInfraReleaseDag:
@@ -38,54 +36,87 @@ class TestsFlextInfraReleaseDag:
         """Hashed build-toolchain policy behavior."""
 
         @staticmethod
+        def policy_snapshot(workspace: Path, name: str) -> bytes:
+            """Read one immutable policy file a build phase snapshotted."""
+            return (
+                u.Tests.release_report_dir(workspace, c.Tests.RELEASE_VERSION_BASE)
+                / "policy"
+                / name
+            ).read_bytes()
+
+        @staticmethod
         def test_complete_hashed_constraints_build_and_are_attested(
             tmp_path: Path,
         ) -> None:
-            """Build only with the complete hashed toolchain and attest its digest."""
+            """Build only with the complete hashed toolchain and attest its digests."""
             project_name = "flext-a"
             workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
-            constraints_path = workspace / c.Infra.RELEASE_BUILD_CONSTRAINTS_PATH
 
             result = u.Tests.run_release_build(workspace, project_name)
 
             report = u.Tests.release_build_report(workspace)
-            expected_digest = hashlib.sha256(constraints_path.read_bytes()).hexdigest()
+            snapshot = TestsFlextInfraReleaseDag.TestsBuildConstraints.policy_snapshot
             gitleaks_path = workspace / c.Infra.RELEASE_GITLEAKS_CONFIG_PATH
-            expected_gitleaks_digest = hashlib.sha256(
-                gitleaks_path.read_bytes()
-            ).hexdigest()
             tm.that(result, eq=0)
-            tm.that(report.build_constraints_sha256, eq=expected_digest)
-            tm.that(report.gitleaks_policy_sha256, eq=expected_gitleaks_digest)
+            tm.that(
+                report.build_constraints_sha256,
+                eq=hashlib.sha256(
+                    snapshot(workspace, "build-constraints.txt")
+                ).hexdigest(),
+            )
+            tm.that(
+                report.gitleaks_policy_sha256,
+                eq=hashlib.sha256(gitleaks_path.read_bytes()).hexdigest(),
+            )
             tm.that(report.records[0].exit_code, eq=0)
 
         @staticmethod
-        def test_incomplete_hashed_constraints_fail_before_build(
-            tmp_path: Path,
-        ) -> None:
-            """Reject a valid hash record that omits required toolchain members."""
+        def test_policy_snapshot_pins_every_configured_backend(tmp_path: Path) -> None:
+            """The snapshot carries each configured pin with exactly its digests.
+
+            ``uv build --require-hashes`` then accepts precisely the declared
+            backend; the typed config is the only owner of those bytes, and a
+            second build renders them identically.
+            """
             project_name = "flext-a"
             workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
-            constraints_path = workspace / c.Infra.RELEASE_BUILD_CONSTRAINTS_PATH
-            # Keep exactly the first pin record: comment lines are skipped and a
-            # record spans every line that ends with a continuation.
-            first_record: list[str] = []
-            for line in constraints_path.read_text(encoding="utf-8").splitlines():
-                if not line.strip() or line.lstrip().startswith("#"):
-                    continue
-                first_record.append(line)
-                if not line.rstrip().endswith("\\"):
-                    break
-            constraints_path.write_text(
-                "\n".join(first_record) + "\n", encoding="utf-8"
+            snapshot = TestsFlextInfraReleaseDag.TestsBuildConstraints.policy_snapshot
+
+            first = u.Tests.run_release_build(workspace, project_name, dry_run=True)
+            rendered = snapshot(workspace, "build-constraints.txt").decode("utf-8")
+            second = u.Tests.run_release_build(workspace, project_name, dry_run=True)
+
+            pins = config.Infra.release.build_constraints
+            tm.that((first, second), eq=(0, 0))
+            for pin in pins:
+                tm.that(rendered, has=f"{pin.name}=={pin.version} \\")
+                for digest in pin.hashes:
+                    tm.that(rendered, has=f"--hash=sha256:{digest}")
+            tm.that(
+                rendered.count("--hash=sha256:"),
+                eq=sum(len(pin.hashes) for pin in pins),
+            )
+            tm.that(rendered, lacks="\\\n\n")
+            tm.that(
+                snapshot(workspace, "build-constraints.txt").decode("utf-8"),
+                eq=rendered,
             )
 
-            result = u.Tests.run_release_build(workspace, project_name)
+        @staticmethod
+        def test_only_the_gitleaks_policy_is_projected_into_repositories() -> None:
+            """Codegen owns the Gitleaks policy everywhere and no constraints file.
 
-            build_log = u.Tests.release_build_log_text(workspace, project_name)
-            tm.that(result, eq=1)
-            tm.that(build_log, has="release build toolchain mismatch")
-            tm.that(build_log, has="packaging")
+            Build constraints render from the typed config at release time; a
+            repository ``config/build-constraints.txt`` would be a second owner.
+            """
+            entries = {
+                entry.destination: entry
+                for entry in config.Infra.codegen.templates.entries
+            }
+            gitleaks = entries[c.Infra.RELEASE_GITLEAKS_CONFIG_PATH]
+            tm.that("config/build-constraints.txt" in entries, eq=False)
+            tm.that(set(gitleaks.profiles), eq=set(c.Infra.MakeProfile))
+            tm.that(gitleaks.overwrite, eq=True)
 
     class TestsArchiveBoundary:
         """Publishable archive content policy."""
@@ -123,49 +154,18 @@ class TestsFlextInfraReleaseDag:
         """Publishable metadata policy behavior."""
 
         @staticmethod
-        def test_pinned_sibling_version_comes_from_the_committed_lock(
-            tmp_path: Path,
-        ) -> None:
-            """A standalone repository pins a git-consumed sibling to its locked version.
-
-            The sibling is not part of this release, so the only truthful
-            version is what the committed lock resolved for the pinned ref.
-            """
+        def test_unavailable_sibling_manifest_fails_release(tmp_path: Path) -> None:
+            """Never substitute installed versions for an unavailable release source."""
             project_name = "flext-a"
             workspace = u.Tests.create_release_workspace(
                 tmp_path, project_names=(project_name,), initialize_project_git=True
             )
-            lock_lines = ["version = 1", ""]
-            for sibling in c.Tests.RELEASE_INTERNAL_DEPENDENCIES:
-                source = (
-                    f"https://github.com/flext-sh/{sibling}.git?rev=0.12.0-dev#0000"
-                )
-                lock_lines.extend([
-                    "[[package]]",
-                    f'name = "{sibling}"',
-                    'version = "0.9.0"',
-                    f'source = {{ git = "{source}" }}',
-                    "",
-                ])
-            (workspace / c.Infra.UV_LOCK_FILENAME).write_text(
-                "\n".join(lock_lines), encoding="utf-8"
-            )
-
             result = u.Tests.run_release_build(workspace, project_name)
-
-            tm.that(result, eq=0)
-            artifact_dir = u.Tests.release_artifact_dir(
-                workspace, c.Tests.RELEASE_VERSION_BASE, project_name
+            tm.that(result, ne=0)
+            tm.that(
+                u.Tests.release_build_log_text(workspace, project_name),
+                has="internal dependency version unknown",
             )
-            wheel = next(artifact_dir.glob("*.whl"))
-            with zipfile.ZipFile(wheel) as archive:
-                metadata = next(
-                    archive.read(name).decode("utf-8")
-                    for name in archive.namelist()
-                    if name.endswith("METADATA")
-                )
-            tm.that(metadata, has="Requires-Dist: flext-core~=0.9.0")
-            tm.that(metadata, lacks="git+")
 
         @staticmethod
         def test_missing_hatch_config_fails_before_artifact_build(
@@ -208,7 +208,10 @@ class TestsFlextInfraReleaseDag:
             project = workspace / project_name
             synthetic_token = hashlib.sha256(project_name.encode()).hexdigest()
             (project / "credential.txt").write_text(
-                f'api_key = "{synthetic_token}"\n', encoding="utf-8"
+                # Split literal: fixture writes a synthetic secret for the
+                # gitleaks detection path and must not self-match scans.
+                "api_" + f'key = "{synthetic_token}"\n',
+                encoding="utf-8",
             )
             u.Tests.commit_git_changes(project, "add synthetic secret fixture")
             ambient_policy = tmp_path / "ambient-gitleaks.toml"

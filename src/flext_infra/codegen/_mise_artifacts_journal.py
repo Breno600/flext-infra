@@ -3,17 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, cast
 
 from flext_core import r
-from flext_infra import c, m, u
+from flext_infra import c, m, p, t, u
 
 from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
 from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess as process
-from ._mise_artifacts_state import FlextInfraMiseArtifactsState as state
-
-if TYPE_CHECKING:
-    from flext_infra import p, t
+from ._mise_artifacts_state import FlextInfraMiseArtifactsState as journal_state
 
 
 class FlextInfraMiseArtifactsJournal:
@@ -22,26 +18,26 @@ class FlextInfraMiseArtifactsJournal:
     @classmethod
     def begin(
         cls,
-        plan: m.Infra.MiseToolchainWorkspacePlan,
+        plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
         *,
         transaction_id: str,
-        sources: tuple[tuple[str, m.Cli.AtomicFileState], ...] = (),
-        directories: tuple[m.Infra.CodegenJournalDirectory, ...] = (),
+        sources: t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]] = (),
+        directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory] = (),
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Build staging authority before any disposable transaction root exists."""
         physical_scope = files.physical_directory_identity(plan.layout.scope_root)
         if physical_scope.failure:
             return r[m.Infra.CodegenTransactionJournal].from_failure(physical_scope)
         projects: list[m.Infra.CodegenJournalProject] = []
-        for project in plan.projects:
-            physical_project = files.physical_directory_identity(project.layout.root)
+        for project in plan.layout.projects:
+            physical_project = files.physical_directory_identity(project.root)
             if physical_project.failure:
                 return r[m.Infra.CodegenTransactionJournal].from_failure(
                     physical_project
                 )
             projects.append(
                 m.Infra.CodegenJournalProject(
-                    selector=project.layout.selector,
+                    selector=project.selector,
                     device=physical_project.value[0],
                     inode=physical_project.value[1],
                 )
@@ -49,33 +45,35 @@ class FlextInfraMiseArtifactsJournal:
         encoded_sources = cls._merge_sources((), sources)
         if encoded_sources.failure:
             return r[m.Infra.CodegenTransactionJournal].from_failure(encoded_sources)
-        try:
-            return r[m.Infra.CodegenTransactionJournal].ok(
-                m.Infra.CodegenTransactionJournal(
-                    version=8,
-                    transaction_id=transaction_id,
-                    scope_device=physical_scope.value[0],
-                    scope_inode=physical_scope.value[1],
-                    state="staging",
-                    projects=tuple(projects),
-                    sources=encoded_sources.value,
-                    directories=directories,
-                    entries=(),
-                )
-            )
-        except c.ValidationError as exc:
+        validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
+            m.Infra.CodegenTransactionJournal,
+            {
+                "version": 8,
+                "transaction_id": transaction_id,
+                "scope_device": physical_scope.value[0],
+                "scope_inode": physical_scope.value[1],
+                "state": "staging",
+                "projects": tuple(projects),
+                "file_participants": plan.layout.file_participants,
+                "sources": encoded_sources.value,
+                "directories": directories,
+                "entries": (),
+            },
+        )
+        if validated.failure:
             return r[m.Infra.CodegenTransactionJournal].fail_op(
-                "validate staging codegen journal", exc
+                "validate staging codegen journal", validated.error
             )
+        return r[m.Infra.CodegenTransactionJournal].ok(validated.value)
 
     @classmethod
     def append_prepared(
         cls,
-        plan: m.Infra.MiseToolchainWorkspacePlan,
+        plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
         journal: m.Infra.CodegenTransactionJournal,
         publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
         *,
-        sources: tuple[tuple[str, m.Cli.AtomicFileState], ...] = (),
+        sources: t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]] = (),
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Back up one complete phase and return its extended prepared authority."""
         if journal.state not in {"staging", "prepared"}:
@@ -89,9 +87,7 @@ class FlextInfraMiseArtifactsJournal:
         entries = list(journal.entries)
         recovery_roots: set[Path] = set()
         for offset, publication in enumerate(publications, start=len(entries)):
-            target = files.workspace_relative(
-                plan.layout.scope_root, publication.before.path
-            )
+            target = files.transaction_relative(plan.layout, publication.before.path)
             if target.failure:
                 return r[m.Infra.CodegenTransactionJournal].from_failure(target)
             if target.value in existing_paths:
@@ -108,30 +104,32 @@ class FlextInfraMiseArtifactsJournal:
         encoded_sources = cls._merge_sources(journal.sources, sources)
         if encoded_sources.failure:
             return r[m.Infra.CodegenTransactionJournal].from_failure(encoded_sources)
-        try:
-            return r[m.Infra.CodegenTransactionJournal].ok(
-                m.Infra.CodegenTransactionJournal(
-                    version=8,
-                    transaction_id=journal.transaction_id,
-                    scope_device=journal.scope_device,
-                    scope_inode=journal.scope_inode,
-                    state="prepared",
-                    projects=journal.projects,
-                    sources=encoded_sources.value,
-                    directories=journal.directories,
-                    entries=tuple(entries),
-                )
-            )
-        except c.ValidationError as exc:
+        validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
+            m.Infra.CodegenTransactionJournal,
+            {
+                "version": 8,
+                "transaction_id": journal.transaction_id,
+                "scope_device": journal.scope_device,
+                "scope_inode": journal.scope_inode,
+                "state": "prepared",
+                "projects": journal.projects,
+                "file_participants": journal.file_participants,
+                "sources": encoded_sources.value,
+                "directories": journal.directories,
+                "entries": tuple(entries),
+            },
+        )
+        if validated.failure:
             return r[m.Infra.CodegenTransactionJournal].fail_op(
-                "validate prepared codegen journal", exc
+                "validate prepared codegen journal", validated.error
             )
+        return r[m.Infra.CodegenTransactionJournal].ok(validated.value)
 
     @classmethod
     def append_directories(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        directories: tuple[m.Infra.CodegenJournalDirectory, ...],
+        directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory],
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Extend durable directory authority before materializing any new path."""
         if journal.state not in {"staging", "prepared"}:
@@ -147,30 +145,48 @@ class FlextInfraMiseArtifactsJournal:
             return r[m.Infra.CodegenTransactionJournal].fail(
                 f"generation directory already has an owner: {duplicate}"
             )
-        try:
-            return r[m.Infra.CodegenTransactionJournal].ok(
-                m.Infra.CodegenTransactionJournal(
-                    version=8,
-                    transaction_id=journal.transaction_id,
-                    scope_device=journal.scope_device,
-                    scope_inode=journal.scope_inode,
-                    state=journal.state,
-                    projects=journal.projects,
-                    sources=journal.sources,
-                    directories=(*journal.directories, *directories),
-                    entries=journal.entries,
-                )
-            )
-        except c.ValidationError as exc:
+        validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
+            m.Infra.CodegenTransactionJournal,
+            {
+                "version": 8,
+                "transaction_id": journal.transaction_id,
+                "scope_device": journal.scope_device,
+                "scope_inode": journal.scope_inode,
+                "state": journal.state,
+                "projects": journal.projects,
+                "file_participants": journal.file_participants,
+                "sources": journal.sources,
+                "directories": (*journal.directories, *directories),
+                "entries": journal.entries,
+            },
+        )
+        if validated.failure:
             return r[m.Infra.CodegenTransactionJournal].fail_op(
-                "validate extended codegen directory journal", exc
+                "validate extended codegen directory journal", validated.error
             )
+        return r[m.Infra.CodegenTransactionJournal].ok(validated.value)
+
+    @classmethod
+    def record_transaction_manifests(
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        journal: m.Infra.CodegenTransactionJournal,
+    ) -> p.Result[m.Infra.CodegenTransactionJournal]:
+        """Validate physical manifests and retain them in the transaction journal."""
+        from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
+
+        registered = FlextInfraMiseArtifactsVerification.register_transaction_manifests(
+            layout, journal
+        )
+        if registered.failure:
+            return r[m.Infra.CodegenTransactionJournal].from_failure(registered)
+        return cls.record_directories(journal, registered.value)
 
     @classmethod
     def record_directories(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        directories: tuple[m.Infra.CodegenJournalDirectory, ...],
+        directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory],
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Advance physical directory evidence without changing its durable intent."""
         result_type = r[m.Infra.CodegenTransactionJournal]
@@ -205,22 +221,26 @@ class FlextInfraMiseArtifactsJournal:
                 return result_type.fail(
                     f"recorded directory manifest disappeared: {previous.path}"
                 )
-        try:
-            return result_type.ok(
-                m.Infra.CodegenTransactionJournal(
-                    version=8,
-                    transaction_id=journal.transaction_id,
-                    scope_device=journal.scope_device,
-                    scope_inode=journal.scope_inode,
-                    state=journal.state,
-                    projects=journal.projects,
-                    sources=journal.sources,
-                    directories=directories,
-                    entries=journal.entries,
-                )
+        validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
+            m.Infra.CodegenTransactionJournal,
+            {
+                "version": 8,
+                "transaction_id": journal.transaction_id,
+                "scope_device": journal.scope_device,
+                "scope_inode": journal.scope_inode,
+                "state": journal.state,
+                "projects": journal.projects,
+                "file_participants": journal.file_participants,
+                "sources": journal.sources,
+                "directories": directories,
+                "entries": journal.entries,
+            },
+        )
+        if validated.failure:
+            return result_type.fail_op(
+                "validate recorded directory evidence", validated.error
             )
-        except c.ValidationError as exc:
-            return result_type.fail_op("validate recorded directory evidence", exc)
+        return result_type.ok(validated.value)
 
     @classmethod
     def commit(
@@ -231,30 +251,32 @@ class FlextInfraMiseArtifactsJournal:
             return r[m.Infra.CodegenTransactionJournal].fail(
                 "only a prepared codegen journal can be committed"
             )
-        try:
-            return r[m.Infra.CodegenTransactionJournal].ok(
-                m.Infra.CodegenTransactionJournal(
-                    version=8,
-                    transaction_id=journal.transaction_id,
-                    scope_device=journal.scope_device,
-                    scope_inode=journal.scope_inode,
-                    state="committed",
-                    projects=journal.projects,
-                    sources=journal.sources,
-                    directories=journal.directories,
-                    entries=journal.entries,
-                )
-            )
-        except c.ValidationError as exc:
+        validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
+            m.Infra.CodegenTransactionJournal,
+            {
+                "version": 8,
+                "transaction_id": journal.transaction_id,
+                "scope_device": journal.scope_device,
+                "scope_inode": journal.scope_inode,
+                "state": "committed",
+                "projects": journal.projects,
+                "file_participants": journal.file_participants,
+                "sources": journal.sources,
+                "directories": journal.directories,
+                "entries": journal.entries,
+            },
+        )
+        if validated.failure:
             return r[m.Infra.CodegenTransactionJournal].fail_op(
-                "validate committed codegen journal", exc
+                "validate committed codegen journal", validated.error
             )
+        return r[m.Infra.CodegenTransactionJournal].ok(validated.value)
 
     @classmethod
     def begin_recovery(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        candidates: tuple[m.Infra.CodegenStagedFile | None, ...],
+        candidates: t.VariadicTuple[m.Infra.CodegenStagedFile | None],
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Persist every rollback replacement identity before the first restore."""
         if journal.state != "prepared" or len(candidates) != len(journal.entries):
@@ -302,30 +324,34 @@ class FlextInfraMiseArtifactsJournal:
                     else Path(entry.original_backup).with_suffix(".restore").as_posix()
                 ),
             })
-            try:
-                entries.append(m.Infra.CodegenJournalEntry.model_validate(entry_data))
-            except c.ValidationError as exc:
+            validated_entry: p.Result[m.Infra.CodegenJournalEntry] = u.validate_value(
+                m.Infra.CodegenJournalEntry, entry_data
+            )
+            if validated_entry.failure:
                 return r[m.Infra.CodegenTransactionJournal].fail_op(
-                    "validate recovering codegen journal entry", exc
+                    "validate recovering codegen journal entry", validated_entry.error
                 )
-        try:
-            return r[m.Infra.CodegenTransactionJournal].ok(
-                m.Infra.CodegenTransactionJournal(
-                    version=8,
-                    transaction_id=journal.transaction_id,
-                    scope_device=journal.scope_device,
-                    scope_inode=journal.scope_inode,
-                    state="recovering",
-                    projects=journal.projects,
-                    sources=journal.sources,
-                    directories=journal.directories,
-                    entries=tuple(entries),
-                )
-            )
-        except c.ValidationError as exc:
+            entries.append(validated_entry.value)
+        validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
+            m.Infra.CodegenTransactionJournal,
+            {
+                "version": 8,
+                "transaction_id": journal.transaction_id,
+                "scope_device": journal.scope_device,
+                "scope_inode": journal.scope_inode,
+                "state": "recovering",
+                "projects": journal.projects,
+                "file_participants": journal.file_participants,
+                "sources": journal.sources,
+                "directories": journal.directories,
+                "entries": tuple(entries),
+            },
+        )
+        if validated.failure:
             return r[m.Infra.CodegenTransactionJournal].fail_op(
-                "validate recovering codegen journal", exc
+                "validate recovering codegen journal", validated.error
             )
+        return r[m.Infra.CodegenTransactionJournal].ok(validated.value)
 
     @classmethod
     def write(
@@ -342,21 +368,21 @@ class FlextInfraMiseArtifactsJournal:
                 "codegen journal expected state belongs to another path"
             )
         written = u.Cli.atomic_write_binary_file_guarded(
-            expected, content, permission_mode=files.JOURNAL_MODE
+            expected, content, permission_mode=c.Infra.JOURNAL_MODE
         )
         if written.failure:
             return r[m.Cli.AtomicFileState].from_failure(written)
-        observed = state.journal_state(layout)
+        observed = journal_state.journal_state(layout)
         if observed.failure:
             return r[m.Cli.AtomicFileState].from_failure(observed)
-        observed_snapshot = state.journal_snapshot(observed.value)
+        observed_snapshot = journal_state.journal_snapshot(observed.value)
         if observed_snapshot is None:
             return r[m.Cli.AtomicFileState].fail(
                 "published codegen journal parent disappeared"
             )
         if (
             observed_snapshot.content != content
-            or observed_snapshot.mode != files.JOURNAL_MODE
+            or observed_snapshot.mode != c.Infra.JOURNAL_MODE
         ):
             return r[m.Cli.AtomicFileState].fail(
                 "published codegen journal differs from exact bytes or mode"
@@ -368,22 +394,23 @@ class FlextInfraMiseArtifactsJournal:
         cls, layout: m.Infra.MiseToolchainWorkspaceLayout
     ) -> p.Result[t.Pair[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]]:
         """Parse the typed v8 journal without deriving a second filesystem path."""
-        snapshot = state.journal_state(layout)
+        snapshot = journal_state.journal_state(layout)
         result_type = r[tuple[m.Infra.CodegenTransactionJournal, m.Cli.AtomicFileState]]
         if snapshot.failure:
             return result_type.from_failure(snapshot)
-        journal_snapshot = state.journal_snapshot(snapshot.value)
+        journal_snapshot = journal_state.journal_snapshot(snapshot.value)
         if journal_snapshot is None or journal_snapshot.content is None:
             return result_type.fail("codegen transaction journal is absent")
-        if journal_snapshot.mode != files.JOURNAL_MODE:
+        if journal_snapshot.mode != c.Infra.JOURNAL_MODE:
             return result_type.fail("codegen transaction journal mode is not 0600")
-        try:
-            journal = m.Infra.CodegenTransactionJournal.model_validate_json(
-                journal_snapshot.content
+        validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
+            m.Infra.CodegenTransactionJournal, journal_snapshot.content, from_json=True
+        )
+        if validated.failure:
+            return result_type.fail_op(
+                "validate codegen transaction journal", validated.error
             )
-        except c.ValidationError as exc:
-            return result_type.fail_op("validate codegen transaction journal", exc)
-        relocated = cls._relocate_journal(layout, journal)
+        relocated = cls._relocate_journal(layout, validated.value)
         if relocated.failure:
             return result_type.from_failure(relocated)
         return result_type.ok((relocated.value, journal_snapshot))
@@ -393,15 +420,15 @@ class FlextInfraMiseArtifactsJournal:
         cls,
         layout: m.Infra.MiseToolchainWorkspaceLayout,
         journal: m.Infra.CodegenTransactionJournal,
-        journal_state: m.Cli.AtomicFileState,
+        journal_snapshot: m.Cli.AtomicFileState,
     ) -> p.Result[bool]:
         """Retain journal authority until all journal-authorized cleanup completes."""
-        directories = state.cleanup_journaled_directories(
+        directories = journal_state.cleanup_journaled_directories(
             layout, journal, include_generated=journal.state != "committed"
         )
         if directories.failure:
             return directories
-        removed = files.delete_state(journal_state)
+        removed = files.delete_state(journal_snapshot)
         if removed.failure:
             return r[bool].from_failure(removed)
         return r[bool].ok(True)
@@ -421,25 +448,54 @@ class FlextInfraMiseArtifactsJournal:
             return result_type.fail(
                 "generation journal belongs to another physical scope"
             )
-        recorded_root = cls._recorded_scope_root(journal)
+        recorded_root = cls._recorded_scope_root(journal, layout.scope_root)
         if recorded_root.failure:
             return result_type.from_failure(recorded_root)
+        recorded_participants = {
+            participant.selector: participant
+            for participant in journal.file_participants
+        }
+        current_participants = {
+            participant.selector: participant
+            for participant in layout.file_participants
+        }
         if recorded_root.value == layout.scope_root:
             return result_type.ok(journal)
+        if recorded_participants.keys() != current_participants.keys():
+            return result_type.fail(
+                "generation journal file participant inventory changed"
+            )
+        for selector, recorded in recorded_participants.items():
+            current = current_participants[selector]
+            if (recorded.device, recorded.inode) != (current.device, current.inode):
+                return result_type.fail(
+                    f"generation journal file participant changed: {selector}"
+                )
         sources: list[m.Infra.CodegenJournalSource] = []
         directories: list[m.Infra.CodegenJournalDirectory] = []
         for source in journal.sources:
-            rebound = cls._relocated_path(
-                source.path, recorded_root.value, layout.scope_root
+            previous_root, current_root = cls._relocation_roots(
+                source.path,
+                recorded_root.value,
+                layout.scope_root,
+                recorded_participants,
+                current_participants,
             )
+            rebound = cls._relocated_path(source.path, previous_root, current_root)
             if rebound.failure:
                 return result_type.from_failure(rebound)
             sources.append(source.model_copy(update={"path": rebound.value}))
         for directory in journal.directories:
+            previous_root = recorded_root.value
+            current_root = layout.scope_root
+            recorded_participant = recorded_participants.get(directory.project)
+            if recorded_participant is not None:
+                previous_root = recorded_participant.root
+                current_root = current_participants[directory.project].root
             before: m.Cli.AtomicDirectoryState | None = None
             if directory.before is not None:
                 relocated_before = cls._relocate_directory_state(
-                    directory.before, recorded_root.value, layout.scope_root
+                    directory.before, previous_root, current_root
                 )
                 if relocated_before.failure:
                     return result_type.from_failure(relocated_before)
@@ -447,7 +503,7 @@ class FlextInfraMiseArtifactsJournal:
             created: m.Cli.AtomicDirectoryState | None = None
             if directory.created is not None:
                 relocated_created = cls._relocate_directory_state(
-                    directory.created, recorded_root.value, layout.scope_root
+                    directory.created, previous_root, current_root
                 )
                 if relocated_created.failure:
                     return result_type.from_failure(relocated_created)
@@ -455,54 +511,116 @@ class FlextInfraMiseArtifactsJournal:
             manifest: m.Cli.AtomicPhysicalTreeManifest | None = None
             if directory.manifest is not None:
                 relocated_manifest = cls._relocate_manifest(
-                    directory.manifest, recorded_root.value, layout.scope_root
+                    directory.manifest, previous_root, current_root
                 )
                 if relocated_manifest.failure:
                     return result_type.from_failure(relocated_manifest)
                 manifest = relocated_manifest.value
-            try:
-                directories.append(
-                    m.Infra.CodegenJournalDirectory.model_validate({
+            validated_directory: p.Result[m.Infra.CodegenJournalDirectory] = (
+                u.validate_value(
+                    m.Infra.CodegenJournalDirectory,
+                    {
                         **directory.model_dump(),
                         "before": before,
                         "created": created,
                         "manifest": manifest,
-                    })
+                    },
                 )
-            except c.ValidationError as exc:
-                return result_type.fail_op("relocate generation directory", exc)
-        try:
-            return result_type.ok(
-                m.Infra.CodegenTransactionJournal.model_validate({
-                    **journal.model_dump(),
-                    "sources": tuple(sources),
-                    "directories": tuple(directories),
-                })
             )
-        except c.ValidationError as exc:
-            return result_type.fail_op("relocate generation journal", exc)
+            if validated_directory.failure:
+                return result_type.fail_op(
+                    "relocate generation directory", validated_directory.error
+                )
+            directories.append(validated_directory.value)
+        validated: p.Result[m.Infra.CodegenTransactionJournal] = u.validate_value(
+            m.Infra.CodegenTransactionJournal,
+            {
+                **journal.model_dump(),
+                "file_participants": layout.file_participants,
+                "sources": tuple(sources),
+                "directories": tuple(directories),
+            },
+        )
+        if validated.failure:
+            return result_type.fail_op("relocate generation journal", validated.error)
+        return result_type.ok(validated.value)
 
     @classmethod
     def _recorded_scope_root(
-        cls, journal: m.Infra.CodegenTransactionJournal
+        cls, journal: m.Infra.CodegenTransactionJournal, current_scope: Path
     ) -> p.Result[Path]:
         candidates: set[Path] = set()
+        participants = {
+            participant.selector: participant.root
+            for participant in journal.file_participants
+        }
         for directory in journal.directories:
-            relative = Path(directory.path)
-            for directory_state in (directory.before, directory.created):
-                if directory_state is None:
-                    continue
-                candidate = directory_state.path
-                for _part in relative.parts:
-                    candidate = candidate.parent
-                if candidate / relative != directory_state.path:
-                    return r[Path].fail(
-                        f"generation directory path is inconsistent: {directory.path}"
-                    )
-                candidates.add(candidate)
+            candidate = cls._recorded_directory_roots(directory, participants)
+            if candidate.failure:
+                return r[Path].from_failure(candidate)
+            candidates.update(candidate.value)
+        if not candidates:
+            return r[Path].ok(current_scope)
         if len(candidates) != 1:
             return r[Path].fail("generation journal has no single recorded scope path")
         return r[Path].ok(candidates.pop())
+
+    @staticmethod
+    def _recorded_directory_roots(
+        directory: m.Infra.CodegenJournalDirectory, participants: t.MappingKV[str, Path]
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        """Recover the workspace root candidates or validate an external owner.
+
+        A directory owned by a recorded participant contributes no candidate, so
+        the empty tuple is the typed absence here, never None.
+        """
+        relative = Path(directory.path)
+        selector = relative.parts[0]
+        participant_root = participants.get(selector)
+        states = tuple(
+            state
+            for state in (directory.before, directory.created)
+            if state is not None
+        )
+        if participant_root is not None:
+            expected = participant_root.joinpath(*relative.parts[1:])
+            valid = directory.project == selector and all(
+                state.path == expected for state in states
+            )
+            if valid:
+                return r[t.VariadicTuple[Path]].ok(())
+            return r[t.VariadicTuple[Path]].fail(
+                f"generation directory path is inconsistent: {directory.path}"
+            )
+        candidates: set[Path] = set()
+        for state in states:
+            candidate = state.path
+            for _part in relative.parts:
+                candidate = candidate.parent
+            if candidate / relative != state.path:
+                return r[t.VariadicTuple[Path]].fail(
+                    f"generation directory path is inconsistent: {directory.path}"
+                )
+            candidates.add(candidate)
+        if len(candidates) > 1:
+            return r[t.VariadicTuple[Path]].fail(
+                f"generation directory path is inconsistent: {directory.path}"
+            )
+        return r[t.VariadicTuple[Path]].ok(tuple(candidates))
+
+    @staticmethod
+    def _relocation_roots(
+        path: Path,
+        recorded_scope: Path,
+        current_scope: Path,
+        recorded_participants: t.MappingKV[str, m.Infra.CodegenFileParticipant],
+        current_participants: t.MappingKV[str, m.Infra.CodegenFileParticipant],
+    ) -> t.Pair[Path, Path]:
+        """Resolve the physical owner roots for one journaled absolute path."""
+        for selector, participant in recorded_participants.items():
+            if path.is_relative_to(participant.root):
+                return participant.root, current_participants[selector].root
+        return recorded_scope, current_scope
 
     @classmethod
     def _relocated_path(
@@ -542,32 +660,42 @@ class FlextInfraMiseArtifactsJournal:
             if rebound.failure:
                 return result_type.from_failure(rebound)
             relocated.append(entry.model_copy(update={"path": rebound.value}))
-        try:
-            return result_type.ok(
-                m.Cli.AtomicPhysicalTreeManifest(
-                    root=relocated[0], entries=tuple(relocated[1:])
-                )
+        validated: p.Result[m.Cli.AtomicPhysicalTreeManifest] = u.validate_value(
+            m.Cli.AtomicPhysicalTreeManifest,
+            {"root": relocated[0], "entries": tuple(relocated[1:])},
+        )
+        if validated.failure:
+            return result_type.fail_op(
+                "relocate generation tree manifest", validated.error
             )
-        except c.ValidationError as exc:
-            return result_type.fail_op("relocate generation tree manifest", exc)
+        return result_type.ok(validated.value)
 
     @classmethod
     def _journal_source(
-        cls, phase: str, source: m.Cli.AtomicFileState
+        cls,
+        phase: str,
+        source: m.Cli.AtomicFileState,
+        previous: m.Infra.CodegenJournalSource | None = None,
     ) -> p.Result[m.Infra.CodegenJournalSource]:
+        absent_parent = None
         if source.parent_device is None or source.parent_inode is None:
+            if previous is not None:
+                absent_parent = previous.absent_parent
+            else:
+                witness = u.Cli.atomic_plan_directory_chain(source.path.parent)
+                if witness.failure:
+                    return r[m.Infra.CodegenJournalSource].from_failure(witness)
+                absent_parent = witness.value
+        incomplete_source = source.content is not None and any((
+            source.mode is None,
+            source.device is None,
+            source.inode is None,
+            source.link_count is None,
+            source.link_count is not None and source.link_count < 1,
+        ))
+        if incomplete_source:
             return r[m.Infra.CodegenJournalSource].fail(
-                f"generation source parent identity is incomplete: {source.path}"
-            )
-        if (
-            source.content is None
-            or source.mode is None
-            or source.device is None
-            or source.inode is None
-            or source.link_count != 1
-        ):
-            return r[m.Infra.CodegenJournalSource].fail(
-                f"generation source is absent or incomplete: {source.path}"
+                f"generation source identity is incomplete: {source.path}"
             )
         return r[m.Infra.CodegenJournalSource].ok(
             m.Infra.CodegenJournalSource(
@@ -575,13 +703,16 @@ class FlextInfraMiseArtifactsJournal:
                 path=source.path,
                 parent_device=source.parent_device,
                 parent_inode=source.parent_inode,
-                sha256=files.digest(source.content),
+                sha256=files.digest(source.content)
+                if source.content is not None
+                else None,
                 mode=source.mode,
                 device=source.device,
                 inode=source.inode,
                 link_count=source.link_count,
                 file_attributes=source.file_attributes,
                 reparse_tag=source.reparse_tag,
+                absent_parent=absent_parent,
             )
         )
 
@@ -589,17 +720,17 @@ class FlextInfraMiseArtifactsJournal:
     def _merge_sources(
         cls,
         existing: t.VariadicTuple[m.Infra.CodegenJournalSource],
-        sources: tuple[tuple[str, m.Cli.AtomicFileState], ...],
+        sources: t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenJournalSource]]:
         result_type = r[tuple[m.Infra.CodegenJournalSource, ...]]
         by_key = {(source.phase, source.path): source for source in existing}
         order = [(source.phase, source.path) for source in existing]
         for phase, source in sources:
-            encoded = cls._journal_source(phase, source)
+            key = (phase, source.path)
+            previous = by_key.get(key)
+            encoded = cls._journal_source(phase, source, previous)
             if encoded.failure:
                 return result_type.from_failure(encoded)
-            key = (encoded.value.phase, encoded.value.path)
-            previous = by_key.get(key)
             if previous is not None and previous != encoded.value:
                 return result_type.fail(
                     f"generation source changed between phases: {encoded.value.path}"
@@ -612,7 +743,7 @@ class FlextInfraMiseArtifactsJournal:
     @classmethod
     def _journal_entry(
         cls,
-        plan: m.Infra.MiseToolchainWorkspacePlan,
+        plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
         publication: m.Infra.CodegenStagedFile,
         *,
         index: int,
@@ -624,14 +755,18 @@ class FlextInfraMiseArtifactsJournal:
                 f"generation destination parent identity is incomplete: {before.path}"
             )
         project = next(
-            (item for item in plan.projects if item.layout.root == publication.project),
+            (
+                item
+                for item in files.transaction_participants(plan.layout)
+                if item.root == publication.project
+            ),
             None,
         )
-        if project is None or project.layout.transaction_root is None:
+        if project is None or project.transaction_root is None:
             return r[m.Infra.CodegenJournalEntry].fail(
                 f"generation publication has no transaction participant: {before.path}"
             )
-        selector = files.workspace_relative(plan.layout.scope_root, before.path)
+        selector = files.transaction_relative(plan.layout, before.path)
         if selector.failure:
             return r[m.Infra.CodegenJournalEntry].from_failure(selector)
         backup_selector: str | None = None
@@ -646,7 +781,7 @@ class FlextInfraMiseArtifactsJournal:
                 return r[m.Infra.CodegenJournalEntry].fail(
                     f"generation original identity is incomplete: {before.path}"
                 )
-            recovery_root = project.layout.transaction_root / "recovery"
+            recovery_root = project.transaction_root / "recovery"
             if recovery_root not in recovery_roots:
                 if recovery_root.exists() or recovery_root.is_symlink():
                     inventory = u.Cli.atomic_inventory_physical_tree(recovery_root)
@@ -667,10 +802,10 @@ class FlextInfraMiseArtifactsJournal:
                         return r[m.Infra.CodegenJournalEntry].from_failure(created)
                 recovery_roots.add(recovery_root)
             backup = recovery_root / f"{index:06d}.original"
-            written = process.write_new(backup, before.content, files.JOURNAL_MODE)
+            written = process.write_new(backup, before.content, c.Infra.JOURNAL_MODE)
             if written.failure:
                 return r[m.Infra.CodegenJournalEntry].from_failure(written)
-            relative_backup = files.workspace_relative(plan.layout.scope_root, backup)
+            relative_backup = files.transaction_relative(plan.layout, backup)
             if relative_backup.failure:
                 return r[m.Infra.CodegenJournalEntry].from_failure(relative_backup)
             backup_selector = relative_backup.value
@@ -690,16 +825,14 @@ class FlextInfraMiseArtifactsJournal:
             )
         desired_staging: str | None = None
         if replacement is not None:
-            relative_staging = files.workspace_relative(
-                plan.layout.scope_root, replacement.path
-            )
+            relative_staging = files.transaction_relative(plan.layout, replacement.path)
             if relative_staging.failure:
                 return r[m.Infra.CodegenJournalEntry].from_failure(relative_staging)
             desired_staging = relative_staging.value
         return r[m.Infra.CodegenJournalEntry].ok(
             m.Infra.CodegenJournalEntry(
                 phase=publication.phase,
-                project=project.layout.selector,
+                project=project.selector,
                 path=selector.value,
                 desired_staging=desired_staging,
                 original_exists=before.content is not None,
@@ -710,7 +843,7 @@ class FlextInfraMiseArtifactsJournal:
                 original_mode=before.mode,
                 original_device=before.device,
                 original_inode=before.inode,
-                original_link_count=cast("Literal[1] | None", before.link_count),
+                original_link_count=1 if before.content is not None else None,
                 original_file_attributes=before.file_attributes,
                 original_reparse_tag=before.reparse_tag,
                 desired_exists=desired_exists,
@@ -724,11 +857,7 @@ class FlextInfraMiseArtifactsJournal:
                 desired_mode=None if replacement is None else replacement.mode,
                 desired_device=None if replacement is None else replacement.device,
                 desired_inode=None if replacement is None else replacement.inode,
-                desired_link_count=(
-                    None
-                    if replacement is None
-                    else cast("Literal[1]", replacement.link_count)
-                ),
+                desired_link_count=1 if replacement is not None else None,
                 desired_file_attributes=(
                     None if replacement is None else replacement.file_attributes
                 ),
@@ -741,29 +870,15 @@ class FlextInfraMiseArtifactsJournal:
     @classmethod
     def _validate_physical_topology(
         cls,
-        plan: m.Infra.MiseToolchainWorkspacePlan,
+        plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
         journal: m.Infra.CodegenTransactionJournal,
     ) -> p.Result[bool]:
-        scope = files.physical_directory_identity(plan.layout.scope_root)
-        if scope.failure:
-            return r[bool].from_failure(scope)
-        if scope.value != (journal.scope_device, journal.scope_inode):
-            return r[bool].fail("generation scope changed during transaction")
-        expected = tuple(project.layout.selector for project in plan.projects)
-        observed = tuple(project.selector for project in journal.projects)
-        if observed != expected:
-            return r[bool].fail(
-                "generation project topology changed during transaction"
-            )
-        for planned, recorded in zip(plan.projects, journal.projects, strict=True):
-            identity = files.physical_directory_identity(planned.layout.root)
-            if identity.failure:
-                return r[bool].from_failure(identity)
-            if identity.value != (recorded.device, recorded.inode):
-                return r[bool].fail(
-                    f"generation project changed during transaction: {recorded.selector}"
-                )
-        return r[bool].ok(True)
+        """Use the same capability and physical topology proof as recovery."""
+        from ._mise_artifacts_verification import FlextInfraMiseArtifactsVerification
+
+        return FlextInfraMiseArtifactsVerification.journal_topology(
+            plan.layout, journal
+        )
 
 
 __all__: list[str] = ["FlextInfraMiseArtifactsJournal"]

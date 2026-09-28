@@ -6,13 +6,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import c, m, s, t, u
+from flext_infra import c, m, t, u
+from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraValidateTestImportDag(s[bool]):
+class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool]):
     """Enforce directed imports between production, tests, and test facets."""
 
     def build_report(self, repository_root: Path) -> p.Result[m.Infra.ValidationReport]:
@@ -51,7 +52,7 @@ class FlextInfraValidateTestImportDag(s[bool]):
                 file_path = u.Infra.resource_file_path(project, resource)
                 if file_path is None:
                     continue
-                module_imports = u.Infra.get_module_imports(project, resource)
+                module_imports = u.Infra.resolve_module_imports(project, resource)
                 for imported in u.Infra.imported_module_paths(module_imports):
                     reason = self._edge_violation(
                         file_path,

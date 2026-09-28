@@ -16,10 +16,8 @@ from tests import u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
 
-
-class TestScannerHelpers:
+class TestsFlextInfraScannerHelpers:
     """Tests for scanner helper methods."""
 
     def test_iter_matching_files_glob_patterns(self, tmp_path: Path) -> None:
@@ -124,6 +122,3 @@ class TestScannerHelpers:
         scope.mkdir()
 
         tm.that(infra_u.Infra.git_tracked_scope_paths(scope), eq=[])
-
-
-__all__: t.StrSequence = []

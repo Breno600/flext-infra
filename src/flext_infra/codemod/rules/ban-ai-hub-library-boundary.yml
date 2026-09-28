@@ -22,7 +22,7 @@ rule:
         - regex: '^from\s+code_review_graph(?:\.[A-Za-z_][\w.]*)*\s+import\b'
     - all:
         - kind: identifier
-        - regex: '(?i)(?:code_?review_?graph|(?:^|_)crg(?:_|$))'
+        - regex: "(?i)(?:code_?review_?graph|(?:^|_)crg(?:_|$))"
 message: >-
   flext-infra must not import ai-hub/CRG libraries or implement CRG wrappers,
   models, constants, gates, or lifecycle. Use an optional public ai-hub

@@ -38,4 +38,4 @@ constraints:
   RECV:
     regex: '^(?:u\.Infra|FlextInfraUtilitiesGit)$'
   METHOD:
-    regex: '^git_(?:run|capture|capture_bytes)$'
+    regex: "^git_(?:run|capture|capture_bytes)$"

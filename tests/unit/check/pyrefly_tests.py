@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestFlextInfraConfigFixer:
+class TestsFlextInfraConfigFixer:
     """Test suite for FlextInfraConfigFixer."""
 
     def test_init_creates_instance(self) -> None:

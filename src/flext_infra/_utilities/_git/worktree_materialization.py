@@ -9,11 +9,10 @@ from flext_cli import u
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra import c, t
 
 from .worktree_discovery import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
-from .worktree_io import git_stdin
+from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -134,7 +133,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
                 patch_bytes += b"\n"
             try:
                 worktree_repo = cls._repo(worktree_root)
-                with git_stdin(patch_bytes) as istream:
+                with FlextInfraUtilitiesGitWorktreeIO.git_stdin(patch_bytes) as istream:
                     worktree_repo.git.apply("--binary", "-", istream=istream)
             except GitCommandError as exc:
                 return r[bool].fail(str(exc), exception=exc)

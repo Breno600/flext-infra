@@ -23,10 +23,24 @@ class FlextInfraCodegenLayoutPlanMixin:
         """Layout SSOT loaded once through the validated config singleton."""
         return config.Infra.codegen.layout
 
+    @staticmethod
+    def layout_project_name(project_dir: Path) -> str:
+        """Return the project's declared identity, ``[project].name``.
+
+        Layout overrides and profile patterns are keyed by the name a project
+        declares, never by the directory it happens to be checked out in: a
+        linked worktree (``.claude/worktrees/<lane>``) or a renamed clone is
+        the same project and inherits the same keep-list.
+        """
+        pyproject_path = project_dir / c.PYPROJECT_FILENAME
+        return u.Infra.project_name_from_payload(
+            pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+        )
+
     def plan_project(self, project_dir: Path) -> m.Infra.LayoutProjectReport:
         """Classify every root entry of one project without writing anything."""
         spec = self._layout_spec
-        project_name = project_dir.name
+        project_name = self.layout_project_name(project_dir)
         override = self._resolve_override(spec, project_name)
         allowed = self._allowed_root_names(spec, project_dir, project_name, override)
         override_roots = self._override_root_names(override)
@@ -111,12 +125,17 @@ class FlextInfraCodegenLayoutPlanMixin:
     def _override_root_names(
         override: m.Infra.LayoutProjectOverrideSpec | None,
     ) -> frozenset[str]:
-        """Root names owned by per-project override rules (never generic rules)."""
+        """Root names owned by per-project override rules (never generic rules).
+
+        Declared ``keep_root_files`` are owned too: they are exempt from the
+        generic loose-root classification instead of being archived or moved.
+        """
         if override is None:
             return frozenset()
         return frozenset({
             *(Path(move.source).parts[0] for move in override.moves),
             *override.archive_empty_dirs,
+            *override.keep_root_files,
         })
 
     def _classify_root_entry(

@@ -7,10 +7,13 @@ from .._utilities._docs_generate_root import FlextInfraUtilitiesDocsGenerateRoot
 # Why: restored lost composition — FlextInfraUtilitiesDocsGuidesMixin was
 # never wired into any composed Docs* facade, leaving consumers unresolved.
 from ._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
+from .docs_collection import FlextInfraUtilitiesDocsCollection
 
 
 class FlextInfraUtilitiesDocsGenerate(
-    FlextInfraUtilitiesDocsGenerateRootMixin, FlextInfraUtilitiesDocsGuidesMixin
+    FlextInfraUtilitiesDocsGenerateRootMixin,
+    FlextInfraUtilitiesDocsGuidesMixin,
+    FlextInfraUtilitiesDocsCollection,
 ):
     """Reusable generation helpers exposed through ``u.Infra``."""
 

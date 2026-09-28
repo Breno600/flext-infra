@@ -2,7 +2,7 @@
 
 The three census-rules mixins (``_census_rules_dispatch``, ``_census_rules_alias``,
 ``_census_rules_struct``) each declared identical ``TYPE_CHECKING``-only stubs for
-``_detector_context``, ``_raw_violation``, ``_fix_key``, and ``_named_object``
+``_detector_context``, ``_fix_key``, and ``_named_object``
 so that the type checker sees the method signatures that are actually resolved
 through sibling mixins later in the MRO of ``FlextInfraRefactorCensus``.
 This module centralises those stubs in a single base mixin so they are declared once.
@@ -45,22 +45,9 @@ class FlextInfraRefactorCensusRulesSharedMixin:
         @staticmethod
         def _fix_key(file_path: Path, object_name: str, action: str = "") -> str: ...
         @staticmethod
-        def _raw_violation(
-            *,
-            project: str,
-            object_name: str,
-            object_kind: str,
-            kind: str,
-            file_path: Path,
-            line: int,
-            description: str,
-            fixable: bool = False,
-            fix_action: str = "",
-        ) -> m.Infra.Census.Violation: ...
-        @staticmethod
         def _named_object(
-            objects: t.VariadicTuple[m.Infra.Census.Object], name: str
-        ) -> m.Infra.Census.Object | None: ...
+            objects: t.VariadicTuple[m.Infra.Object], name: str
+        ) -> m.Infra.Object | None: ...
 
 
 __all__: list[str] = ["FlextInfraRefactorCensusRulesSharedMixin"]

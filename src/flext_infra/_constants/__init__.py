@@ -25,12 +25,16 @@ if TYPE_CHECKING:
     from .git import FlextInfraConstantsGit
     from .make import FlextInfraConstantsMake
     from .namespace import FlextInfraConstantsNamespace
+    from .promoted import FlextInfraConstantsPromoted
+    from .promoted_messages import FlextInfraConstantsPromotedMessages
     from .refactor import FlextInfraConstantsRefactor
     from .release import FlextInfraConstantsRelease
     from .rope import FlextInfraConstantsRope
     from .source_code import FlextInfraConstantsSourceCode
     from .validate import FlextInfraConstantsSharedInfra
     from .workspace import FlextInfraConstantsWorkspace
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraConstantsAdapters",
     "FlextInfraConstantsBase",
@@ -48,6 +52,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraConstantsGit",
     "FlextInfraConstantsMake",
     "FlextInfraConstantsNamespace",
+    "FlextInfraConstantsPromoted",
+    "FlextInfraConstantsPromotedMessages",
     "FlextInfraConstantsRefactor",
     "FlextInfraConstantsRelease",
     "FlextInfraConstantsRope",
@@ -75,6 +81,8 @@ _LAZY_IMPORTS = MappingProxyType(
             ".git": ("FlextInfraConstantsGit",),
             ".make": ("FlextInfraConstantsMake",),
             ".namespace": ("FlextInfraConstantsNamespace",),
+            ".promoted": ("FlextInfraConstantsPromoted",),
+            ".promoted_messages": ("FlextInfraConstantsPromotedMessages",),
             ".refactor": ("FlextInfraConstantsRefactor",),
             ".release": ("FlextInfraConstantsRelease",),
             ".rope": ("FlextInfraConstantsRope",),

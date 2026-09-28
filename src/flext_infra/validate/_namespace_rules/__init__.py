@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from .contracts import FlextInfraNamespaceRulesContracts
     from .imports import FlextInfraNamespaceRulesImports
     from .structure import FlextInfraNamespaceRulesStructure
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraNamespaceRulesBase",
     "FlextInfraNamespaceRulesContracts",

@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 import tarfile
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 
 from flext_cli import r, u
 
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
 
 from .dependencies import FlextInfraUtilitiesDependencies
 
@@ -44,7 +41,7 @@ class FlextInfraUtilitiesRelease:
             members = tuple(archive.getmembers())
         except tarfile.TarError as exc:
             return r[bool].fail_op("read release archive members", exc)
-        validated_members: list[tuple[tarfile.TarInfo, Path]] = []
+        validated_members: list[t.Pair[tarfile.TarInfo, Path]] = []
         for member in members:
             path_result = FlextInfraUtilitiesRelease.archive_member_path(member.name)
             if path_result.failure:
@@ -89,7 +86,7 @@ class FlextInfraUtilitiesRelease:
     def _write_validated_tar_tree(
         archive: tarfile.TarFile,
         staging: Path,
-        validated_members: Sequence[tuple[tarfile.TarInfo, Path]],
+        validated_members: Sequence[t.Pair[tarfile.TarInfo, Path]],
     ) -> p.Result[bool]:
         """Write prevalidated tar members into a staging directory."""
         for member, relative_path in validated_members:
@@ -157,7 +154,7 @@ class FlextInfraUtilitiesRelease:
         return r[c.Infra.VersionBump].ok(bump)
 
     @staticmethod
-    def is_release_subject(subject: str, version: str) -> bool:
+    def release_subject(subject: str, version: str) -> bool:
         """Whether ``subject`` is the protocol's release commit for ``version``.
 
         Matches the commit as the lane wrote it and as GitHub merged it, which
@@ -213,15 +210,9 @@ class FlextInfraUtilitiesRelease:
         repository_root: Path, version: str, tag: str, notes_path: Path
     ) -> p.Result[bool]:
         """Update docs/changelog and docs/releases entries."""
-        docs = repository_root / c.Infra.DIR_DOCS
-        changelog_path = docs / "CHANGELOG.md"
-        latest_path = docs / "releases" / "latest.md"
-        tagged_path = docs / "releases" / f"{tag}.md"
         try:
             FlextInfraUtilitiesRelease._write_changelog_files(
-                changelog_path=changelog_path,
-                latest_path=latest_path,
-                tagged_path=tagged_path,
+                repository_root=repository_root,
                 version=version,
                 tag=tag,
                 notes_path=notes_path,
@@ -232,15 +223,13 @@ class FlextInfraUtilitiesRelease:
 
     @staticmethod
     def _write_changelog_files(
-        *,
-        changelog_path: Path,
-        latest_path: Path,
-        tagged_path: Path,
-        version: str,
-        tag: str,
-        notes_path: Path,
+        *, repository_root: Path, version: str, tag: str, notes_path: Path
     ) -> None:
-        """Write changelog and release note files."""
+        """Write the docs changelog plus the latest and tagged release notes."""
+        docs = repository_root / c.Infra.DIR_DOCS
+        changelog_path = docs / "CHANGELOG.md"
+        latest_path = docs / "releases" / "latest.md"
+        tagged_path = docs / "releases" / f"{tag}.md"
         notes_text = notes_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         existing = (
             changelog_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
@@ -297,7 +286,7 @@ class FlextInfraUtilitiesRelease:
         wave may upload in parallel while the sequence between waves is strict.
         """
         selected = {name for name, _ in targets}
-        edges: dict[str, t.StrSequence] = {}
+        edges: MutableMapping[str, t.StrSequence] = {}
         for name, path in targets:
             declared = cls._release_runtime_dependencies(path)
             if declared.failure:
@@ -323,10 +312,10 @@ class FlextInfraUtilitiesRelease:
         the platform packages test against each other, counting them would
         report the whole workspace as one cycle.
         """
-        pyproject = path / c.Infra.PYPROJECT_FILENAME
+        pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.StrSequence].fail(
-                f"release project has no {c.Infra.PYPROJECT_FILENAME}: {path}"
+                f"release project has no {c.PYPROJECT_FILENAME}: {path}"
             )
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:

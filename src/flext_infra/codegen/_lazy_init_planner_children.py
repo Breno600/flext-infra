@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import c
@@ -23,7 +24,7 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
 
         def context(self, pkg_dir: Path) -> m.Infra.LazyInitPackageContext: ...
 
-        _source_plan_cache: dict[str, m.Infra.LazyInitPlan]
+        _source_plan_cache: MutableMapping[str, m.Infra.LazyInitPlan]
 
         def _add(
             self, index: t.MutableLazyAliasMap, name: str, target: t.StrPair
@@ -31,6 +32,12 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
 
         @staticmethod
         def _publish(name: str, *, allow_main: bool) -> bool: ...
+
+        @staticmethod
+        def _is_facade_root(context: m.Infra.LazyInitPackageContext) -> bool: ...
+
+        @staticmethod
+        def _is_private_owner(module_path: str, *, root_pkg: str) -> bool: ...
 
     def _has_live_package_content(
         self, package_entry: m.Infra.RopePackageIndexEntry
@@ -65,11 +72,18 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         publish_child_exports = (
             parent_context.surface not in c.Infra.NON_PUBLIC_LAZY_ROOTS
         )
+        # A facade root never publishes a symbol owned behind a private segment,
+        # so a private child's exports are not candidates there: merging them
+        # would only let an unpublishable target displace the public owner a
+        # sibling module declares for the same name.
+        is_facade_root = self._is_facade_root(parent_context)
         direct: list[str] = []
         for child_dir in package_entry.descendant_child_dirs:
             # flext-pulj (codex): do not merge retired root registries into the
             # inline map that replaces them.
             if child_dir.name in c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES:
+                continue
+            if not self.context(child_dir).importable:
                 continue
             resolved_child_dir = child_dir.resolve()
             # flext-mh7g4: children are planned before their parent (depth
@@ -88,7 +102,6 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
             if not planned_write and not child_init.is_file():
                 continue
             child_entry = self._package_entry(child_dir)
-            is_fixture_child = self._is_fixture_package(child_dir)
             child_exports = dir_exports.get(str(resolved_child_dir), {})
             child_pkg_name = (
                 child_entry.package_name
@@ -106,17 +119,16 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
                 continue
             if resolved_child_dir.parent != resolved_pkg_dir:
                 continue
-            # flext-pulj (codex): private fixture modules are pytest-owned plugin
-            # boundaries and never bubble into their production package root.
-            if is_fixture_child:
-                continue
             direct.append(child_pkg_name)
             self._add(
                 lazy_map,
                 child_pkg_name.rsplit(".", maxsplit=1)[-1],
                 (child_pkg_name, ""),
             )
-            if not publish_child_exports:
+            if not publish_child_exports or (
+                is_facade_root
+                and self._is_private_owner(child_pkg_name, root_pkg=parent_pkg)
+            ):
                 continue
             for name, (module_name, attr) in child_exports.items():
                 source_module_name = module_name.rsplit(".", maxsplit=1)[-1]
@@ -158,13 +170,3 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
             len(relative_to_root) == 1
             and relative_to_root[0] in sys.stdlib_module_names
         )
-
-    @staticmethod
-    def _is_fixture_package(pkg_dir: Path) -> bool:
-        """Return True when the directory is the ``_fixtures`` convention package."""
-        return pkg_dir.name == "_fixtures"
-
-    @classmethod
-    def _is_private_test_fixture_package(cls, pkg_dir: Path, surface: str) -> bool:
-        """Return True when the package is a private fixture under the tests surface."""
-        return surface == "tests" and cls._is_fixture_package(pkg_dir)

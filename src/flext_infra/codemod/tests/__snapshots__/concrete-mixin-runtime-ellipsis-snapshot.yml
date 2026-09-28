@@ -18,3 +18,7 @@ snapshots:
       style: secondary
       start: 0
       end: 49
+    - source: 'def run(self) -> int: ...'
+      style: secondary
+      start: 24
+      end: 49

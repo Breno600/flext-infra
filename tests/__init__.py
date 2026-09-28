@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_tests import FlextTestsConstants, d, e, h, r, td, tf, tk, tm, tv, x
+    from flext_tests import api, d, e, h, r, td, tf, tk, tm, tv, x
 
     from . import integration, refactor, unit
     from .base import TestsFlextInfraServiceBase, TestsFlextInfraServiceBase as s
@@ -29,13 +29,13 @@ if TYPE_CHECKING:
     )
     from .utilities_gates import TestsFlextInfraUtilitiesGatesMixin
     from .utilities_git import TestsFlextInfraUtilitiesGitMixin
+    from .utilities_promoted import TestsFlextInfraUtilitiesPromotedMixin
     from .utilities_release import TestsFlextInfraUtilitiesReleaseMixin
-    from .utilities_replay import TestsFlextInfraUtilitiesReplayRunnerMixin
-    from .utilities_replay_sequence import TestsFlextInfraUtilitiesReplaySequenceMixin
     from .utilities_toml import TestsFlextInfraUtilitiesTomlMixin
     from .utilities_workspace_env import TestsFlextInfraUtilitiesWorkspaceEnvMixin
+
+
 __all__: tuple[str, ...] = (
-    "FlextTestsConstants",
     "TestsFlextInfraConstants",
     "TestsFlextInfraConstantsScanMixin",
     "TestsFlextInfraModels",
@@ -49,13 +49,13 @@ __all__: tuple[str, ...] = (
     "TestsFlextInfraUtilitiesGatesMixin",
     "TestsFlextInfraUtilitiesGitMixin",
     "TestsFlextInfraUtilitiesProjectFixtureMixin",
+    "TestsFlextInfraUtilitiesPromotedMixin",
     "TestsFlextInfraUtilitiesReleaseMixin",
-    "TestsFlextInfraUtilitiesReplayRunnerMixin",
-    "TestsFlextInfraUtilitiesReplaySequenceMixin",
     "TestsFlextInfraUtilitiesTomlMixin",
     "TestsFlextInfraUtilitiesToolingFixtureMixin",
     "TestsFlextInfraUtilitiesWorkspaceEnvMixin",
     "TestsFlextInfraUtilitiesWorkspaceFixtureMixin",
+    "api",
     "c",
     "d",
     "e",
@@ -104,15 +104,12 @@ _LAZY_IMPORTS = MappingProxyType(
             ),
             ".utilities_gates": ("TestsFlextInfraUtilitiesGatesMixin",),
             ".utilities_git": ("TestsFlextInfraUtilitiesGitMixin",),
+            ".utilities_promoted": ("TestsFlextInfraUtilitiesPromotedMixin",),
             ".utilities_release": ("TestsFlextInfraUtilitiesReleaseMixin",),
-            ".utilities_replay": ("TestsFlextInfraUtilitiesReplayRunnerMixin",),
-            ".utilities_replay_sequence": (
-                "TestsFlextInfraUtilitiesReplaySequenceMixin",
-            ),
             ".utilities_toml": ("TestsFlextInfraUtilitiesTomlMixin",),
             ".utilities_workspace_env": ("TestsFlextInfraUtilitiesWorkspaceEnvMixin",),
             "flext_tests": (
-                "FlextTestsConstants",
+                "api",
                 "d",
                 "e",
                 "h",

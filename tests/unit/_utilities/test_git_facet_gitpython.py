@@ -10,43 +10,40 @@ from flext_infra import FlextInfraGitService, c, m, u
 from tests import u as test_u
 
 
-def _add_submodule(repository: Path, source: Path, name: str) -> None:
-    """Add and commit ``source`` as a file-protocol submodule named ``name``."""
-    _ = test_u.Tests.git_run(
-        repository,
-        "-c",
-        "protocol.file.allow=always",
-        "submodule",
-        "add",
-        str(source),
-        name,
-    )
-    _ = test_u.Tests.git_run(repository, "commit", "-am", name)
-
-
-def _add_lane(tmp_path: Path, repository: Path, branch: str) -> Path:
-    """Create one branch and check it out as a worktree lane under ``tmp_path``."""
-    lane = tmp_path / branch
-    _ = test_u.Tests.git_run(repository, "branch", branch)
-    _ = test_u.Tests.git_run(repository, "worktree", "add", str(lane), branch)
-    return lane
-
-
-def _update_submodules(lane: Path) -> None:
-    """Initialize every declared submodule inside the lane checkout."""
-    _ = test_u.Tests.git_run(
-        lane,
-        "-c",
-        "protocol.file.allow=always",
-        "submodule",
-        "update",
-        "--init",
-        "--recursive",
-    )
-
-
 class TestsFlextInfraGitFacet:
     """Exercise the public Git facade against a real repository worktree."""
+
+    def _add_submodule(self, repository: Path, source: Path, name: str) -> None:
+        """Add and commit ``source`` as a file-protocol submodule named ``name``."""
+        _ = test_u.Tests.git_run(
+            repository,
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "add",
+            str(source),
+            name,
+        )
+        _ = test_u.Tests.git_run(repository, "commit", "-am", name)
+
+    def _add_lane(self, tmp_path: Path, repository: Path, branch: str) -> Path:
+        """Create one branch and check it out as a worktree lane under ``tmp_path``."""
+        lane = tmp_path / branch
+        _ = test_u.Tests.git_run(repository, "branch", branch)
+        _ = test_u.Tests.git_run(repository, "worktree", "add", str(lane), branch)
+        return lane
+
+    def _update_submodules(self, lane: Path) -> None:
+        """Initialize every declared submodule inside the lane checkout."""
+        _ = test_u.Tests.git_run(
+            lane,
+            "-c",
+            "protocol.file.allow=always",
+            "submodule",
+            "update",
+            "--init",
+            "--recursive",
+        )
 
     def test_tracked_scope_refreshes_after_filesystem_mutation(
         self, tmp_path: Path
@@ -77,7 +74,7 @@ class TestsFlextInfraGitFacet:
 
         tracked = u.Infra.git_tracked_scope_paths(project / "src")
 
-        tm.that(tracked, eq=None)
+        tm.that(tracked, eq=[created])
 
     def test_tracked_scope_does_not_borrow_an_ignoring_parent_repository(
         self, tmp_path: Path
@@ -257,9 +254,9 @@ class TestsFlextInfraGitFacet:
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         source = test_u.Tests.git_repository(tmp_path, "member-source")
-        _add_submodule(repository, source, "member")
-        lane = _add_lane(tmp_path, repository, "fixture-lane")
-        _update_submodules(lane)
+        self._add_submodule(repository, source, "member")
+        lane = self._add_lane(tmp_path, repository, "fixture-lane")
+        self._update_submodules(lane)
         gitmodules = (repository / ".gitmodules").read_text(encoding="utf-8")
         gitlink = tm.ok(
             u.Cli.capture(
@@ -301,10 +298,10 @@ class TestsFlextInfraGitFacet:
         repository = test_u.Tests.git_repository(tmp_path)
         nested_source = test_u.Tests.git_repository(tmp_path, "nested-source")
         member_source = test_u.Tests.git_repository(tmp_path, "member-source")
-        _add_submodule(member_source, nested_source, "nested")
-        _add_submodule(repository, member_source, "member")
-        lane = _add_lane(tmp_path, repository, "dirty-lane")
-        _update_submodules(lane)
+        self._add_submodule(member_source, nested_source, "nested")
+        self._add_submodule(repository, member_source, "member")
+        lane = self._add_lane(tmp_path, repository, "dirty-lane")
+        self._update_submodules(lane)
         (lane / "member" / "nested" / "dirty.txt").write_text(
             "dirty\n", encoding="utf-8"
         )
@@ -318,7 +315,7 @@ class TestsFlextInfraGitFacet:
         self, tmp_path: Path
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
-        lane = _add_lane(tmp_path, repository, "locked-lane")
+        lane = self._add_lane(tmp_path, repository, "locked-lane")
         _ = test_u.Tests.git_run(repository, "worktree", "lock", str(lane))
 
         result = u.Infra.git_remove_clean_worktree(repository, lane)

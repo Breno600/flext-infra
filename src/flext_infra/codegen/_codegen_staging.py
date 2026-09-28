@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import stat
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 
 from flext_core import r
 from flext_infra import m, u
@@ -16,7 +16,10 @@ if TYPE_CHECKING:
     from flext_infra import p, t
 
 
-_PHASES = frozenset({"conform", "lazy-init", "docs"})
+_PHASES = frozenset({
+    "conform",
+    *get_args(m.Infra.CodegenPhaseAnalysis.model_fields["phase"].annotation),
+})
 
 
 def stage_file_plans(
@@ -34,11 +37,22 @@ def stage_file_plans(
     paths = tuple(plan.path for plan in changed)
     if len(set(paths)) != len(paths):
         return result_type.fail(f"duplicate {phase} generation destination")
-    publications: list[m.Infra.CodegenStagedFile] = []
-    phase_roots: set[Path] = set()
-    for index, file_plan in enumerate(changed):
+    prepared: list[
+        tuple[
+            m.Infra.CodegenFilePlan,
+            m.Cli.AtomicFileState,
+            tuple[Path, bytes, int] | None,
+        ]
+    ] = []
+    phase_roots: dict[Path, m.Cli.AtomicDirectoryState] = {}
+    for file_plan in changed:
         project = next(
-            (item for item in layout.projects if item.root == file_plan.project), None
+            (
+                item
+                for item in files.transaction_participants(layout)
+                if item.root == file_plan.project
+            ),
+            None,
         )
         if project is None or project.transaction_root is None:
             return result_type.fail(
@@ -47,15 +61,21 @@ def stage_file_plans(
         current = files.read_state(file_plan.path, required=False)
         if current.failure:
             return result_type.from_failure(current)
-        if isinstance(file_plan.before, m.Cli.AtomicDirectoryChainPlan):
-            before = current.value
+        # A plan captured before its parent chain existed carries no parent
+        # identity (chain plan, or file state with ``parent_device`` None); the
+        # parent may legitimately appear before staging, and the journal owns
+        # its identity check. Staging only proves the file itself stayed absent.
+        before = current.value
+        planned_before = file_plan.before
+        if (
+            isinstance(planned_before, m.Cli.AtomicDirectoryChainPlan)
+            or planned_before.parent_device is None
+        ):
             if before.content is not None:
                 return result_type.fail(
                     f"{phase} destination appeared after planning: {file_plan.path}"
                 )
-        else:
-            before = file_plan.before
-        if current.value != before:
+        elif before != planned_before:
             return result_type.fail(
                 f"{phase} destination changed after planning: {file_plan.path}"
             )
@@ -79,7 +99,7 @@ def stage_file_plans(
             return result_type.fail(
                 f"{phase} staging is not on destination filesystem: {file_plan.path}"
             )
-        replacement: m.Cli.AtomicFileState | None = None
+        replacement_input: tuple[Path, bytes, int] | None = None
         if file_plan.desired_content is not None:
             desired_mode = file_plan.desired_mode
             if desired_mode is None:
@@ -100,16 +120,25 @@ def stage_file_plans(
                     return result_type.fail(
                         f"{phase} staging root already exists: {phase_root}"
                     )
-                created = u.Cli.atomic_create_empty_directory_guarded(
-                    phase_root_before.value, permission_mode=0o700
-                )
-                if created.failure:
-                    return result_type.from_failure(created)
-                phase_roots.add(phase_root)
+                phase_roots[phase_root] = phase_root_before.value
+            replacement_input = (phase_root, file_plan.desired_content, desired_mode)
+        prepared.append((file_plan, before, replacement_input))
+
+    # Reject every invalid destination before creating any phase artifact.
+    # Recovery cannot authorize partial staging absent from the durable journal.
+    for phase_root_before in phase_roots.values():
+        created = u.Cli.atomic_create_empty_directory_guarded(
+            phase_root_before, permission_mode=0o700
+        )
+        if created.failure:
+            return result_type.from_failure(created)
+    publications: list[m.Infra.CodegenStagedFile] = []
+    for index, (file_plan, before, replacement_input) in enumerate(prepared):
+        replacement: m.Cli.AtomicFileState | None = None
+        if replacement_input is not None:
+            phase_root, desired_content, desired_mode = replacement_input
             staged_path = phase_root / f"{index:06d}.replacement"
-            staged = process.write_new(
-                staged_path, file_plan.desired_content, desired_mode
-            )
+            staged = process.write_new(staged_path, desired_content, desired_mode)
             if staged.failure:
                 return result_type.from_failure(staged)
             staged_state = files.read_state(staged_path, required=True)

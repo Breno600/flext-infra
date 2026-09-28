@@ -12,10 +12,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import c, config, p, r, t, u
-from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_core import r
+from flext_infra import c, config, m, p, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
+from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
 from ._mise_artifacts_publication import publish_file_plan
 
 
@@ -38,10 +39,12 @@ class FlextInfraCodegenLayoutGitignoreMixin:
         self, project_dir: Path, profile: c.Infra.MakeProfile
     ) -> p.Result[t.Infra.LayoutStatus]:
         """Write the canonical rendered gitignore for a governed project."""
-        rendered = FlextInfraCodegenConform.render_project_gitignore(
+        rendered = u.Infra.render_project_gitignore(
             config.Infra.codegen,
             profile=profile,
-            project_name=project_dir.name,
+            project_name=FlextInfraCodegenLayoutPlanMixin.layout_project_name(
+                project_dir
+            ),
             project_dir=project_dir,
         )
         if rendered.failure:
@@ -54,22 +57,25 @@ class FlextInfraCodegenLayoutGitignoreMixin:
                 return r[t.Infra.LayoutStatus].from_failure(read)
             current = read.value
         if rendered.value == current:
-            return r[t.Infra.LayoutStatus].ok("noop")
-        planned = u.Infra.planned_file(
-            project_dir,
-            gitignore_path,
-            required=False,
+            noop_status: t.Infra.LayoutStatus = "noop"
+            return r[t.Infra.LayoutStatus].ok(noop_status)
+        before = u.Cli.atomic_read_binary_file_state(gitignore_path, required=False)
+        if before.failure:
+            return r[t.Infra.LayoutStatus].from_failure(before)
+        planned = m.Infra.CodegenFilePlan(
+            project=project_dir,
+            path=gitignore_path,
+            before=before.value,
             desired_content=rendered.value.encode(c.Cli.ENCODING_DEFAULT),
             desired_mode=0o644,
             owner="codegen",
             policy="full",
         )
-        if planned.failure:
-            return r[t.Infra.LayoutStatus].from_failure(planned)
-        written = publish_file_plan(planned.value, backup=True, phase="layout")
+        written = publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
-        return r[t.Infra.LayoutStatus].ok("applied")
+        applied_status: t.Infra.LayoutStatus = "applied"
+        return r[t.Infra.LayoutStatus].ok(applied_status)
 
     def _apply_gitignore_append(
         self, project_dir: Path, patterns: t.StrSequence
@@ -89,7 +95,8 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             if pattern not in covered and pattern.rstrip("/") not in covered
         )
         if not missing:
-            return r[t.Infra.LayoutStatus].ok("noop")
+            noop_status: t.Infra.LayoutStatus = "noop"
+            return r[t.Infra.LayoutStatus].ok(noop_status)
         text = current
         if text and not text.endswith("\n"):
             text += "\n"
@@ -97,21 +104,23 @@ class FlextInfraCodegenLayoutGitignoreMixin:
             text += "\n"
         text += f"# {c.Infra.GITIGNORE_LAYOUT_SECTION_NAME}\n"
         text += "\n".join(missing) + "\n"
-        planned = u.Infra.planned_file(
-            project_dir,
-            gitignore_path,
-            required=False,
+        before = u.Cli.atomic_read_binary_file_state(gitignore_path, required=False)
+        if before.failure:
+            return r[t.Infra.LayoutStatus].from_failure(before)
+        planned = m.Infra.CodegenFilePlan(
+            project=project_dir,
+            path=gitignore_path,
+            before=before.value,
             desired_content=text.encode(c.Cli.ENCODING_DEFAULT),
             desired_mode=0o644,
             owner="codegen",
             policy="merge",
         )
-        if planned.failure:
-            return r[t.Infra.LayoutStatus].from_failure(planned)
-        written = publish_file_plan(planned.value, backup=True, phase="layout")
+        written = publish_file_plan(planned, phase="layout")
         if written.failure:
             return r[t.Infra.LayoutStatus].from_failure(written)
-        return r[t.Infra.LayoutStatus].ok("applied")
+        applied_status: t.Infra.LayoutStatus = "applied"
+        return r[t.Infra.LayoutStatus].ok(applied_status)
 
     @staticmethod
     def _managed_profile(project_dir: Path) -> p.Result[c.Infra.MakeProfile | None]:

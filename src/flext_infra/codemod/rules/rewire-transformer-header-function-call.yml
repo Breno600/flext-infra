@@ -10,6 +10,6 @@ rule:
   pattern: $METHOD($$$ARGS)
 constraints:
   METHOD:
-    regex: '^(?:alias_locally_bound|ensure_future_annotations)$'
+    regex: "^(?:alias_locally_bound|ensure_future_annotations)$"
 fix: u.Infra.$METHOD($$$ARGS)
 message: Consume module-header functions through u.Infra.

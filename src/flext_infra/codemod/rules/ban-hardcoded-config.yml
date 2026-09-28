@@ -43,7 +43,7 @@ rule:
           kind: keyword_argument
           has:
             field: name
-            regex: '^(?:eq|ne|has)$'
+            regex: "^(?:eq|ne|has)$"
 message: >-
   Hardcoded config-owned value (pin, URL or absolute path) bound to a field.
   Pins, paths, URLs and profiles must be read from config.<Ns>.* /

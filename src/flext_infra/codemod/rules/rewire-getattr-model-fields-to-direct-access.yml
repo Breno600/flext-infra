@@ -1,0 +1,31 @@
+# getattr() with a dead default on the required pydantic class attribute
+# ``model_fields`` silently degrades to an empty field set when the receiver
+# is not a pydantic model class: the CLI then builds commands with no
+# parameters instead of failing. Found in the flext-cli audit (2026-09-22,
+# bead flext-4skwi) as ``getattr(model_cls, "model_fields", {})`` in two
+# owners; both are rewired here so the same defect class is exterminated
+# fleet-wide through ``make mod`` instead of per-site hand edits.
+#
+# ``model_fields`` is a required class attribute of every ``BaseModel``
+# subclass, so the getattr default can never be a legitimate fallback: any
+# receiver that lacks it is a defect that must fail loud (AttributeError).
+# Both the three-argument and two-argument forms are matched; the quote
+# style of the attribute literal is irrelevant.
+id: rewire-getattr-model-fields-to-direct-access
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  any:
+    - pattern: getattr($OBJ, $NAME, $DEFAULT)
+    - pattern: getattr($OBJ, $NAME)
+constraints:
+  NAME:
+    regex: "^['\"]model_fields['\"]$"
+fix: $OBJ.model_fields
+message: >-
+  model_fields is a required pydantic class attribute; a getattr default
+  silently degrades to an empty field set and hides a wrong receiver.
+  Access it directly so a non-model receiver fails loud.

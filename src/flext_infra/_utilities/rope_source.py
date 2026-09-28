@@ -10,9 +10,7 @@ from typing import ClassVar
 
 from flext_cli import u
 
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
 
 from .discovery import FlextInfraUtilitiesDiscovery
 from .rope_core import FlextInfraUtilitiesRopeCore
@@ -368,7 +366,9 @@ class FlextInfraUtilitiesRopeSource:
         """
         source = resource.read()
         try:
-            pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(rope_project, resource)
+            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
+                rope_project, resource
+            )
             tree = pymodule.get_ast()
         except c.EXC_BROAD_RUNTIME as exc:
             msg = f"silent failure sentinel AST collection failed for {resource.path}"
@@ -405,7 +405,7 @@ class FlextInfraUtilitiesRopeSource:
             with FlextInfraUtilitiesRopeCore.open_project(
                 repository_root
             ) as rope_project:
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, file_path
                 )
                 if resource is None:

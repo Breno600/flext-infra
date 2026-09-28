@@ -11,8 +11,17 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from flext_infra import config, m, t
+from flext_infra import m, t
+
+# Concrete-owner imports: this module resolves during the root's lazy ``u``
+# export, when the root namespace is still initializing — a root from-import
+# would re-enter the partial namespace and fail.
+from .._config import config
+
+if TYPE_CHECKING:
+    from flext_infra import FlextInfraConfig
 
 _GITHUB_BLOB_TREE_RE = re.compile(
     r"^https://github\.com/"
@@ -27,6 +36,10 @@ class FlextInfraUtilitiesDocsGithubLinks:
     """Governed GitHub URL helpers for docs audit and fix."""
 
     @staticmethod
+    def _config() -> FlextInfraConfig:
+        return config
+
+    @staticmethod
     def docs_github_repos() -> t.VariadicTuple[m.Infra.DocsGithubRepoSpec]:
         """Return the typed GitHub repo map from make.docs SSOT."""
         return config.Infra.codegen.make.docs.github_repos
@@ -34,7 +47,9 @@ class FlextInfraUtilitiesDocsGithubLinks:
     @staticmethod
     def docs_stale_github_organizations() -> frozenset[str]:
         """Placeholder organizations that must not appear in doc URLs."""
-        return frozenset(config.Infra.codegen.make.docs.stale_github_organizations)
+        return frozenset(
+            FlextInfraUtilitiesDocsGithubLinks._config().Infra.codegen.make.docs.stale_github_organizations
+        )
 
     @staticmethod
     def docs_github_repo_lookup(
@@ -48,7 +63,12 @@ class FlextInfraUtilitiesDocsGithubLinks:
         if organization == "flext-sh" and repository.startswith("flext-"):
             for repo in FlextInfraUtilitiesDocsGithubLinks.docs_github_repos():
                 if repo.organization == "flext-sh" and repo.repository == "flext":
-                    return repo.model_copy(update={"repository": repository})
+                    return m.Infra.DocsGithubRepoSpec(
+                        organization=repo.organization,
+                        repository=repository,
+                        branch=repo.branch,
+                        local_checkout=repo.local_checkout,
+                    )
         return None
 
     @staticmethod

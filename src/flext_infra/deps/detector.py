@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated, override
 
@@ -69,7 +70,7 @@ class FlextInfraRuntimeDevDependencyDetector(
     @override
     def execute(self) -> p.Result[bool]:
         """Execute dependency detection and generate workspace report."""
-        payload: dict[str, t.Infra.InfraValue] = {
+        payload: MutableMapping[str, t.JsonValue] = {
             "repository_root": str(self.root),
             "apply": self.apply_changes,
             "format": self.output_format,

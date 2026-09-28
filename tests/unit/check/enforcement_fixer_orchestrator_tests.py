@@ -16,7 +16,7 @@ from flext_infra.fixers.orchestrator import FlextInfraEnforcementFixerOrchestrat
 from tests import c, u
 
 
-class TestsEnforcementFixerOrchestrator:
+class TestsFlextInfraEnforcementFixerOrchestrator:
     """Root-cause guardrails for fixer collection and routing."""
 
     @staticmethod
@@ -38,6 +38,7 @@ class TestsEnforcementFixerOrchestrator:
         source_file = project_dir / "src" / "demo" / "sample.py"
         source_file.parent.mkdir(parents=True)
         source_file.write_text("from __future__ import annotations\n", encoding="utf-8")
+        u.Tests.initialize_git_repo(project_dir)
         orchestrator = FlextInfraEnforcementFixerOrchestrator(
             repository_root=project_dir,
             selected_projects=("demo",),
@@ -254,8 +255,8 @@ class TestsEnforcementFixerOrchestrator:
             'MODULE_KIND: ClassVar[str] = "demo"\n\n\n'
             "class DemoWorker:\n"
             '    """Worker with one misplaced constant."""\n\n'
-            '    GROUPS: ClassVar[tuple[str, ...]] = ("alpha", "beta")\n\n'
-            "    def groups(self) -> tuple[str, ...]:\n"
+            '    GROUPS: ClassVar[t.VariadicTuple[str]] = ("alpha", "beta")\n\n'
+            "    def groups(self) -> t.VariadicTuple[str]:\n"
             '        """Return the configured groups."""\n'
             "        return self.GROUPS\n",
             encoding="utf-8",

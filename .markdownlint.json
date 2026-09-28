@@ -1,9 +1,11 @@
 {
   "MD001": false,
   "MD013": {
-    "code_block_line_length": 500,
+    "code_block_line_length": 88,
     "heading_line_length": 200,
-    "line_length": 500,
+    "line_length": 88,
+    "reflow": true,
+    "reflow-mode": "normalize",
     "tables": false
   },
   "MD022": false,

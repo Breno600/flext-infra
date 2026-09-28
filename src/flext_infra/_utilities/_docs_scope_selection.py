@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra.models import m
+from flext_infra import m
 
 from .docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesDocsScopeSelectionMixin:
@@ -40,14 +41,14 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
     def _selected_scope(
         repository_root: Path,
         name: str,
-        project_by_name: dict[str, m.Infra.ProjectInfo],
+        project_by_name: MutableMapping[str, m.Infra.ProjectInfo],
         output_dir: Path | str,
     ) -> m.Infra.DocScope | None:
         """Build one selected scope from discovery or a local path."""
         selected = project_by_name.get(name)
         if selected is not None:
             return FlextInfraUtilitiesDocsScopeSelectionMixin._doc_scope(
-                project=selected, output_dir=output_dir
+                project=selected, output_dir=output_dir, repository_root=repository_root
             )
         return FlextInfraUtilitiesDocsScopeSelectionMixin._optional_path_scope(
             repository_root, name, output_dir
@@ -56,9 +57,9 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
     @staticmethod
     def _project_by_name(
         discovered: t.SequenceOf[m.Infra.ProjectInfo],
-    ) -> dict[str, m.Infra.ProjectInfo]:
+    ) -> MutableMapping[str, m.Infra.ProjectInfo]:
         """Index discovered projects by canonical and directory names."""
-        project_by_name: dict[str, m.Infra.ProjectInfo] = {}
+        project_by_name: MutableMapping[str, m.Infra.ProjectInfo] = {}
         for project in discovered:
             project_by_name.setdefault(project.name, project)
             project_by_name.setdefault(project.path.name, project)
@@ -86,7 +87,7 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
         if not FlextInfraUtilitiesDocsScope.project_state(project_root).payload:
             return None
         return FlextInfraUtilitiesDocsScopeSelectionMixin._governed_scope(
-            project_root, output_dir
+            project_root, output_dir, repository_root=repository_root
         )
 
     @staticmethod
@@ -107,7 +108,7 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
 
     @staticmethod
     def _doc_scope(
-        *, project: m.Infra.ProjectInfo, output_dir: Path | str
+        *, project: m.Infra.ProjectInfo, output_dir: Path | str, repository_root: Path
     ) -> m.Infra.DocScope:
         """Build one canonical docs scope model."""
         resolved = project.path
@@ -119,10 +120,13 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
             ),
             project_class=project.project_class,
             package_name=project.package_name,
+            repository_root_override=repository_root,
         )
 
     @staticmethod
-    def _governed_scope(project_root: Path, output_dir: Path | str) -> m.Infra.DocScope:
+    def _governed_scope(
+        project_root: Path, output_dir: Path | str, *, repository_root: Path
+    ) -> m.Infra.DocScope:
         """Build docs scope for a governed project root."""
         payload = FlextInfraUtilitiesDocsScope.project_payload(project_root)
         docs_meta = FlextInfraUtilitiesDocsScope.docs_meta_from_payload(payload)
@@ -141,6 +145,7 @@ class FlextInfraUtilitiesDocsScopeSelectionMixin:
             package_name=FlextInfraUtilitiesDocsScope.package_name_from_payload(
                 project_root, payload, docs_meta
             ),
+            repository_root_override=repository_root,
         )
 
 

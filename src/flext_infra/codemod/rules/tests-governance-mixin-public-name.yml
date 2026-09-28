@@ -1,0 +1,50 @@
+# Test-tier governance suites consume the module-governance mixin through the
+# flext_tests root under its current public name (flext-sfy85, 2026-09-23).
+#
+# The mixin was renamed ModuleGovernanceMixin -> FlextTestsModuleGovernanceMixin
+# and is published by the flext_tests root; four consumers kept importing the
+# retired name from the private submodule path `flext_tests.utilities`, so the
+# test module fails at import (ImportError) and also breaks R1 (facade-only
+# import grammar). Same "renamed owner, missed consumer" class as
+# codegen-templates-root-owner.
+#
+# Idempotent: the rewritten import names the current symbol from the root.
+id: tests-governance-mixin-public-name
+language: python
+severity: error
+files:
+  - "tests/**/*.py"
+rule:
+  pattern: "from flext_tests.utilities import ModuleGovernanceMixin"
+fix: "from flext_tests import FlextTestsModuleGovernanceMixin"
+message: >-
+  Import the governance mixin from the flext_tests root under its public name
+  FlextTestsModuleGovernanceMixin.
+---
+# Companion: the base-class reference follows the renamed import in the same
+# pass, only in modules that import the current name from the flext_tests root.
+id: tests-governance-mixin-public-base
+language: python
+severity: error
+files:
+  - "tests/**/*.py"
+rule:
+  all:
+    - kind: identifier
+      regex: "^ModuleGovernanceMixin$"
+    - inside:
+        kind: argument_list
+        inside:
+          kind: class_definition
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          any:
+            - pattern: "from flext_tests.utilities import ModuleGovernanceMixin"
+            - pattern: "from flext_tests import FlextTestsModuleGovernanceMixin"
+fix: "FlextTestsModuleGovernanceMixin"
+message: >-
+  Subclass the governance mixin under its public name
+  FlextTestsModuleGovernanceMixin.

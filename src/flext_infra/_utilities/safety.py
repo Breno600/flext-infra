@@ -13,10 +13,7 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
 
 
 class FlextInfraUtilitiesSafety:
@@ -51,7 +48,7 @@ class FlextInfraUtilitiesSafety:
             if status_result.failure or not u.Cli.process_succeeded(
                 status_result.value.outcome
             ):
-                result = r[str].fail(status_result.error or "git status failed")
+                result = r[str].from_failure(status_result)
             elif not status_result.value.stdout.strip():
                 result = r[str].ok("")
             else:
@@ -109,8 +106,8 @@ class FlextInfraUtilitiesSafety:
     @staticmethod
     def execute_safely(
         files: t.SequenceOf[Path],
-        transform: Callable[[t.SequenceOf[Path]], r[t.SequenceOf[Path]]],
-        validate: Callable[[t.SequenceOf[Path]], r[bool]],
+        transform: Callable[[t.SequenceOf[Path]], p.Result[t.SequenceOf[Path]]],
+        validate: Callable[[t.SequenceOf[Path]], p.Result[bool]],
         *,
         mode: c.Infra.ExecutionMode = c.Infra.ExecutionMode.APPLY_SAFE,
     ) -> m.Infra.SafeExecutionResult:
@@ -127,7 +124,7 @@ class FlextInfraUtilitiesSafety:
 
         bak_paths = FlextInfraUtilitiesSafety.backup_files(files)
 
-        transform_result = transform(files)
+        transform_result: p.Result[t.SequenceOf[Path]] = transform(files)
         if transform_result.failure:
             FlextInfraUtilitiesSafety.restore_files(bak_paths)
             return m.Infra.SafeExecutionResult(
@@ -143,7 +140,7 @@ class FlextInfraUtilitiesSafety:
                 mode=mode, files_backed_up=file_strs, gate_results=[], rolled_back=False
             )
 
-        validate_result = validate(files)
+        validate_result: p.Result[bool] = validate(files)
         if validate_result.failure:
             FlextInfraUtilitiesSafety.restore_files(bak_paths)
             return m.Infra.SafeExecutionResult(

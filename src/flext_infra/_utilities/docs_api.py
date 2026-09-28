@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
 
 from .pyproject import FlextInfraUtilitiesPyproject
 from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
@@ -34,7 +33,7 @@ class FlextInfraUtilitiesDocsApi:
     )
 
     @staticmethod
-    def _string_values(value: t.Infra.InfraValue | None) -> t.StrSequence:
+    def _string_values(value: t.JsonValue | None) -> t.StrSequence:
         """Normalize one infra sequence payload into strings."""
         if value is None:
             return []
@@ -42,7 +41,7 @@ class FlextInfraUtilitiesDocsApi:
         return [str(item) for item in items]
 
     @staticmethod
-    def _string_mapping(value: t.Infra.InfraValue | None) -> t.StrMapping:
+    def _string_mapping(value: t.JsonValue | None) -> t.StrMapping:
         """Normalize one infra mapping payload into string keys and values."""
         if value is None:
             return {}
@@ -170,7 +169,7 @@ class FlextInfraUtilitiesDocsApi:
                 symbol_name=imported_symbol or symbol_name,
                 visited=next_visited,
             )
-        targets: dict[str, str] = {}
+        targets: MutableMapping[str, str] = {}
         for target_module, export_names in entries:
             resolved_module = cls._resolve_lazy_module_name(root_package, target_module)
             for export_name in export_names:
@@ -389,12 +388,12 @@ class FlextInfraUtilitiesDocsApi:
                 )
                 if not module_file.exists():
                     continue
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, module_file
                 )
                 if resource is None:
                     continue
-                pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(
+                pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                     rope_project, resource
                 )
                 if export_name in pymodule.get_attributes():
@@ -503,7 +502,7 @@ class FlextInfraUtilitiesDocsApi:
     @staticmethod
     def _classify_exports(
         all_exports: t.StrSequence, target_map: t.StrMapping
-    ) -> tuple[list[str], list[str], list[str]]:
+    ) -> t.Triple[list[str], list[str], list[str]]:
         """Split ``__all__`` entries into ``(aliases, module_exports, symbol_exports)``."""
         aliases = [
             name

@@ -21,7 +21,8 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, u
-from flext_infra.base import s
+
+from ..base import s
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -66,7 +67,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             projects = tuple(
                 project.path
                 for project in discovered_projects.unwrap()
-                if (project.path / c.Infra.PYPROJECT_FILENAME).exists()
+                if (project.path / c.PYPROJECT_FILENAME).exists()
             )
         mode = "Checking" if self.check_only else "Enforcing"
         logger.info(
@@ -183,7 +184,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
 
     def _read_required_minor(self, repository_root: Path) -> int:
         """Read requires-python minor from pyproject; default 13 when absent."""
-        pyproject = repository_root / c.Infra.PYPROJECT_FILENAME
+        pyproject = repository_root / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return 13
         content = u.Cli.files_read_text(pyproject).unwrap()
@@ -201,11 +202,7 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         if current.is_file():
             current = current.parent
         for parent in [current, *list(current.parents)]:
-            markers = {
-                c.Infra.GIT_DIR,
-                c.Infra.MAKEFILE_FILENAME,
-                c.Infra.PYPROJECT_FILENAME,
-            }
+            markers = {c.Infra.GIT_DIR, c.Infra.MAKEFILE_FILENAME, c.PYPROJECT_FILENAME}
             if all((parent / marker).exists() for marker in markers):
                 return parent
         msg = f"repository root not found from {file}"

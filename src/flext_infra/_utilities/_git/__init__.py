@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from .scope import FlextInfraUtilitiesGitScopeMixin
     from .semantic_identity import FlextInfraUtilitiesGitSemanticIdentityMixin
     from .semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
+    from .semantic_lane import FlextInfraUtilitiesGitSemanticLaneMixin
     from .semantic_paths import FlextInfraUtilitiesGitSemanticPathsMixin
     from .semantic_publish import FlextInfraUtilitiesGitSemanticPublishMixin
     from .semantic_refs import FlextInfraUtilitiesGitSemanticRefsMixin
@@ -23,14 +24,18 @@ if TYPE_CHECKING:
     from .worktree import FlextInfraUtilitiesGitWorktreeMixin
     from .worktree_checkpoint import FlextInfraUtilitiesGitWorktreeCheckpointMixin
     from .worktree_discovery import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
-    from .worktree_io import git_stdin
+    from .worktree_facts import FlextInfraUtilitiesGitWorktreeFactsMixin
+    from .worktree_io import FlextInfraUtilitiesGitWorktreeIO
     from .worktree_materialization import (
         FlextInfraUtilitiesGitWorktreeMaterializationMixin,
     )
+    from .worktree_measure import FlextInfraUtilitiesGitWorktreeMeasureMixin
     from .worktree_patch import FlextInfraUtilitiesGitWorktreePatchMixin
     from .worktree_removal import FlextInfraUtilitiesGitWorktreeRemovalMixin
     from .worktree_roots import FlextInfraUtilitiesGitWorktreeRootsMixin
     from .worktree_status import FlextInfraUtilitiesGitWorktreeStatusMixin
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitAttestationMixin",
     "FlextInfraUtilitiesGitRemote",
@@ -38,6 +43,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitScopeMixin",
     "FlextInfraUtilitiesGitSemanticIdentityMixin",
     "FlextInfraUtilitiesGitSemanticIndexMixin",
+    "FlextInfraUtilitiesGitSemanticLaneMixin",
     "FlextInfraUtilitiesGitSemanticPathsMixin",
     "FlextInfraUtilitiesGitSemanticPublishMixin",
     "FlextInfraUtilitiesGitSemanticRefsMixin",
@@ -45,13 +51,15 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitSemanticWorktreeMixin",
     "FlextInfraUtilitiesGitWorktreeCheckpointMixin",
     "FlextInfraUtilitiesGitWorktreeDiscoveryMixin",
+    "FlextInfraUtilitiesGitWorktreeFactsMixin",
+    "FlextInfraUtilitiesGitWorktreeIO",
     "FlextInfraUtilitiesGitWorktreeMaterializationMixin",
+    "FlextInfraUtilitiesGitWorktreeMeasureMixin",
     "FlextInfraUtilitiesGitWorktreeMixin",
     "FlextInfraUtilitiesGitWorktreePatchMixin",
     "FlextInfraUtilitiesGitWorktreeRemovalMixin",
     "FlextInfraUtilitiesGitWorktreeRootsMixin",
     "FlextInfraUtilitiesGitWorktreeStatusMixin",
-    "git_stdin",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -63,6 +71,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".scope": ("FlextInfraUtilitiesGitScopeMixin",),
             ".semantic_identity": ("FlextInfraUtilitiesGitSemanticIdentityMixin",),
             ".semantic_index": ("FlextInfraUtilitiesGitSemanticIndexMixin",),
+            ".semantic_lane": ("FlextInfraUtilitiesGitSemanticLaneMixin",),
             ".semantic_paths": ("FlextInfraUtilitiesGitSemanticPathsMixin",),
             ".semantic_publish": ("FlextInfraUtilitiesGitSemanticPublishMixin",),
             ".semantic_refs": ("FlextInfraUtilitiesGitSemanticRefsMixin",),
@@ -71,10 +80,12 @@ _LAZY_IMPORTS = MappingProxyType(
             ".worktree": ("FlextInfraUtilitiesGitWorktreeMixin",),
             ".worktree_checkpoint": ("FlextInfraUtilitiesGitWorktreeCheckpointMixin",),
             ".worktree_discovery": ("FlextInfraUtilitiesGitWorktreeDiscoveryMixin",),
-            ".worktree_io": ("git_stdin",),
+            ".worktree_facts": ("FlextInfraUtilitiesGitWorktreeFactsMixin",),
+            ".worktree_io": ("FlextInfraUtilitiesGitWorktreeIO",),
             ".worktree_materialization": (
                 "FlextInfraUtilitiesGitWorktreeMaterializationMixin",
             ),
+            ".worktree_measure": ("FlextInfraUtilitiesGitWorktreeMeasureMixin",),
             ".worktree_patch": ("FlextInfraUtilitiesGitWorktreePatchMixin",),
             ".worktree_removal": ("FlextInfraUtilitiesGitWorktreeRemovalMixin",),
             ".worktree_roots": ("FlextInfraUtilitiesGitWorktreeRootsMixin",),

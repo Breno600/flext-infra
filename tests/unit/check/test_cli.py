@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from tests import t
 
 
-class TestWorkspaceCheckCli:
+class TestsFlextInfraWorkspaceCheckCli:
     """Exercise the public check CLI without patching internal services."""
 
     @staticmethod
@@ -106,12 +106,15 @@ class TestWorkspaceCheckCli:
 
         tm.that(exit_code, eq=1)
 
-    def test_run_cli_handles_multiple_projects(self, tmp_path: Path) -> None:
+    @pytest.mark.parametrize("reports_directory", [None, "artifacts/check"])
+    def test_run_cli_handles_multiple_projects(
+        self, tmp_path: Path, reports_directory: str | None
+    ) -> None:
         workspace = self._create_workspace(tmp_path, project_names=("proj1", "proj2"))
         _ = self._write_module(workspace, "proj1", "value = 1\n")
         _ = self._write_module(workspace, "proj2", "other = 2\n")
 
-        exit_code = main([
+        arguments = [
             "check",
             "run",
             "--repository-root",
@@ -122,11 +125,31 @@ class TestWorkspaceCheckCli:
             "proj1",
             "--projects",
             "proj2",
-        ])
+        ]
+        if reports_directory is not None:
+            arguments.extend(["--reports-dir", reports_directory])
+        caller = tmp_path / "caller"
+        caller.mkdir()
+        relative_reports = reports_directory or f"{c.Infra.REPORTS_DIR_NAME}/check"
+        report_name = c.Infra.CHECK_REPORT_MARKDOWN_FILENAME
+        caller_report = caller / relative_reports / report_name
+        caller_report.parent.mkdir(parents=True)
+        caller_report.write_text("Caller report must survive.\n", encoding="utf-8")
+
+        with tm.scope(cwd=str(caller)):
+            exit_code = main(arguments)
 
         tm.that(exit_code, eq=0)
+        report = (workspace / relative_reports / report_name).read_text(
+            encoding="utf-8"
+        )
+        tm.that(report, has=["proj1", "proj2"])
+        tm.that(
+            caller_report.read_text(encoding="utf-8"),
+            eq="Caller report must survive.\n",
+        )
 
-    def test_run_cli_never_rewrites_source_because_check_is_read_only(
+    def test_run_cli_fix_contract_preserves_failure_when_reporting(
         self, tmp_path: Path
     ) -> None:
         workspace = self._create_workspace(tmp_path)
@@ -139,13 +162,45 @@ class TestWorkspaceCheckCli:
             str(workspace),
             "--gates",
             "lint",
-            "--fix",
+            "--apply",
+            "--report-findings",
             "--ruff-args",
             "--select F401",
             "--projects",
             "flext-core",
         ])
 
+        # Reporting cannot turn remaining gate failures into success;
+        # an unparsable module is never rewritten.
+        tm.that(exit_code, eq=1)
+        tm.that(
+            module_path.read_text(encoding="utf-8"),
+            eq='"""Fixture module."""\n\ndef broken(:\n',
+        )
+
+    def test_run_cli_check_contract_fails_on_remaining_findings(
+        self, tmp_path: Path
+    ) -> None:
+        """Apply without ``--report-findings`` still fails on remaining findings."""
+        workspace = self._create_workspace(tmp_path)
+        module_path = self._write_module(workspace, "flext-core", "def broken(:\n")
+
+        exit_code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(workspace),
+            "--gates",
+            "lint",
+            "--apply",
+            "--ruff-args",
+            "--select F401",
+            "--projects",
+            "flext-core",
+        ])
+
+        # No --report-findings: apply mode still fails while findings remain,
+        # and the unparsable module is never rewritten.
         tm.that(exit_code, eq=1)
         tm.that(
             module_path.read_text(encoding="utf-8"),
@@ -165,7 +220,7 @@ class TestWorkspaceCheckCli:
             str(workspace),
             "--gates",
             "lint",
-            "--fix",
+            "--apply",
             "--check-only",
             "--ruff-args",
             "--select F401",
@@ -179,7 +234,20 @@ class TestWorkspaceCheckCli:
             eq='"""Fixture module."""\n\nimport os\n\nvalue = 1\n',
         )
 
-    def test_run_cli_accepts_shared_dry_run_flag(self) -> None:
-        exit_code = main(["check", "--dry-run", "run", "--projects", "flext-core"])
+    def test_run_cli_accepts_shared_dry_run_flag(self, tmp_path: Path) -> None:
+        workspace = self._create_workspace(tmp_path)
+        _ = self._write_module(workspace, "flext-core", "value = 1\n")
+
+        exit_code = main([
+            "check",
+            "--dry-run",
+            "run",
+            "--repository-root",
+            str(workspace),
+            "--gates",
+            "lint",
+            "--projects",
+            "flext-core",
+        ])
 
         tm.that(exit_code, eq=0)

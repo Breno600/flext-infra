@@ -14,6 +14,8 @@ from flext_infra.detectors.loose_test_function_detector import (
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from tests import t
+
 
 class TestsFlextInfraLooseTestFunctionDetector:
     """Behavior contract for loose-test-function detection (config-driven engine)."""
@@ -31,7 +33,7 @@ class TestsFlextInfraLooseTestFunctionDetector:
     @staticmethod
     def _violations(
         *, project: Path, file_path: Path
-    ) -> tuple[m.Infra.LooseTestFunctionViolation, ...]:
+    ) -> t.VariadicTuple[m.Infra.LooseTestFunctionViolation]:
         with u.Infra.open_project(project) as rope_project:
             violations = FlextInfraLooseTestFunctionDetector.detect_file(
                 m.Infra.DetectorContext(

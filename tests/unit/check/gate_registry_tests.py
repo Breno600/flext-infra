@@ -8,21 +8,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_tests import tm
+
+from flext_infra import config
 from flext_infra.check import FlextInfraGateRegistry
 from flext_infra.gates import FlextInfraCanonicalAliasGate
-from tests import c, m, t, tm
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestGateRegistry:
+class TestsFlextInfraGateRegistry:
     @staticmethod
     def _apply_alias_fix(tmp_path: Path, project_dir: Path) -> m.Infra.GateExecution:
         """Write the canonical root manifest and apply the alias gate fix."""
         (project_dir / "pyproject.toml").write_text(
             '[project]\nname = "flext-infra"\nversion = "0.1.0"\n', encoding="utf-8"
         )
+        u.Tests.provision_checkout(project_dir)
         return FlextInfraCanonicalAliasGate(tmp_path).fix(
             project_dir,
             m.Infra.GateContext(
@@ -93,7 +97,7 @@ class TestGateRegistry:
         )
         original = "from flext_core import c\n\nVALUE = c.VALUE\n"
         test_file.write_text(original, encoding="utf-8")
-        result = TestGateRegistry._apply_alias_fix(tmp_path, project_dir)
+        result = TestsFlextInfraGateRegistry._apply_alias_fix(tmp_path, project_dir)
         tm.that(result.result.passed, eq=False)
         tm.that(result.raw_output, has="import cycle")
         tm.that(test_file.read_text(encoding="utf-8"), eq=original)
@@ -117,6 +121,7 @@ class TestGateRegistry:
         (project_dir / "pyproject.toml").write_text(
             '[project]\nname = "flext-infra"\nversion = "0.1.0"\n', encoding="utf-8"
         )
+        u.Tests.provision_checkout(project_dir)
         gate = FlextInfraCanonicalAliasGate(tmp_path)
         context = m.Infra.GateContext(
             repository_root=tmp_path, reports_dir=tmp_path / "reports", apply_fixes=True
@@ -150,7 +155,7 @@ class TestGateRegistry:
         consumer.write_text(
             "from flext_core import c\n\nVALUE = c.VALUE\n", encoding="utf-8"
         )
-        result = TestGateRegistry._apply_alias_fix(tmp_path, project_dir)
+        result = TestsFlextInfraGateRegistry._apply_alias_fix(tmp_path, project_dir)
         tm.that(result.result.passed, eq=True)
         tm.that(
             consumer.read_text(encoding="utf-8"),
@@ -181,54 +186,56 @@ class TestGateRegistry:
             "from tests.unit.test_consumer import VALUE\n", encoding="utf-8"
         )
         (unit_dir / "__init__.py").write_text("", encoding="utf-8")
-        result = TestGateRegistry._apply_alias_fix(tmp_path, project_dir)
+        result = TestsFlextInfraGateRegistry._apply_alias_fix(tmp_path, project_dir)
 
         tm.that(result.result.passed, eq=False)
         tm.that(result.raw_output, has="import cycle")
         tm.that(consumer.read_text(encoding="utf-8"), eq=original)
 
+    def test_every_allowed_gate_resolves_in_the_registry(self) -> None:
+        """Every gate the Make surface accepts must be instantiable.
 
-def test_every_allowed_gate_resolves_in_the_registry() -> None:
-    """Every gate the Make surface accepts must be instantiable.
+        flext-38p39: `format` once sat in the canonical check-gate vocabulary
+        and FlextInfraRuffFormatGate declared gate_id="format" with
+        can_fix=True, but the class was never listed in the registry. The
+        generated check command could therefore name a gate that silently
+        resolved to nothing.
+        """
+        registry = FlextInfraGateRegistry.default()
+        unresolved = [
+            gate_id
+            for gate_id in c.Infra.CANONICAL_GATE_IDS
+            if registry.get(gate_id) is None
+        ]
 
-    flext-38p39: `format` once sat in the canonical check-gate vocabulary and
-    FlextInfraRuffFormatGate declared gate_id="format" with can_fix=True, but the
-    class was never listed in the registry. The generated check command could
-    therefore name a gate that silently resolved to nothing.
-    """
-    registry = FlextInfraGateRegistry.default()
-    unresolved = [
-        gate_id
-        for gate_id in c.Infra.CANONICAL_GATE_IDS
-        if registry.get(gate_id) is None
-    ]
+        tm.that(unresolved, eq=[])
 
-    tm.that(unresolved, eq=[])
+    def test_fixable_gate_vocabulary_matches_the_registry(self) -> None:
+        """The Make fixable-gate vocabulary equals the gates that declare can_fix.
 
+        flext-38p39: `make fix` routes through `check run --fix`. Without a
+        gate selector that run executes EVERY gate, including pyright and
+        mypy, which cannot fix anything and cost ~37s -- the verb timed out
+        (exit 124).
 
-def test_fixable_gate_vocabulary_matches_the_registry() -> None:
-    """The Make fixable-gate vocabulary equals the gates that declare can_fix.
-
-    flext-38p39: `make fix APPLY=Y` routes through `check run --fix`. Without a
-    gate selector that run executes EVERY gate, including pyright and mypy,
-    which cannot fix anything and cost ~37s -- the verb timed out (exit 124).
-
-    Runtime contract: verbs own tools by intent. `fmt` owns formatting
-    (ruff format), `fix` repairs findings (markdown, smells), `check` is
-    read-only. `format` therefore appears in NO check vocabulary: not in
-    ALLOWED (check never mutates) and not in FIXABLE (fix never formats).
-    """
-    registry = FlextInfraGateRegistry.default()
-    registered_fixable = {
-        gate_id
-        for gate_id in c.Infra.CANONICAL_GATE_IDS
-        if (gate_cls := registry.get(gate_id)) is not None and gate_cls.can_fix
-    }
-    tm.that(set(c.Infra.CANONICAL_FIXABLE_GATE_IDS), eq=registered_fixable)
-    # `format` belongs to `make fmt` alone: absent from the read-only check
-    # vocabulary AND from the fix vocabulary.
-    tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_FIXABLE_GATE_IDS, eq=True)
-    tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_GATE_IDS, eq=True)
-
-
-__all__: t.StrSequence = []
+        Runtime contract: verbs own tools by intent. `fmt` owns formatting
+        (ruff format plus the fmt_gates writers such as markdown-format),
+        `fix` repairs findings (markdown, markdown-code, smells), `check` is
+        read-only. `format` therefore appears in NO check vocabulary: not in
+        ALLOWED (check never mutates) and not in FIXABLE (fix never formats).
+        """
+        registry = FlextInfraGateRegistry.default()
+        mutating = {
+            gate_id
+            for gate_id in c.Infra.CANONICAL_GATE_IDS
+            if (gate_cls := registry.get(gate_id)) is not None and gate_cls.can_fix
+        }
+        # `make fix` owns every mutating check-gate EXCEPT the fmt-owned
+        # formatters (single-pass verb law: one operation per tool per verb).
+        fmt_owned = set(config.Infra.codegen.make.fmt_gates)
+        tm.that(set(c.Infra.CANONICAL_FIXABLE_GATE_IDS), eq=mutating - fmt_owned)
+        tm.that(fmt_owned <= mutating, eq=True)
+        # `format` belongs to `make fmt` alone: absent from the read-only
+        # check vocabulary AND from the fix vocabulary.
+        tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_FIXABLE_GATE_IDS, eq=True)
+        tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_GATE_IDS, eq=True)

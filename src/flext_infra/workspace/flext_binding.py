@@ -41,16 +41,16 @@ class FlextInfraFlextBindingService:
     @staticmethod
     def _declared_distributions(consumer_root: Path) -> p.Result[t.VariadicTuple[str]]:
         """Return the distribution names the consumer declares as dependencies."""
-        manifest = consumer_root / c.Infra.PYPROJECT_FILENAME
+        manifest = consumer_root / c.PYPROJECT_FILENAME
         if not manifest.is_file():
-            return r[tuple[str, ...]].fail(
-                f"consumer has no {c.Infra.PYPROJECT_FILENAME}: {consumer_root}"
+            return r[t.VariadicTuple[str]].fail(
+                f"consumer has no {c.PYPROJECT_FILENAME}: {consumer_root}"
             )
         payload_result = u.Cli.toml_read_json(manifest)
         payload: t.JsonMapping = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(
             payload_result.unwrap()
         )
-        return r[tuple[str, ...]].ok(
+        return r[t.VariadicTuple[str]].ok(
             tuple(u.Infra.project_dependency_names_from_payload(payload))
         )
 
@@ -65,7 +65,7 @@ class FlextInfraFlextBindingService:
         """
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(flext_root)
         if workspace.failure:
-            return r[tuple[str, ...]].fail(
+            return r[t.VariadicTuple[str]].fail(
                 f"FLEXT is not a flext workspace: {flext_root}: "
                 f"{workspace.error or 'manifest unreadable'}"
             )
@@ -76,8 +76,8 @@ class FlextInfraFlextBindingService:
         }
         declared = cls._declared_distributions(consumer_root)
         if declared.failure:
-            return r[tuple[str, ...]].from_failure(declared)
-        return r[tuple[str, ...]].ok(
+            return r[t.VariadicTuple[str]].from_failure(declared)
+        return r[t.VariadicTuple[str]].ok(
             tuple(sorted(name for name in declared.value if name in available))
         )
 

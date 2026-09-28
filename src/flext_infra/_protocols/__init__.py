@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from .promoted import FlextInfraProtocolsPromoted
     from .rope import FlextInfraProtocolsRope
     from .rope_runtime import FlextInfraProtocolsRopeRuntime
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraProtocolsBase",
     "FlextInfraProtocolsCheck",

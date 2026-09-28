@@ -1,0 +1,31 @@
+# A name used at runtime is imported at runtime (flext-itpd1.3, 2026-09-19).
+#
+# `isinstance(x, Sequence)` evaluates its second argument, so the abstract base
+# class must exist in the module namespace at run time. A module that only lists
+# it under `if TYPE_CHECKING:` — or never imports it — raises `NameError` the
+# first time the branch executes, and both Ruff (`undefined-name`) and Pyrefly
+# (`unknown-name`) report it before that happens. The fleet idiom for the runtime
+# form is a plain `from collections.abc import ...`, which the test tree already
+# uses (tests/utilities_deps.py, tests/utilities_fixture_workspace.py).
+#
+# Detection only: the repair is one import line whose exact member list depends
+# on every name the module evaluates, which a single pattern cannot compose
+# without dropping a sibling already on the line.
+id: runtime-abc-needs-runtime-import
+language: Python
+severity: error
+rule:
+  pattern: isinstance($OBJ, $ABC)
+  not:
+    inside:
+      kind: module
+      stopBy: end
+      has:
+        pattern: from collections.abc import $$$MEMBERS
+        stopBy: end
+constraints:
+  ABC:
+    regex: "^(Sequence|MutableSequence|Mapping|MutableMapping|Iterable|Iterator|Set|MutableSet|Collection|Sized)$"
+message: >-
+  This abstract base class is evaluated at runtime by isinstance; import it at
+  runtime with `from collections.abc import ...`, never only under TYPE_CHECKING.

@@ -12,7 +12,7 @@ from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import c, m, u
 
 
-class TestsRootArtifactOwnership:
+class TestsFlextInfraRootArtifactOwnership:
     """Prove codegen config is the sole root-artifact ownership catalog."""
 
     def test_envrc_template_covers_every_repository_profile(self) -> None:
@@ -24,6 +24,16 @@ class TestsRootArtifactOwnership:
         )
 
         tm.that(set(entry.profiles), eq=set(c.Infra.MakeProfile))
+
+    def test_release_workflow_requires_explicit_repository_opt_in(self) -> None:
+        """Package membership alone must never activate release automation."""
+        entry = next(
+            item
+            for item in config.Infra.codegen.templates.entries
+            if item.destination == ".github/workflows/release.yml"
+        )
+
+        tm.that(entry.requires_release_protocol, eq=True)
 
     def test_governed_artifacts_have_one_explicit_policy(self) -> None:
         configured = config.Infra.codegen.managed_files
@@ -58,6 +68,7 @@ class TestsRootArtifactOwnership:
         physical = {
             path.relative_to(template_root).as_posix().removesuffix(".j2")
             for path in (template_root / ".github").rglob("*.j2")
+            if "_fragments" not in path.relative_to(template_root).parts
         }
         declared = {
             entry.destination
@@ -118,7 +129,7 @@ class TestsRootArtifactOwnership:
                     "[project]\n"
                     'name = "flext-demo"\n'
                     'version = "0.1.0"\n'
-                    'requires-python = ">=3.13,<3.14"\n'
+                    f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
                     "dependencies = []\n"
                     "[project.urls]\n"
                     'Repository = "https://github.com/flext-sh/flext-demo"\n'
@@ -163,51 +174,50 @@ class TestsRootArtifactOwnership:
         for relative, expected in manual.items():
             tm.that((root / relative).read_bytes(), eq=expected)
 
+    class TestsConformPlanNetworkBoundary:
+        """The conform plan is a repository-local, offline inventory."""
 
-class TestsAncestryNetworkBoundary:
-    """The ancestry plan is a repository-local, offline inventory."""
-
-    @pytest.mark.slow
-    def test_ancestry_plan_never_fetches_origin(self, infra_git_repo: Path) -> None:
-        """Planning consumes the existing origin ref without network access."""
-        root = infra_git_repo
-        dist = u.Tests.repository_ref(config.Infra.name).distribution
-        u.Tests.write_project_beads_config(root, dist)
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                root / "pyproject.toml",
-                f'[project]\nname = "{dist}"\nversion = "0.12.0.dev0"\n'
-                'requires-python = ">=3.13,<3.14"\n',
+        @pytest.mark.slow
+        def test_plan_never_fetches_origin(self, infra_git_repo: Path) -> None:
+            """Planning consumes the existing origin ref without network access."""
+            root = infra_git_repo
+            dist = u.Tests.repository_ref(config.Infra.name).distribution
+            u.Tests.write_project_beads_config(root, dist)
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    root / "pyproject.toml",
+                    f'[project]\nname = "{dist}"\nversion = "0.12.0.dev0"\n'
+                    f'description = "{dist} governed fixture"\n'
+                    f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+                    'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
+                    'dependencies = ["flext-core>=0.1.0"]\n',
+                )
             )
-        )
-        package_init = root / "src" / dist.replace("-", "_") / "__init__.py"
-        package_init.parent.mkdir(parents=True, exist_ok=True)
-        tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
-        tests_init = root / "tests" / "__init__.py"
-        tests_init.parent.mkdir(parents=True, exist_ok=True)
-        tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
-        for relative_parent in (
-            ".beads",
-            ".github/ci-template",
-            ".github/prompts",
-            ".github/scripts",
-            ".github/workflows",
-            "config",
-            "tests/fixtures/ci/docker",
-        ):
-            root.joinpath(relative_parent).mkdir(parents=True, exist_ok=True)
-        u.Tests.commit_git_changes(root, "Seed manifest-less topology")
-        # Ownership is resolved from the declared provider URL, so the remote
-        # keeps it. What is removed is the local rewrite target the fixture
-        # installed: any fetch would then have to leave this machine, and a
-        # plan that stays offline never notices.
-        (root.parent / "origin.git").rename(root.parent / "origin.git.removed")
-        request = m.Infra.CodegenConformRequest(root=root)
-        tm.ok(
-            FlextInfraCodegenConform(repository_root=root, request=request).plan(
-                request
+            package_init = root / "src" / dist.replace("-", "_") / "__init__.py"
+            package_init.parent.mkdir(parents=True, exist_ok=True)
+            tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
+            tests_init = root / "tests" / "__init__.py"
+            tests_init.parent.mkdir(parents=True, exist_ok=True)
+            tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
+            for relative_parent in (
+                ".beads",
+                ".github/ci-template",
+                ".github/prompts",
+                ".github/scripts",
+                ".github/workflows",
+                "config",
+                "tests/fixtures/ci/docker",
+            ):
+                root.joinpath(relative_parent).mkdir(parents=True, exist_ok=True)
+            u.Tests.commit_git_changes(root, "Seed manifest-less topology")
+            # Ownership is resolved from the declared provider URL, so the remote
+            # keeps it. What is removed is the local rewrite target the fixture
+            # installed: any fetch would then have to leave this machine, and a
+            # plan that stays offline never notices.
+            (root.parent / "origin.git").rename(root.parent / "origin.git.removed")
+            request = m.Infra.CodegenConformRequest(root=root)
+            tm.ok(
+                FlextInfraCodegenConform(repository_root=root, request=request).plan(
+                    request
+                )
             )
-        )
-
-
-__all__: list[str] = []

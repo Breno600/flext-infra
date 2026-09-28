@@ -30,6 +30,13 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+    # Why: GitHub-hosted runners share egress IPs, so the unauthenticated
+    # 60 req/h REST budget is exhausted before mise resolves the moving
+    # @latest backends (observed 2026-09-23: 403, rate limit 0/60, on every
+    # backend in Sync workspace toolchain), and docs generation reads the
+    # governed sibling repos. The job token authenticates both, as in CI.
+    env:
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
@@ -43,10 +50,13 @@ jobs:
         run: make setup
 
       - name: Generation drift (blocking)
-        run: make conform {{ make.apply_variable }}={{ make.apply_value }}
+        run: |
+          make gen
+          git status --short
+          test -z "$(git status --porcelain --untracked-files=all)"
 
       - name: Docs lifecycle (blocking)
-        run: make docs {{ make.apply_variable }}={{ make.apply_value }}
+        run: make docs
 
       # Failure diagnostics execute only after the original Make step has
       # already propagated its exact status to Actions.
@@ -95,6 +105,9 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+    # Why: same authenticated toolchain and docs-source resolution as docs-quality.
+    env:
+      GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
@@ -108,7 +121,7 @@ jobs:
         run: make setup
 
       - name: Build site
-        run: make docs {{ make.apply_variable }}={{ make.apply_value }}
+        run: make docs
 
       - name: Verify byte-identical repository
         run: |
@@ -137,9 +150,6 @@ jobs:
     permissions:
       pages: write
       id-token: write
-    environment:
-      name: {% raw %}${{ 'github-pages' }}{% endraw %}
-      url: {% raw %}${{ steps.deployment.outputs.page_url }}{% endraw %}
     steps:
       - name: Deploy to GitHub Pages
         id: deployment

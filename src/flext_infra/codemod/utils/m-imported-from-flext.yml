@@ -1,0 +1,28 @@
+# A rewrite that emits ``m.*`` is only F821-safe when the canonical models
+# facade is bound as the plain name ``m`` in the same module, by either the
+# absolute import from a public FLEXT package or the package-relative import a
+# FLEXT package uses on itself.
+#
+# Sibling of u-imported-from-flext and r-imported-from-flext: one audited
+# binding guard per facade, referenced with ``matches:``.
+id: m-imported-from-flext
+language: python
+rule:
+  kind: import_from_statement
+  all:
+    - has:
+        pattern: m
+        stopBy: end
+    - any:
+        - has:
+            field: module_name
+            regex: "^flext(?:_[a-z0-9_]+)?$"
+        - has:
+            kind: relative_import
+    - not:
+        has:
+          kind: aliased_import
+          stopBy: end
+          has:
+            pattern: m
+            stopBy: end

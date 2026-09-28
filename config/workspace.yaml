@@ -1,0 +1,25 @@
+# Handwritten topology SSOT consumed by `flext-infra codegen conform`.
+# conform never overwrites this input. Declare members/exclusions here, then
+# run the project's canonical generation surface (`make gen`).
+version: 3
+name: flext-infra
+# Why (green mandate, cosmos-3flk9 decision A): production sources are the
+# namespace validator's declared scope — tests host pytest conventions and
+# scripts/examples are thin command and documentation surfaces. Lint, type,
+# constant, and magic-value rules stay fleet-tree-wide.
+namespace_scan_dirs:
+  - src
+repository:
+  name: flext-infra
+  distribution: flext-infra
+  provider: flext-sh
+  url: https://github.com/flext-sh/flext-infra.git
+  path: .
+  role: standalone
+  state: active
+  kind: internal_flext
+  codegen: conform
+  package: true
+  editable: true
+  read_only: false
+members: []

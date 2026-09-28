@@ -15,20 +15,14 @@ from tests import u
 class TestsFlextInfraInfraReportingExtra:
     """Test suite for FlextInfraReportingService extra operations."""
 
-    def test_resolve_report_dir_returns_path(
-        self, infra_reporting: u.Cli, tmp_path: Path
-    ) -> None:
+    def test_resolve_report_dir_returns_path(self, tmp_path: Path) -> None:
         """Test that resolve_report_dir returns Path type."""
-        result = infra_reporting.resolve_report_dir(tmp_path, "project", "check")
+        result = u.Cli.resolve_report_dir(tmp_path, "project", "check")
         tm.that(result, is_=Path)
         tm.that(result.is_absolute(), eq=True)
 
-    def test_resolve_report_path_returns_path(
-        self, infra_reporting: u.Cli, tmp_path: Path
-    ) -> None:
+    def test_resolve_report_path_returns_path(self, tmp_path: Path) -> None:
         """Test that resolve_report_path returns Path type."""
-        result = infra_reporting.resolve_report_path(
-            tmp_path, "project", "check", "report.json"
-        )
+        result = u.Cli.resolve_report_path(tmp_path, "project", "check", "report.json")
         tm.that(result, is_=Path)
         tm.that(result.is_absolute(), eq=True)

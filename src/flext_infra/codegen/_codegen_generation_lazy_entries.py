@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from ._codegen_generation_type_checking import (
@@ -12,7 +13,7 @@ from ._codegen_generation_type_checking import (
 if TYPE_CHECKING:
     from flext_infra import t
 
-type _LazyEntryContext = tuple[str, frozenset[str], bool]
+type _LazyEntryContext = t.Triple[str, frozenset[str], bool]
 
 
 class FlextInfraCodegenGenerationLazyEntriesMixin(
@@ -58,8 +59,8 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
         lazy_entries: t.SequenceOf[t.Triple[str, str, str]],
     ) -> t.Pair[t.SequenceOf[t.StrSequencePair], t.SequenceOf[t.StrPairSequencePair]]:
         """Group lazy entries by module and alias group."""
-        module_groups: dict[str, list[str]] = defaultdict(list)
-        alias_groups: dict[str, list[t.StrPair]] = defaultdict(list)
+        module_groups: MutableMapping[str, list[str]] = defaultdict(list)
+        alias_groups: MutableMapping[str, list[t.StrPair]] = defaultdict(list)
         for export_name, mod, attr_name in lazy_entries:
             if not attr_name or attr_name == export_name:
                 module_groups[mod].append(export_name)

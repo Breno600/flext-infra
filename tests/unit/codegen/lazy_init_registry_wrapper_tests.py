@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import c, u
+from tests import c, t, u
 
 
 # flext-i6nq.10: Cleanup is proven through the real generator, not private mixins.
@@ -14,7 +14,9 @@ class TestsFlextInfraLazyInitCleanup:
     """Validate stale generated sidecars are reported or removed truthfully."""
 
     @staticmethod
-    def _workspace_with_sidecars(tmp_path: Path) -> tuple[Path, Path, tuple[Path, ...]]:
+    def _workspace_with_sidecars(
+        tmp_path: Path,
+    ) -> t.Triple[Path, Path, t.VariadicTuple[Path]]:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
             package_root / "models.py", class_name="FlextTestsModels", alias="m"
@@ -113,6 +115,3 @@ class TestsFlextInfraLazyInitCleanup:
         tm.that(result.failure, eq=True)
         tm.that(obsolete_module.is_file(), eq=True)
         tm.that(unexpected.is_file(), eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraLazyInitCleanup"]

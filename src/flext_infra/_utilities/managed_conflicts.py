@@ -5,8 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, m, t
+from flext_infra import c, m, t
 
+from .._config import FlextInfraConfig
 from .base import FlextInfraUtilitiesBase
 
 if TYPE_CHECKING:
@@ -24,12 +25,11 @@ class FlextInfraUtilitiesManagedConflicts:
     @staticmethod
     def pyproject_managed_file() -> p.Result[m.Infra.ManagedFileSpec]:
         """Return the pyproject ManagedFileSpec. Missing declaration is a bug."""
-        for item in config.Infra.codegen.managed_files:
-            if item.path.as_posix() == c.Infra.PYPROJECT_FILENAME:
+        for item in FlextInfraConfig.fetch_global().Infra.codegen.managed_files:
+            if item.path.as_posix() == c.PYPROJECT_FILENAME:
                 return r[m.Infra.ManagedFileSpec].ok(item)
         return r[m.Infra.ManagedFileSpec].fail(
-            "codegen.yaml templates.managed_files must declare "
-            f"{c.Infra.PYPROJECT_FILENAME}"
+            f"codegen.yaml templates.managed_files must declare {c.PYPROJECT_FILENAME}"
         )
 
     @classmethod

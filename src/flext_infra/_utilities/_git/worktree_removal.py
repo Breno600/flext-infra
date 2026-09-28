@@ -74,21 +74,6 @@ class FlextInfraUtilitiesGitWorktreeRemovalMixin(
         return r[Repo].ok(repo)
 
     @classmethod
-    def git_remove_worktree(
-        cls, source_root: Path, worktree_root: Path
-    ) -> p.Result[bool]:
-        """Remove one explicitly selected temporary worktree and prune metadata."""
-        try:
-            repo = cls._repo(source_root)
-            repo.git.worktree("remove", "--force", str(worktree_root))
-            repo.git.worktree("prune")
-        except GitCommandError as exc:
-            return r[bool].fail(str(exc), exception=exc)
-        except (OSError, ValueError) as exc:
-            return r[bool].fail(f"failed to remove worktree: {exc}", exception=exc)
-        return r[bool].ok(True)
-
-    @classmethod
     def git_remove_clean_worktree(
         cls, source_root: Path, worktree_root: Path
     ) -> p.Result[bool]:

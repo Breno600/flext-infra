@@ -14,13 +14,11 @@ from git import (
 )
 
 from flext_core import r
-from flext_infra.models import m
+from flext_infra import m
 
 from ..._utilities._git.remote import FlextInfraUtilitiesGitRemote
 from ..._utilities._git.repo import FlextInfraUtilitiesGitRepo
-from ..._utilities._git.semantic_worktree import (
-    FlextInfraUtilitiesGitSemanticWorktreeMixin,
-)
+from ..._utilities._git.semantic_lane import FlextInfraUtilitiesGitSemanticLaneMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -29,7 +27,7 @@ _GITLINK_MODE = "160000"
 
 
 class FlextInfraUtilitiesGitSemanticIdentityMixin(
-    FlextInfraUtilitiesGitSemanticWorktreeMixin
+    FlextInfraUtilitiesGitSemanticLaneMixin
 ):
     """Own semantic identity operations."""
 
@@ -63,6 +61,41 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         return r[m.Infra.GitIdentityReport].ok(report)
 
     @classmethod
+    def exact_worktree_root(
+        cls, requested: Path
+    ) -> p.Result[m.Infra.GitIdentityReport]:
+        """Reject Git parent discovery and unregistered nesting under a root.
+
+        Promoted from the Mise workspace planner (`flext-infra` `init` needed
+        the identical exact-root contract): the requested path must be the
+        resolved repository root itself, and — unless it is a genuine linked
+        worktree or a real Git submodule — no ancestor directory may itself be
+        a separate Git repository. An unregistered nested ``.git`` (a plain
+        ``git init`` under an existing checkout) satisfies "requested == root"
+        on its own but is never the exact worktree root callers intend.
+        """
+        identity = cls.git_identity(m.Infra.GitRepoRequest(repo_root=requested))
+        if identity.failure:
+            return r[m.Infra.GitIdentityReport].from_failure(identity)
+        if identity.value.repo_root != requested:
+            return r[m.Infra.GitIdentityReport].fail(
+                "Git request is not the exact Git worktree root: "
+                f"requested={requested} resolved={identity.value.repo_root}"
+            )
+        if identity.value.is_submodule or identity.value.is_worktree:
+            return identity
+        parent = requested.parent
+        if parent != requested:
+            outer = cls.git_identity(m.Infra.GitRepoRequest(repo_root=parent))
+            if outer.success:
+                return r[m.Infra.GitIdentityReport].fail(
+                    "Git request is nested inside another Git repository and is "
+                    "not a registered submodule or linked worktree: "
+                    f"requested={requested} outer={outer.value.repo_root}"
+                )
+        return identity
+
+    @classmethod
     def git_is_inside_work_tree(
         cls, request: m.Infra.GitRepoRequest
     ) -> p.Result[m.Infra.GitBoolReport]:
@@ -87,11 +120,16 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             return r[m.Infra.GitBoolReport].fail(
                 f"failed to probe Git work tree: {exc}", exception=exc
             )
-        return r[m.Infra.GitBoolReport].ok(
-            m.Infra.GitBoolReport(
-                value=not repo.bare and repo.working_tree_dir is not None
+        # GitPython pins a `git cat-file` child per open handle: the probe owns
+        # its handle, so it is released before the report leaves the boundary.
+        try:
+            return r[m.Infra.GitBoolReport].ok(
+                m.Infra.GitBoolReport(
+                    value=not repo.bare and repo.working_tree_dir is not None
+                )
             )
-        )
+        finally:
+            repo.close()
 
     @classmethod
     def _collect_identity_facts(
@@ -123,9 +161,14 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         raw_super = repo.git.rev_parse("--show-superproject-working-tree").strip()
         if not raw_super and primary_root != working_tree:
             primary_repo = cls._repo(primary_root)
-            raw_super = primary_repo.git.rev_parse(
-                "--show-superproject-working-tree"
-            ).strip()
+            try:
+                raw_super = primary_repo.git.rev_parse(
+                    "--show-superproject-working-tree"
+                ).strip()
+            finally:
+                # The secondary handle is only opened for this one probe; every
+                # open GitPython handle pins a `git cat-file` child.
+                primary_repo.close()
         superproject = Path(raw_super).resolve() if raw_super else None
 
         is_worktree = git_dir != common_dir

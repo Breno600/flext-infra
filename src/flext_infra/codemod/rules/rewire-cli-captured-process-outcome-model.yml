@@ -6,67 +6,39 @@ id: remove-cli-captured-process-timeout-parameter
 language: Python
 severity: error
 rule:
-  pattern:
-    context: |
-      def _captured_process_result(
-          cls,
-          cmd: t.StrSequence,
-          return_code: int | None,
-          received_signals: list[int],
-          diagnostics: tuple[str, ...],
-          stdout_output: bytearray,
-          stderr_output: bytearray,
-          duration: float,
-          *,
-          timed_out: bool,
-          timeout_seconds: int | None,
-          timeout_exit_code: int,
-      ) -> p.Result[p.Cli.CommandBytesOutput]:
-          """Attach captured bytes only after the owned process boundary is empty."""
-          return cls._process_exit_result(
-              cmd,
-              return_code,
-              received_signals,
-              diagnostics,
-              timed_out=timed_out,
-              legacy_timeout=timeout_seconds is not None,
-              legacy_timeout_seconds=timeout_seconds,
-              timeout_exit_code=timeout_exit_code,
-          ).map(
-              lambda outcome: m.Cli.CommandBytesOutput(
-                  stdout=bytes(stdout_output),
-                  stderr=bytes(stderr_output),
-                  outcome=outcome,
-                  duration=duration,
-              )
-          )
-    selector: function_definition
+    pattern:
+        context: |
+            def _captured_process_result(
+                cls,
+                cmd: $COMMAND_TYPE,
+                $$$PARAMETERS,
+                *,
+                timed_out: $TIMED_OUT_TYPE,
+                timeout_seconds: $SECONDS_TYPE,
+                timeout_exit_code: $EXIT_CODE_TYPE,
+            ) -> $RESULT_TYPE:
+                $DOC
+                return cls._process_exit_result(
+                    cmd,
+                    $$$ARGUMENTS,
+                    timed_out=timed_out,
+                    legacy_timeout=timeout_seconds is not None,
+                    legacy_timeout_seconds=timeout_seconds,
+                    timeout_exit_code=timeout_exit_code,
+                ).map($MAPPER)
+        selector: function_definition
 fix: |
-  def _captured_process_result(
-      cls,
-      return_code: int | None,
-      received_signals: list[int],
-      diagnostics: tuple[str, ...],
-      stdout_output: bytearray,
-      stderr_output: bytearray,
-      duration: float,
-      *,
-      timed_out: bool,
-  ) -> p.Result[p.Cli.CommandBytesOutput]:
-      """Attach captured bytes only after the owned process boundary is empty."""
-      return cls._process_exit_result(
-          return_code,
-          received_signals,
-          diagnostics,
-          timed_out=timed_out,
-      ).map(
-          lambda outcome: m.Cli.CommandBytesOutput(
-              stdout=bytes(stdout_output),
-              stderr=bytes(stderr_output),
-              outcome=outcome,
-              duration=duration,
-          )
-      )
+    def _captured_process_result(
+        cls,
+        $$$PARAMETERS,
+        *,
+        timed_out: $TIMED_OUT_TYPE,
+    ) -> $RESULT_TYPE:
+        $DOC
+        return cls._process_exit_result(
+            $$$ARGUMENTS,
+            timed_out=timed_out,
+        ).map($MAPPER)
 message: Remove timeout policy from captured ProcessOutcome construction.
 ---
 id: rewire-cli-captured-process-outcome-model
@@ -75,54 +47,28 @@ severity: error
 files:
   - "flext-cli/src/flext_cli/_utilities/_runtime_process_outcome.py"
 rule:
-  pattern:
-    context: |
-      def _captured_process_result(
-          cls,
-          return_code: int | None,
-          received_signals: list[int],
-          diagnostics: tuple[str, ...],
-          stdout_output: bytearray,
-          stderr_output: bytearray,
-          duration: float,
-          *,
-          timed_out: bool,
-      ) -> p.Result[p.Cli.CommandBytesOutput]:
-          """Attach captured bytes only after the owned process boundary is empty."""
-          return cls._process_exit_result(
-              return_code, received_signals, diagnostics, timed_out=timed_out
-          ).map(
-              lambda outcome: m.Cli.CommandBytesOutput(
-                  stdout=bytes(stdout_output),
-                  stderr=bytes(stderr_output),
-                  outcome=outcome,
-                  duration=duration,
-              )
-          )
-    selector: function_definition
+    pattern: |
+        lambda $OUTCOME: m.Cli.CommandBytesOutput(
+            $$$BEFORE,
+            outcome=$OUTCOME,
+            $$$AFTER,
+        )
+    inside:
+        pattern:
+            context: |
+                def _captured_process_result(
+                    cls,
+                    $$$PARAMETERS,
+                    *,
+                    timed_out: $TIMED_OUT_TYPE,
+                ) -> $RESULT_TYPE:
+                    $$$BODY
+            selector: function_definition
+        stopBy: end
 fix: |
-  def _captured_process_result(
-      cls,
-      return_code: int | None,
-      received_signals: list[int],
-      diagnostics: tuple[str, ...],
-      stdout_output: bytearray,
-      stderr_output: bytearray,
-      duration: float,
-      *,
-      timed_out: bool,
-  ) -> p.Result[p.Cli.CommandBytesOutput]:
-      """Attach captured bytes only after the owned process boundary is empty."""
-      return cls._process_exit_result(
-          return_code, received_signals, diagnostics, timed_out=timed_out
-      ).map(
-          lambda outcome: m.Cli.CommandBytesOutput(
-              stdout=bytes(stdout_output),
-              stderr=bytes(stderr_output),
-              outcome=m.Cli.ProcessOutcome.model_validate(
-                  outcome, from_attributes=True
-              ),
-              duration=duration,
-          )
-      )
+    lambda $OUTCOME: m.Cli.CommandBytesOutput(
+        $$$BEFORE,
+        outcome=m.Cli.ProcessOutcome.model_validate($OUTCOME, from_attributes=True),
+        $$$AFTER,
+    )
 message: Materialize the structural process outcome at the Pydantic command boundary.

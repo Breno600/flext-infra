@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestConfigFixerPublicBehavior:
+class TestsFlextInfraExtendedConfigFixerErrors:
     """Exercise ``FlextInfraConfigFixer`` only through its public surface."""
 
     @pytest.mark.parametrize(

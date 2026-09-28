@@ -5,18 +5,17 @@ from __future__ import annotations
 import hashlib
 import os
 import stat
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m
 
 from .git import FlextInfraUtilitiesGit
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
-    from flext_infra.typings import t
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesWorkspaceFingerprint:
@@ -78,7 +77,7 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
         index_result_value = inputs.value.index_z
         head = inputs.value.head
 
-        index_entries: dict[bytes, list[bytes]] = {}
+        index_entries: MutableMapping[bytes, list[bytes]] = {}
         for record in index_result_value.split(b"\0"):
             if not record:
                 continue

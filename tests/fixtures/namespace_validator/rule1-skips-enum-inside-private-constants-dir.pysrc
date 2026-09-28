@@ -1,0 +1,6 @@
+from __future__ import annotations
+from enum import Enum
+
+class FlextTestModelsConstants:
+    class Status(Enum):
+        OK = "ok"

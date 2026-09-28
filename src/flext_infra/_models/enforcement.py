@@ -7,13 +7,10 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, ClassVar
+from typing import Annotated, ClassVar
 
 from flext_core import m, m as core_m
-from flext_infra import t
-
-if TYPE_CHECKING:
-    from flext_infra import p
+from flext_infra import p, t
 
 
 class FlextInfraModelsEnforcement:
@@ -107,7 +104,7 @@ class FlextInfraModelsEnforcement:
     class EnforcementEvaluation(m.ArbitraryTypesModel):
         """Collected rule probes and collection failures for one project."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         violations: Annotated[
             t.VariadicTuple[t.Pair[core_m.EnforcementRuleSpec, p.AttributeProbe]],
@@ -126,7 +123,7 @@ class FlextInfraModelsEnforcement:
         inspect via ``getattr``.
         """
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True, extra="allow")
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True, extra="allow")
 
         file_path: Annotated[str, m.Field(description="Target file path")]
         line: Annotated[int, m.Field(description="Line number of the violation")] = 0

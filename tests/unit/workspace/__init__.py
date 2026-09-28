@@ -9,50 +9,49 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_tests import c, d, e, h, m, p, r, s, t, td, tf, tk, tm, tv, u, x
+    from .test_work_finish_recovery import TestsWorkFinishRecovery
+    from .work_public_adversarial_fixture import (
+        MetadataSnapshot,
+        WorkAdversarialFixture,
+    )
+    from .work_public_finish_fixture import (
+        ChildFinishState,
+        WorkInvocation,
+        WorkPublicFinishFixture,
+    )
+    from .work_public_service_fixture import (
+        PullRequestCreateReceipt,
+        WorkPublicServiceFixture,
+    )
 
-    from .worktree_fixture import WorktreeFixture
+
 __all__: tuple[str, ...] = (
-    "WorktreeFixture",
-    "c",
-    "d",
-    "e",
-    "h",
-    "m",
-    "p",
-    "r",
-    "s",
-    "t",
-    "td",
-    "tf",
-    "tk",
-    "tm",
-    "tv",
-    "u",
-    "x",
+    "ChildFinishState",
+    "MetadataSnapshot",
+    "PullRequestCreateReceipt",
+    "TestsWorkFinishRecovery",
+    "WorkAdversarialFixture",
+    "WorkInvocation",
+    "WorkPublicFinishFixture",
+    "WorkPublicServiceFixture",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
-            ".worktree_fixture": ("WorktreeFixture",),
-            "flext_tests": (
-                "c",
-                "d",
-                "e",
-                "h",
-                "m",
-                "p",
-                "r",
-                "s",
-                "t",
-                "td",
-                "tf",
-                "tk",
-                "tm",
-                "tv",
-                "u",
-                "x",
+            ".test_work_finish_recovery": ("TestsWorkFinishRecovery",),
+            ".work_public_adversarial_fixture": (
+                "MetadataSnapshot",
+                "WorkAdversarialFixture",
+            ),
+            ".work_public_finish_fixture": (
+                "ChildFinishState",
+                "WorkInvocation",
+                "WorkPublicFinishFixture",
+            ),
+            ".work_public_service_fixture": (
+                "PullRequestCreateReceipt",
+                "WorkPublicServiceFixture",
             ),
         }),
         alias_groups=MappingProxyType({}),

@@ -30,5 +30,5 @@ transform:
     replace:
       source: $DOC
       replace: '^((?:"""|\x27\x27\x27))(?:Check|Checks|Determine|Determines)\s+(?:if|whether)\s+'
-      by: '${1}Whether '
+      by: "${1}Whether "
 fix: $FIXED

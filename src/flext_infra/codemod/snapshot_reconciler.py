@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import stat
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from pathlib import Path
 
-from flext_infra import c, m, t, u
+from .. import c, m, t, u
 
 
 class FlextInfraCodemodSnapshotReconciler:
@@ -29,7 +29,7 @@ class FlextInfraCodemodSnapshotReconciler:
             msg = f"ast-grep config must be a regular file: {config_path}"
             raise ValueError(msg)
         payload = u.Cli.yaml_safe_load(config_path).unwrap()
-        declared: dict[str, Sequence[t.JsonValue]] = {}
+        declared: MutableMapping[str, Sequence[t.JsonValue]] = {}
         for key in (c.Infra.CODEMOD_RULE_DIRS_KEY, c.Infra.CODEMOD_UTIL_DIRS_KEY):
             raw_value = payload.get(
                 key, () if key == c.Infra.CODEMOD_UTIL_DIRS_KEY else None
@@ -51,7 +51,7 @@ class FlextInfraCodemodSnapshotReconciler:
                 raise TypeError(msg)
             test_dirs.append(raw_test_config.get(c.Infra.CODEMOD_TEST_DIR_KEY))
         declared[c.Infra.CODEMOD_TEST_DIR_KEY] = test_dirs
-        resolved: dict[str, tuple[Path, ...]] = {}
+        resolved: MutableMapping[str, t.VariadicTuple[Path]] = {}
         for key, declared_paths in declared.items():
             directories: list[Path] = []
             for raw_dir in declared_paths:

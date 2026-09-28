@@ -118,8 +118,10 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(check_service.modified_files, empty=True)
         tm.that(after, eq=before)
 
-    def test_manual_private_initializer_is_preserved(self, tmp_path: Path) -> None:
-        """Keep an authored static private facade byte-identical."""
+    def test_manual_private_initializer_exports_survive_adoption(
+        self, tmp_path: Path
+    ) -> None:
+        """Adopt the private facade while retaining its declared public export."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         private_dir = package_root / "_facade"
         private_dir.mkdir()
@@ -134,12 +136,14 @@ class TestsFlextInfraLazyInitProcessing:
             '__all__ = ["FlextTestsRuntime"]\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        before = init_path.read_bytes()
-
         result = u.Tests.run_lazy_init(repository_root)
 
         tm.that(result, eq=0)
-        tm.that(init_path.read_bytes(), eq=before)
+        generated = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        tm.that(generated, has='__all__: tuple[str, ...] = ("FlextTestsRuntime",)')
+        tm.that(generated, has="from .runtime import FlextTestsRuntime")
+        tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
+        tm.that(init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=generated)
 
     def test_apply_removes_obsolete_generated_sidecars(self, tmp_path: Path) -> None:
         """Remove retired generated manifests while writing the initializer."""
@@ -156,6 +160,3 @@ class TestsFlextInfraLazyInitProcessing:
 
         tm.that(result, eq=0)
         tm.that(unit_path.exists(), eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraLazyInitProcessing"]

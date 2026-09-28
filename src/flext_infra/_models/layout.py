@@ -26,9 +26,9 @@ class FlextInfraModelsLayout:
     class _LayoutContract(m.ContractModel):
         """Private declarative base for schema-loaded layout records.
 
-        Mirrors ``_ConfigContract`` from ``_models/config.py``; kept local
-        because ``config.py`` consumes this module (a reverse import would be
-        a cycle).
+        Mirrors ``ConfigContract`` from ``_models/_config/contract.py``; kept
+        local because the config families consume this module (a reverse
+        import would be a cycle).
         """
 
         model_config = m.ConfigDict(

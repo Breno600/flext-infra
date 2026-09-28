@@ -1,0 +1,8 @@
+from __future__ import annotations
+
+class FlextTest:
+    pass
+
+api: FlextTest = FlextTest.fetch_global()
+"""Global FlextTest facade instance."""
+__all__: list[str] = ["FlextTest", "api"]

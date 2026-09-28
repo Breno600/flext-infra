@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import t
 
-from ._defaults import ImmutableEmptyMapping
 from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
 
 
@@ -111,7 +111,7 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 alias="ignored-rule-rationales",
                 description="Global Ruff exclusions mapped to verified architecture rationales.",
             ),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
+        ]
         banned_api: Annotated[
             t.StrMapping,
             m.Field(
@@ -192,6 +192,13 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 description="Error codes disabled for these modules.",
             ),
         ]
+        follow_untyped_imports: Annotated[
+            bool,
+            m.Field(
+                alias="follow-untyped-imports",
+                description="Analyze installed source even without typing metadata.",
+            ),
+        ] = False
         justification: Annotated[
             str,
             m.Field(
@@ -241,7 +248,7 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                     "(e.g. follow_imports='normal')."
                 ),
             ),
-        ] = m.Field(default_factory=ImmutableEmptyMapping)
+        ]
         overrides: Annotated[
             t.VariadicTuple[FlextInfraModelsDepsToolConfigLinters.MypyOverrideConfig],
             m.Field(

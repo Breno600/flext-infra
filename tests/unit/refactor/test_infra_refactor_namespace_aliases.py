@@ -94,7 +94,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceAliases:
         ids=["runtime_alias_imports", "contextual_alias_subset", "nested_and_renamed"],
     )
     def test_namespace_rewriter_preserves_top_level_package_imports(
-        self, tmp_path: Path, project_parts: tuple[str, ...], source: str
+        self, tmp_path: Path, project_parts: t.VariadicTuple[str], source: str
     ) -> None:
         """The submodule cleaner never touches ``from <package> import X``.
 

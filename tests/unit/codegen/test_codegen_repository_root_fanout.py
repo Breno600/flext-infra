@@ -8,6 +8,7 @@ primitive, never through hardcoded per-project logic.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from flext_tests import tm
@@ -17,7 +18,7 @@ from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import u, u as test_u
 
 
-class TestsCodegenRepositoryRootFanout:
+class TestsFlextInfraCodegenRepositoryRootFanout:
     def test_conform_owns_repository_root_makefile(self) -> None:
         """The single Makefile render entry includes the workspace profile."""
         makefile_entries = tuple(
@@ -32,24 +33,26 @@ class TestsCodegenRepositoryRootFanout:
         self, tmp_path: Path
     ) -> None:
         """The workspace projection exposes both gate routes and the CLI owner."""
-        repository_root = _render_root_makefile(tmp_path)
+        repository_root = self._render_root_makefile(tmp_path)
         rendered = (repository_root / c.Infra.MAKEFILE_FILENAME).read_text(
             encoding=c.Infra.ENCODING_DEFAULT
         )
         tm.that(rendered, has="$(WORKSPACE_ORCHESTRATE) --verb check")
         tm.that(rendered, has="$(WORKSPACE_ORCHESTRATE) --verb test")
         tm.that(rendered, has="MAKE_PROFILE := workspace")
-        tm.that(rendered, has="$(FLEXT_INFRA_PYTHON) -m flext_infra")
+        tm.that(
+            rendered, has="PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra"
+        )
 
     def test_repository_root_gate_verbs_fan_out_via_orchestrator(
         self, tmp_path: Path
     ) -> None:
         """Generated workspace check/test route through workspace orchestrate."""
-        repository_root = _render_root_makefile(tmp_path)
+        repository_root = self._render_root_makefile(tmp_path)
         for verb in (c.Infra.VERB_CHECK, c.Infra.VERB_TEST):
             execution = tm.ok(
                 test_u.Cli.run_raw(
-                    [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}", "APPLY=Y"],
+                    [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}"],
                     cwd=repository_root,
                     remove_env_keys=("MAKEFLAGS",),
                 )
@@ -57,69 +60,86 @@ class TestsCodegenRepositoryRootFanout:
             tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
             tm.that(execution.stdout + execution.stderr, has=f"--verb {verb}")
 
-    def test_repository_root_deps_profiles_canonical_modernization(
-        self, tmp_path: Path
-    ) -> None:
-        """Generated deps renders the exact lock-upgrade and modernizer invocation."""
-        repository_root = _render_root_makefile(tmp_path)
-
+    def test_repository_root_declares_member_propagation(self, tmp_path: Path) -> None:
+        """The workspace profile declares propagate through the workspace CLI."""
+        repository_root = self._render_root_makefile(tmp_path)
         execution = tm.ok(
             test_u.Cli.run_raw(
-                [c.Infra.MAKE, "--dry-run", "_builtin-deps", "APPLY=Y"],
+                [c.Infra.MAKE, "--dry-run", "_builtin-propagate"],
                 cwd=repository_root,
                 remove_env_keys=("MAKEFLAGS",),
             )
         )
-
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
+        tm.that(
+            execution.stdout + execution.stderr,
+            has=f"{c.Infra.CLI_GROUP_WORKSPACE} propagate",
+        )
+
+    def test_repository_root_upg_profiles_canonical_modernization(
+        self, tmp_path: Path
+    ) -> None:
+        """Generated upg renders the exact lock-upgrade and modernizer invocation.
+
+        ``upg`` bootstraps Mise (network) and then dispatches its lifecycle with
+        the Mise-resolved direnv handoff; the dry run enters that lifecycle with
+        the same handoff contract, so its recursive ``+`` activation still runs.
+        """
+        repository_root = self._render_root_makefile(tmp_path)
+
+        execution = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--dry-run", "_upg_lifecycle"],
+                cwd=repository_root,
+                env={
+                    "SETUP_DIRENV": tm.not_none(shutil.which("direnv")),
+                    "SETUP_DIRENV_XDG_DATA_HOME": str(tmp_path / "direnv-data"),
+                },
+            )
+        )
+
+        tm.that(
+            u.Cli.process_succeeded(execution.outcome),
+            eq=True,
+            msg=execution.stdout + execution.stderr,
+        )
         rendered = execution.stdout + execution.stderr
         tm.that(rendered, has="deps modernize")
-        tm.that(rendered, has="--apply --rewrite-constraints --skip-check")
-        tm.that(rendered, has="uv lock --project")
-        tm.that(rendered, has="--upgrade")
+        tm.that(rendered, has="--apply --rewrite-constraints")
+        tm.that(rendered, has="lock --project")
+        tm.that(rendered, has="--upgrade --refresh")
 
-
-def _render_root_makefile(tmp_path: Path) -> Path:
-    """Render base/Makefile.j2 from a typed workspace fixture."""
-    repository = u.Tests.repository_ref("workspace-fixture")
-    workspace = m.Infra.WorkspaceSpec(
-        name=repository.name,
-        beads=m.Infra.BeadsProjectSpec(
-            version=1,
-            workspace=repository.name,
-            database=repository.name,
-            issue_prefix=repository.name,
-        ),
-        repository=repository,
-        project=u.Tests.project_spec(repository.name),
-    )
-    repository_root = tmp_path / "workspace"
-    # The bootstrap projection refreshes the dispatcher of an existing checkout:
-    # the root is present, even when it carries no metadata or topology yet.
-    repository_root.mkdir()
-    request = u.Tests.conform_request(
-        repository_root,
-        what=c.Infra.CodegenConformSurface.MAKEFILE,
-        scope=c.Infra.CodegenConformScope.SELF,
-        mode=c.Infra.CodegenConformMode.CHECK,
-    )
-    plan: m.Infra.CodegenPlan = tm.ok(
-        FlextInfraCodegenConform(
-            repository_root=repository_root,
-            request=request,
-            initial_workspace=workspace,
-        ).plan(request)
-    )
-    makefile_plans = tuple(
-        fp for fp in plan.files if Path(fp.path).name == c.Infra.MAKEFILE_FILENAME
-    )
-    tm.that(makefile_plans, len=1)
-    makefile_path = repository_root / c.Infra.MAKEFILE_FILENAME
-    tm.not_none(makefile_plans[0].desired_content)
-    makefile_path.write_text(
-        u.Tests.codegen_file_text(makefile_plans[0]), encoding=c.Infra.ENCODING_DEFAULT
-    )
-    return repository_root
-
-
-__all__: tuple[str, ...] = ()
+    def _render_root_makefile(self, tmp_path: Path) -> Path:
+        """Render base/Makefile.j2 from a typed workspace fixture."""
+        repository = u.Tests.repository_ref("workspace-fixture")
+        workspace = u.Tests.workspace_spec(
+            repository, project=u.Tests.project_spec(repository.name)
+        )
+        # The bootstrap projection refreshes the dispatcher of an existing
+        # checkout: the root is a Git repository (the workspace profile resolves
+        # itself through Git), even when it carries no topology yet.
+        repository_root = u.Tests.git_repository(tmp_path, "workspace")
+        request = u.Tests.conform_request(
+            repository_root,
+            what=c.Infra.CodegenConformSurface.MAKEFILE,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.CHECK,
+        )
+        plan: m.Infra.CodegenPlan = tm.ok(
+            FlextInfraCodegenConform(
+                repository_root=repository_root,
+                request=request,
+                initial_workspace=workspace,
+            ).plan(request)
+        )
+        makefile_plans = tuple(
+            fp for fp in plan.files if Path(fp.path).name == c.Infra.MAKEFILE_FILENAME
+        )
+        tm.that(makefile_plans, len=1)
+        makefile_path = repository_root / c.Infra.MAKEFILE_FILENAME
+        tm.not_none(makefile_plans[0].desired_content)
+        makefile_path.write_text(
+            u.Tests.codegen_file_text(makefile_plans[0]),
+            encoding=c.Infra.ENCODING_DEFAULT,
+        )
+        return repository_root

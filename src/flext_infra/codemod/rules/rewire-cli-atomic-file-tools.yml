@@ -11,6 +11,6 @@ rule:
 constraints:
   METHOD:
     kind: identifier
-    regex: '^atomic_(write_text_file(_guarded)?|write_binary_file_guarded|delete_binary_file_guarded|publish_staged_binary_file_guarded|read_binary_file_state|plan_directory_chain|create_directory_chain_guarded|read_empty_directory_state|create_empty_directory_guarded|delete_empty_directory_guarded|publish_staged_empty_directory_guarded|inventory_physical_tree|cleanup_physical_tree_guarded)$'
+    regex: "^atomic_(write_text_file(_guarded)?|write_binary_file_guarded|delete_binary_file_guarded|publish_staged_binary_file_guarded|read_binary_file_state|plan_directory_chain|create_directory_chain_guarded|read_empty_directory_state|create_empty_directory_guarded|delete_empty_directory_guarded|publish_staged_empty_directory_guarded|inventory_physical_tree|cleanup_physical_tree_guarded)$"
 fix: u.Cli.$METHOD($$$ARGS)
 message: Call the canonical generic atomic filesystem utility owner directly.

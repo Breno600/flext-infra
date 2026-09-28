@@ -21,26 +21,3 @@ message: >-
   `model_rebuild()` is a declaration defect: export the symbol through its
   facade, break the import cycle at its owner, or hoist the model out of the
   function scope. A strict fleet never calls `model_rebuild`.
----
-# Pairing `json.loads` with `model_validate` parses the payload twice and
-# loses Pydantic's single Rust-side pass. JSON enters through
-# `model_validate_json` / `TypeAdapter` factory with `validate_json` directly.
-id: ban-json-loads-paired-validate
-language: python
-severity: error
-files:
-  - "**/*.py"
-ignores:
-  - "**/.git/**"
-  - "**/.venv/**"
-  - "**/legado/**"
-  - "**/legacy/**"
-  - "**/node_modules/**"
-  - "**/*_pb2.py"
-  - "**/*_pb2_grpc.py"
-rule:
-  pattern: $$$MODEL.model_validate(json.loads($$$RAW))
-message: >-
-  `json.loads` + `model_validate` double-parses the payload. Use
-  `Model.model_validate_json(raw)` (or the cached `TypeAdapter` factory
-  with `validate_json`) so parsing and validation run in one pass.

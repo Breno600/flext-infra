@@ -4,11 +4,30 @@ from __future__ import annotations
 
 from flext_tests import tm
 
-from flext_infra import u
+from flext_infra import c, u
 
 
-class TestsManagedConflictRecovery:
+class TestsFlextInfraManagedConflictRecovery:
     """Prove conflict recovery remains bounded by the document SSOT."""
+
+    def test_every_table_the_conform_pipeline_writes_is_recoverable(self) -> None:
+        """Whatever the owner writes, the owner must be able to recover.
+
+        The table is named by the same constant the conform pipeline writes
+        through, so the writer and this declaration cannot drift. They did
+        drift once: the pipeline gained a table while the declaration did not,
+        and absorbing the integration base then dead-ended the superproject
+        merge on the owner's own output.
+        """
+        pyproject = tm.ok(u.Infra.pyproject_managed_file())
+
+        tm.that(
+            u.Infra.toml_section_is_owned(
+                u.Cli.toml_dot_path(*c.Infra.CONFORM_NAMESPACE_TABLE),
+                pyproject.conflict_sections,
+            ),
+            eq=True,
+        )
 
     def test_every_generated_pyproject_section_declares_recovery(self) -> None:
         """A section the owner renders must be recoverable, or a merge dead-ends.

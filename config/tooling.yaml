@@ -16,11 +16,27 @@ Infra:
         rules:
           default: true
           MD001: false
+          # MD013 prose and code lengths are THE markdown line contract: the
+          # prettier projection (printWidth) and the .prettierrc render read
+          # MD013.line_length, converging with ruff/yamlfix at 88. Headings
+          # stay at 200 because no tool can reflow a heading — a shorter limit
+          # would only manufacture unfixable findings.
+          #
+          # flext-md-converge: wrapping is owned by rumdl (`make fix`), not
+          # prettier. `reflow`/`reflow-mode: normalize` make MD013 fixable
+          # (`[*]`) and give rumdl's own reflow-aware writer (atomic code
+          # spans, GFM task-item post-checkbox column) the authority over
+          # line breaks that prettier's proseWrap could not reach (a
+          # 294-char line inside backtick spans that prettier left
+          # unwrapped). prettier keeps `prose-wrap: preserve` below so it
+          # never re-wraps what rumdl already wrapped.
           MD013:
-            line_length: 500
+            line_length: 88
             heading_line_length: 200
-            code_block_line_length: 500
+            code_block_line_length: 88
             tables: false
+            reflow: true
+            reflow-mode: normalize
           MD022: false
           MD023: false
           MD024: { siblings_only: true }
@@ -37,10 +53,37 @@ Infra:
           MD057: false
           MD060: false
           MD076: false
+        # Prettier formatting policy (markdown-format gate): rendered into the
+        # managed .prettierrc. prettier --write is owned by `make fmt` and
+        # prettier --check by `make check`; `make fix` never runs it.
+        #
+        # flext-md-converge: `prose-wrap: preserve` (not `always`) so prettier
+        # never reflows a paragraph or a link-reference definition onto a
+        # fresh, bracket-less line — the exact shape rumdl's MD034 (bare URL)
+        # flags. `always` also forces prettier's list-continuation printer to
+        # reindent a GFM task item whose text starts with a manual ordinal
+        # (`- [ ] 1. text`) to a column neither of MD077's two valid columns
+        # accepts, on every rerun, regardless of `prose-wrap` (a prettier
+        # 3.5.3 defect confirmed empirically: it reproduces under `preserve`
+        # too). `preserve` removes the reflow trigger for MD034 and for the
+        # ordinary case; wrapping ownership moves to rumdl (MD013 above), so
+        # `make fix` (not `make fmt` alone) is required for full MD013
+        # coverage on newly authored long lines.
+        prettier:
+          prose-wrap: preserve
+          tab-width: 4
+          md-tab-width: 2
         exclude:
           # AGENTS.md is a tool-managed projection (beads integration + codex
           # setup blocks): gating generated output is a projection defect.
+          # CLAUDE.md is its symlink and would rewrite the projection through
+          # the link.
           - AGENTS.md
+          - CLAUDE.md
+          # GEMINI.md is the same tool-managed instruction-pointer projection
+          # (generate-workspace-config); prose-wrap always rewraps its exact
+          # rendered pointer and the law-surface validator then fails closed.
+          - GEMINI.md
           - .kilo/**
           - .omo/**
           - .tmp/**
@@ -63,6 +106,14 @@ Infra:
           - legado/**
           - .github/**
           - site/**
+          # target/ is a fully generated build tree (mise/rust-style outputs):
+          # formatting generated output is a projection defect.
+          - target/**
+          # Provider-surface projections and runtime state owned by ai-hub:
+          # never a lint/format surface.
+          - .agents/**
+          - .gemini/**
+          - .beads/**
           # Gen-emitted table projections whose emitter lives outside the
           # codegen surface; MD058 (blank lines around tables) is upstream of
           # the projection and cannot be repaired at the projection itself.
@@ -71,6 +122,18 @@ Infra:
           # External CRG tool output: pipe-separated rows (MD075) and long JSON
           # lines (MD013) originate from code-review-graph, not hand-authored docs.
           - docs/architecture/crg-reports/**
+          # Generated api-reference and project-catalog projections (make gen /
+          # docs generate): the renderer's output is canonical as emitted —
+          # operator law 2026-09-22 — so prettier never rewrites generated
+          # docs and the codegen fixed point stays stable.
+          - docs/api-reference/generated/**
+          - docs/projects/generated/**
+          # Pandoc-fenced authoring sources (fonte.md): the fenced-div markers
+          # are runtime syntax (class attribution), not prose. Prettier's
+          # rewrap merges `::: {.class}` onto the content line and the motor
+          # loses the declared classes (style-specimen contract); the author
+          # owns the fences and the renderer owns their meaning.
+          - "**/fonte.md"
       ruff:
         # P0 law: lint covers every tracked Python surface. No excludes over
         # legado, examples, tests, or scripts code anywhere in this config.
@@ -80,7 +143,18 @@ Infra:
           - .git
           - .github/hooks
           - .github/hooks/**
-          - "**/aihub-hooks/**"
+          # Agent-hook projections are runtime state owned by ai-hub, never
+          # fleet source — they are untracked and outside the lint surface.
+          - ".agents/aihub-hooks"
+          - ".agents/aihub-hooks/**"
+          - ".claude/aihub-hooks"
+          - ".claude/aihub-hooks/**"
+          - ".codex/aihub-hooks"
+          - ".codex/aihub-hooks/**"
+          - ".cursor/aihub-hooks"
+          - ".cursor/aihub-hooks/**"
+          - ".gemini/aihub-hooks"
+          - ".gemini/aihub-hooks/**"
           - .mypy_cache
           - .pytest_cache
           - .ruff_cache
@@ -200,12 +274,6 @@ Infra:
             # Examples are executable documentation loaded by path, not
             # importable modules, so module-name and shebang rules do not apply.
             "**/examples/**/*.py": [invalid-module-name, shebang-not-executable]
-            # The rope PEP 695 exemption is NOT declared here: this file is the
-            # FLEET policy, and a path that exists only in flext-infra would be
-            # written into every generated project's pyproject.toml. It lives in
-            # flext-infra's own config/quality.yaml as a project-local
-            # ManagedArtifacts.Ruff addition, which conform merges over this
-            # policy for that one repository.
             # Test suites: pytest idioms that are correct-by-design
             # are exempted GLOBALLY at the codegen SSOT (operator P0, per-rule
             # justified per UNIVERSAL_CORE r19 — never a blanket mask):
@@ -253,19 +321,32 @@ Infra:
               - unused-import
 
       mypy:
+        # The returns plugin types p.Result: without it every Result.value /
+        # .map boundary resolves to Any and consumers flood with
+        # no-any-return (proven by assert_type on 2026-09-23); its removal
+        # alongside five disable rows and ignore_missing_imports was the
+        # root cause of that flood, restored here from the canonical
+        # pre-regression section (commit 7691100a4).
         plugins: [pydantic.mypy]
-        # flext-j47u: every retained global exclusion carries its tested rationale;
+        exclude: ^legado(?:/|$)
+        # mro-j47u: every retained global exclusion carries its tested rationale;
         # generated pyprojects receive this evidence as managed comments.
         boolean-settings:
+          # The canonical facade rebind (import the upstream single letter,
+          # then rebind it to the composed namespace class, mro-j47u) is a
+          # deliberate same-name redefinition; without this flag Mypy treats
+          # every facade root as an error-degraded Any (removed and restored
+          # 2026-09-22 — the removal flooded CI with no-any-return shadows).
+          allow_redefinition: true
           namespace_packages: true
           explicit_package_bases: true
-          # Analyze installed implementations without py.typed; do not ignore them.
-          # https://mypy.readthedocs.io/en/stable/config_file.html#confval-follow_untyped_imports
-          follow_untyped_imports: true
           check_untyped_defs: true
-          # disallow_untyped_defs, Noisier flags
-          # disallow_any_unimported, Noisier flags
           extra_checks: true
+          # Analyze source distributions that have real annotations but omit
+          # the PEP 561 marker. Rope 1.14 is one such runtime owner; skipping
+          # it converts every public boundary into Any and makes its imports
+          # fail before our typed protocols can validate them.
+          follow_untyped_imports: true
           local_partial_types: true
           no_implicit_reexport: true
           show_traceback: true
@@ -276,28 +357,27 @@ Infra:
           warn_unreachable: true
           warn_unused_ignores: true
         disabled-error-codes:
+          arg-type: Public p.Result values widen only in Mypy; Pyright and Pyrefly retain T.
           assignment: Dependency-injector descriptors lose their FLEXT-bound type only in Mypy.
           attr-defined: PEP 562 facade members installed by FLEXT composition are invisible to Mypy.
           call-arg: Pydantic v2 init signatures behind facade FLEXT are incomplete in Mypy.
           misc: Valid PEP 695 nested facade aliases are rejected under Mypy's misc bucket.
           name-defined: Generated PEP 562 exports are installed at runtime but absent to Mypy.
+          no-any-return: Facade returns widen to Any only in Mypy; Pyright and Pyrefly resolve them.
+          no-redef: Canonical c-t-p-m-u facades intentionally rebind their inherited short alias.
           prop-decorator: Mypy loses Pydantic computed-field descriptors across composed FLEXT.
+          type-var: Mypy 1.20 drops T from inherited p.ResultLike; the direct owner passes.
+          unreachable: Mypy over-narrows facade values and rejects live defensive guards.
           valid-type: Mypy rejects facade namespaces used as owners in valid PEP 695 aliases.
         string-settings:
           follow_imports: normal
         overrides:
-          # Fail-loud exhaustive enum dispatch (ADR-001): Mypy over-narrows
-          # the enum through the branch chain and flags the live defensive
-          # guard as unreachable; the guard is the required runtime contract
-          # for future ChartPrimitive members.
-          - modules:
-              ["dcdoc._utilities._charts._matplotlib_renderer._renders_spec"]
-            disable-error-codes: [unreachable]
+          - modules: [rope.*]
+            disable-error-codes: []
+            follow-untyped-imports: true
             justification: >-
-              Mypy over-narrows exhaustive ChartPrimitive dispatch and
-              rejects the live fail-loud guard (ADR-001) as unreachable;
-              the guard is the required runtime contract for future enum
-              members (documented rationale in the consumer pyproject).
+              Analyze Rope's installed source without suppressing import-untyped;
+              https://mypy.readthedocs.io/en/stable/config_file.html#follow-untyped-imports
       pydantic-mypy:
         init_forbid_extra: true
         init_typed: true
@@ -392,27 +472,12 @@ Infra:
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
-          # flext-j47u (codex): Rope 1.14/latest has no public PEP 695 walker
-          # registration API. This existing-path-only environment is the tested
-          # vendor boundary; broad src code keeps reportPrivateUsage=error.
-          diagnostic-path-overrides:
-            - root: src/flext_infra/_utilities/_rope
-              reportPrivateUsage: "none"
-              rationale: >-
-                Rope 1.14 and upstream master require private walker handler
-                registration for Python 3.13 PEP 695 source regions.
+          diagnostic-path-overrides: []
           source-report-private-usage: error
           test-like-report-private-usage: "none"
           other-report-private-usage: "none"
-          venv-name: .venv
       coverage:
         source: [src]
-        fail-under:
-          core: 45
-          domain: 30
-          platform: 45
-          integration: 20
-          app: 15
         show-missing: true
         skip-covered: false
         precision: 2
@@ -552,55 +617,47 @@ Infra:
           # scripts/legado/dispatch.py.
           project-shared-search-paths: []
       pytest:
-        testmon-state-home-variable: XDG_STATE_HOME
-        testmon-datafile-variable: TESTMON_DATAFILE
-        testmon-namespace: flext/testmon
-        testmon-database-filename: .testmondata
-        testmon-lock-filename: cache.lock
         # flext-j47u (codex): scaffold/modernizer consume one complete pytest model.
-        # OPERATOR LAW flext-38p39 (2026-08-13), reaffirmed by flext-09686
-        # measurement. 10s per case, 60s for an explicitly slow case, 120s for
-        # the complete suite. A case that does not fit is a TEST DEFECT and is
-        # OPTIMIZED; raising the ceiling to accommodate it is forbidden and is
-        # itself a violation. This supersedes the prior measurement-driven note
-        # that told future maintainers to never narrow back to 10s/60s: that
-        # rule let the suite run 30 minutes, so make test never aborted on
-        # overrun and a push could be attempted without a full green suite.
+        # A case that does not fit is a test defect to optimize. Fifteen
+        # seconds still fails a blocked filesystem
+        # operation quickly without pretending that an uninterruptible host
+        # fsync can obey a five-second Python signal deadline. The aggregate
+        # budget below independently terminates an incomplete full suite.
         case-timeout-seconds: 10
-        # The 60s arm of OPERATOR LAW flext-38p39, made executable. The law
-        # already granted an explicitly slow case 60s, but no key projected it,
-        # so `flext_slow_timeout_seconds` stayed empty and every `@pytest.mark.slow`
-        # item was still judged at 10s. A nested `pytester.runpytest_subprocess()`
-        # pays a full interpreter + plugin boot before its first assertion and
-        # cannot fit 10s; it is not a slow TEST, it is a slow HARNESS. This is
-        # the declared exception, not a raised ceiling: unmarked cases keep 10s.
-        slow-timeout-seconds: 60
-        # Complete-suite wall clock. Individual cases remain bounded at 10s
-        # (60s only when explicitly slow); the aggregate receives 600s so the
-        # entire parallel suite and coverage finalization can complete. The
-        # process wall adds one minute for orderly worker/report shutdown.
-        run-timeout-seconds: 600
+        # Slow marks are a narrow integration-harness budget, not permission
+        # for an unbounded test. Cases that exceed it require owner repair.
+        slow-timeout-seconds: 30
+        # A local suite that cannot finish within two minutes is a performance
+        # defect. The generated process wall is derived from this value and the
+        # termination grace by the typed model; no second timeout source exists.
+        run-timeout-seconds: 120
         termination-grace-seconds: 2
-        # The first failing test is the only actionable red. Continuing after
-        # it wastes runtime and obscures the causal failure.
+        # Operator decision 2026-09-26: one failure stops the invocation. The
+        # next run starts from the corrected owner instead of accumulating a
+        # permissive backlog of unrelated failures.
         max-failures: 1
         enforcement-plugin: flext_tests_enforcement
         asyncio-default-fixture-loop-scope: function
         progress-args: [--verbose]
         report-args: [-ra, --durations=25, --durations-min=0.001, --tb=short]
         diagnostic-args: [-rA, --durations=0, --tb=long, --showlocals]
-        # The full suite nests Make, Git, and Python subprocesses. Four workers
-        # previously exhausted that process topology, and a 16-worker run on a
-        # 20-CPU/63-GiB host produced six independent item timeouts. Two is the
-        # highest measured stable ceiling; live CPU and memory remain stricter
-        # additional bounds on smaller hosts.
-        parallel-workers: 2
+        # One worker makes maxfail exact: no second in-flight case can fail
+        # after the first failure has stopped the invocation.
+        parallel-workers: 1
+        # Per declared-project worker ceilings ([project].name → workers),
+        # resolved by the runner over the default above: a consumer whose
+        # measured suite cannot fit the single-worker process boundary
+        # declares its ceiling here, inside the fleet cycle, instead of
+        # patching projections. With workers > 1 maxfail still stops the
+        # invocation; in-flight cases may report after the stop, which the
+        # declaring consumer accepts by declaring.
+        parallel-worker-overrides:
+          cosmos-docgen: 4
+          flext-infra: 4
         # Reserve physical memory for each xdist worker and its child process
         # tree; this bound may reduce the tested ceiling on smaller hosts.
         parallel-worker-memory-gb: 2
-        # Keep scheduling centralized so -x stops feeding workers after the
-        # first failure. Work stealing pre-allocated an entire worker queue and
-        # continued hundreds of cases for minutes after a decisive failure.
+        # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
         profile-sort: cumulative
         profile-limit: 50
@@ -630,14 +687,28 @@ Infra:
           - "smoke: public-interface smoke tests"
           - "unit: unit tests"
           - "integration: integration tests"
+          - "functional: functional behavior tests"
           - "performance: performance and benchmark tests"
           - "slow: slow-running tests"
           - "docker: tests requiring Docker"
+          - "oracle: tests requiring the shared Oracle database"
           - "remote: tests requiring remote/external network services"
           - "e2e: end-to-end integration tests"
           - "edge_cases: edge case tests"
           - "stress: stress tests"
           - "resilience: resilience tests"
+          - "discovery: catalog and stream discovery tests"
+          - "singer: Singer protocol contract tests"
+        # gate-budget/engineering-core: external-token gates never run inside
+        # offline verification (`make test`); the runner records their exclusion.
+        # `make test-full` first completes that incremental phase, then executes
+        # every marker under the same database and deadline. Existing external
+        # tests retain their declared environment and authentication requirements.
+        external-gate-markers: [remote, docker]
+        # Operator 2026-09-14: CI and pre-commit share make.ci.value;
+        # local and pre-push execution retain slow tests. The full phase of
+        # `make test-full` includes these markers in every context.
+        ci-excluded-markers: [slow]
         standard-addopts:
           - --benchmark-disable
           - --strict-markers
@@ -645,13 +716,6 @@ Infra:
           - --durations=10
           # flext-99ae: --timeout/--session-timeout are runner-owned and derived
           # from case-timeout-seconds/run-timeout-seconds; never restate them here.
-        # flext-99ae: hard process boundary independent of pytest hook progress.
-        # Must exceed run-timeout-seconds (120) by a small grace only: this caps
-        # the whole Make/pytest process (shell `timeout`), not a single session
-        # hook. A wide outer wall is itself an escape hatch — it would let an
-        # overrun keep burning wall clock instead of aborting. Grace covers
-        # interpreter start, collection and teardown only.
-        process-timeout-seconds: 660
       tomlsort:
         all: true
         in_place: true
@@ -687,7 +751,30 @@ Infra:
           reportMissingTypeStubs: "none"
       app:
         pyright: {}
-    lazy-init: {}
+    lazy-init:
+      # flext-lz2 (codex): canonical import layer order for the
+      # lazy-init engine (D3). Lower index = lower layer.
+      # Runtime imports target equal-or-lower layers (relative-dot
+      # within package); reverse (higher) imports are emitted under
+      # ``if TYPE_CHECKING:`` per ``reverse_import_mode``.
+      import-layer-order:
+        - settings
+        - config
+        - c
+        - t
+        - p
+        - m
+        - u
+        - base
+        - services
+        - api
+        - cli
+      reverse-import-mode: type_checking
+      forward-import-form: relative_dot
+    mod:
+      phases:
+        # Component toggles for make mod (rule: toggles are data, not flags).
+        import-alignment: true
 
 # Project-local managed-artifact additions for flext-infra itself.
 #
@@ -705,14 +792,3 @@ ManagedArtifacts:
       src/flext_infra/_utilities/_mypy_supervisor.py:
         - suspicious-subprocess-import
         - subprocess-without-shell-equals-true
-      # OPERATOR-AUTHORIZED 2026-08-08 (rope only, private-member-access only).
-      # Rope 1.14 and upstream master expose NO public API to register a PEP 695
-      # walker handler, so these private slots ARE the library interface.
-      # Vendoring the walker and dropping PEP 695 support were the alternatives;
-      # the operator rejected both.
-      # The access is written LITERALLY and reported honestly: routing it through
-      # getattr with a name constant was refused as a disguised suppression. The
-      # typing side is genuinely fixed (pep695_ast_walker narrows via TypeGuard
-      # and raises when rope changes its internals), so this exemption covers the
-      # ruff rule alone. Removing it reports exactly 12 SLF001, all under _rope/.
-      src/flext_infra/_utilities/_rope/**/*.py: [private-member-access]

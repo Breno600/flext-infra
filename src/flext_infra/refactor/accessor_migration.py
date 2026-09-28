@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from typing import Annotated, override
 
 from flext_cli import cli
 
-from flext_infra import c, m, p, r, t, u
+from flext_core import r
+from flext_infra import m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 
 from ._accessor_report import FlextInfraAccessorMigrationReportMixin
@@ -26,8 +28,13 @@ class FlextInfraAccessorMigrationOrchestrator(
     ] = 10
     gates: Annotated[
         str,
-        m.Field(description="Comma-separated lint gates for preview/apply validation"),
-    ] = c.Infra.SAFE_EXECUTION_DEFAULT_GATES
+        m.Field(
+            description=(
+                "Comma-separated lint gates for preview/apply validation; empty"
+                " selects the SSOT snapshot gates (make.check_gates_ci)."
+            )
+        ),
+    ] = ""
 
     @property
     @override
@@ -61,27 +68,19 @@ class FlextInfraAccessorMigrationOrchestrator(
         files_with_changes = 0
         automated_change_count = 0
         warning_count = 0
-        lint_before_totals: dict[str, int] = {}
-        lint_after_totals: dict[str, int] = {}
-        new_lint_error_totals: dict[str, int] = {}
+        lint_before_totals: MutableMapping[str, int] = {}
+        lint_after_totals: MutableMapping[str, int] = {}
+        new_lint_error_totals: MutableMapping[str, int] = {}
         with u.Infra.open_project(self.repository_root) as rope_project:
             for py_file in iter_result.value:
                 read = u.Cli.files_read_text(py_file)
                 if read.failure:
                     return r[m.Infra.AccessorMigrationReport].from_failure(read)
-                source = read.value
-                updated_source, automated_changes = self._apply_automated_rewrites(
-                    rope_project, py_file, source
-                )
-                warnings = list(self._collect_manual_warnings(py_file, source))
                 file_report = self._process_file(
+                    rope_project,
                     py_file,
-                    source=source,
-                    updated_source=updated_source,
-                    automated_changes=automated_changes,
-                    warnings=warnings,
-                    include_preview=(bool(automated_changes or warnings))
-                    and len(previews) < self.preview_limit,
+                    read.value,
+                    preview_available=len(previews) < self.preview_limit,
                 )
                 automated_change_count += len(file_report.automated_changes)
                 warning_count += len(file_report.warnings)

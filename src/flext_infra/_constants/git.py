@@ -11,7 +11,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from enum import StrEnum, unique
-from typing import Final
+from typing import ClassVar
 
 
 class FlextInfraConstantsGit:
@@ -25,36 +25,36 @@ class FlextInfraConstantsGit:
 
     # --- Index entry modes (git mode field, not POSIX st_mode) ---
 
-    GIT_MODE_FILE: Final[int] = 0o100644
+    GIT_MODE_FILE: ClassVar[int] = 0o100644
     "Normal tracked file index mode."
-    GIT_MODE_EXECUTABLE: Final[int] = 0o100755
+    GIT_MODE_EXECUTABLE: ClassVar[int] = 0o100755
     "Executable tracked file index mode."
-    GIT_MODE_SYMLINK: Final[int] = 0o120000
+    GIT_MODE_SYMLINK: ClassVar[int] = 0o120000
     "Symbolic link index mode."
-    GIT_MODE_GITLINK: Final[int] = 0o160000
+    GIT_MODE_GITLINK: ClassVar[int] = 0o160000
     "Submodule gitlink index mode (used by BaseIndexEntry)."
-    GIT_CACHEINFO_GITLINK: Final[str] = "160000"
+    GIT_CACHEINFO_GITLINK: ClassVar[str] = "160000"
     "Submodule gitlink mode string for ``git update-index --cacheinfo``."
 
     # --- Index stage values ---
 
-    GIT_STAGE_NORMAL: Final[int] = 0
+    GIT_STAGE_NORMAL: ClassVar[int] = 0
     "Normal (non-conflict) index stage."
 
     # --- SHA lengths ---
 
-    GIT_OID_HEX_LENGTH_SHA1: Final[int] = 40
+    GIT_OID_HEX_LENGTH_SHA1: ClassVar[int] = 40
     "Hex length of a SHA-1 Git object id."
-    GIT_OID_HEX_LENGTH_SHA256: Final[int] = 64
+    GIT_OID_HEX_LENGTH_SHA256: ClassVar[int] = 64
     "Hex length of a SHA-256 Git object id."
 
     # --- Remote defaults ---
 
-    GIT_DEFAULT_REMOTE: Final[str] = "origin"
+    GIT_DEFAULT_REMOTE: ClassVar[str] = "origin"
     "Canonical upstream remote name."
-    GIT_REMOTE_SSH_SCHEMES: Final[frozenset[str]] = frozenset({"ssh", "git+ssh"})
+    GIT_REMOTE_SSH_SCHEMES: ClassVar[frozenset[str]] = frozenset({"ssh", "git+ssh"})
     "Remote URL schemes treated as SSH-style remote identifiers."
-    GIT_REMOTE_SENSITIVE_QUERY_KEYS: Final[frozenset[str]] = frozenset({
+    GIT_REMOTE_SENSITIVE_QUERY_KEYS: ClassVar[frozenset[str]] = frozenset({
         "access_token",
         "api_key",
         "apikey",
@@ -78,8 +78,19 @@ class FlextInfraConstantsGit:
 
     # --- Ref prefixes ---
 
-    GIT_REFS_HEADS: Final[str] = "refs/heads/"
+    GIT_REFS_HEADS: ClassVar[str] = "refs/heads/"
     "Local branch ref prefix."
+
+    # --- Linked-worktree registry (filesystem discovery, no Git subprocess) ---
+
+    GIT_WORKTREES_DIRNAME: ClassVar[str] = "worktrees"
+    "Directory under the repository's ``.git`` holding one registered entry."
+    GIT_WORKTREE_SCAN_FILE_CAP: ClassVar[int] = 200_000
+    "Maximum entries a bounded worktree tree walk visits before degrading."
+    GIT_WORKTREE_SCAN_TIME_CAP_S: ClassVar[float] = 30.0
+    "Maximum seconds a bounded worktree tree walk runs before degrading."
+    SECONDS_PER_DAY: ClassVar[float] = 86400.0
+    "Seconds in one day, the idle-time denominator for stale worktrees."
 
 
 __all__: list[str] = ["FlextInfraConstantsGit"]

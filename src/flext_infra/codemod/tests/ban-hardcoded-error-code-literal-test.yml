@@ -1,0 +1,9 @@
+id: ban-hardcoded-error-code-literal
+valid:
+  - error_code = c.ErrorCode.OPERATION_ERROR.value
+  - timeout_code = c.ErrorCode.TIMEOUT_ERROR.value
+  - raise FlextTimeoutError(msg, error_code=error_code)
+invalid:
+  - d.timeout(error_code="OPERATION_TIMEOUT")
+  - result = r[TValue].fail(msg, error_code="OPERATION_ERROR")
+  - assert outcome.error_code == "OPERATION_ERROR"

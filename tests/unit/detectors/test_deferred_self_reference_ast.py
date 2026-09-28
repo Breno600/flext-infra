@@ -17,19 +17,20 @@ from flext_infra import m, u
 from flext_infra.detectors.deferred_self_reference_detector import (
     FlextInfraDeferredSelfReferenceDetector,
 )
+from tests import t
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-_DEFERRED = "DEFERRED_SELF_REFERENCE"
-_RECURSIVE = "RECURSIVE_MODEL"
 
 
 class TestsFlextInfraDeferredSelfReferenceDetector:
     """Behavior contract for deferred-self-reference detection."""
 
+    _DEFERRED = "DEFERRED_SELF_REFERENCE"
+    _RECURSIVE = "RECURSIVE_MODEL"
+
     @staticmethod
-    def _codes(tmp_path: Path, source: str) -> tuple[str, ...]:
+    def _codes(tmp_path: Path, source: str) -> t.VariadicTuple[str]:
         project = tmp_path / "demo-project"
         package_dir = project / "src" / "demo_project"
         package_dir.mkdir(parents=True)
@@ -58,7 +59,7 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
             "    class Holder:\n"
             "        leaf: Outer.Leaf = Field(default_factory=lambda: Outer.Leaf())\n"
         )
-        tm.that(self._codes(tmp_path, source), eq=(_DEFERRED,))
+        tm.that(self._codes(tmp_path, source), eq=(self._DEFERRED,))
 
     def test_diamond_flext_composition_is_accepted(self, tmp_path: Path) -> None:
         """The canonical repair resolves the model eagerly, so it must be clean."""
@@ -87,7 +88,7 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
     ) -> None:
         """A field typed as its own owner cannot be instantiated."""
         source = "class Node:\n    child: Node | None = None\n"
-        tm.that(self._codes(tmp_path, source), eq=(_RECURSIVE,))
+        tm.that(self._codes(tmp_path, source), eq=(self._RECURSIVE,))
 
     def test_classvar_singleton_slot_is_not_recursive(self, tmp_path: Path) -> None:
         """A ClassVar slot is never instantiated as a field."""

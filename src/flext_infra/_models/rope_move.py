@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, ClassVar
 
-from flext_core import m
-from flext_infra import t
+from flext_cli import m
 
-from .mixins import FlextInfraModelsMixins as mm
+from .. import t
+from . import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsRopeMove:
@@ -32,6 +32,26 @@ class FlextInfraModelsRopeMove:
         ]
         apply: Annotated[
             bool, m.Field(description="Whether to execute the validated move")
+        ]
+
+    class ResolvedClassMove(m.ArbitraryTypesModel):
+        """One class move whose Rope identities are resolved before any rewrite."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        request: Annotated[
+            FlextInfraModelsRopeMove.ClassMoveRequest,
+            m.Field(description="Prevalidated class-move request being planned"),
+        ]
+        declaration: Annotated[
+            t.Infra.RopePyName,
+            m.Field(description="Original Rope identity of the moved declaration"),
+        ]
+        origin_module: Annotated[
+            str, m.Field(description="Rope module declaring the class before the move")
+        ]
+        target_module: Annotated[
+            str, m.Field(description="Rope module receiving the moved class")
         ]
 
 

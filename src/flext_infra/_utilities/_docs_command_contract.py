@@ -28,7 +28,9 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
         if stripped.startswith("$ "):
             return (stripped[2:],)
         return tuple(
-            match.group(0)[1:-1] for match in c.Infra.INLINE_CODE_RE.finditer(line)
+            match.group(0)[1:-1]
+            for match in c.Infra.INLINE_CODE_RE.finditer(line)
+            if len(match.group(0)[1:-1].split()) > 1
         )
 
     @staticmethod
@@ -63,7 +65,7 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
             ):
                 make_match = c.Infra.DOCS_MAKE_COMMAND_RE.match(candidate)
                 if c.Infra.DOCS_RAW_PYTEST_COMMAND_RE.match(candidate):
-                    issue = "direct pytest command bypasses `make test APPLY=Y`"
+                    issue = "direct pytest command bypasses `make test`"
                 elif c.Infra.DOCS_RAW_TOOL_COMMAND_RE.match(candidate):
                     issue = "direct tool command bypasses the root Make dispatcher"
                 elif make_match is not None:
@@ -74,19 +76,22 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
                     verb_spec = next(
                         (spec for spec in effective_verbs if spec.name == verb), None
                     )
-                    has_apply = (
+                    legacy_apply = (
                         c.Infra.DOCS_APPLY_RE.search(make_match.group("args"))
                         is not None
                     )
-                    if verb_spec is None:
+                    if legacy_apply:
+                        issue = (
+                            "legacy `APPLY` flag is exterminated: verbs always "
+                            "execute their declared operation"
+                        )
+                    elif verb_spec is None:
                         issue = f"Make verb `{verb}` is not declared by the config SSOT"
                     elif selector is not None:
                         selector_name = (
                             selector.group(0).split("=", maxsplit=1)[0].strip()
                         )
                         issue = f"invented Make selector `{selector_name}`"
-                    elif verb_spec.requires_apply and not has_apply:
-                        issue = f"`make {verb}` requires `APPLY=Y`"
                 if issue:
                     break
             if not issue and c.Infra.DOCS_TEST_DOUBLE_HEADING_RE.match(line):

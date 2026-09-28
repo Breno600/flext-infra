@@ -11,7 +11,7 @@ from flext_cli import u
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra.models import m
+from flext_infra import m
 
 from ..._utilities._git.remote import FlextInfraUtilitiesGitRemote
 from ..._utilities._git.semantic_identity import (
@@ -70,7 +70,7 @@ class FlextInfraUtilitiesGitAttestationMixin(
     ) -> p.Result[t.VariadicTuple[m.Infra.GateCommandEvidence]]:
         evidence: list[m.Infra.GateCommandEvidence] = []
         for gate in gates:
-            command = f"make {gate} APPLY=Y"
+            command = f"make {gate}"
             started = datetime.now(UTC)
             outcome = u.Cli.run_raw(command.split(), cwd=repo_root)
             completed = datetime.now(UTC)
@@ -99,13 +99,14 @@ class FlextInfraUtilitiesGitAttestationMixin(
     def _toolchain_digest(cls, repo_root: Path, commit_sha: str | None = None) -> str:
         repo = cls._repo(repo_root)
         commit = repo.commit(commit_sha) if commit_sha is not None else repo.head.commit
-        names = (".mise.toml", ".python-version", "pyproject.toml", "uv.lock")
+        names = (".mise.toml", ".python-version", "pyproject.toml")
         tracked: list[str] = []
         for name in names:
-            try:
-                blob = commit.tree / name
-            except KeyError:
+            # An optional toolchain file absent from this commit contributes
+            # nothing to the digest; its absence is read, not caught.
+            if name not in commit.tree:
                 continue
+            blob = commit.tree / name
             tracked.append(f"{name}:{blob.hexsha}")
         content = "\n".join(tracked)
         return f"sha256:{u.Cli.sha256_content(content)}"

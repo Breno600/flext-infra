@@ -6,16 +6,50 @@ from pathlib import Path
 from typing import Annotated, ClassVar, Self
 
 from flext_core import m, u
-from flext_infra import t
+from flext_infra import c, t
 
 
 class FlextInfraModelsDuplication:
     """Strict external-boundary models for jscpd 5 reports."""
 
+    class ProjectDuplicationOverrides(m.ContractModel):
+        """Validated ``[tool.flext.project.duplication]`` overrides.
+
+        One project's pyproject.toml may narrow the workspace-wide jscpd
+        defaults; every field defaults to the canonical constant so a project
+        with no overrides table gets the same behavior as the workspace scan.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
+            extra="forbid", frozen=True, populate_by_name=True
+        )
+
+        min_lines: Annotated[
+            t.PositiveInt,
+            m.Field(alias="min-lines", description="Minimum duplicated line count"),
+        ] = c.Infra.JSCPD_MIN_LINES
+        min_tokens: Annotated[
+            t.PositiveInt,
+            m.Field(alias="min-tokens", description="Minimum duplicated token count"),
+        ] = c.Infra.JSCPD_MIN_TOKENS
+        threshold_percent: Annotated[
+            t.Percentage,
+            m.Field(
+                alias="threshold-percent",
+                description="Maximum allowed duplication percentage",
+            ),
+        ] = c.Infra.JSCPD_THRESHOLD_PERCENT
+        mode: Annotated[t.NonEmptyStr, m.Field(description="jscpd detection mode")] = (
+            c.Infra.JSCPD_MODE
+        )
+        scope: Annotated[
+            t.StrSequence, m.Field(description="Scope directory names")
+        ] = c.Infra.JSCPD_SCOPE_DIRNAMES
+
     class JscpdConfig(m.ContractModel):
         """Complete generated jscpd invocation configuration."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", frozen=True, populate_by_name=True
         )
 
@@ -50,7 +84,7 @@ class FlextInfraModelsDuplication:
     class JscpdLocation(m.ContractModel):
         """One required source coordinate in a jscpd report."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         column: Annotated[
             t.NonNegativeInt,
@@ -68,7 +102,7 @@ class FlextInfraModelsDuplication:
     class JscpdFile(m.ContractModel):
         """One side of a detected clone."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", frozen=True, populate_by_name=True
         )
 
@@ -91,7 +125,7 @@ class FlextInfraModelsDuplication:
     class JscpdDuplicate(m.ContractModel):
         """One complete two-sided clone from jscpd."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", frozen=True, populate_by_name=True
         )
 
@@ -128,7 +162,7 @@ class FlextInfraModelsDuplication:
     class JscpdStatisticsSummary(m.ContractModel):
         """Complete aggregate emitted for one format or the whole scan."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", frozen=True, populate_by_name=True
         )
 
@@ -170,7 +204,7 @@ class FlextInfraModelsDuplication:
     class JscpdStatistics(m.ContractModel):
         """Per-format and total statistics proving non-empty collection."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", frozen=True, populate_by_name=True
         )
 
@@ -190,7 +224,7 @@ class FlextInfraModelsDuplication:
     class JscpdReport(m.ContractModel):
         """Validated complete jscpd JSON report."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         duplicates: Annotated[
             t.SequenceOf[FlextInfraModelsDuplication.JscpdDuplicate],
@@ -234,7 +268,7 @@ class FlextInfraModelsDuplication:
     class JscpdScan(m.ContractModel):
         """Fresh command evidence plus its validated report."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         exit_code: Annotated[
             t.NonNegativeInt, m.Field(le=255, description="Raw jscpd process exit code")

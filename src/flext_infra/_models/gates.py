@@ -7,22 +7,63 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal, Self
 
-from flext_cli import u
+from flext_cli import t, u
 
 from flext_core import m
-from flext_infra import c, t
+from flext_infra import c
 
+# Gate models use base type primitives; importing the composing project facade
+# here creates unresolved aliases while Pydantic analyzes nested root models.
 from .duplication import FlextInfraModelsDuplication
 
 
 class FlextInfraModelsGates(FlextInfraModelsDuplication):
     """Quality gate execution domain models."""
 
+    class SccFile(m.FlexibleModel):
+        """Required per-file SCC fields; unrelated scanner metrics are ignored."""
+
+        location: Annotated[
+            str,
+            m.Field(
+                alias="Location",
+                min_length=1,
+                strict=True,
+                description="Scanned file path",
+            ),
+        ]
+        code: Annotated[
+            int,
+            m.Field(alias="Code", ge=0, strict=True, description="Logical code lines"),
+        ]
+
+    class SccLanguage(m.FlexibleModel):
+        """Required language group from SCC's JSON by-file output."""
+
+        name: Annotated[
+            str,
+            m.Field(
+                alias="Name",
+                min_length=1,
+                strict=True,
+                description="Scanner language name",
+            ),
+        ]
+        files: Annotated[
+            t.VariadicTuple[FlextInfraModelsGates.SccFile],
+            m.Field(alias="Files", description="Every scanned file in this language"),
+        ]
+
+    class SccReport(m.RootModel[tuple[SccLanguage, ...]]):
+        """Native SCC groups, including an empty scan; malformed JSON fails."""
+
     class GateContext(m.ContractModel):
         """Quality gate execution context and configuration."""
 
-        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = True
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = (
+            c.Infra.CHECK_FAIL_FAST_DEFAULT
+        )
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", arbitrary_types_allowed=True, populate_by_name=True
         )
         repository_root: Path = m.Field(description="Repository root directory")
@@ -34,12 +75,6 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             bool,
             m.Field(description="Never write files even when fix mode is requested"),
         ] = False
-        gate_mode: Annotated[
-            Literal["error", "warn"],
-            m.Field(
-                description="Diagnostic presentation mode; errors and warnings always fail"
-            ),
-        ] = "error"
         ruff_args: Annotated[
             t.StrSequence, m.Field(description="Extra arguments for Ruff")
         ] = ()
@@ -53,29 +88,22 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         file: Annotated[str, m.Field(description="Diagnostic source file path")]
         line: Annotated[int, m.Field(description="Diagnostic start line")]
         column: Annotated[int, m.Field(description="Diagnostic start column")]
-        end_line: Annotated[int | None, m.Field(description="Diagnostic end line")]
-        end_column: Annotated[int | None, m.Field(description="Diagnostic end column")]
+        end_line: Annotated[
+            int | None, m.Field(default=None, description="Diagnostic end line")
+        ]
+        end_column: Annotated[
+            int | None, m.Field(default=None, description="Diagnostic end column")
+        ]
         message: Annotated[t.NonEmptyStr, m.Field(description="Diagnostic message")]
-        hint: Annotated[str | None, m.Field(description="Diagnostic hint")]
-        code: Annotated[str | None, m.Field(description="Mypy diagnostic code")]
+        hint: Annotated[
+            str | None, m.Field(default=None, description="Diagnostic hint")
+        ]
+        code: Annotated[
+            str | None, m.Field(default=None, description="Mypy diagnostic code")
+        ]
         severity: Annotated[
             Literal["error", "note"], m.Field(description="Mypy diagnostic severity")
         ]
-
-    class MypyCoverageReport(m.ContractModel):
-        """Native linecoverage report, including files with no covered lines."""
-
-        lines: Annotated[
-            t.MappingKV[str, t.SequenceOf[t.PositiveInt]],
-            m.Field(min_length=1, description="Covered lines by absolute source path"),
-        ]
-
-        @u.model_validator(mode="after")
-        def _validate_sources(self) -> Self:
-            if any(not Path(path).is_absolute() for path in self.lines):
-                msg = "Mypy coverage must identify absolute source paths"
-                raise ValueError(msg)
-            return self
 
     class PyrightPosition(m.ContractModel):
         """Zero-based native diagnostic position."""
@@ -247,7 +275,7 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
     class GateAttestationPredicate(m.ContractModel):
         """Canonical signed statement for locally completed gates."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", frozen=True, strict=False
         )
 

@@ -8,7 +8,7 @@ rule:
     - kind: keyword_argument
     - has:
         field: name
-        regex: '^(?:apply_safety|gates)$'
+        regex: "^(?:apply_safety|gates)$"
     - inside:
         any:
           - pattern: $SERVICE.refactor_project($$$ARGS)

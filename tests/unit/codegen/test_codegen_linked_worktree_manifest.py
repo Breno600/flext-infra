@@ -11,13 +11,12 @@ from flext_infra import c, m
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import u
-from tests.unit.workspace import WorktreeFixture
 
 
 # Conform materializes a full managed tree; the real Git scenarios therefore use
 # the config-owned slow budget instead of weakening the global timeout.
 @pytest.mark.slow
-class TestCodegenLinkedWorktreeTopology:
+class TestsFlextInfraCodegenLinkedWorktreeManifest:
     """Keep topology inputs and writes owned by the repository being conformed."""
 
     def test_linked_lane_reads_its_local_beads_identity_and_only_writes_lane(
@@ -25,7 +24,7 @@ class TestCodegenLinkedWorktreeTopology:
     ) -> None:
         """Use dirty lane-local policy without reading or mutating the primary."""
         primary = tmp_path / "primary"
-        primary_pyproject = WorktreeFixture.initialize_governed_project(
+        primary_pyproject = u.Tests.WorktreeFixture.initialize_governed_project(
             primary,
             "fixture-project",
             workspace="primary-workspace",
@@ -43,7 +42,7 @@ class TestCodegenLinkedWorktreeTopology:
                 )
             )
         )
-        lane_beads = WorktreeFixture.write_beads_project(
+        lane_beads = u.Tests.WorktreeFixture.write_beads_project(
             lane,
             workspace="lane-workspace",
             database="lane-database",
@@ -54,7 +53,7 @@ class TestCodegenLinkedWorktreeTopology:
             f"{primary_pyproject.read_text(encoding='utf-8')}# human WIP\n",
             encoding="utf-8",
         )
-        primary_snapshot = WorktreeFixture.repository_snapshot(primary)
+        primary_snapshot = u.Tests.WorktreeFixture.repository_snapshot(primary)
 
         request = u.Tests.conform_request(
             lane,
@@ -72,9 +71,10 @@ class TestCodegenLinkedWorktreeTopology:
         tm.that(
             u.Tests.codegen_file_text(makefile_plan), has="MAKE_PROFILE := standalone"
         )
-        tm.that(plan.workspace.beads.workspace, eq="lane-workspace")
-        tm.that(plan.workspace.beads.database, eq="lane-database")
-        tm.that(plan.workspace.beads.issue_prefix, eq="lane-prefix")
+        beads = tm.not_none(plan.workspace.beads)
+        tm.that(beads.workspace, eq="lane-workspace")
+        tm.that(beads.database, eq="lane-database")
+        tm.that(beads.issue_prefix, eq="lane-prefix")
         tm.that(all(item.path.is_relative_to(lane) for item in plan.files), eq=True)
         tm.that(
             tm.ok(FlextInfraWorkspaceDetector.resolve_repository_root(lane)),
@@ -83,7 +83,9 @@ class TestCodegenLinkedWorktreeTopology:
         tm.that(lane_beads.read_bytes(), eq=lane_beads_bytes)
         tm.that((lane / c.Infra.MAKEFILE_FILENAME).exists(), eq=False)
         tm.that((primary / c.Infra.MAKEFILE_FILENAME).exists(), eq=False)
-        tm.that(WorktreeFixture.repository_snapshot(primary), eq=primary_snapshot)
+        tm.that(
+            u.Tests.WorktreeFixture.repository_snapshot(primary), eq=primary_snapshot
+        )
 
     @pytest.mark.parametrize(
         ("beads_content", "expected_error"),
@@ -103,7 +105,7 @@ class TestCodegenLinkedWorktreeTopology:
     ) -> None:
         """Fail planning atomically when the required local input is invalid."""
         root = tmp_path / "project"
-        WorktreeFixture.initialize_governed_project(
+        u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-project",
             workspace="fixture-workspace",
@@ -115,7 +117,7 @@ class TestCodegenLinkedWorktreeTopology:
             beads_path.unlink()
         else:
             beads_path.write_text(beads_content, encoding="utf-8")
-        before = WorktreeFixture.repository_snapshot(root)
+        before = u.Tests.WorktreeFixture.repository_snapshot(root)
 
         result = FlextInfraCodegenConform.execute_request(
             u.Tests.conform_request(
@@ -126,14 +128,14 @@ class TestCodegenLinkedWorktreeTopology:
         )
 
         tm.fail(result, has=expected_error)
-        tm.that(WorktreeFixture.repository_snapshot(root), eq=before)
+        tm.that(u.Tests.WorktreeFixture.repository_snapshot(root), eq=before)
 
     def test_workspace_members_inherit_identity_and_topology_inputs_are_never_rewritten(
         self, tmp_path: Path
     ) -> None:
         """Members declare the workspace identity; conform never rewrites inputs."""
         root = tmp_path / "workspace"
-        WorktreeFixture.initialize_governed_project(
+        u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-workspace",
             workspace="root-workspace",
@@ -142,14 +144,14 @@ class TestCodegenLinkedWorktreeTopology:
         )
         project_names = ("fixture-alpha", "fixture-beta")
         for project_name in project_names:
-            WorktreeFixture.initialize_governed_project(
+            u.Tests.WorktreeFixture.initialize_governed_project(
                 root / project_name,
                 project_name,
                 workspace="root-workspace",
                 database="root-database",
                 issue_prefix="root-prefix",
             )
-        gitmodules = WorktreeFixture.write_gitmodules(root, project_names)
+        gitmodules = u.Tests.WorktreeFixture.write_gitmodules(root, project_names)
         u.Tests.git_bootstrap(root, ("add", c.Infra.GITMODULES, *project_names))
         u.Tests.git_bootstrap(
             root, ("commit", "-m", "fixture: declare workspace subprojects")
@@ -204,14 +206,14 @@ class TestCodegenLinkedWorktreeTopology:
         """Reject a declared subproject whose path resolves outside its owner."""
         root = tmp_path / "workspace"
         outside = tmp_path / "outside-project"
-        WorktreeFixture.initialize_governed_project(
+        u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             "fixture-workspace",
             workspace="root-workspace",
             database="root-database",
             issue_prefix="root-prefix",
         )
-        WorktreeFixture.initialize_governed_project(
+        u.Tests.WorktreeFixture.initialize_governed_project(
             outside,
             "linked-project",
             workspace="outside-workspace",
@@ -219,8 +221,8 @@ class TestCodegenLinkedWorktreeTopology:
             issue_prefix="outside-prefix",
         )
         (root / "linked-project").symlink_to(outside, target_is_directory=True)
-        WorktreeFixture.write_gitmodules(root, ("linked-project",))
-        outside_snapshot = WorktreeFixture.repository_snapshot(outside)
+        u.Tests.WorktreeFixture.write_gitmodules(root, ("linked-project",))
+        outside_snapshot = u.Tests.WorktreeFixture.repository_snapshot(outside)
 
         result = FlextInfraCodegenConform.execute_request(
             u.Tests.conform_request(
@@ -232,4 +234,6 @@ class TestCodegenLinkedWorktreeTopology:
         )
 
         tm.fail(result, has="escapes workspace root")
-        tm.that(WorktreeFixture.repository_snapshot(outside), eq=outside_snapshot)
+        tm.that(
+            u.Tests.WorktreeFixture.repository_snapshot(outside), eq=outside_snapshot
+        )

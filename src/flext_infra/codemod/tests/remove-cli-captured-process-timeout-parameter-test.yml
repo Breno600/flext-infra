@@ -1,29 +1,30 @@
 id: remove-cli-captured-process-timeout-parameter
 valid:
   - |
-    def _captured_process_result(
-        cls,
-        return_code: int | None,
-        received_signals: list[int],
-        diagnostics: tuple[str, ...],
-        stdout_output: bytearray,
-        stderr_output: bytearray,
-        duration: float,
+    def _finalize_capture(
+        handler,
+        exit_status,
+        signal_list,
+        diag_data,
+        buf_out,
+        buf_err,
+        elapsed,
         *,
-        timed_out: bool,
+        is_timed_out,
     ) -> p.Result[p.Cli.CommandBytesOutput]:
-        """Attach captured bytes only after the owned process boundary is empty."""
-        return cls._process_exit_result(
-            return_code,
-            received_signals,
-            diagnostics,
-            timed_out=timed_out,
-        ).map(
-            lambda outcome: m.Cli.CommandBytesOutput(
-                stdout=bytes(stdout_output),
-                stderr=bytes(stderr_output),
-                outcome=outcome,
-                duration=duration,
+        """Build the final command bytes output after process completion (variant A)."""
+        step_one = handler._process_exit_result(
+            exit_status,
+            signal_list,
+            diag_data,
+            timed_out=is_timed_out,
+        )
+        return step_one.map(
+            lambda item: m.Cli.CommandBytesOutput(
+                stdout=bytes(buf_out),
+                stderr=bytes(buf_err),
+                outcome=item,
+                duration=elapsed,
             )
         )
 invalid:
@@ -33,7 +34,7 @@ invalid:
         cmd: t.StrSequence,
         return_code: int | None,
         received_signals: list[int],
-        diagnostics: tuple[str, ...],
+        diagnostics: t.VariadicTuple[str],
         stdout_output: bytearray,
         stderr_output: bytearray,
         duration: float,

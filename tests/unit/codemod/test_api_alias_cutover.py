@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, m, u
+from flext_infra import c, infra, m, u
 
 
 class TestsFlextInfraApiAliasCutover:
@@ -37,9 +37,15 @@ class TestsFlextInfraApiAliasCutover:
             payload={},
         )
 
-        edits = u.Infra.plan_api_alias_cutover(
-            root=tmp_path, sources=sources, findings=(finding,)
-        )
+        with infra.rope_workspace(tmp_path) as rope:
+            planned = u.Infra.plan_semantic_cutover(
+                c.Infra.SemanticCutoverPhase.COMPAT_ALIAS,
+                rope_workspace=rope,
+                sources=sources,
+                findings=(finding,),
+            )
+        tm.ok(planned)
+        edits = planned.value
         by_path = {edit.file_path: edit.updated_source for edit in edits}
 
         tm.that(len(edits), eq=2)
@@ -48,6 +54,3 @@ class TestsFlextInfraApiAliasCutover:
         tm.that(by_path[consumer], has="from flext_sample.api import FlextSample")
         tm.that(by_path[consumer], has="facade = FlextSample")
         tm.that(by_path[consumer], lacks="import sample")
-
-
-__all__: list[str] = ["TestsFlextInfraApiAliasCutover"]

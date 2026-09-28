@@ -13,9 +13,7 @@ from pathlib import Path
 from flext_cli import r, u
 from packaging.version import InvalidVersion, Version
 
-from flext_infra.constants import c
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, p, t
 
 
 class FlextInfraUtilitiesVersioning:
@@ -83,7 +81,7 @@ class FlextInfraUtilitiesVersioning:
     ) -> p.Result[str]:
         """Return the next release version for one bump kind.
 
-        A pre-release (``0.12.0rc0``) is finalized to its base release by any
+        A pre-release (``0.12.0``) is finalized to its base release by any
         real bump: the base was already reserved when the pre-release was cut,
         so the first releasable change ships it. ``none`` returns the version
         unchanged for both shapes.
@@ -131,7 +129,7 @@ class FlextInfraUtilitiesVersioning:
             r[str] with the version string.
 
         """
-        pyproject = repository_root / c.Infra.PYPROJECT_FILENAME
+        pyproject = repository_root / c.PYPROJECT_FILENAME
         try:
             content = pyproject.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         except OSError as exc:
@@ -241,7 +239,7 @@ class FlextInfraUtilitiesVersioning:
             r[bool] with True on success.
 
         """
-        pyproject = project_path / c.Infra.PYPROJECT_FILENAME
+        pyproject = project_path / c.PYPROJECT_FILENAME
         try:
             content = pyproject.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         except OSError as exc:
@@ -250,7 +248,7 @@ class FlextInfraUtilitiesVersioning:
             content, version
         )
         if rendered.failure:
-            return r[bool].fail(f"{rendered.error} in {pyproject}")
+            return r[bool].from_failure(rendered)
         written = u.Cli.atomic_write_text_file(pyproject, rendered.value)
         if written.failure:
             return written

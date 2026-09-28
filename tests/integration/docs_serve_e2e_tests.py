@@ -24,6 +24,8 @@ from flext_infra.docs.server import FlextInfraDocServer
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from flext_infra import p
+
 _PYTEST_POLICY = config.Infra.tooling.tools.pytest
 # A real MkDocs dev server cold-starts a fresh interpreter and builds the
 # site; under full-suite xdist contention that legitimately exceeds the
@@ -37,30 +39,28 @@ _PROCESS_STOP_TIMEOUT_SECONDS = float(_PYTEST_POLICY.termination_grace_seconds)
 _HTTP_OK = 200
 
 
-def _free_local_port() -> int:
-    """Reserve and release an ephemeral localhost port for the dev server."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-        probe.bind(("127.0.0.1", 0))
-        return int(probe.getsockname()[1])
-
-
-def _http_get_body(host: str, port: int) -> r[str]:
-    """Return the response body when the dev server answers HTTP 200, else fail."""
-    connection = http.client.HTTPConnection(host, port, timeout=0.25)
-    try:
-        connection.request("GET", "/")
-        response = connection.getresponse()
-        if response.status != _HTTP_OK:
-            return r[str].fail(f"server responded HTTP {response.status}")
-        return r[str].ok(response.read().decode("utf-8", errors="replace"))
-    except (OSError, http.client.HTTPException) as exc:
-        return r[str].fail(f"GET {host}:{port} failed: {exc}", exception=exc)
-    finally:
-        connection.close()
-
-
 class TestsFlextInfraIntegrationDocsServeE2e:
     """Real serve: a governed scope with mkdocs.yml answers HTTP requests."""
+
+    def _free_local_port(self) -> int:
+        """Reserve and release an ephemeral localhost port for the dev server."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", 0))
+            return int(probe.getsockname()[1])
+
+    def _http_get_body(self, host: str, port: int) -> p.Result[str]:
+        """Return the response body when the dev server answers HTTP 200, else fail."""
+        connection = http.client.HTTPConnection(host, port, timeout=0.25)
+        try:
+            connection.request("GET", "/")
+            response = connection.getresponse()
+            if response.status != _HTTP_OK:
+                return r[str].fail(f"server responded HTTP {response.status}")
+            return r[str].ok(response.read().decode("utf-8", errors="replace"))
+        except (OSError, http.client.HTTPException) as exc:
+            return r[str].fail(f"GET {host}:{port} failed: {exc}", exception=exc)
+        finally:
+            connection.close()
 
     @pytest.mark.slow
     def test_serve_scope_serves_site_over_http(self, tmp_path: Path) -> None:
@@ -71,7 +71,7 @@ class TestsFlextInfraIntegrationDocsServeE2e:
         (tmp_path / "mkdocs.yml").write_text(
             "site_name: Flext Demo Docs\n", encoding="utf-8"
         )
-        port = _free_local_port()
+        port = self._free_local_port()
         dev_addr = f"127.0.0.1:{port}"
         context = multiprocessing.get_context("spawn")
         server = FlextInfraDocServer(dev_addr=dev_addr, livereload=False, strict=False)
@@ -79,14 +79,14 @@ class TestsFlextInfraIntegrationDocsServeE2e:
         try:
             process.start()
             deadline = time.monotonic() + _DEADLINE_SECONDS
-            body_result = _http_get_body("127.0.0.1", port)
+            body_result = self._http_get_body("127.0.0.1", port)
             while (
                 body_result.failure
                 and process.is_alive()
                 and time.monotonic() < deadline
             ):
                 time.sleep(_POLL_INTERVAL_SECONDS)
-                body_result = _http_get_body("127.0.0.1", port)
+                body_result = self._http_get_body("127.0.0.1", port)
 
             tm.that(body_result, ok=True, msg=f"child exit code: {process.exitcode}")
             body = tm.ok(body_result)

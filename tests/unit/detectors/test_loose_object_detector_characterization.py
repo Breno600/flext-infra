@@ -18,17 +18,19 @@ from tests import u as test_u
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from tests import t
+
 
 class TestsFlextInfraLooseObjectCharacterization:
     """Pin every positive loose-object detection kind."""
 
     @staticmethod
-    def _project(tmp_path: Path) -> tuple[Path, Path]:
+    def _project(tmp_path: Path) -> t.Pair[Path, Path]:
         project, package_dir = test_u.Tests.demo_project(tmp_path)
         return project, package_dir
 
     @classmethod
-    def _kinds_for(cls, tmp_path: Path, source: str) -> set[tuple[str, str]]:
+    def _kinds_for(cls, tmp_path: Path, source: str) -> set[t.Pair[str, str]]:
         project, package_dir = cls._project(tmp_path)
         module_file = package_dir / "widget.py"
         _ = module_file.write_text(source, encoding="utf-8")

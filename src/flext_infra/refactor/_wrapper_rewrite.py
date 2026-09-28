@@ -19,8 +19,8 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
 
     Composed into FlextInfraWrapperRootNamespaceRefactor via inheritance;
     borrows repository_root + the include-init / dry-run flags + the wrapper
-    package set from the facade via FLEXT. ``module_ast`` is typed ``object`` to
-    mirror the public rope-AST utility facade, which
+    package set from the facade via FLEXT. ``module_ast`` is narrowed to the
+    rope-AST protocol at the parsing boundary via ``ensure_ast_node``, which
     deliberately avoids ``import ast`` at the consumer layer (tracked: flext-6flt).
     """
 
@@ -59,7 +59,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
             return
         source = u.Cli.files_read_text(file_path).unwrap()
         pymodule = u.Infra.parse_string_module(source)
-        module_ast = pymodule.get_ast()
+        module_ast = u.Infra.ensure_ast_node(pymodule.get_ast())
         line_offsets = self._build_line_offsets(source)
         core_rewrites = self._collect_core_test_rewrites(
             module_ast, line_offsets=line_offsets, runtime_aliases=runtime_aliases
@@ -82,6 +82,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         accumulator.per_project_changes[project_name] += 1
         accumulator.per_project_replacements[project_name] += replacements
         if not self.effective_dry_run and core_updated != source:
+            accumulator.expected_sources[file_path] = source
             accumulator.updates[file_path] = core_updated
 
     @staticmethod
@@ -94,28 +95,31 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
 
     def _collect_core_test_rewrites(
         self,
-        module_ast: object,
+        module_ast: t.Infra.RopeAstNode,
         *,
         line_offsets: list[int],
         runtime_aliases: frozenset[str],
-    ) -> list[tuple[int, int, str]]:
+    ) -> list[t.Triple[int, int, str]]:
         """Find every ``<alias>.Core.Tests`` chain and emit ``(start, end, repl)``."""
-        rewrites: list[tuple[int, int, str]] = []
-        for node in u.Infra.walk_ast_nodes(module_ast):
+        rewrites: list[t.Triple[int, int, str]] = []
+        for node in u.Infra.walk_ast_nodes(u.Infra.ensure_ast_node(module_ast)):
             if (
                 u.Infra.node_kind(node) != "Attribute"
                 or getattr(node, "attr", "") != "Tests"
             ):
                 continue
             parent_attr = getattr(node, "value", None)
+            if not u.Infra.ast_node(parent_attr):
+                continue
             if (
-                parent_attr is None
-                or u.Infra.node_kind(parent_attr) != "Attribute"
+                u.Infra.node_kind(parent_attr) != "Attribute"
                 or getattr(parent_attr, "attr", "") != "Core"
             ):
                 continue
             base_name = getattr(parent_attr, "value", None)
-            if base_name is None or u.Infra.node_kind(base_name) != "Name":
+            if not u.Infra.ast_node(base_name):
+                continue
+            if u.Infra.node_kind(base_name) != "Name":
                 continue
             base_id = getattr(base_name, "id", "")
             if base_id not in runtime_aliases:
@@ -131,13 +135,13 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
 
     def _has_wrapper_import_candidate(
         self,
-        module_ast: object,
+        module_ast: t.Infra.RopeAstNode,
         *,
         wrapper_submodules: frozenset[str],
         runtime_aliases: frozenset[str],
     ) -> bool:
         """Return whether any ``from wrapper.<sub> import <alias>`` exists."""
-        for node in u.Infra.walk_ast_nodes(module_ast):
+        for node in u.Infra.walk_ast_nodes(u.Infra.ensure_ast_node(module_ast)):
             if u.Infra.node_kind(node) != "ImportFrom":
                 continue
             module_name = getattr(node, "module", "") or ""
@@ -157,7 +161,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
 
     @staticmethod
     def _apply_byte_rewrites(
-        source: str, rewrites: t.SequenceOf[tuple[int, int, str]]
+        source: str, rewrites: t.SequenceOf[t.Triple[int, int, str]]
     ) -> str:
         """Apply ``(start, end, replacement)`` triples to ``source`` (right-to-left)."""
         updated = source

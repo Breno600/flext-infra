@@ -6,21 +6,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import config
-from flext_infra.models import m
+from flext_infra import config, m, t
 
-from ._docs_generate_plan import (
-    DocsRenderedArtifactTuple,
-    FlextInfraUtilitiesDocsGeneratePlanMixin,
-)
+from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
 from ._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
 from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_contract import FlextInfraUtilitiesDocsContract
 from .docs_render import FlextInfraUtilitiesDocsRender
 
 if TYPE_CHECKING:
-    from flext_infra import t
-    from flext_infra.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesDocsGenerateProjectMixin(
@@ -69,13 +64,15 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
         *,
         repository_root: Path,
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Render the complete target inventory for one FLEXT project."""
         guides = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guides_artifacts(
             scope, repository_root=repository_root, source_states=source_states
         )
         if guides.failure:
-            return r[tuple[DocsRenderedArtifactTuple, ...]].from_failure(guides)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                guides
+            )
         guide_paths = {
             state.path
             for state in source_states
@@ -95,7 +92,7 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             scope.path, analyzed_contract
         )
         module_names = FlextInfraUtilitiesDocsGenerateProjectMixin._module_names(scope)
-        rendered: list[tuple[Path, str]] = [
+        rendered: list[t.Pair[Path, str]] = [
             (
                 scope.path / "README.md",
                 FlextInfraUtilitiesDocsRender.docs_project_readme(scope, contract),
@@ -134,7 +131,9 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             )
         )
         if pruned.failure:
-            return r[tuple[DocsRenderedArtifactTuple, ...]].from_failure(pruned)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                pruned
+            )
         return FlextInfraUtilitiesDocsGenerateProjectMixin.docs_normalize_artifacts((
             *((scope.path, path, content) for path, content in rendered),
             *guides.value,

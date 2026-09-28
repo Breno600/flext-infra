@@ -5,7 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import c, t
 
 
@@ -28,7 +29,7 @@ class FlextInfraModelsMixins:
         command.
         """
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(populate_by_name=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
         repository_root: Annotated[
             Path,
@@ -60,15 +61,19 @@ class FlextInfraModelsMixins:
                 )
             ),
         ] = None
-        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = True
         verbose: Annotated[bool, m.Field(description="Verbose output")] = False
 
         @property
         def project_names(self) -> t.StrSequence | None:
             """Normalized project names from repeated selectors."""
-            from flext_infra import u
-
-            return u.Infra.normalize_sequence_values(self.projects)
+            names = tuple(
+                item.strip()
+                for value in (self.projects or ())
+                for group in (value or "").split(",")
+                for item in group.split()
+                if item.strip()
+            )
+            return names or None
 
     class ReadMixin(ScopeMixin):
         """Read-only commands — report file + output directory only.
@@ -88,16 +93,17 @@ class FlextInfraModelsMixins:
         @property
         def report_path(self) -> Path | None:
             """Resolved report path when provided."""
-            from flext_infra import u
-
-            return u.Infra.normalize_optional_path(self.report)
+            if self.report is None:
+                return None
+            return Path(self.report).resolve()
 
         @property
         def output_dir_path(self) -> Path | None:
             """Resolved output directory when provided."""
-            from flext_infra import u
-
-            return u.Infra.normalize_optional_path(self.output_dir)
+            if self.output_dir is None:
+                return None
+            # The validated field is a string; resolve it at the Path boundary.
+            return Path(self.output_dir).resolve()
 
     class WriteMixin(ScopeMixin):
         """Canonical write contract — apply/dry-run + safety gates.
@@ -117,12 +123,11 @@ class FlextInfraModelsMixins:
             ),
         ] = False
         gates: t.StrSequence = m.Field(
-            default_factory=lambda: tuple(
-                gate.strip()
-                for gate in c.Infra.SAFE_EXECUTION_DEFAULT_GATES.split(",")
-                if gate.strip()
+            default=(),
+            description=(
+                "Gate names for post-transform validation; empty selects the SSOT"
+                " snapshot gates (make.check_gates_ci)."
             ),
-            description="Gate names for post-transform validation",
         )
 
         @m.field_validator("gates", mode="before")
@@ -208,11 +213,6 @@ class FlextInfraModelsMixins:
 
         detail: Annotated[str, m.Field(description="Error detail")] = ""
 
-    class ConfidenceLevelMixin:
-        """Shared confidence field for refactor diagnostics."""
-
-        confidence: Annotated[str, m.Field(description="Confidence level")] = "low"
-
     # ═══════════════════ PROJECT NAME / PATH VARIANTS ═══════════════════
 
     class ProjectNameMixin:
@@ -224,11 +224,6 @@ class FlextInfraModelsMixins:
         """Shared required project entry name field."""
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Project name")]
-
-    class ProjectNameFieldMixin:
-        """Shared required project_name field."""
-
-        project_name: Annotated[t.NonEmptyStr, m.Field(description="Project name")]
 
     class RepositoryRootPathMixin:
         """Shared repository root path field."""

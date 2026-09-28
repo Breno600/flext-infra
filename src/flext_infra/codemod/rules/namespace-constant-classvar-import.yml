@@ -1,0 +1,32 @@
+# Binds `ClassVar` for the namespace-constant rewrites (flext-xercj,
+# 2026-09-23). The holder is pydantic-backed, so an unbound `ClassVar`
+# annotation fails when pydantic resolves the class annotations.
+#
+# Only the module-level `from typing import ...` is extended (a TYPE_CHECKING
+# import would leave the name unbound at runtime), and only in modules that
+# declare a constant on a FlextTestsConstants.Tests holder.
+#
+# Idempotent: once `ClassVar` is imported the rule no longer matches.
+id: namespace-constant-classvar-import
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  all:
+    - pattern: "from typing import $$$NAMES"
+    - not:
+        has:
+          stopBy: end
+          kind: dotted_name
+          regex: "^ClassVar$"
+    - inside:
+        kind: module
+        has:
+          stopBy: end
+          matches: pydantic-namespace-constant
+fix: "from typing import ClassVar, $$$NAMES"
+message: >-
+  Modules declaring FlextTestsConstants.Tests constants bind ClassVar at
+  module level.

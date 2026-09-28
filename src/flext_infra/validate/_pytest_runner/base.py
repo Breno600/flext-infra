@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import os
 from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
 from typing import Annotated, Self
 
-from flext_infra import c, m, u
+from platformdirs import user_cache_path
+
+from flext_infra import c, config, m, u
 from flext_infra.base import s
 
 type PytestPolicy = m.Infra.PytestConfig
@@ -21,7 +24,14 @@ class FlextInfraPytestRunnerBase(s[int]):
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
-    testmon_db: Annotated[Path, m.Field(description="External persistent testmon DB.")]
+    testmon_db: Annotated[
+        Path,
+        m.Field(description="Absolute external pytest-testmon SQLite database path."),
+    ]
+    ci_context: Annotated[
+        bool,
+        m.Field(description="CI/pre-commit selection captured at the Make boundary."),
+    ] = False
 
     @staticmethod
     def _environment_value(name: str) -> str:
@@ -31,19 +41,47 @@ class FlextInfraPytestRunnerBase(s[int]):
     @classmethod
     def from_environment(cls, *, started_at_monotonic: float) -> Self:
         """Create the runner exclusively from generated Make inputs."""
+        ci = config.Infra.codegen.make.ci
         return cls(
             repository_root=Path.cwd(),
             started_at_monotonic=started_at_monotonic,
+            ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
             testmon_db=Path(
-                cls._environment_value(c.Infra.PYTEST_ENV_TESTMON_DATAFILE)
+                cls._environment_value(
+                    config.Infra.codegen.make.testmon_cache.database_environment_variable
+                )
             ),
         )
 
+    @property
+    def testmon_db(self) -> Path:
+        """Persistent Testmon database outside this workspace's checkout."""
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        project_name = u.Infra.project_name_from_payload(
+            pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+        )
+        cache_root = user_cache_path(appname=project_name, appauthor=False)
+        if not cache_root.is_absolute():
+            msg = f"platform cache root must be absolute: {cache_root}"
+            raise ValueError(msg)
+        workspace_key = sha256(
+            os.path.normcase(str(self.root.resolve())).encode("utf-8")
+        ).hexdigest()
+        database = (
+            cache_root
+            / workspace_key
+            / config.Infra.codegen.make.testmon_cache.database_filename
+        ).resolve()
+        if database.is_relative_to(self.root.resolve()):
+            msg = f"testmon database must be outside the checkout: {database}"
+            raise ValueError(msg)
+        return database
+
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
-        """Require contained inputs and an external absolute cache path."""
+        """Require repository-contained target and report paths."""
         for name, path in (("target", self.target), ("reports", self.reports)):
             raw = str(path)
             if (
@@ -63,10 +101,10 @@ class FlextInfraPytestRunnerBase(s[int]):
             msg = f"test target must be an existing directory: {self.target}"
             raise ValueError(msg)
         if not self.testmon_db.is_absolute():
-            msg = "TESTMON_DATAFILE must be absolute"
+            msg = "testmon database path must be absolute"
             raise ValueError(msg)
         if self.testmon_db.resolve().is_relative_to(self.root.resolve()):
-            msg = "TESTMON_DATAFILE must be outside the repository checkout"
+            msg = f"testmon database must be outside the checkout: {self.testmon_db}"
             raise ValueError(msg)
         return self
 
@@ -84,8 +122,32 @@ class FlextInfraPytestRunnerBase(s[int]):
             raise ValueError(msg)
         return memory_gb
 
+    def _declared_worker_ceiling(self, policy: PytestPolicy) -> int:
+        """Resolve the declared project's ceiling over the fleet default.
+
+        A tree without a declared ``[project].name`` (fixture projects, raw
+        workbenches) is an expected state and takes the fleet-wide default.
+        """
+        if not policy.parallel_worker_overrides:
+            return policy.parallel_workers
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        try:
+            name = u.Infra.project_name_from_payload(
+                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+            )
+        except (TypeError, ValueError):
+            return policy.parallel_workers
+        return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
+
     def parallel_worker_budget(self, policy: PytestPolicy) -> int:
-        """Bound xdist by configuration, CPU, and physical memory."""
+        """Bound xdist by configuration, CPU, and physical memory.
+
+        The per-project override map (``[project].name`` → workers) is where
+        a consumer whose measured suite cannot fit the single-worker process
+        boundary declares its ceiling; the fleet-wide default stays one
+        worker so ``max-failures: 1`` remains exact everywhere else.
+        """
+        ceiling = self._declared_worker_ceiling(policy)
         cpu_count = os.cpu_count()
         if cpu_count is None or cpu_count <= 0:
             msg = "CPU capacity is unavailable"
@@ -94,7 +156,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         if memory_workers <= 0:
             msg = "physical memory cannot support one pytest worker"
             raise ValueError(msg)
-        return min(policy.parallel_workers, cpu_count, memory_workers)
+        return min(ceiling, cpu_count, memory_workers)
 
     def _report_directory(self) -> Path:
         """Create a collision-resistant report directory."""

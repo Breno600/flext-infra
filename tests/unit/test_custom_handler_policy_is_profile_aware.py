@@ -27,12 +27,13 @@ from flext_tests import tm
 
 from flext_infra import c, config, m
 from flext_infra.codegen.conform import FlextInfraCodegenConform
+from tests import t
 
 
 class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
     def test_every_declared_profile_has_a_custom_handler_policy(self) -> None:
         """Each Make profile declares the contract for its own custom surface."""
-        codegen_profiles: tuple[m.Infra.ProfileSpec, ...] = (
+        codegen_profiles: t.VariadicTuple[m.Infra.ProfileSpec] = (
             config.Infra.codegen.profiles
         )
         declared = frozenset(
@@ -99,7 +100,7 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
         to the strict base policy -- exactly the failure that made conform
         reject the repository root's own custom surface.
         """
-        policies: dict[str, m.Infra.CustomHandlerPolicy] = dict(
+        policies: t.MutableMappingKV[str, m.Infra.CustomHandlerPolicy] = dict(
             config.Infra.codegen.make.custom_handler_policies
         )
         profile: c.Infra.MakeProfile = c.Infra.MakeProfile.WORKSPACE

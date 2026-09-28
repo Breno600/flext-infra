@@ -3,20 +3,21 @@
 from __future__ import annotations
 
 import re
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, m
+from flext_infra import c, config, m, t
 
 from ._docs_command_contract import FlextInfraUtilitiesDocsCommandContractMixin
-from ._docs_generate_plan import (
-    DocsRenderedArtifactTuple,
-    FlextInfraUtilitiesDocsGeneratePlanMixin,
-)
+from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import p
+
+_OWNED_HEADER_LINES = 2
+"Lines an owned member guide carries before its generated body: marker + source."
 
 
 class FlextInfraUtilitiesDocsGuidesMixin:
@@ -39,10 +40,10 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             break
         body = "\n".join(body_lines).lstrip()
         header = (
-            "<!-- AUTO-GENERATED FILE — regenerate through `make gen APPLY=Y` "
+            "<!-- AUTO-GENERATED FILE — regenerate through `make gen` "
             "from the workspace root. -->\n"
-            f"<!-- Source of truth: `docs/guides/{guide_name}`; adjust that source, "
-            "never this projection. -->\n\n"
+            f"<!-- Source of truth: `<workspace-root>/docs/guides/{guide_name}`; "
+            "adjust that workspace source, never this member projection. -->\n\n"
             f"# {project_name} - {title}\n\n"
             f"> Project profile: `{project_name}`"
         )
@@ -71,7 +72,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         *,
         repository_root: Path,
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Plan root-owned guide projections from authenticated snapshot bytes."""
         from flext_infra import u
 
@@ -79,13 +80,13 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         destination_root = scope.path / c.Infra.DIR_DOCS / "guides"
         if source_root == destination_root:
             # Same-root inputs are authoritative, never their own projections.
-            return r[tuple[DocsRenderedArtifactTuple, ...]].ok(())
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].ok(())
         if not scope.path.is_relative_to(repository_root):
-            return r[tuple[DocsRenderedArtifactTuple, ...]].fail(
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                 f"docs guide scope escapes repository {repository_root}: {scope.path}"
             )
-        sources: dict[Path, str] = {}
-        destinations: dict[Path, str] = {}
+        sources: MutableMapping[Path, str] = {}
+        destinations: MutableMapping[Path, str] = {}
         for state in source_states:
             path = state.path
             if (
@@ -95,7 +96,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
             ):
                 continue
             if state.content is None:
-                return r[tuple[DocsRenderedArtifactTuple, ...]].fail(
+                return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"docs guide source is absent: {path}"
                 )
             content = state.content.decode(c.Cli.ENCODING_DEFAULT)
@@ -105,16 +106,51 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 destinations[path] = content
         owned: set[Path] = set()
         for path, content in destinations.items():
+            lines = content.splitlines()
+            generated = (
+                "<!-- AUTO-GENERATED FILE — regenerate through `make gen` "
+                "from the workspace root. -->"
+            )
+            source_headers = {
+                (
+                    f"<!-- Source of truth: `docs/guides/{path.name}`; "
+                    "adjust that source, never this projection. -->"
+                ),
+                (
+                    f"<!-- Source of truth: `<workspace-root>/docs/guides/{path.name}`; "
+                    "adjust that workspace source, never this member projection. -->"
+                ),
+            }
+            if (
+                len(lines) >= _OWNED_HEADER_LINES
+                and lines[0] == generated
+                and lines[1] in source_headers
+            ):
+                owned.add(path)
+                continue
             ownership = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guide_content(
                 "", scope.name, path.name
             ).partition("\n\n")[0]
-            if content.startswith(ownership + "\n\n"):
+            previous_ownership = ownership.replace("`<workspace-root>/", "`")
+            legacy_ownership = (
+                "<!-- AUTO-GENERATED FILE — regenerate through `make gen` "
+                "from the workspace root. -->\n"
+                f"<!-- Source of truth: `docs/guides/{path.name}`; "
+                "adjust that workspace source, never this member projection. -->"
+            )
+            if content.startswith((
+                ownership + "\n\n",
+                previous_ownership + "\n\n",
+                legacy_ownership + "\n\n",
+            )):
                 owned.add(path)
-        artifacts: list[DocsRenderedArtifactTuple] = []
+        artifacts: list[t.Infra.DocsRenderedArtifactTuple] = []
         expected_paths = {destination_root / path.name for path in sources}
         loaded = u.Infra.workspace_spec_load(repository_root)
         if loaded.failure:
-            return r[tuple[DocsRenderedArtifactTuple, ...]].from_failure(loaded)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                loaded
+            )
         effective_verbs = (
             *config.Infra.codegen.make.verbs,
             *loaded.value.repository.extra_verbs,
@@ -122,7 +158,7 @@ class FlextInfraUtilitiesDocsGuidesMixin:
         for source_path, source in sorted(sources.items()):
             destination = destination_root / source_path.name
             if destination in destinations and destination not in owned:
-                return r[tuple[DocsRenderedArtifactTuple, ...]].fail(
+                return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"canonical guide collides with protected custom guide: {destination}"
                 )
             relative_path = source_path.relative_to(repository_root).as_posix()

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, ClassVar
 from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesRopeCorePyModuleMixin:
@@ -47,26 +47,26 @@ class FlextInfraUtilitiesRopeCorePyModuleMixin:
         return None
 
     @staticmethod
-    def get_pymodule(
+    def resolve_pymodule(
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.Infra.RopePyModule:
         """Resolve one concrete rope PyModule through the validated API boundary."""
         pymodule = rope_project.get_pymodule(resource)
-        if not FlextInfraUtilitiesRopeRuntime.is_pymodule(pymodule):
+        if not FlextInfraUtilitiesRopeRuntime.pymodule(pymodule):
             msg = "rope project returned non-PyModule"
             raise TypeError(msg)
         result: t.Infra.RopePyModule = pymodule
         return result
 
     @staticmethod
-    def get_module_imports(
+    def resolve_module_imports(
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.Infra.RopeModuleImports:
-        """Get module imports, raising when rope cannot build the import table."""
+        """Resolve the module import table, raising when rope cannot build it."""
         try:
             module_imports = FlextInfraUtilitiesRopeRuntime.module_imports_for_pymodule(
                 rope_project,
-                FlextInfraUtilitiesRopeCorePyModuleMixin.get_pymodule(
+                FlextInfraUtilitiesRopeCorePyModuleMixin.resolve_pymodule(
                     rope_project, resource
                 ),
             )

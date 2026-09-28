@@ -1,0 +1,102 @@
+# A facade extends its parent by the class name the parent declares
+# (flext-dv1ga, 2026-09-23; generator-declarations law 1 and 5).
+#
+# A facade module that imports its parent's short letter, subclasses it, and
+# then rebinds the same letter to the subclass binds that letter twice:
+#
+#     from flext_cli import m
+#     class FlextMeltanoModels(m): ...
+#     m = FlextMeltanoModels
+#
+# Type checkers then read `m` as a variable, not a class alias, and every
+# annotation spelled `m.X` (and `t.X`, `c.X`, ...) through that facade resolves
+# to Unknown. The same defect hides behind a private import alias with an
+# annotated rebind (`from flext_cli import m as _cli_m` ...
+# `m: type[FlextInfraModels] = FlextInfraModels`): the annotation declares a
+# variable. The canonical shape imports the parent class and rebinds the letter
+# as a plain alias:
+#
+#     from flext_cli import FlextCliModels
+#     class FlextMeltanoModels(FlextCliModels): ...
+#     m = FlextMeltanoModels
+#
+# Detection-only. The class name is never inferred from package naming: the
+# semantic `facade-base` phase of `make mod` derives it from the parent module
+# that declares the letter in its own `__all__` and rewrites the import, the
+# base, and the rebind in one transaction. Modules that extend a letter without
+# rebinding it (`class FlextInfra(s[...])`) never match.
+#
+# Scope: FLEXT family facades only (Pattern-B peers, named `Flext*` or
+# `TestsFlext*` by the facade naming law). A Pattern-A consumer of the family
+# keeps the letter base: flext-core ENFORCE-046 forbids a consumer's canonical
+# facade from importing a bare `FlextXxx` class ("unless Pattern-B peer"), so
+# rewriting `class AiHubProtocols(p)` would break the consumer's `make check`
+# (operator decision 2026-09-25, flext-dv1ga).
+id: facade-base-by-class-name
+language: python
+severity: error
+files:
+  - "**/*.py"
+constraints:
+  C:
+    regex: "^(?:Tests)?Flext[A-Z]"
+rule:
+  all:
+    - kind: assignment
+    - has:
+        field: left
+        kind: identifier
+        pattern: $L
+    - has:
+        field: right
+        kind: identifier
+        pattern: $C
+    - inside:
+        kind: expression_statement
+        inside:
+          kind: module
+    # The import binds $B before the class is inspected: ast-grep never
+    # backtracks, so a class with several bases must meet an already bound $B.
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          kind: import_from_statement
+          has:
+            field: name
+            any:
+              - all:
+                  - kind: dotted_name
+                  - pattern: $L
+                  - pattern: $B
+              - all:
+                  - kind: aliased_import
+                  - has:
+                      field: name
+                      pattern: $L
+                  - has:
+                      field: alias
+                      pattern: $B
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          kind: class_definition
+          all:
+            - has:
+                field: name
+                pattern: $C
+            - has:
+                field: superclasses
+                has:
+                  kind: identifier
+                  pattern: $B
+message: >-
+  Facade `$C` extends the parent letter `$B` and rebinds `$L`; extend the class
+  the parent declares for `$L` in its own `__all__` and rebind `$L = $C`.
+note: >-
+  Run `make mod`: the facade-base semantic phase derives the parent class name
+  from the parent module's `__all__` and rewrites the import, the base, and an
+  annotated rebind atomically. Only FLEXT family facades (`Flext*`,
+  `TestsFlext*`) are selected; a consumer facade keeps its letter base
+  (flext-core ENFORCE-046).

@@ -8,13 +8,6 @@ from flext_infra import c, config, t, u
 class FlextInfraInjectCommentsPhase:
     """Inject managed/custom markers into pyproject.toml."""
 
-    _MYPY_RATIONALE_HEADER = (
-        "# FLEXT mypy suppression rationale (validated at the facade-FLEXT boundary):"
-    )
-    _RUFF_RATIONALE_HEADER = (
-        "# FLEXT Ruff suppression rationale (validated against semantic facet order):"
-    )
-    _PYRIGHT_RATIONALE_HEADER = "# FLEXT Pyright suppression rationale (validated at the facade-FLEXT boundary):"
     _STRIP_PREFIXES: t.StrSequence = (
         "# [MANAGED]",
         "# [CUSTOM]",
@@ -26,42 +19,44 @@ class FlextInfraInjectCommentsPhase:
     )
 
     @staticmethod
-    def _rationale_lines(header: str, items: t.StrMapping, tag: str) -> t.StrSequence:
-        """Render one tool's evidence-backed suppression comments."""
-        return (
-            header,
-            *(
-                f"# FLEXT {tag}[{code}]: {rationale}"
-                for code, rationale in sorted(items.items())
-            ),
-        )
-
-    @classmethod
-    def _mypy_rationale_lines(cls) -> t.StrSequence:
-        """Render evidence-backed Mypy exclusions from the tooling SSOT."""
-        return cls._rationale_lines(
-            cls._MYPY_RATIONALE_HEADER,
-            config.Infra.tooling.tools.mypy.disabled_error_codes,
-            "mypy",
-        )
-
-    @classmethod
-    def _ruff_rationale_lines(cls) -> t.StrSequence:
-        """Render evidence-backed Ruff exclusions from the tooling SSOT."""
-        return cls._rationale_lines(
-            cls._RUFF_RATIONALE_HEADER,
-            config.Infra.tooling.tools.ruff.lint.ignored_rule_rationales,
-            "ruff",
-        )
-
-    @classmethod
-    def _pyright_rationale_lines(cls) -> t.StrSequence:
-        """Render evidence-backed Pyright exclusions from the tooling SSOT."""
-        return cls._rationale_lines(
-            cls._PYRIGHT_RATIONALE_HEADER,
-            config.Infra.tooling.tools.pyright.global_suppression_rationales,
-            "pyright",
-        )
+    def _rationale_blocks() -> t.MappingKV[str, t.Pair[str, t.StrSequence]]:
+        """Render each managed section's evidence-backed suppression comments."""
+        tools = config.Infra.tooling.tools
+        return {
+            f"[tool.{section}]": (
+                label,
+                (
+                    f"# FLEXT {label} suppression rationale (validated {boundary}):",
+                    *(
+                        f"# FLEXT {tag}[{code}]: {rationale}"
+                        for code, rationale in sorted(items.items())
+                    ),
+                ),
+            )
+            for section, tag, label, boundary, items in (
+                (
+                    "mypy",
+                    "mypy",
+                    "mypy",
+                    "at the facade-FLEXT boundary",
+                    tools.mypy.disabled_error_codes,
+                ),
+                (
+                    "ruff.lint",
+                    "ruff",
+                    "Ruff",
+                    "against semantic facet order",
+                    tools.ruff.lint.ignored_rule_rationales,
+                ),
+                (
+                    "pyright",
+                    "pyright",
+                    "Pyright",
+                    "at the facade-FLEXT boundary",
+                    tools.pyright.global_suppression_rationales,
+                ),
+            )
+        }
 
     @staticmethod
     def _is_section_header(line: str) -> bool:
@@ -74,9 +69,8 @@ class FlextInfraInjectCommentsPhase:
         """Return banner and rationale lines to strip."""
         markers = {c.Infra.LEGACY_AUTO_BANNER_LINE}
         markers.update(c.Infra.BANNER.splitlines())
-        markers.update(cls._mypy_rationale_lines())
-        markers.update(cls._ruff_rationale_lines())
-        markers.update(cls._pyright_rationale_lines())
+        for _, block in cls._rationale_blocks().values():
+            markers.update(block)
         return markers
 
     @classmethod
@@ -138,6 +132,7 @@ class FlextInfraInjectCommentsPhase:
         if lines[: len(banner_lines)] != banner_lines:
             changes.append("managed banner injected")
         emitted_markers: set[str] = set()
+        rationale_blocks = self._rationale_blocks()
         for line in content_lines:
             stripped = line.strip()
             markers_result = u.Infra.pyproject_section_markers(stripped)
@@ -151,15 +146,10 @@ class FlextInfraInjectCommentsPhase:
                     changes.append(f"marker injected for {stripped}")
                     emitted_markers.add(marker)
             out.append(line)
-            if stripped == "[tool.mypy]":
-                out.extend(self._mypy_rationale_lines())
-                changes.append("Mypy suppression rationales injected")
-            elif stripped == "[tool.ruff.lint]":
-                out.extend(self._ruff_rationale_lines())
-                changes.append("Ruff suppression rationales injected")
-            elif stripped == "[tool.pyright]":
-                out.extend(self._pyright_rationale_lines())
-                changes.append("Pyright suppression rationales injected")
+            if stripped in rationale_blocks:
+                label, rationale = rationale_blocks[stripped]
+                out.extend(rationale)
+                changes.append(f"{label.capitalize()} suppression rationales injected")
         updated = "\n".join(self._collapse_blank_lines(out)).rstrip() + "\n"
         original = rendered.rstrip() + "\n"
         if updated == original:

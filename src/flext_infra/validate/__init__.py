@@ -14,16 +14,18 @@ if TYPE_CHECKING:
     from ._namespace_rules.contracts import FlextInfraNamespaceRulesContracts
     from ._namespace_rules.imports import FlextInfraNamespaceRulesImports
     from ._namespace_rules.structure import FlextInfraNamespaceRulesStructure
+    from ._pytest_diag_xml import FlextInfraPytestDiagXmlMixin
     from ._pytest_runner.base import FlextInfraPytestRunnerBase
     from ._pytest_runner.command import FlextInfraPytestRunnerCommand
     from ._pytest_runner.execution import FlextInfraPytestRunnerExecution
     from ._pytest_runner.reports import FlextInfraPytestRunnerReports
+    from ._rope_import_boundary import FlextInfraRopeImportBoundaryBase
+    from ._skill_rule_runner import FlextInfraSkillRuleRunnerMixin
     from .cprofile_report import FlextInfraCProfileReport
     from .fresh_import import FlextInfraValidateFreshImport
     from .gate_contract import FlextInfraGateContractValidator
     from .gate_contract_checks import FlextInfraGateContractChecksMixin
     from .gate_contract_content import FlextInfraGateContractContentMixin
-    from .gate_contract_errors import GateContractInfraError, GateContractUsageError
     from .gate_contract_report import FlextInfraGateContractReportMixin
     from .gate_contract_scan import FlextInfraGateContractScanMixin
     from .import_cycles import FlextInfraValidateImportCycles
@@ -43,6 +45,8 @@ if TYPE_CHECKING:
     from .stub_chain import FlextInfraStubSupplyChain
     from .testmon_db import FlextInfraTestmonDbInspector
     from .tier_whitelist import FlextInfraValidateTierWhitelist
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraCProfileReport",
     "FlextInfraGateContractChecksMixin",
@@ -60,13 +64,16 @@ __all__: tuple[str, ...] = (
     "FlextInfraNamespaceRulesStructure",
     "FlextInfraNamespaceValidator",
     "FlextInfraPytestDiagExtractor",
+    "FlextInfraPytestDiagXmlMixin",
     "FlextInfraPytestRunner",
     "FlextInfraPytestRunnerBase",
     "FlextInfraPytestRunnerCommand",
     "FlextInfraPytestRunnerExecution",
     "FlextInfraPytestRunnerReports",
+    "FlextInfraRopeImportBoundaryBase",
     "FlextInfraRuntimeCensusValidator",
     "FlextInfraSilentFailureValidator",
+    "FlextInfraSkillRuleRunnerMixin",
     "FlextInfraSkillValidator",
     "FlextInfraStubSupplyChain",
     "FlextInfraTestmonDbInspector",
@@ -76,8 +83,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraValidateLazyMapFreshness",
     "FlextInfraValidateMetadataDiscipline",
     "FlextInfraValidateTierWhitelist",
-    "GateContractInfraError",
-    "GateContractUsageError",
     "_namespace_rules",
     "_pytest_runner",
 )
@@ -90,20 +95,19 @@ _LAZY_IMPORTS = MappingProxyType(
             "._namespace_rules.contracts": ("FlextInfraNamespaceRulesContracts",),
             "._namespace_rules.imports": ("FlextInfraNamespaceRulesImports",),
             "._namespace_rules.structure": ("FlextInfraNamespaceRulesStructure",),
+            "._pytest_diag_xml": ("FlextInfraPytestDiagXmlMixin",),
             "._pytest_runner": ("_pytest_runner",),
             "._pytest_runner.base": ("FlextInfraPytestRunnerBase",),
             "._pytest_runner.command": ("FlextInfraPytestRunnerCommand",),
             "._pytest_runner.execution": ("FlextInfraPytestRunnerExecution",),
             "._pytest_runner.reports": ("FlextInfraPytestRunnerReports",),
+            "._rope_import_boundary": ("FlextInfraRopeImportBoundaryBase",),
+            "._skill_rule_runner": ("FlextInfraSkillRuleRunnerMixin",),
             ".cprofile_report": ("FlextInfraCProfileReport",),
             ".fresh_import": ("FlextInfraValidateFreshImport",),
             ".gate_contract": ("FlextInfraGateContractValidator",),
             ".gate_contract_checks": ("FlextInfraGateContractChecksMixin",),
             ".gate_contract_content": ("FlextInfraGateContractContentMixin",),
-            ".gate_contract_errors": (
-                "GateContractInfraError",
-                "GateContractUsageError",
-            ),
             ".gate_contract_report": ("FlextInfraGateContractReportMixin",),
             ".gate_contract_scan": ("FlextInfraGateContractScanMixin",),
             ".import_cycles": ("FlextInfraValidateImportCycles",),

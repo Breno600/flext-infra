@@ -7,7 +7,7 @@ from flext_tests import tm
 from tests import u
 
 
-class TestsGitRemoteIdentity:
+class TestsFlextInfraGitRemoteIdentity:
     """Private CI may rewrite origin to aliased SSH without changing the repo."""
 
     def test_https_ssh_and_host_alias_urls_match(self) -> None:
@@ -28,6 +28,3 @@ class TestsGitRemoteIdentity:
             u.Infra.git_remote_identity(left) == u.Infra.git_remote_identity(right),
             eq=False,
         )
-
-
-__all__: tuple[str, ...] = ()

@@ -21,17 +21,22 @@ rule:
         - pattern: |
             def $METHOD($$$PARAMS) -> $RETURN:
                 ...
+    # Chained neighbor scoping: the method's immediate enclosing class must be
+    # the Mixin itself. `inside` with default neighbor stop walks function ->
+    # class body block -> class definition, so a Protocol nested inside a
+    # concrete Mixin (declaration-only methods) is never flagged.
     - inside:
-        kind: class_definition
-        stopBy: end
-        all:
-          - has:
-              field: name
-              regex: "Mixin$"
-          - not:
-              has:
-                field: superclasses
-                regex: "(Protocol|ABC)"
+        kind: block
+        inside:
+          kind: class_definition
+          all:
+            - has:
+                field: name
+                regex: "Mixin$"
+            - not:
+                has:
+                  field: superclasses
+                  regex: "(Protocol|ABC)"
     - not:
         inside:
           kind: if_statement

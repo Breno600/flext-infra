@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -12,9 +12,9 @@ if TYPE_CHECKING:
 class FlextInfraConstantsCodegenDetection:
     """Constant detection policy for codegen."""
 
-    DETECTION_MIN_QUOTED_LITERAL_LEN: Final[int] = 2
+    DETECTION_MIN_QUOTED_LITERAL_LEN: ClassVar[int] = 2
     "Minimum length for a quoted string to be considered a literal."
-    DETECTION_TRIVIAL_VALUES: Final[frozenset[str]] = frozenset({
+    DETECTION_TRIVIAL_VALUES: ClassVar[frozenset[str]] = frozenset({
         "True",
         "False",
         "None",
@@ -32,15 +32,15 @@ class FlextInfraConstantsCodegenDetection:
         "()",
     })
     "Literal values considered trivial for constant detection heuristics."
-    DETECTION_FINAL_DECL_RE: Final[t.RegexPattern] = re.compile(
+    DETECTION_FINAL_DECL_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?P<indent>\s*)(?P<name>[A-Z_][A-Z0-9_]*)"
         r"\s*:\s*(?P<ann>Final\[.*?\])\s*=\s*(?P<value>.+?)\s*(?:#.*)?$",
         re.MULTILINE,
     )
-    "Regex: NAME: Final[TYPE] = VALUE (with optional inline comment)."
-    DETECTION_CLASS_DECL_RE: Final[t.RegexPattern] = re.compile(r"class\s+(\w+)")
+    "Regex: NAME: ClassVar[TYPE] = VALUE (with optional inline comment)."
+    DETECTION_CLASS_DECL_RE: ClassVar[t.RegexPattern] = re.compile(r"class\s+(\w+)")
     "Regex: class ClassName (captures class name)."
-    DETECTION_CANONICAL_ALIASES: Final[frozenset[str]] = frozenset({
+    DETECTION_CANONICAL_ALIASES: ClassVar[frozenset[str]] = frozenset({
         "c",
         "m",
         "p",

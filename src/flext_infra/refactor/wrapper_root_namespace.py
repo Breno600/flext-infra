@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, ClassVar, override
 
-from flext_infra import c, m, p, r, t, u
+from flext_core import r
+from flext_infra import c, m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 
 from ._wrapper_rewrite import FlextInfraWrapperRootNamespaceRewriteMixin
@@ -51,7 +53,9 @@ class FlextInfraWrapperRootNamespaceRefactor(
                 wrapper_submodules=wrapper_submodules,
                 metadata_runtime_aliases=metadata_aliases,
             )
-        write_failure = self._persist_updates(accumulator.updates)
+        write_failure = self._persist_updates(
+            accumulator.updates, expected_sources=accumulator.expected_sources
+        )
         if write_failure is not None:
             return r[t.JsonPayload].fail(write_failure)
         effective_dry_run: bool = self.effective_dry_run
@@ -69,7 +73,11 @@ class FlextInfraWrapperRootNamespaceRefactor(
 
     def _scan_workspace(
         self,
-    ) -> p.Result[tuple[t.SequenceOf[Path], dict[str, frozenset[str]], frozenset[str]]]:
+    ) -> p.Result[
+        t.Triple[
+            t.SequenceOf[Path], MutableMapping[str, frozenset[str]], frozenset[str]
+        ]
+    ]:
         """Resolve project paths and discover Python files + runtime alias map."""
         selected_projects: t.StrSequence = (
             self.project_names if self.project_names is not None else ()
@@ -77,7 +85,11 @@ class FlextInfraWrapperRootNamespaceRefactor(
         resolved = u.Infra.resolve_projects(self.repository_root, selected_projects)
         if resolved.failure:
             return r[
-                tuple[t.SequenceOf[Path], dict[str, frozenset[str]], frozenset[str]]
+                tuple[
+                    t.SequenceOf[Path],
+                    MutableMapping[str, frozenset[str]],
+                    frozenset[str],
+                ]
             ].from_failure(resolved)
         iter_result = u.Infra.iter_python_files(
             m.Infra.SourceScanRequest(
@@ -86,7 +98,11 @@ class FlextInfraWrapperRootNamespaceRefactor(
         )
         if iter_result.failure:
             return r[
-                tuple[t.SequenceOf[Path], dict[str, frozenset[str]], frozenset[str]]
+                tuple[
+                    t.SequenceOf[Path],
+                    MutableMapping[str, frozenset[str]],
+                    frozenset[str],
+                ]
             ].from_failure(iter_result)
         project_runtime_aliases = {
             project.path.name: frozenset(layout.runtime_aliases)
@@ -94,21 +110,27 @@ class FlextInfraWrapperRootNamespaceRefactor(
             if (layout := u.Infra.layout(project.path)) is not None
         }
         return r[
-            tuple[t.SequenceOf[Path], dict[str, frozenset[str]], frozenset[str]]
+            tuple[
+                t.SequenceOf[Path], MutableMapping[str, frozenset[str]], frozenset[str]
+            ]
         ].ok((
             iter_result.value,
             project_runtime_aliases,
             u.facade_module_names(c.Infra.PKG_INFRA_UNDERSCORE),
         ))
 
-    def _persist_updates(self, updates: Mapping[Path, str]) -> str | None:
+    def _persist_updates(
+        self, updates: Mapping[Path, str], *, expected_sources: Mapping[Path, str]
+    ) -> str | None:
         """Write batched updates via the protected pipeline; ``None`` on success."""
         if not updates:
             return None
         ok, report = u.Infra.protected_source_writes(
             dict(updates),
             request=m.Infra.ProtectedSourceWritesRequest(
-                workspace=self.repository_root, skip_pytest=True
+                workspace=self.repository_root,
+                expected_sources=expected_sources,
+                skip_pytest=True,
             ),
         )
         if ok:

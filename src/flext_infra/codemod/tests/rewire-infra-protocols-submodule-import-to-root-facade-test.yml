@@ -1,0 +1,5 @@
+id: rewire-infra-protocols-submodule-import-to-root-facade
+valid:
+  - from flext_infra import p
+invalid:
+  - from flext_infra.protocols import p

@@ -7,21 +7,16 @@ from collections.abc import MutableMapping, MutableSequence, MutableSet
 from pathlib import Path
 from typing import Annotated, ClassVar
 
-from flext_core import m, u
-from flext_infra import t
+from flext_cli import m, u
 
+from .. import t
 from .mixins import FlextInfraModelsMixins as mm
 from .refactor_ast_grep import FlextInfraModelsRefactorGrep
-from .refactor_census import FlextInfraModelsRefactorCensus
 from .refactor_namespace_enforcer import FlextInfraModelsNamespaceEnforcer
-from .refactor_violations import FlextInfraModelsRefactorViolations
 
 
 class FlextInfraModelsRefactor(
-    FlextInfraModelsRefactorGrep,
-    FlextInfraModelsNamespaceEnforcer,
-    FlextInfraModelsRefactorCensus,
-    FlextInfraModelsRefactorViolations,
+    FlextInfraModelsRefactorGrep, FlextInfraModelsNamespaceEnforcer
 ):
     """Models for refactor workflows and related tools.
 
@@ -127,7 +122,7 @@ class FlextInfraModelsRefactor(
     class ProjectClassification(m.ArbitraryTypesModel):
         """Result of classifying a project by kind and family chains."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         project_kind: Annotated[
             t.NonEmptyStr,
@@ -153,6 +148,10 @@ class FlextInfraModelsRefactor(
         updates: Annotated[
             MutableMapping[Path, str],
             m.Field(description="Pending file content updates keyed by path"),
+        ] = m.Field(default_factory=dict)
+        expected_sources: Annotated[
+            MutableMapping[Path, str],
+            m.Field(description="Original content keyed by every pending update path"),
         ] = m.Field(default_factory=dict)
         wrapper_candidates: Annotated[
             MutableSequence[Path],
@@ -183,7 +182,7 @@ class FlextInfraModelsRefactor(
     class ClassvarConstantAutofixPlan(m.ArbitraryTypesModel):
         """Planned edits for one ENFORCE-079 ClassVar-constant autofix."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         class_module: Annotated[
             str, m.Field(description="Module that declares the owning class")
@@ -220,7 +219,7 @@ class FlextInfraModelsRefactor(
         populates ``constant_module``. ``touched_files`` is always present.
         """
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         touched_files: Annotated[
             t.StrSequence, m.Field(description="Files the autofix created or rewrote")
@@ -241,12 +240,42 @@ class FlextInfraModelsRefactor(
             m.Field(description="Per-file textual edits planned (dry-run only)"),
         ] = None
 
+    # -- CSV-driven Rename Models ---------------------------------------------
+
+    class ApplyRenamesInput(mm.WriteMixin, m.ContractModel):
+        """Validated CLI request for CSV-driven symbol renames."""
+
+        csv: Annotated[
+            t.NonEmptyStr, m.Field(description="Path to the old,new rename-list CSV")
+        ]
+        roots: Annotated[
+            t.StrSequence,
+            m.Field(min_length=1, description="Directories to scan for rename targets"),
+        ]
+
+    class ApplyRenamesReport(m.ArbitraryTypesModel):
+        """Summary of one CSV-driven rename pass."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        label: Annotated[t.NonEmptyStr, m.Field(description="Rename-list label")]
+        files_scanned: Annotated[
+            t.NonNegativeInt, m.Field(description="Text files scanned")
+        ]
+        occurrences: Annotated[
+            t.NonNegativeInt, m.Field(description="Pending occurrences in check mode")
+        ] = 0
+        files_changed: Annotated[
+            t.NonNegativeInt, m.Field(description="Files rewritten in apply mode")
+        ] = 0
+        applied: Annotated[bool, m.Field(description="Whether changes were applied")]
+
     # -- Namespace Enforcer Models ---------------------------------------------
 
     class ParsedPythonModule(m.ArbitraryTypesModel):
         """Result of parsing a Python source file into AST."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         source: Annotated[str, m.Field(description="Raw source text")]
         tree: Annotated[

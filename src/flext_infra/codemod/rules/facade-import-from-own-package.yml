@@ -1,0 +1,60 @@
+# A facade letter is imported from the package that owns the widest one the
+# module can see (flext-itpd1.3, 2026-09-19).
+#
+# flext-infra's facades are strict subclasses of flext-cli's: FlextInfraUtilities
+# extends FlextCliUtilities, FlextInfraProtocols extends FlextCliProtocols. They
+# add the nested `Infra` namespace that every flext-infra module reaches through
+# `u.Infra.*` / `p.Infra.*`. Binding the letter from flext_cli therefore gives a
+# facade that resolves every shared member and then fails on exactly the nested
+# namespace the module exists to use.
+#
+# The failure is silent to the reader — the call sites are spelled identically —
+# and it survived long enough that namespace_moves.py carries a comment
+# admitting `u` here has no nested Infra while the line below it still calls
+# `u.Infra.alias_locally_bound`. The import was the defect, never the call.
+#
+# Scoped by what the module actually does, not by where it lives. The facade
+# modules themselves extend the flext-cli facade by the class name flext-cli
+# declares in its own `__all__` — `class FlextInfraModels(FlextCliModels)`,
+# never `class FlextInfraModels(m)`; the facade-base-by-class-name rule and the
+# facade-base semantic phase own that shape (2026-09-23, flext-dv1ga). This
+# rule therefore concerns only consumer modules: it fires where the module
+# reaches the nested namespace that the base facade does not have, so the
+# import is wrong exactly when `<letter>.Infra` appears in the same module. The
+# duplicate flext_infra import line this produces is merged by `make fix`.
+#
+# The private utilities tree is excluded: a member of `u.Infra` cannot bind its
+# own still-assembling facade at module import time, so there the canonical form
+# is a method-local import and ban-infra-utility-module-self-facade-import is
+# the owner of that contract. A module-level rewrite there would trade a wrong
+# facade for an import cycle.
+id: facade-import-from-own-package
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+ignores:
+  - "src/*/_utilities/**/*.py"
+rule:
+  all:
+    - pattern: from flext_cli import $F
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          matches: module-binds-flext-infra-facade
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          pattern: $F.Infra
+constraints:
+  F:
+    regex: "^[cmptu]$"
+fix: from flext_infra import $F
+message: >-
+  Bind the facade from the package that owns the nested Infra namespace this
+  module uses; the flext-cli facade is the base class, not the owner.
