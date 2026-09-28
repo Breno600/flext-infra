@@ -118,7 +118,7 @@ class FlextInfraWorkSagaPublish(FlextInfraWorkSagaCommon):
         if matrix_cas.failure:
             return r.fail(matrix_cas.error or "work land matrix CAS failed")
         synced = FlextInfraWorktreeService(
-            workspace_root=primary_root,
+            repository_root=primary_root,
             operation=c.Infra.WorktreeOperation.UPDATE,
             branch=branch,
             base=self._git_integration_ref(primary_root, integration),

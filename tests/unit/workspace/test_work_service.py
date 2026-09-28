@@ -364,7 +364,7 @@ class TestsFlextInfraWorkService:
         before_record = self._record(tmp_path, bead_id)
         before_worktrees = tm.ok(
             FlextInfraWorktreeService(
-                workspace_root=repository, operation=c.Infra.WorktreeOperation.LIST
+                repository_root=repository, operation=c.Infra.WorktreeOperation.LIST
             ).execute()
         )
 
@@ -383,7 +383,7 @@ class TestsFlextInfraWorkService:
         assert (
             tm.ok(
                 FlextInfraWorktreeService(
-                    workspace_root=repository, operation=c.Infra.WorktreeOperation.LIST
+                    repository_root=repository, operation=c.Infra.WorktreeOperation.LIST
                 ).execute()
             )
             == before_worktrees
@@ -1253,7 +1253,7 @@ class TestsFlextInfraWorkService:
         )
         orphan = tm.ok(
             FlextInfraWorktreeService(
-                workspace_root=repository,
+                repository_root=repository,
                 operation=c.Infra.WorktreeOperation.ADD,
                 branch="feature/recover-lane",
                 base="HEAD",
