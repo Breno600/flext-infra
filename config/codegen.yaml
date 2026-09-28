@@ -145,6 +145,11 @@ Infra:
           - spec
           - convergence
           - step
+          # The Gas City runtime mints startup-health-episode beads and writes
+          # the type into every governed ledger's generated `.beads/config.yaml`
+          # (observed in mcb, gmn and gc). Declaring it here keeps the frozen
+          # projection owned by this SSOT instead of hand-adopted per rig.
+          - startup-health-episode
         # Ledger scalars rendered into .beads/config.yaml. Change them here.
         # Per-repo override of Gas City participation is workspace.yaml
         # `gascity_enabled` (flips dolt.auto-start and omits gc.*). Never edit
