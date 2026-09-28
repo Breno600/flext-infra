@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from flext_tests import tm
 
 from flext_infra import c, config, m, u
@@ -49,72 +48,6 @@ class TestsFlextInfraPyprojectConformTopologySources:
             exclude_dependencies=(),
             environments=tuple(toolchain.uv_environments),
         )
-
-    def test_declared_revision_survives_generation_and_controls_transitives(
-        self,
-    ) -> None:
-        """The same declared SHA reaches runtime, dev, codegen and uv resolution."""
-        revision = "a1" * 20
-        project = test_u.Tests.project_spec("workspace")
-        project = m.Infra.ProjectSpec.model_validate({
-            **project.model_dump(),
-            "dependency_revisions": {"flext-core": revision},
-        })
-        workspace = self._workspace().model_copy(update={"project": project})
-        declared = (
-            "flext-core @ git+"
-            f"{test_u.Tests.repository_ref('flext-core').url}@"
-            f"{test_u.Tests.provider_branch()}"
-        )
-        source = (
-            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
-            f'dependencies = ["{declared}"]\n'
-            f'[dependency-groups]\ndev = ["{declared}"]\n'
-            f'codegen = ["{declared}"]\n'
-        )
-        rendered = tm.ok(
-            u.Infra.pyproject_conform(
-                source,
-                workspace=workspace,
-                required_dev_dependencies=(),
-                uv_resolution=self._toolchain_resolution(),
-            )
-        )
-        for section, key in (
-            ("project", "dependencies"),
-            ("dependency-groups", "dev"),
-            ("dependency-groups", "codegen"),
-        ):
-            requirements = tu.Tests.toml_strings_at(rendered, section, key)
-            tm.that(len(requirements), eq=1)
-            tm.that(requirements[0].endswith(f"@{revision}"), eq=True)
-        parsed = tu.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
-        uv = tu.Tests.toml_mapping(tu.Tests.toml_mapping(parsed["tool"])["uv"])
-        tm.that(
-            uv["override-dependencies"],
-            eq=list(tu.Tests.toml_strings_at(rendered, "project", "dependencies")),
-        )
-        second = tm.ok(
-            u.Infra.pyproject_conform(
-                rendered,
-                workspace=workspace,
-                required_dev_dependencies=(),
-                uv_resolution=self._toolchain_resolution(),
-            )
-        )
-        tm.that(second, eq=rendered)
-
-    @pytest.mark.parametrize("revision", ["main", "1234", "z" * 40])
-    def test_dependency_revision_rejects_mutable_or_invalid_refs(
-        self, revision: str
-    ) -> None:
-        """A declared fixed revision must be an immutable full commit id."""
-        project = test_u.Tests.project_spec("workspace")
-        with pytest.raises(ValueError, match="dependency_revisions"):
-            m.Infra.ProjectSpec.model_validate({
-                **project.model_dump(),
-                "dependency_revisions": {"flext-core": revision},
-            })
 
     def _assert_direct_source(self, rendered: str, ref: m.Infra.RepositoryRef) -> None:
         """Assert the canonical standalone output: one direct Git requirement."""

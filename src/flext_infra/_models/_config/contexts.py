@@ -562,13 +562,6 @@ class FlextInfraConfigModelsContexts:
             ),
         ] = None
 
-        dependency_revisions: Annotated[
-            Mapping[t.NonEmptyStr, Annotated[str, m.Field(pattern=r"^[0-9a-f]{40}$")]],
-            m.Field(
-                description="Explicit immutable revisions of provider-owned dependencies"
-            ),
-        ]
-
         # NOTE (multi-agent, flext-get3j): ProjectSpec is the sole declaration
         # owner; absence is meaningful and must never select a conventional hook.
         hatch_build_hook_path: Annotated[

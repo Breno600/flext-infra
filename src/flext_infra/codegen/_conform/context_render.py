@@ -121,7 +121,6 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         licenses = codegen.scaffold.project.supported_licenses
         return r[m.Infra.ProjectSpec].ok(
             m.Infra.ProjectSpec(
-                dependency_revisions={},
                 package_name=package_name,
                 class_stem=class_stem,
                 namespace=namespace,

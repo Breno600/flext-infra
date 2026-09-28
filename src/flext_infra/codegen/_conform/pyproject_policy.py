@@ -59,10 +59,6 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         )
         if flext_line.failure:
             return r[str].from_failure(flext_line)
-        declared_sources = {
-            member.distribution: f"git+{member.url}@{flext_line.value.branch}"
-            for member in workspace.subprojects
-        }
         return u.Infra.pyproject_conform(
             source,
             workspace=workspace,
@@ -75,7 +71,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
                 exclude_dependencies=cls.routed_uv_exclude_dependencies(render_inputs),
                 environments=tuple(codegen.toolchain.uv_environments),
             ),
-            declared_sources=declared_sources,
+            family_line=flext_line.value.branch,
         )
 
     @staticmethod
