@@ -33,12 +33,12 @@ if TYPE_CHECKING:
     from .base import FlextInfraModelsBase
     from .census import FlextInfraModelsCensus
     from .check import FlextInfraModelsCheck
-    from .codegen import FlextInfraModelsCodegen
-    from .codegen_journal import FlextInfraModelsCodegenJournal
+    from ._codegen import FlextInfraModelsCodegen
+    from ._codegen.journal import FlextInfraModelsCodegenJournal
     from .codegen_render import FlextInfraModelsCodegenRender
     from .codegen_toolchain import FlextInfraModelsCodegenToolchain
     from .codemod import FlextInfraModelsCodemod
-    from .config import FlextInfraConfigModels
+    from ._config import FlextInfraConfigModels
     from .deps import FlextInfraModelsDeps
     from .deps_toml import FlextInfraModelsDepsToml
     from .deps_tool_config import FlextInfraModelsDepsToolSettings
@@ -172,12 +172,12 @@ _LAZY_IMPORTS = MappingProxyType(
             ".base": ("FlextInfraModelsBase",),
             ".census": ("FlextInfraModelsCensus",),
             ".check": ("FlextInfraModelsCheck",),
-            ".codegen": ("FlextInfraModelsCodegen",),
-            ".codegen_journal": ("FlextInfraModelsCodegenJournal",),
+            "._codegen": ("FlextInfraModelsCodegen",),
+            "._codegen_journal": ("FlextInfraModelsCodegenJournal",),
             ".codegen_render": ("FlextInfraModelsCodegenRender",),
             ".codegen_toolchain": ("FlextInfraModelsCodegenToolchain",),
             ".codemod": ("FlextInfraModelsCodemod",),
-            ".config": ("FlextInfraConfigModels",),
+            "._config": ("FlextInfraConfigModels",),
             ".deps": ("FlextInfraModelsDeps",),
             ".deps_toml": ("FlextInfraModelsDepsToml",),
             ".deps_tool_config": ("FlextInfraModelsDepsToolSettings",),
