@@ -37,7 +37,9 @@ class FlextInfraWorkspaceEnvironmentMixin:
             if envrc_result.failure:
                 return r[result_type].from_failure(envrc_result)
             changed = (
-                (repository_root / c.Infra.ENVRC_FILENAME,) if envrc_result.value else ()
+                (repository_root / c.Infra.ENVRC_FILENAME,)
+                if envrc_result.value
+                else ()
             )
             result = r[result_type].ok(result_type(changed_files=changed))
         if result.failure:
@@ -63,10 +65,7 @@ class FlextInfraWorkspaceEnvironmentMixin:
         )
 
     @classmethod
-    def _render_environment_template(
-        cls,
-        destination: str,
-    ) -> p.Result[str]:
+    def _render_environment_template(cls, destination: str) -> p.Result[str]:
         """Render one SSOT environment template from the toolchain spec."""
         template_path = (
             Path(__file__).resolve().parents[1]
@@ -75,19 +74,12 @@ class FlextInfraWorkspaceEnvironmentMixin:
             / "base"
             / f"{destination}.j2"
         )
-        render_context: (
-            m.Infra.BeadsWorkspaceEnvironmentSpec | m.Infra.EnvrcRenderSpec
-        ) = (
-            context
-            if context is not None
-            else m.Infra.EnvrcRenderSpec(
-                repository_root_rel=".",
-                environment_path_prepends=(
-                    config.Infra.codegen.toolchain.environment_path_prepends
-                ),
-                mise_bootstrap=u.Infra.mise_bootstrap_environment(),
-                gascity=gascity,
-            )
+        render_context = m.Infra.EnvrcRenderSpec(
+            repository_root_rel=".",
+            environment_path_prepends=(
+                config.Infra.codegen.toolchain.environment_path_prepends
+            ),
+            mise_bootstrap=u.Infra.mise_bootstrap_environment(),
         )
         return u.Cli.template_render(template_path, render_context)
 
