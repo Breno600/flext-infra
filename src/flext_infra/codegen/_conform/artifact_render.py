@@ -20,13 +20,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         destination: str,
         rendered: str,
         *,
-        render_inputs: m.Infra.CodegenRenderInputs | None = None,
+        managed_artifacts: m.Infra.ProjectManagedArtifactsSnapshot | None = None,
+        workspace: m.Infra.WorkspaceSpec | None = None,
+        codegen: m.Infra.CodegenConfigSpec | None = None,
+        repository: m.Infra.RepositoryRef | None = None,
+        target: m.Infra.RepositoryConformTarget | None = None,
     ) -> p.Result[m.Infra.CodegenArtifactComposition]:
-        """Apply typed project overlays after canonical template rendering.
-
-        Without ``render_inputs`` the committed project catalog overlays the
-        render and no pyproject conformance runs.
-        """
+        """Apply typed project overlays after canonical template rendering."""
         if destination == c.PYPROJECT_FILENAME:
             live_path = repository_root / c.PYPROJECT_FILENAME
             live: str | None = None
@@ -43,9 +43,29 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             if overlaid.failure:
                 return r[m.Infra.CodegenArtifactComposition].from_failure(overlaid)
             rendered = overlaid.value
-            if render_inputs is not None:
+            if workspace is not None and codegen is not None and repository is not None:
+                profile = (
+                    target.make_profile
+                    if target is not None
+                    else c.Infra.MakeProfile.STANDALONE
+                )
+                excludes = (
+                    cls.routed_uv_exclude_dependencies(
+                        repository=repository,
+                        target=target,
+                        codegen=codegen,
+                        workspace=workspace,
+                    )
+                    if target is not None
+                    else ()
+                )
                 conformed = cls.conformed_pyproject_source(
-                    rendered, render_inputs=render_inputs
+                    rendered,
+                    repository=repository,
+                    workspace=workspace,
+                    codegen=codegen,
+                    workspace_mode=profile,
+                    uv_exclude_dependencies=excludes,
                 )
                 if conformed.failure:
                     return r[m.Infra.CodegenArtifactComposition].from_failure(conformed)
@@ -67,15 +87,14 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[m.Infra.CodegenArtifactComposition].ok(
                 m.Infra.CodegenArtifactComposition(rendered=rendered)
             )
-        if render_inputs is None:
+        resolved_artifacts = managed_artifacts
+        if resolved_artifacts is None:
             snapshot = u.Infra.snapshot_committed_project_managed_artifacts(
                 repository_root
             )
             if snapshot.failure:
                 return r[m.Infra.CodegenArtifactComposition].from_failure(snapshot)
             resolved_artifacts = snapshot.value
-        else:
-            resolved_artifacts = render_inputs.managed_artifacts
         composed = (
             u.Infra.compose_mise_toml_from_snapshot(
                 resolved_artifacts.sources, rendered
@@ -98,12 +117,20 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
     def _rendered_artifact_source(
         self,
-        render_inputs: m.Infra.CodegenRenderInputs,
         *,
+        templates_root: Path,
         template_relpath: Path,
-        destination: str,
         failure_prefix: str,
+        dist: str,
+        repository: m.Infra.RepositoryRef,
+        repository_root: Path,
+        target: m.Infra.RepositoryConformTarget,
+        workspace: m.Infra.WorkspaceSpec,
+        codegen: m.Infra.CodegenConfigSpec,
+        destination: str,
+        tooling_runtime: m.Infra.ToolingRuntimeContext,
         project_context: m.Infra.ProjectRenderContext | None,
+        managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
     ) -> p.Result[str]:
         """Resolve one artifact render context and render its template source.
 
@@ -112,13 +139,21 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         prepends to a render failure.
         """
         artifact_context = self._artifact_render_context(
-            render_inputs, destination=destination, project_context=project_context
+            dist=dist,
+            repository=repository,
+            repository_root=repository_root,
+            target=target,
+            workspace=workspace,
+            codegen=codegen,
+            destination=destination,
+            tooling_runtime=tooling_runtime,
+            project_context=project_context,
+            managed_artifacts=managed_artifacts,
         )
         if artifact_context.failure:
             return r[str].from_failure(artifact_context)
         rendered = u.Cli.template_render(
-            u.Infra.codegen_templates_root(render_inputs.codegen) / template_relpath,
-            artifact_context.value,
+            templates_root / template_relpath, artifact_context.value
         )
         if rendered.failure:
             return r[str].fail(
@@ -130,21 +165,24 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
     def _artifact_render_context(
         self,
-        render_inputs: m.Infra.CodegenRenderInputs,
         *,
+        dist: str,
+        repository: m.Infra.RepositoryRef,
+        repository_root: Path,
+        target: m.Infra.RepositoryConformTarget,
+        workspace: m.Infra.WorkspaceSpec,
+        codegen: m.Infra.CodegenConfigSpec,
         destination: str,
+        tooling_runtime: m.Infra.ToolingRuntimeContext,
         project_context: m.Infra.ProjectRenderContext | None,
+        managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
     ) -> p.Result[p.Model]:
         """Resolve one governed artifact to its canonical typed render input."""
-        target = render_inputs.target
-        workspace = render_inputs.workspace
-        codegen = render_inputs.codegen
-        repository = target.repository
-        repository_root = target.root
-        dist = repository.distribution
         if destination == c.Infra.GITIGNORE:
             project_patterns: t.StrSequence = (
-                render_inputs.managed_artifacts.resolution.artifacts.Gitignore.patterns
+                managed_artifacts.artifacts.Gitignore.patterns
+                if managed_artifacts is not None
+                else ()
             )
             return r[p.Model].ok(
                 m.Infra.GitignoreRenderSpec(
@@ -183,23 +221,25 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 )
             )
         if destination == c.Infra.ENVRC_FILENAME:
-            # The workspace declaration owns whether a Beads route exists.
-            # A repository without one must not render ledger activation.
+            # Conform targets always own a governed Beads identity, so the
+            # rendered tier is binary here: city server wiring when the
+            # repository declares city participation, the repository-local
+            # bd base otherwise.
             return r[p.Model].ok(
                 m.Infra.EnvrcRenderSpec(
                     repository_root_rel=self._repository_root_rel(workspace),
+                    state_directory_name=codegen.toolchain.state_directory_name,
+                    scratch_namespace=codegen.toolchain.scratch_namespace,
+                    scratch_home_relative=(codegen.toolchain.scratch_home_relative),
+                    pycache_namespace=codegen.toolchain.pycache_namespace,
                     environment_path_prepends=(
                         codegen.toolchain.environment_path_prepends
                     ),
                     mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                     gascity=(
-                        m.Infra.BeadsWorkspaceEnvironmentSpec(backend="none")
-                        if target.beads is None
-                        else (
-                            m.Infra.BeadsWorkspaceEnvironmentSpec()
-                            if target.gascity_enabled
-                            else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
-                        )
+                        m.Infra.BeadsWorkspaceEnvironmentSpec()
+                        if target.gascity_enabled
+                        else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
                     ),
                 )
             )
@@ -214,10 +254,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[p.Model].ok(m.Infra.ToolchainSpec(**toolchain_data))
 
         if destination == c.Infra.BEADS_CONFIG_RELPATH:
-            if target.beads is None:
-                return r[p.Model].fail(
-                    "Beads rendering requires enabled Beads identity"
-                )
             project_types = target.beads.custom_issue_types
             required_types = codegen.toolchain.beads.required_custom_types
             beads = codegen.toolchain.beads
@@ -237,10 +273,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 )
             )
         if destination == c.Infra.BEADS_METADATA_RELPATH:
-            if target.beads is None:
-                return r[p.Model].fail(
-                    "Beads rendering requires enabled Beads identity"
-                )
             # Why: this marker is regenerated on every `make gen`, but the
             # ledger identity inside it is owned by the checkout, not by the
             # fleet SSOT. Rendering without it stripped the key, and Beads then
@@ -289,6 +321,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         ))
                     ),
                     python_version=codegen.toolchain.python_version,
+                    state_directory_name=codegen.toolchain.state_directory_name,
                     github_actions=codegen.github_actions,
                     make=codegen.make,
                     workspace_repositories=workspace_repositories,
@@ -353,6 +386,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     pytest=config.Infra.tooling.tools.pytest,
                     mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                     dist=dist,
+                    state_directory_name=codegen.toolchain.state_directory_name,
+                    scratch_namespace=codegen.toolchain.scratch_namespace,
+                    scratch_home_relative=codegen.toolchain.scratch_home_relative,
                     infra_cli=config.Infra.name,
                     make_profile=profile,
                     makefile_custom_include=c.Infra.MAKEFILE_CUSTOM_INCLUDE,
@@ -365,11 +401,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     uv_link_mode=self.link_mode(repository, codegen.toolchain),
                     uv_version=codegen.toolchain.uv_version,
                     mise_lockfile_platforms=codegen.toolchain.mise_lockfile_platforms,
-                    npm_package_manager=codegen.toolchain.npm_package_manager,
                     qlty_selector=codegen.toolchain.qlty_selector,
                     jscpd_selector=codegen.toolchain.jscpd_selector,
                     prettier_selector=codegen.toolchain.prettier_selector,
-                    ast_grep_selector=codegen.toolchain.ast_grep_selector,
                     scc_selector=codegen.toolchain.scc_selector,
                     waza_selector=codegen.toolchain.waza_selector,
                     make=codegen.make,
@@ -397,19 +431,38 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     pytest_process_timeout_seconds=(
                         config.Infra.tooling.tools.pytest.process_timeout_seconds
                     ),
+                    pytest_incremental_process_timeout_seconds=(
+                        config.Infra.tooling.tools.pytest.incremental_process_timeout_seconds
+                    ),
                 )
             )
         if destination == c.Infra.CUSTOM_MAKE_FILENAME:
             # Existing repositories project custom routes from the same typed
             # Make contract as Makefile; they do not require scaffold-only
             # project metadata.
-            make_context = self.make_render_context(render_inputs)
+            make_context = self.make_render_context(
+                repository,
+                target,
+                workspace,
+                codegen,
+                tooling_runtime=tooling_runtime,
+                repository_root=repository_root,
+            )
             if make_context.failure:
                 return r[p.Model].from_failure(make_context)
             return r[p.Model].ok(make_context.value)
         if project_context is not None:
             return r[p.Model].ok(project_context)
-        context_result = self._project_render_context(render_inputs)
+        context_result = self._project_render_context(
+            repository,
+            target,
+            workspace,
+            codegen,
+            tooling_runtime=tooling_runtime,
+            repository_root=repository_root,
+            managed_artifacts=managed_artifacts,
+            use_committed_artifacts=project_context is None,
+        )
         if context_result.failure:
             return r[p.Model].from_failure(context_result)
         return r[p.Model].ok(context_result.value)
