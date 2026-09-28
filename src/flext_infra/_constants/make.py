@@ -59,7 +59,7 @@ class FlextInfraConstantsMake:
     MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
     MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
     MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 100
+    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 600
     MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
     PRLIMIT_COMMAND: ClassVar[str] = "prlimit"
     PRLIMIT_ADDRESS_SPACE_OPTION: ClassVar[str] = "--as"

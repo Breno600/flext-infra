@@ -13,6 +13,7 @@ from flext_cli import m
 from ... import t
 from ..._constants import FlextInfraConstantsCodegenProject
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
+from ..mise_toolchain import FlextInfraModelsMiseToolchain
 from .beads import FlextInfraConfigModelsBeads
 from .contract import FlextInfraConfigModelsContract
 from .make import FlextInfraConfigModelsMake
@@ -50,7 +51,20 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Typed pytest execution policy"),
         ]
 
-    class MakefileRenderSpec(MakeCommandContext):
+    class ScratchRootContext(FlextInfraModelsMiseToolchain.RuntimeStorageSpec):
+        """Shared state and scratch roots every generated environment derives."""
+
+        scratch_identity_segment_aliases: Annotated[
+            t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
+            m.Field(
+                description=(
+                    "Checkout path segments renamed in the home scratch mirror "
+                    "so a scratch root never contains a VCS directory"
+                )
+            ),
+        ] = tuple(FlextInfraConstantsWorkspace.SCRATCH_IDENTITY_SEGMENT_ALIASES)
+
+    class MakefileRenderSpec(MakeCommandContext, ScratchRootContext):
         """Field-only render input for an existing repository Makefile."""
 
         mise_bootstrap: Annotated[

@@ -79,7 +79,22 @@ class FlextInfraModelsMiseToolchain:
                 raise ValueError(msg)
             return self
 
-    class ToolchainSpec(_ConfigContract):
+    class RuntimeStorageSpec(_ConfigContract):
+        """Canonical runtime-storage contract shared by toolchain renderers."""
+
+        state_directory_name: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="External runtime state directory beside checkout"),
+        ]
+        scratch_namespace: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Scratch namespace below the home scratch root"),
+        ]
+        scratch_home_relative: Annotated[
+            t.NonEmptyStr, m.Field(description="Home-relative scratch root")
+        ]
+
+    class ToolchainSpec(RuntimeStorageSpec):
         """Language-runtime and native-tool versions shared by generated projects.
 
         Language runtimes and native tools are declared as moving ``latest``
@@ -109,6 +124,10 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
+        # Scratch home-relative path: platform home plus this path mirrors the
+        # absolute checkout path below it. Workspace mode: sibling state root
+        # under superproject, so every sandbox became a tracked scope of the
+        # enclosing repository.
         uv_link_mode: Annotated[
             t.NonEmptyStr, m.Field(description="Portable uv installation link mode")
         ]
