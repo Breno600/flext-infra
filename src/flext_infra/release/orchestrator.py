@@ -118,11 +118,7 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             return r[bool].from_failure(projects)
         notes = self._release_dir(root, plan.tag) / c.Infra.RELEASE_NOTES_FILENAME
         generated = u.Infra.generate_notes(
-            plan.next,
-            plan.tag,
-            projects.value,
-            "\n".join(plan.merges),
-            notes,
+            plan.next, plan.tag, projects.value, "\n".join(plan.merges), notes
         )
         if generated.failure:
             return generated
