@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import shutil
+from collections.abc import Mapping
 from functools import cache, lru_cache
 from pathlib import Path
 
@@ -186,12 +187,77 @@ class FlextInfraUtilitiesPyproject:
         return r[str].ok(formatted)
 
     @staticmethod
+    def _locked_mise_version(
+        execution_root: Path, tool: str, selector: str
+    ) -> p.Result[str]:
+        """Resolve the selector's pinned version from the committed mise.lock.
+
+        Only ``make upg`` resolves a moving selector and writes mise.lock;
+        every other execution must authenticate exactly what the lock pins,
+        because a version taken from the selector itself sends the shim's
+        resolution over the network on a cold cache.
+        """
+        lock_path = next(
+            (
+                candidate / c.Infra.MISE_LOCK_FILENAME
+                for candidate in (execution_root, *execution_root.parents)
+                if (candidate / c.Infra.MISE_LOCK_FILENAME).is_file()
+            ),
+            None,
+        )
+        if lock_path is None:
+            return r[str].fail(
+                f"no {c.Infra.MISE_LOCK_FILENAME} above {execution_root} pins "
+                f"{tool}; run make upg so generation stays offline"
+            )
+        document = u.Cli.toml_parse_text(
+            lock_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        )
+        if document is None:
+            return r[str].fail(f"{lock_path} is not valid TOML")
+        payload = u.Cli.toml_as_mapping(document)
+        if payload is None:
+            return r[str].fail(f"{lock_path} carries no TOML mapping payload")
+        tools = payload.get("tools", {})
+        if not isinstance(tools, Mapping):
+            return r[str].fail(f"{lock_path} has a malformed [tools] table")
+        entries = tools.get(tool)
+        if not isinstance(entries, list):
+            return r[str].fail(f"{lock_path} pins no [[tools.{tool}]] entry")
+        for entry in entries:
+            if not isinstance(entry, Mapping):
+                return r[str].fail(
+                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}"
+                )
+            pinned = entry.get("version")
+            specifiers = entry.get("specifiers", ())
+            if not isinstance(pinned, str) or not isinstance(specifiers, (list, tuple)):
+                return r[str].fail(
+                    f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}"
+                )
+            if selector in specifiers or selector == pinned:
+                return r[str].ok(pinned)
+        return r[str].fail(
+            f"{lock_path} pins no {tool} for selector {selector!r}; run make upg"
+        )
+
+    @staticmethod
     @cache
     def _taplo_binary(
         taplo_version: str, process_timeout_seconds: int, execution_root: Path
     ) -> p.Result[Path]:
-        """Resolve and authenticate Make's config-versioned Taplo executable."""
-        u.Cli.info(f"pyproject-tooling: resolve taplo={taplo_version}")
+        """Resolve and authenticate Make's config-versioned Taplo executable.
+
+        ``taplo_version`` is the release selector the workspace declares; the
+        version that authenticates is the one the committed mise.lock pins for
+        it, so no shim run ever resolves a moving selector over the network.
+        """
+        pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
+            execution_root, "taplo", taplo_version
+        )
+        if pinned.failure:
+            return r[Path].from_failure(pinned)
+        u.Cli.info(f"pyproject-tooling: resolve taplo={pinned.value} (mise.lock)")
         resolved = shutil.which("taplo")
         if resolved is None:
             return r[Path].fail(
@@ -227,15 +293,11 @@ class FlextInfraUtilitiesPyproject:
                 f"{detail or 'no diagnostic output'}"
             )
         observed = identified.value.stdout.strip()
-        identity_matches = (
-            "taplo" in observed.lower()
-            if taplo_version == "latest"
-            else taplo_version in observed
-        )
+        identity_matches = pinned.value in observed
         if not identity_matches:
             return r[Path].fail(
-                "resolved Taplo executable version differs: "
-                f"expected={taplo_version} observed={observed}"
+                "resolved Taplo executable version differs from the mise.lock "
+                f"pin: expected={pinned.value} observed={observed}"
             )
         return r[Path].ok(binary)
 
