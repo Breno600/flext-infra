@@ -170,7 +170,6 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             f"{name}"
         )
         return m.Infra.ProjectSpec(
-            dependency_revisions={},
             flext_source=TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(),
             package_name=package_name,
             class_stem=class_stem,
