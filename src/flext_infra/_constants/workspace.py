@@ -16,93 +16,12 @@ class FlextInfraConstantsWorkspace:
 
     @unique
     class WorktreeOperation(StrEnum):
-        """Private Git worktree primitives composed by the work saga."""
+        """Private Git worktree primitives composed by the worktree service."""
 
         LIST = "list"
         ADD = "add"
         UPDATE = "update"
         REMOVE = "remove"
-
-    @unique
-    class WorkOperation(StrEnum):
-        """Retained lane metadata operation values."""
-
-        START = "start"
-        STATUS = "status"
-        LAND = "land"
-        FINISH = "finish"
-
-    @unique
-    class WorkKind(StrEnum):
-        """GitFlow lane kinds owned by configuration policy."""
-
-        EPIC = "epic"
-        FEATURE = "feature"
-        BUGFIX = "bugfix"
-        HOTFIX = "hotfix"
-        RELEASE = "release"
-
-    @unique
-    class WorkBranchNamespace(StrEnum):
-        EPIC = "epic"
-        FEATURE = "feature"
-        BUGFIX = "bugfix"
-        HOTFIX = "hotfix"
-        RELEASE = "release"
-
-    @unique
-    class WorkLaneRole(StrEnum):
-        """Topology role one registered lane holds inside an epic program."""
-
-        PLAIN = "plain"
-        EPIC = "epic"
-        CHILD = "child"
-
-    @unique
-    class BeadIssueStatus(StrEnum):
-        """Canonical statuses exposed by the configured Beads service."""
-
-        OPEN = "open"
-        IN_PROGRESS = "in_progress"
-        BLOCKED = "blocked"
-        DEFERRED = "deferred"
-        CLOSED = "closed"
-        PINNED = "pinned"
-        HOOKED = "hooked"
-
-    @unique
-    class WorkProvisioningState(StrEnum):
-        """Lifecycle state persisted for one work-lane reservation."""
-
-        PENDING = "pending"
-        READY = "ready"
-        FAILED = "failed"
-
-    @unique
-    class WorkRecoveryCategory(StrEnum):
-        """Recovery action supported for a failed work-lane reservation."""
-
-        RETRY_SETUP = "retry-setup"
-
-    @unique
-    class WorkProvisioningError(StrEnum):
-        """Provisioning stage that failed after lane reservation."""
-
-        SETUP = "setup"
-
-    WORK_ACTIVE_ISSUE_STATUSES: ClassVar[frozenset[BeadIssueStatus]] = frozenset({
-        BeadIssueStatus.OPEN,
-        BeadIssueStatus.IN_PROGRESS,
-        BeadIssueStatus.BLOCKED,
-    })
-
-    WORK_FORBIDDEN_SLUGS: ClassVar[frozenset[str]] = frozenset({
-        "teste",
-        "ajuste",
-        "correcao",
-        "temp",
-        "nova-branch",
-    })
 
     EXTERNAL_WORKSPACE_SIBLING_PATTERNS: ClassVar[t.StrSequence] = (
         ".ai-hub",
