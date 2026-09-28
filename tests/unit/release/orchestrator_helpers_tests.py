@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
+from flext_infra.release import FlextInfraReleaseBuildMixin
 from tests import c, m, p, u
 
 
@@ -467,3 +468,61 @@ class TestsFlextInfraReleaseHelpers:
                 ).exists(),
                 eq=False,
             )
+
+    class TestsInternalLockedVersions:
+        """The internal-versions map reads git dependencies from the root lock."""
+
+        @staticmethod
+        def write_lock(workspace: Path, body: str) -> Path:
+            """Write one uv.lock body into the workspace root."""
+            lock = workspace / c.Infra.UV_LOCK_FILENAME
+            lock.write_text(body, encoding="utf-8")
+            return lock
+
+        @staticmethod
+        def test_reads_internal_git_versions_and_skips_the_rest(tmp_path: Path) -> None:
+            """Internal git entries seed the map; other names and sources do not."""
+            lock_body = """
+[[package]]
+name = "flext-api"
+version = "0.12.0"
+source = { git = "https://example/flext-api.git?rev=0.12.0-dev#df73a089" }
+
+[[package]]
+name = "flext-core"
+version = "0.12.0"
+source = { editable = "vendor/flext-core" }
+
+[[package]]
+name = "pyyaml"
+version = "6.0.0"
+source = { registry = "https://pypi.org/simple" }
+"""
+            TestsFlextInfraReleaseHelpers.TestsInternalLockedVersions.write_lock(
+                tmp_path, lock_body
+            )
+
+            result = FlextInfraReleaseBuildMixin.internal_locked_versions(tmp_path)
+
+            tm.ok(result)
+            tm.that(result.value, eq={"flext-api": "0.12.0"})
+
+        @staticmethod
+        def test_missing_lock_yields_an_empty_map(tmp_path: Path) -> None:
+            """No lock means no git entries to seed; the render stays the authority."""
+            result = FlextInfraReleaseBuildMixin.internal_locked_versions(tmp_path)
+
+            tm.ok(result)
+            tm.that(result.value, eq={})
+
+        @staticmethod
+        def test_invalid_lock_fails_loud(tmp_path: Path) -> None:
+            """A corrupt lock is a typed failure, never a silently empty map."""
+            TestsFlextInfraReleaseHelpers.TestsInternalLockedVersions.write_lock(
+                tmp_path, "not [ valid toml"
+            )
+
+            result = FlextInfraReleaseBuildMixin.internal_locked_versions(tmp_path)
+
+            tm.fail(result)
+            tm.that(result.error or "", has="invalid TOML")
