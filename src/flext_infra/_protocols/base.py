@@ -180,11 +180,6 @@ class FlextInfraProtocolsBase(Protocol):
         """Scaffold-only project metadata consumed by initial generation."""
 
         @property
-        def dependency_revisions(self) -> t.StrMapping:
-            """Repository-declared immutable dependency revisions."""
-            ...
-
-        @property
         def repository_root_rel(self) -> str:
             """Declared relative path from the project to its workspace root."""
             ...

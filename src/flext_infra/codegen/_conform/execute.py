@@ -67,10 +67,14 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 if parsed.failure:
                     return r[m.Infra.CodegenResult].from_failure(parsed)
                 requirement_url, requirement_ref = parsed.value
-                if not requirement_url.startswith("https://") or not requirement_ref:
+                if (
+                    not requirement_url.startswith("https://")
+                    or not requirement_ref
+                    or u.Infra.ref_is_commit(requirement_ref)
+                ):
                     return r[m.Infra.CodegenResult].fail(
                         "infrastructure source must declare an HTTPS Git URL "
-                        f"and ref: {declared}"
+                        f"and integration line (never a commit): {declared}"
                     )
         # The supplied WorkspaceSpec already owns the declared integration branch.
         # Require it before materialization instead of a second divergent input.

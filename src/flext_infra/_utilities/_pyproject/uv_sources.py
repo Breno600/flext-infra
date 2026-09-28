@@ -10,7 +10,6 @@ from flext_cli import r, u
 from flext_infra import c, t
 
 from ..dependencies import FlextInfraUtilitiesDependencies
-from ..repository import FlextInfraUtilitiesRepository
 from .requirements import FlextInfraUtilitiesPyprojectRequirements
 
 if TYPE_CHECKING:
@@ -21,96 +20,23 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
     """Render the conform-owned ``[tool.uv]`` keys of one pyproject document."""
 
     @classmethod
-    def _document_requirement_lines(
-        cls, document: t.Cli.TomlDocument
-    ) -> p.Result[list[str]]:
-        """Collect every declared requirement line of one pyproject document."""
-        payload = u.Cli.toml_as_mapping(document)
-        if payload is None:
-            return r[list[str]].fail("pyproject document is not a TOML mapping")
-        requirements: list[str] = []
-        project = payload.get(c.Infra.PROJECT)
-        if isinstance(project, Mapping):
-            for key in (c.Infra.DEPENDENCIES, c.Infra.OPTIONAL_DEPENDENCIES):
-                requirements.extend(cls.raw_requirement_values(project.get(key)))
-        groups = payload.get(c.Infra.DEPENDENCY_GROUPS)
-        if isinstance(groups, Mapping):
-            for group in groups.values():
-                requirements.extend(cls.raw_requirement_values(group))
-        return r[list[str]].ok(requirements)
-
-    @classmethod
-    def _dependency_overrides(
-        cls, workspace: p.Infra.WorkspaceSpec, *, requirements: t.SequenceOf[str]
-    ) -> p.Result[t.VariadicTuple[str]]:
-        """Render declared immutable revisions as uv override-dependencies.
-
-        A manifest-declared revision pins one external provider-owned
-        dependency to an explicit SHA. The URL is still detected — from that
-        dependency's own declared direct Git source in the same document —
-        so a pin without a declared source fails loudly instead of borrowing
-        an URL from any catalog.
-        """
-        revisions: t.StrMapping = (
-            workspace.project.dependency_revisions if workspace.project else {}
-        )
-        members = {member.distribution for member in workspace.subprojects}
-        declared: dict[str, str] = {}
-        for requirement in requirements:
-            name = FlextInfraUtilitiesDependencies.dep_name(requirement)
-            if name is not None and name in revisions:
-                declared[name] = requirement
-        overrides: list[str] = []
-        for name in sorted(revisions):
-            if name in members or not name.startswith("flext-"):
-                return r[t.VariadicTuple[str]].fail(
-                    f"dependency revision must name an external provider dependency: {name}"
-                )
-            source = FlextInfraUtilitiesRepository.declared_git_source(
-                declared.get(name, name)
-            )
-            if source.failure:
-                return r[t.VariadicTuple[str]].from_failure(source)
-            url, _ref = source.value
-            if not url:
-                return r[t.VariadicTuple[str]].fail(
-                    "pinned dependency declares no direct git source to detect "
-                    f"its URL from: {name}"
-                )
-            overrides.append(f"{name} @ git+{url}@{revisions[name]}")
-        return r[t.VariadicTuple[str]].ok(tuple(overrides))
-
-    @classmethod
     def _sync_uv_sources(
-        cls,
-        document: t.Cli.TomlDocument,
-        *,
-        workspace: p.Infra.WorkspaceSpec,
-        resolution: m.Infra.UvResolutionSpec,
+        cls, document: t.Cli.TomlDocument, *, resolution: m.Infra.UvResolutionSpec
     ) -> p.Result[bool]:
         """Render the conform-owned ``[tool.uv]`` keys and drop workspace sources.
 
         The resolver keys are always declared, so the table always exists and
         never ends empty.
         """
-        declared_requirements = cls._document_requirement_lines(document)
-        if declared_requirements.failure:
-            return r[bool].from_failure(declared_requirements)
-        overrides = cls._dependency_overrides(
-            workspace, requirements=declared_requirements.value
-        )
-        if overrides.failure:
-            return r[bool].from_failure(overrides)
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
             tool = u.Cli.toml_ensure_table(document, c.Infra.TOOL)
         uv = u.Cli.toml_table_child(tool, "uv")
         if uv is None:
             uv = u.Cli.toml_ensure_table(tool, "uv")
-        if overrides.value:
-            u.Cli.toml_sync_string_list(uv, "override-dependencies", overrides.value)
-        else:
-            u.Cli.toml_remove_key_if_present(uv, "override-dependencies")
+        # uv.lock, written only by `make upg`, owns every resolved revision:
+        # no override may pin one beside it (flext-oe420).
+        u.Cli.toml_remove_key_if_present(uv, "override-dependencies")
         u.Cli.toml_remove_key_if_present(uv, "required-version")
         # Constraints are SSOT-rendered: the declared config value is the only
         # source, so a removed declaration exterminates the key everywhere and

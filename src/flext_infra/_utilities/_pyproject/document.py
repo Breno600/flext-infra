@@ -48,12 +48,15 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         workspace: m.Infra.WorkspaceSpec,
         required_dev_dependencies: t.StrSequence,
         uv_resolution: m.Infra.UvResolutionSpec,
-        declared_sources: t.StrMapping | None = None,
+        family_line: str | None = None,
     ) -> p.Result[str]:
         """Return canonical TOML with autonomous dependencies and uv policy.
 
         The workspace manifest owns the topology facts, including the
-        namespace production scope its project declares.
+        namespace production scope its project declares. ``family_line`` is
+        the detected FLEXT integration branch: source-less member requirements
+        render on it and it re-renders commit residue in internal
+        requirements; without it, both fail loudly.
         """
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
@@ -64,8 +67,16 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             project_name=project_name,
             required_dev_dependencies=required_dev_dependencies,
         )
+        declared_sources = (
+            {
+                member.distribution: f"git+{member.url}@{family_line}"
+                for member in workspace.subprojects
+            }
+            if family_line is not None
+            else {}
+        )
         normalized = cls._normalize_requirements(
-            source, workspace=workspace, declared_sources=declared_sources
+            source, declared_sources=declared_sources, family_line=family_line
         )
         if normalized.failure:
             return r[str].from_failure(normalized)
@@ -82,9 +93,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         if namespace_scope.failure:
             return r[str].from_failure(namespace_scope)
-        sources_result = cls._sync_uv_sources(
-            source, workspace=workspace, resolution=uv_resolution
-        )
+        sources_result = cls._sync_uv_sources(source, resolution=uv_resolution)
         if sources_result.failure:
             return r[str].from_failure(sources_result)
         provenance_result = cls._validate_dependency_provenance(

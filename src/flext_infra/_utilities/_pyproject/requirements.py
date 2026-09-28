@@ -46,18 +46,16 @@ class FlextInfraUtilitiesPyprojectRequirements:
         cls,
         document: t.Cli.TomlDocument,
         *,
-        workspace: p.Infra.WorkspaceSpec,
-        declared_sources: t.StrMapping | None = None,
+        declared_sources: t.StrMapping,
+        family_line: str | None,
     ) -> p.Result[bool]:
         """Render internal requirements from their declared Git provenance."""
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
         normalized = cls._normalize_requirement_field(
             project,
             c.Infra.DEPENDENCIES,
-            revisions=workspace.project.dependency_revisions
-            if workspace.project
-            else {},
-            declared_sources=declared_sources or {},
+            declared_sources=declared_sources,
+            family_line=family_line,
         )
         if normalized.failure:
             return normalized
@@ -65,10 +63,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
             group_result = cls._normalize_requirement_field(
                 section,
                 group_name,
-                revisions=workspace.project.dependency_revisions
-                if workspace.project
-                else {},
-                declared_sources=declared_sources or {},
+                declared_sources=declared_sources,
+                family_line=family_line,
             )
             if group_result.failure:
                 return group_result
@@ -80,8 +76,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
         container: t.Cli.TomlDocument | t.Cli.TomlTable,
         key: str,
         *,
-        revisions: t.StrMapping,
         declared_sources: t.StrMapping,
+        family_line: str | None,
     ) -> p.Result[bool]:
         """Normalize one dependency array and fail on model-less entries."""
         raw_value = u.Cli.toml_value(container, key)
@@ -99,7 +95,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         normalized_items: t.MutableSequenceOf[str] = []
         for item in items:
             normalized = cls._canonical_requirement(
-                item, revisions=revisions, declared_sources=declared_sources
+                item, declared_sources=declared_sources, family_line=family_line
             )
             if normalized.failure:
                 return r[bool].from_failure(normalized)
@@ -124,16 +120,18 @@ class FlextInfraUtilitiesPyprojectRequirements:
         cls,
         requirement: str,
         *,
-        revisions: t.StrMapping,
         declared_sources: t.StrMapping,
+        family_line: str | None,
     ) -> p.Result[str]:
         """Render one internal requirement from its own declared Git source.
 
         The requirement line is the only authority for an internal
         dependency's canonical URL and branch: it is parsed and canonicalized
-        (transport scheme only), never rewritten from provider policy. The
-        workspace manifest may pin the ref to an explicit immutable revision —
-        a declared SHA, never an invented default. A source-less internal
+        (transport scheme only), never rewritten from provider policy. The ref
+        is the dependency's integration line: uv.lock alone records the commit
+        it resolves to, so a commit left in this generated projection is
+        residue re-rendered on the detected family line and never written
+        back; without a detected line it fails loudly. A source-less internal
         dependency that the active workspace overlay does not own is a loud
         failure.
         """
@@ -163,10 +161,17 @@ class FlextInfraUtilitiesPyprojectRequirements:
             if parsed.failure:
                 return r[str].from_failure(parsed)
             url, declared_ref = parsed.value
-        ref = revisions.get(dependency_name, declared_ref)
+        if FlextInfraUtilitiesRepository.ref_is_commit(declared_ref):
+            if family_line is None:
+                return r[str].fail(
+                    f"internal dependency {dependency_name} pins commit "
+                    f"{declared_ref} and no FLEXT line is detected to re-render "
+                    "it: uv.lock records the commit and only `make upg` moves it"
+                )
+            declared_ref = family_line
         # The inline Git source is the sole provenance for each independent
         # project lock, including the orchestration repository.
-        inline = f"{head} @ git+{url}@{ref}"
+        inline = f"{head} @ git+{url}@{declared_ref}"
         return r[str].ok(
             f"{inline}; {marker_text}" if separator and marker_text else inline
         )
