@@ -159,6 +159,17 @@ class FlextInfraConfigModelsRender:
                 ),
             ),
         ] = ()
+        packages_read: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description=(
+                    "Grant the ci job packages: read because this "
+                    "distribution's gates resolve GitHub Packages; False keeps "
+                    "the job contents-only"
+                ),
+            ),
+        ] = False
 
     class MakeWorkflowRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input shared by generated local workflow surfaces."""

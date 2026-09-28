@@ -41,6 +41,11 @@ class FlextInfraConstantsDeps:
     PEP621_REQUIREMENT_HEAD_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^\s*(?P<head>[A-Za-z0-9_.-]+(?:\[[^\]]+\])?)"
     )
+    # An internal requirement declares its integration line; the commit it
+    # resolves to is recorded only in uv.lock, written by `make upg`.
+    GIT_COMMIT_OID_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$"
+    )
     BANNER: ClassVar[str] = (
         "# @flext-generated: continuous\n"
         "# @flext-owner: flext-infra/config/codegen.yaml"
