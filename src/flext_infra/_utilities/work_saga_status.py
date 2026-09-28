@@ -95,7 +95,7 @@ class FlextInfraWorkSagaStatus(FlextInfraWorkSagaCommon):
                 if not branch:
                     branch = metadata.branch
         listed = FlextInfraWorktreeService(
-            workspace_root=primary_root, operation=c.Infra.WorktreeOperation.LIST
+            repository_root=primary_root, operation=c.Infra.WorktreeOperation.LIST
         ).execute()
         lines.extend(
             (f"worktrees: error={listed.error}",)
