@@ -36,7 +36,7 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         snapshot = u.Cli.run_raw(
             ("/bin/ps", "-p", str(int(pid)), "-o", "stat="), timeout=timeout
         ).unwrap()
-        if snapshot.outcome.raw_return_code not in (0, 1) or snapshot.stderr:
+        if snapshot.outcome.raw_return_code not in {0, 1} or snapshot.stderr:
             raise RuntimeError(snapshot.stderr)
         state = snapshot.stdout.strip()
         if state and not state.startswith("Z"):
