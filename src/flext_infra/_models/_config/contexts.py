@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from functools import partial
 from pathlib import Path, PureWindowsPath
+from types import MappingProxyType
 from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
