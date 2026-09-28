@@ -29,6 +29,7 @@ from ._models.refactor import FlextInfraModelsRefactor
 from ._models.release import FlextInfraModelsRelease
 from ._models.rope import FlextInfraModelsRope
 from ._models.rope_move import FlextInfraModelsRopeMove
+from ._models.rope_rules import FlextInfraModelsRopeRules
 from ._models.scan import FlextInfraModelsScan
 from ._models.settings import FlextInfraSettingsModels
 from ._models.sonarcloud import FlextInfraModelsSonarcloud
@@ -65,6 +66,7 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsGit,
         FlextInfraModelsRope,
         FlextInfraModelsRopeMove,
+        FlextInfraModelsRopeRules,
         FlextInfraModelsScan,
         FlextInfraModelsSonarcloud,
         FlextInfraModelsTestmon,

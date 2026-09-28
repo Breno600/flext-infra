@@ -203,6 +203,7 @@ if TYPE_CHECKING:
     from .rope_imports import FlextInfraUtilitiesRopeImports
     from .rope_inventory import FlextInfraUtilitiesRopeInventory
     from .rope_module_patch import FlextInfraUtilitiesRopeModulePatch
+    from .rope_rule_loader import FlextInfraRopeRuleLoaderService
     from .rope_runtime import FlextInfraUtilitiesRopeRuntime
     from .rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
     from .rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
@@ -232,6 +233,7 @@ if TYPE_CHECKING:
 __all__: tuple[str, ...] = (
     "FlextInfraMypyDarwinSupervisor",
     "FlextInfraRopeProject",
+    "FlextInfraRopeRuleLoaderService",
     "FlextInfraUtilitiesBase",
     "FlextInfraUtilitiesCodegen",
     "FlextInfraUtilitiesCodegenFacades",
@@ -639,6 +641,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".rope_imports": ("FlextInfraUtilitiesRopeImports",),
             ".rope_inventory": ("FlextInfraUtilitiesRopeInventory",),
             ".rope_module_patch": ("FlextInfraUtilitiesRopeModulePatch",),
+            ".rope_rule_loader": ("FlextInfraRopeRuleLoaderService",),
             ".rope_runtime": ("FlextInfraUtilitiesRopeRuntime",),
             ".rope_runtime_base": ("FlextInfraUtilitiesRopeRuntimeBase",),
             ".rope_runtime_modules": ("FlextInfraUtilitiesRopeRuntimeModules",),
