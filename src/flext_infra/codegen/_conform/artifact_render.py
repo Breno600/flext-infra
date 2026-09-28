@@ -303,6 +303,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         dist
                     ),
                     system_packages=tuple(codegen.ci_system_packages.get(dist, ())),
+                    packages_read=dist in codegen.ci_package_registry_read,
                 )
             )
         destination_path = Path(destination)
