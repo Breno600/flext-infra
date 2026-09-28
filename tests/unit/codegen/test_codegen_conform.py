@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+from importlib.resources import files
 from pathlib import Path
 from typing import override
 
@@ -754,6 +755,65 @@ class TestsFlextInfraCodegenConform:
             )
         )
 
+        fixed_point = FlextInfraCodegenConform.execute_request(
+            u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.CHECK,
+            )
+        )
+        tm.ok(fixed_point)
+        tm.that(fixed_point.value.written_files, eq=())
+
+    # Why (suite budget): one conform apply plus a check over a full managed
+    # tree on a real git repo; the per-case wall only holds idle.
+    @pytest.mark.slow
+    def test_pre_bake_launcher_projection_converges_to_packaged_triple(
+        self, infra_git_repo: Path
+    ) -> None:
+        """A consumer still carrying the pre-bake triple converges in one gen.
+
+        Its launchers resolve the latest release at run time and predate the
+        ``make upg`` recipe that bakes one, so generation publishes the
+        packaged baked triple instead of re-staging launchers its own
+        validation rejects on every run.
+        """
+        root = infra_git_repo
+        TestsFlextInfraConformSupport.seed_infra_package_tree(root)
+        pre_bake_launcher = (
+            f"#!/bin/sh\n# https://github.com/jdx/mise/"
+            f"{c.Infra.MISE_LATEST_RESOLUTION_MARKER}\n"
+        )
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    root / relative,
+                    "1.2.3\n"
+                    if relative == c.Infra.MISE_VERSION_PIN_FILENAME
+                    else pre_bake_launcher,
+                )
+            )
+            (root / relative).chmod(mode)
+        u.Tests.commit_git_changes(root, "Seed pre-bake Mise projection")
+
+        tm.ok(
+            FlextInfraCodegenConform.execute_request(
+                u.Tests.conform_request(
+                    root,
+                    scope=c.Infra.CodegenConformScope.SELF,
+                    mode=c.Infra.CodegenConformMode.APPLY,
+                )
+            )
+        )
+
+        packaged = files("flext_infra").joinpath(c.Infra.MISE_COLD_START_DIRECTORY)
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            tm.that(
+                (root / relative).read_bytes(),
+                eq=packaged.joinpath(Path(relative).name).read_bytes(),
+            )
+            tm.that((root / relative).stat().st_mode & 0o777, eq=mode)
+        tm.ok(FlextInfraCodegenMiseArtifacts(repository_root=root).execute(), eq=True)
         fixed_point = FlextInfraCodegenConform.execute_request(
             u.Tests.conform_request(
                 root,

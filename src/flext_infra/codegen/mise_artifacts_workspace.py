@@ -10,6 +10,7 @@ from flext_core import r
 
 from .. import c, m, u
 from ..workspace import FlextInfraWorkspaceDetector
+from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
 from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
 
 if TYPE_CHECKING:
@@ -431,16 +432,12 @@ class FlextInfraMiseWorkspacePlanner:
         if runtime.failure:
             return runtime
         present = tuple(state.content is not None for state in runtime.value.states)
-        seed = False
         if all(present):
-            seed = any(
-                c.Infra.MISE_LATEST_RESOLUTION_MARKER.encode() in state.content
-                for state in runtime.value.states
-                if state.content is not None
-            )
-            if not seed:
+            if not FlextInfraMiseArtifactsDerivation.resolves_at_run_time(
+                runtime.value
+            ):
                 return runtime
-        if any(present) and not seed:
+        elif any(present):
             missing = ", ".join(
                 str(path)
                 for path, found in zip(paths, present, strict=True)
