@@ -98,13 +98,13 @@ class TestsFlextInfraAuditor:
         workspace = u.Tests.create_docs_workspace(
             tmp_path, project_names=tuple(projects or ())
         )
-        output_dir_value = (
-            str(workspace / output_dir) if output_dir == "custom_output" else output_dir
-        )
+        # The output directory is resolved relative to each project root, so a
+        # custom name is passed through as the relative name it is. Building an
+        # absolute path here is rejected by scope resolution.
         result = auditor.audit(
             workspace,
             projects=projects,
-            output_dir=output_dir_value,
+            output_dir=output_dir,
             params=m.Infra.AuditScopeParams(check=check),
         )
         # Every variant here is a valid option combination, so the observable
