@@ -47,7 +47,7 @@ class TestsFlextInfraCodegenVscode:
         doc = u.Tests.json_payload(result.value)
         tm.that("python.analysis.typeCheckingMode" in doc, eq=False)
         tm.that("python.analysis.diagnosticSeverityOverrides" in doc, eq=False)
-        setting = config.Infra.codegen.vscode.runtime_interpreter_setting
+        setting = "python.defaultInterpreterPath"
         projected_path = str(doc[setting])
         tm.that(projected_path.startswith("${workspaceFolder}/"), eq=True)
         tm.that(

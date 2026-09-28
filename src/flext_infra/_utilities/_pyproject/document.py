@@ -86,8 +86,6 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         cls._sync_dependency_groups(
             source,
             project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
             required_dev_dependencies=required_dev_dependencies,
         )
         normalized = cls._normalize_requirements(

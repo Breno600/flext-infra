@@ -103,6 +103,7 @@ class FlextInfraWorkspaceEnvironmentMixin:
             context
             if context is not None
             else m.Infra.EnvrcRenderSpec(
+                repository_root_rel=".",
                 state_directory_name=config.Infra.codegen.toolchain.state_directory_name,
                 scratch_namespace=config.Infra.codegen.toolchain.scratch_namespace,
                 scratch_home_relative=(

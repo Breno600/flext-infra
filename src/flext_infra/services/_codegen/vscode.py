@@ -176,7 +176,7 @@ class FlextInfraCodegenVscodeMixin:
         relative_venv = os.path.relpath(runtime_venv, repository_root).replace(
             "\\", "/"
         )
-        settings[spec.runtime_interpreter_setting] = (
+        settings["python.defaultInterpreterPath"] = (
             f"${{workspaceFolder}}/{relative_venv}"
         )
         # The three exclude maps are complete projections of the artifact SSOT.
