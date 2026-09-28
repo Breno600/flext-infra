@@ -120,6 +120,10 @@ Infra:
       make_version: latest
       # Mise self-provisioning: pin the mise bootstrap binary so it never
       # resolves 'latest' at runtime. Override to pin a specific release.
+      mise_version: "2026.9.15"
+      # Mise is not a registry tool name; it is provisioned from the aqua
+      # backend, so the generated [tools] key must be the aqua selector.
+      mise_namespace: "aqua:jdx/mise"
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools owned by ai-hub's global mise
@@ -609,9 +613,6 @@ Infra:
       - {name: .doltcfg}
       - {name: .hypothesis}
       - {name: .git, gitignore: false, source_scan_ignore: true}
-    # mro-operator-20260918: mimosa agent tool state (hook-state/hook-status)
-    # is machine-local cache, never production input.
-      - {name: .mimosa, source_scan_ignore: true}
       - {name: .mypy_cache, source_scan_ignore: true}
       - {name: .omo}
       - {name: .pylance_cache, vscode_exclude: false}
