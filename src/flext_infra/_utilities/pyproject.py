@@ -175,9 +175,7 @@ class FlextInfraUtilitiesPyproject:
         if payload is None:
             return r[str].fail(f"invalid TOML in {lock_path.name}")
         raw_tools = payload.get("tools")
-        raw_entry = (
-            raw_tools.get(tool_name) if isinstance(raw_tools, Mapping) else None
-        )
+        raw_entry = raw_tools.get(tool_name) if isinstance(raw_tools, Mapping) else None
         if isinstance(raw_entry, Sequence) and not isinstance(raw_entry, str):
             raw_entry = raw_entry[0] if raw_entry else None
         version = raw_entry.get("version") if isinstance(raw_entry, Mapping) else None
