@@ -259,6 +259,7 @@ if TYPE_CHECKING:
     from .validate.stub_chain import FlextInfraStubSupplyChain
     from .validate.testmon_db import FlextInfraTestmonDbInspector
     from .validate.tier_whitelist import FlextInfraValidateTierWhitelist
+    from .work import FlextInfraWorkService
     from .workspace.detector import FlextInfraWorkspaceDetector
     from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
     from .workspace.environment_beads import FlextInfraWorkspaceEnvironmentSync
@@ -457,6 +458,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraValidateTierWhitelist",
     "FlextInfraValidationCommandRoutes",
     "FlextInfraValidationRoutes",
+    "FlextInfraWorkService",
     "FlextInfraWorkspaceCheckGatesMixin",
     "FlextInfraWorkspaceChecker",
     "FlextInfraWorkspaceDetector",
@@ -779,6 +781,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".validate.stub_chain": ("FlextInfraStubSupplyChain",),
             ".validate.testmon_db": ("FlextInfraTestmonDbInspector",),
             ".validate.tier_whitelist": ("FlextInfraValidateTierWhitelist",),
+            ".work": ("FlextInfraWorkService",),
             ".workspace": ("workspace",),
             ".workspace.detector": ("FlextInfraWorkspaceDetector",),
             ".workspace.environment": ("FlextInfraWorkspaceEnvironmentMixin",),
