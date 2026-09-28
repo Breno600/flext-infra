@@ -109,6 +109,72 @@ class TestsFlextInfraCodegenRepositoryRootFanout:
         tm.that(rendered, has="lock --project")
         tm.that(rendered, has="--upgrade --refresh")
 
+    def test_repository_root_upg_locks_tools_from_the_rendered_manifest(
+        self, tmp_path: Path
+    ) -> None:
+        """One ``make upg`` converges: every final lock follows ``gen``.
+
+        ``gen`` renders the tool manifests of the upgraded generator, so the
+        first half ends at ``gen`` and hands off to a fresh make invocation of
+        the regenerated Makefile. That second half locks the tools again from
+        the rendered manifest (without re-resolving the Mise release), then
+        re-resolves, reprovisions and checks uv.lock before post-upg.
+        """
+        repository_root = self._render_root_makefile(tmp_path)
+        handoff = {
+            "SETUP_DIRENV": tm.not_none(shutil.which("direnv")),
+            "SETUP_DIRENV_XDG_DATA_HOME": str(tmp_path / "direnv-data"),
+        }
+        first, second, database = (
+            tm.ok(
+                u.Tests.run_isolated_make(arguments, cwd=repository_root, env=handoff)
+            )
+            for arguments in (
+                ["--dry-run", "_upg_lifecycle"],
+                ["--dry-run", "_upg_converge"],
+                ["--dry-run", "--print-data-base", "help"],
+            )
+        )
+        for execution in (first, second, database):
+            tm.that(
+                u.Cli.process_succeeded(execution.outcome),
+                eq=True,
+                msg=execution.stdout + execution.stderr,
+            )
+        steps = first.stdout.splitlines()
+        positions = [
+            next(i for i, step in enumerate(steps) if needle in step)
+            for needle in (
+                "--upgrade --refresh",
+                "deps modernize",
+                " gen",
+                "_upg_relock",
+            )
+        ]
+        tm.that(positions, eq=sorted(positions))
+        tm.that(steps[positions[-1] :], len=1)
+        tm.that(sum("lock --project" in step for step in steps), eq=1)
+        converge = second.stdout.splitlines()
+        final_lock = next(i for i, s in enumerate(converge) if "lock --project" in s)
+        lock_check = next(i for i, s in enumerate(converge) if "--check" in s)
+        tm.that(final_lock < lock_check, eq=True)
+        tm.that(second.stdout + second.stderr, has="_upg_activated")
+        variables = {
+            line
+            for line in database.stdout.splitlines()
+            if line.startswith(("upg: TOOL_BOOTSTRAP_", "_upg_relock: TOOL_BOOTSTRAP_"))
+        }
+        tm.that(
+            variables,
+            eq={
+                "upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle",
+                "upg: TOOL_BOOTSTRAP_RESOLVE := 1",
+                "upg: TOOL_BOOTSTRAP_LOCK := 1",
+                "_upg_relock: TOOL_BOOTSTRAP_LIFECYCLE := _upg_converge",
+                "_upg_relock: TOOL_BOOTSTRAP_LOCK := 1",
+            },
+        )
+
     def _render_root_makefile(self, tmp_path: Path) -> Path:
         """Render base/Makefile.j2 from a typed workspace fixture."""
         repository = u.Tests.repository_ref("workspace-fixture")
