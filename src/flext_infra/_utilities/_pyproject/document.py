@@ -49,14 +49,12 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         required_dev_dependencies: t.StrSequence,
         uv_resolution: m.Infra.UvResolutionSpec,
         declared_sources: t.StrMapping | None = None,
-        workspace_members: t.StrSequence = (),
     ) -> p.Result[str]:
         """Return canonical TOML with autonomous dependencies and uv policy.
 
         The workspace manifest owns the topology facts, including the
-        namespace production scope its project declares. ``workspace_members``
-        names the member distributions a workspace root environment serves;
-        every other repository passes none.
+        namespace production scope its project declares and the members a
+        workspace root environment serves.
         """
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
@@ -66,7 +64,13 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             source,
             project_name=project_name,
             required_dev_dependencies=required_dev_dependencies,
-            workspace_members=workspace_members,
+            workspace_members=tuple(
+                member.distribution
+                for member in workspace.subprojects
+                if member.package
+            )
+            if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE
+            else (),
         )
         normalized = cls._normalize_requirements(
             source, workspace=workspace, declared_sources=declared_sources
