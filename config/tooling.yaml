@@ -593,11 +593,6 @@ Infra:
           # scripts/legado/dispatch.py.
           project-shared-search-paths: []
       pytest:
-        testmon-state-home-variable: XDG_STATE_HOME
-        testmon-datafile-variable: TESTMON_DATAFILE
-        testmon-namespace: flext/testmon
-        testmon-database-filename: .testmondata
-        testmon-lock-filename: cache.lock
         # flext-j47u (codex): scaffold/modernizer consume one complete pytest model.
         # A case that does not fit is a test defect to optimize. Fifteen
         # seconds still fails a blocked filesystem
@@ -616,28 +611,28 @@ Infra:
         # Operator decision 2026-09-26: one failure stops the invocation. The
         # next run starts from the corrected owner instead of accumulating a
         # permissive backlog of unrelated failures.
-        max-failures: 0
-        enforcement-plugin: flext_tests_enforcement
-        asyncio-default-fixture-loop-scope: function
-        progress-args: [--verbose]
-        report-args: [-ra, --durations=25, --durations-min=0.001, --tb=short]
-        diagnostic-args: [-rA, --durations=0, --tb=long, --showlocals]
-        # One worker makes maxfail exact: no second in-flight case can fail
-        # after the first failure has stopped the invocation.
-        parallel-workers: 1
-        # Per declared-project worker ceilings ([project].name → workers),
-        # resolved by the runner over the default above: a consumer whose
-        # measured suite cannot fit the single-worker process boundary
-        # declares its ceiling here, inside the fleet cycle, instead of
-        # patching projections. With workers > 1 maxfail still stops the
-        # invocation; in-flight cases may report after the stop, which the
-        # declaring consumer accepts by declaring.
-        parallel-worker-overrides:
-          cosmos-docgen: 4
-          flext-infra: 4
-        # Reserve physical memory for each xdist worker and its child process
-        # tree; this bound may reduce the tested ceiling on smaller hosts.
-        parallel-worker-memory-gb: 2
+        max-failures: 1
+          enforcement-plugin: flext_tests_enforcement
+          asyncio-default-fixture-loop-scope: function
+          progress-args: [--verbose]
+          report-args: [-ra, --durations=25, --durations-min=0.001, --tb=short]
+          diagnostic-args: [-rA, --durations=0, --tb=long, --showlocals]
+          # One worker makes maxfail exact: no second in-flight case can fail
+          # after the first failure has stopped the invocation.
+          parallel-workers: 1
+          # Per declared-project worker ceilings ([project].name → workers),
+          # resolved by the runner over the default above: a consumer whose
+          # measured suite cannot fit the single-worker process boundary
+          # declares its ceiling here, inside the fleet cycle, instead of
+          # patching projections. With workers > 1 maxfail still stops the
+          # invocation; in-flight cases may report after the stop, which the
+          # declaring consumer accepts by declaring.
+          parallel-worker-overrides:
+            cosmos-docgen: 4
+            flext-infra: 4
+          # Reserve physical memory for each xdist worker and its child process
+          # tree; this bound may reduce the tested ceiling on smaller hosts.
+          parallel-worker-memory-gb: 2
         # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
         profile-sort: cumulative
