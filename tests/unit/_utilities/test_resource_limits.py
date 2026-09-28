@@ -86,7 +86,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         ("scenario", "expected"),
         [
             ("exit", 7),
-            ("deadline", 124),
+            # Real interpreter startup and controlled group cleanup use the
+            # existing integration-harness budget, not the default case budget.
+            pytest.param("deadline", 124, marks=pytest.mark.slow),
             # Darwin's supervisor samples group RSS and stops it (137); Linux
             # prlimit makes the allocation fail inside the process (exit 1).
             ("memory", (137 if sys.platform == "darwin" else 1)),
@@ -100,7 +102,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             memory_limit_mb=max(1, c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 8)
             if scenario == "memory"
             else c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-            timeout_seconds=max(1, c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 10)
+            timeout_seconds=test_u.Tests.mypy_deadline_limit().timeout_seconds
             if scenario == "deadline"
             else c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
         )
@@ -126,15 +128,13 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 has="RSS limit reached" if sys.platform == "darwin" else "MemoryError",
             )
 
+    @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])
     def test_resource_limit_stops_resistant_descendant_group(
         self, tmp_path: Path, expected: int
     ) -> None:
         """Kill a TERM-resistant descendant after leader exit or deadline."""
-        limit = m.Infra.MypyResourceLimit(
-            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-            timeout_seconds=max(1, c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 10),
-        )
+        limit = test_u.Tests.mypy_deadline_limit()
         sleep = f"time.sleep({limit.timeout_seconds + c.Infra.TIMEOUT_KILL_AFTER_SECONDS + 1})"
         tail = "sys.exit(7)" if expected == 7 else sleep
         source = (

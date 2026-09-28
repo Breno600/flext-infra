@@ -7,13 +7,27 @@ import sys
 from pathlib import Path
 from textwrap import indent
 
-from flext_infra import u
+from flext_infra import config, u
 from tests import c, m, p, t
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 
 
 class TestsFlextInfraUtilitiesToolingFixtureMixin:
     """Executable, Make, and toolchain-environment fixture helpers."""
+
+    @staticmethod
+    def mypy_deadline_limit() -> m.Infra.MypyResourceLimit:
+        """Reserve harness startup and cleanup inside the configured slow budget."""
+        policy = config.Infra.tooling.tools.pytest
+        available = (
+            policy.slow_timeout_seconds
+            - c.Infra.MYPY_TIMEOUT_GRACE_SECONDS
+            - policy.termination_grace_seconds
+        )
+        return m.Infra.MypyResourceLimit(
+            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
+            timeout_seconds=min(c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT, available // 2),
+        )
 
     @staticmethod
     def mypy_workload(root: Path, plugin_body: str = "") -> m.Infra.MypyInvocation:
