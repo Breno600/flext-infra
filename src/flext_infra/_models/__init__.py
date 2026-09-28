@@ -80,7 +80,6 @@ if TYPE_CHECKING:
     from .testmon import FlextInfraModelsTestmon
     from .transformers import FlextInfraModelsTransformers
     from .validate import FlextInfraModelsCore
-    from .work_lane import FlextInfraModelsWorkLane
     from .workspace import FlextInfraModelsWorkspace
     from .worktree import FlextInfraModelsWorktree
 
@@ -149,7 +148,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsSonarcloud",
     "FlextInfraModelsTestmon",
     "FlextInfraModelsTransformers",
-    "FlextInfraModelsWorkLane",
     "FlextInfraModelsWorkspace",
     "FlextInfraModelsWorktree",
     "FlextInfraSettingsModels",
@@ -238,7 +236,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".testmon": ("FlextInfraModelsTestmon",),
             ".transformers": ("FlextInfraModelsTransformers",),
             ".validate": ("FlextInfraModelsCore",),
-            ".work_lane": ("FlextInfraModelsWorkLane",),
             ".workspace": ("FlextInfraModelsWorkspace",),
             ".worktree": ("FlextInfraModelsWorktree",),
         }),

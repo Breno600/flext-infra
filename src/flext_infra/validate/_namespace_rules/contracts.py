@@ -169,6 +169,8 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
         root = node
         while cls.kind(root) == "Attribute":
             root = getattr(root, "value", None)
+        if not isinstance(root, p.Infra.RopeAstNode):
+            return ()
         offset = u.Infra.source_offset(visit.source, root)
         scope = u.Infra.scope_at(visit.pymodule, offset)
         binding = u.Infra.resolve_symbol(scope, root)
