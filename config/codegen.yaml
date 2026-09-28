@@ -357,24 +357,12 @@ Infra:
         - gate: smells
           authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
           reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
-      # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
-      # save_enabled stays false while storage-limit API returns HTTP 402 /
-      # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
+      # One filename and the root-relative runner paths; the runner places the
+      # database in platformdirs' external per-worktree cache.
       testmon_cache:
-        schema_version: 1
         database_filename: .testmondata
         target_directory: tests
         reports_directory: .reports/tests
-        mode: bootstrap
-        save_enabled: false
-        max_bootstrap_generations: 3
-        max_stable_generations: 2
-        per_repo_budget_bytes: 536870912
-        warning_threshold_percent: 70
-        maintenance_threshold_percent: 75
-        block_threshold_percent: 80
-        allowed_save_refs: [refs/heads/0.12.0-dev]
-        key_prefix: testmon-v1
       # Public verbs execute their declared operation without mode selectors.
       ci:
         variable: CI
@@ -1183,6 +1171,7 @@ Infra:
           - pytest-testmon>=2.2.0
           - pytest-timeout
           - pytest-xdist
+          - platformdirs>=4.12.0
         # types-* stub floors are declared here (cooldown-eligible dates).
         # Lock-fed raising wrote dated stub versions into the projections;
         # dated stubs churn weekly, so the SSOT owns the clamp and the

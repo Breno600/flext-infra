@@ -497,9 +497,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that("UV ?= uv" in makefile, eq=False)
         # UV_RUN's environment binding is exercised by the real runtime test
         # above, including a parent uv workspace with a different default venv.
-        # Nothing forces an external location (operator 2026-09-27): the
-        # environment is the runtime checkout's own, and temp files, bytecode
-        # and the testmon database use the tools' defaults.
+        # Make does not inject a caller-selected database path. The canonical
+        # pytest runner binds TESTMON_DATAFILE to its external persistent cache.
         tm.that(
             makefile,
             has=f"override RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}",
