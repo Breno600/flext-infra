@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from ._git.worktree_removal import FlextInfraUtilitiesGitWorktreeRemovalMixin
     from ._git.worktree_roots import FlextInfraUtilitiesGitWorktreeRootsMixin
     from ._git.worktree_status import FlextInfraUtilitiesGitWorktreeStatusMixin
+    from ._mypy_profile import FlextInfraMypyProfiler
     from ._mypy_supervisor import FlextInfraMypyDarwinSupervisor
     from ._project_discovery_candidates import (
         FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
@@ -215,6 +216,7 @@ if TYPE_CHECKING:
 
 __all__: tuple[str, ...] = (
     "FlextInfraMypyDarwinSupervisor",
+    "FlextInfraMypyProfiler",
     "FlextInfraRopeProject",
     "FlextInfraRopeRuleLoaderService",
     "FlextInfraUtilitiesBase",
@@ -440,6 +442,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._git.worktree_removal": ("FlextInfraUtilitiesGitWorktreeRemovalMixin",),
             "._git.worktree_roots": ("FlextInfraUtilitiesGitWorktreeRootsMixin",),
             "._git.worktree_status": ("FlextInfraUtilitiesGitWorktreeStatusMixin",),
+            "._mypy_profile": ("FlextInfraMypyProfiler",),
             "._mypy_supervisor": ("FlextInfraMypyDarwinSupervisor",),
             "._project_discovery_candidates": (
                 "FlextInfraUtilitiesProjectDiscoveryCandidatesMixin",
