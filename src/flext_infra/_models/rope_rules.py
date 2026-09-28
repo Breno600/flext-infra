@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Literal
 
-from flext_meltano import m, u
+from flext_cli import m, u
 
 
 class FlextInfraModelsRopeRules:
