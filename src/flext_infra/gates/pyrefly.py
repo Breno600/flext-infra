@@ -145,7 +145,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
                 if line.strip()
             ]
             if output_lines and all(
-                line.lstrip().startswith(self.checker_info_prefixes)
+                line.lstrip().startswith(tuple(self.checker_info_prefixes))
                 for line in output_lines
             ):
                 # Content-only project topology (package:false root, no python
