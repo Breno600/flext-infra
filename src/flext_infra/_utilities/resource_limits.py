@@ -12,6 +12,7 @@ from flext_cli import u
 from flext_infra import c, m, t
 
 from .process import FlextInfraUtilitiesProcess
+from .project_discovery import FlextInfraUtilitiesProjectDiscovery
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -84,15 +85,35 @@ class FlextInfraUtilitiesResourceLimits:
     @staticmethod
     def mypy_command(invocation: m.Infra.MypyInvocation) -> t.StrSequence:
         """Construct the owned checker entrypoint from typed data, never command text."""
+        interpreter = sys.executable
+        if invocation.workspace is not None:
+            managed_python = FlextInfraUtilitiesProjectDiscovery.runtime_python(
+                invocation.workspace
+            )
+            if not managed_python.is_file():
+                msg = f"managed workspace interpreter is missing: {managed_python}"
+                raise FileNotFoundError(msg)
+            interpreter = str(managed_python)
+            if invocation.profile_output is None:
+                managed_mypy = managed_python.with_name(
+                    f"{c.Infra.MYPY}.exe" if sys.platform == "win32" else c.Infra.MYPY
+                )
+                if not managed_mypy.is_file():
+                    msg = f"managed workspace checker is missing: {managed_mypy}"
+                    raise FileNotFoundError(msg)
+                return (
+                    str(managed_mypy),
+                    *FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation),
+                )
         if invocation.profile_output is not None:
             return (
-                sys.executable,
+                interpreter,
                 "-m",
                 f"{__package__}._mypy_profile",
                 invocation.model_dump_json(),
             )
         return (
-            sys.executable,
+            interpreter,
             "-m",
             c.Infra.MYPY,
             *FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation),

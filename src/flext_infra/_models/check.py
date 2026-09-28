@@ -115,6 +115,9 @@ class FlextInfraModelsCheck:
             t.VariadicTuple[Path],
             m.Field(min_length=1, description="Files or directories to check"),
         ]
+        workspace: Annotated[
+            Path | None, m.Field(description="Workspace owning the checker environment")
+        ] = None
         config_file: Annotated[
             Path | None, m.Field(description="Owned Mypy configuration")
         ] = None

@@ -210,7 +210,9 @@ class FlextInfraUtilitiesProtectedEditLinting:
         """Build one canonical protected-edit lint command."""
         if tool_name == c.Infra.MYPY:
             return FlextInfraUtilitiesResourceLimits.mypy_limited_command(
-                m.Infra.MypyInvocation(targets=(py_file.resolve(),))
+                m.Infra.MypyInvocation(
+                    targets=(py_file.resolve(),), workspace=workspace
+                )
             )
         command: t.StrSequence = (
             *cls._workspace_tool_command(workspace, template[0]),

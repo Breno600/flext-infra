@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import sys
 from functools import lru_cache
 from operator import attrgetter
 from pathlib import Path
@@ -254,6 +255,15 @@ class FlextInfraUtilitiesProjectDiscovery(
             m.Infra.GitRepoRequest(repo_root=project_root)
         ).unwrap()
         return runtime.repository_root / c.Infra.ENVIRONMENT_DIRECTORY
+
+    @classmethod
+    def runtime_python(cls, project_root: Path) -> Path:
+        """Resolve the fixed Python entrypoint inside the managed environment."""
+        return (
+            cls.runtime_environment_dir(project_root)
+            / ("Scripts" if sys.platform == "win32" else "bin")
+            / ("python.exe" if sys.platform == "win32" else c.Infra.PYTHON)
+        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesProjectDiscovery"]
