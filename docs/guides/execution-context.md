@@ -97,10 +97,12 @@ congelados a partir desses locks, que é o caminho do CI. Dependências Git segu
 das branches de integração declaradas e `APPLY` continua removido. Cada requisito
 interno `flext-*` declara no `pyproject.toml` a sua linha de integração, nunca um
 commit: o commit resolvido existe só no `uv.lock`, e só o `make upg` o move para o tip
-da linha. O manifesto não fixa revisões (`project.dependency_revisions` foi removido) e
-o `make gen` recusa um commit declarado em vez de regravá-lo (operador 2026-09-28,
-`flext-oe420`). Corrija o responsável do setup ou do `upg` e regenere pelo `make gen`;
-instalações manuais não substituem o ciclo.
+da linha. O manifesto não fixa revisões (`project.dependency_revisions` foi removido).
+Um commit deixado na projeção do `pyproject.toml` é resíduo: o `make gen` o re-renderiza
+na linha detectada e nunca o regrava; quando a projeção não traz linha alguma, o
+`project.flext_source` escrito à mão no manifesto a declara, e um commit numa fonte
+escrita à mão falha (operador 2026-09-28, `flext-oe420`). Corrija o responsável do setup
+ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o ciclo.
 
 O mesmo `make upg` é o único escritor de `mise.version`, `bin/mise` e `bin/mise.cmd`.
 Ele resolve o release do Mise uma vez, pelo próprio Mise (`mise latest github:jdx/mise`,
