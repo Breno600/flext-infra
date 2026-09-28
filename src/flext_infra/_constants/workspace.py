@@ -6,6 +6,7 @@ from enum import StrEnum, unique
 from typing import TYPE_CHECKING, ClassVar
 
 from .codegen_project import FlextInfraConstantsCodegenProject
+from .validate import FlextInfraConstantsSharedInfra
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -67,6 +68,18 @@ class FlextInfraConstantsWorkspace:
         PLAIN = "plain"
         EPIC = "epic"
         CHILD = "child"
+
+    @unique
+    class BeadIssueStatus(StrEnum):
+        """Canonical statuses exposed by the configured Beads service."""
+
+        OPEN = "open"
+        IN_PROGRESS = "in_progress"
+        BLOCKED = "blocked"
+        DEFERRED = "deferred"
+        CLOSED = "closed"
+        PINNED = "pinned"
+        HOOKED = "hooked"
 
     @unique
     class WorkProvisioningState(StrEnum):

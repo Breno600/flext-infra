@@ -94,7 +94,7 @@ class FlextInfraWorkSagaStart(FlextInfraWorkSagaCommon):
             if fetched.failure:
                 return r.fail(fetched.error or "work start failed to fetch origin")
             created = FlextInfraWorktreeService(
-                workspace_root=primary_root,
+                repository_root=primary_root,
                 operation=c.Infra.WorktreeOperation.ADD,
                 branch=branch,
                 base=(

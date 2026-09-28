@@ -220,7 +220,7 @@ def test_member_start_upgrades_legacy_scalar_metadata_to_workspace_matrix(
     branch = "feature/member-matrix"
     lane = tm.ok(
         FlextInfraWorktreeService(
-            workspace_root=repository,
+            repository_root=repository,
             operation=c.Infra.WorktreeOperation.ADD,
             branch=branch,
             base="HEAD",
@@ -259,7 +259,7 @@ def test_epic_start_preserves_legacy_workspace_matrix_during_upgrade(
     lane = Path(
         tm.ok(
             FlextInfraWorktreeService(
-                workspace_root=repository,
+                repository_root=repository,
                 operation=c.Infra.WorktreeOperation.ADD,
                 branch=branch,
                 base="HEAD",
