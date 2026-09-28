@@ -187,6 +187,21 @@ class FlextInfraModelsDepsToolConfig(
                 description="Pytest-xdist scheduler for full runs.",
             ),
         ]
+        parallel_schedule_chunk: Annotated[
+            int,
+            m.Field(
+                alias="parallel-schedule-chunk",
+                ge=1,
+                description=(
+                    "Maximum tests scheduled per dispatch step under the load "
+                    "distribution. One makes the declared max-failures stop "
+                    "take effect at the next item boundary in every worker "
+                    "instead of after each worker drains a large pre-assigned "
+                    "chunk, so a red suite exits typed and early at fleet "
+                    "scale inside the fixed run budget."
+                ),
+            ),
+        ]
         parallel_worker_overrides: Annotated[
             Mapping[str, int],
             m.Field(
