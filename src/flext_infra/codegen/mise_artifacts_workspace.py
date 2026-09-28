@@ -432,7 +432,6 @@ class FlextInfraMiseWorkspacePlanner:
         if runtime.failure:
             return runtime
         present = tuple(state.content is not None for state in runtime.value.states)
-        seed = False
         if all(present):
             if not FlextInfraMiseArtifactsDerivation.resolves_at_run_time(
                 runtime.value
