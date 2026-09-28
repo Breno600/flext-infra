@@ -9,15 +9,7 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from . import (
-        _git,
-        _promoted,
-        _pyproject,
-        _rope,
-        _rope_analysis,
-        _semantic_cutover,
-        _work,
-    )
+    from . import _git, _promoted, _pyproject, _rope, _rope_analysis, _semantic_cutover
     from ._docs_audit_detectors import FlextInfraUtilitiesDocsAuditDetectorsMixin
     from ._docs_command_contract import FlextInfraUtilitiesDocsCommandContractMixin
     from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
@@ -122,10 +114,6 @@ if TYPE_CHECKING:
     from ._semantic_cutover.private_imports import (
         FlextInfraUtilitiesSemanticCutoverPrivateImports,
     )
-    from ._work.ownership import FlextInfraWorkOwnership
-    from ._work.reservation import FlextInfraWorkReservation
-    from ._work.start_support import FlextInfraWorkStartSupport
-    from ._work.topology import FlextInfraWorkTopology
     from .base import FlextInfraUtilitiesBase
     from .census import FlextInfraUtilitiesRefactorCensus
     from .codegen import FlextInfraUtilitiesCodegen
@@ -218,12 +206,6 @@ if TYPE_CHECKING:
     from .transformer_header import FlextInfraUtilitiesTransformerHeader
     from .transformer_header_parser import FlextInfraUtilitiesTransformerHeaderParser
     from .versioning import FlextInfraUtilitiesVersioning
-    from .work_beads import FlextInfraUtilitiesWorkBeads
-    from .work_saga_common import FlextInfraWorkSagaCommon
-    from .work_saga_finish import FlextInfraWorkSagaFinish
-    from .work_saga_publish import FlextInfraWorkSagaPublish
-    from .work_saga_start import FlextInfraWorkSagaStart
-    from .work_saga_status import FlextInfraWorkSagaStatus
     from .workspace_fingerprint import FlextInfraUtilitiesWorkspaceFingerprint
     from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
     from .worktree_lifecycle import FlextInfraWorktreeLifecycle
@@ -395,18 +377,8 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesTransformerHeader",
     "FlextInfraUtilitiesTransformerHeaderParser",
     "FlextInfraUtilitiesVersioning",
-    "FlextInfraUtilitiesWorkBeads",
     "FlextInfraUtilitiesWorkspaceFingerprint",
     "FlextInfraUtilitiesWorkspaceManifest",
-    "FlextInfraWorkOwnership",
-    "FlextInfraWorkReservation",
-    "FlextInfraWorkSagaCommon",
-    "FlextInfraWorkSagaFinish",
-    "FlextInfraWorkSagaPublish",
-    "FlextInfraWorkSagaStart",
-    "FlextInfraWorkSagaStatus",
-    "FlextInfraWorkStartSupport",
-    "FlextInfraWorkTopology",
     "FlextInfraWorktreeLifecycle",
     "FlextInfraWorktreeProvisioning",
     "_git",
@@ -415,7 +387,6 @@ __all__: tuple[str, ...] = (
     "_rope",
     "_rope_analysis",
     "_semantic_cutover",
-    "_work",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -553,11 +524,6 @@ _LAZY_IMPORTS = MappingProxyType(
             "._semantic_cutover.private_imports": (
                 "FlextInfraUtilitiesSemanticCutoverPrivateImports",
             ),
-            "._work": ("_work",),
-            "._work.ownership": ("FlextInfraWorkOwnership",),
-            "._work.reservation": ("FlextInfraWorkReservation",),
-            "._work.start_support": ("FlextInfraWorkStartSupport",),
-            "._work.topology": ("FlextInfraWorkTopology",),
             ".base": ("FlextInfraUtilitiesBase",),
             ".census": ("FlextInfraUtilitiesRefactorCensus",),
             ".codegen": ("FlextInfraUtilitiesCodegen",),
@@ -658,12 +624,6 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraUtilitiesTransformerHeaderParser",
             ),
             ".versioning": ("FlextInfraUtilitiesVersioning",),
-            ".work_beads": ("FlextInfraUtilitiesWorkBeads",),
-            ".work_saga_common": ("FlextInfraWorkSagaCommon",),
-            ".work_saga_finish": ("FlextInfraWorkSagaFinish",),
-            ".work_saga_publish": ("FlextInfraWorkSagaPublish",),
-            ".work_saga_start": ("FlextInfraWorkSagaStart",),
-            ".work_saga_status": ("FlextInfraWorkSagaStatus",),
             ".workspace_fingerprint": ("FlextInfraUtilitiesWorkspaceFingerprint",),
             ".workspace_manifest": ("FlextInfraUtilitiesWorkspaceManifest",),
             ".worktree_lifecycle": ("FlextInfraWorktreeLifecycle",),

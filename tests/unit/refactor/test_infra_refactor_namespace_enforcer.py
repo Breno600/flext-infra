@@ -720,8 +720,10 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             apply=True
         )
 
-        tm.that(report.total_runtime_alias_violations, eq=0)
-        tm.that(report.total_manual_typing_violations, eq=0)
+        tm.that(report.projects, empty=False)
+        for project_report in report.projects:
+            tm.that(project_report.runtime_alias_violations, empty=True)
+            tm.that(project_report.manual_typing_violations, empty=True)
         tm.that(alias_file.read_text(encoding="utf-8"), eq=alias_source)
 
     def test_namespace_enforcer_skips_dynamic_dirs_by_default(

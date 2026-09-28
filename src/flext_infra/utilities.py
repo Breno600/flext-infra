@@ -11,8 +11,6 @@ from __future__ import annotations
 
 from flext_cli import FlextCliUtilities
 
-from flext_infra._utilities.work_beads import FlextInfraUtilitiesWorkBeads
-
 from ._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
 from ._utilities.base import FlextInfraUtilitiesBase
 from ._utilities.census import FlextInfraUtilitiesRefactorCensus
@@ -163,7 +161,6 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesSignatureRules,
         FlextInfraUtilitiesPrivateImportAncestry,
         FlextInfraUtilitiesPrivateImportFacades,
-        FlextInfraUtilitiesWorkBeads,
     ):
         """Infrastructure-domain utilities - all methods exposed directly."""
 

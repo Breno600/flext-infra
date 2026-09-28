@@ -166,17 +166,11 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
         """Reject imported Pydantic v1 decorators, never same-spelled local bindings."""
         if cls.kind(node) not in {"Name", "Attribute"}:
             return ()
-        root_candidate = node
-        while cls.kind(root_candidate) == "Attribute":
-            parent = getattr(root_candidate, "value", None)
-            if parent is None:
-                msg = "Rope attribute node has no parent expression"
-                raise TypeError(msg)
-            root_candidate = parent
-        if not isinstance(root_candidate, p.Infra.RopeAstNode):
-            msg = "Rope decorator root is not a typed AST node"
-            raise TypeError(msg)
-        root = root_candidate
+        root = node
+        while cls.kind(root) == "Attribute":
+            root = getattr(root, "value", None)
+        if not isinstance(root, p.Infra.RopeAstNode):
+            return ()
         offset = u.Infra.source_offset(visit.source, root)
         scope = u.Infra.scope_at(visit.pymodule, offset)
         binding = u.Infra.resolve_symbol(scope, root)

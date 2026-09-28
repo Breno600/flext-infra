@@ -287,3 +287,52 @@ class TestsFlextInfraCodegenMakeLockContract:
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(pin.exists(), eq=False)
+
+    @pytest.mark.parametrize("attached", [False, True])
+    def test_setup_bootstraps_from_the_runtime_root_pin(
+        self, tmp_path: Path, *, attached: bool
+    ) -> None:
+        """Setup reads the Mise pin of the runtime that owns the checkout.
+
+        A standalone checkout owns its runtime. An attached member runs on its
+        superproject runtime, so the member pin (kept for standalone
+        consumption) never contradicts the runtime pin during setup.
+        """
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.STANDALONE
+        )
+        pin = project_root / c.Infra.MISE_VERSION_PIN_FILENAME
+        pinned = pin.read_text(encoding="utf-8")
+        release = pinned.strip().splitlines()[-1]
+        components = release.split(".")
+        member_release = ".".join((*components[:-1], str(int(components[-1]) + 1)))
+        if attached:
+            runtime_root = project_root.parent
+            u.Tests.initialize_git_repo(runtime_root)
+            (runtime_root / pin.name).write_text(pinned, encoding="utf-8")
+            pin.write_text(pinned.replace(release, member_release), encoding="utf-8")
+            superproject = tm.ok(
+                u.Cli.capture(
+                    ["git", "rev-parse", "--show-superproject-working-tree"],
+                    cwd=project_root,
+                )
+            )
+            tm.that(Path(superproject).resolve(), eq=runtime_root.resolve())
+        storage_variable = u.Infra.mise_bootstrap_environment().storage_root_variable
+
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "setup"],
+                cwd=project_root,
+                env={
+                    **os.environ,
+                    "GH_TOKEN": "invalid-test-credential",
+                    storage_variable: "relative-storage",
+                },
+            )
+        )
+
+        tm.that(process.outcome.raw_return_code, ne=0)
+        tm.that(process.stderr, lacks="conflicts with")
+        tm.that(process.stderr, lacks=member_release)
+        tm.that(process.stderr, has=f"{storage_variable} must be absolute")
