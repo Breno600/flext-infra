@@ -165,11 +165,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._config.static": ("FlextInfraConfigModelsStatic",),
             "._config.templates": ("FlextInfraConfigModelsTemplates",),
             "._config.workspace": ("FlextInfraConfigModelsWorkspace",),
-            "._defaults": (
-                "ImmutableEmptyMapping",
-                "immutable_empty_mapping",
-                "tool_version_field",
-            ),
+            "._defaults": ("FlextInfraModelsDefaults",),
             "._git": ("_git",),
             "._git.identity": ("FlextInfraModelsGitIdentity",),
             ".base": ("FlextInfraModelsBase",),
