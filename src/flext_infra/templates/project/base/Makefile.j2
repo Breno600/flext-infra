@@ -664,7 +664,11 @@ _builtin-self-fix-enforcement: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
 
 _builtin-self-build:
+{% if package %}
 	@$(UV) build --project "$(PROJECT_ROOT)"
+{% else %}
+	@printf '%s\n' 'INFO: build: repository declares package=false (content-only root); no distribution to build'
+{% endif %}
 {% else %}
 # Standalone: the `_all` twins own the one emitted body (SSOT); each carries
 # its own `_builtin_require_environment` edge.
@@ -731,7 +735,11 @@ _builtin-propagate: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} propagate --repository-root "$(PROJECT_ROOT)"
 {% else %}
 _builtin_build_artifacts:
+{% if package %}
 	@$(UV) build --project "$(PROJECT_ROOT)"
+{% else %}
+	@printf '%s\n' 'INFO: build: repository declares package=false (content-only root); no distribution to build'
+{% endif %}
 
 # Check is read-only: it runs the gates without --apply, so the tree is left
 # unchanged; fix applies the declared repairs of the fixable gates.

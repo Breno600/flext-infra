@@ -531,6 +531,52 @@ class TestsFlextInfraCodegenMakeEnvironment:
     @pytest.mark.parametrize(
         "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
     )
+    def test_build_verb_renders_uv_build_for_packaged_repositories(
+        self, tmp_path: Path, profile: c.Infra.MakeProfile
+    ) -> None:
+        """A repository that publishes a package keeps the real build recipe.
+
+        The `package` flag is an input of the fixture, not a frozen constant:
+        both branches of the flag are exercised (the false branch lives in the
+        twin test) so the contract holds for any valid manifest value.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, profile, package=True
+        )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+        tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
+        tm.that(makefile, lacks="package=false (content-only root)")
+
+    @pytest.mark.parametrize(
+        "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
+    )
+    def test_build_verb_renders_typed_noop_for_package_false_roots(
+        self, tmp_path: Path, profile: c.Infra.MakeProfile
+    ) -> None:
+        """A content-only root (package=false) builds nothing and says so.
+
+        `uv build` on a package:false root cannot produce a wheel (no content
+        to ship) and fails the wheel step after wasting an sdist — the invest
+        root proof (92MB sdist, wheel failure, exit 2). The generated verb
+        must instead emit a typed receipt and exit zero. The `package` flag is
+        the fixture input; both branches are exercised across the twins.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, profile, package=False
+        )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+        tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=False)
+        tm.that(makefile, has="package=false (content-only root)")
+        # The noop verb itself must still exist in both profiles.
+        if profile is c.Infra.MakeProfile.WORKSPACE:
+            tm.that(makefile, has="_builtin-self-build:")
+        else:
+            tm.that(makefile, has="_builtin-self-build: _builtin_build_artifacts")
+            tm.that(makefile, has="_builtin_build_artifacts:")
+
+    @pytest.mark.parametrize(
+        "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
+    )
     def test_every_declared_check_gate_reaches_the_runtime(
         self, tmp_path: Path, profile: c.Infra.MakeProfile
     ) -> None:
