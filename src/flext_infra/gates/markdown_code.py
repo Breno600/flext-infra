@@ -5,10 +5,8 @@ held to the ruff-format contract. This gate extracts fenced ``python`` blocks
 and doctest examples into one temporary source tree and runs ONE ruff format
 invocation per verb (single-pass law): ``check`` renders the format verdict
 read-only, ``fix`` — reached from ``make fix`` — writes formatting back into
-fenced blocks when every block of a file round-trips cleanly. Unparseable
-documentation fragments stay out of scope by design: their syntax findings
-belong to the flext-tests markdown validator (MD-001 with approved
-exceptions), and docstring write-back stays a human decision.
+fenced blocks when every block of a file round-trips cleanly. Invalid Python
+fences fail loudly; docstring write-back stays a human decision.
 """
 
 from __future__ import annotations
@@ -219,12 +217,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         ):
             content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
             relative_posix = md_path.relative_to(project_dir).as_posix()
-            # Enumerate every non-``notest`` fence exactly like
-            # ``write_fenced_block_sources``: the extraction index counts
-            # fragments that do not compile, so the splice must preserve that
-            # same index. Re-enumerating only parseable blocks shifted every
-            # later source name and silently skipped whole files whenever a
-            # fragment preceded a valid block.
+            # Preserve indexes across fragments the formatter does not own.
             staged: t.MutableSequenceOf[t.Pair[int, str]] = []
             for index, match in enumerate(
                 match
@@ -245,9 +238,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                     round_trips = False
                     break
                 formatted = source.read_text(c.Cli.ENCODING_DEFAULT)
-                try:
-                    compile(formatted, str(md_path), "exec")
-                except SyntaxError:
+                if is_syntax_broken(formatted, md_path):
                     round_trips = False
                     break
                 blocks.append(formatted)
@@ -261,7 +252,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 origin_path: Path = md_path,
                 replacements: Iterator[str] = blocks_iter,
             ) -> str:
-                """Splice one formatted block; fragments and markers stay verbatim."""
+                """Splice formatted code; prose fragments stay byte-identical."""
                 keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
                     "info"
                 ) or is_syntax_broken(match.group("code"), origin_path)

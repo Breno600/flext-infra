@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import sys
 from collections.abc import Mapping, MutableMapping, Sequence
+from functools import lru_cache
 from importlib.metadata import Distribution, distributions
 from importlib.util import find_spec
 from pathlib import Path
@@ -21,8 +22,15 @@ class FlextInfraUtilitiesCodemodRules:
     """Resolve universal, runtime-transitive, and local ast-grep rule layers."""
 
     @classmethod
+    @lru_cache(maxsize=1)
     def codemod_rule_plan(cls, root: Path) -> p.Result[m.Infra.CodemodRulePlan]:
-        """Build the sole executable rule plan for check and mutation."""
+        """Build the sole executable rule plan for check and mutation.
+
+        Cached per resolved root for the lifetime of one process: the composed
+        provider/rule catalog is invariant across the many ``scan()`` calls a
+        single ``mod`` invocation issues while converging to a fixed point, and
+        a fresh process (a new ``make mod`` run) always recomputes it from disk.
+        """
         project = cls._project(root)
         if project.failure:
             return r[m.Infra.CodemodRulePlan].from_failure(project)

@@ -397,6 +397,88 @@ class FlextInfraModelsRope:
             ),
         ] = None
 
+    class RopeModuleCoordinates(m.ContractModel):
+        """Canonical identity shared by Rope module inputs and outcomes."""
+
+        file_path: Annotated[Path, m.Field(description="Resolved module path")]
+        project_root: Annotated[
+            Path, m.Field(description="Owning project root for this module")
+        ]
+
+    class RopeModuleVisit(RopeModuleCoordinates, m.ArbitraryTypesModel):
+        """One module snapshot owned by a shared Rope callback cycle."""
+
+        entry: Annotated[
+            FlextInfraModelsRope.RopeModuleIndexEntry,
+            m.Field(description="Workspace index entry for this module"),
+        ]
+        resource: Annotated[
+            t.Infra.RopeResource,
+            m.Field(
+                exclude=True, description="Live Rope resource for reads and writes"
+            ),
+        ]
+        tree: Annotated[
+            t.Infra.RopeAstNode,
+            m.Field(exclude=True, description="AST owned by the live Rope module"),
+        ]
+        source: Annotated[
+            str, m.Field(description="Source snapshot read from the Rope resource")
+        ]
+        convention: Annotated[
+            FlextInfraModelsRope.RopeModuleConvention,
+            m.Field(description="Canonical module convention from the same session"),
+        ]
+
+    class RopeCallbackOutcome(RopeModuleCoordinates, m.ContractModel):
+        """Typed effect returned by one Rope module callback."""
+
+        callback_id: Annotated[
+            t.NonEmptyStr, m.Field(description="Stable callback operation identity")
+        ]
+        changed: Annotated[
+            bool, m.Field(description="Whether the live Rope resource was changed")
+        ] = False
+        applicable: Annotated[
+            bool, m.Field(description="Whether the callback governed this module")
+        ] = True
+        violations: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Validation violations produced by the callback"),
+        ] = ()
+        changes: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Semantic changes applied by the callback"),
+        ] = ()
+
+    class RopeCallbackBinding(m.ArbitraryTypesModel):
+        """One callback and its exact pre-semantic module selection."""
+
+        callback: Annotated[
+            t.Port[p.Infra.RopeModuleCallback],
+            m.Field(exclude=True, description="Typed callback invoked by the cycle"),
+        ]
+        file_paths: Annotated[
+            frozenset[Path],
+            m.Field(
+                description="Exact modules accepted before semantic materialization"
+            ),
+        ]
+
+    class RopeCycleReport(m.ContractModel):
+        """Complete typed result from one shared Rope callback cycle."""
+
+        modules_visited: Annotated[
+            t.NonNegativeInt, m.Field(description="Number of visited modules")
+        ]
+        callbacks_executed: Annotated[
+            t.NonNegativeInt, m.Field(description="Number of callback invocations")
+        ]
+        outcomes: Annotated[
+            t.VariadicTuple[FlextInfraModelsRope.RopeCallbackOutcome],
+            m.Field(description="Every callback outcome in execution order"),
+        ] = ()
+
     class RopeInventoryRecordInput(m.ArbitraryTypesModel):
         """Validated payload for building one rope inventory census object."""
 

@@ -110,6 +110,8 @@ class FlextInfraConstantsMake:
         "fmt",
         "fix",
         "fix-enforcement",
+        "fix-namespace",
+        "fix-accessors",
         "sonarcloud-sync",
         "test",
         "test-full",

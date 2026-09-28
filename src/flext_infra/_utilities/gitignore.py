@@ -45,6 +45,10 @@ class FlextInfraUtilitiesGitignore:
             return r[str].fail(
                 "gitignore template is missing from codegen configuration"
             )
+        if entry.source is None:
+            return r[str].fail(
+                "gitignore codegen entry must declare a render template source"
+            )
         templates_root = FlextInfraUtilitiesGitignore.codegen_templates_root(codegen)
         project_patterns: t.StrSequence = ()
         if project_dir is not None:

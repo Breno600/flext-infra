@@ -9,7 +9,7 @@ from flext_cli import cli
 
 from flext_core import r
 
-from .. import FlextInfraConfig, FlextInfraServiceBase, m, p, t, u
+from .. import FlextInfraConfig, FlextInfraServiceBase, infra, m, p, t, u
 from . import (
     FlextInfraApplyRenames,
     FlextInfraCodemodSemanticApply,
@@ -69,6 +69,16 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         """Converge AST, semantic, and text phases over the same source state."""
         cli.display_text("mod: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(root, rules).unwrap()
+        with infra.rope_workspace(root) as rope_workspace:
+            return FlextInfraCodemodBatchApply._execute_apply_cycle(
+                root, rope_workspace
+            )
+
+    @staticmethod
+    def _execute_apply_cycle(
+        root: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Converge every mod phase through one shared Rope workspace."""
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
         fingerprint = FlextInfraCodemodSemanticApply.source_fingerprint
         seen: dict[t.VariadicTuple[t.Pair[str, str]], int] = {}
@@ -89,18 +99,21 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 f"{current.actionable} actionable, "
                 f"{current.detection_only} detection-only"
             )
+            after_ast = current
             if current.actionable:
                 FlextInfraModGateEngine.scan(root, fix=True).unwrap()
-            after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
+                rope_workspace.refresh()
+                after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
             FlextInfraCodemodBatchApply.validate_fix_match(current, after_ast)
             phase_states = [fingerprint(root, after_ast)]
             transaction_paths = FlextInfraCodemodSemanticApply.plan_transaction_paths(
-                root, after_ast
+                root, after_ast, rope_workspace
             )
             if transaction_paths:
                 FlextInfraCodemodSemanticApply.apply_transaction_paths(
                     root, transaction_paths
                 )
+                rope_workspace.refresh()
                 after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
             phase_states.append(fingerprint(root, after_ast))
             owned = FlextInfraModReplacements.require_authored(after_ast)
@@ -108,7 +121,9 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 return r[t.Cli.ResultValue].from_failure(owned)
             # Detection-only findings and configured import alignment select
             # semantic work even when no AST rule has a textual replacement.
-            semantic = FlextInfraCodemodSemanticApply.apply(root, after_ast)
+            semantic = FlextInfraCodemodSemanticApply.apply(
+                root, after_ast, rope_workspace
+            )
             if semantic.failure:
                 return r[t.Cli.ResultValue].from_failure(semantic)
             phase_states.append(fingerprint(root, after_ast))

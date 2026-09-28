@@ -83,6 +83,18 @@ class TestsFlextInfraAbstractionBoundaryGate:
 
         tm.that(result.result.passed, eq=True)
 
+    def test_live_print_call_is_flagged(self, tmp_path: Path) -> None:
+        project = self._project(
+            tmp_path, name="flext-demo", filename="logic.py", src="print('live')\n"
+        )
+
+        result = u.Tests.run_gate_check(
+            FlextInfraAbstractionBoundaryGate, tmp_path, project
+        )
+
+        tm.that(not result.result.passed, eq=True)
+        tm.that(any("cli.print" in issue.message for issue in result.issues), eq=True)
+
     def test_print_detection_ignores_embedded_source_text(self, tmp_path: Path) -> None:
         project = self._project(
             tmp_path,

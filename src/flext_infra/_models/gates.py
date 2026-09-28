@@ -60,7 +60,9 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
     class GateContext(m.ContractModel):
         """Quality gate execution context and configuration."""
 
-        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = True
+        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = (
+            c.Infra.CHECK_FAIL_FAST_DEFAULT
+        )
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", arbitrary_types_allowed=True, populate_by_name=True
         )

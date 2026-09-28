@@ -145,6 +145,51 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(rendered_makefile, has="REPOSITORY_ROOT := $(MAKEFILE_ROOT)")
         tm.that(rendered_makefile, lacks="INIT_FLEXT_INFRA")
 
+    @pytest.mark.parametrize(
+        ("ci_token", "fans_out"),
+        [
+            (config.Infra.codegen.make.ci.value, False),
+            (config.Infra.codegen.make.ci.local_value, False),
+            ("", True),
+        ],
+    )
+    def test_ci_token_narrows_root_verbs_to_the_workspace(
+        self, rendered_makefile: str, tmp_path: Path, ci_token: str, fans_out: bool
+    ) -> None:
+        """Under a CI token every root verb covers only the workspace itself.
+
+        Every member runs its own CI, so the workspace CI never re-runs member
+        gates, generation or provisioning; an unset token keeps the fleet-wide
+        local run. Observed by evaluating the real rendered Makefile with GNU make.
+        """
+        makefile = tmp_path / c.Infra.MAKEFILE_FILENAME
+        makefile.write_text(rendered_makefile, encoding=c.Cli.ENCODING_DEFAULT)
+        variable = config.Infra.codegen.make.ci.variable
+        probe = u.Cli.run_checked(
+            [
+                c.Infra.MAKE,
+                "--no-print-directory",
+                "-f",
+                str(makefile),
+                f"{variable}={ci_token}",
+                "--eval=_scope_probe: ; @printf '%s|%s|%s' '$(SELECTED_PROJECTS)' "
+                "'$(CODEGEN_SCOPE)' '$(UV_SYNC_FLAGS)'",
+                "_scope_probe",
+            ],
+            cwd=tmp_path,
+        )
+
+        tm.ok(probe)
+        projects, codegen_scope, sync_flags = probe.value.stdout.strip().split("|")
+        tm.that(_MEMBER in projects.split(), eq=fans_out)
+        tm.that(projects.split()[-1], eq=".")
+        scope = c.Infra.CodegenConformScope
+        tm.that(codegen_scope, eq=scope.ALL if fans_out else scope.SELF)
+        # CI installs the workspace dependencies as regular packages and never
+        # provisions every member checkout as an editable install.
+        tm.that("--no-editable" in sync_flags.split(), eq=not fans_out)
+        tm.that("--all-packages" in sync_flags.split(), eq=fans_out)
+
     def test_project_selector_resolves_members_from_repository_root(
         self, rendered_makefile: str
     ) -> None:

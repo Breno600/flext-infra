@@ -493,6 +493,7 @@ class FlextInfraMiseArtifactsVerification:
                 project.config.before,
                 project.artifacts.unix_launcher,
                 project.artifacts.windows_launcher,
+                project.artifacts.version_pin,
             )
             current = cls.states_current(expected_states)
             if current.failure:
@@ -571,7 +572,9 @@ class FlextInfraMiseArtifactsVerification:
         if artifact_before.failure:
             return r[bool].from_failure(artifact_before)
         for project in plan.projects:
-            validated = owner.validate_artifacts(project.layout.root)
+            validated = owner.validate_artifacts(
+                project.layout.root, plan.layout.scope_root
+            )
             if validated.failure:
                 return r[bool].from_failure(validated)
         artifact_after = cls._artifact_snapshot(plan, replacements)
@@ -863,23 +866,25 @@ class FlextInfraMiseArtifactsVerification:
         plan: m.Infra.MiseToolchainWorkspacePlan,
         replacements: MutableMapping[Path, t.Pair[bytes, int | None]],
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        root_launchers: t.Pair[bytes, bytes] | None = None
         states: list[m.Cli.AtomicFileState] = []
         for project in plan.projects:
             artifacts = (
                 project.config.before,
                 project.artifacts.unix_launcher,
                 project.artifacts.windows_launcher,
+                project.artifacts.version_pin,
             )
-            observed: list[bytes] = []
             for expected, (_name, required_mode) in zip(
                 artifacts, c.Infra.PUBLICATION_SPECS, strict=True
             ):
-                current = files.read_state(expected.path, required=True)
+                current = files.read_state(expected.path, required=False)
                 if current.failure or current.value.content is None:
+                    repair = (
+                        "make gen" if expected is project.config.before else "make upg"
+                    )
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                        current.error
-                        or f"published Mise artifact is absent: {expected.path}"
+                        f"published Mise artifact is absent: {expected.path}; "
+                        f"run {repair}"
                     )
                 if current.value.mode is None:
                     return r[tuple[m.Cli.AtomicFileState, ...]].fail(
@@ -899,15 +904,7 @@ class FlextInfraMiseArtifactsVerification:
                         f" (observed {oct(current.value.mode)},"
                         f" canonical {oct(required_mode)})"
                     )
-                observed.append(current.value.content)
                 states.append(current.value)
-            launchers = (observed[1], observed[2])
-            if root_launchers is None:
-                root_launchers = launchers
-            elif launchers != root_launchers:
-                return r[tuple[m.Cli.AtomicFileState, ...]].fail(
-                    f"published Mise launchers differ in {project.layout.selector}"
-                )
         return r[tuple[m.Cli.AtomicFileState, ...]].ok(tuple(states))
 
     @classmethod

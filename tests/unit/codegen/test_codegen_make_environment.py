@@ -332,20 +332,21 @@ class TestsFlextInfraCodegenMakeEnvironment:
             )
         )
         tm.that(u.Cli.process_succeeded(unlocked.outcome), eq=False)
-        tm.that((project_root / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
-
-        # `upg` is the only resolver: the run's template was upgraded under the
-        # same foreign environment with a declared post-upg hook. It wrote both
-        # locks, provisioned the environment frozen from them, and ran the
-        # hook inside the activated environment, exactly as setup runs post-setup.
-        template = resolved_make_templates[profile]
-        receipts = template.parent.parent
-        upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
-        tm.that(upgraded.stdout, has="upg-hook-ran")
-        for lock in (c.Infra.UV_LOCK_FILENAME, c.Infra.MISE_LOCK_FILENAME):
-            tm.that((template / lock).is_file(), eq=True)
-        tm.that((template / ".venv" / "pyvenv.cfg").is_file(), eq=True)
-        template_hostile = receipts / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
+        tm.that(lock_path.exists(), eq=False)
+        # `upg` is the only resolver: it writes both locks and provisions the
+        # environment frozen from them, then runs the declared post-upg hook
+        # inside the activated environment, exactly as setup runs post-setup.
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                project_root / "custom.mk",
+                ".PHONY: post-upg\npost-upg:\n\t@printf '%s\\n' 'upg-hook-ran'\n",
+            )
+        )
+        upgraded = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "upg"], cwd=project_root, env=active_env
+            )
+        )
         tm.that(
             (template_hostile / "sentinel").read_text(encoding="utf-8"),
             eq="untouched\n",
@@ -971,8 +972,16 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-fmt: _builtin_fmt_all")
         tm.that(makefile, has="_builtin-fix: _builtin_fix_all")
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
+        tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
         tm.that(
             makefile, has="_builtin-self-fix-enforcement: _builtin_require_environment"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-namespace: _builtin_require_environment"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-accessors: _builtin_require_environment"
         )
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(

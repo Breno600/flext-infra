@@ -32,6 +32,7 @@ class FlextInfraCodegenPipelineStagesMixin:
         # Provided by the composed facade (FlextInfraCodegenPipeline); declared
         # here so the handlers type-resolve against the facade state + harness.
         _state: m.Infra.CodegenPipelineState
+        rope: p.Infra.RopeWorkspaceDsl
 
         def _run_stage[V](
             self,
@@ -154,9 +155,14 @@ class FlextInfraCodegenPipelineStagesMixin:
         def _action() -> t.Pair[
             FlextInfraCodegenCensus, t.SequenceOf[m.Infra.CensusReport]
         ]:
-            census = FlextInfraCodegenCensus(repository_root=ctx.repository_root)
+            census = FlextInfraCodegenCensus(
+                repository_root=ctx.repository_root, rope=self.rope
+            )
             projects = self._state.discovered_projects
-            return census, census.run(projects=projects)
+            reports_result = census.run(projects=projects)
+            if reports_result.failure:
+                raise RuntimeError(reports_result.error or "census failed")
+            return census, reports_result.value
 
         def _emit(
             payload: t.Pair[
@@ -203,7 +209,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             dry_run = bool(ctx.settings.get(c.Infra.PIPELINE_KEY_DRY_RUN, False))
             projects = self._state.discovered_projects
             return FlextInfraCodegenFixer(
-                repository_root=ctx.repository_root, dry_run=dry_run
+                repository_root=ctx.repository_root, dry_run=dry_run, rope=self.rope
             ).fix_workspace(projects=projects)
 
         def _emit(results: t.SequenceOf[m.Infra.AutoFixResult]) -> t.JsonMapping:
@@ -244,9 +250,14 @@ class FlextInfraCodegenPipelineStagesMixin:
         def _action() -> t.SequenceOf[m.Infra.CensusReport]:
             census = self._state.census_service
             if census is None:
-                census = FlextInfraCodegenCensus(repository_root=ctx.repository_root)
+                census = FlextInfraCodegenCensus(
+                    repository_root=ctx.repository_root, rope=self.rope
+                )
             projects = self._state.discovered_projects
-            return census.run(projects=projects)
+            reports_result = census.run(projects=projects)
+            if reports_result.failure:
+                raise RuntimeError(reports_result.error or "census failed")
+            return reports_result.value
 
         def _emit(reports: t.SequenceOf[m.Infra.CensusReport]) -> t.JsonMapping:
             self._state.reports_after = reports
