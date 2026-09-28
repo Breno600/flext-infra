@@ -44,8 +44,7 @@ class FlextInfraPyrightGate(FlextInfraGate):
                     column=1,
                     code="pyright-empty-analysis",
                     message=(
-                        "no python targets discovered: content-only project "
-                        "topology"
+                        "no python targets discovered: content-only project topology"
                     ),
                     severity="information",
                 ),
@@ -138,7 +137,7 @@ class FlextInfraPyrightGate(FlextInfraGate):
                         "content-only project topology"
                     ),
                     severity="information",
-                ),
+                )
             ]
         issues: t.MutableSequenceOf[m.Infra.Issue] = [
             m.Infra.Issue(
