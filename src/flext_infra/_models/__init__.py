@@ -33,12 +33,12 @@ if TYPE_CHECKING:
     from .base import FlextInfraModelsBase
     from .census import FlextInfraModelsCensus
     from .check import FlextInfraModelsCheck
-    from .codegen import FlextInfraModelsCodegen
-    from .codegen_journal import FlextInfraModelsCodegenJournal
+    from ._codegen import FlextInfraModelsCodegen
+    from ._codegen.journal import FlextInfraModelsCodegenJournal
     from .codegen_render import FlextInfraModelsCodegenRender
     from .codegen_toolchain import FlextInfraModelsCodegenToolchain
     from .codemod import FlextInfraModelsCodemod
-    from .config import FlextInfraConfigModels
+    from ._config import FlextInfraConfigModels
     from .deps import FlextInfraModelsDeps
     from .deps_toml import FlextInfraModelsDepsToml
     from .deps_tool_config import FlextInfraModelsDepsToolSettings
@@ -60,9 +60,7 @@ if TYPE_CHECKING:
     from .promoted import FlextInfraModelsPromoted
     from .refactor import FlextInfraModelsRefactor
     from .refactor_ast_grep import FlextInfraModelsRefactorGrep
-    from .refactor_census import FlextInfraModelsRefactorCensus
     from .refactor_namespace_enforcer import FlextInfraModelsNamespaceEnforcer
-    from .refactor_violations import FlextInfraModelsRefactorViolations
     from .release import FlextInfraModelsRelease
     from .rope import FlextInfraModelsRope
     from .rope_move import FlextInfraModelsRopeMove
@@ -88,7 +86,6 @@ __all__: t.VariadicTuple[str] = (
     "FlextInfraConfigModelsTemplates",
     "FlextInfraConfigModelsWorkspace",
     "FlextInfraModelsBase",
-    "FlextInfraModelsDefaults",
     "FlextInfraModelsCensus",
     "FlextInfraModelsCheck",
     "FlextInfraModelsCodegen",
@@ -124,9 +121,7 @@ __all__: t.VariadicTuple[str] = (
     "FlextInfraModelsNamespaceEnforcer",
     "FlextInfraModelsPromoted",
     "FlextInfraModelsRefactor",
-    "FlextInfraModelsRefactorCensus",
     "FlextInfraModelsRefactorGrep",
-    "FlextInfraModelsRefactorViolations",
     "FlextInfraModelsRelease",
     "FlextInfraModelsRope",
     "FlextInfraModelsRopeMove",
@@ -172,12 +167,12 @@ _LAZY_IMPORTS = MappingProxyType(
             ".base": ("FlextInfraModelsBase",),
             ".census": ("FlextInfraModelsCensus",),
             ".check": ("FlextInfraModelsCheck",),
-            ".codegen": ("FlextInfraModelsCodegen",),
-            ".codegen_journal": ("FlextInfraModelsCodegenJournal",),
+            "._codegen": ("FlextInfraModelsCodegen",),
+            "._codegen.journal": ("FlextInfraModelsCodegenJournal",),
             ".codegen_render": ("FlextInfraModelsCodegenRender",),
             ".codegen_toolchain": ("FlextInfraModelsCodegenToolchain",),
             ".codemod": ("FlextInfraModelsCodemod",),
-            ".config": ("FlextInfraConfigModels",),
+            "._config": ("FlextInfraConfigModels",),
             ".deps": ("FlextInfraModelsDeps",),
             ".deps_toml": ("FlextInfraModelsDepsToml",),
             ".deps_tool_config": ("FlextInfraModelsDepsToolSettings",),
@@ -198,10 +193,9 @@ _LAZY_IMPORTS = MappingProxyType(
             ".mixins": ("FlextInfraModelsMixins",),
             ".promoted": ("FlextInfraModelsPromoted",),
             ".refactor": ("FlextInfraModelsRefactor",),
+            "._codegen.journal": ("FlextInfraModelsCodegenJournal",),
             ".refactor_ast_grep": ("FlextInfraModelsRefactorGrep",),
-            ".refactor_census": ("FlextInfraModelsRefactorCensus",),
             ".refactor_namespace_enforcer": ("FlextInfraModelsNamespaceEnforcer",),
-            ".refactor_violations": ("FlextInfraModelsRefactorViolations",),
             ".release": ("FlextInfraModelsRelease",),
             ".rope": ("FlextInfraModelsRope",),
             ".rope_move": ("FlextInfraModelsRopeMove",),
