@@ -111,14 +111,14 @@ a raiz de runtime executa `make upg`. O pacote `flext_infra` distribui em
 `templates/bootstrap/` a cópia do trio do próprio flext-infra, usada apenas por um
 repositório que ainda não tem nenhum ou que ainda carrega a projeção anterior ao bake,
 cujos launchers resolvem `releases/latest` em tempo de execução: o `make gen` desse
-repositório publica a cópia empacotada, já assada, e o `make upg` seguinte a regrava para
-o release resolvido. Nunca edite esses arquivos; a correção é
-`make upg`. Um `bin/` de projeto nunca entra no PATH (shell, `BASH_ENV` ou `GITHUB_PATH`
-do CI): o Mise liga os shims compartilhados ao primeiro `mise` do PATH. Versione o pin,
-`mise.lock` e os grafos nativos referenciados em `.mise/locks/` juntos; para ferramentas
-npm, o grafo contém `package.json` e `aube-lock.yaml`. Esses arquivos também entram no
-contexto Docker e nas fixtures de checkout. O setup congelado exige o grafo e seu digest
-válido, conforme o
+repositório publica a cópia empacotada, já assada, e o `make upg` seguinte a regrava
+para o release resolvido. Nunca edite esses arquivos; a correção é `make upg`. Um `bin/`
+de projeto nunca entra no PATH (shell, `BASH_ENV` ou `GITHUB_PATH` do CI): o Mise liga
+os shims compartilhados ao primeiro `mise` do PATH. Versione o pin, `mise.lock` e os
+grafos nativos referenciados em `.mise/locks/` juntos; para ferramentas npm, o grafo
+contém `package.json` e `aube-lock.yaml`. Esses arquivos também entram no contexto
+Docker e nas fixtures de checkout. O setup congelado exige o grafo e seu digest válido,
+conforme o
 [contrato oficial de sidecars do Mise](https://mise.jdx.dev/dev-tools/mise-lock.html#native-dependency-sidecars).
 Caches, instalações e grafos de locks locais continuam fora do Git. Não formate nem
 edite o payload nativo: uma alteração dos bytes exige nova resolução pelo `make upg`. As
