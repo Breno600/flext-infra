@@ -54,7 +54,7 @@ class FlextInfraUtilitiesPyprojectSession:
             if uv is not None
             else ()
         )
-        overrides = tuple(
+        active_overrides = tuple(
             parsed
             for item in explicit
             if (
@@ -63,10 +63,13 @@ class FlextInfraUtilitiesPyprojectSession:
                 )
             )
             is not None
-            and FlextInfraUtilitiesDependencies.dep_name(parsed) not in selected
+        )
+        overrides = tuple(
+            item for item in active_overrides
+            if FlextInfraUtilitiesDependencies.dep_name(item) not in selected
         )
         override_names = frozenset(
-            FlextInfraUtilitiesDependencies.dep_name(item) for item in overrides
+            FlextInfraUtilitiesDependencies.dep_name(item) for item in active_overrides
         )
         declared_constraints = (
             u.Cli.toml_as_string_list(uv.get("constraint-dependencies"))
@@ -89,7 +92,7 @@ class FlextInfraUtilitiesPyprojectSession:
                     ),
                     *(
                         item
-                        for item in explicit
+                        for item in active_overrides
                         if FlextInfraUtilitiesDependencies.dep_name(item) in selected
                     ),
                     *declared_constraints,

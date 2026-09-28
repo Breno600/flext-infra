@@ -65,15 +65,15 @@ Every governed standalone repository keeps referencing its provider by name from
 The explicit `workspace flext-binding` CLI accepts `--repository-root`, `--flext-root`,
 and `--python`. It changes only the provisioned consumer environment; it never edits the
 consumer's dependency declarations. Canonical setup restores the declared resolution.
-The interpreter must belong to the consumer's physical environment as determined by
-the workspace topology. A symlinked environment or a foreign interpreter is rejected.
+The interpreter must belong to the consumer's physical environment as determined by the
+workspace topology. A symlinked environment or a foreign interpreter is rejected.
 
 Binding evaluates dependency markers with that interpreter's facts and matches
-normalized distribution names against the supplier root and its package members.
-Like canonical setup, it includes all declared extras and dependency groups. Selected
-extras, version bounds, declared constraints, and unrelated source overrides remain
-effective. An empty active selection fails. CI rejects binding before accessing the
-consumer, using the configured CI variable and value.
+normalized distribution names against the supplier root and its package members. Like
+canonical setup, it includes all declared extras and dependency groups. Selected extras,
+version bounds, declared constraints, and unrelated source overrides remain effective.
+An empty active selection fails. CI rejects binding before accessing the consumer, using
+the configured CI variable and value.
 
 The public service's `plan_targets` method also requires the consumer `python` path;
 planning must use the same interpreter as installation. Its in-repository callers use

@@ -17,7 +17,7 @@ class TestsFlextInfraBindingInstall:
     """Exercise the public binding CLI with real consumer and supplier packages."""
 
     @pytest.mark.parametrize(
-        "scenario", ["extras", "constraint", "inactive", "borrowed"]
+        "scenario", ["extras", "constraint", "inactive", "borrowed", "override", "override-constraint"]
     )
     def test_binding_uses_consumer_contract(
         self, tmp_path: Path, scenario: str
@@ -52,15 +52,17 @@ class TestsFlextInfraBindingInstall:
                 'VALUE = "installed"\n', encoding=c.Cli.ENCODING_DEFAULT
             )
         marker = "; python_version < '0'" if scenario == "inactive" else ""
-        constraints = (
-            '\n[tool.uv]\nconstraint-dependencies = ["binding-candidate>=2"]\n'
-            if scenario == "constraint"
-            else ""
-        )
+        policy = []
+        if scenario in {"override", "override-constraint"}:
+            policy.append('override-dependencies = ["binding-candidate==1"]')
+        if scenario in {"constraint", "override-constraint"}:
+            policy.append('constraint-dependencies = ["binding-candidate>=2"]')
+        constraints = "\n[tool.uv]\n" + "\n".join(policy) if policy else ""
+        minimum = "2" if scenario in {"override", "override-constraint"} else "1"
         declaration = consumer / c.PYPROJECT_FILENAME
         declaration.write_text(
             '[project]\nname = "binding-consumer"\nversion = "1.0.0"\n'
-            f'dependencies = ["Binding_Candidate[feature]>=1{marker}"]\n{constraints}',
+            f'dependencies = ["Binding_Candidate[feature]>={minimum}{marker}"]\n{constraints}',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         original = declaration.read_bytes()
@@ -101,7 +103,7 @@ class TestsFlextInfraBindingInstall:
         )
         output = f"{outcome.stdout}{outcome.stderr}"
         tm.that(declaration.read_bytes(), eq=original)
-        if scenario != "extras":
+        if scenario not in {"extras", "override"}:
             tm.that(outcome.outcome.raw_return_code != 0, eq=True, msg=output)
             if scenario == "inactive":
                 tm.that(output, has="no active declared dependency")
