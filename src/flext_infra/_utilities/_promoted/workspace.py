@@ -42,17 +42,10 @@ class FlextInfraUtilitiesPromotedWorkspace:
         """Build the workspace spec owned by one explicit repository root."""
         from flext_infra import m, u
 
-        runtime_venv = u.Infra.runtime_environment_dir(root)
         return m.Infra.PromotedWorkspaceSpec(
             root=root,
             scripts=root / c.Infra.DIR_SCRIPTS,
-            local_python=runtime_venv
-            / ("Scripts" if sys.platform == "win32" else "bin")
-            / (
-                "python.exe"
-                if sys.platform == "win32"
-                else c.Infra.PromotedSelector.VENV_PYTHON
-            ),
+            local_python=u.Infra.runtime_python(root),
         )
 
     @classmethod

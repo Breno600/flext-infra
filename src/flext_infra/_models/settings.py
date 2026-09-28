@@ -80,6 +80,19 @@ class FlextInfraSettingsModels:
                 description="uv launcher path resolved for dependency orchestration.",
             ),
         ]
+        runtime_root: Annotated[
+            Path | None,
+            m.Field(
+                default=None,
+                validation_alias="RUNTIME_ROOT",
+                description=(
+                    "Declared runtime root whose environment executes the target "
+                    "checkout's code; the generated Makefile exports its "
+                    "RUNTIME_ROOT. Undeclared, the owner derives the checkout's "
+                    "Git root."
+                ),
+            ),
+        ]
         virtual_env: Annotated[
             str | None,
             m.Field(

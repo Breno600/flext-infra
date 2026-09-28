@@ -105,6 +105,12 @@ na linha detectada e nunca o regrava; quando a projeção não traz linha alguma
 escrita à mão falha (operador 2026-09-28, `flext-oe420`). Corrija o responsável do setup
 ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o ciclo.
 
+O código de um checkout executa no ambiente do seu `RUNTIME_ROOT`. O Makefile gerado
+exporta esse `RUNTIME_ROOT` e o `flext-infra` o lê como declaração tipada: a validação
+`fresh-import` roda as sondas com `<RUNTIME_ROOT>/.venv/bin/python`, nunca com o
+interpretador que hospeda a ferramenta. Sem declaração, o dono deriva a raiz Git do
+checkout; uma declaração sem interpretador falha.
+
 O mesmo `make upg` é o único escritor de `mise.version`, `bin/mise` e `bin/mise.cmd`.
 Ele resolve o release do Mise uma vez, pelo próprio Mise (`mise latest github:jdx/mise`,
 autenticado por `GITHUB_TOKEN` e sujeito ao `minimum_release_age` do Mise), e gera os
