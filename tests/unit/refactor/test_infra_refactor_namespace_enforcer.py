@@ -712,12 +712,17 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "from __future__ import annotations\n\nclass DemoConstants:\n    pass\n",
             encoding="utf-8",
         )
+        alias_file = examples_dir / "aliases.py"
+        alias_source = "from __future__ import annotations\n\ntype LocalAlias = str\n"
+        _ = alias_file.write_text(alias_source, encoding="utf-8")
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=True
         )
 
-        tm.that(report.projects[0].runtime_alias_violations, empty=True)
+        tm.that(report.total_runtime_alias_violations, eq=0)
+        tm.that(report.total_manual_typing_violations, eq=0)
+        tm.that(alias_file.read_text(encoding="utf-8"), eq=alias_source)
 
     def test_namespace_enforcer_skips_dynamic_dirs_by_default(
         self, tmp_path: Path

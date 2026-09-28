@@ -100,3 +100,13 @@ class TestsFlextInfraTestmonDbInspector:
         tm.that(state.changed, eq=False)
         tm.that(state.saveable, eq=False)
         tm.that(state.reason, eq="unchanged")
+
+    def test_in_checkout_database_is_rejected(self, tmp_path: Path) -> None:
+        filename = config.Infra.codegen.make.testmon_cache.database_filename
+
+        with pytest.raises(ValueError, match="outside the repository checkout"):
+            FlextInfraTestmonDbInspector(
+                repository_root=tmp_path,
+                db_path=tmp_path / filename,
+                pre_run_digest=None,
+            )

@@ -497,9 +497,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that("UV ?= uv" in makefile, eq=False)
         # UV_RUN's environment binding is exercised by the real runtime test
         # above, including a parent uv workspace with a different default venv.
-        # Nothing forces an external location (operator 2026-09-27): the
-        # environment is the runtime checkout's own, and temp files, bytecode
-        # and the testmon database use the tools' defaults.
+        # Make does not inject a caller-selected database path. The canonical
+        # pytest runner binds TESTMON_DATAFILE to its external persistent cache.
         tm.that(
             makefile,
             has=f"override RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}",
@@ -971,8 +970,16 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-fmt: _builtin_fmt_all")
         tm.that(makefile, has="_builtin-fix: _builtin_fix_all")
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
+        tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
         tm.that(
             makefile, has="_builtin-self-fix-enforcement: _builtin_require_environment"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-namespace: _builtin_require_environment"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-accessors: _builtin_require_environment"
         )
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(

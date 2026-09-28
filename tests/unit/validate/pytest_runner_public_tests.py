@@ -563,6 +563,18 @@ class TestsFlextInfraPytestRunner:
             [context.execution_mode for context in parsed], eq=["incremental", "full"]
         )
         tm.that({context.testmon_db for context in parsed}, eq={runner.testmon_db})
+        tm.that(runner.testmon_db.is_absolute(), eq=True)
+        tm.that(
+            runner.testmon_db.is_relative_to(cached_runner_project.resolve()), eq=False
+        )
+        tm.that(runner.testmon_db.is_file(), eq=True)
+        tm.that(
+            (
+                cached_runner_project
+                / config.Infra.codegen.make.testmon_cache.database_filename
+            ).exists(),
+            eq=False,
+        )
         tm.that(
             {context.deadline_monotonic for context in parsed},
             eq={

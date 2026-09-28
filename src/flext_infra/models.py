@@ -35,6 +35,7 @@ from ._models.sonarcloud import FlextInfraModelsSonarcloud
 from ._models.testmon import FlextInfraModelsTestmon
 from ._models.transformers import FlextInfraModelsTransformers
 from ._models.validate import FlextInfraModelsCore
+from ._models.work_lane import FlextInfraModelsWorkLane
 from ._models.workspace import FlextInfraModelsWorkspace
 from ._models.worktree import FlextInfraModelsWorktree
 
@@ -59,6 +60,7 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsMixins,
         FlextInfraModelsTransformers,
         FlextInfraModelsWorkspace,
+        FlextInfraModelsWorkLane,
         FlextInfraModelsWorktree,
         FlextInfraModelsGit,
         FlextInfraModelsRope,

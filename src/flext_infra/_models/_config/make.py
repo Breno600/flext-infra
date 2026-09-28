@@ -289,11 +289,8 @@ class FlextInfraConfigModelsMake:
             return self
 
     class TestmonCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Adaptive pytest-testmon GitHub Actions cache policy."""
+        """Persistent pytest-testmon database and runner paths."""
 
-        schema_version: Annotated[
-            int, m.Field(ge=1, description="Cache key schema version")
-        ]
         database_filename: Annotated[
             t.NonEmptyStr, m.Field(description="pytest-testmon database filename")
         ]

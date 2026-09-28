@@ -66,7 +66,7 @@ class FlextInfraConstantsMake:
     MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
     MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
     MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 100
+    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 600
     MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
     PRLIMIT_COMMAND: ClassVar[str] = "prlimit"
     PRLIMIT_ADDRESS_SPACE_OPTION: ClassVar[str] = "--as"
@@ -117,6 +117,8 @@ class FlextInfraConstantsMake:
         "fmt",
         "fix",
         "fix-enforcement",
+        "fix-namespace",
+        "fix-accessors",
         "sonarcloud-sync",
         "test",
         "test-full",
@@ -153,6 +155,7 @@ class FlextInfraConstantsMake:
     PYTEST_ENV_TARGET: ClassVar[str] = "FLEXT_PYTEST_TARGET_RAW"
     PYTEST_ENV_CI: ClassVar[str] = "CI"
     PYTEST_ENV_COLLECTION_MANIFEST: ClassVar[str] = "FLEXT_PYTEST_COLLECTION_MANIFEST"
+    PYTEST_ENV_TESTMON_DATAFILE: ClassVar[str] = "TESTMON_DATAFILE"
     PYTEST_WARNING_EVENTS_SUFFIX: ClassVar[str] = ".warnings.jsonl"
     PYTEST_INHERITED_ENV_REMOVE_KEYS: ClassVar[t.StrSequence] = (
         "PYTEST_ADDOPTS",

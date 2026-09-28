@@ -270,7 +270,7 @@ print(RuntimeRow.model_validate_json('{"value": "runtime"}').value)
         probe = (
             f"from {c.Infra.PKG_CORE_UNDERSCORE} import m\n"
             "from ancestral_consumer import build\n"
-            "print(build())\n"
+            "print(build() is m.BaseModel)\n"
         )
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
-        tm.that(outcome.stdout.strip(), eq="False")
+        tm.that(outcome.stdout.strip(), eq="True")

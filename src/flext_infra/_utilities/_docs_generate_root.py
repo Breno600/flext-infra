@@ -184,7 +184,10 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         aggregate_scopes: t.SequenceOf[m.Infra.DocScope],
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
-        """Return the rendered artifact inventory for one docs scope."""
+        """Return the rendered artifact inventory for one docs scope.
+
+        The scope label is the only topology input (see ``build_scopes``).
+        """
         if scope.name == c.Infra.RK_ROOT:
             return FlextInfraUtilitiesDocsGenerateRootMixin.docs_root_artifacts(
                 repository_root, aggregate_scopes

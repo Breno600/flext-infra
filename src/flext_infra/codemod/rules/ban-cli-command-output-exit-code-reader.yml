@@ -35,7 +35,6 @@ files:
   - "flext-infra/src/flext_infra/_utilities/_docs_audit_detectors.py"
   - "flext-infra/src/flext_infra/_utilities/pyproject.py"
   - "flext-infra/src/flext_infra/_utilities/resource_limits.py"
-  - "flext-infra/src/flext_infra/services/_workspace/environment_beads.py"
   - "flext-infra/src/flext_infra/codegen/mise_artifacts.py"
   - "flext-infra/src/flext_infra/codegen/lazy_init.py"
   - "flext-infra/src/flext_infra/codegen/constants_quality_gate.py"

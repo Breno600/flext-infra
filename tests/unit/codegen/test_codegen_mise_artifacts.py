@@ -16,55 +16,89 @@ from tests import u as test_u
 class TestsFlextInfraCodegenMiseArtifacts:
     """Keep ordinary generation checks independent from remote resolution."""
 
-    @pytest.mark.parametrize("invalid", ["missing", "empty", "nonexecutable"])
-    def test_public_launcher_validation_keeps_failure_guards(
-        self, tmp_path: Path, invalid: str
+    RELEASE = "1.2.3"
+    "Any resolved release; the pin and both launchers must agree on it."
+
+    @pytest.mark.parametrize(
+        ("invalid", "reported"),
+        [
+            ("missing", "run make upg"),
+            ("live-resolution", c.Infra.MISE_LATEST_RESOLUTION_MARKER),
+            ("release-drift", "bakes Mise"),
+            ("nonexecutable", "not executable"),
+        ],
+    )
+    def test_launcher_derivation_guards(
+        self, tmp_path: Path, invalid: str, reported: str
     ) -> None:
-        """Published launchers must retain content and executable-output validation."""
-        resources = files("flext_infra").joinpath(c.Infra.MISE_BOOTSTRAP_SEED_DIRECTORY)
-        launchers = tmp_path / "bin"
-        launchers.mkdir()
-        for name, mode in (("mise", 0o755), ("mise.cmd", 0o644)):
-            launcher = launchers / name
-            launcher.write_bytes(resources.joinpath(name).read_bytes())
-            launcher.chmod(mode)
-        tm.ok(FlextInfraCodegenMiseArtifacts.validate_launchers(tmp_path))
-        unix = launchers / "mise"
-        if invalid == "empty":
-            unix.write_bytes(b"")
-        elif invalid == "missing":
+        """Every launcher must be the generator's output for the pinned release."""
+        root = self._project(tmp_path / "project")
+        unix = root / c.Infra.ARTIFACT_SPECS[0][0]
+        if invalid == "missing":
             unix.unlink()
+        elif invalid == "live-resolution":
+            unix.write_text(
+                unix.read_text(encoding="utf-8")
+                + f"# {c.Infra.MISE_LATEST_RESOLUTION_MARKER}\n",
+                encoding="utf-8",
+            )
+        elif invalid == "release-drift":
+            self._write_triple(root, release="1.2.4", pin=self.RELEASE)
         else:
             unix.chmod(0o644)
 
-        tm.fail(FlextInfraCodegenMiseArtifacts.validate_launchers(tmp_path))
+        result = FlextInfraCodegenMiseArtifacts.model_validate({
+            "repository_root": root,
+            "check_only": True,
+        }).execute()
+
+        tm.fail(result, has=reported)
+
+    def test_member_triple_must_equal_its_runtime_root(self, tmp_path: Path) -> None:
+        """A member's pin and launchers are a byte projection of its runtime root."""
+        runtime_root = self._project(tmp_path / "workspace")
+        member = self._project(tmp_path / "member")
+        service = FlextInfraCodegenMiseArtifacts.model_validate({
+            "repository_root": member,
+            "check_only": True,
+        })
+        tm.ok(service.validate_artifacts(member, runtime_root))
+
+        self._write_triple(member, release="1.2.4", pin="1.2.4")
+
+        tm.fail(
+            service.validate_artifacts(member, runtime_root),
+            has="differs from the runtime root",
+        )
 
     @pytest.mark.parametrize("shape", ["absolute", "tilde"])
-    def test_seed_launcher_resolves_the_data_dir_without_doubling_home(
+    def test_packaged_launcher_runs_its_baked_release_offline(
         self, tmp_path: Path, shape: str
     ) -> None:
-        """The seed launcher runs the binary under the declared data dir, offline.
+        """The packaged cold-start launcher runs its pinned release, offline.
 
-        An unquoted ``~/*)`` case pattern is tilde-expanded by bash, so an
-        absolute ``MISE_DATA_DIR`` matched it and gained a second ``$HOME``
-        prefix; the launcher then missed the installed binary and tried to
-        download mise. A binary planted at the correct path proves resolution:
-        the launcher executes it and never reaches the installer.
+        No ``MISE_VERSION`` is passed: the launcher bakes the release its
+        ``mise.version`` records. A binary planted at that release under the
+        declared data dir proves resolution without any download, for both an
+        absolute and a ``~``-relative data dir (an unquoted ``~/*)`` pattern
+        once doubled ``$HOME``).
         """
+        packaged = files("flext_infra").joinpath(c.Infra.MISE_COLD_START_DIRECTORY)
+        release = tm.ok(
+            u.Infra.mise_pinned_release(
+                packaged.joinpath(c.Infra.MISE_VERSION_PIN_FILENAME).read_text(
+                    encoding="utf-8"
+                )
+            )
+        )
         home = tmp_path / "home"
         data_dir = home / "mise-data"
-        version = "0.0.0"
-        planted = data_dir / "bootstrap" / f"mise-{version}"
+        planted = data_dir / "bootstrap" / f"mise-{release}"
         planted.parent.mkdir(parents=True)
         planted.write_text('#!/bin/sh\necho "planted-mise $*"\n', encoding="utf-8")
         planted.chmod(0o755)
         launcher = tmp_path / "mise"
-        launcher.write_bytes(
-            files("flext_infra")
-            .joinpath(c.Infra.MISE_BOOTSTRAP_SEED_DIRECTORY)
-            .joinpath("mise")
-            .read_bytes()
-        )
+        launcher.write_bytes(packaged.joinpath("mise").read_bytes())
         launcher.chmod(0o755)
         declared = str(data_dir) if shape == "absolute" else "~/mise-data"
 
@@ -74,13 +108,11 @@ class TestsFlextInfraCodegenMiseArtifacts:
                 env={
                     "HOME": str(home),
                     c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE: declared,
-                    "MISE_VERSION": version,
-                    "MISE_INSTALL_PATH": "",
                 },
-                # An explicit MISE_INSTALL_PATH outranks the data dir by the
-                # launcher's contract; the generated Make harness exports one
-                # into every child, so this probe must not inherit it.
-                remove_env_keys=("MISE_INSTALL_PATH",),
+                # An explicit MISE_INSTALL_PATH or MISE_VERSION outranks the
+                # baked release; the generated Make harness exports both into
+                # every child, so this probe must not inherit them.
+                remove_env_keys=("MISE_INSTALL_PATH", "MISE_VERSION"),
                 timeout=10,
             )
         )
@@ -97,48 +129,31 @@ class TestsFlextInfraCodegenMiseArtifacts:
         tm.that(tm.ok(u.Cli.files_read_binary(linked)), eq=b"#!/bin/sh\n")
 
     @classmethod
-    def _write_launchers(cls, root: Path) -> None:
-        """Write minimal launchers carrying the unlocked resolution contract.
+    def _write_triple(
+        cls, root: Path, *, release: str | None = None, pin: str | None = None
+    ) -> None:
+        """Write the `make upg` triple in the shapes the upstream generator bakes.
 
-        Root cause (R28): the seed switched from an embedded per-arch
-        checksum table pinned to one release to a live `releases/latest`
-        resolution verified against a fetched ``SHASUMS256.txt`` — the only
-        contract `FlextInfraCodegenMiseArtifacts.validate_seed` still checks
-        (`c.Infra.MISE_UNLOCKED_RESOLUTION_URL` /
-        `MISE_UNLOCKED_FAIL_LOUD_CLAUSE` / `MISE_UNLOCKED_CHECKSUM_URI`).
-        Per-arch checksum pinning and cross-launcher version drift no longer
-        exist as launcher content or as a validated contract.
+        ``mise generate install-script --version R`` defaults the Unix launcher
+        to ``${MISE_VERSION:-R}`` and the Windows launcher to
+        ``set "pinned_version=R"``; ``mise.version`` carries the generated
+        header and ``R``. ``release`` and ``pin`` diverge only to model drift.
         """
-        launchers = root / "bin"
-        launchers.mkdir(parents=True, exist_ok=True)
-        (launchers / "mise").write_text(
-            "\n".join((
-                "#!/usr/bin/env bash",
-                "set -eu",
-                (
-                    f"mise_version=\"$(curl -fsSI -o /dev/null -w '%{{redirect_url}}' "
-                    f'{c.Infra.MISE_UNLOCKED_RESOLUTION_URL})"'
-                ),
-                (
-                    f'[ -n "$mise_version" ] || '
-                    f'{{ echo "{c.Infra.MISE_UNLOCKED_FAIL_LOUD_CLAUSE}" >&2; exit 1; }}'
-                ),
-                f'checksums="{c.Infra.MISE_UNLOCKED_CHECKSUM_URI}"',
-                "",
-            )),
-            encoding="utf-8",
-        )
-        (launchers / "mise").chmod(0o755)
-        (launchers / "mise.cmd").write_text(
-            "\n".join((
-                "@echo off",
-                f"rem resolves {c.Infra.MISE_UNLOCKED_RESOLUTION_URL}",
-                f"rem {c.Infra.MISE_UNLOCKED_FAIL_LOUD_CLAUSE}",
-                f"rem verifies {c.Infra.MISE_UNLOCKED_CHECKSUM_URI}",
-                "",
-            )),
-            encoding="utf-8",
-        )
+        launcher_release = release or cls.RELEASE
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if relative == c.Infra.MISE_VERSION_PIN_FILENAME:
+                lines = (*c.Infra.MISE_VERSION_PIN_HEADER, pin or cls.RELEASE)
+            elif path.suffix == ".cmd":
+                lines = ("@echo off", f'set "pinned_version={launcher_release}"')
+            else:
+                lines = (
+                    "#!/usr/bin/env bash",
+                    f'local mise_version="${{MISE_VERSION:-{launcher_release}}}"',
+                )
+            path.write_text("\n".join((*lines, "")), encoding="utf-8")
+            path.chmod(mode)
 
     @staticmethod
     def _write_config(
@@ -163,7 +178,8 @@ class TestsFlextInfraCodegenMiseArtifacts:
         version: str = "latest",
     ) -> Path:
         root.mkdir(parents=True)
-        cls._write_launchers(root)
+        test_u.Tests.initialize_git_repo(root)
+        cls._write_triple(root)
         cls._write_config(root, selector=selector, version=version)
         (root / "pyproject.toml").write_text(
             "[project]\n"
@@ -217,6 +233,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
     def test_full_validation_requires_committed_launchers(self, tmp_path: Path) -> None:
         root = tmp_path / "project"
         root.mkdir()
+        test_u.Tests.initialize_git_repo(root)
         self._write_config(root)
 
         result = FlextInfraCodegenMiseArtifacts.model_validate({
@@ -224,9 +241,9 @@ class TestsFlextInfraCodegenMiseArtifacts:
             "check_only": True,
         }).execute()
 
-        # Root cause: a missing launcher file fails at the read boundary
-        # before validate_seed's own "Mise seed lacks ..." wording applies.
-        tm.fail(result, has="No such file or directory")
+        # Only `make upg` writes the pin and launchers, so a project without
+        # them names that verb as its single repair.
+        tm.fail(result, has="run make upg")
 
     def test_tools_section_is_mandatory(self, tmp_path: Path) -> None:
         root = tmp_path / "project"
@@ -283,17 +300,6 @@ class TestsFlextInfraCodegenMiseArtifacts:
             },
         )
         tm.that("npm:jscpd" in tools, eq=False)
-
-    def test_unix_launcher_requires_executable_mode(self, tmp_path: Path) -> None:
-        root = self._project(tmp_path / "project")
-        (root / "bin" / "mise").chmod(0o644)
-
-        result = FlextInfraCodegenMiseArtifacts.model_validate({
-            "repository_root": root,
-            "check_only": True,
-        }).execute()
-
-        tm.fail(result, has="not executable")
 
     def test_project_filter_is_internal_to_make_propagation(self) -> None:
         """Keep project selection on the Make propagation boundary."""

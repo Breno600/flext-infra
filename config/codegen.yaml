@@ -25,6 +25,21 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
+      # External runtime state directory (sibling of checkout, not inside it).
+      # Governs PROJECT_STATE_ROOT, PROJECT_SCRATCH_ROOT, PYTHONPYCACHEPREFIX.
+      state_directory_name: ".flext-runtime"
+      # Scratch namespace for TMPDIR, test basetemp, Mise bootstrap staging.
+      # Never lives inside a versioned tree (storage law).
+      scratch_namespace: "scratch"
+      # Scratch home-relative path: platform home plus this path mirrors the
+      # absolute checkout path below it. Workspace mode: sibling state root
+      # under superproject, so every sandbox became a tracked scope of the
+      # enclosing repository.
+      scratch_home_relative: "tmp"
+      # Bytecode cache namespace under PROJECT_STATE_ROOT.
+      pycache_namespace: "pycache"
+      # Mise artifacts namespace under state directory.
+      mise_namespace: "mise-artifacts"
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -357,11 +372,9 @@ Infra:
         - gate: smells
           authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
           reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
-      # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
-      # save_enabled stays false while storage-limit API returns HTTP 402 /
-      # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
+      # One filename and the root-relative runner paths; the runner places the
+      # database in platformdirs' external per-worktree cache.
       testmon_cache:
-        schema_version: 1
         database_filename: .testmondata
         database_environment_variable: TESTMON_DATAFILE
         data_home_environment_variable: XDG_CACHE_HOME
@@ -370,16 +383,6 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
-        mode: bootstrap
-        save_enabled: false
-        max_bootstrap_generations: 3
-        max_stable_generations: 2
-        per_repo_budget_bytes: 536870912
-        warning_threshold_percent: 70
-        maintenance_threshold_percent: 75
-        block_threshold_percent: 80
-        allowed_save_refs: [refs/heads/0.12.0-dev]
-        key_prefix: testmon-v1
       # Public verbs execute their declared operation without mode selectors.
       ci:
         variable: CI
@@ -534,6 +537,10 @@ Infra:
           description: Apply ruff check --fix --unsafe-fixes --preview plus every other configured safe correction. Ruff is the rule; change code, never ruff.
         - name: fix-enforcement
           description: Apply the safe fix actions declared by the enforcement catalog.
+        - name: fix-namespace
+          description: Apply the canonical namespace enforcer to the selected workspace.
+        - name: fix-accessors
+          description: Migrate forbidden accessor names and every resolved consumer.
         - name: audit
           description: Inspect ownership, dependency, and generated-state health.
         - name: status
@@ -1184,6 +1191,7 @@ Infra:
           - pytest-testmon>=2.2.0
           - pytest-timeout
           - pytest-xdist
+          - platformdirs>=4.12.0
         # types-* stub floors are declared here (cooldown-eligible dates).
         # Lock-fed raising wrote dated stub versions into the projections;
         # dated stubs churn weekly, so the SSOT owns the clamp and the
@@ -1271,7 +1279,7 @@ Infra:
             runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.8]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.9]
           - upstream: flext_cli
             project: flext-db-oracle
             runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]

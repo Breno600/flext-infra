@@ -58,9 +58,9 @@ if [[ ! -s "${mise_pin_file}" ]]; then
   log_error "missing or empty ${mise_pin_file}; make upg records the Mise release"
   return 1
 fi
-mise_release="$(<"${mise_pin_file}")"
+mise_release="$(awk '{{ mise_bootstrap.version_pin_reader }}' "${mise_pin_file}")"
 if [[ ! "${mise_release}" =~ ^{{ mise_bootstrap.resolved_release_pattern }}$ ]]; then
-  log_error "${mise_pin_file} must contain a resolved Mise release"
+  log_error "${mise_pin_file} must contain a resolved Mise release; make upg writes it"
   return 1
 fi
 mise_runtime="${MISE_STORAGE_ROOT}/{{ mise_bootstrap.runtime_install_relative_template | replace('{release}', '${mise_release}') }}"
@@ -164,43 +164,6 @@ else
   unset VIRTUAL_ENV
 fi
 # End SECTION: virtual environment
-
-{% if gascity is not none %}
-{%- if gascity.backend == "gascity" %}
-# Repository policy permits this capability; the caller's explicit city
-# identity selects its runtime. Standalone activation owns no inherited ledger.
-if [[ -v {{ gascity.identity_var }} ]]; then
-{% include "_envrc_beads.j2" %}
-else
-{% for var in gascity.unset_vars -%}
-  unset {{ var }}
-{% endfor -%}
-  unset BEADS_DOLT_SERVER_HOST BEADS_DOLT_SERVER_PORT
-  unset BEADS_DOLT_SERVER_DATABASE BEADS_DOLT_SERVER_MODE
-  unset BEADS_DOLT_AUTO_START
-fi
-{%- elif gascity.backend == "local" %}
-# Repository-owned Beads base: bd owns the local Dolt server lifecycle
-# through .beads/config.yaml; inherited orchestration endpoints never apply.
-checkout_root="$(pwd -P)"
-watch_file "${checkout_root}/{{ gascity.beads_metadata_relpath }}"
-{% for var in gascity.unset_vars -%}
-unset {{ var }}
-{% endfor -%}
-unset BEADS_DOLT_SERVER_HOST BEADS_DOLT_SERVER_PORT
-unset BEADS_DOLT_SERVER_DATABASE BEADS_DOLT_SERVER_MODE
-unset BEADS_DOLT_AUTO_START
-{%- else %}
-# No Beads identity in this repository: inherited orchestration and Beads
-# endpoint variables never leak into the activation.
-{% for var in gascity.unset_vars -%}
-unset {{ var }}
-{% endfor -%}
-unset BEADS_DOLT_SERVER_HOST BEADS_DOLT_SERVER_PORT
-unset BEADS_DOLT_SERVER_DATABASE BEADS_DOLT_SERVER_MODE
-unset BEADS_DOLT_AUTO_START
-{%- endif %}
-{%- endif %}
 
 # === SECTION: local overrides (managed) ===
 # Source: template. Repository-local, tracked overrides load last and win;

@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import os
 from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
 from typing import Annotated, Self
+
+from platformdirs import user_cache_path
 
 from flext_infra import c, config, m, u
 from flext_infra.base import s
@@ -51,6 +54,30 @@ class FlextInfraPytestRunnerBase(s[int]):
                 )
             ),
         )
+
+    @property
+    def testmon_db(self) -> Path:
+        """Persistent Testmon database outside this workspace's checkout."""
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        project_name = u.Infra.project_name_from_payload(
+            pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+        )
+        cache_root = user_cache_path(appname=project_name, appauthor=False)
+        if not cache_root.is_absolute():
+            msg = f"platform cache root must be absolute: {cache_root}"
+            raise ValueError(msg)
+        workspace_key = sha256(
+            os.path.normcase(str(self.root.resolve())).encode("utf-8")
+        ).hexdigest()
+        database = (
+            cache_root
+            / workspace_key
+            / config.Infra.codegen.make.testmon_cache.database_filename
+        ).resolve()
+        if database.is_relative_to(self.root.resolve()):
+            msg = f"testmon database must be outside the checkout: {database}"
+            raise ValueError(msg)
+        return database
 
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
