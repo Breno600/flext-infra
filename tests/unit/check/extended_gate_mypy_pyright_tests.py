@@ -222,7 +222,9 @@ class TestsFlextInfraTypeGates:
         # stays visible in the execution errors for every gate posture.
         assert result.result.errors
 
-    @pytest.mark.parametrize("gate_class", [FlextInfraPyrightGate, FlextInfraPyreflyGate])
+    @pytest.mark.parametrize(
+        "gate_class", [FlextInfraPyrightGate, FlextInfraPyreflyGate]
+    )
     def test_zero_python_topology_passes_with_typed_receipt(
         self, tmp_path: Path, gate_class: type[FlextInfraGate]
     ) -> None:
@@ -314,7 +316,9 @@ class TestsFlextInfraTypeGates:
         result = FlextInfraPyrightGate(project).check(project, checker_context)
 
         tm.that(result.result.passed, eq=True)
-        receipts = [i for i in result.observational_issues if i.code == "pyright-empty-analysis"]
+        receipts = [
+            i for i in result.observational_issues if i.code == "pyright-empty-analysis"
+        ]
         tm.that(len(receipts), eq=1)
         tm.that(receipts[0].severity.lower() == "information", eq=True)
 
@@ -337,6 +341,8 @@ class TestsFlextInfraTypeGates:
         result = FlextInfraPyreflyGate(project).check(project, checker_context)
 
         tm.that(result.result.passed, eq=True)
-        receipts = [i for i in result.observational_issues if i.code == "pyrefly-empty-analysis"]
+        receipts = [
+            i for i in result.observational_issues if i.code == "pyrefly-empty-analysis"
+        ]
         tm.that(len(receipts), eq=1)
         tm.that(receipts[0].severity.lower() == "information", eq=True)
