@@ -40,13 +40,19 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
         """Scan one project's Python sources for abstraction-boundary breaches."""
         _ = ctx
         started = time.monotonic()
-        if project_dir.name in c.Infra.BOUNDARY_SKIP_PROJECTS:
+        metadata = u.Infra.read_project_metadata_result(project_dir)
+        if metadata.failure:
+            return self._build_project_error_gate_result(
+                project_dir, passed=False, errors=[str(metadata.error)], started=started
+            )
+        project_name = metadata.value.project.name
+        if project_name in c.Infra.BOUNDARY_SKIP_PROJECTS:
             # A declared boundary owner is exempt by design: an intentional
             # skip passes, never a non-acceptance for missing targets.
             return self._neutral_skip_result(
                 project_dir,
                 started,
-                message=f"{self.gate_id}: {project_dir.name} is a declared boundary owner",
+                message=f"{self.gate_id}: {project_name} is a declared boundary owner",
             )
         files_result = u.Infra.iter_python_files(
             m.Infra.SourceScanRequest(project_roots=(project_dir,))
@@ -69,7 +75,7 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
         issues = [
             issue
             for file_path in files_result.value
-            for issue in self._scan_file(file_path, project_dir.name)
+            for issue in self._scan_file(file_path, project_name)
         ]
         return self._detected_gate_execution(
             project_dir, issues=issues, started=started
