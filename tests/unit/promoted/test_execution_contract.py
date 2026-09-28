@@ -19,6 +19,7 @@ class TestsFlextInfraPromotedExecutionContract:
         """Facade composition exposes both schemas without a name collision."""
         repository = u.Tests.repository_ref("semantic-spec")
         workspace = u.Tests.workspace_spec(repository)
+        u.Tests.initialize_git_repo(tmp_path)
         facts = u.Infra.promoted_workspace_spec(tmp_path)
         tm.that(workspace.repository, eq=repository)
         tm.that(facts.root, eq=tmp_path)

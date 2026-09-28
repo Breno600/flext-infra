@@ -111,8 +111,22 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         existing-repository planners: the stage banner the scaffold planner
         prepends to a render failure.
         """
+        target = render_inputs.target
         artifact_context = self._artifact_render_context(
-            render_inputs, destination=destination, project_context=project_context
+            dist=(
+                project_context.dist
+                if project_context is not None
+                else target.repository.distribution
+            ),
+            repository=target.repository,
+            repository_root=target.root,
+            target=target,
+            workspace=render_inputs.workspace,
+            codegen=render_inputs.codegen,
+            destination=destination,
+            tooling_runtime=render_inputs.tooling_runtime,
+            project_context=project_context,
+            managed_artifacts=render_inputs.managed_artifacts.resolution,
         )
         if artifact_context.failure:
             return r[str].from_failure(artifact_context)

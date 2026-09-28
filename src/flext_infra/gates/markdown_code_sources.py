@@ -19,6 +19,15 @@ if TYPE_CHECKING:
     from flext_infra import t
 
 
+def is_syntax_broken(code: str, origin: Path) -> bool:
+    """Identify documentation fragments owned by the Markdown syntax validator."""
+    try:
+        compile(code, str(origin), "exec")
+    except SyntaxError:
+        return True
+    return False
+
+
 def source_name(relative_posix: str, index: int) -> str:
     """Encode one block's documentation location into a temp source filename."""
     return c.Infra.MARKDOWN_CODE_SOURCE_FORMAT.format(
@@ -31,10 +40,9 @@ def write_fenced_block_sources(
 ) -> dict[str, t.Pair[str, int]]:
     """Write one temp source per parseable fenced ``python`` block.
 
-    Blocks carrying the ``notest`` fence marker are skipped (opted out of
-    code validation by declaration). Every other block must compile: an
-    unparseable block in a python fence is a documentation defect and its
-    ``SyntaxError`` escapes unchanged.
+    Blocks carrying the ``notest`` fence marker and unparseable fragments are
+    excluded. The Markdown validator owns syntax errors; this gate owns only
+    formatting of Python blocks that compile.
     """
     origin_by_source: dict[str, t.Pair[str, int]] = {}
     for md_path in markdown_files:
@@ -46,7 +54,8 @@ def write_fenced_block_sources(
             if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
         ):
             source_text = match.group("code")
-            compile(source_text, str(md_path), "exec")
+            if is_syntax_broken(source_text, md_path):
+                continue
             name = source_name(relative_posix, index)
             (target_dir / name).write_text(source_text, c.Cli.ENCODING_DEFAULT)
             origin_by_source[name] = (
@@ -95,6 +104,7 @@ def write_docstring_sources(
 
 
 __all__: list[str] = [
+    "is_syntax_broken",
     "source_name",
     "write_docstring_sources",
     "write_fenced_block_sources",

@@ -446,6 +446,10 @@ class FlextInfraModelsRope:
             t.VariadicTuple[str],
             m.Field(description="Validation violations produced by the callback"),
         ] = ()
+        changes: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Semantic changes applied by the callback"),
+        ] = ()
 
     class RopeCallbackBinding(m.ArbitraryTypesModel):
         """One callback and its exact pre-semantic module selection."""
@@ -460,10 +464,6 @@ class FlextInfraModelsRope:
                 description="Exact modules accepted before semantic materialization"
             ),
         ]
-        changes: Annotated[
-            t.VariadicTuple[str],
-            m.Field(description="Applied semantic changes produced by the callback"),
-        ] = ()
 
     class RopeCycleReport(m.ContractModel):
         """Complete typed result from one shared Rope callback cycle."""

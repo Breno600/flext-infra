@@ -118,7 +118,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
             "    _ = t.Core.Tests.Testobject\n",
             encoding="utf-8",
         )
-        u.Tests.initialize_git_repo(workspace)
+        u.Tests.provision_checkout(workspace)
 
         result = infra_main([
             "refactor",

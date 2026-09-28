@@ -131,6 +131,7 @@ class TestsFlextInfraInfraRopeService:
             tmp_path, "cycle.py", 'VALUE = "before"\n'
         )
         observed: t.MutableSequenceOf[str] = []
+        written: t.MutableSequenceOf[str] = []
 
         def rewrite(
             _workspace: p.Infra.RopeWorkspaceDsl, visit: m.Infra.RopeModuleVisit
@@ -143,7 +144,9 @@ class TestsFlextInfraInfraRopeService:
                         callback_id="rewrite",
                     )
                 )
-            visit.resource.write(visit.source.replace('"before"', '"after"'))
+            updated_source = visit.source.replace('"before"', '"after"')
+            visit.resource.write(updated_source)
+            written.append(updated_source)
             return r[m.Infra.RopeCallbackOutcome].ok(
                 m.Infra.RopeCallbackOutcome(
                     file_path=visit.file_path,
@@ -182,9 +185,16 @@ class TestsFlextInfraInfraRopeService:
                 ))
             )
 
-        tm.that(observed, eq=['VALUE = "after"\n'])
+        tm.that(observed, eq=written)
         tm.that(report.callbacks_executed, eq=report.modules_visited * 2)
-        tm.that(module_path.read_text(encoding="utf-8"), eq='VALUE = "after"\n')
+        tm.that(len(written), eq=1)
+        rewrite_outcome = next(
+            outcome
+            for outcome in report.outcomes
+            if outcome.file_path == module_path and outcome.callback_id == "rewrite"
+        )
+        tm.that(rewrite_outcome.changes, eq=("value updated",))
+        tm.that(module_path.read_text(encoding="utf-8"), eq=written[0])
 
     def test_script_guard_bindings_are_not_exports(self, tmp_path: Path) -> None:
         """A name bound under ``if __name__ == "__main__":`` is not a module export.

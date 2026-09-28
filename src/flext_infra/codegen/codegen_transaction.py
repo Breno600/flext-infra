@@ -319,11 +319,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         )
         if source_states.failure:
             return result_type.from_failure(source_states)
-        mise_sources = tuple(
-            ("mise", source)
-            for project in plan.value.projects
-            for source in project.config.sources
-        )
+        mise_sources = tuple(("mise", source) for source in plan.value.sources)
         all_sources = (*source_states.value, *mise_sources)
         source_barrier = verify.states_current(
             FlextInfraCodegenPreconditions.unique_states(
@@ -388,7 +384,10 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
             )
             if staged_config is None:
                 return result_type.fail("Mise staging receipt has no configuration")
-            validated = self._owner.validate_artifacts(staged_config.path.parent)
+            # The staged set is complete and self-contained; its projection of
+            # the runtime root is proven again on the published destinations.
+            staged_root = staged_config.path.parent
+            validated = self._owner.validate_artifacts(staged_root, staged_root)
             if validated.failure:
                 return result_type.from_failure(
                     self._recover_failure(

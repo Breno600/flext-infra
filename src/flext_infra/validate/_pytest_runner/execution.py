@@ -39,7 +39,8 @@ class FlextInfraPytestRunnerExecution(
         overrides = {
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
                 self.root / c.Infra.DEFAULT_SRC_DIR
-            )
+            ),
+            c.Infra.PYTEST_ENV_TESTMON_DATAFILE: str(self.testmon_db),
         }
         if manifest is not None:
             overrides[c.Infra.PYTEST_ENV_COLLECTION_MANIFEST] = str(manifest)
@@ -283,6 +284,7 @@ class FlextInfraPytestRunnerExecution(
 
     def _execute_testmon(self, *, complete: bool) -> p.Result[int]:
         """Execute one selected testmon phase without resetting shared state."""
+        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
         report_dir = self._report_directory()
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL

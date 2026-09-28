@@ -324,6 +324,10 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
             tree = ast.parse(source)
         except SyntaxError:
             return ""
+        # One bare pre-loop annotation: the AnnAssign branch may leave the
+        # value None, so the None check after the loop body must stay
+        # reachable to the type checker.
+        value: ast.expr | None
         for node in tree.body:
             value: ast.expr | None
             if isinstance(node, ast.Assign):

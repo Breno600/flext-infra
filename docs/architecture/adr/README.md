@@ -61,6 +61,17 @@ instalam congelados a partir deles (operador 2026-09-24); e os Beads são exclus
 do Gas City. Qualquer nova leitura desses ADRs deve aplicar essa precedência e reportar
 o conflito no Bead owner, não resolver em silêncio.
 
+Decisão INC-429 (operador 2026-09-27, `flext-itpd1.3.3`, HQ `gc-363qxz`): o launcher
+semente mantido à mão, que resolvia `releases/latest` a cada chamada sem `MISE_VERSION`,
+derrubou todas as ferramentas da frota com HTTP 429 quando os shims do host apontaram
+para ele. Essa semente deixa de existir como autoridade. `make upg` é o único escritor
+de `mise.version`, `bin/mise` e `bin/mise.cmd`, gerados pelo próprio Mise
+(`mise generate install-script`) para o release resolvido pelo Mise; `gen`, `check` e o
+CI só verificam offline. Isso substitui a premissa de 2026-09-04 ("setup sempre com o
+Mise mais novo"): a atualização contínua é feita pelo `make upg`, conforme a lei de
+2026-09-24. O detalhe operacional está em
+[execution-context](../../guides/execution-context.md).
+
 O estado dos god modules e do defeito `_lazy_analysis` não é provado resolvido por
 qualquer fonte viva. Consulte o [roadmap](../../roadmap/index.md) para a tabela corrente
 e o Bead ativo. Gas City task `flext-itpd1.2` mantém o cursor da convergência documental
