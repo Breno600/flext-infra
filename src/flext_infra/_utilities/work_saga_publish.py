@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -38,7 +37,10 @@ class FlextInfraWorkSagaPublish(FlextInfraWorkSagaCommon):
         )
         if listed.failure:
             return r.fail(listed.error or "failed to list open PRs")
-        rows = json.loads(listed.value or "[]")
+        decoded = u.Cli.json_loads(listed.value or "[]")
+        if decoded.failure:
+            return r.from_failure(decoded)
+        rows = u.Cli.json_as_mapping_list(decoded.value)
         if not rows:
             return r.fail(f"no open PR for head {branch}")
         return r.ok((str(rows[0].get("number", "")), str(rows[0].get("url", ""))))
@@ -170,16 +172,21 @@ class FlextInfraWorkSagaPublish(FlextInfraWorkSagaCommon):
                     entry_head.error
                     or f"failed to resolve matrix HEAD: {entry.project}"
                 )
-            pr = u.Infra.run_github_pull_request(
-                m.Infra.GithubPullRequestRequest(
-                    repo_root=str(project_root.value),
-                    action=c.Infra.PullRequestAction.CREATE,
-                    base=pr_base,
-                    head=entry.branch,
-                    title=f"{entry.branch}: lane land",
-                    body=f"Automated land for bead {bead} ({entry.branch}).",
-                    draft=False,
-                )
+            pr = u.Cli.capture(
+                (
+                    c.Infra.GH,
+                    "pr",
+                    "create",
+                    "--base",
+                    pr_base,
+                    "--head",
+                    entry.branch,
+                    "--title",
+                    f"{entry.branch}: lane land",
+                    "--body",
+                    f"Automated land for bead {bead} ({entry.branch}).",
+                ),
+                cwd=project_root.value,
             )
             observed = self._observe_open_pr(project_root.value, entry.branch)
             if pr.failure and observed.failure:
@@ -210,14 +217,16 @@ class FlextInfraWorkSagaPublish(FlextInfraWorkSagaCommon):
                     )
                 )
                 checkpoint = u.Infra.beads_update_lane(
-                    bead,
-                    metadata=metadata.model_copy(update={"matrix": progress}),
-                    notes=(
-                        "work land progress: "
-                        f"project={entry.project} pr={entry_pr or 'pending'} "
-                        f"sha={entry_head.value}"
+                    m.Infra.BeadsLaneUpdate(
+                        bead_id=bead,
+                        metadata=metadata.model_copy(update={"matrix": progress}),
+                        notes=(
+                            "work land progress: "
+                            f"project={entry.project} pr={entry_pr or 'pending'} "
+                            f"sha={entry_head.value}"
+                        ),
+                        root=self.workspace_root,
                     ),
-                    root=self.workspace_root,
                 )
                 if checkpoint.failure:
                     return r.fail(
@@ -248,23 +257,27 @@ class FlextInfraWorkSagaPublish(FlextInfraWorkSagaCommon):
             f"decisive=PR {pr_url or pr_number or 'pending'} sha={head}"
         )
         updated = u.Infra.beads_update_lane(
-            bead,
-            metadata=updated_metadata,
-            labels=labels,
-            notes=notes,
-            root=self.workspace_root,
+            m.Infra.BeadsLaneUpdate(
+                bead_id=bead,
+                metadata=updated_metadata,
+                labels=labels,
+                notes=notes,
+                root=self.workspace_root,
+            )
         )
         if updated.failure:
             return r.fail(updated.error or "failed to record land on bead")
         receipt = self._format_receipt(
-            bead=bead,
-            operation=c.Infra.WorkOperation.LAND,
-            primary=primary_root,
-            worktree=str(lane),
-            branch=branch,
-            base=pr_base,
-            head_oid=head,
-            pr=pr_number,
+            m.Infra.WorkLaneReceipt(
+                bead=bead,
+                operation=c.Infra.WorkOperation.LAND,
+                primary=primary_root,
+                worktree=str(lane),
+                branch=branch,
+                base=pr_base,
+                head_oid=head,
+                pr=pr_number,
+            )
         )
         return r.ok(
             f"BRANCH={branch} HEAD={head} PR_NUMBER={pr_number} "

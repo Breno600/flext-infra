@@ -9,9 +9,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, c
-from tests.unit.workspace.test_work_service import (
-    TestsFlextInfraWorkService as _WorkFixture,
-)
+from tests.unit.workspace.work_service_fixture import WorkServiceFixture as _WorkFixture
 
 
 def test_status_rejects_tampered_child_metadata(

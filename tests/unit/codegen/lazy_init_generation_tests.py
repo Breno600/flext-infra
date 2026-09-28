@@ -23,7 +23,7 @@ class TestsFlextInfraCodegenGeneration:
         exports: t.StrSequence,
         lazy_map: t.LazyAliasMap,
         *,
-        eager_dunders: t.MutableLazyAliasMap | None = None,
+        eager_dunders: t.LazyAliasMap | None = None,
         child_packages: t.StrSequence = (),
         type_checking_map: t.LazyAliasMap | None = None,
     ) -> m.Infra.LazyInitPlan:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 
@@ -10,23 +9,24 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, c
-from tests.unit.workspace.test_work_service import (
-    TestsFlextInfraWorkService as _WorkFixture,
-)
+from tests import t, u
+from tests.unit.workspace.work_service_fixture import WorkServiceFixture as _WorkFixture
 
 
 def _record(tmp_path: Path, bead_id: str, metadata: dict[str, str]) -> None:
     store_path = tmp_path / "beads-store.json"
-    store = json.loads(store_path.read_text(encoding="utf-8"))
+    store = t.json_dict_adapter().validate_python(
+        u.Cli.json_loads(store_path.read_text(encoding="utf-8")).unwrap()
+    )
     store[bead_id] = {
         "id": bead_id,
         "status": "open",
         "issue_type": "feature",
         "parent": None,
-        "metadata": metadata,
+        "metadata": t.json_value_adapter().validate_python(metadata),
         "labels": [],
     }
-    store_path.write_text(json.dumps(store), encoding="utf-8")
+    store_path.write_text(u.Cli.json_dumps(store).unwrap(), encoding="utf-8")
 
 
 def test_foreign_bead_cannot_start_reserved_branch(
@@ -96,9 +96,13 @@ def test_closed_reservation_does_not_block_new_owner(
         },
     )
     store_path = tmp_path / "beads-store.json"
-    store = json.loads(store_path.read_text(encoding="utf-8"))
-    store[bead_a]["status"] = "closed"
-    store_path.write_text(json.dumps(store), encoding="utf-8")
+    store = t.json_dict_adapter().validate_python(
+        u.Cli.json_loads(store_path.read_text(encoding="utf-8")).unwrap()
+    )
+    issue = t.json_dict_adapter().validate_python(store[bead_a])
+    issue["status"] = "closed"
+    store[bead_a] = issue
+    store_path.write_text(u.Cli.json_dumps(store).unwrap(), encoding="utf-8")
 
     result = FlextInfraWorkService(
         workspace_root=repository,
@@ -138,10 +142,18 @@ def test_poisoned_foreign_metadata_cannot_mutate_owner_lane(
         ).execute()
     )
     store_path = tmp_path / "beads-store.json"
-    store = json.loads(store_path.read_text(encoding="utf-8"))
-    store[bead_b]["metadata"] = dict(store[bead_a]["metadata"])
-    store_path.write_text(json.dumps(store), encoding="utf-8")
-    owner_path = Path(store[bead_a]["metadata"]["worktree"])
+    store = t.json_dict_adapter().validate_python(
+        u.Cli.json_loads(store_path.read_text(encoding="utf-8")).unwrap()
+    )
+    foreign_issue = t.json_dict_adapter().validate_python(store[bead_b])
+    owner_issue = t.json_dict_adapter().validate_python(store[bead_a])
+    foreign_issue["metadata"] = t.json_dict_adapter().validate_python(
+        owner_issue["metadata"]
+    )
+    store[bead_b] = foreign_issue
+    store_path.write_text(u.Cli.json_dumps(store).unwrap(), encoding="utf-8")
+    owner_metadata = t.json_dict_adapter().validate_python(owner_issue["metadata"])
+    owner_path = Path(u.Cli.json_pick_str(owner_metadata, "worktree"))
 
     result = FlextInfraWorkService(
         workspace_root=repository, operation=operation, bead=bead_b, apply_changes=True

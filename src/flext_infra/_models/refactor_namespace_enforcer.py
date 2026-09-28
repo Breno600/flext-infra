@@ -487,6 +487,18 @@ class FlextInfraModelsNamespaceEnforcer:
 
         @m.computed_field
         @property
+        def total_runtime_alias_violations(self) -> t.NonNegativeInt:
+            """Aggregate runtime-alias findings from the project reports."""
+            return sum(len(project.runtime_alias_violations) for project in self.projects)
+
+        @m.computed_field
+        @property
+        def total_manual_typing_violations(self) -> t.NonNegativeInt:
+            """Aggregate manual-typing findings from the project reports."""
+            return sum(len(project.manual_typing_violations) for project in self.projects)
+
+        @m.computed_field
+        @property
         def has_violations(self) -> bool:
             """Whether any project carries a violation."""
             return any(project.has_violations for project in self.projects)

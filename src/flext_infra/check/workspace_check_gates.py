@@ -248,9 +248,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 elapsed=execution.result.duration,
             )
             if not execution.result.passed:
+                details = "; ".join(issue.formatted for issue in execution.issues)
                 return r[m.Cli.PipelineStageResult].fail(
                     f"{gate_id} failed for {project_name} "
-                    f"with {len(execution.issues)} findings"
+                    f"with {len(execution.issues)} findings: {details}"
                 )
             return r[m.Cli.PipelineStageResult].ok(
                 m.Cli.PipelineStageResult(

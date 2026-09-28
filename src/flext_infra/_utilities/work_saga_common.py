@@ -12,7 +12,6 @@ from flext_infra._utilities._work import (
     FlextInfraWorkReservation,
     FlextInfraWorkStartSupport,
 )
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -23,7 +22,6 @@ _SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 class FlextInfraWorkSagaCommon(FlextInfraWorkReservation, FlextInfraWorkStartSupport):
     """Resolve bases, branches, and primary-worktree safety."""
 
-    workspace_root: Path
     base: str | None
     bead: str | None
     kind: c.Infra.WorkKind | None
@@ -102,20 +100,21 @@ class FlextInfraWorkSagaCommon(FlextInfraWorkReservation, FlextInfraWorkStartSup
         else:
             namespace = None
         if kind is None and namespace is None:
-            workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
-                self.workspace_root
-            )
-            if workspace.failure:
-                return r.fail(workspace.error or "failed to load workspace lane policy")
             match normalized_issue_type:
                 case "bug":
                     kind = c.Infra.WorkKind.BUGFIX
                 case "feature":
                     kind = c.Infra.WorkKind.FEATURE
                 case "task":
-                    kind = c.Infra.WorkKind(workspace.value.work.task_kind)
+                    return r.fail(
+                        "work start requires --kind for task issues; the workspace "
+                        "does not declare a task-to-branch policy"
+                    )
                 case "chore":
-                    kind = c.Infra.WorkKind(workspace.value.work.chore_kind)
+                    return r.fail(
+                        "work start requires --kind for chore issues; the workspace "
+                        "does not declare a chore-to-branch policy"
+                    )
                 case "":
                     return r.fail("work start bead is missing issue_type; pass --kind")
                 case invalid:
@@ -228,27 +227,17 @@ class FlextInfraWorkSagaCommon(FlextInfraWorkReservation, FlextInfraWorkStartSup
         return r.ok(True)
 
     @staticmethod
-    def _format_receipt(
-        *,
-        bead: str,
-        operation: c.Infra.WorkOperation,
-        primary: Path,
-        worktree: str,
-        branch: str,
-        base: str,
-        head_oid: str,
-        pr: str,
-    ) -> str:
+    def _format_receipt(receipt: m.Infra.WorkLaneReceipt) -> str:
         """Render the machine-readable lifecycle receipt of one saga step."""
         return "\n".join((
-            f"receipt.bead={bead}",
-            f"receipt.operation={operation.value}",
-            f"receipt.primary={primary}",
-            f"receipt.worktree={worktree}",
-            f"receipt.branch={branch}",
-            f"receipt.base={base}",
-            f"receipt.head_oid={head_oid}",
-            f"receipt.pr={pr}",
+            f"receipt.bead={receipt.bead}",
+            f"receipt.operation={receipt.operation.value}",
+            f"receipt.primary={receipt.primary}",
+            f"receipt.worktree={receipt.worktree}",
+            f"receipt.branch={receipt.branch}",
+            f"receipt.base={receipt.base}",
+            f"receipt.head_oid={receipt.head_oid}",
+            f"receipt.pr={receipt.pr}",
         ))
 
     @staticmethod

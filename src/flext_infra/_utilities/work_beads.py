@@ -2,19 +2,18 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_cli import u
+from flext_cli import u as cli
 
 from flext_core import r
 from flext_infra.constants import FlextInfraConstants as c
 from flext_infra.models import FlextInfraModels as m
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesWorkBeads:
@@ -35,20 +34,28 @@ class FlextInfraUtilitiesWorkBeads:
         cached = cls._BEADS_ROOT_CACHE.get(start)
         if cached is not None:
             return r.ok(cached)
+        from flext_infra import u
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
-        governing = FlextInfraWorkspaceDetector.resolve_workspace_root(start)
-        if governing.failure:
-            return r.fail(governing.error or "unable to resolve governing workspace")
-        workspace = FlextInfraWorkspaceDetector.load_workspace_spec(governing.value)
+        identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=start))
+        if identity.failure:
+            return r.fail(identity.error or "unable to resolve governing repository")
+        governing_root = (
+            identity.value.superproject_root
+            if identity.value.is_attached_submodule
+            else identity.value.primary_root
+        )
+        if governing_root is None:
+            return r.fail(f"attached submodule has no superproject: {start}")
+        workspace = FlextInfraWorkspaceDetector.load_workspace_spec(governing_root)
         if workspace.failure:
             return r.fail(workspace.error or "unable to load governing workspace")
-        if workspace.value.ledger_id is None:
+        if workspace.value.beads is None:
             return r.fail(
-                f"governing workspace declares no Beads ledger: {governing.value}"
+                f"governing workspace declares no Beads ledger: {governing_root}"
             )
-        cls._BEADS_ROOT_CACHE[start] = governing.value
-        return r.ok(governing.value)
+        cls._BEADS_ROOT_CACHE[start] = governing_root
+        return r.ok(governing_root)
 
     @classmethod
     def _bd_command(
@@ -70,13 +77,13 @@ class FlextInfraUtilitiesWorkBeads:
         command = cls._bd_command("show", cleaned, "--json", root=root)
         if command.failure:
             return r.fail(command.error or "failed to build bd show command")
-        captured = u.Cli.capture(command.value)
+        captured = cli.Cli.capture(command.value)
         if captured.failure:
             return r.fail(captured.error or f"bd show failed for {cleaned}")
-        try:
-            payload = json.loads(captured.value)
-        except json.JSONDecodeError as exc:
-            return r.fail(f"bd show returned invalid JSON: {exc}")
+        decoded = cli.Cli.json_loads(captured.value)
+        if decoded.failure:
+            return r.fail(f"bd show returned invalid JSON: {decoded.error}")
+        payload = decoded.value
         if isinstance(payload, list):
             if not payload or not isinstance(payload[0], dict):
                 return r.fail(f"bd show returned empty list for {cleaned}")
@@ -93,13 +100,13 @@ class FlextInfraUtilitiesWorkBeads:
         command = cls._bd_command("list", "--json", root=root)
         if command.failure:
             return r.fail(command.error or "failed to build bd list command")
-        captured = u.Cli.capture(command.value)
+        captured = cli.Cli.capture(command.value)
         if captured.failure:
             return r.fail(captured.error or "bd list failed")
-        try:
-            payload = json.loads(captured.value)
-        except json.JSONDecodeError as exc:
-            return r.fail(f"bd list returned invalid JSON: {exc}")
+        decoded = cli.Cli.json_loads(captured.value)
+        if decoded.failure:
+            return r.fail(f"bd list returned invalid JSON: {decoded.error}")
+        payload = decoded.value
         if not isinstance(payload, list):
             return r.fail("bd list returned unexpected JSON")
         issues: list[m.Infra.BeadIssue] = []
@@ -149,7 +156,7 @@ class FlextInfraUtilitiesWorkBeads:
             parsed_matrix = (
                 m.Infra.WorkLaneMatrix.model_validate_json(matrix)
                 if isinstance(matrix, str)
-                else m.Infra.WorkLaneMatrix.model_validate_json(json.dumps(matrix))
+                else m.Infra.WorkLaneMatrix.model_validate(dict(matrix))
             )
             root_entry = next(
                 (entry for entry in parsed_matrix.entries if entry.project == "."),
@@ -221,9 +228,7 @@ class FlextInfraUtilitiesWorkBeads:
             if isinstance(matrix, str):
                 projected["matrix"] = m.Infra.WorkLaneMatrix.model_validate_json(matrix)
             elif isinstance(matrix, Mapping):
-                projected["matrix"] = m.Infra.WorkLaneMatrix.model_validate_json(
-                    json.dumps(dict(matrix))
-                )
+                projected["matrix"] = m.Infra.WorkLaneMatrix.model_validate(dict(matrix))
         if "epic_worktree" in topology:
             topology["epic_worktree"] = Path(str(topology["epic_worktree"]))
         projected["topology"] = topology
@@ -231,7 +236,10 @@ class FlextInfraUtilitiesWorkBeads:
 
     @classmethod
     def _parse_issue(
-        cls, payload: dict[str, object], *, adopt_legacy_ready: bool = False
+        cls,
+        payload: Mapping[str, t.JsonValue],
+        *,
+        adopt_legacy_ready: bool = False,
     ) -> p.Result[m.Infra.BeadIssue]:
         try:
             projected_metadata = cls._project_lane_metadata(
@@ -258,26 +266,16 @@ class FlextInfraUtilitiesWorkBeads:
     @classmethod
     def beads_update_lane(
         cls,
-        bead_id: str,
-        *,
-        metadata: (
-            m.Infra.PendingLaneReservation
-            | m.Infra.ReadyLaneMetadata
-            | m.Infra.FailedLaneMetadata
-            | None
-        ) = None,
-        labels: tuple[str, ...] = (),
-        notes: str | None = None,
-        claim: bool = False,
-        root: Path | None = None,
+        request: m.Infra.BeadsLaneUpdate,
     ) -> p.Result[str]:
         """Update lane registry fields on one bead."""
-        cleaned = bead_id.strip()
+        cleaned = request.bead_id.strip()
         if not cleaned:
             return r.fail("beads update requires a non-empty bead id")
         parts: list[str] = ["update", cleaned]
-        if claim:
+        if request.claim:
             parts.append("--claim")
+        metadata = request.metadata
         if metadata is not None:
             values = metadata.model_dump(
                 mode="json", exclude_none=True, exclude={"topology", "matrix"}
@@ -313,16 +311,16 @@ class FlextInfraUtilitiesWorkBeads:
                 stale_fields = ("pr_number", "pr_url", "matrix")
             for stale_field in stale_fields:
                 parts.extend(("--unset-metadata", stale_field))
-        for label in labels:
+        for label in request.labels:
             parts.extend(("--add-label", label))
-        if notes:
-            parts.extend(("--append-notes", notes))
+        if request.notes:
+            parts.extend(("--append-notes", request.notes))
         if len(parts) == cls._UPDATE_BASE_ARGV_LENGTH:
             return r.fail("beads update requires metadata, labels, notes, or claim")
-        command = cls._bd_command(*parts, root=root)
+        command = cls._bd_command(*parts, root=request.root)
         if command.failure:
             return r.fail(command.error or "failed to build bd update command")
-        ran = u.Cli.run(command.value)
+        ran = cli.Cli.run(command.value)
         if ran.failure:
             return r.fail(ran.error or f"bd update failed for {cleaned}")
         if ran.value.exit_code != 0:

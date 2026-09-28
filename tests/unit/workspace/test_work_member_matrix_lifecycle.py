@@ -10,9 +10,7 @@ from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, c, m
 from tests import u as test_u
-from tests.unit.workspace.test_work_service import (
-    TestsFlextInfraWorkService as _WorkFixture,
-)
+from tests.unit.workspace.work_service_fixture import WorkServiceFixture as _WorkFixture
 
 _metadata = _WorkFixture._metadata  # ruff: ignore[private-member-access]
 _repository = _WorkFixture._repository  # ruff: ignore[private-member-access]

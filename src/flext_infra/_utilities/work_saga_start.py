@@ -131,7 +131,7 @@ class FlextInfraWorkSagaStart(FlextInfraWorkSagaCommon):
                 epic_worktree=epic_lane,
                 child_slug=slug,
             )
-        pending_metadata = self.pending(
+        pending_metadata = m.Infra.PendingLaneReservation(
             branch=branch,
             namespace=namespace,
             worktree=lane,
@@ -139,13 +139,16 @@ class FlextInfraWorkSagaStart(FlextInfraWorkSagaCommon):
             slug=slug,
             integration_base=base,
             topology=topology,
+            provisioning=c.Infra.WorkProvisioningState.PENDING,
         )
         pending = u.Infra.beads_update_lane(
-            bead,
-            metadata=pending_metadata,
-            labels=(f"branch:{branch}",),
-            notes=f"work start: decisive=lane-registered-before-provisioning path={lane}",
-            root=self.workspace_root,
+            m.Infra.BeadsLaneUpdate(
+                bead_id=bead,
+                metadata=pending_metadata,
+                labels=(f"branch:{branch}",),
+                notes=f"work start: decisive=lane-registered-before-provisioning path={lane}",
+                root=self.workspace_root,
+            )
         )
         if pending.failure:
             return r.fail(
@@ -165,10 +168,12 @@ class FlextInfraWorkSagaStart(FlextInfraWorkSagaCommon):
                 pending_metadata, known_head.value if known_head.success else None
             )
             recorded = u.Infra.beads_update_lane(
-                bead,
-                metadata=failed,
-                notes=f"work start: decisive=provisioning-failed path={lane}",
-                root=self.workspace_root,
+                m.Infra.BeadsLaneUpdate(
+                    bead_id=bead,
+                    metadata=failed,
+                    notes=f"work start: decisive=provisioning-failed path={lane}",
+                    root=self.workspace_root,
+                )
             )
             if recorded.failure:
                 return r.fail(recorded.error or "failed to record provisioning failure")
@@ -252,11 +257,13 @@ class FlextInfraWorkSagaStart(FlextInfraWorkSagaCommon):
         if epic_lane is not None:
             labels = (*labels, f"epic:{epic_bead}")
         updated = u.Infra.beads_update_lane(
-            bead,
-            metadata=lane_metadata,
-            labels=labels,
-            notes=notes,
-            root=self.workspace_root,
+            m.Infra.BeadsLaneUpdate(
+                bead_id=bead,
+                metadata=lane_metadata,
+                labels=labels,
+                notes=notes,
+                root=self.workspace_root,
+            )
         )
         if updated.failure:
             return r.fail(
@@ -266,14 +273,16 @@ class FlextInfraWorkSagaStart(FlextInfraWorkSagaCommon):
         if ownership.failure:
             return r.fail(ownership.error or "ready reservation ownership failed")
         receipt = self._format_receipt(
-            bead=bead,
-            operation=c.Infra.WorkOperation.START,
-            primary=primary_root,
-            worktree=str(lane),
-            branch=branch,
-            base=base,
-            head_oid=head.value,
-            pr="",
+            m.Infra.WorkLaneReceipt(
+                bead=bead,
+                operation=c.Infra.WorkOperation.START,
+                primary=primary_root,
+                worktree=str(lane),
+                branch=branch,
+                base=base,
+                head_oid=head.value,
+                pr="",
+            )
         )
         epic_selector = f" EPIC={epic_bead}" if epic_bead else ""
         return r.ok(

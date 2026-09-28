@@ -9,7 +9,7 @@ from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService
 from tests import c, m, u
-from tests.unit import WorkPublicFinishFixture
+from tests.unit.workspace import WorkPublicFinishFixture
 
 # Why (suite budget): full child FINISH saga over real epic/child worktrees
 # with subprocess git and beads calls; the per-case wall only holds idle.

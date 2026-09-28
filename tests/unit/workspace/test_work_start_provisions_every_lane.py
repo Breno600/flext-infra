@@ -8,7 +8,6 @@ carrying whatever half-built environment the interrupted run had left (mro-c6di)
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 
@@ -16,7 +15,8 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, c, m
-from tests import u
+from tests import t, u
+from tests.unit.workspace.work_test_support import declare_workspace_ledger
 
 _SETUP_LOG = "setup-runs.log"
 _VENV_NAME = c.Infra.ENVIRONMENT_DIRECTORY
@@ -52,7 +52,7 @@ def _repository(tmp_path: Path, *, content_only: bool = False) -> Path:
     (repository / ".gitignore").write_text(
         f"{_VENV_NAME}\n{_SETUP_LOG}\n", encoding="utf-8"
     )
-    u.Tests.declare_workspace_ledger(repository, "mro")
+    declare_workspace_ledger(repository)
     u.Tests.initialize_git_repo(repository)
     return repository
 
@@ -61,13 +61,13 @@ def _install_bd_shim(tmp_path: Path, bead_id: str) -> Path:
     """Install the minimal ``bd`` surface the start saga consumes."""
     store = tmp_path / "beads-store.json"
     store.write_text(
-        json.dumps({
+        u.Cli.json_dumps({
             "id": bead_id,
             "status": "open",
             "assignee": None,
             "metadata": {},
             "labels": [],
-        }),
+        }).unwrap(),
         encoding="utf-8",
     )
     shim_dir = tmp_path / "bin"
@@ -140,10 +140,14 @@ def _setup_runs(lane: Path) -> int:
 
 
 def _metadata(tmp_path: Path) -> dict[str, str]:
-    payload: dict[str, dict[str, str]] = json.loads(
-        (tmp_path / "beads-store.json").read_text(encoding="utf-8")
+    payload = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
+        u.Cli.json_loads(
+            (tmp_path / "beads-store.json").read_text(encoding="utf-8")
+        ).unwrap()
     )
-    return payload["metadata"]
+    metadata = t.Cli.JSON_MAPPING_ADAPTER.validate_python(payload["metadata"])
+    tm.that(all(isinstance(value, str) for value in metadata.values()))
+    return {key: value for key, value in metadata.items() if isinstance(value, str)}
 
 
 def test_start_provisions_a_new_lane_and_an_adopted_one(

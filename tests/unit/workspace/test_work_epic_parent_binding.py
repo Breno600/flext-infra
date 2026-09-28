@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 
@@ -10,17 +9,17 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, c
-from tests.unit.workspace.test_work_service import (
-    TestsFlextInfraWorkService as _WorkFixture,
-)
+from tests import t, u
+from tests.unit.workspace.work_service_fixture import WorkServiceFixture as _WorkFixture
 
-type JsonObject = dict[str, JsonValue]
-type JsonValue = str | int | bool | list[JsonValue] | JsonObject | None
+type JsonObject = dict[str, t.JsonValue]
 
 
 def _store(tmp_path: Path) -> tuple[Path, JsonObject]:
     path = tmp_path / "beads-store.json"
-    return path, json.loads(path.read_text(encoding="utf-8"))
+    return path, t.json_dict_adapter().validate_python(
+        u.Cli.json_loads(path.read_text(encoding="utf-8")).unwrap()
+    )
 
 
 def _issue(store: JsonObject, bead_id: str) -> JsonObject:
@@ -36,7 +35,7 @@ def _metadata(store: JsonObject, bead_id: str) -> JsonObject:
 
 
 def _write(path: Path, store: JsonObject) -> None:
-    path.write_text(json.dumps(store), encoding="utf-8")
+    path.write_text(u.Cli.json_dumps(store).unwrap(), encoding="utf-8")
 
 
 def _start_pair(

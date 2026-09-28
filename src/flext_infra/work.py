@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
@@ -25,6 +26,9 @@ class FlextInfraWorkService(
 ):
     """Automate bead + GitFlow branch + worktree + GitHub PR as one saga."""
 
+    workspace_root: Annotated[
+        Path, m.Field(description="Repository root that owns this work-lane operation")
+    ]
     operation: Annotated[
         c.Infra.WorkOperation, m.Field(description="Public work saga operation")
     ]

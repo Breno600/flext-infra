@@ -171,9 +171,11 @@ class WorkPublicFinishFixture:
         oid = self.oid(state.epic_lane, "HEAD")
         tm.ok(
             u.Infra.beads_update_lane(
-                state.epic_bead,
-                metadata=metadata.model_copy(update={"head_oid": oid}),
-                root=self.repository,
+                m.Infra.BeadsLaneUpdate(
+                    bead_id=state.epic_bead,
+                    metadata=metadata.model_copy(update={"head_oid": oid}),
+                    root=self.repository,
+                )
             )
         )
         return oid

@@ -114,10 +114,12 @@ class FlextInfraWorkTopology(FlextInfraWorkOwnership):
         if head.value.oid == metadata.head_oid:
             return r.ok(metadata.head_oid)
         updated = u.Infra.beads_update_lane(
-            shown.value.id,
-            metadata=metadata.model_copy(update={"head_oid": head.value.oid}),
-            notes=f"work finish: decisive=child-merge-forward head={head.value.oid}",
-            root=self.workspace_root,
+            m.Infra.BeadsLaneUpdate(
+                bead_id=shown.value.id,
+                metadata=metadata.model_copy(update={"head_oid": head.value.oid}),
+                notes=f"work finish: decisive=child-merge-forward head={head.value.oid}",
+                root=self.workspace_root,
+            )
         )
         if updated.failure:
             return r.fail(updated.error or "failed to advance epic metadata HEAD")

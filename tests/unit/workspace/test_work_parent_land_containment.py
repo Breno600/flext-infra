@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests.unit import WorkAdversarialFixture
+from tests.unit.workspace import WorkAdversarialFixture
 
 
 # Why (suite budget): parent LAND saga over real epic/child worktrees with

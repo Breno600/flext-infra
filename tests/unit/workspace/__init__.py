@@ -23,6 +23,8 @@ if TYPE_CHECKING:
         PullRequestCreateReceipt,
         WorkPublicServiceFixture,
     )
+    from .work_service_fixture import WorkServiceFixture
+    from .work_test_support import declare_workspace_ledger
 
 
 __all__: tuple[str, ...] = (
@@ -34,6 +36,8 @@ __all__: tuple[str, ...] = (
     "WorkInvocation",
     "WorkPublicFinishFixture",
     "WorkPublicServiceFixture",
+    "WorkServiceFixture",
+    "declare_workspace_ledger",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -53,6 +57,8 @@ _LAZY_IMPORTS = MappingProxyType(
                 "PullRequestCreateReceipt",
                 "WorkPublicServiceFixture",
             ),
+            ".work_service_fixture": ("WorkServiceFixture",),
+            ".work_test_support": ("declare_workspace_ledger",),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,

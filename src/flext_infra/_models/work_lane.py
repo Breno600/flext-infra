@@ -3,17 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, ClassVar, Literal
+from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
 from flext_infra.constants import FlextInfraConstants as c
 from flext_infra.typings import FlextInfraTypes as t
-
-if TYPE_CHECKING:
-    from .._constants.validate import FlextInfraConstantsSharedInfra
-
-    BeadIssueStatus = FlextInfraConstantsSharedInfra.BeadIssueStatus
 
 
 class FlextInfraModelsWorkLane:
@@ -211,7 +206,8 @@ class FlextInfraModelsWorkLane:
 
         id: Annotated[t.NonEmptyStr, m.Field(description="Canonical Beads issue id")]
         status: Annotated[
-            BeadIssueStatus, m.Field(description="Current Beads issue status")
+            c.Infra.BeadIssueStatus,
+            m.Field(description="Current Beads issue status"),
         ]
         issue_type: Annotated[
             t.NonEmptyStr | None,
@@ -225,6 +221,31 @@ class FlextInfraModelsWorkLane:
             FlextInfraModelsWorkLane.LaneMetadata | None,
             m.Field(description="Validated lane reservation or lifecycle state"),
         ] = None
+
+    class BeadsLaneUpdate(LaneContract):
+        """One typed command to update a lane reservation in Beads."""
+
+        bead_id: Annotated[t.NonEmptyStr, m.Field(description="Beads issue identifier")]
+        metadata: Annotated[
+            FlextInfraModelsWorkLane.LaneMetadata | None,
+            m.Field(description="Replacement lane state to persist"),
+        ] = None
+        labels: Annotated[tuple[t.NonEmptyStr, ...], m.Field(description="Labels to add")] = ()
+        notes: Annotated[str | None, m.Field(description="Evidence appended to the issue")] = None
+        claim: Annotated[bool, m.Field(description="Whether the issue is claimed")] = False
+        root: Annotated[Path | None, m.Field(description="Governing Beads project root")] = None
+
+    class WorkLaneReceipt(LaneContract):
+        """Machine-readable receipt for one completed lane operation."""
+
+        bead: Annotated[t.NonEmptyStr, m.Field(description="Beads issue identifier")]
+        operation: Annotated[c.Infra.WorkOperation, m.Field(description="Completed operation")]
+        primary: Annotated[Path, m.Field(description="Primary repository root")]
+        worktree: Annotated[str, m.Field(description="Lane worktree")]
+        branch: Annotated[str, m.Field(description="Lane branch")]
+        base: Annotated[str, m.Field(description="Integration branch")]
+        head_oid: Annotated[str, m.Field(description="Observed lane HEAD")]
+        pr: Annotated[str, m.Field(description="Pull request number")]
 
 
 __all__: list[str] = ["FlextInfraModelsWorkLane"]

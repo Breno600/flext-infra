@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,7 +10,7 @@ from typing import Self
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, u
+from flext_infra import c, m, t, u
 from tests import u as test_u
 
 
@@ -125,7 +124,9 @@ class WorkPublicServiceFixture:
     def add_issue(
         self, bead_id: str, *, issue_type: str, parent: str | None = None
     ) -> None:
-        records = json.loads(self.store.read_text(encoding="utf-8"))
+        records = t.json_dict_adapter().validate_python(
+            u.Cli.json_loads(self.store.read_text(encoding="utf-8")).unwrap()
+        )
         records[bead_id] = {
             "id": bead_id,
             "status": "open",
@@ -135,7 +136,7 @@ class WorkPublicServiceFixture:
             "metadata": {},
             "labels": [],
         }
-        self.store.write_text(json.dumps(records), encoding="utf-8")
+        self.store.write_text(u.Cli.json_dumps(records).unwrap(), encoding="utf-8")
 
     def issue(self, bead_id: str) -> m.Infra.BeadIssue:
         result = u.Infra.beads_show(bead_id, root=self.repository)
@@ -143,20 +144,24 @@ class WorkPublicServiceFixture:
         return m.Infra.BeadIssue.model_validate(result.value)
 
     def pr_create_receipt(self) -> PullRequestCreateReceipt:
-        argv = json.loads(self.pr_receipt.read_text(encoding="utf-8"))
-        return PullRequestCreateReceipt(tuple(argv))
+        raw_argv = t.Cli.JSON_LIST_ADAPTER.validate_python(
+            u.Cli.json_loads(self.pr_receipt.read_text(encoding="utf-8")).unwrap()
+        )
+        argv = tuple(value for value in raw_argv if isinstance(value, str))
+        tm.that(len(argv) == len(raw_argv))
+        return PullRequestCreateReceipt(argv)
 
     def set_merged_pr(self, *, head: str) -> None:
         self.pr_state.write_text(
-            json.dumps({"state": "MERGED", "headRefName": head}), encoding="utf-8"
+            u.Cli.json_dumps({"state": "MERGED", "headRefName": head}).unwrap(), encoding="utf-8"
         )
 
     def fail_updates_for(self, bead_id: str) -> None:
         self.failed_update.write_text(bead_id, encoding="utf-8")
 
-    def update_events(self) -> tuple[dict[str, str], ...]:
+    def update_events(self) -> tuple[dict[str, t.JsonValue], ...]:
         return tuple(
-            json.loads(line)
+            t.json_dict_adapter().validate_python(u.Cli.json_loads(line).unwrap())
             for line in self.update_receipt.read_text(encoding="utf-8").splitlines()
         )
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -45,14 +44,16 @@ class FlextInfraWorkSagaFinish(FlextInfraWorkSagaCommon):
         if lane_meta == Path("removed"):
             return r.ok(
                 self._format_receipt(
-                    bead=bead,
-                    operation=c.Infra.WorkOperation.FINISH,
-                    primary=primary_root,
-                    worktree=worktree,
-                    branch=branch,
-                    base=integration,
-                    head_oid=expected,
-                    pr=pr_number,
+                    m.Infra.WorkLaneReceipt(
+                        bead=bead,
+                        operation=c.Infra.WorkOperation.FINISH,
+                        primary=primary_root,
+                        worktree=worktree,
+                        branch=branch,
+                        base=integration,
+                        head_oid=expected,
+                        pr=pr_number,
+                    )
                 )
             )
         if self._is_primary_path(primary_root, lane_meta):
@@ -186,19 +187,26 @@ class FlextInfraWorkSagaFinish(FlextInfraWorkSagaCommon):
             update={"worktree": Path("removed"), "matrix": removed_matrix}
         )
         updated = u.Infra.beads_update_lane(
-            bead, metadata=removed_metadata, notes=notes, root=self.workspace_root
+            m.Infra.BeadsLaneUpdate(
+                bead_id=bead,
+                metadata=removed_metadata,
+                notes=notes,
+                root=self.workspace_root,
+            )
         )
         if updated.failure:
             return r.fail(updated.error or "failed to record finish on bead")
         receipt = self._format_receipt(
-            bead=bead,
-            operation=c.Infra.WorkOperation.FINISH,
-            primary=primary_root,
-            worktree=worktree,
-            branch=branch,
-            base=metadata.integration_base,
-            head_oid=metadata.head_oid,
-            pr=metadata.pr_number or "",
+            m.Infra.WorkLaneReceipt(
+                bead=bead,
+                operation=c.Infra.WorkOperation.FINISH,
+                primary=primary_root,
+                worktree=worktree,
+                branch=branch,
+                base=metadata.integration_base,
+                head_oid=metadata.head_oid,
+                pr=metadata.pr_number or "",
+            )
         )
         return r.ok(f"FINISHED BRANCH={branch} WORKTREE={worktree}\n{receipt}")
 
@@ -233,7 +241,10 @@ class FlextInfraWorkSagaFinish(FlextInfraWorkSagaCommon):
         )
         if viewed.failure:
             return r.fail(viewed.error or "failed to inspect PR merge state")
-        payload = json.loads(viewed.value or "{}")
+        decoded = u.Cli.json_loads(viewed.value or "{}")
+        if decoded.failure:
+            return r.from_failure(decoded)
+        payload = u.Cli.json_as_mapping(decoded.value)
         state = str(payload.get("state") or "")
         head_ref = str(payload.get("headRefName") or "").strip()
         if head_ref and head_ref != branch:

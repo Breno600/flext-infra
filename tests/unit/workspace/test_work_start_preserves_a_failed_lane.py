@@ -13,7 +13,6 @@ checkout once the cause is resolved.
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 
@@ -23,6 +22,7 @@ from flext_tests import tm
 from flext_core import p as core_p
 from flext_infra import FlextInfraWorkService, c
 from tests import u
+from tests.unit.workspace.work_test_support import declare_workspace_ledger
 
 _SETUP_MARKER = "setup-attempted"
 
@@ -46,7 +46,7 @@ def _repository(tmp_path: Path, *, setup_exit: int) -> Path:
         encoding="utf-8",
     )
     (repository / ".gitignore").write_text(f"{_SETUP_MARKER}\n", encoding="utf-8")
-    u.Tests.declare_workspace_ledger(repository, "mro")
+    declare_workspace_ledger(repository)
     u.Tests.initialize_git_repo(repository)
     return repository
 
@@ -55,13 +55,13 @@ def _install_bd_shim(tmp_path: Path, bead_id: str) -> Path:
     """Install the minimal ``bd`` surface the start saga consumes."""
     store = tmp_path / "beads-store.json"
     store.write_text(
-        json.dumps({
+        u.Cli.json_dumps({
             "id": bead_id,
             "status": "open",
             "assignee": None,
             "metadata": {},
             "labels": [],
-        }),
+        }).unwrap(),
         encoding="utf-8",
     )
     shim_dir = tmp_path / "bin"

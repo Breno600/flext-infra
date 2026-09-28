@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests.unit import WorkAdversarialFixture
+from tests.unit.workspace import WorkAdversarialFixture
 
 # Why (suite budget): full child FINISH saga over real epic/child worktrees
 # with subprocess git and beads calls; the per-case wall only holds idle.

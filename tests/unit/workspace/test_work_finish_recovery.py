@@ -9,10 +9,10 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, c, m, u
-from tests.unit.workspace.test_work_service import TestsFlextInfraWorkService
+from tests.unit.workspace.work_service_fixture import WorkServiceFixture
 
 
-class TestsWorkFinishRecovery(TestsFlextInfraWorkService):
+class TestsWorkFinishRecovery(WorkServiceFixture):
     @staticmethod
     def _finish(repository: Path, bead_id: str) -> str:
         return tm.ok(

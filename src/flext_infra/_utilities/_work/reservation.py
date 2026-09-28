@@ -2,39 +2,11 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from flext_infra import c, m
 
 
 class FlextInfraWorkReservation:
     """Construct immutable lane states for Beads persistence."""
-
-    @staticmethod
-    def pending(
-        *,
-        branch: str,
-        namespace: c.Infra.WorkBranchNamespace,
-        worktree: Path,
-        kind: c.Infra.WorkKind | None,
-        slug: str,
-        integration_base: str,
-        topology: (
-            m.Infra.PlainLaneTopology
-            | m.Infra.EpicLaneTopology
-            | m.Infra.ChildLaneTopology
-        ),
-    ) -> m.Infra.PendingLaneReservation:
-        return m.Infra.PendingLaneReservation(
-            branch=branch,
-            namespace=namespace,
-            worktree=worktree,
-            kind=kind,
-            slug=slug,
-            integration_base=integration_base,
-            topology=topology,
-            provisioning=c.Infra.WorkProvisioningState.PENDING,
-        )
 
     @staticmethod
     def ready(

@@ -14,6 +14,7 @@ from tests.unit.workspace.test_work_start_provisions_every_lane import (
     _install_bd_shim,
     _metadata,
 )
+from tests.unit.workspace.work_test_support import declare_workspace_ledger
 
 _VENV_NAME = c.Infra.ENVIRONMENT_DIRECTORY
 
@@ -60,7 +61,7 @@ def _external_consumer(tmp_path: Path) -> Path:
     (primary / ".gitignore").write_text(
         f"{_VENV_NAME}\nsetup-owner.log\n", encoding="utf-8"
     )
-    u.Tests.declare_workspace_ledger(primary, "mro")
+    declare_workspace_ledger(primary)
     u.Tests.initialize_git_repo(primary)
     submodules = (("mt5linux", "master"), ("vectorbt.pro", "main"))
     for name, branch in submodules:
