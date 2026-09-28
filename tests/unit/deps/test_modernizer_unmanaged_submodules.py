@@ -30,7 +30,9 @@ class TestsFlextInfraDepsModernizerUnmanagedSubmodules:
             )
         vendored = modernizer_workspace / "vendored"
         vendored.mkdir()
-        (vendored / "README.md").write_text("# Not a Python project\n", encoding="utf-8")
+        (vendored / "README.md").write_text(
+            "# Not a Python project\n", encoding="utf-8"
+        )
         (modernizer_workspace / c.Infra.GITMODULES).write_text(
             '[submodule "member"]\n\tpath = member\n'
             "\turl = https://github.com/flext-sh/member.git\n"
