@@ -41,7 +41,9 @@ class TestsFlextInfraDepsModernizerWorkspace:
 
     def test_taplo_formats_toml_through_public_utility(self, tmp_path: Path) -> None:
         u.Tests.write_mise_lock(
-            tmp_path, "taplo", u.Tests.pinned_mise_version(u.Tests.repo_mise_lock(), "taplo")
+            tmp_path,
+            "taplo",
+            u.Tests.pinned_mise_version(u.Tests.repo_mise_lock(), "taplo"),
         )
         config_path = tmp_path / ".taplo.toml"
         config_path.write_text('include = ["**/*.toml"]\n', encoding="utf-8")
@@ -80,7 +82,9 @@ class TestsFlextInfraDepsModernizerWorkspace:
         self, tmp_path: Path
     ) -> None:
         u.Tests.write_mise_lock(
-            tmp_path, "taplo", u.Tests.pinned_mise_version(u.Tests.repo_mise_lock(), "taplo")
+            tmp_path,
+            "taplo",
+            u.Tests.pinned_mise_version(u.Tests.repo_mise_lock(), "taplo"),
         )
         future_root = tmp_path / "future" / "project"
 
