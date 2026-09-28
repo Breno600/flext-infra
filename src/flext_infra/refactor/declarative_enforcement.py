@@ -11,21 +11,20 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, u
-from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 from flext_infra.detectors.class_placement_detector import (
     FlextInfraClassPlacementDetector,
 )
 from flext_infra.detectors.compatibility_alias_detector import (
     FlextInfraCompatibilityAliasDetector,
 )
+from flext_infra.detectors.consumer_import_violations_detector import (
+    FlextInfraConsumerImportViolationsDetector,
+)
 from flext_infra.detectors.loose_test_function_detector import (
     FlextInfraLooseTestFunctionDetector,
 )
-from flext_infra.detectors.mro_shape_detector import FlextInfraMROShapeDetector
 
 if TYPE_CHECKING:
-    from flext_core._models.enforcement import FlextModelsEnforcement as me
     from flext_infra import m, p, t
 
 
@@ -49,14 +48,12 @@ class FlextInfraRefactorDeclarativeEnforcement:
         "stub_file_violations",
         "foreign_canonical_alias_violations",
         "loose_test_function_violations",
+        "consumer_import_violations",
     })
-    _BEARTYPE_PREDICATES: ClassVar[frozenset[str]] = frozenset({
-        "classvar_constant",
-        "mro_shape",
-    })
+    _BEARTYPE_PREDICATES: ClassVar[frozenset[str]] = frozenset({"classvar_constant"})
 
     @classmethod
-    def supports(cls, rule: me.EnforcementRuleSpec) -> bool:
+    def supports(cls, rule: m.EnforcementRuleSpec) -> bool:
         """Return whether this engine can evaluate ``rule`` from source metadata."""
         source = rule.source
         if source.kind == "flext_infra_detector":
@@ -71,7 +68,7 @@ class FlextInfraRefactorDeclarativeEnforcement:
 
     @classmethod
     def detect(
-        cls, rule: me.EnforcementRuleSpec, ctx: m.Infra.DetectorContext
+        cls, rule: m.EnforcementRuleSpec, ctx: m.Infra.DetectorContext
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Return probes for violations of ``rule`` inside ``ctx.file_path``."""
         rule_id = cls._rule_id_short(rule.id)
@@ -86,13 +83,13 @@ class FlextInfraRefactorDeclarativeEnforcement:
                 return cls._detect_foreign_canonical_aliases(ctx, rule_id=rule_id)
             if violation_field == "loose_test_function_violations":
                 return cls._detect_loose_test_functions(ctx, rule_id=rule_id)
+            if violation_field == "consumer_import_violations":
+                return cls._detect_consumer_import_violations(ctx, rule_id=rule_id)
         elif source.kind == "beartype":
             predicate_kind = getattr(source, "predicate_kind", None)
             predicate_value = getattr(predicate_kind, "value", predicate_kind)
             if predicate_value == "classvar_constant":
                 return cls._detect_classvar_constants(ctx, rule_id=rule_id)
-            if predicate_value == "mro_shape":
-                return cls._detect_mro_shape(ctx, rule_id=rule_id)
         violation_field = getattr(source, "violation_field", "")
         predicate_kind = getattr(source, "predicate_kind", "")
         msg = (
@@ -117,9 +114,7 @@ class FlextInfraRefactorDeclarativeEnforcement:
         cls, ctx: m.Infra.DetectorContext, *, rule_id: str
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Return probes for magic numbers/strings in executable code."""
-        res = FlextInfraUtilitiesRopeCore.get_resource_from_path(
-            ctx.rope_project, ctx.file_path
-        )
+        res = u.Infra.resolve_resource_from_path(ctx.rope_project, ctx.file_path)
         if res is None:
             msg = (
                 f"declarative enforcement {ctx.file_path} failed: "
@@ -127,7 +122,7 @@ class FlextInfraRefactorDeclarativeEnforcement:
             )
             raise RuntimeError(msg)
         try:
-            pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(ctx.rope_project, res)
+            pymodule = u.Infra.resolve_pymodule(ctx.rope_project, res)
             tree = pymodule.get_ast()
         except u.Infra.rope_runtime_errors() as exc:
             msg = (
@@ -136,9 +131,10 @@ class FlextInfraRefactorDeclarativeEnforcement:
             )
             raise RuntimeError(msg) from exc
         probes: list[p.AttributeProbe] = []
-        parent_map = cls._rope_parent_map(tree)
-        for node in FlextInfraUtilitiesRopeAnalysis.walk_ast_nodes(tree):
-            if FlextInfraUtilitiesRopeAnalysis.node_kind(node) != "Constant":
+        ast_root = u.Infra.ensure_ast_node(tree)
+        parent_map = u.Infra.ast_parent_map(ast_root)
+        for node in u.Infra.walk_ast_nodes(ast_root):
+            if u.Infra.node_kind(node) != "Constant":
                 continue
             value = getattr(node, "value", None)
             if not cls._is_magic_literal(value):
@@ -181,6 +177,32 @@ class FlextInfraRefactorDeclarativeEnforcement:
         )
 
     @classmethod
+    def _detect_consumer_import_violations(
+        cls, ctx: m.Infra.DetectorContext, *, rule_id: str
+    ) -> t.SequenceOf[p.AttributeProbe]:
+        """Delegate consumer import violations detection to the canonical scanner."""
+        try:
+            violations = FlextInfraConsumerImportViolationsDetector.detect_file(ctx)
+        except c.EXC_BROAD_RUNTIME as exc:
+            msg = (
+                f"declarative enforcement {ctx.file_path} failed: "
+                f"consumer import violations detector failed: {type(exc).__name__}: {exc}"
+            )
+            raise RuntimeError(msg) from exc
+        return tuple(
+            cls._probe(
+                Path(v.file),
+                line=v.line,
+                rule_id=rule_id,
+                object_name=v.imported_symbol,
+                target_package=v.target_package,
+                imported_path=v.imported_path,
+                legal_symbols=list(v.legal_symbols),
+            )
+            for v in violations
+        )
+
+    @classmethod
     def _detect_loose_test_functions(
         cls, ctx: m.Infra.DetectorContext, *, rule_id: str
     ) -> t.SequenceOf[p.AttributeProbe]:
@@ -195,43 +217,6 @@ class FlextInfraRefactorDeclarativeEnforcement:
             raise RuntimeError(msg) from exc
         return tuple(
             cls._probe(Path(v.file), line=v.line, rule_id=rule_id, object_name=v.name)
-            for v in violations
-        )
-
-    @classmethod
-    def _detect_mro_shape(
-        cls, ctx: m.Infra.DetectorContext, *, rule_id: str
-    ) -> t.SequenceOf[p.AttributeProbe]:
-        """Delegate MRO-shape detection to the canonical rope scanner."""
-        try:
-            violations = FlextInfraMROShapeDetector.detect_file(ctx)
-        except RuntimeError as exc:
-            detail = str(exc)
-            if "could not parse" in detail or "Cannot resolve" in detail:
-                # The file is not part of the rope project (e.g. out-of-tree
-                # init/settings modules). Treat as no violation for the fixer.
-                return ()
-            msg = (
-                f"declarative enforcement {ctx.file_path} failed: "
-                f"mro_shape detector failed: {type(exc).__name__}: {exc}"
-            )
-            raise RuntimeError(msg) from exc
-        except c.EXC_BROAD_RUNTIME as exc:
-            msg = (
-                f"declarative enforcement {ctx.file_path} failed: "
-                f"mro_shape detector failed: {type(exc).__name__}: {exc}"
-            )
-            raise RuntimeError(msg) from exc
-        return tuple(
-            cls._probe(
-                Path(v.file),
-                line=v.line,
-                rule_id=rule_id,
-                class_name=v.class_name,
-                first_base=v.first_base,
-                expected_base=v.expected_base,
-                detail=v.detail,
-            )
             for v in violations
         )
 
@@ -283,34 +268,21 @@ class FlextInfraRefactorDeclarativeEnforcement:
 
     @classmethod
     def _is_exempt_literal_position(
-        cls, node: p.AttributeProbe, parent_map: dict[int, p.AttributeProbe]
+        cls,
+        node: t.Infra.RopeAstNode,
+        parent_map: t.MappingKV[int, t.Infra.RopeAstNode],
     ) -> bool:
         """Return True when a Constant node lives in an exempt syntactic position."""
         parent = parent_map.get(id(node))
         if parent is None:
             return False
-        parent_kind = FlextInfraUtilitiesRopeAnalysis.node_kind(parent)
+        if not u.Infra.ast_node(parent):
+            return False
+        parent_kind = u.Infra.node_kind(parent)
         return parent_kind in {"arguments", "arg", "keyword", "AnnAssign"} or (
             parent_kind in {"Assign", "AnnAssign"}
-            and cls._is_module_level(parent, parent_map)
+            and u.Infra.module_level_node(parent, parent_map)
         )
-
-    @classmethod
-    def _is_module_level(
-        cls, node: p.AttributeProbe, parent_map: dict[int, p.AttributeProbe]
-    ) -> bool:
-        """Return True when ``node`` is a direct child of the module body."""
-        current = node
-        while True:
-            parent = parent_map.get(id(current))
-            if parent is None:
-                return False
-            parent_kind = FlextInfraUtilitiesRopeAnalysis.node_kind(parent)
-            if parent_kind in {"ClassDef", "FunctionDef", "AsyncFunctionDef"}:
-                return False
-            if parent_kind == "Module":
-                return True
-            current = parent
 
     @staticmethod
     def _probe(
@@ -320,22 +292,3 @@ class FlextInfraRefactorDeclarativeEnforcement:
         return SimpleNamespace(
             file_path=str(file_path), line=line, rule_id=rule_id, **kwargs
         )
-
-    @staticmethod
-    def _rope_parent_map(root: p.AttributeProbe) -> dict[int, p.AttributeProbe]:
-        """Build a child-id -> parent map for the full rope AST."""
-        parent_map: dict[int, p.AttributeProbe] = {}
-        stack: list[p.AttributeProbe] = [root]
-        while stack:
-            parent = stack.pop()
-            for field_name in getattr(parent, "_fields", ()):
-                value = getattr(parent, field_name, None)
-                if isinstance(value, list):
-                    for child in value:
-                        if hasattr(child, "_fields"):
-                            parent_map[id(child)] = parent
-                            stack.append(child)
-                elif hasattr(value, "_fields"):
-                    parent_map[id(value)] = parent
-                    stack.append(value)
-        return parent_map

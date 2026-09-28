@@ -1,7 +1,9 @@
 """Phase: Ensure bounded Hatch wheel and source-distribution targets.
 
 Every project's wheel gets an explicit ``[tool.hatch.build.targets.wheel]``
-with ``packages = ["src/<pkg>"]``. Root data directories declared in
+with the primary ``src/<pkg>`` plus every project-declared additional package.
+Project-declared standalone modules under ``src/<module>.py`` and root data
+directories declared in
 ``config.Infra.tooling.tools.hatch.packaged_data_dirs`` (e.g. ``config``,
 ``templates``) are force-included into the wheel when they exist at the
 project root, so they survive ``pip install`` (``<pkg>/<dir>``). The source
@@ -14,7 +16,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, t, u
-from flext_infra.deps.toml_phase import FlextInfraTomlPhaseService
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -28,41 +29,85 @@ class FlextInfraEnsurePackagingPhase:
         self._tool_config = tool_config
 
     def _phase(
-        self, *, package_name: str, data_dirs: t.StrSequence
-    ) -> m.Infra.Deps.Toml.PhaseConfig:
+        self,
+        *,
+        package_name: str,
+        data_dirs: t.StrSequence,
+        root_modules: t.StrSequence,
+        root_packages: t.StrSequence,
+    ) -> m.Infra.DepsToml.PhaseConfig:
         """Build bounded distribution targets for one resolved package name."""
         package_path = f"{c.Infra.DEFAULT_SRC_DIR}/{package_name}"
-        builder = (
-            m.Infra.Deps.Toml.PhaseConfig
-            .Builder("packaging")
-            .table("hatch", "build", "targets")
-            .nested("wheel", lists=(("packages", (package_path,)),))
-            .nested("sdist", lists=(("only-include", (package_path, *data_dirs)),))
+        package_paths = (
+            package_path,
+            *(f"{c.Infra.DEFAULT_SRC_DIR}/{package}" for package in root_packages),
         )
-        if data_dirs:
-            builder = builder.nested(
-                "wheel",
-                "force-include",
-                values=tuple(
-                    (data_dir, f"{package_name}/{data_dir}") for data_dir in data_dirs
+        module_paths = tuple(
+            f"{c.Infra.DEFAULT_SRC_DIR}/{module}.py" for module in root_modules
+        )
+        toml = m.Infra.DepsToml
+        force_include = tuple(
+            (data_dir, f"{package_name}/{data_dir}") for data_dir in data_dirs
+        ) + tuple(
+            (module_path, f"{module}.py")
+            for module_path, module in zip(module_paths, root_modules, strict=True)
+        )
+        return toml.PhaseConfig(
+            name="packaging",
+            table_path=("hatch", "build", "targets"),
+            nested_tables=(
+                toml.PhaseConfig(
+                    name="packaging",
+                    root_path=(),
+                    table_path=("wheel",),
+                    operations=(toml.ListOp(key="packages", values=package_paths),),
                 ),
-            )
-        return builder.build()
+                toml.PhaseConfig(
+                    name="packaging",
+                    root_path=(),
+                    table_path=("sdist",),
+                    operations=(
+                        toml.ListOp(
+                            key="only-include",
+                            values=(*package_paths, *module_paths, *data_dirs),
+                        ),
+                    ),
+                ),
+                (
+                    toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("wheel", "force-include"),
+                        operations=tuple(
+                            toml.SetOp(key=key, value=value)
+                            for key, value in force_include
+                        ),
+                    )
+                    if force_include
+                    else toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("wheel",),
+                        operations=(toml.RemoveOp(key="force-include"),),
+                    )
+                ),
+            ),
+        )
 
     def apply_payload(
-        self, payload: t.MutableJsonMapping, *, path: Path, is_root: bool
+        self,
+        payload: t.MutableJsonMapping,
+        *,
+        path: Path,
+        root_modules: t.StrSequence = (),
+        root_packages: t.StrSequence = (),
     ) -> t.StrSequence:
         """Emit bounded build targets for a distributable project.
 
-        Projects whose distribution name resolves to ``src/<name>`` build via
-        hatchling default file selection and need no explicit targets (the
-        workspace root is the canonical case). Standalone projects whose
-        import package differs from the distribution name (for example a
-        project shipping ``src/<other_name>``) must receive explicit bounded
-        targets, or
-        hatchling cannot determine the wheel contents. Only data directories
-        that actually exist at the project root are force-included, keeping
-        the wheel free of phantom paths.
+        Every package gets the same explicit targets so initial rendering and
+        ongoing modernization converge. Only declared module/package roots and
+        data directories that actually exist at the project root enter those
+        targets, keeping distributions free of phantom paths.
         """
         project_dir = path.parent
         docs_meta = u.Infra.docs_meta_from_payload(payload)
@@ -70,34 +115,58 @@ class FlextInfraEnsurePackagingPhase:
             project_dir, payload, docs_meta
         )
         if not package_name:
+            if root_modules or root_packages:
+                msg = (
+                    "project package name is required when additional distribution "
+                    "roots are declared"
+                )
+                raise ValueError(msg)
             return ()
-        package_root = project_dir / c.Infra.DEFAULT_SRC_DIR / package_name
-        if is_root:
-            project_name = u.Infra.project_name_from_payload(path, payload).replace(
-                "-", "_"
+        source_root = project_dir / c.Infra.DEFAULT_SRC_DIR
+        missing_module = next(
+            (
+                source_root / f"{module}.py"
+                for module in root_modules
+                if not (source_root / f"{module}.py").is_file()
+            ),
+            None,
+        )
+        if missing_module is not None:
+            msg = f"declared project root module source is missing: {missing_module}"
+            raise FileNotFoundError(msg)
+        missing_package = next(
+            (
+                source_root / package
+                for package in root_packages
+                if not (source_root / package).is_dir()
+                or not (source_root / package / c.Infra.INIT_PY).is_file()
+            ),
+            None,
+        )
+        if missing_package is not None:
+            msg = (
+                "declared project root package source is missing a package "
+                f"initializer: {missing_package / c.Infra.INIT_PY}"
             )
-            if (project_dir / c.Infra.DEFAULT_SRC_DIR / project_name).is_dir():
-                return ()
-        tool = u.Cli.json_as_mapping(payload.get(c.Infra.TOOL))
-        hatch = u.Cli.json_as_mapping(tool.get("hatch"))
-        build = u.Cli.json_as_mapping(hatch.get("build"))
-        targets = u.Cli.json_as_mapping(build.get("targets"))
-        wheel = u.Cli.json_as_mapping(targets.get("wheel"))
-        declared_force_include = u.Cli.json_as_mapping(wheel.get("force-include"))
+            raise FileNotFoundError(msg)
+        package_root = project_dir / c.Infra.DEFAULT_SRC_DIR / package_name
         present_dirs = tuple(
             data_dir
             for data_dir in self._tool_config.tools.hatch.packaged_data_dirs
             # Force-include a root data dir only when it exists at the project
             # root AND is not already shipped from inside the package (which
             # would collide on the same wheel path).
-            if data_dir in declared_force_include
-            or (
-                (project_dir / data_dir).is_dir()
-                and not (package_root / data_dir).is_dir()
-            )
+            if (project_dir / data_dir).is_dir()
+            and not (package_root / data_dir).is_dir()
         )
-        return FlextInfraTomlPhaseService.apply_payload_phases(
-            payload, self._phase(package_name=package_name, data_dirs=present_dirs)
+        return u.Infra.apply_toml_phases(
+            payload,
+            self._phase(
+                package_name=package_name,
+                data_dirs=present_dirs,
+                root_modules=root_modules,
+                root_packages=root_packages,
+            ),
         )
 
 

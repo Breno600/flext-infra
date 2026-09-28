@@ -4,25 +4,24 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_tests import tm
+
 from flext_infra import m
 from flext_infra.gates.pyright import FlextInfraPyrightGate
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
 from flext_infra.gates.ruff_lint import FlextInfraRuffLintGate
-from flext_tests import tm
 from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
 
-
-class TestRealGateRunners:
+class TestsFlextInfraRealGateRunners:
     """Exercise real gate behavior through public gate APIs."""
 
     @staticmethod
     def make_ctx(root: Path) -> m.Infra.GateContext:
-        return m.Infra.GateContext(workspace=root, reports_dir=root)
+        return m.Infra.GateContext(repository_root=root, reports_dir=root)
 
     def test_ruff_lint_reports_real_issue(self, tmp_path: Path) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "lint-project", with_src=True)
@@ -44,7 +43,9 @@ class TestRealGateRunners:
         result = FlextInfraRuffLintGate(tmp_path).check(
             project_dir,
             m.Infra.GateContext(
-                workspace=tmp_path, reports_dir=tmp_path, ruff_args=("--select", "E501")
+                repository_root=tmp_path,
+                reports_dir=tmp_path,
+                ruff_args=("--select", "E501"),
             ),
         )
 
@@ -56,6 +57,9 @@ class TestRealGateRunners:
     ) -> None:
         """Do not recurse into nested consumer repositories or worktrees."""
         project_dir = u.Tests.mk_project(tmp_path, "scoped-project", with_src=True)
+        (project_dir / "src/scoped_project/__init__.py").write_text(
+            '"""Scoped test package."""\n', encoding="utf-8"
+        )
         (project_dir / "tests").mkdir()
         nested = project_dir / ".claude" / "worktrees" / "nested"
         nested.mkdir(parents=True)
@@ -97,7 +101,7 @@ class TestRealGateRunners:
         result = FlextInfraRuffFormatGate(tmp_path).fix(
             project_dir,
             m.Infra.GateContext(
-                workspace=tmp_path, reports_dir=tmp_path, apply_fixes=True
+                repository_root=tmp_path, reports_dir=tmp_path, apply_fixes=True
             ),
         )
 
@@ -105,7 +109,12 @@ class TestRealGateRunners:
         tm.that(source.read_text(encoding="utf-8"), eq="value = [1, 2, 3]\n")
 
     def test_pyright_reports_real_type_error(self, tmp_path: Path) -> None:
-        project_dir = u.Tests.mk_project(tmp_path, "pyright-project", with_src=True)
+        project_dir = u.Tests.mk_project(
+            tmp_path,
+            "pyright-project",
+            pyproject='[tool.pyright]\ninclude = ["src"]\ntypeCheckingMode = "strict"\n',
+            with_src=True,
+        )
         (project_dir / "src" / "demo.py").write_text(
             "value: str = 1\n", encoding="utf-8"
         )
@@ -116,6 +125,3 @@ class TestRealGateRunners:
 
         tm.that(not result.result.passed, eq=True)
         tm.that(len(result.issues), gte=1)
-
-
-__all__: t.StrSequence = []

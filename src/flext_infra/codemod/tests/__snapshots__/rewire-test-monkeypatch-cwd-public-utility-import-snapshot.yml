@@ -1,0 +1,35 @@
+id: rewire-test-monkeypatch-cwd-public-utility-import
+snapshots:
+  ? |
+    import pytest
+
+    @pytest.fixture(autouse=True)
+    def isolate_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.chdir(tmp_path)
+  : fixed: |
+      import pytest
+
+      from flext_tests import u
+
+
+      @pytest.fixture(autouse=True)
+      def isolate_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+          monkeypatch.chdir(tmp_path)
+    labels:
+    - source: import pytest
+      style: primary
+      start: 0
+      end: 13
+    - source: monkeypatch.chdir(tmp_path)
+      style: secondary
+      start: 123
+      end: 150
+    - source: |
+        import pytest
+
+        @pytest.fixture(autouse=True)
+        def isolate_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+            monkeypatch.chdir(tmp_path)
+      style: secondary
+      start: 0
+      end: 151

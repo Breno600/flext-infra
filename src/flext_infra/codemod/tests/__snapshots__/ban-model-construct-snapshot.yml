@@ -1,0 +1,14 @@
+id: ban-model-construct
+snapshots:
+  user = User.model_construct(name="x"):
+    labels:
+    - source: User.model_construct(name="x")
+      style: primary
+      start: 7
+      end: 37
+  user = self._model.model_construct():
+    labels:
+    - source: self._model.model_construct()
+      style: primary
+      start: 7
+      end: 36

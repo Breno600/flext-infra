@@ -1,0 +1,6 @@
+from __future__ import annotations
+
+class FlextTestModels(Models):
+    pass
+
+__all__: list[str] = ["FlextTestModels"]

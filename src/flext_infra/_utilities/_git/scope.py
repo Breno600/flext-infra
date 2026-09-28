@@ -6,46 +6,55 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra._utilities._git.semantic import FlextInfraUtilitiesGitSemanticMixin
-from flext_infra.constants import c
+from flext_infra import c, m
+
+from .semantic_identity import FlextInfraUtilitiesGitSemanticIdentityMixin
+from .semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
 
 if TYPE_CHECKING:
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
-class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticMixin):
+class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticIndexMixin):
     """Static helpers for resolving tracked files and directories within Git scopes."""
 
     @classmethod
-    @cache
     def _git_repo_root(cls, scope_root: str) -> str | None:
-        """Return the nearest enclosing Git worktree root for ``scope_root``."""
-        current = Path(scope_root).resolve()
-        while True:
-            if (current / ".git").exists():
-                return str(current)
-            parent = current.parent
-            if parent == current:
-                return None
-            current = parent
+        """Return the enclosing Git worktree root, or ``None`` outside any worktree.
+
+        Only the canonical three-way work-tree probe may classify a path as
+        outside Git; a genuine probe or open failure raises instead of being
+        reported as absence. Git is a required dependency of this scope probe;
+        unavailable executables must fail rather than hide tracked-file scope.
+        """
+        resolved_scope = Path(scope_root).resolve()
+        probe = FlextInfraUtilitiesGitSemanticIdentityMixin.git_is_inside_work_tree
+        probed = probe(m.Infra.GitRepoRequest(repo_root=resolved_scope))
+        if probed.failure:
+            raise OSError(probed.error or "failed to probe Git work tree")
+        if not probed.value.value:
+            return None
+        opened = cls._open_repo(resolved_scope)
+        if opened.failure:
+            raise OSError(opened.error or "failed to open git repository")
+        working_tree_dir = opened.value.working_tree_dir
+        if working_tree_dir is None:
+            msg = f"opened Git repository has no worktree: {scope_root}"
+            raise RuntimeError(msg)
+        return str(Path(working_tree_dir).resolve())
 
     @classmethod
-    @cache
     def _git_tracked_repo_relative_paths(cls, repo_root: str) -> t.StrSequence | None:
-        """Return tracked and dirty paths relative to one Git repo root."""
+        """Return current tracked and dirty paths relative to one Git repo root."""
         resolved_root = Path(repo_root).resolve()
-        try:
-            repo = cls._repo(resolved_root)
-            tracked_output = repo.git.ls_files(with_exceptions=False)
-            status_output = repo.git.status(
-                "--porcelain", "--untracked-files=all", with_exceptions=False
-            )
-        except (OSError, ValueError):
-            return None
+        repo = cls._repo(resolved_root)
+        tracked_output = repo.git.ls_files(with_exceptions=False)
+        status_output = repo.git.status(
+            "--porcelain", "--untracked-files=all", with_exceptions=False
+        )
         scope_paths: set[str] = set()
         for raw_line in tracked_output.splitlines():
             normalized = raw_line.strip()
@@ -64,14 +73,16 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticMixin):
         return tuple(sorted(scope_paths))
 
     @classmethod
-    @cache
     def _git_tracked_scope_relative_paths(cls, scope_root: str) -> t.StrSequence | None:
-        """Return tracked file paths relative to ``scope_root`` or ``None`` outside Git.
+        """Return current tracked paths relative to ``scope_root`` or ``None`` outside Git.
 
         ``git ls-files <scope_prefix>`` emits paths relative to the **repo root**.
         Callers join the result back onto ``scope_root``, so this function
         strips ``scope_prefix`` from each line to keep the contract honest:
-        returned paths are scope-relative, never repo-relative.
+        returned paths are scope-relative, never repo-relative. The ls-files
+        and status union is the sole tracked authority: a git-ignored scope
+        directory may still carry force-staged tracked files, so check_ignore
+        must never veto the result.
         """
         resolved_root = Path(scope_root)
         repo_root_text = cls._git_repo_root(scope_root)
@@ -81,10 +92,7 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticMixin):
         if repo_relative_paths is None:
             return None
         repo_root = Path(repo_root_text).resolve()
-        try:
-            scope_prefix = resolved_root.resolve().relative_to(repo_root)
-        except ValueError:
-            return None
+        scope_prefix = resolved_root.resolve().relative_to(repo_root)
         prefix_parts = scope_prefix.parts
         scope_paths: set[str] = set()
         for repo_relative_text in repo_relative_paths:
@@ -127,16 +135,16 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticMixin):
 
     @classmethod
     def project_descriptor_is_tracked(
-        cls, workspace_root: Path, project_root: Path
+        cls, repository_root: Path, project_root: Path
     ) -> bool:
         """Return whether one candidate project has a tracked descriptor file."""
         relative_paths = cls._git_tracked_scope_relative_paths(
-            str(workspace_root.resolve())
+            str(repository_root.resolve())
         )
         if relative_paths is None:
             return True
         tracked_paths = frozenset(relative_paths)
-        resolved_workspace = workspace_root.resolve()
+        resolved_workspace = repository_root.resolve()
         resolved_project = project_root.resolve()
         relative_prefix = ""
         if resolved_project != resolved_workspace:
@@ -146,7 +154,7 @@ class FlextInfraUtilitiesGitScopeMixin(FlextInfraUtilitiesGitSemanticMixin):
         tracked_gitlink = relative_prefix.removesuffix("/")
         if tracked_gitlink and tracked_gitlink in tracked_paths:
             return True
-        return f"{relative_prefix}{c.Infra.PYPROJECT_FILENAME}" in tracked_paths
+        return f"{relative_prefix}{c.PYPROJECT_FILENAME}" in tracked_paths
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitScopeMixin"]

@@ -1,0 +1,27 @@
+# A packaged resource is immutable data, never uniquely owned atomic state
+# (flext-itpd1.3, 2026-09-19).
+#
+# `atomic_read_binary_file_state` returns a guarded-write precondition: it proves
+# the path is a single-owner regular file and rejects any alias (st_nlink != 1).
+# A file that ships inside the installed package is shared with the installer's
+# cache — uv hard-links it — so that contract is false by construction and the
+# read fails in a clean CI with `atomic destination has 2 hard links`. Read
+# package data with `files_read_binary`; keep atomic state for destinations the
+# process is about to publish. Detection only: the repair belongs to the caller,
+# which must also stop passing the state object downstream.
+id: packaged-resource-not-atomic-state
+language: Python
+severity: error
+rule:
+  pattern: $U.Cli.atomic_read_binary_file_state($PATH, $$$REST)
+  has:
+    pattern: __file__
+    stopBy: end
+message: >-
+  Packaged resources are hard-linked by installers; read them with
+  files_read_binary, not with the single-owner atomic state primitive.
+metadata:
+  # Receipt: the fleet-wide red gen came from exactly one call site, repaired
+  # in this lane. Any new match is a regression and fails the scan loudly
+  # instead of being rewritten or silently counted.
+  expected: 0

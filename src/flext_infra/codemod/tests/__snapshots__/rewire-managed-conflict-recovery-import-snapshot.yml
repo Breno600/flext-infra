@@ -1,0 +1,9 @@
+id: rewire-managed-conflict-recovery-import
+snapshots:
+  from flext_infra.codegen.managed_conflicts import FlextInfraCodegenManagedConflicts:
+    fixed: from flext_infra import u
+    labels:
+    - source: from flext_infra.codegen.managed_conflicts import FlextInfraCodegenManagedConflicts
+      style: primary
+      start: 0
+      end: 83

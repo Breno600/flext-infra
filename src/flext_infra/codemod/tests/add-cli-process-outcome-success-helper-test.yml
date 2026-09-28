@@ -1,0 +1,21 @@
+id: add-cli-process-outcome-success-helper
+valid:
+  - |
+    class FlextCliUtilitiesRuntimeProcessOutcomeMixin:
+        """Map one completed lifecycle to its public result contract."""
+
+        @staticmethod
+        def process_succeeded(outcome: p.Cli.ProcessOutcome) -> bool:
+            return (
+                outcome.raw_return_code == c.Cli.EXIT_CODE_SUCCESS
+                and not outcome.timed_out
+                and outcome.forwarded_signal is None
+            )
+
+        marker = True
+invalid:
+  - |
+    class FlextCliUtilitiesRuntimeProcessOutcomeMixin:
+        """Map one completed lifecycle to its public result contract."""
+
+        marker = True

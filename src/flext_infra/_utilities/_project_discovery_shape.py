@@ -8,11 +8,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_cli import u
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-from flext_infra._utilities.git import FlextInfraUtilitiesGit
-from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
-from flext_infra.constants import c
+from flext_infra import c
+
+from .dependencies import FlextInfraUtilitiesDependencies
+from .pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -26,14 +25,14 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
         path: Path,
         *,
         effective_scan_dirs: frozenset[str],
-        configured_member_set: frozenset[str],
+        configured_project_set: frozenset[str],
     ) -> bool:
         """Return whether one path matches the canonical governed project shape."""
         if not path.is_dir():
             return False
-        pyproject_path = path / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = path / c.PYPROJECT_FILENAME
         if pyproject_path.exists() and (
-            path.name in configured_member_set
+            path.name in configured_project_set
             or (path / c.Infra.MAKEFILE_FILENAME).exists()
         ):
             return True
@@ -50,28 +49,6 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
         if effective_scan_dirs:
             return any((path / dir_name).is_dir() for dir_name in effective_scan_dirs)
         return True
-
-    @classmethod
-    def _attached_top_level_dir_names(cls, scope_root: Path) -> frozenset[str]:
-        """Return top-level dir names opted into workspace iteration as attached."""
-        workspace_submodule_names = (
-            FlextInfraUtilitiesGit.git_tracked_top_level_dir_names(scope_root)
-            or frozenset()
-        )
-        attached: list[str] = []
-        for entry in sorted(scope_root.iterdir(), key=lambda item: item.name):
-            if not entry.is_dir() or entry.name.startswith("."):
-                continue
-            if entry.name in workspace_submodule_names:
-                continue
-            if not (entry / c.Infra.PYPROJECT_FILENAME).is_file():
-                continue
-            metadata_result = u.read_project_metadata(entry)
-            if metadata_result.failure:
-                continue
-            if metadata_result.value.flext.workspace.attached:
-                attached.append(entry.name)
-        return frozenset(attached)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesProjectDiscoveryShapeMixin"]

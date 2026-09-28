@@ -1,0 +1,13 @@
+id: rename-tests-mapping-to-toml-mapping
+# `valid` MUST NOT match: the canonical owner, a different attribute, or text.
+valid:
+  - value = u.Tests.toml_mapping(payload)
+  - value = test_u.Tests.toml_mapping(payload)
+  - value = u.Tests.mapping_deep(payload)
+  - 'mapping = {"a": 1}'
+  - |
+    """Docstring mentioning u.Tests.mapping(payload) as prose."""
+# `invalid` MUST match: any receiver spelling of the retired alias.
+invalid:
+  - value = u.Tests.mapping(payload)
+  - value = test_u.Tests.mapping(payload)

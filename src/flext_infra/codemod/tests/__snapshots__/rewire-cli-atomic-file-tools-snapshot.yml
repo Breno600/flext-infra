@@ -1,0 +1,23 @@
+id: rewire-cli-atomic-file-tools
+snapshots:
+  cli.atomic_cleanup_physical_tree_guarded(manifest):
+    fixed: u.Cli.atomic_cleanup_physical_tree_guarded(manifest)
+    labels:
+    - source: cli.atomic_cleanup_physical_tree_guarded(manifest)
+      style: primary
+      start: 0
+      end: 50
+  cli.atomic_create_directory_chain_guarded(plan, permission_mode=0o700):
+    fixed: u.Cli.atomic_create_directory_chain_guarded(plan, permission_mode=0o700)
+    labels:
+    - source: cli.atomic_create_directory_chain_guarded(plan, permission_mode=0o700)
+      style: primary
+      start: 0
+      end: 70
+  cli.atomic_read_binary_file_state(path, required=True):
+    fixed: u.Cli.atomic_read_binary_file_state(path, required=True)
+    labels:
+    - source: cli.atomic_read_binary_file_state(path, required=True)
+      style: primary
+      start: 0
+      end: 54

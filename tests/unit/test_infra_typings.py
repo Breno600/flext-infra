@@ -5,8 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from flext_tests import tm
+
+from flext_infra import config
 from tests import c, t
 
 
@@ -29,13 +30,14 @@ class TestsFlextInfraInfraTypings:
         tm.that(list(items), eq=expected)
 
     def test_infra_mapping_adapter_validates_real_workspace_payload(self) -> None:
+        python_version = config.Infra.codegen.toolchain.python_version
         payload = t.Infra.INFRA_MAPPING_ADAPTER.validate_python({
-            "python": {"version": "3.13"},
+            "python": {"version": python_version},
             "paths": ["src", "tests"],
             "enabled": True,
         })
 
-        tm.that(payload["python"], eq={"version": "3.13"})
+        tm.that(payload["python"], eq={"version": python_version})
         tm.that(payload["paths"], eq=["src", "tests"])
         tm.that(payload["enabled"], eq=True)
 
@@ -61,10 +63,3 @@ class TestsFlextInfraInfraTypings:
                 "root": Path("/var/lib/flext"),
                 "settings": {"enabled": True},
             })
-
-    def test_factory_and_resource_guards_accept_callables(self) -> None:
-        def build_service() -> str:
-            return "ok"
-
-        tm.that(callable(build_service), eq=True)
-        tm.that(callable(build_service), eq=True)

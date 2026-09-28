@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
-from flext_infra.deps.phases.ensure_formatting import (
-    FlextInfraEnsureFormattingToolingPhase,
-)
-from flext_infra.deps.phases.ensure_namespace import (
-    FlextInfraEnsureNamespaceToolingPhase,
-)
-from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+import pytest
 from flext_tests import tm
-from tests import u
+
+from flext_infra import FlextInfraEnsureRuffConfigPhase
+from tests import t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -21,7 +18,40 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraDepsModernizerTooling:
-    """Declarative tests for formatting, namespace, and Ruff phases."""
+    """Declarative tests for the Ruff phase and analyzer surface policy."""
+
+    @staticmethod
+    def _project_with_local_ruff_policy(tmp_path: Path, name: str) -> Path:
+        """Create one project whose local config extends Ruff per-file ignores."""
+        project_dir = tmp_path / name
+        config_dir = project_dir / "config"
+        config_dir.mkdir(parents=True)
+        (config_dir / "cli.yaml").write_text(
+            "ManagedArtifacts:\n"
+            "  Ruff:\n"
+            "    per_file_ignores:\n"
+            "      src/flext_cli/_config.py: [N802]\n",
+            encoding="utf-8",
+        )
+        return project_dir
+
+    @staticmethod
+    def _applied(
+        tool_config_document: m.Infra.ToolConfigDocument,
+        project_dir: Path,
+        source: str = "",
+    ) -> t.Pair[t.MutableJsonMapping, t.JsonMapping]:
+        """Apply the Ruff phase twice to one named payload; return payload and ruff."""
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload(f'[project]\nname = "{project_dir.name}"\n{source}')
+        )
+        phase = FlextInfraEnsureRuffConfigPhase(tool_config_document)
+        path = project_dir / "pyproject.toml"
+        _ = phase.apply_payload(payload, path=path)
+        tm.that(phase.apply_payload(payload, path=path), empty=True)
+        return payload, u.Tests.toml_mapping(
+            u.Tests.toml_mapping(payload["tool"])["ruff"]
+        )
 
     def test_typecheck_policy_keeps_tracked_surfaces_visible(
         self, tool_config_document: m.Infra.ToolConfigDocument
@@ -42,7 +72,15 @@ class TestsFlextInfraDepsModernizerTooling:
             eq=frozenset({"examples", "scripts", "tests"}),
         )
         tm.that(tracked_surfaces.isdisjoint(tools.ruff.exclude), eq=True)
-        tm.that(tools.mypy.exclude, eq="")
+        # mypy's exclude is config-owned (tooling.yaml) and may legitimately
+        # hide non-tracked trees (e.g. legacy sources); the contract is that
+        # no exclude pattern ever matches a tracked surface.
+        for pattern in tools.mypy.exclude.split(","):
+            if pattern:
+                tm.that(
+                    any(re.match(pattern, surface) for surface in tracked_surfaces),
+                    eq=False,
+                )
         tm.that(frozenset(tools.pyright.path_rules.env_dirs), eq=tracked_surfaces)
         tm.that(
             hidden_globs.isdisjoint(tools.pyright.path_rules.default_excludes), eq=True
@@ -50,361 +88,133 @@ class TestsFlextInfraDepsModernizerTooling:
         tm.that(frozenset(tools.pyrefly.path_rules.env_dirs), eq=tracked_surfaces)
         tm.that(hidden_globs.isdisjoint(tools.pyrefly.project_exclude_globs), eq=True)
 
-    def test_formatting_phase_sets_expected_state(
-        self, tool_config_document: m.Infra.ToolConfigDocument
-    ) -> None:
-        """Render every managed formatting tool from typed policy."""
-        doc = u.Cli.toml_document()
-
-        _ = FlextInfraEnsureFormattingToolingPhase(tool_config_document).apply(doc)
-
-        tool = u.Tests.toml_mapping(u.Tests.toml_doc_mapping(doc)["tool"])
-        codespell = u.Tests.toml_mapping(tool["codespell"])
-        tomlsort = u.Tests.toml_mapping(tool["tomlsort"])
-        yamlfix = u.Tests.toml_mapping(tool["yamlfix"])
-        tm.that(
-            codespell["check-filenames"],
-            eq=tool_config_document.tools.codespell.check_filenames,
-        )
-        tm.that(
-            codespell["ignore-words-list"],
-            eq=tool_config_document.tools.codespell.ignore_words_list,
-        )
-        tm.that(tomlsort["all"], eq=tool_config_document.tools.tomlsort.all)
-        tm.that(tomlsort["in_place"], eq=tool_config_document.tools.tomlsort.in_place)
-        tm.that(
-            list(u.Tests.toml_strings(tomlsort["sort_first"])),
-            eq=sorted(tool_config_document.tools.tomlsort.sort_first),
-        )
-        tm.that(
-            yamlfix["line_length"], eq=tool_config_document.tools.yamlfix.line_length
-        )
-        tm.that(
-            yamlfix["preserve_quotes"],
-            eq=tool_config_document.tools.yamlfix.preserve_quotes,
-        )
-        tm.that(yamlfix["whitelines"], eq=tool_config_document.tools.yamlfix.whitelines)
-        tm.that(
-            yamlfix["section_whitelines"],
-            eq=tool_config_document.tools.yamlfix.section_whitelines,
-        )
-        tm.that(
-            yamlfix["explicit_start"],
-            eq=tool_config_document.tools.yamlfix.explicit_start,
-        )
-
-    def test_formatting_phase_is_idempotent(
-        self, tool_config_document: m.Infra.ToolConfigDocument
-    ) -> None:
-        """Keep formatting output stable after the first application."""
-        phase = FlextInfraEnsureFormattingToolingPhase(tool_config_document)
-        doc = u.Cli.toml_document()
-
-        _ = phase.apply(doc)
-        second_changes = phase.apply(doc)
-
-        tm.that(second_changes, eq=[])
-
-    def test_formatting_phase_removes_codespell_skip(
-        self, tool_config_document: m.Infra.ToolConfigDocument
-    ) -> None:
-        """Remove the obsolete codespell skip setting."""
-        phase = FlextInfraEnsureFormattingToolingPhase(tool_config_document)
-        doc = u.Tests.toml_doc(
-            """
-[tool.codespell]
-check-filenames = true
-ignore-words-list = "crate,nd"
-skip = ".git,poetry.lock"
-"""
-        )
-
-        changes = phase.apply(doc)
-
-        tool = u.Tests.toml_mapping(u.Tests.toml_doc_mapping(doc)["tool"])
-        codespell = u.Tests.toml_mapping(tool["codespell"])
-        tm.that(codespell, lacks="skip")
-        tm.that(changes, has="removed codespell.skip hardcode")
-
-    def test_namespace_phase_sets_detected_first_party(self, tmp_path: Path) -> None:
-        """Detect the project package as first-party code."""
-        project_dir = tmp_path / "flext-sample"
-        package_dir = project_dir / "src" / "flext_sample"
-        package_dir.mkdir(parents=True, exist_ok=True)
-        _ = (package_dir / "__init__.py").write_text("", encoding="utf-8")
-        doc = u.Cli.toml_document()
-
-        _ = FlextInfraEnsureNamespaceToolingPhase().apply(
-            doc, path=project_dir / "pyproject.toml"
-        )
-
-        deptry = u.Tests.toml_mapping(
-            u.Tests.toml_mapping(u.Tests.toml_doc_mapping(doc)["tool"])["deptry"]
-        )
-        tm.that(
-            list(u.Tests.toml_strings(deptry["known_first_party"])),
-            eq=["flext_core", "flext_sample"],
-        )
-
-    def test_namespace_phase_includes_workspace_source_packages(
-        self, tmp_path: Path
-    ) -> None:
-        """Include declared workspace dependencies in first-party packages."""
-        project_dir = tmp_path / "flext-sample"
-        package_dir = project_dir / "src" / "flext_sample"
-        package_dir.mkdir(parents=True, exist_ok=True)
-        _ = (package_dir / "__init__.py").write_text("", encoding="utf-8")
-        doc = u.Tests.toml_doc(
-            """
-[project]
-dependencies = ["flext-core>=0.1.0"]
-
-[tool.uv.sources.flext-core]
-workspace = true
-"""
-        )
-
-        _ = FlextInfraEnsureNamespaceToolingPhase().apply(
-            doc, path=project_dir / "pyproject.toml"
-        )
-
-        deptry = u.Tests.toml_mapping(
-            u.Tests.toml_mapping(u.Tests.toml_doc_mapping(doc)["tool"])["deptry"]
-        )
-        tm.that(
-            list(u.Tests.toml_strings(deptry["known_first_party"])),
-            eq=["flext_core", "flext_sample"],
-        )
-
     def test_ruff_phase_sets_expected_state(
         self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
     ) -> None:
-        """Render Ruff policy while retaining tracked test roots."""
+        """Render Ruff policy, drop stale sections, and converge on second apply."""
+        ruff_policy = tool_config_document.tools.ruff
         project_dir = tmp_path / "flext-sample"
-        package_dir = project_dir / "src" / "flext_sample"
-        test_dir = project_dir / "tests"
-        fixture_dir = test_dir / "fixtures"
-        package_dir.mkdir(parents=True, exist_ok=True)
-        fixture_dir.mkdir(parents=True, exist_ok=True)
-        _ = (package_dir / "__init__.py").write_text("", encoding="utf-8")
-        _ = (fixture_dir / "sample.py").write_text("VALUE = 1\n", encoding="utf-8")
-        _ = (test_dir / "test_dummy.py").write_text(
-            "def test_dummy() -> None:\n    assert True\n", encoding="utf-8"
-        )
-        doc = u.Tests.toml_doc(
-            """
-[lint]
-select = ["E501"]
-
-[tool.ruff.lint.per-file-ignores]
-"old.py" = ["E402"]
-"""
-        )
-
-        _ = FlextInfraEnsureRuffConfigPhase(tool_config_document).apply(
-            doc, path=project_dir / "pyproject.toml"
-        )
-
-        root = u.Tests.toml_doc_mapping(doc)
-        tm.that(root, lacks="lint")
-        ruff = u.Tests.toml_mapping(u.Tests.toml_mapping(root["tool"])["ruff"])
-        tm.that(
-            frozenset(u.Tests.toml_strings(ruff["exclude"])),
-            eq=frozenset(tool_config_document.tools.ruff.exclude),
-        )
-        tm.that(
-            frozenset(u.Tests.toml_strings(ruff["namespace-packages"])),
-            eq=frozenset(tool_config_document.tools.ruff.namespace_packages),
-        )
-        tm.that(ruff["fix"], eq=tool_config_document.tools.ruff.fix)
-        tm.that(ruff["line-length"], eq=tool_config_document.tools.ruff.line_length)
-        tm.that(ruff["preview"], eq=tool_config_document.tools.ruff.preview)
-        tm.that(
-            ruff["respect-gitignore"],
-            eq=tool_config_document.tools.ruff.respect_gitignore,
-        )
-        tm.that(ruff["show-fixes"], eq=tool_config_document.tools.ruff.show_fixes)
-        tm.that(
-            ruff["target-version"], eq=tool_config_document.tools.ruff.target_version
-        )
-        tm.that(
-            frozenset(u.Tests.toml_strings(ruff["src"])),
-            eq=frozenset(tool_config_document.tools.ruff.src),
-        )
-        format_section = u.Tests.toml_mapping(ruff["format"])
-        tm.that(
-            format_section["docstring-code-format"],
-            eq=tool_config_document.tools.ruff.format.docstring_code_format,
-        )
-        lint_section = u.Tests.toml_mapping(ruff["lint"])
-        tm.that(
-            frozenset(u.Tests.toml_strings(lint_section["select"])),
-            eq=frozenset(tool_config_document.tools.ruff.lint.select),
-        )
-        tm.that(
-            frozenset(u.Tests.toml_strings(lint_section["ignore"]))
-            == frozenset({
-                *tool_config_document.tools.ruff.lint.ignore,
-                *tool_config_document.tools.ruff.lint.ignored_rule_rationales,
-            }),
-            eq=True,
-        )
-        isort = u.Tests.toml_mapping(lint_section["isort"])
-        tm.that(
-            isort["combine-as-imports"],
-            eq=tool_config_document.tools.ruff.lint.isort.combine_as_imports,
-        )
-        tm.that(
-            list(u.Tests.toml_strings(isort["known-first-party"])),
-            eq=["flext_core", "flext_sample"],
-        )
-        per_file_ignores = u.Tests.toml_mapping(lint_section["per-file-ignores"])
-        tm.that(
-            per_file_ignores,
-            eq={
-                pattern: sorted(rules)
-                for pattern, rules in tool_config_document.tools.ruff.lint.per_file_ignores.items()
-            },
-        )
-        tm.that(
-            list(u.Tests.toml_strings(per_file_ignores["**/__init__.py"])),
-            eq=sorted(
-                tool_config_document.tools.ruff.lint.per_file_ignores["**/__init__.py"]
-            ),
-        )
-        tm.that(
-            list(u.Tests.toml_strings(per_file_ignores["**/__init__.py"])), lacks="ALL"
-        )
-
-    def test_ruff_phase_is_idempotent(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
-    ) -> None:
-        """Keep the Ruff phase stable after the first application."""
-        project_dir = tmp_path / "flext-sample"
-        package_dir = project_dir / "src" / "flext_sample"
-        package_dir.mkdir(parents=True, exist_ok=True)
-        _ = (package_dir / "__init__.py").write_text("", encoding="utf-8")
-        phase = FlextInfraEnsureRuffConfigPhase(tool_config_document)
-        doc = u.Cli.toml_document()
-
-        _ = phase.apply(doc, path=project_dir / "pyproject.toml")
-        second_changes = phase.apply(doc, path=project_dir / "pyproject.toml")
-
-        tm.that(second_changes, eq=[])
-
-    def test_ruff_phase_applies_project_managed_artifact_overrides(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
-    ) -> None:
-        """Project config extends Ruff policy only for its managed artifact."""
-        project_dir = tmp_path / "flext-cli"
-        config_dir = project_dir / "config"
-        config_dir.mkdir(parents=True)
-        (config_dir / "cli.yaml").write_text(
-            "ManagedArtifacts:\n"
-            "  Ruff:\n"
-            "    per_file_ignores:\n"
-            "      src/flext_cli/_config.py: [N802]\n",
-            encoding="utf-8",
-        )
-        doc = u.Cli.toml_document()
-
-        _ = FlextInfraEnsureRuffConfigPhase(tool_config_document).apply(
-            doc, path=project_dir / "pyproject.toml"
-        )
-
-        root = u.Tests.toml_doc_mapping(doc)
-        lint = u.Tests.toml_mapping(
-            u.Tests.toml_mapping(u.Tests.toml_mapping(root["tool"])["ruff"])["lint"]
-        )
-        ignores = u.Tests.toml_mapping(lint["per-file-ignores"])
-        tm.that(
-            list(u.Tests.toml_strings(ignores["src/flext_cli/_config.py"])), eq=["N802"]
-        )
-
-    def test_ruff_phase_does_not_leak_other_project_overrides(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
-    ) -> None:
-        """A project without local policy receives only the global Ruff policy."""
-        project_dir = tmp_path / "flext-tests"
-        project_dir.mkdir()
-        doc = u.Cli.toml_document()
-
-        _ = FlextInfraEnsureRuffConfigPhase(tool_config_document).apply(
-            doc, path=project_dir / "pyproject.toml"
-        )
-
-        root = u.Tests.toml_doc_mapping(doc)
-        lint = u.Tests.toml_mapping(
-            u.Tests.toml_mapping(u.Tests.toml_mapping(root["tool"])["ruff"])["lint"]
-        )
-        ignores = u.Tests.toml_mapping(lint["per-file-ignores"])
-        tm.that(ignores, lacks="src/flext_cli/_config.py")
-
-    def test_ruff_phase_project_overrides_are_idempotent(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
-    ) -> None:
-        """Repeated project-local policy application reaches one fixed point."""
-        project_dir = tmp_path / "flext-cli"
-        config_dir = project_dir / "config"
-        config_dir.mkdir(parents=True)
-        (config_dir / "cli.yaml").write_text(
-            "ManagedArtifacts:\n"
-            "  Ruff:\n"
-            "    per_file_ignores:\n"
-            "      src/flext_cli/_config.py: [N802]\n",
-            encoding="utf-8",
-        )
-        phase = FlextInfraEnsureRuffConfigPhase(tool_config_document)
-        doc = u.Cli.toml_document()
-
-        _ = phase.apply(doc, path=project_dir / "pyproject.toml")
-        second_changes = phase.apply(doc, path=project_dir / "pyproject.toml")
-
-        tm.that(second_changes, eq=[])
-
-    def test_ruff_phase_skips_attached_workspace_namespaces(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
-    ) -> None:
-        """Exclude attached consumer namespaces from FLEXT first-party names."""
-        workspace_root = tmp_path / "workspace"
-        project_dir = workspace_root / "demo-migration-tool"
-        internal_project = workspace_root / "flext-core"
-        project_dir.joinpath("src", "demo_migration_tool").mkdir(
-            parents=True, exist_ok=True
-        )
-        internal_project.joinpath("src", "flext_core").mkdir(
-            parents=True, exist_ok=True
-        )
-        _ = project_dir.joinpath(
-            "src", "demo_migration_tool", "__init__.py"
-        ).write_text("", encoding="utf-8")
-        _ = internal_project.joinpath("src", "flext_core", "__init__.py").write_text(
+        (project_dir / "src" / "flext_sample").mkdir(parents=True)
+        (project_dir / "src" / "flext_sample" / "__init__.py").write_text(
             "", encoding="utf-8"
         )
-        _ = project_dir.joinpath("pyproject.toml").write_text(
-            '[project]\nname = "demo-migration-tool"\nversion = "0.1.0"\ndependencies = ["flext-core>=0.1.0"]\n',
+        stale_pattern = "stale-pattern.py"
+
+        payload, ruff = self._applied(
+            tool_config_document,
+            project_dir,
+            '[lint]\nselect = ["E501"]\n'
+            f'[tool.ruff.lint.per-file-ignores]\n"{stale_pattern}" = ["E402"]\n',
+        )
+
+        tm.that(payload, lacks="lint")
+        tm.that(
+            frozenset(u.Tests.toml_strings(ruff["exclude"])),
+            eq=frozenset(ruff_policy.exclude),
+        )
+        tm.that(ruff["line-length"], eq=ruff_policy.line_length)
+        tm.that(ruff["target-version"], eq=ruff_policy.target_version)
+        tm.that(
+            frozenset(u.Tests.toml_strings(ruff["src"])), eq=frozenset(ruff_policy.src)
+        )
+        tm.that(
+            u.Tests.toml_mapping(ruff["format"])["docstring-code-format"],
+            eq=ruff_policy.format.docstring_code_format,
+        )
+        lint = u.Tests.toml_mapping(ruff["lint"])
+        tm.that(
+            frozenset(u.Tests.toml_strings(lint["ignore"])),
+            eq=frozenset({
+                *ruff_policy.lint.ignore,
+                *ruff_policy.lint.ignored_rule_rationales,
+            }),
+        )
+        tm.that(
+            list(
+                u.Tests.toml_strings(
+                    u.Tests.toml_mapping(lint["isort"])["known-first-party"]
+                )
+            ),
+            eq=sorted({
+                *tool_config_document.tools.deptry.known_first_party,
+                "flext_sample",
+            }),
+        )
+        tm.that(
+            u.Tests.toml_mapping(lint["per-file-ignores"]),
+            eq={
+                pattern: sorted(rules)
+                for pattern, rules in ruff_policy.lint.per_file_ignores.items()
+            },
+        )
+
+    @pytest.mark.parametrize("with_local_policy", [True, False])
+    def test_ruff_phase_applies_only_own_project_overrides(
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
+        *,
+        with_local_policy: bool,
+    ) -> None:
+        """Project config extends Ruff policy only for its own managed artifact."""
+        project_dir = (
+            self._project_with_local_ruff_policy(tmp_path, "flext-cli")
+            if with_local_policy
+            else tmp_path / "flext-tests"
+        )
+        project_dir.mkdir(parents=True, exist_ok=True)
+
+        _, ruff = self._applied(tool_config_document, project_dir)
+
+        ignores = u.Tests.toml_mapping(
+            u.Tests.toml_mapping(ruff["lint"])["per-file-ignores"]
+        )
+        if with_local_policy:
+            tm.that(
+                list(u.Tests.toml_strings(ignores["src/flext_cli/_config.py"])),
+                eq=["N802"],
+            )
+        else:
+            tm.that(ignores, lacks="src/flext_cli/_config.py")
+
+    def test_ruff_phase_skips_nonmember_workspace_namespaces(
+        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
+    ) -> None:
+        """Exclude nonmember consumer namespaces from FLEXT first-party names."""
+        repository_root = tmp_path / "workspace"
+        project_dir = repository_root / "demo-migration-tool"
+        internal_project = repository_root / "flext-core"
+        (project_dir / "src" / "demo_migration_tool").mkdir(parents=True)
+        (internal_project / "src" / "flext_core").mkdir(parents=True)
+        for package in (
+            project_dir / "src" / "demo_migration_tool",
+            internal_project / "src" / "flext_core",
+        ):
+            (package / "__init__.py").write_text("", encoding="utf-8")
+        (project_dir / "pyproject.toml").write_text(
+            '[project]\nname = "demo-migration-tool"\nversion = "0.1.0"\n'
+            'dependencies = ["flext-core>=0.1.0"]\n',
             encoding="utf-8",
         )
-        _ = workspace_root.joinpath("pyproject.toml").write_text(
+        (repository_root / "pyproject.toml").write_text(
             "[project]\nname = 'workspace'\nversion = '0.1.0'\n\n"
-            "[tool.uv.workspace]\n"
-            "members = ['flext-core']\n",
+            "[tool.uv.workspace]\nmembers = ['flext-core']\n",
             encoding="utf-8",
         )
-        _ = internal_project.joinpath("pyproject.toml").write_text(
+        (internal_project / "pyproject.toml").write_text(
             '[project]\nname = "flext-core"\nversion = "0.1.0"\n', encoding="utf-8"
         )
-        doc = u.Cli.toml_document()
 
-        _ = FlextInfraEnsureRuffConfigPhase(tool_config_document).apply(
-            doc, path=workspace_root / "pyproject.toml"
+        _, ruff = self._applied(
+            tool_config_document,
+            repository_root,
+            'dependencies = ["flext-core>=0.1.0"]\n',
         )
 
-        ruff = u.Tests.toml_mapping(
-            u.Tests.toml_mapping(u.Tests.toml_doc_mapping(doc)["tool"])["ruff"]
+        known_first_party = u.Tests.toml_strings(
+            u.Tests.toml_mapping(u.Tests.toml_mapping(ruff["lint"])["isort"])[
+                "known-first-party"
+            ]
         )
-        lint_section = u.Tests.toml_mapping(ruff["lint"])
-        isort = u.Tests.toml_mapping(lint_section["isort"])
-        known_first_party = list(u.Tests.toml_strings(isort["known-first-party"]))
         tm.that(known_first_party, has="flext_core")
-        tm.that("demo_migration_tool" in known_first_party, eq=False)
+        tm.that(known_first_party, lacks="demo_migration_tool")

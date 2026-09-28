@@ -43,20 +43,33 @@ class FlextInfraDocAuditorChecksMixin:
             scope, policy_key="placeholder_terms", issue_type="placeholder"
         )
 
+    @staticmethod
+    def machine_path_issues(
+        scope: m.Infra.DocScope,
+    ) -> t.SequenceOf[m.Infra.AuditIssue]:
+        """Return machine-local absolute path issues, honouring the scope's exempt paths."""
+        return u.Infra.docs_machine_path_issues(
+            scope,
+            exempt_paths=u.Infra.docs_policy_list(
+                scope, section="audit", key="machine_path_exempt_paths"
+            ),
+        )
+
     def _collect_issues(
         self, scope: m.Infra.DocScope, checks: t.StrSequence
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Collect issues for the requested check set in canonical order."""
-        handlers: tuple[
-            tuple[str, Callable[[m.Infra.DocScope], t.SequenceOf[m.Infra.AuditIssue]]],
-            ...,
+        handlers: t.VariadicTuple[
+            t.Pair[str, Callable[[m.Infra.DocScope], t.SequenceOf[m.Infra.AuditIssue]]]
         ] = (
             ("links", u.Infra.docs_broken_link_issues),
             ("forbidden-terms", self.forbidden_term_issues),
             ("placeholders", self.placeholder_issues),
+            ("machine-paths", self.machine_path_issues),
             ("stale-symbols", u.Infra.docs_stale_symbol_issues),
             ("scope-boundary", u.Infra.docs_scope_boundary_issues),
             ("generated-ownership", u.Infra.docs_generated_ownership_issues),
+            ("command-contract", u.Infra.docs_command_contract_issues),
             ("docstrings", u.Infra.docs_public_docstring_issues),
             ("python-codeblocks", u.Infra.docs_python_codeblock_issues),
         )

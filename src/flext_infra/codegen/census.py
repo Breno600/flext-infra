@@ -12,18 +12,21 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import c, m, t, u
-from flext_infra.base import s
+from flext_infra import c, m, p, t, u
 from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
+
+from ..base import s
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-
 
 class FlextInfraCodegenCensus(s[str]):
     """Read-only census service for namespace violation counting."""
+
+    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
+        exclude=True, description="Shared Rope cycle injected by the composition root"
+    )
 
     @override
     def execute(self) -> p.Result[str]:
@@ -32,14 +35,14 @@ class FlextInfraCodegenCensus(s[str]):
             return r[str].fail(
                 "census is read-only; use flext-infra codegen auto-fix --apply"
             )
-        try:
-            reports = self.run()
-        except c.EXC_OS_RUNTIME_TYPE as exc:
-            return r[str].fail_op("census", exc)
+        reports_result = self.run()
+        if reports_result.failure:
+            return r[str].from_failure(reports_result)
+        reports = reports_result.value
         total_violations = sum(report.total for report in reports)
         total_fixable = sum(report.fixable for report in reports)
         if self.output_format == c.Cli.OutputFormats.JSON:
-            payload: t.Infra.MutableInfraMapping = {
+            payload: t.MutableJsonMapping = {
                 c.Infra.RK_PROJECTS: [report.model_dump() for report in reports],
                 "total_violations": total_violations,
                 "total_fixable": total_fixable,
@@ -61,15 +64,15 @@ class FlextInfraCodegenCensus(s[str]):
 
     def run(
         self,
-        workspace_root: Path | None = None,
+        repository_root: Path | None = None,
         *,
         output_format: str = c.Cli.OutputFormats.JSON,
         projects: t.SequenceOf[p.Infra.ProjectInfo] | None = None,
-    ) -> t.SequenceOf[m.Infra.CensusReport]:
+    ) -> p.Result[t.VariadicTuple[m.Infra.CensusReport]]:
         """Run census on all projects in workspace.
 
         Args:
-            workspace_root: Override workspace root (defaults to self.workspace_root).
+            repository_root: Override repository root (defaults to self.repository_root).
             output_format: Unused, kept for API compat.
             projects: Pre-discovered projects to skip redundant discovery.
 
@@ -78,7 +81,7 @@ class FlextInfraCodegenCensus(s[str]):
 
         """
         _ = output_format
-        workspace = workspace_root or self.workspace_root
+        workspace = repository_root or self.repository_root
         return self._run_project_census(workspace, projects=projects)
 
     def _run_project_census(
@@ -86,31 +89,62 @@ class FlextInfraCodegenCensus(s[str]):
         workspace: Path,
         *,
         projects: t.SequenceOf[p.Infra.ProjectInfo] | None = None,
-    ) -> t.SequenceOf[m.Infra.CensusReport]:
+    ) -> p.Result[t.VariadicTuple[m.Infra.CensusReport]]:
         """Census all projects in workspace using the standard path."""
         if projects is not None:
             selected_projects = tuple(projects)
         else:
             projects_result = u.Infra.projects(workspace)
-            selected_projects = (
-                tuple(projects_result.unwrap()) if projects_result.success else ()
+            if projects_result.failure:
+                return r[t.VariadicTuple[m.Infra.CensusReport]].from_failure(
+                    projects_result
+                )
+            selected_projects = tuple(projects_result.value)
+        bindings = tuple(
+            FlextInfraNamespaceValidator(
+                repository_root=project.path, rope=self.rope
+            ).callback_binding()
+            for project in selected_projects
+        )
+        cycle_result = self.rope.cycle(
+            bindings,
+            project_names=tuple(
+                project.path.resolve().name for project in selected_projects
+            ),
+        )
+        if cycle_result.failure:
+            return r[t.VariadicTuple[m.Infra.CensusReport]].from_failure(cycle_result)
+        reports: t.MutableSequenceOf[m.Infra.CensusReport] = []
+        for project in selected_projects:
+            project_root = project.path.resolve()
+            raw_violations = tuple(
+                violation
+                for outcome in cycle_result.value.outcomes
+                if outcome.callback_id == "namespace"
+                and outcome.project_root.resolve() == project_root
+                and outcome.applicable
+                for violation in outcome.violations
             )
-        return [self._census_project(project) for project in selected_projects]
-
-    def _census_project(self, project: p.Infra.ProjectInfo) -> m.Infra.CensusReport:
-        """Run census on a single project."""
-        violations_result = u.Infra.parse_namespace_validation(
-            FlextInfraNamespaceValidator().validate_project(project.path)
-        )
-        violations = (
-            list(violations_result.unwrap()) if violations_result.success else []
-        )
-        return m.Infra.CensusReport(
-            project=project.name,
-            violations=list(violations),
-            total=len(violations),
-            fixable=u.count(violations, lambda v: v.fixable),
-        )
+            validation = r[m.Infra.ValidationReport].ok(
+                m.Infra.ValidationReport(
+                    passed=not raw_violations,
+                    violations=raw_violations,
+                    summary=f"{len(raw_violations)} namespace violation(s)",
+                )
+            )
+            parsed = u.Infra.parse_namespace_validation(validation)
+            if parsed.failure:
+                return r[t.VariadicTuple[m.Infra.CensusReport]].from_failure(parsed)
+            violations = parsed.value
+            reports.append(
+                m.Infra.CensusReport(
+                    project=project.name,
+                    violations=violations,
+                    total=len(violations),
+                    fixable=u.count(violations, lambda violation: violation.fixable),
+                )
+            )
+        return r[t.VariadicTuple[m.Infra.CensusReport]].ok(tuple(reports))
 
 
 __all__: list[str] = ["FlextInfraCodegenCensus"]

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_cli import cli
+
 from flext_core import r
 from flext_infra import c, m, t, u
 
@@ -37,15 +38,15 @@ class FlextInfraModernizeOrchestrator:
         self, params: m.Infra.ModernizeInput
     ) -> p.Result[t.SequenceOf[m.Infra.Result]]:
         """Run modernize across selected projects."""
-        workspace_root = params.workspace_path
-        project_roots = self._resolve_projects(workspace_root, params.projects)
+        repository_root = params.repository_root
+        project_roots = self._resolve_projects(repository_root, params.projects)
         if not project_roots:
             return r[t.SequenceOf[m.Infra.Result]].fail(
                 "No projects selected", error_code="MODERNIZE_NO_PROJECTS"
             )
 
         results: list[m.Infra.Result] = []
-        with u.Infra.open_project(workspace_root) as rope_project:
+        with u.Infra.open_project(repository_root) as rope_project:
             for project_root in project_roots:
                 project_results = self._modernize_project(
                     rope_project=rope_project,
@@ -70,19 +71,19 @@ class FlextInfraModernizeOrchestrator:
         description: str,
     ) -> p.Result[t.Cli.ResultValue]:
         """Execute a modernization as a convenience entrypoint for CLI route handlers."""
-        # mro-r3r8: keep detailed results in run(); CLI routes expose one scalar contract.
+        # flext-r3r8: keep detailed results in run(); CLI routes expose one scalar contract.
         orchestrator = cls(transformer_factory, description=description)
         result = orchestrator.run(params)
         if result.failure:
-            return r[t.Cli.ResultValue].fail(result.error, error_code=result.error_code)
+            return r[t.Cli.ResultValue].from_failure(result)
         cls._display_results(result.value, dry_run=not params.apply)
         return r[t.Cli.ResultValue].ok(True)
 
     def _resolve_projects(
-        self, workspace_root: Path, project_names: t.StrSequence | None
+        self, repository_root: Path, project_names: t.StrSequence | None
     ) -> t.SequenceOf[Path]:
         """Resolve project roots, optionally filtered by name."""
-        project_roots = u.Infra.discover_project_roots(workspace_root=workspace_root)
+        project_roots = u.Infra.discover_project_roots(repository_root=repository_root)
         if project_names:
             name_set = set(project_names)
             project_roots = [p for p in project_roots if p.name in name_set]
@@ -160,12 +161,15 @@ class FlextInfraModernizeOrchestrator:
             return r[t.Infra.TransformResult].ok(transformer.apply_to_source(source))
         except SyntaxError as exc:
             return r[t.Infra.TransformResult].fail(
-                f"Syntax error: {exc}", error_code="MODERNIZE_SYNTAX_ERROR"
+                f"Syntax error: {exc}",
+                error_code="MODERNIZE_SYNTAX_ERROR",
+                exception=exc,
             )
         except c.EXC_OS_RUNTIME_TYPE as exc:
             return r[t.Infra.TransformResult].fail(
                 f"Runtime error during transform: {exc}",
                 error_code="MODERNIZE_TRANSFORM_FAILED",
+                exception=exc,
             )
 
     @staticmethod

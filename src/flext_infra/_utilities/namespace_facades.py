@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import operator
 from collections import defaultdict
 from collections.abc import MutableMapping
 from pathlib import Path
@@ -9,17 +10,15 @@ from types import MappingProxyType
 from typing import ClassVar
 
 from flext_cli import u
-from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
-from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
-from flext_infra._utilities.namespace_common import (
-    FlextInfraUtilitiesRefactorNamespaceCommon,
-)
-from flext_infra._utilities.rope_module_patch import FlextInfraUtilitiesRopeModulePatch
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
 
-# mro-j47u (codex): annotation-only stdlib types are safe runtime imports;
+from flext_infra import c, m, t
+
+from .dependencies import FlextInfraUtilitiesDependencies
+from .namespace import FlextInfraUtilitiesCodegenNamespace
+from .namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
+from .rope_module_patch import FlextInfraUtilitiesRopeModulePatch
+
+# flext-j47u (codex): annotation-only stdlib types are safe runtime imports;
 # TYPE_CHECKING is reserved for real reverse-dependency cycle boundaries.
 
 
@@ -48,16 +47,16 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
     @staticmethod
     def _compute_base_chains(*, project_root: Path) -> t.StrSequenceMapping:
         """Compute base chains."""
-        pyproject_path = project_root / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = project_root / c.PYPROJECT_FILENAME
         if not pyproject_path.exists():
-            return MappingProxyType(dict[str, tuple[str, ...]]())
+            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
         try:
             raw = pyproject_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         except OSError:
-            return MappingProxyType(dict[str, tuple[str, ...]]())
+            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
         payload = u.Cli.toml_mapping_from_text(raw)
         if payload is None:
-            return MappingProxyType(dict[str, tuple[str, ...]]())
+            return MappingProxyType(dict[str, t.VariadicTuple[str]]())
         dep_names = (
             FlextInfraUtilitiesDependencies.declared_dependency_names_from_payload(
                 t.Infra.INFRA_MAPPING_ADAPTER.validate_python(payload)
@@ -86,7 +85,7 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
                     f"from {u.class_name_to_module(base)} import {base}"
                     for base in chain
                 )
-        suffix = c.Infra.FAMILY_SUFFIXES.get(family, "Utilities")
+        suffix = c.Infra.FAMILY_SUFFIXES[family]
         return f"from flext_core import Flext{suffix}"
 
     @staticmethod
@@ -98,20 +97,25 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
             chain = base_chains.get(family, [])
             if chain:
                 return ", ".join(chain)
-        suffix = c.Infra.FAMILY_SUFFIXES.get(family, "Utilities")
+        suffix = c.Infra.FAMILY_SUFFIXES[family]
         return f"Flext{suffix}"
 
     @staticmethod
     def _write_missing_facade_file(
         *,
         file_path: Path,
+        package_root: Path,
         family: str,
         class_name: str,
         base_chains: t.StrSequenceMapping | None = None,
     ) -> None:
         """Write missing facade file."""
+        file_path = file_path.resolve()
+        if not file_path.is_relative_to(package_root.resolve()):
+            msg = f"refusing facade write outside package: {file_path}"
+            raise ValueError(msg)
         content = (
-            '"""Auto-generated facade to enforce MRO namespace contracts."""\n\n'
+            '"""Auto-generated facade to enforce FLEXT namespace contracts."""\n\n'
             "from __future__ import annotations\n\n"
             f"{FlextInfraUtilitiesRefactorNamespaceFacades._base_import_for_family(family=family, base_chains=base_chains)}\n\n"
             f"class {class_name}({FlextInfraUtilitiesRefactorNamespaceFacades._base_class_for_family(family=family, base_chains=base_chains)}):\n"
@@ -128,7 +132,7 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
         project_root: Path,
         project_name: str,
         facade_statuses: t.SequenceOf[m.Infra.FacadeStatus],
-        workspace_root: Path | None = None,
+        repository_root: Path | None = None,
     ) -> None:
         """Ensure missing facades."""
         del project_name
@@ -137,7 +141,7 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
             return
         package_dirs = [
             entry
-            for entry in sorted(src_dir.iterdir(), key=lambda item: item.name)
+            for entry in sorted(src_dir.iterdir(), key=operator.attrgetter("name"))
             if entry.is_dir() and (entry / c.Infra.INIT_PY).is_file()
         ]
         layout = FlextInfraUtilitiesCodegenNamespace.layout(project_root)
@@ -151,7 +155,7 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
             FlextInfraUtilitiesRefactorNamespaceFacades.build_expected_base_chains(
                 project_root=project_root
             )
-            if workspace_root is not None
+            if repository_root is not None
             else None
         )
         for status in facade_statuses:
@@ -166,6 +170,7 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
             if target_path.exists():
                 FlextInfraUtilitiesRefactorNamespaceFacades._patch_existing_facade_file(
                     target_path=target_path,
+                    package_root=package_dir,
                     family=status.family,
                     class_name=class_name,
                     base_chains=base_chains,
@@ -173,6 +178,7 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
                 continue
             FlextInfraUtilitiesRefactorNamespaceFacades._write_missing_facade_file(
                 file_path=target_path,
+                package_root=package_dir,
                 family=status.family,
                 class_name=class_name,
                 base_chains=base_chains,
@@ -203,11 +209,16 @@ class FlextInfraUtilitiesRefactorNamespaceFacades:
     def _patch_existing_facade_file(
         *,
         target_path: Path,
+        package_root: Path,
         family: str,
         class_name: str,
         base_chains: t.StrSequenceMapping | None = None,
     ) -> None:
         """Patch existing facade file."""
+        target_path = target_path.resolve()
+        if not target_path.is_relative_to(package_root.resolve()):
+            msg = f"refusing facade patch outside package: {target_path}"
+            raise ValueError(msg)
         source = target_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         lines = source.splitlines()
         base_class = FlextInfraUtilitiesRefactorNamespaceFacades._base_class_for_family(

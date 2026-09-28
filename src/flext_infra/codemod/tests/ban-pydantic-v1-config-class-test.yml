@@ -1,0 +1,28 @@
+id: ban-pydantic-v1-config-class
+# `valid` MUST NOT match: a Config class outside a Pydantic model, the canonical
+# v2 declaration, or the literal text in a docstring.
+valid:
+  - |
+    class Settings:
+        class Config:
+            frozen = True
+  - |
+    class Model(BaseModel):
+        model_config = ConfigDict(frozen=True)
+  - HELP = "replace class Config with model_config = ConfigDict(...)"
+  - |
+    """Docstring describing class Config inside a BaseModel."""
+# `invalid` MUST match: a Config class nested in a Pydantic model base.
+invalid:
+  - |
+    class Model(BaseModel):
+        class Config:
+            frozen = True
+  - |
+    class Model(BaseSettings):
+        class Config:
+            env_prefix = "APP_"
+  - |
+    class Model(RootModel[int]):
+        class Config:
+            frozen = True

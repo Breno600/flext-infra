@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from typing import Annotated, override
 
 from flext_cli import cli
-from flext_infra import c, m, p, r, t, u
+
+from flext_core import r
+from flext_infra import m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-from flext_infra.refactor._accessor_report import FlextInfraAccessorMigrationReportMixin
-from flext_infra.refactor._accessor_rewrite import (
-    FlextInfraAccessorMigrationRewriteMixin,
-)
+
+from ._accessor_report import FlextInfraAccessorMigrationReportMixin
+from ._accessor_rewrite import FlextInfraAccessorMigrationRewriteMixin
 
 
 class FlextInfraAccessorMigrationOrchestrator(
@@ -26,8 +28,13 @@ class FlextInfraAccessorMigrationOrchestrator(
     ] = 10
     gates: Annotated[
         str,
-        m.Field(description="Comma-separated lint gates for preview/apply validation"),
-    ] = c.Infra.SAFE_EXECUTION_DEFAULT_GATES
+        m.Field(
+            description=(
+                "Comma-separated lint gates for preview/apply validation; empty"
+                " selects the SSOT snapshot gates (make.check_gates_ci)."
+            )
+        ),
+    ] = ""
 
     @property
     @override
@@ -47,47 +54,33 @@ class FlextInfraAccessorMigrationOrchestrator(
         selected_projects: t.StrSequence = (
             self.project_names if self.project_names is not None else ()
         )
-        resolved = u.Infra.resolve_projects(self.workspace_root, selected_projects)
+        resolved = u.Infra.resolve_projects(self.repository_root, selected_projects)
         if resolved.failure:
-            return r[m.Infra.AccessorMigrationReport].fail(
-                resolved.error or "project resolution failed"
-            )
+            return r[m.Infra.AccessorMigrationReport].from_failure(resolved)
         iter_result = u.Infra.iter_python_files(
             m.Infra.SourceScanRequest(
                 project_roots=tuple(project.path for project in resolved.value)
             )
         )
         if iter_result.failure:
-            return r[m.Infra.AccessorMigrationReport].fail(
-                iter_result.error or "python file iteration failed"
-            )
+            return r[m.Infra.AccessorMigrationReport].from_failure(iter_result)
         previews: t.MutableSequenceOf[m.Infra.AccessorMigrationFile] = []
         files_with_changes = 0
         automated_change_count = 0
         warning_count = 0
-        lint_before_totals: dict[str, int] = {}
-        lint_after_totals: dict[str, int] = {}
-        new_lint_error_totals: dict[str, int] = {}
-        with u.Infra.open_project(self.workspace_root) as rope_project:
+        lint_before_totals: MutableMapping[str, int] = {}
+        lint_after_totals: MutableMapping[str, int] = {}
+        new_lint_error_totals: MutableMapping[str, int] = {}
+        with u.Infra.open_project(self.repository_root) as rope_project:
             for py_file in iter_result.value:
                 read = u.Cli.files_read_text(py_file)
                 if read.failure:
-                    return r[m.Infra.AccessorMigrationReport].fail(
-                        read.error or f"failed to read {py_file}"
-                    )
-                source = read.value
-                updated_source, automated_changes = self._apply_automated_rewrites(
-                    rope_project, py_file, source
-                )
-                warnings = list(self._collect_manual_warnings(py_file, source))
+                    return r[m.Infra.AccessorMigrationReport].from_failure(read)
                 file_report = self._process_file(
+                    rope_project,
                     py_file,
-                    source=source,
-                    updated_source=updated_source,
-                    automated_changes=automated_changes,
-                    warnings=warnings,
-                    include_preview=(bool(automated_changes or warnings))
-                    and len(previews) < self.preview_limit,
+                    read.value,
+                    preview_available=len(previews) < self.preview_limit,
                 )
                 automated_change_count += len(file_report.automated_changes)
                 warning_count += len(file_report.warnings)
@@ -106,7 +99,7 @@ class FlextInfraAccessorMigrationOrchestrator(
                 )
         return r[m.Infra.AccessorMigrationReport].ok(
             m.Infra.AccessorMigrationReport(
-                workspace=str(self.workspace_root),
+                workspace=str(self.repository_root),
                 dry_run=self.dry_run,
                 files_scanned=len(iter_result.value),
                 files_with_changes=files_with_changes,
@@ -126,19 +119,16 @@ class FlextInfraAccessorMigrationOrchestrator(
     ) -> p.Result[m.Infra.AccessorMigrationReport]:
         """Execute accessor migration from the validated command service."""
         result = cls(
-            workspace_root=params.workspace_path,
+            repository_root=params.repository_root,
             selected_projects=params.projects,
             apply_changes=params.apply,
-            fail_fast=params.fail_fast,
             target_module=params.module,
             target_namespace=params.namespace,
             preview_limit=params.preview_limit,
             gates=",".join(params.gates),
         ).execute()
         if result.failure:
-            return r[m.Infra.AccessorMigrationReport].fail(
-                result.error or "accessor migration execution failed"
-            )
+            return r[m.Infra.AccessorMigrationReport].from_failure(result)
         cli.display_text(cls.render_text(result.value))
         return r[m.Infra.AccessorMigrationReport].ok(result.value)
 

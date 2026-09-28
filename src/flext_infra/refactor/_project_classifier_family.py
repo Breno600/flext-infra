@@ -1,4 +1,4 @@
-"""MRO family-chain discovery + project-kind inference — extracted concern."""
+"""FLEXT family-chain discovery + project-kind inference — extracted concern."""
 
 from __future__ import annotations
 
@@ -14,14 +14,14 @@ if TYPE_CHECKING:
 
 
 class FlextInfraProjectClassifierFamilyMixin:
-    """Parse facade family files and confirm MRO family chains + project kind.
+    """Parse facade family files and confirm FLEXT family chains + project kind.
 
     Composed into FlextInfraProjectClassifier via inheritance; borrows
     ``_src_path`` and ``_normalize_dependency_name`` from the facade/deps-mixin
-    via MRO.
+    via FLEXT.
     """
 
-    _CLASS_DEF_RE: t.Infra.RegexPattern = c.Infra.CLASS_WITH_BASES_RE
+    _CLASS_DEF_RE: t.RegexPattern = c.Infra.CLASS_WITH_BASES_RE
 
     if TYPE_CHECKING:
         _src_path: Path

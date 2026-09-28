@@ -1,0 +1,68 @@
+id: rewire-test-monkeypatch-environment
+snapshots:
+  ? |
+    from tests import u
+
+    def test_settings_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        expiry_minutes = c.DEFAULT_EXPIRY_MINUTES + 1
+        algorithm = c.Algorithms.RS256.value
+        monkeypatch.setenv(expiry_key, expiry_minutes)
+        monkeypatch.setenv(algorithm_key, algorithm)
+        settings = Settings()
+        tm.that(settings.expiry_minutes, eq=expiry_minutes)
+  : fixed: |+
+      from tests import u
+
+      def test_settings_environment(self) -> None:
+          expiry_minutes = c.DEFAULT_EXPIRY_MINUTES + 1
+          algorithm = c.Algorithms.RS256.value
+          with u.Tests.env_vars_context({
+              expiry_key: expiry_minutes,
+              algorithm_key: algorithm,
+          }):
+              settings = Settings()
+              tm.that(settings.expiry_minutes, eq=expiry_minutes)
+
+    labels:
+    - source: |-
+        def test_settings_environment(
+            self, monkeypatch: pytest.MonkeyPatch
+        ) -> None:
+            expiry_minutes = c.DEFAULT_EXPIRY_MINUTES + 1
+            algorithm = c.Algorithms.RS256.value
+            monkeypatch.setenv(expiry_key, expiry_minutes)
+            monkeypatch.setenv(algorithm_key, algorithm)
+            settings = Settings()
+            tm.that(settings.expiry_minutes, eq=expiry_minutes)
+      style: primary
+      start: 21
+      end: 377
+    - source: u
+      style: secondary
+      start: 18
+      end: 19
+    - source: tests
+      style: secondary
+      start: 5
+      end: 10
+    - source: from tests import u
+      style: secondary
+      start: 0
+      end: 19
+    - source: |
+        from tests import u
+
+        def test_settings_environment(
+            self, monkeypatch: pytest.MonkeyPatch
+        ) -> None:
+            expiry_minutes = c.DEFAULT_EXPIRY_MINUTES + 1
+            algorithm = c.Algorithms.RS256.value
+            monkeypatch.setenv(expiry_key, expiry_minutes)
+            monkeypatch.setenv(algorithm_key, algorithm)
+            settings = Settings()
+            tm.that(settings.expiry_minutes, eq=expiry_minutes)
+      style: secondary
+      start: 0
+      end: 378

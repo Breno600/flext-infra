@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_infra import c, u
-from flext_infra.docs.base import FlextInfraDocServiceBase
+
+from .base import FlextInfraDocServiceBase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -20,14 +21,14 @@ class FlextInfraDocBuilder(FlextInfraDocServiceBase):
 
     def build(
         self,
-        workspace_root: Path,
+        repository_root: Path,
         *,
         projects: t.StrSequence | None = None,
         output_dir: Path | str | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
         """Build MkDocs sites across project scopes."""
         return self.run_scoped_docs(
-            workspace_root,
+            repository_root,
             projects=projects,
             output_dir=output_dir,
             handler=self._build_scope,
@@ -39,7 +40,7 @@ class FlextInfraDocBuilder(FlextInfraDocServiceBase):
         return self._propagate_phase_outcome(
             "build",
             self.build(
-                workspace_root=self.workspace_root,
+                repository_root=self.repository_root,
                 projects=self.selected_projects,
                 output_dir=self.output_dir,
             ),

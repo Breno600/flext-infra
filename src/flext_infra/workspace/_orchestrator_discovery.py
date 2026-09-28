@@ -8,19 +8,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol
 
-from flext_infra import m, u
+from flext_infra import m, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, t
+    from flext_infra import p
 
     class _WorkspaceOrchestratorProtocol(Protocol):
         @property
         def root(self) -> Path: ...
 
         @property
-        def project_names(self) -> t.StrSequence | None: ...
+        def projects(self) -> t.StrSequence | None: ...
 
 
 class FlextInfraWorkspaceOrchestratorDiscoveryMixin:
@@ -29,18 +29,16 @@ class FlextInfraWorkspaceOrchestratorDiscoveryMixin:
     def _resolved_projects(
         self: _WorkspaceOrchestratorProtocol,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectInfo]]:
-        """Resolve selected projects using workspace discovery."""
-        return u.Infra.resolve_projects(
-            self.root, self.project_names or (), include_attached=True
-        )
+        """Resolve the declared project inventory, narrowed by explicit selection."""
+        return u.Infra.resolve_projects(self.root, self.projects or ())
 
     @staticmethod
-    def _project_target(project: m.Infra.ProjectInfo, *, workspace_root: Path) -> str:
+    def _project_target(project: m.Infra.ProjectInfo, *, repository_root: Path) -> str:
         """Map a project info object into a relative make target."""
         project_path = project.path.resolve()
-        resolved_workspace_root = workspace_root.resolve()
+        resolved_repository_root = repository_root.resolve()
         try:
-            return str(project_path.relative_to(resolved_workspace_root))
+            return str(project_path.relative_to(resolved_repository_root))
         except ValueError:
             return str(project_path)
 

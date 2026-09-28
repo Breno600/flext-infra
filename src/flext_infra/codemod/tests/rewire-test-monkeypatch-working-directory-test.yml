@@ -1,0 +1,17 @@
+id: rewire-test-monkeypatch-working-directory
+valid:
+  - |
+    import pytest
+
+    @pytest.fixture(autouse=True)
+    def isolate_cwd(tmp_path: Path) -> Generator[None]:
+        with u.Tests.Matchers.scope(cwd=tmp_path):
+            yield
+invalid:
+  - |
+    import pytest
+
+    @pytest.fixture(autouse=True)
+    def isolate_cwd(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Run every test from an isolated directory."""
+        monkeypatch.chdir(tmp_path)

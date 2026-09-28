@@ -1,0 +1,9 @@
+id: remove-cli-test-deadline-exit-code-argument
+snapshots:
+  _deadline(seconds=2.0, grace=0.5, exit_code=93):
+    fixed: _deadline(seconds=2.0, grace=0.5)
+    labels:
+    - source: _deadline(seconds=2.0, grace=0.5, exit_code=93)
+      style: primary
+      start: 0
+      end: 47

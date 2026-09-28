@@ -4,25 +4,26 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra.refactor.project_classifier import FlextInfraProjectClassifier
 from flext_tests import tm
+
+from flext_infra.refactor.project_classifier import FlextInfraProjectClassifier
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-def _write_pyproject(project_root: Path, content: str) -> None:
-    pyproject_path = project_root / "pyproject.toml"
-    pyproject_path.write_text(content.strip() + "\n", encoding="utf-8")
-
-
 class TestsFlextInfraRefactorInfraRefactorProjectClassifier:
     """Behavior contract for test_infra_refactor_project_classifier."""
+
+    @staticmethod
+    def _write_pyproject(project_root: Path, content: str) -> None:
+        pyproject_path = project_root / "pyproject.toml"
+        pyproject_path.write_text(content.strip() + "\n", encoding="utf-8")
 
     def test_classify_reads_internal_dependencies_from_pep621(
         self, tmp_path: Path
     ) -> None:
-        _write_pyproject(
+        self._write_pyproject(
             tmp_path,
             """
             [project]
@@ -42,7 +43,7 @@ class TestsFlextInfraRefactorInfraRefactorProjectClassifier:
     def test_classify_reads_internal_dependencies_from_poetry(
         self, tmp_path: Path
     ) -> None:
-        _write_pyproject(
+        self._write_pyproject(
             tmp_path,
             """
             [tool.poetry]

@@ -1,0 +1,38 @@
+id: rewire-structlog-get-logger-missing-u-import
+snapshots:
+  ? |
+    from flext_core import u as utilities
+
+    logger = structlog.get_logger("service")
+  : labels:
+    - source: structlog.get_logger("service")
+      style: primary
+      start: 48
+      end: 79
+    - source: ("service")
+      style: secondary
+      start: 68
+      end: 79
+    - source: |
+        from flext_core import u as utilities
+
+        logger = structlog.get_logger("service")
+      style: secondary
+      start: 0
+      end: 80
+  ? |
+    import structlog
+
+    logger = structlog.get_logger()
+  : labels:
+    - source: structlog.get_logger()
+      style: primary
+      start: 27
+      end: 49
+    - source: |
+        import structlog
+
+        logger = structlog.get_logger()
+      style: secondary
+      start: 0
+      end: 50

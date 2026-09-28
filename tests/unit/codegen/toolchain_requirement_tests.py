@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from flext_infra import config
 from flext_tests import tm
 
+from flext_infra import config
 
-class TestsToolchainRequirement:
+
+class TestsFlextInfraToolchainRequirement:
     """Toolchain requirements tolerate compatible Python patch drift."""
 
     def test_python_requirement_uses_declared_minor_as_floor(self) -> None:
@@ -23,6 +24,3 @@ class TestsToolchainRequirement:
         major, _, minor = toolchain.python_version.partition(".")
 
         tm.that(toolchain.python_required_version, has=f",<{major}.{int(minor) + 1}")
-
-
-__all__: tuple[str, ...] = ()

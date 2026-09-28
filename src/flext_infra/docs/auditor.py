@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, override
 
-from flext_infra import m, r, u
-from flext_infra.docs._auditor_checks import FlextInfraDocAuditorChecksMixin
-from flext_infra.docs._auditor_report import FlextInfraDocAuditorReportMixin
-from flext_infra.docs.auditor_mixin import FlextInfraDocAuditorMixin
-from flext_infra.docs.base import FlextInfraDocServiceBase
+from flext_infra import m, u
+
+from ._auditor_checks import FlextInfraDocAuditorChecksMixin
+from ._auditor_report import FlextInfraDocAuditorReportMixin
+from .auditor_mixin import FlextInfraDocAuditorMixin
+from .base import FlextInfraDocServiceBase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,20 +23,19 @@ class FlextInfraDocAuditor(
     FlextInfraDocAuditorChecksMixin,
     FlextInfraDocAuditorReportMixin,
 ):
-    """Audit governed docs scopes using code-backed and policy-backed checks."""
+    """Audit governed docs scopes; every finding is reported.
 
-    strict_mode: Annotated[
-        bool, m.Field(alias="strict", description="Strict audit mode")
-    ] = False
+    There is no issue budget and no findings are dropped: the report always
+    carries the complete issue list. The phase verdict follows the configured
+    posture — audit is blocking unless ``make.docs.warning_actions`` lists it
+    (operator law 2026-09-22: findings then warn, owned by cleanup beads,
+    while ``docstring_min`` stays an additional floor in blocking posture).
+    """
 
-    # kimi-docs mro-3o9s: seletor de checks via CLI como --checks (flag --check é o
-    # alias bool de check_only na base); default "all" = comportamento anterior.
     checks: Annotated[
         str, m.Field(description="Comma-separated audit checks (default: all)")
     ] = "all"
 
-    # kimi-docs mro-3o9s: threshold de cobertura de docstrings via CLI
-    # (--docstring-min); None = desativado. Substitui o interrogate paralelo.
     docstring_min: Annotated[
         float | None,
         m.Field(
@@ -45,24 +45,25 @@ class FlextInfraDocAuditor(
 
     def audit(
         self,
-        workspace_root: Path,
+        repository_root: Path,
         *,
         projects: t.StrSequence | None = None,
         output_dir: Path | str | None = None,
         params: m.Infra.AuditScopeParams | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
         """Audit root and governed project docs scopes."""
-        resolved_params = self._audit_params(workspace_root, params)
-        if resolved_params.failure:
-            return r.fail(
-                resolved_params.error or "audit parameter resolution failed",
-                error_code=resolved_params.error_code,
+        resolved_params = (
+            params
+            if params is not None
+            else m.Infra.AuditScopeParams(
+                check=self.checks, docstring_min=self.docstring_min
             )
+        )
         return self.run_scoped_docs(
-            workspace_root,
+            repository_root,
             projects=projects,
             output_dir=output_dir,
-            handler=lambda scope: self.audit_scope(scope, params=resolved_params.value),
+            handler=lambda scope: self.audit_scope(scope, params=resolved_params),
         )
 
     def audit_scope(
@@ -73,7 +74,7 @@ class FlextInfraDocAuditor(
         issues = self._collect_issues(scope, checks)
         docstring_coverage = (
             u.Infra.docs_public_docstring_coverage(scope)
-            if "docstrings" in checks
+            if "docstrings" in checks or params.docstring_min is not None
             else None
         )
         report = self._audit_report(
@@ -87,7 +88,6 @@ class FlextInfraDocAuditor(
             scope,
             issues,
             set(checks),
-            strict=params.strict,
             docstring_coverage=docstring_coverage,
             to_markdown_fn=u.Infra.docs_audit_markdown,
         )
@@ -106,46 +106,15 @@ class FlextInfraDocAuditor(
         return self._propagate_phase_outcome(
             "audit",
             self.audit(
-                workspace_root=self.workspace_root,
+                repository_root=self.repository_root,
                 projects=self.selected_projects,
                 output_dir=self.output_dir,
                 params=m.Infra.AuditScopeParams(
-                    check=self.checks,
-                    strict=self.strict_mode,
-                    docstring_min=self.docstring_min,
+                    check=self.checks, docstring_min=self.docstring_min
                 ),
             ),
             failure_predicate=lambda report: not report.passed,
         )
-
-    def _audit_params(
-        self, workspace_root: Path, params: m.Infra.AuditScopeParams | None
-    ) -> p.Result[m.Infra.AuditScopeParams]:
-        """Resolve runtime audit parameters and load default budgets when absent."""
-        if params is not None and params.budgets is not None:
-            return r[m.Infra.AuditScopeParams].ok(params)
-        budgets_result = self.load_audit_budgets(workspace_root)
-        if budgets_result.failure:
-            return r[m.Infra.AuditScopeParams].fail(
-                budgets_result.error or "audit budget resolution failed",
-                error_code=budgets_result.error_code,
-            )
-        budgets = budgets_result.value
-        if params is None:
-            resolved = m.Infra.AuditScopeParams(
-                check="all",
-                strict=self.strict_mode,
-                docstring_min=self.docstring_min,
-                budgets=budgets,
-            )
-        else:
-            resolved = m.Infra.AuditScopeParams(
-                check=params.check,
-                strict=params.strict,
-                docstring_min=params.docstring_min,
-                budgets=budgets,
-            )
-        return r[m.Infra.AuditScopeParams].ok(resolved)
 
 
 if __name__ == "__main__":

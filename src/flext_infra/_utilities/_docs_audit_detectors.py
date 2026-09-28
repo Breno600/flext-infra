@@ -6,16 +6,17 @@ import sys
 from typing import TYPE_CHECKING
 
 from flext_cli import u
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
-from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-from flext_infra.constants import c
-from flext_infra.models import m
+
+from flext_infra import c, m
+
+from .docs import FlextInfraUtilitiesDocs
+from .docs_api import FlextInfraUtilitiesDocsApi
+from .docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesDocsAuditDetectorsMixin:
@@ -35,9 +36,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
             return issues
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             rel = md_file.relative_to(scope.path).as_posix()
-            text = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
-            )
+            text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for token in tokens:
                 if token in text:
                     issues.append(
@@ -46,6 +45,42 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                             issue_type=issue_type,
                             severity="medium",
                             message=f"contains `{token}`",
+                        )
+                    )
+        return issues
+
+    @staticmethod
+    def docs_machine_path_issues(
+        scope: m.Infra.DocScope, *, exempt_paths: t.StrSequence
+    ) -> t.SequenceOf[m.Infra.AuditIssue]:
+        """Collect per-user absolute paths (``/home/<user>``) frozen into markdown.
+
+        A path rooted at one operator's home binds the document to one machine;
+        container and CI identities declared in ``c.Infra.MACHINE_PATH_CONTAINER_USERS``
+        are image contracts and pass. ``exempt_paths`` are scope-relative prefixes
+        (frozen evidence such as dated plans) declared by the repository's docs
+        policy; they are skipped whole.
+        """
+        issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
+        exempt = tuple(exempt_paths)
+        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
+            rel = md_file.relative_to(scope.path).as_posix()
+            if rel.startswith(exempt):
+                continue
+            text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            for line_number, line in enumerate(text.splitlines(), start=1):
+                for match in c.Infra.MACHINE_PATH_RE.finditer(line):
+                    if match.group("user") in c.Infra.MACHINE_PATH_CONTAINER_USERS:
+                        continue
+                    issues.append(
+                        m.Infra.AuditIssue(
+                            file=rel,
+                            issue_type="machine-path",
+                            severity="high",
+                            message=(
+                                f"line {line_number} embeds machine-local path "
+                                f"`{match.group(0)}`"
+                            ),
                         )
                     )
         return issues
@@ -65,9 +100,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         ]:
             if not md_file.exists():
                 continue
-            text = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
-            )
+            text = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for token in excluded:
                 if token in text:
                     issues.append(
@@ -95,7 +128,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                 continue
             rel = path.relative_to(scope.path).as_posix()
             if path.is_relative_to(scope.path / c.Infra.DIR_DOCS) and (
-                FlextInfraUtilitiesDocsScope.is_excluded_doc_path(
+                FlextInfraUtilitiesDocsScope.excluded_doc_path(
                     scope.path, path.relative_to(scope.path / c.Infra.DIR_DOCS)
                 )
             ):
@@ -152,11 +185,9 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             rel = md_file.relative_to(scope.path).as_posix()
-            content = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
-            )
+            content = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             for index, match in enumerate(c.Infra.PYTHON_FENCE_RE.finditer(content)):
-                # mro-o6h5 (agent: kimi) — ruff via running interpreter (venv SSOT);
+                # flext-o6h5 (agent: kimi) — ruff via running interpreter (venv SSOT);
                 # bare "ruff" breaks when .venv/bin is not on PATH (CI docs audit).
                 outcome = u.Cli.run_raw(
                     [
@@ -175,18 +206,14 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                 )
                 if outcome.failure:
                     detail = outcome.error
-                elif outcome.value.exit_code == 0:
+                elif u.Cli.process_succeeded(outcome.value.outcome):
                     continue
                 else:
-                    # mro-o6h5 (agent: kimi) — ruff reports parse errors on stderr
+                    # flext-o6h5 (agent: kimi) — ruff reports parse errors on stderr
                     # only; indexing an empty stdout crashes with IndexError.
-                    stdout_lines = outcome.value.stdout.strip().splitlines()
-                    stderr_lines = outcome.value.stderr.strip().splitlines()
-                    detail_lines = stdout_lines or stderr_lines
                     detail = (
-                        detail_lines[-1]
-                        if detail_lines
-                        else f"ruff exit {outcome.value.exit_code}"
+                        f"{outcome.value.stdout}\n{outcome.value.stderr}".strip()
+                        or f"ruff exit {outcome.value.outcome.raw_return_code}"
                     )
                 issues.append(
                     m.Infra.AuditIssue(

@@ -1,0 +1,19 @@
+id: remove-pdb-set-trace-statement
+# `valid` MUST NOT match: the import alone, an unrelated receiver, or the
+# literal text in a string.
+valid:
+  - import pdb
+  - tracer.set_trace()
+  - HINT = "delete every pdb.set_trace() before committing"
+  - |
+    """Docstring quoting pdb.set_trace() at column zero.
+
+    pdb.set_trace()
+    """
+# `invalid` MUST match: the debugger call as a statement.
+invalid:
+  - pdb.set_trace()
+  - |
+    def f():
+        pdb.set_trace()
+        return 1

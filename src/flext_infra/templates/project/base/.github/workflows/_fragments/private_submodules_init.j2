@@ -1,35 +1,40 @@
 {%- if private_submodules %}
-          persist-credentials: false
+          persist-credentials: {{ persist_private_checkout_credentials | default(false) | lower }}
 
-      - name: Init private workspace members
+      - name: Init private workspace projects
         env:
 {% for key in private_submodules.deploy_keys %}
           {{ key.secret }}: {% raw %}${{ secrets.{% endraw %}{{ key.secret }}{% raw %} }}{% endraw %}
 {% endfor %}
         run: |
           set -euo pipefail
-          mkdir -p ~/.ssh
-          ssh-keyscan -T 10 github.com >> ~/.ssh/known_hosts 2>/dev/null
+          : "${RUNNER_TEMP:?RUNNER_TEMP is required for private submodule identity}"
 {% for key in private_submodules.deploy_keys %}
           if [ -z "${{ '{' }}{{ key.secret }}{{ '}' }}" ]; then
             echo "::error::secret {{ key.secret }} missing — private submodule {{ key.path }} requires a read-only deploy key"
             exit 1
           fi
-          printf '%s\n' "${{ '{' }}{{ key.secret }}{{ '}' }}" > "$HOME/.ssh/{{ key.secret | lower }}"
-          chmod 600 "$HOME/.ssh/{{ key.secret | lower }}"
 {% endfor %}
-          {
+          identity_root="$RUNNER_TEMP/flext-private-submodules"
+          install -d -m 700 "$identity_root"
+          known_hosts="$identity_root/known_hosts"
+          printf '%s\n'{% for line in private_submodules.known_hosts %} \
+            '{{ line }}'{% endfor %} > "$known_hosts.new"
+          chmod 600 "$known_hosts.new"
+          mv "$known_hosts.new" "$known_hosts"
 {% for key in private_submodules.deploy_keys %}
-            printf 'Host {{ key.host_alias }}\n  HostName github.com\n  User git\n  IdentityFile ~/.ssh/{{ key.secret | lower }}\n  IdentitiesOnly yes\n  StrictHostKeyChecking yes\n'
+          key_path="$identity_root/key-{{ "%02d" | format(loop.index0) }}"
+          printf '%s\n' "${{ '{' }}{{ key.secret }}{{ '}' }}" > "$key_path.new"
+          chmod 600 "$key_path.new"
+          mv "$key_path.new" "$key_path"
 {% endfor %}
-          } >> ~/.ssh/config
-          chmod 600 ~/.ssh/config
-          git submodule sync -- {% for p in private_submodules.paths %}{{ p }} {% endfor %}
+          git submodule sync -- {{ private_submodules.paths | join(" ") }}
 {% for key in private_submodules.deploy_keys %}
-          git config submodule.{{ key.submodule }}.url {{ key.ssh_url }}
-{% endfor %}
-          git submodule update --init --depth 1 --jobs 2 -- {% for p in private_submodules.paths %}{{ p }} {% endfor %}
-{% for key in private_submodules.deploy_keys %}
-          git -C {{ key.path }} remote set-url origin {{ key.ssh_url }}
+          key_path="$identity_root/key-{{ "%02d" | format(loop.index0) }}"
+          ssh_command="ssh -F none -i \"$key_path\" -o IdentitiesOnly=yes -o IdentityAgent=none -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=\"$known_hosts\""
+          git config "submodule.{{ key.submodule }}.url" "{{ key.remote }}"
+          git -c core.sshCommand="$ssh_command" submodule update --init --depth 1 -- "{{ key.path }}"
+          git -C "{{ key.path }}" config --local core.sshCommand "$ssh_command"
+          git -C "{{ key.path }}" remote set-url origin "{{ key.remote }}"
 {% endfor %}
 {%- endif -%}

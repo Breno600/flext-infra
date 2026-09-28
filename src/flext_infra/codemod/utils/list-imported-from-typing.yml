@@ -1,0 +1,15 @@
+id: list-imported-from-typing
+language: python
+rule:
+  kind: import_from_statement
+  all:
+    - has:
+        field: module_name
+        regex: "^typing$"
+    - has:
+        stopBy: end
+        kind: dotted_name
+        regex: "^List$"
+        not:
+          inside:
+            kind: aliased_import

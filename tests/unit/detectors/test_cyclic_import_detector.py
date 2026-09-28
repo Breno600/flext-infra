@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_tests import tm
+
 from flext_infra import u
 from flext_infra.detectors.cyclic_import_detector import FlextInfraCyclicImportDetector
-from flext_tests import tm
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -18,7 +19,9 @@ class TestsFlextInfraCyclicImportDetector:
     """Prospective graph contracts for canonical alias migrations."""
 
     @staticmethod
-    def _project(tmp_path: Path, files: t.StrMapping) -> tuple[Path, dict[str, Path]]:
+    def _project(
+        tmp_path: Path, files: t.StrMapping
+    ) -> t.Pair[Path, t.MutableMappingKV[str, Path]]:
         project = tmp_path / "demo-project"
         package = project / "src" / "demo_pkg"
         package.mkdir(parents=True)
@@ -26,7 +29,7 @@ class TestsFlextInfraCyclicImportDetector:
         (project / "pyproject.toml").write_text(
             '[project]\nname = "demo-project"\nversion = "0.1.0"\n', encoding="utf-8"
         )
-        paths: dict[str, Path] = {}
+        paths: t.MutableMappingKV[str, Path] = {}
         for filename, source in files.items():
             path = package / filename
             path.write_text(source, encoding="utf-8")
@@ -91,6 +94,3 @@ class TestsFlextInfraCyclicImportDetector:
                 proposed_sources={paths["b.py"]: "from demo_pkg import a\n"},
             )
         tm.that(cycles, eq=[])
-
-
-__all__: t.StrSequence = []

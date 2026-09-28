@@ -1,0 +1,5 @@
+id: rewire-cli-internal-process-outcome-failure-check
+valid:
+  - not cls.process_succeeded(output.outcome)
+invalid:
+  - output.outcome.raw_return_code != 0

@@ -1,0 +1,161 @@
+# Test law: an assertion must be able to fail against a wrong runtime.
+#
+# A tautology passes whatever the code under test does, so it proves nothing
+# and hides the absence of a real behavioural check. This rule is the single
+# owner of the tautology law (it supersedes the former `no-assert-true` and
+# `ban-tautological-result-assertion` rules) and covers every shape of it:
+#
+#   * asserting a truthy constant: `assert True`, `assert not False`,
+#     `assert not None`, `assert "text"`, `assert 1`;
+#   * comparing a call-free expression with itself: `assert x == x`,
+#     `assert x is x`, `tm.that(x, eq=x)`, `tm.that(42, eq=42)` (ast-grep
+#     metavariable equality proves both sides are the same expression; two
+#     evaluations of a call such as `svc() is svc()` are two observations and
+#     stay legal);
+#   * a Result that is success or failure: a flext Result is always exactly one
+#     of them, so `X.success or X.failure` is always true;
+#   * the isinstance of the object just constructed: `isinstance(C(...), C)`,
+#     `tm.that(C(...), is_=C)`, or `v = C(...)` directly followed later in the
+#     same block by `assert isinstance(v, C)` / `tm.that(v, is_=C)`;
+#   * a project-owned constant, config or settings value compared with a
+#     hardcoded literal (`assert c.Ns.KEY == "value"`,
+#     `tm.that(settings.Ns.key, eq=3)`): the test restates the SSOT instead of
+#     proving behaviour, and breaks on every legitimate configuration change.
+#
+# Legitimate homonyms keep their contract: `a.success or b.failure` on two
+# different expressions is ordinary logic; `assert False` is an unreachable
+# marker, not a tautology; comparing an owned value with another computed value
+# is a real check; a local variable merely named `c`, `config` or `settings` is
+# only treated as the owned facade when the module imports that name from a
+# FLEXT package or the tests facade.
+#
+# Detection-only: the replacement asserts the one observable outcome the test
+# expects, which a rewrite cannot choose. A test that has no such outcome is
+# deleted.
+id: ban-test-tautology
+language: Python
+severity: error
+files:
+  - "**/tests/**/*.py"
+  - "**/examples/**/*.py"
+  - "**/conftest.py"
+utils:
+  # Each root name is the owned facade only where the module imports that exact
+  # name from a FLEXT package or the tests facade; a local `config` variable in
+  # a module that imports only `c` is not the config facade.
+  owned-facade-read:
+    kind: attribute
+    any:
+      - all:
+          - regex: '^c\.[A-Za-z_][\w.]*$'
+          - inside:
+              kind: module
+              stopBy: end
+              has:
+                stopBy: end
+                kind: import_from_statement
+                regex: '^from\s+(?:flext_\w+|tests)(?:\.\w+)*\s+import\s+[\s\S]*\bc\b'
+      - all:
+          - regex: '^config\.[A-Za-z_][\w.]*$'
+          - inside:
+              kind: module
+              stopBy: end
+              has:
+                stopBy: end
+                kind: import_from_statement
+                regex: '^from\s+(?:flext_\w+|tests)(?:\.\w+)*\s+import\s+[\s\S]*\bconfig\b'
+      - all:
+          - regex: '^settings\.[A-Za-z_][\w.]*$'
+          - inside:
+              kind: module
+              stopBy: end
+              has:
+                stopBy: end
+                kind: import_from_statement
+                regex: '^from\s+(?:flext_\w+|tests)(?:\.\w+)*\s+import\s+[\s\S]*\bsettings\b'
+  owned-literal:
+    any:
+      - kind: string
+      - kind: integer
+      - kind: float
+      - kind: "true"
+      - kind: "false"
+  follows-own-construction:
+    follows:
+      stopBy: end
+      kind: expression_statement
+      has:
+        any:
+          - pattern: $V = $C($$$ARGS)
+          - pattern: "$V: $T = $C($$$ARGS)"
+rule:
+  any:
+    - kind: assert_statement
+      regex: '^assert\s+(?:True|not\s+(?:False|None)|[1-9]\d*|"[^"]+"|''[^'']+'')\s*(?:,[^\n]*)?$'
+    # Two evaluations of a call are two observations (identity of a singleton,
+    # determinism of a generator, hash stability), so only call-free
+    # expressions compared with themselves are tautologies.
+    - all:
+        - any:
+            - pattern: assert $X == $X
+            - pattern: assert $X is $X
+            - pattern: assert $X >= $X
+            - pattern: assert $X <= $X
+            - pattern: tm.that($X, eq=$X)
+        - not:
+            has:
+              kind: call
+              stopBy: end
+    - all:
+        - any:
+            - pattern: $X.success or $X.failure
+            - pattern: $X.failure or $X.success
+        - inside:
+            stopBy: end
+            any:
+              - kind: assert_statement
+              - pattern: tm.that($$$ARGS)
+    - pattern: assert isinstance($C($$$ARGS), $C)
+    - pattern: tm.that($C($$$ARGS), is_=$C)
+    - all:
+        - pattern: assert isinstance($V, $C)
+        - matches: follows-own-construction
+    - all:
+        - kind: expression_statement
+        - has:
+            pattern: tm.that($V, is_=$C)
+        - matches: follows-own-construction
+    # Constraints apply after `any` elects its first structural match, so the
+    # owned-value operands are checked inline where each shape is matched.
+    - all:
+        - kind: assert_statement
+        - has:
+            kind: comparison_operator
+            regex: '^\S[^\n]*\s==\s[^\n]*\S$'
+            all:
+              - has:
+                  matches: owned-facade-read
+              - has:
+                  matches: owned-literal
+    - all:
+        - pattern: tm.that($OWNED, eq=$LITERAL)
+        - has:
+            kind: argument_list
+            all:
+              - has:
+                  nthChild: 1
+                  matches: owned-facade-read
+              - has:
+                  kind: keyword_argument
+                  all:
+                    - has:
+                        field: name
+                        regex: "^eq$"
+                    - has:
+                        field: value
+                        matches: owned-literal
+message: >-
+  Tautological assertion: it passes whatever the runtime does (constant truth,
+  self-comparison, success-or-failure, isinstance of the object just built, or
+  an owned constant/config/settings value restated as a literal). Assert the
+  one observable outcome the test expects, or delete the test.

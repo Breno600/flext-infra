@@ -23,8 +23,8 @@ set -euo pipefail
 
 # This script lives at .github/scripts/flext-law-loop.sh; the workspace root
 # is therefore two levels up.
-WORKSPACE_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
-cd "${WORKSPACE_ROOT}"
+REPOSITORY_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." >/dev/null 2>&1 && pwd)"
+cd "${REPOSITORY_ROOT}"
 
 # A loop owns the entire disposable-worktree namespace.  A non-blocking lock
 # prevents a second invocation from deleting an active cycle during startup
@@ -42,7 +42,7 @@ ONCE=0
 MYPY_MEMORY_LIMIT_MB="${MYPY_MEMORY_LIMIT_MB:-6144}"
 MYPY_TIMEOUT_SECONDS="${MYPY_TIMEOUT_SECONDS:-600}"
 FLEXT_INFRA=(uv run --all-packages flext-infra)
-REPORT_DIR="${WORKSPACE_ROOT}/.reports/flext-law"
+REPORT_DIR="${REPOSITORY_ROOT}/.reports/flext-law"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -93,7 +93,7 @@ run_cycle() {
   base="$(git rev-parse HEAD)"
   # Keep our worktree OUT of .worktrees/ — flext-infra fixers own that path for
   # their internal transactions and prune it, which would delete ours mid-cycle.
-  worktree="${WORKSPACE_ROOT}/.flext-law-worktrees/flext-law-${stamp}"
+  worktree="${REPOSITORY_ROOT}/.flext-law-worktrees/flext-law-${stamp}"
 
   # Self-heal: a cycle killed mid-run (SIGKILL bypasses the trap) can leave
   # stale loop worktrees behind — and a fixer may have nested its own
@@ -101,17 +101,17 @@ run_cycle() {
   # living under our base dir, delete the trees, then prune the git metadata.
   local stale
   git worktree list --porcelain 2>/dev/null | awk '/^worktree /{print $2}' \
-    | grep -F "${WORKSPACE_ROOT}/.flext-law-worktrees/" \
+    | grep -F "${REPOSITORY_ROOT}/.flext-law-worktrees/" \
     | sort -r \
     | while IFS= read -r stale; do
         git worktree remove --force "${stale}" 2>/dev/null || true
       done
-  rm -rf "${WORKSPACE_ROOT}/.flext-law-worktrees" 2>/dev/null || true
+  rm -rf "${REPOSITORY_ROOT}/.flext-law-worktrees" 2>/dev/null || true
   git worktree prune 2>/dev/null || true
 
 
   log "cycle start: base=${base} worktree=${worktree} apply=${APPLY}"
-  mkdir -p "${WORKSPACE_ROOT}/.flext-law-worktrees"
+  mkdir -p "${REPOSITORY_ROOT}/.flext-law-worktrees"
   git worktree add --quiet --detach "${worktree}" "${base}"
 
   # Always clean up the throwaway worktree, green or red (handles nested fixer
@@ -127,7 +127,7 @@ run_cycle() {
     flags=("${command_parts[@]:2}")
     log "fixer: ${group} ${cmd} ${flags[*]:-}"
     # Apply inside the worktree; flext-infra validates each micro-transaction.
-    if "${FLEXT_INFRA[@]}" "${group}" "${cmd}" --workspace "${worktree}" --apply "${flags[@]}" \
+    if "${FLEXT_INFRA[@]}" "${group}" "${cmd}" --repository "${worktree}" --apply "${flags[@]}" \
         >"${REPORT_DIR}/${stamp}-${group}-${cmd}.log" 2>&1; then
       :
     else
@@ -171,7 +171,7 @@ run_cycle() {
       return 1
     fi
     git apply --index --3way "${REPORT_DIR}/${stamp}-APPLIED.patch"
-    if ! validate_worktree "${WORKSPACE_ROOT}"; then
+    if ! validate_worktree "${REPOSITORY_ROOT}"; then
       log "apply RED: reverting the vetted patch"
       if git apply --index --reverse --3way "${REPORT_DIR}/${stamp}-APPLIED.patch"; then
         log "apply RED: revert succeeded; workspace left unchanged"

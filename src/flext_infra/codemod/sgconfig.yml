@@ -5,6 +5,10 @@
 # These package-owned rule fixtures do not depend on retired project skill links.
 # .claude/skills/** is non-canonical and MUST NOT be referenced here.
 
+# Every FLEXT project inherits universal rules. Domain/adapter packages use
+# `runtime`, so this config is selected only through a consumer's runtime graph.
+scope: universal
+
 # ruleDirs: directories containing rule YAML files
 # Package-owned rule YAML files are discovered here.
 ruleDirs:

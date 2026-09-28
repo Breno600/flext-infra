@@ -1,0 +1,16 @@
+id: rewire-cli-command-result-success-assertion
+snapshots:
+  tm.that(result.value.exit_code, eq=0):
+    fixed: tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
+    labels:
+    - source: tm.that(result.value.exit_code, eq=0)
+      style: primary
+      start: 0
+      end: 37
+  tm.that(result.value.outcome.raw_return_code, eq=0):
+    fixed: tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
+    labels:
+    - source: tm.that(result.value.outcome.raw_return_code, eq=0)
+      style: primary
+      start: 0
+      end: 51

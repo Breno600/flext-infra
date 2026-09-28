@@ -7,30 +7,20 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+
+from flext_tests import tm
 
 import flext_infra as infra_pkg
 from flext_infra import u
-from flext_tests import tm
-
-if TYPE_CHECKING:
-    from flext_infra import p
 
 
 class TestsFlextInfraInfraVersionExtra:
     """Validate public package metadata exports against project SSOT."""
 
-    @staticmethod
-    def _project_root() -> Path:
-        return Path(__file__).resolve().parents[2]
-
-    def _metadata(self) -> p.ProjectMetadata:
-        metadata_result = u.read_project_metadata(self._project_root())
-        tm.ok(metadata_result)
-        return metadata_result.value
-
     def test_public_package_metadata_matches_project_metadata(self) -> None:
-        metadata = self._metadata()
+        metadata = tm.ok(
+            u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2])
+        )
 
         tm.that(infra_pkg.__title__, eq=metadata.project.name)
         tm.that(infra_pkg.__version__, eq=metadata.project.version)
@@ -38,7 +28,9 @@ class TestsFlextInfraInfraVersionExtra:
         tm.that(infra_pkg.__url__, eq=metadata.project.urls.homepage)
 
     def test_public_package_author_matches_project_authors(self) -> None:
-        metadata = self._metadata()
+        metadata = tm.ok(
+            u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2])
+        )
 
         tm.that(metadata.project.authors, empty=False)
         author = metadata.project.authors[0]

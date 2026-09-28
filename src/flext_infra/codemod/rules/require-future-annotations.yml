@@ -1,0 +1,82 @@
+# Family file for the universal module-hygiene rules: all share the same
+# governed Python surface, so the files/ignores scan scope stays in one owner
+# file. Each document is one rule; the rule ID is the contract.
+id: require-future-annotations
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  kind: module
+  not:
+    has:
+      pattern: from __future__ import annotations
+      stopBy: end
+message: >-
+  Python modules must declare `from __future__ import annotations`; insertion
+  remains detection-only because module docstrings, shebangs, encoding markers,
+  and other future imports determine the only legal insertion point.
+---
+id: ban-star-import-src
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  kind: import_from_statement
+  has:
+    kind: wildcard_import
+    stopBy: end
+message: >-
+  Star imports are forbidden; enumerate the public symbols after semantic
+  reference discovery. Detection remains strict because a textual expansion
+  cannot prove the imported module's runtime export contract.
+---
+# The runtime `serialize_as_any=True` flag applies duck-typed serialization to
+# every value in the call, not only to model subclasses. Pydantic 2.13+
+# provides `polymorphic_serialization=True` for subclass exposure and the
+# per-field `SerializeAsAny[...]` annotation for genuine duck-typed fields.
+id: ban-serialize-as-any-flag
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/.git/**"
+  - "**/.venv/**"
+  - "**/legado/**"
+  - "**/legacy/**"
+  - "**/node_modules/**"
+  - "**/*_pb2.py"
+  - "**/*_pb2_grpc.py"
+rule:
+  kind: keyword_argument
+  regex: '^serialize_as_any\s*=\s*True$'
+  inside:
+    kind: argument_list
+    inside:
+      any:
+        - pattern: $OBJ.model_dump($$$ARGS)
+        - pattern: $OBJ.model_dump_json($$$ARGS)
+        - pattern: $OBJ.dump_python($$$ARGS)
+        - pattern: $OBJ.dump_json($$$ARGS)
+message: >-
+  The `serialize_as_any=True` call flag applies to every value. Use
+  `polymorphic_serialization=True` for model subclasses or the per-field
+  `SerializeAsAny[...]` annotation through the `m` facade.

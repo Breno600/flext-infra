@@ -23,8 +23,8 @@ class FlextInfraManualProtocolDetector:
     ) -> t.SequenceOf[m.Infra.ManualProtocolViolation]:
         """Detect Protocol classes outside canonical locations."""
         if (
-            ctx.file_path.name in c.Infra.MRO_PROTOCOLS_FILE_NAMES
-            or c.Infra.MRO_PROTOCOLS_DIRECTORIES.intersection(ctx.file_path.parts)
+            ctx.file_path.name in c.Infra.FLEXT_PROTOCOLS_FILE_NAMES
+            or c.Infra.FLEXT_PROTOCOLS_DIRECTORIES.intersection(ctx.file_path.parts)
         ):
             return []
         if ctx.file_path.name in c.Infra.NAMESPACE_PROTECTED_FILES:
@@ -32,8 +32,9 @@ class FlextInfraManualProtocolDetector:
         file_path = ctx.file_path
         try:
             source = file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-        except OSError:
-            return []
+        except OSError as exc:
+            msg = f"manual-protocol detector could not read {file_path}: {exc}"
+            raise RuntimeError(msg) from exc
         return [
             m.Infra.ManualProtocolViolation(
                 file=str(file_path), line=ci.line, name=ci.name

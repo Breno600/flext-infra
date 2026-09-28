@@ -1,0 +1,40 @@
+id: rewire-print-to-cli-display-text
+valid:
+  - |
+    from flext_cli import cli
+
+    cli.display_text("message")
+  - |
+    from flext_cli import cli
+
+    print("message", flush=True)
+  - |
+    from flext_cli import cli
+
+    print(flush=True)
+  - |
+    from flext_cli import cli
+
+    print()
+  - |
+    from flext_cli import cli
+
+    console.print("message")
+  - |
+    print("message")
+  - |
+    """Docstring naming print("x") and u.Cli.print("x") as prose."""
+
+    from flext_cli import cli
+
+    TABLE = (("print(", "cli.display_text("), ("u.Cli.print(", "cli.display_text("))
+    # comment naming print("x") and u.Cli.print("x")
+invalid:
+  - |
+    from flext_cli import cli
+
+    print("message")
+  - |
+    from flext_cli import cli
+
+    u.Cli.print("message")

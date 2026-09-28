@@ -21,10 +21,11 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, u
-from flext_infra.base import s
+
+from ..base import s
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import p, t
 
 logger = u.fetch_logger(__name__)
 
@@ -57,16 +58,16 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             self.check_only = check_only
         if verbose is not None:
             self.verbose = verbose
-        root = self._resolve_workspace_root()
+        root = self._resolve_repository_root()
         required_minor = self._read_required_minor(root)
         discovered_projects = u.Infra.discover_projects(root)
         if discovered_projects.failure:
-            projects: tuple[Path, ...] = ()
+            projects: t.VariadicTuple[Path] = ()
         else:
             projects = tuple(
                 project.path
                 for project in discovered_projects.unwrap()
-                if (project.path / c.Infra.PYPROJECT_FILENAME).exists()
+                if (project.path / c.PYPROJECT_FILENAME).exists()
             )
         mode = "Checking" if self.check_only else "Enforcing"
         logger.info(
@@ -98,12 +99,12 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         )
         return r[int].ok(0)
 
-    def _resolve_workspace_root(self) -> Path:
+    def _resolve_repository_root(self) -> Path:
         """Prefer the validated CLI workspace when provided, otherwise auto-detect."""
-        if "workspace_root" in self.model_fields_set:
-            workspace_root: Path = self.workspace_root
-            return workspace_root.resolve()
-        return self._workspace_root_from_file(__file__)
+        if "repository_root" in self.model_fields_set:
+            repository_root: Path = self.repository_root
+            return repository_root.resolve()
+        return self._repository_root_from_file(__file__)
 
     def _ensure_python_version_file(self, project: Path, required_minor: int) -> bool:
         """Return True when project pyproject + runtime match required_minor."""
@@ -172,12 +173,8 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             return False
         write_result = u.Cli.files_write_text(version_file, desired)
         if write_result.failure:
-            logger.error(
-                "python_version_file_write_failed",
-                project=project.name,
-                error=write_result.error,
-            )
-            return False
+            msg = f"failed to write {version_file}: {write_result.error}"
+            raise RuntimeError(msg)
         logger.info(
             "python_version_file_conformed",
             project=project.name,
@@ -185,9 +182,9 @@ class FlextInfraPythonVersionEnforcer(s[int]):
         )
         return True
 
-    def _read_required_minor(self, workspace_root: Path) -> int:
+    def _read_required_minor(self, repository_root: Path) -> int:
         """Read requires-python minor from pyproject; default 13 when absent."""
-        pyproject = workspace_root / c.Infra.PYPROJECT_FILENAME
+        pyproject = repository_root / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return 13
         content = u.Cli.files_read_text(pyproject).unwrap()
@@ -196,21 +193,20 @@ class FlextInfraPythonVersionEnforcer(s[int]):
             return 13
         return int(match.group(2))
 
-    def _workspace_root_from_file(self, file: str | Path) -> Path:
+    def _repository_root_from_file(self, file: str | Path) -> Path:
         """Walk up from ``file`` to the first dir with .git+Makefile+pyproject.
 
-        Raises RuntimeError when no such workspace root exists (fail-loud).
+        Raises RuntimeError when no such repository root exists (fail-loud).
         """
         current = Path(file).resolve()
         if current.is_file():
             current = current.parent
         for parent in [current, *list(current.parents)]:
-            markers = {
-                c.Infra.GIT_DIR,
-                c.Infra.MAKEFILE_FILENAME,
-                c.Infra.PYPROJECT_FILENAME,
-            }
+            markers = {c.Infra.GIT_DIR, c.Infra.MAKEFILE_FILENAME, c.PYPROJECT_FILENAME}
             if all((parent / marker).exists() for marker in markers):
                 return parent
-        msg = f"workspace root not found from {file}"
+        msg = f"repository root not found from {file}"
         raise RuntimeError(msg)
+
+
+__all__: list[str] = ["FlextInfraPythonVersionEnforcer"]

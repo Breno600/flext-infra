@@ -3,22 +3,29 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from .clean import FlextInfraCleanService
     from .python_version import FlextInfraPythonVersionEnforcer
-__all__: tuple[str, ...] = ("FlextInfraCleanService", "FlextInfraPythonVersionEnforcer")
+    from .sonarcloud import FlextInfraSonarcloudSettingsSync
+
+
+__all__: tuple[str, ...] = (
+    "FlextInfraCleanService",
+    "FlextInfraPythonVersionEnforcer",
+    "FlextInfraSonarcloudSettingsSync",
+)
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
             ".clean": ("FlextInfraCleanService",),
             ".python_version": ("FlextInfraPythonVersionEnforcer",),
+            ".sonarcloud": ("FlextInfraSonarcloudSettingsSync",),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,

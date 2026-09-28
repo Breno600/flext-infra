@@ -1,7 +1,7 @@
 """JUnit-XML diagnostics parsing for the pytest-diag extractor (§3.1 split).
 
 JUnit-XML parsing cluster for pytest diagnostics, composed
-into ``FlextInfraPytestDiagExtractor`` via MRO.
+into ``FlextInfraPytestDiagExtractor`` via FLEXT.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -27,9 +27,12 @@ class FlextInfraPytestDiagXmlMixin:
     @staticmethod
     def _as_xml_element(
         value: p.Infra.XmlElementLike | t.JsonValue,
-    ) -> p.Infra.XmlElementLike | None:
-        """Normalize dynamic defusedxml nodes to the typed stdlib element API."""
-        return value if isinstance(value, p.Infra.XmlElementLike) else None
+    ) -> p.Infra.XmlElementLike:
+        """Require the typed stdlib element API from defusedxml."""
+        if not isinstance(value, p.Infra.XmlElementLike):
+            msg = f"invalid XML element: {type(value).__name__}"
+            raise TypeError(msg)
+        return value
 
     @staticmethod
     def _build_trace_chunk(
@@ -53,10 +56,7 @@ class FlextInfraPytestDiagXmlMixin:
         classname = case.attrib.get("classname", "")
         name = case.attrib.get(c.Infra.NAME, "")
         label = f"{classname}::{name}" if classname else name
-        try:
-            secs = float(case.attrib.get("time", "0") or 0.0)
-        except ValueError:
-            secs = 0.0
+        secs = float(case.attrib["time"])
         if (failure := case.find("failure")) is not None:
             diag.failed_cases.append(label)
             diag.error_traces.append(
@@ -77,34 +77,22 @@ class FlextInfraPytestDiagXmlMixin:
         return secs, label
 
     @staticmethod
-    def _parse_xml(junit_path: Path, diag: m.Infra.DiagResult) -> bool:
-        """Parse JUnit XML and populate diagnostics. Returns True on success."""
-        if not junit_path.exists():
-            return False
-        try:
-            root_raw = DefusedET.parse(junit_path).getroot()
-        except DefusedET.ParseError:
-            return False
+    def _parse_xml(junit_path: Path, diag: m.Infra.DiagResult) -> None:
+        """Parse the required JUnit XML and populate diagnostics."""
+        root_raw = DefusedET.parse(junit_path).getroot()
         if root_raw is None:
-            return False
+            msg = f"JUnit XML has no root element: {junit_path}"
+            raise ValueError(msg)
         root = FlextInfraPytestDiagXmlMixin._as_xml_element(root_raw)
-        if root is None:
-            return False
         slow_rows: t.MutableSequenceOf[t.Pair[float, str]] = []
-        # NOTE (multi-agent, mro-f8vk / kimi): Element.iter() never yields
-        # None; the dropped guard was dead code. _as_xml_element below stays
-        # as the live XmlElementLike union guard.
         for case_raw in root.iter("testcase"):
             case = FlextInfraPytestDiagXmlMixin._as_xml_element(case_raw)
-            if case is None:
-                continue
             slow_rows.append(FlextInfraPytestDiagXmlMixin._process_testcase(case, diag))
         if slow_rows:
             diag.slow_entries = [
                 f"{secs:.6f}s | {label}"
                 for secs, label in sorted(slow_rows, reverse=True)
             ]
-        return True
 
 
 __all__: list[str] = ["FlextInfraPytestDiagXmlMixin"]

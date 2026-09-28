@@ -1,0 +1,56 @@
+id: rewire-print-to-logger-info
+snapshots:
+  ? |
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+    print("message")
+  : fixed: |
+      from flext_infra import u
+
+      logger = u.fetch_logger(__name__)
+      logger.info("message")
+    labels:
+    - source: print("message")
+      style: primary
+      start: 61
+      end: 77
+    - source: logger = u.fetch_logger(__name__)
+      style: secondary
+      start: 27
+      end: 60
+    - source: |
+        from flext_infra import u
+
+        logger = u.fetch_logger(__name__)
+        print("message")
+      style: secondary
+      start: 0
+      end: 78
+  ? |
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+    u.Cli.print("message")
+  : fixed: |
+      from flext_infra import u
+
+      logger = u.fetch_logger(__name__)
+      logger.info("message")
+    labels:
+    - source: u.Cli.print("message")
+      style: primary
+      start: 61
+      end: 83
+    - source: logger = u.fetch_logger(__name__)
+      style: secondary
+      start: 27
+      end: 60
+    - source: |
+        from flext_infra import u
+
+        logger = u.fetch_logger(__name__)
+        u.Cli.print("message")
+      style: secondary
+      start: 0
+      end: 84

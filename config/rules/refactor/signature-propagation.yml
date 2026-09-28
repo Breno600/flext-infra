@@ -1,0 +1,21 @@
+# Declarative signature migrations for the `refactor propagate-signatures` verb.
+#
+# One entry renames, removes or adds keyword arguments at every call site of the
+# named callables, across the governed scan surface. This is the automated form
+# of a signature change: without it, a parameter rename is a hand sweep over
+# every consumer, which is exactly the work the operator ruled is lost work.
+#
+# migrations:
+#   - id: unique-migration-id            # required, unique
+#     enabled: true                      # optional, default true
+#     target_qualified_names:            # either of the two target lists
+#       - flext_infra.workspace.migrator.FlextInfraProjectMigrator.migrate
+#     target_simple_names: [migrate]     # matched on the call's simple name
+#     keyword_renames: {old: new}        # optional
+#     remove_keywords: [legacy_flag]     # optional
+#     add_keywords: {strict: "True"}     # optional
+#
+# The catalogue starts empty: a migration is declared for one cutover, applied,
+# and removed in the same change. A permanently declared migration would be
+# re-applied on every run against code that no longer carries the old shape.
+migrations: []

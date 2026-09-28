@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from enum import StrEnum, unique
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
+from .codegen_project import FlextInfraConstantsCodegenProject
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -25,7 +25,7 @@ class FlextInfraConstantsWorkspace:
 
     @unique
     class WorkOperation(StrEnum):
-        """Public make work saga operations."""
+        """Retained lane metadata operation values."""
 
         START = "start"
         STATUS = "status"
@@ -78,155 +78,77 @@ class FlextInfraConstantsWorkspace:
 
         SETUP = "setup"
 
-    @unique
-    class BeadIssueStatus(StrEnum):
-        """Beads issue states relevant to live lane ownership."""
-
-        OPEN = "open"
-        IN_PROGRESS = "in_progress"
-        BLOCKED = "blocked"
-        CLOSED = "closed"
-
-    WORK_ACTIVE_ISSUE_STATUSES: Final[frozenset[BeadIssueStatus]] = frozenset({
-        BeadIssueStatus.OPEN,
-        BeadIssueStatus.IN_PROGRESS,
-        BeadIssueStatus.BLOCKED,
-    })
-
-    WORK_FORBIDDEN_SLUGS: Final[frozenset[str]] = frozenset({
+    WORK_FORBIDDEN_SLUGS: ClassVar[frozenset[str]] = frozenset({
         "teste",
         "ajuste",
         "correcao",
         "temp",
         "nova-branch",
     })
-    WORK_BEADS_METADATA_KEYS: Final[t.StrSequence] = (
-        "branch",
-        "namespace",
-        "worktree",
-        "kind",
-        "slug",
-        "integration_base",
-        "head_oid",
-        "pr_number",
-        "pr_url",
-        "provisioning",
-        "recovery",
-        "error_category",
-        "role",
-        "epic_bead",
-        "epic_branch",
-        "epic_worktree",
-        "child_slug",
-    )
 
-    @unique
-    class WorkspaceMode(StrEnum):
-        """Workspace execution mode enumeration."""
-
-        WORKSPACE = "workspace"
-        WORKSPACE_MEMBER = "workspace-member"
-        STANDALONE = "standalone"
-
-    @unique
-    class WorkspaceProjectRole(StrEnum):
-        """Role of one discovered project relative to the uv workspace root."""
-
-        WORKSPACE_MEMBER = "member"
-        ATTACHED = "attached"
-
-    EXTERNAL_WORKSPACE_SIBLING_PATTERNS: Final[t.StrSequence] = (
+    EXTERNAL_WORKSPACE_SIBLING_PATTERNS: ClassVar[t.StrSequence] = (
         ".ai-hub",
         "algar-*",
         "gruponos-*",
     )
     "Sibling directory patterns for FLEXT-managed external workspaces."
 
-    PERSISTENT_STATE_ARTIFACT_NAMES: Final[frozenset[str]] = frozenset({
-        ".beads",
-        ".code-review-graph",
-        ".codegraph",
-        ".serena",
-    })
-    "Persistent-state artifact basenames owned only by the workspace root."
+    PERSISTENT_STATE_ARTIFACT_NAMES: ClassVar[frozenset[str]] = frozenset({".serena"})
+    "Persistent-state artifact basenames owned by the local repository."
 
-    MAKEFILE_REPLACEMENTS: Final[t.VariadicTuple[t.StrPair]] = (
-        (
-            'python3 "$(BASE_MK_DIR)/scripts/mode.py"',
-            "python -m flext_infra workspace detect",
-        ),
-        (
-            'python "$(WORKSPACE_ROOT)/scripts/check/fix_pyrefly_config.py"',
-            "python -m flext_infra check fix-pyrefly-settings",
-        ),
-        (
-            'python "$(WORKSPACE_ROOT)/scripts/check/workspace_check.py"',
-            "python -m flext_infra check run",
-        ),
-        (
-            '$(VENV_PYTHON) "$(BASE_MK_DIR)/scripts/core/pytest_diag_extract.py"',
-            "$(VENV_PYTHON) -m flext_infra validate pytest-diag",
-        ),
-        (
-            'python3 "$(WORKSPACE_ROOT)/scripts/github/pr_manager.py"',
-            "python3 -m flext_infra github pr",
-        ),
-    )
-    # NOTE (mro-jnm1.2): the .gitignore body is derived from the artifact SSOT
+    # NOTE (flext-jnm1.2): the .gitignore body is derived from the artifact SSOT
     # (config/codegen.yaml artifacts -> CodegenConfigSpec.gitignore_sections)
     # and written only by codegen conform; the old REQUIRED_GITIGNORE_ENTRIES,
     # GITIGNORE_REMOVE_EXACT and GITIGNORE_MANAGED_HEADER append-paths were
     # removed with the migrator/sync parallel writers.
-    WORKTREES_DIRNAME: Final[str] = ".worktrees"
-    WORKTREE_NAMESPACE_DIGEST_LENGTH: Final[int] = 12
-    VSCODE_DIRNAME: Final[str] = ".vscode"
-    VSCODE_SETTINGS_FILENAME: Final[str] = "settings.json"
-    VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY: Final[str] = "python-envs.workspaceSearchPaths"
-    CODEGEN_OWNER_VSCODE: Final[str] = "vscode"
+    WORKTREES_DIRNAME: ClassVar[str] = ".worktrees"
+    WORKTREE_NAMESPACE_DIGEST_LENGTH: ClassVar[int] = 12
+    VSCODE_DIRNAME: ClassVar[str] = ".vscode"
+    VSCODE_SETTINGS_FILENAME: ClassVar[str] = "settings.json"
+    VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY: ClassVar[str] = (
+        "python-envs.workspaceSearchPaths"
+    )
+    CODEGEN_OWNER_VSCODE: ClassVar[str] = "vscode"
     # Canonical VS Code settings content lives in config/codegen.yaml (vscode:).
     # Recursive "**" venv search globs are forbidden: they make the Python
     # Environments locator (pet) walk entire trees and hang discovery.
-    MAKEFILE_INCLUDE_OLD: Final[str] = (
-        'ifneq ("$(wildcard ../base.mk)", "")\n'
-        "include ../base.mk\n"
-        "else\n"
-        "include base.mk\n"
-        "endif"
-    )
-
-    MAKEFILE_GENERATED_MARKER: Final[str] = (
+    MAKEFILE_GENERATED_MARKER: ClassVar[str] = (
         "# @generated by: flext_infra codegen conform"
     )
     "Comment marker inserted into generated Makefiles."
-    TEMPLATE_GENERATED_MARKER: Final[str] = "Generated by flext_infra codegen"
-    "Header marker every rendered project template carries."
-    MAKEFILE_CUSTOM_INCLUDE: Final[str] = (
+    TEMPLATE_GENERATED_MARKERS: ClassVar[t.StrSequence] = (
+        "Generated by flext_infra codegen",
+        "@generated by flext_infra codegen",
+        "@flext-generated:",
+        "Generated by `flext_infra codegen conform`",
+    )
+    "Canonical and historical ownership markers emitted by project codegen."
+    MAKEFILE_CUSTOM_INCLUDE: ClassVar[str] = (
         f"-include {FlextInfraConstantsCodegenProject.CUSTOM_MAKE_FILENAME}"
     )
     "Makefile include for user customization overrides."
 
-    # Workspace environment sync (public `infra` facade): generated-file
-    # detection and canonical filenames for direnv/mise artifacts. Old marker
-    # kept for migration: files written by the retired workspace sync module
-    # must still be recognized as generated and upgradable in place.
-    ENVRC_FILENAME: Final[str] = ".envrc"
-    MISE_TOML_FILENAME: Final[str] = ".mise.toml"
-    WORKSPACE_ENV_FILES: Final[t.StrSequence] = (ENVRC_FILENAME, MISE_TOML_FILENAME)
-    WORKSPACE_ENV_GENERATED_MARKERS: Final[t.StrSequence] = (
+    # Workspace environment sync owns .envrc only. Conform is the sole writer
+    # of .mise.toml; the old marker remains readable for migration evidence.
+    ENVRC_FILENAME: ClassVar[str] = ".envrc"
+    ENVRC_LOCAL_RELPATH: ClassVar[str] = ".envrc.local"
+    MISE_TOML_FILENAME: ClassVar[str] = ".mise.toml"
+    WORKSPACE_ENV_FILES: ClassVar[t.StrSequence] = (ENVRC_FILENAME,)
+    WORKSPACE_ENV_GENERATED_MARKERS: ClassVar[t.StrSequence] = (
         "# @generated by: flext_infra workspace sync",
         "# Generated by `flext-infra codegen conform`.",
         "# Generated by `flext_infra codegen conform`.",
     )
-    # Tools that must never appear under mise: linters/type-checkers come from
-    # the locked pyproject dependency groups into .venv (gates invoke them via
-    # python -m), and go is not a workspace runtime. Sync prunes any drift.
-    WORKSPACE_MISE_REMOVED_TOOLS: Final[t.StrSequence] = (
-        "mypy",
-        "pyright",
-        "pyrefly",
-        "ruff",
-        "go",
+    ENVIRONMENT_DIRECTORY: ClassVar[str] = ".venv"
+    "Python environment directory owned by the runtime checkout (D-VENV)."
+
+    PROPAGATION_BRANCH: ClassVar[str] = "propagation/flext-infra"
+    "One lane per member carries the workspace's flext-infra projections."
+    PROPAGATION_COMMIT_SUBJECT: ClassVar[str] = (
+        "chore(infra): propagate the workspace flext-infra"
     )
+    PROPAGATION_REPORT_KEY: ClassVar[str] = "propagation"
+    "Report directory holding each member lane's pull-request body."
 
 
 __all__: list[str] = ["FlextInfraConstantsWorkspace"]

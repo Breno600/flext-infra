@@ -5,12 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Self
 
-from packaging.version import InvalidVersion, Version
+from flext_core import m, u
 
-from flext_cli import m
-from flext_core import u
-from flext_infra import t
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+from .. import t
+from .._constants import FlextInfraConstantsRelease as cr
+from . import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsRelease:
@@ -117,23 +116,47 @@ class FlextInfraModelsRelease:
                 raise ValueError(msg)
             return self
 
-    class ReleaseSpec(mm.VersionTagMixin, m.ArbitraryTypesModel):
-        """Release descriptor with version, tag, and bump metadata."""
+    class ReleasePlan(m.StrictBoundaryModel):
+        """The protocol's decision for one repository, derived and never typed by hand."""
 
-        bump_type: Annotated[t.NonEmptyStr, m.Field(description="Release bump type")]
+        current: Annotated[
+            t.NonEmptyStr, m.Field(description="Version declared by pyproject.toml")
+        ]
+        next: Annotated[t.NonEmptyStr, m.Field(description="Version to release")]
+        bump: Annotated[
+            cr.VersionBump, m.Field(description="Bump derived from merged PRs")
+        ]
+        previous_tag: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(default=None, description="Latest release tag, if any"),
+        ] = None
+        merges: Annotated[
+            t.VariadicTuple[str],
+            m.Field(default=(), description="Merged PR subjects since previous_tag"),
+        ] = ()
+        declared: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description=(
+                    "``next`` is the declared version itself (first release, "
+                    "finalized pre-release, or a version written beyond the last "
+                    "tag): decided when it was written, still untagged"
+                ),
+            ),
+        ] = False
 
-        @u.model_validator(mode="after")
-        def validate_identity(self) -> Self:
-            """Require canonical PEP 440 version and its exact v-prefixed tag."""
-            try:
-                parsed = Version(self.version)
-            except InvalidVersion as exc:
-                msg = f"invalid PEP 440 release version: {self.version}"
-                raise ValueError(msg) from exc
-            if str(parsed) != self.version or self.tag != f"v{self.version}":
-                msg = f"release version/tag mismatch: {self.version} != {self.tag}"
-                raise ValueError(msg)
-            return self
+        @m.computed_field
+        @property
+        def tag(self) -> str:
+            """Tag that will identify ``next``."""
+            return cr.TAG_FORMAT.format(version=self.next)
+
+        @m.computed_field
+        @property
+        def releasable(self) -> bool:
+            """Whether a release commit is due: a declared release, or a real bump."""
+            return self.declared or self.next != self.current
 
     class BuildReport(m.StrictBoundaryModel):
         """Aggregated build report payload written to JSON."""
@@ -201,34 +224,22 @@ class FlextInfraModelsRelease:
                     raise ValueError(msg)
             return self
 
-    class ReleaseOrchestratorConfig(
-        mm.ProjectNamesOptionalMixin,
-        mm.WorkspaceRootPathMixin,
-        mm.VersionTagMixin,
-        mm.AutomationMixin,
-        m.ArbitraryTypesModel,
-    ):
-        """Configuration for release workflow execution."""
-
-        dry_run: Annotated[bool, m.Field(description="Dry run flag")] = False
-        phases: Annotated[t.StrSequence, m.Field(description="Ordered list of phases")]
-        create_branches: Annotated[
-            bool, m.Field(description="Create branches flag")
-        ] = True
-        next_dev: Annotated[bool, m.Field(description="Next dev flag")] = False
-        next_bump: Annotated[str, m.Field(description="Next bump")] = "minor"
-
     class ReleasePhaseDispatchConfig(
         mm.ProjectNamesListMixin,
-        mm.WorkspaceRootPathMixin,
+        mm.RepositoryRootPathMixin,
         mm.VersionTagMixin,
-        mm.AutomationMixin,
         m.ArbitraryTypesModel,
     ):
-        """Configuration for single release phase dispatch."""
+        """Resolved input of one release phase: the repository, its declared version and its tag."""
 
         dry_run: Annotated[bool, m.Field(description="Dry run flag")] = False
-        phase: Annotated[t.NonEmptyStr, m.Field(description="Release phase")]
+        phase: Annotated[cr.ReleasePhase, m.Field(description="Release phase")]
+        index: Annotated[
+            bool, m.Field(description="Publish verified artifacts to the package index")
+        ] = False
+        pr_title: Annotated[
+            str, m.Field(description="Pull-request title to validate, when known")
+        ] = ""
 
 
 __all__: list[str] = ["FlextInfraModelsRelease"]

@@ -1,0 +1,41 @@
+# Test environment changes use the real shared flext-tests context owner. This
+# structural cutover is deliberately limited to the safe two-variable method
+# shape: it removes the injected monkeypatch dependency and scopes every
+# consumer statement beneath the restoring context manager atomically.
+id: rewire-test-monkeypatch-environment
+language: Python
+severity: error
+files:
+  - "**/tests/**/*.py"
+rule:
+  all:
+    - pattern:
+        context: |
+          def $METHOD(self, monkeypatch: pytest.MonkeyPatch) -> None:
+              $$$BEFORE
+              monkeypatch.setenv($KEY_ONE, $VALUE_ONE)
+              monkeypatch.setenv($KEY_TWO, $VALUE_TWO)
+              $$$AFTER
+        selector: function_definition
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          kind: import_from_statement
+          all:
+            - has:
+                pattern: u
+                stopBy: end
+            - has:
+                field: module_name
+                regex: "^(?:tests|flext_tests)$"
+          stopBy: end
+fix: |
+  def $METHOD(self) -> None:
+      $$$BEFORE
+      with u.Tests.env_vars_context({
+          $KEY_ONE: $VALUE_ONE,
+          $KEY_TWO: $VALUE_TWO,
+      }):
+          $$$AFTER
+message: Use the public typed flext-tests environment scope instead of monkeypatch.

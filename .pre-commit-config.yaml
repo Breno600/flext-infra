@@ -2,24 +2,21 @@
 repos:
   - repo: local
     hooks:
-      # Why: fast fixes run before each commit; expensive gates run before push.
-      # Prefix CI=Y only on make check so gate skips apply.
-      # make test must not inherit that token (mro-v4p5 forbids pytest under CI=Y).
-      - id: flext-pre-commit
-        name: FLEXT pre-commit workflow
-        language: system
-        entry: >-
-          bash -eu -o pipefail -c
-          'make fmt APPLY=Y && make fix APPLY=Y && CI=Y make check'
-        pass_filenames: false
-        always_run: true
-        stages: [pre-commit]
-      - id: flext-pre-push
-        name: FLEXT pre-push workflow
-        language: system
-        entry: >-
-          bash -eu -o pipefail -c
-          'make gen APPLY=Y && CI=Y make check && make test'
-        pass_filenames: false
-        always_run: true
-        stages: [pre-push]
+    # Why: each make verb is its own pre-commit/pre-push hook so the operator
+    # sees per-step status (Passed/Failed) natively via the pre-commit runner.
+    # Every step owns its CI context instead of inheriting the caller's token.
+    # pre-commit is the fast mutation pass and runs the CI gate set
+    # (CI=Y). pre-push check unsets CI to run
+    # every active gate; its other verbs retain CI=N.
+    # Pytest deselects tooling.tools.pytest.ci_excluded_markers
+    # only with CI=Y, shared by CI and pre-commit. Local and
+    # pre-push runs retain those tests; deselection is recorded in test reports.
+    # Every hook step owns a shell because Git exports repository-local state,
+    # including GIT_INDEX_FILE during pre-commit. A member hook that delegates
+    # setup to its repository root must clear those variables first or the root
+    # reads the member's temporary index and reports governed gitlinks missing.
+    # Inherited Make flags are cleared in the same prefix so each hook step
+    # executes its independently declared operation.
+    # Stage gates (operator law 2026-08-24): each stage renders only when its
+    # config gate (make.pre_commit / make.pre_push) is enabled. Disabled by
+    # default; re-enable case by case in config/codegen.yaml.

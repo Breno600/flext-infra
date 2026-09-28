@@ -1,0 +1,103 @@
+# Recomposition of enforcement rule ENFORCE-094 onto `make mod`.
+#
+# ENFORCE-094 drove the generic regex `pattern` transformer with:
+#
+#     \bstructlog\s*\.\s*get_logger\s*\(\s*\)             -> u.fetch_logger(__name__)
+#     \bstructlog\s*\.\s*get_logger\s*\(\s*['"](?P<name>[^'"]*)['"]\s*\)
+#                                                         -> u.fetch_logger("\g<name>")
+#
+# The second pattern re-parsed a Python string literal with a character class,
+# so it accepted only a quoted literal containing no quote character and
+# silently skipped `structlog.get_logger(__name__)` and every other expression;
+# and both patterns matched the same characters inside a docstring or a string
+# constant. Selecting the `call` node makes the argument structural: the name
+# expression is carried through verbatim by `$NAME`, so any expression survives
+# byte-for-byte, and text inside a string is unreachable.
+#
+# Arity is split deliberately rather than collapsed into `$$$ARGS`, because
+# `u.fetch_logger(name: str)` takes exactly one required argument: the empty
+# call must acquire `__name__` (as the retired regex did), and a call carrying
+# more than one argument has no single-argument translation and is therefore not
+# matched at all. A missed rewrite stays a visible finding; a rewrite that emits
+# a TypeError does not.
+#
+# Sibling of rewire-logging-get-logger-to-fetch-logger, which owns the stdlib
+# `logging.getLogger` form. Emitting `u.fetch_logger` is only F821-safe when `u`
+# is bound from a public FLEXT package in the same module; the missing-import
+# case is the detection-only companion rewire-structlog-get-logger-missing-u-import.
+id: rewire-structlog-get-logger-default-name
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  all:
+    - pattern: structlog.get_logger()
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          matches: u-imported-from-flext
+fix: u.fetch_logger(__name__)
+message: >-
+  Logger construction must route through the FLEXT utilities facade
+  (u.fetch_logger). The now-unused `structlog` import is removed by Ruff F401.
+---
+id: rewire-structlog-get-logger-explicit-name
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  all:
+    - pattern: structlog.get_logger($NAME)
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          matches: u-imported-from-flext
+constraints:
+  NAME:
+    not:
+      kind: keyword_argument
+fix: u.fetch_logger($NAME)
+message: >-
+  Logger construction must route through the FLEXT utilities facade
+  (u.fetch_logger). The now-unused `structlog` import is removed by Ruff F401.
+---
+# Detection-only companion: the same constructs in a module that does not bind
+# `u`. Rewriting there would emit an undefined name (Ruff F821 / Pyrefly
+# missing-name), so the import must be added first.
+id: rewire-structlog-get-logger-missing-u-import
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  all:
+    - any:
+        - pattern: structlog.get_logger()
+        - all:
+            - pattern: structlog.get_logger($NAME)
+            - has:
+                stopBy: end
+                kind: argument_list
+                not:
+                  has:
+                    kind: keyword_argument
+    - inside:
+        kind: module
+        stopBy: end
+        not:
+          has:
+            stopBy: end
+            matches: u-imported-from-flext
+message: >-
+  structlog.get_logger must become u.fetch_logger, but this module does not
+  import `u` from a public FLEXT package. Add the utilities import first, then
+  rewire-structlog-get-logger-default-name or -explicit-name rewrites the call.

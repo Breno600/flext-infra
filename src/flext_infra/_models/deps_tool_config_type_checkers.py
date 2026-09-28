@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType
 from typing import Annotated, ClassVar
 
 from flext_cli import m
@@ -104,14 +103,14 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 t.StrSequence,
                 m.Field(
                     alias="root-typings-paths",
-                    description="Typings paths used in workspace-root settings.",
+                    description="Typings paths used in workspace settings.",
                 ),
             ]
             project_typings_paths: Annotated[
                 t.StrSequence,
                 m.Field(
                     alias="project-typings-paths",
-                    description="Typings paths used in subproject configs.",
+                    description="Typings paths used in declared_repository configs.",
                 ),
             ]
             ignored_diagnostic_globs: Annotated[
@@ -122,9 +121,8 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 ),
             ]
             diagnostic_path_overrides: Annotated[
-                tuple[
-                    FlextInfraModelsDepsToolConfigTypeCheckers.PyrightConfig.DiagnosticPathOverride,
-                    ...,
+                t.VariadicTuple[
+                    FlextInfraModelsDepsToolConfigTypeCheckers.PyrightConfig.DiagnosticPathOverride
                 ],
                 m.Field(
                     alias="diagnostic-path-overrides",
@@ -152,13 +150,6 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                     description="reportPrivateUsage value for non-source/non-test-like envs.",
                 ),
             ]
-            venv_name: Annotated[
-                str,
-                m.Field(
-                    alias="venv-name",
-                    description="Virtualenv directory name shared across pyright configs.",
-                ),
-            ]
 
         strict_settings: Annotated[
             t.StrMapping,
@@ -172,35 +163,35 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 alias="extended-settings",
                 description="Pyright extended settings options.",
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         lazy_import_suppressions: Annotated[
             t.StrMapping,
             m.Field(
                 alias="lazy-import-suppressions",
                 description="Pyright rules suppressed in ALL envs due to lazy import pattern.",
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         global_suppression_rationales: Annotated[
             t.StrMapping,
             m.Field(
                 alias="global-suppression-rationales",
-                description="Global Pyright exclusions mapped to verified facade-MRO rationales.",
+                description="Global Pyright exclusions mapped to verified facade-FLEXT rationales.",
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         source_env_suppressions: Annotated[
             t.StrMapping,
             m.Field(
                 alias="source-env-suppressions",
                 description="Additional pyright rules suppressed in source env only.",
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         test_like_env_suppressions: Annotated[
             t.StrMapping,
             m.Field(
                 alias="test-like-env-suppressions",
                 description="Additional pyright rules suppressed in test-like envs.",
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         path_rules: Annotated[
             FlextInfraModelsDepsToolConfigTypeCheckers.PyrightConfig.PathRulesConfig,
             m.Field(
@@ -232,14 +223,14 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 t.StrSequence,
                 m.Field(
                     alias="root-typings-paths",
-                    description="Typings paths used in workspace-root settings.",
+                    description="Typings paths used in workspace settings.",
                 ),
             ]
             project_typings_paths: Annotated[
                 t.StrSequence,
                 m.Field(
                     alias="project-typings-paths",
-                    description="Typings paths used in subproject configs.",
+                    description="Typings paths used in declared_repository configs.",
                 ),
             ]
             env_dirs: Annotated[
@@ -267,7 +258,7 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 t.StrSequence,
                 m.Field(
                     alias="project-shared-search-paths",
-                    description="Additional shared workspace paths for subproject pyrefly search-path.",
+                    description="Additional shared workspace paths for declared_repository pyrefly search-path.",
                 ),
             ]
 
@@ -275,13 +266,6 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
             str,
             m.Field(
                 alias="python-version", description="Pyrefly python-version baseline."
-            ),
-        ]
-        ignore_errors_in_generated_code: Annotated[
-            bool,
-            m.Field(
-                alias="ignore-errors-in-generated-code",
-                description="Enable ignoring errors in generated code.",
             ),
         ]
         disable_project_excludes_heuristics: Annotated[
@@ -303,13 +287,6 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
             m.Field(
                 alias="strict-errors",
                 description="Pyrefly errors enabled as strict defaults.",
-            ),
-        ]
-        disabled_errors: Annotated[
-            t.StrSequence,
-            m.Field(
-                alias="disabled-errors",
-                description="Pyrefly errors disabled by default.",
             ),
         ]
         project_exclude_globs: Annotated[

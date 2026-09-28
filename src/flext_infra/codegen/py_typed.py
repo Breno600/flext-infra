@@ -14,16 +14,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import c, u
-from flext_infra.base import s
+
+from .. import c, u
+from ._execution import FlextInfraCodegenExecutionBase
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, t
+    from .. import p, t
 
 
-class FlextInfraCodegenPyTyped(s[bool]):
+class FlextInfraCodegenPyTyped(FlextInfraCodegenExecutionBase[bool]):
     """Creates and removes PEP 561 ``py.typed`` markers across workspace packages."""
 
     _PY_TYPED_FILENAME: str = c.Infra.PY_TYPED
@@ -31,7 +32,11 @@ class FlextInfraCodegenPyTyped(s[bool]):
     @override
     def execute(self) -> p.Result[bool]:
         """Execute ``py.typed`` synchronization from the validated CLI model."""
-        self.run(check_only=self.check_only)
+        changes = self.run(check_only=self.check_only)
+        if self.check_only and changes:
+            return r[bool].fail(
+                f"py.typed drift detected in {changes} package directorie(s)"
+            )
         return r[bool].ok(True)
 
     def run(self, *, check_only: bool = False) -> int:
@@ -44,9 +49,9 @@ class FlextInfraCodegenPyTyped(s[bool]):
 
         """
         dirs_to_scan: t.SequenceOf[Path] = [
-            self.workspace_root / pattern.split("/*")[0]
+            self.repository_root / pattern.split("/*")[0]
             for pattern in c.Infra.ALL_SCAN_PATTERNS
-            if (self.workspace_root / pattern.split("/*")[0]).is_dir()
+            if (self.repository_root / pattern.split("/*")[0]).is_dir()
         ]
         created = 0
         removed = 0
@@ -56,7 +61,7 @@ class FlextInfraCodegenPyTyped(s[bool]):
                     continue
                 if any(
                     part.startswith(".") or part in {"vendor", "node_modules", ".venv"}
-                    for part in dirpath.relative_to(self.workspace_root).parts
+                    for part in dirpath.relative_to(self.repository_root).parts
                 ):
                     continue
                 marker = dirpath / self._PY_TYPED_FILENAME

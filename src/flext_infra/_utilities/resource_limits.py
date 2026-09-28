@@ -2,21 +2,26 @@
 
 from __future__ import annotations
 
+import platform
 import shutil
+import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
+
 from flext_infra import c, m, t
-from flext_infra._utilities.process import FlextInfraUtilitiesProcess
+
+from .process import FlextInfraUtilitiesProcess
 
 if TYPE_CHECKING:
-    from flext_infra.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesResourceLimits:
     """Build resource-bounded commands for memory-intensive quality tools."""
 
-    _MEMORY_FAILURE_MARKERS: ClassVar[tuple[str, ...]] = (
+    _MEMORY_FAILURE_MARKERS: ClassVar[t.VariadicTuple[str]] = (
         "cannot allocate memory",
         "failed to map segment",
         "memoryerror",
@@ -62,12 +67,24 @@ class FlextInfraUtilitiesResourceLimits:
 
     @staticmethod
     def mypy_limited_command(
-        command: t.StrSequence, limit: m.Infra.MypyResourceLimit | None = None
+        command: t.StrSequence,
+        limit: m.Infra.MypyResourceLimit | None = None,
+        *,
+        host_system: str | None = None,
     ) -> t.StrSequence:
-        """Prefix one Mypy command with validated memory and wall-time limits."""
+        """Prefix one Mypy command with limits for the selected host system."""
         validated_limit = (
             limit or FlextInfraUtilitiesResourceLimits.mypy_resource_limit()
         )
+        if (host_system or platform.system()) == "Darwin":
+            return (
+                sys.executable,
+                str(Path(__file__).with_name("_mypy_supervisor.py")),
+                str(validated_limit.memory_limit_bytes),
+                str(validated_limit.timeout_seconds),
+                str(c.Infra.TIMEOUT_KILL_AFTER_SECONDS),
+                *command,
+            )
         prlimit_executable = FlextInfraUtilitiesResourceLimits._required_executable(
             c.Infra.PRLIMIT_COMMAND
         )
@@ -134,7 +151,7 @@ class FlextInfraUtilitiesResourceLimits:
         validated_limit = limit or cls.mypy_resource_limit()
         combined = f"{output.stdout}\n{output.stderr}".lower()
         classification = FlextInfraUtilitiesProcess.process_exit_classification(
-            output.exit_code
+            output.outcome.raw_return_code
         )
         resource_failure = classification != "failure" or any(
             marker in combined for marker in cls._MEMORY_FAILURE_MARKERS
@@ -155,7 +172,10 @@ class FlextInfraUtilitiesResourceLimits:
             or "resource limit reached"
         )
         return cls._bounded_mypy_diagnostic(
-            validated_limit, detail=detail, exit_code=output.exit_code, signal=signal
+            validated_limit,
+            detail=detail,
+            exit_code=output.outcome.raw_return_code,
+            signal=signal,
         )
 
 

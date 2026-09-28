@@ -5,9 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, u
-from flext_infra.validate.gate_contract_content import (
-    FlextInfraGateContractContentMixin,
-)
+
+from .gate_contract_content import FlextInfraGateContractContentMixin
 
 if TYPE_CHECKING:
     from pathlib import Path

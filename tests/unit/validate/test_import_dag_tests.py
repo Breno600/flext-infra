@@ -5,21 +5,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-
-from flext_infra.validate.test_import_dag import FlextInfraValidateTestImportDag
 from flext_tests import tm
 
+from flext_infra.validate.test_import_dag import FlextInfraValidateTestImportDag
 from tests import m
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from tests import t
 
-class TestsTestImportDag:
+
+class TestsFlextInfraImportDag:
     """Verify allowed and forbidden package-test import edges."""
 
     @staticmethod
-    def _project(tmp_path: Path, files: dict[str, str]) -> Path:
+    def _project(tmp_path: Path, files: t.MappingKV[str, str]) -> Path:
         project = tmp_path / "sample"
         (project / "pyproject.toml").parent.mkdir(parents=True, exist_ok=True)
         (project / "pyproject.toml").write_text(
@@ -75,6 +76,3 @@ class TestsTestImportDag:
             FlextInfraValidateTestImportDag().build_report(project)
         )
         tm.that(report.passed, eq=True)
-
-
-__all__: list[str] = []

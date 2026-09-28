@@ -1,0 +1,10 @@
+id: rewire-duplicate-test-package-seed
+language: Python
+severity: error
+files:
+  - "**/tests/unit/validate/import_cycles_tests.py"
+  - "**/tests/unit/validate/tier_whitelist_tests.py"
+rule:
+  pattern: _seed_pkg($ROOT)
+fix: u.Tests.write_package_init($ROOT / "src" / "pkg", "").parent
+message: Materialize the package through the existing test fixture owner.

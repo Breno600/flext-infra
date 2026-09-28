@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import c, m, p, r, t, u
+from flext_core import r
+from flext_infra import c, m, p, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -13,13 +14,13 @@ if TYPE_CHECKING:
 class FlextInfraCodegenConsolidatorStepsMixin:
     """Value-map build + per-file scan/match/apply for constants consolidation.
 
-    Composed into FlextInfraCodegenConsolidator via MRO; self-contained (no
+    Composed into FlextInfraCodegenConsolidator via FLEXT; self-contained (no
     facade state), so the facade's ``execute`` orchestrator only sequences
     these workers across selected projects.
     """
 
     _ALL_LINT_GATES: ClassVar[t.StrSequence] = tuple(
-        tool for tool, _ in c.Infra.LINT_TOOLS
+        entry[0] for entry in c.Infra.LINT_TOOLS
     )
 
     @classmethod
@@ -35,9 +36,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
             return r[t.StrMapping].ok({})
         read = u.Cli.files_read_text(constants_file)
         if read.failure:
-            return r[t.StrMapping].fail(
-                read.error or f"unreadable constants file: {constants_file}"
-            )
+            return r[t.StrMapping].from_failure(read)
         value_map: t.MutableStrMapping = {}
         for name, _, raw, class_path, _ in u.Infra.parse_final_constant_definitions(
             read.value.splitlines()
@@ -61,17 +60,12 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         rope_project: t.Infra.RopeProject,
         python_file: Path,
         value_map: t.StrMapping,
-    ) -> (
-        tuple[
-            t.Infra.RopeResource, str, t.SequenceOf[tuple[m.Infra.SymbolInfo, str, str]]
-        ]
-        | None
-    ):
+    ) -> m.Infra.ConsolidatorScannedFile | None:
         """Scan file."""
-        resource = u.Infra.get_resource_from_path(rope_project, python_file)
+        resource = u.Infra.resolve_resource_from_path(rope_project, python_file)
         if resource is None:
             return None
-        symbols = u.Infra.get_module_symbols(rope_project, resource)
+        symbols = u.Infra.resolve_module_symbols(rope_project, resource)
         assignments = [symbol for symbol in symbols if symbol.kind == "assignment"]
         if not assignments:
             return None
@@ -79,19 +73,21 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         matches = self._match_assignments(assignments, source.splitlines(), value_map)
         if not matches:
             return None
-        return (resource, source, matches)
+        return m.Infra.ConsolidatorScannedFile(
+            resource=resource, source=source, matches=matches
+        )
 
     @staticmethod
     def _match_assignments(
         symbols: t.SequenceOf[m.Infra.SymbolInfo],
-        # mro-j47u (codex): use the canonical scalar sequence alias directly.
+        # flext-j47u (codex): use the canonical scalar sequence alias directly.
         source_lines: t.StrSequence,
         value_to_ref: t.StrMapping,
-    ) -> t.SequenceOf[tuple[m.Infra.SymbolInfo, str, str]]:
+    ) -> t.SequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]]:
         """Match assignments."""
-        matches: t.MutableSequenceOf[tuple[m.Infra.SymbolInfo, str, str]] = []
+        matches: t.MutableSequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]] = []
         for symbol in symbols:
-            # mro-j47u (codex): widen the validated constrained int for indexing.
+            # flext-j47u (codex): widen the validated constrained int for indexing.
             line_number: int = symbol.line
             if line_number < 1 or line_number > len(source_lines):
                 continue
@@ -115,19 +111,19 @@ class FlextInfraCodegenConsolidatorStepsMixin:
     def _apply_and_validate(
         cls,
         rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        scanned: m.Infra.ConsolidatorScannedFile,
         py_file: Path,
         workspace: Path,
         pkg_name: str,
-        backup: str,
-        matches: t.SequenceOf[tuple[m.Infra.SymbolInfo, str, str]],
     ) -> t.Infra.EditResultWithDescs:
         """Apply and validate."""
+        resource = scanned.resource
+        backup = scanned.source
         src_lines = backup.splitlines(keepends=True)
         rel = py_file.relative_to(workspace)
-        edits: t.MutableSequenceOf[tuple[int, int, str]] = []
+        edits: t.MutableSequenceOf[t.Triple[int, int, str]] = []
         descs: t.MutableSequenceOf[str] = []
-        for symbol, ref, value in matches:
+        for symbol, ref, value in scanned.matches:
             line_number = symbol.line
             if line_number < 1 or line_number > len(src_lines):
                 continue

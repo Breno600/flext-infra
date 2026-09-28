@@ -3,19 +3,27 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from .identity import FlextInfraModelsGitIdentity
-__all__: tuple[str, ...] = ("FlextInfraModelsGitIdentity",)
+    from .worktree_facts import FlextInfraModelsGitWorktreeFacts
+
+
+__all__: tuple[str, ...] = (
+    "FlextInfraModelsGitIdentity",
+    "FlextInfraModelsGitWorktreeFacts",
+)
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
-        MappingProxyType({".identity": ("FlextInfraModelsGitIdentity",)}),
+        MappingProxyType({
+            ".identity": ("FlextInfraModelsGitIdentity",),
+            ".worktree_facts": ("FlextInfraModelsGitWorktreeFacts",),
+        }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
     )

@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_tests import tm
+
 from tests import c, u
 
 if TYPE_CHECKING:
@@ -26,7 +27,7 @@ class TestsFlextInfraLazyInitFixtureSettingsCollision:
         self, tmp_path: Path
     ) -> None:
         """The public root keeps direct singletons without private fixture exports."""
-        workspace_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
+        repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         fixtures_dir = package_root / "_fixtures"
         fixtures_dir.mkdir()
         (fixtures_dir / c.Infra.INIT_PY).write_text("", encoding=c.Cli.ENCODING_DEFAULT)
@@ -53,7 +54,7 @@ class TestsFlextInfraLazyInitFixtureSettingsCollision:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
 
-        result = u.Tests.run_lazy_init(workspace_root)
+        result = u.Tests.run_lazy_init(repository_root)
 
         init_content = (package_root / c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT
@@ -73,4 +74,43 @@ class TestsFlextInfraLazyInitFixtureSettingsCollision:
         tm.that(init_content, lacks="reset_settings as reset_settings")
         tm.that(init_content, lacks="FlextSampleConfig")
         tm.that(init_content, lacks="FlextSampleSettings")
+        compile(init_content, "__init__.py", "exec")
+
+    def test_private_fixture_never_displaces_declared_settings_singleton(
+        self, tmp_path: Path
+    ) -> None:
+        """A colliding private fixture never costs the root its declared singleton."""
+        repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
+        fixtures_dir = package_root / "_fixtures"
+        fixtures_dir.mkdir()
+        (fixtures_dir / c.Infra.INIT_PY).write_text("", encoding=c.Cli.ENCODING_DEFAULT)
+        (fixtures_dir / "settings.py").write_text(
+            '"""Test fixtures."""\n\n'
+            "def settings() -> str:\n"
+            '    """Fixture colliding with the public singleton."""\n'
+            '    return "fixture"\n',
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        (package_root / "_settings.py").write_text(
+            "class FlextSampleSettings:\n"
+            '    """Public settings class."""\n\n'
+            "settings = FlextSampleSettings()\n"
+            '__all__ = ["FlextSampleSettings", "settings"]\n',
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+
+        result = u.Tests.run_lazy_init(repository_root)
+
+        init_content = (package_root / c.Infra.INIT_PY).read_text(
+            encoding=c.Cli.ENCODING_DEFAULT
+        )
+        tm.that(result, eq=0)
+        tm.that(
+            init_content, contains='"._settings": ("FlextSampleSettings", "settings")'
+        )
+        tm.that(
+            init_content,
+            contains='__all__: tuple[str, ...] = ("FlextSampleSettings", "settings")',
+        )
+        tm.that(init_content, lacks="_fixtures.settings")
         compile(init_content, "__init__.py", "exec")

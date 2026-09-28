@@ -6,13 +6,11 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import override
 
-from flext_infra.transformers._header import ensure_future_annotations
-from flext_infra.transformers.base import FlextInfraRopeTransformer
+from flext_infra import t, u
 
-if TYPE_CHECKING:
-    from flext_infra import t
+from .rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraRefactorFutureImport(FlextInfraRopeTransformer):
@@ -23,7 +21,7 @@ class FlextInfraRefactorFutureImport(FlextInfraRopeTransformer):
     @override
     def apply_to_source(self, source: str) -> t.Infra.TransformResult:
         """Normalize the future import after the module docstring."""
-        updated = ensure_future_annotations(source)
+        updated = u.Infra.ensure_future_annotations(source)
         if updated == source:
             return source, list(self.changes)
         self._record_change("Normalized from __future__ import annotations")

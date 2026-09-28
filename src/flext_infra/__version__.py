@@ -17,7 +17,7 @@ from flext_core.__version__ import FlextVersion
 
 
 class FlextInfraVersion(FlextVersion):
-    """flext-infra version — MRO-derived from FlextVersion."""
+    """flext-infra version — FLEXT-derived from FlextVersion."""
 
     _metadata: PackageMetadata = metadata("flext-infra")
 

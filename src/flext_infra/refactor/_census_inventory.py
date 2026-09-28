@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import MutableMapping
+from importlib.util import find_spec
 from typing import TYPE_CHECKING
 
 from flext_infra import p, u
@@ -17,7 +19,7 @@ class FlextInfraRefactorCensusInventoryMixin:
     """Governed-parent facade-alias inventory + workspace collision cross-ref.
 
     Composed into FlextInfraRefactorCensus via inheritance; ``_is_flext_owned``
-    is provided by the sibling objects mixin through MRO.
+    is provided by the sibling objects mixin through FLEXT.
     """
 
     if TYPE_CHECKING:
@@ -27,11 +29,11 @@ class FlextInfraRefactorCensusInventoryMixin:
 
     @classmethod
     def _build_parent_inventory(
-        cls, workspace_root: Path
+        cls, repository_root: Path
     ) -> t.MappingKV[str, t.StrSequence]:
         """Inventory governed-package alias top-level facade names.
 
-        Discovers governed projects via ``u.Infra.projects(workspace_root)``
+        Discovers governed projects via ``u.Infra.projects(repository_root)``
         (canonical workspace project discovery — SSOT). For each project
         whose hyphenated name converts to a Python package, imports the
         package and walks dynamic facade aliases at depth 1
@@ -52,16 +54,22 @@ class FlextInfraRefactorCensusInventoryMixin:
         NO subprocess. Skips packages that fail to import (sub-repo
         environments may not have every flext-* installed).
         """
-        projects_result = u.Infra.projects(workspace_root)
+        projects_result = u.Infra.projects(repository_root)
         if projects_result.failure:
-            return {}
-        inventory: dict[str, list[str]] = defaultdict(list)
+            msg = (
+                f"failed to discover projects for alias inventory at "
+                f"{repository_root}: {projects_result.error}"
+            )
+            raise RuntimeError(msg)
+        inventory: MutableMapping[str, list[str]] = defaultdict(list)
         for project in projects_result.unwrap():
             pkg_name = project.name.replace("-", "_")
-            try:
-                module = __import__(pkg_name)
-            except ImportError:
+            # A workspace member not installed in this interpreter holds no
+            # importable aliases; an installed one that fails to import is a
+            # real defect and escapes.
+            if find_spec(pkg_name) is None:
                 continue
+            module = __import__(pkg_name)
             import_name = pkg_name.replace("-", "_")
             for alias_name, module_name, _ in u.lazy_alias_suffixes(import_name):
                 if module_name.split(".", 1)[0] != import_name:
@@ -86,8 +94,8 @@ class FlextInfraRefactorCensusInventoryMixin:
 
     @classmethod
     def parent_alias_collisions(
-        cls, report: m.Infra.Census.WorkspaceReport, *, workspace_root: Path
-    ) -> tuple[tuple[m.Infra.Census.Object, t.StrSequence], ...]:
+        cls, report: m.Infra.WorkspaceReport, *, repository_root: Path
+    ) -> t.VariadicTuple[t.Pair[m.Infra.Object, t.StrSequence]]:
         """Cross-reference workspace objects against upstream parent inventory.
 
         Returns ``(symbol, parent_paths)`` pairs where the consumer's
@@ -104,7 +112,7 @@ class FlextInfraRefactorCensusInventoryMixin:
                 ``_collect_report(...)``. Reusing the existing report
                 avoids a second Rope-walk; the inventory is the only new
                 I/O.
-            workspace_root: Workspace root used to discover governed
+            repository_root: Repository root used to discover governed
                 projects (parent packages).
 
         Returns:
@@ -112,8 +120,12 @@ class FlextInfraRefactorCensusInventoryMixin:
             no collisions are found.
 
         """
-        inventory = cls._build_parent_inventory(workspace_root)
-        collisions: list[tuple[m.Infra.Census.Object, t.StrSequence]] = []
+        inventory = cls._build_parent_inventory(repository_root)
+        collisions: list[t.Pair[m.Infra.Object, t.StrSequence]] = []
+
+        def collision_breadth(entry: t.Pair[m.Infra.Object, t.StrSequence]) -> int:
+            return -len(entry[1])
+
         for project_report in report.projects:
             self_pkg_prefix = f"{project_report.project.replace('-', '_')}."
             for obj in project_report.objects:
@@ -130,7 +142,7 @@ class FlextInfraRefactorCensusInventoryMixin:
                 if not foreign_paths:
                     continue
                 collisions.append((obj, foreign_paths))
-        collisions.sort(key=lambda entry: -len(entry[1]))
+        collisions.sort(key=collision_breadth)
         return tuple(collisions)
 
 

@@ -1,0 +1,40 @@
+id: remove-breakpoint-debugger-statement
+snapshots:
+  breakpoint():
+    fixed: ''
+    labels:
+    - source: breakpoint()
+      style: primary
+      start: 0
+      end: 12
+    - source: breakpoint()
+      style: secondary
+      start: 0
+      end: 12
+  ? |
+    def f():
+        breakpoint()
+        return 1
+  : fixed: "def f():\n    \n    return 1\n"
+    labels:
+    - source: breakpoint()
+      style: primary
+      start: 13
+      end: 25
+    - source: breakpoint()
+      style: secondary
+      start: 13
+      end: 25
+  ? |
+    if debug:
+        breakpoint()
+  : fixed: "if debug:\n    \n"
+    labels:
+    - source: breakpoint()
+      style: primary
+      start: 14
+      end: 26
+    - source: breakpoint()
+      style: secondary
+      start: 14
+      end: 26

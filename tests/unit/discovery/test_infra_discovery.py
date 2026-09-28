@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-
 from flext_tests import tm
+
 from tests import c, m, u
 
 if TYPE_CHECKING:
@@ -25,17 +25,13 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
     @pytest.fixture
     def workspace_with_projects(self, tmp_path: Path) -> Path:
         (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname='workspace'\n\n"
-            "[tool.uv.workspace]\n"
-            "members = ['project2']\n",
-            encoding="utf-8",
+            "[project]\nname='workspace'\n", encoding="utf-8"
         )
         proj1 = tmp_path / "project1"
         proj1.mkdir()
         (proj1 / "pyproject.toml").write_text(
             "[project]\nname='project1'\nversion='0.1.0'\n"
-            "dependencies=['flext-core>=0.1.0']\n\n"
-            "[tool.flext.workspace]\nattached = true\n",
+            "dependencies=['flext-core>=0.1.0']\n",
             encoding="utf-8",
         )
         (proj1 / "src").mkdir()
@@ -56,14 +52,17 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
             "[project]\nname='hidden'\ndependencies=['flext-core>=0.1.0']\n",
             encoding="utf-8",
         )
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "project1"]\n\tpath = project1\n\turl = https://github.com/flext-sh/project1.git\n'
+            '[submodule "project2"]\n\tpath = project2\n\turl = https://github.com/flext-sh/project2.git\n',
+            encoding="utf-8",
+        )
         return tmp_path
 
     def test_discover_projects_happy_path(
         self, service: u.Infra, workspace_with_projects: Path
     ) -> None:
-        result = service.discover_projects(
-            workspace_with_projects, include_attached=True
-        )
+        result = service.discover_projects(workspace_with_projects)
         tm.ok(result)
         projects = result.value
         tm.that(len(projects), eq=2)
@@ -73,14 +72,9 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(projects[0].has_src, eq=True)
         tm.that(projects[1].has_src, eq=False)
         tm.that(projects[1].has_tests, eq=False)
-        tm.that(projects[0].workspace_role, eq=c.Infra.WorkspaceProjectRole.ATTACHED)
-        tm.that(
-            (
-                projects[1].workspace_role
-                == c.Infra.WorkspaceProjectRole.WORKSPACE_MEMBER
-            ),
-            eq=True,
-        )
+        tm.that(projects[0].make_profile, eq=c.Infra.MakeProfile.STANDALONE)
+        tm.that(projects[0].declared_subproject, eq=True)
+        tm.that(projects[1].declared_subproject, eq=True)
 
     def test_discover_projects_empty_workspace(
         self, service: u.Infra, tmp_path: Path
@@ -89,13 +83,13 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.ok(result)
         tm.that(result.value, eq=[])
 
-    def test_discover_projects_nonexistent_path(self, service: u.Infra) -> None:
-        nonexistent = Path("/nonexistent/path/to/workspace")
+    def test_discover_projects_nonexistent_path(
+        self, service: u.Infra, tmp_path: Path
+    ) -> None:
+        nonexistent = tmp_path / "missing"
         result = service.discover_projects(nonexistent)
         tm.fail(result)
-        tm.that(result.error, is_=str)
-        tm.that(result.error, is_=str)
-        tm.that(result.error, has="discovery failed")
+        tm.that(result.error or "", has=str(nonexistent))
 
     def test_find_all_pyproject_files_happy_path(
         self, service: u.Infra, tmp_path: Path
@@ -162,17 +156,14 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         self, service: u.Infra, tmp_path: Path
     ) -> None:
         (tmp_path / "pyproject.toml").write_text(
-            "[project]\nname='workspace-root'\ndependencies=['flext-core>=0.1.0']\n\n"
-            "[tool.uv.workspace]\n"
-            "members = ['project2']\n",
+            "[project]\nname='workspace'\ndependencies=['flext-core>=0.1.0']\n",
             encoding="utf-8",
         )
         project1 = tmp_path / "project1"
         project1.mkdir()
         (project1 / "pyproject.toml").write_text(
             "[project]\nname='project1'\nversion='0.1.0'\n"
-            "dependencies=['flext-core>=0.1.0']\n\n"
-            "[tool.flext.workspace]\nattached = true\n",
+            "dependencies=['flext-core>=0.1.0']\n",
             encoding="utf-8",
         )
         project2 = tmp_path / "project2"
@@ -180,8 +171,13 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         (project2 / "pyproject.toml").write_text(
             "[project]\nname='project2'\n", encoding="utf-8"
         )
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "project1"]\n\tpath = project1\n\turl = https://github.com/flext-sh/project1.git\n'
+            '[submodule "project2"]\n\tpath = project2\n\turl = https://github.com/flext-sh/project2.git\n',
+            encoding="utf-8",
+        )
 
-        result = service.discover_projects(tmp_path, include_attached=True)
+        result = service.discover_projects(tmp_path)
 
         tm.ok(result)
         tm.that([project.name for project in result.value], eq=["project1", "project2"])
@@ -189,7 +185,7 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
     def test_discover_projects_derives_package_name_from_hatch_packages(
         self, service: u.Infra, tmp_path: Path
     ) -> None:
-        project = tmp_path / "project1"
+        project = tmp_path
         package_dir = project / "src" / "custom_pkg"
         package_dir.mkdir(parents=True)
         (package_dir / "__init__.py").write_text("", encoding="utf-8")
@@ -226,45 +222,3 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(result.value[0].path, eq=tmp_path.resolve())
         tm.that(result.value[0].name, eq="demo-project")
         tm.that(result.value[0].package_name, eq="demo_pkg")
-
-    def test_discover_python_dirs_skips_workspace_excluded_dirs(
-        self, service: u.Infra, tmp_path: Path
-    ) -> None:
-        """Manifest-excluded vendored trees are never Python source roots."""
-        config_dir = tmp_path / "config"
-        config_dir.mkdir()
-        (config_dir / "workspace.yaml").write_text(
-            "version: 3\n"
-            "name: demo\n"
-            "repository:\n"
-            "  name: demo\n"
-            "  distribution: demo\n"
-            "  provider: acme-hosting\n"
-            "  url: https://github.com/acme-hosting/demo.git\n"
-            "  path: .\n"
-            "  role: standalone\n"
-            "  state: active\n"
-            "  checkout: independent\n"
-            "  codegen: conform\n"
-            "  package: true\n"
-            "  editable: false\n"
-            "  read_only: false\n"
-            "members: []\n"
-            "exclusions:\n"
-            "  - path: data\n"
-            "    reason: vendored document submodules\n",
-            encoding="utf-8",
-        )
-        src_dir = tmp_path / "src"
-        src_dir.mkdir()
-        (src_dir / "module.py").write_text("X = 1\n", encoding="utf-8")
-        data_dir = tmp_path / "data"
-        data_dir.mkdir()
-        (data_dir / "vendored.py").write_text("Y = 2\n", encoding="utf-8")
-
-        discovered = service.discover_python_dirs(tmp_path)
-
-        tm.that(discovered, eq=["src"])
-
-
-__all__: t.StrSequence = []

@@ -10,7 +10,7 @@ class FlextInfraUtilitiesRopeBracketBalanceMixin:
     """Compute net bracket depth to extend regex-captured blocks across newlines.
 
     Composed into FlextInfraUtilitiesRopeHelpers via inheritance; ``extract_definition``
-    resolves ``_extend_block_through_open_brackets`` through the facade MRO.
+    resolves ``_extend_block_through_open_brackets`` through the facade FLEXT.
     """
 
     @staticmethod

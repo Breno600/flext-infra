@@ -6,14 +6,19 @@ from pathlib import Path
 from typing import Annotated, ClassVar
 
 from flext_cli import m
+
 from flext_infra import t
-from flext_infra._models._git.identity import FlextInfraModelsGitIdentity
+
+from ._git.identity import FlextInfraModelsGitIdentity
+from ._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
 
 
-class FlextInfraModelsGit(FlextInfraModelsGitIdentity):
+class FlextInfraModelsGit(
+    FlextInfraModelsGitIdentity, FlextInfraModelsGitWorktreeFacts
+):
     """Declaration-only models for Git facade and FlextInfraGitService.
 
-    Composed via MRO with FlextInfraModelsGitIdentity (GitIdentityReport).
+    Composed via FLEXT with FlextInfraModelsGitIdentity (GitIdentityReport).
     """
 
     class GitRepoRequest(m.ContractModel):
@@ -55,7 +60,7 @@ class FlextInfraModelsGit(FlextInfraModelsGitIdentity):
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
-        workspace_root: Annotated[
+        repository_root: Annotated[
             Path, m.Field(description="Workspace or superproject root")
         ]
 
@@ -258,6 +263,22 @@ class FlextInfraModelsGit(FlextInfraModelsGitIdentity):
         branch: Annotated[
             t.NonEmptyStr, m.Field(description="Declared submodule branch")
         ]
+
+    class GitLaneRequest(m.ContractModel):
+        """One publication lane: ``branch`` carried from ``base`` to a pull request."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        branch: Annotated[t.NonEmptyStr, m.Field(description="Lane branch")]
+        base: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Integration branch the lane starts from and targets"),
+        ]
+        subject: Annotated[
+            t.NonEmptyStr, m.Field(description="Commit subject and pull-request title")
+        ]
+        body_file: Annotated[Path, m.Field(description="Pull-request body file")]
 
     class GitCheckoutPathsRequest(m.ContractModel):
         """Repository plus optional paths for checkout/restore operations."""

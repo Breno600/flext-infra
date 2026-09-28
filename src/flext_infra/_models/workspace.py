@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import MappingProxyType
 from typing import Annotated, ClassVar
 
 from flext_cli import m
-from flext_infra import c, t
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+
+from .. import c, t
+from . import FlextInfraConfigModels, FlextInfraModelsMixins as mm
+from ._git import FlextInfraModelsGitIdentity
 
 
 class FlextInfraModelsWorkspace:
@@ -24,18 +25,37 @@ class FlextInfraModelsWorkspace:
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
-        workspace_root: Annotated[
-            Path, m.Field(alias="workspace", description="Workspace root path")
-        ]
+        repository_root: Annotated[Path, m.Field(description="Repository root path")]
+
+    class WorkspaceProjectContext(m.ContractModel):
+        """Canonical context derived from one runtime working directory."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        cwd: Annotated[Path, m.Field(description="Resolved submitted directory")]
+        identity: Annotated[
+            FlextInfraModelsGitIdentity.GitIdentityReport | None,
+            m.Field(description="Observed Git identity, absent outside a repository"),
+        ] = None
+        workspace: Annotated[
+            FlextInfraConfigModels.WorkspaceSpec | None,
+            m.Field(description="Governed workspace contract when declared"),
+        ] = None
+        target: Annotated[
+            FlextInfraConfigModels.RepositoryConformTarget | None,
+            m.Field(description="Effective governed project properties"),
+        ] = None
+        governed: Annotated[
+            bool,
+            m.Field(description="Whether repository-local FLEXT governance exists"),
+        ] = False
 
     class FlextBindingRequest(m.ContractModel):
         """Session request binding one consumer onto a flext worktree."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
-        workspace_root: Annotated[
-            Path, m.Field(alias="workspace", description="Consumer project root")
-        ]
+        repository_root: Annotated[Path, m.Field(description="Consumer project root")]
         flext_root: Annotated[
             Path, m.Field(description="Flext worktree supplying the packages")
         ]
@@ -80,10 +100,14 @@ class FlextInfraModelsWorkspace:
         package_name: Annotated[
             str, m.Field(description="Primary Python package name")
         ] = ""
-        workspace_role: Annotated[
-            c.Infra.WorkspaceProjectRole,
-            m.Field(description="Operational role relative to the uv workspace root"),
-        ] = c.Infra.WorkspaceProjectRole.ATTACHED
+        make_profile: Annotated[
+            c.Infra.MakeProfile,
+            m.Field(description="Topology proven by this checkout's .gitmodules"),
+        ] = c.Infra.MakeProfile.STANDALONE
+        declared_subproject: Annotated[
+            bool,
+            m.Field(description="Whether the aggregate workspace declares this path"),
+        ] = False
 
     class WorkLaneParentContext(m.ContractModel):
         """Resolved anchor a lane is nested under and based on."""
@@ -176,10 +200,10 @@ class FlextInfraModelsWorkspace:
         pyproject_path: Annotated[Path, m.Field(description="Resolved pyproject path")]
         payload: Annotated[
             t.JsonMapping, m.Field(description="Parsed pyproject payload")
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         docs_meta: Annotated[
             t.JsonMapping, m.Field(description="Parsed tool.flext.docs payload")
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         project_name: Annotated[str, m.Field(description="Declared project name")] = ""
         package_name: Annotated[str, m.Field(description="Primary package name")] = ""
         dependency_names: Annotated[

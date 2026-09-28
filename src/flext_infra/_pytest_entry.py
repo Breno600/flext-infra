@@ -5,30 +5,34 @@ from __future__ import annotations
 import sys
 import time
 
-_STARTED_AT_MONOTONIC = time.monotonic()
 
+class FlextInfraPytestEntry:
+    """Facade for the pytest entrypoint with pre-import clock."""
 
-def main() -> int:
-    """Parse the Make boundary and return the exact child process status."""
-    from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
+    _STARTED_AT_MONOTONIC: float = time.monotonic()
 
-    try:
+    @classmethod
+    def main(cls) -> int:
+        """Parse the Make boundary and return the exact child process status.
+
+        ``full`` runs incremental then complete testmon execution. ``coverage``
+        selects coverage alone; the default is the incremental operation.
+        """
+        from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
+
         runner = FlextInfraPytestRunner.from_environment(
-            started_at_monotonic=_STARTED_AT_MONOTONIC
+            started_at_monotonic=cls._STARTED_AT_MONOTONIC
         )
-    except ValueError as exc:
-        sys.stderr.write(f"ERROR: {exc}\n")
-        return 2
-    result = runner.execute()
-    if result.failure:
-        # Prefix every line so workspace extract_errors keeps the full detail
-        # (it only retains lines matching ^ERROR:), not just the first sentence.
-        detail = result.error or "pytest runner failed"
-        for line in detail.splitlines() or [detail]:
-            sys.stderr.write(f"ERROR: {line}\n")
-        return 2
-    return result.value
+        mode = sys.argv[1] if len(sys.argv) > 1 else ""
+        if mode == "coverage":
+            return runner.execute_coverage().unwrap()
+        if mode == "full":
+            return runner.execute_full().unwrap()
+        if not mode:
+            return runner.execute().unwrap()
+        msg = f"unsupported pytest operation: {mode}"
+        raise ValueError(msg)
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(FlextInfraPytestEntry.main())

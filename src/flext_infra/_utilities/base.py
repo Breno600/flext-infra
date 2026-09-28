@@ -6,15 +6,15 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import re
+from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-from flext_core import r
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_cli import u as cli_u
 
-if TYPE_CHECKING:
-    from flext_infra.protocols import p
+from flext_infra import c, t
+
+from .._settings import FlextInfraSettings
 
 
 class FlextInfraUtilitiesBase:
@@ -26,7 +26,29 @@ class FlextInfraUtilitiesBase:
     """
 
     @staticmethod
-    def resolve_workspace_root_or_cwd(workspace_root: Path | None = None) -> Path:
+    def env_lookup(name: str) -> str | None:
+        """Return one raw environment value through the governed boundary.
+
+        The only sanctioned escape hatch for keys that are dynamic by
+        contract (caller-named CLI parameters, CI passthrough variables,
+        subprocess environment merges). Static values must be typed
+        ``settings.Infra.*`` fields instead; ambient ``os.environ`` reads
+        elsewhere are banned by the ``ban-ambient-environ-read`` rule.
+        """
+        return FlextInfraSettings.env_lookup(name)
+
+    @staticmethod
+    def env_value(name: str, default: str = "") -> str:
+        """Return one stripped dynamic environment value, or the stripped default.
+
+        Only an unset variable falls back to ``default``; a set but blank value
+        stays blank so callers can reject it explicitly.
+        """
+        value = FlextInfraSettings.env_lookup(name)
+        return default.strip() if value is None else value.strip()
+
+    @staticmethod
+    def resolve_repository_root_or_cwd(repository_root: Path | None = None) -> Path:
         """Resolve the root a verb operates on from its invocation point.
 
         Scope follows where the verb is invoked: run it at the workspace and it
@@ -36,12 +58,11 @@ class FlextInfraUtilitiesBase:
 
         Escalating inverted that rule. A verb invoked inside one member
         resolved every relative path against the superproject shared by all
-        sibling worktrees, so `FILE=` selectors rejected files that exist and
-        `.reports/tests/latest.txt` -- the canonical evidence artifact -- was
-        written to the shared root, where each project's run overwrote the
-        previous one's result.
+        sibling worktrees, so project-local inputs were resolved in the wrong
+        checkout and `.reports/tests/latest.txt` was written to the shared root,
+        where each project's run overwrote the previous one's evidence.
         """
-        target = workspace_root or Path.cwd()
+        target = repository_root or Path.cwd()
         if target.is_file():
             target = target.parent
         return target.resolve()
@@ -72,9 +93,118 @@ class FlextInfraUtilitiesBase:
         return names or None
 
     @staticmethod
-    def normalize_make_args(values: t.StrSequence) -> t.StrSequence:
-        """Return trimmed make arguments without blank entries."""
-        return tuple(item.strip() for item in values if item.strip())
+    def path_depth(path: Path) -> int:
+        """Return the number of components in a path."""
+        return len(path.parts)
+
+    @staticmethod
+    def path_depth_then_text(path: Path) -> t.Pair[int, str]:
+        """Order paths by depth and then their stable POSIX representation."""
+        return FlextInfraUtilitiesBase.path_depth(path), path.as_posix()
+
+    @staticmethod
+    def first_merge_conflict_marker(content: str) -> str | None:
+        """Return the first Git merge-control line in rendered content."""
+        return next(
+            (
+                line
+                for line in content.splitlines()
+                if FlextInfraUtilitiesBase.merge_conflict_control(line) is not None
+            ),
+            None,
+        )
+
+    @staticmethod
+    def merge_conflict_control(line: str) -> str | None:
+        """Classify one Git merge-control line from the protocol SSOT."""
+        return next(
+            (
+                kind
+                for kind, token in c.Infra.MERGE_CONFLICT_CONTROLS
+                if line.startswith(token)
+            ),
+            None,
+        )
+
+    @staticmethod
+    def ast_grep_scan_command(
+        rule_path: Path,
+        *,
+        rule_ids: t.StrSequence = (),
+        targets: t.StrSequence = (".",),
+        json_stream: bool = False,
+        update_all: bool = False,
+    ) -> t.StrSequence:
+        """Build one ast-grep scan command with explicit cwd-relative targets."""
+        if not targets or any(Path(target).is_absolute() for target in targets):
+            msg = "ast-grep scan targets must be nonempty and cwd-relative"
+            raise ValueError(msg)
+        config_path = next(
+            (
+                ancestor / c.Infra.CODEMOD_CONFIG_FILENAME
+                for ancestor in rule_path.resolve().parents
+                if (ancestor / c.Infra.CODEMOD_CONFIG_FILENAME).is_file()
+            ),
+            None,
+        )
+        if config_path is None:
+            msg = f"ast-grep rule has no owning config: {rule_path}"
+            raise ValueError(msg)
+        selected_rule_ids = (
+            tuple(rule_ids)
+            if rule_ids
+            else tuple(
+                sorted(FlextInfraUtilitiesBase.ast_grep_rule_contract(rule_path)[0])
+            )
+        )
+        if any(not rule_id or "|" in rule_id for rule_id in selected_rule_ids):
+            msg = "ast-grep rule IDs must be nonempty literal IDs"
+            raise ValueError(msg)
+        command = [
+            c.Infra.SG,
+            c.Infra.SCAN,
+            c.Infra.SG_CONFIG_FLAG,
+            str(config_path),
+            c.Infra.SG_FILTER_FLAG,
+            rf"^(?:{'|'.join(re.escape(rule_id) for rule_id in sorted(selected_rule_ids))})$",
+        ]
+        if json_stream:
+            command.append("--json=stream")
+        if update_all:
+            command.append(c.Infra.SG_UPDATE_ALL)
+        command.extend(targets)
+        return tuple(command)
+
+    @staticmethod
+    def ast_grep_rule_contract(
+        rule_path: Path,
+    ) -> t.Pair[frozenset[str], frozenset[str]]:
+        """Return every document ID and the subset carrying an automatic fix."""
+        rule_ids: set[str] = set()
+        fixable_ids: set[str] = set()
+        for raw_document in rule_path.read_text(encoding=c.Cli.ENCODING_DEFAULT).split(
+            "\n---"
+        ):
+            if not any(
+                line.strip() and not line.lstrip().startswith("#")
+                for line in raw_document.splitlines()
+            ):
+                continue
+            parsed = cli_u.Cli.yaml_parse(raw_document).unwrap()
+            rule_id = parsed.get("id")
+            if not isinstance(rule_id, str) or not rule_id:
+                msg = f"ast-grep rule document missing required id: {rule_path}"
+                raise ValueError(msg)
+            if rule_id in rule_ids:
+                msg = f"duplicate ast-grep rule id {rule_id!r}: {rule_path}"
+                raise ValueError(msg)
+            rule_ids.add(rule_id)
+            if "fix" in parsed:
+                fixable_ids.add(rule_id)
+        if not rule_ids:
+            msg = f"ast-grep rule file contains no rule documents: {rule_path}"
+            raise ValueError(msg)
+        return frozenset(rule_ids), frozenset(fixable_ids)
 
     @staticmethod
     def strongly_connected_components(
@@ -83,8 +213,8 @@ class FlextInfraUtilitiesBase:
         """Return every strongly connected component in one directed graph."""
         next_index = 0
         stack: list[str] = []
-        indexes: dict[str, int] = {}
-        lowlinks: dict[str, int] = {}
+        indexes: MutableMapping[str, int] = {}
+        lowlinks: MutableMapping[str, int] = {}
         on_stack: set[str] = set()
         components: list[t.StrSequence] = []
 
@@ -127,35 +257,6 @@ class FlextInfraUtilitiesBase:
         if exit_code >= c.Infra.PROCESS_SIGNAL_EXIT_OFFSET:
             return f"signal={exit_code - c.Infra.PROCESS_SIGNAL_EXIT_OFFSET}"
         return "failure"
-
-    @staticmethod
-    def normalize_process_exit_code(raw_exit_code: int) -> int:
-        """Map a subprocess signal return code into the portable shell domain."""
-        if raw_exit_code < 0:
-            normalized_exit_code: int = (
-                c.Infra.PROCESS_SIGNAL_EXIT_OFFSET - raw_exit_code
-            )
-            return normalized_exit_code
-        return raw_exit_code
-
-    @staticmethod
-    def resolve_what(verb: str, phase: str) -> p.Result[t.StrSequence]:
-        """Resolve a ``WHAT=`` phase against ``c.Infra.WHAT_PHASES`` (single SSOT).
-
-        Empty ``phase`` expands to every phase of ``verb`` (sorted); a non-empty
-        unknown phase is a usage failure listing the valid phases. Shared by the
-        orchestrator, check and validate groups so WHAT resolution lives in one
-        place.
-        """
-        phases = c.Infra.WHAT_PHASES.get(verb, frozenset())
-        if not phase:
-            return r[t.StrSequence].ok(tuple(sorted(phases)))
-        if phase not in phases:
-            valid = ", ".join(sorted(phases)) or "(none)"
-            return r[t.StrSequence].fail(
-                f"unknown WHAT '{phase}' for verb '{verb}' (valid: {valid})"
-            )
-        return r[t.StrSequence].ok((phase,))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesBase"]

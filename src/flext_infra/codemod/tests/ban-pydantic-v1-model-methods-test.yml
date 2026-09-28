@@ -1,0 +1,20 @@
+id: ban-pydantic-v1-model-methods
+# `valid` MUST NOT match: the generic names whose receiver is unprovable are
+# deliberately out of scope, as are the canonical v2 replacements and the
+# literal text in a docstring or a string constant.
+valid:
+  - value = response.json()
+  - value = payload.dict()
+  - value = defaults.copy()
+  - value = Model.schema()
+  - value = Model.model_validate(record)
+  - value = Model.model_validate_json(raw)
+  - HELP = "replace Model.parse_obj(data) with Model.model_validate(data)"
+  - |
+    """Docstring quoting Model.parse_obj(data) verbatim."""
+# `invalid` MUST match: the Pydantic-v1-exclusive constructor names.
+invalid:
+  - value = Model.parse_obj(record)
+  - value = Model.parse_raw(raw)
+  - value = Model.from_orm(row)
+  - value = Model.schema_json()

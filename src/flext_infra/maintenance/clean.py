@@ -1,14 +1,8 @@
-"""Disposable-artifact census and removal for the generated ``clean`` verb.
+"""Structural-residue cleanup for the generated ``clean`` verb.
 
-Stale caches and traces are not cosmetic: they produce FALSE DIAGNOSES. A stale
-``__pycache__`` once raised a pydantic ``ValidationError`` for source that was
-already correct, and a stale ``.reports`` directory made a green suite look
-failed. Removing them is therefore a first-class maintenance operation, not a
-shell loop embedded in a Makefile recipe.
-
-The disposable set is DATA (``config.Infra.codegen.make.clean``): every project
-cleans exactly the same things, and a new artifact kind is one config row rather
-than an edit to 31 generated Makefiles.
+Git-ignored runtime and bytecode artifacts are valid caches, never residue.
+Cleanup owns only broken managed workspace links; every source inventory uses
+the Git-aware ``u.Infra`` scope facade.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -17,86 +11,55 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, override
+from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import config, m, u
-from flext_infra.base import s
+from flext_infra import c, u
+
+from ..base import s
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import p, t
 
 logger = u.fetch_logger(__name__)
 
 
 class FlextInfraCleanService(s[int]):
-    """Report or remove the declared disposable artifacts of one project."""
+    """Report or remove broken links below the managed workspace container."""
 
-    apply_changes: Annotated[
-        bool, m.Field(description="Remove the artifacts instead of reporting them")
-    ] = False
-
-    def _cache_dirs(self) -> tuple[Path, ...]:
-        """Return every cache directory found anywhere under the project."""
-        spec = config.Infra.codegen.make.clean
+    def _broken_worktree_links(self) -> t.VariadicTuple[Path]:
+        """Return broken symlinks left below the managed worktree container."""
+        worktrees_root = self.repository_root / c.Infra.WORKTREES_DIRNAME
+        if not worktrees_root.is_dir():
+            return ()
         return tuple(
             path
-            for name in spec.cache_dirs
-            for path in self.workspace_root.rglob(name)
-            if path.is_dir()
-        )
-
-    def _root_entries(self) -> tuple[Path, ...]:
-        """Return the root-level directories and files that exist."""
-        spec = config.Infra.codegen.make.clean
-        return tuple(
-            path
-            for name in (*spec.root_dirs, *spec.root_files)
-            if (path := self.workspace_root / name).exists()
-        )
-
-    def _trace_files(self) -> tuple[Path, ...]:
-        """Return every trace or profile artifact found under the project."""
-        spec = config.Infra.codegen.make.clean
-        return tuple(
-            path
-            for pattern in spec.trace_globs
-            for path in self.workspace_root.rglob(pattern)
-            if path.is_file()
+            for path in worktrees_root.rglob("*")
+            if path.is_symlink() and not path.exists()
         )
 
     @override
     def execute(self) -> p.Result[int]:
-        """Report the disposable residue, removing it when apply is requested."""
-        if not self.workspace_root.is_dir():
-            return r[int].fail(f"workspace is not a directory: {self.workspace_root}")
-        targets = (*self._cache_dirs(), *self._root_entries(), *self._trace_files())
+        """Report broken managed links, removing them when apply is requested."""
+        if not self.repository_root.is_dir():
+            return r[int].fail(f"workspace is not a directory: {self.repository_root}")
+        targets = self._broken_worktree_links()
         if not targets:
-            u.Cli.info("clean: no disposable artifacts")
+            u.Cli.info("clean: no broken managed workspace links")
             return r[int].ok(0)
         if not self.apply_changes:
             for target in targets:
-                u.Cli.info(f"  {target.relative_to(self.workspace_root)}")
-            apply_token = config.Infra.codegen.make.apply_variable
-            apply_value = config.Infra.codegen.make.apply_value
-            u.Cli.info(
-                f"clean: {len(targets)} disposable artifact(s); "
-                f"remove with make clean WHAT=generated {apply_token}={apply_value}"
-            )
+                u.Cli.info(f"  {target.relative_to(self.repository_root)}")
+            u.Cli.info(f"clean: {len(targets)} broken managed workspace link(s)")
             return r[int].ok(0)
         removed = 0
         for target in targets:
-            # A cache directory can vanish when its parent is removed first;
-            # a missing target is the requested end state, never an error.
-            outcome = (
-                u.Cli.files_remove_directory(target)
-                if target.is_dir()
-                else u.Cli.files_delete(target)
-            )
-            if outcome.failure and target.exists():
-                return r[int].fail(outcome.error or f"failed to remove {target}")
+            u.Cli.info(f"clean: remove {target.relative_to(self.repository_root)}")
+            outcome = u.Cli.files_delete(target)
+            if outcome.failure:
+                return r[int].from_failure(outcome)
             removed += 1
-        u.Cli.info(f"clean: removed {removed} disposable artifact(s)")
+        u.Cli.info(f"clean: removed {removed} broken managed workspace link(s)")
         return r[int].ok(0)
 
 

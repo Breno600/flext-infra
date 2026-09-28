@@ -1,0 +1,17 @@
+# Finish the `mapping` -> `toml_mapping` rename the split started.
+#
+# `tests/utilities_toml.py` owns TOML/JSON payload narrowing as `toml_mapping`;
+# the transitional `mapping` alias lived only in the pre-split monolith that
+# `tests/utilities.py` no longer carries. Every remaining call site is renamed
+# to the canonical owner; the rule stays as a guard against reintroduction.
+id: rename-tests-mapping-to-toml-mapping
+language: python
+severity: error
+files:
+  - "tests/**/*.py"
+rule:
+  pattern: $RECEIVER.Tests.mapping($$$ARGS)
+fix: $RECEIVER.Tests.toml_mapping($$$ARGS)
+message: >-
+  The pre-split `mapping` alias no longer exists; call the canonical
+  `toml_mapping` owner from tests/utilities_toml.py.

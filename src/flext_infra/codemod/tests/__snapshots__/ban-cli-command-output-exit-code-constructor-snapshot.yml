@@ -1,0 +1,44 @@
+id: ban-cli-command-output-exit-code-constructor
+snapshots:
+  m.Cli.CommandBytesOutput(stdout=b"", stderr=b"failed", exit_code=return_code):
+    labels:
+    - source: exit_code=return_code
+      style: primary
+      start: 55
+      end: 76
+    - source: exit_code
+      style: secondary
+      start: 55
+      end: 64
+    - source: m.Cli.CommandBytesOutput(stdout=b"", stderr=b"failed", exit_code=return_code)
+      style: secondary
+      start: 0
+      end: 77
+  m.Cli.CommandOutput(stdout="", stderr="failed", exit_code=1):
+    labels:
+    - source: exit_code=1
+      style: primary
+      start: 48
+      end: 59
+    - source: exit_code
+      style: secondary
+      start: 48
+      end: 57
+    - source: m.Cli.CommandOutput(stdout="", stderr="failed", exit_code=1)
+      style: secondary
+      start: 0
+      end: 60
+  m.Cli.CommandOutput(stdout=source.stdout, stderr=source.stderr, exit_code=source.exit_code):
+    labels:
+    - source: exit_code=source.exit_code
+      style: primary
+      start: 64
+      end: 90
+    - source: exit_code
+      style: secondary
+      start: 64
+      end: 73
+    - source: m.Cli.CommandOutput(stdout=source.stdout, stderr=source.stderr, exit_code=source.exit_code)
+      style: secondary
+      start: 0
+      end: 91

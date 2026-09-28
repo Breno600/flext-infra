@@ -1,0 +1,26 @@
+id: ban-pydantic-v1-model-methods
+snapshots:
+  value = Model.from_orm(row):
+    labels:
+    - source: Model.from_orm(row)
+      style: primary
+      start: 8
+      end: 27
+  value = Model.parse_obj(record):
+    labels:
+    - source: Model.parse_obj(record)
+      style: primary
+      start: 8
+      end: 31
+  value = Model.parse_raw(raw):
+    labels:
+    - source: Model.parse_raw(raw)
+      style: primary
+      start: 8
+      end: 28
+  value = Model.schema_json():
+    labels:
+    - source: Model.schema_json()
+      style: primary
+      start: 8
+      end: 27

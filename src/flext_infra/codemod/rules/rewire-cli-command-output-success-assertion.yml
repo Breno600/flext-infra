@@ -1,0 +1,7 @@
+id: rewire-cli-command-output-success-assertion
+language: Python
+severity: error
+rule:
+  pattern: tm.that($OUTPUT.outcome.raw_return_code, eq=0)
+fix: tm.that(u.Cli.process_succeeded($OUTPUT.outcome), eq=True)
+message: Assert complete causal command success through the public utility facade.

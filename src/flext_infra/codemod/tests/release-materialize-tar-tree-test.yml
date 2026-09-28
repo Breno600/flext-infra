@@ -1,0 +1,14 @@
+id: release-materialize-tar-tree
+valid:
+  - |
+    u.Infra.materialize_tar_tree(archive, stage_path)
+  - |
+    with tarfile.open(archive_path, "r") as archive:
+        extracted = u.Infra.materialize_tar_tree(archive, stage_path)
+invalid:
+  - |
+    archive.extractall(stage_path, filter="data")
+  - |
+    archive.extractall(path=stage_path, filter="data")
+  - |
+    archive.extract(member, path=stage_path, filter="data")

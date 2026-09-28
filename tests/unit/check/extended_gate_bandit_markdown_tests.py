@@ -1,111 +1,79 @@
-"""Public Bandit and Markdown gate behavior tests using protocol runners."""
+"""Public Bandit and Markdown gate behavior against the real lane tools."""
 
 from __future__ import annotations
 
+import shutil
 from typing import TYPE_CHECKING
 
 import pytest
+from flext_tests import tm
 
-from flext_infra import m, p, r, t
+from flext_infra import m, t
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.markdown import FlextInfraMarkdownGate
-from flext_tests import tm
-from tests import TestsFlextInfraUtilities as u
+from tests import TestsFlextInfraUtilities as u, c
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestBanditAndMarkdownGates:
+class TestsFlextInfraBanditAndMarkdownGates:
     """Declarative public-contract tests for Bandit and Markdown gates."""
 
-    @staticmethod
-    def make_ctx(root: Path) -> m.Infra.GateContext:
-        return m.Infra.GateContext(workspace=root, reports_dir=root)
+    HEADING_SKIP = "# Test\n\n### Skip\n"
+    LONG_LINE = "# Test\n\n" + " ".join(["word"] * 30) + "\n"
 
-    @staticmethod
-    def make_runner(*results: p.Result[m.Cli.CommandOutput]) -> u.Tests.SequenceRunner:
-        return u.Tests.SequenceRunner(list(results))
-
-    @pytest.mark.parametrize(
-        ("with_src", "runner_results", "passed", "issues_len"),
-        [
-            (False, (), True, 0),
-            (
-                True,
-                (
-                    r.ok(
-                        u.Tests.stub_run(
-                            stdout='{"results": [{"filename": "a.py", "line_number": 1, "test_id": "B101", "issue_text": "Assert used", "issue_severity": "MEDIUM"}]}',
-                            returncode=1,
-                        )
-                    ),
-                ),
-                False,
-                1,
-            ),
-            (
-                True,
-                (r.ok(u.Tests.stub_run(stdout="invalid json", returncode=1)),),
-                False,
-                1,
-            ),
-        ],
-    )
-    def test_bandit_check(
-        self,
-        *,
-        tmp_path: Path,
-        with_src: bool,
-        runner_results: tuple[r[m.Cli.CommandOutput], ...],
-        passed: bool,
-        issues_len: int,
-    ) -> None:
+    def test_bandit_reports_real_finding(self, tmp_path: Path) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "bandit-project")
-        if with_src:
-            (project_dir / "src").mkdir()
-            (project_dir / "src" / "main.py").write_text("# code\n", encoding="utf-8")
-
-        gate = FlextInfraBanditGate(
-            tmp_path,
-            runner=self.make_runner(*runner_results) if runner_results else None,
+        (project_dir / c.Infra.DEFAULT_SRC_DIR).mkdir()
+        (project_dir / c.Infra.DEFAULT_SRC_DIR / "main.py").write_text(
+            "def check(value):\n    assert value\n", encoding="utf-8"
         )
-        result = gate.check(project_dir, self.make_ctx(tmp_path))
 
-        tm.that(result.result.passed, eq=passed)
-        tm.that(len(result.issues), eq=issues_len)
+        result = u.Tests.check_gate_asserting(
+            FlextInfraBanditGate, tmp_path, project_dir, passed=False, issues_len=1
+        )
+
+        tm.that(result.issues[0].code, eq="B101")
+
+    def test_bandit_without_source_tree_has_no_audit_surface(
+        self, tmp_path: Path
+    ) -> None:
+        """A project without ``src`` declares no package to audit (d94decf10)."""
+        project_dir = u.Tests.mk_project(tmp_path, "p1")
+
+        result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
+
+        tm.that(result.result.passed, eq=True)
+        tm.that(result.result.errors, empty=True)
+        tm.that(result.issues, empty=True)
+
+    def test_bandit_scans_large_tree_with_sanitized_path(self, tmp_path: Path) -> None:
+        """The workspace interpreter runs Bandit without any PATH-provided tool."""
+        project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
+        for index in range(51):
+            (project_dir / c.Infra.DEFAULT_SRC_DIR / f"module_{index}.py").write_text(
+                "def identity(value):\n    return value\n", encoding="utf-8"
+            )
+        empty_path = tmp_path / "empty-path"
+        empty_path.mkdir()
+
+        with tm.scope(env={"PATH": str(empty_path)}):
+            result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
+
+        tm.that(result.result.passed, eq=True)
+        tm.that(result.issues, eq=())
+        tm.that(result.raw_output.startswith("{"), eq=True)
+        tm.that(result.raw_output, lacks="Working...")
 
     @pytest.mark.parametrize(
-        (
-            "markdown_text",
-            "config_text",
-            "runner_result",
-            "passed",
-            "issues_len",
-            "raw_output",
-        ),
+        ("markdown_text", "config_text", "findings_block", "codes"),
         [
-            ("", None, None, True, 0, ""),
-            (
-                "# Test\n",
-                None,
-                r.ok(
-                    u.Tests.stub_run(
-                        stdout="README.md:1:1: [MD001] Heading level", returncode=1
-                    )
-                ),
-                False,
-                1,
-                "README.md:1:1: [MD001] Heading level",
-            ),
-            (
-                "# Test\n",
-                None,
-                r.ok(u.Tests.stub_run(stderr="rumdl failed", returncode=1)),
-                False,
-                1,
-                "rumdl failed",
-            ),
+            # A project with no markdown has nothing to check, so the gate is
+            # not applicable and skips neutrally (4dc7027ed).
+            ("", None, False, []),
+            (HEADING_SKIP, None, True, ["MD001"]),
+            ("# Test\n", '{"broken": [', True, ["TOOL_ERROR"]),
         ],
     )
     def test_markdown_check(
@@ -114,56 +82,105 @@ class TestBanditAndMarkdownGates:
         tmp_path: Path,
         markdown_text: str,
         config_text: str | None,
-        runner_result: p.Result[m.Cli.CommandOutput] | None,
-        passed: bool,
-        issues_len: int,
-        raw_output: str,
+        findings_block: bool,
+        codes: t.StrSequence,
     ) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "markdown-project")
         if markdown_text:
             (project_dir / "README.md").write_text(markdown_text, encoding="utf-8")
         if config_text is not None:
-            (project_dir / ".markdownlint.json").write_text(
+            (project_dir / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).write_text(
                 config_text, encoding="utf-8"
             )
 
-        gate = FlextInfraMarkdownGate(
+        result = u.Tests.check_gate_asserting(
+            FlextInfraMarkdownGate,
             tmp_path,
-            runner=self.make_runner(runner_result)
-            if runner_result is not None
-            else None,
+            project_dir,
+            passed=not findings_block,
+            issues_len=len(codes),
         )
-        result = gate.check(project_dir, self.make_ctx(tmp_path))
 
-        tm.that(result.result.passed, eq=passed)
-        tm.that(len(result.issues), eq=issues_len)
-        if raw_output:
-            tm.that(result.raw_output, contains=raw_output)
+        tm.that([issue.code for issue in result.issues], eq=list(codes))
+        if codes:
+            tm.that(
+                [issue.severity.lower() for issue in result.issues],
+                eq=[str(c.Infra.GateSeverity.ERROR.value)] * len(codes),
+            )
 
-    def test_markdown_prefers_local_config_when_root_is_missing(
-        self, tmp_path: Path
+    def test_markdown_applies_only_the_local_config(self, tmp_path: Path) -> None:
+        """A standalone project's gate never crosses its repository boundary."""
+        project_dir = u.Tests.mk_project(tmp_path, "markdown-local-owner")
+        (project_dir / "README.md").write_text(self.LONG_LINE, encoding="utf-8")
+        disabled = '{"MD013": false}'
+        (tmp_path / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).write_text(
+            disabled, encoding="utf-8"
+        )
+
+        inherited = u.Tests.check_gate_asserting(
+            FlextInfraMarkdownGate, tmp_path, project_dir, passed=False, issues_len=1
+        )
+        (project_dir / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).write_text(
+            disabled, encoding="utf-8"
+        )
+        _ = u.Tests.check_gate_asserting(
+            FlextInfraMarkdownGate, tmp_path, project_dir, passed=True, issues_len=0
+        )
+
+        tm.that(inherited.issues[0].code, eq="MD013")
+
+    @pytest.mark.parametrize(
+        "owner_parts",
+        [
+            *sorted(
+                (name,)
+                for name in c.Infra.CHECK_EXCLUDED_DIRS - c.Infra.COMMON_EXCLUDED_DIRS
+            ),
+            *sorted((".github", name) for name in c.Infra.GITHUB_AGENT_PROJECTION_DIRS),
+        ],
+    )
+    def test_markdown_excludes_non_project_markdown(
+        self, tmp_path: Path, owner_parts: t.StrSequence
     ) -> None:
-        project_dir = u.Tests.mk_project(tmp_path, "markdown-settings-project")
+        """Tracker storage and provider projections are not live project docs."""
+        project_dir = u.Tests.mk_project(tmp_path, "markdown-excluded-owner")
         (project_dir / "README.md").write_text("# Test\n", encoding="utf-8")
-        (project_dir / ".markdownlint.json").write_text("{}", encoding="utf-8")
-        runner = self.make_runner(r.ok(u.Tests.stub_run()))
+        excluded = project_dir.joinpath(*owner_parts, "projected.md")
+        excluded.parent.mkdir(parents=True, exist_ok=True)
+        excluded.write_text(self.HEADING_SKIP, encoding="utf-8")
 
-        gate = FlextInfraMarkdownGate(tmp_path, runner=runner)
-        _ = gate.check(project_dir, self.make_ctx(tmp_path))
+        _ = u.Tests.check_gate_asserting(
+            FlextInfraMarkdownGate, tmp_path, project_dir, passed=True, issues_len=0
+        )
 
-        tm.that(runner.commands[0], has="--config")
+    def test_markdown_keeps_project_owned_github_markdown(self, tmp_path: Path) -> None:
+        """Shared GitHub roots retain non-provider Markdown in the native gate."""
+        project_dir = u.Tests.mk_project(tmp_path, "markdown-github-project-owner")
+        (project_dir / "README.md").write_text("# Test\n", encoding="utf-8")
+        project_owned = project_dir / ".github" / "prompts" / "project.md"
+        project_owned.parent.mkdir(parents=True)
+        project_owned.write_text(self.HEADING_SKIP, encoding="utf-8")
+
+        result = u.Tests.check_gate_asserting(
+            FlextInfraMarkdownGate, tmp_path, project_dir, passed=False, issues_len=1
+        )
+
+        tm.that(result.issues[0].file, eq=".github/prompts/project.md")
 
     def test_markdown_uses_uv_managed_tool_with_sanitized_path(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path
     ) -> None:
         """Prove the real gate cannot bind a host or mise-provided executable."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-managed-tool")
         (project_dir / "README.md").write_text("# Test\n", encoding="utf-8")
-        monkeypatch.setenv("PATH", "/usr/bin:/bin")
-
-        result = FlextInfraMarkdownGate(tmp_path).check(
-            project_dir, self.make_ctx(tmp_path)
-        )
+        empty_path = tmp_path / "empty-path"
+        empty_path.mkdir()
+        # Source discovery needs Git; the Markdown linter remains unavailable on PATH.
+        (empty_path / "git").symlink_to(tm.not_none(shutil.which("git")))
+        with tm.scope(env={"PATH": str(empty_path)}):
+            result = FlextInfraMarkdownGate(tmp_path).check(
+                project_dir, u.Tests.gate_context(tmp_path)
+            )
 
         tm.that(result.result.passed, eq=True)
         tm.that(result.issues, eq=())
@@ -182,7 +199,7 @@ class TestBanditAndMarkdownGates:
         (target_dir / "overview.md").write_text("# Overview\n", encoding="utf-8")
 
         result = FlextInfraMarkdownGate(tmp_path).check(
-            project_dir, self.make_ctx(tmp_path)
+            project_dir, u.Tests.gate_context(tmp_path)
         )
 
         tm.that(result.result.passed, eq=True)
@@ -205,7 +222,7 @@ class TestBanditAndMarkdownGates:
         )
 
         result = FlextInfraMarkdownGate(tmp_path).check(
-            project_dir, self.make_ctx(tmp_path)
+            project_dir, u.Tests.gate_context(tmp_path)
         )
 
         tm.that(result.result.passed, eq=False)
@@ -224,41 +241,35 @@ class TestBanditAndMarkdownGates:
         target.write_text("# Target\n", encoding="utf-8")
         gate = FlextInfraMarkdownGate(tmp_path)
 
-        first = gate.check(project_dir, self.make_ctx(tmp_path))
+        first = gate.check(project_dir, u.Tests.gate_context(tmp_path))
         target.unlink()
-        second = gate.check(project_dir, self.make_ctx(tmp_path))
+        second = gate.check(project_dir, u.Tests.gate_context(tmp_path))
 
         tm.that(first.result.passed, eq=True)
         tm.that(second.result.passed, eq=False)
         tm.that(second.issues[0].code, eq="MD057")
 
     def test_markdown_fix_applies_the_auto_fixable_rules(self, tmp_path: Path) -> None:
-        """`make fix APPLY=Y` repairs the markdown findings that check blocks on.
+        """`make fix` repairs the markdown findings that check blocks on.
 
-        mro-38p39: the markdown gate reports MD009/MD012 with the linter's own
+        flext-38p39: the markdown gate reports MD009/MD012 with the linter's own
         `[*]` auto-fixable marker, but declared can_fix=False. So `make check`
-        blocked on ten findings while `make fmt APPLY=Y` and `make fix APPLY=Y`
-        both exited 0 without repairing any of them -- the canonical sequence
-        could never reach green, and the only way out was hand-editing a file
-        the gate owns.
-
-        The gate uses the tool's formatter so a successful repair exits zero even
-        when the input also contains non-fixable findings.
+        blocked on findings while `make fmt` and `make fix` both exited 0
+        without repairing any of them. The gate uses the tool's formatter so a
+        successful repair exits zero and leaves the file clean for `check`.
         """
         project_dir = u.Tests.mk_project(tmp_path, "markdown-fix-project")
-        (project_dir / "README.md").write_text("# Title   \n", encoding="utf-8")
-        runner = self.make_runner(r.ok(u.Tests.stub_run()))
+        readme = project_dir / "README.md"
+        readme.write_text("# Title   \n", encoding="utf-8")
+        u.Tests.initialize_git_repo(project_dir)
         context = m.Infra.GateContext(
-            workspace=tmp_path, reports_dir=tmp_path, apply_fixes=True
+            repository_root=tmp_path, reports_dir=tmp_path, apply_fixes=True
         )
 
-        gate = FlextInfraMarkdownGate(tmp_path, runner=runner)
-        result = gate.fix(project_dir, context)
+        result = FlextInfraMarkdownGate(tmp_path).fix(project_dir, context)
 
         tm.that(result.result.passed, eq=True)
-        tm.that(runner.commands, ne=[])
-        tm.that(runner.commands[0], has="fmt")
-        tm.that(runner.commands[0], lacks="--fix")
-
-
-__all__: t.StrSequence = []
+        tm.that(readme.read_text(encoding="utf-8"), eq="# Title\n")
+        _ = u.Tests.check_gate_asserting(
+            FlextInfraMarkdownGate, tmp_path, project_dir, passed=True, issues_len=0
+        )

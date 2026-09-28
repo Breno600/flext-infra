@@ -1,0 +1,23 @@
+id: rewire-getattr-model-fields-to-direct-access
+snapshots:
+  fields = getattr(model_cls, "model_fields"):
+    fixed: fields = model_cls.model_fields
+    labels:
+    - source: getattr(model_cls, "model_fields")
+      style: primary
+      start: 9
+      end: 43
+  fields = getattr(model_cls, "model_fields", {}):
+    fixed: fields = model_cls.model_fields
+    labels:
+    - source: getattr(model_cls, "model_fields", {})
+      style: primary
+      start: 9
+      end: 47
+  fields = getattr(self.model_class, 'model_fields', {}):
+    fixed: fields = self.model_class.model_fields
+    labels:
+    - source: getattr(self.model_class, 'model_fields', {})
+      style: primary
+      start: 9
+      end: 54

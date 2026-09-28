@@ -19,10 +19,9 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
+from flext_tests import tm
 
 from flext_infra import config, m, t
-from flext_tests import tm
 
 
 class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
@@ -50,7 +49,7 @@ class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
             "per-file-ignores": {"src/flext_sample/generated.py": ["ALL"]},
         }
 
-        with pytest.raises(ValidationError) as failure:
+        with pytest.raises(m.ValidationError) as failure:
             _ = m.Infra.RuffLintConfig.model_validate(payload)
 
         tm.that(str(failure.value), has="ALL")
@@ -59,7 +58,7 @@ class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
         """A project config cannot smuggle ALL past the fleet policy."""
         payload = {"per_file_ignores": {"**/__init__.py": ["ALL"]}}
 
-        with pytest.raises(ValidationError) as failure:
+        with pytest.raises(m.ValidationError) as failure:
             _ = m.Infra.ProjectRuffConfig.model_validate(payload)
 
         tm.that(str(failure.value), has="ALL")
@@ -84,8 +83,5 @@ class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
         """Blank padding names no rule, so it cannot be an exemption."""
         payload = {"per_file_ignores": {"src/flext_sample/_config.py": ["   "]}}
 
-        with pytest.raises(ValidationError):
+        with pytest.raises(m.ValidationError):
             _ = m.Infra.ProjectRuffConfig.model_validate(payload)
-
-
-__all__: tuple[str, ...] = ()

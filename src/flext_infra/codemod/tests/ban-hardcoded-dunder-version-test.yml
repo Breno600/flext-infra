@@ -1,0 +1,24 @@
+id: ban-hardcoded-dunder-version
+# `valid` MUST NOT match: a derived version, a non-module scope, or the literal
+# assignment text appearing inside a docstring or string constant.
+valid:
+  - |
+    from importlib.metadata import version
+
+    __version__ = version("flext-infra")
+  - |
+    """A docstring quoting the defect at column zero.
+
+    __version__ = "1.2.3"
+    """
+  - TEMPLATE = '__version__ = "0.0.0"'
+  - |
+    class Release:
+        __version__ = "1.2.3"
+  - |
+    def build() -> None:
+        __version__ = "1.2.3"
+# `invalid` MUST match: a module-level literal version assignment.
+invalid:
+  - __version__ = "1.2.3"
+  - __version__ = '0.9.0-dev'

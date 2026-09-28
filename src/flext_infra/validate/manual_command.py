@@ -1,36 +1,30 @@
 """Manual-command blocker (AGENTS.md `Build & Test`).
 
-Two responsibilities:
+``command_blocked`` — predicate flagging a bare tool invocation (ruff/pytest/git/…)
+that bypasses the ``make`` / ``python -m flext_infra`` monopoly. Deny rules are
+evaluated FIRST, per shell segment, after stripping wrappers and path components
+— an allow-list substring can never short-circuit a deny.
 
-- ``command_blocked`` — predicate flagging a bare tool invocation (ruff/pytest/git/…)
-  that bypasses the ``make`` / ``python -m flext_infra`` monopoly. Backs both the
-  pre-commit hook and the Claude PreToolUse guard. Deny rules are evaluated
-  FIRST, per shell segment, after stripping wrappers and path components — an
-  allow-list substring can never short-circuit a deny.
-- ``render_pre_commit_config`` — the canonical ``.pre-commit-config.yaml`` content
-  (hooks call ``uv run --all-packages python -m flext_infra``, never standalone
-  scripts).
-
-``execute`` is a drift gate: the live ``.pre-commit-config.yaml`` MUST equal the
-rendered canonical template.
+The former pre-commit-config drift half of this module is retired: the
+``.pre-commit-config.yaml`` content has one owner, the codegen template
+``templates/project/base/.pre-commit-config.yaml.j2``, and its drift has one
+detector, ``codegen conform --mode check`` (wired into ``make check``). A
+second detector diffing the live file against a hand-copied constant was
+permanently red on any conforming repository.
 """
 
 from __future__ import annotations
 
 import shlex
 from pathlib import Path
-from typing import TYPE_CHECKING, override
 
-from flext_core import r
-from flext_infra import c, t, u
-from flext_infra.base import s
+from flext_infra import c, t
 
-if TYPE_CHECKING:
-    from flext_infra import p
+from ..base import s
 
 
 class FlextInfraManualCommandValidator(s[bool]):
-    """Block bare tool invocations in automation and gate pre-commit drift."""
+    """Flag bare tool invocations that bypass the make / flext_infra monopoly."""
 
     @classmethod
     def command_blocked(cls, command: str) -> bool:
@@ -130,29 +124,6 @@ class FlextInfraManualCommandValidator(s[bool]):
             or arg.startswith("--in-place=")
             or (arg.startswith("-i") and not arg.startswith("--"))
         )
-
-    @classmethod
-    def render_pre_commit_config(cls) -> str:
-        """Return the canonical generated ``.pre-commit-config.yaml`` content."""
-        config: str = c.Infra.PRE_COMMIT_CONFIG
-        return config
-
-    @override
-    def execute(self) -> p.Result[bool]:
-        """Fail when the live pre-commit config drifts from the canonical template."""
-        config_path = self.workspace_root / ".pre-commit-config.yaml"
-        if not config_path.exists():
-            return r[bool].fail(
-                ".pre-commit-config.yaml missing — run `make gen` to generate it"
-            )
-        read = u.Cli.files_read_text(config_path)
-        if read.failure:
-            return r[bool].fail(read.error or "pre-commit config read failed")
-        if read.value.strip() != self.render_pre_commit_config().strip():
-            return r[bool].fail(
-                ".pre-commit-config.yaml drifted from canonical template — run `make gen`"
-            )
-        return r[bool].ok(True)
 
 
 __all__: list[str] = ["FlextInfraManualCommandValidator"]

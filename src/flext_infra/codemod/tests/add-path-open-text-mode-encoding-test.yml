@@ -1,0 +1,15 @@
+id: add-path-open-text-mode-encoding
+# `valid` MUST NOT match: a binary mode, an unprovable mode or receiver, or an
+# encoding already declared.
+valid:
+  - handle = Path(path).open("rb")
+  - handle = Path(path).open(mode="wb")
+  - handle = Path(path).open(chosen_mode)
+  - handle = candidate.open("r")
+  - handle = Path(path).open("r", encoding="latin-1")
+  - HELP = 'Path(path).open("w") needs an encoding'
+# `invalid` MUST match: a direct Path constructor opened in a provable text mode.
+invalid:
+  - handle = Path(path).open("w")
+  - handle = Path(path).open(mode="a")
+  - handle = pathlib.Path(root, name).open("r")

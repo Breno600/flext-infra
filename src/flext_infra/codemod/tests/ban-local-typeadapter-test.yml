@@ -1,0 +1,9 @@
+id: ban-local-typeadapter
+valid:
+  - |
+    adapter = TypeAdapter(list[int])
+  - adapter = t.TypeAdapters.json_mapping_adapter()
+invalid:
+  - |
+    def parse(raw):
+        return TypeAdapter(dict[str, int]).validate_json(raw)

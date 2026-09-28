@@ -3,21 +3,26 @@
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 from collections.abc import Iterator
 from pathlib import Path
-from types import ModuleType
 
 import pytest
-
-import flext_infra as infra_pkg
-from flext_infra import config
 from flext_tests import tm
-from tests import c, t, u
 
-# NOTE(mro-p68a.9.4, agent codex): the installed flext-tests pytest11 plugin is
+from flext_infra import config, infra, p
+from tests import c, m, t, u
+
+# NOTE(flext-p68a.9.4, agent codex): the installed flext-tests pytest11 plugin is
 # the only fixture owner; conftest must not re-export or shadow its fixtures.
 pytest_plugins = ["tests.unit.fixtures", "tests.unit.fixtures_git"]
+
+_TRACKED_CODEGEN_CONFIG_PATH = (
+    Path(__file__).resolve().parent.parent
+    / c.Infra.CODEGEN_CONFIG_DIR
+    / c.Infra.CODEGEN_CONFIG_FILENAME
+)
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -39,39 +44,66 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 
 
 @pytest.fixture
-def infra_public_root() -> Iterator[ModuleType]:
-    """Reload the root public package after clearing lazy-export caches.
+def rope_workspace(tmp_path: Path) -> Iterator[p.Infra.RopeWorkspaceDsl]:
+    """Provide one real Rope workspace through the public composition root."""
+    with infra.rope_workspace(tmp_path) as workspace:
+        yield workspace
 
-    Why (root cause, reload isolation): ``importlib.reload(flext_infra)``
-    re-executes the package ``__init__``, which re-imports ``pathlib`` and
-    binds a NEW ``Path`` class. Any ``Path`` instance created before the
-    reload keeps the OLD class, whose private slots (``_str``/``_drv``) no
-    longer match, so every later ``path.exists()`` on a pre-reload instance
-    raises ``AttributeError`` — corrupting every test that runs after this
-    fixture. The purge also drops the lazy-export registry the ``tests``
-    package shares, so ``tests.u`` resolved to the infra facade without
-    ``Tests``. Both module snapshots are restored after the fixture so the
-    process-global interpreter state is left exactly as found.
+
+@pytest.fixture(scope="session", autouse=True)
+def _guard_tracked_codegen_config_untouched() -> Iterator[None]:
+    """Fail loud if the suite writes to the real, tracked ``config/codegen.yaml``.
+
+    Root cause (flext-eles2): dependency-floor rewrite tests exercised the
+    public ``--rewrite-constraints`` entry point through workspaces that never
+    declared their own governed SSOT, so the floor writer fell back to the
+    packaged/installed ``flext_infra`` config directory — this very checkout
+    in an editable install — and silently flipped floors in the real tracked
+    file. The floor writer now resolves its target from the modernizer's own
+    ``repository_root`` and every workspace fixture declares its own isolated
+    ``config/codegen.yaml``; this session-wide guard proves the real file
+    stays untouched by the whole suite, current and future.
     """
-    stdlib_snapshots = {
-        name: module
-        for name, module in sys.modules.items()
-        if name == "pathlib" or name.startswith("pathlib.")
-    }
-    wrapper_snapshots = {
-        name: sys.modules.pop(name, None)
-        for name in c.Tests.INFRA_PUBLIC_WRAPPER_MODULES
-    }
+    before = _TRACKED_CODEGEN_CONFIG_PATH.read_bytes()
+    yield
+    after = _TRACKED_CODEGEN_CONFIG_PATH.read_bytes()
+    if after != before:
+        pytest.fail(
+            "test suite modified the tracked repository file "
+            f"{_TRACKED_CODEGEN_CONFIG_PATH}; dependency-floor and codegen "
+            "writers must target an isolated workspace, never the real "
+            "checkout (flext-eles2)"
+        )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_host_gas_city_identity() -> Iterator[None]:
+    """Keep the operator's Gas City identity out of every fixture process.
+
+    The generated ``.envrc`` selects its Gas City Beads branch from the
+    caller's identity variable. A host shell connected to a city exports it,
+    so every fixture repository (declaring no city) would inherit the host
+    city and fail reading its absent ``.beads/metadata.json``. Tests that
+    exercise the city branch pass the variable explicitly.
+    """
+    name = m.Infra.BeadsWorkspaceEnvironmentSpec().identity_var
+    original = os.environ.pop(name, None)
+    yield
+    u.Tests.restore_env(name, original)
+
+
+@pytest.fixture
+def installed_dependency_path(tmp_path: Path) -> Iterator[Path]:
+    """Expose real non-src package files through the selected import environment."""
+    location = tmp_path / "installed"
+    location.mkdir()
+    sys.path.insert(0, str(location))
+    importlib.invalidate_caches()
     try:
-        for export_name in c.Tests.INFRA_PUBLIC_ROOT_EXPORTS:
-            _ = infra_pkg.__dict__.pop(export_name, None)
-        yield importlib.reload(infra_pkg)
+        yield location
     finally:
-        for name, module in stdlib_snapshots.items():
-            sys.modules[name] = module
-        for name, module in wrapper_snapshots.items():
-            if module is not None:
-                sys.modules[name] = module
+        sys.path.remove(str(location))
+        importlib.invalidate_caches()
 
 
 def _is_collectable_test_module(collection_path: Path) -> bool:
@@ -105,7 +137,7 @@ def pytest_collection_modifyitems(
 
     for item in items:
         if _is_collectable_test_module(Path(item.path)):
-            # mro-wkii.4.15: settings identity is fixed at process startup.
+            # flext-wkii.4.15: settings identity is fixed at process startup.
             kept_items.append(item)
             continue
         deselected_items.append(item)
@@ -172,12 +204,6 @@ def infra_selection() -> u.Infra:
 
 
 @pytest.fixture
-def infra_reporting() -> u.Infra:
-    """Provide the public infrastructure utility facade for reporting tests."""
-    return u.Infra()
-
-
-@pytest.fixture
 def infra_safe_command_output(
     infra_subprocess: u.Cli, infra_test_workspace: Path
 ) -> str:
@@ -197,18 +223,18 @@ def infra_git_repo(infra_test_workspace: Path) -> Path:
 
     Conformance reads this repository twice and both reads must agree. Detection
     only accepts a remote whose host and organization match the provider, while
-    baseline ancestry resolves the provider branch by fetching that same remote.
+    integration-branch discovery reads the already materialized tracking ref.
     Declaring the real upstream URL satisfies detection but grades the fixture
     against the live repository; declaring a local path fails detection outright.
     The fixture therefore declares the provider URL and rewrites it to a local
-    bare origin through Git's own ``url.<base>.insteadOf`` mechanism, so the two
-    reads observe one self-consistent topology without any network access.
+    bare origin through Git's own ``url.<base>.insteadOf`` mechanism. Fixture
+    setup materializes the tracking ref once; conformance itself stays offline.
     """
     repo = infra_test_workspace / "repo"
     repo.mkdir(parents=True, exist_ok=True)
     baseline_file = repo / ".infra-baseline"
     baseline_file.write_text("baseline\n", encoding="utf-8")
-    provider = config.Infra.codegen.providers[0]
+    u.Tests.write_project_beads_config(repo, config.Infra.name)
     upstream = u.Tests.repository_ref(config.Infra.name).url
     origin = infra_test_workspace / "origin.git"
     origin.mkdir(parents=True, exist_ok=True)
@@ -218,7 +244,13 @@ def infra_git_repo(infra_test_workspace: Path) -> Path:
         repo, ("config", "--local", f"url.{origin}.insteadOf", upstream)
     )
     u.Tests.git_bootstrap(
-        repo, ("push", "-q", c.Infra.GIT_ORIGIN, f"HEAD:refs/heads/{provider.branch}")
+        repo,
+        (
+            "push",
+            "-q",
+            c.Infra.GIT_ORIGIN,
+            f"HEAD:refs/heads/{u.Tests.provider_branch()}",
+        ),
     )
     u.Tests.git_bootstrap(
         repo,
@@ -226,7 +258,10 @@ def infra_git_repo(infra_test_workspace: Path) -> Path:
             "fetch",
             "-q",
             c.Infra.GIT_ORIGIN,
-            f"+refs/heads/{provider.branch}:refs/remotes/origin/{provider.branch}",
+            (
+                f"+refs/heads/{u.Tests.provider_branch()}:refs/remotes/origin/"
+                f"{u.Tests.provider_branch()}"
+            ),
         ),
     )
     return repo

@@ -1,4 +1,4 @@
-"""Filesystem and Git primitives for the layout engine apply path (mro-0wuz).
+"""Filesystem and Git primitives for the layout engine apply path (flext-0wuz).
 
 Archive-not-delete law: nothing is ever destroyed; collisions and duplicates
 move content into ``<archive_root>/<project>/``. Git checkouts use ``git mv``
@@ -13,7 +13,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import config, m, p, r, t, u
+from flext_core import r
+from flext_infra import config, m, p, t, u
 
 
 class FlextInfraCodegenLayoutFilesMixin:
@@ -26,7 +27,7 @@ class FlextInfraCodegenLayoutFilesMixin:
         if not target.exists():
             moved = self._move_path(project_dir, source, target)
             if moved.failure:
-                return r[str].fail(moved.error or "move failed")
+                return r[str].from_failure(moved)
             return r[str].ok(f"moved {source.name} -> {target.name}")
         if (
             source.is_file()
@@ -35,11 +36,11 @@ class FlextInfraCodegenLayoutFilesMixin:
         ):
             archived = self._archive_path(project_dir, source, archive_rel)
             if archived.failure:
-                return r[str].fail(archived.error or "identical-source archive failed")
+                return r[str].from_failure(archived)
             return r[str].ok(f"identical target kept; source archived: {source.name}")
         archived = self._archive_path(project_dir, source, archive_rel)
         if archived.failure:
-            return r[str].fail(archived.error or "collision archive failed")
+            return r[str].from_failure(archived)
         return r[str].ok(
             f"collision: target kept, source archived for review: {source.name}"
         )
@@ -63,23 +64,25 @@ class FlextInfraCodegenLayoutFilesMixin:
             ):
                 removed = self._remove_tracked_or_unlinked(project_dir, source)
                 if removed.failure:
-                    return r[t.Pair[t.Infra.LayoutStatus, str]].fail(
-                        removed.error or "duplicate removal failed"
-                    )
+                    return r[t.Pair[t.Infra.LayoutStatus, str]].from_failure(removed)
+                applied_status: t.Infra.LayoutStatus = "applied"
                 return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
-                    "applied",
+                    applied_status,
                     f"{base_message} (already archived; duplicate removed)",
                 ))
+            skipped_status: t.Infra.LayoutStatus = "skipped"
             return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
-                "skipped",
+                skipped_status,
                 f"{base_message} (archive target exists; manual review)",
             ))
         moved = self._archive_move(project_dir, source, target)
         if moved.failure:
-            return r[t.Pair[t.Infra.LayoutStatus, str]].fail(
-                moved.error or "archive move failed"
-            )
-        return r[t.Pair[t.Infra.LayoutStatus, str]].ok(("applied", base_message))
+            return r[t.Pair[t.Infra.LayoutStatus, str]].from_failure(moved)
+        final_applied_status: t.Infra.LayoutStatus = "applied"
+        return r[t.Pair[t.Infra.LayoutStatus, str]].ok((
+            final_applied_status,
+            base_message,
+        ))
 
     def _move_path(
         self, project_dir: Path, source: Path, target: Path
@@ -95,7 +98,7 @@ class FlextInfraCodegenLayoutFilesMixin:
                 )
             )
             if moved.failure:
-                return r[bool].fail(moved.error or "git mv execution failed")
+                return r[bool].from_failure(moved)
             return r[bool].ok(True)
         source.rename(target)
         return r[bool].ok(True)
@@ -117,7 +120,7 @@ class FlextInfraCodegenLayoutFilesMixin:
                 )
             )
             if untracked.failure:
-                return r[bool].fail(untracked.error or "git rm execution failed")
+                return r[bool].from_failure(untracked)
         source.rename(target)
         return r[bool].ok(True)
 
@@ -133,7 +136,7 @@ class FlextInfraCodegenLayoutFilesMixin:
                 )
             )
             if removed.failure:
-                return r[bool].fail(removed.error or "git rm execution failed")
+                return r[bool].from_failure(removed)
             return r[bool].ok(True)
         source.unlink()
         return r[bool].ok(True)
@@ -151,7 +154,7 @@ class FlextInfraCodegenLayoutFilesMixin:
         """Remove directories left empty by a merge, deepest first."""
         dirs = sorted(
             (path for path in root.rglob("*") if path.is_dir()),
-            key=lambda path: len(path.parts),
+            key=u.Infra.path_depth,
             reverse=True,
         )
         for path in (*dirs, root):

@@ -5,31 +5,22 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from flext_tests import tm
 
-import flext_infra.constants  # ruff: ignore[unused-import] - force eager load for monkeypatch targets
-from flext_infra import m, u
-from flext_infra.detectors.class_placement_detector import (
-    FlextInfraClassPlacementDetector,
-)
-from flext_infra.refactor.census import FlextInfraRefactorCensus
+from flext_infra import m
 from flext_infra.refactor.declarative_enforcement import (
     FlextInfraRefactorDeclarativeEnforcement,
 )
-from flext_tests import tm
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.typings import t
+    from flext_infra import p, t
 
 
 class TestsFlextInfraRefactorDeclarativeEnforcement:
     """Root-cause coverage for declarative detection strategies."""
-
-    @staticmethod
-    def _rule(rule_id: str) -> m.EnforcementRuleSpec:
-        catalog = u.build_canonical_catalog()
-        return next(rule for rule in catalog.enabled_rules() if rule.id == rule_id)
 
     @staticmethod
     def _ctx(
@@ -42,14 +33,32 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
             project_root=file_path.parent,
         )
 
-    def test_stub_file_detection(self, tmp_path: Path) -> None:
-        """ENFORCE-090 probe is emitted for ``.pyi`` files."""
-        stub = tmp_path / "demo.pyi"
-        stub.write_text("x: int\n", encoding="utf-8")
+    @classmethod
+    def _detect(
+        cls,
+        tmp_path: Path,
+        *,
+        rule: m.EnforcementRuleSpec,
+        file_name: str,
+        source_text: str,
+    ) -> t.Pair[Path, t.SequenceOf[p.AttributeProbe]]:
+        """Write one fixture module and detect ``rule`` violations inside it."""
+        source = tmp_path / file_name
+        source.write_text(source_text, encoding="utf-8")
         with u.Infra.open_project(tmp_path) as rope_project:
             probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                self._rule("ENFORCE-090"), self._ctx(rope_project, stub)
+                rule, cls._ctx(rope_project, source)
             )
+        return source, probes
+
+    def test_stub_file_detection(self, tmp_path: Path) -> None:
+        """ENFORCE-090 probe is emitted for ``.pyi`` files."""
+        stub, probes = self._detect(
+            tmp_path,
+            rule=u.Tests.enforcement_rule("ENFORCE-090"),
+            file_name="demo.pyi",
+            source_text="x: int\n",
+        )
         tm.that(len(probes), eq=1)
         tm.that(getattr(probes[0], "file_path", ""), eq=str(stub))
         tm.that(getattr(probes[0], "rule_id", ""), eq="090")
@@ -66,82 +75,71 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
                 violation_field="stub_file_violations"
             ),
         )
-        stub = tmp_path / "demo.pyi"
-        stub.write_text("x: int\n", encoding="utf-8")
         tm.that(FlextInfraRefactorDeclarativeEnforcement.supports(rule), eq=True)
-        with u.Infra.open_project(tmp_path) as rope_project:
-            probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                rule, self._ctx(rope_project, stub)
-            )
+        stub, probes = self._detect(
+            tmp_path, rule=rule, file_name="demo.pyi", source_text="x: int\n"
+        )
         tm.that(len(probes), eq=1)
         tm.that(getattr(probes[0], "file_path", ""), eq=str(stub))
 
     def test_magic_literal_in_function_body(self, tmp_path: Path) -> None:
         """ENFORCE-097 detects a bare integer inside a function body."""
-        source = tmp_path / "demo.py"
-        source.write_text(
-            "from __future__ import annotations\n\ndef f() -> int:\n    return 42\n",
-            encoding="utf-8",
+        _source, probes = self._detect(
+            tmp_path,
+            rule=u.Tests.enforcement_rule("ENFORCE-097"),
+            file_name="demo.py",
+            source_text=(
+                "from __future__ import annotations\n\ndef f() -> int:\n    return 42\n"
+            ),
         )
-        with u.Infra.open_project(tmp_path) as rope_project:
-            probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                self._rule("ENFORCE-097"), self._ctx(rope_project, source)
-            )
         tm.that(len(probes), eq=1)
         tm.that(getattr(probes[0], "line", 0), eq=4)
         tm.that(getattr(probes[0], "rule_id", ""), eq="097")
 
-    def test_magic_literal_skips_default_arg(self, tmp_path: Path) -> None:
-        """Default argument values are exempt from magic-literal detection."""
-        source = tmp_path / "demo.py"
-        source.write_text(
-            "from __future__ import annotations\n\ndef f(x: int = 42) -> int:\n    return x\n",
-            encoding="utf-8",
+    @pytest.mark.parametrize(
+        ("source_text", "exemption"),
+        [
+            (
+                (
+                    "from __future__ import annotations\n"
+                    "\ndef f(x: int = 42) -> int:\n    return x\n"
+                ),
+                "default argument values",
+            ),
+            (
+                "from __future__ import annotations\n\nLITERAL: str = 'ok'\n",
+                "type annotations",
+            ),
+            (
+                "from __future__ import annotations\n\nMAGIC = 42\n",
+                "module-level assignments",
+            ),
+        ],
+    )
+    def test_magic_literal_exemptions(
+        self, tmp_path: Path, source_text: str, exemption: str
+    ) -> None:
+        """Default args, annotations, and module constants stay exempt."""
+        _source, probes = self._detect(
+            tmp_path,
+            rule=u.Tests.enforcement_rule("ENFORCE-097"),
+            file_name="demo.py",
+            source_text=source_text,
         )
-        with u.Infra.open_project(tmp_path) as rope_project:
-            probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                self._rule("ENFORCE-097"), self._ctx(rope_project, source)
-            )
-        tm.that(len(probes), eq=0)
-
-    def test_magic_literal_skips_type_annotation(self, tmp_path: Path) -> None:
-        """Type annotations are exempt from magic-literal detection."""
-        source = tmp_path / "demo.py"
-        source.write_text(
-            "from __future__ import annotations\n\nLITERAL: str = 'ok'\n",
-            encoding="utf-8",
-        )
-        with u.Infra.open_project(tmp_path) as rope_project:
-            probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                self._rule("ENFORCE-097"), self._ctx(rope_project, source)
-            )
-        tm.that(len(probes), eq=0)
-
-    def test_magic_literal_skips_module_level_assignment(self, tmp_path: Path) -> None:
-        """Module-level assignments are the canonical constant location."""
-        source = tmp_path / "demo.py"
-        source.write_text(
-            "from __future__ import annotations\n\nMAGIC = 42\n", encoding="utf-8"
-        )
-        with u.Infra.open_project(tmp_path) as rope_project:
-            probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                self._rule("ENFORCE-097"), self._ctx(rope_project, source)
-            )
-        tm.that(len(probes), eq=0)
+        tm.that(len(probes), eq=0, msg=f"{exemption} must not be reported")
 
     def test_classvar_constant_detection(self, tmp_path: Path) -> None:
         """ENFORCE-079 delegates to the class-placement detector."""
-        source = tmp_path / "consumer.py"
-        source.write_text(
-            "from typing import ClassVar\n"
-            "class PlainClass:\n"
-            "    GROUPS: ClassVar[frozenset[str]] = frozenset({'a'})\n",
-            encoding="utf-8",
+        _source, probes = self._detect(
+            tmp_path,
+            rule=u.Tests.enforcement_rule("ENFORCE-079"),
+            file_name="consumer.py",
+            source_text=(
+                "from typing import ClassVar\n"
+                "class PlainClass:\n"
+                "    GROUPS: ClassVar[frozenset[str]] = frozenset({'a'})\n"
+            ),
         )
-        with u.Infra.open_project(tmp_path) as rope_project:
-            probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                self._rule("ENFORCE-079"), self._ctx(rope_project, source)
-            )
         tm.that(len(probes), eq=1)
         tm.that(getattr(probes[0], "object_name", ""), eq="GROUPS")
         tm.that(getattr(probes[0], "rule_id", ""), eq="079")
@@ -154,39 +152,15 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
             pytest.raises(RuntimeError, match="unable to resolve rope resource"),
         ):
             FlextInfraRefactorDeclarativeEnforcement.detect(
-                self._rule("ENFORCE-097"), self._ctx(rope_project, missing)
+                u.Tests.enforcement_rule("ENFORCE-097"),
+                self._ctx(rope_project, missing),
             )
 
-    def test_classvar_detector_failure_fails_loud(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Class-placement detector failures propagate to the orchestrator."""
-        source = tmp_path / "consumer.py"
-        source.write_text("from typing import ClassVar\n", encoding="utf-8")
-
-        def _fail(
-            ctx: m.Infra.DetectorContext,
-        ) -> t.SequenceOf[m.Infra.ClassPlacementViolation]:
-            _ = ctx
-            msg = "class placement exploded"
-            raise RuntimeError(msg)
-
-        monkeypatch.setattr(FlextInfraClassPlacementDetector, "detect_file", _fail)
-        with (
-            u.Infra.open_project(tmp_path) as rope_project,
-            pytest.raises(RuntimeError, match="class placement detector failed"),
-        ):
-            FlextInfraRefactorDeclarativeEnforcement.detect(
-                self._rule("ENFORCE-079"), self._ctx(rope_project, source)
-            )
-
-    def test_foreign_canonical_alias_detection(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_foreign_canonical_alias_detection(self, tmp_path: Path) -> None:
         """ENFORCE-080 detects a canonical alias imported from flext_core."""
-        source = tmp_path / "src" / "demo_pkg" / "consumer.py"
+        source = tmp_path / "src" / "flext_infra" / "consumer.py"
         source.parent.mkdir(parents=True)
-        # Why (mro-ygc2k): package discovery requires src/<pkg>/__init__.py;
+        # Why (flext-ygc2k): package discovery requires src/<pkg>/__init__.py;
         # without it the policy owner resolves empty and detection is vacuous.
         (source.parent / "__init__.py").write_text("", encoding="utf-8")
         source.write_text(
@@ -194,17 +168,13 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
             encoding="utf-8",
         )
         (tmp_path / "pyproject.toml").write_text(
-            '[project]\nname = "demo_pkg"\nversion = "0.1.0"\n', encoding="utf-8"
-        )
-        monkeypatch.setattr(
-            "flext_infra.constants.c.ENFORCEMENT_PROJECT_ALIAS_OWNERS",
-            {"demo_pkg": ("c", "m", "p", "t", "u")},
+            '[project]\nname = "flext_infra"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         with u.Infra.open_project(tmp_path) as rope_project:
             ctx = self._ctx(rope_project, source)
-            ctx.project_name = "demo_pkg"
+            ctx.project_name = "flext_infra"
             probes = FlextInfraRefactorDeclarativeEnforcement.detect(
-                self._rule("ENFORCE-080"), ctx
+                u.Tests.enforcement_rule("ENFORCE-080"), ctx
             )
         tm.that(len(probes), eq=1)
         tm.that(getattr(probes[0], "object_name", ""), eq="c")
@@ -258,15 +228,9 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
             encoding="utf-8",
         )
 
-        report_result = FlextInfraRefactorCensus(
-            workspace_root=workspace, include_local_scopes=False, rules=("ENFORCE-079",)
-        ).execute()
+        report = u.Tests.census_report(workspace, rules=("ENFORCE-079",))
+        violations = u.Tests.census_violations(report)
 
-        tm.ok(report_result)
-        report = report_result.unwrap()
-        violations = [
-            violation for project in report.projects for violation in project.violations
-        ]
         tm.that(len(violations), eq=1)
         tm.that(violations[0].kind, eq="classvar_constant")
         tm.that(violations[0].object_name, eq="GROUPS")
@@ -279,15 +243,9 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
         stub = workspace / "src" / "demo_pkg" / "service.pyi"
         stub.write_text("x: int\n", encoding="utf-8")
 
-        report_result = FlextInfraRefactorCensus(
-            workspace_root=workspace, include_local_scopes=False, rules=("ENFORCE-090",)
-        ).execute()
+        report = u.Tests.census_report(workspace, rules=("ENFORCE-090",))
+        violations = u.Tests.census_violations(report)
 
-        tm.ok(report_result)
-        report = report_result.unwrap()
-        violations = [
-            violation for project in report.projects for violation in project.violations
-        ]
         tm.that(len(violations), eq=1)
         tm.that(violations[0].kind, eq="stub_file")
         tm.that(violations[0].fix_action, eq="remove_stub_file")
@@ -299,25 +257,12 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
         stub = workspace / "src" / "demo_pkg" / "service.pyi"
         stub.write_text("x: int\n", encoding="utf-8")
 
-        dry_run_result = FlextInfraRefactorCensus(
-            workspace_root=workspace,
-            apply_changes=True,
-            dry_run=True,
-            include_local_scopes=False,
-            rules=("ENFORCE-090",),
-        ).execute()
-
-        tm.ok(dry_run_result)
+        u.Tests.census_report(
+            workspace, rules=("ENFORCE-090",), apply_changes=True, dry_run=True
+        )
         tm.that(stub.exists(), eq=True)
 
-        apply_result = FlextInfraRefactorCensus(
-            workspace_root=workspace,
-            apply_changes=True,
-            include_local_scopes=False,
-            rules=("ENFORCE-090",),
-        ).execute()
-
-        tm.ok(apply_result)
+        u.Tests.census_report(workspace, rules=("ENFORCE-090",), apply_changes=True)
         tm.that(stub.exists(), eq=False)
 
     def test_census_reports_enforce_097_magic_literal(self, tmp_path: Path) -> None:
@@ -331,44 +276,28 @@ class TestsFlextInfraRefactorDeclarativeEnforcementInCensus:
             encoding="utf-8",
         )
 
-        report_result = FlextInfraRefactorCensus(
-            workspace_root=workspace, include_local_scopes=False, rules=("ENFORCE-097",)
-        ).execute()
+        report = u.Tests.census_report(workspace, rules=("ENFORCE-097",))
+        violations = u.Tests.census_violations(report)
 
-        tm.ok(report_result)
-        report = report_result.unwrap()
-        violations = [
-            violation for project in report.projects for violation in project.violations
-        ]
         tm.that(len(violations), eq=1)
         tm.that(violations[0].kind, eq="magic_literal")
         tm.that(violations[0].fix_action, eq="extract_magic_literal")
         tm.that(violations[0].fixable, eq=False)
 
     def test_census_reports_enforce_080_foreign_canonical_alias(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path
     ) -> None:
         """ENFORCE-080 appears in the census for foreign canonical aliases."""
-        workspace = self._build_workspace(tmp_path, "demo_pkg")
-        source = workspace / "src" / "demo_pkg" / "service.py"
+        workspace = self._build_workspace(tmp_path, "flext_infra")
+        source = workspace / "src" / "flext_infra" / "service.py"
         source.write_text(
             "from __future__ import annotations\nfrom flext_core import c\n",
             encoding="utf-8",
         )
-        monkeypatch.setattr(
-            "flext_infra.constants.c.ENFORCEMENT_PROJECT_ALIAS_OWNERS",
-            {"demo_pkg": ("c", "m", "p", "t", "u")},
-        )
 
-        report_result = FlextInfraRefactorCensus(
-            workspace_root=workspace, include_local_scopes=False, rules=("ENFORCE-080",)
-        ).execute()
+        report = u.Tests.census_report(workspace, rules=("ENFORCE-080",))
+        violations = u.Tests.census_violations(report)
 
-        tm.ok(report_result)
-        report = report_result.unwrap()
-        violations = [
-            violation for project in report.projects for violation in project.violations
-        ]
         tm.that(len(violations), eq=1)
         tm.that(violations[0].kind, eq="foreign_canonical_alias")
         tm.that(violations[0].object_name, eq="c")

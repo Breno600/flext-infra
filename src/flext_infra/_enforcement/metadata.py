@@ -10,7 +10,6 @@ from flext_infra.refactor.declarative_enforcement import (
 )
 
 if TYPE_CHECKING:
-    from flext_core._models.enforcement import FlextModelsEnforcement as me
     from flext_infra import m, p, t
 
 
@@ -19,13 +18,13 @@ class FlextInfraEnforcementMetadata:
 
     @staticmethod
     def detect_declarative(
-        rule: me.EnforcementRuleSpec, ctx: m.Infra.DetectorContext
+        rule: m.EnforcementRuleSpec, ctx: m.Infra.DetectorContext
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Detect one declarative rule for one detector context."""
         return FlextInfraRefactorDeclarativeEnforcement.detect(rule, ctx)
 
     @staticmethod
-    def violation_kind(rule: me.EnforcementRuleSpec) -> str:
+    def violation_kind(rule: m.EnforcementRuleSpec) -> str:
         """Return the normalized violation kind declared by catalog metadata."""
         source = rule.source
         if source.kind == "flext_infra_detector":
@@ -60,7 +59,7 @@ class FlextInfraEnforcementMetadata:
 
     @staticmethod
     def description(
-        rule: me.EnforcementRuleSpec, probe: p.AttributeProbe, object_name: str
+        rule: m.EnforcementRuleSpec, probe: p.AttributeProbe, object_name: str
     ) -> str:
         """Return a human-readable description for a declarative violation."""
         base = rule.description

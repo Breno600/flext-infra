@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
+from configparser import Error as ConfigParserError
 from typing import TYPE_CHECKING
 
-from git import GitCommandError
+from git import GitCommandError, GitConfigParser
 
 from flext_core import r
-from flext_infra._utilities._git.semantic_identity import (
-    FlextInfraUtilitiesGitSemanticIdentityMixin,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
+
+from .semantic_identity import FlextInfraUtilitiesGitSemanticIdentityMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -33,7 +32,8 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
             repo.git.submodule("update", "--init", "--", request.reference)
         except (GitCommandError, OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"could not initialize the governed gitlink {request.reference}: {exc}"
+                f"could not initialize the governed gitlink {request.reference}: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
@@ -42,19 +42,17 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
         cls, request: m.Infra.GitSubmoduleConfigRequest
     ) -> p.Result[m.Infra.GitTextReport]:
         """Read one ``.gitmodules`` value, returning empty text when unset."""
+        gitmodules = request.repo_root / c.Infra.GITMODULES
         try:
-            repo = cls._repo(request.repo_root)
-            value = repo.git.config(
-                "-f",
-                c.Infra.GITMODULES,
-                "--get",
-                "--default",
-                "",
-                f"{request.section}.{request.key}",
-            )
-        except (GitCommandError, OSError, ValueError) as exc:
+            with GitConfigParser(file_or_files=gitmodules, read_only=True) as parser:
+                value = (
+                    str(parser.get_value(request.section, request.key))
+                    if parser.has_option(request.section, request.key)
+                    else ""
+                )
+        except (ConfigParserError, OSError, TypeError, ValueError) as exc:
             return r[m.Infra.GitTextReport].fail(
-                f"failed to read {request.section}.{request.key}: {exc}"
+                f"failed to read {request.section}.{request.key}: {exc}", exception=exc
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=value.strip()))
 
@@ -71,29 +69,19 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
         if not gitmodules.is_file():
             return r[t.StrMapping].ok({})
         try:
-            repo = cls._repo(request.repo_root)
-            listed = repo.git.config(
-                "-f",
-                c.Infra.GITMODULES,
-                "--name-only",
-                "--get-regexp",
-                r"^submodule\..*\.path$",
-            )
-        except (GitCommandError, OSError, ValueError) as exc:
-            return r[t.StrMapping].fail(f"failed to read submodule declarations: {exc}")
-        sections: dict[str, str] = {}
-        for key in listed.split():
-            section = key.removesuffix(".path")
-            value = cls.git_submodule_config_value(
-                m.Infra.GitSubmoduleConfigRequest(
-                    repo_root=request.repo_root, section=section, key="path"
+            with GitConfigParser(file_or_files=gitmodules, read_only=True) as parser:
+                declarations = tuple(
+                    (str(parser.get_value(section, "path")).strip(), section)
+                    for section in parser.sections()
+                    if section.startswith("submodule ")
+                    and parser.has_option(section, "path")
                 )
+        except (ConfigParserError, OSError, TypeError, ValueError) as exc:
+            return r[t.StrMapping].fail(
+                f"failed to read submodule declarations: {exc}", exception=exc
             )
-            if value.failure:
-                return r[t.StrMapping].fail(
-                    value.error or f"failed to read {section}.path"
-                )
-            declared = value.value.text
+        sections: MutableMapping[str, str] = {}
+        for declared, section in declarations:
             if not declared:
                 continue
             if declared in sections:

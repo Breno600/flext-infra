@@ -1,95 +1,100 @@
-"""MRO redeclaration remover transformer — rope-based implementation."""
+"""Remove redundant inner namespace classes (ENFORCE-048).
+
+An inner class whose first base is the enclosing class itself and whose body
+declares nothing (``pass``, ``...`` or a docstring only) re-exposes a namespace
+the parent already provides. Deleting it is behaviour-preserving.
+"""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import override
 
-from flext_infra import c, u
-from flext_infra.transformers.base import FlextInfraRopeTransformer
+import libcst as cst
 
-if TYPE_CHECKING:
-    from flext_infra import t
+from flext_infra import t
+
+from .rope_transformer import FlextInfraRopeTransformer
 
 
-class FlextInfraRefactorMRORemover(FlextInfraRopeTransformer):
-    """Remove nested class bases that redundantly reference the parent class.
+class FlextInfraRefactorMroRemover(FlextInfraRopeTransformer):
+    """Delete empty inner classes that re-inherit their enclosing class."""
 
-    For each top-level class, scans nested classes whose base list
-    references the parent and strips that base via rope regex replacement.
-    """
+    _description = "remove redundant inner namespace classes"
+
+    class _RedundantInnerRemover(cst.CSTTransformer):
+        """libcst pass: track the class nesting and drop redundant inner classes."""
+
+        def __init__(self) -> None:
+            super().__init__()
+            self._enclosing: list[str] = []
+            self.removed: list[str] = []
+
+        @override
+        def visit_ClassDef(self, node: cst.ClassDef) -> bool:
+            self._enclosing.append(node.name.value)
+            return True
+
+        @override
+        def leave_ClassDef(
+            self, original_node: cst.ClassDef, updated_node: cst.ClassDef
+        ) -> cst.BaseStatement | cst.RemovalSentinel:
+            self._enclosing.pop()
+            if not self._enclosing or not self._is_redundant(
+                updated_node, self._enclosing[-1]
+            ):
+                return updated_node
+            self.removed.append(f"{self._enclosing[-1]}.{updated_node.name.value}")
+            return cst.RemoveFromParent()
+
+        @override
+        def leave_IndentedBlock(
+            self, original_node: cst.IndentedBlock, updated_node: cst.IndentedBlock
+        ) -> cst.BaseSuite:
+            # A body emptied by the removal above must stay valid Python.
+            if updated_node.body:
+                return updated_node
+            return updated_node.with_changes(
+                body=[cst.SimpleStatementLine(body=[cst.Pass()])]
+            )
+
+        @staticmethod
+        def _is_redundant(node: cst.ClassDef, outer_name: str) -> bool:
+            if not node.bases:
+                return False
+            first_base = node.bases[0].value
+            if not isinstance(first_base, cst.Name) or first_base.value != outer_name:
+                return False
+            statements = (
+                node.body.body
+                if isinstance(node.body, cst.IndentedBlock)
+                else (node.body,)
+            )
+            small: list[cst.BaseSmallStatement] = []
+            for statement in statements:
+                if not isinstance(
+                    statement, cst.SimpleStatementLine | cst.SimpleStatementSuite
+                ):
+                    return False
+                small.extend(statement.body)
+            return all(
+                isinstance(item, cst.Pass)
+                or (
+                    isinstance(item, cst.Expr)
+                    and isinstance(item.value, cst.Ellipsis | cst.SimpleString)
+                )
+                for item in small
+            )
 
     @override
     def apply_to_source(self, source: str) -> t.Infra.TransformResult:
-        """No-op text transform. This transformer requires rope resources."""
-        return source, list(self.changes)
-
-    @override
-    def transform(
-        self, rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
-    ) -> t.Infra.TransformResult:
-        """Apply MRO redeclaration removal. Returns (new_source, changes)."""
-        source = resource.read()
-        class_infos = u.Infra.get_class_info(rope_project, resource)
-        if not class_infos:
-            no_changes: list[str] = []
-            return source, no_changes
-
-        for parent_info in class_infos:
-            parent_name = parent_info.name
-            nested_names = u.Infra.get_class_nested_classes(
-                rope_project, resource, parent_name
-            )
-            for nested_name in nested_names:
-                source = self._strip_parent_base(
-                    rope_project,
-                    resource,
-                    source,
-                    parent_name=parent_name,
-                    nested_class=nested_name,
-                )
-
-        if source != resource.read() and self.changes:
-            resource.write(source)
-        return source, list(self.changes)
-
-    def _strip_parent_base(
-        self,
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
-        source: str,
-        *,
-        parent_name: str,
-        nested_class: str,
-    ) -> str:
-        """Remove base referencing parent_name from nested_class definition."""
-        nested_bases = u.Infra.get_class_bases(rope_project, resource, nested_class)
-        has_parent_base = any(
-            base == parent_name or base.startswith(f"{parent_name}.")
-            for base in nested_bases
-        )
-        if not has_parent_base:
-            return source
-
-        # Remove the base class referencing parent, or strip all bases if only one
-        remaining = [
-            b
-            for b in nested_bases
-            if b != parent_name and not b.startswith(f"{parent_name}.")
-        ]
-        pattern = c.Infra.compile_class_header_with_bases_for(nested_class)
-        if remaining:
-            bases_str = ", ".join(remaining)
-            replacement = rf"\1({bases_str}):"
-        else:
-            replacement = r"\1:"
-
-        replacement_result = pattern.subn(replacement, source, count=1)
-        new_source: str = replacement_result[0]
-        count = replacement_result[1]
-        if count > 0 and new_source != source:
-            self._record_change(f"Fixed MRO redeclaration: {nested_class}")
-            return new_source
-        return source
+        """Return ``source`` without its redundant inner namespace classes."""
+        remover = self._RedundantInnerRemover()
+        updated = cst.parse_module(source).visit(remover)
+        for qualname in remover.removed:
+            self._record_change(f"Removed redundant inner namespace class {qualname}")
+        if not remover.removed:
+            return source, list(self.changes)
+        return updated.code, list(self.changes)
 
 
-__all__: list[str] = ["FlextInfraRefactorMRORemover"]
+__all__: list[str] = ["FlextInfraRefactorMroRemover"]

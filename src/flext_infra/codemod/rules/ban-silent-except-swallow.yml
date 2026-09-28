@@ -1,0 +1,19 @@
+# Why: an except arm whose only statement is pass/continue silently swallows
+# the failure (ENFORCE-082 family, recomposed onto make mod per ADR-017
+# Decision 5). Detection-only while owners convert each site to an explicit
+# failure signal; severity stays warning until the fleet reaches zero.
+id: ban-silent-except-swallow
+language: python
+severity: warning
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  kind: except_clause
+  has:
+    kind: block
+    stopBy: neighbor
+    regex: "^\\s*(pass|continue)\\s*$"
+message: >-
+  Silent exception swallow: an except arm whose only statement is pass or
+  continue hides the failure; propagate, log, or return an explicit failure.

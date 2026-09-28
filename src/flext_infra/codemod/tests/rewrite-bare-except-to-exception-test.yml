@@ -1,0 +1,46 @@
+id: rewrite-bare-except-to-exception
+# `valid` MUST NOT match: a typed handler, or the literal text in a docstring,
+# a string constant or a comment.
+valid:
+  - |
+    try:
+        risky()
+    except ValueError:
+        pass
+  - |
+    try:
+        risky()
+    except Exception:
+        pass
+  - |
+    """Docstring quoting a bare handler at column zero.
+
+    except:
+        pass
+    """
+  - |
+    HINT = "rewrite except: to except Exception:"
+  - |
+    # A comment showing except: must survive untouched.
+    value = 1
+# `invalid` MUST match: a bare handler, including one with several statements
+# and one followed by `finally`.
+invalid:
+  - |
+    try:
+        risky()
+    except:
+        pass
+  - |
+    try:
+        risky()
+    except:
+        logger.warning("boom")
+        raise
+  - |
+    try:
+        risky()
+    except:
+        pass
+    finally:
+        done()

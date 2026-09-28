@@ -3,25 +3,22 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from .collection_base import (
-        FlextInfraEnforcementCollectionBase,
-        FlextInfraEnforcementEvaluation,
-    )
+    from .collection_base import FlextInfraEnforcementCollectionBase
     from .collection_sources import FlextInfraEnforcementSourceCollectors
     from .engine import FlextInfraEnforcementEngine
     from .metadata import FlextInfraEnforcementMetadata
     from .selection import FlextInfraEnforcementSelection
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraEnforcementCollectionBase",
     "FlextInfraEnforcementEngine",
-    "FlextInfraEnforcementEvaluation",
     "FlextInfraEnforcementMetadata",
     "FlextInfraEnforcementSelection",
     "FlextInfraEnforcementSourceCollectors",
@@ -30,10 +27,7 @@ __all__: tuple[str, ...] = (
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
-            ".collection_base": (
-                "FlextInfraEnforcementCollectionBase",
-                "FlextInfraEnforcementEvaluation",
-            ),
+            ".collection_base": ("FlextInfraEnforcementCollectionBase",),
             ".collection_sources": ("FlextInfraEnforcementSourceCollectors",),
             ".engine": ("FlextInfraEnforcementEngine",),
             ".metadata": ("FlextInfraEnforcementMetadata",),

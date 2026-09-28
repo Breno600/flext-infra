@@ -9,64 +9,64 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import m
-from flext_infra._models.base import FlextInfraModelsBase
-from flext_infra._models.basemk import FlextInfraModelsBasemk
-from flext_infra._models.census import FlextInfraModelsCensus
-from flext_infra._models.check import FlextInfraModelsCheck
-from flext_infra._models.codegen import FlextInfraModelsCodegen
-from flext_infra._models.config import FlextInfraConfigModels
-from flext_infra._models.deps import FlextInfraModelsDeps
-from flext_infra._models.docs import FlextInfraModelsDocs
-from flext_infra._models.enforcement import FlextInfraModelsEnforcement
-from flext_infra._models.gates import FlextInfraModelsGates
-from flext_infra._models.git import FlextInfraModelsGit
-from flext_infra._models.github import FlextInfraModelsGithub
-from flext_infra._models.layout import FlextInfraModelsLayout
-from flext_infra._models.mixins import FlextInfraModelsMixins
-from flext_infra._models.refactor import FlextInfraModelsRefactor
-from flext_infra._models.release import FlextInfraModelsRelease
-from flext_infra._models.rope import FlextInfraModelsRope
-from flext_infra._models.scan import FlextInfraModelsScan
-from flext_infra._models.transformers import FlextInfraModelsTransformers
-from flext_infra._models.validate import FlextInfraModelsCore
-from flext_infra._models.work_lane import FlextInfraModelsWorkLane
-from flext_infra._models.workspace import FlextInfraModelsWorkspace
-from flext_infra._models.worktree import FlextInfraModelsWorktree
+from flext_cli import FlextCliModels
+
+from ._models._codegen.base import FlextInfraCodegen
+from ._models._config import FlextInfraConfigModels
+from ._models.base import FlextInfraModelsBase
+from ._models.census import FlextInfraModelsCensus
+from ._models.check import FlextInfraModelsCheck
+from ._models.codemod import FlextInfraModelsCodemod
+from ._models.deps import FlextInfraModelsDeps
+from ._models.docs import FlextInfraModelsDocs
+from ._models.enforcement import FlextInfraModelsEnforcement
+from ._models.gates import FlextInfraModelsGates
+from ._models.git import FlextInfraModelsGit
+from ._models.layout import FlextInfraModelsLayout
+from ._models.mixins import FlextInfraModelsMixins
+from ._models.promoted import FlextInfraModelsPromoted
+from ._models.refactor import FlextInfraModelsRefactor
+from ._models.release import FlextInfraModelsRelease
+from ._models.rope import FlextInfraModelsRope
+from ._models.rope_move import FlextInfraModelsRopeMove
+from ._models.scan import FlextInfraModelsScan
+from ._models.settings import FlextInfraSettingsModels
+from ._models.sonarcloud import FlextInfraModelsSonarcloud
+from ._models.testmon import FlextInfraModelsTestmon
+from ._models.transformers import FlextInfraModelsTransformers
+from ._models.validate import FlextInfraModelsCore
+from ._models.workspace import FlextInfraModelsWorkspace
+from ._models.worktree import FlextInfraModelsWorktree
 
 
-class FlextInfraModels(m):
+class FlextInfraModels(FlextCliModels):
     """Merged model namespace for flext-infra domain objects."""
 
     class Infra(
         FlextInfraModelsCensus,
-        FlextInfraModelsBasemk,
         FlextInfraModelsCheck,
-        # NOTE (multi-agent, mro-wkii.17 / agent: codex): conform contracts are
-        # isolated from the active detector work in _models/codegen.py while
-        # remaining exposed through the single public m.Infra facade.
         FlextInfraConfigModels,
-        FlextInfraModelsCodegen,
+        FlextInfraCodegen,
+        FlextInfraModelsCodemod,
         FlextInfraModelsDeps,
         FlextInfraModelsDocs,
-        # NOTE (multi-agent): enforcement/transformers model
-        # facades added for the deep-FLEXT dataclass -> m.Infra migration.
         FlextInfraModelsEnforcement,
         FlextInfraModelsGates,
-        FlextInfraModelsGithub,
         FlextInfraModelsLayout,
+        FlextInfraModelsPromoted,
         FlextInfraModelsRefactor,
         FlextInfraModelsRelease,
         FlextInfraModelsMixins,
         FlextInfraModelsTransformers,
         FlextInfraModelsWorkspace,
-        FlextInfraModelsWorkLane,
-        # mro-wkii.17.26 (codex): all fix/codegen mutations share one typed
-        # worktree transaction report rather than command-local backup shapes.
         FlextInfraModelsWorktree,
         FlextInfraModelsGit,
         FlextInfraModelsRope,
+        FlextInfraModelsRopeMove,
         FlextInfraModelsScan,
+        FlextInfraModelsSonarcloud,
+        FlextInfraModelsTestmon,
+        FlextInfraSettingsModels,
         FlextInfraModelsCore,
         FlextInfraModelsBase,
     ):

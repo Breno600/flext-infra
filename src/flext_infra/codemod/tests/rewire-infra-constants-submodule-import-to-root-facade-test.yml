@@ -1,0 +1,5 @@
+id: rewire-infra-constants-submodule-import-to-root-facade
+valid:
+  - from flext_infra import c
+invalid:
+  - from flext_infra.constants import c

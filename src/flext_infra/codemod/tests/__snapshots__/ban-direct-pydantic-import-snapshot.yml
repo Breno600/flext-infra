@@ -1,0 +1,26 @@
+id: ban-direct-pydantic-import
+snapshots:
+  from pydantic import BaseModel:
+    labels:
+    - source: from pydantic import BaseModel
+      style: primary
+      start: 0
+      end: 30
+  from pydantic_settings import BaseSettings:
+    labels:
+    - source: from pydantic_settings import BaseSettings
+      style: primary
+      start: 0
+      end: 42
+  import pydantic:
+    labels:
+    - source: import pydantic
+      style: primary
+      start: 0
+      end: 15
+  import pydantic_settings:
+    labels:
+    - source: import pydantic_settings
+      style: primary
+      start: 0
+      end: 24

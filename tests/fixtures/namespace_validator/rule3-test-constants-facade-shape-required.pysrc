@@ -1,0 +1,4 @@
+from tests import m
+
+class TestsFlextTestConstants:
+    pass

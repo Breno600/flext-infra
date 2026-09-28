@@ -8,13 +8,13 @@ Copyright (c) {{ year }} {{ author_name }}. All rights reserved.
 SPDX-License-Identifier: MIT
 """
 
-from __future__ import annotations{# NOTE (codex, mro-j47u): the facade composes services, never base behavior. #}
+from __future__ import annotations{# NOTE (codex, flext-j47u): the facade composes services, never base behavior. #}
 
 from {{ package_name }}.services.ping import {{ class_stem }}Ping
 
 
 class {{ class_stem }}({{ class_stem }}Ping):
-    """Public {{ class_stem }} facade composed through cooperative MRO."""
+    """Public {{ class_stem }} facade composed through cooperative FLEXT."""
 
 
 {{ alias }} = {{ class_stem }}.fetch_global()

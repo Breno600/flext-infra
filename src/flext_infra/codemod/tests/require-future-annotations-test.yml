@@ -1,0 +1,13 @@
+id: require-future-annotations
+valid:
+  - from __future__ import annotations
+  - |
+    """Module documentation remains before the future import."""
+
+    from __future__ import annotations
+  - |
+    from __future__ import annotations
+
+    value = "from __future__ import annotations"
+invalid:
+  - value = 1

@@ -22,7 +22,7 @@
 set -euo pipefail
 
 VERBOSE="${1:-}"
-WORKSPACE_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+REPOSITORY_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 VIOLATIONS=0
 
 _log() {
@@ -45,7 +45,7 @@ _check() {
 	_log "Checking: ${description}"
 
 	local matches
-	matches=$(cd "${WORKSPACE_ROOT}" && grep -rn "${pattern}" --include="*.py" --exclude-dir="__pycache__" ./*/src/ 2>/dev/null || true)
+	matches=$(cd "${REPOSITORY_ROOT}" && grep -rn "${pattern}" --include="*.py" --exclude-dir="__pycache__" ./*/src/ 2>/dev/null || true)
 
 	# Filter out excluded paths
 	for excl in "${exclude_patterns[@]}"; do
@@ -83,7 +83,7 @@ _check "EVT-BASEMODEL" \
 
 # 3. No setattr hacks for message_type (prod AND test code)
 _log "Checking: setattr hacks for message_type (prod + tests)"
-matches=$(cd "${WORKSPACE_ROOT}" && grep -rn 'setattr.*message_type' --include="*.py" --exclude-dir="__pycache__" ./*/src/ ./*/tests/ 2>/dev/null || true)
+matches=$(cd "${REPOSITORY_ROOT}" && grep -rn 'setattr.*message_type' --include="*.py" --exclude-dir="__pycache__" ./*/src/ ./*/tests/ 2>/dev/null || true)
 matches=$(echo "${matches}" | grep -v '^flext-ldif/' | grep -v '^examples/' || true)
 if [[ -n "${matches}" ]]; then
 	while IFS= read -r match; do
@@ -98,7 +98,7 @@ fi
 
 # 4. No direct FlextDispatcher() instantiation (except container registration)
 _log "Checking: Direct FlextDispatcher() instantiation"
-matches=$(cd "${WORKSPACE_ROOT}" && grep -rn '= FlextDispatcher()' --include="*.py" --exclude-dir="__pycache__" ./*/src/ 2>/dev/null || true)
+matches=$(cd "${REPOSITORY_ROOT}" && grep -rn '= FlextDispatcher()' --include="*.py" --exclude-dir="__pycache__" ./*/src/ 2>/dev/null || true)
 matches=$(echo "${matches}" | grep -v '^flext-ldif/' | grep -v '^examples/' | grep -v 'container\|register' || true)
 if [[ -n "${matches}" ]]; then
 	while IFS= read -r match; do

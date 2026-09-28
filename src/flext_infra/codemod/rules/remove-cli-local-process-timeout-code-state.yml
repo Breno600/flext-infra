@@ -1,0 +1,11 @@
+id: remove-cli-local-process-timeout-code-state
+language: Python
+severity: error
+files:
+  - "src/flext_cli/_utilities/_runtime_process_timing.py"
+rule:
+  any:
+    - pattern: timeout_exit_code = 124
+    - pattern: timeout_exit_code = deadline.timeout_exit_code
+fix: ""
+message: Remove synthetic timeout-code state from deadline timing.

@@ -7,11 +7,41 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 from flext_infra import c, t
-from flext_infra._models.config import FlextInfraConfigModels
+
+from ._config import FlextInfraConfigModels
+from .docs_collection import FlextInfraModelsDocsCollection
+from .docs_generation import FlextInfraModelsDocsGeneration
 
 
-class _FlextInfraDocsContracts:
-    """Field-only source and rendering contracts for documentation."""
+# NOTE (multi-agent, flext-wkii.17.23 / agent: uv_overlay_owner): docs transport
+# retains the exact metadata/config models and declares only analysis deltas.
+class FlextInfraModelsDocs(
+    FlextInfraModelsDocsGeneration, FlextInfraModelsDocsCollection
+):
+    """Models for documentation services."""
+
+    class DocsTocToken(m.ContractModel):
+        """One rendered heading and its nested headings from Python-Markdown."""
+
+        level: Annotated[int, m.Field(description="Rendered heading level")]
+        id: Annotated[str, m.Field(description="Actual rendered heading ID")]
+        name: Annotated[str, m.Field(description="Sanitized heading label")]
+        html: Annotated[str, m.Field(description="Rendered inline heading HTML")]
+        data_toc_label: Annotated[
+            str, m.Field(alias="data-toc-label", description="Explicit TOC label")
+        ]
+        children: Annotated[
+            t.SequenceOf[FlextInfraModelsDocs.DocsTocToken],
+            m.Field(description="Nested heading tokens"),
+        ]
+
+    class DocsRenderedToc(m.ContractModel):
+        """Validated output of Python-Markdown's registered TOC extension."""
+
+        toc_tokens: Annotated[
+            t.SequenceOf[FlextInfraModelsDocs.DocsTocToken],
+            m.Field(description="Rendered table of contents tokens"),
+        ]
 
     class DocsExportBinding(m.ContractModel):
         """One public export bound to its defining module."""
@@ -42,11 +72,15 @@ class _FlextInfraDocsContracts:
         project_class: Annotated[str, m.Field(description="Project class")]
         count: Annotated[t.NonNegativeInt, m.Field(description="Project count")]
 
+    class DocsCollectRequest(m.ContractModel):
+        """Fixed-effect collection command with repository-owned configuration."""
 
-# NOTE (multi-agent, mro-wkii.17.23 / agent: uv_overlay_owner): docs transport
-# retains the exact metadata/config models and declares only analysis deltas.
-class FlextInfraModelsDocs(_FlextInfraDocsContracts):
-    """Models for documentation services."""
+        repository_root: Annotated[
+            Path, m.Field(description="Repository owning the plans")
+        ]
+        configuration: Annotated[
+            Path, m.Field(description="Versioned collection source associations")
+        ]
 
     class DocsGenerateRequest(m.ContractModel):
         """Canonical docs generation request payload.
@@ -55,8 +89,8 @@ class FlextInfraModelsDocs(_FlextInfraDocsContracts):
         reuse the same validation rules and avoid ad-hoc multi-parameter calls.
         """
 
-        workspace_root: Annotated[
-            Path, m.Field(description="Workspace root for docs generation")
+        repository_root: Annotated[
+            Path, m.Field(description="Repository root for docs generation")
         ]
         projects: Annotated[
             t.StrSequence | None, m.Field(description="Optional selected project names")
@@ -65,7 +99,18 @@ class FlextInfraModelsDocs(_FlextInfraDocsContracts):
             Path | str | None,
             m.Field(description="Optional docs output directory override"),
         ] = Path(c.Infra.DEFAULT_DOCS_OUTPUT_DIR)
-        apply: Annotated[bool, m.Field(description="Apply writes to disk")] = False
+        # Why (X-47): conform's DECLARED scope excludes the workspace root
+        # repository, so the docs generator must not render root as an output
+        # scope either; standalone docs commands keep including it.
+        include_root: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Render the workspace root as a docs output scope (root "
+                    "guides remain readable sources regardless of this flag)"
+                )
+            ),
+        ] = True
 
     class DocsPhaseItemModel(m.Value):
         """Unified item payload for docs phase reports."""
@@ -89,21 +134,6 @@ class FlextInfraModelsDocs(_FlextInfraDocsContracts):
         written: Annotated[bool, m.Field(description="Generated file write flag")] = (
             False
         )
-
-    class DocScope(m.ArbitraryTypesModel):
-        """Documentation scope targeting a project or workspace root."""
-
-        name: Annotated[t.NonEmptyStr, m.Field(description="Scope name")]
-        path: Annotated[Path, m.Field(description="Absolute path to scope root")]
-        report_dir: Annotated[
-            Path, m.Field(description="Report output directory for scope")
-        ]
-        project_class: Annotated[
-            str, m.Field(description="Docs scope classification")
-        ] = "root"
-        package_name: Annotated[
-            str, m.Field(description="Primary package name for scope")
-        ] = ""
 
     class DocstringCoverage(m.ContractModel):
         """Docstring coverage metric for one docs scope (declaration only).
@@ -148,10 +178,6 @@ class FlextInfraModelsDocs(_FlextInfraDocsContracts):
             FlextInfraConfigModels.RepositoryRef | None,
             m.Field(description="Exact repository catalog model"),
         ] = None
-        provider: Annotated[
-            FlextInfraConfigModels.ProviderSpec | None,
-            m.Field(description="Exact Git provider model"),
-        ] = None
         package_name: Annotated[str, m.Field(description="Documented package name")]
         doc_summary: Annotated[str, m.Field(description="Package docstring summary")]
         site_title: Annotated[str, m.Field(description="Resolved site title")]
@@ -171,7 +197,7 @@ class FlextInfraModelsDocs(_FlextInfraDocsContracts):
             t.StrTuple, m.Field(default=(), description="Rope-resolved public symbols")
         ] = ()
         export_bindings: Annotated[
-            tuple[_FlextInfraDocsContracts.DocsExportBinding, ...],
+            t.VariadicTuple[FlextInfraModelsDocs.DocsExportBinding],
             m.Field(default=(), description="Export-to-module bindings"),
         ] = ()
         modules: Annotated[
@@ -193,19 +219,14 @@ class FlextInfraModelsDocs(_FlextInfraDocsContracts):
         )
 
     class AuditScopeParams(m.ContractModel):
-        """Bundled parameters for a single audit scope run."""
+        """Audit checks and an additional coverage floor; every finding fails."""
 
         check: Annotated[str, m.Field(description="Comma-separated checks")] = "all"
-        strict: Annotated[bool, m.Field(description="Strict mode")] = True
         docstring_min: Annotated[
             float | None,
             m.Field(
                 description="Minimum docstring coverage percent; breach fails the scope"
             ),
-        ] = None
-        budgets: Annotated[
-            tuple[int | None, t.IntMapping] | None,
-            m.Field(description="Budget tuple (default, by_scope)"),
         ] = None
 
     class DocsPhaseReport(m.ContractModel):

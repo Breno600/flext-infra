@@ -5,8 +5,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_cli import cli
-from flext_infra import c, m, p, r, s, t, u
-from flext_infra.codegen._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
+
+from flext_core import r
+
+from .. import c, m, p, t, u
+from ._execution import FlextInfraCodegenExecutionBase
+from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
+from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles
+from ._mise_artifacts_publication import publish_file_plan
+from ._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
+from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -14,8 +22,14 @@ if TYPE_CHECKING:
 _log = u.fetch_logger(__name__)
 
 
-class FlextInfraCodegenPipeline(FlextInfraCodegenPipelineStagesMixin, s[str]):
+class FlextInfraCodegenPipeline(
+    FlextInfraCodegenPipelineStagesMixin, FlextInfraCodegenExecutionBase[str]
+):
     """Run the full codegen pipeline directly from the validated CLI model."""
+
+    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
+        exclude=True, description="Shared Rope cycle injected by the composition root"
+    )
 
     _state: m.Infra.CodegenPipelineState = u.PrivateAttr(
         default_factory=m.Infra.CodegenPipelineState
@@ -29,17 +43,16 @@ class FlextInfraCodegenPipeline(FlextInfraCodegenPipelineStagesMixin, s[str]):
 
         pipeline_result = cli.pipeline(
             stages,
-            context=cli.stage_context(
-                self.workspace_root,
+            context=m.Cli.PipelineStageContext(
+                repository_root=self.repository_root,
                 settings={
                     c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run or not self.apply_changes
                 },
             ),
-            fail_fast=True,
             logger=_log,
         )
         if pipeline_result.failure:
-            return r[str].fail(pipeline_result.error or "pipeline execution failed")
+            return r[str].from_failure(pipeline_result)
         # cli.pipeline already maps failed_stages to r.fail; value is always success.
         return self._collect_pipeline_output()
 
@@ -49,7 +62,7 @@ class FlextInfraCodegenPipeline(FlextInfraCodegenPipelineStagesMixin, s[str]):
 
     def _build_codegen_stages(self) -> t.SequenceOf[m.Cli.PipelineStageSpec]:
         """Build DAG stage specs with linear dependency chain."""
-        handlers: t.Cli.PipelineHandlerMap = {
+        handlers: t.MappingKV[str, p.Cli.PipelineStage] = {
             c.Infra.PipelineStage.DISCOVER: self._stage_discover,
             c.Infra.PipelineStage.TOOLCHAIN: self._stage_toolchain,
             c.Infra.PipelineStage.PY_TYPED: self._stage_py_typed,
@@ -60,10 +73,7 @@ class FlextInfraCodegenPipeline(FlextInfraCodegenPipelineStagesMixin, s[str]):
             c.Infra.PipelineStage.LAZY_INIT: self._stage_lazy_init,
             c.Infra.PipelineStage.CENSUS_AFTER: self._stage_census_after,
         }
-        retry_by_stage: t.Cli.PipelineRetryMap = {c.Infra.PipelineStage.AUTO_FIX: 1}
-        return cli.linear_pipeline(
-            c.Infra.PIPELINE_STAGE_ORDER, handlers, retry_by_stage=retry_by_stage
-        )
+        return cli.linear_pipeline(c.Infra.PIPELINE_STAGE_ORDER, handlers)
 
     # ------------------------------------------------------------------
     # Stage harness — single fail-fast boundary, no per-stage duplication
@@ -73,16 +83,17 @@ class FlextInfraCodegenPipeline(FlextInfraCodegenPipelineStagesMixin, s[str]):
     def _run_stage[V](
         self, stage_id: str, action: Callable[[], V], emit: Callable[[V], t.JsonMapping]
     ) -> p.Result[m.Cli.PipelineStageResult]:
-        """Run one pipeline stage with a single try-boundary.
+        """Run one pipeline stage and preserve the first exception.
 
         ``action`` performs the work and may mutate ``self._state``; ``emit``
-        builds the output payload from the action's return value. Any
-        exception is captured and returned as ``r.fail_op(stage_id, exc)``
-        so the DAG runner can fail-fast — never silenced, never demoted.
+        builds the output payload from the action's return value.
         """
-        return r[m.Cli.PipelineStageResult].create_from_callable(
-            lambda: cli.stage_result(stage_id, output=emit(action())),
-            error_code=stage_id,
+        return r[m.Cli.PipelineStageResult].ok(
+            m.Cli.PipelineStageResult(
+                stage_id=stage_id,
+                status=c.Cli.PipelineStageStatus.OK,
+                output=emit(action()),
+            )
         )
 
     # ------------------------------------------------------------------
@@ -106,7 +117,7 @@ class FlextInfraCodegenPipeline(FlextInfraCodegenPipelineStagesMixin, s[str]):
         skipped = sum(len(result.violations_skipped) for result in fix_results)
 
         if self.output_format == c.Cli.OutputFormats.JSON:
-            payload: t.Infra.MutableInfraMapping = {
+            payload: t.MutableJsonMapping = {
                 "census_before": {
                     "total_violations": before_violations,
                     "total_fixable": before_fixable,
@@ -133,4 +144,11 @@ class FlextInfraCodegenPipeline(FlextInfraCodegenPipelineStagesMixin, s[str]):
         )
 
 
-__all__: list[str] = ["FlextInfraCodegenPipeline"]
+__all__: list[str] = [
+    "FlextInfraCodegenLazyInitGenerationMixin",
+    "FlextInfraCodegenLazyInitPlanner",
+    "FlextInfraCodegenPipeline",
+    "FlextInfraCodegenPipelineStagesMixin",
+    "FlextInfraMiseArtifactsFiles",
+    "publish_file_plan",
+]

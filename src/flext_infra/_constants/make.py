@@ -1,129 +1,123 @@
-"""Make-related constants for flext-infra project.
-
-Copyright (c) 2025 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Selector-free Make and project-tool constants."""
 
 from __future__ import annotations
 
 import re
-from types import MappingProxyType
-from typing import TYPE_CHECKING, Final
+from enum import StrEnum
+from typing import TYPE_CHECKING, ClassVar
+
+from .._constants.check import FlextInfraConstantsCheck
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
 class FlextInfraConstantsMake:
-    """Make-related constants for Makefile generation and CLI routing."""
+    """One canonical vocabulary shared by generated Make and its services."""
 
-    # Why: conform Makefile policy classifies declarations via these patterns;
-    # they belong on c.Infra, not as leaf module re.compile copies.
-    MAKE_ASSIGNMENT_RE: Final[t.RegexPattern] = re.compile(
+    class PytestExecutionMode(StrEnum):
+        """Public operations whose test scope and accounting are distinct."""
+
+        INCREMENTAL = "incremental"
+        FULL = "full"
+        COVERAGE = "coverage"
+
+    MAKE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^[A-Za-z_][A-Za-z0-9_]*\s*(?::?:|\?|\+)?="
     )
-    "GNU Make variable assignment at column 0 (``=``, ``:=``, ``::=``, ``?=``, ``+=``)."
-    MAKE_DIRECTIVE_RE: Final[t.RegexPattern] = re.compile(
+    MAKE_DIRECTIVE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?:export|unexport|override|include|-include|sinclude|vpath)\b"
     )
-    "GNU Make directives that scope or include a declaration rather than define a target."
-    MAKE_CONDITIONAL_RE: Final[t.RegexPattern] = re.compile(
+    MAKE_CONDITIONAL_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?:else\b|endif\b|ifeq\b|ifneq\b|ifdef\b|ifndef\b)"
     )
-    "GNU Make conditional control flow; structural, never a target declaration."
+    MAKE_REPOSITORY_ROOT: ClassVar[str] = "REPOSITORY_ROOT"
+    "Make variable the workspace orchestrator passes to attached members."
 
-    VERB_CHECK: Final[str] = "check"
-    VERB_VALIDATE: Final[str] = "validate"
-    VERB_PUBLISH: Final[str] = "publish"
-    VERB_RUN: Final[str] = "run"
-    VERB_CHECKS: Final[str] = "checks"
-    VERB_CLEAN: Final[str] = "clean"
+    VERB_CHECK: ClassVar[str] = "check"
+    VERB_TEST: ClassVar[str] = "test"
+    VERB_CLEAN: ClassVar[str] = "clean"
+    VERB_VALIDATE: ClassVar[str] = "validate"
+    VERB_PUBLISH: ClassVar[str] = "publish"
+    VERB_RUN: ClassVar[str] = "run"
+    VERB_CHECKS: ClassVar[str] = "checks"
+    VERB_SONARCLOUD_SYNC: ClassVar[str] = "sonarcloud-sync"
 
-    # --- Canonical make contract constants (was: class Make) ---
+    CLI_GROUP_CHECK: ClassVar[str] = "check"
+    CLI_GROUP_CODEGEN: ClassVar[str] = "codegen"
+    CLI_GROUP_DEPS: ClassVar[str] = "deps"
+    CLI_GROUP_DOCS: ClassVar[str] = "docs"
+    CLI_GROUP_MAINTENANCE: ClassVar[str] = "maintenance"
+    CLI_GROUP_REFACTOR: ClassVar[str] = "refactor"
+    CLI_GROUP_RELEASE: ClassVar[str] = "release"
+    CLI_ROUTE_RELEASE: ClassVar[str] = "release run"
+    CLI_GROUP_VALIDATE: ClassVar[str] = "validate"
+    CLI_ROUTE_MAINTENANCE: ClassVar[str] = "maintenance run"
+    CLI_GROUP_WORKSPACE: ClassVar[str] = "workspace"
 
-    CLI_GROUP_BASEMK: Final[str] = "basemk"
-    CLI_GROUP_CHECK: Final[str] = "check"
-    CLI_GROUP_CODEGEN: Final[str] = "codegen"
-    CLI_GROUP_DEPS: Final[str] = "deps"
-    CLI_GROUP_DOCS: Final[str] = "docs"
-    CLI_GROUP_GITHUB: Final[str] = "github"
-    CLI_GROUP_MAINTENANCE: Final[str] = "maintenance"
-    CLI_GROUP_REFACTOR: Final[str] = "refactor"
-    CLI_GROUP_RELEASE: Final[str] = "release"
-    CLI_ROUTE_RELEASE: Final[str] = "release run"
-    CLI_GROUP_VALIDATE: Final[str] = "validate"
-    CLI_ROUTE_MAINTENANCE: Final[str] = "maintenance run"
-    CLI_GROUP_WORKSPACE: Final[str] = "workspace"
-    CLI_GROUPS_TRANSLATING_WHAT: Final[frozenset[str]] = frozenset({
-        CLI_GROUP_CHECK,
-        CLI_GROUP_VALIDATE,
-        CLI_GROUP_CODEGEN,
-    })
-    "Groups whose --what maps onto a selector instead of a subcommand option."
-    MYPY_MEMORY_LIMIT_MB_ENV: Final[str] = "MYPY_MEMORY_LIMIT_MB"
-    MYPY_MEMORY_LIMIT_MB_DEFAULT: Final[int] = 6144
-    MYPY_TIMEOUT_SECONDS_ENV: Final[str] = "MYPY_TIMEOUT_SECONDS"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: Final[int] = 600
-    MYPY_TIMEOUT_GRACE_SECONDS: Final[int] = 10
-    PRLIMIT_COMMAND: Final[str] = "prlimit"
-    PRLIMIT_ADDRESS_SPACE_OPTION: Final[str] = "--as"
-    TIMEOUT_COMMAND: Final[str] = "timeout"
-    TIMEOUT_KILL_AFTER_SECONDS: Final[int] = 5
-    CHECK_GATES_VARIABLE: Final[str] = "CHECK_GATES"
-    "Make variable carrying the gate selection."
-    # The check vocabulary: read-only gates only. `format` is NOT here -- it
-    # rewrites files, so it is owned by `make fmt APPLY=Y` / `make fix APPLY=Y`
-    # (PROJECT_CHECK_GATES_FIXABLE_VALUES) and a read-only verb must never
-    # invoke it.
-    PROJECT_CHECK_GATES_ALLOWED_VALUES: Final[tuple[str, ...]] = (
+    MYPY_MEMORY_LIMIT_MB_ENV: ClassVar[str] = "MYPY_MEMORY_LIMIT_MB"
+    MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
+    MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
+    MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
+    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 100
+    MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
+    PRLIMIT_COMMAND: ClassVar[str] = "prlimit"
+    PRLIMIT_ADDRESS_SPACE_OPTION: ClassVar[str] = "--as"
+    TIMEOUT_COMMAND: ClassVar[str] = "timeout"
+    TIMEOUT_KILL_AFTER_SECONDS: ClassVar[int] = 5
+
+    # Every read-only gate this package implements, derived from the gate SSOT
+    # (c.Infra.SARIF_TOOL_INFO) so registering a gate makes it reachable
+    # through `make check` in the same edit and no second list can drift.
+    # Mutating gates (`format`) are excluded: they rewrite files, so they are
+    # owned by `make fmt` / `make fix` and a read-only verb
+    # must never invoke them.
+    CANONICAL_GATE_IDS: ClassVar[t.VariadicTuple[str]] = tuple(
+        gate
+        for gate in FlextInfraConstantsCheck.SARIF_TOOL_INFO
+        if gate not in FlextInfraConstantsCheck.MUTATING_GATES
+    )
+    # markdown-code and markdown-format stay allowed and explicitly invocable
+    # (`--gates markdown-code`), but are not default check gates: operator
+    # ruling 2026-09-18 (flext-uz0dt for markdown-code; flext-v4fmn for
+    # markdown-format) takes them out of the unset-CI default set pending
+    # review. markdown-format is structurally contradictory on the current
+    # generated docs: the gen render is not prettier-stable, so no commit can
+    # satisfy both `gen fixed point` and `prettier --check`.
+    CANONICAL_DEFAULT_GATE_IDS: ClassVar[t.VariadicTuple[str]] = tuple(
+        gate
+        for gate in CANONICAL_GATE_IDS
+        if gate
+        not in {
+            FlextInfraConstantsCheck.MARKDOWN_CODE,
+            FlextInfraConstantsCheck.MARKDOWN_FORMAT,
+        }
+    )
+    CANONICAL_FIXABLE_GATE_IDS: ClassVar[t.VariadicTuple[str]] = (
         "lint",
-        "pyrefly",
-        "mypy",
-        "pyright",
-        "security",
         "markdown",
-        "smells",
+        "markdown-code",
+        "canonical-alias",
     )
-    # The gates CI=N owns: the type checkers only. They are the slow, whole-
-    # program analyses, so CI=Y runs the strict complement of this set -- ruff
-    # lint included -- and the two contexts can never overlap nor leave a gate
-    # unowned. An unset CI runs every allowed gate.
-    PROJECT_CHECK_GATES_LOCAL_VALUES: Final[tuple[str, ...]] = ("pyrefly", "mypy")
-    PROJECT_CHECK_GATES_DEFAULT_VALUES: Final[tuple[str, ...]] = (
-        PROJECT_CHECK_GATES_ALLOWED_VALUES
-    )
-    # mro-38p39: the gates that can repair what they report. `make fix APPLY=Y`
-    # routes through `check run --fix`, which without a selector would execute
-    # every gate -- including pyright and mypy, which fix nothing and cost ~37s,
-    # timing the verb out. Formatting is NOT here: `format` belongs to
-    # `make fmt` alone -- fix repairs findings, fmt rewrites style.
-    PROJECT_CHECK_GATES_FIXABLE_VALUES: Final[tuple[str, ...]] = ("markdown", "smells")
-    # mro-x0rau.3: the FILE/FILES/CHANGED_ONLY fast-path gate restriction was
-    # deleted with base_verbs.mk.j2 (commit 2a4a8ea7a). File-scoped runs now go
-    # through the same typed gate pipeline as a full run, so every allowed gate
-    # is file-scopable and no separate fast-path allowlist exists.
-    PROJECT_CHECK_GATES_ALLOWED: Final[str] = ",".join(
-        PROJECT_CHECK_GATES_ALLOWED_VALUES
-    )
-    PROJECT_CHECK_GATES_DEFAULT: Final[str] = ",".join(
-        PROJECT_CHECK_GATES_DEFAULT_VALUES
-    )
-
-    PROJECT_VALIDATE_GATES_ALLOWED: Final[str] = "complexity,docstring"
-    ORCHESTRATED_PROJECT_VERBS: Final[t.StrSequence] = (
+    # markdown-format is deliberately absent: prettier is a formatter, so the
+    # gate's mutating side is owned by `make fmt` (check = `prettier --check`),
+    # never by `make fix` — one operation per tool per verb, never repeated.
+    ORCHESTRATED_VERBS: ClassVar[t.StrSequence] = (
         "build",
         "check",
         "clean",
+        "docs",
         "fmt",
         "fix",
-        "scan",
+        "fix-enforcement",
+        "sonarcloud-sync",
         "test",
-        "val",
+        "test-full",
     )
-    ORCHESTRATOR_REMOVE_ENV_KEYS: Final[t.StrSequence] = (
+    ORCHESTRATOR_REMOVE_ENV_KEYS: ClassVar[t.StrSequence] = (
         "GNUMAKEFLAGS",
-        "MAKEFILES",
         "MAKEFLAGS",
+        "MAKEFILES",
         "MAKELEVEL",
         "MAKEOVERRIDES",
         "MISE_DIR",
@@ -135,243 +129,28 @@ class FlextInfraConstantsMake:
         "MISE_VERBOSE",
         "MFLAGS",
         "MYPYPATH",
-        # mro-izia.1 (agent kimi): workspace selection is an ARGUMENT of the
-        # invocation that owns it, never ambient state a nested make inherits.
-        # A selection exported here (directly, or smuggled through
-        # GNUMAKEFLAGS/MAKEFLAGS) reached generated project makes that never
-        # declare that name and failed them with `undeclared project <name>`.
-        "PROJECT",
-        "PROJECTS",
+        "PYTHONDONTWRITEBYTECODE",
         "PYTHONPATH",
         "UV_PROJECT",
         "UV_PROJECT_ENVIRONMENT",
         "VIRTUAL_ENV",
     )
-    "Environment keys removed before project-level make orchestration."
-    ORCHESTRATOR_ENV_NO_COLOR: Final[str] = "NO_COLOR"
-    ORCHESTRATOR_ENV_PATH: Final[str] = "PATH"
-    ORCHESTRATOR_ENV_PYTHONPATH: Final[str] = "PYTHONPATH"
-    ORCHESTRATOR_ENV_PYTHONDONTWRITEBYTECODE: Final[str] = "PYTHONDONTWRITEBYTECODE"
-    ORCHESTRATOR_ENV_PATH_SEPARATOR: Final[str] = ":"
-    ORCHESTRATOR_ENV_MISE_SHIMS: Final[str] = "MISE_SHIMS"
-    ORCHESTRATOR_ENV_WORKSPACE_MISE_SHIMS: Final[str] = "WORKSPACE_MISE_SHIMS"
-    PYTEST_ENV_ARGS: Final[str] = "FLEXT_PYTEST_ARGS_RAW"
-    PYTEST_ENV_DIAG: Final[str] = "FLEXT_PYTEST_DIAG_RAW"
-    PYTEST_ENV_FAIL_FAST: Final[str] = "FLEXT_PYTEST_FAIL_FAST_RAW"
-    PYTEST_ENV_FILE: Final[str] = "FLEXT_PYTEST_FILE_RAW"
-    PYTEST_ENV_FILES: Final[str] = "FLEXT_PYTEST_FILES_RAW"
-    PYTEST_ENV_MATCH: Final[str] = "FLEXT_PYTEST_MATCH_RAW"
-    PYTEST_ENV_REPORTS: Final[str] = "FLEXT_PYTEST_REPORTS_RAW"
-    PYTEST_ENV_TARGET: Final[str] = "FLEXT_PYTEST_TARGET_RAW"
-    PYTEST_ENV_VERBOSE: Final[str] = "FLEXT_PYTEST_VERBOSE_RAW"
-    PYTEST_ENV_WHAT: Final[str] = "FLEXT_PYTEST_WHAT_RAW"
-    PYTEST_ENV_CI: Final[str] = "CI"
-    # Why: the argv that writes each artifact and the gate that later verifies
-    # it must name the SAME file. A bare --cov-report=xml wrote coverage beside
-    # the invocation while the gate read the report dir, failing a green suite.
-    PYTEST_COVERAGE_XML: Final[str] = "coverage.xml"
-    PYTEST_JUNIT_XML: Final[str] = "junit.xml"
-    PYTEST_INHERITED_ENV_REMOVE_KEYS: Final[t.StrSequence] = (
+    ORCHESTRATOR_ENV_NO_COLOR: ClassVar[str] = "NO_COLOR"
+    ORCHESTRATOR_ENV_PATH: ClassVar[str] = "PATH"
+    ORCHESTRATOR_ENV_PYTHONPATH: ClassVar[str] = "PYTHONPATH"
+    ORCHESTRATOR_ENV_PATH_SEPARATOR: ClassVar[str] = ":"
+    ORCHESTRATOR_ENV_MISE_SHIMS: ClassVar[str] = "MISE_SHIMS"
+    ORCHESTRATOR_ENV_WORKSPACE_MISE_SHIMS: ClassVar[str] = "WORKSPACE_MISE_SHIMS"
+
+    PYTEST_ENV_REPORTS: ClassVar[str] = "FLEXT_PYTEST_REPORTS_RAW"
+    PYTEST_ENV_TARGET: ClassVar[str] = "FLEXT_PYTEST_TARGET_RAW"
+    PYTEST_ENV_CI: ClassVar[str] = "CI"
+    PYTEST_ENV_COLLECTION_MANIFEST: ClassVar[str] = "FLEXT_PYTEST_COLLECTION_MANIFEST"
+    PYTEST_WARNING_EVENTS_SUFFIX: ClassVar[str] = ".warnings.jsonl"
+    PYTEST_INHERITED_ENV_REMOVE_KEYS: ClassVar[t.StrSequence] = (
         "PYTEST_ADDOPTS",
         "PYTHONPATH",
-    )
-    PROJECT_VARIABLE_DEFAULTS: Final[t.StrPairSequence] = (
-        ("PYTEST_ARGS", ""),
-        ("DEPENDENCY", ""),
-        ("DIAG", "0"),
-        (CHECK_GATES_VARIABLE, ""),
-        ("VALIDATE_GATES", ""),
-        ("SCOPE", "project"),
-        ("NAMESPACE", ""),
-        ("GATES", ""),
-        ("PROPAGATE", ""),
-        ("FIX", ""),
-        ("PR_ACTION", "status"),
-        ("PR_BASE", ""),
-        ("PR_HEAD", ""),
-        ("PR_TITLE", ""),
-        ("PR_BODY", ""),
-        ("PR_DRAFT", "0"),
-        ("FILE", ""),
-        ("FILES", ""),
-        ("CHANGED_ONLY", ""),
-        ("MATCH", ""),
-        ("RUFF_ARGS", ""),
-        ("PYRIGHT_ARGS", ""),
-        ("CHECK_ONLY", ""),
-        ("FAIL_FAST", ""),
-        ("VERBOSE", ""),
-    )
-    WORKSPACE_VARIABLE_DEFAULTS: Final[t.StrPairSequence] = (
-        ("PROJECT", ""),
-        ("PROJECTS", ""),
-        ("WHAT", ""),
-        ("PYTEST_ARGS", ""),
-        ("DEPENDENCY", ""),
-        ("VALIDATE_SCOPE", "all"),
-        ("FAIL_FAST", ""),
-        ("JOBS", ""),
-        (CHECK_GATES_VARIABLE, ""),
-        ("MYPY_MEMORY_LIMIT_MB", str(MYPY_MEMORY_LIMIT_MB_DEFAULT)),
-        ("MYPY_TIMEOUT_SECONDS", str(MYPY_TIMEOUT_SECONDS_DEFAULT)),
-        ("VALIDATE_GATES", ""),
-        ("SCOPE", "project"),
-        ("NAMESPACE", ""),
-        ("GATES", ""),
-        ("PROPAGATE", ""),
-        ("FIX", ""),
-        ("FILE", ""),
-        ("FILES", ""),
-        ("CHANGED_ONLY", ""),
-        ("MATCH", ""),
-        ("RUFF_ARGS", ""),
-        ("PYRIGHT_ARGS", ""),
-        ("CHECK_ONLY", ""),
-        ("RELEASE_PHASE", "all"),
-        ("INTERACTIVE", "1"),
-        ("DRY_RUN", ""),
-        ("PUSH", ""),
-        ("VERSION", ""),
-        ("MESSAGE", ""),
-        ("TAG", ""),
-        ("BUMP", ""),
-        ("RELEASE_DEV_SUFFIX", "0"),
-        ("RELEASE_NEXT_DEV", "0"),
-        ("RELEASE_NEXT_BUMP", "minor"),
-        ("CREATE_BRANCHES", "1"),
-        ("PR_ACTION", "status"),
-        ("PR_BASE", ""),
-        ("PR_HEAD", ""),
-        ("PR_TITLE", ""),
-        ("PR_BODY", ""),
-        ("PR_DRAFT", "0"),
-        ("PR_INCLUDE_ROOT", "1"),
-        ("PR_CHECKPOINT", "1"),
-        ("DEPS_REPORT", "1"),
-        ("VERBOSE", ""),
-    )
-    PROJECT_CORE_VERBS: Final[t.StrPairSequence] = (
-        ("boot", "Install dependencies and hooks"),
-        ("build", "Build distributable artifacts"),
-        ("check", "Run lint gates (CHECK_GATES= to select)"),
-        (
-            "fix-enforcement",
-            "Auto-fix enforcement violations (APPLY=1, PROJECTS=..., RULES=...)",
-        ),
-        ("scan", "Run all security checks"),
-        ("fmt", "Run all formatting"),
-        ("test", "Run bounded pytest (FILE=/MATCH= selectors)"),
-        ("val", "Run validate gates (FIX=1 to auto-fix)"),
-        ("clean", "Clean build/test/type artifacts"),
-    )
-    PROJECT_DAEMON_VERBS: Final[t.StrPairSequence] = (
-        ("daemon-start", "Start all daemons (mypy + pyright)"),
-        ("daemon-stop", "Stop all daemons"),
-        ("daemon-status", "Show status of all daemons"),
-        ("daemon-restart", "Restart all daemons"),
-    )
-    PROJECT_OPTION_LINES: Final[t.StrSequence] = (
-        f"CHECK_GATES={PROJECT_CHECK_GATES_ALLOWED}",
-        f"MYPY_MEMORY_LIMIT_MB={MYPY_MEMORY_LIMIT_MB_DEFAULT}  Mypy address-space cap",
-        f"MYPY_TIMEOUT_SECONDS={MYPY_TIMEOUT_SECONDS_DEFAULT}  Mypy wall-time cap",
-        f"VALIDATE_GATES={PROJECT_VALIDATE_GATES_ALLOWED}",
-        "FILE=src/foo.py             Single file for check/fmt/test",
-        'FILES="a.py b.py"          Multiple files for check/fmt; test rejects it',
-        "CHANGED_ONLY=1              Git-changed Python files for check",
-        "CHECK_ONLY=1                Dry-run format/check (no writes)",
-        'RUFF_ARGS="--select E501"   Extra args for ruff check',
-        'PYRIGHT_ARGS="--level basic" Extra args for pyright',
-        "PYTEST_ARGS=<value>         Rejected; use FILE, MATCH, or WHAT",
-        "DEPENDENCY=<distribution>   Select one package for deps WHAT=upgrade",
-        "MATCH=test_name             Alias for pytest -k",
-        "FAIL_FAST=1                 Add -x to pytest",
-        "DIAG=1                      Emit extended pytest diagnostics",
-        "FIX=1                       Auto-fix supported gates",
-        "APPLY=1                     Apply enforcement fixes (default dry-run)",
-        "PROJECTS=p1,p2              Scope fix-enforcement to projects",
-        "RULES=ENFORCE-XXX,...       Scope fix-enforcement to rules",
-        "VERBOSE=1                   Show executed commands",
-    )
-    PROJECT_PR_OPTION_LINES: Final[t.StrSequence] = (
-        "PR_ACTION=status|create",
-        "PR_BASE=<branch>  PR_HEAD=<branch>",
-        "PR_TITLE='...'  PR_BODY='...'  PR_DRAFT=0|1",
-    )
-    # Phase-set per verb for legacy CLI helpers. Make routing is owned by
-    # the registry discovered from scripts/cmd through flext-tests.
-    WHAT_PHASES: Final[t.MappingKV[str, frozenset[str]]] = MappingProxyType({
-        "boot": frozenset({"imp", "stat", "submodules", "sync", "venv"}),
-        "build": frozenset({
-            "constraints",
-            "docs",
-            "gen",
-            "mod",
-            "stubs",
-            "sync",
-            "up",
-        }),
-        "check": frozenset({
-            "boundary",
-            "coordination",
-            "cqrs",
-            "fmt",
-            "format",
-            "lint",
-            "loc-cap",
-            "markdown",
-            "mypy",
-            "pol",
-            "pyre",
-            "pyrefly",
-            "pyright",
-            "scan",
-            "silent-failure",
-            "types",
-        }),
-        "ship": frozenset({"pr", "push", "rel", "save", "tag"}),
-        "test": frozenset({"all"}),
-        "val": frozenset({"all", "project", "workspace"}),
-    })
-    STANDALONE_BOOTSTRAP_VERBS: Final[t.StrPairSequence] = (
-        ("venv", "Create virtual environment"),
-        ("setup", "Full standalone setup"),
-        ("help", "Show this help"),
-    )
-    STANDALONE_POST_SETUP_VERBS: Final[str] = (
-        "check, test, fmt, build, val, clean, docs, pr"
-    )
-    PROJECT_SELECTION_CONFLICT_ERROR: Final[str] = (
-        "ERROR: Cannot use PROJECT and PROJECTS together"
-    )
-    PROJECT_SELECTION_CONFLICT_HINT: Final[str] = (
-        'Use PROJECT=<name> or PROJECTS="proj-a proj-b"'
-    )
-    PROJECT_SELECTION_EMPTY_ERROR: Final[str] = "ERROR: no projects selected"
-    PROJECT_SELECTION_EMPTY_HINT: Final[str] = (
-        'Use PROJECT=<name> or PROJECTS="proj-a proj-b"'
-    )
-    WORKSPACE_BOOT_HINT: Final[str] = "make boot"
-    SAVE_USAGE: Final[str] = "make save MESSAGE='chore: your message'"
-    FORWARD_MODE_VALUE: Final[str] = "value"
-    FORWARD_MODE_ENABLED: Final[str] = "enabled"
-    CHECK_FORWARD_ARGS: Final[t.StrPairSequence] = (
-        ("CHECK_GATES", FORWARD_MODE_VALUE),
-        ("FILE", FORWARD_MODE_VALUE),
-        ("FILES", FORWARD_MODE_VALUE),
-        ("CHANGED_ONLY", FORWARD_MODE_ENABLED),
-        ("FIX", FORWARD_MODE_ENABLED),
-        ("RUFF_ARGS", FORWARD_MODE_VALUE),
-        ("PYRIGHT_ARGS", FORWARD_MODE_VALUE),
-        ("CHECK_ONLY", FORWARD_MODE_ENABLED),
-    )
-    TEST_FORWARD_ARGS: Final[t.StrPairSequence] = (
-        ("FILE", FORWARD_MODE_VALUE),
-        ("MATCH", FORWARD_MODE_VALUE),
-        ("VERBOSE", FORWARD_MODE_ENABLED),
-    )
-    VALIDATE_FORWARD_ARGS: Final[t.StrPairSequence] = (
-        ("FIX", FORWARD_MODE_ENABLED),
-        ("VALIDATE_GATES", FORWARD_MODE_VALUE),
+        PYTEST_ENV_COLLECTION_MANIFEST,
     )
 
 

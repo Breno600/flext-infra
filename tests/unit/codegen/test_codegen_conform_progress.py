@@ -5,41 +5,24 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
-from flext_infra import c, m
-from flext_infra.codegen.conform import FlextInfraCodegenConform
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_tests import tm
+
+from flext_infra import c, config, m
+from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import u
 
 
 class TestsFlextInfraCodegenConformProgress:
-    """Prove conform emits stage and template progress on stdout."""
+    """Prove conform emits stage and repository progress on stdout."""
 
     def test_plan_emits_stage_and_repository_progress(
         self, infra_git_repo: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """A check-mode conform must report stage and per-repository progress."""
         root = infra_git_repo
-        u.Tests.write_standalone_workspace_manifest(
-            root, "flext-demo", upstream="flext_cli"
-        )
-        package_root = root / "src" / "flext_demo"
-        tm.ok(u.Cli.ensure_dir(package_root))
-        tm.ok(u.Cli.atomic_write_text_file(package_root / "__init__.py", ""))
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                root / "pyproject.toml",
-                (
-                    "[project]\n"
-                    'name = "flext-demo"\n'
-                    'version = "0.1.0"\n'
-                    'requires-python = ">=3.13,<3.14"\n'
-                    "dependencies = []\n"
-                ),
-            )
-        )
-        workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        # The check pass re-detects the checkout, so the manifest must declare
+        # the identity the fixture's Git origin carries.
+        workspace = u.Tests.standalone_workspace(root, config.Infra.name)
         request = m.Infra.CodegenConformRequest(
             root=root,
             scope=c.Infra.CodegenConformScope.SELF,
@@ -68,4 +51,3 @@ class TestsFlextInfraCodegenConformProgress:
             where=bool,
             msg=captured[-3000:],
         )
-        tm.that(" template " in captured, where=bool, msg=captured[-3000:])

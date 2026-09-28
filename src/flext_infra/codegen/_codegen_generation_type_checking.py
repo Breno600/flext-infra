@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-from flext_infra.codegen._codegen_generation_imports import (
-    FlextInfraCodegenGenerationImportsMixin,
-)
+
+from ._codegen_generation_imports import FlextInfraCodegenGenerationImportsMixin
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -28,7 +28,7 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         sorted_children: list[str] = sorted(
             set(child_packages or []), key=len, reverse=True
         )
-        collapsed: dict[str, list[t.StrPair]] = defaultdict(list)
+        collapsed: MutableMapping[str, list[t.StrPair]] = defaultdict(list)
         for mod, items in groups.items():
             target = mod
             for child_package in sorted_children:
@@ -48,9 +48,59 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         )
 
     @staticmethod
-    def _type_checking_sort_key(mod: str) -> t.StrPair:
-        """Order absolute imports before relative imports, then by module path."""
-        return ("1" if mod.startswith(".") else "0", mod.lower())
+    def _type_checking_sort_key(mod: str, root_names: frozenset[str]) -> t.StrPair:
+        """Rank an import by ruff isort section, then by module path.
+
+        ruff/isort partitions imports into sections — third-party, then
+        first-party (this package's own root), then local (relative) — sorted
+        alphabetically within each section and separated by a single blank
+        line (``section_whitelines``). The legacy rank lumped every absolute
+        import into one alphabetical run, so a third-party import (e.g.
+        ``flext_tests``) sorted ahead of this package's own first-party import,
+        violating I001 in the generated ``tests`` initializers. Sections are
+        derived from the emitted module's owner and the package root so the
+        generated order mirrors each project's ruff isort config.
+        """
+        if mod.startswith("."):
+            return ("2", mod.lower())  # local-folder section
+        own_top = mod.split(".", maxsplit=1)[0]
+        return ("1" if own_top in root_names else "0", mod.lower())
+
+    @staticmethod
+    def _is_root_module_alias_group(mod: str, items: t.StrPairSequence) -> bool:
+        """Return whether ``mod`` is one direct root child reexporting itself."""
+        return (
+            mod.count(".") == 1
+            and bool(items)
+            and all(
+                not attr_name and export_name == mod.rsplit(".", maxsplit=1)[-1]
+                for export_name, attr_name in items
+            )
+        )
+
+    @staticmethod
+    def _merge_root_alias_groups(
+        collapsed: t.MappingKV[str, t.MutableSequenceOf[t.StrPair]],
+    ) -> MutableMapping[str, t.StrPairSequence]:
+        """Fold direct root-child module aliases into one root-relative group.
+
+        Ruff renders consecutive ``from . import <child> as <child>`` statements
+        as one root-relative import; separate per-child groups emitted one line
+        each, so every generation diverged from the formatter's canonical form
+        and only a post-generation autofix converged the published initializer.
+        """
+        merged: MutableMapping[str, t.StrPairSequence] = {}
+        root_items: t.StrPairSequence = ()
+        for mod, items in collapsed.items():
+            if FlextInfraCodegenGenerationTypeCheckingMixin._is_root_module_alias_group(
+                mod, items
+            ):
+                root_items = (*root_items, *items)
+                continue
+            merged[mod] = items
+        if root_items:
+            merged["."] = (*merged.get(".", ()), *root_items)
+        return merged
 
     @staticmethod
     def _type_checking_sort_owner(mod: str, items: t.StrPairSequence) -> str:
@@ -64,8 +114,8 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
                 for export_name, attr_name in items
             )
         ):
-            # mro-i6nq.10: Module aliases emit from their parent package.
-            return mod.rsplit(".", maxsplit=1)[0]
+            # flext-i6nq.10: Module aliases emit from their parent package.
+            return mod.rsplit(".", maxsplit=1)[0] or "."
         return mod
 
     @staticmethod
@@ -80,10 +130,10 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         if export_name != export_name.lower():
             return False
         if not attr_name:
-            # mro-i6nq.10: Literal __all__ requires every module alias binding.
+            # flext-i6nq.10: Literal __all__ requires every module alias binding.
             return False
         # A lowercase ``from mod import name`` (package-name alias like ``grpc``
-        # or a module-level function like ``smell_fixer_for``) is a real symbol
+        # or a lowercase module-level function) is a real symbol
         # that must stay statically visible; only skip a redundant self-import
         # from the root package itself.
         return mod == root_name and attr_name == export_name
@@ -103,7 +153,7 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
             item
             for item in sorted(
                 items,
-                key=lambda item: (item[1] or item[0], item[0] != (item[1] or item[0])),
+                key=FlextInfraCodegenGenerationTypeCheckingMixin._import_item_sort_key,
             )
             if not FlextInfraCodegenGenerationTypeCheckingMixin._should_skip_type_checking_module_export(
                 mod, item[0], item[1], root_name
@@ -146,13 +196,14 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         include_flext_types: bool = True,
         child_packages: t.StrSequence | None = None,
         local_package_root: str | None = None,
+        root_names: frozenset[str] | None = None,
     ) -> t.StrSequence:
         """Generate a TYPE_CHECKING import block."""
         if not groups and not include_flext_types:
             return ()
         if not groups:
             return ("if TYPE_CHECKING:", "    from flext_core import FlextTypes")
-        normalized_groups: dict[str, t.StrPairSequence] = {}
+        normalized_groups: MutableMapping[str, t.StrPairSequence] = {}
         for mod, items in groups.items():
             resolved = FlextInfraCodegenGenerationTypeCheckingMixin._normalize_type_checking_module_path(
                 mod, local_package_root
@@ -164,31 +215,60 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         collapsed = FlextInfraCodegenGenerationTypeCheckingMixin._collapse_to_children(
             normalized_groups, child_packages
         )
-        root_name = "" if not local_package_root else local_package_root.split(".")[0]
-        lines: t.MutableSequenceOf[str] = ["if TYPE_CHECKING:"]
-        if include_flext_types and (
-            not FlextInfraCodegenGenerationTypeCheckingMixin._has_flext_types(collapsed)
-        ):
-            lines.append("    from flext_core import FlextTypes")
-        sorted_mods = sorted(
-            collapsed,
-            key=lambda mod: (
-                FlextInfraCodegenGenerationTypeCheckingMixin._type_checking_sort_key(
-                    FlextInfraCodegenGenerationTypeCheckingMixin._type_checking_sort_owner(
-                        mod, collapsed[mod]
-                    )
-                )
-            ),
+        merged_groups = (
+            FlextInfraCodegenGenerationTypeCheckingMixin._merge_root_alias_groups(
+                collapsed
+            )
         )
-        previous_is_relative: bool | None = False if include_flext_types else None
+        root_name = "" if not local_package_root else local_package_root.split(".")[0]
+        # Derive the set of first-party roots for isort sectioning. When the
+        # caller provides an explicit root_names (e.g. test facades need both
+        # "tests" and the project package), use it; otherwise fall back to the
+        # single root_name so non-test packages are unaffected.
+        effective_root_names = (
+            root_names if root_names is not None else frozenset({root_name})
+        )
+        lines: t.MutableSequenceOf[str] = ["if TYPE_CHECKING:"]
+        flext_types_emitted = (
+            include_flext_types
+            and not FlextInfraCodegenGenerationTypeCheckingMixin._has_flext_types(
+                collapsed
+            )
+        )
+        if flext_types_emitted:
+            lines.append("    from flext_core import FlextTypes")
+
+        def type_checking_module_key(mod: str) -> t.StrPair:
+            owner = (
+                FlextInfraCodegenGenerationTypeCheckingMixin._type_checking_sort_owner(
+                    mod, merged_groups[mod]
+                )
+            )
+            return FlextInfraCodegenGenerationTypeCheckingMixin._type_checking_sort_key(
+                owner, effective_root_names
+            )
+
+        sorted_mods = sorted(merged_groups, key=type_checking_module_key)
+        # ``from flext_core import FlextTypes`` (when emitted above) is the
+        # leading absolute import; seed the previous section so the first loop
+        # group only separates on a real ruff isort section transition rather
+        # than against an empty prior state, and so the local-section blank that
+        # follows the absolutes is preserved.
+        previous_section: str | None = (
+            FlextInfraCodegenGenerationTypeCheckingMixin._type_checking_sort_key(
+                "flext_core", effective_root_names
+            )[0]
+            if flext_types_emitted
+            else None
+        )
         for mod in sorted_mods:
-            is_relative = mod.startswith(".")
-            if previous_is_relative is False and is_relative:
+            current_section = type_checking_module_key(mod)[0]
+            if previous_section is not None and current_section != previous_section:
                 lines.append("")
             FlextInfraCodegenGenerationTypeCheckingMixin._emit_type_checking_module(
-                mod, collapsed[mod], root_name, lines
+                mod, merged_groups[mod], root_name, lines
             )
-            previous_is_relative = is_relative
+            previous_section = current_section
         return () if len(lines) == 1 else lines
 
 

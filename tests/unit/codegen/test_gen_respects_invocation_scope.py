@@ -6,7 +6,7 @@ project alone.
 
 The ``gen`` recipe broke that by mixing two criteria in the same body:
 ``codegen conform`` received ``PROJECT_ROOT`` while dependency stages received
-``WORKSPACE_ROOT``. A ``gen`` invoked inside one
+``REPOSITORY_ROOT``. A ``gen`` invoked inside one
 member therefore rewrote the ``pyproject.toml`` of every sibling -- measured as
 "INFO: Updated <sibling>/pyproject.toml" for ~30 repositories, leaving each one
 dirty without the caller ever touching it.
@@ -17,6 +17,9 @@ pre-commit hook, so a single commit in any lane dirties every sibling.
 At the workspace root ``PROJECT_ROOT`` already *is* the workspace, so a single
 root keeps the fan-out where it belongs and restricts it everywhere else. No
 new flag is needed -- one rule, applied consistently.
+
+Every contract is asserted on the Makefile the public conform owner renders
+for a workspace fixture composing one member.
 """
 
 from __future__ import annotations
@@ -24,110 +27,134 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-_TEMPLATE = (
-    Path(__file__).resolve().parents[3]
-    / "src"
-    / "flext_infra"
-    / "templates"
-    / "project"
-    / "base"
-    / "Makefile.j2"
-)
+import pytest
+from flext_tests import tm
+
+from flext_infra import c, config
+from tests import t, u
+
+pytestmark = pytest.mark.slow
+
+_MEMBER = "fixture-member"
 
 
-def _template_text() -> str:
-    """Return the generated-Makefile template source."""
-    return _TEMPLATE.read_text(encoding="utf-8")
+class TestsFlextInfraGenRespectsInvocationScope:
+    """`gen` recipes write to exactly one root per invocation."""
 
+    @pytest.fixture
+    def rendered_makefile(self, tmp_path: Path) -> str:
+        """Render the workspace Makefile through the conform owner."""
+        return u.Tests.scaffold_text(
+            tmp_path / "fixture-project", c.Infra.MAKEFILE_FILENAME, members=(_MEMBER,)
+        )
 
-def _recipe_bodies() -> dict[str, list[str]]:
-    """Return each ``_builtin_*`` target mapped to its recipe lines."""
-    bodies: dict[str, list[str]] = {}
-    current: str | None = None
-    for line in _template_text().splitlines():
-        target = re.match(r"^(_builtin_[a-z_]+):", line)
-        if target:
-            current = target.group(1)
-            bodies[current] = []
-            continue
-        if current is None:
-            continue
-        if line.startswith("\t"):
-            bodies[current].append(line.strip())
-            continue
-        current = None
-    return bodies
+    @staticmethod
+    def _recipe_bodies(text: str) -> t.MutableMappingKV[str, list[str]]:
+        """Return each rendered ``_builtin_*`` target mapped to its recipe lines."""
+        bodies: t.MutableMappingKV[str, list[str]] = {}
+        current: str | None = None
+        for line in text.splitlines():
+            target = re.match(r"^(_builtin_[a-z_]+):", line)
+            if target:
+                current = target.group(1)
+                bodies[current] = []
+                continue
+            if current is None:
+                continue
+            if line.startswith("\t"):
+                bodies[current].append(line.strip())
+                continue
+            current = None
+        return bodies
 
+    def test_no_recipe_mixes_project_and_repository_roots(
+        self, rendered_makefile: str
+    ) -> None:
+        """One rendered recipe never writes to two different roots.
 
-def _mixed_scope_recipes() -> dict[str, list[str]]:
-    """Return recipes whose commands disagree about which root they write to."""
-    mixed: dict[str, list[str]] = {}
-    for target, lines in _recipe_bodies().items():
-        writes = [
-            line
-            for line in lines
-            if "$(PROJECT_ROOT)" in line or "$(WORKSPACE_ROOT)" in line
-        ]
-        if not writes:
-            continue
-        uses_project = any("$(PROJECT_ROOT)" in line for line in writes)
-        uses_workspace = any("$(WORKSPACE_ROOT)" in line for line in writes)
-        if uses_project and uses_workspace:
-            mixed[target] = writes
-    return mixed
+        A command that escalates to ``REPOSITORY_ROOT`` beside one scoped to
+        ``PROJECT_ROOT`` mutates siblings the caller never asked for.
+        """
+        bodies = self._recipe_bodies(rendered_makefile)
+        project_scoped = {
+            target
+            for target, lines in bodies.items()
+            if any("$(PROJECT_ROOT)" in line for line in lines)
+        }
+        mixed = {
+            target: bodies[target]
+            for target in project_scoped
+            if any("$(REPOSITORY_ROOT)" in line for line in bodies[target])
+        }
 
+        # The rendered gen recipe is project-scoped, so the invariant below is
+        # never satisfied vacuously by an unparsed Makefile.
+        tm.that(project_scoped, has="_builtin_gen_all")
+        tm.that(mixed, eq={})
 
-def test_no_recipe_mixes_project_and_workspace_roots() -> None:
-    """One recipe never writes to two different roots.
+    def test_gen_has_one_codegen_owner(self, rendered_makefile: str) -> None:
+        """The gen recipe delegates once to the conform owner.
 
-    A command that escalates to ``WORKSPACE_ROOT`` beside one scoped to
-    ``PROJECT_ROOT`` mutates siblings the caller never asked for.
-    """
-    mixed = _mixed_scope_recipes()
+        Apply verifies its own fixed point inside the conform transaction, so a
+        second external check invocation would duplicate ownership.
+        """
+        tm.that(rendered_makefile, lacks="CODEGEN_PROJECT_ARGS")
+        body = self._recipe_bodies(rendered_makefile)["_builtin_gen_all"]
+        conform_lines = [line for line in body if "codegen conform" in line]
 
-    assert not mixed, (
-        f"recipes mix invocation scopes and escalate beyond the caller: {mixed}"
-    )
+        tm.that(len(conform_lines), eq=1)
+        tm.that(conform_lines[0], has="--mode apply")
+        tm.that(conform_lines[0], has='--root "$(PROJECT_ROOT)"')
+        tm.that(conform_lines[0], has='--scope "$(CODEGEN_SCOPE)"')
+        tm.that(any("deps modernize" in line for line in body), eq=False)
+        tm.that(any("deps extra-paths" in line for line in body), eq=False)
 
+    def test_gen_init_uses_the_provisioned_owner_route(
+        self, rendered_makefile: str
+    ) -> None:
+        """Initialize uses its declared interpreter and one initializer owner."""
+        init_lines = self._recipe_bodies(rendered_makefile)["_builtin_gen_init"]
+        init_commands = [line for line in init_lines if "codegen init" in line]
 
-def test_recipe_bodies_are_actually_parsed() -> None:
-    """Guard the parser so the invariant above cannot pass vacuously."""
-    bodies = _recipe_bodies()
+        tm.that(len(init_commands), eq=2)
+        tm.that(
+            all(
+                '--repository-root "$(PROJECT_ROOT)"' in line for line in init_commands
+            ),
+            eq=True,
+        )
+        tm.that(any("codegen conform" in line for line in init_lines), eq=False)
+        for verb in config.Infra.codegen.make.verbs:
+            if verb.name in {"setup", "upg", "help", "clean"}:
+                continue
+            tm.that(
+                rendered_makefile,
+                has=f"_activated-{verb.name}: _builtin_require_environment",
+            )
+            if not verb.produces_activation:
+                tm.that(
+                    rendered_makefile,
+                    has=(
+                        'direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) '
+                        f"_activated-{verb.name}"
+                    ),
+                )
+        tm.that(rendered_makefile, has="_builtin-initialize: _builtin_gen_init")
+        tm.that(rendered_makefile, has="ifneq ($(filter initialize,$(MAKECMDGOALS)),)")
+        tm.that(rendered_makefile, has="GEN_INIT_ONLY := Y")
+        tm.that(rendered_makefile, has="REPOSITORY_ROOT := $(MAKEFILE_ROOT)")
+        tm.that(rendered_makefile, lacks="INIT_FLEXT_INFRA")
 
-    assert any(
-        "$(PROJECT_ROOT)" in line for lines in bodies.values() for line in lines
-    ), f"no PROJECT_ROOT command found in {_TEMPLATE}; parser is broken"
+    def test_project_selector_resolves_members_from_repository_root(
+        self, rendered_makefile: str
+    ) -> None:
+        """Workspace members are projected as declared gitlinks, not a WORKSPACE var.
 
-
-def test_gen_has_one_codegen_owner() -> None:
-    """The gen recipe delegates every projection to codegen conform once."""
-    text = _template_text()
-    assert "CODEGEN_PROJECT_ARGS" not in text
-
-    bodies = _recipe_bodies()
-    for target in ("_builtin_gen_check", "_builtin_gen_all"):
-        conform_lines = [line for line in bodies[target] if "codegen conform" in line]
-        assert len(conform_lines) == 1
-        assert all('--root "$(PROJECT_ROOT)"' in line for line in conform_lines)
-        assert all('--scope "$(CODEGEN_SCOPE)"' in line for line in conform_lines)
-        assert all("deps modernize" not in line for line in bodies[target])
-        assert all("deps extra-paths" not in line for line in bodies[target])
-
-
-def test_gen_routes_through_project_root() -> None:
-    bodies = _recipe_bodies()
-    for target in ("_builtin_gen_check", "_builtin_gen_all"):
-        generation_lines = [
-            line for line in bodies[target] if "$(PROJECT_FLEXT_INFRA)" in line
-        ]
-        assert len(generation_lines) == 1
-        assert all('--root "$(PROJECT_ROOT)"' in line for line in generation_lines)
-
-
-def test_project_selector_resolves_members_from_workspace_root() -> None:
-    text = _template_text()
-    assert "override WORKSPACE := $(WORKSPACE_ROOT)/$(PROJECT)" in text
-    assert "override WORKSPACE := $(PROJECT_ROOT)/$(PROJECT)" not in text
-
-
-__all__: tuple[str, ...] = ()
+        Root cause: the `override WORKSPACE := .../$(PROJECT)` selector was
+        retired in favor of `WORKSPACE_SUBPROJECTS`/`MANAGED_GITLINKS`, which the
+        generator renders from the declared workspace members, never re-derived
+        from a shell probe at `REPOSITORY_ROOT` or `PROJECT_ROOT`.
+        """
+        tm.that(rendered_makefile, lacks="override WORKSPACE :=")
+        tm.that(rendered_makefile, has=f"WORKSPACE_SUBPROJECTS := {_MEMBER}")
+        tm.that(rendered_makefile, has="MANAGED_GITLINKS :=$(WORKSPACE_SUBPROJECTS)")

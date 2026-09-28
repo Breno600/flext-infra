@@ -1,6 +1,6 @@
 """Auto-fix service for namespace violations.
 
-Orchestrates NS rule fixes, MRO migration, refactor service passes,
+Orchestrates NS rule fixes, FLEXT migration, refactor service passes,
 namespace enforcement, and lazy init propagation for each project.
 
 Rule implementations live in ``_utilities_codegen_fixer_rules``.
@@ -12,15 +12,13 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, override
+from typing import Annotated, override
 
 from flext_core import r
-from flext_infra import c, m
+from flext_infra import c, m, p, t
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-from flext_infra.codegen._fixer_workspace import FlextInfraCodegenFixerWorkspaceMixin
 
-if TYPE_CHECKING:
-    from flext_infra import p, t
+from ._fixer_workspace import FlextInfraCodegenFixerWorkspaceMixin
 
 
 class FlextInfraCodegenFixer(
@@ -34,6 +32,9 @@ class FlextInfraCodegenFixer(
     rules_only: Annotated[
         bool, m.Field(description="Only apply rule-based fixes, skip heuristic ones")
     ] = False
+    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
+        exclude=True, description="Shared Rope cycle injected by the composition root"
+    )
 
     @override
     def execute(self) -> p.Result[str]:

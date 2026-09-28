@@ -1,0 +1,9 @@
+id: rewire-cli-utilities-public-facade-import
+valid:
+  - from flext_cli import u
+invalid:
+  - from flext_cli import FlextCliUtilities as u
+  - |
+    from flext_cli import (
+        FlextCliUtilities as u,
+    )

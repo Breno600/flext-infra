@@ -1,0 +1,11 @@
+# Preserve physical line boundaries when materializing Rope logical regions.
+---
+id: rope-logical-statement-preserve-newlines
+language: Python
+severity: error
+rule:
+  pattern: $TARGET = "".join($LINES.get_line($LINE) for $LINE in range($START, $END + 1))
+fix: $TARGET = "\n".join($LINES.get_line($LINE) for $LINE in range($START, $END + 1))
+message: Rope logical statements must preserve physical newlines.
+files:
+  - "src/flext_infra/_utilities/**/*.py"

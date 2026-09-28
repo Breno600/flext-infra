@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import sys
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
-from flext_infra.gates.base_gate import FlextInfraGate
+
+from .base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -20,8 +21,6 @@ class FlextInfraPyrightGate(FlextInfraGate):
     gate_id: ClassVar[str] = c.Infra.PYRIGHT
     gate_name: ClassVar[str] = "Pyright"
     can_fix: ClassVar[bool] = False
-    tool_name: ClassVar[str] = c.Infra.SARIF_TOOL_INFO[c.Infra.PYRIGHT][0]
-    tool_url: ClassVar[str] = c.Infra.SARIF_TOOL_INFO[c.Infra.PYRIGHT][1]
 
     @override
     def _get_check_dirs(
@@ -40,13 +39,18 @@ class FlextInfraPyrightGate(FlextInfraGate):
         """Build check command."""
         _ = project_dir
         return self._python_module_command(
-            c.Infra.PYRIGHT, *check_dirs, *ctx.pyright_args, "--outputjson"
+            c.Infra.PYRIGHT,
+            "--pythonpath",
+            sys.executable,
+            *check_dirs,
+            *ctx.pyright_args,
+            "--outputjson",
         )
 
     @staticmethod
     def _has_project_pyright_config(project_dir: Path) -> bool:
         """Return whether pyproject.toml declares [tool.pyright]."""
-        doc = u.Cli.toml_read(project_dir / c.Infra.PYPROJECT_FILENAME)
+        doc = u.Cli.toml_read(project_dir / c.PYPROJECT_FILENAME)
         if doc is None:
             return False
         tool_table = u.Cli.toml_table_child(doc, c.Infra.TOOL)
@@ -65,52 +69,51 @@ class FlextInfraPyrightGate(FlextInfraGate):
     @override
     def _parse_check_output(
         self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
-    ) -> tuple[bool, t.SequenceOf[m.Infra.Issue]]:
+    ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
-        _ = project_dir, ctx
-        issues: t.MutableSequenceOf[m.Infra.Issue] = []
-        empty: t.MappingKV[str, t.Infra.InfraValue] = {}
-        parsed_result = u.Cli.json_parse(result.stdout or "{}")
-        parsed = parsed_result.unwrap() if parsed_result.success else empty
-        data = u.Cli.json_as_mapping(parsed) if isinstance(parsed, Mapping) else empty
-        try:
-            diagnostics = u.Cli.json_deep_mapping_list(
-                data, c.Infra.PYRIGHT_DIAGNOSTICS_KEY
-            )
-            issues.extend(
-                m.Infra.Issue(
-                    file=u.Cli.json_pick_str(diag, "file", "?"),
-                    line=u.Cli.json_nested_int(diag, "range", "start", "line") + 1,
-                    column=u.Cli.json_nested_int(diag, "range", "start", "character")
-                    + 1,
-                    code=u.Cli.json_pick_str(diag, "rule"),
-                    message=u.Cli.json_pick_str(diag, "message"),
-                    severity=u.Cli.json_pick_str(diag, "severity", c.Infra.ERROR),
-                )
-                for diag in diagnostics
-            )
-        except c.EXC_VALIDATION_TYPE as err:
-            issues.append(
-                m.Infra.Issue(
-                    file="<pyright-output>",
+        _ = ctx
+        if not u.Cli.process_succeeded(result.outcome) and not result.stdout.strip():
+            return False, (
+                self._command_error_issue(
+                    result,
+                    tool=c.Infra.PYRIGHT,
+                    file=str(project_dir),
                     line=0,
                     column=0,
-                    code="PARSE_ERROR",
-                    message=f"Tool output parsing failed: {type(err).__name__}",
-                    severity="ERROR",
-                )
+                ),
             )
-            return False, issues
-        if (not issues) and result.exit_code != 0:
+        validated: p.Result[m.Infra.PyrightReport] = u.validate_value(
+            m.Infra.PyrightReport, result.stdout, from_json=True, strict=True
+        )
+        if validated.failure:
+            return False, (
+                self._malformed_report_issue(
+                    str(validated.error), tool=c.Infra.PYRIGHT, file=str(project_dir)
+                ),
+            )
+        report = validated.value
+        issues: t.MutableSequenceOf[m.Infra.Issue] = [
+            m.Infra.Issue(
+                file=diag.file,
+                line=diag.range.start.line + 1 if diag.range is not None else 0,
+                column=diag.range.start.character + 1 if diag.range is not None else 0,
+                code=diag.rule or "",
+                message=diag.message,
+                severity=diag.severity,
+            )
+            for diag in report.general_diagnostics
+        ]
+        issues.extend(self._checker_stderr_issues(result, project_dir))
+        if (not issues) and not u.Cli.process_succeeded(result.outcome):
             message = (result.stderr or result.stdout).strip()
             if not message:
                 message = (
-                    f"pyright exited with code {result.exit_code} "
+                    f"pyright exited with code {result.outcome.raw_return_code} "
                     "without JSON diagnostics"
                 )
             issues.append(
                 m.Infra.Issue(
-                    file=c.Infra.PYPROJECT_FILENAME,
+                    file=c.PYPROJECT_FILENAME,
                     line=1,
                     column=1,
                     code="pyright-exec",
@@ -118,7 +121,13 @@ class FlextInfraPyrightGate(FlextInfraGate):
                     severity=c.Infra.ERROR,
                 )
             )
-        return result.exit_code == 0, issues
+        return (
+            u.Cli.process_succeeded(result.outcome)
+            and not report.summary.error_count
+            and not report.summary.warning_count
+            and not any(issue.severity == "ERROR" for issue in issues),
+            issues,
+        )
 
 
 __all__: list[str] = ["FlextInfraPyrightGate"]

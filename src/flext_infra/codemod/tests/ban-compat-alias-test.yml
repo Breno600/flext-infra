@@ -1,0 +1,8 @@
+id: ban-compat-alias
+valid:
+  - "c = FlextConstants"
+  - "u = FlextUtilities"
+  - "tm = FlextTestsMatchers"
+invalid:
+  - "OldService = NewService"
+  - "LegacyClient = CanonicalClient"

@@ -1,0 +1,14 @@
+id: ban-skip-validation
+snapshots:
+  int_view = PlainValidator(int):
+    labels:
+    - source: PlainValidator(int)
+      style: primary
+      start: 11
+      end: 30
+  'raw: SkipValidation[str]':
+    labels:
+    - source: 'raw: SkipValidation[str]'
+      style: primary
+      start: 0
+      end: 24

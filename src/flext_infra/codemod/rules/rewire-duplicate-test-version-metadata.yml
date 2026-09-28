@@ -1,0 +1,10 @@
+id: rewire-duplicate-test-version-metadata
+language: Python
+severity: error
+files:
+  - "**/tests/unit/test_infra_version_core.py"
+  - "**/tests/unit/test_infra_version_extra.py"
+rule:
+  pattern: self._metadata()
+fix: tm.ok(u.Infra.read_project_metadata_result(Path(__file__).resolve().parents[2]))
+message: Read package metadata directly through the canonical public owner.

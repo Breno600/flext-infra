@@ -1,0 +1,5 @@
+from tests import c, t, p, m
+
+class TestsFlextTestModels(m):
+    class TestsFlextTest(c, t, p):
+        pass

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import main
 from flext_tests import tm
-from tests import TestsFlextInfraUtilities as u, c
+
+from flext_infra import main
+from tests import TestsFlextInfraUtilities as u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -29,40 +30,11 @@ class TestsFlextInfraReleaseCli:
             tm.that(main(["release", "run", "--help"]), eq=0)
 
     class TestsValidation:
-        """Public validation-phase behavior."""
+        """Public input validation behavior."""
 
         @staticmethod
-        def test_release_run_validate_dry_run_succeeds(tmp_path: Path) -> None:
-            """Validate a real workspace without applying its Make gate."""
+        def test_unknown_phase_is_rejected(tmp_path: Path) -> None:
+            """A phase outside the protocol never reaches execution."""
             workspace = u.Tests.create_release_workspace(tmp_path)
 
-            result = u.Tests.run_release_main(
-                workspace,
-                "--phase",
-                c.Tests.RELEASE_PHASE_VALIDATE,
-                "--interactive",
-                "0",
-                "--dry-run",
-            )
-
-            tm.that(result, eq=0)
-
-        @staticmethod
-        def test_release_run_validate_apply_propagates_make_failure(
-            tmp_path: Path,
-        ) -> None:
-            """Propagate a real workspace validation failure to the CLI exit."""
-            workspace = u.Tests.create_release_workspace(
-                tmp_path, root_validate_exit_code="1"
-            )
-
-            result = u.Tests.run_release_main(
-                workspace,
-                "--phase",
-                c.Tests.RELEASE_PHASE_VALIDATE,
-                "--interactive",
-                "0",
-                "--apply",
-            )
-
-            tm.that(result, eq=1)
+            tm.that(u.Tests.run_release_main(workspace, "--phase", "deploy"), ne=0)

@@ -12,8 +12,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-
 from flext_tests import tm
+
 from tests import u
 
 if TYPE_CHECKING:
@@ -37,6 +37,13 @@ class TestsFlextInfraInfraSelection:
             package_dir = proj / "src" / name.replace("-", "_")
             package_dir.mkdir(parents=True)
             (package_dir / "__init__.py").write_text("")
+        (tmp_path / ".gitmodules").write_text(
+            "".join(
+                f'[submodule "{name}"]\n\tpath = {name}\n'
+                f"\turl = https://github.com/flext-sh/{name}.git\n"
+                for name in ("alpha", "beta", "gamma")
+            )
+        )
         return tmp_path
 
     @pytest.fixture
@@ -62,6 +69,16 @@ class TestsFlextInfraInfraSelection:
                 f'[project]\nname = "{project_name}"\ndependencies = ["flext-core"]\n'
             )
             (package_dir / "__init__.py").write_text("")
+        (tmp_path / ".gitmodules").write_text(
+            "".join(
+                f'[submodule "{directory}"]\n\tpath = {directory}\n'
+                f"\turl = https://github.com/flext-sh/{project}.git\n"
+                for directory, project in (
+                    ("core-alias", "flext-core"),
+                    ("cli-alias", "flext-cli"),
+                )
+            )
+        )
         return tmp_path
 
     @pytest.fixture
@@ -69,13 +86,15 @@ class TestsFlextInfraInfraSelection:
         (tmp_path / ".git").mkdir()
         (tmp_path / "Makefile").touch()
         (tmp_path / "pyproject.toml").write_text(
-            "[project]\n"
-            'name = "workspace-root"\n'
-            'dependencies = ["flext-core"]\n'
-            "[tool.uv.workspace]\n"
-            'members = ["apps/member-one", "apps/member-two"]\n'
+            '[project]\nname = "workspace"\ndependencies = ["flext-core"]\n'
         )
-        root_package = tmp_path / "src" / "workspace_root"
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "member-one"]\n\tpath = apps/member-one\n'
+            "\turl = https://github.com/flext-sh/member-one.git\n"
+            '[submodule "member-two"]\n\tpath = apps/member-two\n'
+            "\turl = https://github.com/flext-sh/member-two.git\n"
+        )
+        root_package = tmp_path / "src" / "workspace"
         root_package.mkdir(parents=True)
         (root_package / "__init__.py").touch()
         for name in ("member-one", "member-two"):
@@ -197,32 +216,28 @@ class TestsFlextInfraInfraSelection:
     def test_resolve_projects_includes_root_and_nested_members(
         self, selector: type[u.Infra], workspace_with_nested_members: Path
     ) -> None:
-        result = selector.resolve_projects(
-            workspace_with_nested_members, (), include_attached=True
-        )
+        result = selector.resolve_projects(workspace_with_nested_members, ())
 
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)
         tm.that(
             [project.name for project in projects],
-            eq=["member-one", "member-two", "workspace-root"],
+            eq=["member-one", "member-two", "workspace"],
         )
 
-    @pytest.mark.parametrize("name", [".", "workspace-root"])
+    @pytest.mark.parametrize("name", [".", "workspace"])
     def test_resolve_projects_accepts_root_aliases(
         self, selector: type[u.Infra], workspace_with_nested_members: Path, name: str
     ) -> None:
-        result = selector.resolve_projects(
-            workspace_with_nested_members, (name,), include_attached=True
-        )
+        result = selector.resolve_projects(workspace_with_nested_members, (name,))
 
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)
-        tm.that([project.name for project in projects], eq=["workspace-root"])
+        tm.that([project.name for project in projects], eq=["workspace"])
 
     def test_resolve_projects_accepts_nested_member_path(
         self, selector: type[u.Infra], workspace_with_nested_members: Path
     ) -> None:
         result = selector.resolve_projects(
-            workspace_with_nested_members, ("apps/member-one",), include_attached=True
+            workspace_with_nested_members, ("apps/member-one",)
         )
 
         projects: t.SequenceOf[m.Infra.ProjectInfo] = tm.ok(result)

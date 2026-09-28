@@ -1,0 +1,11 @@
+from __future__ import annotations
+
+from flext_core import t
+
+from flext_test._typings.base import FlextTestTypesBase
+from flext_test._typings.domain import FlextTestTypesDomain
+
+
+class FlextTestTypes(t):
+    class Test(FlextTestTypesBase, FlextTestTypesDomain):
+        pass

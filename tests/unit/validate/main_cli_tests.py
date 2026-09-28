@@ -4,14 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import main as infra_main
 from flext_tests import tm
+
+from flext_infra import main as infra_main
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestValidateCli:
+class TestsFlextInfraValidateCli:
     """Exercise the public validate CLI entrypoints."""
 
     def test_stub_validate_accepts_all_flag(self, tmp_path: Path) -> None:
@@ -22,7 +23,7 @@ class TestValidateCli:
             infra_main([
                 "validate",
                 "stub-validate",
-                "--workspace",
+                "--repository-root",
                 str(workspace),
                 "--all",
             ]),

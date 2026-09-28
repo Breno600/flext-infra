@@ -1,0 +1,16 @@
+id: private-infra-utility-call-to-facade
+snapshots:
+  FlextInfraUtilitiesPrivateImportFacades.discover(modules):
+    fixed: u.Infra.discover(modules)
+    labels:
+    - source: FlextInfraUtilitiesPrivateImportFacades.discover
+      style: primary
+      start: 0
+      end: 48
+  ? FlextInfraUtilitiesPrivateImportFacades.public_reference(class_bases=FlextInfraUtilitiesPrivateImportAncestry.class_bases(modules))
+  : fixed: u.Infra.public_reference(class_bases=FlextInfraUtilitiesPrivateImportAncestry.class_bases(modules))
+    labels:
+    - source: FlextInfraUtilitiesPrivateImportFacades.public_reference
+      style: primary
+      start: 0
+      end: 56

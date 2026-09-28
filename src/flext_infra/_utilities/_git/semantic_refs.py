@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 from git import BadName, GitCommandError
 
 from flext_core import r
-from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
-from flext_infra.constants import c
-from flext_infra.models import m
+from flext_infra import c, m
+
+from .worktree import FlextInfraUtilitiesGitWorktreeMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -28,9 +28,11 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             repo = cls._repo(request.repo_root)
             text = repo.git.worktree("list", "--porcelain")
         except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc))
+            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
-            return r[m.Infra.GitTextReport].fail(f"failed to list Git worktrees: {exc}")
+            return r[m.Infra.GitTextReport].fail(
+                f"failed to list Git worktrees: {exc}", exception=exc
+            )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text))
 
     @classmethod
@@ -45,7 +47,7 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to validate branch name: {exc}"
+                f"failed to validate branch name: {exc}", exception=exc
             )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
@@ -61,7 +63,9 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             # show-ref exits 1 when the ref does not exist — not an error.
             return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
         except (OSError, ValueError) as exc:
-            return r[m.Infra.GitBoolReport].fail(f"failed to inspect Git ref: {exc}")
+            return r[m.Infra.GitBoolReport].fail(
+                f"failed to inspect Git ref: {exc}", exception=exc
+            )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
     @classmethod
@@ -73,10 +77,10 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             repo = cls._repo(request.repo_root)
             text = repo.git.rev_parse("--show-superproject-working-tree")
         except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc))
+            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitTextReport].fail(
-                f"failed to resolve superproject working tree: {exc}"
+                f"failed to resolve superproject working tree: {exc}", exception=exc
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text))
 
@@ -84,7 +88,7 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
     def git_show_toplevel(
         cls, request: m.Infra.GitRepoRequest
     ) -> p.Result[m.Infra.GitRootReport]:
-        """Resolve ``rev-parse --show-toplevel`` as a workspace root report."""
+        """Resolve ``rev-parse --show-toplevel`` as a repository root report."""
         try:
             repo = cls._repo(request.repo_root)
             root = (
@@ -95,12 +99,12 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
                     "failed to resolve Git top level: working tree is None"
                 )
         except GitCommandError as exc:
-            return r[m.Infra.GitRootReport].fail(str(exc))
+            return r[m.Infra.GitRootReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitRootReport].fail(
-                f"failed to resolve Git top level: {exc}"
+                f"failed to resolve Git top level: {exc}", exception=exc
             )
-        return r[m.Infra.GitRootReport].ok(m.Infra.GitRootReport(workspace_root=root))
+        return r[m.Infra.GitRootReport].ok(m.Infra.GitRootReport(repository_root=root))
 
     @classmethod
     def git_current_branch(
@@ -111,11 +115,11 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             repo = cls._repo(request.repo_root)
             branch = repo.active_branch.name
         except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc))
+            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (TypeError, OSError, ValueError) as exc:
             # active_branch raises TypeError on detached HEAD.
             return r[m.Infra.GitTextReport].fail(
-                f"head branch is required from a detached HEAD: {exc}"
+                f"head branch is required from a detached HEAD: {exc}", exception=exc
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=branch))
 
@@ -128,10 +132,10 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             repo = cls._repo(request.repo_root)
             text = repo.git.symbolic_ref("--quiet", "--short", c.Infra.GIT_HEAD)
         except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc))
+            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitTextReport].fail(
-                f"failed to resolve symbolic-ref HEAD: {exc}"
+                f"failed to resolve symbolic-ref HEAD: {exc}", exception=exc
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text.strip()))
 
@@ -144,9 +148,11 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             repo = cls._repo(request.repo_root)
             oid = repo.commit(request.commitish).hexsha
         except (BadName, GitCommandError) as exc:
-            return r[m.Infra.GitOidReport].fail(str(exc))
+            return r[m.Infra.GitOidReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
-            return r[m.Infra.GitOidReport].fail(f"cannot resolve commitish: {exc}")
+            return r[m.Infra.GitOidReport].fail(
+                f"cannot resolve commitish: {exc}", exception=exc
+            )
         return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
 
     @classmethod
@@ -158,14 +164,14 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             repo = cls._repo(request.repo_root)
             branch = repo.active_branch.name
         except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc))
+            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (TypeError, OSError, ValueError):
             # Detached HEAD — fall back to the proxy for the ``HEAD`` text.
             try:
                 detached_repo = cls._repo(request.repo_root)
                 text = detached_repo.git.rev_parse("--abbrev-ref", c.Infra.GIT_HEAD)
             except GitCommandError as exc:
-                return r[m.Infra.GitTextReport].fail(str(exc))
+                return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
             return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text.strip()))
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=branch))
 
@@ -180,9 +186,11 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             head = repo.commit(c.Infra.GIT_HEAD)
             result = repo.is_ancestor(ancestor, head)
         except GitCommandError as exc:
-            return r[m.Infra.GitBoolReport].fail(str(exc))
+            return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
-            return r[m.Infra.GitBoolReport].fail(f"failed to inspect ancestry: {exc}")
+            return r[m.Infra.GitBoolReport].fail(
+                f"failed to inspect ancestry: {exc}", exception=exc
+            )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=result))
 
     @classmethod
@@ -194,10 +202,10 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             repo = cls._repo(request.repo_root)
             oid = repo.git.rev_parse(request.commitish).strip()
         except GitCommandError as exc:
-            return r[m.Infra.GitOidReport].fail(str(exc))
+            return r[m.Infra.GitOidReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitOidReport].fail(
-                f"rev-parse failed for {request.commitish}: {exc}"
+                f"rev-parse failed for {request.commitish}: {exc}", exception=exc
             )
         return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
 
@@ -210,10 +218,10 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             repo = cls._repo(request.repo_root)
             oid = repo.commit(f"{request.commitish}^").hexsha
         except GitCommandError as exc:
-            return r[m.Infra.GitOidReport].fail(str(exc))
+            return r[m.Infra.GitOidReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitOidReport].fail(
-                f"failed to resolve parent of {request.commitish}: {exc}"
+                f"failed to resolve parent of {request.commitish}: {exc}", exception=exc
             )
         return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
 

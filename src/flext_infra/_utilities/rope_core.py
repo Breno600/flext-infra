@@ -2,22 +2,16 @@
 
 from __future__ import annotations
 
-import warnings
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
-from flext_infra._config import config
-from flext_infra._utilities._rope.pep695_patch import FlextInfraUtilitiesRopePep695Patch
-from flext_infra._utilities._rope_core_pymodule import (
-    FlextInfraUtilitiesRopeCorePyModuleMixin,
-)
-from flext_infra._utilities._rope_core_resources import (
-    FlextInfraUtilitiesRopeCoreResourcesMixin,
-)
-from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.typings import t
+from flext_infra import config, t
+
+from ._rope_core_pymodule import FlextInfraUtilitiesRopeCorePyModuleMixin
+from ._rope_core_resources import FlextInfraUtilitiesRopeCoreResourcesMixin
+from .project_discovery import FlextInfraUtilitiesProjectDiscovery
+from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraUtilitiesRopeCore(
@@ -26,22 +20,33 @@ class FlextInfraUtilitiesRopeCore(
     """Core Rope lifecycle helpers."""
 
     @staticmethod
-    def init_rope_project(workspace_root: Path) -> t.Infra.RopeProject:
-        """Create a rope Project over workspace_root with no disk artifacts."""
-        FlextInfraUtilitiesRopePep695Patch.apply()
-        resolved_root = workspace_root.resolve()
-        discovered_roots = (
-            FlextInfraUtilitiesProjectDiscovery.discover_project_candidates(
-                resolved_root, include_attached=False
-            )
+    def init_rope_project(repository_root: Path) -> t.Infra.RopeProject:
+        """Create a project-scoped Rope session with no disk artifacts."""
+        resolved_root = repository_root.resolve()
+        return FlextInfraUtilitiesRopeCore._new_project(
+            resolved_root, project_roots=(resolved_root,)
         )
+
+    @staticmethod
+    def init_rope_workspace(repository_root: Path) -> t.Infra.RopeProject:
+        """Create a Rope session spanning every project below a workspace root."""
+        resolved_root = repository_root.resolve()
         project_roots = tuple(
             project_root
-            for project_root in discovered_roots
+            for project_root in FlextInfraUtilitiesProjectDiscovery.discover_rope_project_roots(
+                resolved_root
+            )
             if project_root.resolve().is_relative_to(resolved_root)
         )
-        # NOTE (multi-agent, mro-wkii.17.24): Rope consumes the same validated
-        # production roots and exclusions as every source scanner.
+        return FlextInfraUtilitiesRopeCore._new_project(
+            resolved_root, project_roots=project_roots
+        )
+
+    @staticmethod
+    def _new_project(
+        resolved_root: Path, *, project_roots: t.SequenceOf[Path]
+    ) -> t.Infra.RopeProject:
+        """Create one Rope project from validated source roots."""
         source_folders = sorted({
             str(scan_path.relative_to(resolved_root))
             for project_root in project_roots
@@ -49,31 +54,19 @@ class FlextInfraUtilitiesRopeCore(
             if (scan_path := project_root / dir_name).is_dir()
             and scan_path.resolve().is_relative_to(resolved_root)
         })
-        with warnings.catch_warnings():
-            # Why: rope's own Project.__init__ emits this DeprecationWarning
-            # internally; upstream noise we cannot fix, scoped to this call
-            # only via catch_warnings (auto-restored, never process-global).
-            warnings.filterwarnings(
-                "ignore",
-                message="Delete once deprecated functions are gone",
-                category=DeprecationWarning,
-            )
-            project: t.Infra.RopeProject = FlextInfraUtilitiesRopeRuntime.new_project(
-                str(resolved_root),
-                ropefolder="",
-                save_objectdb=False,
-                # NOTE (mro-jnm1.1 / mro-jnm1.4): ignore names derive from the
-                # codegen artifact SSOT (single source, no per-consumer copies).
-                ignored_resources=sorted(config.Infra.codegen.source_scan_ignored),
-                source_folders=source_folders,
-            )
-            return project
+        return FlextInfraUtilitiesRopeRuntime.new_project(
+            str(resolved_root),
+            ropefolder="",
+            save_objectdb=False,
+            ignored_resources=sorted(config.Infra.codegen.source_scan_ignored),
+            source_folders=source_folders,
+        )
 
     @staticmethod
     @contextmanager
-    def open_project(workspace_root: Path) -> Generator[t.Infra.RopeProject]:
+    def open_project(repository_root: Path) -> Generator[t.Infra.RopeProject]:
         """Open one Rope project and always close it through the core boundary."""
-        rope_project = FlextInfraUtilitiesRopeCore.init_rope_project(workspace_root)
+        rope_project = FlextInfraUtilitiesRopeCore.init_rope_project(repository_root)
         try:
             yield rope_project
         finally:

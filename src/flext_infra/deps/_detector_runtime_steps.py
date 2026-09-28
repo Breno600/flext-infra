@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, p, t
+from flext_infra import c, p, settings, t, u
 
 if TYPE_CHECKING:
     from flext_infra import m
@@ -22,16 +22,14 @@ class FlextInfraDependencyDetectorRuntimeSteps:
 
     def _validate_environment(
         self, params: m.Infra.DetectCommand, root: Path, venv_bin: Path
-    ) -> p.Result[tuple[t.SequenceOf[Path], Path]]:
+    ) -> p.Result[t.Pair[t.SequenceOf[Path], Path]]:
         """Discover projects and verify deptry binary; return ``(projects, limits_path)``."""
         detector = self._detector
         projects_result = detector.deps.discover_project_paths(
             root, projects_filter=params.project_names
         )
         if projects_result.failure:
-            return r[tuple[t.SequenceOf[Path], Path]].fail(
-                projects_result.error or "project discovery failed"
-            )
+            return r[tuple[t.SequenceOf[Path], Path]].from_failure(projects_result)
         projects: t.SequenceOf[Path] = projects_result.value
         if not projects:
             detector.log.error("deps_no_projects_found")
@@ -77,24 +75,33 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         self,
         project_path: Path,
         *,
-        deps_service: p.Infra.DepsService,
-        typing_deps: p.Infra.TypingsDepsService | None,
         venv_bin: Path,
         limits_path: Path,
         params: m.Infra.DetectCommand,
-        do_typings: bool,
-        projects_report: MutableMapping[str, MutableMapping[str, t.Infra.InfraValue]],
+        projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]],
     ) -> p.Result[bool]:
         """Run deptry + optional typings detection/apply for one project."""
         detector = self._detector
+        deps_service = detector.deps
+        typing_deps = (
+            deps_service
+            if isinstance(deps_service, p.Infra.TypingsDepsService)
+            else None
+        )
+        do_typings = params.typings or params.apply_typings
         project_name = project_path.name
         if not params.quiet:
             detector.log.info("deps_deptry_running", project=project_name)
         deptry_result = deps_service.run_deptry(project_path, venv_bin)
         if deptry_result.failure:
-            return r[bool].fail(deptry_result.error or "deptry run failed")
+            return r[bool].from_failure(deptry_result)
         issues, _ = deptry_result.value
-        project_payload = deps_service.build_project_report(project_name, issues)
+        governed = deps_service.govern_deptry_issues(project_path, issues)
+        if governed.failure:
+            return r[bool].from_failure(governed)
+        project_payload = deps_service.build_project_report(
+            project_name, governed.value
+        )
         projects_report[project_name] = dict(project_payload.model_dump())
         run_typings_for_project = (
             do_typings
@@ -106,7 +113,6 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         return self._run_project_typings(
             project_path,
             typing_deps=typing_deps,
-            venv_bin=venv_bin,
             limits_path=limits_path,
             params=params,
             projects_report=projects_report,
@@ -117,44 +123,51 @@ class FlextInfraDependencyDetectorRuntimeSteps:
         project_path: Path,
         *,
         typing_deps: p.Infra.TypingsDepsService | None,
-        venv_bin: Path,
         limits_path: Path,
         params: m.Infra.DetectCommand,
-        projects_report: MutableMapping[str, MutableMapping[str, t.Infra.InfraValue]],
+        projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]],
     ) -> p.Result[bool]:
-        """Detect required typings for a project and optionally add them via poetry."""
+        """Declare CUSTOM typing extras and install them through UV's source editor."""
         detector = self._detector
         if typing_deps is None:
             return r[bool].fail("typing dependency detection service unavailable")
         project_name = project_path.name
         if not params.quiet:
             detector.log.info("deps_typings_detect_running", project=project_name)
-        typings_result = typing_deps.get_required_typings(
+        typings_result = typing_deps.analyze_required_typings(
             project_path, limits_path=limits_path
         )
         if typings_result.failure:
-            return r[bool].fail(
-                typings_result.error or "typing dependency detection failed"
-            )
+            return r[bool].from_failure(typings_result)
         typings_report = typings_result.value
         projects_report[project_name][c.Infra.DIR_TYPINGS] = typings_report.model_dump()
         to_add: t.StrSequence = typings_report.to_add
         if not (params.apply_typings and to_add and params.apply):
             return r[bool].ok(True)
-        env = {"VIRTUAL_ENV": str(venv_bin.parent)}
-        poetry = venv_bin / c.Infra.POETRY
-        for package in to_add:
-            run_outcome = detector.runner.run_raw(
-                [str(poetry), "add", "--group", c.Infra.DIR_TYPINGS, package],
-                cwd=project_path,
-                timeout=c.Infra.TIMEOUT_MEDIUM,
-                env=env,
+        # UV owns the TOML edit, lock, installation and failed-add source recovery.
+        # Inherit Make's UV_PROJECT_ENVIRONMENT; never rebind a parent's runtime.
+        run_outcome = detector.runner.run_raw(
+            [
+                settings.Infra.uv_executable or c.Infra.UV,
+                "add",
+                "--project",
+                str(project_path),
+                "--optional",
+                c.Infra.TYPINGS,
+                "--",
+                *to_add,
+            ],
+            cwd=project_path,
+            timeout=c.Infra.TIMEOUT_MEDIUM,
+        )
+        if run_outcome.failure:
+            return r[bool].from_failure(run_outcome)
+        if not u.Cli.process_succeeded(run_outcome.value.outcome):
+            return r[bool].fail(
+                f"UV typing dependency add failed for {project_name}: "
+                f"exit {run_outcome.value.outcome.raw_return_code}\n"
+                f"{run_outcome.value.stdout}\n{run_outcome.value.stderr}"
             )
-            poetry_failed = run_outcome.failure or run_outcome.value.exit_code != 0
-            if poetry_failed:
-                detector.log.warning(
-                    "deps_typings_add_failed", project=project_name, package=package
-                )
         return r[bool].ok(True)
 
     def _run_pip_check(
@@ -175,7 +188,7 @@ class FlextInfraDependencyDetectorRuntimeSteps:
             detector.log.info("deps_pip_check_running")
         pip_result = deps_service.run_pip_check(root, venv_bin)
         if pip_result.failure:
-            return r[bool].fail(pip_result.error or "pip check failed")
+            return r[bool].from_failure(pip_result)
         pip_lines, pip_exit = pip_result.value
         pip_ok = pip_exit == 0
         report_model.pip_check = self._pip_check_factory(ok=pip_ok, lines=pip_lines)

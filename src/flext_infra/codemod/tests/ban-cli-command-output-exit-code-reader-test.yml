@@ -1,0 +1,6 @@
+id: ban-cli-command-output-exit-code-reader
+valid:
+  - output.outcome.raw_return_code
+invalid:
+  - output.exit_code
+  - command.exit_code

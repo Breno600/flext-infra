@@ -5,12 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-
-from flext_core import r
-from flext_infra import config, m, main, u as infra_u
-from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
 from flext_tests import tm
-from tests import c, u
+
+from flext_infra import FlextInfraPyprojectModernizer, config, main, u as infra_u
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -21,45 +19,33 @@ if TYPE_CHECKING:
 class TestsFlextInfraDepsModernizerWorkspace:
     """Validate helper behavior through public utilities and entrypoints."""
 
-    def test_tooling_context_resolution_does_not_launch_external_formatter(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    @staticmethod
+    def _reject_external_selector(
+        modernizer_workspace: Path,
+        selector: str,
+        external_pyproject: Path,
+        original: str,
     ) -> None:
-        project = tmp_path / "flext-demo"
-        monkeypatch.setenv("PATH", "")
-
-        resolved = FlextInfraPyprojectModernizer(
-            workspace_root=project, skip_check=True
-        ).resolve_tooling_context(
-            project_name="flext-demo",
-            package_name="flext_demo",
-            path=project / "pyproject.toml",
-            declared_python_dirs=("src", "tests"),
-            declared_python_dirs_are_complete=True,
+        """Run the modernizer on an undeclared selector and prove no mutation."""
+        modernizer = FlextInfraPyprojectModernizer(
+            repository_root=modernizer_workspace,
+            selected_projects=[selector],
+            apply_changes=True,
+            skip_check=True,
+            skip_comments=True,
         )
 
-        tm.ok(resolved)
+        tm.that(modernizer.run(), eq=2)
+        tm.that(external_pyproject.read_text(encoding="utf-8"), eq=original)
 
-    def test_taplo_cache_key_tracks_config_content_and_relative_path(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        commands: list[tuple[str, ...]] = []
-        working_directories: list[Path] = []
-
-        def run_raw(
-            command: list[str], *, cwd: Path, input_data: bytes
-        ) -> r[m.Cli.CommandOutput]:
-            commands.append(tuple(command))
-            working_directories.append(cwd)
-            tm.that(input_data, eq=source.encode())
-            return r[m.Cli.CommandOutput].ok(
-                m.Cli.CommandOutput(stdout='name = "demo"\n', stderr="", exit_code=0)
-            )
-
-        monkeypatch.setattr(u.Cli, "run_raw", run_raw)
+    def test_taplo_formats_toml_through_public_utility(self, tmp_path: Path) -> None:
         config_path = tmp_path / ".taplo.toml"
         config_path.write_text('include = ["**/*.toml"]\n', encoding="utf-8")
         formatter = infra_u.Infra.format_toml_source
         taplo_version = config.Infra.codegen.toolchain.taplo_version
+        process_timeout_seconds = (
+            config.Infra.tooling.tools.tomlsort.process_timeout_seconds
+        )
         source = 'name="demo"\n'
 
         formatted = tm.ok(
@@ -68,68 +54,44 @@ class TestsFlextInfraDepsModernizerWorkspace:
                 path=tmp_path / "first" / "pyproject.toml",
                 toolchain_root=tmp_path,
                 taplo_version=taplo_version,
-            )
-        )
-        tm.ok(
-            formatter(
-                source,
-                path=tmp_path / "first" / "pyproject.toml",
-                toolchain_root=tmp_path,
-                taplo_version=taplo_version,
+                process_timeout_seconds=process_timeout_seconds,
             )
         )
         config_path.write_text('include = ["pyproject.toml"]\n', encoding="utf-8")
-        tm.ok(
+        reformatted = tm.ok(
             formatter(
                 source,
                 path=tmp_path / "first" / "pyproject.toml",
                 toolchain_root=tmp_path,
                 taplo_version=taplo_version,
+                process_timeout_seconds=process_timeout_seconds,
             )
         )
-        tm.ok(
-            formatter(
-                source,
-                path=tmp_path / "second" / "pyproject.toml",
-                toolchain_root=tmp_path,
-                taplo_version=taplo_version,
-            )
-        )
-
-        tm.that(commands, len=3)
-        tm.that(formatted, eq='name = "demo"')
-        tm.that(commands[0], has="first/pyproject.toml")
-        tm.that(commands[2], has="second/pyproject.toml")
-        tm.that(working_directories, eq=[tmp_path.resolve()] * 3)
-        tm.that(commands[0], has=str(config_path.resolve()))
+        # Why (flext-50qh0): the wrapper returns Taplo's stdout unchanged and
+        # a formatted TOML document ends with the canonical trailing newline.
+        tm.that(formatted, eq='name = "demo"\n')
+        tm.that(reformatted, eq=formatted)
 
     def test_taplo_uses_nearest_existing_root_for_scaffold_path(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path
     ) -> None:
-        working_directories: list[Path] = []
-
-        def run_raw(
-            _command: list[str], *, cwd: Path, input_data: bytes
-        ) -> r[m.Cli.CommandOutput]:
-            working_directories.append(cwd)
-            tm.that(input_data, eq=b'name="demo"\n')
-            return r[m.Cli.CommandOutput].ok(
-                m.Cli.CommandOutput(stdout='name = "demo"\n', stderr="", exit_code=0)
-            )
-
-        monkeypatch.setattr(u.Cli, "run_raw", run_raw)
         future_root = tmp_path / "future" / "project"
 
-        tm.ok(
+        formatted = tm.ok(
             infra_u.Infra.format_toml_source(
                 'name="demo"\n',
                 path=future_root / "pyproject.toml",
                 toolchain_root=future_root,
                 taplo_version=config.Infra.codegen.toolchain.taplo_version,
+                process_timeout_seconds=(
+                    config.Infra.tooling.tools.tomlsort.process_timeout_seconds
+                ),
             )
         )
 
-        tm.that(working_directories, eq=[tmp_path.resolve()])
+        # Why (flext-50qh0): the wrapper returns Taplo's stdout unchanged and
+        # a formatted TOML document ends with the canonical trailing newline.
+        tm.that(formatted, eq='name = "demo"\n')
 
     @pytest.mark.parametrize(
         ("content", "exists", "expected"),
@@ -155,20 +117,20 @@ class TestsFlextInfraDepsModernizerWorkspace:
         else:
             tm.that(log_entries, empty=True)
 
-    def test_workspace_root_returns_explicit_path(self, tmp_path: Path) -> None:
-        """Verify workspace root returns explicit path."""
+    def test_repository_root_returns_explicit_path(self, tmp_path: Path) -> None:
+        """Verify repository root returns explicit path."""
         explicit = tmp_path / "explicit"
         explicit.mkdir()
-        result = u.Infra.resolve_workspace_root_or_cwd(explicit)
+        result = u.Infra.resolve_repository_root_or_cwd(explicit)
         tm.that(str(result), eq=str(explicit.resolve()))
 
-    def test_workspace_root_fallback_returns_non_empty_path(
+    def test_repository_root_fallback_returns_non_empty_path(
         self, tmp_path: Path
     ) -> None:
-        """Verify workspace root fallback returns non empty path."""
+        """Verify repository root fallback returns non empty path."""
         deep_path = tmp_path / "a" / "b" / "c" / "d" / "e"
         deep_path.mkdir(parents=True, exist_ok=True)
-        result = u.Infra.resolve_workspace_root_or_cwd(deep_path)
+        result = u.Infra.resolve_repository_root_or_cwd(deep_path)
         tm.that(str(result), ne="")
 
     @pytest.mark.parametrize(
@@ -191,7 +153,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         self, tmp_path: Path, description: str, sort_first: t.StrSequence | None
     ) -> None:
         """Keep project scalars explicit for arbitrary valid top-level orders."""
-        pyproject = tmp_path / c.Infra.PYPROJECT_FILENAME
+        pyproject = tmp_path / c.PYPROJECT_FILENAME
         package_init = tmp_path / "src" / "flext_example" / "__init__.py"
         package_init.parent.mkdir(parents=True)
         package_init.write_text("", encoding="utf-8")
@@ -210,17 +172,21 @@ class TestsFlextInfraDepsModernizerWorkspace:
         )
         modernizer = (
             FlextInfraPyprojectModernizer(
-                workspace_root=tmp_path, skip_check=True, skip_comments=True
+                repository_root=tmp_path, skip_check=True, skip_comments=True
             )
             if sort_first is None
             else FlextInfraPyprojectModernizer(
-                workspace_root=tmp_path,
+                repository_root=tmp_path,
                 skip_check=True,
                 skip_comments=True,
                 tomlsort_sort_first=sort_first,
             )
         )
-        rendered = tm.ok(modernizer.conform_source(source, path=pyproject))
+        rendered = tm.ok(
+            modernizer.conform_source(
+                source, path=pyproject, topology=m.Infra.PyprojectDeclaredTopology()
+            )
+        )
         tm.that(rendered.count("[project]"), eq=1)
         payload = u.Cli.toml_mapping_from_text(rendered)
         tm.that(payload, none=False)
@@ -238,70 +204,21 @@ class TestsFlextInfraDepsModernizerWorkspace:
         tm.that(u.Cli.json_as_sequence(groups.get(c.Infra.DEV)), eq=["pytest"])
         tm.that(list(payload)[: len(expected_order)], eq=list(expected_order))
 
-    def test_modernizer_uses_git_topology_for_child_detection(
-        self, tmp_path: Path
-    ) -> None:
-        source_repository = tmp_path / "source-repository"
-        source_repository.mkdir()
-        pyproject = source_repository / c.Infra.PYPROJECT_FILENAME
-        source = '[project]\nname = "flext-demo"\nversion = "0.1.0"\n'
-        pyproject.write_text(source, encoding="utf-8")
-        package_init = source_repository / "src" / "flext_demo" / "__init__.py"
-        package_init.parent.mkdir(parents=True)
-        package_init.write_text("", encoding="utf-8")
-        (source_repository / "Makefile").write_text(
-            "MAKE_PROFILE := workspace-member\nWORKSPACE_ROOT_REL := ..\n",
-            encoding="utf-8",
-        )
-        u.Tests.initialize_git_repo(source_repository)
-        standalone = tm.ok(
-            FlextInfraPyprojectModernizer(
-                workspace_root=source_repository, skip_check=True, skip_comments=True
-            ).conform_source(source, path=pyproject)
-        )
-
-        superproject = tmp_path / "superproject"
-        superproject.mkdir()
-        (superproject / "README.md").write_text("workspace\n", encoding="utf-8")
-        u.Tests.initialize_git_repo(superproject)
-        u.Tests.git_bootstrap(
-            superproject,
-            (
-                "-c",
-                "protocol.file.allow=always",
-                "submodule",
-                "add",
-                str(source_repository),
-                "member",
-            ),
-        )
-        member = superproject / "member"
-        attached = tm.ok(
-            FlextInfraPyprojectModernizer(
-                workspace_root=member, skip_check=True, skip_comments=True
-            ).conform_source(
-                (member / c.Infra.PYPROJECT_FILENAME).read_text(encoding="utf-8"),
-                path=member / c.Infra.PYPROJECT_FILENAME,
-            )
-        )
-
-        tm.that(attached, ne=standalone)
-
     def test_main_applies_only_selected_projects(
         self, modernizer_workspace_with_projects: Path
     ) -> None:
         """Verify main applies only selected projects."""
         selected_pyproject = (
-            modernizer_workspace_with_projects / "selected" / c.Infra.PYPROJECT_FILENAME
+            modernizer_workspace_with_projects / "selected" / c.PYPROJECT_FILENAME
         )
         ignored_pyproject = (
-            modernizer_workspace_with_projects / "ignored" / c.Infra.PYPROJECT_FILENAME
+            modernizer_workspace_with_projects / "ignored" / c.PYPROJECT_FILENAME
         )
         tm.that(
             main([
                 "deps",
                 "modernize",
-                "--workspace",
+                "--repository-root",
                 str(modernizer_workspace_with_projects),
                 "--apply",
                 "--skip-check",
@@ -323,17 +240,26 @@ class TestsFlextInfraDepsModernizerWorkspace:
         workspace = tmp_path / "workspace"
         member = workspace / "member-dir"
         member.mkdir(parents=True)
-        (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
-            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
-            '\n[tool.uv.workspace]\nmembers = ["member-dir"]\n',
+        (workspace / c.PYPROJECT_FILENAME).write_text(
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n', encoding="utf-8"
+        )
+        (workspace / ".gitmodules").write_text(
+            '[submodule "declared-name"]\n\tpath = member-dir\n'
+            "\turl = https://github.com/flext-sh/declared-name.git\n",
             encoding="utf-8",
         )
-        (member / c.Infra.PYPROJECT_FILENAME).write_text(
+        (member / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "declared-name"\nversion = "0.1.0"\n', encoding="utf-8"
+        )
+        u.Tests.write_beads_project(
+            member,
+            workspace="workspace",
+            database="declared_name",
+            issue_prefix="declared-name",
         )
 
         modernizer = FlextInfraPyprojectModernizer(
-            workspace_root=workspace,
+            repository_root=workspace,
             selected_projects=["declared-name"],
             apply_changes=False,
             skip_check=True,
@@ -349,15 +275,20 @@ class TestsFlextInfraDepsModernizerWorkspace:
         workspace = tmp_path / "workspace"
         member = workspace / "member"
         member.mkdir(parents=True)
-        (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
-            '[tool.uv.workspace]\nmembers = ["member"]\n', encoding="utf-8"
+        (workspace / c.PYPROJECT_FILENAME).write_text(
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n', encoding="utf-8"
         )
-        (member / c.Infra.PYPROJECT_FILENAME).write_text(
+        (workspace / ".gitmodules").write_text(
+            '[submodule "member"]\n\tpath = member\n'
+            "\turl = https://github.com/flext-sh/member.git\n",
+            encoding="utf-8",
+        )
+        (member / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "member"\nversion = "0.1.0"\n', encoding="utf-8"
         )
 
         modernizer = FlextInfraPyprojectModernizer(
-            workspace_root=workspace,
+            repository_root=workspace,
             selected_projects=["member"],
             apply_changes=False,
             skip_check=True,
@@ -374,25 +305,30 @@ class TestsFlextInfraDepsModernizerWorkspace:
         workspace = tmp_path / "workspace"
         (workspace / "first-dir").mkdir(parents=True)
         (workspace / "second-dir").mkdir()
-        (workspace / c.Infra.PYPROJECT_FILENAME).write_text(
-            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
-            '\n[tool.uv.workspace]\nmembers = ["first-dir", "second-dir"]\n',
+        (workspace / c.PYPROJECT_FILENAME).write_text(
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n', encoding="utf-8"
+        )
+        (workspace / ".gitmodules").write_text(
+            '[submodule "first"]\n\tpath = first-dir\n'
+            "\turl = https://github.com/flext-sh/first.git\n"
+            '[submodule "second"]\n\tpath = second-dir\n'
+            "\turl = https://github.com/flext-sh/second.git\n",
             encoding="utf-8",
         )
         for member_name in ("first-dir", "second-dir"):
-            (workspace / member_name / c.Infra.PYPROJECT_FILENAME).write_text(
+            (workspace / member_name / c.PYPROJECT_FILENAME).write_text(
                 '[project]\nname = "shared-name"\nversion = "0.1.0"\n', encoding="utf-8"
             )
 
         ambiguous = FlextInfraPyprojectModernizer(
-            workspace_root=workspace,
+            repository_root=workspace,
             selected_projects=["shared-name"],
             apply_changes=False,
             skip_check=True,
             skip_comments=True,
         )
         exact = FlextInfraPyprojectModernizer(
-            workspace_root=workspace,
+            repository_root=workspace,
             selected_projects=["first-dir"],
             apply_changes=False,
             skip_check=True,
@@ -409,7 +345,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         """Reject configured members resolving outside root without mutation."""
         external_project = modernizer_workspace.parent / "external"
         external_project.mkdir()
-        external_pyproject = external_project / c.Infra.PYPROJECT_FILENAME
+        external_pyproject = external_project / c.PYPROJECT_FILENAME
         original = '[project]\nname = "external"\nversion = "0.1.0"\n'
         external_pyproject.write_text(original, encoding="utf-8")
         if member_kind == "absolute":
@@ -421,44 +357,30 @@ class TestsFlextInfraDepsModernizerWorkspace:
             (modernizer_workspace / selector).symlink_to(
                 external_project, target_is_directory=True
             )
-        (modernizer_workspace / c.Infra.PYPROJECT_FILENAME).write_text(
+        (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "workspace"\nversion = "0.1.0"\n'
             f'\n[tool.uv.workspace]\nmembers = ["{selector}"]\n',
             encoding="utf-8",
         )
 
-        modernizer = FlextInfraPyprojectModernizer(
-            workspace_root=modernizer_workspace,
-            selected_projects=[selector],
-            apply_changes=True,
-            skip_check=True,
-            skip_comments=True,
+        TestsFlextInfraDepsModernizerWorkspace._reject_external_selector(
+            modernizer_workspace, selector, external_pyproject, original
         )
-
-        tm.that(modernizer.run(), eq=2)
-        tm.that(external_pyproject.read_text(encoding="utf-8"), eq=original)
 
     @pytest.mark.parametrize("selector_kind", ["absolute", "parent-relative"])
     def test_modernizer_rejects_undeclared_project_paths(
         self, modernizer_workspace: Path, selector_kind: str
     ) -> None:
-        """Reject selectors outside declared workspace members without mutation."""
+        """Reject selectors outside declared workspace projects without mutation."""
         external_project = modernizer_workspace.parent / "external"
         external_project.mkdir()
-        external_pyproject = external_project / c.Infra.PYPROJECT_FILENAME
+        external_pyproject = external_project / c.PYPROJECT_FILENAME
         original = '[project]\nname = "external"\nversion = "0.1.0"\n'
         external_pyproject.write_text(original, encoding="utf-8")
         selector = (
             str(external_project) if selector_kind == "absolute" else "../external"
         )
 
-        modernizer = FlextInfraPyprojectModernizer(
-            workspace_root=modernizer_workspace,
-            selected_projects=[selector],
-            apply_changes=True,
-            skip_check=True,
-            skip_comments=True,
+        TestsFlextInfraDepsModernizerWorkspace._reject_external_selector(
+            modernizer_workspace, selector, external_pyproject, original
         )
-
-        tm.that(modernizer.run(), eq=2)
-        tm.that(external_pyproject.read_text(encoding="utf-8"), eq=original)

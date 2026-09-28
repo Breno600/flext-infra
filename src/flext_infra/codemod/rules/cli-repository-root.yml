@@ -1,0 +1,9 @@
+id: cli-repository-root-option
+language: Python
+severity: error
+rule:
+  pattern: '"--workspace"'
+fix: '"--repository-root"'
+message: Use the repository_root CLI contract rather than the retired workspace alias.
+files:
+  - "tests/unit/**/*.py"

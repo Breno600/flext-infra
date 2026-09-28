@@ -96,17 +96,15 @@ class FlextInfraGateContractReportMixin:
     def _violation_rows(
         scripts: t.SequenceOf[m.Infra.GateContractScriptInfo],
     ) -> t.SequenceOf[t.JsonDict]:
+        def violation_key(row: t.JsonDict) -> t.Pair[str, str]:
+            return str(row.get("script", "")), str(row.get("check", ""))
+
         rows = [
             t.json_dict_adapter().validate_python(violation.model_dump())
             for script in scripts
             for violation in script.violations
         ]
-        return tuple(
-            sorted(
-                rows,
-                key=lambda row: (str(row.get("script", "")), str(row.get("check", ""))),
-            )
-        )
+        return tuple(sorted(rows, key=violation_key))
 
     def _summary_for(
         self, scripts: t.SequenceOf[m.Infra.GateContractScriptInfo]
@@ -154,7 +152,7 @@ class FlextInfraGateContractReportMixin:
             options=m.Cli.JsonWriteOptions(indent=2, sort_keys=True),
         )
         if write.failure:
-            return r[Path].fail(write.error or f"cannot write {report_path}")
+            return r[Path].from_failure(write)
         return r[Path].ok(report_path)
 
     def _print_summary(

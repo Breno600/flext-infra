@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_tests import tm
+
 from flext_infra import m, u
 from flext_infra.detectors.internal_import_detector import (
     FlextInfraInternalImportDetector,
 )
-from flext_tests import tm
+from tests import u as test_u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -18,14 +20,7 @@ class TestsFlextInfraInternalImportDetector:
     """Behavior contract for internal import detection."""
 
     def test_allows_public_dunder_version_module_import(self, tmp_path: Path) -> None:
-        project = tmp_path / "demo-project"
-        package_dir = project / "src" / "demo_project"
-        package_dir.mkdir(parents=True)
-        _ = (project / "pyproject.toml").write_text(
-            "[project]\nname='demo-project'\n", encoding="utf-8"
-        )
-        _ = (project / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
-        _ = (package_dir / "__init__.py").write_text("", encoding="utf-8")
+        project, package_dir = test_u.Tests.demo_project(tmp_path)
         version_file = package_dir / "__version__.py"
         _ = version_file.write_text(
             "from __future__ import annotations\n"
@@ -52,14 +47,7 @@ class TestsFlextInfraInternalImportDetector:
     def test_allows_private_local_alias_for_public_external_symbol(
         self, tmp_path: Path
     ) -> None:
-        project = tmp_path / "demo-project"
-        package_dir = project / "src" / "demo_project"
-        package_dir.mkdir(parents=True)
-        _ = (project / "pyproject.toml").write_text(
-            "[project]\nname='demo-project'\n", encoding="utf-8"
-        )
-        _ = (project / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
-        _ = (package_dir / "__init__.py").write_text("", encoding="utf-8")
+        project, package_dir = test_u.Tests.demo_project(tmp_path)
         constants_file = package_dir / "constants.py"
         _ = constants_file.write_text(
             "from __future__ import annotations\n"

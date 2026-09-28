@@ -1,0 +1,30 @@
+# The release config family has one owner: the release module
+# (flext-itpd1.3, 2026-09-19).
+#
+# The _models/_config split duplicated the whole release block — four classes,
+# 151 lines — into the artifact module. The two copies are byte-identical once
+# the enclosing namespace name is normalised, so nothing is lost by electing
+# one; but while both exist the config root binds the artifact copy while the
+# public facade `m.Infra.*` binds the release copy. Config data then validates
+# into one class and reaches a consumer annotated with the other, and Pydantic
+# rejects every item: "Input should be a valid dictionary or instance of
+# BuildConstraintSpec". That is what kills `make gen` fleet-wide.
+#
+# The release module is the elected owner: it is named for the domain, it holds
+# the whole family, and the generated facade already points at it. This rule
+# rewires any consumer still naming the artifact copy.
+id: release-family-owner-is-release-module
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: FlextInfraConfigModelsArtifact.$ATTR
+constraints:
+  ATTR:
+    regex: "^(?:ReleasePolicySpec|ReleaseAutomationSpec|ReleaseAutomationOverrideSpec|BuildConstraintSpec)$"
+fix: FlextInfraConfigModelsRelease.$ATTR
+message: >-
+  The release config family is owned by the release module; the artifact copy
+  is split residue and binding to it splits the config root from the facade.

@@ -1,0 +1,6 @@
+from __future__ import annotations
+
+class FlextTestValidation:
+    def execute(self) -> None:
+        from pydantic.v1 import validator as validate
+        validate('value')

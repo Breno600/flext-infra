@@ -1,0 +1,4 @@
+from tests.conftest import helper
+
+class TestsFlextTestModels:
+    pass

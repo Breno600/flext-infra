@@ -1,384 +1,481 @@
-"""AST-only silent-failure detection helpers.
-
-Copyright (c) 2025 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Public utility facet for silent-failure AST enforcement."""
 
 from __future__ import annotations
 
 import ast
-from collections.abc import Mapping
-from typing import NamedTuple, override
+from collections.abc import Iterator, MutableMapping
+from typing import ClassVar
+
+from flext_infra import m, p, t
 
 
-class _SilentFailureFinding(NamedTuple):
-    line: int
-    column: int
-    kind: str
-    detail: str
-    fix_action: str
-    replacement: tuple[int, int, str] | None = None
+class FlextInfraUtilitiesSilentFailureAst:
+    """Expose stateless silent-failure detection and fixes through ``u.Infra``.
 
-
-class _SilentFailureAstVisitor(ast.NodeVisitor):
-    """AST visitor collecting exception-silencing patterns.
-
-    Walks the rope-backed AST (``pymodule.get_ast()``).  No regex is used;
-    all findings are derived from structural AST nodes.
+    Analysis walks one module in the pre-order ``ast.NodeVisitor`` uses and
+    threads its context explicitly: import aliases accumulate in that order (an
+    import resolves only the calls after it), and the parent map and source
+    lines are read-only inputs of the rules. Findings leave as
+    ``m.Infra.SilentFailureFinding`` models.
     """
 
-    _SENTINEL_CONSTANTS: frozenset[object] = frozenset({False, None})
-    _BROAD_EXCEPTION_NAMES: frozenset[str] = frozenset({"Exception", "BaseException"})
+    # ``True`` is included deliberately: an error branch returning True is a
+    # fail-open path, strictly worse than the already-flagged False. ``0`` and
+    # ``""`` stay OUT: a zero count or empty string is frequently the correct
+    # computed result, and the AST cannot distinguish that from a sentinel —
+    # flagging them would drown the gate in false positives (flext-t5uhw).
+    _SENTINEL_CONSTANTS: ClassVar[frozenset[p.AttributeProbe]] = frozenset({
+        False,
+        None,
+        True,
+    })
+    _BOOLEAN_PREDICATE_PREFIXES: ClassVar[t.VariadicTuple[str]] = (
+        "has_",
+        "is_",
+        "should_",
+    )
+    _BROAD_EXCEPTION_NAMES: ClassVar[frozenset[str]] = frozenset({
+        "Exception",
+        "BaseException",
+    })
 
-    def __init__(self, source: str) -> None:
-        self.source = source
-        self.lines = source.splitlines(keepends=True)
-        self.findings: list[_SilentFailureFinding] = []
-        self._import_aliases: dict[str, str] = {}
-        self._parents: dict[ast.AST, ast.AST] = {}
+    @classmethod
+    def collect_silent_failure_findings(
+        cls, tree: ast.Module, source: str, *, is_test_module: bool = False
+    ) -> t.VariadicTuple[m.Infra.SilentFailureFinding]:
+        """Collect all silent-failure findings in one module.
 
-    def analyze(self, tree: ast.Module) -> list[_SilentFailureFinding]:
-        """Build parent map and walk the rope-backed module AST."""
-        self._parents.clear()
-        for parent in ast.walk(tree):
-            for child in ast.iter_child_nodes(parent):
-                self._parents[child] = parent
-        self.visit(tree)
-        return self.findings
+        ``is_test_module`` relaxes ``contextlib.suppress`` findings: a test
+        teardown legitimately suppresses lifecycle errors (a child process
+        that already died) without hiding any production failure path.
+        """
+        lines = tuple(source.splitlines(keepends=True))
+        parents = {
+            child: parent
+            for parent in ast.walk(tree)
+            for child in ast.iter_child_nodes(parent)
+        }
+        aliases: MutableMapping[str, str] = {}
+        findings: list[m.Infra.SilentFailureFinding] = []
+        for node in cls._preorder(tree):
+            if isinstance(node, ast.Import):
+                aliases.update(
+                    (alias.asname or alias.name.split(".", maxsplit=1)[0], alias.name)
+                    for alias in node.names
+                )
+            elif isinstance(node, ast.ImportFrom):
+                module = node.module or ""
+                aliases.update(
+                    (
+                        alias.asname or alias.name,
+                        f"{module}.{alias.name}" if module else alias.name,
+                    )
+                    for alias in node.names
+                )
+            elif isinstance(node, ast.Call):
+                findings.extend(
+                    cls._call_findings(node, aliases, is_test_module=is_test_module)
+                )
+            elif isinstance(node, ast.ExceptHandler):
+                findings.extend(cls._handler_findings(node, aliases, lines, parents))
+            elif isinstance(node, ast.If):
+                findings.extend(cls._guard_findings(node, lines, parents))
+        return tuple(findings)
 
-    def _enclosing_function(
-        self, node: ast.AST
-    ) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
-        current: ast.AST | None = node
-        while current is not None:
-            if isinstance(current, ast.FunctionDef | ast.AsyncFunctionDef):
-                return current
-            current = self._parents.get(current)
-        return None
-
-    def _result_inner_type(
-        self, func: ast.FunctionDef | ast.AsyncFunctionDef
-    ) -> str | None:
-        returns = func.returns
-        if not isinstance(returns, ast.Subscript):
-            return None
-        value = returns.value
-        is_result_shape = (
-            isinstance(value, ast.Name) and value.id in {"r", "Result"}
-        ) or (isinstance(value, ast.Attribute) and value.attr == "Result")
-        if not is_result_shape:
-            return None
-        inner_type: str = ast.unparse(returns.slice)
-        return inner_type
-
-    def _line_offsets(self, lineno: int) -> tuple[int, int]:
-        start = sum(len(self.lines[i]) for i in range(lineno - 1))
-        end = start + len(self.lines[lineno - 1])
-        return start, end
-
-    def _indent_of(self, node: ast.Return) -> str:
-        line = self.lines[node.lineno - 1]
-        indent: str = line[: len(line) - len(line.lstrip())]
-        return indent
-
-    def _add_finding(
-        self,
+    @classmethod
+    def collect_silent_failure_fixes(
+        cls,
+        tree: ast.Module,
+        source: str,
         *,
-        line: int,
-        column: int,
-        kind: str,
-        detail: str,
-        fix_action: str = "manual",
-        replacement: tuple[int, int, str] | None = None,
-    ) -> None:
-        self.findings.append(
-            _SilentFailureFinding(
-                line=line,
-                column=column,
-                kind=kind,
-                detail=detail,
-                fix_action=fix_action,
-                replacement=replacement,
+        kinds: set[str] | frozenset[str] | None = None,
+        is_test_module: bool = False,
+    ) -> t.VariadicTuple[t.Triple[int, int, str]]:
+        """Return deterministic fixes for the selected finding kinds."""
+        allowed = kinds or frozenset()
+        return tuple(
+            finding.replacement
+            for finding in cls.collect_silent_failure_findings(
+                tree, source, is_test_module=is_test_module
             )
+            if finding.replacement is not None
+            and (not allowed or finding.kind in allowed)
         )
 
-    @override
-    def visit_Import(self, node: ast.Import) -> None:
-        for alias in node.names:
-            bound_name = alias.asname or alias.name.split(".", maxsplit=1)[0]
-            self._import_aliases[bound_name] = alias.name
-        self.generic_visit(node)
+    @staticmethod
+    def _preorder(root: ast.AST) -> Iterator[ast.AST]:
+        """Yield nodes in ``ast.NodeVisitor`` order: node, then children in field order."""
+        stack: list[ast.AST] = [root]
+        while stack:
+            node = stack.pop()
+            yield node
+            stack.extend(reversed(tuple(ast.iter_child_nodes(node))))
 
-    @override
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        module_name = node.module or ""
-        for alias in node.names:
-            bound_name = alias.asname or alias.name
-            self._import_aliases[bound_name] = (
-                f"{module_name}.{alias.name}" if module_name else alias.name
-            )
-        self.generic_visit(node)
-
-    @override
-    def visit_Call(self, node: ast.Call) -> None:
-        call_name = _resolve_call_name(node, self._import_aliases)
-        if call_name == "contextlib.suppress":
-            self._add_finding(
-                line=node.lineno,
-                column=node.col_offset,
-                kind="silent-failure-suppress",
-                detail=(
-                    "contextlib.suppress(...) silences exceptions without logging "
-                    "or propagation"
+    @classmethod
+    def _call_findings(
+        cls, node: ast.Call, aliases: t.MappingKV[str, str], *, is_test_module: bool
+    ) -> t.VariadicTuple[m.Infra.SilentFailureFinding]:
+        if cls._resolve_call_name(node, aliases) == "contextlib.suppress":
+            if is_test_module:
+                return ()
+            return (
+                m.Infra.SilentFailureFinding(
+                    line=node.lineno,
+                    column=node.col_offset,
+                    kind="silent-failure-suppress",
+                    detail=(
+                        "contextlib.suppress(...) silences exceptions without "
+                        "propagation"
+                    ),
+                    fix_action="manual",
                 ),
             )
-        elif _is_unwrap_or_call(node):
-            self._add_finding(
-                line=node.lineno,
-                column=node.col_offset,
-                kind="silent-failure-unwrap-or",
-                detail="unwrap_or(sentinel) hides a failure path",
-            )
-        self.generic_visit(node)
-
-    @override
-    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
-        if self._is_except_pass(node):
-            self._add_finding(
-                line=node.lineno,
-                column=node.col_offset,
-                kind="silent-failure-except-pass",
-                detail="except handler with empty pass swallows the exception",
-            )
-        elif self._is_broad_unhandled_except(node):
-            self._add_finding(
-                line=node.lineno,
-                column=node.col_offset,
-                kind="silent-failure-broad-except",
-                detail=(
-                    "broad except catches Exception/BaseException without re-raise "
-                    "or r[...].fail(...) propagation"
+        if cls._is_unwrap_or_call(node):
+            return (
+                m.Infra.SilentFailureFinding(
+                    line=node.lineno,
+                    column=node.col_offset,
+                    kind="silent-failure-unwrap-or",
+                    detail="unwrap_or(sentinel) hides a failure path",
+                    fix_action="manual",
                 ),
             )
-        elif self._is_except_sentinel(node):
-            self._add_except_sentinel_finding(node)
-        self.generic_visit(node)
+        return ()
 
-    @override
-    def visit_If(self, node: ast.If) -> None:
-        guard_info = self._guard_info(node)
-        if guard_info is not None:
-            result_name, _success_branch = guard_info
-            self._add_guard_finding(node, result_name)
-        self.generic_visit(node)
+    @classmethod
+    def _handler_findings(
+        cls,
+        node: ast.ExceptHandler,
+        aliases: t.MappingKV[str, str],
+        lines: t.StrSequence,
+        parents: t.MappingKV[ast.AST, ast.AST],
+    ) -> t.VariadicTuple[m.Infra.SilentFailureFinding]:
+        if cls._is_except_pass(node):
+            return (
+                m.Infra.SilentFailureFinding(
+                    line=node.lineno,
+                    column=node.col_offset,
+                    kind="silent-failure-except-pass",
+                    detail="except handler with pass swallows the exception",
+                    fix_action="manual",
+                ),
+            )
+        if not cls._body_has_raise_or_fail(node.body) and cls._declares_broad_exception(
+            node, aliases
+        ):
+            return (
+                m.Infra.SilentFailureFinding(
+                    line=node.lineno,
+                    column=node.col_offset,
+                    kind="silent-failure-broad-except",
+                    detail="broad except does not re-raise or propagate with r.fail",
+                    fix_action="manual",
+                ),
+            )
+        if cls._is_except_sentinel(node, aliases):
+            return cls._except_sentinel_findings(node, lines, parents)
+        return ()
 
-    def _is_except_pass(self, node: ast.ExceptHandler) -> bool:
-        return all(
-            isinstance(stmt, ast.Pass)
-            or (isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant))
-            for stmt in node.body
-        ) and any(isinstance(stmt, ast.Pass) for stmt in node.body)
-
-    def _is_broad_unhandled_except(self, node: ast.ExceptHandler) -> bool:
-        if self._body_has_raise_or_fail(node.body):
+    @classmethod
+    def _is_except_sentinel(
+        cls, node: ast.ExceptHandler, aliases: t.MappingKV[str, str]
+    ) -> bool:
+        if node.type is not None and cls._declares_broad_exception(node, aliases):
             return False
-        type_name = _expression_name(node.type, self._import_aliases)
-        if not type_name:
-            return True  # bare ``except:`` is equivalent to BaseException
-        return type_name in self._BROAD_EXCEPTION_NAMES
+        if cls._body_has_raise_or_fail(node.body):
+            return False
+        returned = cls._first_sentinel_return(node.body)
+        if returned is None:
+            return False
+        # A ``True`` return inside a narrow except branch is a fail-closed
+        # predicate decision ("treat as broken / has behavior"), not a
+        # swallowed failure. Guards keep ``True`` flagged: a failure branch
+        # returning True is fail-open.
+        return not (
+            isinstance(returned.value, ast.Constant) and returned.value.value is True
+        )
 
-    def _is_except_sentinel(self, node: ast.ExceptHandler) -> bool:
-        if node.type is not None:
-            type_name = _expression_name(node.type, self._import_aliases)
-            if type_name in self._BROAD_EXCEPTION_NAMES or not type_name:
-                return False
-        return not self._body_has_raise_or_fail(
-            node.body
-        ) and self._body_has_sentinel_return(node.body)
+    @classmethod
+    def _guard_findings(
+        cls, node: ast.If, lines: t.StrSequence, parents: t.MappingKV[ast.AST, ast.AST]
+    ) -> t.VariadicTuple[m.Infra.SilentFailureFinding]:
+        result_name = cls._guard_info(node)
+        if result_name is None:
+            return ()
+        function = cls._enclosing_function(node, parents)
+        if function is not None and cls._is_findings_collector(function):
+            return ()
+        if cls._body_records_failure(node.body):
+            return ()
+        returned = cls._first_sentinel_return(node.body)
+        if returned is None:
+            return ()
+        inner = cls._result_inner_type(function) if function is not None else None
+        replacement: t.Triple[int, int, str] | None = None
+        action = "manual"
+        if inner is not None:
+            label = result_name.removesuffix("_result").replace("_", " ").strip()
+            failure = f"{label} failed" if label else "operation failed"
+            start, end = cls._return_line_span(lines, returned.lineno)
+            replacement = (
+                start,
+                end,
+                (
+                    f"{cls._return_indent(lines, returned)}return r[{inner}].fail("
+                    f"{result_name}.error or {failure!r})\n"
+                ),
+            )
+            action = "fix_silent_failure_sentinels"
+        return (
+            m.Infra.SilentFailureFinding(
+                line=returned.lineno,
+                column=returned.col_offset,
+                kind="silent-failure-guard",
+                detail=f"failure branch for {result_name!r} returns a sentinel",
+                fix_action=action,
+                replacement=replacement,
+            ),
+        )
 
-    def _body_has_sentinel_return(self, body: list[ast.stmt]) -> bool:
-        for stmt in body:
-            for child in ast.walk(stmt):
-                if isinstance(child, ast.Return) and self._is_sentinel_value(
-                    child.value
-                ):
-                    return True
-        return False
-
-    def _is_sentinel_value(self, node: ast.expr | None) -> bool:
-        if node is None:
-            return True
-        if isinstance(node, ast.Constant) and node.value in self._SENTINEL_CONSTANTS:
-            return True
-        if isinstance(node, ast.List) and not node.elts:
-            return True
-        return isinstance(node, ast.Dict) and not node.keys
+    @classmethod
+    def _except_sentinel_findings(
+        cls,
+        node: ast.ExceptHandler,
+        lines: t.StrSequence,
+        parents: t.MappingKV[ast.AST, ast.AST],
+    ) -> t.VariadicTuple[m.Infra.SilentFailureFinding]:
+        function = cls._enclosing_function(node, parents)
+        if function is not None and cls._is_boolean_predicate(function):
+            return ()
+        if cls._body_records_failure(node.body):
+            return ()
+        returned = cls._first_sentinel_return(node.body)
+        if returned is None:
+            return ()
+        inner = cls._result_inner_type(function) if function is not None else None
+        replacement: t.Triple[int, int, str] | None = None
+        action = "manual"
+        if inner is not None and node.name is not None:
+            start, end = cls._return_line_span(lines, returned.lineno)
+            replacement = (
+                start,
+                end,
+                (
+                    f"{cls._return_indent(lines, returned)}return r[{inner}].fail("
+                    f"str({node.name}), exception={node.name})\n"
+                ),
+            )
+            action = "fix_silent_failure_sentinels"
+        return (
+            m.Infra.SilentFailureFinding(
+                line=returned.lineno,
+                column=returned.col_offset,
+                kind="silent-failure-except",
+                detail="exception branch returns a sentinel instead of propagating",
+                fix_action=action,
+                replacement=replacement,
+            ),
+        )
 
     @staticmethod
-    def _body_has_raise_or_fail(body: list[ast.stmt]) -> bool:
-        for stmt in body:
-            for child in ast.walk(stmt):
-                if isinstance(child, ast.Raise):
-                    return True
-                if (
-                    isinstance(child, ast.Call)
-                    and isinstance(child.func, ast.Attribute)
-                    and child.func.attr == "fail"
-                ):
-                    return True
-        return False
+    def _is_except_pass(node: ast.ExceptHandler) -> bool:
+        return any(isinstance(statement, ast.Pass) for statement in node.body) and all(
+            isinstance(statement, ast.Pass)
+            or (
+                isinstance(statement, ast.Expr)
+                and isinstance(statement.value, ast.Constant)
+            )
+            for statement in node.body
+        )
 
-    def _guard_info(self, node: ast.If) -> tuple[str, bool] | None:
+    @staticmethod
+    def _guard_info(node: ast.If) -> str | None:
         test = node.test
         if isinstance(test, ast.Attribute) and isinstance(test.value, ast.Name):
-            if test.attr == "failure":
-                return test.value.id, False
-            if test.attr == "success":
-                return test.value.id, True
+            return test.value.id if test.attr in {"failure", "success"} else None
         if (
             isinstance(test, ast.UnaryOp)
             and isinstance(test.op, ast.Not)
             and isinstance(test.operand, ast.Attribute)
             and isinstance(test.operand.value, ast.Name)
+            and test.operand.attr in {"failure", "success"}
         ):
-            if test.operand.attr == "success":
-                return test.operand.value.id, False
-            if test.operand.attr == "failure":
-                return test.operand.value.id, True
+            return test.operand.value.id
         return None
 
-    def _add_guard_finding(self, node: ast.If, result_name: str) -> None:
-        return_node = self._first_sentinel_return(node.body)
-        if return_node is None:
-            return
-        func = self._enclosing_function(node)
-        inner_type = self._result_inner_type(func) if func is not None else None
-        replacement: tuple[int, int, str] | None = None
-        fix_action = "manual"
-        if inner_type is not None:
-            lbl = result_name.removesuffix("_result").replace("_", " ").strip()
-            failure_label = f"{lbl} failed" if lbl else "operation failed"
-            indent = self._indent_of(return_node)
-            start, end = self._line_offsets(return_node.lineno)
-            replacement = (
-                start,
-                end,
-                (
-                    f"{indent}return r[{inner_type}].fail("
-                    f"{result_name}.error or {failure_label!r})\n"
-                ),
-            )
-            fix_action = "fix_silent_failure_sentinels"
-        self._add_finding(
-            line=return_node.lineno,
-            column=return_node.col_offset,
-            kind="silent-failure-guard",
-            detail=(
-                f"failure branch for '{result_name}' returns sentinel "
-                "instead of propagating the error"
-            ),
-            fix_action=fix_action,
-            replacement=replacement,
-        )
-
-    def _add_except_sentinel_finding(self, node: ast.ExceptHandler) -> None:
-        return_node = self._first_sentinel_return(node.body)
-        if return_node is None:
-            return
-        exception_name = node.name
-        func = self._enclosing_function(node)
-        inner_type = self._result_inner_type(func) if func is not None else None
-        replacement: tuple[int, int, str] | None = None
-        fix_action = "manual"
-        if inner_type is not None and exception_name is not None:
-            indent = self._indent_of(return_node)
-            start, end = self._line_offsets(return_node.lineno)
-            replacement = (
-                start,
-                end,
-                (
-                    f"{indent}return r[{inner_type}].fail("
-                    f"str({exception_name}), exception={exception_name})\n"
-                ),
-            )
-            fix_action = "fix_silent_failure_sentinels"
-        self._add_finding(
-            line=return_node.lineno,
-            column=return_node.col_offset,
-            kind="silent-failure-except",
-            detail=(
-                "exception branch returns sentinel instead of "
-                "propagating the caught error"
-            ),
-            fix_action=fix_action,
-            replacement=replacement,
-        )
-
-    def _first_sentinel_return(self, body: list[ast.stmt]) -> ast.Return | None:
-        for stmt in body:
-            for child in ast.walk(stmt):
-                if isinstance(child, ast.Return) and self._is_sentinel_value(
-                    child.value
-                ):
-                    return child
+    @staticmethod
+    def _enclosing_function(
+        node: ast.AST, parents: t.MappingKV[ast.AST, ast.AST]
+    ) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+        current: ast.AST | None = node
+        while current is not None:
+            if isinstance(current, ast.FunctionDef | ast.AsyncFunctionDef):
+                return current
+            current = parents.get(current)
         return None
 
+    @staticmethod
+    def _is_findings_collector(
+        function: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> bool:
+        """Return whether ``function`` is a findings collector.
 
-def _resolve_call_name(node: ast.Call, import_aliases: Mapping[str, str]) -> str:
-    """Resolve a call expression to a dotted name using alias context."""
-    func = node.func
-    if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
-        base = import_aliases.get(func.value.id, func.value.id)
-        return f"{base}.{func.attr}"
-    if isinstance(func, ast.Name):
-        return import_aliases.get(func.id, func.id)
-    return ""
+        Why (cosmos-3flk9): a collector's contract returns the list of
+        findings it found; an empty list in a success branch means "no
+        findings", not a swallowed failure.
+        """
+        return function.name.endswith("_findings") or function.name.startswith(
+            "collect_"
+        )
 
+    @classmethod
+    def _is_boolean_predicate(
+        cls, function: ast.FunctionDef | ast.AsyncFunctionDef
+    ) -> bool:
+        """Return whether ``function`` is a boolean predicate.
 
-def _is_unwrap_or_call(node: ast.Call) -> bool:
-    """Return True for ``<something>.unwrap_or(<sentinel>)``."""
-    func = node.func
-    if not isinstance(func, ast.Attribute) or func.attr != "unwrap_or":
-        return False
-    if not node.args:
-        return False
-    first_arg = node.args[0]
-    if isinstance(first_arg, ast.Constant) and first_arg.value in {False, None}:
-        return True
-    if isinstance(first_arg, ast.List) and not first_arg.elts:
-        return True
-    return isinstance(first_arg, ast.Dict) and not first_arg.keys
+        Why (cosmos-3flk9): a ``has_*``/``is_*``/``should_*`` predicate maps
+        a specific, expected exception to ``False`` — that is the predicate's
+        meaning, not a hidden failure.
+        """
+        return function.name.startswith(cls._BOOLEAN_PREDICATE_PREFIXES)
 
+    @staticmethod
+    def _result_inner_type(
+        function: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> str | None:
+        returns = function.returns
+        if not isinstance(returns, ast.Subscript):
+            return None
+        value = returns.value
+        is_result = (isinstance(value, ast.Name) and value.id in {"r", "Result"}) or (
+            isinstance(value, ast.Attribute) and value.attr == "Result"
+        )
+        return ast.unparse(returns.slice) if is_result else None
 
-def _expression_name(node: ast.expr | None, import_aliases: Mapping[str, str]) -> str:
-    """Resolve a bare expression to a dotted name."""
-    if node is None:
+    @staticmethod
+    def _return_line_span(lines: t.StrSequence, line_number: int) -> t.Pair[int, int]:
+        start = sum(len(lines[index]) for index in range(line_number - 1))
+        return start, start + len(lines[line_number - 1])
+
+    @staticmethod
+    def _return_indent(lines: t.StrSequence, node: ast.Return) -> str:
+        line = lines[node.lineno - 1]
+        return line[: len(line) - len(line.lstrip())]
+
+    @classmethod
+    def _is_sentinel_value(cls, node: ast.expr | None) -> bool:
+        if node is None:
+            return True
+        if isinstance(node, ast.Constant) and node.value in cls._SENTINEL_CONSTANTS:
+            return True
+        if isinstance(node, (ast.List, ast.Tuple)) and not node.elts:
+            return True
+        if isinstance(node, ast.Dict) and not node.keys:
+            return True
+        # set()/frozenset() carry the same "no result" semantics as [] and {}.
+        return (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id in {"set", "frozenset"}
+            and not node.args
+            and not node.keywords
+        )
+
+    @classmethod
+    def _first_sentinel_return(cls, body: t.SequenceOf[ast.stmt]) -> ast.Return | None:
+        return next(
+            (
+                child
+                for statement in body
+                for child in ast.walk(statement)
+                if isinstance(child, ast.Return) and cls._is_sentinel_value(child.value)
+            ),
+            None,
+        )
+
+    @staticmethod
+    def _body_has_raise_or_fail(body: t.SequenceOf[ast.stmt]) -> bool:
+        return any(
+            isinstance(child, ast.Raise)
+            or (
+                isinstance(child, ast.Call)
+                and isinstance(child.func, ast.Attribute)
+                and child.func.attr.startswith("fail")
+            )
+            for statement in body
+            for child in ast.walk(statement)
+        )
+
+    @staticmethod
+    def _body_records_failure(body: t.SequenceOf[ast.stmt]) -> bool:
+        """Whether the branch records the failure through an explicit skip.
+
+        Gate and fixer flows own a loud skip channel (recorded with the error
+        and rendered in reports) — a branch that skips is not silent.
+        """
+        return any(
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Attribute)
+            and child.func.attr == "skip"
+            for statement in body
+            for child in ast.walk(statement)
+        )
+
+    @staticmethod
+    def _resolve_call_name(node: ast.Call, aliases: t.MappingKV[str, str]) -> str:
+        function = node.func
+        if isinstance(function, ast.Attribute) and isinstance(function.value, ast.Name):
+            base = aliases.get(function.value.id, function.value.id)
+            return f"{base}.{function.attr}"
+        if isinstance(function, ast.Name):
+            return aliases.get(function.id, function.id)
         return ""
-    if isinstance(node, ast.Name):
-        return import_aliases.get(node.id, node.id)
-    if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
-        base = import_aliases.get(node.value.id, node.value.id)
-        return f"{base}.{node.attr}"
-    return ""
+
+    @classmethod
+    def _expression_name(
+        cls, node: ast.expr | None, aliases: t.MappingKV[str, str]
+    ) -> str:
+        if node is None:
+            return ""
+        if isinstance(node, ast.Name):
+            return aliases.get(node.id, node.id)
+        if isinstance(node, ast.Attribute):
+            base = cls._expression_name(node.value, aliases)
+            if base:
+                return f"{base}.{node.attr}"
+        return ""
+
+    @classmethod
+    def _declares_broad_exception(
+        cls, node: ast.ExceptHandler, aliases: t.MappingKV[str, str]
+    ) -> bool:
+        """Whether the clause declares no exception, or any broad one.
+
+        A bare ``except:`` declares none. ``except (A, B):`` declares both --
+        the tuple form is exactly as narrow as the single form. An
+        unresolvable expression keeps its conservative broad reading: the rule
+        cannot prove it narrow, so it does not claim it is.
+        """
+        if node.type is None:
+            return True
+        declared = (
+            tuple(node.type.elts) if isinstance(node.type, ast.Tuple) else (node.type,)
+        )
+        names = tuple(cls._expression_name(element, aliases) for element in declared)
+        return not names or any(
+            not name or name in cls._BROAD_EXCEPTION_NAMES for name in names
+        )
+
+    @classmethod
+    def _is_unwrap_or_call(cls, node: ast.Call) -> bool:
+        function = node.func
+        return (
+            isinstance(function, ast.Attribute)
+            and function.attr == "unwrap_or"
+            and bool(node.args)
+            and cls._is_sentinel_value(node.args[0])
+        )
 
 
-def collect_silent_failure_findings(
-    tree: ast.Module, source: str
-) -> list[_SilentFailureFinding]:
-    """Collect all silent-failure findings from a rope-backed module AST."""
-    return _SilentFailureAstVisitor(source).analyze(tree)
-
-
-def collect_silent_failure_fixes(
-    tree: ast.Module, source: str, *, kinds: set[str] | frozenset[str] | None = None
-) -> list[tuple[int, int, str]]:
-    """Return deterministic auto-fix replacements for silent-failure sentinels."""
-    allowed = kinds if kinds is not None else frozenset()
-    return [
-        finding.replacement
-        for finding in _SilentFailureAstVisitor(source).analyze(tree)
-        if finding.replacement is not None and (not allowed or finding.kind in allowed)
-    ]
-
-
-__all__: list[str] = ["collect_silent_failure_findings", "collect_silent_failure_fixes"]
+__all__: t.VariadicTuple[str] = ("FlextInfraUtilitiesSilentFailureAst",)

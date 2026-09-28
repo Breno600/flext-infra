@@ -1,0 +1,9 @@
+id: rewire-infra-constants-submodule-import-to-root-facade
+snapshots:
+  from flext_infra.constants import c:
+    fixed: from flext_infra import c
+    labels:
+    - source: from flext_infra.constants import c
+      style: primary
+      start: 0
+      end: 35

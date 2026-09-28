@@ -1,0 +1,10 @@
+id: rewire-duplicate-test-release-build
+language: Python
+severity: error
+files:
+  - "**/tests/unit/release/test_release_dag.py"
+  - "**/tests/unit/release/orchestrator_helpers_tests.py"
+rule:
+  pattern: _run_release_build($$$ARGS)
+fix: u.Tests.run_release_build($$$ARGS)
+message: Reuse the existing public release build test owner.

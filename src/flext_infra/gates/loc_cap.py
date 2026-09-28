@@ -1,102 +1,100 @@
 """FLEXT module-cap SUPREME LAW (§3.1) quality gate.
 
-Enforces the per-module logical-LOC ceiling using tokei's code-line count.
+Enforces the per-module logical-LOC ceiling using scc's code-line count.
 Per-class / per-method / per-function caps require AST and are out of scope
-for this tool-driven gate (tokei reports at file granularity only).
+for this tool-driven gate (scc reports at file granularity only).
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, u
+from flext_infra import c, config, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import p, t
 
 
 class FlextInfraLocCapGate(FlextInfraGate):
-    """Flag any module whose tokei `code` LOC exceeds ``c.Infra.LOC_CAP_MAX``."""
+    """Flag any module whose scc `Code` LOC exceeds the config-owned ceiling."""
 
     gate_id: ClassVar[str] = "loc-cap"
     gate_name: ClassVar[str] = "MODULE-LOC SUPREME LAW"
     can_fix: ClassVar[bool] = False
-    tool_name: ClassVar[str] = c.Infra.SARIF_TOOL_INFO["loc-cap"][0]
-    tool_url: ClassVar[str] = c.Infra.SARIF_TOOL_INFO["loc-cap"][1]
 
     @override
     def _build_check_command(
         self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
     ) -> t.StrSequence:
-        """Run tokei over the project's Python directories, emitting JSON."""
+        """Run scc over the project's Python directories, emitting per-file JSON."""
         _ = project_dir, ctx
-        return [c.Infra.TOKEI_BINARY, "--output", "json", *check_dirs]
+        return [c.Infra.SCC_BINARY, "--format", "json", "--by-file", *check_dirs]
 
     @override
     def _parse_check_output(
         self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
-    ) -> tuple[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse tokei JSON into one Issue per over-cap module."""
-        _ = project_dir, ctx
-        if result.exit_code != 0:
+    ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
+        """Parse scc JSON into one Issue per over-cap module."""
+        _ = ctx
+        if not u.Cli.process_succeeded(result.outcome):
             return (
                 False,
                 (
                     m.Infra.Issue(
-                        file="<tokei>",
+                        file="<scc>",
                         line=0,
                         column=0,
                         code="LOC_CAP_EXEC",
-                        message=result.stderr or "tokei execution failed",
+                        message=result.stderr or "scc execution failed",
                         severity="ERROR",
                     ),
                 ),
             )
-        issues = self._files_over_cap(result.stdout or "{}", c.Infra.LOC_CAP_MAX)
+        issues = self._files_over_cap(
+            result.stdout, config.Infra.codegen.loc_cap.max_lines, project_dir
+        )
         return len(issues) == 0, issues
 
-    @classmethod
-    def _files_over_cap(cls, tokei_json: str, cap: int) -> tuple[m.Infra.Issue, ...]:
-        """Extract over-cap modules from a tokei `--output json` payload.
+    @staticmethod
+    def _issue_for_over_cap(path: str, code: int, cap: int) -> m.Infra.Issue:
+        """Build the ``LOC_CAP`` issue for one module past the SUPREME LAW cap."""
+        return m.Infra.Issue(
+            file=path,
+            line=code,
+            column=0,
+            code="LOC_CAP",
+            message=f"{code} code LOC exceeds {cap}-line SUPREME LAW",
+            severity="ERROR",
+        )
 
-        Pure function (no subprocess) so the cap logic is unit-testable against
-        a literal tokei fixture.
+    @classmethod
+    def _files_over_cap(
+        cls, scc_json: str, cap: int, project_dir: Path
+    ) -> t.VariadicTuple[m.Infra.Issue]:
+        """Extract over-cap modules from an `scc --format json --by-file` payload.
+
+        SCC paths are relative to its project working directory, not the caller.
+        Parsing and header-read failures propagate. Generated facades carry
+        AUTOGEN_HEADER and are exempt: their size is the generator's obligation,
+        enforced by its own contract — the SUPREME LAW caps authored modules.
         """
-        parsed = u.Cli.json_parse(tokei_json or "{}")
-        empty: t.JsonValue = {}
-        data = parsed.unwrap() if parsed.success else empty
-        if not isinstance(data, Mapping):
-            return ()
-        issues: t.MutableSequenceOf[m.Infra.Issue] = []
-        for language, payload in data.items():
-            if language != c.Infra.TOKEI_PYTHON_LANG or not isinstance(
-                payload, Mapping
-            ):
-                continue
-            reports = payload.get("reports")
-            if not isinstance(reports, list):
-                continue
-            for report in reports:
-                if not isinstance(report, Mapping):
-                    continue
-                code = u.Cli.json_nested_int(report, "stats", "code")
-                if code > cap:
-                    name = u.Cli.json_pick_str(report, "name", "?")
-                    issues.append(
-                        m.Infra.Issue(
-                            file=name,
-                            line=code,
-                            column=0,
-                            code="LOC_CAP",
-                            message=f"{code} code LOC exceeds {cap}-line SUPREME LAW",
-                            severity="ERROR",
-                        )
-                    )
-        return tuple(issues)
+        report = m.Infra.SccReport.model_validate_json(scc_json, strict=True)
+        return tuple(
+            cls._issue_for_over_cap(file.location, file.code, cap)
+            for language in report.root
+            if language.name == c.Infra.SCC_PYTHON_LANG
+            for file in language.files
+            if file.code > cap
+            and not cls._is_generated_facade(project_dir / file.location)
+        )
+
+    @staticmethod
+    def _is_generated_facade(path: Path) -> bool:
+        """Return True when the file opens with the generator's AUTOGEN_HEADER."""
+        with path.open(encoding=c.Cli.ENCODING_DEFAULT) as handle:
+            return handle.readline().startswith(c.Infra.AUTOGEN_HEADER)
 
 
 __all__: list[str] = ["FlextInfraLocCapGate"]

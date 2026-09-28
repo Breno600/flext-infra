@@ -2,23 +2,40 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType
+from collections.abc import Mapping
 from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
+
 from flext_infra import t
-from flext_infra._models.deps_tool_config_linters import (
-    FlextInfraModelsDepsToolConfigLinters,
-)
-from flext_infra._models.deps_tool_config_type_checkers import (
-    FlextInfraModelsDepsToolConfigTypeCheckers,
-)
+
+from .deps_tool_config_linters import FlextInfraModelsDepsToolConfigLinters
+from .deps_tool_config_type_checkers import FlextInfraModelsDepsToolConfigTypeCheckers
 
 
-class FlextInfraModelsDepsToolSettings(
+class FlextInfraModelsDepsToolConfig(
     FlextInfraModelsDepsToolConfigLinters, FlextInfraModelsDepsToolConfigTypeCheckers
 ):
     """Models for tool configuration loaded from YAML."""
+
+    class ModPhasesConfig(m.ArbitraryTypesModel):
+        """Component selection for ``make mod`` phases (toggles are data)."""
+
+        import_alignment: Annotated[
+            bool,
+            m.Field(
+                alias="import-alignment",
+                default=True,
+                description=("Run the rope-native import-alignment phase of make mod."),
+            ),
+        ] = True
+
+    class ModConfig(m.ArbitraryTypesModel):
+        """Declarative policy for the unified modernize verb ``mod``."""
+
+        phases: FlextInfraModelsDepsToolConfig.ModPhasesConfig = m.Field(
+            description="Phase toggles read from config/tooling.yaml."
+        )
 
     class DeptryConfig(m.ArbitraryTypesModel):
         """Deptry namespace and dependency-group policy."""
@@ -63,7 +80,7 @@ class FlextInfraModelsDepsToolSettings(
     class PytestConfig(m.ArbitraryTypesModel):
         """Pytest baseline settings loaded from YAML."""
 
-        # mro-j47u (codex): every rendered pytest value is validated config data.
+        # flext-j47u (codex): every rendered pytest value is validated config data.
         case_timeout_seconds: Annotated[
             int,
             m.Field(
@@ -96,6 +113,14 @@ class FlextInfraModelsDepsToolSettings(
                 description="Grace period reserved inside the invocation deadline.",
             ),
         ]
+        max_failures: Annotated[
+            int,
+            m.Field(
+                alias="max-failures",
+                ge=1,
+                description="Maximum failures before the pytest invocation stops.",
+            ),
+        ]
         enforcement_plugin: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -103,8 +128,15 @@ class FlextInfraModelsDepsToolSettings(
                 description="Required pytest11 enforcement plugin loaded by Make.",
             ),
         ]
+        asyncio_default_fixture_loop_scope: Annotated[
+            Literal["function", "class", "module", "package", "session"],
+            m.Field(
+                alias="asyncio-default-fixture-loop-scope",
+                description="Explicit event-loop lifetime for asynchronous pytest fixtures.",
+            ),
+        ]
         progress_args: Annotated[
-            tuple[t.NonEmptyStr, ...],
+            t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 alias="progress-args",
                 min_length=1,
@@ -112,7 +144,7 @@ class FlextInfraModelsDepsToolSettings(
             ),
         ]
         report_args: Annotated[
-            tuple[t.NonEmptyStr, ...],
+            t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 alias="report-args",
                 min_length=1,
@@ -120,7 +152,7 @@ class FlextInfraModelsDepsToolSettings(
             ),
         ]
         diagnostic_args: Annotated[
-            tuple[t.NonEmptyStr, ...],
+            t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 alias="diagnostic-args",
                 min_length=1,
@@ -133,16 +165,41 @@ class FlextInfraModelsDepsToolSettings(
                 alias="parallel-workers",
                 gt=0,
                 le=16,
-                description="Fixed pytest-xdist worker budget for full runs.",
+                description="Upper pytest-xdist worker ceiling for full runs.",
+            ),
+        ]
+        parallel_worker_memory_gb: Annotated[
+            int,
+            m.Field(
+                alias="parallel-worker-memory-gb",
+                gt=0,
+                le=64,
+                description=(
+                    "Physical-memory reservation per xdist worker; the runner "
+                    "also bounds workers by available CPU."
+                ),
             ),
         ]
         parallel_distribution: Annotated[
-            Literal["worksteal"],
+            Literal["load"],
             m.Field(
                 alias="parallel-distribution",
                 description="Pytest-xdist scheduler for full runs.",
             ),
         ]
+        parallel_worker_overrides: Annotated[
+            Mapping[str, int],
+            m.Field(
+                alias="parallel-worker-overrides",
+                description=(
+                    "Per declared-project worker ceilings (``[project].name`` "
+                    "→ workers) resolved by the runner over the fleet-wide "
+                    "``parallel-workers`` default: a consumer whose measured "
+                    "suite cannot fit the single-worker process boundary "
+                    "declares its ceiling here, inside the fleet cycle."
+                ),
+            ),
+        ] = {}
         profile_sort: Annotated[
             Literal[
                 "calls",
@@ -184,7 +241,7 @@ class FlextInfraModelsDepsToolSettings(
                 description="Canonical pytest test module patterns.",
             ),
         ]
-        # mro-wkii.17 (codex): collection roots are validated config, not local state.
+        # flext-wkii.17 (codex): collection roots are validated config, not local state.
         test_paths: Annotated[
             t.StrTuple,
             m.Field(
@@ -213,14 +270,35 @@ class FlextInfraModelsDepsToolSettings(
                 description="Standard pytest addopts enforced by modernizer.",
             ),
         ]
-        process_timeout_seconds: Annotated[
-            int,
+        external_gate_markers: Annotated[
+            t.StrTuple,
             m.Field(
-                alias="process-timeout-seconds",
-                gt=0,
-                description="Hard timeout for the complete pytest process.",
+                alias="external-gate-markers",
+                description=(
+                    "Markers of external-token gates deselected by offline"
+                    " verification and reported as NOT EXECUTED; each must be"
+                    " declared in standard-markers."
+                ),
             ),
         ]
+
+        @property
+        def external_gate_deselection(self) -> str:
+            """Pytest ``-m`` expression that skips external gates."""
+            return f"not ({' or '.join(self.external_gate_markers)})"
+
+        ci_excluded_markers: Annotated[
+            t.StrTuple,
+            m.Field(
+                alias="ci-excluded-markers",
+                description="Declared markers deselected in CI and pre-commit only.",
+            ),
+        ]
+
+        @property
+        def process_timeout_seconds(self) -> int:
+            """Derive the outer wall without creating a second config field."""
+            return self.run_timeout_seconds + (self.termination_grace_seconds * 2)
 
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
@@ -243,18 +321,6 @@ class FlextInfraModelsDepsToolSettings(
             if self.slow_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest slow timeout must be less than run timeout"
                 raise ValueError(msg)
-            if self.process_timeout_seconds <= self.run_timeout_seconds:
-                msg = (
-                    "pytest process timeout must exceed the run timeout: the"
-                    " process boundary caps the whole invocation, so a value at"
-                    " or below the session budget kills healthy suites"
-                )
-                raise ValueError(msg)
-            if self.process_timeout_seconds <= (
-                self.run_timeout_seconds + self.termination_grace_seconds
-            ):
-                msg = "pytest process timeout must exceed run and termination budgets"
-                raise ValueError(msg)
             derived_options = ("--timeout", "--session-timeout")
             if any(
                 option in {"-o", "--override-ini"}
@@ -265,6 +331,25 @@ class FlextInfraModelsDepsToolSettings(
                 raise ValueError(msg)
             if "--verbose" not in self.progress_args:
                 msg = "pytest progress args must expose verbose item progress"
+                raise ValueError(msg)
+            declared_markers = {
+                marker.split(":", 1)[0].strip() for marker in self.standard_markers
+            }
+            if any(
+                marker not in declared_markers for marker in self.ci_excluded_markers
+            ):
+                msg = "pytest ci-excluded-markers must be declared in standard-markers"
+                raise ValueError(msg)
+            undeclared = [
+                marker
+                for marker in self.external_gate_markers
+                if marker not in declared_markers
+            ]
+            if not self.external_gate_markers or undeclared:
+                msg = (
+                    "pytest external-gate-markers must be a non-empty subset of"
+                    f" standard-markers; undeclared: {undeclared}"
+                )
                 raise ValueError(msg)
             runner_owned_prefixes = (
                 "-k",
@@ -297,6 +382,15 @@ class FlextInfraModelsDepsToolSettings(
 
         all: Annotated[bool, m.Field(description="Sort all TOML tables and entries.")]
         in_place: Annotated[bool, m.Field(description="Apply TOML sorting in place.")]
+        process_timeout_seconds: Annotated[
+            int,
+            m.Field(
+                alias="process-timeout-seconds",
+                gt=0,
+                le=60,
+                description="Maximum runtime for Taplo resolution or formatting.",
+            ),
+        ]
         sort_first: Annotated[
             t.StrSequence, m.Field(description="Top-level TOML sections ordered first.")
         ]
@@ -318,25 +412,6 @@ class FlextInfraModelsDepsToolSettings(
             bool, m.Field(description="Emit explicit YAML start marker.")
         ]
 
-    class CoverageFailUnderConfig(m.ArbitraryTypesModel):
-        """Coverage fail-under thresholds by layer."""
-
-        core: int = m.Field(
-            description="Minimum coverage percentage required for core layer."
-        )
-        domain: int = m.Field(
-            description="Minimum coverage percentage required for domain layer."
-        )
-        platform: int = m.Field(
-            description="Minimum coverage percentage required for platform layer."
-        )
-        integration: int = m.Field(
-            description="Minimum coverage percentage required for integration layer."
-        )
-        app: int = m.Field(
-            description="Minimum coverage percentage required for app layer."
-        )
-
     class CoverageConfig(m.ArbitraryTypesModel):
         """Coverage baseline settings loaded from YAML."""
 
@@ -344,9 +419,6 @@ class FlextInfraModelsDepsToolSettings(
             t.StrSequence,
             m.Field(description="Production roots measured by full coverage runs."),
         ]
-        fail_under: FlextInfraModelsDepsToolSettings.CoverageFailUnderConfig = m.Field(
-            alias="fail-under", description="Coverage fail-under thresholds by layer."
-        )
         show_missing: Annotated[
             bool,
             m.Field(
@@ -383,7 +455,7 @@ class FlextInfraModelsDepsToolSettings(
     class VultureConfig(m.ArbitraryTypesModel):
         """Vulture production-reachability policy loaded from YAML."""
 
-        # NOTE (multi-agent, mro-j47u): keep dead-code scope fully config-owned.
+        # NOTE (multi-agent, flext-j47u): keep dead-code scope fully config-owned.
         exclude: Annotated[
             t.StrTuple,
             m.Field(
@@ -405,6 +477,34 @@ class FlextInfraModelsDepsToolSettings(
             description="Enable Vulture's internal scanner trace when requested."
         )
 
+    class MarkdownPrettierConfig(m.ArbitraryTypesModel):
+        """Prettier projection policy: ``make fmt``'s markdown formatter."""
+
+        prose_wrap: Annotated[
+            str,
+            m.Field(
+                default="always",
+                alias="prose-wrap",
+                description="Prettier proseWrap contract for markdown prose.",
+            ),
+        ]
+        tab_width: Annotated[
+            int,
+            m.Field(
+                default=4,
+                alias="tab-width",
+                description="Prettier tabWidth for non-markdown targets.",
+            ),
+        ]
+        md_tab_width: Annotated[
+            int,
+            m.Field(
+                default=2,
+                alias="md-tab-width",
+                description="Prettier tabWidth override for markdown targets.",
+            ),
+        ]
+
     class MarkdownConfig(m.ArbitraryTypesModel):
         """Markdown lint rules and excluded non-documentation surfaces."""
 
@@ -413,49 +513,56 @@ class FlextInfraModelsDepsToolSettings(
             description="Glob patterns excluded from Markdown quality checks."
         )
 
+        prettier: Annotated[
+            FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig,
+            m.Field(
+                description="Prettier formatting policy projected into .prettierrc."
+            ),
+        ]
+
     class ToolConfigTools(m.ArbitraryTypesModel):
         """Tool map loaded from YAML."""
 
-        codespell: FlextInfraModelsDepsToolSettings.CodespellConfig = m.Field(
+        codespell: FlextInfraModelsDepsToolConfig.CodespellConfig = m.Field(
             description="Codespell settings"
         )
-        deptry: FlextInfraModelsDepsToolSettings.DeptryConfig = m.Field(
+        deptry: FlextInfraModelsDepsToolConfig.DeptryConfig = m.Field(
             description="Deptry settings"
         )
-        hatch: FlextInfraModelsDepsToolSettings.HatchConfig = m.Field(
+        hatch: FlextInfraModelsDepsToolConfig.HatchConfig = m.Field(
             description="Hatch metadata settings"
         )
-        markdown: FlextInfraModelsDepsToolSettings.MarkdownConfig = m.Field(
+        markdown: FlextInfraModelsDepsToolConfig.MarkdownConfig = m.Field(
             description="Markdown lint settings"
         )
-        ruff: FlextInfraModelsDepsToolSettings.RuffConfig = m.Field(
+        ruff: FlextInfraModelsDepsToolConfig.RuffConfig = m.Field(
             description="Ruff settings"
         )
-        mypy: FlextInfraModelsDepsToolSettings.MypyConfig = m.Field(
+        mypy: FlextInfraModelsDepsToolConfig.MypyConfig = m.Field(
             description="Mypy settings"
         )
-        pydantic_mypy: FlextInfraModelsDepsToolSettings.PydanticMypyConfig = m.Field(
+        pydantic_mypy: FlextInfraModelsDepsToolConfig.PydanticMypyConfig = m.Field(
             alias="pydantic-mypy", description="Pydantic mypy plugin configuration."
         )
-        pyright: FlextInfraModelsDepsToolSettings.PyrightConfig = m.Field(
+        pyright: FlextInfraModelsDepsToolConfig.PyrightConfig = m.Field(
             description="Pyright settings"
         )
-        pyrefly: FlextInfraModelsDepsToolSettings.PyreflyConfig = m.Field(
+        pyrefly: FlextInfraModelsDepsToolConfig.PyreflyConfig = m.Field(
             description="Pyrefly settings"
         )
-        pytest: FlextInfraModelsDepsToolSettings.PytestConfig = m.Field(
+        pytest: FlextInfraModelsDepsToolConfig.PytestConfig = m.Field(
             description="Pytest settings"
         )
-        tomlsort: FlextInfraModelsDepsToolSettings.TomlsortConfig = m.Field(
+        tomlsort: FlextInfraModelsDepsToolConfig.TomlsortConfig = m.Field(
             description="Tomlsort settings"
         )
-        vulture: FlextInfraModelsDepsToolSettings.VultureConfig = m.Field(
+        vulture: FlextInfraModelsDepsToolConfig.VultureConfig = m.Field(
             description="Vulture production-reachability settings"
         )
-        yamlfix: FlextInfraModelsDepsToolSettings.YamlfixConfig = m.Field(
+        yamlfix: FlextInfraModelsDepsToolConfig.YamlfixConfig = m.Field(
             description="Yamlfix settings"
         )
-        coverage: FlextInfraModelsDepsToolSettings.CoverageConfig = m.Field(
+        coverage: FlextInfraModelsDepsToolConfig.CoverageConfig = m.Field(
             description="Coverage configuration with per-project-type thresholds."
         )
 
@@ -465,92 +572,100 @@ class FlextInfraModelsDepsToolSettings(
         pyright: Annotated[
             t.StrMapping,
             m.Field(description="Pyright override settings for this project type."),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
 
     class ProjectTypeOverridesConfig(m.ArbitraryTypesModel):
         """Project-type-specific override matrix from ``config/tooling.yaml``."""
 
-        core: FlextInfraModelsDepsToolSettings.ProjectTypeOverrideConfig = m.Field(
+        core: FlextInfraModelsDepsToolConfig.ProjectTypeOverrideConfig = m.Field(
             description="Core overrides"
         )
-        domain: FlextInfraModelsDepsToolSettings.ProjectTypeOverrideConfig = m.Field(
+        domain: FlextInfraModelsDepsToolConfig.ProjectTypeOverrideConfig = m.Field(
             description="Domain overrides"
         )
-        platform: FlextInfraModelsDepsToolSettings.ProjectTypeOverrideConfig = m.Field(
+        platform: FlextInfraModelsDepsToolConfig.ProjectTypeOverrideConfig = m.Field(
             description="Platform overrides"
         )
-        integration: FlextInfraModelsDepsToolSettings.ProjectTypeOverrideConfig = (
-            m.Field(description="Integration overrides")
+        integration: FlextInfraModelsDepsToolConfig.ProjectTypeOverrideConfig = m.Field(
+            description="Integration overrides"
         )
-        app: FlextInfraModelsDepsToolSettings.ProjectTypeOverrideConfig = m.Field(
+        app: FlextInfraModelsDepsToolConfig.ProjectTypeOverrideConfig = m.Field(
             description="App overrides"
         )
 
     class LazyInitConfig(m.ArbitraryTypesModel):
         """Declarative policy for ``__init__.py`` lazy export generation."""
 
-        root_namespace_files: Annotated[
-            t.StrSequence,
+        import_layer_order: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                alias="root-namespace-files",
-                description="Governed root facade filenames enforced by gen-init.",
+                alias="import-layer-order",
+                default=(
+                    "settings",
+                    "config",
+                    "c",
+                    "t",
+                    "p",
+                    "m",
+                    "u",
+                    "base",
+                    "services",
+                    "api",
+                    "cli",
+                ),
+                description=(
+                    "Canonical dependency layer order for project "
+                    "imports. Lower index = lower layer. A module may "
+                    "runtime-import modules at equal or lower index "
+                    "(relative-dot within the same package); importing "
+                    "a module at higher index is a reverse dependency "
+                    "and the engine emits it under ``if TYPE_CHECKING:`` "
+                    "(see ``reverse_import_mode``). Any value not in "
+                    "the fleet SSOT is rejected."
+                ),
             ),
         ]
-        public_file_aliases: Annotated[
-            t.StrMapping,
+        reverse_import_mode: Annotated[
+            Literal["type_checking"],
             m.Field(
-                alias="public-file-aliases",
-                description="Canonical alias by governed root facade filename.",
+                alias="reverse-import-mode",
+                description=(
+                    "How reverse (upward) runtime dependencies are "
+                    "emitted. ``type_checking`` moves the import into "
+                    "an ``if TYPE_CHECKING:`` block. The engine rejects "
+                    "any other value; reverse runtime imports are a "
+                    "module defect fixed at the module root cause."
+                ),
             ),
-        ]
-        public_file_suffixes: Annotated[
-            t.StrMapping,
+        ] = "type_checking"
+        forward_import_form: Annotated[
+            Literal["relative_dot"],
             m.Field(
-                alias="public-file-suffixes",
-                description="Canonical class suffix by governed root facade filename.",
+                alias="forward-import-form",
+                description=(
+                    "How forward (downward) intra-project imports are "
+                    "emitted. ``relative_dot`` uses relative imports "
+                    "within the same package."
+                ),
             ),
-        ]
-        private_family_tokens: Annotated[
-            t.MappingKV[str, t.StrSequence],
-            m.Field(
-                alias="private-family-tokens",
-                description="Accepted family markers for private namespace packages.",
-            ),
-        ]
-        surface_prefixes: Annotated[
-            t.StrMapping,
-            m.Field(
-                alias="surface-prefixes",
-                description="Class prefixes by wrapper surface such as tests/examples/scripts.",
-            ),
-        ]
-        inherited_exports: Annotated[
-            t.MappingKV[str, t.StrSequence],
-            m.Field(
-                alias="inherited-exports",
-                description="Allowed inherited exports from parent package by root surface.",
-            ),
-        ]
-        main_export_files: Annotated[
-            t.StrSequence,
-            m.Field(
-                alias="main-export-files",
-                description="Root files allowed to export module-level main().",
-            ),
-        ]
+        ] = "relative_dot"
 
     class ToolConfigDocument(m.ArbitraryTypesModel):
         """Root schema for canonical ``config/tooling.yaml`` policy data."""
 
-        tools: FlextInfraModelsDepsToolSettings.ToolConfigTools = m.Field(
+        tools: FlextInfraModelsDepsToolConfig.ToolConfigTools = m.Field(
             description="Tools"
         )
-        project_type_overrides: FlextInfraModelsDepsToolSettings.ProjectTypeOverridesConfig = m.Field(
+        project_type_overrides: FlextInfraModelsDepsToolConfig.ProjectTypeOverridesConfig = m.Field(
             alias="project-type-overrides",
             description="Per-project-type configuration overrides.",
         )
-        lazy_init: FlextInfraModelsDepsToolSettings.LazyInitConfig = m.Field(
+        lazy_init: FlextInfraModelsDepsToolConfig.LazyInitConfig = m.Field(
             alias="lazy-init", description="Declarative lazy-init generation policy."
+        )
+
+        mod: FlextInfraModelsDepsToolConfig.ModConfig = m.Field(
+            description="Declarative make-mod phase policy."
         )
 
     class ToolingScalarSetting(m.ArbitraryTypesModel):
@@ -569,19 +684,72 @@ class FlextInfraModelsDepsToolSettings(
             t.StrTuple, m.Field(description="Resolved environment import paths")
         ]
         settings: Annotated[
-            tuple[FlextInfraModelsDepsToolSettings.ToolingScalarSetting, ...],
+            t.VariadicTuple[FlextInfraModelsDepsToolConfig.ToolingScalarSetting],
             m.Field(description="Resolved environment diagnostics"),
         ]
 
-    # mro-j47u (codex): explicit runtime-only values keep the Jinja structure full.
+    class ToolingConformedTools(m.FlexibleModel):
+        """Typed view of the ``[tool]`` tables one conformed pyproject carries."""
+
+        deptry: Annotated[t.JsonMapping, m.Field(description="Conformed deptry table")]
+        mypy: Annotated[t.JsonMapping, m.Field(description="Conformed mypy table")]
+        mypy_path: Annotated[
+            t.StrTuple,
+            m.Field(
+                validation_alias=m.AliasPath("mypy", "mypy_path"),
+                description="Synced Mypy search paths, absent before the first sync",
+            ),
+        ] = ()
+        pyrefly: Annotated[
+            t.JsonMapping, m.Field(description="Conformed pyrefly table")
+        ]
+        pyrefly_search_path: Annotated[
+            t.StrTuple,
+            m.Field(
+                validation_alias=m.AliasPath("pyrefly", "search-path"),
+                description="Synced Pyrefly search paths, absent before the first sync",
+            ),
+        ] = ()
+        pyright: Annotated[
+            t.JsonMapping, m.Field(description="Conformed pyright table")
+        ]
+        first_party: Annotated[
+            t.StrTuple,
+            m.Field(
+                validation_alias=m.AliasPath(
+                    "ruff", "lint", "isort", "known-first-party"
+                ),
+                description="Conformed first-party namespaces",
+            ),
+        ]
+        ruff_src: Annotated[
+            t.StrTuple,
+            m.Field(
+                validation_alias=m.AliasPath("ruff", "src"),
+                description="Conformed Ruff source roots",
+            ),
+        ]
+        ruff_exclude: Annotated[
+            t.StrTuple,
+            m.Field(
+                validation_alias=m.AliasPath("ruff", "exclude"),
+                description="Conformed Ruff exclusions",
+            ),
+        ]
+        ruff_ignore: Annotated[
+            t.StrTuple,
+            m.Field(
+                validation_alias=m.AliasPath("ruff", "lint", "ignore"),
+                description="Conformed Ruff ignores",
+            ),
+        ]
+
+    # flext-j47u (codex): explicit runtime-only values keep the Jinja structure full.
     class ToolingRuntimeContext(m.ArbitraryTypesModel):
         """Resolved project/workspace values consumed by the complete template."""
 
         project_kind: Annotated[
             t.NonEmptyStr, m.Field(description="Resolved project classification")
-        ]
-        coverage_fail_under: Annotated[
-            int, m.Field(ge=0, le=100, description="Resolved coverage threshold")
         ]
         first_party: Annotated[
             t.StrTuple, m.Field(description="Resolved first-party namespaces")
@@ -608,11 +776,11 @@ class FlextInfraModelsDepsToolSettings(
             t.StrTuple, m.Field(description="Resolved Pyright import paths")
         ]
         pyright_settings: Annotated[
-            tuple[FlextInfraModelsDepsToolSettings.ToolingScalarSetting, ...],
+            t.VariadicTuple[FlextInfraModelsDepsToolConfig.ToolingScalarSetting],
             m.Field(description="Resolved Pyright scalar settings"),
         ]
         pyright_execution_environments: Annotated[
-            tuple[FlextInfraModelsDepsToolSettings.ToolingPyrightEnvironment, ...],
+            t.VariadicTuple[FlextInfraModelsDepsToolConfig.ToolingPyrightEnvironment],
             m.Field(description="Resolved Pyright environments"),
         ]
         ruff_src: Annotated[
@@ -627,4 +795,4 @@ class FlextInfraModelsDepsToolSettings(
         ]
 
 
-__all__: list[str] = ["FlextInfraModelsDepsToolSettings"]
+__all__: list[str] = ["FlextInfraModelsDepsToolConfig"]

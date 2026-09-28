@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from types import MappingProxyType
 from typing import Annotated
 
 from flext_cli import m
 from flext_infra import t
-from flext_infra._models.deps_tool_config_project import (
-    FlextInfraModelsDepsToolConfigProject,
-)
+
+from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
 
 
 class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProject):
@@ -112,7 +110,7 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 alias="ignored-rule-rationales",
                 description="Global Ruff exclusions mapped to verified architecture rationales.",
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         banned_api: Annotated[
             t.StrMapping,
             m.Field(
@@ -193,6 +191,13 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 description="Error codes disabled for these modules.",
             ),
         ]
+        follow_untyped_imports: Annotated[
+            bool,
+            m.Field(
+                alias="follow-untyped-imports",
+                description="Analyze installed source even without typing metadata.",
+            ),
+        ] = False
         justification: Annotated[
             str,
             m.Field(
@@ -222,7 +227,7 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             m.Field(
                 alias="disabled-error-codes",
                 description=(
-                    "Mypy error codes mapped to their tested facade-MRO rationale."
+                    "Mypy error codes mapped to their tested facade-FLEXT rationale."
                 ),
             ),
         ]
@@ -242,9 +247,9 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                     "(e.g. follow_imports='normal')."
                 ),
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         overrides: Annotated[
-            tuple[FlextInfraModelsDepsToolConfigLinters.MypyOverrideConfig, ...],
+            t.VariadicTuple[FlextInfraModelsDepsToolConfigLinters.MypyOverrideConfig],
             m.Field(
                 description="Per-module mypy overrides for auto-generated files and PEP 695 generics."
             ),
@@ -274,16 +279,6 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 description="Warn on required dynamic aliases in pydantic mypy plugin."
             ),
         ]
-        warn_untyped_fields: Annotated[
-            bool,
-            m.Field(
-                alias="warn-untyped-fields",
-                description=(
-                    "Warn when Pydantic model fields are inferred as Any instead of "
-                    "explicitly typed. Aligns with AGENTS.md:279 'no Any allowed'."
-                ),
-            ),
-        ] = False
 
 
 __all__: list[str] = ["FlextInfraModelsDepsToolConfigLinters"]

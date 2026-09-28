@@ -1,0 +1,30 @@
+id: add-open-builtin-text-mode-encoding
+snapshots:
+  handle = open(path, "r"):
+    fixed: handle = open(path, "r", encoding="utf-8")
+    labels:
+    - source: open(path, "r")
+      style: primary
+      start: 9
+      end: 24
+  handle = open(path, "r+"):
+    fixed: handle = open(path, "r+", encoding="utf-8")
+    labels:
+    - source: open(path, "r+")
+      style: primary
+      start: 9
+      end: 25
+  handle = open(path, "w"):
+    fixed: handle = open(path, "w", encoding="utf-8")
+    labels:
+    - source: open(path, "w")
+      style: primary
+      start: 9
+      end: 24
+  handle = open(path, mode="a"):
+    fixed: handle = open(path, mode="a", encoding="utf-8")
+    labels:
+    - source: open(path, mode="a")
+      style: primary
+      start: 9
+      end: 29

@@ -1,0 +1,43 @@
+id: remove-cli-local-process-timeout-code-argument
+snapshots:
+  ? |
+    return cls._captured_process_result(
+        cmd,
+        return_code,
+        received_signals,
+        (*failures, *cleanup_errors),
+        stdout_output,
+        stderr_output,
+        max(0.0, time.monotonic() - started),
+        timed_out=timed_out,
+        timeout_seconds=timeout,
+        timeout_exit_code=timeout_exit_code,
+    )
+  : fixed: |+
+      return cls._captured_process_result(
+          return_code,
+          received_signals,
+          (*failures, *cleanup_errors),
+          stdout_output,
+          stderr_output,
+          max(0.0, time.monotonic() - started),
+          timed_out=timed_out,
+      )
+
+    labels:
+    - source: |-
+        return cls._captured_process_result(
+            cmd,
+            return_code,
+            received_signals,
+            (*failures, *cleanup_errors),
+            stdout_output,
+            stderr_output,
+            max(0.0, time.monotonic() - started),
+            timed_out=timed_out,
+            timeout_seconds=timeout,
+            timeout_exit_code=timeout_exit_code,
+        )
+      style: primary
+      start: 0
+      end: 295

@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra.docs.base import FlextInfraDocServiceBase
+
+from .base import FlextInfraDocServiceBase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,21 +32,19 @@ class FlextInfraDocServer(FlextInfraDocServiceBase):
 
     def serve(
         self,
-        workspace_root: Path,
+        repository_root: Path,
         *,
         projects: t.StrSequence | None = None,
         output_dir: Path | str | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
         """Serve the single matching docs scope (blocks until stopped)."""
         scopes_result = u.Infra.build_scopes(
-            workspace_root,
+            repository_root,
             projects=self.selected_projects if projects is None else projects,
             output_dir=output_dir or c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
         if scopes_result.failure:
-            return r[t.SequenceOf[m.Infra.DocsPhaseReport]].fail(
-                scopes_result.error or "scope resolution failed"
-            )
+            return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(scopes_result)
         servable = [
             scope
             for scope in scopes_result.value
@@ -71,7 +70,7 @@ class FlextInfraDocServer(FlextInfraDocServiceBase):
         return self._propagate_phase_outcome(
             "serve",
             self.serve(
-                workspace_root=self.workspace_root,
+                repository_root=self.repository_root,
                 projects=self.selected_projects,
                 output_dir=self.output_dir,
             ),

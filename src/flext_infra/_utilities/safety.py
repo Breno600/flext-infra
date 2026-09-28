@@ -11,15 +11,25 @@ from collections.abc import Callable
 from pathlib import Path
 
 from flext_cli import u
+
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.protocols import p
-from flext_infra.typings import t
+from flext_infra import c, m, p, t
 
 
 class FlextInfraUtilitiesSafety:
     """Static safety helpers for copy-on-write file protection."""
+
+    @staticmethod
+    def _is_repository_root(repo: Path) -> bool:
+        """Return whether ``repo`` is itself the top level of a Git repository."""
+        repo_check = u.Cli.run_raw(
+            [c.Infra.GIT, "rev-parse", "--show-toplevel"], cwd=repo
+        )
+        return not (
+            repo_check.failure
+            or not u.Cli.process_succeeded(repo_check.value.outcome)
+            or Path(repo_check.value.stdout.strip()).resolve() != repo.resolve()
+        )
 
     @staticmethod
     def create_checkpoint(repo: Path, *, label: str = "checkpoint") -> p.Result[str]:
@@ -29,17 +39,16 @@ class FlextInfraUtilitiesSafety:
         """
         result: p.Result[str]
         checkpoint_label = label.strip() or "checkpoint"
-        repo_check = u.Cli.run_raw(
-            [c.Infra.GIT, "rev-parse", "--is-inside-work-tree"], cwd=repo
-        )
-        if repo_check.failure or repo_check.value.exit_code != 0:
+        if not FlextInfraUtilitiesSafety._is_repository_root(repo):
             result = r[str].ok("")
         else:
             status_result = u.Cli.run_raw(
                 [c.Infra.GIT, "status", "--porcelain"], cwd=repo
             )
-            if status_result.failure or status_result.value.exit_code != 0:
-                result = r[str].fail(status_result.error or "git status failed")
+            if status_result.failure or not u.Cli.process_succeeded(
+                status_result.value.outcome
+            ):
+                result = r[str].from_failure(status_result)
             elif not status_result.value.stdout.strip():
                 result = r[str].ok("")
             else:
@@ -57,10 +66,7 @@ class FlextInfraUtilitiesSafety:
         """
         if not checkpoint:
             return r[bool].ok(True)
-        repo_check = u.Cli.run_raw(
-            [c.Infra.GIT, "rev-parse", "--is-inside-work-tree"], cwd=repo
-        )
-        if repo_check.failure or repo_check.value.exit_code != 0:
+        if not FlextInfraUtilitiesSafety._is_repository_root(repo):
             return r[bool].ok(True)
         return r[bool].fail(
             "repository-wide checkpoint rollback is unsupported; "
@@ -100,8 +106,8 @@ class FlextInfraUtilitiesSafety:
     @staticmethod
     def execute_safely(
         files: t.SequenceOf[Path],
-        transform: Callable[[t.SequenceOf[Path]], r[t.SequenceOf[Path]]],
-        validate: Callable[[t.SequenceOf[Path]], r[bool]],
+        transform: Callable[[t.SequenceOf[Path]], p.Result[t.SequenceOf[Path]]],
+        validate: Callable[[t.SequenceOf[Path]], p.Result[bool]],
         *,
         mode: c.Infra.ExecutionMode = c.Infra.ExecutionMode.APPLY_SAFE,
     ) -> m.Infra.SafeExecutionResult:
@@ -118,7 +124,7 @@ class FlextInfraUtilitiesSafety:
 
         bak_paths = FlextInfraUtilitiesSafety.backup_files(files)
 
-        transform_result = transform(files)
+        transform_result: p.Result[t.SequenceOf[Path]] = transform(files)
         if transform_result.failure:
             FlextInfraUtilitiesSafety.restore_files(bak_paths)
             return m.Infra.SafeExecutionResult(
@@ -134,7 +140,7 @@ class FlextInfraUtilitiesSafety:
                 mode=mode, files_backed_up=file_strs, gate_results=[], rolled_back=False
             )
 
-        validate_result = validate(files)
+        validate_result: p.Result[bool] = validate(files)
         if validate_result.failure:
             FlextInfraUtilitiesSafety.restore_files(bak_paths)
             return m.Infra.SafeExecutionResult(

@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import operator
 import sys
 from typing import TYPE_CHECKING
 
@@ -62,7 +63,7 @@ class FlextInfraInlineImportDetector:
                 continue
             in_function = statement.enclosing_kind == c.Infra.RopeScopeKind.FUNCTION
             at_module = statement.enclosing_kind == c.Infra.RopeScopeKind.MODULE
-            pymodule = u.Infra.get_string_module(
+            pymodule = u.Infra.build_string_module(
                 ctx.rope_project, statement.text.strip()
             )
             module_imports = u.Infra.module_imports_for_pymodule(
@@ -70,7 +71,7 @@ class FlextInfraInlineImportDetector:
             )
             for import_statement in u.Infra.import_statements(module_imports):
                 import_info = import_statement.import_info
-                if u.Infra.is_normal_import(import_info):
+                if u.Infra.normal_import_info(import_info):
                     for imported_name, alias_name in import_info.names_and_aliases:
                         if in_function:
                             current_import = f"import {imported_name}"
@@ -100,7 +101,7 @@ class FlextInfraInlineImportDetector:
                                 ),
                             ))
                     continue
-                if not u.Infra.is_from_import(import_info):
+                if not u.Infra.from_import_info(import_info):
                     continue
                 if in_function:
                     names = ", ".join(
@@ -169,7 +170,7 @@ class FlextInfraInlineImportDetector:
                             is_importlib=True,
                         )
                     )
-        return tuple(sorted(violations, key=lambda violation: violation.line))
+        return tuple(sorted(violations, key=operator.attrgetter("line")))
 
     @staticmethod
     def _binding_offset(

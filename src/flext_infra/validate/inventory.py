@@ -14,7 +14,8 @@ from typing import Annotated, cast, override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-from flext_infra.base import s
+
+from ..base import s
 
 
 class FlextInfraInventoryService(s[bool]):
@@ -29,21 +30,21 @@ class FlextInfraInventoryService(s[bool]):
     ] = None
 
     def generate(
-        self, workspace_root: Path, *, output_dir: Path | None = None
+        self, repository_root: Path, *, output_dir: Path | None = None
     ) -> p.Result[m.Infra.InventoryReport]:
         """Build and write scripts inventory reports.
 
         Args:
-            workspace_root: Root of the workspace to scan.
+            repository_root: Root of the workspace to scan.
             output_dir: Optional directory for reports. Defaults to
-                ``workspace_root / ".reports"``.
+                ``repository_root / ".reports"``.
 
         Returns:
             r with combined inventory metadata.
 
         """
         try:
-            return self._generate_inventory_report(workspace_root, output_dir)
+            return self._generate_inventory_report(repository_root, output_dir)
         except c.EXC_OS_TYPE_VALUE as exc:
             return r[m.Infra.InventoryReport].fail_op("inventory generation", exc)
 
@@ -65,7 +66,7 @@ class FlextInfraInventoryService(s[bool]):
     @staticmethod
     def _report_payloads(
         root: Path, scripts: t.StrSequence
-    ) -> tuple[t.JsonMapping, t.JsonMapping, t.JsonMapping]:
+    ) -> t.Triple[t.JsonMapping, t.JsonMapping, t.JsonMapping]:
         """Build inventory, wiring, and external candidate payloads."""
         now = u.now().isoformat()
         inventory_payload = t.json_value_adapter().validate_python({
@@ -96,7 +97,7 @@ class FlextInfraInventoryService(s[bool]):
             path, payload, m.Cli.JsonWriteOptions(sort_keys=True)
         )
         if write_result.failure:
-            return r[str].fail(write_result.error or "write failed")
+            return r[str].from_failure(write_result)
         return r[str].ok(str(path))
 
     def _write_inventory_reports(
@@ -107,7 +108,7 @@ class FlextInfraInventoryService(s[bool]):
         external: t.JsonMapping,
     ) -> p.Result[list[str]]:
         """Write all inventory report payloads."""
-        report_specs: tuple[tuple[str, t.JsonMapping], ...] = (
+        report_specs: t.VariadicTuple[t.Pair[str, t.JsonMapping]] = (
             ("scripts-infra--json--scripts-inventory.json", inventory),
             ("scripts-infra--json--scripts-wiring.json", wiring),
             ("scripts-infra--json--external-scripts-candidates.json", external),
@@ -116,15 +117,15 @@ class FlextInfraInventoryService(s[bool]):
         for filename, payload in report_specs:
             write_result = self._write_json_report(reports_dir / filename, payload)
             if write_result.failure:
-                return r[list[str]].fail(write_result.error or "write failed")
+                return r[list[str]].from_failure(write_result)
             written.append(write_result.value)
         return r[list[str]].ok(list(written))
 
     def _generate_inventory_report(
-        self, workspace_root: Path, output_dir: Path | None
+        self, repository_root: Path, output_dir: Path | None
     ) -> p.Result[m.Infra.InventoryReport]:
         """Generate inventory reports after path resolution."""
-        root = workspace_root.resolve()
+        root = repository_root.resolve()
         scripts = self._script_paths(root)
         inventory, wiring, external = self._report_payloads(root, scripts)
         reports_dir = output_dir or root / c.Infra.REPORTS_DIR_NAME
@@ -132,9 +133,7 @@ class FlextInfraInventoryService(s[bool]):
             reports_dir, inventory, wiring, external
         )
         if written_result.failure:
-            return r[m.Infra.InventoryReport].fail(
-                written_result.error or "inventory report write failed"
-            )
+            return r[m.Infra.InventoryReport].from_failure(written_result)
         return r[m.Infra.InventoryReport].ok(
             m.Infra.InventoryReport(
                 total_scripts=len(scripts), reports_written=written_result.value
@@ -144,9 +143,9 @@ class FlextInfraInventoryService(s[bool]):
     @override
     def execute(self) -> p.Result[bool]:
         """Execute the inventory CLI flow."""
-        result = self.generate(self.workspace_root, output_dir=self.output_dir)
+        result = self.generate(self.repository_root, output_dir=self.output_dir)
         if result.failure:
-            return r[bool].fail(result.error or "inventory generation failed")
+            return r[bool].from_failure(result)
         return r[bool].ok(True)
 
 

@@ -1,9 +1,7 @@
-"""Namespace validation service.
+"""Strict Rope-backed namespace validation service.
 
-Rope-backed validator enforcing namespace rules 0-3 for flext projects.
-Detection-only — does not auto-fix any files. AST nodes are obtained via
-``rope.get_pymodule(...).get_ast()`` per the flext-infra detector mandate
-(no raw ``ast.parse`` source reads).
+AST nodes come only from the active Rope module. Parse failures are violations
+and never silent exclusions.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -11,103 +9,136 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import ast
 from typing import TYPE_CHECKING, override
 
 from flext_core import r
-from flext_infra import c, m, u
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra.base import s
-from flext_infra.validate.namespace_rules import FlextInfraNamespaceRules
+from flext_infra import m, p, t, u
+
+from ..base import s
+from .namespace_rules import FlextInfraNamespaceRules
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, t
-
 
 class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
-    """Rope-backed namespace validator for flext projects (Rules 0-3).
+    """Validate strict layer, facade, typing, and DI invariants."""
 
-    Validates that each module follows the one-namespace-class-per-file
-    convention, constants are centralized in ``constants.py``, and type
-    definitions are centralized in ``typings.py``.
-    """
+    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
+        exclude=True, description="Shared Rope cycle injected by the composition root"
+    )
+    _eligible_files: frozenset[Path] | None = u.PrivateAttr(default=None)
+    _first_eligible_file: Path | None = u.PrivateAttr(default=None)
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute namespace validation for the configured workspace root."""
-        report_result = self.validate_project(self.workspace_root)
+        """Execute namespace validation for the configured repository root."""
+        report_result = self.build_report()
         if report_result.failure:
-            return r[bool].fail(report_result.error or "namespace validation failed")
+            return r[bool].from_failure(report_result)
         report = report_result.unwrap()
         return r[bool].ok(report.passed)
 
-    def validate_project(
-        self, project_root: Path
-    ) -> p.Result[m.Infra.ValidationReport]:
-        """Validate namespace rules inside one project."""
-        files_result = u.Infra.iter_python_files(
-            m.Infra.SourceScanRequest(project_roots=(project_root,))
-        )
-        if files_result.failure:
-            return r[m.Infra.ValidationReport].fail(
-                files_result.error or "Namespace validation failed: discovery failed"
-            )
-        files = [
-            py_file
-            for py_file in files_result.value
-            if not self._is_exempt_file(py_file)
-        ]
-        layout = u.Infra.layout(project_root)
-        prefix = layout.class_stem if layout is not None else ""
-        package_name = (
-            layout.package_dir.name
-            if layout is not None
-            else project_root.name.replace("-", "_")
-        )
-        violations: t.MutableSequenceOf[str] = []
-        with u.Infra.open_project(project_root) as rope_project:
-            for filepath in files:
-                tree_result = self._parse_file(rope_project, filepath)
-                if tree_result.failure:
-                    continue
-                tree = tree_result.value
-                rel = filepath.relative_to(project_root)
-                is_test_file = self._is_test_file(rel)
-                if self._is_namespace_governed_file(rel):
-                    is_facade = self._is_facade_module(rel)
-                    violations.extend(
-                        self.check_rule_0(
-                            tree,
-                            rel,
-                            prefix,
-                            is_test_file=is_test_file,
-                            strict_top_level=is_facade,
-                            strict_single_class=is_facade,
-                            require_public_class=is_facade,
-                        )
-                    )
-                    if is_facade and not is_test_file:
-                        violations.extend(self.check_rule_1(tree, rel))
-                        violations.extend(self.check_rule_2(tree, rel))
-                violations.extend(
-                    self.check_rule_3(
-                        tree, rel, class_stem=prefix, package_name=package_name
-                    )
+    def __call__(
+        self, workspace: p.Infra.RopeWorkspaceDsl, visit: m.Infra.RopeModuleVisit, /
+    ) -> p.Result[m.Infra.RopeCallbackOutcome]:
+        """Validate one module supplied by the shared Rope owner callback."""
+        project_root = self.repository_root.resolve()
+        if visit.project_root.resolve() != project_root:
+            return r[m.Infra.RopeCallbackOutcome].ok(
+                m.Infra.RopeCallbackOutcome(
+                    file_path=visit.file_path,
+                    project_root=visit.project_root,
+                    callback_id="namespace",
+                    applicable=False,
                 )
-        return self._validation_report(files=files, violations=violations)
+            )
+        filepath = visit.file_path.resolve()
+        eligible = self._eligible_project_files(workspace)
+        if filepath not in eligible:
+            return r[m.Infra.RopeCallbackOutcome].ok(
+                m.Infra.RopeCallbackOutcome(
+                    file_path=visit.file_path,
+                    project_root=visit.project_root,
+                    callback_id="namespace",
+                    applicable=False,
+                )
+            )
+        layout = visit.convention.project_layout
+        rel = filepath.relative_to(project_root)
+        violations: t.MutableSequenceOf[str] = []
+        if filepath == self._first_eligible_file:
+            violations.extend(
+                self._layout_violations(
+                    layout.package_dir if layout is not None else None
+                )
+            )
+        violations.extend(self.check_module(visit, rel))
+        return r[m.Infra.RopeCallbackOutcome].ok(
+            m.Infra.RopeCallbackOutcome(
+                file_path=visit.file_path,
+                project_root=visit.project_root,
+                callback_id="namespace",
+                violations=tuple(violations),
+            )
+        )
+
+    def _eligible_project_files(
+        self, workspace: p.Infra.RopeWorkspaceDsl
+    ) -> frozenset[Path]:
+        """Index the governed files once for this project callback."""
+        cached = self._eligible_files
+        if cached is not None:
+            return cached
+        project_root = self.repository_root.resolve()
+        eligible = frozenset(
+            entry.file_path.resolve()
+            for entry in workspace.modules(project_names=(project_root.name,))
+            if entry.project_root is not None
+            and entry.project_root.resolve() == project_root
+            and not self._is_exempt_file(entry.file_path)
+            and self._in_declared_scan_scope(entry.file_path, project_root)
+        )
+        self._eligible_files = eligible
+        self._first_eligible_file = min(eligible) if eligible else None
+        return eligible
+
+    def build_report(self) -> p.Result[m.Infra.ValidationReport]:
+        """Build the project report through the injected shared Rope cycle."""
+        cycle_result = self.rope.cycle(
+            (self.callback_binding(),),
+            project_names=(self.repository_root.resolve().name,),
+        )
+        if cycle_result.failure:
+            return r[m.Infra.ValidationReport].from_failure(cycle_result)
+        outcomes = tuple(
+            outcome
+            for outcome in cycle_result.value.outcomes
+            if outcome.callback_id == "namespace" and outcome.applicable
+        )
+        violations = tuple(
+            violation for outcome in outcomes for violation in outcome.violations
+        )
+        return self._validation_report(
+            files_checked=len(outcomes), violations=violations
+        )
+
+    def callback_binding(self) -> m.Infra.RopeCallbackBinding:
+        """Bind this validator to its exact files before Rope builds syntax trees."""
+        return m.Infra.RopeCallbackBinding(
+            callback=self, file_paths=self._eligible_project_files(self.rope)
+        )
 
     @staticmethod
     def _validation_report(
-        *, files: t.SequenceOf[Path], violations: t.SequenceOf[str]
+        *, files_checked: int, violations: t.SequenceOf[str]
     ) -> p.Result[m.Infra.ValidationReport]:
         """Build the namespace validation report."""
         passed = not violations
         summary = (
-            f"namespace validation passed ({len(files)} files checked)"
+            f"namespace validation passed ({files_checked} files checked)"
             if passed
-            else f"{len(violations)} namespace violation(s) found ({len(files)} files checked)"
+            else f"{len(violations)} namespace violation(s) found ({files_checked} files checked)"
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
@@ -116,69 +147,67 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         )
 
     def _is_exempt_file(self, filepath: Path) -> bool:
-        """Check whether a file should be skipped from validation."""
+        """Leave generated package projections to their generation contract."""
         name = filepath.name
-        if name in c.Infra.EXEMPT_FILENAMES:
-            return True
-        return any(name.startswith(prefix) for prefix in c.Infra.EXEMPT_PREFIXES)
+        return name in {"__init__.py", "__version__.py"}
 
-    def _parse_file(
-        self, rope_project: t.Infra.RopeProject, path: Path
-    ) -> p.Result[ast.AST]:
-        """Return the AST module for ``path`` via rope.
+    def _in_declared_scan_scope(self, filepath: Path, project_root: Path) -> bool:
+        """Return whether ``filepath`` lies inside the declared namespace scope.
 
-        ``r.ok(module)`` on success. ``r.fail(reason)`` when the resource
-        cannot be fetched, the module fails to parse, or rope returns no
-        ``PyModule``. Callers that want "skip silently" can collapse with
-        ``unwrap_or(None)`` or ``.failure``.
+        Why (cosmos-3flk9, decision A): ``[tool.flext.namespace].scan_dirs``
+        scopes enforcement to production sources when a project declares it —
+        ``tests/`` host pytest conventions and ``scripts/`` are thin command
+        adapters, so governing them as facades contradicts their contract.
+        The cyclic-import detector and the canonical-alias gate already honor
+        ``u.Infra.namespace_scan_dirs``; the validator silently ignoring the
+        same declaration made the declared scope a no-op. Without an explicit
+        declaration every file stays in scope (previous behavior).
         """
-        try:
-            resource = u.Infra.fetch_python_resource(rope_project, path)
-        except c.EXC_OS_SYNTAX as exc:
-            return r[ast.AST].fail(f"fetch_python_resource raised: {exc!s}")
-        if resource is None:
-            return r[ast.AST].fail(f"no rope resource for {path}")
-        try:
-            pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(rope_project, resource)
-        except c.EXC_OS_SYNTAX as exc:
-            return r[ast.AST].fail(f"get_pymodule raised: {exc!s}")
-        ast_module = pymodule.get_ast()
-        return r[ast.AST].ok(ast_module)
+        declared = u.Infra.namespace_meta(project_root).get("scan_dirs")
+        if not isinstance(declared, list) or not declared:
+            return True
+        scope = frozenset(str(item).strip() for item in declared if str(item).strip())
+        return filepath.relative_to(project_root).parts[0] in scope
 
     @staticmethod
-    def _is_namespace_governed_file(rel_path: Path) -> bool:
-        """Return whether NS-000/001/002 structural rules apply to this file.
-
-        Governed files are the five canonical facade modules and any module
-        inside the corresponding private namespace directories.
-        """
-        if FlextInfraNamespaceValidator._is_facade_module(rel_path):
-            return True
-        return any(
-            part in {"_constants", "_models", "_protocols", "_typings", "_utilities"}
-            for part in rel_path.parts
+    def _layout_violations(package_dir: Path | None) -> t.StrSequence:
+        """Require the complete ordered facade and private-family layout."""
+        if package_dir is None:
+            return ("[NS-LAYOUT-001] project package layout was not discovered",)
+        messages: list[str] = []
+        required_files: t.VariadicTuple[t.Pair[str, t.VariadicTuple[str]]] = (
+            ("settings", ("settings.py", "_settings.py")),
+            ("config", ("config.py", "_config.py")),
+            ("c", ("constants.py",)),
+            ("t", ("typings.py",)),
+            ("p", ("protocols.py",)),
+            ("m", ("models.py",)),
+            ("u", ("utilities.py",)),
+            ("cli", ("cli.py",)),
         )
-
-    @staticmethod
-    def _is_facade_module(rel_path: Path) -> bool:
-        """Return True for the five root facade modules under ``src/<pkg>/``."""
-        if (
-            len(rel_path.parts) != c.Infra.FACADE_MODULE_DEPTH
-            or rel_path.parts[0] != c.Infra.DEFAULT_SRC_DIR
-        ):
-            return False
-        return rel_path.name in {
-            c.Infra.CONSTANTS_PY,
-            c.Infra.MODELS_PY,
-            c.Infra.PROTOCOLS_PY,
-            c.Infra.TYPINGS_PY,
-            c.Infra.UTILITIES_PY,
-        }
-
-    @staticmethod
-    def _is_test_file(rel_path: Path) -> bool:
-        """Return True when the file lives under the project's ``tests/`` tree."""
-        return any(part == c.Infra.DIR_TESTS for part in rel_path.parts)
+        for layer, filenames in required_files:
+            if not any((package_dir / filename).is_file() for filename in filenames):
+                messages.append(
+                    f"[NS-LAYOUT-{len(messages) + 1:03d}] missing {layer} facade: "
+                    + " or ".join(filenames)
+                )
+        services_dir = package_dir / "services"
+        has_services = services_dir.is_dir() and any(
+            path.is_file() and path.suffix == ".py" and path.name != "__init__.py"
+            for path in services_dir.iterdir()
+        )
+        if has_services:
+            for layer in ("base", "api"):
+                if not (package_dir / f"{layer}.py").is_file():
+                    messages.append(
+                        f"[NS-LAYOUT-{len(messages) + 1:03d}] missing {layer} facade"
+                    )
+        for family in ("_constants", "_typings", "_protocols", "_models", "_utilities"):
+            if not (package_dir / family / "base.py").is_file():
+                messages.append(
+                    f"[NS-LAYOUT-{len(messages) + 1:03d}] {family} must begin with base.py"
+                )
+        return tuple(messages)
 
 
 __all__: list[str] = ["FlextInfraNamespaceValidator"]

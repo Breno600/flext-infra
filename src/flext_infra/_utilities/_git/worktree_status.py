@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING
 from git import GitCommandError, Repo
 
 from flext_core import r
-from flext_infra._utilities._git.repo import FlextInfraUtilitiesGitRepo
-from flext_infra.models import m
+from flext_infra import m, t
+
+from .repo import FlextInfraUtilitiesGitRepo
 
 _PORCELAIN_PATH_OFFSET = 3
 
@@ -56,9 +57,11 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
             porcelain = repo.git.status("--porcelain", "--untracked-files=all")
             lifecycle = cls._lifecycle_porcelain(repo, repo_path, porcelain)
         except GitCommandError as exc:
-            return r[m.Infra.GitStatusReport].fail(str(exc))
+            return r[m.Infra.GitStatusReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
-            return r[m.Infra.GitStatusReport].fail(f"git status failed: {exc}")
+            return r[m.Infra.GitStatusReport].fail(
+                f"git status failed: {exc}", exception=exc
+            )
         return r[m.Infra.GitStatusReport].ok(
             m.Infra.GitStatusReport(
                 repo_root=repo_path, porcelain=porcelain, dirty=bool(lifecycle.strip())
@@ -72,19 +75,47 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         """Capture the current repository HEAD as a typed oid report."""
         oid = cls._git_head_oid(request.repo_root)
         if oid.failure:
-            return r[m.Infra.GitOidReport].fail(oid.error or "failed to resolve HEAD")
+            return r[m.Infra.GitOidReport].from_failure(oid)
         return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid.value))
+
+    @classmethod
+    def git_changed_paths(
+        cls, request: m.Infra.GitRepoRequest
+    ) -> p.Result[t.SequenceOf[Path]]:
+        """Return every existing staged, unstaged, or untracked path in one repo."""
+        repo_path = request.repo_root.expanduser().resolve()
+        try:
+            repo = cls._repo(repo_path)
+            changed = tuple(
+                name
+                for name in repo.git.diff("--name-only", "-z", "HEAD", "--").split("\0")
+                if name
+            )
+            relative_paths = tuple(dict.fromkeys((*changed, *repo.untracked_files)))
+        except GitCommandError as exc:
+            return r[t.SequenceOf[Path]].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[t.SequenceOf[Path]].fail(
+                f"git changed paths failed: {exc}", exception=exc
+            )
+        return r[t.SequenceOf[Path]].ok(
+            tuple(
+                path
+                for relative_path in relative_paths
+                if (path := (repo_path / relative_path).resolve()).is_file()
+            )
+        )
 
     @classmethod
     def _git_head_oid(cls, repo_root: Path) -> p.Result[str]:
         """Private Path-based HEAD oid resolver for facet-internal callers."""
         opened = cls._open_repo(repo_root)
         if opened.failure:
-            return r[str].fail(opened.error or "failed to open git repository")
+            return r[str].from_failure(opened)
         try:
             return r[str].ok(opened.value.head.commit.hexsha)
         except (ValueError, TypeError, OSError) as exc:
-            return r[str].fail(f"failed to resolve HEAD: {exc}")
+            return r[str].fail(f"failed to resolve HEAD: {exc}", exception=exc)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitWorktreeStatusMixin"]

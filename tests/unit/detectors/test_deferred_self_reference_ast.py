@@ -2,7 +2,7 @@
 
 Both defects share one root cause: a nested model that cannot name what it
 depends on while its own class body executes. The canonical repair is
-diamond-MRO composition, so the detector must fire on the deferral and stay
+diamond-FLEXT composition, so the detector must fire on the deferral and stay
 silent once the model is composed through inherited namespaces.
 """
 
@@ -10,24 +10,27 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+from flext_tests import tm
+
 from flext_infra import m, u
 from flext_infra.detectors.deferred_self_reference_detector import (
     FlextInfraDeferredSelfReferenceDetector,
 )
-from flext_tests import tm
+from tests import t
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-_DEFERRED = "DEFERRED_SELF_REFERENCE"
-_RECURSIVE = "RECURSIVE_MODEL"
 
 
 class TestsFlextInfraDeferredSelfReferenceDetector:
     """Behavior contract for deferred-self-reference detection."""
 
+    _DEFERRED = "DEFERRED_SELF_REFERENCE"
+    _RECURSIVE = "RECURSIVE_MODEL"
+
     @staticmethod
-    def _codes(tmp_path: Path, source: str) -> tuple[str, ...]:
+    def _codes(tmp_path: Path, source: str) -> t.VariadicTuple[str]:
         project = tmp_path / "demo-project"
         package_dir = project / "src" / "demo_project"
         package_dir.mkdir(parents=True)
@@ -56,9 +59,9 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
             "    class Holder:\n"
             "        leaf: Outer.Leaf = Field(default_factory=lambda: Outer.Leaf())\n"
         )
-        tm.that(self._codes(tmp_path, source), eq=(_DEFERRED,))
+        tm.that(self._codes(tmp_path, source), eq=(self._DEFERRED,))
 
-    def test_diamond_mro_composition_is_accepted(self, tmp_path: Path) -> None:
+    def test_diamond_flext_composition_is_accepted(self, tmp_path: Path) -> None:
         """The canonical repair resolves the model eagerly, so it must be clean."""
         source = (
             "class Base:\n"
@@ -85,7 +88,7 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
     ) -> None:
         """A field typed as its own owner cannot be instantiated."""
         source = "class Node:\n    child: Node | None = None\n"
-        tm.that(self._codes(tmp_path, source), eq=(_RECURSIVE,))
+        tm.that(self._codes(tmp_path, source), eq=(self._RECURSIVE,))
 
     def test_classvar_singleton_slot_is_not_recursive(self, tmp_path: Path) -> None:
         """A ClassVar slot is never instantiated as a field."""
@@ -114,7 +117,7 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
         )
         tm.that(self._codes(tmp_path, source), eq=())
 
-    def test_report_names_the_mro_repair(self, tmp_path: Path) -> None:
+    def test_report_names_the_flext_repair(self, tmp_path: Path) -> None:
         """The finding must tell the author how to fix it, not just that it failed."""
         project = tmp_path / "demo-project"
         package_dir = project / "src" / "demo_project"
@@ -139,5 +142,144 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
                 )
             )
         tm.that(len(issues), eq=1)
-        tm.that(issues[0].message, has="MRO")
+        tm.that(issues[0].message, has="FLEXT")
         tm.that(issues[0].line, eq=5)
+
+    def test_public_normalizer_qualifies_sibling_annotations_without_reordering(
+        self,
+    ) -> None:
+        """Sibling annotations use the owner while declaration order stays stable."""
+        source = (
+            "from __future__ import annotations\n\n"
+            "class Models:\n"
+            "    class Consumer:\n"
+            "        dependency: Dependency\n\n"
+            "        def runtime(self) -> object:\n"
+            "            return Models.Dependency()\n\n"
+            "    class Dependency:\n"
+            "        pass\n"
+        )
+        normalized = u.Infra.normalize_deferred_self_references(source)
+        tm.that(
+            normalized.index("    class Consumer:"),
+            lt=normalized.index("    class Dependency:"),
+        )
+        tm.that(normalized, has="dependency: Models.Dependency")
+        tm.that(normalized, has="return Models.Dependency()")
+
+    def test_public_normalizer_ignores_a_nested_models_own_return_type(self) -> None:
+        """A method returning its enclosing nested model is not a graph edge."""
+        source = (
+            "class Models:\n"
+            "    class Target:\n"
+            "        @classmethod\n"
+            "        def create(cls) -> Target:\n"
+            "            return cls()\n\n"
+            "    class Other:\n"
+            "        pass\n"
+        )
+        tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
+
+    def test_public_normalizer_restores_executable_nested_class_bases(self) -> None:
+        """A nested base resolves from the active owner namespace at definition time."""
+        source = (
+            "class Models:\n"
+            "    class Base:\n"
+            "        pass\n\n"
+            "    class Child(Models.Base):\n"
+            "        pass\n"
+        )
+        normalized = u.Infra.normalize_deferred_self_references(source)
+        tm.that(normalized, has="class Child(Base):")
+        tm.that("class Child(Models.Base):" not in normalized, eq=True)
+
+    def test_public_normalizer_rejects_ambiguous_owners_and_model_rebuild(self) -> None:
+        """Unknown owner members and runtime schema repair fail loud."""
+        ambiguous = (
+            "class Models:\n"
+            "    class First:\n"
+            "        value: Models.Missing\n\n"
+            "    class Second:\n"
+            "        pass\n"
+        )
+        rebuild = "class Model:\n    pass\n\nModel.model_rebuild()\n"
+        with pytest.raises(ValueError, match="ambiguous self-qualified annotation"):
+            u.Infra.normalize_deferred_self_references(ambiguous)
+        with pytest.raises(ValueError, match="model_rebuild is prohibited"):
+            u.Infra.normalize_deferred_self_references(rebuild)
+
+    def test_public_normalizer_preserves_inherited_owner_annotations(self) -> None:
+        """An inherited public type need not be redeclared in the local facade."""
+        source = (
+            "from __future__ import annotations\n\n"
+            "class Base:\n"
+            "    class Target:\n"
+            "        pass\n\n"
+            "class Models(Base):\n"
+            "    class Consumer:\n"
+            "        value: Models.Target\n"
+        )
+        tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
+
+    @pytest.mark.parametrize(
+        "declaration",
+        [
+            '_Kind = Literal["one", "two"]',
+            '_Kind: TypeAlias = Literal["one", "two"]',
+            'type _Kind = Literal["one", "two"]',
+        ],
+    )
+    def test_public_normalizer_accepts_declared_owner_aliases(
+        self, declaration: str
+    ) -> None:
+        """An existing qualified alias must not block unrelated sibling repairs."""
+        source = (
+            "from __future__ import annotations\n"
+            "from typing import Annotated, Literal, TypeAlias\n\n"
+            "class Models:\n"
+            f"    {declaration}\n"
+            "    class Dependency:\n"
+            "        pass\n"
+            "    class Consumer:\n"
+            "        kind: Annotated[Models._Kind, 'category']\n"
+            "        dependency: Dependency\n"
+        )
+        normalized = u.Infra.normalize_deferred_self_references(source)
+
+        tm.that(
+            normalized,
+            eq=source.replace(
+                "dependency: Dependency", "dependency: Models.Dependency"
+            ),
+        )
+        tm.that(u.Infra.normalize_deferred_self_references(normalized), eq=normalized)
+
+    def test_public_normalizer_does_not_qualify_bare_assignment_bindings(self) -> None:
+        """Recognizing a member does not turn every class attribute into a type."""
+        source = (
+            "from __future__ import annotations\n\n"
+            "class Models:\n"
+            "    int = 1\n"
+            "    class Consumer:\n"
+            "        value: int\n"
+        )
+
+        tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
+
+    @pytest.mark.parametrize(
+        "declaration", ["_Kind: object", "class Other:\n        _Kind = str"]
+    )
+    def test_public_normalizer_rejects_unbound_or_foreign_owner_members(
+        self, declaration: str
+    ) -> None:
+        """An annotation-only slot or another class's member is not an owner binding."""
+        source = (
+            "from __future__ import annotations\n\n"
+            "class Models:\n"
+            f"    {declaration}\n"
+            "    class Consumer:\n"
+            "        kind: Models._Kind\n"
+        )
+
+        with pytest.raises(ValueError, match="ambiguous self-qualified annotation"):
+            u.Infra.normalize_deferred_self_references(source)

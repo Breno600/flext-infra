@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra.codegen._codegen_generation_type_checking import (
+from ._codegen_generation_type_checking import (
     FlextInfraCodegenGenerationTypeCheckingMixin,
 )
 
 if TYPE_CHECKING:
     from flext_infra import t
 
-type _LazyEntryContext = tuple[str, frozenset[str], bool]
+type _LazyEntryContext = t.Triple[str, frozenset[str], bool]
 
 
 class FlextInfraCodegenGenerationLazyEntriesMixin(
@@ -25,10 +26,10 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
         exports: t.StrSequence,
         lazy_filtered: t.LazyAliasMap,
         context: _LazyEntryContext,
-    ) -> t.SequenceOf[tuple[str, str, str]]:
+    ) -> t.SequenceOf[t.Triple[str, str, str]]:
         """Build normalized lazy entries for template rendering."""
         current_pkg, child_aliases, include_module_exports = context
-        entries: t.MutableSequenceOf[tuple[str, str, str]] = []
+        entries: t.MutableSequenceOf[t.Triple[str, str, str]] = []
         for exp in exports:
             if exp not in lazy_filtered:
                 continue
@@ -55,27 +56,23 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
 
     @staticmethod
     def _group_lazy_entries(
-        lazy_entries: t.SequenceOf[tuple[str, str, str]],
-    ) -> tuple[t.SequenceOf[t.StrSequencePair], t.SequenceOf[t.StrPairSequencePair]]:
+        lazy_entries: t.SequenceOf[t.Triple[str, str, str]],
+    ) -> t.Pair[t.SequenceOf[t.StrSequencePair], t.SequenceOf[t.StrPairSequencePair]]:
         """Group lazy entries by module and alias group."""
-        module_groups: dict[str, list[str]] = defaultdict(list)
-        alias_groups: dict[str, list[t.StrPair]] = defaultdict(list)
+        module_groups: MutableMapping[str, list[str]] = defaultdict(list)
+        alias_groups: MutableMapping[str, list[t.StrPair]] = defaultdict(list)
         for export_name, mod, attr_name in lazy_entries:
             if not attr_name or attr_name == export_name:
                 module_groups[mod].append(export_name)
             else:
                 alias_groups[mod].append((export_name, attr_name))
         module_items = tuple(
-            (mod, tuple(sorted(names)))
-            for mod, names in sorted(
-                module_groups.items(), key=lambda item: item[0].lower()
-            )
+            (mod, tuple(sorted(module_groups[mod])))
+            for mod in sorted(module_groups, key=str.lower)
         )
         alias_items = tuple(
-            (mod, tuple(sorted(pairs)))
-            for mod, pairs in sorted(
-                alias_groups.items(), key=lambda item: item[0].lower()
-            )
+            (mod, tuple(sorted(alias_groups[mod])))
+            for mod in sorted(alias_groups, key=str.lower)
         )
         return module_items, alias_items
 
@@ -84,7 +81,7 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
         exports: t.StrSequence, lazy_filtered: t.LazyAliasMap
     ) -> t.StrSequence:
         """Build root public exports in Ruff's canonical isort-style order."""
-        # mro-wkii.17.26 (codex): the planner is the sole ABI filter; rendering
+        # flext-wkii.17.26 (codex): the planner is the sole ABI filter; rendering
         # only orders its validated contract and must not reinterpret target paths.
         _ = lazy_filtered
         export_candidates = tuple(dict.fromkeys(exports))
@@ -96,10 +93,10 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
         )
 
     @staticmethod
-    def _public_export_order_key(export_name: str) -> tuple[int, str]:
+    def _public_export_order_key(export_name: str) -> t.Pair[int, str]:
         """Classify one export using Ruff's canonical ``RUF022`` order."""
         category = 0 if export_name.isupper() else 1 if export_name[:1].isupper() else 2
-        # mro-wkii.17 (Codex): dependency order belongs to facade imports;
+        # flext-wkii.17 (Codex): dependency order belongs to facade imports;
         # published __all__ values follow Ruff RUF022 (case-sensitive ASCII
         # secondary sort) so the two contracts never fight.
         return (category, export_name)

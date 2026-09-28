@@ -6,7 +6,7 @@ from flext_infra import c
 
 
 class FlextInfraUtilitiesProcess:
-    """Normalize external process exits into stable diagnostic classifications."""
+    """Normalize external process exits without discarding their status."""
 
     @staticmethod
     def process_exit_classification(exit_code: int) -> str:

@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra.gates.base_gate import FlextInfraGate
+
+from .base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -21,8 +22,12 @@ class FlextInfraBanditGate(FlextInfraGate):
     gate_id: ClassVar[str] = c.Infra.SECURITY
     gate_name: ClassVar[str] = "Bandit"
     can_fix: ClassVar[bool] = False
-    tool_name: ClassVar[str] = c.Infra.SARIF_TOOL_INFO[c.Infra.SECURITY][0]
-    tool_url: ClassVar[str] = c.Infra.SARIF_TOOL_INFO[c.Infra.SECURITY][1]
+    check_module_command_prefix: ClassVar[t.StrSequence] = (c.Infra.BANDIT, "-r")
+    check_module_command_suffix: ClassVar[t.StrSequence] = (
+        "-f",
+        c.Infra.OUTPUT_JSON,
+        "--quiet",
+    )
 
     @override
     def _get_check_dirs(
@@ -35,37 +40,42 @@ class FlextInfraBanditGate(FlextInfraGate):
         return [c.Infra.DEFAULT_SRC_DIR]
 
     @override
-    def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
-    ) -> t.StrSequence:
-        """Build check command."""
-        _ = project_dir, ctx
-        return [
-            c.Infra.BANDIT,
-            "-r",
-            *check_dirs,
-            "-f",
-            c.Infra.OUTPUT_JSON,
-            "-q",
-            "-ll",
-        ]
+    def _empty_targets_result(
+        self, project_dir: Path, started: float
+    ) -> m.Infra.GateExecution:
+        """No ``src`` tree means no Python package surface to audit.
+
+        A package:false workspace root declares no importable package, so
+        bandit has no legitimate target there; absence is topology, not a
+        lost scan.
+        """
+        return self._neutral_skip_result(
+            project_dir,
+            started,
+            message=(
+                f"{self.gate_id}: no src tree — package:false project declares "
+                "no Python package surface to audit"
+            ),
+        )
 
     @override
     def _parse_check_output(
         self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
-    ) -> tuple[bool, t.SequenceOf[m.Infra.Issue]]:
+    ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
-        _ = project_dir, ctx
+        del project_dir, ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
-        try:
-            parsed_payload = self._parse_bandit_payload(result.stdout or "{}")
-        except c.EXC_VALIDATION_TYPE as err:
+        if not u.Cli.process_succeeded(result.outcome) and not result.stdout.strip():
             issues.append(
-                self._parse_error_issue(
-                    f"Tool output parsing failed: {type(err).__name__}"
+                self._command_error_issue(
+                    result, tool=c.Infra.BANDIT, file="<bandit>", line=0, column=0
                 )
             )
             return False, issues
+        if not result.stdout.strip():
+            issues.append(self._parse_error_issue("bandit produced no JSON output"))
+            return False, issues
+        parsed_payload = self._parse_bandit_payload(result.stdout)
         if parsed_payload.failure:
             issues.append(
                 self._parse_error_issue(
@@ -74,41 +84,30 @@ class FlextInfraBanditGate(FlextInfraGate):
             )
             return False, issues
         issues.extend(self._bandit_issues(parsed_payload.unwrap()))
-        if not issues and result.exit_code != 0:
-            detail = (result.stderr or result.stdout).strip() or "no diagnostics"
+        if not issues and not u.Cli.process_succeeded(result.outcome):
             issues.append(
-                m.Infra.Issue(
-                    file="<bandit>",
-                    line=0,
-                    column=0,
-                    code="TOOL_ERROR",
-                    message=f"bandit exited with code {result.exit_code}: {detail}",
-                    severity="ERROR",
+                self._command_error_issue(
+                    result, tool=c.Infra.BANDIT, file="<bandit>", line=0, column=0
                 )
             )
-        return result.exit_code == 0, issues
+        return u.Cli.process_succeeded(result.outcome), issues
 
     @staticmethod
-    def _parse_bandit_payload(
-        stdout: str,
-    ) -> p.Result[t.MappingKV[str, t.Infra.InfraValue]]:
+    def _parse_bandit_payload(stdout: str) -> p.Result[t.MappingKV[str, t.JsonValue]]:
         """Parse Bandit JSON stdout into a typed payload mapping."""
-        parsed_result = u.Cli.json_parse(stdout or "{}")
+        parsed_result = u.Cli.json_parse(stdout)
         if parsed_result.failure:
-            return r[t.MappingKV[str, t.Infra.InfraValue]].fail(
-                parsed_result.error or "Tool output parsing failed"
-            )
+            return r[t.MappingKV[str, t.JsonValue]].from_failure(parsed_result)
         raw_payload = parsed_result.unwrap()
         if not isinstance(raw_payload, Mapping):
-            empty_mapping: t.MappingKV[str, t.Infra.InfraValue] = {}
-            return r[t.MappingKV[str, t.Infra.InfraValue]].ok(empty_mapping)
-        return r[t.MappingKV[str, t.Infra.InfraValue]].ok(
-            u.Cli.json_as_mapping(raw_payload)
-        )
+            return r[t.MappingKV[str, t.JsonValue]].fail(
+                "Bandit output is not a JSON object"
+            )
+        return r[t.MappingKV[str, t.JsonValue]].ok(u.Cli.json_as_mapping(raw_payload))
 
     @staticmethod
     def _bandit_issues(
-        bandit_data: t.MappingKV[str, t.Infra.InfraValue],
+        bandit_data: t.MappingKV[str, t.JsonValue],
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Build typed gate issues from parsed Bandit result entries."""
         return tuple(

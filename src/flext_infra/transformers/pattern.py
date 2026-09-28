@@ -9,16 +9,13 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c
-from flext_infra.transformers._canonical_t_import import (
-    FlextInfraEnsureCanonicalTImportMixin,
-)
-from flext_infra.transformers.base import FlextInfraRopeTransformer
+from flext_infra import c, t
+
+from ._canonical_t_import import FlextInfraEnsureCanonicalTImportMixin
+from .rope_transformer import FlextInfraRopeTransformer
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from flext_infra import t
 
 
 class FlextInfraRefactorPatternTransformer(
@@ -66,7 +63,7 @@ class FlextInfraRefactorPatternTransformer(
         self._required_alias = required_alias
         self._alias_module = (
             alias_module
-            or self._canonical_import_module(file_path)
+            or FlextInfraEnsureCanonicalTImportMixin.canonical_import_module(file_path)
             or c.Infra.PKG_CORE_UNDERSCORE
         )
 

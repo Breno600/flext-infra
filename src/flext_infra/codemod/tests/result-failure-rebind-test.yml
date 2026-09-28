@@ -1,0 +1,20 @@
+id: result-failure-rebind
+valid:
+  - "return r[str].from_failure(result)"
+  - "return r[str].fail(result.error or 'read failed')"
+  - |
+    if other.failure:
+        return r[str].fail(result.error or "read failed")
+  - |
+    if result.failure:
+        return r[str].fail(result.error or "read failed", error_code="READ")
+invalid:
+  - |
+    if loaded.failure:
+        return r[m.Sample.Config].fail(loaded.error or c.Sample.ERR_CONFIG)
+  - |
+    if result.failure:
+        return r[str].fail(result.error or "read failed")
+  - |
+    if loaded.failure:
+        return r[p.Sample.Config].fail(loaded.error or c.Sample.ERR_CONFIG)

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_infra import config
 from tests import c
 
 if TYPE_CHECKING:
@@ -21,9 +22,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraWorkspaceFactory:
     """Factory for creating test workspaces with real project structures."""
 
-    default_python: str = "^3.13"
-    default_version: str = "0.1.0"
-    encoding: str = "utf-8"
+    default_python: str = f"^{config.Infra.codegen.toolchain.python_version}"
+    default_version: str = c.Tests.RELEASE_VERSION_BASE
+    encoding: str = c.Cli.ENCODING_DEFAULT
 
     def create_minimal(self, tmp_path: Path, name: t.NonEmptyStr = "test-proj") -> Path:
         """Create a minimal project with pyproject.toml, Makefile, and src/."""
@@ -53,28 +54,33 @@ class TestsFlextInfraWorkspaceFactory:
 
     def create_workspace(self, tmp_path: Path, projects: int = 3) -> Path:
         """Create a multi-project workspace using real project fixtures."""
-        workspace_root: Path = tmp_path / "workspace"
-        workspace_root.mkdir(parents=True, exist_ok=True)
+        repository_root: Path = tmp_path / "workspace"
+        repository_root.mkdir(parents=True, exist_ok=True)
         project_names = [f"test-proj-{idx + 1}" for idx in range(projects)]
         for project_name in project_names:
-            self.create_minimal(tmp_path=workspace_root, name=project_name)
-        members = ", ".join(f'"{name}"' for name in project_names)
+            self.create_minimal(tmp_path=repository_root, name=project_name)
         workspace_pyproject = (
             "[tool.poetry]\n"
             '"name" = "workspace"\n'
             f'"version" = "{self.default_version}"\n'
             '"description" = "Generated workspace fixture"\n'
-            '"authors" = ["FLEXT Tests <tests@flext.dev>"]\n\n'
-            "[tool.flext.workspace]\n"
-            f"members = [{members}]\n"
+            '"authors" = ["FLEXT Tests <tests@flext.dev>"]\n'
         )
-        (workspace_root / "pyproject.toml").write_text(
+        (repository_root / "pyproject.toml").write_text(
             workspace_pyproject, encoding=self.encoding
         )
-        (workspace_root / "Makefile").write_text(
+        (repository_root / "Makefile").write_text(
             "check:\n\t@echo workspace-check\n", encoding=self.encoding
         )
-        return workspace_root
+        (repository_root / ".gitmodules").write_text(
+            "".join(
+                f'[submodule "{name}"]\n\tpath = {name}\n'
+                f"\turl = https://github.com/flext-sh/{name}.git\n"
+                for name in project_names
+            ),
+            encoding=self.encoding,
+        )
+        return repository_root
 
     def _create_project(
         self, tmp_path: Path, name: t.NonEmptyStr, deps: t.StrSequence
@@ -122,6 +128,3 @@ class TestsFlextInfraWorkspaceFactory:
             + poetry_deps
             + f"{dependencies}\n"
         )
-
-
-__all__: list[str] = ["TestsFlextInfraWorkspaceFactory"]

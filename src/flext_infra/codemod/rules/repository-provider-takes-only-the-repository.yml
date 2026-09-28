@@ -1,0 +1,29 @@
+# repository_provider answers one question with one input
+# (flext-itpd1.3, 2026-09-19).
+#
+# The owner detects the provider identity a repository declares for itself,
+# reading organization and base URL from that repository's own manifest. It
+# deliberately matches nothing against configured provider rows — that is the
+# D14 cutover, which moved the FLEXT integration line to its own owner. The
+# second parameter went away with the matching it fed, and the configuration
+# key it read (`codegen.providers`) no longer exists anywhere in the schema.
+#
+# One consumer kept passing it, so every project render died with
+# "'CodegenConfigSpec' object has no attribute 'providers'". This rule drops
+# any surviving extra argument so the call matches the owner it names. The
+# arities are spelled out rather than written with a trailing `$$$`, which
+# does not match an empty tail after a named metavariable.
+id: repository-provider-takes-only-the-repository
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  any:
+    - pattern: u.Infra.repository_provider($REPO, $A)
+    - pattern: u.Infra.repository_provider($REPO, $A, $B)
+fix: u.Infra.repository_provider($REPO)
+message: >-
+  repository_provider takes only the repository; the extra argument is residue
+  of the provider-row matching the D14 cutover removed.

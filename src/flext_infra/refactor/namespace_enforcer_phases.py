@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class FlextInfraNamespaceEnforcerPhasesMixin:
     """Project enforcement methods for namespace enforcer."""
 
-    _workspace_root: Path
+    _repository_root: Path
     _rope_project: t.Infra.RopeProject
 
     def _resolve_project_roots(
@@ -55,10 +55,10 @@ class FlextInfraNamespaceEnforcerPhasesMixin:
     @staticmethod
     def _scan_facades(
         *,
-        project: tuple[Path, str],
+        project: t.Pair[Path, str],
         rope_project: t.Infra.RopeProject,
         apply: bool,
-        workspace_root: Path,
+        repository_root: Path,
     ) -> t.SequenceOf[m.Infra.FacadeStatus]:
         """Scan facades and optionally create missing ones."""
         project_root, project_name = project
@@ -71,7 +71,7 @@ class FlextInfraNamespaceEnforcerPhasesMixin:
             project_root=project_root,
             project_name=project_name,
             facade_statuses=facade_statuses,
-            workspace_root=workspace_root,
+            repository_root=repository_root,
         )
         return FlextInfraScanner.scan_project(
             project_root=project_root, rope_project=rope_project

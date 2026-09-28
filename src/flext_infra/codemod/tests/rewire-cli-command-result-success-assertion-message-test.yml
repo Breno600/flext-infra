@@ -1,0 +1,6 @@
+id: rewire-cli-command-result-success-assertion-message
+valid:
+  - tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True, msg=result.value.stderr)
+invalid:
+  - tm.that(result.value.exit_code, eq=0, msg=result.value.stderr)
+  - tm.that(result.value.outcome.raw_return_code, eq=0, msg=result.value.stderr)

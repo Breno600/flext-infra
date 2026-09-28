@@ -1,0 +1,35 @@
+id: ban-silent-except-swallow
+snapshots:
+  ? |-
+    for item in items:
+        try:
+            parse(item)
+        except ParseError:
+            continue
+  : labels:
+    - source: |-
+        except ParseError:
+                continue
+      style: primary
+      start: 52
+      end: 87
+    - source: continue
+      style: secondary
+      start: 79
+      end: 87
+  ? |-
+    try:
+        run()
+    except ValueError:
+        pass
+  : labels:
+    - source: |-
+        except ValueError:
+            pass
+      style: primary
+      start: 15
+      end: 42
+    - source: pass
+      style: secondary
+      start: 38
+      end: 42

@@ -5,19 +5,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
-from flext_cli import m
+from flext_cli import m, t
 
 
 class FlextInfraSettingsModels:
     """Private namespace for validated settings payloads."""
 
-    class Infra(BaseSettings):
+    class Infra(m.BaseSettings):
         """Validated process-start settings owned by flext-infra."""
 
-        # mro-wkii.4.15: validate every external alias before singleton export.
-        model_config = SettingsConfigDict(
+        # flext-wkii.4.15: validate every external alias before singleton export.
+        model_config = m.SettingsConfigDict(
             env_prefix="",
             env_ignore_empty=True,
             case_sensitive=True,
@@ -34,12 +32,12 @@ class FlextInfraSettingsModels:
                 description="Force standalone mode and skip workspace auto-detection.",
             ),
         ]
-        workspace_root: Annotated[
+        repository_root: Annotated[
             Path | None,
             m.Field(
                 default=None,
-                validation_alias="FLEXT_WORKSPACE_ROOT",
-                description="Explicit workspace root for dependency orchestration.",
+                validation_alias="FLEXT_REPOSITORY_ROOT",
+                description="Explicit repository root for dependency orchestration.",
             ),
         ]
         use_https: Annotated[
@@ -72,6 +70,73 @@ class FlextInfraSettingsModels:
                 default=None,
                 validation_alias="GITHUB_REF_NAME",
                 description="GitHub Actions ref name for dependency sync.",
+            ),
+        ]
+        uv_executable: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                validation_alias="UV",
+                description="uv launcher path resolved for dependency orchestration.",
+            ),
+        ]
+        virtual_env: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                validation_alias="VIRTUAL_ENV",
+                description="Active virtualenv root for promoted Python commands.",
+            ),
+        ]
+        dispatch_what: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                validation_alias="WHAT",
+                description="Make-dispatch WHAT verb for promoted commands.",
+            ),
+        ]
+        cosmos_command_dispatched: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                validation_alias="COSMOS_COMMAND_DISPATCHED",
+                description="Gas City command-dispatch marker for promoted verbs.",
+            ),
+        ]
+        cosmos_command_path: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                validation_alias="COSMOS_COMMAND_PATH",
+                description="Gas City command path for promoted verb dispatch.",
+            ),
+        ]
+        system_path: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                validation_alias="PATH",
+                description="Process PATH captured for isolated subprocess builds.",
+            ),
+        ]
+        sonar_token: Annotated[
+            t.SecretStr | None,
+            m.Field(
+                default=None,
+                validation_alias="SONAR_TOKEN",
+                description=(
+                    "SonarCloud web API token; required only by the explicit "
+                    "sonarcloud-sync verb, never read from any other source."
+                ),
+            ),
+        ]
+        mise_github_credential_command: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                validation_alias="MISE_GITHUB_CREDENTIAL_COMMAND",
+                description="Mise credential command forwarded to isolated builds.",
             ),
         ]
 

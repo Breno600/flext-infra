@@ -1,171 +1,150 @@
-"""AST analysis for deferred self-reference and recursive model defects.
-
-Two structural defects share one root cause: a nested model that cannot name
-what it depends on at class-body execution time.
-
-1. DEFERRED_SELF_REFERENCE — ``default_factory=lambda: Outer.Sibling()``.
-   A ``default_factory`` runs while the class body executes, and the outer
-   class name is still unbound there, so the author wraps the reference in a
-   lambda to postpone resolution. That converts a definition-order defect
-   into a runtime one and hides it from every static gate.
-
-2. RECURSIVE_MODEL — a model whose annotation or default reaches itself,
-   directly or through the outer namespace. Instantiation then depends on a
-   type that is not finished being defined.
-
-The canonical repair for both is the workspace's diamond-MRO composition:
-hoist the referenced model into its own namespace class, inherit that
-namespace, and reference the model as a resolved base-class attribute. Every
-default then stays a direct callable.
-"""
+"""AST analysis for deferred self-reference and recursive model defects."""
 
 from __future__ import annotations
 
 import ast
-from typing import NamedTuple
+from typing import ClassVar, NamedTuple
+
+from flext_infra import t
+
+from .._utilities.deferred_self_reference_rewrite import (
+    FlextInfraUtilitiesDeferredSelfReferenceRewrite,
+)
 
 
-class DeferredSelfReferenceFinding(NamedTuple):
-    """One deferred-self-reference or recursive-model occurrence."""
+class FlextInfraUtilitiesDeferredSelfReference(
+    FlextInfraUtilitiesDeferredSelfReferenceRewrite
+):
+    """Own deferred-self-reference AST analysis and rewrites."""
 
-    line: int
-    column: int
-    kind: str
-    detail: str
+    class Finding(NamedTuple):
+        """One deferred-self-reference or recursive-model occurrence."""
 
+        line: int
+        column: int
+        kind: str
+        detail: str
 
-_DEFERRED_KIND = "DEFERRED_SELF_REFERENCE"
-_RECURSIVE_KIND = "RECURSIVE_MODEL"
-_FACTORY_KEYWORD = "default_factory"
-# Annotations whose subscript is a slot or a type table, never an instantiated
-# model field: naming the owner inside them is self-typing, not recursion.
-_NON_FIELD_WRAPPERS = frozenset({"ClassVar", "TypeAdapter"})
+    _DEFERRED_KIND: ClassVar[str] = "DEFERRED_SELF_REFERENCE"
+    _RECURSIVE_KIND: ClassVar[str] = "RECURSIVE_MODEL"
+    _FACTORY_KEYWORD: ClassVar[str] = "default_factory"
+    _NON_FIELD_WRAPPERS: ClassVar[frozenset[str]] = frozenset({
+        "ClassVar",
+        "TypeAdapter",
+    })
 
+    @staticmethod
+    def _enclosing_class_names(stack: list[ast.ClassDef]) -> frozenset[str]:
+        return frozenset(node.name for node in stack)
 
-def _enclosing_class_names(stack: list[ast.ClassDef]) -> frozenset[str]:
-    """Return every class name currently open in the definition stack."""
-    return frozenset(node.name for node in stack)
+    @staticmethod
+    def _attribute_root(node: ast.expr) -> str | None:
+        current = node
+        while isinstance(current, ast.Attribute):
+            current = current.value
+        return current.id if isinstance(current, ast.Name) else None
 
+    @classmethod
+    def _referenced_roots(cls, node: ast.expr) -> frozenset[str]:
+        roots: set[str] = set()
+        for child in ast.walk(node):
+            if isinstance(child, ast.Attribute):
+                root = cls._attribute_root(child)
+                if root is not None:
+                    roots.add(root)
+            elif isinstance(child, ast.Name):
+                roots.add(child.id)
+        return frozenset(roots)
 
-def _attribute_root(node: ast.expr) -> str | None:
-    """Return the leftmost identifier of an attribute chain, if any."""
-    current = node
-    while isinstance(current, ast.Attribute):
-        current = current.value
-    return current.id if isinstance(current, ast.Name) else None
+    @staticmethod
+    def _annotation_wrappers(node: ast.expr) -> frozenset[str]:
+        wrappers: set[str] = set()
+        for child in ast.walk(node):
+            if not isinstance(child, ast.Subscript):
+                continue
+            value = child.value
+            if isinstance(value, ast.Attribute):
+                wrappers.add(value.attr)
+            elif isinstance(value, ast.Name):
+                wrappers.add(value.id)
+        return frozenset(wrappers)
 
+    @classmethod
+    def _factory_keyword(cls, call: ast.Call) -> ast.keyword | None:
+        return next(
+            (item for item in call.keywords if item.arg == cls._FACTORY_KEYWORD), None
+        )
 
-def _referenced_roots(node: ast.expr) -> frozenset[str]:
-    """Return every identifier the expression resolves against."""
-    roots: set[str] = set()
-    for child in ast.walk(node):
-        if isinstance(child, ast.Attribute):
-            root = _attribute_root(child)
-            if root is not None:
-                roots.add(root)
-        elif isinstance(child, ast.Name):
-            roots.add(child.id)
-    return frozenset(roots)
+    @classmethod
+    def _append_deferred(
+        cls, findings: list[Finding], enclosing: frozenset[str], factory: ast.Lambda
+    ) -> None:
+        hit = enclosing & cls._referenced_roots(factory.body)
+        if not hit:
+            return
+        name = min(hit)
+        findings.append(
+            cls.Finding(
+                factory.lineno,
+                factory.col_offset,
+                cls._DEFERRED_KIND,
+                f"default_factory defers resolution of {name!r} through a lambda; "
+                "hoist the model into a FLEXT namespace facet, inherit it, and "
+                "pass the model as the factory",
+            )
+        )
 
+    @classmethod
+    def _append_recursive(
+        cls, findings: list[Finding], owner: str, node: ast.AnnAssign
+    ) -> None:
+        wrappers = cls._annotation_wrappers(node.annotation)
+        if owner not in cls._referenced_roots(node.annotation) or (
+            wrappers & cls._NON_FIELD_WRAPPERS
+        ):
+            return
+        findings.append(
+            cls.Finding(
+                node.annotation.lineno,
+                node.annotation.col_offset,
+                cls._RECURSIVE_KIND,
+                f"model {owner!r} annotates a field with itself; split the "
+                "recursive leg into a FLEXT namespace facet",
+            )
+        )
 
-def _annotation_wrappers(node: ast.expr) -> frozenset[str]:
-    """Return the trailing names of every generic wrapper in an annotation."""
-    wrappers: set[str] = set()
-    for child in ast.walk(node):
-        if not isinstance(child, ast.Subscript):
-            continue
-        value = child.value
-        if isinstance(value, ast.Attribute):
-            wrappers.add(value.attr)
-        elif isinstance(value, ast.Name):
-            wrappers.add(value.id)
-    return frozenset(wrappers)
-
-
-def _factory_keyword(call: ast.Call) -> ast.keyword | None:
-    """Return the ``default_factory`` keyword of a call, if present."""
-    for keyword in call.keywords:
-        if keyword.arg == _FACTORY_KEYWORD:
-            return keyword
-    return None
-
-
-def collect_deferred_self_reference_findings(
-    tree: ast.Module,
-) -> tuple[DeferredSelfReferenceFinding, ...]:
-    """Collect deferred-self-reference and recursive-model findings in a module."""
-    findings: list[DeferredSelfReferenceFinding] = []
-    stack: list[ast.ClassDef] = []
-
-    def visit(node: ast.AST) -> None:
+    @classmethod
+    def _visit(
+        cls, node: ast.AST, stack: list[ast.ClassDef], findings: list[Finding]
+    ) -> None:
         if isinstance(node, ast.ClassDef):
             stack.append(node)
             for child in node.body:
-                visit(child)
+                cls._visit(child, stack, findings)
             stack.pop()
             return
-
         if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
-            # A function body is executed on call, long after the class is
-            # bound, so neither defect can occur there: an annotated local is
-            # not a model field and a default already resolved.
             return
-
-        enclosing = _enclosing_class_names(stack)
+        enclosing = cls._enclosing_class_names(stack)
         if enclosing and isinstance(node, ast.Call):
-            keyword = _factory_keyword(node)
+            keyword = cls._factory_keyword(node)
             if keyword is not None and isinstance(keyword.value, ast.Lambda):
-                hit = enclosing & _referenced_roots(keyword.value.body)
-                if hit:
-                    name = min(hit)
-                    findings.append(
-                        DeferredSelfReferenceFinding(
-                            line=keyword.value.lineno,
-                            column=keyword.value.col_offset,
-                            kind=_DEFERRED_KIND,
-                            detail=(
-                                f"default_factory defers resolution of {name!r} "
-                                "through a lambda because the enclosing class is "
-                                "still unbound. Hoist the referenced model into "
-                                "its own namespace class, inherit it (diamond "
-                                "MRO), and pass the model itself as the factory."
-                            ),
-                        )
-                    )
-
+                cls._append_deferred(findings, enclosing, keyword.value)
         if stack and isinstance(node, ast.AnnAssign):
-            owner = stack[-1].name
-            annotation = node.annotation
-            # ClassVar slots (singleton holders) and TypeAdapter tables are
-            # never instantiated as model fields, so naming the owner there is
-            # a normal self-typed reference, not a recursive model.
-            annotation_roots = _referenced_roots(annotation)
-            wrappers = _annotation_wrappers(annotation)
-            is_field_annotation = not wrappers & _NON_FIELD_WRAPPERS
-            if owner in annotation_roots and is_field_annotation:
-                findings.append(
-                    DeferredSelfReferenceFinding(
-                        line=annotation.lineno,
-                        column=annotation.col_offset,
-                        kind=_RECURSIVE_KIND,
-                        detail=(
-                            f"model {owner!r} annotates a field with itself. A "
-                            "recursive model cannot be instantiated while its own "
-                            "definition is incomplete; split the recursive leg "
-                            "into a separate namespace class composed by MRO."
-                        ),
-                    )
-                )
-
+            cls._append_recursive(findings, stack[-1].name, node)
         for child in ast.iter_child_nodes(node):
-            visit(child)
+            cls._visit(child, stack, findings)
 
-    for child in tree.body:
-        visit(child)
-    return tuple(findings)
+    @classmethod
+    def collect_deferred_self_reference_findings(
+        cls, tree: ast.Module
+    ) -> t.VariadicTuple[Finding]:
+        """Collect deferred factories and recursive fields in one module."""
+        findings: list[FlextInfraUtilitiesDeferredSelfReference.Finding] = []
+        stack: list[ast.ClassDef] = []
+        for child in tree.body:
+            cls._visit(child, stack, findings)
+        return tuple(findings)
 
 
-__all__: list[str] = [
-    "DeferredSelfReferenceFinding",
-    "collect_deferred_self_reference_findings",
-]
+__all__: t.VariadicTuple[str] = ("FlextInfraUtilitiesDeferredSelfReference",)

@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import Annotated, override
 
 from flext_infra import m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-from flext_infra.deps.detection import FlextInfraDependencyDetectionService
-from flext_infra.deps.detector_runtime import FlextInfraDependencyDetectorRuntime
+
+from .detection import FlextInfraDependencyDetectionService
+from .detector_runtime import FlextInfraDependencyDetectorRuntime
 
 
 class FlextInfraRuntimeDevDependencyDetector(
@@ -31,7 +33,10 @@ class FlextInfraRuntimeDevDependencyDetector(
     ] = False
     apply_typings: Annotated[
         bool,
-        m.Field(alias="apply-typings", description="Install missing typing packages"),
+        m.Field(
+            alias="apply-typings",
+            description="Declare CUSTOM typings extras and install through UV",
+        ),
     ] = False
     no_pip_check: Annotated[
         bool, m.Field(alias="no-pip-check", description="Skip workspace pip check")
@@ -65,8 +70,8 @@ class FlextInfraRuntimeDevDependencyDetector(
     @override
     def execute(self) -> p.Result[bool]:
         """Execute dependency detection and generate workspace report."""
-        payload: dict[str, t.Infra.InfraValue] = {
-            "workspace": str(self.root),
+        payload: MutableMapping[str, t.JsonValue] = {
+            "repository_root": str(self.root),
             "apply": self.apply_changes,
             "format": self.output_format,
             "output": self.output,

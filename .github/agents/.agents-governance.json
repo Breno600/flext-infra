@@ -1,0 +1,26 @@
+{
+  "context": "project",
+  "destination": ".github/agents",
+  "managed": {
+    "python-reviewer.agent.md": {
+      "activation": ["marker:pyproject.toml"],
+      "adapter_version": 1,
+      "destination": "python-reviewer.agent.md",
+      "origin": "agents:agents:copilot",
+      "physical_digest": "ddf47f62ddf3d5c00d94b582fa588090709e3aa378cddc98dab67501f7e212ee",
+      "slug": "python-reviewer",
+      "source_digest": "f3710dd034fb6cd70481c542e134052ae4ca1a8bc962c760bc4b29b087cc43d6",
+      "source_type": "agent"
+    }
+  },
+  "owner": "agents-governance",
+  "project": ".",
+  "providers": ["copilot"],
+  "selection": {
+    "agents": [],
+    "opt_ins": [],
+    "selected_tags": ["flext"]
+  },
+  "surface": "agents",
+  "version": 5
+}

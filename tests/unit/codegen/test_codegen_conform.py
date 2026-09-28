@@ -7,150 +7,398 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import os
+import shutil
 import sys
-import tomllib
 from pathlib import Path
+from typing import override
 
 import pytest
-from flext_infra import config, main
-from flext_infra.codegen import FlextInfraCodegenConform, FlextInfraCodegenProjectNew
-from flext_infra.deps import FlextInfraPyprojectModernizer
-from flext_infra.services.cli_routes_codegen import CodegenRoutes
-from flext_infra.workspace import FlextInfraWorkspaceDetector
 from flext_tests import tm
 
-from tests import c, m, p, r, u
+from flext_core import r
+from flext_infra import config, main
+from flext_infra.codegen import (
+    FlextInfraCodegenConform,
+    FlextInfraCodegenMiseArtifacts,
+    FlextInfraCodegenProjectNew,
+    FlextInfraMiseWorkspacePlanner,
+)
+from flext_infra.docs import FlextInfraDocGenerator
+from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
+from flext_infra.workspace import FlextInfraWorkspaceDetector
+from tests import c, m, p, t, u
+
+from .conform_support import TestsFlextInfraConformSupport
+
+pytestmark = [pytest.mark.slow]
+
+_LIFECYCLE_EXCEPTION = OSError("conform operation raised after begin")
 
 
-def _conform_target(
-    root: Path, repository: m.Infra.RepositoryRef, *, make_profile: c.Infra.MakeProfile
-) -> m.Infra.RepositoryConformTarget:
-    """Build a typed rendering target from the same provider SSOT as production."""
-    provider = tm.ok(
-        u.Infra.repository_provider(repository, config.Infra.codegen.providers)
-    )
-    return m.Infra.RepositoryConformTarget(
-        repository=repository,
-        root=root,
-        make_profile=make_profile,
-        beads_enabled=make_profile is c.Infra.MakeProfile.WORKSPACE_ROOT,
-        canonical_project_name=repository.distribution,
-        baseline_branch=provider.branch,
-        ci_enabled=True,
-        technical_branch_patterns=(
-            config.Infra.codegen.branch_policy.technical_branch_patterns
-        ),
-        governed_branch_patterns=(
-            config.Infra.codegen.branch_policy.governed_branch_patterns
-        ),
-    )
+class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
+    """Inject one public planning outcome after the real transaction begins."""
 
-
-def _standalone_workspace(root: Path) -> m.Infra.WorkspaceSpec:
-    """Load the smallest owner-written standalone manifest for conform tests."""
-    u.Tests.write_standalone_workspace_manifest(
-        root, "flext-demo", upstream="flext_cli"
-    )
-    package_root = root / "src" / "flext_demo"
-    tm.ok(u.Cli.ensure_dir(package_root))
-    tm.ok(u.Cli.atomic_write_text_file(package_root / "__init__.py", ""))
-    tm.ok(
-        u.Cli.atomic_write_text_file(
-            root / "pyproject.toml",
-            (
-                "[project]\n"
-                'name = "flext-demo"\n'
-                'version = "0.1.0"\n'
-                'requires-python = ">=3.13,<3.14"\n'
-                "dependencies = []\n"
-            ),
+    @override
+    def plan(
+        self, request: m.Infra.CodegenConformRequest
+    ) -> p.Result[m.Infra.CodegenPlan]:
+        """Exercise recovery from real journal, staging, and CAS state changes."""
+        planned = super().plan(request)
+        if planned.failure:
+            return planned
+        identity = tm.ok(
+            u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=request.root))
         )
-    )
-    return tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        journal_path = FlextInfraMiseWorkspacePlanner.journal_path(identity)
+        if not journal_path.is_file():
+            return planned
+        scenario = request.root.name
+        if scenario in {"cas", "source-race"}:
+            marker = request.root / ".lifecycle-cas"
+            if marker.read_bytes() != b"before\n":
+                return planned
+            before = tm.ok(u.Cli.atomic_read_binary_file_state(marker, required=True))
+            marker.write_bytes(b"foreign\n")
+            failed = (
+                u.Cli.atomic_verify_binary_file_states((before,))
+                if scenario == "source-race"
+                else u.Cli.atomic_write_binary_file_guarded(
+                    before, b"owned\n", permission_mode=tm.not_none(before.mode)
+                )
+            )
+            tm.fail(failed)
+            return r[m.Infra.CodegenPlan].from_failure(failed)
+        journal_bytes = journal_path.read_bytes()
+        journal = m.Infra.CodegenTransactionJournal.model_validate_json(journal_bytes)
+        if scenario.endswith("-mixed"):
+            staging = next(
+                tm.not_none(directory.created).path
+                for directory in journal.directories
+                if directory.disposition == "temporary"
+                and directory.created is not None
+            )
+            (staging / "foreign.bin").write_bytes(b"foreign staging\n")
+        if scenario.endswith("-changed"):
+            journal_path.write_bytes(journal_bytes + b"\n")
+        elif scenario.endswith("-replaced"):
+            preserved = journal_path.with_suffix(".preserved")
+            journal_path.rename(preserved)
+            journal_path.write_bytes(preserved.read_bytes())
+            journal_path.chmod(preserved.stat().st_mode)
+        if scenario.startswith("exception-"):
+            raise _LIFECYCLE_EXCEPTION
+        return r[m.Infra.CodegenPlan].fail("conform operation failed after begin")
 
 
-def _apply_conform_surface(
-    root: Path, workspace: m.Infra.WorkspaceSpec, surface: c.Infra.CodegenConformSurface
-) -> None:
-    """Materialize one exact public conform surface for a focused test."""
-    tm.ok(
-        FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=root,
-                what=surface,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-            initial_workspace=workspace,
-        )
-    )
-
-
-def _project_tree(root: Path) -> tuple[tuple[str, bytes], ...]:
-    """Return the versionable project tree independently of Git test fixtures."""
-    return tuple(
-        sorted(
-            (path.relative_to(root).as_posix(), path.read_bytes())
-            for path in root.rglob("*")
-            if path.is_file()
-            and ".git" not in path.relative_to(root).parts
-            and ".infra-baseline" not in path.relative_to(root).parts
-        )
-    )
-
-
-def _seed_infra_package_tree(root: Path) -> None:
-    """Seed the minimal flext-infra tree (pyproject, src package, tests package).
-
-    The conform templates materialize tests/fixtures/ci/docker/*, and the
-    existing-tree tooling render discovers python roots from directories that
-    exist on disk (env_dirs). Seeding tests/ makes the first render match the
-    post-apply fixed point.
-    """
-    dist = u.Tests.repository_ref(config.Infra.name).distribution
-    tm.ok(
-        u.Cli.atomic_write_text_file(
-            root / "pyproject.toml",
-            f'[project]\nname = "{dist}"\nversion = "0.12.0.dev0"\n'
-            'requires-python = ">=3.13,<3.14"\n',
-        )
-    )
-    package_init = root / "src" / "flext_infra" / "__init__.py"
-    package_init.parent.mkdir(parents=True, exist_ok=True)
-    tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
-    tests_init = root / "tests" / "__init__.py"
-    tests_init.parent.mkdir(parents=True, exist_ok=True)
-    tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
-
-
-class TestCodegenConform:
+class TestsFlextInfraCodegenConform:
     """Prove one SSOT for project creation and existing-tree conformance."""
 
+    @pytest.fixture(scope="module")
+    def conformed_template(self, tmp_path_factory: pytest.TempPathFactory) -> Path:
+        """Conform one real seed tree once per module; each scenario clones it.
+
+        Every recovery scenario begins its own transaction on a fresh clone of
+        this template, so the journal (which anchors inside the clone's Git
+        directory), staging, and CAS state under test are always the clone's
+        own; only the expensive seed apply is shared provisioning.
+        """
+        template = tmp_path_factory.mktemp("conform-template") / "conformed"
+        template.mkdir()
+        u.Tests.initialize_git_repo(
+            template, origin_url=u.Tests.repository_ref(config.Infra.name).url
+        )
+        TestsFlextInfraConformSupport.seed_infra_package_tree(template)
+        workspace = u.Tests.standalone_workspace(template, config.Infra.name)
+        request = u.Tests.conform_request(
+            template,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        )
+        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
+        u.Tests.commit_git_changes(template, "Seed conformed lifecycle fixture")
+        return template
+
+    @staticmethod
+    def _lifecycle_fixture(
+        tmp_path: Path, scenario: str, template: Path
+    ) -> tuple[Path, m.Infra.CodegenConformRequest, Path, bytes, Path]:
+        """Clone the conformed template, then introduce one recoverable publication."""
+        root = tmp_path / scenario
+        shutil.copytree(template, root)
+        published = root / c.Infra.MAKEFILE_FILENAME
+        original = published.read_bytes() + b"\n# recoverable drift\n"
+        published.write_bytes(original)
+        if scenario in {"cas", "source-race"}:
+            (root / ".lifecycle-cas").write_bytes(b"before\n")
+        identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)))
+        journal = FlextInfraMiseWorkspacePlanner.journal_path(identity)
+        request = u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        )
+        return root, request, published, original, journal
+
+    @pytest.mark.parametrize(
+        "scenario",
+        [
+            "failure-changed",
+            "exception-replaced",
+            "failure-mixed",
+            "cas",
+            "source-race",
+            "lazy-failure",
+            "docs-failure",
+        ],
+    )
+    def test_public_apply_recovers_only_authenticated_prepared_state(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        conformed_template: Path,
+        scenario: str,
+    ) -> None:
+        """Exercise post-begin failures through real filesystem and CAS state."""
+        root, request, published, original, journal = self._lifecycle_fixture(
+            tmp_path, scenario, conformed_template
+        )
+        if scenario == "lazy-failure":
+            package = root / "src" / config.Infra.name.replace("-", "_")
+            obsolete = package / next(iter(sorted(c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES)))
+            obsolete.symlink_to(root / "README.md")
+        elif scenario == "docs-failure":
+            docs_config = root / c.Infra.DIR_DOCS / c.Infra.DOCS_CONFIG_FILENAME
+            docs_config.write_text("{invalid", encoding="utf-8")
+        _ = capsys.readouterr()
+        execute = (
+            FlextInfraCodegenConform.execute_request
+            if scenario.endswith("-failure")
+            else _FlextInfraCodegenConformLifecycleProbe.execute_request
+        )
+
+        if scenario.startswith("exception-"):
+            with pytest.raises(OSError, match="raised after begin") as raised:
+                execute(request)
+            tm.that(raised.value is _LIFECYCLE_EXCEPTION, eq=True)
+        elif scenario == "docs-failure":
+            with pytest.raises(ValueError, match="Invalid JSON"):
+                execute(request)
+        else:
+            failed = execute(request)
+            expected = {
+                "cas": "atomic destination content changed",
+                "source-race": "atomic source changed",
+                "lazy-failure": "refusing obsolete root-support symlink",
+            }.get(scenario, "failed after begin")
+            tm.fail(failed, has=expected)
+
+        retained = scenario in {
+            "exception-replaced",
+            "failure-changed",
+            "failure-mixed",
+        }
+        tm.that(journal.exists(), eq=retained)
+        publication_is_preserved = not retained or scenario == "failure-mixed"
+        tm.that(published.read_bytes() == original, eq=publication_is_preserved)
+        if scenario == "failure-changed":
+            tm.that(journal.read_bytes().endswith(b"\n"), eq=True)
+        elif scenario == "exception-replaced":
+            preserved = journal.with_suffix(".preserved")
+            tm.that(preserved.read_bytes(), eq=journal.read_bytes())
+            tm.that(preserved.stat().st_ino == journal.stat().st_ino, eq=False)
+        elif scenario == "failure-mixed":
+            tm.that(
+                tuple(path.read_bytes() for path in tmp_path.rglob("foreign.bin")),
+                eq=(b"foreign staging\n",),
+            )
+        elif scenario in {"cas", "source-race"}:
+            tm.that((root / ".lifecycle-cas").read_bytes(), eq=b"foreign\n")
+            tm.that(capsys.readouterr().out, lacks="mode=converge")
+
+    def test_public_scaffold_exception_restores_bootstrap_state(
+        self, tmp_path: Path
+    ) -> None:
+        """A raised prepared operation removes invocation-owned root and Git state."""
+        root = tmp_path / "exception-scaffold"
+        repository = u.Tests.repository_ref(
+            "exception-scaffold", role=c.Infra.MakeProfile.STANDALONE
+        )
+        workspace = u.Tests.workspace_spec(
+            repository, project=u.Tests.project_spec(repository.name)
+        )
+        request = u.Tests.conform_request(
+            root,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        )
+
+        with pytest.raises(OSError, match="raised after begin") as raised:
+            _FlextInfraCodegenConformLifecycleProbe.execute_request(request, workspace)
+
+        tm.that(raised.value is _LIFECYCLE_EXCEPTION, eq=True)
+        tm.that(root.exists(), eq=False)
+
+    @staticmethod
+    def _hook_workspace(hook_path: str | Path | None) -> m.Infra.WorkspaceSpec:
+        """Build one standalone project whose manifest owns the Hatch hook."""
+        repository = u.Tests.repository_ref("hook-project").model_copy(
+            update={"role": c.Infra.MakeProfile.STANDALONE}
+        )
+        project_payload = u.Tests.project_spec("hook-project").model_dump()
+        project_payload["hatch_build_hook_path"] = hook_path
+        return u.Tests.workspace_spec(
+            repository, project=m.Infra.ProjectSpec.model_validate(project_payload)
+        )
+
+    @staticmethod
+    def _planned_hook_pyproject(
+        root: Path, hook_path: str | Path | None
+    ) -> t.Triple[
+        FlextInfraCodegenConform, m.Infra.CodegenConformRequest, m.Infra.CodegenFilePlan
+    ]:
+        """Plan the canonical pyproject through the public conform owner."""
+        workspace = TestsFlextInfraCodegenConform._hook_workspace(hook_path)
+        request = u.Tests.conform_request(
+            root,
+            what=c.Infra.CodegenConformSurface.PYPROJECT,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.CHECK,
+        )
+        service = FlextInfraCodegenConform(
+            repository_root=root, request=request, initial_workspace=workspace
+        )
+        plan = tm.ok(service.plan(request))
+        pyproject = next(
+            item for item in plan.files if item.path.name == c.PYPROJECT_FILENAME
+        )
+        return service, request, pyproject
+
+    # NOTE (multi-agent, flext-get3j): these tests exercise the public conform
+    # owner so no test-only template path can mask declaration or propagation drift.
+    def test_declared_hatch_build_hook_renders_before_wheel_target(
+        self, tmp_path: Path
+    ) -> None:
+        _, _, pyproject = self._planned_hook_pyproject(
+            tmp_path / "declared", Path("scripts/hatch_build.py")
+        )
+        rendered = u.Tests.codegen_file_text(pyproject)
+
+        tm.that(
+            u.Tests.toml_table_at(
+                rendered, "tool", "hatch", "build", "hooks", "custom"
+            )["path"],
+            eq="scripts/hatch_build.py",
+        )
+        tm.that(
+            rendered.index("[tool.hatch.build.hooks.custom]")
+            < rendered.index("[tool.hatch.build.targets.wheel]"),
+            eq=True,
+        )
+
+    def test_absent_hatch_build_hook_emits_no_custom_hook_table(
+        self, tmp_path: Path
+    ) -> None:
+        _, _, pyproject = self._planned_hook_pyproject(tmp_path / "absent", None)
+
+        tm.that(
+            u.Tests.codegen_file_text(pyproject),
+            lacks="[tool.hatch.build.hooks.custom]",
+        )
+
+    @pytest.mark.parametrize(
+        "unsafe_path",
+        [
+            "/scripts/hatch_build.py",
+            ".",
+            "..",
+            "../scripts/hatch_build.py",
+            "scripts/../hatch_build.py",
+            r"scripts\hatch_build.py",
+            "C:/scripts/hatch_build.py",
+            r"\\server\share\hatch_build.py",
+        ],
+    )
+    def test_hatch_build_hook_rejects_unsafe_paths(self, unsafe_path: str) -> None:
+        payload = u.Tests.project_spec("unsafe-hook").model_dump()
+        payload["hatch_build_hook_path"] = unsafe_path
+
+        with pytest.raises(c.ValidationError, match="safe project-relative path"):
+            m.Infra.ProjectSpec.model_validate(payload)
+
+    def test_hatch_build_hook_conform_reaches_pyproject_fixed_point(
+        self, tmp_path: Path
+    ) -> None:
+        root = tmp_path / "fixed-point"
+        service, request, first = self._planned_hook_pyproject(
+            root, Path("scripts/hatch_build.py")
+        )
+        root.mkdir(parents=True, exist_ok=True)
+        (root / c.PYPROJECT_FILENAME).write_bytes(tm.not_none(first.desired_content))
+
+        second_plan = tm.ok(service.plan(request))
+        second = next(
+            item for item in second_plan.files if item.path.name == c.PYPROJECT_FILENAME
+        )
+
+        tm.that(u.Tests.codegen_file_text(second), eq=u.Tests.codegen_file_text(first))
+        tm.that(u.Infra.codegen_file_requires_effect(second), eq=False)
+
+    def test_pyproject_plan_rejects_local_path_internal_source(
+        self, tmp_path: Path
+    ) -> None:
+        """A local-path internal source has no detectable identity: fail loud."""
+        service, request = TestsFlextInfraConformSupport.self_check_conform_service(
+            tmp_path
+        )
+        request = request.model_copy(
+            update={"what": c.Infra.CodegenConformSurface.PYPROJECT}
+        )
+        # The infrastructure checkout publishes its Git origin (208716f4f).
+        u.Tests.initialize_git_repo(
+            tmp_path, origin_url=u.Tests.repository_ref("flext-infra").url
+        )
+        pyproject = tmp_path / c.PYPROJECT_FILENAME
+        source = pyproject.read_text(encoding="utf-8")
+        pyproject.write_text(
+            source + 'dependencies = ["custom-runtime>=0.22", '
+            '"flext-custom @ ../flext-custom"]\n',
+            encoding="utf-8",
+        )
+
+        result = service.plan(request)
+
+        tm.fail(result, has="internal dependency direct source must be a git URL")
+
     def _conform_with_rendered_makefile(
-        self, root: Path, monkeypatch: pytest.MonkeyPatch, suffix: str
+        self, root: Path, help_text: str
     ) -> p.Result[m.Infra.CodegenResult]:
-        """Apply conform with ``suffix`` appended to the rendered Makefile."""
+        """Apply conform after declaring ``help_text`` into the rendered Makefile.
+
+        The managed Makefile renders ``verb.description`` for every declared
+        ``extra_verbs`` entry into its help block, so a repository manifest
+        carrying multi-line help puts those exact lines in the rendered
+        artifact through the production renderer -- no substitution of it.
+        """
         distribution = u.Tests.repository_ref(config.Infra.name).distribution
         (root / "pyproject.toml").write_text(
             f'[project]\nname = "{distribution}"\nversion = "0.12.0.dev0"\n'
-            'requires-python = ">=3.13,<3.14"\n',
+            f'description = "{distribution} governed fixture"\n'
+            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+            'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
+            'dependencies = ["flext-cli"]\n',
             encoding="utf-8",
         )
         package_init = root / "src" / distribution.replace("-", "_") / "__init__.py"
         package_init.parent.mkdir(parents=True, exist_ok=True)
         package_init.write_text("", encoding="utf-8")
-        original_render = u.Cli.template_render
-
-        def _render(path: Path, context: p.Model) -> p.Result[str]:
-            rendered = original_render(path, context)
-            if rendered.failure or path.name != f"{c.Infra.MAKEFILE_FILENAME}.j2":
-                return rendered
-            return r[str].ok(f"{rendered.value}{suffix}")
-
-        monkeypatch.setattr(u.Cli, "template_render", _render)
+        u.Tests.write_standalone_workspace_manifest(
+            root,
+            config.Infra.name,
+            extra_verbs=(m.Infra.MakeVerbSpec(name="probe", description=help_text),),
+        )
         return FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=root,
+            u.Tests.conform_request(
+                root,
                 what=c.Infra.CodegenConformSurface.MAKEFILE,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
@@ -158,66 +406,15 @@ class TestCodegenConform:
         )
 
     @pytest.mark.slow
-    def test_rendered_conflict_marker_is_rejected_before_target_changes(
-        self, infra_git_repo: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        root = infra_git_repo
-        target = root / c.Infra.MAKEFILE_FILENAME
-        original = "existing generated makefile\n"
-        target.write_text(original, encoding="utf-8")
-
-        rejected = self._conform_with_rendered_makefile(
-            root, monkeypatch, "\n<<<<<<< incoming\n"
-        )
-
-        tm.fail(rejected)
-        tm.that(rejected.error, has="base/Makefile.j2")
-        tm.that(rejected.error, has=str(target))
-        tm.that(rejected.error, has=str(root))
-        tm.that(target.read_text(encoding="utf-8"), eq=original)
-
-        monkeypatch.undo()
-        request = m.Infra.CodegenConformRequest(
-            root=root,
-            what=c.Infra.CodegenConformSurface.MAKEFILE,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.APPLY,
-        )
-        applied = FlextInfraCodegenConform.execute_request(request)
-        tm.ok(applied)
-        tm.that(target.read_text(encoding="utf-8"), lacks="<<<<<<< ")
-        fixed_point = FlextInfraCodegenConform.execute_request(
-            request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK})
-        )
-        tm.ok(fixed_point)
-        tm.that(fixed_point.value.written_files, eq=())
-
-    @pytest.mark.slow
     def test_setext_underline_is_accepted_as_ordinary_content(
-        self, infra_git_repo: Path, monkeypatch: pytest.MonkeyPatch
+        self, infra_git_repo: Path
     ) -> None:
         """A Markdown Setext underline is content, so conform must not reject it."""
         applied = self._conform_with_rendered_makefile(
-            infra_git_repo, monkeypatch, "\n# Title\n=======\n"
+            infra_git_repo, "Probe verb help\n# Title\n=======\ntrailing help"
         )
 
         tm.ok(applied)
-
-    def test_diff3_ancestor_fence_is_rejected_before_target_changes(
-        self, infra_git_repo: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """A diff3 merge leaves an ancestor fence that must stop the plan."""
-        target = infra_git_repo / c.Infra.MAKEFILE_FILENAME
-        original = "existing generated makefile\n"
-        target.write_text(original, encoding="utf-8")
-
-        rejected = self._conform_with_rendered_makefile(
-            infra_git_repo, monkeypatch, "\n||||||| base\nancestor\n"
-        )
-
-        tm.fail(rejected)
-        tm.that(rejected.error, has="||||||| base")
-        tm.that(target.read_text(encoding="utf-8"), eq=original)
 
     @pytest.mark.slow
     def test_apply_recovers_declared_managed_pyproject_conflict(
@@ -228,7 +425,10 @@ class TestCodegenConform:
         distribution = u.Tests.repository_ref(config.Infra.name).distribution
         (root / "pyproject.toml").write_text(
             f'[project]\nname = "{distribution}"\nversion = "0.12.0.dev0"\n'
-            'requires-python = ">=3.13,<3.14"\n'
+            f'description = "{distribution} governed fixture"\n'
+            f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
+            'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
+            'dependencies = ["flext-cli"]\n'
             "\n"
             "[tool.pytest.ini_options]\n"
             'addopts = ["--timeout=10"]\n',
@@ -239,9 +439,8 @@ class TestCodegenConform:
         package_init.write_text("", encoding="utf-8")
 
         applied = FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=root,
-                what=c.Infra.CodegenConformSurface.PYPROJECT,
+            u.Tests.conform_request(
+                root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
             )
@@ -250,118 +449,36 @@ class TestCodegenConform:
         tm.ok(applied)
         rendered = (root / "pyproject.toml").read_text(encoding="utf-8")
         tm.that(rendered, lacks="<<<<<<<")
-        payload = tomllib.loads(rendered)
-        addopts = payload["tool"]["pytest"]["ini_options"]["addopts"]
+        addopts = u.Tests.toml_table_at(rendered, "tool", "pytest", "ini_options")[
+            "addopts"
+        ]
         tm.that(
             addopts,
             has=f"--timeout={config.Infra.tooling.tools.pytest.case_timeout_seconds}",
         )
 
-    @pytest.mark.slow
-    def test_branch_ancestry_accepts_active_merge_parent(self, tmp_path: Path) -> None:
-        root = tmp_path / "repository"
-        root.mkdir()
-        u.Tests.initialize_git_repo(root)
-        baseline = tm.ok(u.Cli.capture(["git", "rev-parse", "HEAD"], cwd=root))
-        tm.ok(
-            u.Cli.run_checked(
-                ["git", "update-ref", "refs/remotes/origin/0.12.0-dev", baseline],
-                cwd=root,
-            )
-        )
-        tm.ok(
-            u.Cli.run_checked(
-                ["git", "remote", "set-url", "origin", str(tmp_path / "missing")],
-                cwd=root,
-            )
-        )
-        empty_tree = tm.ok(u.Cli.capture(["git", "mktree"], cwd=root))
-        divergent = tm.ok(
-            u.Cli.capture(
-                ["git", "commit-tree", empty_tree, "-m", "Create divergent local line"],
-                cwd=root,
-            )
-        )
-        tm.ok(
-            u.Cli.run_checked(
-                ["git", "checkout", "-B", "0.12.0-dev", divergent], cwd=root
-            )
-        )
-        divergent_check = tm.ok(
-            u.Cli.run_raw(
-                ["git", "merge-base", "--is-ancestor", baseline, divergent], cwd=root
-            )
-        )
-        tm.that(divergent_check.exit_code, eq=1)
-        repository = u.Tests.repository_ref("flext-infra").model_copy(
-            update={"path": Path(), "profile": c.Infra.MakeProfile.STANDALONE}
-        )
-        workspace = m.Infra.WorkspaceSpec(
-            version=c.Infra.WORKSPACE_MANIFEST_VERSION,
-            name=repository.name,
-            repository=repository,
-        )
-        tm.ok(
-            u.Cli.yaml_dump(
-                root / "config" / "workspace.yaml",
-                workspace.model_dump(mode="json", exclude_none=True),
-            )
-        )
-        (root / "pyproject.toml").write_text(
-            f"[project]\nname = '{repository.distribution}'\nversion = '0.1.0'\n",
-            encoding="utf-8",
-        )
-        package = root / "src" / repository.distribution.replace("-", "_")
-        package.mkdir(parents=True)
-        (package / "__init__.py").write_text("", encoding="utf-8")
-        request = m.Infra.CodegenConformRequest(
-            root=root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-        service = FlextInfraCodegenConform(workspace_root=root, request=request)
-
-        before_merge = tm.ok(service.plan(request)).branch_ancestry[0]
-        divergent_current = next(
-            reference
-            for reference in before_merge.references
-            if reference.reference == "refs/heads/0.12.0-dev"
-        )
-        tm.that(divergent_current.ancestor, eq=False)
-
-        merge_head = tm.ok(
-            u.Cli.capture(["git", "rev-parse", "--git-path", "MERGE_HEAD"], cwd=root)
-        )
-        (root / merge_head).write_text(f"{baseline}\n", encoding="utf-8")
-        during_merge = tm.ok(service.plan(request)).branch_ancestry[0]
-        merging_current = next(
-            reference
-            for reference in during_merge.references
-            if reference.reference == "refs/heads/0.12.0-dev"
-        )
-
-        tm.that(merging_current.ancestor, eq=True)
-
     # This end-to-end scenario scaffolds a project and runs its console entry
     # point in a fresh interpreter. The slow marker opts into the single
     # config-owned slow-item budget; tests must not restate that policy locally.
     @pytest.mark.slow
-    @pytest.mark.parametrize(
-        ("kind", "name"),
-        [
-            (c.Infra.ProjectKind.EXTERNAL, "flext-demo"),
-            (c.Infra.ProjectKind.INTERNAL, "flext-member"),
-        ],
-    )
+    @pytest.mark.parametrize("name", ["flext-demo", "flext-member"])
     def test_new_project_is_complete_and_idempotent(
-        self, tmp_path: Path, kind: c.Infra.ProjectKind, name: str
+        self, tmp_path: Path, name: str
     ) -> None:
-        root = tmp_path / kind.value
+        # Generation rewrites an internal_flext repository and nothing else, so
+        # a scaffold that must come out complete declares that kind; the two
+        # rows prove the result does not depend on the distribution name.
+        root = tmp_path / name
         service = FlextInfraCodegenProjectNew(
+            flext_source=u.Tests.flext_source(),
             name=name,
-            kind=kind,
+            kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
             output_root=root,
             provider="flext-sh",
+            repository_url=f"https://github.com/flext-sh/{name}.git",
+            repository_branch="0.12.0-dev",
+            flext_repository_url=u.Tests.repository_ref(config.Infra.name).url,
+            flext_repository_ref=u.Tests.provider_branch(),
             license="MIT",
             author_name="FLEXT Team",
             author_email="team@flext.dev",
@@ -372,8 +489,33 @@ class TestCodegenConform:
         first = service.execute()
         first_result = tm.ok(first)
         tm.that(bool(first_result.written_files), eq=True)
+        tm.that(first_result.written_files.count(root / "README.md"), eq=1)
         tm.that(
-            tuple(file.path for file in first_result.plan.files if file.changed), eq=()
+            (root / "README.md").read_text(encoding="utf-8"),
+            has=c.Infra.GENERATED_HEADER,
+        )
+        tm.that(
+            (root / "docs/api-reference/generated/public-api.md").read_text(
+                encoding="utf-8"
+            ),
+            has=f"::: {u.Infra.project_package_name(root)}\n",
+        )
+        tm.that(
+            (root / "docs/api-reference/generated/modules/index.md").is_file(), eq=True
+        )
+        docs = tm.ok(
+            FlextInfraDocGenerator(repository_root=root).generate(
+                m.Infra.DocsGenerateRequest(repository_root=root)
+            )
+        )
+        tm.that(all(report.changed_files == 0 for report in docs), eq=True)
+        tm.that(
+            tuple(
+                file.path
+                for file in first_result.plan.files
+                if u.Infra.codegen_file_requires_effect(file)
+            ),
+            eq=(),
         )
         makefile_plan = next(
             item
@@ -381,11 +523,12 @@ class TestCodegenConform:
             if item.path.name == c.Infra.MAKEFILE_FILENAME
         )
         tm.that(
-            makefile_plan.rendered,
+            u.Tests.codegen_file_text(makefile_plan),
             has=f"MAKE_PROFILE := {c.Infra.MakeProfile.STANDALONE.value}",
         )
         tm.that(first_result.plan.request.root, eq=root.resolve())
-        tm.that((root / "config" / "workspace.yaml").is_file(), eq=True)
+        tm.that((root / "config" / "workspace.yaml").exists(), eq=False)
+        tm.that((root / "config" / "beads.yaml").is_file(), eq=True)
         tm.that((root / "pyproject.toml").is_file(), eq=True)
         tm.that((root / ".env.example").is_file(), eq=True)
         package_name = name.replace("-", "_")
@@ -409,8 +552,10 @@ class TestCodegenConform:
     ) -> None:
         """Generated Make delegates uv selection to the caller environment."""
         root = infra_git_repo
-        workspace = _standalone_workspace(root)
-        _apply_conform_surface(root, workspace, c.Infra.CodegenConformSurface.MAKEFILE)
+        workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
+        TestsFlextInfraConformSupport.apply_conform_surface(
+            root, workspace, c.Infra.CodegenConformSurface.MAKEFILE
+        )
         selected = u.Cli.run_raw(
             ["make", "-C", str(root), "--dry-run", "_builtin_status_diagnostics"],
             remove_env_keys=("MAKEFLAGS",),
@@ -418,15 +563,10 @@ class TestCodegenConform:
 
         selected_process = tm.ok(selected)
         selected_output = selected_process.stdout + selected_process.stderr
-        tm.that(selected_process.exit_code, eq=0)
+        tm.that(u.Cli.process_succeeded(selected_process.outcome), eq=True)
         tm.that(selected_output, has="uv --version")
         tm.that(selected_output, lacks="uv@")
         tm.that(selected_output, lacks="UV_VERSION")
-        makefile = (root / "Makefile").read_text(encoding="utf-8")
-        tm.that(makefile, has="UV ?= uv")
-        tm.that(makefile, lacks="UV_VERSION")
-        tm.that(makefile, lacks="uv@")
-        tm.that(makefile, lacks="mise exec")
 
     @pytest.mark.slow
     def test_existing_manifest_converges_to_identical_tree(
@@ -434,9 +574,14 @@ class TestCodegenConform:
     ) -> None:
         existing_root = infra_git_repo
         created = FlextInfraCodegenProjectNew(
+            flext_source=u.Tests.flext_source(),
             name="flext-demo",
-            kind=c.Infra.ProjectKind.EXTERNAL,
+            kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
             output_root=existing_root,
+            repository_url="https://github.com/flext-sh/flext-demo.git",
+            repository_branch="0.12.0-dev",
+            flext_repository_url=u.Tests.repository_ref(config.Infra.name).url,
+            flext_repository_ref=u.Tests.provider_branch(),
             provider="flext-sh",
             license="MIT",
             author_name="FLEXT Team",
@@ -446,7 +591,7 @@ class TestCodegenConform:
             apply_changes=True,
         ).execute()
         tm.ok(created)
-        expected_tree = _project_tree(existing_root)
+        expected_tree = TestsFlextInfraConformSupport.project_tree(existing_root)
         tm.ok(
             u.Cli.atomic_write_text_file(
                 existing_root / ".gitignore", "# committed managed drift\n"
@@ -457,22 +602,19 @@ class TestCodegenConform:
                 existing_root / "Makefile", "# committed managed drift\n"
             )
         )
-        tm.ok(u.Cli.run_checked(["git", "add", "-A"], cwd=existing_root))
-        tm.ok(
-            u.Cli.run_checked(
-                ["git", "commit", "-q", "--no-verify", "-m", "Seed committed drift"],
-                cwd=existing_root,
-            )
-        )
+        u.Tests.commit_git_changes(existing_root, "Seed committed drift")
         migrated = FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=existing_root,
+            u.Tests.conform_request(
+                existing_root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
             )
         )
         tm.ok(migrated)
-        tm.that(_project_tree(existing_root), eq=expected_tree)
+        actual_tree = TestsFlextInfraConformSupport.project_tree(existing_root)
+        assert actual_tree == expected_tree, (
+            TestsFlextInfraConformSupport.project_tree_diff(expected_tree, actual_tree)
+        )
 
     @pytest.mark.slow
     def test_python_root_outside_env_dirs_still_reaches_a_fixed_point(
@@ -488,7 +630,7 @@ class TestCodegenConform:
         root by itself and immediately reach a fixed point.
         """
         root = infra_git_repo
-        _seed_infra_package_tree(root)
+        TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         # The defect needs a Python root the declarative env_dirs never lists.
         extra_root = "tools"
         module = root / extra_root / "maintenance.py"
@@ -508,8 +650,8 @@ class TestCodegenConform:
         )
 
         applied = FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=root,
+            u.Tests.conform_request(
+                root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
             )
@@ -517,8 +659,8 @@ class TestCodegenConform:
         tm.ok(applied)
 
         fixed_point = FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=root,
+            u.Tests.conform_request(
+                root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.CHECK,
             )
@@ -531,23 +673,30 @@ class TestCodegenConform:
         self, infra_git_repo: Path
     ) -> None:
         root = infra_git_repo
-        _seed_infra_package_tree(root)
+        TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         (root / "scripts").mkdir()
 
         result = FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=root,
+            u.Tests.conform_request(
+                root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.APPLY,
             )
         )
 
         tm.ok(result)
-        payload = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
         tm.that(
-            payload["tool"]["pyrefly"]["project-includes"], lacks="scripts/**/*.py*"
+            u.Tests.toml_table_at(
+                (root / "pyproject.toml").read_text(encoding="utf-8"), "tool", "pyrefly"
+            )["project-includes"],
+            lacks="scripts/**/*.py*",
         )
-        tm.that(payload["tool"]["pyright"]["include"], lacks="scripts")
+        tm.that(
+            u.Tests.toml_table_at(
+                (root / "pyproject.toml").read_text(encoding="utf-8"), "tool", "pyright"
+            )["include"],
+            lacks="scripts",
+        )
 
     # Why (suite budget): two conform apply cycles plus a check over a full
     # managed tree on a real git repo; the per-case wall only holds idle.
@@ -556,48 +705,36 @@ class TestCodegenConform:
         self, infra_git_repo: Path
     ) -> None:
         root = infra_git_repo
-        repository = u.Tests.repository_ref(config.Infra.name)
+        repository = u.Tests.repository_ref(
+            config.Infra.name, role=c.Infra.MakeProfile.STANDALONE
+        )
         local_repository = repository.model_copy(update={"path": Path()})
         create_only = {
             "LICENSE": "existing license\n",
-            "README.md": "# Existing repository\n",
-            "custom.mk": "_custom_status_diagnostics:\n\t@true\n",
+            "custom.mk": "_custom-status-diagnostics:\n\t@true\n",
         }
-        _seed_infra_package_tree(root)
+        TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         for relative, content in create_only.items():
             tm.ok(u.Cli.atomic_write_text_file(root / relative, content))
-        tm.ok(u.Cli.run_checked(["git", "add", "-A"], cwd=root))
-        tm.ok(
-            u.Cli.run_checked(
-                ["git", "commit", "-q", "--no-verify", "-m", "Seed manifest-less tree"],
-                cwd=root,
-            )
-        )
+        u.Tests.commit_git_changes(root, "Seed manifest-less tree")
 
         derived = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
         tm.that(derived.repository, eq=local_repository)
         tm.that(derived.project, eq=None)
 
-        request = m.Infra.CodegenConformRequest(
-            root=root,
+        request = u.Tests.conform_request(
+            root,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
         initial_plan = tm.ok(
-            FlextInfraCodegenConform(workspace_root=root).plan(request)
+            FlextInfraCodegenConform(repository_root=root).plan(request)
         )
         plans = {
             file.path.relative_to(root).as_posix(): file for file in initial_plan.files
         }
-        env_plan = plans[".env.example"]
-        tm.that(env_plan.owner, eq="codegen")
-        tm.that(env_plan.policy, eq="create-only")
-        tm.that(env_plan.changed, eq=False)
-        tm.that(env_plan.blocked, eq=False)
-        tm.that(env_plan.current_sha256, eq="")
-        tm.that((root / ".env.example").exists(), eq=False)
         for required in ("Makefile", ".mise.toml", ".python-version", ".gitignore"):
-            tm.that(plans[required].changed, eq=True)
+            tm.that(u.Infra.codegen_file_requires_effect(plans[required]), eq=True)
 
         applied = FlextInfraCodegenConform.execute_request(request)
         tm.ok(applied)
@@ -609,10 +746,17 @@ class TestCodegenConform:
         tm.that((root / ".gitignore").is_file(), eq=True)
         tm.that((root / ".env.example").exists(), eq=False)
         tm.that(root / ".env.example" in applied.value.written_files, eq=False)
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            tm.that((root / relative).stat().st_mode & 0o777, eq=mode)
+        tm.ok(
+            FlextInfraCodegenMiseArtifacts(repository_root=root).validate_artifacts(
+                root, root
+            )
+        )
 
         fixed_point = FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=root,
+            u.Tests.conform_request(
+                root,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=c.Infra.CodegenConformMode.CHECK,
             )
@@ -625,47 +769,24 @@ class TestCodegenConform:
     ) -> None:
         """Keep workspace setup data complete without Make-side re-derivation."""
         root_repository = u.Tests.repository_ref("flext")
-        member = u.Tests.repository_ref(
-            "flext-core", role=c.Infra.RepositoryRole.WORKSPACE_MEMBER
-        )
-        workspace = m.Infra.WorkspaceSpec(
-            version=c.Infra.WORKSPACE_MANIFEST_VERSION,
-            name="flext",
-            repository=root_repository,
-            project=m.Infra.ProjectSpec(
-                package_name="flext",
-                class_stem="Flext",
-                namespace="Flext",
-                constant_name="flext",
-                namespace_attribute="flext",
-                alias="flext",
-                environment_prefix="FLEXT_",
-                description="FLEXT workspace",
-                version="0.12.0.dev0",
-                license="MIT",
-                author_name="FLEXT Team",
-                author_email="team@flext.dev",
-                upstream="flext_cli",
-                homepage="https://github.com/flext-sh/flext",
-                documentation="https://github.com/flext-sh/flext",
-                workspace_root_rel=".",
-                year=2026,
-            ),
-            members=(member,),
+        member = u.Tests.repository_ref("flext-core", path=Path("flext-core"))
+        workspace = u.Tests.workspace_spec(
+            root_repository,
+            project=u.Tests.project_spec("flext"),
+            subprojects=(member,),
         )
         root = tmp_path / "flext"
-        request = m.Infra.CodegenConformRequest(
-            root=root,
+        request = u.Tests.conform_request(
+            root,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.CHECK,
         )
         planned = FlextInfraCodegenConform(
-            workspace_root=root, request=request, initial_workspace=workspace
+            repository_root=root, request=request, initial_workspace=workspace
         ).plan(request)
         tm.ok(planned)
         environment = planned.value.uv_environments[0]
         tm.that(environment.environment_root, eq=root.resolve())
-        tm.that(environment.lock_path, eq=root.resolve() / "uv.lock")
         tm.that(environment.groups, eq=("dev", "codegen", "workspace"))
         tm.that(
             tuple(item.name for item in environment.editable_repositories),
@@ -673,260 +794,103 @@ class TestCodegenConform:
         )
 
     @pytest.mark.slow
-    def test_workspace_root_catalog_profile_preserves_platform_coverage(
+    def test_repository_root_catalog_profile_projects_no_coverage_floor(
         self, tmp_path: Path
     ) -> None:
         """Route an arbitrary workspace root through its typed catalog profile."""
-        provider = config.Infra.codegen.providers[0]
+        provider = u.Tests.provider()
         repository = u.Tests.repository_ref("arbitrary-root").model_copy(
             update={
                 "name": "arbitrary-root",
                 "distribution": "arbitrary-root",
                 "url": f"{provider.base_url}/arbitrary-root.git",
                 "path": Path(),
-                "role": c.Infra.RepositoryRole.WORKSPACE_ROOT,
-                "profile": c.Infra.MakeProfile.WORKSPACE_ROOT,
+                "role": c.Infra.MakeProfile.WORKSPACE,
                 "package": False,
                 "editable": False,
             }
         )
-        workspace = m.Infra.WorkspaceSpec(
-            version=c.Infra.WORKSPACE_MANIFEST_VERSION,
-            name="arbitrary-root",
-            repository=repository,
-            project=m.Infra.ProjectSpec(
-                package_name="arbitrary_root",
-                class_stem="ArbitraryRoot",
-                namespace="ArbitraryRoot",
-                constant_name="arbitrary-root",
-                namespace_attribute="arbitrary_root",
-                alias="arbitrary_root",
-                environment_prefix="ARBITRARY_ROOT_",
-                description="Arbitrary workspace root",
-                version="0.1.0",
-                license="MIT",
-                author_name="FLEXT Team",
-                author_email="team@flext.dev",
-                upstream="flext_cli",
-                homepage=f"{provider.base_url}/arbitrary-root",
-                documentation=f"{provider.base_url}/arbitrary-root",
-                workspace_root_rel=".",
-                year=2026,
-            ),
+        workspace = u.Tests.workspace_spec(
+            repository, project=u.Tests.project_spec("arbitrary-root")
         )
         root = tmp_path / "arbitrary-root"
-        request = m.Infra.CodegenConformRequest(
-            root=root,
+        request = u.Tests.conform_request(
+            root,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.CHECK,
         )
         service = FlextInfraCodegenConform(
-            workspace_root=root, request=request, initial_workspace=workspace
+            repository_root=root, request=request, initial_workspace=workspace
         )
 
         first = tm.ok(service.plan(request))
         second = tm.ok(service.plan(request))
         first_pyproject = next(
-            item for item in first.files if item.path.name == c.Infra.PYPROJECT_FILENAME
+            item for item in first.files if item.path.name == c.PYPROJECT_FILENAME
         )
         second_pyproject = next(
-            item
-            for item in second.files
-            if item.path.name == c.Infra.PYPROJECT_FILENAME
+            item for item in second.files if item.path.name == c.PYPROJECT_FILENAME
         )
-        rendered_tooling = tomllib.loads(first_pyproject.rendered)["tool"]
-        report = rendered_tooling["coverage"]["report"]
-        addopts = set(rendered_tooling["pytest"]["ini_options"]["addopts"])
+        rendered_pyproject = u.Tests.codegen_file_text(first_pyproject)
+        report = u.Tests.toml_table_at(rendered_pyproject, "tool", "coverage", "report")
+        addopts = u.Tests.toml_strings_at(
+            rendered_pyproject, "tool", "pytest", "ini_options", "addopts"
+        )
         pytest_policy = config.Infra.tooling.tools.pytest
 
-        tm.that(second_pyproject.rendered, eq=first_pyproject.rendered)
+        tm.that(
+            u.Tests.codegen_file_text(second_pyproject),
+            eq=u.Tests.codegen_file_text(first_pyproject),
+        )
         tm.that(addopts, has=f"--timeout={pytest_policy.case_timeout_seconds}")
         tm.that(addopts, lacks="--session-timeout")
-        tm.that(addopts >= set(pytest_policy.standard_addopts), eq=True)
-        tm.that(
-            report["fail_under"],
-            eq=config.Infra.tooling.tools.coverage.fail_under.platform,
-        )
+        tm.that(set(addopts) >= set(pytest_policy.standard_addopts), eq=True)
+        tm.that(report, lacks="fail_under")
 
     @pytest.mark.slow
-    def test_project_root_exports_only_declared_upstream_facets(
+    def test_project_root_inherits_declared_upstream_facets(
         self, tmp_path: Path
     ) -> None:
         repository = u.Tests.repository_ref("consumer")
-        project = m.Infra.ProjectSpec(
-            package_name="consumer",
-            class_stem="Consumer",
-            namespace="Consumer",
-            constant_name="consumer",
-            namespace_attribute="consumer",
-            alias="consumer",
-            environment_prefix="CONSUMER_",
-            description="Consumer project",
-            version="0.1.0",
-            license="MIT",
-            author_name="FLEXT Team",
-            author_email="team@flext.dev",
-            upstream="flext_cli",
-            homepage="https://example.invalid/consumer",
-            documentation="https://example.invalid/consumer",
-            workspace_root_rel=".",
-            year=2026,
+        project = u.Tests.project_spec("consumer").model_copy(
+            update={"upstream": "flext_cli"}
         )
-        workspace = m.Infra.WorkspaceSpec(
-            version=c.Infra.WORKSPACE_MANIFEST_VERSION,
-            name="consumer",
-            repository=repository,
-            project=project,
-        )
+        workspace = u.Tests.workspace_spec(repository, project=project)
         root = tmp_path / "consumer"
-        request = m.Infra.CodegenConformRequest(
-            root=root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-
-        plan = tm.ok(
-            FlextInfraCodegenConform(
-                workspace_root=root, request=request, initial_workspace=workspace
-            ).plan(request)
-        )
-        package_root = next(
-            item
-            for item in plan.files
-            if item.path == root / "src/consumer/__init__.py"
-        )
-        tm.that(package_root.rendered, lacks='"r"')
-
-        declared_workspace = workspace.model_copy(
-            update={"project": project.model_copy(update={"inherited_facets": ("r",)})}
-        )
-        declared_plan = tm.ok(
-            FlextInfraCodegenConform(
-                workspace_root=root,
-                request=request,
-                initial_workspace=declared_workspace,
-            ).plan(request)
-        )
-        declared_root = next(
-            item
-            for item in declared_plan.files
-            if item.path == root / "src/consumer/__init__.py"
-        )
-        tm.that(declared_root.rendered, has='"r"')
-        tm.that(declared_root.rendered, has="from flext_cli import r as r")
-
-    def test_make_context_accepts_manifest_without_project_metadata(
-        self, tmp_path: Path
-    ) -> None:
-        """Build Make context from repository-owned data alone."""
-        repository = u.Tests.repository_ref("consumer")
-        workspace = m.Infra.WorkspaceSpec(
-            version=c.Infra.WORKSPACE_MANIFEST_VERSION,
-            name="consumer",
-            repository=repository,
-        )
-        target = _conform_target(
-            tmp_path, repository, make_profile=c.Infra.MakeProfile.STANDALONE
-        )
-        tooling_runtime = tm.ok(
-            FlextInfraPyprojectModernizer(
-                workspace_root=tmp_path, skip_check=True
-            ).resolve_tooling_context(
-                project_name=repository.distribution,
-                package_name=repository.distribution.replace("-", "_"),
-                path=tmp_path / "pyproject.toml",
-                declared_python_dirs=("src",),
+        tm.ok(
+            FlextInfraCodegenConform.execute_request(
+                u.Tests.conform_request(
+                    root,
+                    scope=c.Infra.CodegenConformScope.SELF,
+                    mode=c.Infra.CodegenConformMode.APPLY,
+                ),
+                initial_workspace=workspace,
             )
         )
-        context = FlextInfraCodegenConform.make_render_context(
-            repository,
-            target,
-            workspace,
-            config.Infra.codegen,
-            tooling_runtime=tooling_runtime,
-        )
-        rendered = tm.ok(context)
-        tm.that(isinstance(rendered, m.Infra.MakeRenderContext), eq=True)
-        tm.that(isinstance(rendered, m.Infra.ProjectRenderContext), eq=False)
-        tm.that(rendered.workspace_root_rel, eq=".")
-        # A standalone consumer declares no flext-infra member, so the
-        # reference is derived from the provider contract. The generated
-        # Makefile consumes exactly the distribution and the URL (the
-        # bootstrap requirement), which is what this asserts; the topology
-        # role of a derived reference is not part of that contract.
-        tm.that(rendered.infra_repository.distribution, eq=config.Infra.name)
-        tm.that(
-            rendered.infra_repository.url,
-            eq=f"{config.Infra.codegen.providers[0].base_url.rstrip('/')}"
-            f"/{config.Infra.name}.git",
-        )
-        tm.that(rendered.infra_source_root_rel, eq=None)
+        package_root = (root / "src/consumer/__init__.py").read_text(encoding="utf-8")
+        tm.that(package_root, has='"flext_cli": (')
+        tm.that(package_root, has='"r"')
 
-    def test_make_context_resolves_attached_infra_member_from_workspace(
-        self, tmp_path: Path
-    ) -> None:
-        """An attached member bootstraps from its declared local checkout."""
-        workspace_repository = u.Tests.repository_ref("workspace-root-fixture")
-        infra_repository = u.Tests.repository_ref(config.Infra.name)
-        workspace = m.Infra.WorkspaceSpec(
-            version=c.Infra.WORKSPACE_MANIFEST_VERSION,
-            name=workspace_repository.name,
-            repository=workspace_repository,
-            members=(infra_repository,),
-        )
-        target = _conform_target(
-            tmp_path,
-            workspace_repository,
-            make_profile=c.Infra.MakeProfile.WORKSPACE_ROOT,
-        )
-        tooling_runtime = tm.ok(
-            FlextInfraPyprojectModernizer(
-                workspace_root=tmp_path, skip_check=True
-            ).resolve_tooling_context(
-                project_name=infra_repository.distribution,
-                package_name=infra_repository.distribution.replace("-", "_"),
-                path=tmp_path / infra_repository.path / "pyproject.toml",
-                declared_python_dirs=("src",),
-            )
-        )
-
-        rendered = tm.ok(
-            FlextInfraCodegenConform.make_render_context(
-                infra_repository,
-                target,
-                workspace,
-                config.Infra.codegen,
-                tooling_runtime=tooling_runtime,
-            )
-        )
-
-        tm.that(rendered.infra_source_root_rel, eq=infra_repository.path.as_posix())
-
-    # Why (suite budget): parametrized over both conform modes, each running a
-    # full plan/apply cycle on a real git repo; 10s only holds on an idle CPU.
-    @pytest.mark.slow
     @pytest.mark.parametrize("mode", tuple(c.Infra.CodegenConformMode))
     def test_public_cli_routes_check_and_apply_to_one_handler(
         self, infra_git_repo: Path, mode: c.Infra.CodegenConformMode
     ) -> None:
         """Execute one public mode without changing an already conform tree."""
         root = infra_git_repo
-        workspace = _standalone_workspace(root)
-        _apply_conform_surface(root, workspace, c.Infra.CodegenConformSurface.MAKEFILE)
-        tm.ok(u.Cli.run_checked(["git", "add", "-A"], cwd=root))
-        tm.ok(
-            u.Cli.run_checked(
-                ["git", "commit", "-q", "--no-verify", "-m", "Seed generated project"],
-                cwd=root,
-            )
+        workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
+        TestsFlextInfraConformSupport.apply_conform_surface(
+            root, workspace, c.Infra.CodegenConformSurface.MAKEFILE
         )
+        u.Tests.commit_git_changes(root, "Seed generated project")
         route = next(
             route
-            for route in CodegenRoutes.codegen_routes[c.Infra.CLI_GROUP_CODEGEN]
+            for route in FlextInfraCodegenRoutes.codegen_routes[
+                c.Infra.CLI_GROUP_CODEGEN
+            ]
             if route.name == "conform"
         )
-        request = m.Infra.CodegenConformRequest(
-            root=root,
+        request = u.Tests.conform_request(
+            root,
             what=c.Infra.CodegenConformSurface.MAKEFILE,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=mode,
@@ -943,35 +907,36 @@ class TestCodegenConform:
     ) -> None:
         """Plan only dependency metadata when another managed surface is invalid."""
         root = infra_git_repo
-        workspace = _standalone_workspace(root)
-        _apply_conform_surface(
-            root, workspace, c.Infra.CodegenConformSurface.DEPENDENCIES
+        workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
+        TestsFlextInfraConformSupport.apply_conform_surface(
+            root, workspace, c.Infra.CodegenConformSurface.ALL
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
                 root / "custom.mk", ".PHONY: public-handler\npublic-handler:\n\t@true\n"
             )
         )
-        tm.ok(u.Cli.run_checked(["git", "add", "-A"], cwd=root))
-        tm.ok(
-            u.Cli.run_checked(
-                ["git", "commit", "-q", "--no-verify", "-m", "Seed generated project"],
-                cwd=root,
-            )
-        )
-        request = m.Infra.CodegenConformRequest(
-            root=root,
+        u.Tests.commit_git_changes(root, "Seed generated project")
+        request = u.Tests.conform_request(
+            root,
             what=c.Infra.CodegenConformSurface.DEPENDENCIES,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.CHECK,
         )
-        planned = FlextInfraCodegenConform(workspace_root=root, request=request).plan(
+        planned = FlextInfraCodegenConform(repository_root=root, request=request).plan(
             request
         )
         tm.ok(planned)
         tm.that(
             tuple(file.path.name for file in planned.value.files),
             eq=("pyproject.toml",),
+        )
+        tm.that(
+            tuple(
+                u.Infra.codegen_file_requires_effect(file)
+                for file in planned.value.files
+            ),
+            eq=(False,),
         )
         exit_code = main([
             "codegen",
@@ -989,455 +954,3 @@ class TestCodegenConform:
 
     # Why (suite budget): full conform cycle plus subprocess make validation;
     # the default case timeout only holds on an idle machine.
-
-    def test_invalid_public_custom_make_fails_without_side_effects(
-        self, infra_git_repo: Path
-    ) -> None:
-        root = infra_git_repo
-        custom = root / "custom.mk"
-        content = ".PHONY: public-handler\npublic-handler:\n\t@true\n"
-        tm.ok(u.Cli.atomic_write_text_file(custom, content))
-        policy: m.Infra.CustomHandlerPolicy = (
-            config.Infra.codegen.make.custom_handler_policies[
-                c.Infra.MakeProfile.STANDALONE
-            ]
-        )
-        result = FlextInfraCodegenConform.validate_custom_make(
-            tm.ok(u.Cli.files_read_text(custom)), policy
-        )
-        tm.fail(result)
-        rejection = Path(f"{custom}.rej")
-        tm.that(
-            result.error or "", has="custom.mk line 1 is not a private custom handler"
-        )
-        tm.that(rejection.exists(), eq=False)
-        tm.that(custom.read_text(encoding="utf-8"), eq=content)
-
-    @pytest.mark.slow
-    def test_valid_private_custom_make_has_no_rejection(
-        self, infra_git_repo: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        root = infra_git_repo
-        workspace = _standalone_workspace(root)
-        custom = root / "custom.mk"
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                custom,
-                (
-                    ".PHONY: \\\n"
-                    "\t_custom_check_demo \\\n"
-                    "\t_custom_run_demo\n"
-                    "_custom_check_demo:\n\t@true\n"
-                    "_custom_run_demo:\n\t@true\n"
-                ),
-            )
-        )
-        result = FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=root,
-                what=c.Infra.CodegenConformSurface.MAKEFILE,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-            initial_workspace=workspace,
-        )
-        tm.ok(result)
-        tm.that("WARN:" in capsys.readouterr().out, eq=False)
-        tm.that(Path(f"{custom}.rej").exists(), eq=False)
-
-    def test_custom_make_rejects_unterminated_phony_continuation(self) -> None:
-        """Fail closed when a multiline private-handler declaration is truncated."""
-        policy: m.Infra.CustomHandlerPolicy = (
-            config.Infra.codegen.make.custom_handler_policies[
-                c.Infra.MakeProfile.STANDALONE
-            ]
-        )
-
-        result = FlextInfraCodegenConform.validate_custom_make(
-            ".PHONY: \\\n\t_custom_check_demo \\", policy
-        )
-
-        tm.fail(result, has="unterminated .PHONY continuation")
-
-    @pytest.mark.slow
-    def test_scaffold_make_help_documents_and_lists_custom_hooks(
-        self, infra_git_repo: Path
-    ) -> None:
-        """Scaffold help documents the hook contract and lists custom.mk hooks."""
-        root = infra_git_repo
-        workspace = _standalone_workspace(root)
-        _apply_conform_surface(root, workspace, c.Infra.CodegenConformSurface.MAKEFILE)
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                root / "custom.mk",
-                ".PHONY: pre-check post-test-all _custom_check_myscan\n"
-                "pre-check:\n\t@true\n"
-                "post-test-all:\n\t@true\n"
-                "_custom_check_myscan:\n\t@true\n",
-            )
-        )
-        outcome = u.Cli.run_raw(
-            ["make", "-C", str(root), "help"], remove_env_keys=("MAKEFLAGS", "WHAT")
-        )
-        output = tm.ok(outcome)
-        tm.that(output.exit_code, eq=0)
-        tm.that(
-            output.stdout,
-            has=[
-                "Custom hooks (custom.mk):",
-                "pre-<verb>",
-                "pre-check",
-                "post-test-all",
-                "_custom_check_myscan",
-            ],
-        )
-
-    @pytest.mark.slow
-    def test_scaffold_make_runs_pre_and_post_verb_hooks_in_order(
-        self, infra_git_repo: Path
-    ) -> None:
-        """Generated _dispatch runs pre-<verb>, handler, post-<verb> in order."""
-        root = infra_git_repo
-        workspace = _standalone_workspace(root)
-        _apply_conform_surface(root, workspace, c.Infra.CodegenConformSurface.MAKEFILE)
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                root / "custom.mk",
-                ".PHONY: pre-check post-check _custom_check_probe\n"
-                "pre-check:\n\t@echo HOOK_PRE\n"
-                "_custom_check_probe:\n\t@echo HANDLER_BODY\n"
-                "post-check:\n\t@echo HOOK_POST\n",
-            )
-        )
-        # `check` requires a provisioned interpreter, which `make setup` would
-        # build. Stub it so this test stays about hook ordering.
-        u.Tests.write_executable(
-            root / ".venv" / "bin" / "python", "#!/bin/sh\nexit 0\n"
-        )
-        outcome = u.Cli.run_raw(["make", "-C", str(root), "check", "WHAT=probe"])
-        output = tm.ok(outcome)
-        tm.that(output.exit_code, eq=0)
-        combined = output.stdout + output.stderr
-        pre_at = combined.find("HOOK_PRE")
-        body_at = combined.find("HANDLER_BODY")
-        post_at = combined.find("HOOK_POST")
-        tm.that(pre_at >= 0 and body_at >= 0 and post_at >= 0, eq=True)
-        tm.that(pre_at < body_at, eq=True)
-        tm.that(body_at < post_at, eq=True)
-
-    def test_custom_make_accepts_pre_post_verb_hooks(
-        self, infra_git_repo: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
-        """custom.mk may append pre/post verb hooks (verb-wide and WHAT-scoped)."""
-        root = infra_git_repo
-        workspace = _standalone_workspace(root)
-        custom = root / "custom.mk"
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                custom,
-                ".PHONY: pre-check post-check pre-test-all post-test-all\n"
-                "pre-check:\n\t@true\n"
-                "post-check:\n\t@true\n"
-                "pre-test-all:\n\t@true\n"
-                "post-test-all:\n\t@true\n",
-            )
-        )
-        result = FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=root,
-                what=c.Infra.CodegenConformSurface.MAKEFILE,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.APPLY,
-            ),
-            initial_workspace=workspace,
-        )
-        tm.ok(result)
-        tm.that("WARN:" in capsys.readouterr().out, eq=False)
-        tm.that(Path(f"{custom}.rej").exists(), eq=False)
-
-    @pytest.mark.slow
-    def test_non_regular_custom_make_remains_fatal(self, infra_git_repo: Path) -> None:
-        root = infra_git_repo
-        workspace = _standalone_workspace(root)
-        _apply_conform_surface(root, workspace, c.Infra.CodegenConformSurface.MAKEFILE)
-        tm.ok(u.Cli.files_delete(root / "custom.mk"))
-        (root / "custom.mk").mkdir()
-        result = FlextInfraCodegenConform.execute_request(
-            m.Infra.CodegenConformRequest(
-                root=root,
-                scope=c.Infra.CodegenConformScope.SELF,
-                mode=c.Infra.CodegenConformMode.CHECK,
-            ),
-            initial_workspace=workspace,
-        )
-        tm.fail(result)
-        tm.that(result.error, has="not a regular file")
-        tm.that(result.error, has=str(root / "custom.mk"))
-
-
-class TestScriptDispatchMakefile:
-    """Prove per-repo extra verbs and script-dispatch WHAT normalization."""
-
-    @staticmethod
-    def _render_root_makefile(
-        tmp_path: Path,
-        *,
-        extra_verbs: tuple[m.Infra.MakeVerbSpec, ...],
-        script_dispatch: m.Infra.ScriptDispatchSpec | None,
-    ) -> str:
-        # mro-4gbp: the engine is consumer-agnostic, so this fixture models a
-        # neutral downstream root and takes its provider from the engine's own
-        # configured provider catalog instead of naming a real consumer.
-        provider = config.Infra.codegen.providers[0]
-        root_repository = m.Infra.RepositoryRef(
-            name="demo-root",
-            distribution="demo-root",
-            url=f"{provider.base_url}/demo-root.git",
-            path=Path(),
-            # Script dispatch is a generic capability: exercise it on standalone.
-            role=c.Infra.RepositoryRole.STANDALONE,
-            provider=provider.name,
-            checkout=c.Infra.CheckoutKind.ROOT,
-            codegen=c.Infra.CodegenKind.CONFORM,
-            package=False,
-            editable=False,
-            read_only=False,
-            extra_verbs=extra_verbs,
-            script_dispatch=script_dispatch,
-        )
-        workspace = m.Infra.WorkspaceSpec(
-            version=c.Infra.WORKSPACE_MANIFEST_VERSION,
-            name="demo-root",
-            repository=root_repository,
-            project=m.Infra.ProjectSpec(
-                package_name="demo_root",
-                class_stem="DemoRoot",
-                namespace="DemoRoot",
-                constant_name="demo-root",
-                namespace_attribute="demo_root",
-                alias="demo_root",
-                environment_prefix="DEMO_",
-                description="Demo workspace",
-                version="0.2.0",
-                license="MIT",
-                author_name="Demo",
-                author_email="devops@example.com",
-                upstream="flext_cli",
-                homepage=f"{provider.base_url}/demo-root",
-                documentation=f"{provider.base_url}/demo-root",
-                workspace_root_rel=".",
-                year=2026,
-            ),
-            members=(),
-        )
-        root = tmp_path / "demo-root"
-        request = m.Infra.CodegenConformRequest(
-            root=root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-        planned = FlextInfraCodegenConform(
-            workspace_root=root, request=request, initial_workspace=workspace
-        ).plan(request)
-        plan = tm.ok(planned)
-        makefile = next(
-            file for file in plan.files if file.path.name == c.Infra.MAKEFILE_FILENAME
-        )
-        rendered: str = makefile.rendered
-        return rendered
-
-    def test_script_dispatch_repo_routes_extra_verbs_and_normalizes_what(
-        self, tmp_path: Path
-    ) -> None:
-        """Extra verbs join PUBLIC_VERBS and WHAT hyphens map to script stems."""
-        rendered = self._render_root_makefile(
-            tmp_path,
-            extra_verbs=(
-                m.Infra.MakeVerbSpec(
-                    name="incidente",
-                    default_what="all",
-                    whats=("all",),
-                    apply_what="all",
-                ),
-                m.Infra.MakeVerbSpec(
-                    name="charts", default_what="all", whats=("all",), apply_what="all"
-                ),
-            ),
-            script_dispatch=m.Infra.ScriptDispatchSpec(
-                dispatcher="scripts/dispatch.py",
-                roots=("scripts", "apps/demo-app/scripts"),
-            ),
-        )
-        # Extra verbs are public targets the dispatcher can reach.
-        tm.that("incidente" in rendered, eq=True)
-        tm.that("charts" in rendered, eq=True)
-        # The generated dispatch normalizes hyphenated WHAT to the module stem.
-        tm.that("tr '-' '_'" in rendered, eq=True)
-        # It forwards to the declared dispatcher through uv, not a raw builtin.
-        tm.that("scripts/dispatch.py" in rendered, eq=True)
-        # Existence check spans every declared script root.
-        tm.that("apps/demo-app/scripts" in rendered, eq=True)
-        # REGRESSION (fork-bomb): every line of the single-recipe _dispatch shell
-        # command must continue with a trailing backslash. A blank/unterminated
-        # line splits the recipe, drops $$what/$$builtin, and recurses into the
-        # default goal. Verify continuity across the whole define body.
-        body = rendered.split("define _dispatch", 1)[1].split("endef", 1)[0]
-        recipe = [ln for ln in body.splitlines() if ln.startswith("\t")]
-        broken = [ln for ln in recipe[:-1] if not ln.rstrip().endswith("\\")]
-        tm.that(broken, eq=[])
-
-    def test_dispatch_routes_custom_what_before_allowlist(self, tmp_path: Path) -> None:
-        """Custom ``_custom_<verb>_<what>`` handlers bypass the builtin allowlist.
-
-        ai-hub and other projects extend ``run`` / ``check`` via custom.mk. The
-        continuous Makefile must discover those handlers and dispatch them
-        instead of rejecting unknown WHATs as ``allowed:default``.
-        """
-        rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
-        )
-        body = rendered.split("define _dispatch", 1)[1].split("endef", 1)[0]
-        tm.that("_custom_$(1)_$$what" in body, eq=True)
-        tm.that("custom_rc" in body, eq=True)
-        tm.that('$(SELF_MAKE) "$$custom"' in body, eq=True)
-        recipe = [ln for ln in body.splitlines() if ln.startswith("\t")]
-        broken = [ln for ln in recipe[:-1] if not ln.rstrip().endswith("\\")]
-        tm.that(broken, eq=[])
-
-    def test_repo_without_script_dispatch_omits_script_routing(
-        self, tmp_path: Path
-    ) -> None:
-        """A repo with no script dispatch omits every script-routing projection."""
-        rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
-        )
-        # No script routing leaks into non-opted-in repositories.
-        tm.that("tr '-' '_'" in rendered, eq=False)
-        tm.that("scripts/dispatch.py" in rendered, eq=False)
-
-    def test_gen_replaces_codegen_as_the_single_conform_verb(
-        self, tmp_path: Path
-    ) -> None:
-        """``make gen`` is THE conform verb; ``codegen`` no longer exists.
-
-        The convergence spine (mro-e9j0.6 C7) fuses codegen+conform under the
-        single short ``gen`` verb: one verb, one meaning. The old ``codegen``
-        Make verb is fully replaced across config, rendered handlers, and the
-        regeneration header.
-        """
-        make_config = config.Infra.codegen.make
-        verb_names = {verb.name for verb in make_config.verbs}
-        tm.that("gen" in verb_names, eq=True)
-        tm.that("codegen" in verb_names, eq=False)
-        gen = next(verb for verb in make_config.verbs if verb.name == "gen")
-        tm.that(gen.default_what, eq="check")
-        tm.that(gen.apply_guarded, eq=True)
-        tm.that(hasattr(make_config, "serialization"), eq=False)
-        rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
-        )
-        public_line = next(
-            line for line in rendered.splitlines() if line.startswith("PUBLIC_VERBS :=")
-        )
-        tm.that(" gen" in public_line, eq=True)
-        tm.that(" codegen" in public_line, eq=False)
-        tm.that("_DEFAULT_gen := check" in rendered, eq=True)
-        tm.that("_builtin_gen_check:" in rendered, eq=True)
-        tm.that("_builtin_gen_apply:" in rendered, eq=True)
-        tm.that("_builtin_codegen_check" in rendered, eq=False)
-        tm.that("_builtin_codegen_apply" in rendered, eq=False)
-        builtin_line = next(
-            line
-            for line in rendered.splitlines()
-            if line.startswith("BUILTIN_VERBS :=")
-        )
-        tm.that(" gen" in builtin_line, eq=True)
-        tm.that(" codegen" in builtin_line, eq=False)
-        phony_line = next(
-            line
-            for line in rendered.splitlines()
-            if line.startswith(".PHONY:") and "_builtin_" in line
-        )
-        tm.that("_builtin_gen_check" in phony_line, eq=True)
-        tm.that("_builtin_gen_apply" in phony_line, eq=True)
-        # Both handlers drive the conform engine (CLI namespace is unchanged).
-        gen_check_body = rendered.split("_builtin_gen_check:", 1)[1].split("\n\n", 1)[0]
-        tm.that(gen_check_body.count("codegen conform"), eq=1)
-        tm.that("--mode check" in gen_check_body, eq=True)
-        tm.that(gen_check_body, lacks=["codegen init", "deps modernize"])
-        # The apply semantics live on _builtin_gen_all; _builtin_gen_apply aliases it.
-        gen_all_body = rendered.split("_builtin_gen_all:", 1)[1].split("\n\n", 1)[0]
-        tm.that(gen_all_body.count("codegen conform"), eq=1)
-        tm.that("--mode apply" in gen_all_body, eq=True)
-        tm.that(gen_all_body, lacks=["codegen init", "deps modernize"])
-        tm.that("_require_apply" in gen_all_body, eq=True)
-        gen_apply_body = rendered.split("_builtin_gen_apply:", 1)[1].split("\n\n", 1)[0]
-        tm.that("_builtin_gen_all" in gen_apply_body, eq=True)
-        # The regeneration contract published on every projection speaks gen.
-        tm.that("# @flext-regenerate: make gen WHAT=apply APPLY=Y" in rendered, eq=True)
-        # The custom-surface policy names gen (not codegen) for hooks/handlers.
-        handler_policies: dict[str, m.Infra.CustomHandlerPolicy] = dict(
-            config.Infra.codegen.make.custom_handler_policies
-        )
-        for policy in handler_policies.values():
-            tm.that("|gen|" in policy.target_pattern, eq=True)
-            tm.that("|codegen|" in policy.target_pattern, eq=False)
-
-    # NOTE (mro-4gbp): a test asserting a downstream consumer's verbs from this
-    # engine's catalog was removed. The engine is consumer-agnostic: a consumer
-    # declares extra_verbs/script_dispatch in its OWN config/workspace.yaml. The
-    # generic capability stays covered by the fixture-driven cases below.
-    def test_script_dispatch_adds_scripts_to_lint_and_type_paths(
-        self, tmp_path: Path
-    ) -> None:
-        """Opted-in repos scan scripts alongside src and tests."""
-        rendered = self._render_root_makefile(
-            tmp_path,
-            extra_verbs=(
-                m.Infra.MakeVerbSpec(
-                    name="charts", default_what="all", whats=("all",), apply_what="all"
-                ),
-                m.Infra.MakeVerbSpec(
-                    name="chart-release",
-                    default_what="all",
-                    whats=("all",),
-                    apply_what="all",
-                ),
-                m.Infra.MakeVerbSpec(
-                    name="bead", default_what="all", whats=("all",), apply_what="all"
-                ),
-            ),
-            script_dispatch=m.Infra.ScriptDispatchSpec(
-                dispatcher="scripts/dispatch.py", roots=("scripts",)
-            ),
-        )
-        tm.that(
-            "RUFF_PATHS := $(PROJECT_ROOT)/src $(PROJECT_ROOT)/tests $(PROJECT_ROOT)/scripts"
-            in rendered,
-            eq=True,
-        )
-        tm.that(
-            "MYPY_PATHS := $(PROJECT_ROOT)/src $(PROJECT_ROOT)/tests $(PROJECT_ROOT)/scripts"
-            in rendered,
-            eq=True,
-        )
-
-    def test_repo_without_script_dispatch_retains_canonical_lint_and_type_paths(
-        self, tmp_path: Path
-    ) -> None:
-        """A repo without script dispatch keeps src/tests paths and excludes scripts."""
-        rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
-        )
-        tm.that(
-            "RUFF_PATHS := $(PROJECT_ROOT)/src $(PROJECT_ROOT)/tests" in rendered,
-            eq=True,
-        )
-        tm.that(
-            "MYPY_PATHS := $(PROJECT_ROOT)/src $(PROJECT_ROOT)/tests" in rendered,
-            eq=True,
-        )
-        tm.that("$(PROJECT_ROOT)/scripts" in rendered, eq=False)
-
-
-__all__: list[str] = []

@@ -1,0 +1,37 @@
+id: path-depth-call-to-facade
+language: Python
+severity: error
+rule:
+  pattern: path_depth($PATH)
+fix: u.Infra.path_depth($PATH)
+message: Consume the shared path sort key through u.Infra.
+files:
+  - "src/flext_infra/codegen/**/*.py"
+---
+id: path-depth-sort-key-to-facade
+language: Python
+severity: error
+rule:
+  all:
+    - pattern: path_depth
+    - inside:
+        pattern: sorted($$$ARGS)
+        stopBy: end
+    - not:
+        inside:
+          pattern: $OWNER.path_depth
+          stopBy: end
+fix: u.Infra.path_depth
+message: Consume the shared path sort key through u.Infra.
+files:
+  - "src/flext_infra/codegen/**/*.py"
+---
+id: path-depth-import-to-facade
+language: Python
+severity: error
+rule:
+  pattern: from flext_infra._utilities._sort_keys import path_depth
+fix: from flext_infra import u
+message: Import the public infrastructure utility facade.
+files:
+  - "src/flext_infra/codegen/**/*.py"

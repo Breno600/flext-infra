@@ -1,0 +1,67 @@
+id: typing-dict-to-mapping-kv
+# `valid` MUST NOT match: already canonical, `Dict` not bound from typing, the
+# module lacks `t` (that case belongs to typing-dict-missing-t-import), or the
+# text is a string/docstring/comment rather than a type node. The last three
+# cases are the exact corruption the retired regex transformers caused.
+valid:
+  # already canonical
+  - |
+    from flext_core import t
+    def f(x: t.MappingKV[str, int]) -> None: ...
+  # `Dict` is a locally defined class, not typing.Dict
+  - |
+    from flext_core import t
+    class Dict: ...
+    def f(x: Dict[str, int]) -> None: ...
+  # aliased import binds `D`, not `Dict`
+  - |
+    from flext_core import t
+    from typing import Dict as D
+    def f(x: Dict[str, int]) -> None: ...
+  # module does not bind `t` -> typing-dict-missing-t-import owns this
+  - |
+    from typing import Dict
+    def f(x: Dict[str, int]) -> None: ...
+  # docstring text describing the pattern is not a type node
+  - |
+    """Rewrite ``Dict[K, V]`` to ``t.MappingKV[K, V]``."""
+    from flext_core import t
+    from typing import Dict
+  # a string literal in a rewrite table is not a type node
+  - |
+    from flext_core import t
+    from typing import Dict
+    _REWRITES = (("Dict[", "t.MappingKV"), ("typing.Dict[", "t.MappingKV"))
+  # a comment is not a type node
+  - |
+    from flext_core import t
+    from typing import Dict
+    # Dict[...] named in a comment stays.
+    VALUE = 1
+# `invalid` MUST match and rewrite to t.MappingKV (module binds `t`).
+invalid:
+  # bare name in a parameter annotation
+  - |
+    from flext_core import t
+    from typing import Dict
+    def f(x: Dict[str, int]) -> None: ...
+  # bare name in a return annotation
+  - |
+    from flext_core import t
+    from typing import Dict
+    def f() -> Dict[str, int]: ...
+  # bare name in a module-level variable annotation
+  - |
+    from flext_core import t
+    from typing import Dict
+    ALIAS: Dict[str, int] = {}
+  # bare name in value position
+  - |
+    from flext_core import t
+    from typing import Dict
+    ALIAS = Dict[str, int]
+  # attribute form needs no typing-import guard
+  - |
+    from flext_core import t
+    import typing
+    def f(y: typing.Dict[str, int]) -> None: ...

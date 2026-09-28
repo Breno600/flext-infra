@@ -1,9 +1,3 @@
-# Private project hooks for {{ dist }}.
-# custom.mk policy is a BLACKLIST (mro-ga9q): define ANY custom verb/WHAT via
-#   * lifecycle hooks   (pre|post)-<verb>[-<what>]
-#   * custom handlers   _custom_<verb>_<what> (new project-specific WHAT)
-# EXCEPT the reserved verbs/WHATs that stay a flext-infra monopoly (the base.mk
-# public verbs and their builtin WHATs): redefining one fails every make run at
-# parse time. Everything else is permitted.
-# `codegen conform` additionally validates this file against the custom-handler
-# profile for the project (private handler shapes for member projects).
+# Private lifecycle hooks for {{ dist }}.
+# Define only pre-<verb> or post-<verb> for an operation declared by the typed
+# Make catalog. A distinct operation is a named public verb, never a parameter.

@@ -3,40 +3,60 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from .base import FlextInfraWorkspaceGeneratorBase
+    from ._governance import FlextInfraWorkspaceGovernanceMixin
+    from ._orchestrator_discovery import FlextInfraWorkspaceOrchestratorDiscoveryMixin
+    from ._orchestrator_execution import FlextInfraWorkspaceOrchestratorExecutionMixin
     from .detector import FlextInfraWorkspaceDetector
+    from .environment import FlextInfraWorkspaceEnvironmentMixin
+    from .environment_beads import FlextInfraWorkspaceEnvironmentSync
+    from .environment_contracts import FlextInfraWorkspaceEnvironmentContracts
     from .environment_provenance import FlextInfraWorkspaceEnvironmentProvenance
     from .flext_binding import FlextInfraFlextBindingService
     from .orchestrator import FlextInfraOrchestratorService
+    from .propagation import FlextInfraWorkspacePropagation
     from .rope import FlextInfraRopeWorkspace
-    from .sandbox_orchestrator import FlextInfraSandboxOrchestrator
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraFlextBindingService",
     "FlextInfraOrchestratorService",
     "FlextInfraRopeWorkspace",
-    "FlextInfraSandboxOrchestrator",
     "FlextInfraWorkspaceDetector",
+    "FlextInfraWorkspaceEnvironmentContracts",
+    "FlextInfraWorkspaceEnvironmentMixin",
     "FlextInfraWorkspaceEnvironmentProvenance",
-    "FlextInfraWorkspaceGeneratorBase",
+    "FlextInfraWorkspaceEnvironmentSync",
+    "FlextInfraWorkspaceGovernanceMixin",
+    "FlextInfraWorkspaceOrchestratorDiscoveryMixin",
+    "FlextInfraWorkspaceOrchestratorExecutionMixin",
+    "FlextInfraWorkspacePropagation",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
-            ".base": ("FlextInfraWorkspaceGeneratorBase",),
+            "._governance": ("FlextInfraWorkspaceGovernanceMixin",),
+            "._orchestrator_discovery": (
+                "FlextInfraWorkspaceOrchestratorDiscoveryMixin",
+            ),
+            "._orchestrator_execution": (
+                "FlextInfraWorkspaceOrchestratorExecutionMixin",
+            ),
             ".detector": ("FlextInfraWorkspaceDetector",),
+            ".environment": ("FlextInfraWorkspaceEnvironmentMixin",),
+            ".environment_beads": ("FlextInfraWorkspaceEnvironmentSync",),
+            ".environment_contracts": ("FlextInfraWorkspaceEnvironmentContracts",),
             ".environment_provenance": ("FlextInfraWorkspaceEnvironmentProvenance",),
             ".flext_binding": ("FlextInfraFlextBindingService",),
             ".orchestrator": ("FlextInfraOrchestratorService",),
+            ".propagation": ("FlextInfraWorkspacePropagation",),
             ".rope": ("FlextInfraRopeWorkspace",),
-            ".sandbox_orchestrator": ("FlextInfraSandboxOrchestrator",),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,

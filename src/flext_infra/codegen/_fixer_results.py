@@ -10,13 +10,16 @@ from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidato
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t
+    from flext_infra import p, t
 
 _log = u.fetch_logger(__name__)
 
 
 class FlextInfraCodegenFixerResultsMixin:
     """Private result and validation helpers for codegen fixer composition."""
+
+    if TYPE_CHECKING:
+        rope: p.Infra.RopeWorkspaceDsl
 
     @staticmethod
     def _empty_result(project_name: str) -> m.Infra.AutoFixResult:
@@ -40,13 +43,14 @@ class FlextInfraCodegenFixerResultsMixin:
             files_modified=sorted(ctx.files_modified),
         )
 
-    @staticmethod
     def _load_initial_violations(
-        ctx: m.Infra.FixContext, project_path: Path
+        self, ctx: m.Infra.FixContext, project_path: Path
     ) -> t.SequenceOf[m.Infra.CensusViolation]:
         """Read the initial namespace violations and record skip reason on failure."""
         initial_violations_result = u.Infra.parse_namespace_validation(
-            FlextInfraNamespaceValidator().validate_project(project_path)
+            FlextInfraNamespaceValidator(
+                repository_root=project_path, rope=self.rope
+            ).build_report()
         )
         if initial_violations_result.failure:
             _log.warning(
@@ -64,15 +68,17 @@ class FlextInfraCodegenFixerResultsMixin:
             return ()
         return initial_violations_result.unwrap()
 
-    @staticmethod
     def _classify_remaining_violations(
+        self,
         ctx: m.Infra.FixContext,
         project_path: Path,
         initial_violations: t.SequenceOf[m.Infra.CensusViolation],
     ) -> None:
         """Re-run validation and split outstanding violations into fixed vs skipped."""
         remaining_result = u.Infra.parse_namespace_validation(
-            FlextInfraNamespaceValidator().validate_project(project_path)
+            FlextInfraNamespaceValidator(
+                repository_root=project_path, rope=self.rope
+            ).build_report()
         )
         if remaining_result.failure:
             ctx.skip(
@@ -81,14 +87,14 @@ class FlextInfraCodegenFixerResultsMixin:
                 line=0,
                 message=remaining_result.error or "namespace validation failed",
             )
-            return
-        fixed, skipped = u.Infra.classify_violation_outcomes(
-            project_path=project_path,
-            initial_violations=initial_violations,
-            remaining_violations=remaining_result.unwrap(),
-        )
-        ctx.violations_fixed.extend(fixed)
-        ctx.violations_skipped.extend(skipped)
+        else:
+            fixed, skipped = u.Infra.classify_violation_outcomes(
+                project_path=project_path,
+                initial_violations=initial_violations,
+                remaining_violations=remaining_result.unwrap(),
+            )
+            ctx.violations_fixed.extend(fixed)
+            ctx.violations_skipped.extend(skipped)
 
 
 __all__: list[str] = ["FlextInfraCodegenFixerResultsMixin"]

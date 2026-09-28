@@ -1,6 +1,6 @@
 """Pytest diagnostics extraction service.
 
-Extracts robust pytest diagnostics from JUnit XML and log outputs,
+Extracts strict pytest diagnostics from JUnit XML and structured report-log outputs,
 producing structured failure/error/warning/skip/slow-test reports.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
@@ -15,24 +15,27 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, u
-from flext_infra.base import s
-from flext_infra.validate._pytest_diag_xml import FlextInfraPytestDiagXmlMixin
+
+from ..base import s
+from ._pytest_diag_xml import FlextInfraPytestDiagXmlMixin
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import p
 
 
 class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
-    """Extracts pytest diagnostics from JUnit XML and log files.
+    """Extracts pytest diagnostics from the runner's required report artifacts.
 
-    Parses JUnit XML for structured failure/error/skip/timing data
-    and uses regex-based log parsing when XML is unavailable.
+    Parses required JUnit XML for structured failure/error/skip/timing data
+    and the explicit report-log for every warning occurrence.
+    The human-readable pytest log remains required diagnostic evidence.
     """
 
     junit: Annotated[Path, m.Field(description="JUnit XML path")]
     log_path: Annotated[Path, m.Field(description="Pytest log path")] = m.Field(
         alias="log"
     )
+    report_log: Annotated[Path, m.Field(description="Pytest report-log JSONL path")]
     failed: Annotated[
         Path | None, m.Field(description="Path to write failed cases")
     ] = None
@@ -49,90 +52,96 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         Path | None, m.Field(description="Path to write skipped cases")
     ] = None
 
-    @staticmethod
-    def _extract_slow_from_log(lines: t.StrSequence, diag: m.Infra.DiagResult) -> None:
-        """Extract slow test durations from log when XML unavailable."""
-        capture_slow = False
+    @classmethod
+    def _extract_report_events(cls, report_log: Path, diag: m.Infra.DiagResult) -> None:
+        """Read real test attempts and every warning independently of terminal text."""
+        lines = report_log.read_text(encoding=c.Cli.ENCODING_DEFAULT).splitlines()
+        if not lines:
+            msg = f"pytest report log contains no events: {report_log}"
+            raise ValueError(msg)
+        warnings = []
         for line in lines:
-            if c.Infra.PYTEST_SLOWEST_HEADER_RE.match(line):
-                capture_slow = True
-                continue
-            if capture_slow and c.Infra.PYTEST_SECTION_DIVIDER_RE.match(line):
-                break
-            if capture_slow and line.strip():
-                diag.slow_entries.append(line)
+            event = m.Infra.PytestReportEvent.model_validate_json(line)
+            if event.report_type == "WarningMessage":
+                warnings.append(event)
+            else:
+                cls._record_case_event(event, diag)
+        identities = [
+            m.Infra.PytestWarningEvent.model_validate_json(line)
+            for line in report_log
+            .with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX)
+            .read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            .splitlines()
+        ]
+        for event, identity in zip(warnings, identities, strict=True):
+            cls._record_warning(event, identity, diag)
 
     @staticmethod
-    def _extract_warnings(lines: t.StrSequence, diag: m.Infra.DiagResult) -> None:
-        """Extract warning lines from pytest log."""
-        capture_warn = False
-        for line in lines:
-            if c.Infra.PYTEST_WARNINGS_HEADER_RE.match(line):
-                capture_warn = True
-                continue
-            if capture_warn and c.Infra.PYTEST_DOCS_FOOTER_RE.match(line):
-                break
-            if capture_warn and c.Infra.PYTEST_WARNING_LINE_RE.search(line):
-                diag.warning_lines.append(line)
-        if not diag.warning_lines:
-            diag.warning_lines = [
-                line for line in lines if c.Infra.PYTEST_WARNING_LINE_RE.search(line)
-            ]
+    def _record_case_event(
+        event: m.Infra.PytestReportEvent, diag: m.Infra.DiagResult
+    ) -> None:
+        if event.nodeid is None:
+            return
+        if event.report_type == "TestReport":
+            diag.reported_node_ids.append(event.nodeid)
+        elif event.report_type == "CollectReport":
+            if event.outcome == "failed":
+                diag.collection_failed_cases.append(event.nodeid)
+            elif event.outcome == "skipped":
+                diag.collection_skip_cases.append(event.nodeid)
 
     @staticmethod
-    def _parse_log_into_diag(lines: t.StrSequence, diag: m.Infra.DiagResult) -> None:
-        """Parse pytest log output for failures/skips when XML unavailable."""
-        diag.failed_cases = [
-            line for line in lines if c.Infra.PYTEST_FAILED_LINE_RE.search(line)
-        ]
-        diag.error_cases = [
-            line for line in lines if c.Infra.PYTEST_ERROR_LINE_RE.search(line)
-        ]
-        diag.skip_cases = [
-            line for line in lines if c.Infra.PYTEST_SKIPPED_LINE_RE.search(line)
-        ]
-        capture = False
-        block: t.MutableSequenceOf[str] = []
-        for line in lines:
-            if c.Infra.PYTEST_FAILURES_OR_ERRORS_RE.match(line):
-                capture = True
-            if capture:
-                block.append(line)
-                if c.Infra.PYTEST_BLOCK_END_RE.match(line):
-                    break
-        diag.error_traces = block
+    def _record_warning(
+        event: m.Infra.PytestReportEvent,
+        identity: m.Infra.PytestWarningEvent,
+        diag: m.Infra.DiagResult,
+    ) -> None:
+        if (event.category, event.filename, event.lineno, event.message) != (
+            identity.category,
+            identity.filename,
+            identity.lineno,
+            identity.message,
+        ):
+            msg = "WarningMessage differs from its recorded runtime identity"
+            raise ValueError(msg)
+        warning = (
+            f"{identity.filename}:{identity.lineno}: "
+            f"{identity.category_module}.{identity.category_qualname}: "
+            f"{identity.message}"
+        )
+        diag.warning_lines.append(warning)
+        if identity.suspended:
+            diag.suspended_warning_lines.append(warning)
 
     def extract(
-        self, junit_path: Path, log_path: Path
+        self, junit_path: Path, log_path: Path, *, report_log: Path
     ) -> p.Result[m.Infra.PytestDiagnostics]:
-        """Extract diagnostics from JUnit XML and pytest log.
+        """Extract diagnostics from JUnit XML, pytest log and explicit report-log.
 
         Args:
             junit_path: Path to JUnit XML result file.
             log_path: Path to raw pytest log output.
+            report_log: Path to the structured pytest report-log.
 
         Returns:
             r with diagnostics dict containing counts and entries.
 
         """
-        try:
-            return self._extract_diagnostics(junit_path, log_path)
-        except c.EXC_OS_TYPE_VALUE as exc:
-            return r[m.Infra.PytestDiagnostics].fail_op(
-                "pytest diagnostics extraction", exc
-            )
+        return self._extract_diagnostics(junit_path, log_path, report_log=report_log)
+
+    @classmethod
+    def extract_report_log(
+        cls, report_log: Path
+    ) -> p.Result[m.Infra.PytestDiagnostics]:
+        """Read collection-only evidence through the same runtime event boundary."""
+        diag = m.Infra.DiagResult()
+        cls._extract_report_events(report_log, diag)
+        return r.ok(cls._diagnostics_model(diag))
 
     @staticmethod
-    def _read_log_text(log_path: Path) -> p.Result[str]:
-        """Read pytest log text when present."""
-        if not log_path.exists():
-            return r[str].ok("")
-        log_read = u.Cli.files_read_text(log_path)
-        if log_read.failure:
-            return r[str].fail(
-                log_read.error or f"Failed to read pytest log: {log_path}"
-            )
-        return r[str].ok(log_read.value)
+    def _read_log_text(log_path: Path) -> str:
+        """Read the required pytest log without exception normalization."""
+        return log_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
 
     @staticmethod
     def _diagnostics_model(diag: m.Infra.DiagResult) -> m.Infra.PytestDiagnostics:
@@ -141,39 +150,40 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
             failed_count=len(diag.failed_cases),
             error_count=len(diag.error_cases),
             warning_count=len(diag.warning_lines),
+            blocking_warning_count=(
+                len(diag.warning_lines) - len(diag.suspended_warning_lines)
+            ),
+            suspended_warning_count=len(diag.suspended_warning_lines),
             skipped_count=len(diag.skip_cases),
+            collection_failed_count=len(diag.collection_failed_cases),
+            collection_skipped_count=len(diag.collection_skip_cases),
+            collection_failed_cases=tuple(diag.collection_failed_cases),
+            collection_skip_cases=tuple(diag.collection_skip_cases),
+            reported_node_ids=tuple(sorted(set(diag.reported_node_ids))),
             failed_cases=diag.failed_cases,
             error_traces=diag.error_traces,
             warning_lines=diag.warning_lines,
+            suspended_warning_lines=diag.suspended_warning_lines,
             skip_cases=diag.skip_cases,
             slow_entries=diag.slow_entries,
         )
 
     def _extract_diagnostics(
-        self, junit_path: Path, log_path: Path
+        self, junit_path: Path, log_path: Path, *, report_log: Path
     ) -> p.Result[m.Infra.PytestDiagnostics]:
         """Extract pytest diagnostics after input normalization."""
-        log_text_result = self._read_log_text(log_path)
-        if log_text_result.failure:
-            return r[m.Infra.PytestDiagnostics].fail(
-                log_text_result.error or f"Failed to read pytest log: {log_path}"
-            )
-        lines = log_text_result.value.splitlines()
+        self._read_log_text(log_path)
         diag = m.Infra.DiagResult()
-        xml_parsed = self._parse_xml(junit_path, diag)
-        if not xml_parsed:
-            self._parse_log_into_diag(lines, diag)
-        self._extract_warnings(lines, diag)
-        if not diag.slow_entries:
-            self._extract_slow_from_log(lines, diag)
+        self._parse_xml(junit_path, diag)
+        self._extract_report_events(report_log, diag)
         return r[m.Infra.PytestDiagnostics].ok(self._diagnostics_model(diag))
 
     @override
     def execute(self) -> p.Result[bool]:
         """Execute the pytest diagnostics CLI flow."""
-        result = self.extract(self.junit, self.log_path)
-        if result.failure:
-            return r[bool].fail(result.error or "extraction failed")
+        diagnostics = self.extract(
+            self.junit, self.log_path, report_log=self.report_log
+        ).unwrap()
         for output_path, attr_name, separator in [
             (self.failed, "failed_cases", "\n\n"),
             (self.errors, "error_traces", "\n\n"),
@@ -183,21 +193,17 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
         ]:
             if output_path is None:
                 continue
-            items = [
-                value
-                for value in getattr(result.value, attr_name, [])
-                if isinstance(value, str)
-            ]
-            u.write_file(
-                output_path,
-                separator.join(items) + "\n",
-                encoding=c.Cli.ENCODING_DEFAULT,
-            )
+            items = getattr(diagnostics, attr_name)
+            u.Cli.atomic_write_text_file(
+                output_path, separator.join(items) + "\n"
+            ).unwrap()
         sys.stdout.write(
-            f"failed_count={result.value.failed_count}\n"
-            f"error_count={result.value.error_count}\n"
-            f"warning_count={result.value.warning_count}\n"
-            f"skipped_count={result.value.skipped_count}\n"
+            f"failed_count={diagnostics.failed_count}\n"
+            f"error_count={diagnostics.error_count}\n"
+            f"warning_count={diagnostics.warning_count}\n"
+            f"blocking_warning_count={diagnostics.blocking_warning_count}\n"
+            f"suspended_warning_count={diagnostics.suspended_warning_count}\n"
+            f"skipped_count={diagnostics.skipped_count}\n"
         )
         return r[bool].ok(True)
 

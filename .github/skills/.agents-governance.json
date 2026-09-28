@@ -1,0 +1,276 @@
+{
+  "context": "project",
+  "destination": ".github/skills",
+  "managed": {
+    "anti-hardcode": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "anti-hardcode",
+      "origin": "agents:skills",
+      "physical_digest": "ae7d4dbf5c63ae0103bf3cb7dbf60138268a918e61822b4aa2c072cca2221921",
+      "slug": "anti-hardcode",
+      "source_digest": "7f2996b5a04c0180096948e39caa81da1299d9e7e4ce1166b806a2bb7c04111d",
+      "source_type": "skill"
+    },
+    "architecture-documentation": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "architecture-documentation",
+      "origin": "agents:skills",
+      "physical_digest": "7641628ed008dbae7ae79f5efb8be040004471dee569223d25b04da8bb2d16d2",
+      "slug": "architecture-documentation",
+      "source_digest": "43be898ce89d2c934780d94e89988328d30eace32ac2e08ef7d75242ab6912ac",
+      "source_type": "skill"
+    },
+    "backend-patterns": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "backend-patterns",
+      "origin": "agents:skills",
+      "physical_digest": "60ddd662a20a22bf365145bc316505bfaedb41428052fab931fd5689a2c9b37c",
+      "slug": "backend-patterns",
+      "source_digest": "50ddddd61768051f291eae737eae26a29581479378e7aff2b4b4cb08382fd119",
+      "source_type": "skill"
+    },
+    "code-review-expert": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "code-review-expert",
+      "origin": "agents:skills",
+      "physical_digest": "66423b28db0deed8f33d09ce5ed255a97dad3615f6b0a77411c44f029ed4a9d8",
+      "slug": "code-review-expert",
+      "source_digest": "0f326df6767423197f6e1e03603db28fd169668259fcf0df9ccb03aa2bf2e774",
+      "source_type": "skill"
+    },
+    "config-schema-migration": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "config-schema-migration",
+      "origin": "agents:skills",
+      "physical_digest": "89296cd4ef3e2b692ed7bb48a2ef715a5d9af720af281fdda42942c1fc07f7b2",
+      "slug": "config-schema-migration",
+      "source_digest": "fdc6ab025184274e8a6df27dec7c308ece4d4be4a2e16d360d186ebbcb80a770",
+      "source_type": "skill"
+    },
+    "data-modeling-analysis": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "data-modeling-analysis",
+      "origin": "agents:skills",
+      "physical_digest": "060a3f329471c32d445a2e1f7c423ca3eed6427015d40d220bb2ae53aced2006",
+      "slug": "data-modeling-analysis",
+      "source_digest": "2ae48816a5ddb8b83e4186eebaa12e1fca0f044759a33fe234f08f6448b8368a",
+      "source_type": "skill"
+    },
+    "doc-drift": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "doc-drift",
+      "origin": "agents:skills",
+      "physical_digest": "daef590b6aaa86f2bd7a05cb8847dbf35fb4dd04d016e35fec6c4762b38f2ee5",
+      "slug": "doc-drift",
+      "source_digest": "1e005fd3df44c58b37d5f0c4fb370d1841abc22c8549ca92582bb10c6ec029cf",
+      "source_type": "skill"
+    },
+    "documentation-criteria": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "documentation-criteria",
+      "origin": "agents:skills",
+      "physical_digest": "2bc74435eafd89338b395a42e6085d9401b56aad0c26f53e4f1e7c7c58e8989b",
+      "slug": "documentation-criteria",
+      "source_digest": "15047c8d653754b19fa267a5775f1c8198022816aa2fb7666f145283191f10d6",
+      "source_type": "skill"
+    },
+    "dry": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "dry",
+      "origin": "agents:skills",
+      "physical_digest": "a5c6ba1636de11bb1ec31fad3b496eb527d286a12826f9f615c1f4c668ffea81",
+      "slug": "dry",
+      "source_digest": "402d1fdb71718b55144f9ea27a7c2b0872dffae3d51b210da3922901970721b1",
+      "source_type": "skill"
+    },
+    "eval-harness": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "eval-harness",
+      "origin": "agents:skills",
+      "physical_digest": "8e0683d047365db0b30788c7718e9674795a92336af9d67509552927383cf4d8",
+      "slug": "eval-harness",
+      "source_digest": "4dacfffe15e36c247a8b4b79a5963dc3f1ea9711b313b7b2f10cf682b2031964",
+      "source_type": "skill"
+    },
+    "extermination-mode": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "extermination-mode",
+      "origin": "agents:skills",
+      "physical_digest": "c14a7c0dfba4d4dd4be2350c584fc3e413699e85dc7e69b8001d36326c7ee609",
+      "slug": "extermination-mode",
+      "source_digest": "6e26fa69f3f402ec6d4a7698ff328295e208556ad49d0eb242109bde91488411",
+      "source_type": "skill"
+    },
+    "fail-fast": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "fail-fast",
+      "origin": "agents:skills",
+      "physical_digest": "7b30078ad93345307166342080943c2021524e88de9ac882f64c46656c8a6350",
+      "slug": "fail-fast",
+      "source_digest": "94224f44dd482da65c111d3e1c1984acad8e3f694ed560148ebdf5607349751a",
+      "source_type": "skill"
+    },
+    "flext-development": {
+      "activation": ["dependency:python:flext-core", "selected-tag:flext"],
+      "adapter_version": 1,
+      "destination": "flext-development",
+      "origin": "agents:skills",
+      "physical_digest": "cc726aabffeddbd8dad27cfac5b6f2aaed57c001d80bc32c955b871e9634583a",
+      "slug": "flext-development",
+      "source_digest": "4b8fd834ee1f6792091f9e78e3488117c6c919d449f5532bab60c1166be54122",
+      "source_type": "skill"
+    },
+    "implementation-plan-review": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "implementation-plan-review",
+      "origin": "agents:skills",
+      "physical_digest": "433f9c4b055ace0902241fc534b33a3741433b4e92683117d597163f296742f9",
+      "slug": "implementation-plan-review",
+      "source_digest": "1b50d4382b7e97381b620cf4934ac2c28f0c4db99bcccd3cf1f901a86dd51c0f",
+      "source_type": "skill"
+    },
+    "product-capability": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "product-capability",
+      "origin": "agents:skills",
+      "physical_digest": "b8b7e11f392eea7b99f903e110159de02331b36d7f353d9c4da4408d41453cec",
+      "slug": "product-capability",
+      "source_digest": "c2d1cdcfb17200509ce91b2584b0051d19de0ac8af57c1a67d554d7a45567b56",
+      "source_type": "skill"
+    },
+    "python-development": {
+      "activation": ["marker:pyproject.toml", "marker:uv.lock"],
+      "adapter_version": 1,
+      "destination": "python-development",
+      "origin": "agents:skills",
+      "physical_digest": "3ddf5e367c369a7064ceb406d5998cd0572bd4529576d251f7f5128447dadfbf",
+      "slug": "python-development",
+      "source_digest": "a5682d138d5ca359e7e271fca72776145c66a8b0a05c5670f86ffdb070220e87",
+      "source_type": "skill"
+    },
+    "python-parallelization": {
+      "activation": ["marker:pyproject.toml", "marker:uv.lock"],
+      "adapter_version": 1,
+      "destination": "python-parallelization",
+      "origin": "agents:skills",
+      "physical_digest": "7b9b6d8b767abb1fac72c2d941a8d1c5a070cc8bd42db44bbf9dd901daca5213",
+      "slug": "python-parallelization",
+      "source_digest": "5f30cdd39358e9e42cdf16fb9d6b5918374fbf220e2ab51db981640da9d54026",
+      "source_type": "skill"
+    },
+    "rest-api-design": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "rest-api-design",
+      "origin": "agents:skills",
+      "physical_digest": "e91a09d270156993fda33299af7cf290abbfb7a308a4c616c0814c942fe70c6d",
+      "slug": "rest-api-design",
+      "source_digest": "542e6a3ba5ab88bfed86ab9aef8a281df2ac4eb4ebd7208adea4fce3f01d3c7f",
+      "source_type": "skill"
+    },
+    "search-first": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "search-first",
+      "origin": "agents:skills",
+      "physical_digest": "780945b9da742576c9acf8a8b83a93c1f463a08469ab7e46b1bad25ab47cb7b9",
+      "slug": "search-first",
+      "source_digest": "af465e25caaf486f008bc014d9a241ca0cf02bd3e5e3ccde1f0d3ab630eb562f",
+      "source_type": "skill"
+    },
+    "security-review": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "security-review",
+      "origin": "agents:skills",
+      "physical_digest": "0d2ce51c1f4563a25b793a37cc0e237937e574df7c07fc6bf732dead8214c3e1",
+      "slug": "security-review",
+      "source_digest": "91d28d5841249b493d3e71bc78ded32182c25f8058e7607c39261a404a0c190c",
+      "source_type": "skill"
+    },
+    "simplify": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "simplify",
+      "origin": "agents:skills",
+      "physical_digest": "49a30068791b6894414ac2175cfd572882d0b41c2f773e2250ad2ca4662569af",
+      "slug": "simplify",
+      "source_digest": "0e6d5d4c6b8c552dda3c5f1140adcff8574f40a8380efe2ba655399f68e22cbc",
+      "source_type": "skill"
+    },
+    "solid": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "solid",
+      "origin": "agents:skills",
+      "physical_digest": "768b9e9a0d529c00f09a4793d9f6e7c089b7121ef033914f6acaf344367e4056",
+      "slug": "solid",
+      "source_digest": "0b9d429c3f1982faba36217ac908bac5ee538878592a8e14dba0be4a7451fb5d",
+      "source_type": "skill"
+    },
+    "ssot": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "ssot",
+      "origin": "agents:skills",
+      "physical_digest": "ef08ef1574b4dadab12849542aa6c95ae3646e43e4deae260039107c4fb3db24",
+      "slug": "ssot",
+      "source_digest": "e4b4d9f5647922177901867c8e2041118384aa150725e3eb3dfa96425f7af21f",
+      "source_type": "skill"
+    },
+    "tdd-workflow": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "tdd-workflow",
+      "origin": "agents:skills",
+      "physical_digest": "ae4f5672dd34d4e5f670c6204de8c19f773a486241706a27eda3f77a21a5955d",
+      "slug": "tdd-workflow",
+      "source_digest": "95fda30485393ff84d764355f5ee717642bc1bf53501391a3f18250f53900e25",
+      "source_type": "skill"
+    },
+    "technical-writing-style": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "technical-writing-style",
+      "origin": "agents:skills",
+      "physical_digest": "eaeeb8fe79cd4a112dcb3809849870c6bd482600a9005d8c28263d5bca8eb4a5",
+      "slug": "technical-writing-style",
+      "source_digest": "229d8379c7eab108eb988182d64fc6360852a78ed4ea86f176efe66278986283",
+      "source_type": "skill"
+    },
+    "yagni": {
+      "activation": ["project-generic"],
+      "adapter_version": 1,
+      "destination": "yagni",
+      "origin": "agents:skills",
+      "physical_digest": "88a9c9b67f23e7e568bbabc56de5ea79c3ac1f16b1debd3857759a719b1a4f53",
+      "slug": "yagni",
+      "source_digest": "96466eda9f0906d5481ec3bcbae7ecc9ef0f63556cb1e5a1a7cac499c6081f77",
+      "source_type": "skill"
+    }
+  },
+  "owner": "agents-governance",
+  "project": ".",
+  "providers": ["copilot"],
+  "selection": {
+    "agents": [],
+    "opt_ins": [],
+    "selected_tags": ["flext"]
+  },
+  "surface": "skills",
+  "version": 5
+}

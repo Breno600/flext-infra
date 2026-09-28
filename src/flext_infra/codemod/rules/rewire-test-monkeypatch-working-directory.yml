@@ -1,0 +1,28 @@
+# Migration-only cutover from pytest monkeypatch to a restoring public fixture.
+id: rewire-test-monkeypatch-working-directory
+language: Python
+severity: error
+files:
+  - "**/tests/conftest.py"
+rule:
+  all:
+    - pattern:
+        context: |
+          @pytest.fixture(autouse=True)
+          def $FIXTURE($DIRECTORY: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+              $$$BODY
+              monkeypatch.chdir($DIRECTORY)
+        selector: decorated_definition
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          pattern: import pytest
+          stopBy: end
+fix: |
+  @pytest.fixture(autouse=True)
+  def $FIXTURE($DIRECTORY: Path) -> Generator[None]:
+      $$$BODY
+      with u.Tests.Matchers.scope(cwd=$DIRECTORY):
+          yield
+message: Use the public restoring flext-tests scope instead of monkeypatch.chdir.

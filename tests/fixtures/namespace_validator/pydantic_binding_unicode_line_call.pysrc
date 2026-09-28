@@ -1,0 +1,6 @@
+from __future__ import annotations
+from pydantic import validator as validate
+
+class FlextTestValidation:
+    def execute(self) -> None:
+        label = 'café'; validate('value')

@@ -1,0 +1,31 @@
+id: rewire-structlog-get-logger-missing-u-import
+# `valid` MUST NOT match: the module binds `u` (the auto-fixing rules own it),
+# the call has no single-argument translation, or it is text rather than code.
+valid:
+  - |
+    from flext_core import u
+
+    logger = structlog.get_logger()
+  - |
+    from flext_core import u
+
+    logger = structlog.get_logger("service")
+  - |
+    import structlog
+
+    logger = structlog.get_logger(__name__, component=name)
+  - |
+    import structlog
+
+    HELP = "replace structlog.get_logger() with u.fetch_logger(__name__)"
+# `invalid` MUST match: a rewritable shape with no `u` binding, including the
+# aliased import that does not bind the name.
+invalid:
+  - |
+    import structlog
+
+    logger = structlog.get_logger()
+  - |
+    from flext_core import u as utilities
+
+    logger = structlog.get_logger("service")

@@ -1,0 +1,22 @@
+id: test-utilities-unambiguous-alias
+valid:
+  - |
+    from flext_infra import u
+    from tests import WorktreeFixture, u as test_u
+
+    value = test_u.Tests.codegen_file_text(plan)
+  - |
+    from tests import u
+
+    value = u.Tests.codegen_file_text(plan)
+  - |
+    from flext_infra import u as infra_u
+    from tests import u
+
+    value = u.Tests.codegen_file_text(plan)
+invalid:
+  - |
+    from flext_infra import u
+    from tests import WorktreeFixture
+
+    value = u.Tests.codegen_file_text(plan)

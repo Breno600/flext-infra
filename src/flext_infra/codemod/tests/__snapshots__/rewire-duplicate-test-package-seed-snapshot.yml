@@ -1,0 +1,9 @@
+id: rewire-duplicate-test-package-seed
+snapshots:
+  _seed_pkg(root):
+    fixed: u.Tests.write_package_init(root / "src" / "pkg", "").parent
+    labels:
+    - source: _seed_pkg(root)
+      style: primary
+      start: 0
+      end: 15

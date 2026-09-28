@@ -2,26 +2,34 @@
 
 from __future__ import annotations
 
-import difflib
+import operator
 from collections.abc import Callable, MutableMapping
 from pathlib import Path
 
-from flext_infra._utilities.protected_edit_linting import (
-    FlextInfraUtilitiesProtectedEditLinting,
-)
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra import c, t
+
+from .protected_edit_linting import FlextInfraUtilitiesProtectedEditLinting
 
 
 class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLinting):
     """Preview and revert-report helpers for protected edit workflows."""
 
     @staticmethod
+    def _normalized_source_updates(
+        updates: t.MappingKV[Path, str],
+    ) -> MutableMapping[Path, str]:
+        """Return one update map keyed by resolved path in deterministic order."""
+        return {
+            path.resolve(): content
+            for path, content in sorted(updates.items(), key=operator.itemgetter(0))
+        }
+
+    @staticmethod
     def _preview_write_baselines(
         updates: t.MappingKV[Path, str],
         workspace: Path,
         gates: t.StrSequence | None = None,
-    ) -> tuple[
+    ) -> t.Pair[
         MutableMapping[Path, str | None], MutableMapping[Path, t.Infra.LintSnapshot]
     ]:
         """Preview write baselines."""
@@ -71,17 +79,15 @@ class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLi
         """Reverted report lines."""
         rel = FlextInfraUtilitiesProtectedEditPreview._relative_path(path, workspace)
         modified = path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-        diff = list(
-            difflib.unified_diff(
-                before_source.splitlines(keepends=True),
-                modified.splitlines(keepends=True),
-                fromfile=f"a/{rel}",
-                tofile=f"b/{rel}",
-                n=3,
-            )
+        diff = FlextInfraUtilitiesProtectedEditPreview.unified_diff_lines(
+            before_source,
+            modified,
+            fromfile=f"a/{rel}",
+            tofile=f"b/{rel}",
+            max_lines=30,
         )
         report_lines = [f"  REVERTED {rel}:"]
-        report_lines.extend(f"    {line.rstrip()}" for line in diff[:30])
+        report_lines.extend(f"    {line.rstrip()}" for line in diff)
         for tool, messages in new_errors.items():
             report_lines.extend((
                 f"    NEW {tool} errors:",
@@ -131,10 +137,9 @@ class FlextInfraUtilitiesProtectedEditPreview(FlextInfraUtilitiesProtectedEditLi
         if not updates:
             return (True, [])
 
-        normalized_updates = {
-            path.resolve(): content
-            for path, content in sorted(updates.items(), key=lambda item: str(item[0]))
-        }
+        normalized_updates = (
+            FlextInfraUtilitiesProtectedEditPreview._normalized_source_updates(updates)
+        )
         before_sources, before_lints = (
             FlextInfraUtilitiesProtectedEditPreview._preview_write_baselines(
                 normalized_updates, workspace, gates=gates

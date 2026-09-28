@@ -1,0 +1,73 @@
+# Config overrides layer (hierarchical config architecture, ADR-005).
+#
+# Layer 1: config/codegen.yaml             — immutable fleet-wide business rules
+# Layer 2: config/codegen-overrides.yaml   — committed project-specific overrides
+# Layer 3: config/codegen-overrides.local.yaml — gitignored per-clone overrides
+#
+# This file contains ONLY per-distribution/per-project overrides that cannot be
+# expressed as immutable fleet-wide rules AND carry no operator-private data:
+# anything naming private organizations, remotes, credentials or machine paths
+# belongs in the gitignored Layer 3 file, which merges after this one through
+# the same typed SSOT (scalars win, dict keys add, lists concatenate). No raw
+# injection at any layer.
+#
+# The FlextConfig base auto-discovers all *.yaml files in config/ and deep-merges
+# them. This file's entries merge on top of codegen.yaml's empty defaults.
+
+Infra:
+  codegen:
+    checkout_submodules_overrides: {}
+
+    make:
+      # Per-profile overrides of the custom handler policy.
+      # workspace profile relaxes the private-handler restriction for
+      # developer-local Makefile extensions.
+      custom_handler_profile_overrides:
+        workspace:
+          allow_public_targets: true
+          allow_toolchain_declarations: true
+
+    layout:
+      # Consumer ecosystem root keep-lists (plan B).
+      project_overrides:
+        cosmos-docgen:
+          # Presentation SSOT surface owned by dcdoc.config.yaml (templates,
+          # generated_assets) plus the project-local strict skills source
+          # declared by AGENTS.md/GOVERNANCE.md; reviewed and kept at root.
+          ignore_globs:
+            - layouts
+            - skills
+            - templates
+        flext-cli:
+          archive_names:
+            - settings.json
+          gitignore_additions:
+            - settings.json
+        flext-core:
+          archive_names:
+            - config.json
+        flext-tap-oracle-wms:
+          archive_names:
+            - config.json
+          gitignore_additions:
+            - config.json
+        flext-target-oracle-oic:
+          archive_names:
+            - config.json
+          gitignore_additions:
+            - config.json
+        flext-oracle-oic:
+          archive_names:
+            - config.json
+          gitignore_additions:
+            - config.json
+        flext-dbt-ldif:
+          moves:
+            - { source: profiles/profiles.yml, target: profiles.yml }
+          archive_empty_dirs:
+            - profiles
+        flext-dbt-oracle-wms:
+          moves:
+            - { source: models/reference.md, target: docs/reference.md }
+          archive_empty_dirs:
+            - models

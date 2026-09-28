@@ -3,7 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_tests import tm
-from tests import c, m
+
+from tests import m
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -45,4 +46,3 @@ class TestsFlextInfraUtilitiesscanning:
         tm.that(len(violations), eq=1)
         tm.that(violations[0]["message"], eq="rule hit")
         tm.that(violations[0]["rule_id"], none=True)
-        tm.that(c.Infra.GIT, eq="git")

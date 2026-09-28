@@ -1,24 +1,21 @@
 """Tests for the manual-command blocker (AGENTS.md §5).
 
 ``command_blocked`` flags bare tool invocations that bypass make / flext_infra and
-allows monopoly-routed commands; ``render_pre_commit_config`` emits hooks that
-call ``python -m flext_infra`` (never the retired audit scripts).
+allows monopoly-routed commands. The former pre-commit-config drift half is
+retired: the template owns the content and ``codegen conform --mode check``
+owns drift detection, so no second detector may exist.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from flext_infra.validate.manual_command import FlextInfraManualCommandValidator
 from flext_tests import tm
 
-if TYPE_CHECKING:
-    from tests import t
+from flext_infra.validate.manual_command import FlextInfraManualCommandValidator
 
 _V = FlextInfraManualCommandValidator
 
 
-class TestManualCommandValidator:
+class TestsFlextInfraManualCommand:
     def test_bare_ruff_blocked(self) -> None:
         tm.that(_V.command_blocked("ruff check src/"), eq=True)
 
@@ -67,21 +64,9 @@ class TestManualCommandValidator:
         tm.that(_V.command_blocked("git status"), eq=False)
 
     def test_make_allowed(self) -> None:
-        tm.that(_V.command_blocked("make check WHAT=lint"), eq=False)
+        tm.that(_V.command_blocked("make check"), eq=False)
 
     def test_flext_infra_allowed(self) -> None:
         tm.that(
             _V.command_blocked("python -m flext_infra check --what boundary"), eq=False
         )
-
-    def test_render_uses_flext_infra_and_drops_scripts(self) -> None:
-        rendered = _V.render_pre_commit_config()
-        tm.that(
-            "uv run --all-packages python -m flext_infra validate --what manual-cmd"
-            in rendered,
-            eq=True,
-        )
-        tm.that("audit_banned_cli_libs.py" not in rendered, eq=True)
-
-
-__all__: t.StrSequence = []

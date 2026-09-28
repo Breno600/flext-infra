@@ -1,0 +1,75 @@
+id: rewire-logging-get-logger-to-fetch-logger
+snapshots:
+  ? |
+    from logging import getLogger
+
+    from flext_infra import u
+
+    logger = getLogger(__name__)
+  : fixed: |
+      from logging import getLogger
+
+      from flext_infra import u
+
+      logger = u.fetch_logger(__name__)
+    labels:
+    - source: getLogger(__name__)
+      style: primary
+      start: 67
+      end: 86
+    - source: from logging import getLogger
+      style: secondary
+      start: 0
+      end: 29
+    - source: |
+        from logging import getLogger
+
+        from flext_infra import u
+
+        logger = getLogger(__name__)
+      style: secondary
+      start: 0
+      end: 87
+    - source: from flext_infra import u
+      style: secondary
+      start: 31
+      end: 56
+    - source: |
+        from logging import getLogger
+
+        from flext_infra import u
+
+        logger = getLogger(__name__)
+      style: secondary
+      start: 0
+      end: 87
+  ? |
+    import logging
+
+    from flext_infra import u
+
+    logger = logging.getLogger(__name__)
+  : fixed: |
+      import logging
+
+      from flext_infra import u
+
+      logger = u.fetch_logger(__name__)
+    labels:
+    - source: logging.getLogger(__name__)
+      style: primary
+      start: 52
+      end: 79
+    - source: from flext_infra import u
+      style: secondary
+      start: 16
+      end: 41
+    - source: |
+        import logging
+
+        from flext_infra import u
+
+        logger = logging.getLogger(__name__)
+      style: secondary
+      start: 0
+      end: 80

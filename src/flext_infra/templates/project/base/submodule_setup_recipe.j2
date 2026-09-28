@@ -3,31 +3,42 @@
 
 # === SECTION: submodule setup (managed) ===
 # Source: template (submodule_setup_recipe.j2)
-# Computed: workspace-root uses WORKSPACE_MEMBERS from config; standalone discovers
+# Computed: workspace uses MANAGED_GITLINKS from config; standalone discovers
 #           submodules with flext-managed=true from .gitmodules at runtime.
 # Rule: setup PROVISIONS an absent governed gitlink and VERIFIES a present one.
 #       An absent checkout holds no work, so setup initializes it at the recorded
-#       gitlink. A present checkout is never destroyed: git checkout and git reset
-#       are forbidden. Detached HEAD is attached via branch + symbolic-ref so dirty
-#       work is carried. Pin validity is HEAD contains gitlink — origin may lag the
-#       pin without failing verify. Declared branch is the named integration line;
+#       gitlink. A present checkout is never destroyed: git checkout, git reset,
+#       fetch, and branch attachment are forbidden. Pin validity is HEAD contains
+#       gitlink. Declared branch is the named integration line;
 #       legacy branch=. still resolves to the superproject named branch if present.
-#       A checkout is also accepted on the superproject current branch (workspace
-#       lane): that lane branch then becomes the verified branch, and its fetch is
-#       skipped when origin carries no counterpart. Any third branch still fails.
-#       Fetch skips when local already contains pin and origin tip.
+#       A present checkout may be on its own named change lane. Its branch name is
+#       not a safety boundary: exact containment of the recorded gitlink is.
+#       Nested gitlinks belong to their own setup.
 # Free: no
 # End SECTION: submodule setup
+# Why (flext-mphw1): runners expose umask 002 and `submodule update --init`
+# materializes tracked files as 0664; canonical Mise artifact gates demand
+# exact modes, so provisioning normalizes the umask before checkout.
 {{ target }}:
 	@set -eu; \
+	umask 022; \
 	root="{{ project_root }}"; \
 	if [ ! -f "$$root/.gitmodules" ]; then exit 0; fi; \
 	profile="$(MAKE_PROFILE)"; \
-	if [ "$$profile" = "workspace-root" ]; then \
-		managed="$(WORKSPACE_MEMBERS)"; \
+	if [ "$$profile" = "workspace" ]; then \
+		managed="$(MANAGED_GITLINKS)"; \
 	else \
 		managed=""; \
-		keys=$$(git -C "$$root" config -f .gitmodules --name-only --get-regexp '^submodule\..*\.flext-managed$$' || :); \
+		keys=""; \
+		if keys=$$(git -C "$$root" config -f .gitmodules --name-only --get-regexp '^submodule\..*\.flext-managed$$'); then \
+			keys_status=0; \
+		else \
+			keys_status=$$?; \
+		fi; \
+		if [ "$$keys_status" -ne 0 ] && [ "$$keys_status" -ne 1 ]; then \
+			printf 'ERROR: cannot enumerate governed gitlinks\n' >&2; \
+			exit "$$keys_status"; \
+		fi; \
 		for key in $$keys; do \
 			value=$$(git -C "$$root" config -f .gitmodules --get "$$key"); \
 			if [ "$$value" = "true" ]; then \
@@ -41,24 +52,20 @@
 	fi; \
 	managed=$$(printf '%s' "$$managed" | tr ' ' '\n' | sort -u | tr '\n' ' '); \
 	if [ -z "$$managed" ]; then exit 0; fi; \
-	attach_branch_at_head() { \
-		child_root="$$1"; \
-		branch="$$2"; \
-		git -C "$$child_root" branch --quiet -f "$$branch" HEAD || { \
-			printf 'ERROR: %s: could not create branch %s at HEAD\n' "$$child_root" "$$branch" >&2; \
-			exit 1; \
-		}; \
-		git -C "$$child_root" symbolic-ref HEAD "refs/heads/$$branch" || { \
-			printf 'ERROR: %s: could not attach HEAD to %s without moving the tree\n' "$$child_root" "$$branch" >&2; \
-			exit 1; \
-		}; \
-		git -C "$$child_root" branch --quiet --set-upstream-to "origin/$$branch" "$$branch" >/dev/null 2>&1 || :; \
-	}; \
 	validate_submodule() { \
 		superproject="$$1"; \
 		child_path="$$2"; \
 		child_root="$$superproject/$$child_path"; \
-		keys=$$(git -C "$$superproject" config -f .gitmodules --name-only --get-regexp '^submodule\..*\.path$$' || :); \
+		keys=""; \
+		if keys=$$(git -C "$$superproject" config -f .gitmodules --name-only --get-regexp '^submodule\..*\.path$$'); then \
+			keys_status=0; \
+		else \
+			keys_status=$$?; \
+		fi; \
+		if [ "$$keys_status" -ne 0 ] && [ "$$keys_status" -ne 1 ]; then \
+			printf 'ERROR: cannot enumerate submodule paths\n' >&2; \
+			exit "$$keys_status"; \
+		fi; \
 		section=""; \
 		for key in $$keys; do \
 			declared=$$(git -C "$$superproject" config -f .gitmodules --get "$$key"); \
@@ -87,91 +94,39 @@
 				exit 1; \
 			fi; \
 		fi; \
-		declared_branch="$$branch"; \
-		accepted_branches="$$declared_branch"; \
-		if [ -n "$$super_branch" ] && [ "$$super_branch" != "$$declared_branch" ]; then \
-			accepted_branches="$$declared_branch or $$super_branch"; \
+		validated_branch=$$(git check-ref-format --branch "$$branch"); \
+		if [ "$$validated_branch" != "$$branch" ]; then \
+			printf 'ERROR: branch validator changed %s to %s\n' "$$branch" "$$validated_branch" >&2; \
+			exit 2; \
 		fi; \
-		git check-ref-format --branch "$$branch" >/dev/null || { \
-			printf 'ERROR: %s: invalid declared branch %s\n' "$$child_path" "$$branch" >&2; \
-			exit 1; \
-		}; \
-		gitlink=$$(git -C "$$superproject" ls-files --stage -- "$$child_path" | awk '$$1 == "160000" {print $$2}'); \
-		if [ -z "$$gitlink" ]; then \
+		gitlink_entry=$$(git -C "$$superproject" ls-files --stage -- "$$child_path"); \
+		if [ -z "$$gitlink_entry" ]; then \
 			printf 'ERROR: governed gitlink is absent from the index: %s\n' "$$child_path" >&2; \
 			exit 2; \
 		fi; \
+		set -- $$gitlink_entry; \
+		if [ "$$1" != 160000 ]; then \
+			printf 'ERROR: governed path is not a gitlink: %s\n' "$$child_path" >&2; \
+			exit 2; \
+		fi; \
+		gitlink="$$2"; \
 		if [ ! -e "$$child_root/.git" ]; then \
-			git -C "$$superproject" submodule update --init -- "$$child_path" || { \
-				printf 'ERROR: %s: could not initialize the governed gitlink\n' "$$child_path" >&2; \
-				exit 1; \
-			}; \
-			attach_branch_at_head "$$child_root" "$$branch"; \
+			git -C "$$superproject" submodule update --init -- "$$child_path"; \
 		fi; \
 		current=$$(git -C "$$child_root" branch --show-current); \
-		if [ -n "$$current" ] && [ "$$current" != "$$declared_branch" ] && \
-		   [ -n "$$super_branch" ] && [ "$$current" = "$$super_branch" ]; then \
-			branch="$$super_branch"; \
-		fi; \
-		remote_ref="refs/remotes/origin/$$branch"; \
 		head=$$(git -C "$$child_root" rev-parse HEAD); \
-		if [ -n "$$current" ] && [ "$$current" != "$$branch" ]; then \
-			printf 'ERROR: %s: conflicting branch %s; expected %s (setup never runs checkout/reset; switch it yourself while keeping dirty)\n' "$$child_path" "$$current" "$$accepted_branches" >&2; \
-			exit 1; \
-		fi; \
-		need_fetch=1; \
 		if git -C "$$child_root" merge-base --is-ancestor "$$gitlink" HEAD; then \
-			if git -C "$$child_root" rev-parse --verify "$$remote_ref" >/dev/null 2>&1; then \
-				if git -C "$$child_root" merge-base --is-ancestor "$$remote_ref" HEAD; then \
-					need_fetch=0; \
-				fi; \
+			ancestor=Y; \
+		else \
+			status=$$?; if [ "$$status" -eq 1 ]; then ancestor=N; else exit "$$status"; fi; \
+		fi; \
+		if [ "$$ancestor" = N ]; then \
+			if [ -z "$$current" ]; then \
+				printf 'ERROR: %s: detached HEAD %s does not contain recorded gitlink %s; merge the superproject gitlink into this head\n' "$$child_path" "$$head" "$$gitlink" >&2; \
 			else \
-				# Pin is already present; origin tip may be absent on a shallow CI \
-				# clone. Origin lag must not fail verify (setup never destroys). \
-				need_fetch=0; \
+				printf 'ERROR: %s: checked-out branch %s at %s does not contain recorded gitlink %s; merge the superproject gitlink into this branch\n' "$$child_path" "$$current" "$$head" "$$gitlink" >&2; \
 			fi; \
-		fi; \
-		if [ "$$need_fetch" -eq 1 ]; then \
-			fetch_allowed=1; \
-			if [ "$$branch" != "$$declared_branch" ] && \
-			   ! git -C "$$child_root" ls-remote --exit-code --heads origin "$$branch" >/dev/null 2>&1; then \
-				fetch_allowed=0; \
-			fi; \
-			if [ "$$fetch_allowed" -eq 1 ]; then \
-				git -C "$$child_root" fetch --quiet origin "$$branch" || { \
-					printf 'ERROR: %s: fetch origin %s failed\n' "$$child_path" "$$branch" >&2; \
-					exit 1; \
-				}; \
-			fi; \
-		fi; \
-		current=$$(git -C "$$child_root" branch --show-current); \
-		head=$$(git -C "$$child_root" rev-parse HEAD); \
-		if [ -n "$$current" ] && [ "$$current" != "$$branch" ]; then \
-			printf 'ERROR: %s: conflicting branch %s; expected %s (setup never runs checkout/reset; switch it yourself while keeping dirty)\n' "$$child_path" "$$current" "$$accepted_branches" >&2; \
 			exit 1; \
-		fi; \
-		if [ -z "$$current" ]; then \
-			if git -C "$$child_root" merge-base --is-ancestor "$$gitlink" HEAD; then \
-				attach_branch_at_head "$$child_root" "$$branch"; \
-			elif git -C "$$child_root" rev-parse --verify "$$remote_ref" >/dev/null 2>&1 && \
-			     git -C "$$child_root" merge-base --is-ancestor "$$head" "$$remote_ref"; then \
-				attach_branch_at_head "$$child_root" "$$branch"; \
-			else \
-				printf 'ERROR: %s: detached HEAD %s is not on the recorded gitlink and not contained in origin/%s; reconcile it yourself (setup never discards commits)\n' "$$child_path" "$$head" "$$branch" >&2; \
-				exit 1; \
-			fi; \
-			current="$$branch"; \
-		fi; \
-		if ! git -C "$$child_root" merge-base --is-ancestor "$$gitlink" HEAD; then \
-			printf 'ERROR: %s: branch %s diverges from recorded gitlink %s (setup never runs checkout/reset; advance or switch it yourself while keeping dirty)\n' "$$child_path" "$$branch" "$$gitlink" >&2; \
-			exit 1; \
-		fi; \
-		if [ -f "$$child_root/.gitmodules" ]; then \
-			nested_keys=$$(git -C "$$child_root" config -f .gitmodules --name-only --get-regexp '^submodule\..*\.path$$' || :); \
-			for nested_key in $$nested_keys; do \
-				nested_path=$$(git -C "$$child_root" config -f .gitmodules --get "$$nested_key"); \
-				validate_submodule "$$child_root" "$$nested_path"; \
-				done; \
 		fi; \
 	}; \
 	for child_path in $$managed; do \

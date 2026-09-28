@@ -2,45 +2,79 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from typing import ClassVar
 
-from flext_infra import FlextInfraWorkService, c, m
+from flext_infra import c, m, p, t, u
 from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
-from flext_infra.services.cli_route_base import CliRouteBase
-from flext_infra.services.cli_routes_refactor import RefactorRoutes
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+from flext_infra.workspace.environment_beads import FlextInfraWorkspaceEnvironmentSync
 from flext_infra.workspace.environment_provenance import (
     FlextInfraWorkspaceEnvironmentProvenance,
 )
 from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
 from flext_infra.workspace.orchestrator import FlextInfraOrchestratorService
+from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
+
+from .cli_route_base import FlextInfraCliRouteBase
+from .cli_routes_refactor import FlextInfraRefactorRoutes
 
 
-class WorkspaceRoutes(RefactorRoutes):
+class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
     """Own refactor, release, and workspace routes."""
 
-    workspace_routes: ClassVar[dict[str, tuple[m.Cli.ResultCommandRoute, ...]]] = {
-        c.Infra.CLI_GROUP_REFACTOR: RefactorRoutes.refactor_routes,
+    @staticmethod
+    def _apply_flext_binding(
+        params: m.Infra.FlextBindingRequest,
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Apply the typed binding request through its service owner."""
+        return FlextInfraFlextBindingService.apply(
+            consumer_root=params.repository_root,
+            flext_root=params.flext_root,
+            python=params.python,
+        ).map(FlextInfraCliRouteBase.as_route_value)
+
+    @staticmethod
+    def _sync_environment(
+        params: m.Infra.WorkspaceEnvironmentCliRequest,
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Keep the internal beads render context off the public CLI surface."""
+        request = m.Infra.WorkspaceEnvironmentSyncRequest.model_validate(
+            params.model_dump()
+        )
+        return FlextInfraWorkspaceEnvironmentSync.execute_request(request).map(
+            FlextInfraCliRouteBase.as_route_value
+        )
+
+    workspace_routes: ClassVar[
+        MutableMapping[str, t.VariadicTuple[m.Cli.ResultCommandRoute]]
+    ] = {
+        c.Infra.CLI_GROUP_REFACTOR: FlextInfraRefactorRoutes.refactor_routes,
         c.Infra.CLI_GROUP_RELEASE: (
             m.Cli.ResultCommandRoute(
                 name=c.Infra.VERB_RUN,
                 help_text="Run release orchestration CLI flow",
                 model_cls=FlextInfraReleaseOrchestrator,
-                handler=lambda params: FlextInfraReleaseOrchestrator.execute_command(
-                    params
-                ).map(CliRouteBase.as_route_value),
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraReleaseOrchestrator.execute_command
+                ),
                 success_message="Release completed successfully",
             ),
         ),
         c.Infra.CLI_GROUP_WORKSPACE: (
             m.Cli.ResultCommandRoute(
+                name="identity",
+                help_text="Report canonical Git checkout identity",
+                model_cls=m.Infra.GitRepoRequest,
+                handler=FlextInfraCliRouteBase.result_handler(u.Infra.git_identity),
+                success_message="workspace Git identity resolved",
+            ),
+            m.Cli.ResultCommandRoute(
                 name="verify-environment",
                 help_text="Verify live workspace editable provenance",
                 model_cls=m.Infra.WorkspaceEnvironmentRequest,
-                handler=lambda params: (
-                    FlextInfraWorkspaceEnvironmentProvenance.execute_request(
-                        params
-                    ).map(CliRouteBase.as_route_value)
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraWorkspaceEnvironmentProvenance.execute_request
                 ),
                 success_message="workspace editable provenance verified",
             ),
@@ -48,11 +82,7 @@ class WorkspaceRoutes(RefactorRoutes):
                 name="flext-binding",
                 help_text="Bind this project onto a flext worktree for the session",
                 model_cls=m.Infra.FlextBindingRequest,
-                handler=lambda params: FlextInfraFlextBindingService.apply(
-                    consumer_root=params.workspace_root,
-                    flext_root=params.flext_root,
-                    python=params.python,
-                ).map(CliRouteBase.as_route_value),
+                handler=_apply_flext_binding,
                 success_message="flext worktree binding applied",
             ),
             *(
@@ -60,23 +90,38 @@ class WorkspaceRoutes(RefactorRoutes):
                     name=route_name,
                     help_text=help_text,
                     model_cls=model_cls,
-                    handler=lambda params, mc=model_cls: mc.execute_command(params),
+                    handler=handler,
                 )
-                for route_name, help_text, model_cls in (
+                for route_name, help_text, model_cls, handler in (
                     (
                         "detect",
                         "Detect workspace or standalone mode",
                         FlextInfraWorkspaceDetector,
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraWorkspaceDetector.execute_command
+                        ),
                     ),
                     (
                         "orchestrate",
                         "Run make verb across projects",
                         FlextInfraOrchestratorService,
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraOrchestratorService.execute_command
+                        ),
                     ),
                     (
-                        "work",
-                        "Unified bead/GitFlow/worktree/PR lane saga",
-                        FlextInfraWorkService,
+                        "propagate",
+                        "Publish this workspace's flext-infra to every member",
+                        FlextInfraWorkspacePropagation,
+                        FlextInfraCliRouteBase.result_handler(
+                            FlextInfraWorkspacePropagation.execute_command
+                        ),
+                    ),
+                    (
+                        "sync-environment",
+                        "Sync generated direnv/mise environment files",
+                        m.Infra.WorkspaceEnvironmentCliRequest,
+                        _sync_environment,
                     ),
                 )
             ),
@@ -84,4 +129,4 @@ class WorkspaceRoutes(RefactorRoutes):
     }
 
 
-__all__: list[str] = ["WorkspaceRoutes"]
+__all__: list[str] = ["FlextInfraWorkspaceRoutes"]

@@ -7,7 +7,6 @@ from typing import Annotated, ClassVar
 
 from flext_cli import m
 from flext_infra import c, t
-from flext_infra._utilities.base import FlextInfraUtilitiesBase as ub
 
 
 class FlextInfraModelsMixins:
@@ -31,14 +30,11 @@ class FlextInfraModelsMixins:
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
-        workspace: Annotated[
-            str,
-            m.Field(
-                alias="workspace",
-                validation_alias=t.AliasChoices("workspace", "workspace_path"),
-                description="Workspace root",
-            ),
-        ] = "."
+        repository_root: Annotated[
+            Path,
+            m.BeforeValidator(lambda value: Path(value).resolve()),
+            m.Field(description="Repository root"),
+        ] = Path()
         projects: Annotated[
             t.StrSequence | None,
             m.Field(
@@ -51,7 +47,7 @@ class FlextInfraModelsMixins:
                 description=(
                     "Dotted module path to scope verb to a single module "
                     "(e.g. flext_core.result). Mutually compatible with "
-                    "--projects/--workspace; narrows the run."
+                    "--projects/--repository-root; narrows the run."
                 )
             ),
         ] = None
@@ -64,18 +60,19 @@ class FlextInfraModelsMixins:
                 )
             ),
         ] = None
-        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = True
         verbose: Annotated[bool, m.Field(description="Verbose output")] = False
-
-        @property
-        def workspace_path(self) -> Path:
-            """Resolved workspace path for CLI execution."""
-            return Path(self.workspace).resolve()
 
         @property
         def project_names(self) -> t.StrSequence | None:
             """Normalized project names from repeated selectors."""
-            return ub.normalize_sequence_values(self.projects)
+            names = tuple(
+                item.strip()
+                for value in (self.projects or ())
+                for group in (value or "").split(",")
+                for item in group.split()
+                if item.strip()
+            )
+            return names or None
 
     class ReadMixin(ScopeMixin):
         """Read-only commands — report file + output directory only.
@@ -95,12 +92,17 @@ class FlextInfraModelsMixins:
         @property
         def report_path(self) -> Path | None:
             """Resolved report path when provided."""
-            return ub.normalize_optional_path(self.report)
+            if self.report is None:
+                return None
+            return Path(self.report).resolve()
 
         @property
         def output_dir_path(self) -> Path | None:
             """Resolved output directory when provided."""
-            return ub.normalize_optional_path(self.output_dir)
+            if self.output_dir is None:
+                return None
+            # The validated field is a string; resolve it at the Path boundary.
+            return Path(self.output_dir).resolve()
 
     class WriteMixin(ScopeMixin):
         """Canonical write contract — apply/dry-run + safety gates.
@@ -120,12 +122,11 @@ class FlextInfraModelsMixins:
             ),
         ] = False
         gates: t.StrSequence = m.Field(
-            default_factory=lambda: tuple(
-                gate.strip()
-                for gate in c.Infra.SAFE_EXECUTION_DEFAULT_GATES.split(",")
-                if gate.strip()
+            default=(),
+            description=(
+                "Gate names for post-transform validation; empty selects the SSOT"
+                " snapshot gates (make.check_gates_ci)."
             ),
-            description="Gate names for post-transform validation",
         )
 
         @m.field_validator("gates", mode="before")
@@ -145,7 +146,7 @@ class FlextInfraModelsMixins:
                 )
             return tuple(normalized)
 
-        @m.computed_field()
+        @m.computed_field
         @property
         def dry_run(self) -> bool:
             """Whether writes are disabled (inverse of apply)."""
@@ -158,66 +159,6 @@ class FlextInfraModelsMixins:
 
         version: Annotated[str, m.Field(description="Version string")] = ""
         tag: Annotated[str, m.Field(description="Git tag (e.g. v1.0.0)")] = ""
-
-    class AutomationMixin:
-        """Shared release automation toggles."""
-
-        push: Annotated[bool, m.Field(description="Push to remote")] = False
-        dev_suffix: Annotated[bool, m.Field(description="Add dev suffix")] = False
-
-    # ═══════════════════ GITHUB REQUEST MIXINS ═══════════════════
-
-    class WorkspaceCliRequestMixin:
-        """CLI workspace request fields — branch/checkpoint + canonical fail-fast.
-
-        Merged surface of the former ``GithubWorkspaceRequestMixin`` +
-        ``GithubWorkspaceCliRequestMixin``. ``fail_fast`` default aligned
-        to the canonical ``ScopeMixin`` value (``True``); commands that
-        need the legacy ``False`` declare it locally.
-        """
-
-        include_root: Annotated[bool, m.Field(description="Include root project")] = (
-            False
-        )
-        branch: Annotated[str, m.Field(description="Branch name filter")] = ""
-        checkpoint: Annotated[bool, m.Field(description="Enable checkpoints")] = True
-        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = True
-
-    class GithubPullRequestFieldsMixin:
-        """Shared pull-request fields used by single and workspace requests."""
-
-        action: Annotated[
-            c.Infra.PullRequestAction,
-            m.Field(description="Pull-request publication action"),
-        ] = c.Infra.PullRequestAction.STATUS
-
-        @m.field_validator("action", mode="before")
-        @classmethod
-        def _validate_pull_request_action(
-            cls, value: object
-        ) -> c.Infra.PullRequestAction:
-            """Normalize the CLI string boundary to the strict action enum."""
-            if isinstance(value, c.Infra.PullRequestAction):
-                return value
-            if isinstance(value, str):
-                return c.Infra.PullRequestAction(value)
-            msg = "pull-request action must be a string or PullRequestAction"
-            raise TypeError(msg)
-
-        base: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(description="Base branch; repository default when omitted"),
-        ] = None
-        head: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(description="Head branch; current branch when omitted"),
-        ] = None
-        title: Annotated[
-            t.NonEmptyStr | None,
-            m.Field(description="Required pull-request title for create"),
-        ] = None
-        body: Annotated[str | None, m.Field(description="PR body")] = None
-        draft: Annotated[bool, m.Field(description="Draft PR")] = False
 
     # ═══════════════════ FIELD CONTRACT MIXINS ═══════════════════
 
@@ -271,16 +212,6 @@ class FlextInfraModelsMixins:
 
         detail: Annotated[str, m.Field(description="Error detail")] = ""
 
-    class ConfidenceLevelMixin:
-        """Shared confidence field for refactor diagnostics."""
-
-        confidence: Annotated[str, m.Field(description="Confidence level")] = "low"
-
-    class RewriteScopeMixin:
-        """Shared rewrite-scope field for refactor diagnostics."""
-
-        rewrite_scope: Annotated[str, m.Field(description="Rewrite scope")] = "file"
-
     # ═══════════════════ PROJECT NAME / PATH VARIANTS ═══════════════════
 
     class ProjectNameMixin:
@@ -293,15 +224,10 @@ class FlextInfraModelsMixins:
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Project name")]
 
-    class ProjectNameFieldMixin:
-        """Shared required project_name field."""
+    class RepositoryRootPathMixin:
+        """Shared repository root path field."""
 
-        project_name: Annotated[t.NonEmptyStr, m.Field(description="Project name")]
-
-    class WorkspaceRootPathMixin:
-        """Shared workspace root path field."""
-
-        workspace_root: Annotated[Path, m.Field(description="Workspace root path")]
+        repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
     class CheckpointRefMixin:
         """Shared safety checkpoint reference field."""

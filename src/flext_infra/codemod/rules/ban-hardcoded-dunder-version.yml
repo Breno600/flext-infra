@@ -1,0 +1,47 @@
+# Recomposition of the hardcoded-version transformer (ENFORCE-033) onto
+# `make mod`.
+#
+# The retired transformer was detection-only already -- it returned its input
+# unchanged and only recorded a message -- but it selected with a raw regex:
+#
+#     re.compile(r"^__version__\s*=\s*(['\"])[^'\"]*\1", re.MULTILINE)
+#
+# `re.MULTILINE` makes `^` match after every newline, including the newlines
+# inside a triple-quoted string, so a module whose docstring quoted a
+# `__version__ = "1.2.3"` line at column zero was reported as if it carried the
+# assignment. Matching an `assignment` node instead makes text unreachable: an
+# assignment written inside a string is a `string` node, not an assignment.
+#
+# The canonical fix reads the version from the installed distribution metadata
+# (`importlib.metadata.version(...)`), which requires choosing the distribution
+# name and adding an import -- neither is expressible as a textual ast-grep fix
+# and neither was attempted by the transformer. The rule therefore carries no
+# `fix:`, which is the exact contract the transformer had (`safe: False` in the
+# enforcement catalog) rather than a reduction of it.
+#
+# Scope is the module body: a `__version__` assigned inside a class or function
+# is a local name, not the package version marker the rule is about.
+id: ban-hardcoded-dunder-version
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  kind: expression_statement
+  has:
+    kind: assignment
+    all:
+      - has:
+          field: left
+          pattern: __version__
+      - has:
+          field: right
+          kind: string
+  inside:
+    kind: module
+message: >-
+  __version__ must not be hardcoded. Read it from the installed distribution
+  metadata (importlib.metadata.version) so the package and its metadata cannot
+  disagree. Detection only: choosing the distribution name and inserting the
+  import is a semantic decision, not a token rewrite.

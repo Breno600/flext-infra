@@ -1,0 +1,9 @@
+id: rewire-infra-utilities-submodule-import-to-root-facade
+snapshots:
+  from flext_infra.utilities import u:
+    fixed: from flext_infra import u
+    labels:
+    - source: from flext_infra.utilities import u
+      style: primary
+      start: 0
+      end: 35

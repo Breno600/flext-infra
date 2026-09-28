@@ -1,0 +1,14 @@
+id: remove-cli-process-deadline-timeout-exit-code
+valid:
+  - |
+    m.Cli.ProcessDeadline(
+        expires_at_monotonic=expires_at,
+        termination_grace_seconds=grace,
+    )
+invalid:
+  - |
+    m.Cli.ProcessDeadline(
+        expires_at_monotonic=expires_at,
+        termination_grace_seconds=grace,
+        timeout_exit_code=124,
+    )

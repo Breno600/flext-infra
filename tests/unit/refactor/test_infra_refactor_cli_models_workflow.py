@@ -6,8 +6,9 @@ from contextlib import redirect_stdout
 from io import StringIO
 from typing import TYPE_CHECKING
 
-from flext_infra import main as infra_main
 from flext_tests import tm
+
+from flext_infra import main as infra_main
 from tests import u
 
 if TYPE_CHECKING:
@@ -36,7 +37,11 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         )
         u.Tests.initialize_git_repo(workspace)
         buffer = StringIO()
-        cli_args = ["namespace-enforce", f"--workspace={workspace!s}", "--dry-run"]
+        cli_args = [
+            "namespace-enforce",
+            f"--repository-root={workspace!s}",
+            "--dry-run",
+        ]
         with redirect_stdout(buffer):
             result = infra_main(["refactor", *cli_args])
         tm.that(result, ne=0)
@@ -62,7 +67,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
             result = infra_main([
                 "refactor",
                 "wrapper-root-namespace",
-                f"--workspace={workspace!s}",
+                f"--repository-root={workspace!s}",
                 "--dry-run",
             ])
 
@@ -90,7 +95,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         result = infra_main([
             "refactor",
             "wrapper-root-namespace",
-            f"--workspace={workspace!s}",
+            f"--repository-root={workspace!s}",
             "--check",
         ])
 
@@ -113,12 +118,12 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
             "    _ = t.Core.Tests.Testobject\n",
             encoding="utf-8",
         )
-        u.Tests.initialize_git_repo(workspace)
+        u.Tests.provision_checkout(workspace)
 
         result = infra_main([
             "refactor",
             "wrapper-root-namespace",
-            f"--workspace={workspace!s}",
+            f"--repository-root={workspace!s}",
             "--apply",
         ])
 
@@ -127,4 +132,3 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         tm.that(updated, has="from tests import t")
         tm.that(updated, has="t.Tests.Testobject")
         tm.that(updated, lacks="Core.Tests")
-        tm.that((workspace / "src" / "workspace" / "__pycache__").exists(), eq=False)

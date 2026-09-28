@@ -1,0 +1,5 @@
+id: add-cli-process-outcome-success-import
+valid:
+  - from flext_cli import c, m, p, r, t
+invalid:
+  - from flext_cli import m, p, r, t

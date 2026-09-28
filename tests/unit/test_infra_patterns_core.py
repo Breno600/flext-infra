@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from flext_tests import tm
+
 from tests import c
 
 
@@ -171,7 +172,7 @@ class TestsFlextInfraInfraPatternsCore:
         tm.that(c.Infra.MAKE_ASSIGNMENT_RE.match("all:"), none=True)
 
     def test_make_directive_and_conditional_match(self) -> None:
-        tm.not_none(c.Infra.MAKE_DIRECTIVE_RE.match("include base.mk"))
+        tm.not_none(c.Infra.MAKE_DIRECTIVE_RE.match("include shared.mk"))
         tm.not_none(c.Infra.MAKE_DIRECTIVE_RE.match("-include custom.mk"))
         tm.not_none(c.Infra.MAKE_DIRECTIVE_RE.match("export PATH"))
         tm.not_none(c.Infra.MAKE_CONDITIONAL_RE.match("ifeq ($(A),$(B))"))

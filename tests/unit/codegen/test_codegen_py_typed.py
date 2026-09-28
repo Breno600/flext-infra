@@ -9,15 +9,13 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from flext_tests import tm
 
 from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
-from flext_tests import tm
 from tests import c
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from tests import t
 
 
 class TestsFlextInfraCodegenPyTyped:
@@ -25,7 +23,7 @@ class TestsFlextInfraCodegenPyTyped:
         pkg = tmp_path / "src" / "mypkg"
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         count = svc.run()
 
@@ -36,7 +34,7 @@ class TestsFlextInfraCodegenPyTyped:
         pkg = tmp_path / "src" / "emptypkg"
         pkg.mkdir(parents=True)
         (pkg / c.Infra.PY_TYPED).touch()
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         count = svc.run()
 
@@ -47,7 +45,7 @@ class TestsFlextInfraCodegenPyTyped:
         pkg = tmp_path / "src" / "mypkg"
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         count = svc.run(check_only=True)
 
@@ -58,7 +56,7 @@ class TestsFlextInfraCodegenPyTyped:
         pkg = tmp_path / "src" / "emptypkg"
         pkg.mkdir(parents=True)
         (pkg / c.Infra.PY_TYPED).touch()
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         count = svc.run(check_only=True)
 
@@ -72,7 +70,7 @@ class TestsFlextInfraCodegenPyTyped:
         skipped_pkg = tmp_path / "src" / skip_dir / "mypkg"
         skipped_pkg.mkdir(parents=True)
         (skipped_pkg / "__init__.py").write_text("", encoding="utf-8")
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         count = svc.run()
 
@@ -84,7 +82,7 @@ class TestsFlextInfraCodegenPyTyped:
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
         (pkg / c.Infra.PY_TYPED).touch()
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         count = svc.run()
 
@@ -94,7 +92,7 @@ class TestsFlextInfraCodegenPyTyped:
         pkg = tmp_path / "src" / "mypkg"
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         result = svc.execute()
 
@@ -104,7 +102,7 @@ class TestsFlextInfraCodegenPyTyped:
         test_pkg = tmp_path / "tests" / "unit"
         test_pkg.mkdir(parents=True)
         (test_pkg / "__init__.py").write_text("", encoding="utf-8")
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         count = svc.run()
 
@@ -115,7 +113,7 @@ class TestsFlextInfraCodegenPyTyped:
         venv_pkg = tmp_path / "src" / ".cache" / ".venv" / "mypkg"
         venv_pkg.mkdir(parents=True)
         (venv_pkg / "__init__.py").write_text("", encoding="utf-8")
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         count = svc.run()
 
@@ -125,7 +123,7 @@ class TestsFlextInfraCodegenPyTyped:
         pkg = tmp_path / "src" / "mypkg"
         pkg.mkdir(parents=True)
         (pkg / "__init__.py").write_text("", encoding="utf-8")
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         count = svc.run()
 
@@ -142,13 +140,10 @@ class TestsFlextInfraCodegenPyTyped:
             pkg = tmp_path / "src" / name
             pkg.mkdir(parents=True)
             (pkg / "__init__.py").write_text("", encoding="utf-8")
-        svc = FlextInfraCodegenPyTyped.model_validate({"workspace_root": tmp_path})
+        svc = FlextInfraCodegenPyTyped.model_validate({"repository_root": tmp_path})
 
         count = svc.run()
 
         tm.that(count, eq=3)
         for name in ("pkga", "pkgb", "pkgc"):
             tm.that((tmp_path / "src" / name / c.Infra.PY_TYPED).exists(), eq=True)
-
-
-__all__: t.StrSequence = []

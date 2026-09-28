@@ -23,8 +23,8 @@ class FlextInfraManualTypingAliasDetector:
     ) -> t.SequenceOf[m.Infra.ManualTypingAliasViolation]:
         """Detect typing declaration placement violations in a single file."""
         if (
-            ctx.file_path.name in c.Infra.MRO_TYPINGS_FILE_NAMES
-            or c.Infra.MRO_TYPINGS_DIRECTORY in ctx.file_path.parts
+            ctx.file_path.name in c.Infra.FLEXT_TYPINGS_FILE_NAMES
+            or c.Infra.FLEXT_TYPINGS_DIRECTORY in ctx.file_path.parts
         ):
             return []
         resource = u.Infra.fetch_python_resource(ctx.rope_project, ctx.file_path)

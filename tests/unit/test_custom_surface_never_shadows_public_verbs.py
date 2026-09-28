@@ -19,41 +19,44 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from flext_infra import c, config
 from flext_tests import tm
 
-_TARGET_LINE = re.compile(r"^(?P<names>[a-z][a-z0-9 _-]*):(?!=)")
-
-
-def _workspace_root() -> Path:
-    """Return the workspace root that owns this checkout."""
-    return Path(__file__).resolve().parents[2]
-
-
-def _custom_surfaces() -> tuple[Path, ...]:
-    """Return every custom Make surface present in the workspace."""
-    root = _workspace_root()
-    name = c.Infra.CUSTOM_MAKE_FILENAME
-    return tuple(
-        sorted(
-            path for path in (root / name, *root.glob(f"*/{name}")) if path.is_file()
-        )
-    )
-
-
-def _shadowed_verbs(surface: Path) -> tuple[str, ...]:
-    """Return public verbs this custom surface declares as targets."""
-    public = frozenset(verb.name for verb in config.Infra.codegen.make.verbs)
-    found: list[str] = []
-    for line in surface.read_text(encoding="utf-8").splitlines():
-        match = _TARGET_LINE.match(line)
-        if match is None:
-            continue
-        found.extend(name for name in match.group("names").split() if name in public)
-    return tuple(sorted(set(found)))
+from flext_infra import c, config
+from tests import t
 
 
 class TestsFlextInfraCustomSurfaceNeverShadowsPublicVerbs:
+    _TARGET_LINE = re.compile(r"^(?P<names>[a-z][a-z0-9 _-]*):(?!=)")
+
+    def _repository_root(self) -> Path:
+        """Return the repository root that owns this checkout."""
+        return Path(__file__).resolve().parents[2]
+
+    def _custom_surfaces(self) -> t.VariadicTuple[Path]:
+        """Return every custom Make surface present in the workspace."""
+        root = self._repository_root()
+        name = c.Infra.CUSTOM_MAKE_FILENAME
+        return tuple(
+            sorted(
+                path
+                for path in (root / name, *root.glob(f"*/{name}"))
+                if path.is_file()
+            )
+        )
+
+    def _shadowed_verbs(self, surface: Path) -> t.VariadicTuple[str]:
+        """Return public verbs this custom surface declares as targets."""
+        public = frozenset(verb.name for verb in config.Infra.codegen.make.verbs)
+        found: list[str] = []
+        for line in surface.read_text(encoding="utf-8").splitlines():
+            match = self._TARGET_LINE.match(line)
+            if match is None:
+                continue
+            found.extend(
+                name for name in match.group("names").split() if name in public
+            )
+        return tuple(sorted(set(found)))
+
     def test_policy_forbids_public_targets_on_the_custom_surface(self) -> None:
         """The codegen catalog declares the custom surface private-only."""
         policy = config.Infra.codegen.make.custom_handler_policy
@@ -62,21 +65,11 @@ class TestsFlextInfraCustomSurfaceNeverShadowsPublicVerbs:
 
     def test_no_custom_surface_redefines_a_public_verb(self) -> None:
         """No custom.mk on disk overrides a generated public verb recipe."""
-        root = _workspace_root()
+        root = self._repository_root()
         offenders = {
             str(surface.relative_to(root)): shadowed
-            for surface in _custom_surfaces()
-            if (shadowed := _shadowed_verbs(surface))
+            for surface in self._custom_surfaces()
+            if (shadowed := self._shadowed_verbs(surface))
         }
 
         tm.that(offenders, eq={})
-
-    def test_basemk_generation_has_a_declared_make_selector(self) -> None:
-        """custom.mk is hooks-only and does not declare basemk generate as WHAT."""
-        custom = (_workspace_root() / c.Infra.CUSTOM_MAKE_FILENAME).read_text(
-            encoding="utf-8"
-        )
-
-        tm.that(custom, lacks="_custom_basemk_generate:")
-        tm.that(custom, lacks="basemk generate")
-        tm.that(custom, has="only pre/post hooks")

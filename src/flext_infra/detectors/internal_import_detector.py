@@ -11,15 +11,13 @@ from typing import TYPE_CHECKING
 from flext_infra import c, m, u
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import t
 
 
 class FlextInfraInternalImportDetector:
     """Detect private module/symbol imports via rope semantic resolution.
 
-    Same-package facade assembly is the sanctioned FLEXT MRO-composition
+    Same-package facade assembly is the sanctioned FLEXT FLEXT-composition
     pattern: a facade module (or any module of the owning package subtree)
     importing a private ``_x`` module/subpackage that hangs off one of its
     own ancestor packages is NOT a violation. Cross-package private module
@@ -65,21 +63,11 @@ class FlextInfraInternalImportDetector:
         return cls._facade_assembly_exempt(importer_module, fqn)
 
     @classmethod
-    def _is_pytest_test_module(cls, file_path: Path) -> bool:
-        """Return whether a file is a pytest test module."""
-        if c.Infra.DIR_TESTS not in file_path.parts:
-            return False
-        file_name = file_path.name
-        return file_name.startswith(
-            c.Infra.NAMESPACE_PYTEST_MODULE_PREFIX
-        ) or file_name.endswith(tuple(c.Infra.NAMESPACE_PYTEST_MODULE_SUFFIXES))
-
-    @classmethod
     def _project_whitebox_test_exempt(
         cls, ctx: m.Infra.DetectorContext, fqn: str
     ) -> bool:
         """Return whether a pytest test module imports its own package internals."""
-        if not cls._is_pytest_test_module(ctx.file_path):
+        if not u.Infra.pytest_test_module(ctx.file_path):
             return False
         if ctx.project_root is None:
             return False
@@ -102,7 +90,7 @@ class FlextInfraInternalImportDetector:
         file_path = ctx.file_path
         rope_project = ctx.rope_project
         current_module = u.Infra.package_name(file_path)
-        imports = u.Infra.get_semantic_module_imports(rope_project, res)
+        imports = u.Infra.resolve_semantic_module_imports(rope_project, res)
 
         def violates_internal_import(local: str, fqn: str) -> bool:
             _ = local

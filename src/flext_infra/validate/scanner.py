@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, t, u
-from flext_infra.base import s
+
+from ..base import s
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -47,14 +48,14 @@ class FlextInfraTextPatternScanner(s[bool]):
 
     @staticmethod
     def _count_matches(
-        files: t.SequenceOf[Path], regex: t.Infra.RegexPattern
+        files: t.SequenceOf[Path], regex: t.RegexPattern
     ) -> p.Result[int]:
         """Count regex matches across files; surface any unreadable file as failure."""
         total = 0
         for file_path in files:
             read = u.Cli.files_read_text(file_path)
             if read.failure:
-                return r[int].fail(read.error or f"unreadable file: {file_path}")
+                return r[int].from_failure(read)
             total += sum(1 for _ in regex.finditer(read.value))
         return r[int].ok(total)
 
@@ -89,7 +90,9 @@ class FlextInfraTextPatternScanner(s[bool]):
                 scan_root, pattern, includes, excludes or (), match_mode
             )
         except c.Infra.REGEX_ERROR as exc:
-            return r[t.ScalarMapping].fail(f"invalid regex pattern: {exc}")
+            return r[t.ScalarMapping].fail(
+                f"invalid regex pattern: {exc}", exception=exc
+            )
         except c.EXC_OS_TYPE_VALUE as exc:
             return r[t.ScalarMapping].fail_op("text pattern scan", exc)
 
@@ -115,9 +118,7 @@ class FlextInfraTextPatternScanner(s[bool]):
         )
         matches_result = self._count_matches(files, regex)
         if matches_result.failure:
-            return r[t.ScalarMapping].fail(
-                matches_result.error or "text pattern scan read failed"
-            )
+            return r[t.ScalarMapping].from_failure(matches_result)
         matches = matches_result.value
         result: t.MutableConfigurationMapping = {
             "violation_count": self._violation_count(matches, match_mode),
@@ -130,14 +131,14 @@ class FlextInfraTextPatternScanner(s[bool]):
     def execute(self) -> p.Result[bool]:
         """Execute the text-pattern scan CLI flow."""
         result = self.scan(
-            self.workspace_root,
+            self.repository_root,
             self.pattern,
             includes=self.include,
             excludes=self.exclude,
             match_mode=self.match,
         )
         if result.failure:
-            return r[bool].fail(result.error or "scan failed")
+            return r[bool].from_failure(result)
         count = result.value.get("violation_count", 0)
         if isinstance(count, int) and count > 0:
             return r[bool].fail(f"Scan found {count} violation(s)")

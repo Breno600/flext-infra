@@ -6,16 +6,13 @@ import ast
 from typing import TYPE_CHECKING
 
 from flext_infra import m, u
-from flext_infra._utilities.deferred_self_reference_ast import (
-    collect_deferred_self_reference_findings,
-)
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
 class FlextInfraDeferredSelfReferenceDetector:
-    """Detect models that defer their own resolution instead of composing by MRO."""
+    """Detect models that defer their own resolution instead of composing by FLEXT."""
 
     @staticmethod
     def detect_file(ctx: m.Infra.DetectorContext) -> t.SequenceOf[m.Infra.Issue]:
@@ -32,8 +29,9 @@ class FlextInfraDeferredSelfReferenceDetector:
             display_path = file_path.relative_to(ctx.project_root)
         try:
             tree = ast.parse(source)
-        except SyntaxError:
-            return []
+        except SyntaxError as exc:
+            msg = f"deferred-self-reference detector could not parse {file_path}: {exc}"
+            raise RuntimeError(msg) from exc
         return tuple(
             m.Infra.Issue(
                 file=str(display_path),
@@ -42,7 +40,7 @@ class FlextInfraDeferredSelfReferenceDetector:
                 code=finding.kind,
                 message=finding.detail,
             )
-            for finding in collect_deferred_self_reference_findings(tree)
+            for finding in u.Infra.collect_deferred_self_reference_findings(tree)
         )
 
 

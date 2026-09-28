@@ -1,0 +1,6 @@
+from __future__ import annotations
+
+from flext_test import c
+
+class FlextTestSettings(FlextTestSettingsBase):
+    pass

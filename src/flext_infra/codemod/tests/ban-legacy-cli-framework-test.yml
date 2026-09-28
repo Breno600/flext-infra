@@ -1,0 +1,18 @@
+id: ban-legacy-cli-framework
+valid:
+  - import os
+  - from flext_cli import cli
+  - |
+    """Docstring naming import typer, typer.Typer() and click.group()."""
+
+    TABLE = (("import typer", ""), ("click.group(", ""))
+    # comment naming import rich.console and tabulate
+invalid:
+  - import typer
+  - import rich.console
+  - import tabulate
+  - from click import command
+  - from rich.console import Console
+  - app = typer.Typer()
+  - group = click.group()
+  - command = click.command()

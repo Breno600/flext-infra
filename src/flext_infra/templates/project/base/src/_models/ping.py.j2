@@ -11,22 +11,22 @@ from __future__ import annotations
 
 from typing import Annotated, ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from flext_core import m
 
 
 class {{ class_stem }}ModelsPing:
     """{{ ns }} ping-command models (Pydantic v2, built the 2-way)."""
 
-    class PingInput(BaseModel):
+    class PingInput(m.BaseModel):
         """Input model for the ``ping`` health-check command (no fields)."""
 
-        model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
-    class PingResult(BaseModel):
+    class PingResult(m.BaseModel):
         """Result model for the ``ping`` health-check command."""
 
-        model_config: ClassVar[ConfigDict] = ConfigDict(extra="forbid", frozen=True)
-        message: Annotated[str, Field(description="Health-check reply message.")]
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        message: Annotated[str, m.Field(description="Health-check reply message.")]
 
 
 __all__: list[str] = ["{{ class_stem }}ModelsPing"]

@@ -1,0 +1,6 @@
+id: cli-repository-root-option
+valid:
+  - 'main(["docs", "audit", "--repository-root", str(root)])'
+  - 'name = "workspace"'
+invalid:
+  - 'main(["docs", "audit", "--workspace", str(root)])'

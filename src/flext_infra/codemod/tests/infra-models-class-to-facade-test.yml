@@ -1,0 +1,9 @@
+id: infra-models-class-to-facade
+valid:
+  - |
+    from flext_infra import m
+    value: m.Infra.ProjectInfo
+invalid:
+  - |
+    from flext_infra import m
+    value: FlextInfraModelsWorkspace.ProjectInfo

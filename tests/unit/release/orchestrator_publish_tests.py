@@ -1,169 +1,69 @@
-"""Public release publish-phase behavior tests."""
+"""Public release receipt validation using real builds and artifact bytes."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_tests import tm
-from tests import TestsFlextInfraUtilities as u, c
 
-if TYPE_CHECKING:
-    from pathlib import Path
+from tests import TestsFlextInfraUtilities as u, c, m, t
 
 
 class TestsFlextInfraReleasePublish:
     """Behavior contract for the public release publish phase."""
 
-    class TestsDryRun:
-        """Dry-run publish behavior."""
+    def _built_workspace(self, tmp_path: Path) -> t.Pair[Path, m.Infra.BuildReport]:
+        """Build one member and return the workspace with its verified receipt."""
+        project_name = "flext-a"
+        workspace = u.Tests.create_release_workspace(
+            tmp_path,
+            project_names=(project_name, *c.Tests.RELEASE_INTERNAL_DEPENDENCIES),
+            initialize_project_git=True,
+        )
+        notes = workspace / "docs" / "releases"
+        notes.mkdir(parents=True)
+        (notes / "v0.1.0.md").write_text("# Release v0.1.0\n", encoding="utf-8")
+        tm.that(
+            u.Tests.run_release_main(
+                workspace, "--phase", "build", "--projects", project_name, "--apply"
+            ),
+            eq=0,
+        )
+        report_path = (
+            u.Tests.release_report_dir(workspace, c.Tests.RELEASE_VERSION_BASE)
+            / c.Infra.RELEASE_REPORT_FILENAME
+        )
+        return workspace, m.Infra.BuildReport.model_validate_json(
+            report_path.read_text(encoding="utf-8")
+        )
 
-        @staticmethod
-        def test_publish_dry_run_writes_notes_only(tmp_path: Path) -> None:
-            """Write notes without changing docs or Git refs."""
-            workspace = u.Tests.create_release_workspace(
-                tmp_path, initialize_root_git=True
-            )
+    def test_dry_run_verifies_the_receipt_without_effects(self, tmp_path: Path) -> None:
+        """Receipt validation preserves the artifacts produced by a real build."""
+        workspace, report = self._built_workspace(tmp_path)
+        artifacts = {
+            Path(artifact.path): Path(artifact.path).read_bytes()
+            for record in report.records
+            for artifact in record.artifacts
+        }
 
-            result = u.Tests.run_release_main(
-                workspace,
-                "--phase",
-                c.Tests.RELEASE_PHASE_PUBLISH,
-                "--version",
-                c.Tests.RELEASE_VERSION_TARGET,
-                "--tag",
-                c.Tests.RELEASE_TAG_TARGET,
-                "--interactive",
-                "0",
-                "--create-branches",
-                "0",
-                "--dry-run",
-            )
+        tm.that(u.Tests.run_release_main(workspace, "--phase", "publish"), eq=0)
+        for path, content in artifacts.items():
+            tm.that(path.read_bytes(), eq=content)
 
-            notes_path = (
-                u.Tests.release_report_dir(workspace, c.Tests.RELEASE_VERSION_TARGET)
-                / c.Tests.RELEASE_NOTES_FILENAME
-            )
-            tm.that(result, eq=0)
-            tm.that(notes_path.is_file(), eq=True)
-            tm.that((workspace / "docs" / "CHANGELOG.md").exists(), eq=False)
-            tm.that(
-                u.Cli.capture(
-                    [c.Infra.GIT, "tag", "-l", c.Tests.RELEASE_TAG_TARGET],
-                    cwd=workspace,
-                ).unwrap(),
-                eq="",
-            )
+    def test_tampered_artifact_is_refused(self, tmp_path: Path) -> None:
+        """An artifact whose bytes no longer match the receipt never leaves."""
+        workspace, report = self._built_workspace(tmp_path)
+        artifact = Path(report.records[0].artifacts[0].path)
+        artifact.write_bytes(artifact.read_bytes() + b"\n")
 
-    class TestsApply:
-        """Applied publish behavior."""
+        tm.that(
+            u.Tests.run_release_main(workspace, "--phase", "publish", "--apply"), ne=0
+        )
 
-        @staticmethod
-        def test_publish_apply_updates_docs_and_creates_tag(tmp_path: Path) -> None:
-            """Persist release documents and the exact annotated tag."""
-            workspace = u.Tests.create_release_workspace(
-                tmp_path, initialize_root_git=True
-            )
+    def test_missing_receipt_is_refused(self, tmp_path: Path) -> None:
+        """Publishing without a build receipt has nothing attested to upload."""
+        workspace = u.Tests.create_release_workspace(tmp_path)
 
-            result = u.Tests.run_release_main(
-                workspace,
-                "--phase",
-                c.Tests.RELEASE_PHASE_PUBLISH,
-                "--version",
-                c.Tests.RELEASE_VERSION_TARGET,
-                "--tag",
-                c.Tests.RELEASE_TAG_TARGET,
-                "--interactive",
-                "0",
-                "--create-branches",
-                "0",
-                "--apply",
-            )
-
-            tm.that(result, eq=0)
-            tm.that((workspace / "docs" / "CHANGELOG.md").is_file(), eq=True)
-            tm.that((workspace / "docs" / "releases" / "latest.md").is_file(), eq=True)
-            tm.that(
-                (
-                    workspace / "docs" / "releases" / f"{c.Tests.RELEASE_TAG_TARGET}.md"
-                ).is_file(),
-                eq=True,
-            )
-            tm.that(
-                u.Cli.capture(
-                    [c.Infra.GIT, "tag", "-l", c.Tests.RELEASE_TAG_TARGET],
-                    cwd=workspace,
-                ).unwrap(),
-                eq=c.Tests.RELEASE_TAG_TARGET,
-            )
-
-        @staticmethod
-        def test_publish_push_tags_and_pushes_to_the_seeded_origin(
-            tmp_path: Path,
-        ) -> None:
-            """Publish the changelog and tag, then push them to the origin."""
-            workspace = u.Tests.create_release_workspace(
-                tmp_path, initialize_root_git=True
-            )
-
-            result = u.Tests.run_release_main(
-                workspace,
-                "--phase",
-                c.Tests.RELEASE_PHASE_PUBLISH,
-                "--version",
-                c.Tests.RELEASE_VERSION_TARGET,
-                "--tag",
-                c.Tests.RELEASE_TAG_TARGET,
-                "--push",
-                "--interactive",
-                "0",
-                "--create-branches",
-                "0",
-                "--apply",
-            )
-
-            tm.that(result, eq=0)
-            tm.that((workspace / "docs" / "CHANGELOG.md").is_file(), eq=True)
-            tm.that(
-                u.Cli.capture(
-                    [c.Infra.GIT, "tag", "-l", c.Tests.RELEASE_TAG_TARGET],
-                    cwd=workspace,
-                ).unwrap(),
-                eq=c.Tests.RELEASE_TAG_TARGET,
-            )
-
-    class TestsSelection:
-        """Publish project-selection behavior."""
-
-        @staticmethod
-        def test_notes_include_only_selected_projects(tmp_path: Path) -> None:
-            """Render root and selected projects without an unselected peer."""
-            workspace = u.Tests.create_release_workspace(
-                tmp_path, project_names=("flext-a", "flext-b"), initialize_root_git=True
-            )
-
-            result = u.Tests.run_release_main(
-                workspace,
-                "--phase",
-                c.Tests.RELEASE_PHASE_PUBLISH,
-                "--version",
-                c.Tests.RELEASE_VERSION_TARGET,
-                "--tag",
-                c.Tests.RELEASE_TAG_TARGET,
-                "--projects",
-                "flext-a",
-                "--interactive",
-                "0",
-                "--create-branches",
-                "0",
-                "--dry-run",
-            )
-
-            notes_path = (
-                u.Tests.release_report_dir(workspace, c.Tests.RELEASE_VERSION_TARGET)
-                / c.Tests.RELEASE_NOTES_FILENAME
-            )
-            notes = notes_path.read_text(encoding="utf-8")
-            tm.that(result, eq=0)
-            tm.that(notes, has="- root")
-            tm.that(notes, has="- flext-a")
-            tm.that(notes, lacks="- flext-b")
+        tm.that(
+            u.Tests.run_release_main(workspace, "--phase", "publish", "--apply"), ne=0
+        )

@@ -6,12 +6,9 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, t, u
-from flext_infra.refactor._project_classifier_deps import (
-    FlextInfraProjectClassifierDepsMixin,
-)
-from flext_infra.refactor._project_classifier_family import (
-    FlextInfraProjectClassifierFamilyMixin,
-)
+
+from ._project_classifier_deps import FlextInfraProjectClassifierDepsMixin
+from ._project_classifier_family import FlextInfraProjectClassifierFamilyMixin
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -20,14 +17,14 @@ if TYPE_CHECKING:
 class FlextInfraProjectClassifier(
     FlextInfraProjectClassifierDepsMixin, FlextInfraProjectClassifierFamilyMixin
 ):
-    """Classify a project by kind and discover MRO family chains."""
+    """Classify a project by kind and discover FLEXT family chains."""
 
     def __init__(
         self, project_root: Path, *, pyproject_payload: t.JsonMapping | None = None
     ) -> None:
         """Initialize classifier for the given project root."""
         self._project_root = project_root.resolve()
-        self._pyproject_path = self._project_root / c.Infra.PYPROJECT_FILENAME
+        self._pyproject_path = self._project_root / c.PYPROJECT_FILENAME
         self._pyproject_payload = pyproject_payload
         self._src_path = self._project_root / c.Infra.DEFAULT_SRC_DIR
 
@@ -84,18 +81,18 @@ class FlextInfraProjectClassifier(
 
     @override
     def _as_mapping(
-        self, raw_value: t.Infra.InfraValue | None
-    ) -> t.MappingKV[str, t.Infra.InfraValue]:
+        self, raw_value: t.JsonValue | None
+    ) -> t.MappingKV[str, t.JsonValue]:
         """As mapping."""
         if isinstance(raw_value, Mapping):
-            validated: t.MappingKV[str, t.Infra.InfraValue] = (
+            validated: t.MappingKV[str, t.JsonValue] = (
                 t.Infra.INFRA_MAPPING_ADAPTER.validate_python(raw_value)
             )
             return validated
         return {}
 
     def _normalized_name_from_mapping(
-        self, raw_mapping: t.MappingKV[str, t.Infra.InfraValue]
+        self, raw_mapping: t.MappingKV[str, t.JsonValue]
     ) -> str:
         """Return the normalized name from a mapping."""
         raw_name = raw_mapping.get(c.Infra.NAME)

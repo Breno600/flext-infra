@@ -1,0 +1,37 @@
+id: namespace-constant-annotation-to-classvar
+# `valid` MUST NOT match: ClassVar and Final (owned by the Final rule), a plain
+# constants class, and a lower-case member.
+valid:
+  - |
+    from typing import ClassVar
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            EXPECTED_DATA_COUNT: ClassVar[int] = 3
+  - |
+    from typing import Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            EXPECTED_DATA_COUNT: Final[int] = 3
+  - |
+    class FlextThingConstants:
+        EXPECTED_DATA_COUNT: int = 3
+  - |
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            expected: int = 3
+# `invalid` MUST match and wrap the annotation in ClassVar.
+invalid:
+  - |
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            EXPECTED_DATA_COUNT: int = 3
+  - |
+    from collections.abc import Mapping
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            TYPE_MAP: Mapping[str, str] = {"string": "VARCHAR2"}

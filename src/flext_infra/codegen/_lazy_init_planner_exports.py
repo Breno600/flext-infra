@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import operator
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, u
@@ -16,15 +18,11 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
     if TYPE_CHECKING:
         rope_workspace: p.Infra.RopeWorkspaceDsl
         lazy_init: m.Infra.LazyInitConfig
-        _module_exports_cache: dict[
+        _module_exports_cache: MutableMapping[
             tuple[str, bool, bool, bool, bool, bool], t.LazyAliasMap
         ]
         _version_module_name: str
-
-        @classmethod
-        def _is_private_test_fixture_package(
-            cls, pkg_dir: Path, surface: str
-        ) -> bool: ...
+        _project_layout_cache: MutableMapping[Path, m.Infra.RopeProjectLayout]
 
         def _package_entry(
             self, pkg_dir: Path
@@ -37,34 +35,85 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
         @staticmethod
         def _publish(name: str, *, allow_main: bool) -> bool: ...
 
+    def _project_layout_for(self, pkg_dir: Path) -> m.Infra.RopeProjectLayout | None:
+        """Reuse the project's canonical layout during one planning snapshot."""
+        project_root = u.Infra.project_root(pkg_dir)
+        if project_root is None:
+            return None
+        layout = self._project_layout_cache.get(project_root)
+        if layout is None:
+            layout = u.Infra.layout(project_root)
+            if layout is not None:
+                self._project_layout_cache[project_root] = layout
+        return layout
+
     def _package_exports(
         self, context: m.Infra.LazyInitPackageContext
     ) -> t.MutableLazyAliasMap:
         """Return the lazy export map for a package (excluding child packages)."""
-        if self._is_private_test_fixture_package(context.pkg_dir, context.surface):
-            return {}
         package_entry = self._package_entry(context.pkg_dir)
-        if package_entry is None:
-            return {}
+        # Operator init law (2026-09-16): every package with public children —
+        # underscore internals included — carries a light lazy-init export
+        # surface. When the rope index does not track the package, enumerate
+        # direct children from the filesystem instead of rendering an empty
+        # init; emptiness here is a defect, never canonical.
+        # The rope index exposes modules in its own scan order, which follows
+        # the filesystem's directory-entry order and therefore differs between
+        # machines. Sorting the entries makes the rendered lazy map — whose
+        # insertion order the generated ``__init__`` preserves — byte-identical
+        # for the same sources on every host, so a render on one machine can
+        # never drift against a render on another.
+        module_entries: t.MutableSequenceOf[t.Pair[Path, str]] = (
+            sorted(
+                (
+                    (entry.file_path, entry.module_name)
+                    for entry in package_entry.modules
+                ),
+                key=operator.itemgetter(0, 1),
+            )
+            if package_entry is not None
+            else []
+        )
+        if not module_entries:
+            module_entries = [
+                (
+                    child,
+                    f"{context.current_pkg}.{child.stem}"
+                    if context.current_pkg
+                    else child.stem,
+                )
+                for child in sorted(context.pkg_dir.glob("*.py"))
+                if child.name != c.Infra.INIT_PY
+            ]
         index: t.MutableLazyAliasMap = {}
-        # mro-i6nq.10: Generated support modules are output, never public input.
+        project_layout = self._project_layout_for(context.pkg_dir)
+        # flext-i6nq.10: Generated support modules are output, never public input.
+        # conftest.py is pytest-private: its hook variables (pytest_plugins) are
+        # never public package ABI and must not enter the lazy export map.
         skip_names = {
             c.Infra.INIT_PY,
             "__main__.py",
+            "conftest.py",
             self._version_module_name,
             *c.Infra.OBSOLETE_GENERATED_INIT_FILES,
         }
-        for module_entry in package_entry.modules:
-            py_file = module_entry.file_path
+        for py_file, module_name in module_entries:
+            # Operator ruling (2026-09-16, universal, no exceptions): a light
+            # package init exports ONLY its direct children. Subdirectory
+            # symbols stay in the subpackage's own init — never re-exported
+            # upward, in the root or anywhere else.
+            if py_file.parent != context.pkg_dir:
+                continue
             child_dir = py_file.parent / py_file.stem
             child_entry = self._package_entry(child_dir)
-            # mro-pulj: test artifacts never enter an installable package ABI.
+            # flext-pulj: test artifacts never enter an installable package ABI.
             test_only_source_module = (
-                context.surface not in c.Infra.NON_PUBLIC_LAZY_ROOTS
-                and c.Infra.TEST_ONLY_SOURCE_MODULE_RE.fullmatch(py_file.name)
-                is not None
+                context.surface != c.Infra.DIR_TESTS
+                or context.current_pkg == c.Infra.DIR_TESTS
+            ) and (
+                c.Infra.TEST_ONLY_SOURCE_MODULE_RE.fullmatch(py_file.name) is not None
             )
-            # mro-6int (claude-ulw): extract predicate to satisfy PLR0916
+            # flext-6int (claude-ulw): extract predicate to satisfy PLR0916
             # (>5 boolean expressions); retired/generated/test modules are
             # never semantic input for the lazy export map.
             is_generated_or_test = (
@@ -72,56 +121,67 @@ class FlextInfraCodegenLazyInitPlannerExportsMixin:
                 or c.Infra.GENERATED_EXPORT_SIDECAR_RE.match(py_file.name)
                 or py_file.stem in c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES
                 or test_only_source_module
+                # A stem that is not an identifier (numbered example scripts,
+                # dash-named files) can never appear in a from-import: it is
+                # unimportable and never semantic input for the lazy export map.
+                or not py_file.stem.isidentifier()
             )
             is_child_package = child_entry is not None and child_entry.package_name
             if is_generated_or_test or is_child_package:
                 continue
-            convention = self.rope_workspace.convention(
-                py_file, rel_path=py_file.relative_to(context.pkg_dir)
+            policy = u.Infra.publication_policy(
+                py_file,
+                rel_path=py_file.relative_to(context.pkg_dir),
+                current_pkg=context.current_pkg,
+                rope_project=self.rope_workspace.rope_project,
+                project_layout=project_layout,
             )
-            policy = convention.module_policy
-            if not policy.include_in_lazy_init or not module_entry.module_name:
+            entry = self.rope_workspace.module(py_file)
+            if entry is None:
+                msg = f"unindexed publication source: {py_file}"
+                raise ValueError(msg)
+            module_path = entry.module_name
+            root_private_contract = (
+                py_file.parent == context.pkg_dir
+                and py_file.stem in {"_config", "_settings"}
+                and bool(
+                    self._module_exports(
+                        py_file,
+                        module_path,
+                        export_options=m.Infra.ExportOptions(
+                            allow_main=True,
+                            allow_assignments=True,
+                            allow_functions=True,
+                            require_explicit_all=True,
+                        ),
+                    )
+                )
+            )
+            if (
+                not policy.include_in_lazy_init and not root_private_contract
+            ) or not module_name:
                 continue
-            require_explicit_all = (
-                u.Infra.matches_root_namespace_file(py_file.name)
-                and policy.expected_alias is not None
-                and u.Infra.matches_project_namespace_package(context.current_pkg)
-                and not context.pkg_dir.name.startswith("_")
+            # In public src packages, public submodules (without expected_alias) derive
+            # from their explicit __all__; non-public/private subpackages auto-discover.
+            require_explicit_all = context.surface in c.Infra.NON_PUBLIC_LAZY_ROOTS or (
+                not any(part.startswith("_") for part in context.pkg_dir.parts)
+                and not py_file.stem.startswith("_")
+                and (
+                    u.Infra.matches_root_namespace_file(py_file.name)
+                    or policy.expected_alias is not None
+                    or "." in context.current_pkg
+                )
             )
             targets = self._module_exports(
                 py_file,
-                convention.module_name,
+                module_path,
                 export_options=m.Infra.ExportOptions(
-                    allow_main=policy.allow_main_export,
-                    allow_assignments=(
-                        policy.allow_type_alias or policy.expected_alias is not None
-                    ),
-                    allow_functions=policy.is_fixture_module,
+                    allow_main=True,
+                    allow_assignments=True,
+                    allow_functions=True,
                     require_explicit_all=require_explicit_all,
                 ),
             )
-            if require_explicit_all and not targets:
-                msg = (
-                    "governed root facade missing explicit exports "
-                    f"(expected __all__ in {py_file})"
-                )
-                raise ValueError(msg)
-            if (
-                policy.expected_alias
-                and targets
-                and u.Infra.matches_project_namespace_package(context.current_pkg)
-                and u.Infra.matches_root_namespace_file(py_file.name)
-            ):
-                targets.setdefault(
-                    policy.expected_alias,
-                    (module_entry.module_name, policy.expected_alias),
-                )
-            if not targets and (
-                not policy.export_symbols
-                or (not policy.enforce_contract and "." in context.current_pkg)
-            ):
-                self._add(index, py_file.stem, (module_entry.module_name, ""))
-                continue
             for name, target in targets.items():
                 self._add(index, name, target)
         return index

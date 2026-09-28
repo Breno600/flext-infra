@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import operator
 from collections import defaultdict
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra.codegen._codegen_generation_paths import (
-    FlextInfraCodegenGenerationPathsMixin,
-)
+from flext_infra import c
+
+from ._codegen_generation_paths import FlextInfraCodegenGenerationPathsMixin
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -26,8 +27,19 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
 
     @staticmethod
     def _format_import(indent: str, mod: str, parts: t.StrSequence) -> t.StrSequence:
-        """Emit one valid import statement for canonical normalization."""
-        return (f"{indent}from {mod} import {', '.join(parts)}",)
+        """Emit one Ruff-canonical import statement within the configured width."""
+        compact = f"{indent}from {mod} import {', '.join(parts)}"
+        if len(compact) <= c.Infra.MAX_LINE_LENGTH:
+            return (compact,)
+        nested_indent = f"{indent}    "
+        # One symbol per wrapped line is the only form Ruff's isort accepts
+        # (I001); a generated facade that outgrows a LOC cap is the cap
+        # owner's finding, never a reason to render an invalid import block.
+        return (
+            f"{indent}from {mod} import (",
+            *(f"{nested_indent}{part}," for part in parts),
+            f"{indent})",
+        )
 
     @staticmethod
     def _format_module_alias_import(indent: str, mod: str, export_name: str) -> str:
@@ -55,11 +67,28 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
         import_map: t.LazyAliasMap,
     ) -> t.MappingKV[str, t.MutableSequenceOf[t.StrPair]]:
         """Group import map entries by module."""
-        groups: dict[str, list[t.StrPair]] = defaultdict(list)
+        groups: MutableMapping[str, list[t.StrPair]] = defaultdict(list)
         for export_name in sorted(import_map):
             mod, attr = import_map[export_name]
             groups[mod].append((export_name, attr))
         return groups
+
+    @staticmethod
+    def _import_item_sort_key(item: t.StrPair) -> t.Pair[t.Pair[int, str], bool]:
+        """Order an imported symbol like Ruff isort (``order-by-type``).
+
+        Constants (all upper case) precede CamelCase classes, which precede
+        lower-case names; the name is the secondary key and the alias status
+        the tertiary one. Plain lexicographic ordering fights ``ruff format``
+        isort on the same generated block, producing a gen/fmt flip-flop.
+        """
+        export_name, imported_name = item
+        imported = imported_name or export_name
+        category = 0 if imported.isupper() else 1 if imported[:1].isupper() else 2
+        # Ruff isort orders names inside a type group case-insensitively
+        # (``TEST_FACADE_BASES`` < ``TESTS_ROOT``): raw ASCII puts ``S`` (83)
+        # before ``_`` (95) and flips the pair, producing a gen/fmt flip-flop.
+        return (category, imported.casefold()), export_name != imported_name
 
     @staticmethod
     def _generate_import_lines(
@@ -76,7 +105,8 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
                 (item for item in items if not item[1]), key=operator.itemgetter(0)
             )
             sorted_items = sorted(
-                (item for item in items if item[1]), key=lambda x: (x[1], x[0] != x[1])
+                (item for item in items if item[1]),
+                key=FlextInfraCodegenGenerationImportsMixin._import_item_sort_key,
             )
             for export_name, _ in alias_items:
                 lines.append(

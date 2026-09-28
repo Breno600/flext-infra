@@ -1,0 +1,46 @@
+# Recomposition of the CLI modernizer's banned-import and manual-conversion
+# contracts onto `make mod`, as detection.
+#
+# The retired transformer *deleted* `import typer` / `from click import ...`
+# statements outright. That rewrite is unsound: every consumer of the deleted
+# name (`typer.Typer()`, `@click.command`) is left undefined, so the transformer
+# turned a policy violation into a broken module and separately emitted a
+# "manual conversion required" note for the same construct. There is no
+# mechanical replacement for a CLI framework, so the honest contract is
+# detection: the import and the direct instantiation are both reported and the
+# migration to flext_cli is performed by a human.
+#
+# `argparse` is deliberately absent: it is already owned by Ruff's
+# flake8-tidy-imports banned-api entry in pyproject.toml, and restating it here
+# would create a second authority for one rule.
+id: ban-legacy-cli-framework
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  any:
+    - all:
+        - kind: import_statement
+        - has:
+            stopBy: end
+            pattern: $MODULE
+            kind: dotted_name
+    - all:
+        - kind: import_from_statement
+        - has:
+            field: module_name
+            pattern: $MODULE
+            kind: dotted_name
+    - pattern: typer.Typer($$$ARGS)
+    - pattern: click.group($$$ARGS)
+    - pattern: click.command($$$ARGS)
+constraints:
+  MODULE:
+    regex: '^(?:typer|click|rich|tabulate)(?:\.|$)'
+message: >-
+  Legacy CLI framework usage is banned; build the command surface with flext_cli
+  (cli.register_result_command plus a Pydantic input model). Removing the import
+  alone would leave its consumers undefined, so this rule reports and the
+  migration is performed by hand.

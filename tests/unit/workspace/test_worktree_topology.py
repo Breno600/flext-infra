@@ -4,31 +4,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import FlextInfraWorktreeService, c, m
 from flext_tests import tm
+
+from flext_infra import FlextInfraWorktreeService, c, m
 from tests import u
-from tests.unit.workspace.worktree_fixture import WorktreeFixture
 
 
-class TestsWorktreeTopology(WorktreeFixture):
+class TestsFlextInfraWorktreeTopology(u.Tests.WorktreeFixture):
     """Group cohesive worktree behavior."""
 
-    def test_update_fast_forwards_a_lane_to_the_requested_base(
+    def test_update_merges_the_requested_base_with_an_explicit_merge_commit(
         self, tmp_path: Path
     ) -> None:
-        """Update advances an existing lane only through a fast-forward."""
+        """Update preserves lane ancestry through the canonical no-ff merge."""
         repository = self._repository(tmp_path)
         branch = "feature/update"
-        lane = self._lane(repository, repository, branch)
-        tm.ok(
-            FlextInfraWorktreeService(
-                workspace_root=repository,
-                operation=c.Infra.WorktreeOperation.ADD,
-                branch=branch,
-                base="HEAD",
-                apply_changes=True,
-            ).execute()
-        )
+        lane = tm.ok(FlextInfraWorktreeService.canonical_lane_path(repository, branch))
+        _ = self.add_worktree(repository, branch)
         (repository / "owner.txt").write_text("owner\n", encoding="utf-8")
         tm.ok(u.Cli.run_checked([c.Infra.GIT, "add", "owner.txt"], cwd=repository))
         tm.ok(
@@ -51,7 +43,7 @@ class TestsWorktreeTopology(WorktreeFixture):
 
         updated = tm.ok(
             FlextInfraWorktreeService(
-                workspace_root=lane,
+                repository_root=lane,
                 operation=c.Infra.WorktreeOperation.UPDATE,
                 branch=branch,
                 base=base,
@@ -63,35 +55,25 @@ class TestsWorktreeTopology(WorktreeFixture):
         updated_head = tm.ok(
             u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=lane))
         ).oid
-        tm.that(updated_head, ne=base)
+        tm.that(updated_head == base, eq=False)
         parents = tm.ok(
             u.Cli.capture(
-                [c.Infra.GIT, "rev-list", "--parents", "-n", "1", updated_head],
-                cwd=lane,
+                [c.Infra.GIT, "rev-list", "--parents", "-n", "1", "HEAD"], cwd=lane
             )
         ).split()
-        tm.that(len(parents), eq=3)
+        tm.that(parents, length=3)
+        tm.that(parents, has=base)
 
     def test_child_lane_nests_under_its_epic_container(self, tmp_path: Path) -> None:
         """A child lane is namespaced by the epic lane that owns it."""
         repository = self._repository(tmp_path)
         epic_branch = "feature/epic-alpha"
-        epic = Path(
-            tm.ok(
-                FlextInfraWorktreeService(
-                    workspace_root=repository,
-                    operation=c.Infra.WorktreeOperation.ADD,
-                    branch=epic_branch,
-                    base="HEAD",
-                    apply_changes=True,
-                ).execute()
-            )
-        )
+        epic = Path(self.add_worktree(repository, epic_branch))
         child_branch = "feature/child-one"
 
         child = tm.ok(
             FlextInfraWorktreeService(
-                workspace_root=repository,
+                repository_root=repository,
                 operation=c.Infra.WorktreeOperation.ADD,
                 branch=child_branch,
                 base=epic_branch,
@@ -100,15 +82,13 @@ class TestsWorktreeTopology(WorktreeFixture):
             ).execute()
         )
 
+        child_path = child
         container = epic / c.Infra.WORKTREES_DIRNAME
         tm.that(child, eq=str(container / "child-one"))
-        tm.that(Path(child).is_relative_to(container), where=bool)
+        tm.that(Path(child_path).is_relative_to(container), where=bool)
         tm.that(
             tm.ok(
                 u.Infra.git_list_worktrees(m.Infra.GitRepoRequest(repo_root=repository))
             ).text,
-            has=f"worktree {child}",
+            has=f"worktree {child_path}",
         )
-
-
-__all__: tuple[str, ...] = ()

@@ -2,22 +2,10 @@
 
 from __future__ import annotations
 
-from importlib import import_module
-from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, cast
+from flext_infra import c, t
 
-from flext_infra._utilities._rope_bracket_balance import (
-    FlextInfraUtilitiesRopeBracketBalanceMixin,
-)
-from flext_infra._utilities._rope_method_order import (
-    FlextInfraUtilitiesRopeMethodOrderMixin,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
-
-if TYPE_CHECKING:
-    from flext_infra.protocols import p
+from ._rope_bracket_balance import FlextInfraUtilitiesRopeBracketBalanceMixin
+from ._rope_method_order import FlextInfraUtilitiesRopeMethodOrderMixin
 
 
 class FlextInfraUtilitiesRopeHelpers(
@@ -25,42 +13,8 @@ class FlextInfraUtilitiesRopeHelpers(
 ):
     """Generic text, import-placement, and method-order helpers."""
 
-    _post_hooks: ClassVar[list[p.Infra.RopePostHook]] = []
-    _default_post_hooks_registered: ClassVar[bool] = False
-    _default_post_hook_module: ClassVar[str] = (
-        "flext_infra.refactor.migrate_to_class_mro"
-    )
-    _default_post_hook_owner: ClassVar[str] = "FlextInfraRefactorMigrateToClassMRO"
-
-    @classmethod
-    def _ensure_default_post_hooks_registered(cls) -> None:
-        """Load and register built-in rope post-hooks once."""
-        if cls._default_post_hooks_registered:
-            return
-        module = import_module(cls._default_post_hook_module)
-        owner = getattr(module, cls._default_post_hook_owner)
-        cls.register_rope_post_hook(cast("p.Infra.RopePostHook", owner.run_as_hook))
-        cls._default_post_hooks_registered = True
-
-    @classmethod
-    def run_rope_post_hooks(
-        cls, path: Path, *, dry_run: bool
-    ) -> t.SequenceOf[m.Infra.Result]:
-        """Run workspace-scale semantic passes after local refactors."""
-        cls._ensure_default_post_hooks_registered()
-        results: list[m.Infra.Result] = []
-        for hook in cls._post_hooks:
-            results.extend(hook(path, dry_run=dry_run))
-        return results
-
-    @classmethod
-    def register_rope_post_hook(cls, hook: p.Infra.RopePostHook) -> None:
-        """Register a post-processing hook for rope refactoring pipelines."""
-        if hook not in cls._post_hooks:
-            cls._post_hooks.append(hook)
-
     @staticmethod
-    def get_module_level_assignments(source: str) -> t.StrPairSequence:
+    def extract_module_level_assignments(source: str) -> t.StrPairSequence:
         """Return (name, value_str) for module-level simple assignments."""
         assignment_pattern = c.Infra.MODULE_ASSIGNMENT_RE
         results: list[t.StrPair] = []

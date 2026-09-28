@@ -27,7 +27,7 @@ class FlextInfraLooseObjectDetector:
             file_path=ctx.file_path, project_root=ctx.project_root
         ):
             return []
-        if cls._is_pytest_test_module(ctx.file_path):
+        if u.Infra.pytest_test_module(ctx.file_path):
             return []
         if cls._is_generated_lazy_registry(ctx.file_path):
             return []
@@ -36,7 +36,6 @@ class FlextInfraLooseObjectDetector:
             ctx.file_path,
             skip_protected=True,
             skip_settings=True,
-            skip_alias_modules=True,
             skip_init_py=True,
         )
         if res is None:
@@ -70,8 +69,34 @@ class FlextInfraLooseObjectDetector:
                 )
             )
 
+        # Why (cosmos-3flk9): a module whose top level holds only imports,
+        # the export manifest and the package entrypoint call (operational
+        # r/e/x/h/d/s re-exports, ``__main__`` stubs) carries no loose
+        # object by law. Derived from the collected symbols — never a
+        # filename list.
+        module_symbols = tuple(u.Infra.resolve_module_symbols(rope_project, res))
+        facade_class_symbols = [
+            symbol for symbol in module_symbols if symbol.kind == "class"
+        ]
+        data_symbols = [
+            symbol
+            for symbol in module_symbols
+            if symbol.kind in {"assignment", "typealias"}
+            and not symbol.name.startswith("_")
+        ]
+        if (
+            not facade_class_symbols
+            and not data_symbols
+            and all(
+                symbol.name.endswith("main")
+                or symbol.name in c.Infra.DETECTION_CANONICAL_ALIASES
+                for symbol in module_symbols
+                if symbol.kind == "function"
+            )
+        ):
+            return []
         class_symbols: t.MutableSequenceOf[m.Infra.SymbolInfo] = []
-        for symbol in u.Infra.get_module_symbols(rope_project, res):
+        for symbol in module_symbols:
             if (symbol.line, symbol.name) in logger_keys:
                 continue
             if symbol.name in c.Infra.SCAN_ALLOWED_TOP_LEVEL:
@@ -125,14 +150,12 @@ class FlextInfraLooseObjectDetector:
     @classmethod
     def _is_src_file(cls, *, file_path: Path, project_root: Path) -> bool:
         """Return whether the path belongs to the project source tree."""
-        try:
-            relative_path = file_path.resolve().relative_to(project_root.resolve())
-        except ValueError:
+        resolved_path = file_path.resolve()
+        resolved_root = project_root.resolve()
+        if not resolved_path.is_relative_to(resolved_root):
             return False
-        return (
-            bool(relative_path.parts)
-            and relative_path.parts[0] == c.Infra.DEFAULT_SRC_DIR
-        )
+        parts = resolved_path.relative_to(resolved_root).parts
+        return bool(parts) and parts[0] == c.Infra.DEFAULT_SRC_DIR
 
     @classmethod
     def _is_generated_lazy_registry(cls, file_path: Path) -> bool:
@@ -141,20 +164,10 @@ class FlextInfraLooseObjectDetector:
         return file_path.name == root_exports_filename
 
     @classmethod
-    def _is_pytest_test_module(cls, file_path: Path) -> bool:
-        """Return whether a file is a pytest module, not a production module."""
-        if c.Infra.DIR_TESTS not in file_path.parts:
-            return False
-        file_name = file_path.name
-        return file_name.startswith(
-            c.Infra.NAMESPACE_PYTEST_MODULE_PREFIX
-        ) or file_name.endswith(tuple(c.Infra.NAMESPACE_PYTEST_MODULE_SUFFIXES))
-
-    @classmethod
     def _allows_private_base_module_classes(
         cls, *, file_path: Path, class_symbols: t.SequenceOf[m.Infra.SymbolInfo]
     ) -> bool:
-        """Return whether a private ``_base.py`` module satisfies MRO contracts."""
+        """Return whether a private ``_base.py`` module satisfies FLEXT contracts."""
         if file_path.name != c.Infra.NAMESPACE_PRIVATE_BASE_MODULE:
             return False
         if not class_symbols:
@@ -178,7 +191,7 @@ class FlextInfraLooseObjectDetector:
         _ = rope_project
         statements = u.Infra.logical_statements(resource.read())
         file_str = str(file_path)
-        seen: set[tuple[int, str]] = set()
+        seen: set[t.Pair[int, str]] = set()
         violations: list[m.Infra.LooseObjectViolation] = []
 
         def _add(line: int, name: str, kind: str, suffix: str) -> None:

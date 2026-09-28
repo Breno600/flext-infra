@@ -1,0 +1,19 @@
+"""{{ docstring }}"""
+
+from __future__ import annotations
+
+from flext_tests import {{ base_class }}
+
+from {{ project_module }} import {{ alias }}
+
+
+class {{ class_name }}({{ base_class }}, {{ alias }}):
+    """{{ docstring }}"""
+
+    class {{ namespace }}({{ base_class }}.Tests, {{ alias }}.{{ project_namespace }}):
+        """Test namespace composed from shared and project contracts."""
+
+
+{{ alias }} = {{ class_name }}
+
+__all__: list[str] = ["{{ class_name }}", "{{ alias }}"]

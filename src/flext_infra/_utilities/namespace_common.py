@@ -10,20 +10,21 @@ from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from flext_infra._utilities.rope_source import FlextInfraUtilitiesRopeSource
-from flext_infra.constants import c
-from flext_infra.iteration import FlextInfraUtilitiesIteration
+from flext_infra import c
+
+from .iteration import FlextInfraUtilitiesIteration
+from .rope_source import FlextInfraUtilitiesRopeSource
 
 if TYPE_CHECKING:
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesRefactorNamespaceCommon:
     """Shared text and path helpers for namespace refactor utilities."""
 
     @staticmethod
-    def shared_workspace_root(*, py_files: t.SequenceOf[Path]) -> Path:
-        """Shared workspace root."""
+    def shared_repository_root(*, py_files: t.SequenceOf[Path]) -> Path:
+        """Shared repository root."""
         existing_files = [path.resolve() for path in py_files if path.exists()]
         if not existing_files:
             return Path.cwd()
@@ -86,7 +87,7 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
     @staticmethod
     def find_top_level_block(
         *, lines: t.StrSequence, header: str
-    ) -> tuple[int, int] | None:
+    ) -> t.Pair[int, int] | None:
         """Find top level block."""
         start_idx = -1
         for idx, line in enumerate(lines):

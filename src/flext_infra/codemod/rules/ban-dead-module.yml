@@ -12,7 +12,6 @@
 # Detection-only: the correct replacement is either a real facade projection
 # or deletion of the dead package shell.
 
----
 id: ban-dead-init-module
 language: Python
 severity: error
@@ -29,7 +28,3 @@ note: >-
   shell via safe-delete and remove the directory from the package topology.
 files:
   - "**/__init__.py"
-ignores:
-  - "**/.git/**"
-  - "**/.venv/**"
-  - "**/__pycache__/**"

@@ -1,0 +1,17 @@
+# Timeout-to-shell-status conversion belongs only to an executable CLI boundary.
+id: remove-cli-process-deadline-timeout-exit-code
+language: Python
+severity: error
+rule:
+  pattern: |
+    m.Cli.ProcessDeadline(
+        expires_at_monotonic=$EXPIRES,
+        termination_grace_seconds=$GRACE,
+        timeout_exit_code=$CODE,
+    )
+fix: |
+  m.Cli.ProcessDeadline(
+      expires_at_monotonic=$EXPIRES,
+      termination_grace_seconds=$GRACE,
+  )
+message: ProcessDeadline carries timing only; remove the timeout exit-code selector.

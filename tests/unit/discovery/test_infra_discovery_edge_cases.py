@@ -3,32 +3,29 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch
 
-from flext_infra import u as infra_u
 from flext_tests import tm
+
 from tests import u
 
 
 class TestsFlextInfraDiscoveryInfraDiscoveryEdgeCases:
     """Edge-case tests for project discovery."""
 
-    def test_discover_projects_includes_non_git_flext_projects(
+    def test_standalone_never_discovers_undeclared_child_projects(
         self, tmp_path: Path
     ) -> None:
         service = u.Infra()
-        workspace_root = tmp_path
-        non_git_dir = workspace_root / "non_git_project"
+        repository_root = tmp_path
+        non_git_dir = repository_root / "non_git_project"
         non_git_dir.mkdir()
         (non_git_dir / "pyproject.toml").write_text(
             "[project]\nname='non_git_project'\ndependencies=['flext-core>=0.1.0']\n",
             encoding="utf-8",
         )
-        result = service.discover_projects(workspace_root)
+        result = service.discover_projects(repository_root)
         tm.ok(result)
-        tm.that(len(result.value), eq=1)
-        tm.that(result.value[0].name, eq="non_git_project")
-        tm.that(result.value[0].path, eq=non_git_dir)
+        tm.that(result.value, empty=True)
 
     def test_find_all_pyproject_files_with_nonexistent_path(self) -> None:
         service = u.Infra()
@@ -36,6 +33,24 @@ class TestsFlextInfraDiscoveryInfraDiscoveryEdgeCases:
         result = service.find_all_pyproject_files(nonexistent)
         tm.ok(result)
         tm.that(result.value, eq=[])
+
+    def test_standalone_pyproject_scan_never_reads_parent_or_sibling(
+        self, tmp_path: Path
+    ) -> None:
+        service = u.Infra()
+        child = tmp_path / "child"
+        sibling = tmp_path / "sibling"
+        child.mkdir()
+        sibling.mkdir()
+        own_pyproject = child / "pyproject.toml"
+        own_pyproject.touch()
+        (tmp_path / "pyproject.toml").touch()
+        (sibling / "pyproject.toml").touch()
+
+        result = service.find_all_pyproject_files(child)
+
+        tm.ok(result)
+        tm.that(tuple(result.value), eq=(own_pyproject,))
 
     def test_find_all_pyproject_files_with_permission_error(
         self, tmp_path: Path
@@ -50,13 +65,13 @@ class TestsFlextInfraDiscoveryInfraDiscoveryEdgeCases:
         self, tmp_path: Path
     ) -> None:
         service = u.Infra()
-        workspace_root = tmp_path
-        proj = workspace_root / "incomplete_project"
+        repository_root = tmp_path
+        proj = repository_root / "incomplete_project"
         proj.mkdir()
         (proj / "pyproject.toml").write_text(
             "[project]\nname='incomplete_project'\n", encoding="utf-8"
         )
-        result = service.discover_projects(workspace_root)
+        result = service.discover_projects(repository_root)
         tm.ok(result)
         tm.that(not result.value, eq=True)
 
@@ -76,22 +91,3 @@ class TestsFlextInfraDiscoveryInfraDiscoveryEdgeCases:
             blocked_dir.chmod(0o755)
         tm.ok(result)
         tm.that(result.value, eq=[])
-
-    def test_external_discovery_skips_inaccessible_sibling(
-        self, tmp_path: Path
-    ) -> None:
-        workspace = tmp_path / "workspace"
-        blocked = tmp_path / "blocked"
-        workspace.mkdir()
-        blocked.mkdir()
-        original_is_file = Path.is_file
-
-        def is_file(path: Path) -> bool:
-            if path == blocked / "pyproject.toml":
-                raise PermissionError(path)
-            return original_is_file(path)
-
-        with patch.object(Path, "is_file", is_file):
-            roots = infra_u.Infra.discover_external_workspace_roots(workspace)
-
-        tm.that(roots, eq=())

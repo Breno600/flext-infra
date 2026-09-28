@@ -1,0 +1,13 @@
+id: rewire-cli-command-output-expected-exit-assertion
+valid:
+  - |
+    tm.that(
+        (
+            u.Cli.process_succeeded(output.outcome),
+            output.outcome.raw_return_code,
+        ),
+        eq=(True, case.exit_code),
+    )
+invalid:
+  - tm.that(output.exit_code, eq=case.exit_code)
+  - tm.that(output.outcome.raw_return_code, eq=case.exit_code)

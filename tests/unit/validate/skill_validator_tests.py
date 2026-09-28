@@ -6,23 +6,22 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import json
 from typing import TYPE_CHECKING
 
 import pytest
+from flext_tests import tm
 
 from flext_infra.validate.skill_validator import FlextInfraSkillValidator
-from flext_tests import tm
 from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import m, t
+    from tests import m
 
 
-class TestSafeLoadYaml:
-    """Test u.Infra.yaml_load_infra_mapping helper function."""
+class TestsFlextInfraSkillValidator:
+    """Skill validator, YAML/list helpers, ast-grep rules, and baseline templating."""
 
     def test_valid_yaml(self, tmp_path: Path) -> None:
         """Valid YAML file loads correctly."""
@@ -48,10 +47,6 @@ class TestSafeLoadYaml:
         (tmp_path / "str.yml").write_text("just a string")
         tm.that(dict(u.Cli.yaml_load_mapping(tmp_path / "str.yml")), eq={})
 
-
-class TestStringList:
-    """Test u.Infra.string_list helper function."""
-
     def test_none_returns_empty(self) -> None:
         """None returns empty list."""
         tm.that(u.Infra.string_list(None), empty=True)
@@ -70,10 +65,6 @@ class TestStringList:
             u.Infra.string_list(["a", 123, "c"])
         with pytest.raises(TypeError, match="expected list"):
             u.Infra.string_list({"key": "value"})
-
-
-class TestSkillValidatorCore:
-    """Core validation tests for FlextInfraSkillValidator."""
 
     def test_validate_missing_rules_yml(self, tmp_path: Path) -> None:
         """Missing rules.yml returns not-passed report."""
@@ -129,12 +120,7 @@ class TestSkillValidatorCore:
         tm.that(report.passed, eq=True)
         tm.that(report.violations, empty=True)
 
-
-class TestSkillValidatorAstGrepRules:
-    """Public build_report coverage for ast-grep rule counting."""
-
-    @staticmethod
-    def _write_skill(root: Path, rules_yml: str) -> None:
+    def _write_skill(self, root: Path, rules_yml: str) -> None:
         skill = root / c.Infra.SKILLS_DIR / "test-skill"
         skill.mkdir(parents=True)
         (skill / "rule.yaml").write_text(
@@ -143,8 +129,7 @@ class TestSkillValidatorAstGrepRules:
         )
         (skill / "rules.yml").write_text(rules_yml, encoding="utf-8")
 
-    @staticmethod
-    def _write_target(root: Path, source: str) -> None:
+    def _write_target(self, root: Path, source: str) -> None:
         package_root = root / "demo" / "src" / "demo"
         package_root.mkdir(parents=True)
         (package_root / "m.py").write_text(source, encoding="utf-8")
@@ -203,10 +188,6 @@ class TestSkillValidatorAstGrepRules:
             has="does not exist",
         )
 
-
-class TestSkillValidatorBaselineTemplate:
-    """Public build_report coverage for {skill} baseline path templating."""
-
     def test_relative_baseline_path_resolves_with_skill_name(
         self, tmp_path: Path
     ) -> None:
@@ -228,7 +209,9 @@ class TestSkillValidatorBaselineTemplate:
         (package_root / "m.py").write_text("forbidden_token = 1\n", encoding="utf-8")
         baseline_path = tmp_path / ".reports" / "test-skill" / "baseline.json"
         baseline_path.parent.mkdir(parents=True)
-        baseline_path.write_text(json.dumps({"counts": {"t": 0}}), encoding="utf-8")
+        baseline_path.write_text(
+            tm.ok(u.Cli.json_dumps({"counts": {"t": 0}})), encoding="utf-8"
+        )
 
         report = tm.ok(
             FlextInfraSkillValidator(skill="test-skill").build_report(
@@ -238,6 +221,3 @@ class TestSkillValidatorBaselineTemplate:
 
         # Resolved templated baseline (counts.t=0) disallows the 1 real match.
         tm.that(report.passed, eq=False)
-
-
-__all__: t.StrSequence = []

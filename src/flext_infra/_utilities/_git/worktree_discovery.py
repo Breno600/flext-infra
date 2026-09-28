@@ -10,12 +10,10 @@ from urllib.parse import urlparse
 from git import GitCommandError, GitConfigParser
 
 from flext_core import r
-from flext_infra._utilities._git.worktree_roots import (
-    FlextInfraUtilitiesGitWorktreeRootsMixin,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
+
+from ..base import FlextInfraUtilitiesBase
+from .worktree_roots import FlextInfraUtilitiesGitWorktreeRootsMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -82,7 +80,7 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
                 )
         except (ConfigParserError, OSError, TypeError, ValueError) as exc:
             return r[t.SequenceOf[Path]].fail(
-                f"failed to read Git submodule declarations: {exc}"
+                f"failed to read Git submodule declarations: {exc}", exception=exc
             )
         paths: t.MutableSequenceOf[Path] = []
         for raw_path in raw_paths:
@@ -112,7 +110,7 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
             url, branch = cls._read_gitmodule_contract(gitmodules, request.member_path)
         except (ConfigParserError, OSError, TypeError, ValueError) as exc:
             return r[m.Infra.GitSubmoduleContractReport].fail(
-                f"failed to read Git submodule paths: {exc}"
+                f"failed to read Git submodule paths: {exc}", exception=exc
             )
         if not url:
             return r[m.Infra.GitSubmoduleContractReport].fail(
@@ -127,7 +125,9 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
         )
 
     @staticmethod
-    def _read_gitmodule_contract(gitmodules: Path, member_path: str) -> tuple[str, str]:
+    def _read_gitmodule_contract(
+        gitmodules: Path, member_path: str
+    ) -> t.Pair[str, str]:
         """Read URL and branch for one submodule from .gitmodules."""
         with GitConfigParser(file_or_files=gitmodules, read_only=True) as config:
             matching_sections = tuple(
@@ -154,33 +154,33 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
         return url, branch
 
     @classmethod
-    def git_submodule_paths(cls, workspace_root: Path) -> p.Result[t.SequenceOf[Path]]:
+    def git_submodule_paths(cls, repository_root: Path) -> p.Result[t.SequenceOf[Path]]:
         """Resolve every initialized recursive submodule path."""
         try:
-            repo = cls._repo(workspace_root)
+            repo = cls._repo(repository_root)
             status = repo.git.submodule("status", "--recursive")
         except GitCommandError as exc:
-            return r[t.SequenceOf[Path]].fail(str(exc))
+            return r[t.SequenceOf[Path]].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[t.SequenceOf[Path]].fail(
-                f"failed to discover Git submodules: {exc}"
+                f"failed to discover Git submodules: {exc}", exception=exc
             )
         paths: t.MutableSequenceOf[Path] = []
         for raw_line in status.splitlines():
             normalized = raw_line.strip()
             if not normalized:
                 continue
-            try:
-                _status_and_sha, relative_path_text, *_description = normalized.split(
-                    maxsplit=2
-                )
-            except ValueError:
-                continue
+            _status_and_sha, separator, remainder = normalized.partition(" ")
+            path_fields = remainder.split(maxsplit=1)
+            if not separator or not path_fields:
+                msg = f"malformed git submodule status line: {raw_line!r}"
+                raise ValueError(msg)
+            relative_path_text = path_fields[0]
             relative_path = Path(relative_path_text)
-            if (workspace_root / relative_path / ".git").exists():
+            if (repository_root / relative_path / ".git").exists():
                 paths.append(relative_path)
         return r[t.SequenceOf[Path]].ok(
-            tuple(sorted(paths, key=lambda path: (len(path.parts), path.as_posix())))
+            tuple(sorted(paths, key=FlextInfraUtilitiesBase.path_depth_then_text))
         )
 
 

@@ -1,0 +1,45 @@
+id: typing-list-missing-t-import
+snapshots:
+  ? |
+    from typing import List
+
+    def f(x: List[str]) -> None: ...
+  : labels:
+    - source: List[str]
+      style: primary
+      start: 34
+      end: 43
+    - source: from typing import List
+      style: secondary
+      start: 0
+      end: 23
+    - source: |
+        from typing import List
+
+        def f(x: List[str]) -> None: ...
+      style: secondary
+      start: 0
+      end: 58
+    - source: |
+        from typing import List
+
+        def f(x: List[str]) -> None: ...
+      style: secondary
+      start: 0
+      end: 58
+  ? |
+    import typing
+
+    ALIAS = typing.List[str]
+  : labels:
+    - source: typing.List[str]
+      style: primary
+      start: 23
+      end: 39
+    - source: |
+        import typing
+
+        ALIAS = typing.List[str]
+      style: secondary
+      start: 0
+      end: 40

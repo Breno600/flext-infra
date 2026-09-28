@@ -1,91 +1,68 @@
-"""Test detector report flags behavior."""
+"""Public report flags against real project discovery and installed tools."""
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import os
 from pathlib import Path
-from typing import TYPE_CHECKING, override
 
-from flext_infra import r
+import pytest
 from flext_tests import tm
-from tests import TestsFlextInfraUtilities as u, p, t
 
-if TYPE_CHECKING:
-    from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
+from tests import c, u
 
-
-class _ReportStub:
-    def __init__(self, raw_count: int) -> None:
-        self._raw_count = raw_count
-
-    def model_dump(self) -> t.JsonMapping:
-        return {"deptry": {"raw_count": self._raw_count}}
-
-
-class _DepsStub(p.Infra.DepsService, p.Infra.PipCheckDepsService):
-    def __init__(self, project: Path, raw_count: int, pip_exit: int) -> None:
-        self._project = project
-        self._raw_count = raw_count
-        self._pip_exit = pip_exit
-
-    @override
-    def discover_project_paths(
-        self, workspace_root: Path, *, projects_filter: t.StrSequence | None = None
-    ) -> p.Result[Sequence[Path]]:
-        del workspace_root
-        del projects_filter
-        return r[Sequence[Path]].ok([self._project])
-
-    @override
-    def run_deptry(
-        self, project_path: Path, venv_bin: Path
-    ) -> p.Result[t.Pair[Sequence[t.JsonMapping], int]]:
-        del project_path
-        del venv_bin
-        return r[t.Pair[Sequence[t.JsonMapping], int]].ok(([], 0))
-
-    @override
-    def build_project_report(
-        self, project_name: str, deptry_issues: t.SequenceOf[t.JsonMapping]
-    ) -> _ReportStub:
-        del project_name
-        del deptry_issues
-        return _ReportStub(self._raw_count)
-
-    @override
-    def run_pip_check(
-        self, workspace_root: Path, venv_bin: Path
-    ) -> p.Result[tuple[t.StrSequence, int]]:
-        del workspace_root
-        del venv_bin
-        return r[tuple[t.StrSequence, int]].ok(([], self._pip_exit))
-
-
-def _setup(tmp_path: Path, deps: _DepsStub) -> FlextInfraRuntimeDevDependencyDetector:
-    detector: FlextInfraRuntimeDevDependencyDetector = u.Tests.setup_detector_runtime(
-        tmp_path, deps
-    )
-    return detector
+# Real dependency discovery provisions a consumer from external package sources.
+pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraDepsDetectorReportFlags:
-    """Test flext infra deps detector report flags behavior."""
-
-    def test_run_with_issues_and_pip_failure(self, tmp_path: Path) -> None:
-        """Verify run with issues and pip failure."""
-        detector = _setup(tmp_path, _DepsStub(tmp_path / "proj-a", 5, 1))
-        tm.fail(detector.execute(), has="dependency issues detected")
-
-    def test_run_with_no_fail_flag_with_issues(self, tmp_path: Path) -> None:
-        """Verify run with no fail flag with issues."""
-        detector = _setup(tmp_path, _DepsStub(tmp_path / "proj-a", 5, 1)).model_copy(
-            update={"no_fail": True}
+    @pytest.mark.parametrize("no_fail", [False, True])
+    def test_real_dependency_and_environment_issues_respect_no_fail(
+        self, real_detector_project: Path, *, no_fail: bool
+    ) -> None:
+        root = real_detector_project
+        (root / "src/detector_fixture/undeclared.py").write_text(
+            "import undeclared_detector_dependency\n", encoding="utf-8"
         )
-        tm.that(tm.ok(detector.execute()), eq=True)
-
-    def test_run_with_json_stdout_flag(self, tmp_path: Path) -> None:
-        """Verify run with json stdout flag."""
-        detector = _setup(tmp_path, _DepsStub(tmp_path / "proj-a", 0, 0)).model_copy(
-            update={"output_format": "json", "no_pip_check": True}
+        tm.ok(
+            u.Cli.run_checked(
+                [
+                    os.environ.get("UV", c.Infra.UV),
+                    "pip",
+                    "uninstall",
+                    "--python",
+                    str(root / ".venv/bin/python"),
+                    "requests",
+                ],
+                cwd=root,
+            )
         )
-        tm.that(tm.ok(detector.execute()), eq=True)
+        arguments = ("--no-fail",) if no_fail else ()
+        outcome = tm.ok(u.Tests.run_real_detector(root, *arguments))
+        tm.that(
+            u.Cli.process_succeeded(outcome.outcome), eq=no_fail, msg=outcome.stderr
+        )
+        report = u.Cli.json_as_mapping(
+            tm.ok(
+                u.Cli.json_read(
+                    root / ".reports/dependencies/detect-runtime-dev-latest.json"
+                )
+            )
+        )
+        tm.that(u.Cli.json_as_mapping(report.get("pip_check")).get("ok"), eq=False)
+        project = u.Cli.json_as_mapping(
+            u.Cli.json_as_mapping(report.get("projects")).get(root.name)
+        )
+        tm.that(
+            u.Cli.json_pick_int(
+                u.Cli.json_as_mapping(project.get("deptry")), "raw_count"
+            ),
+            gt=0,
+        )
+
+    def test_run_with_json_stdout_flag(self, real_detector_project: Path) -> None:
+        outcome = tm.ok(
+            u.Tests.run_real_detector(
+                real_detector_project, "--format", "json", "--no-pip-check"
+            )
+        )
+        tm.that(u.Cli.process_succeeded(outcome.outcome), eq=True, msg=outcome.stderr)

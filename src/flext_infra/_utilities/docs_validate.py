@@ -6,12 +6,13 @@ from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from flext_cli import u
+
 from flext_core import r
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
-from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
-from flext_infra.constants import c
-from flext_infra.typings import t
+from flext_infra import c, t
+
+from .docs import FlextInfraUtilitiesDocs
+from .docs_api import FlextInfraUtilitiesDocsApi
+from .docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -32,8 +33,8 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def docs_extract_required_skills(
-        payload: t.JsonPayload | t.MappingKV[str, t.Infra.InfraValue],
-    ) -> p.Result[t.Infra.InfraSequence]:
+        payload: t.JsonPayload | t.MappingKV[str, t.JsonValue],
+    ) -> p.Result[t.JsonList]:
         """Extract the configured required skills list from architecture settings.
 
         ``r.ok(list)`` when the configuration block is present and well
@@ -44,24 +45,22 @@ class FlextInfraUtilitiesDocsValidate:
             case Mapping() as outer:
                 pass
             case _:
-                return r[t.Infra.InfraSequence].fail("payload is not a mapping")
+                return r[t.JsonList].fail("payload is not a mapping")
         match outer.get("docs_validation"):
             case Mapping() as inner:
                 pass
             case _:
-                return r[t.Infra.InfraSequence].fail(
+                return r[t.JsonList].fail(
                     "docs_validation block missing or not a mapping"
                 )
         match inner.get("required_skills"):
             case list() as configured:
-                return r[t.Infra.InfraSequence].ok(configured)
+                return r[t.JsonList].ok(configured)
             case _:
-                return r[t.Infra.InfraSequence].fail(
-                    "required_skills missing or not a list"
-                )
+                return r[t.JsonList].fail("required_skills missing or not a list")
 
     @staticmethod
-    def docs_load_required_skills(workspace_root: Path) -> p.Result[t.StrSequence]:
+    def docs_load_required_skills(repository_root: Path) -> p.Result[t.StrSequence]:
         """Load the required skills list from the architecture settings.
 
         Returns ``r.ok([])`` only when the config file is genuinely absent.
@@ -70,7 +69,7 @@ class FlextInfraUtilitiesDocsValidate:
         propagates as ``r.fail(...)`` so callers see the config defect
         instead of a silent empty list — fail-fast over fail-quiet.
         """
-        settings = workspace_root / "docs/architecture/architecture_config.json"
+        settings = repository_root / "docs/architecture/architecture_config.json"
         if not settings.exists():
             return r[t.StrSequence].ok([])
         return (
@@ -83,22 +82,27 @@ class FlextInfraUtilitiesDocsValidate:
         )
 
     @staticmethod
-    def _validate_required_skills(
-        raw: t.Infra.InfraSequence,
-    ) -> p.Result[t.StrSequence]:
+    def _validate_required_skills(raw: t.JsonList) -> p.Result[t.StrSequence]:
         """Validate ``required_skills`` payload against the canonical adapter."""
-        return (
-            r[t.StrSequence]
-            .create_from_callable(
-                lambda: t.Infra.STR_SEQ_ADAPTER.validate_python(raw, strict=True),
-                error_code="required_skills_validation",
+        try:
+            validated: t.StrSequence = t.Infra.STR_SEQ_ADAPTER.validate_python(
+                raw, strict=True
             )
-            .map_error(lambda e: f"invalid required_skills configuration: {e}")
-        )
+        except c.EXC_BROAD_RUNTIME as exc:
+            return r[t.StrSequence].fail(
+                f"invalid required_skills configuration: {exc}",
+                error_code="required_skills_validation",
+                exception=exc,
+            )
+        return r[t.StrSequence].ok(validated)
 
     @staticmethod
     def docs_missing_required_paths(scope: m.Infra.DocScope) -> t.StrSequence:
-        """Return required docs paths that are still missing from one scope."""
+        """Return required docs paths that are still missing from one scope.
+
+        The scope label is the only topology input: the scope builder assigns
+        ``root`` from the manifest's typed role (``is_fleet_umbrella``).
+        """
         if scope.name == c.Infra.RK_ROOT:
             required = [
                 "README.md",
@@ -110,6 +114,14 @@ class FlextInfraUtilitiesDocsValidate:
             ]
         else:
             required = list(FlextInfraUtilitiesDocsScope.required_project_files())
+        if not scope.package_name:
+            # The api-reference generated surface is the mkdocstrings product
+            # over an importable package; a package-less scope (a workspace
+            # orchestrator root) has no generator that can produce it, so
+            # requiring it is an unsatisfiable contract, not a docs defect.
+            required = [
+                rel_path for rel_path in required if "/generated/" not in rel_path
+            ]
         missing: t.MutableSequenceOf[str] = []
         for rel_path in sorted(set(required)):
             if not (scope.path / rel_path).exists():

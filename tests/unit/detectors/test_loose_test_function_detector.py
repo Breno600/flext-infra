@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_tests import tm
+
 from flext_infra import m, u
 from flext_infra.detectors.loose_test_function_detector import (
     FlextInfraLooseTestFunctionDetector,
 )
-from flext_tests import tm
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from tests import t
 
 
 class TestsFlextInfraLooseTestFunctionDetector:
@@ -30,7 +33,7 @@ class TestsFlextInfraLooseTestFunctionDetector:
     @staticmethod
     def _violations(
         *, project: Path, file_path: Path
-    ) -> tuple[m.Infra.LooseTestFunctionViolation, ...]:
+    ) -> t.VariadicTuple[m.Infra.LooseTestFunctionViolation]:
         with u.Infra.open_project(project) as rope_project:
             violations = FlextInfraLooseTestFunctionDetector.detect_file(
                 m.Infra.DetectorContext(

@@ -1,0 +1,37 @@
+# The resolved template root is computed by its owner, never recomposed at a
+# call site (flext-itpd1.3, 2026-09-19).
+#
+# `u.Infra.codegen_templates_root(codegen)` is the single owner of
+# `<package root>/templates/<codegen.templates.root>`, resolved. It was
+# introduced in 2a68d9cb9 as the *rename* of the former `_package_root()`
+# helper: the commit deleted the helper and moved the whole composition into
+# the owner. Two consumers in codegen/_conform/plan.py kept the old
+# composition, so after the rename they call a method that no longer exists and
+# `make gen` dies with AttributeError across the whole fleet.
+#
+# This is the "renamed owner, missed consumer" class: the rule states the
+# contract structurally so every lane and branch that still carries the old
+# composition is repaired by `make mod` instead of by hand.
+#
+# Emitting `u.*` is only F821-safe when the utilities facade is bound in the
+# same module, hence the shared u-imported-from-flext guard.
+id: codegen-templates-root-owner
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  all:
+    - pattern: ($RECV._package_root() / "templates" / $CFG.templates.root).resolve()
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          matches: u-imported-from-flext
+fix: u.Infra.codegen_templates_root($CFG)
+message: >-
+  The resolved template root has one owner, u.Infra.codegen_templates_root;
+  recomposing it from a package-root helper duplicates the owner and breaks
+  when that helper is renamed.

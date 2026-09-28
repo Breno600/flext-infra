@@ -3,7 +3,7 @@
 # codemods skip it (referenced via `not: { matches: assert-has-message }`) and
 # leave it for human review rather than dropping the message.
 id: assert-has-message
-language: python
+language: Python
 rule:
   kind: assert_statement
   pattern: "assert $COND, $MSG"

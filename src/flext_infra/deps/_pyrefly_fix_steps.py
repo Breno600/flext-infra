@@ -11,7 +11,8 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, t, u
-from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+
+from .extra_paths import FlextInfraExtraPathsManager
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,11 +23,11 @@ if TYPE_CHECKING:
 class FlextInfraConfigFixerSteps:
     """Mixin holding the three cohesive pyrefly fix-steps."""
 
-    _workspace_root: Path
+    _repository_root: Path
 
     def _sync_search_path(
         self,
-        pyrefly: MutableMapping[str, t.Infra.InfraValue],
+        pyrefly: MutableMapping[str, t.JsonValue],
         project_dir: Path,
         *,
         is_root: bool,
@@ -35,17 +36,14 @@ class FlextInfraConfigFixerSteps:
         search_raw = pyrefly.get(c.Infra.SEARCH_PATH)
         if not isinstance(search_raw, list):
             return r[t.StrSequence].ok(())
-        try:
-            current_paths: t.JsonList = t.Cli.JSON_LIST_ADAPTER.validate_python(
-                list(search_raw)
-            )
-        except c.ValidationError as err:
-            return r[t.StrSequence].fail_op("validate-search-path", err)
+        validated = u.validate_value(t.Cli.JSON_LIST_ADAPTER, list(search_raw))
+        if validated.failure:
+            return r[t.StrSequence].fail_op("validate-search-path", validated.error)
         current_search = [
-            path_item for path_item in current_paths if isinstance(path_item, str)
+            path_item for path_item in validated.value if isinstance(path_item, str)
         ]
         expected_search = FlextInfraExtraPathsManager(
-            workspace_root=self._workspace_root
+            repository_root=self._repository_root
         ).pyrefly_search_paths(project_dir=project_dir, is_root=is_root)
         if current_search != expected_search:
             pyrefly[c.Infra.SEARCH_PATH] = u.Cli.toml_array(expected_search)
@@ -54,7 +52,7 @@ class FlextInfraConfigFixerSteps:
 
     def _sync_project_includes(
         self,
-        pyrefly: MutableMapping[str, t.Infra.InfraValue],
+        pyrefly: MutableMapping[str, t.JsonValue],
         project_dir: Path,
         *,
         is_root: bool,
@@ -63,17 +61,16 @@ class FlextInfraConfigFixerSteps:
         includes_raw = pyrefly.get(c.Infra.PROJECT_INCLUDES)
         if not isinstance(includes_raw, list):
             return r[t.StrSequence].ok(())
-        try:
-            current_items: t.JsonList = t.Cli.JSON_LIST_ADAPTER.validate_python(
-                list(includes_raw)
+        validated = u.validate_value(t.Cli.JSON_LIST_ADAPTER, list(includes_raw))
+        if validated.failure:
+            return r[t.StrSequence].fail_op(
+                "validate-project-includes", validated.error
             )
-        except c.ValidationError as err:
-            return r[t.StrSequence].fail_op("validate-project-includes", err)
         current_includes = [
-            path_item for path_item in current_items if isinstance(path_item, str)
+            path_item for path_item in validated.value if isinstance(path_item, str)
         ]
         expected_includes = FlextInfraExtraPathsManager(
-            workspace_root=self._workspace_root
+            repository_root=self._repository_root
         ).pyrefly_project_includes(project_dir=project_dir, is_root=is_root)
         if current_includes != expected_includes:
             pyrefly[c.Infra.PROJECT_INCLUDES] = u.Cli.toml_array(expected_includes)
@@ -83,31 +80,35 @@ class FlextInfraConfigFixerSteps:
         return r[t.StrSequence].ok(())
 
     def _strip_ignored_sub_configs(
-        self, pyrefly: MutableMapping[str, t.Infra.InfraValue]
-    ) -> p.Result[tuple[t.StrSequence, bool]]:
+        self, pyrefly: MutableMapping[str, t.JsonValue]
+    ) -> p.Result[t.Pair[t.StrSequence, bool]]:
         """Drop ignore=true entries from tool.pyrefly.sub-config."""
         sub_configs = pyrefly.get(c.Infra.SUB_CONFIG)
         if not isinstance(sub_configs, list):
             return r[tuple[t.StrSequence, bool]].ok(((), False))
-        try:
-            configs: t.SequenceOf[t.Infra.InfraValue] = (
-                t.Infra.INFRA_SEQ_ADAPTER.validate_python(sub_configs)
+        validated_configs: p.Result[t.JsonList] = u.validate_value(
+            t.Infra.INFRA_SEQ_ADAPTER, sub_configs
+        )
+        if validated_configs.failure:
+            return r[tuple[t.StrSequence, bool]].fail_op(
+                "validate-sub-configs", validated_configs.error
             )
-        except c.ValidationError as err:
-            return r[tuple[t.StrSequence, bool]].fail_op("validate-sub-configs", err)
+        configs: t.SequenceOf[t.JsonValue] = validated_configs.value
         fixes: t.MutableSequenceOf[str] = []
         removed_ignore = False
-        new_configs: t.MutableSequenceOf[t.Infra.InfraValue] = []
+        new_configs: t.MutableSequenceOf[t.JsonValue] = []
         for conf in configs:
-            conf_out: t.Infra.InfraValue = conf
+            conf_out: t.JsonValue = conf
             if isinstance(conf, Mapping):
-                try:
-                    conf_map = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(conf)
-                    conf_out = dict(conf_map)
-                except c.ValidationError as err:
+                validated_conf: p.Result[t.JsonMapping] = u.validate_value(
+                    t.Infra.INFRA_MAPPING_ADAPTER, conf
+                )
+                if validated_conf.failure:
                     return r[tuple[t.StrSequence, bool]].fail_op(
-                        "validate-pyrefly-sub-config", err
+                        "validate-pyrefly-sub-config", validated_conf.error
                     )
+                conf_map = validated_conf.value
+                conf_out = dict(conf_map)
             else:
                 new_configs.append(conf_out)
                 continue
@@ -124,19 +125,18 @@ class FlextInfraConfigFixerSteps:
         return r[tuple[t.StrSequence, bool]].ok((fixes, removed_ignore))
 
     def _sync_project_excludes(
-        self, pyrefly: MutableMapping[str, t.Infra.InfraValue]
+        self, pyrefly: MutableMapping[str, t.JsonValue]
     ) -> p.Result[t.StrSequence]:
         """Synchronize tool.pyrefly.project-excludes from YAML rules."""
         current_excludes: t.StrSequence = []
         excludes = pyrefly.get(c.Infra.PROJECT_EXCLUDES)
         if isinstance(excludes, list):
-            try:
-                exclude_items: t.JsonList = t.Cli.JSON_LIST_ADAPTER.validate_python([
-                    *excludes
-                ])
-            except c.ValidationError as err:
-                return r[t.StrSequence].fail_op("validate-project-excludes", err)
-            current_excludes = [str(value) for value in exclude_items]
+            validated = u.validate_value(t.Cli.JSON_LIST_ADAPTER, list(excludes))
+            if validated.failure:
+                return r[t.StrSequence].fail_op(
+                    "validate-project-excludes", validated.error
+                )
+            current_excludes = [str(value) for value in validated.value]
         expected_excludes = sorted(
             set(config.Infra.tooling.tools.pyrefly.project_exclude_globs)
         )

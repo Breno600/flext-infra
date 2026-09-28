@@ -1,4 +1,0 @@
-title = "FLEXT release secret scanning policy"
-
-[extend]
-useDefault = true

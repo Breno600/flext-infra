@@ -1,0 +1,7 @@
+from __future__ import annotations
+import pydantic.v1 as pd
+
+class FlextTestValidation:
+    @pd.root_validator()
+    def validate(cls, value: str) -> str:
+        return value

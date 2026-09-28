@@ -1,0 +1,5 @@
+id: rewire-duplicate-test-package-seed
+valid:
+  - u.Tests.write_package_init(root / "src" / "pkg", "").parent
+invalid:
+  - _seed_pkg(root)

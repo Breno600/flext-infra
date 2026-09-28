@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -10,16 +9,7 @@ from typing import TYPE_CHECKING
 from flext_infra import c, m
 
 if TYPE_CHECKING:
-    from flext_core._models.enforcement import FlextModelsEnforcement as me
-    from flext_infra import p
-
-
-@dataclass(frozen=True, slots=True)
-class FlextInfraEnforcementEvaluation:
-    """Collected rule probes and collection failures for one project."""
-
-    violations: list[tuple[me.EnforcementRuleSpec, p.AttributeProbe]]
-    failures: list[m.Infra.FailedFix]
+    from flext_infra import p, t
 
 
 class FlextInfraEnforcementCollectionBase:
@@ -27,13 +17,13 @@ class FlextInfraEnforcementCollectionBase:
 
     @staticmethod
     def collect_project_probe(
-        project_dir: Path, rule: me.EnforcementRuleSpec
-    ) -> list[tuple[me.EnforcementRuleSpec, p.AttributeProbe]]:
+        project_dir: Path, rule: m.EnforcementRuleSpec
+    ) -> list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]]:
         """Return one project-level probe for gate-backed rules."""
         return [(rule, FlextInfraEnforcementCollectionBase.probe_for_path(project_dir))]
 
     @staticmethod
-    def stub_file_paths(project_dir: Path) -> tuple[Path, ...]:
+    def stub_file_paths(project_dir: Path) -> t.VariadicTuple[Path]:
         """Return source stub files while respecting canonical excluded dirs."""
         paths: set[Path] = set()
         for path in project_dir.rglob("*.pyi"):
@@ -52,7 +42,7 @@ class FlextInfraEnforcementCollectionBase:
 
     @staticmethod
     def collection_failure(
-        project_dir: Path, rule: me.EnforcementRuleSpec, message: str
+        project_dir: Path, rule: m.EnforcementRuleSpec, message: str
     ) -> m.Infra.FailedFix:
         """Build a failed-fix record for collection/routing errors."""
         return m.Infra.FailedFix(
@@ -60,15 +50,12 @@ class FlextInfraEnforcementCollectionBase:
         )
 
     def _empty_failure(
-        self, project_dir: Path, rule: me.EnforcementRuleSpec, message: str
-    ) -> tuple[
-        list[tuple[me.EnforcementRuleSpec, p.AttributeProbe]], list[m.Infra.FailedFix]
+        self, project_dir: Path, rule: m.EnforcementRuleSpec, message: str
+    ) -> t.Pair[
+        list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]], list[m.Infra.FailedFix]
     ]:
         """Return a typed empty collection plus one structured failure."""
         return [], [self.collection_failure(project_dir, rule, message)]
 
 
-__all__: list[str] = [
-    "FlextInfraEnforcementCollectionBase",
-    "FlextInfraEnforcementEvaluation",
-]
+__all__: list[str] = ["FlextInfraEnforcementCollectionBase"]

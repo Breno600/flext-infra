@@ -1,0 +1,14 @@
+# Rewire tar-tree materialization through the public u.Infra owner.
+---
+id: release-materialize-tar-tree
+language: Python
+severity: error
+rule:
+  any:
+    - pattern: $ARCHIVE.extractall($DEST, filter="data")
+    - pattern: $ARCHIVE.extractall(path=$DEST, filter="data")
+    - pattern: $ARCHIVE.extract($MEMBER, path=$DEST, filter="data")
+fix: u.Infra.materialize_tar_tree($ARCHIVE, $DEST)
+message: Materialize release tar trees through the public u.Infra owner.
+files:
+  - "src/flext_infra/release/**/*.py"

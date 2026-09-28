@@ -1,0 +1,9 @@
+id: add-cli-local-process-outcome-success-import
+language: Python
+severity: error
+files:
+  - "src/flext_cli/_utilities/_runtime_process_outcome.py"
+rule:
+  pattern: from flext_cli import m, p, r, t
+fix: from flext_cli import c, m, p, r, t
+message: Import the typed success-code owner for the public ProcessOutcome predicate.

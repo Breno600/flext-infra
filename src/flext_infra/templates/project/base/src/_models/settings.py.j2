@@ -1,4 +1,4 @@
-{# NOTE (multi-agent, mro-wkii.19.1): settings shapes are pure Pydantic declarations; source loading belongs to _settings.py. -#}
+{# NOTE (multi-agent, flext-wkii.19.1): settings shapes are pure Pydantic declarations; source loading belongs to _settings.py. -#}
 """{{ class_stem }} pure Pydantic settings models.
 
 Copyright (c) {{ year }} {{ author_name }}. All rights reserved.
@@ -7,25 +7,25 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from flext_core import m
 
 
 class {{ class_stem }}SettingsModels:
     """Field-only Pydantic declarations for the {{ ns }} settings singleton."""
 
-    class SettingsRoot(BaseModel):
+    class SettingsRoot(m.BaseModel):
         """Validated root loaded by the private settings composition."""
 
-        model_config = ConfigDict(frozen=True, extra="ignore")
+        model_config = m.ConfigDict(frozen=True, extra="ignore")
 
-        class SettingsNamespace(BaseModel):
+        class SettingsNamespace(m.BaseModel):
             """Validated environment-sourced settings for {{ ns }}."""
 
-            model_config = ConfigDict(frozen=True, extra="forbid")
+            model_config = m.ConfigDict(frozen=True, extra="forbid")
 
             enabled: bool = {% if scaffold.ping_example.enabled_default %}True{% else %}False{% endif %}
 
-        {{ ns }}: SettingsNamespace = Field(
+        {{ ns }}: SettingsNamespace = m.Field(
             default_factory=SettingsNamespace,
             description="Validated {{ ns }} project settings.",
         )

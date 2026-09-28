@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m
-from flext_infra.gates.base_gate import FlextInfraGate
+from flext_infra import c, config, m, u
+
+from .base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -19,8 +20,19 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
     gate_id: ClassVar[str] = c.Infra.FORMAT
     gate_name: ClassVar[str] = "Ruff Format"
     can_fix: ClassVar[bool] = True
-    tool_name: ClassVar[str] = c.Infra.SARIF_TOOL_INFO[c.Infra.FORMAT][0]
-    tool_url: ClassVar[str] = c.Infra.SARIF_TOOL_INFO[c.Infra.FORMAT][1]
+
+    @override
+    def _build_check_command(
+        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+    ) -> t.StrSequence:
+        """Build the format verdict command from the config-owned flags."""
+        _ = project_dir, ctx
+        return self._python_module_command(
+            c.Infra.RUFF,
+            c.Infra.FORMAT,
+            *config.Infra.codegen.make.ruff.format_check,
+            *check_dirs,
+        )
 
     @override
     def _get_check_dirs(
@@ -31,23 +43,13 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
         return self._existing_check_dirs(project_dir) or ["."]
 
     @override
-    def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
-    ) -> t.StrSequence:
-        """Build check command."""
-        _ = project_dir, ctx
-        return self._python_module_command(
-            c.Infra.RUFF, c.Infra.FORMAT, "--check", *check_dirs, "--quiet"
-        )
-
-    @override
     def _parse_check_output(
         self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
-    ) -> tuple[bool, t.SequenceOf[m.Infra.Issue]]:
+    ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
         _ = project_dir, ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
-        if result.exit_code != 0 and result.stdout.strip():
+        if not u.Cli.process_succeeded(result.outcome) and result.stdout.strip():
             seen: t.Infra.StrSet = set()
             for line in result.stdout.strip().splitlines():
                 raw = line.strip()
@@ -70,7 +72,7 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
                             message="Would be reformatted",
                         )
                     )
-        return result.exit_code == 0, issues
+        return u.Cli.process_succeeded(result.outcome), issues
 
     @override
     def _build_fix_command(
@@ -78,7 +80,12 @@ class FlextInfraRuffFormatGate(FlextInfraGate):
     ) -> t.StrSequence:
         """Build fix command."""
         _ = project_dir, ctx
-        return self._python_module_command(c.Infra.RUFF, c.Infra.FORMAT, *targets)
+        return self._python_module_command(
+            c.Infra.RUFF,
+            c.Infra.FORMAT,
+            *config.Infra.codegen.make.ruff.format_apply,
+            *targets,
+        )
 
 
 __all__: list[str] = ["FlextInfraRuffFormatGate"]

@@ -1,0 +1,17 @@
+id: result-failure-rebind
+language: python
+severity: error
+message: >-
+  Preserve the complete failure inside its proven failure guard by rebinding it
+  instead of rebuilding it from error text.
+rule:
+  pattern: r[$TYPE].fail($RESULT.error or $FALLBACK)
+  inside:
+    pattern: |
+      if $RESULT.failure:
+          $$$BODY
+    stopBy: end
+constraints:
+  RESULT:
+    kind: identifier
+fix: r[$TYPE].from_failure($RESULT)

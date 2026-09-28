@@ -3,121 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import MappingProxyType
 from typing import Annotated, ClassVar
 
 from flext_cli import m
 from flext_infra import c, t
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
-from flext_infra._models.mro_scan import FlextInfraModelsMroScan
 
 
-class FlextInfraModelsRefactorGrep(FlextInfraModelsMroScan):
+class FlextInfraModelsRefactorGrep:
     """Mixin containing migration/reporting contracts for refactor orchestration."""
-
-    class RewriteFilesInput(m.Value):
-        """Typed input envelope for workspace rewrite execution."""
-
-        workspace_root: Annotated[Path, m.Field(description="Workspace root path")]
-        file_moves: Annotated[
-            t.MappingKV[Path, t.MappingKV[str, t.Pair[str, t.StrMapping]]],
-            m.Field(description="Per-file symbol move map for rewrite"),
-        ]
-        pending_sources: Annotated[
-            t.MappingKV[Path, str],
-            m.Field(description="In-memory pending sources keyed by file path"),
-        ]
-        apply: Annotated[
-            bool, m.Field(description="Whether to write rewritten sources")
-        ]
-        gates: Annotated[
-            t.StrSequence | None,
-            m.Field(description="Optional protected-write gate selectors"),
-        ] = None
-
-    class MROImportRewrite(m.ArbitraryTypesModel):
-        """Unified import rewrite payload for MRO reference updates."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        facade_name: Annotated[str, m.Field(description="Facade alias/import name")] = (
-            ""
-        )
-        module: Annotated[t.NonEmptyStr, m.Field(description="Import module path")]
-        import_name: Annotated[str, m.Field(description="Imported symbol name")]
-        as_name: Annotated[str | None, m.Field(description="Optional alias")] = None
-        symbol: Annotated[str, m.Field(description="Resolved symbol in facade")] = ""
-
-    class MROFileMigration(m.ArbitraryTypesModel):
-        """Migration summary for one transformed file."""
-
-        file: Annotated[t.NonEmptyStr, m.Field(description="Absolute file path")]
-        module: Annotated[t.NonEmptyStr, m.Field(description="Import module path")]
-        moved_symbols: t.VariadicTuple[str] = m.Field(
-            default_factory=tuple, description="Symbols moved to facade class"
-        )
-        created_classes: t.VariadicTuple[str] = m.Field(
-            default_factory=tuple, description="Facade classes created during migration"
-        )
-
-    class MRORewriteResult(m.ArbitraryTypesModel):
-        """Reference rewrite summary for one file."""
-
-        file: Annotated[t.NonEmptyStr, m.Field(description="Absolute file path")]
-        replacements: Annotated[
-            int, m.Field(description="Reference replacements applied")
-        ]
-
-    class MROMigrationReport(mm.CheckpointRefMixin, m.ArbitraryTypesModel):
-        """End-to-end report for migrate-to-mro command execution."""
-
-        workspace: Annotated[str, m.Field(description="Workspace root path")]
-        target: Annotated[t.NonEmptyStr, m.Field(description="constants|typings|all")]
-        selected_projects: t.VariadicTuple[str] = m.Field(
-            default_factory=tuple,
-            description="Project scope used for the run; empty means whole workspace",
-        )
-        dry_run: Annotated[bool, m.Field(description="Dry-run indicator")]
-        validation_mode: Annotated[
-            str,
-            m.Field(
-                description="Validation strategy used for remaining violation counts"
-            ),
-        ] = "post-apply-rescan"
-        files_scanned: Annotated[int, m.Field(description="Total scanned Python files")]
-        files_with_candidates: Annotated[
-            int, m.Field(ge=0, description="Files containing movable declarations")
-        ]
-        migrations: t.VariadicTuple[FlextInfraModelsRefactorGrep.MROFileMigration] = (
-            m.Field(default_factory=tuple, description="File migration summaries")
-        )
-        rewrites: t.VariadicTuple[FlextInfraModelsRefactorGrep.MRORewriteResult] = (
-            m.Field(default_factory=tuple, description="Reference rewrite summaries")
-        )
-        remaining_violations: Annotated[
-            int, m.Field(ge=0, description="Loose declarations remaining after run")
-        ]
-        mro_failures: Annotated[
-            t.NonNegativeInt, m.Field(description="MRO validation failures")
-        ]
-        scan_duration_seconds: Annotated[
-            float, m.Field(ge=0.0, description="Scan phase duration in seconds")
-        ] = 0.0
-        rewrite_duration_seconds: Annotated[
-            float, m.Field(ge=0.0, description="Rewrite phase duration in seconds")
-        ] = 0.0
-        validation_duration_seconds: Annotated[
-            float, m.Field(ge=0.0, description="Validation phase duration in seconds")
-        ] = 0.0
-        total_duration_seconds: Annotated[
-            float, m.Field(ge=0.0, description="Total run duration in seconds")
-        ] = 0.0
-        warnings: t.VariadicTuple[str] = m.Field(
-            default_factory=tuple, description="Warnings"
-        )
-        errors: t.VariadicTuple[str] = m.Field(
-            default_factory=tuple, description="Errors"
-        )
 
     class RefactorConfig(m.ContractModel):
         """Refactor file-selection config."""
@@ -133,13 +26,95 @@ class FlextInfraModelsRefactorGrep(FlextInfraModelsMroScan):
             ],
             description="Relative directories scanned for candidate files",
         )
-        ignore_patterns: t.StrSequence = m.Field(
-            default_factory=tuple, description="Glob/file patterns ignored during scan"
-        )
         file_extensions: t.StrSequence = m.Field(
             default_factory=tuple,
             description="Allowed file extensions (empty = all by pattern)",
         )
+
+    class CodemodRule(m.ArbitraryTypesModel):
+        """One validated ast-grep rule document from a composed provider."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        id: Annotated[t.NonEmptyStr, m.Field(description="Canonical ast-grep rule ID")]
+        digest: Annotated[
+            t.NonEmptyStr, m.Field(description="SHA-256 of the canonical rule document")
+        ]
+        provider: Annotated[
+            t.NonEmptyStr, m.Field(description="Distribution or local rule provider")
+        ]
+        resource: Annotated[
+            Path, m.Field(description="Rule document resource containing this ID")
+        ]
+        fixable: Annotated[
+            bool, m.Field(description="Whether the rule declares an automated fix")
+        ]
+        expected: Annotated[
+            int | None,
+            m.Field(
+                ge=0,
+                description=(
+                    "Declared finding-count receipt from the rule's metadata; "
+                    "absent when the rule declares none"
+                ),
+            ),
+        ] = None
+
+    class CodemodRuleset(m.ArbitraryTypesModel):
+        """One provider config and its elected, conflict-free rule IDs."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        provider: Annotated[
+            t.NonEmptyStr, m.Field(description="Distribution or local rule provider")
+        ]
+        config: Annotated[
+            Path, m.Field(description="Provider-owned ast-grep sgconfig path")
+        ]
+        rule_ids: Annotated[
+            t.StrSequence, m.Field(description="Rule IDs elected from this provider")
+        ]
+        fixable_rule_ids: Annotated[
+            t.StrSequence,
+            m.Field(description="Elected rule IDs that declare an automated fix"),
+        ]
+
+    class CodemodRulePlan(m.ArbitraryTypesModel):
+        """Topologically composed dependency rules followed by the local delta."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        provider_order: Annotated[
+            t.StrSequence, m.Field(description="Dependency-first provider precedence")
+        ]
+        rules: Annotated[
+            t.VariadicTuple[FlextInfraModelsRefactorGrep.CodemodRule],
+            m.Field(description="Unique semantic rules with their elected owner"),
+        ]
+        rulesets: Annotated[
+            t.VariadicTuple[FlextInfraModelsRefactorGrep.CodemodRuleset],
+            m.Field(description="Executable provider configs in precedence order"),
+        ]
+
+    class ModGateSnapshot(m.ArbitraryTypesModel):
+        """Complete Ruff and Pyrefly evidence for one mod-circuit measurement."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        ruff_errors: Annotated[
+            t.NonNegativeInt, m.Field(description="Ruff error count")
+        ]
+        pyrefly_errors: Annotated[
+            t.NonNegativeInt, m.Field(description="Pyrefly error count")
+        ]
+        ruff_files: Annotated[
+            frozenset[Path],
+            m.Field(description="Files carrying Ruff findings in this measurement"),
+        ] = frozenset()
+        diagnostics: Annotated[
+            t.StrSequence,
+            m.Field(description="Unsuppressed diagnostics from every red gate"),
+        ]
 
     class MethodOrderRule(m.ContractModel):
         """A declarative method ordering rule for class reconstruction.
@@ -190,17 +165,12 @@ class FlextInfraModelsRefactorGrep(FlextInfraModelsMroScan):
             default_factory=tuple,
             description="Simple symbol names targeted by the migration",
         )
-        keyword_renames: t.StrMapping = m.Field(
-            default_factory=lambda: MappingProxyType({}),
-            description="Keyword rename mapping",
-        )
+        keyword_renames: t.StrMapping = m.Field(description="Keyword rename mapping")
         remove_keywords: t.StrSequence = m.Field(
             default_factory=tuple,
             description="Keywords removed from matching callsites",
         )
-        add_keywords: t.StrMapping = m.Field(
-            default_factory=lambda: MappingProxyType({}), description="Keywords to add"
-        )
+        add_keywords: t.StrMapping = m.Field(description="Keywords to add")
 
     class ImportModernizerRuleConfig(m.ContractModel):
         """Configuration for a single import modernizer rule.
@@ -210,10 +180,7 @@ class FlextInfraModelsRefactorGrep(FlextInfraModelsMroScan):
         """
 
         module: Annotated[str, m.Field(description="Module path to modernize")] = ""
-        symbol_mapping: t.StrMapping = m.Field(
-            default_factory=lambda: MappingProxyType({}),
-            description="Symbol-to-alias mapping",
-        )
+        symbol_mapping: t.StrMapping = m.Field(description="Symbol-to-alias mapping")
 
     class AccessorMigrationRule(m.ContractModel):
         """Declarative symbol-rename rule for accessor migration."""
@@ -290,15 +257,15 @@ class FlextInfraModelsRefactorGrep(FlextInfraModelsMroScan):
         lint_before: Annotated[
             t.MappingKV[str, t.StrSequence],
             m.Field(description="Lint output before the proposed rewrite"),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         lint_after: Annotated[
             t.MappingKV[str, t.StrSequence],
             m.Field(description="Lint output after the proposed rewrite"),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         new_lint_errors: Annotated[
             t.MappingKV[str, t.StrSequence],
             m.Field(description="Lint errors introduced by the proposed rewrite"),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
 
     class AccessorMigrationReport(m.ArbitraryTypesModel):
         """Workspace-scale report for accessor migration orchestration.
@@ -309,7 +276,7 @@ class FlextInfraModelsRefactorGrep(FlextInfraModelsMroScan):
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
-        workspace: Annotated[t.NonEmptyStr, m.Field(description="Workspace root path")]
+        workspace: Annotated[t.NonEmptyStr, m.Field(description="Repository root path")]
         dry_run: Annotated[bool, m.Field(description="Dry-run indicator")]
         files_scanned: Annotated[
             t.NonNegativeInt, m.Field(description="Total Python files scanned")
@@ -331,15 +298,15 @@ class FlextInfraModelsRefactorGrep(FlextInfraModelsMroScan):
         lint_before_totals: Annotated[
             t.IntMapping,
             m.Field(description="Per-tool count of lint lines before rewrites"),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         lint_after_totals: Annotated[
             t.IntMapping,
             m.Field(description="Per-tool count of lint lines after rewrites"),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         new_lint_error_totals: Annotated[
             t.IntMapping,
             m.Field(description="Per-tool count of newly introduced lint lines"),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         files: t.VariadicTuple[FlextInfraModelsRefactorGrep.AccessorMigrationFile] = (
             m.Field(
                 default_factory=tuple,

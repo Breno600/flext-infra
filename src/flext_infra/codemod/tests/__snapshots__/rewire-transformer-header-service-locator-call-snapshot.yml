@@ -1,0 +1,16 @@
+id: rewire-transformer-header-service-locator-call
+snapshots:
+  u.Infra.header_parser.ensure_alias_import(source, module, alias):
+    fixed: u.Infra.ensure_alias_import(source, module, alias)
+    labels:
+    - source: u.Infra.header_parser.ensure_alias_import(source, module, alias)
+      style: primary
+      start: 0
+      end: 64
+  u.Infra.header_parser.has_alias_import(source, alias):
+    fixed: u.Infra.has_alias_import(source, alias)
+    labels:
+    - source: u.Infra.header_parser.has_alias_import(source, alias)
+      style: primary
+      start: 0
+      end: 53

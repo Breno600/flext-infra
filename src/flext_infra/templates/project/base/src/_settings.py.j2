@@ -1,4 +1,4 @@
-{# NOTE (codex, mro-j47u): precompute exact compact/multiline source with zero render whitespace. -#}
+{# NOTE (codex, flext-j47u): precompute exact compact/multiline source with zero render whitespace. -#}
 {%- set settings_constants_line = "from " ~ package_name ~ "._constants.settings import " ~ class_stem ~ "ConstantsSettings" -%}
 {%- set settings_constants_import = settings_constants_line if settings_constants_line | length <= tooling.tools.ruff.line_length else "from " ~ package_name ~ "._constants.settings import (\n    " ~ class_stem ~ "ConstantsSettings,\n)" -%}
 {%- set settings_model_line = "from " ~ package_name ~ "._models.settings import " ~ class_stem ~ "SettingsModels" -%}
@@ -20,10 +20,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
-from pydantic_settings import SettingsConfigDict
-
-# NOTE (codex, mro-j47u): measure rendered lines so every project is Ruff-native.
-from flext_core import FlextSettings
+# NOTE (codex, flext-j47u): measure rendered lines so every project is Ruff-native.
+from flext_core import FlextSettings, m
 {{ settings_constants_import }}
 {{ settings_model_import }}
 
@@ -34,7 +32,7 @@ if TYPE_CHECKING:
 {{ settings_class_declaration }}
     """Private environment loader composed with the validated settings root."""
 
-    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
+    model_config: ClassVar[m.SettingsConfigDict] = m.SettingsConfigDict(
         env_prefix={{ class_stem }}ConstantsSettings.ENV_PREFIX,
         env_nested_delimiter="__",
         env_file=str(Path(__file__).resolve().parents[2] / ".env"),

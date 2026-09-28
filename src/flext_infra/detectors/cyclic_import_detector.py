@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,10 +25,8 @@ class FlextInfraCyclicImportDetector:
         project_root: Path,
         rope_project: t.Infra.RopeProject,
         proposed_sources: t.MappingKV[Path, str] | None = None,
-        _parse_failures: t.SequenceOf[m.Infra.ParseFailureViolation] | None = None,
     ) -> t.SequenceOf[m.Infra.CyclicImportViolation]:
         """Build the current or prospective import graph and detect cycles."""
-        del _parse_failures
         source_updates = {
             path.resolve(): source for path, source in (proposed_sources or {}).items()
         }
@@ -39,26 +38,21 @@ class FlextInfraCyclicImportDetector:
         if not scan_dirs:
             return []
 
-        module_resources: list[tuple[str, str, t.Infra.RopeResource]] = []
+        module_resources: list[t.Triple[str, str, t.Infra.RopeResource]] = []
         for resource in rope_project.get_python_files():
             real_path = Path(resource.real_path).resolve()
             if not any(real_path.is_relative_to(scan_dir) for scan_dir in scan_dirs):
                 continue
-            try:
-                module_name = u.Infra.get_pymodule(rope_project, resource).get_name()
-            except (
-                *u.Infra.rope_runtime_errors(),
-                *u.Infra.rope_syntax_errors(),
-                TypeError,
-            ):
-                continue
+            module_name = u.Infra.resolve_pymodule(rope_project, resource).get_name()
             if module_name:
                 module_resources.append((module_name, str(real_path), resource))
 
         file_map: t.MutableStrMapping = {
             module_name: file_path for module_name, file_path, _ in module_resources
         }
-        graph: dict[str, t.Infra.StrSet] = {module: set() for module in file_map}
+        graph: MutableMapping[str, t.Infra.StrSet] = {
+            module: set() for module in file_map
+        }
         for module_name, file_path, resource in module_resources:
             resolved_file = Path(file_path).resolve()
             semantic_targets = (
@@ -67,7 +61,9 @@ class FlextInfraCyclicImportDetector:
                 )
                 if resolved_file in source_updates
                 else tuple(
-                    u.Infra.get_semantic_module_imports(rope_project, resource).values()
+                    u.Infra.resolve_semantic_module_imports(
+                        rope_project, resource
+                    ).values()
                 )
             )
             for semantic_target in semantic_targets:
@@ -92,7 +88,7 @@ class FlextInfraCyclicImportDetector:
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource, source: str
     ) -> t.StrSequence:
         """Return Rope-resolved import targets for one proposed source."""
-        pymodule = u.Infra.get_string_module(rope_project, source, resource=resource)
+        pymodule = u.Infra.build_string_module(rope_project, source, resource=resource)
         module_imports = u.Infra.module_imports_for_pymodule(rope_project, pymodule)
         module_name = pymodule.get_name()
         current_package = (

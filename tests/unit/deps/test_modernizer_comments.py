@@ -2,19 +2,28 @@
 
 from __future__ import annotations
 
-from flext_infra import c
-from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
 from flext_tests import tm
+
+from flext_infra import FlextInfraInjectCommentsPhase, c, u
 
 
 class TestsFlextInfraDepsModernizerComments:
     """Tests comment injection behavior."""
 
+    def _owned_marker(self, section: str) -> str:
+        spec = tm.ok(u.Infra.pyproject_managed_file())
+        owned = next(
+            item
+            for item in spec.conflict_sections
+            if u.Infra.toml_section_is_owned(section, (item,))
+        )
+        return f"# [MANAGED] {owned}"
+
     def test_inject_comments_adds_banner(self) -> None:
         """Inject the canonical managed banner."""
         rendered = "[project]\nname = 'test'"
         result, changes = FlextInfraInjectCommentsPhase().apply(rendered)
-        tm.that(result, has="[MANAGED] FLEXT pyproject standardization")
+        tm.that(result, starts=c.Infra.BANNER)
         tm.that(any("banner" in change for change in changes), eq=True)
 
     def test_inject_comments_injects_markers(self) -> None:
@@ -22,6 +31,27 @@ class TestsFlextInfraDepsModernizerComments:
         rendered = "[project]\nname = 'test'\n[tool.pytest]"
         _, changes = FlextInfraInjectCommentsPhase().apply(rendered)
         tm.that(any("marker" in change for change in changes), eq=True)
+
+    def test_inject_comments_marks_project_keys_from_ssot(self) -> None:
+        """[project] comments list preserve/overwrite keys from the managed file."""
+        spec = tm.ok(u.Infra.pyproject_managed_file())
+        result, _changes = FlextInfraInjectCommentsPhase().apply(
+            "[project]\nname = 'test'\n"
+        )
+        custom_line = next(
+            line for line in result.splitlines() if line.startswith("# [CUSTOM]")
+        )
+        for key in spec.preserve_project_keys:
+            tm.that(custom_line, has=key)
+        tm.that(result, has="# [MANAGED] " + ", ".join(spec.overwrite_project_keys))
+        tm.that(custom_line, lacks="project metadata")
+
+    def test_inject_comments_marks_unlisted_tool_table_custom(self) -> None:
+        """A [tool.*] table absent from conflict_sections is CUSTOM."""
+        result, _changes = FlextInfraInjectCommentsPhase().apply(
+            "[tool.bandit]\nskips = []\n"
+        )
+        tm.that(result, has="# [CUSTOM] tool.bandit")
 
     def test_inject_comments_removes_broken_group_section(self) -> None:
         """Remove unsupported dependency-group sections."""
@@ -31,22 +61,22 @@ class TestsFlextInfraDepsModernizerComments:
         tm.that(any("broken" in change for change in changes), eq=True)
 
     def test_inject_comments_handles_optional_dependencies_dev(self) -> None:
-        """Preserve or canonically annotate development dependencies."""
+        """Preserve development dependencies content."""
         rendered = "[project.optional-dependencies]\ndev = ['pytest']"
         result, changes = FlextInfraInjectCommentsPhase().apply(rendered)
         tm.that(("dev" in result) or (changes), eq=True)
 
     def test_inject_comments_preserves_existing_markers(self) -> None:
-        """Preserve an already canonical section marker."""
-        rendered = "# [MANAGED] build system\n[build-system]"
+        """Restamp a managed section from the SSOT, not a frozen phrase."""
+        rendered = "# [MANAGED] build-system\n[build-system]"
         result, _ = FlextInfraInjectCommentsPhase().apply(rendered)
-        tm.that(result, has="# [MANAGED] build system")
+        tm.that(result, has=self._owned_marker("build-system"))
 
     def test_inject_comments_phase_apply_banner(self) -> None:
         """Return a change record when injecting the banner."""
         rendered = '[project]\nname = "test"\n'
         result, changes = FlextInfraInjectCommentsPhase().apply(rendered)
-        tm.that(result, has="[MANAGED] FLEXT pyproject standardization")
+        tm.that(result, starts=c.Infra.BANNER)
         tm.that(changes, has="managed banner injected")
 
     def test_inject_comments_phase_apply_markers(self) -> None:
@@ -70,11 +100,11 @@ class TestsFlextInfraDepsModernizerComments:
 
     def test_inject_comments_phase_repositions_marker_before_section(self) -> None:
         """Position a managed marker immediately before its section."""
-        rendered = '[tool.coverage.report]\nfail_under = 45\n# [MANAGED] pyrefly\n[tool.pyrefly]\npython-version = "3.13"'
+        rendered = '[tool.coverage.report]\nprecision = 2\n# [MANAGED] pyrefly\n[tool.pyrefly]\npython-version = "3.13"'
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
         lines = result.splitlines()
         pyrefly_idx = lines.index("[tool.pyrefly]")
-        tm.that(lines[pyrefly_idx - 1], eq="# [MANAGED] pyrefly")
+        tm.that(lines[pyrefly_idx - 1], eq=self._owned_marker("tool.pyrefly"))
 
     def test_inject_comments_phase_removes_auto_banner_and_auto_marker(self) -> None:
         """Replace superseded automatic banner and marker variants."""
@@ -84,17 +114,19 @@ class TestsFlextInfraDepsModernizerComments:
         tm.that("[AUTO]" in result, eq=False)
 
     def test_inject_comments_phase_marks_pytest_and_coverage_subtables(self) -> None:
-        """Annotate governed pytest and coverage subtables."""
-        rendered = '[tool.pytest.ini_options]\nminversion = "8.0"\n[tool.coverage.report]\nfail_under = 45'
+        """Annotate governed pytest and coverage subtables from the SSOT."""
+        rendered = '[tool.pytest.ini_options]\nminversion = "8.0"\n[tool.coverage.report]\nprecision = 2'
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
-        tm.that(result, has="# [MANAGED] pytest")
-        tm.that(result, has="# [MANAGED] coverage")
+        tm.that(result, has=self._owned_marker("tool.pytest.ini_options"))
+        tm.that(result, has=self._owned_marker("tool.coverage.report"))
 
     def test_inject_comments_phase_deduplicates_family_markers(self) -> None:
         """Emit one marker for multiple tables in the same tool family."""
-        rendered = "[tool.coverage.run]\nbranch = true\n[tool.coverage.report]\nfail_under = 45"
+        rendered = (
+            "[tool.coverage.run]\nbranch = true\n[tool.coverage.report]\nprecision = 2"
+        )
         result, _changes = FlextInfraInjectCommentsPhase().apply(rendered)
-        tm.that(result.count("# [MANAGED] coverage"), eq=1)
+        tm.that(result.count(self._owned_marker("tool.coverage")), eq=1)
 
     def test_inject_comments_phase_is_idempotent_on_managed_content(self) -> None:
         """Produce byte-identical output and no changes on a second pass."""
@@ -111,8 +143,6 @@ class TestsFlextInfraDepsModernizerComments:
 
     def test_inject_comments_normalizes_leading_parse_trivia(self) -> None:
         """Keep the managed banner byte-identical after TOML parse/render."""
-        # NOTE (multi-agent, mro-wkii.17.9.2.1): the banner owns exactly one
-        # separator regardless of leading whitespace supplied by the parser.
         phase = FlextInfraInjectCommentsPhase()
         with_trivia, _changes = phase.apply('\n[project]\nname = "test"\n')
         without_trivia, _changes = phase.apply('[project]\nname = "test"\n')
@@ -122,13 +152,10 @@ class TestsFlextInfraDepsModernizerComments:
         self,
     ) -> None:
         """Converge when a blank line already separates marker and section."""
-        # A rendered pyproject separates tables with a blank line, so a marker
-        # emitted above a table yields "# [MANAGED] x", "", "[tool.x]". Every
-        # re-run must be a fixed point on that shape; re-inserting a separator
-        # each pass made `make gen APPLY=Y` never idempotent.
         rendered = (
             '[project]\nname = "test"\n'
-            '\n# [MANAGED] pytest\n\n[tool.pytest.ini_options]\nminversion = "8.0"\n'
+            f"\n{self._owned_marker('tool.pytest')}\n\n"
+            '[tool.pytest.ini_options]\nminversion = "8.0"\n'
         )
         phase = FlextInfraInjectCommentsPhase()
         first_result, _first_changes = phase.apply(rendered)

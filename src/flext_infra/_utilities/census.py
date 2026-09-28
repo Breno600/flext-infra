@@ -4,65 +4,33 @@ from __future__ import annotations
 
 import shutil
 from collections import defaultdict
+from collections.abc import Callable as _CensusCallable, MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from flext_cli import u
+
 from flext_core import r
-from flext_infra._models.refactor_census import FlextInfraModelsRefactorCensus as mrc
-from flext_infra._utilities.protected_edit import FlextInfraUtilitiesProtectedEdit
-from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from flext_infra._utilities.rope_helpers import FlextInfraUtilitiesRopeHelpers
-from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
+
+from .protected_edit import FlextInfraUtilitiesProtectedEdit
+from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from .rope_core import FlextInfraUtilitiesRopeCore
+from .rope_helpers import FlextInfraUtilitiesRopeHelpers
+from .rope_imports import FlextInfraUtilitiesRopeImports
+from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 if TYPE_CHECKING:
-    from collections.abc import Callable as _CensusCallable
-
-    from flext_infra.protocols import p
+    from flext_infra import p
 
 _log = u.fetch_logger(__name__)
+
+_UNSUPPORTED_SIMPLE_REMOVAL_CODE: Final[str] = "CENSUS_UNSUPPORTED_SIMPLE_REMOVAL"
+"Error code marking a candidate outside the simple-removal contract (not a failure)."
 
 
 class FlextInfraUtilitiesRefactorCensus:
     """Census and source introspection helpers for refactor tools."""
-
-    @staticmethod
-    def identify_project_by_roots(
-        file_path: Path, project_roots: t.SequenceOf[Path]
-    ) -> str:
-        """Identify project name for a file path (most-specific root wins)."""
-        matching_roots = [
-            root for root in project_roots if file_path.is_relative_to(root)
-        ]
-        if not matching_roots:
-            unknown: str = c.Infra.DEFAULT_UNKNOWN
-            return unknown
-        best = max(matching_roots, key=lambda root: len(root.parts))
-        name: str = best.name
-        return name
-
-    @staticmethod
-    def build_mro_target(
-        family: str, core_project: str = c.Infra.PKG_CORE
-    ) -> mrc.MROFamilyTarget:
-        """Create a generic target settings from a family code."""
-        if family not in c.Infra.MRO_FAMILIES:
-            msg = f"Invalid MRO family {family}"
-            raise ValueError(msg)
-        sf = c.Infra.FAMILY_SUFFIXES[family]
-        return mrc.MROFamilyTarget(
-            family=family,
-            class_suffix=sf,
-            package_dir=c.Infra.MRO_FAMILY_PACKAGE_DIRS[family],
-            facade_module=c.Infra.MRO_FAMILY_FACADE_MODULES[family],
-            facade_class_prefix=f"Flext{sf}",
-            core_project=core_project,
-        )
 
     @staticmethod
     def export_pydantic_json(model_payload: m.BaseModel, export_path: Path) -> None:
@@ -76,7 +44,7 @@ class FlextInfraUtilitiesRefactorCensus:
         rope: p.Infra.RopeWorkspaceDsl,
         file_path: Path,
         *,
-        source_cache: dict[Path, str] | None = None,
+        source_cache: MutableMapping[Path, str] | None = None,
     ) -> str:
         """Return one original source snapshot, optionally cached by path."""
         resolved_path = file_path.resolve()
@@ -93,10 +61,10 @@ class FlextInfraUtilitiesRefactorCensus:
     @staticmethod
     def plan_simple_removal_edits(
         rope: p.Infra.RopeWorkspaceDsl,
-        candidate: m.Infra.Census.RemovalCandidate,
+        candidate: m.Infra.RemovalCandidate,
         *,
-        source_cache: dict[Path, str] | None = None,
-    ) -> t.MappingKV[Path, tuple[t.IntPair, ...]] | None:
+        source_cache: MutableMapping[Path, str] | None = None,
+    ) -> t.MappingKV[Path, t.VariadicTuple[t.IntPair]] | None:
         """Plan safe line-range removals for simple top-level removal candidates."""
         if candidate.scope_path != candidate.object_name:
             return None
@@ -111,9 +79,9 @@ class FlextInfraUtilitiesRefactorCensus:
         )
         if definition_range is None:
             return None
-        ranges_by_file: dict[Path, list[t.IntPair]] = defaultdict(list)
+        ranges_by_file: MutableMapping[Path, list[t.IntPair]] = defaultdict(list)
         ranges_by_file[definition_path].append(definition_range)
-        sites_by_path: dict[Path, list[m.Infra.Census.ReferenceSite]] = defaultdict(
+        sites_by_path: MutableMapping[Path, list[m.Infra.ReferenceSite]] = defaultdict(
             list
         )
         for site in FlextInfraUtilitiesRefactorCensus._supporting_reference_sites(
@@ -142,10 +110,10 @@ class FlextInfraUtilitiesRefactorCensus:
         rope: p.Infra.RopeWorkspaceDsl,
         file_path: Path,
         source: str,
-        candidate: m.Infra.Census.RemovalCandidate,
+        candidate: m.Infra.RemovalCandidate,
         *,
-        sites: tuple[m.Infra.Census.ReferenceSite, ...],
-    ) -> tuple[t.IntPair, ...] | None:
+        sites: t.VariadicTuple[m.Infra.ReferenceSite],
+    ) -> t.VariadicTuple[t.IntPair] | None:
         """Plan removable top-level ranges for one support file."""
         planned_ranges: list[t.IntPair] = []
         for site in sites:
@@ -184,13 +152,15 @@ class FlextInfraUtilitiesRefactorCensus:
         source: str,
         *,
         imported_name: str,
-    ) -> tuple[int, ...]:
+    ) -> t.VariadicTuple[int]:
         """Return same-file occurrence lines for local aliases of ``imported_name``."""
         resource = rope.resource(file_path)
         if resource is None:
             return ()
-        declared_imports = FlextInfraUtilitiesRopeAnalysis.get_declared_module_imports(
-            rope.rope_project, resource
+        declared_imports = (
+            FlextInfraUtilitiesRopeAnalysis.resolve_declared_module_imports(
+                rope.rope_project, resource
+            )
         )
         alias_names = tuple(
             local_name
@@ -224,9 +194,7 @@ class FlextInfraUtilitiesRefactorCensus:
         return tuple(sorted(occurrence_lines))
 
     @staticmethod
-    def _supports_simple_removal_candidate(
-        candidate: m.Infra.Census.RemovalCandidate,
-    ) -> bool:
+    def _supports_simple_removal_candidate(candidate: m.Infra.RemovalCandidate) -> bool:
         """Whether ``candidate`` is eligible for the simple-removal pipeline."""
         return (
             candidate.scope_path == candidate.object_name
@@ -237,9 +205,9 @@ class FlextInfraUtilitiesRefactorCensus:
     def _simple_removal_sources_result(
         cls,
         rope: p.Infra.RopeWorkspaceDsl,
-        candidate: m.Infra.Census.RemovalCandidate,
+        candidate: m.Infra.RemovalCandidate,
         *,
-        source_cache: dict[Path, str] | None = None,
+        source_cache: MutableMapping[Path, str] | None = None,
     ) -> p.Result[t.MappingKV[Path, str]]:
         """Return projected sources or a loud failure for broken planning.
 
@@ -260,9 +228,9 @@ class FlextInfraUtilitiesRefactorCensus:
     @staticmethod
     def build_simple_removal_sources(
         rope: p.Infra.RopeWorkspaceDsl,
-        candidate: m.Infra.Census.RemovalCandidate,
+        candidate: m.Infra.RemovalCandidate,
         *,
-        source_cache: dict[Path, str] | None = None,
+        source_cache: MutableMapping[Path, str] | None = None,
     ) -> t.MappingKV[Path, str] | None:
         """Build updated sources for a simple removal candidate without writing."""
         edit_plan = FlextInfraUtilitiesRefactorCensus.plan_simple_removal_edits(
@@ -271,7 +239,7 @@ class FlextInfraUtilitiesRefactorCensus:
         if edit_plan is None:
             return None
         definition_path = Path(candidate.file_path).resolve()
-        updates: dict[Path, str] = {}
+        updates: MutableMapping[Path, str] = {}
         for file_path, ranges in edit_plan.items():
             original_source = FlextInfraUtilitiesRefactorCensus._source_snapshot(
                 rope, file_path, source_cache=source_cache
@@ -339,49 +307,42 @@ class FlextInfraUtilitiesRefactorCensus:
         resource = rope.resource(file_path)
         if resource is None:
             return ()
-        try:
-            attributes = FlextInfraUtilitiesRopeCore.get_pymodule(
-                rope.rope_project, resource
-            ).get_attributes()
-        except FlextInfraUtilitiesRopeRuntime.rope_runtime_errors():
-            return ()
-        except (RecursionError, SyntaxError, ValueError, TypeError):
-            return ()
+        attributes = FlextInfraUtilitiesRopeCore.resolve_pymodule(
+            rope.rope_project, resource
+        ).get_attributes()
         target_pyname = attributes.get(target_name)
-        if target_pyname is None or FlextInfraUtilitiesRopeRuntime.is_imported_name(
+        if target_pyname is None or FlextInfraUtilitiesRopeRuntime.imported_name(
             target_pyname
         ):
             return ()
-        try:
-            target_object = target_pyname.get_object()
-        except FlextInfraUtilitiesRopeRuntime.rope_runtime_errors():
-            return ()
+        target_object = target_pyname.get_object()
         alias_names: set[str] = set()
         for name, pyname in attributes.items():
-            if name == target_name or FlextInfraUtilitiesRopeRuntime.is_imported_name(
+            if name == target_name or FlextInfraUtilitiesRopeRuntime.imported_name(
                 pyname
             ):
                 continue
-            line = FlextInfraUtilitiesRefactorCensus._pyname_definition_line(
+            line = FlextInfraUtilitiesRefactorCensus.pyname_definition_line(
                 pyname, resource
             )
             if line is None or not FlextInfraUtilitiesRefactorCensus._line_in_ranges(
                 line, removed_ranges=removed_ranges
             ):
                 continue
-            try:
-                alias_object = pyname.get_object()
-            except FlextInfraUtilitiesRopeRuntime.rope_runtime_errors():
-                continue
+            alias_object = pyname.get_object()
             if id(alias_object) == id(target_object):
                 alias_names.add(name)
         return tuple(sorted(alias_names))
 
     @staticmethod
-    def _pyname_definition_line(
+    def pyname_definition_line(
         pyname: t.Infra.RopePyName, resource: t.Infra.RopeResource
     ) -> int | None:
-        """Return the local definition line for one Rope symbol."""
+        """Return the local definition line for one Rope symbol.
+
+        ``None`` when the symbol is defined in another module, so a caller never
+        attributes an imported name to the file under inspection.
+        """
         location = pyname.get_definition_location()
         module, line = location
         origin = module.get_resource() if module is not None else None
@@ -397,9 +358,9 @@ class FlextInfraUtilitiesRefactorCensus:
     @staticmethod
     def build_facade_base_cascade_updates(
         rope: p.Infra.RopeWorkspaceDsl,
-        candidate: m.Infra.Census.RemovalCandidate,
+        candidate: m.Infra.RemovalCandidate,
         *,
-        source_cache: dict[Path, str] | None = None,
+        source_cache: MutableMapping[Path, str] | None = None,
     ) -> t.MappingKV[Path, str] | None:
         """Drop ``candidate`` from class-base lists in facade modules.
 
@@ -410,7 +371,7 @@ class FlextInfraUtilitiesRefactorCensus:
         """
         target_name = candidate.object_name
         definition_path = Path(candidate.file_path).resolve()
-        updates: dict[Path, str] = {}
+        updates: MutableMapping[Path, str] = {}
         definition_resource = rope.resource(definition_path)
         if definition_resource is None:
             return None
@@ -465,7 +426,7 @@ class FlextInfraUtilitiesRefactorCensus:
         return updates
 
     @staticmethod
-    def _strip_class_base(source: str, base_name: str) -> tuple[str, bool]:
+    def _strip_class_base(source: str, base_name: str) -> t.Pair[str, bool]:
         """Return (new_source, disqualified) after removing ``base_name`` from bases.
 
         Handles both single-line and multi-line class declarations. When the
@@ -515,7 +476,7 @@ class FlextInfraUtilitiesRefactorCensus:
     @staticmethod
     def _rewrite_class_header_bases(
         header: str, base_name: str
-    ) -> tuple[str, bool, bool]:
+    ) -> t.Triple[str, bool, bool]:
         """Rewrite one class header block after removing ``base_name`` from bases."""
         stripped_header = header.rstrip("\n")
         if "(" not in stripped_header or ")" not in stripped_header:
@@ -569,7 +530,7 @@ class FlextInfraUtilitiesRefactorCensus:
         multi_line = c.Infra.DUNDER_ALL_MULTI_LINE_RE
         quoted_target = {f'"{name}"', f"'{name}'"}
 
-        def _rewrite_single(match: t.Infra.RegexMatch) -> str:
+        def _rewrite_single(match: t.RegexMatch) -> str:
             """Rewrite single."""
             body: str = t.Infra.STR_ADAPTER.validate_python(match.group("body"))
             entries = [entry.strip() for entry in body.split(",") if entry.strip()]
@@ -583,7 +544,7 @@ class FlextInfraUtilitiesRefactorCensus:
                 result = f"{prefix}[{', '.join(remaining)}]"
             return result
 
-        def _rewrite_multi(match: t.Infra.RegexMatch) -> str:
+        def _rewrite_multi(match: t.RegexMatch) -> str:
             """Rewrite multi."""
             body: str = t.Infra.STR_ADAPTER.validate_python(match.group("body"))
             if "\n" not in body:
@@ -616,7 +577,7 @@ class FlextInfraUtilitiesRefactorCensus:
     def _cleanup_written_paths(
         rope: p.Infra.RopeWorkspaceDsl,
         *,
-        candidate: m.Infra.Census.RemovalCandidate,
+        candidate: m.Infra.RemovalCandidate,
         file_paths: t.SequenceOf[Path],
     ) -> None:
         """Run one centralized post-write Rope cleanup for touched files."""
@@ -636,13 +597,55 @@ class FlextInfraUtilitiesRefactorCensus:
             raise RuntimeError(msg)
 
     @staticmethod
+    def _planned_simple_removal(
+        rope: p.Infra.RopeWorkspaceDsl,
+        candidate: m.Infra.RemovalCandidate,
+        *,
+        source_cache: MutableMapping[Path, str] | None = None,
+    ) -> p.Result[t.Pair[t.MappingKV[Path, str], _CensusCallable[[], None]]]:
+        """Plan one simple removal and bind its post-write Rope cleanup.
+
+        A candidate outside the simple-removal contract yields a typed
+        failure carrying ``_UNSUPPORTED_SIMPLE_REMOVAL_CODE`` — never a
+        ``None`` payload, which success results forbid. The preview and
+        apply paths translate that code into their own "unsupported"
+        outcome so both report the same result from one owner.
+        """
+        planned = r[t.Pair[t.MappingKV[Path, str], _CensusCallable[[], None]]]
+        if not FlextInfraUtilitiesRefactorCensus._supports_simple_removal_candidate(
+            candidate
+        ):
+            return planned.fail(
+                "candidate is outside the simple-removal contract: "
+                f"{candidate.file_path}:{candidate.line} {candidate.object_name}",
+                error_code=_UNSUPPORTED_SIMPLE_REMOVAL_CODE,
+            )
+        updates_result = (
+            FlextInfraUtilitiesRefactorCensus._simple_removal_sources_result(
+                rope, candidate, source_cache=source_cache
+            )
+        )
+        if updates_result.failure:
+            return planned.from_failure(updates_result)
+        updates = updates_result.unwrap()
+        file_paths = tuple(sorted(updates))
+
+        def _cleanup() -> None:
+            """Post write."""
+            FlextInfraUtilitiesRefactorCensus._cleanup_written_paths(
+                rope, candidate=candidate, file_paths=file_paths
+            )
+
+        return planned.ok((updates, _cleanup))
+
+    @staticmethod
     def preview_simple_removal_candidate(
         rope: p.Infra.RopeWorkspaceDsl,
         workspace: Path,
-        candidate: m.Infra.Census.RemovalCandidate,
+        candidate: m.Infra.RemovalCandidate,
         *,
         gates: t.StrSequence,
-        source_cache: dict[Path, str] | None = None,
+        source_cache: MutableMapping[Path, str] | None = None,
     ) -> p.Result[bool]:
         """Preview one simple removal candidate, requiring clean gates.
 
@@ -651,31 +654,17 @@ class FlextInfraUtilitiesRefactorCensus:
         simple-removal contract. ``r.fail(...)`` when planning or
         ``preview_source_writes`` failed — the message lists the reason.
         """
-        if not FlextInfraUtilitiesRefactorCensus._supports_simple_removal_candidate(
-            candidate
-        ):
-            return r[bool].ok(False)
-        updates_result = (
-            FlextInfraUtilitiesRefactorCensus._simple_removal_sources_result(
-                rope, candidate, source_cache=source_cache
-            )
+        planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
+            rope, candidate, source_cache=source_cache
         )
-        if updates_result.failure:
-            return r[bool].fail(
-                updates_result.error or "simple removal planning failed"
-            )
-        updates = updates_result.unwrap()
-        file_paths = tuple(sorted(updates))
-
-        def _post_write() -> None:
-            """Post write."""
-            FlextInfraUtilitiesRefactorCensus._cleanup_written_paths(
-                rope, candidate=candidate, file_paths=file_paths
-            )
-
+        if planned.failure:
+            if planned.error_code == _UNSUPPORTED_SIMPLE_REMOVAL_CODE:
+                return r[bool].ok(False)
+            return r[bool].from_failure(planned)
+        updates, post_write = planned.unwrap()
         try:
             applied, reports = FlextInfraUtilitiesProtectedEdit.preview_source_writes(
-                updates, workspace=workspace, gates=gates, post_write=_post_write
+                updates, workspace=workspace, gates=gates, post_write=post_write
             )
         except RuntimeError as exc:
             _log.warning(
@@ -684,7 +673,7 @@ class FlextInfraUtilitiesRefactorCensus:
                 object_name=candidate.object_name,
                 error=str(exc),
             )
-            return r[bool].fail(str(exc))
+            return r[bool].fail(str(exc), exception=exc)
         finally:
             rope.refresh(preserve_indexes=True, validate_project=False)
         if applied:
@@ -697,7 +686,7 @@ class FlextInfraUtilitiesRefactorCensus:
     def apply_simple_removal_candidate(
         rope: p.Infra.RopeWorkspaceDsl,
         workspace: Path,
-        candidate: m.Infra.Census.RemovalCandidate,
+        candidate: m.Infra.RemovalCandidate,
         *,
         gates: t.StrSequence,
         post_apply_hook: _CensusCallable[[Path], None] | None = None,
@@ -712,27 +701,19 @@ class FlextInfraUtilitiesRefactorCensus:
         the ``flext_infra.codegen.lazy_init`` import cycle while still
         giving gates a chance to verify post-cascade correctness.
         """
-        if not FlextInfraUtilitiesRefactorCensus._supports_simple_removal_candidate(
-            candidate
-        ):
-            return r[bool].ok(False)
-        updates_result = (
-            FlextInfraUtilitiesRefactorCensus._simple_removal_sources_result(
-                rope, candidate
-            )
+        source_cache: MutableMapping[Path, str] = {}
+        planned = FlextInfraUtilitiesRefactorCensus._planned_simple_removal(
+            rope, candidate, source_cache=source_cache
         )
-        if updates_result.failure:
-            return r[bool].fail(
-                updates_result.error or "simple removal planning failed"
-            )
-        updates = updates_result.unwrap()
-        file_paths = tuple(sorted(updates))
+        if planned.failure:
+            if planned.error_code == _UNSUPPORTED_SIMPLE_REMOVAL_CODE:
+                return r[bool].ok(False)
+            return r[bool].from_failure(planned)
+        updates, cleanup = planned.unwrap()
 
         def _post_write() -> None:
             """Post write."""
-            FlextInfraUtilitiesRefactorCensus._cleanup_written_paths(
-                rope, candidate=candidate, file_paths=file_paths
-            )
+            cleanup()
             if post_apply_hook is not None:
                 post_apply_hook(workspace)
 
@@ -740,6 +721,7 @@ class FlextInfraUtilitiesRefactorCensus:
             updates,
             request=m.Infra.ProtectedSourceWritesRequest(
                 workspace=workspace,
+                expected_sources={path: source_cache[path] for path in updates},
                 gates=gates,
                 post_write=_post_write,
                 skip_pytest=True,
@@ -800,7 +782,9 @@ class FlextInfraUtilitiesRefactorCensus:
         return resolved_destination
 
     @staticmethod
-    def merge_line_ranges(ranges: t.SequenceOf[t.IntPair]) -> tuple[t.IntPair, ...]:
+    def merge_line_ranges(
+        ranges: t.SequenceOf[t.IntPair],
+    ) -> t.VariadicTuple[t.IntPair]:
         """Merge overlapping or adjacent 1-based inclusive line ranges."""
         if not ranges:
             return ()
@@ -816,17 +800,17 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def _supporting_reference_sites(
-        candidate: m.Infra.Census.RemovalCandidate,
-    ) -> tuple[m.Infra.Census.ReferenceSite, ...]:
+        candidate: m.Infra.RemovalCandidate,
+    ) -> t.VariadicTuple[m.Infra.ReferenceSite]:
         """Supporting reference sites."""
-        sites: tuple[m.Infra.Census.ReferenceSite, ...] = tuple(
+        sites: t.VariadicTuple[m.Infra.ReferenceSite] = tuple(
             candidate.script_reference_sites
         )
         return sites
 
     @staticmethod
     def _definition_line_range(
-        source: str, candidate: m.Infra.Census.RemovalCandidate
+        source: str, candidate: m.Infra.RemovalCandidate
     ) -> t.IntPair | None:
         """Definition line range."""
         block = FlextInfraUtilitiesRopeHelpers.extract_definition(
@@ -838,7 +822,7 @@ class FlextInfraUtilitiesRefactorCensus:
 
     @staticmethod
     def _reference_line_range(
-        source: str, site: m.Infra.Census.ReferenceSite
+        source: str, site: m.Infra.ReferenceSite
     ) -> t.IntPair | None:
         """Compute the line range for a reference site."""
         return FlextInfraUtilitiesRefactorCensus._reference_line_range_for_line(

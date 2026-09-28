@@ -16,20 +16,12 @@ make check
 make test
 ```
 
-For a single project:
-
-```bash
-make check PROJECT={{ package_name }}
-make test  PROJECT={{ package_name }}
-```
-
 ## Development Workflow
 
 1. Create a focused branch from `{{ flext_git_branch }}`.
-2. Track work with `bd` (Beads) — claim an issue, work in a `make work` lane.
-3. Keep changes scoped to one concern per commit.
-4. Run quality gates before opening a PR.
-5. Update docs when API, behavior, or architecture changes.
+2. Keep changes scoped to one concern per commit.
+3. Run quality gates before opening a PR.
+4. Update docs when API, behavior, or architecture changes.
 
 ### Commit Conventions
 
@@ -41,15 +33,6 @@ Use conventional commit messages:
 - `refactor:` — code restructuring, no behavior change
 - `chore:` — tooling, dependencies, maintenance
 
-### Lane Lifecycle
-
-```bash
-make work WHAT=start PROJECT={{ package_name }} BEAD=<id> KIND=feature NAME=<slug> APPLY=Y
-make work WHAT=status PROJECT={{ package_name }} BEAD=<id>
-make work WHAT=land   PROJECT={{ package_name }} BEAD=<id> APPLY=Y
-make work WHAT=finish PROJECT={{ package_name }} BEAD=<id> APPLY=Y
-```
-
 ## Testing
 
 - Test public facades only — no mocks, no internal-method assertions.
@@ -58,23 +41,37 @@ make work WHAT=finish PROJECT={{ package_name }} BEAD=<id> APPLY=Y
 - Tests assert observable behavior, never implementation details.
 
 ```bash
-make test PROJECT={{ package_name }}
+make test
 ```
+
+`make test` runs the incremental scope with the persistent external Testmon cache.
+For the complete suite, including external and CI-excluded markers, run:
+
+```bash
+make test-full
+```
+
+The full verb first runs the incremental phase, then the complete phase. Both share
+one database and one absolute deadline. The first failure stops the operation.
+External tests retain their required services and authentication. Each phase emits
+its own receipts; warnings include selection, inventory, and execution counts.
+Zero execution is accepted only as a typed, integrity-checked incremental cache hit,
+never as tests passed. Never invoke the underlying test runner directly.
 
 ## Code Quality
 
 All quality gates run through canonical `make` verbs:
 
 ```bash
-make check   # ruff + pyrefly + mypy + pyright
-make fmt     # format
-make val     # extra validation
+make check
+make fmt
+make gen
 ```
 
-- **Ruff** — lint + format (enforced via `make check`)
-- **Pyrefly** — fast type checking (enforced via `make check`)
-- **Mypy** — strict type checking (enforced via `make check`)
-- **Pyright** — additional type analysis (enforced via `make check`)
+- **Ruff** — lint + format (enforced via `make check `)
+- **Pyrefly** — fast type checking (enforced via `make check `)
+- **Mypy** — strict type checking (enforced via `make check `)
+- **Pyright** — additional type analysis (enforced via `make check `)
 
 Never run these tools directly — always use the `make` verbs so guards,
 locks, and evidence are preserved.

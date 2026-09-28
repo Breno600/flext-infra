@@ -2,60 +2,61 @@
 
 from __future__ import annotations
 
-from flext_infra import c, config, t
+from flext_infra import c, config, t, u
 
 
 class FlextInfraInjectCommentsPhase:
     """Inject managed/custom markers into pyproject.toml."""
 
-    _MYPY_RATIONALE_HEADER = (
-        "# FLEXT mypy suppression rationale (validated at the facade-MRO boundary):"
-    )
-    _RUFF_RATIONALE_HEADER = (
-        "# FLEXT Ruff suppression rationale (validated against semantic facet order):"
-    )
-    _PYRIGHT_RATIONALE_HEADER = (
-        "# FLEXT Pyright suppression rationale (validated at the facade-MRO boundary):"
+    _STRIP_PREFIXES: t.StrSequence = (
+        "# [MANAGED]",
+        "# [CUSTOM]",
+        "# [AUTO]",
+        "# Sections with [",
+        "# FLEXT mypy[",
+        "# FLEXT ruff[",
+        "# FLEXT pyright[",
     )
 
-    @classmethod
-    def _mypy_rationale_lines(cls) -> t.StrSequence:
-        """Render evidence-backed Mypy exclusions from the tooling SSOT."""
-        return (
-            cls._MYPY_RATIONALE_HEADER,
-            *(
-                f"# FLEXT mypy[{code}]: {rationale}"
-                for code, rationale in sorted(
-                    config.Infra.tooling.tools.mypy.disabled_error_codes.items()
-                )
-            ),
-        )
-
-    @classmethod
-    def _ruff_rationale_lines(cls) -> t.StrSequence:
-        """Render evidence-backed Ruff exclusions from the tooling SSOT."""
-        return (
-            cls._RUFF_RATIONALE_HEADER,
-            *(
-                f"# FLEXT ruff[{code}]: {rationale}"
-                for code, rationale in sorted(
-                    config.Infra.tooling.tools.ruff.lint.ignored_rule_rationales.items()
-                )
-            ),
-        )
-
-    @classmethod
-    def _pyright_rationale_lines(cls) -> t.StrSequence:
-        """Render evidence-backed Pyright exclusions from the tooling SSOT."""
-        return (
-            cls._PYRIGHT_RATIONALE_HEADER,
-            *(
-                f"# FLEXT pyright[{code}]: {rationale}"
-                for code, rationale in sorted(
-                    config.Infra.tooling.tools.pyright.global_suppression_rationales.items()
-                )
-            ),
-        )
+    @staticmethod
+    def _rationale_blocks() -> t.MappingKV[str, t.Pair[str, t.StrSequence]]:
+        """Render each managed section's evidence-backed suppression comments."""
+        tools = config.Infra.tooling.tools
+        return {
+            f"[tool.{section}]": (
+                label,
+                (
+                    f"# FLEXT {label} suppression rationale (validated {boundary}):",
+                    *(
+                        f"# FLEXT {tag}[{code}]: {rationale}"
+                        for code, rationale in sorted(items.items())
+                    ),
+                ),
+            )
+            for section, tag, label, boundary, items in (
+                (
+                    "mypy",
+                    "mypy",
+                    "mypy",
+                    "at the facade-FLEXT boundary",
+                    tools.mypy.disabled_error_codes,
+                ),
+                (
+                    "ruff.lint",
+                    "ruff",
+                    "Ruff",
+                    "against semantic facet order",
+                    tools.ruff.lint.ignored_rule_rationales,
+                ),
+                (
+                    "pyright",
+                    "pyright",
+                    "Pyright",
+                    "at the facade-FLEXT boundary",
+                    tools.pyright.global_suppression_rationales,
+                ),
+            )
+        }
 
     @staticmethod
     def _is_section_header(line: str) -> bool:
@@ -65,25 +66,12 @@ class FlextInfraInjectCommentsPhase:
 
     @classmethod
     def _managed_marker_lines(cls) -> t.Infra.StrSet:
-        """Return the managed marker lines."""
-        markers = {marker for _section_prefix, marker in c.Infra.COMMENT_MARKERS}
-        markers.add(c.Infra.DEV_OPTIONAL_DEPS_MARKER)
-        markers.add(c.Infra.LEGACY_AUTO_MARKER)
-        markers.add(c.Infra.LEGACY_AUTO_BANNER_LINE)
+        """Return banner and rationale lines to strip."""
+        markers = {c.Infra.LEGACY_AUTO_BANNER_LINE}
         markers.update(c.Infra.BANNER.splitlines())
-        markers.update(cls._mypy_rationale_lines())
-        markers.update(cls._ruff_rationale_lines())
-        markers.update(cls._pyright_rationale_lines())
+        for _, block in cls._rationale_blocks().values():
+            markers.update(block)
         return markers
-
-    @staticmethod
-    def _marker_for_section(section_header: str) -> str | None:
-        """Marker for section."""
-        for section_prefix, marker_text in c.Infra.COMMENT_MARKERS:
-            if section_header.startswith(section_prefix):
-                marker: str = marker_text
-                return marker
-        return None
 
     @classmethod
     def _strip_managed_lines(
@@ -102,16 +90,7 @@ class FlextInfraInjectCommentsPhase:
                     skip_broken_group_section = False
                 else:
                     continue
-            # Remove legacy banner variants so canonical banner can be re-injected.
-            if stripped.startswith("# Sections with [MANAGED] are enforced"):
-                continue
-            if stripped == c.Infra.LEGACY_AUTO_BANNER_LINE:
-                continue
-            if stripped.startswith("# FLEXT mypy["):
-                continue
-            if stripped.startswith("# FLEXT ruff["):
-                continue
-            if stripped.startswith("# FLEXT pyright["):
+            if stripped.startswith(tuple(cls._STRIP_PREFIXES)):
                 continue
             if stripped == "[group.dev.dependencies]":
                 skip_broken_group_section = True
@@ -123,19 +102,6 @@ class FlextInfraInjectCommentsPhase:
         if broken_removed:
             changes.append("broken [group.dev.dependencies] section removed")
         return cleaned, changes
-
-    @staticmethod
-    def _inject_dev_markers(
-        out: t.MutableSequenceOf[str],
-        changes: t.MutableSequenceOf[str],
-        emitted_markers: t.Infra.StrSet,
-    ) -> None:
-        """Inject dev markers."""
-        managed_marker = c.Infra.DEV_OPTIONAL_DEPS_MARKER
-        if managed_marker not in emitted_markers:
-            out.append(managed_marker)
-            changes.append("marker injected for optional-dependencies.dev")
-            emitted_markers.add(managed_marker)
 
     @staticmethod
     def _collapse_blank_lines(lines: t.StrSequence) -> t.StrSequence:
@@ -157,8 +123,6 @@ class FlextInfraInjectCommentsPhase:
         cleaned_lines, cleanup_changes = self._strip_managed_lines(lines)
         changes.extend(cleanup_changes)
         banner_lines = c.Infra.BANNER.splitlines()
-        # NOTE (multi-agent, mro-wkii.17.9.2.1): banner injection owns the
-        # leading separator so parse/render trivia cannot require a second pass.
         first_content = next(
             (index for index, line in enumerate(cleaned_lines) if line.strip()),
             len(cleaned_lines),
@@ -168,27 +132,24 @@ class FlextInfraInjectCommentsPhase:
         if lines[: len(banner_lines)] != banner_lines:
             changes.append("managed banner injected")
         emitted_markers: set[str] = set()
+        rationale_blocks = self._rationale_blocks()
         for line in content_lines:
             stripped = line.strip()
-            marker = self._marker_for_section(stripped)
-            if marker and marker not in emitted_markers:
-                out.append(marker)
-                changes.append(f"marker injected for {stripped}")
-                emitted_markers.add(marker)
-            if stripped == "[project.optional-dependencies]" or stripped.startswith(
-                "optional-dependencies.dev"
-            ):
-                self._inject_dev_markers(out, changes, emitted_markers)
+            markers_result = u.Infra.pyproject_section_markers(stripped)
+            if markers_result.failure:
+                raise RuntimeError(
+                    markers_result.error or "pyproject section markers failed"
+                )
+            for marker in markers_result.value:
+                if marker not in emitted_markers:
+                    out.append(marker)
+                    changes.append(f"marker injected for {stripped}")
+                    emitted_markers.add(marker)
             out.append(line)
-            if stripped == "[tool.mypy]":
-                out.extend(self._mypy_rationale_lines())
-                changes.append("Mypy suppression rationales injected")
-            elif stripped == "[tool.ruff.lint]":
-                out.extend(self._ruff_rationale_lines())
-                changes.append("Ruff suppression rationales injected")
-            elif stripped == "[tool.pyright]":
-                out.extend(self._pyright_rationale_lines())
-                changes.append("Pyright suppression rationales injected")
+            if stripped in rationale_blocks:
+                label, rationale = rationale_blocks[stripped]
+                out.extend(rationale)
+                changes.append(f"{label.capitalize()} suppression rationales injected")
         updated = "\n".join(self._collapse_blank_lines(out)).rstrip() + "\n"
         original = rendered.rstrip() + "\n"
         if updated == original:

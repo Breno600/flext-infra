@@ -1,0 +1,39 @@
+id: rewire-print-to-logger-info
+valid:
+  - |
+    from flext_cli import cli
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+    print("message")
+  - |
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+    logger.info("message")
+  - |
+    print("message")
+  - |
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+    print("message", flush=True)
+  - |
+    """Docstring naming print("x") and u.Cli.print("x") as prose."""
+
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+    TABLE = (("print(", "logger.info("), ("u.Cli.print(", "logger.info("))
+    # comment naming print("x") and u.Cli.print("x")
+invalid:
+  - |
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+    print("message")
+  - |
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+    u.Cli.print("message")

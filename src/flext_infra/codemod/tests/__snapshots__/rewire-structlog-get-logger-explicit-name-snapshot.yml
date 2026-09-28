@@ -1,0 +1,74 @@
+id: rewire-structlog-get-logger-explicit-name
+snapshots:
+  ? |
+    from flext_core import u
+
+    logger = structlog.get_logger("service")
+  : fixed: |
+      from flext_core import u
+
+      logger = u.fetch_logger("service")
+    labels:
+    - source: structlog.get_logger("service")
+      style: primary
+      start: 35
+      end: 66
+    - source: from flext_core import u
+      style: secondary
+      start: 0
+      end: 24
+    - source: |
+        from flext_core import u
+
+        logger = structlog.get_logger("service")
+      style: secondary
+      start: 0
+      end: 67
+  ? |
+    from flext_core import u
+
+    logger = structlog.get_logger(__name__)
+  : fixed: |
+      from flext_core import u
+
+      logger = u.fetch_logger(__name__)
+    labels:
+    - source: structlog.get_logger(__name__)
+      style: primary
+      start: 35
+      end: 65
+    - source: from flext_core import u
+      style: secondary
+      start: 0
+      end: 24
+    - source: |
+        from flext_core import u
+
+        logger = structlog.get_logger(__name__)
+      style: secondary
+      start: 0
+      end: 66
+  ? |
+    from flext_core import u
+
+    logger = structlog.get_logger(c.Infra.LOGGER_NAME)
+  : fixed: |
+      from flext_core import u
+
+      logger = u.fetch_logger(c.Infra.LOGGER_NAME)
+    labels:
+    - source: structlog.get_logger(c.Infra.LOGGER_NAME)
+      style: primary
+      start: 35
+      end: 76
+    - source: from flext_core import u
+      style: secondary
+      start: 0
+      end: 24
+    - source: |
+        from flext_core import u
+
+        logger = structlog.get_logger(c.Infra.LOGGER_NAME)
+      style: secondary
+      start: 0
+      end: 77

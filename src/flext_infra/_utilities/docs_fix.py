@@ -6,12 +6,12 @@ import sys
 from typing import TYPE_CHECKING
 
 from flext_cli import u
-from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
-from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+
+from flext_infra import c, m, t
+
+from ._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from .docs import FlextInfraUtilitiesDocs
+from .docs_contract import FlextInfraUtilitiesDocsContract
 
 if TYPE_CHECKING:
     import re
@@ -24,10 +24,13 @@ class FlextInfraUtilitiesDocsFix:
     @staticmethod
     def docs_maybe_fix_link(md_file: Path, raw_link: str) -> str | None:
         """Return a corrected link target when a simple fix is possible."""
-        if raw_link.startswith(("http://", "https://")):
+        if FlextInfraUtilitiesDocs.docs_is_secure_web_url(raw_link):
             return FlextInfraUtilitiesDocsGithubLinks.docs_rewrite_github_url(raw_link)
         result: str | None = None
-        if not raw_link.startswith(("mailto:", "tel:", "#")):
+        if not (
+            FlextInfraUtilitiesDocs.docs_is_external(raw_link)
+            or raw_link.startswith(c.Infra.DOCS_FRAGMENT_PREFIX)
+        ):
             base = raw_link.split("#", maxsplit=1)[0]
             if (
                 base
@@ -60,7 +63,7 @@ class FlextInfraUtilitiesDocsFix:
             ) -> str:
                 body = match.group("body")
                 rel = source_file.relative_to(scope.path).as_posix()
-                # mro-o6h5 (agent: kimi) — ruff via running interpreter (venv SSOT);
+                # flext-o6h5 (agent: kimi) — ruff via running interpreter (venv SSOT);
                 # bare "ruff" breaks when .venv/bin is not on PATH (CI docs fix).
                 outcome = u.Cli.run_raw(
                     [
@@ -89,9 +92,17 @@ class FlextInfraUtilitiesDocsFix:
                 closed_body = (
                     fixed_body if fixed_body.endswith("\n") else f"{fixed_body}\n"
                 )
-                return f"{match.group('open')}{closed_body}```"
+                indent = match.group("indent")
+                return f"{indent}{match.group('open')}{closed_body}{indent}```"
 
-            sanitized = c.Infra.PYTHON_FENCE_FIX_RE.sub(_replace_fence, original)
+            repaired = c.Infra.WELDED_FENCE_RE.sub(
+                lambda match: (
+                    f"{match.group('indent')}{match.group('body')}"
+                    f"\n{match.group('indent')}```"
+                ),
+                original,
+            )
+            sanitized = c.Infra.PYTHON_FENCE_FIX_RE.sub(_replace_fence, repaired)
             if sanitized == original:
                 continue
             changed.append(
@@ -111,7 +122,7 @@ class FlextInfraUtilitiesDocsFix:
         )
         link_count = 0
 
-        def replace_link(match: t.Infra.RegexMatch) -> str:
+        def replace_link(match: t.RegexMatch) -> str:
             """Replace link."""
             nonlocal link_count
             text, link = match.groups()
@@ -123,11 +134,16 @@ class FlextInfraUtilitiesDocsFix:
             return f"[{text}]({fixed})"
 
         updated = c.Infra.MARKDOWN_LINK_RE.sub(replace_link, original)
+        fence_changed = c.Infra.FENCE_NOTEST_ATTR_RE.subn(r"```{.\1 .notest}", updated)
+        updated = fence_changed[0]
         updated, toc_changed = FlextInfraUtilitiesDocs.update_toc(updated)
-        if apply and (link_count > 0 or toc_changed > 0) and updated != original:
+        if apply and updated != original:
             _ = md_file.write_text(updated, encoding=c.Cli.ENCODING_DEFAULT)
         return m.Infra.DocsPhaseItemModel(
-            phase="fix", file=md_file.as_posix(), links=link_count, toc=toc_changed
+            phase="fix",
+            file=md_file.as_posix(),
+            links=link_count + fence_changed[1],
+            toc=toc_changed,
         )
 
     @staticmethod
@@ -138,32 +154,17 @@ class FlextInfraUtilitiesDocsFix:
         apply: bool,
     ) -> None:
         """Persist the standard fix summary and markdown report."""
-        changes_payload: t.JsonList = [
-            {c.Infra.RK_FILE: item.file, "links": item.links, "toc": item.toc}
-            for item in items
-        ]
-        summary_payload = t.Cli.JSON_MAPPING_ADAPTER.validate_python({
-            c.Infra.RK_SUMMARY: {
-                c.Infra.RK_SCOPE: scope.name,
-                "changed_files": len(items),
-                "apply": apply,
-            },
-            "changes": changes_payload,
-        })
-        _ = u.Cli.json_write(scope.report_dir / "fix-summary.json", summary_payload)
-        _ = FlextInfraUtilitiesDocs.write_markdown(
-            scope.report_dir / "fix-report.md",
-            [
-                "# Docs Fix Report",
-                "",
-                f"Scope: {scope.name}",
-                f"Apply: {int(apply)}",
-                f"Changed files: {len(items)}",
-                "",
-                "| file | link_fixes | toc_updates |",
-                "|---|---:|---:|",
-                *[f"| {item.file} | {item.links} | {item.toc} |" for item in items],
-            ],
+        FlextInfraUtilitiesDocs.docs_write_phase_reports(
+            scope,
+            phase="fix",
+            table=m.Cli.TableRenderRequest(
+                title="Docs Fix Report",
+                columns=("file", "link_fixes", "toc_updates"),
+                rows=tuple(
+                    (item.file, str(item.links), str(item.toc)) for item in items
+                ),
+            ),
+            apply=apply,
         )
 
 

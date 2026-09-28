@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-from flext_infra.deps.detection_analysis import FlextInfraDependencyDetectionAnalysis
+
+from .detection_analysis import FlextInfraDependencyDetectionAnalysis
 
 
 class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis):
@@ -29,7 +30,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
             return self.toml.read_plain(path)
         plain_result = u.Cli.toml_read_json(path)
         if plain_result.failure:
-            return r[t.JsonMapping].fail(plain_result.error or f"failed to read {path}")
+            return r[t.JsonMapping].from_failure(plain_result)
         return r[t.JsonMapping].ok(
             t.Infra.INFRA_MAPPING_ADAPTER.validate_python(plain_result.value)
         )
@@ -55,7 +56,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         """Classify deptry issues by error code (DEP001-DEP004)."""
         groups = m.Infra.DeptryIssueGroups(dep001=[], dep002=[], dep003=[], dep004=[])
         for item in issues:
-            normalized_item: dict[str, t.Primitives | None] = {}
+            normalized_item: MutableMapping[str, t.Primitives | None] = {}
             for key, raw_value in item.items():
                 if raw_value is None:
                     normalized_item[key] = ""
@@ -107,7 +108,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         )
 
     def discover_project_paths(
-        self, workspace_root: Path, projects_filter: t.StrSequence | None = None
+        self, repository_root: Path, projects_filter: t.StrSequence | None = None
     ) -> p.Result[t.SequenceOf[Path]]:
         """Discover project paths with pyproject.toml in workspace.
 
@@ -116,19 +117,17 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         """
         names = projects_filter or []
         result = (
-            self.selector.resolve_projects(workspace_root, names)
+            self.selector.resolve_projects(repository_root, names)
             if self.selector is not None
-            else u.Infra.resolve_projects(workspace_root, names)
+            else u.Infra.resolve_projects(repository_root, names)
         )
         if result.failure:
-            return r[t.SequenceOf[Path]].fail(
-                result.error or "project resolution failed"
-            )
+            return r[t.SequenceOf[Path]].from_failure(result)
         projects_info: t.SequenceOf[m.Infra.ProjectInfo] = result.value
         projects = [
             project.path
             for project in projects_info
-            if (project.path / c.Infra.PYPROJECT_FILENAME).exists()
+            if (project.path / c.PYPROJECT_FILENAME).exists()
         ]
         return r[t.SequenceOf[Path]].ok(sorted(projects))
 

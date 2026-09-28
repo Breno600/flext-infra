@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra.constants import c
+from flext_infra import c
 
 if TYPE_CHECKING:
     from flext_infra import m, t
@@ -57,7 +57,7 @@ class FlextInfraUtilitiesRopeMethodOrderMixin:
     @staticmethod
     def build_method_sort_key(
         method: m.Infra.MethodInfo, order_config: t.SequenceOf[m.Infra.MethodOrderRule]
-    ) -> tuple[int, int, str]:
+    ) -> t.Triple[int, int, str]:
         """Build a sort key tuple for method ordering."""
         cls = FlextInfraUtilitiesRopeMethodOrderMixin
         for index, rule in enumerate(order_config):

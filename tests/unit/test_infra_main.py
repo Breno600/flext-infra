@@ -8,8 +8,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import main
 from flext_tests import tm
+
+from flext_infra import main
 
 if TYPE_CHECKING:
     import pytest
@@ -32,5 +33,5 @@ class TestsFlextInfraInfraMain:
     ) -> None:
         tm.that(main(["--help"]), eq=0)
         out = capsys.readouterr().out
-        for group in ("basemk", "check", "codegen", "docs", "refactor", "workspace"):
+        for group in ("check", "codegen", "docs", "refactor", "workspace"):
             tm.that(out, has=group)

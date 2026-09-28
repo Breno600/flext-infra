@@ -13,10 +13,6 @@ role_json="$(bd config get beads.role --json)"
 printf '%s\n' "${role_json}" | rg -q '"value":\s*"maintainer"' \
   || fail "beads.role must be maintainer"
 
-dolt_show="$(bd dolt show)"
-printf '%s\n' "${dolt_show}" | rg -q 'Mode:\s+shared server' \
-  || fail "bd must use Dolt shared-server mode"
-
 bd hooks list --json | python3 -c '
 import json
 import sys

@@ -2,31 +2,29 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import m
-from flext_infra._enforcement.engine import FlextInfraEnforcementEngine
+
+from .._enforcement.engine import FlextInfraEnforcementEngine
+from ._census_rules_shared import FlextInfraRefactorCensusRulesSharedMixin
 
 if TYPE_CHECKING:
-    from flext_core._models.enforcement import FlextModelsEnforcement as me
     from flext_infra import p, t
 
 
-class FlextInfraRefactorCensusRulesDispatchMixin:
-    """Run every selected alias/MRO rule for one module and collect outcomes.
+class FlextInfraRefactorCensusRulesDispatchMixin(
+    FlextInfraRefactorCensusRulesSharedMixin
+):
+    """Run every selected structural rule for one module and collect outcomes.
 
     Parent of FlextInfraRefactorCensusCollectMixin (its ``_scan_module`` calls
-    ``_module_rules``); borrows the symbol-index, rule-selection filter, and
-    the four per-rule detectors from sibling mixins via MRO.
+    ``_module_rules``); borrows the rule-selection filter and the per-rule
+    detectors from sibling mixins via FLEXT.
     """
 
     if TYPE_CHECKING:
 
-        @classmethod
-        def _lightweight_symbol_index(
-            cls, rope: p.Infra.RopeWorkspaceDsl, file_path: Path
-        ) -> dict[str, tuple[str, int]]: ...
         @staticmethod
         def _include_rule(
             rule: str,
@@ -35,324 +33,80 @@ class FlextInfraRefactorCensusRulesDispatchMixin:
             selected_rules: frozenset[str] | None = None,
         ) -> bool: ...
         def _rule_runtime_alias(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: tuple[m.Infra.Census.Object, ...] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: dict[str, tuple[str, int]],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Census.Violation], list[m.Infra.Census.Fix]]: ...
+            self, scan: m.Infra.ModuleScan
+        ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_manual_typing_alias(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: tuple[m.Infra.Census.Object, ...] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Census.Violation], list[m.Infra.Census.Fix]]: ...
+            self, scan: m.Infra.ModuleScan
+        ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_class_placement(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: tuple[m.Infra.Census.Object, ...] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: dict[str, tuple[str, int]],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Census.Violation], list[m.Infra.Census.Fix]]: ...
+            self, scan: m.Infra.ModuleScan
+        ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_private_import_bypass(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: tuple[m.Infra.Census.Object, ...] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: dict[str, tuple[str, int]],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Census.Violation], list[m.Infra.Census.Fix]]: ...
+            self, scan: m.Infra.ModuleScan
+        ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_compatibility_alias(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: tuple[m.Infra.Census.Object, ...] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: dict[str, tuple[str, int]],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Census.Violation], list[m.Infra.Census.Fix]]: ...
-        def _rule_mro_completeness(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: tuple[m.Infra.Census.Object, ...] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: dict[str, tuple[str, int]],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Census.Violation], list[m.Infra.Census.Fix]]: ...
-        def _rule_mro_shape(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: tuple[m.Infra.Census.Object, ...] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: dict[str, tuple[str, int]],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Census.Violation], list[m.Infra.Census.Fix]]: ...
+            self, scan: m.Infra.ModuleScan
+        ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_inline_import(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: tuple[m.Infra.Census.Object, ...] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: dict[str, tuple[str, int]],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Census.Violation], list[m.Infra.Census.Fix]]: ...
+            self, scan: m.Infra.ModuleScan
+        ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
         def _rule_silent_failure(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: tuple[m.Infra.Census.Object, ...] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: dict[str, tuple[str, int]],
-            convention: m.Infra.RopeModuleConvention,
-        ) -> tuple[list[m.Infra.Census.Violation], list[m.Infra.Census.Fix]]: ...
-        @staticmethod
-        def _detector_context(
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            convention: m.Infra.RopeModuleConvention | None = None,
-            parse_failures: t.MutableSequenceOf[m.Infra.ParseFailureViolation]
-            | None = None,
-        ) -> m.Infra.DetectorContext: ...
-        @staticmethod
-        def _fix_key(file_path: Path, object_name: str, action: str = "") -> str: ...
-        @staticmethod
-        def _raw_violation(
-            *,
-            project: str,
-            object_name: str,
-            object_kind: str,
-            kind: str,
-            file_path: Path,
-            line: int,
-            description: str,
-            fixable: bool = False,
-            fix_action: str = "",
-        ) -> m.Infra.Census.Violation: ...
+            self, scan: m.Infra.ModuleScan
+        ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
 
     def _module_rules(
-        self,
-        rope: p.Infra.RopeWorkspaceDsl,
-        file_path: Path,
-        *,
-        objects: tuple[m.Infra.Census.Object, ...] | None,
-        project_name: str,
-        applied: frozenset[str],
-        kind_names: t.StrSequence | None,
-        rule_names: t.StrSequence | None,
-        selected_kinds: frozenset[str] | None = None,
-        selected_rules: frozenset[str] | None = None,
-        convention: m.Infra.RopeModuleConvention | None = None,
-    ) -> tuple[tuple[m.Infra.Census.Violation, ...], tuple[m.Infra.Census.Fix, ...]]:
-        """Run every selected alias/MRO rule for one module and collect outcomes."""
-        resolved_convention = convention or rope.convention(file_path)
-        resolved_kinds = (
-            selected_kinds
-            if selected_kinds is not None
-            else (frozenset(kind_names) if kind_names else frozenset())
+        self, scan: m.Infra.ModuleScan
+    ) -> t.Pair[t.VariadicTuple[m.Infra.Violation], t.VariadicTuple[m.Infra.Fix]]:
+        """Run every selected structural rule for one module and collect outcomes."""
+        violations: list[m.Infra.Violation] = []
+        fixes: list[m.Infra.Fix] = []
+        rules: t.VariadicTuple[t.Pair[str, p.Infra.CensusModuleRule]] = (
+            ("runtime_alias", self._rule_runtime_alias),
+            ("manual_typing_alias", self._rule_manual_typing_alias),
+            ("class_placement", self._rule_class_placement),
+            ("private_import_bypass", self._rule_private_import_bypass),
+            ("compatibility_alias", self._rule_compatibility_alias),
+            ("inline_import", self._rule_inline_import),
+            ("silent_failure", self._rule_silent_failure),
         )
-        symbol_index = self._lightweight_symbol_index(rope, file_path)
-        violations: list[m.Infra.Census.Violation] = []
-        fixes: list[m.Infra.Census.Fix] = []
-
-        def selected(rule_name: str) -> bool:
-            return self._include_rule(
-                rule_name, rule_names=rule_names, selected_rules=selected_rules
-            )
-
-        if selected("runtime_alias"):
-            v, f = self._rule_runtime_alias(
-                rope,
-                file_path,
-                project_name=project_name,
-                objects=objects,
-                applied=applied,
-                selected_kinds=resolved_kinds,
-                symbol_index=symbol_index,
-                convention=resolved_convention,
-            )
-            violations.extend(v)
-            fixes.extend(f)
-        if selected("manual_typing_alias"):
-            v, f = self._rule_manual_typing_alias(
-                rope,
-                file_path,
-                project_name=project_name,
-                objects=objects,
-                applied=applied,
-                selected_kinds=resolved_kinds,
-                convention=resolved_convention,
-            )
-            violations.extend(v)
-            fixes.extend(f)
-        if selected("class_placement"):
-            v, f = self._rule_class_placement(
-                rope,
-                file_path,
-                project_name=project_name,
-                objects=objects,
-                applied=applied,
-                selected_kinds=resolved_kinds,
-                symbol_index=symbol_index,
-                convention=resolved_convention,
-            )
-            violations.extend(v)
-            fixes.extend(f)
-        if selected("private_import_bypass"):
-            v, f = self._rule_private_import_bypass(
-                rope,
-                file_path,
-                project_name=project_name,
-                objects=objects,
-                applied=applied,
-                selected_kinds=resolved_kinds,
-                symbol_index=symbol_index,
-                convention=resolved_convention,
-            )
-            violations.extend(v)
-            fixes.extend(f)
-        if selected("compatibility_alias"):
-            v, f = self._rule_compatibility_alias(
-                rope,
-                file_path,
-                project_name=project_name,
-                objects=objects,
-                applied=applied,
-                selected_kinds=resolved_kinds,
-                symbol_index=symbol_index,
-                convention=resolved_convention,
-            )
-            violations.extend(v)
-            fixes.extend(f)
-        if selected("mro_completeness"):
-            v, f = self._rule_mro_completeness(
-                rope,
-                file_path,
-                project_name=project_name,
-                objects=objects,
-                applied=applied,
-                selected_kinds=resolved_kinds,
-                symbol_index=symbol_index,
-                convention=resolved_convention,
-            )
-            violations.extend(v)
-            fixes.extend(f)
-        if selected("mro_shape"):
-            v, f = self._rule_mro_shape(
-                rope,
-                file_path,
-                project_name=project_name,
-                objects=objects,
-                applied=applied,
-                selected_kinds=resolved_kinds,
-                symbol_index=symbol_index,
-                convention=resolved_convention,
-            )
-            violations.extend(v)
-            fixes.extend(f)
-        if selected("inline_import"):
-            v, f = self._rule_inline_import(
-                rope,
-                file_path,
-                project_name=project_name,
-                objects=objects,
-                applied=applied,
-                selected_kinds=resolved_kinds,
-                symbol_index=symbol_index,
-                convention=resolved_convention,
-            )
-            violations.extend(v)
-            fixes.extend(f)
-        if selected("silent_failure"):
-            v, f = self._rule_silent_failure(
-                rope,
-                file_path,
-                project_name=project_name,
-                objects=objects,
-                applied=applied,
-                selected_kinds=resolved_kinds,
-                symbol_index=symbol_index,
-                convention=resolved_convention,
-            )
-            violations.extend(v)
-            fixes.extend(f)
-        v, f = self._rule_declarative(
-            rope,
-            file_path,
-            project_name=project_name,
-            applied=applied,
-            selected_kinds=resolved_kinds,
-            selected_rules=selected_rules,
-            rule_names=rule_names,
-            convention=resolved_convention,
-        )
-        violations.extend(v)
-        fixes.extend(f)
+        for rule_name, rule in rules:
+            if not self._include_rule(
+                rule_name,
+                rule_names=scan.scan_config.rule_names,
+                selected_rules=scan.scan_config.selected_rules,
+            ):
+                continue
+            rule_violations, rule_fixes = rule(scan)
+            violations.extend(rule_violations)
+            fixes.extend(rule_fixes)
+        declarative_violations, declarative_fixes = self._rule_declarative(scan)
+        violations.extend(declarative_violations)
+        fixes.extend(declarative_fixes)
         return (tuple(violations), tuple(fixes))
 
     @staticmethod
-    def _declarative_catalog_rules() -> tuple[me.EnforcementRuleSpec, ...]:
+    def _declarative_catalog_rules() -> t.VariadicTuple[m.EnforcementRuleSpec]:
         """Return enabled catalog rules handled by the declarative engine."""
         return FlextInfraEnforcementEngine.declarative_rules()
 
     def _rule_declarative(
-        self,
-        rope: p.Infra.RopeWorkspaceDsl,
-        file_path: Path,
-        *,
-        project_name: str,
-        applied: frozenset[str],
-        selected_kinds: frozenset[str],
-        selected_rules: frozenset[str] | None,
-        rule_names: t.StrSequence | None,
-        convention: m.Infra.RopeModuleConvention,
-    ) -> tuple[list[m.Infra.Census.Violation], list[m.Infra.Census.Fix]]:
+        self, scan: m.Infra.ModuleScan
+    ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]:
         """Run catalog-driven declarative rules for one module."""
-        violations: list[m.Infra.Census.Violation] = []
-        fixes: list[m.Infra.Census.Fix] = []
+        violations: list[m.Infra.Violation] = []
+        fixes: list[m.Infra.Fix] = []
         rules = self._declarative_catalog_rules()
         if not rules:
             return violations, fixes
-        ctx = self._detector_context(rope, file_path, convention=convention)
+        ctx = self._detector_context(
+            scan.rope, scan.file_path, convention=scan.convention
+        )
+        selected_kinds = scan.scan_config.selected_kinds
         for rule in rules:
             if not self._include_rule(
-                rule.id, rule_names=rule_names, selected_rules=selected_rules
+                rule.id,
+                rule_names=scan.scan_config.rule_names,
+                selected_rules=scan.scan_config.selected_rules,
             ):
                 continue
             kind = FlextInfraEnforcementEngine.violation_kind(rule)
@@ -372,12 +126,12 @@ class FlextInfraRefactorCensusRulesDispatchMixin:
                     rule, probe, object_name
                 )
                 violations.append(
-                    self._raw_violation(
-                        project=project_name,
+                    m.Infra.Violation(
+                        project=scan.project,
                         object_name=object_name,
                         object_kind=object_kind,
                         kind=kind,
-                        file_path=file_path,
+                        file_path=str(scan.file_path),
                         line=line,
                         description=description,
                         fixable=fixable,
@@ -386,13 +140,13 @@ class FlextInfraRefactorCensusRulesDispatchMixin:
                 )
                 if action:
                     fixes.append(
-                        m.Infra.Census.Fix(
+                        m.Infra.Fix(
                             object_name=object_name,
                             action=action,
-                            source_file=str(file_path),
+                            source_file=str(scan.file_path),
                             files_changed=1,
-                            applied=self._fix_key(file_path, object_name, action)
-                            in applied,
+                            applied=self._fix_key(scan.file_path, object_name, action)
+                            in scan.scan_config.applied,
                         )
                     )
         return violations, fixes

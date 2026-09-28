@@ -7,25 +7,16 @@ from collections.abc import MutableMapping, MutableSequence, MutableSet
 from pathlib import Path
 from typing import Annotated, ClassVar
 
-from flext_cli import m
-from flext_core import u
-from flext_infra import t
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
-from flext_infra._models.refactor_ast_grep import FlextInfraModelsRefactorGrep
-from flext_infra._models.refactor_census import FlextInfraModelsRefactorCensus
-from flext_infra._models.refactor_namespace_enforcer import (
-    FlextInfraModelsNamespaceEnforcer,
-)
-from flext_infra._models.refactor_renames import FlextInfraModelsRefactorRenames
-from flext_infra._models.refactor_violations import FlextInfraModelsRefactorViolations
+from flext_cli import m, u
+
+from .. import t
+from .mixins import FlextInfraModelsMixins as mm
+from .refactor_ast_grep import FlextInfraModelsRefactorGrep
+from .refactor_namespace_enforcer import FlextInfraModelsNamespaceEnforcer
 
 
 class FlextInfraModelsRefactor(
-    FlextInfraModelsRefactorGrep,
-    FlextInfraModelsNamespaceEnforcer,
-    FlextInfraModelsRefactorCensus,
-    FlextInfraModelsRefactorRenames,
-    FlextInfraModelsRefactorViolations,
+    FlextInfraModelsRefactorGrep, FlextInfraModelsNamespaceEnforcer
 ):
     """Models for refactor workflows and related tools.
 
@@ -33,16 +24,6 @@ class FlextInfraModelsRefactor(
     - ``ContractModel`` for configuration/policy contracts.
     - ``ArbitraryTypesModel`` for mutable report/result payloads.
     """
-
-    class RefactorMigrateMroInput(mm.WriteMixin, m.ContractModel):
-        """CLI/service request for MRO migration."""
-
-        target: Annotated[
-            str,
-            m.Field(
-                description="Migration target scope (constants/typings/protocols/models/utilities/all)"
-            ),
-        ] = "all"
 
     class RefactorNamespaceEnforceInput(mm.WriteMixin, m.ContractModel):
         """CLI/service request for namespace enforcement."""
@@ -127,8 +108,8 @@ class FlextInfraModelsRefactor(
     class Checkpoint(mm.CheckpointRefMixin, m.ArbitraryTypesModel):
         """Serialisable checkpoint state for refactor safety recovery."""
 
-        workspace_root: Annotated[
-            t.NonEmptyStr, m.Field(description="Workspace root path")
+        repository_root: Annotated[
+            t.NonEmptyStr, m.Field(description="Repository root path")
         ]
         status: Annotated[str, m.Field(description="Checkpoint status")] = "running"
         processed_targets: Annotated[
@@ -137,55 +118,6 @@ class FlextInfraModelsRefactor(
         updated_at: Annotated[
             str, m.Field(description="ISO 8601 timestamp of last update")
         ] = m.Field(default_factory=lambda: u.now().isoformat())
-
-    class ClassOccurrence(m.ArbitraryTypesModel):
-        """A single class definition occurrence within a source file."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        name: Annotated[t.NonEmptyStr, m.Field(description="Class name")]
-        line: Annotated[
-            t.NonNegativeInt, m.Field(description="Line number (0 = unknown)")
-        ]
-        is_top_level: Annotated[
-            bool, m.Field(description="Whether class is at module top level")
-        ]
-
-    class LooseClassViolation(m.ArbitraryTypesModel):
-        """A detected loose-class naming violation with confidence."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        file: Annotated[t.NonEmptyStr, m.Field(description="Source file path")]
-        line: Annotated[t.PositiveInt, m.Field(description="Line number")]
-        class_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Violating class name")
-        ]
-        expected_prefix: Annotated[
-            str, m.Field(description="Expected namespace prefix")
-        ]
-        rule: Annotated[t.NonEmptyStr, m.Field(description="Violated rule id")]
-        reason: Annotated[str, m.Field(description="Human-readable reason")]
-        confidence: Annotated[str, m.Field(description="Confidence level")]
-        score: Annotated[t.DecimalFraction, m.Field(description="Confidence score")]
-
-    class FamilyMROResolution(m.ArbitraryTypesModel):
-        """Resolution payload for one facade family MRO."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        family: Annotated[t.NonEmptyStr, m.Field(description="Facade family letter")]
-        expected_bases: Annotated[
-            t.VariadicTuple[str],
-            m.Field(description="Expected base class names in order"),
-        ]
-        resolved_mro: Annotated[
-            t.VariadicTuple[str], m.Field(description="Resolved MRO class names")
-        ]
-        accessible_namespaces: Annotated[
-            t.VariadicTuple[str],
-            m.Field(description="Namespaces accessible through the MRO"),
-        ]
 
     class ProjectClassification(m.ArbitraryTypesModel):
         """Result of classifying a project by kind and family chains."""
@@ -200,7 +132,7 @@ class FlextInfraModelsRefactor(
         ]
         family_chains: Annotated[
             t.MappingKV[str, t.StrSequence],
-            m.Field(description="Family letter to MRO chain mapping"),
+            m.Field(description="Family letter to FLEXT chain mapping"),
         ]
 
     # NOTE (multi-agent): the two models below replace the
@@ -216,6 +148,10 @@ class FlextInfraModelsRefactor(
         updates: Annotated[
             MutableMapping[Path, str],
             m.Field(description="Pending file content updates keyed by path"),
+        ] = m.Field(default_factory=dict)
+        expected_sources: Annotated[
+            MutableMapping[Path, str],
+            m.Field(description="Original content keyed by every pending update path"),
         ] = m.Field(default_factory=dict)
         wrapper_candidates: Annotated[
             MutableSequence[Path],
@@ -300,9 +236,39 @@ class FlextInfraModelsRefactor(
             str | None, m.Field(description="Canonical _constants module (apply only)")
         ] = None
         rewrites: Annotated[
-            t.MappingKV[str, t.SequenceOf[tuple[int, int, str]]] | None,
+            t.MappingKV[str, t.SequenceOf[t.Triple[int, int, str]]] | None,
             m.Field(description="Per-file textual edits planned (dry-run only)"),
         ] = None
+
+    # -- CSV-driven Rename Models ---------------------------------------------
+
+    class ApplyRenamesInput(mm.WriteMixin, m.ContractModel):
+        """Validated CLI request for CSV-driven symbol renames."""
+
+        csv: Annotated[
+            t.NonEmptyStr, m.Field(description="Path to the old,new rename-list CSV")
+        ]
+        roots: Annotated[
+            t.StrSequence,
+            m.Field(min_length=1, description="Directories to scan for rename targets"),
+        ]
+
+    class ApplyRenamesReport(m.ArbitraryTypesModel):
+        """Summary of one CSV-driven rename pass."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        label: Annotated[t.NonEmptyStr, m.Field(description="Rename-list label")]
+        files_scanned: Annotated[
+            t.NonNegativeInt, m.Field(description="Text files scanned")
+        ]
+        occurrences: Annotated[
+            t.NonNegativeInt, m.Field(description="Pending occurrences in check mode")
+        ] = 0
+        files_changed: Annotated[
+            t.NonNegativeInt, m.Field(description="Files rewritten in apply mode")
+        ] = 0
+        applied: Annotated[bool, m.Field(description="Whether changes were applied")]
 
     # -- Namespace Enforcer Models ---------------------------------------------
 

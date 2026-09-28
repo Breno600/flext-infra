@@ -1,0 +1,5 @@
+id: docs-strict-text-decoding
+valid:
+  - path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+invalid:
+  - path.read_text(encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE)

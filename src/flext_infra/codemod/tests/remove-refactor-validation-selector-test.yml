@@ -1,0 +1,6 @@
+id: remove-refactor-validation-selector
+valid:
+  - service.refactor_project(project, dry_run=False)
+invalid:
+  - service.refactor_project(project, dry_run=False, apply_safety=False)
+  - service.refactor_file(path, gates=("lint",))

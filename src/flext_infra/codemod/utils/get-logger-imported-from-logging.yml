@@ -1,0 +1,24 @@
+# ``getLogger`` bound unaliased from the stdlib ``logging`` module, so a bare
+# ``getLogger(...)`` call in the same module provably resolves to it.
+#
+# Aliased imports (``from logging import getLogger as gl``) are excluded: the
+# call site then uses a module-local name that ast-grep cannot carry from the
+# import into the call pattern, so no rewrite is emitted for that form.
+id: get-logger-imported-from-logging
+language: python
+rule:
+  kind: import_from_statement
+  all:
+    - has:
+        field: module_name
+        regex: "^logging$"
+    - has:
+        pattern: getLogger
+        stopBy: end
+    - not:
+        has:
+          kind: aliased_import
+          stopBy: end
+          has:
+            pattern: getLogger
+            stopBy: end

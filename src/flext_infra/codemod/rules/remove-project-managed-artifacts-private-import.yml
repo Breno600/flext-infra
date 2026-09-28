@@ -1,0 +1,16 @@
+id: remove-project-managed-artifacts-private-import
+language: Python
+severity: error
+files:
+  - "flext-infra/src/**/*.py"
+ignores:
+  - "**/utilities.py"
+rule:
+  any:
+    - pattern: from flext_infra._utilities.project_managed_artifacts import FlextInfraUtilitiesProjectManagedArtifacts
+    - pattern: |
+        from flext_infra._utilities.project_managed_artifacts import (
+            FlextInfraUtilitiesProjectManagedArtifacts,
+        )
+fix: ""
+message: Remove the private project managed-artifact owner import after facade rewiring.

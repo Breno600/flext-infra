@@ -1,0 +1,6 @@
+id: rewire-cli-command-result-success-assertion
+valid:
+  - tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
+invalid:
+  - tm.that(result.value.exit_code, eq=0)
+  - tm.that(result.value.outcome.raw_return_code, eq=0)

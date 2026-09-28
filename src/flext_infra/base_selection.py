@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from flext_infra import m, t
-from flext_infra._base_projects import FlextInfraProjectSelectionMixin
-from flext_infra.base import FlextInfraServiceBase
 
-type _InfraResultValue = t.Cli.ResultValue
+from ._base_projects import FlextInfraProjectSelectionMixin
+from .base import FlextInfraServiceBase
 
 
-class FlextInfraProjectSelectionServiceBase[TDomainResult: _InfraResultValue](
+class FlextInfraProjectSelectionServiceBase[TDomainResult: t.Cli.ResultValue](
     FlextInfraServiceBase[TDomainResult], FlextInfraProjectSelectionMixin
 ):
     """Shared service foundation for commands that target workspace projects."""

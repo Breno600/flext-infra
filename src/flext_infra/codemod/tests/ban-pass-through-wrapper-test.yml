@@ -1,0 +1,12 @@
+id: ban-pass-through-wrapper
+valid:
+  - |
+    def normalized(value: str) -> str:
+        return owner(value).strip()
+invalid:
+  - |
+    def delegated(value: str) -> str:
+        return owner(value)
+  - |
+    async def delegated(value: str) -> str:
+        return await owner(value)

@@ -1,0 +1,8 @@
+from __future__ import annotations
+
+import typing
+
+from flext_test import m, t
+
+class FlextTestSettings:
+    default_headers: typing.Annotated[t.MappingKV[str, str], m.Field(default_factory=dict)] = None

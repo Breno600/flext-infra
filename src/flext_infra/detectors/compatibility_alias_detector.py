@@ -6,8 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import sys
-from collections.abc import Mapping
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, u
@@ -79,7 +78,7 @@ class FlextInfraCompatibilityAliasDetector:
         alias_renames = c.ENFORCEMENT_COMPATIBILITY_ALIAS_RENAMES
         local_alias_targets = cls._local_alias_targets(source)
         imported_long_names: set[str] = set()
-        canonical_aliases_by_module: dict[str, set[str]] = {}
+        canonical_aliases_by_module: MutableMapping[str, set[str]] = {}
         current_module = u.Infra.package_name(file_path)
         for from_import in cls._all_from_imports(ctx.rope_project, resource):
             module_name = cls._resolve_imported_module(
@@ -144,10 +143,8 @@ class FlextInfraCompatibilityAliasDetector:
         """Detect runtime canonical aliases imported from ``flext_core``."""
         current_module = u.Infra.package_name(file_path)
         migration_context = u.Infra.alias_migration_context(file_path)
-        local_aliases = (
-            FlextInfraCompatibilityAliasDetector._project_alias_owners().get(
-                migration_context.policy_owner
-            )
+        local_aliases = c.ENFORCEMENT_PROJECT_ALIAS_OWNERS.get(
+            migration_context.policy_owner
         )
         if not local_aliases:
             return ()
@@ -160,15 +157,16 @@ class FlextInfraCompatibilityAliasDetector:
 
         local_aliases_set = frozenset(local_aliases)
         violations: list[m.Infra.CompatibilityAliasViolation] = []
-        # mro-j47u (codex): parse each Rope-owned runtime statement in place;
-        # the module-wide table intentionally excludes conditional imports.
+        # Parse each Rope-owned runtime statement in place because the
+        # module-wide table intentionally excludes conditional imports.
         for statement in u.Infra.logical_statements(source):
             if (
                 statement.category != c.Infra.StatementCategory.FROM_IMPORT
                 or statement.type_checking_guarded
+                or c.Infra.PKG_CORE_UNDERSCORE not in statement.text
             ):
                 continue
-            pymodule = u.Infra.get_string_module(
+            pymodule = u.Infra.build_string_module(
                 ctx.rope_project, statement.text.strip()
             )
             module_imports = u.Infra.module_imports_for_pymodule(
@@ -176,7 +174,7 @@ class FlextInfraCompatibilityAliasDetector:
             )
             for import_statement in u.Infra.import_statements(module_imports):
                 from_import = import_statement.import_info
-                if not u.Infra.is_from_import(from_import):
+                if not u.Infra.from_import_info(from_import):
                     continue
                 module = cls._resolve_imported_module(
                     current_module=current_module, from_import=from_import
@@ -201,19 +199,6 @@ class FlextInfraCompatibilityAliasDetector:
         return violations
 
     @staticmethod
-    def _project_alias_owners() -> t.StrSequenceMapping:
-        """Return live alias owners after test/runtime facade reloads."""
-        constants_module = sys.modules.get("flext_infra.constants")
-        if constants_module is None:
-            return c.ENFORCEMENT_PROJECT_ALIAS_OWNERS
-        live_c = constants_module.c
-        owners = live_c.ENFORCEMENT_PROJECT_ALIAS_OWNERS
-        if not isinstance(owners, Mapping):
-            msg = "flext_infra.constants.c.ENFORCEMENT_PROJECT_ALIAS_OWNERS is invalid"
-            raise TypeError(msg)
-        return owners
-
-    @staticmethod
     def _is_private_facade_implementation(file_path: Path) -> bool:
         """Return whether ``file_path`` implements a project facade namespace."""
         family_dirs = frozenset(c.Infra.FAMILY_DIRECTORIES.values())
@@ -224,14 +209,12 @@ class FlextInfraCompatibilityAliasDetector:
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.SequenceOf[t.Infra.RopeFromImport]:
         """Return all ``from ... import ...`` descriptors in a module."""
-        module_imports = u.Infra.get_module_imports(rope_project, resource)
-        if module_imports is None:
-            return ()
+        module_imports = u.Infra.resolve_module_imports(rope_project, resource)
         import_statements = u.Infra.import_statements(module_imports)
         return tuple(
             import_stmt.import_info
             for import_stmt in import_statements
-            if u.Infra.is_from_import(import_stmt.import_info)
+            if u.Infra.from_import_info(import_stmt.import_info)
         )
 
     @staticmethod
@@ -274,7 +257,7 @@ class FlextInfraCompatibilityAliasDetector:
     @staticmethod
     def _local_alias_targets(source: str) -> t.StrMapping:
         """Collect ``canonical_alias = LongFacadeName`` assignments in source."""
-        targets: dict[str, str] = {}
+        targets: MutableMapping[str, str] = {}
         for match in c.Infra.FACADE_ALIAS_RE.finditer(source):
             alias = match.group(1)
             target = match.group(2)

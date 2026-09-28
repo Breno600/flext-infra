@@ -13,14 +13,20 @@ from __future__ import annotations
 import importlib
 import inspect
 import pkgutil
+import re
+import sys
+import types
+from collections import defaultdict
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-from flext_infra import c, config, m, u
-from flext_infra.base import s
+from flext_infra import c, config, m, t, u
+
+from ..base import s
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import p
 
 
 class FlextInfraRuntimeCensusValidator(s[bool]):
@@ -29,17 +35,6 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     project_filter: Annotated[
         str | None, m.Field(description="Project filter (comma-separated)")
     ] = None
-
-    def _selected_projects(
-        self, projects: t.SequenceOf[p.Infra.ProjectInfo]
-    ) -> t.SequenceOf[p.Infra.ProjectInfo]:
-        """Apply comma-separated project filter when provided."""
-        if self.project_filter is None:
-            return projects
-        selected = {
-            item.strip() for item in self.project_filter.split(",") if item.strip()
-        }
-        return [project for project in projects if project.name in selected]
 
     @staticmethod
     def _package_name_for_project(project: p.Infra.ProjectInfo) -> str | None:
@@ -65,44 +60,57 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     @classmethod
     def _walk_modules(cls, package_name: str) -> t.SequenceOf[str]:
         """Return all importable module names under ``package_name``."""
-        try:
-            package = importlib.import_module(package_name)
-        except c.EXC_BROAD_IO_TYPE as exc:
-            return [f"{package_name}: import failed: {exc}"]
+        package = importlib.import_module(package_name)
         prefix = package.__name__ + "."
         modules: list[str] = [package.__name__]
-        try:
-            for _, modname, _ in pkgutil.walk_packages(
-                package.__path__, prefix=prefix, onerror=lambda _name: None
-            ):
-                modules.append(modname)
-        except c.EXC_BROAD_IO_TYPE as exc:
-            modules.append(f"{package_name}: walk_packages failed: {exc}")
+        for _, modname, _ in pkgutil.walk_packages(
+            package.__path__, prefix=prefix, onerror=cls._raise_package_walk_error
+        ):
+            modules.append(modname)
         return modules
+
+    @staticmethod
+    def _raise_package_walk_error(module_name: str) -> None:
+        """Propagate the package import exception with its original traceback."""
+        exception = sys.exception()
+        if exception is None:
+            msg = f"package discovery failed without an exception: {module_name}"
+            raise RuntimeError(msg)
+        raise exception.with_traceback(exception.__traceback__)
+
+    @staticmethod
+    def _is_declared_island(module: types.ModuleType) -> bool:
+        """Whether the module lives under a declared stdlib island path.
+
+        Why: ADR-0018 declares the native hook-client island the sole,
+        performance-motivated exception to the FLEXT enforcement surface; it
+        is stdlib-only and cannot consume ``ai_hub._constants``, so the same
+        declaration the boundary, namespace, and silent-failure gates honor
+        keeps the runtime census from enforcing family constants on it.
+        """
+        module_file = getattr(module, "__file__", None)
+        if module_file is None:
+            return False
+        posix = str(module_file).replace("\\", "/")
+        return any(
+            fragment in posix
+            for fragment in c.Infra.NAMESPACE_STDLIB_ISLAND_PATH_FRAGMENTS
+        )
 
     def _check_module(self, module_name: str) -> t.SequenceOf[m.Infra.ValidationReport]:
         """Import one module and run runtime enforcement on its local classes."""
-        try:
-            module = importlib.import_module(module_name)
-        except c.EXC_BROAD_IO_TYPE as exc:
+        module = importlib.import_module(module_name)
+        if self._is_declared_island(module):
             return [
                 m.Infra.ValidationReport(
-                    passed=False,
-                    violations=(f"{module_name}: import failed: {exc}",),
-                    summary=f"{module_name}: import failed",
+                    passed=True, violations=(), summary=f"{module_name}: clean"
                 )
             ]
         violations: list[str] = []
         for _name, obj in inspect.getmembers(module, inspect.isclass):
             if not self._is_local_class(obj, module.__name__):
                 continue
-            try:
-                report = u.check(obj)
-            except c.EXC_BROAD_IO_TYPE as exc:
-                violations.append(
-                    f"{module_name}:{obj.__qualname__}: check raised: {exc}"
-                )
-                continue
+            report = u.check(obj)
             for violation in report.violations:
                 file_part = f"{violation.file_path}:" if violation.file_path else ""
                 line_part = f"{violation.line_number}:" if violation.line_number else ""
@@ -123,23 +131,38 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             )
         ]
 
-    def _project_report(self, project: p.Infra.ProjectInfo) -> m.Infra.ValidationReport:
+    def _project_report(
+        self, project: p.Infra.ProjectInfo
+    ) -> p.Result[m.Infra.ValidationReport]:
         """Run the runtime census for one project and return a merged report."""
         package_name = self._package_name_for_project(project)
         if package_name is None:
-            return m.Infra.ValidationReport(
-                passed=True,
-                violations=(),
-                summary=f"{project.name}: no importable package found",
+            return r[m.Infra.ValidationReport].ok(
+                m.Infra.ValidationReport(
+                    passed=True,
+                    violations=(),
+                    summary=f"{project.name}: no importable package found",
+                )
             )
-        module_names = self._walk_modules(package_name)
-        import_failures: list[str] = []
-        real_modules: list[str] = []
-        for name in module_names:
-            if ": " in name:
-                import_failures.append(name)
-            else:
-                real_modules.append(name)
+        # Operator stability contract (2026-09-16): an unimportable package is
+        # a census violation to report, never a verb crash.
+        walked = r[t.SequenceOf[str]].create_from_callable(
+            lambda: self._walk_modules(package_name)
+        )
+        if walked.failure:
+            return r[m.Infra.ValidationReport].ok(
+                m.Infra.ValidationReport(
+                    passed=False,
+                    violations=(
+                        (
+                            f"{package_name}: package import failed: "
+                            f"{type(walked.exception).__name__}: {walked.error}"
+                        ),
+                    ),
+                    summary=f"{project.name}: package import failed",
+                )
+            )
+        real_modules = list(walked.value)
         if self.target_module is not None:
             real_modules = [
                 name
@@ -154,15 +177,29 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 name.split(".")
             )
         ]
-        all_reports: list[m.Infra.ValidationReport] = [
-            m.Infra.ValidationReport(
-                passed=False,
-                violations=tuple(import_failures),
-                summary=(f"{project.name}: {len(import_failures)} import failure(s)"),
-            )
-        ]
+        all_reports: list[m.Infra.ValidationReport] = []
         for module_name in real_modules:
-            all_reports.extend(self._check_module(module_name))
+            # Operator stability contract (2026-09-16): a module that cannot
+            # import is a census violation to report, never a verb crash —
+            # findings feed the generator, the Make verb completes.
+            checked = r[t.SequenceOf[m.Infra.ValidationReport]].create_from_callable(
+                lambda name=module_name: self._check_module(name)
+            )
+            if checked.success:
+                all_reports.extend(checked.value)
+            else:
+                all_reports.append(
+                    m.Infra.ValidationReport(
+                        passed=False,
+                        violations=(
+                            (
+                                f"{module_name}: import failed: "
+                                f"{type(checked.exception).__name__}: {checked.error}"
+                            ),
+                        ),
+                        summary=f"{module_name}: import failed",
+                    )
+                )
         merged_violations = tuple(
             violation for report in all_reports for violation in report.violations
         )
@@ -172,29 +209,29 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             if not passed
             else f"{project.name}: runtime census passed ({len(real_modules)} module(s))"
         )
-        return m.Infra.ValidationReport(
-            passed=passed, violations=merged_violations, summary=summary
+        return r[m.Infra.ValidationReport].ok(
+            m.Infra.ValidationReport(
+                passed=passed, violations=merged_violations, summary=summary
+            )
         )
 
     def build_report(self) -> p.Result[m.Infra.ValidationReport]:
         """Build one validation report for the selected workspace projects."""
-        projects_result = u.Infra.projects(self.workspace_root)
+        projects_result = u.Infra.resolve_projects(self.repository_root, ())
         if projects_result.failure:
-            return r[m.Infra.ValidationReport].fail(
-                projects_result.error or "project discovery failed"
-            )
-        projects = self._selected_projects(projects_result.unwrap())
+            return r[m.Infra.ValidationReport].from_failure(projects_result)
+        projects = self._filtered_projects(projects_result.unwrap())
         if not projects:
-            return r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(
-                    passed=True,
-                    violations=(),
-                    summary="runtime census: no projects selected",
-                )
+            return r[m.Infra.ValidationReport].fail(
+                f"runtime census selected no projects: root={self.repository_root}, "
+                f"filter={self.project_filter!r}"
             )
         merged_violations: list[str] = []
         for project in projects:
-            report = self._project_report(project)
+            report_result = self._project_report(project)
+            if report_result.failure:
+                return r[m.Infra.ValidationReport].from_failure(report_result)
+            report = report_result.value
             merged_violations.extend(report.violations)
         passed = not merged_violations
         summary = (
@@ -213,7 +250,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         """Execute runtime census and collapse the report to ``r[bool]``."""
         report_result = self.build_report()
         if report_result.failure:
-            return r[bool].fail(report_result.error or "runtime census failed")
+            return r[bool].from_failure(report_result)
         report = report_result.value
         if report.passed:
             return r[bool].ok(True)
@@ -230,10 +267,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         back to 'UNKNOWN' when a violation string carries no bracket) gives the
         operator a histogram and a per-rule file list in one read.
         """
-        import re
-        from collections import defaultdict
-
-        rule_buckets: dict[str, list[str]] = defaultdict(list)
+        rule_buckets: MutableMapping[str, list[str]] = defaultdict(list)
         for violation in report.violations:
             match = re.search(r"\[(ENFORCE-\d+)\]", violation)
             rule_id = match.group(1) if match else "UNKNOWN"

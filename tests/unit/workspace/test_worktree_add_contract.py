@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import FlextInfraWorktreeService, c, m
 from flext_tests import tm
+
+from flext_infra import FlextInfraWorktreeService, c, m
 from tests import u
-from tests.unit.workspace.worktree_fixture import WorktreeFixture
 
 
-class TestsWorktreeAddContract(WorktreeFixture):
+class TestsFlextInfraWorktreeAddContract(u.Tests.WorktreeFixture):
     """Group cohesive worktree behavior."""
 
     def test_invalid_lane_metadata_fails_precisely_and_rolls_back(
@@ -28,7 +28,7 @@ class TestsWorktreeAddContract(WorktreeFixture):
         self._commit_fixture(repository, "test: invalid project metadata")
 
         result = FlextInfraWorktreeService(
-            workspace_root=repository,
+            repository_root=repository,
             operation=c.Infra.WorktreeOperation.ADD,
             branch=branch,
             base="HEAD",
@@ -62,15 +62,7 @@ class TestsWorktreeAddContract(WorktreeFixture):
         )
         self._commit_fixture(repository, "test: clean setup failure")
 
-        result = tm.ok(
-            FlextInfraWorktreeService(
-                workspace_root=repository,
-                operation=c.Infra.WorktreeOperation.ADD,
-                branch=branch,
-                base="HEAD",
-                apply_changes=True,
-            ).execute()
-        )
+        result = self.add_worktree(repository, branch)
 
         tm.that(result, eq=str(lane))
         tm.that(lane.is_dir(), eq=True)
@@ -92,15 +84,7 @@ class TestsWorktreeAddContract(WorktreeFixture):
         )
         self._commit_fixture(repository, "test: dirty setup failure")
 
-        result = tm.ok(
-            FlextInfraWorktreeService(
-                workspace_root=repository,
-                operation=c.Infra.WorktreeOperation.ADD,
-                branch=branch,
-                base="HEAD",
-                apply_changes=True,
-            ).execute()
-        )
+        result = self.add_worktree(repository, branch)
 
         tm.that(result, eq=str(lane))
         tm.that(not (lane / "setup-wip.txt").exists(), where=bool)
@@ -110,7 +94,7 @@ class TestsWorktreeAddContract(WorktreeFixture):
         repository = self._repository(tmp_path)
 
         result = FlextInfraWorktreeService(
-            workspace_root=repository,
+            repository_root=repository,
             operation=c.Infra.WorktreeOperation.ADD,
             branch="feature/no-apply",
             base="HEAD",
@@ -123,13 +107,10 @@ class TestsWorktreeAddContract(WorktreeFixture):
         repository = self._repository(tmp_path)
 
         result = FlextInfraWorktreeService(
-            workspace_root=repository,
+            repository_root=repository,
             operation=c.Infra.WorktreeOperation.ADD,
             branch="feature/no-base",
             apply_changes=True,
         ).execute()
 
         tm.fail(result, has="requires --base")
-
-
-__all__: tuple[str, ...] = ()

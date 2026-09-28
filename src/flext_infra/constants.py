@@ -6,33 +6,34 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import c
-from flext_infra._constants.base import FlextInfraConstantsBase
-from flext_infra._constants.basemk import FlextInfraConstantsBasemk
-from flext_infra._constants.census import FlextInfraConstantsCensus
-from flext_infra._constants.check import FlextInfraConstantsCheck
-from flext_infra._constants.cli import FlextInfraConstantsCli
-from flext_infra._constants.codegen import FlextInfraConstantsCodegen
-from flext_infra._constants.codegen_project import FlextInfraConstantsCodegenProject
-from flext_infra._constants.deps import FlextInfraConstantsDeps
-from flext_infra._constants.detectors import FlextInfraConstantsDetectors
-from flext_infra._constants.docs import FlextInfraConstantsDocs
-from flext_infra._constants.git import FlextInfraConstantsGit
-from flext_infra._constants.github import FlextInfraConstantsGithub
-from flext_infra._constants.refactor import FlextInfraConstantsRefactor
-from flext_infra._constants.release import FlextInfraConstantsRelease
-from flext_infra._constants.rope import FlextInfraConstantsRope
-from flext_infra._constants.source_code import FlextInfraConstantsSourceCode
-from flext_infra._constants.workspace import FlextInfraConstantsWorkspace
+from flext_cli import FlextCliConstants
+
+from ._constants.base import FlextInfraConstantsBase
+from ._constants.census import FlextInfraConstantsCensus
+from ._constants.check import FlextInfraConstantsCheck
+from ._constants.cli import FlextInfraConstantsCli
+from ._constants.codegen import FlextInfraConstantsCodegen
+from ._constants.codegen_project import FlextInfraConstantsCodegenProject
+from ._constants.deps import FlextInfraConstantsDeps
+from ._constants.detectors import FlextInfraConstantsDetectors
+from ._constants.docs import FlextInfraConstantsDocs
+from ._constants.git import FlextInfraConstantsGit
+from ._constants.namespace import FlextInfraConstantsNamespace
+from ._constants.promoted import FlextInfraConstantsPromoted
+from ._constants.promoted_messages import FlextInfraConstantsPromotedMessages
+from ._constants.refactor import FlextInfraConstantsRefactor
+from ._constants.release import FlextInfraConstantsRelease
+from ._constants.rope import FlextInfraConstantsRope
+from ._constants.source_code import FlextInfraConstantsSourceCode
+from ._constants.workspace import FlextInfraConstantsWorkspace
 
 
-class FlextInfraConstants(c):
+class FlextInfraConstants(FlextCliConstants):
     """Infra constants facade — access via c.Infra.*."""
 
     class Infra(
         FlextInfraConstantsBase,
         FlextInfraConstantsCensus,
-        FlextInfraConstantsBasemk,
         FlextInfraConstantsCheck,
         FlextInfraConstantsCli,
         FlextInfraConstantsCodegen,
@@ -41,8 +42,10 @@ class FlextInfraConstants(c):
         FlextInfraConstantsDeps,
         FlextInfraConstantsDetectors,
         FlextInfraConstantsDocs,
-        FlextInfraConstantsGithub,
         FlextInfraConstantsGit,
+        FlextInfraConstantsNamespace,
+        FlextInfraConstantsPromoted,
+        FlextInfraConstantsPromotedMessages,
         FlextInfraConstantsSourceCode,
         FlextInfraConstantsRefactor,
         FlextInfraConstantsRelease,
@@ -52,4 +55,5 @@ class FlextInfraConstants(c):
 
 
 c = FlextInfraConstants
+
 __all__: tuple[str, ...] = ("FlextInfraConstants", "c")

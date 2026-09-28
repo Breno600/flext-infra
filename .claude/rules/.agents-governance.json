@@ -1,0 +1,376 @@
+{
+  "context": "project",
+  "destination": ".claude/rules",
+  "managed": {
+    "architecture--engineering-core.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "architecture--engineering-core.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "c8e9646baefa422a5bb9f4ef334f34efdc4ec4edd2d7ed250ec54a66bc2e06f7",
+      "slug": "architecture/engineering-core",
+      "source_digest": "8a259e74f4718ae218381f6ae0b41ad628a3f3bd43f33a3f38df4d84debf2bba",
+      "source_type": "rule"
+    },
+    "architecture--generalized-abstraction.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "architecture--generalized-abstraction.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "ef22e23b482e460c05d56458e1eb05ae3fd8219c428b92e1ad1c4a911b55db0b",
+      "slug": "architecture/generalized-abstraction",
+      "source_digest": "a8c161361bbf93cee9449e0590fe240988197fce04f4dba054873aef10b2b64e",
+      "source_type": "rule"
+    },
+    "architecture--governance-artifact-composition.md": {
+      "activation": ["route:project"],
+      "adapter_version": 1,
+      "destination": "architecture--governance-artifact-composition.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "a91defb9867124ab65c0f58e2cbb50739dfd35e03b9da8da3a521be479bb2efd",
+      "slug": "architecture/governance-artifact-composition",
+      "source_digest": "cceba4e14924448a9869e5f18faa344aa7a80d8b514420ae2547234ce0975696",
+      "source_type": "rule"
+    },
+    "communication--caveman.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "communication--caveman.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "9e8ee1b2374f2d764cceb8d5aefcbc1ae032d0e9a17cf4931b31794123abe20e",
+      "slug": "communication/caveman",
+      "source_digest": "8b045e6796357e6cafb513c491e430df211ca21e5727b13f4a3ef4d4987ccf09",
+      "source_type": "rule"
+    },
+    "coordination--fix-forward-collaboration.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "coordination--fix-forward-collaboration.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "bcd284acb7ed1485e448587009d0c7c99e0f6703897b0d0aeb60a45f30519b69",
+      "slug": "coordination/fix-forward-collaboration",
+      "source_digest": "9c36a074ad1b7852f8ce5836707d9a64c88a27b35e7eef526fcb120021a72db5",
+      "source_type": "rule"
+    },
+    "coordination--multiagent-edit-breadcrumb.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "coordination--multiagent-edit-breadcrumb.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "20f4814bfd05dec7f51efc51ee7508f1f1d1d2d4ada83e26260ad6a5cf96c837",
+      "slug": "coordination/multiagent-edit-breadcrumb",
+      "source_digest": "45b157fbbf17a53b5bd7659435b59d94d40e0e2517ed24c377a8a5e49690dd86",
+      "source_type": "rule"
+    },
+    "coordination--operator-precedence.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "coordination--operator-precedence.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "6773c1fb61b030aeb7c2ef0d30bb1857ae52e62ffc69d61fbd6aedd1a871cfb2",
+      "slug": "coordination/operator-precedence",
+      "source_digest": "7ceccf1686c7e2d277923a2ef8669b17c3b3ffbf130af26e28ba0763b8811163",
+      "source_type": "rule"
+    },
+    "coordination--plan-topic-monopoly.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "coordination--plan-topic-monopoly.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "92edc909de5663430c23232853fb56d73a253766daa80fc2f245646a6ea4d0c7",
+      "slug": "coordination/plan-topic-monopoly",
+      "source_digest": "0b8029411ead3575b732f2c2d631536b4a560779767895ebf6de4c1678b6e364",
+      "source_type": "rule"
+    },
+    "coordination--session-governance.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "coordination--session-governance.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "d6359d48f8e5fbc65c1a9f31d4d5fe35ec8a9ee694c9c118de3bbedce410ff18",
+      "slug": "coordination/session-governance",
+      "source_digest": "390b3a19e33d87525cd595bebf8ae3c86bca1f2ba3bda39aee3d58381c51efc5",
+      "source_type": "rule"
+    },
+    "coordination--shared-venv-guard.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "coordination--shared-venv-guard.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "6ef097e509392c235ca5b1bac9f87947d5a69d2bc6be19c6b23ef4ff330de2a8",
+      "slug": "coordination/shared-venv-guard",
+      "source_digest": "1929ade799e81ac8a9ef7c8ea76415ae561027383d02aed56ac5a4ae6b911f9f",
+      "source_type": "rule"
+    },
+    "ethics--professional-integrity.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "ethics--professional-integrity.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "592f917dba6367b65c337e7d57092395a03cb2da8470476b9663dab283e6d254",
+      "slug": "ethics/professional-integrity",
+      "source_digest": "10b16c55521191382c5c3a4e7c985d72eb0e89b64943ed9de1ed39bee6bb9281",
+      "source_type": "rule"
+    },
+    "git--destructive-git-guard.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "git--destructive-git-guard.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "63e820b3b61d9d316649dc112996fa9fec2f86121bf868e936ae8fffe2428ac5",
+      "slug": "git/destructive-git-guard",
+      "source_digest": "9d79b6d2a4758ddb4f7f14fb4017ae933aa9f002d38b407bef47fc0261e0b8af",
+      "source_type": "rule"
+    },
+    "python--config-settings-ssot.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "python--config-settings-ssot.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "cb3fc0a97ca2caaa2d3f8414d9362eb48c90fd292ef051f4e6cad01039312adc",
+      "slug": "python/config-settings-ssot",
+      "source_digest": "15b5a8a2e8e937113e5c0f8b8f35ce5decb7f2057e0671c3a5ef44cd1a5527e0",
+      "source_type": "rule"
+    },
+    "python--no-hidden-errors.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "python--no-hidden-errors.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "12dc8441fa63d9fadc9b6cfe7892492ea6491cad03a4312ea98e2ff491aa8a14",
+      "slug": "python/no-hidden-errors",
+      "source_digest": "6c79e6f194b781df0085a6bc2d2f7a75da6fccf6fca9b737f1f4a22130177447",
+      "source_type": "rule"
+    },
+    "python.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "python.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "8cd4188462770e67526976422f7480db7144f8ef44bac7b8eb5da6a65b1ea722",
+      "slug": "python",
+      "source_digest": "bae3d58bd7bc5a4d82c7ced7ac326828f1a11909bef609507efd30c4da152472",
+      "source_type": "rule"
+    },
+    "runtime--atomic-effects.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "runtime--atomic-effects.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "e2f52eabc0ec060861dc39dee1145d18373fcebedb04442dd834d6ff14068621",
+      "slug": "runtime/atomic-effects",
+      "source_digest": "1c4928a1386ef293609b27853d9e61982207c50f8ce49ddc3672759652fb2234",
+      "source_type": "rule"
+    },
+    "runtime--causal-subprocess.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "runtime--causal-subprocess.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "512c4bfa4f8bfe4a9a7cb0616b362307ea39296e1ddbbcc851e1339e71019f8d",
+      "slug": "runtime/causal-subprocess",
+      "source_digest": "1c29c51914796dc3adb3def97f59e77ff8dff07b10175dd66a2344372e22b92a",
+      "source_type": "rule"
+    },
+    "runtime--fail-loud.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "runtime--fail-loud.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "91dc57af5e3587d5aed29bb4e91ba75503e5054cbd4cf5fefb7a04b2c3016096",
+      "slug": "runtime/fail-loud",
+      "source_digest": "5b48c6f7333e5aae17f9069d8fd75b774ab924b4003fc7ef83559794b1fc362d",
+      "source_type": "rule"
+    },
+    "runtime--no-fallback.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "runtime--no-fallback.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "865bd44053732361cd6269819189eaad40d3bbb366b75727482dbee2691b6a6c",
+      "slug": "runtime/no-fallback",
+      "source_digest": "5161825f16aef8a98efda175ad90376ecf29ec5a667ce07cb359b705011cb167",
+      "source_type": "rule"
+    },
+    "runtime--no-keyring.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "runtime--no-keyring.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "e9d3ba2ee6f77e4f02c4bf4f8bcb1fa0d617425aa54f4a0e7d4900ab97bf3f39",
+      "slug": "runtime/no-keyring",
+      "source_digest": "75c9cec0c591fcdd81e41bb70a23dce49ed35844d287424c53f8ed2a8ac64a8a",
+      "source_type": "rule"
+    },
+    "runtime--preflight-before-effects.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "runtime--preflight-before-effects.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "99128970e754a61a13d0ceebed926210f3d97221b9829ef271aa1775de008b73",
+      "slug": "runtime/preflight-before-effects",
+      "source_digest": "783efdba681eee63ceaaa04969830701ee3ee7b57a2cde8681b67f5517ce92fc",
+      "source_type": "rule"
+    },
+    "runtime--required-environment.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "runtime--required-environment.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "b91afbb00e958845413fef622f2336a4c0a61e6973d530dc2ae41f9a6940e080",
+      "slug": "runtime/required-environment",
+      "source_digest": "f5a946ec4aa962e976cf249452c497edf8c423d61ef3df111771d4725c8e925b",
+      "source_type": "rule"
+    },
+    "runtime--strict-execution.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "runtime--strict-execution.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "c28af7c745831c607bdaaf7ef62f45e01c4dc39aed8b5075f7e40e8c69fd27e2",
+      "slug": "runtime/strict-execution",
+      "source_digest": "2cc96a7a34ded16b8f3ec39cc845be456363a4321683442e79cb8aba49ece0d0",
+      "source_type": "rule"
+    },
+    "runtime--zero-residue.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "runtime--zero-residue.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "17a6a136f17424e769ca67a5997cd6e3cd734bf269ead0e284a6e4956bc378e9",
+      "slug": "runtime/zero-residue",
+      "source_digest": "b10f4dcf5df28d85e7145f677fad74d86857ccb1377de2aeb954b41da53345f7",
+      "source_type": "rule"
+    },
+    "rust.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "rust.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "3caaec0cbf5bc350b952987b6c5a5ac03fef508fcd4a37ff0573e47e68fb090e",
+      "slug": "rust",
+      "source_digest": "6df71b979ca432b7abc197ee79b8eb9d22c22da94f4008e8db3d3f197911a988",
+      "source_type": "rule"
+    },
+    "security--prompt-defense.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "security--prompt-defense.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "84bbc7b3b77248f7983ed440e90bd3165949267ba697d3b2e645826ab664006c",
+      "slug": "security/prompt-defense",
+      "source_digest": "905104915fa9576b4c9fd047a87ace00f359c6801b2773fa8d72899c49cb4d53",
+      "source_type": "rule"
+    },
+    "security--scanner-closure.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "security--scanner-closure.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "c76cd67578e1e42df345e7cf3bc1e32608866208e82bf80946f32af8fb3d6385",
+      "slug": "security/scanner-closure",
+      "source_digest": "7dcd6265608c1a4f2883bb0f21b1e09733035ed706670bf22e71ffd01f200a0f",
+      "source_type": "rule"
+    },
+    "security--supply-chain.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "security--supply-chain.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "6bfce76d97f7ed414d5d04ad15d9c14fd22c4c470ab262896315ecf385350562",
+      "slug": "security/supply-chain",
+      "source_digest": "1b2d58dd195f487b90144ed368fae5b2996dcca7a0f9ac3dfb6decf4aa1688a0",
+      "source_type": "rule"
+    },
+    "shell--bash-guard-chaining-precision.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "shell--bash-guard-chaining-precision.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "661faa722e733b8ff03761919e747319e0cd149038a1934cc612e9510f0541f9",
+      "slug": "shell/bash-guard-chaining-precision",
+      "source_digest": "95f0bb196499062d4dfa5a4226c19e23bb9e2f92b861d0557eb3420ae9cbf894",
+      "source_type": "rule"
+    },
+    "storage.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "storage.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "9505cfc7d50e718950d0547a326a6695c2dfca47a1c24440f5e1f614d239dd2b",
+      "slug": "storage",
+      "source_digest": "0a6e8e0efef6da2cb3e5163805f6b769b85eae4ff221eefcf03c0d7702e0ddf5",
+      "source_type": "rule"
+    },
+    "testing--observable-runtime.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "testing--observable-runtime.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "4032ea18f06092b59a57547db76a11c00e3125aeef8d288cb3df2d28ab6dacd3",
+      "slug": "testing/observable-runtime",
+      "source_digest": "8c651d57ef8b9eae425c932b7c5223d39ca93fcad0d3e7921020a6045444a55e",
+      "source_type": "rule"
+    },
+    "typescript.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "typescript.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "91e34f5e6632b0e2f8218672931878ecadd49a12031d681f4f3180d66c2cab4b",
+      "slug": "typescript",
+      "source_digest": "5ffa4236fa7b2fde7f1df461bcd2e5de9255f30e9f36ada8aa6a4832d2b46d6d",
+      "source_type": "rule"
+    },
+    "workflow--canonical-commands.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "workflow--canonical-commands.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "f9509a9fa1cc857eef639a476daeec8bc2065872440a2ac934d034a3966b2fd4",
+      "slug": "workflow/canonical-commands",
+      "source_digest": "6b3165e691fd4f661fbfae9a1e21567c50d3c8a0b83a4f11b206bf445e085a54",
+      "source_type": "rule"
+    },
+    "workflow--generators-not-projections.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "workflow--generators-not-projections.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "e41bdc0e7201494de98bfd67f93e4f8c7925dce7c368d15b760ab228889e61b1",
+      "slug": "workflow/generators-not-projections",
+      "source_digest": "f8fa90e00f1c1e2d9c0d00eb6f09cba7eb544d8ed48d87a0764711087d72e1d2",
+      "source_type": "rule"
+    },
+    "workflow--living-documentation.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "workflow--living-documentation.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "c34f3079a717d1a9176c7aa1688929d6af1fbf37cb47a7cfe3c0cdeb36fc29a9",
+      "slug": "workflow/living-documentation",
+      "source_digest": "d54876d0b757d8a5ae32b6d94316c86748030e12ae48f17a603c55b653eda751",
+      "source_type": "rule"
+    },
+    "workflow--runtime-is-reality.md": {
+      "activation": ["route:both"],
+      "adapter_version": 1,
+      "destination": "workflow--runtime-is-reality.md",
+      "origin": "agents:rules:claude",
+      "physical_digest": "533cef5c60d83322a59a3f59e8eb3245ca9dbea9a6039fd00fca3ff2d2874f92",
+      "slug": "workflow/runtime-is-reality",
+      "source_digest": "fb50786ff1fc3b75328b7b9d283f2ec41f62ed7dde026fcf710c9079028c5aeb",
+      "source_type": "rule"
+    }
+  },
+  "owner": "agents-governance",
+  "project": ".",
+  "providers": ["claude"],
+  "selection": {
+    "agents": [],
+    "opt_ins": [],
+    "selected_tags": ["flext"]
+  },
+  "surface": "rules",
+  "version": 5
+}

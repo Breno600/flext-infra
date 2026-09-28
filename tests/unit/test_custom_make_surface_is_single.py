@@ -13,20 +13,34 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from flext_tests import tm
+
 import flext_infra
 from flext_infra import config
-from flext_tests import tm
 
 
 class TestsFlextInfraCustomMakeSurfaceIsSingle:
     def test_codegen_declares_only_the_custom_make_surface(self) -> None:
-        """The managed-file catalog declares custom.mk and no sibling variant."""
+        """custom.mk is project-owned: scaffolded once, never a managed file.
+
+        The managed-files catalog owns only codegen-managed projections. The
+        customisation surface is deliberately absent from it: conform
+        scaffolds custom.mk create-only and the project owns every later
+        byte, so declaring it managed would let the generator overwrite the
+        operator's own verb hooks.
+        """
         managed = tuple(
             item.path.as_posix() for item in config.Infra.codegen.managed_files
         )
         custom_surfaces = sorted(path for path in managed if path.endswith("custom.mk"))
 
-        tm.that(custom_surfaces, eq=["custom.mk"])
+        tm.that(custom_surfaces, eq=[])
+
+        scaffolded = {
+            entry.destination: entry for entry in config.Infra.codegen.templates.entries
+        }
+        tm.that("custom.mk" in scaffolded, eq=True)
+        tm.that(scaffolded["custom.mk"].overwrite, eq=False)
 
     def test_no_template_emits_a_second_custom_surface(self) -> None:
         """No shipped template references a custom surface other than custom.mk."""

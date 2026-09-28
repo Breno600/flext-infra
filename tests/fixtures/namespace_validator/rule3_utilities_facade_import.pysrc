@@ -1,0 +1,8 @@
+from __future__ import annotations
+
+from flext_cli import u
+from flext_test import FlextTestUtilitiesCodegen
+
+class FlextTestUtilities(u):
+    class Test(FlextTestUtilitiesCodegen, FlextTestUtilitiesBase):
+        pass

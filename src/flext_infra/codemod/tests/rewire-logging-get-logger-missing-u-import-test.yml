@@ -1,0 +1,25 @@
+id: rewire-logging-get-logger-missing-u-import
+valid:
+  - |
+    import logging
+
+    from flext_infra import u
+
+    logger = logging.getLogger(__name__)
+  - |
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+  - |
+    """Docstring naming logging.getLogger(__name__) as prose."""
+
+    TABLE = (("logging.getLogger", "u.fetch_logger"),)
+invalid:
+  - |
+    import logging
+
+    logger = logging.getLogger(__name__)
+  - |
+    from logging import getLogger
+
+    logger = getLogger(__name__)

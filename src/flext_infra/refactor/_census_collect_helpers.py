@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, config, m
-from flext_infra._enforcement.engine import FlextInfraEnforcementEngine
+
+from .._enforcement.engine import FlextInfraEnforcementEngine
 
 if TYPE_CHECKING:
-    from flext_core._models.enforcement import FlextModelsEnforcement as me
     from flext_infra import p, t
 
 
@@ -26,12 +25,32 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         "runtime_alias",
         "manual_typing_alias",
         "compatibility_alias",
-        "mro_completeness",
     })
     _PYI_GLOB: ClassVar[str] = "*.pyi"
     _PYI_SUFFIX: ClassVar[str] = ".pyi"
 
     if TYPE_CHECKING:
+        include_local_scopes: bool
+
+        @property
+        def project_names(self) -> t.StrSequence | None:
+            """Selected projects of the composed census service."""
+            ...
+
+        @property
+        def kind_names(self) -> t.StrSequence | None:
+            """Normalized symbol-kind filters of the census service."""
+            ...
+
+        @property
+        def rule_names(self) -> t.StrSequence | None:
+            """Normalized violation-rule filters of the census service."""
+            ...
+
+        @property
+        def family_names(self) -> t.StrSequence | None:
+            """Normalized family filters of the census service."""
+            ...
 
         @staticmethod
         def _selected_families(family_names: t.StrSequence | None) -> frozenset[str]:
@@ -42,12 +61,9 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             self,
             rope: p.Infra.RopeWorkspaceDsl,
             module: m.Infra.RopeModuleIndexEntry,
-            config: m.Infra.Census.ScanConfig,
+            scan_config: m.Infra.ScanConfig,
             *,
-            project_objects: dict[str, list[m.Infra.Census.Object]],
-            project_violations: dict[str, list[m.Infra.Census.Violation]],
-            project_fixes: dict[str, list[m.Infra.Census.Fix]],
-            report_projects: set[str],
+            findings: m.Infra.ScanFindings,
         ) -> None:
             """Scan through the composed census collection mixin."""
             ...
@@ -56,13 +72,9 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             self,
             rope: p.Infra.RopeWorkspaceDsl,
             *,
-            project_objects: dict[str, list[m.Infra.Census.Object]],
-            project_violations: dict[str, list[m.Infra.Census.Violation]],
-            project_fixes: dict[str, list[m.Infra.Census.Fix]],
-            report_projects: set[str],
-            rule_names: t.StrSequence | None,
-            selected_rules: frozenset[str] | None,
-        ) -> m.Infra.Census.WorkspaceReport:
+            findings: m.Infra.ScanFindings,
+            scan_config: m.Infra.ScanConfig,
+        ) -> m.Infra.WorkspaceReport:
             """Assemble through the composed census collection mixin."""
             ...
 
@@ -94,12 +106,12 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
     @staticmethod
     def _declarative_rules_for_selection(
         rule_names: t.StrSequence | None,
-    ) -> tuple[me.EnforcementRuleSpec, ...]:
+    ) -> t.VariadicTuple[m.EnforcementRuleSpec]:
         """Return catalog declarative rules selected by the census request."""
         return FlextInfraEnforcementEngine.declarative_rules(rule_names)
 
     @staticmethod
-    def _rule_requires_stub_file(rule: me.EnforcementRuleSpec) -> bool:
+    def _rule_requires_stub_file(rule: m.EnforcementRuleSpec) -> bool:
         """Return whether ``rule`` must scan ``.pyi`` files outside Rope modules."""
         return FlextInfraEnforcementEngine.rule_requires_stub_file(rule)
 
@@ -116,39 +128,25 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         return ""
 
     @staticmethod
-    def _mro_facade_module_names(selected_families: frozenset[str]) -> frozenset[str]:
-        """Mro facade module names."""
-        families = selected_families or c.Infra.MRO_FAMILIES
-        return frozenset(
-            Path(module_path).name
-            for family, module_path in c.Infra.MRO_FAMILY_FACADE_MODULES.items()
-            if family in families
-        )
-
-    @staticmethod
     def _is_production_module(module: m.Infra.RopeModuleIndexEntry) -> bool:
         """Return whether a module belongs to one configured production root."""
         project_root = module.project_root
         if project_root is None:
             return False
-        try:
-            relative_path = module.file_path.resolve().relative_to(
-                project_root.resolve()
-            )
-        except ValueError:
+        resolved_file = module.file_path.resolve()
+        resolved_root = project_root.resolve()
+        if not resolved_file.is_relative_to(resolved_root):
             return False
-        return bool(relative_path.parts) and (
-            relative_path.parts[0] in config.Infra.source_scan.roots
-        )
+        parts = resolved_file.relative_to(resolved_root).parts
+        return bool(parts) and (parts[0] in config.Infra.source_scan.roots)
 
     def _modules_for_rules(
         self,
         rope: p.Infra.RopeWorkspaceDsl,
         *,
         project_names: t.StrSequence | None,
-        selected_families: frozenset[str],
         rule_names: t.StrSequence | None,
-    ) -> tuple[m.Infra.RopeModuleIndexEntry, ...]:
+    ) -> t.VariadicTuple[m.Infra.RopeModuleIndexEntry]:
         """Modules for rules."""
         modules = tuple(
             module
@@ -157,26 +155,16 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         )
         declarative_rules = self._declarative_rules_for_selection(rule_names)
         if any(self._rule_requires_stub_file(rule) for rule in declarative_rules):
-            modules = (*modules, *self._stub_modules(rope, modules, project_names))
-        if rule_names is None or set(rule_names) != {"mro_completeness"}:
-            return modules
-        facade_module_names = self._mro_facade_module_names(selected_families)
-        return tuple(
-            module
-            for module in modules
-            if module.module_name
-            and module.module_name.count(".") == 1
-            and module.file_path.name in facade_module_names
-        )
+            modules = (*modules, *self._stub_modules(rope, modules))
+        return modules
 
     @classmethod
     def _stub_modules(
         cls,
         rope: p.Infra.RopeWorkspaceDsl,
         modules: t.SequenceOf[m.Infra.RopeModuleIndexEntry],
-        project_names: t.StrSequence | None,
-    ) -> tuple[m.Infra.RopeModuleIndexEntry, ...]:
-        """Return synthetic module entries for selected workspace ``.pyi`` files."""
+    ) -> t.VariadicTuple[m.Infra.RopeModuleIndexEntry]:
+        """Return ``.pyi`` entries for the projects owning the selected modules."""
         known_paths = frozenset(module.file_path.resolve() for module in modules)
         roots = tuple(
             sorted({
@@ -185,11 +173,8 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
                 if module.project_root is not None
             })
         )
-        project_filter = frozenset(project_names or ())
         entries: list[m.Infra.RopeModuleIndexEntry] = []
         for root in roots:
-            if project_filter and root.name not in project_filter:
-                continue
             src_root = root / c.Infra.DEFAULT_SRC_DIR
             if not src_root.is_dir():
                 continue
@@ -215,7 +200,7 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             module_parts = module_parts[:-1]
         module_name = ".".join(module_parts)
         package_name = module_parts[0] if module_parts else project_root.name
-        resource_path = str(stub_path.relative_to(rope.rope_workspace_root))
+        resource_path = str(stub_path.relative_to(rope.rope_repository_root))
         return m.Infra.RopeModuleIndexEntry(
             file_path=stub_path,
             resource_path=resource_path,
@@ -227,22 +212,19 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         )
 
     def _collect_report(
-        self,
-        rope: p.Infra.RopeWorkspaceDsl,
-        *,
-        project_names: t.StrSequence | None,
-        kind_names: t.StrSequence | None,
-        family_names: t.StrSequence | None,
-        rule_names: t.StrSequence | None,
-        include_local_scopes: bool,
-        applied: frozenset[str],
-    ) -> m.Infra.Census.WorkspaceReport:
+        self, rope: p.Infra.RopeWorkspaceDsl, *, applied: frozenset[str]
+    ) -> m.Infra.WorkspaceReport:
         """Scan selected modules then assemble the workspace census report."""
+        project_names = self.project_names
+        kind_names = self.kind_names
+        rule_names = self.rule_names
+        include_local_scopes = self.include_local_scopes
+        family_names = self.family_names
         selected_families = self._selected_families(family_names)
         selected_rules: frozenset[str] | None = (
             frozenset(rule_names) if rule_names else None
         )
-        config = m.Infra.Census.ScanConfig(
+        scan_config = m.Infra.ScanConfig(
             kind_names=kind_names,
             rule_names=rule_names,
             selected_families=selected_families,
@@ -257,36 +239,17 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             include_local_scopes=include_local_scopes,
             applied=applied,
         )
-        project_objects: dict[str, list[m.Infra.Census.Object]] = defaultdict(list)
-        project_violations: dict[str, list[m.Infra.Census.Violation]] = defaultdict(
-            list
+        findings = m.Infra.ScanFindings(
+            project_objects={},
+            project_violations={},
+            project_fixes={},
+            report_projects=set(),
         )
-        project_fixes: dict[str, list[m.Infra.Census.Fix]] = defaultdict(list)
-        report_projects: set[str] = set()
         for module in self._modules_for_rules(
-            rope,
-            project_names=project_names,
-            selected_families=selected_families,
-            rule_names=rule_names,
+            rope, project_names=project_names, rule_names=rule_names
         ):
-            self._scan_module(
-                rope,
-                module,
-                config,
-                project_objects=project_objects,
-                project_violations=project_violations,
-                project_fixes=project_fixes,
-                report_projects=report_projects,
-            )
-        return self._assemble_report(
-            rope,
-            project_objects=project_objects,
-            project_violations=project_violations,
-            project_fixes=project_fixes,
-            report_projects=report_projects,
-            rule_names=rule_names,
-            selected_rules=selected_rules,
-        )
+            self._scan_module(rope, module, scan_config, findings=findings)
+        return self._assemble_report(rope, findings=findings, scan_config=scan_config)
 
 
 __all__: list[str] = ["FlextInfraRefactorCensusCollectHelpersMixin"]

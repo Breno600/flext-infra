@@ -1,0 +1,70 @@
+id: ban-legacy-cli-framework
+snapshots:
+  app = typer.Typer():
+    labels:
+    - source: typer.Typer()
+      style: primary
+      start: 6
+      end: 19
+  command = click.command():
+    labels:
+    - source: click.command()
+      style: primary
+      start: 10
+      end: 25
+  from click import command:
+    labels:
+    - source: from click import command
+      style: primary
+      start: 0
+      end: 25
+    - source: click
+      style: secondary
+      start: 5
+      end: 10
+  from rich.console import Console:
+    labels:
+    - source: from rich.console import Console
+      style: primary
+      start: 0
+      end: 32
+    - source: rich.console
+      style: secondary
+      start: 5
+      end: 17
+  group = click.group():
+    labels:
+    - source: click.group()
+      style: primary
+      start: 8
+      end: 21
+  import rich.console:
+    labels:
+    - source: import rich.console
+      style: primary
+      start: 0
+      end: 19
+    - source: rich.console
+      style: secondary
+      start: 7
+      end: 19
+  import tabulate:
+    labels:
+    - source: import tabulate
+      style: primary
+      start: 0
+      end: 15
+    - source: tabulate
+      style: secondary
+      start: 7
+      end: 15
+  import typer:
+    labels:
+    - source: import typer
+      style: primary
+      start: 0
+      end: 12
+    - source: typer
+      style: secondary
+      start: 7
+      end: 12

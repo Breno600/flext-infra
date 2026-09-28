@@ -1,0 +1,16 @@
+id: add-open-builtin-default-mode-encoding
+snapshots:
+  handle = open(path):
+    fixed: handle = open(path, encoding="utf-8")
+    labels:
+    - source: open(path)
+      style: primary
+      start: 9
+      end: 19
+  handle = open(self._resolve(name)):
+    fixed: handle = open(self._resolve(name), encoding="utf-8")
+    labels:
+    - source: open(self._resolve(name))
+      style: primary
+      start: 9
+      end: 34

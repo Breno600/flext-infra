@@ -6,8 +6,8 @@ import operator
 from typing import override
 
 from flext_infra import c, m, t, u
-from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
-from flext_infra.transformers.base import FlextInfraRopeTransformer
+
+from .rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
@@ -28,15 +28,10 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
     ) -> None:
         """Initialize with rule order settings and optional change callback."""
         super().__init__(on_change=on_change)
-        try:
-            typed_items = t.Infra.CONTAINER_DICT_SEQ_ADAPTER.validate_python(
-                order_config
-            )
-            self._order_config: t.SequenceOf[m.Infra.MethodOrderRule] = [
-                m.Infra.MethodOrderRule.model_validate(item) for item in typed_items
-            ]
-        except c.ValidationError:
-            self._order_config = list[m.Infra.MethodOrderRule]()
+        typed_items = t.Infra.CONTAINER_DICT_SEQ_ADAPTER.validate_python(order_config)
+        self._order_config: t.SequenceOf[m.Infra.MethodOrderRule] = [
+            m.Infra.MethodOrderRule.model_validate(item) for item in typed_items
+        ]
 
     @override
     def apply_to_source(self, source: str) -> t.Infra.TransformResult:
@@ -45,16 +40,14 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
         if not self._order_config:
             return source, list[str]()
         try:
-            pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(source)
+            pymodule = u.Infra.parse_string_module(source)
         except c.EXC_OS_SYNTAX:
             return source, list[str]()
-        if pymodule is None:
-            return source, list[str]()
         lines = source.splitlines(keepends=True)
-        edits: list[tuple[int, int, str]] = []
+        edits: list[t.Triple[int, int, str]] = []
         for class_name, class_pyname in pymodule.get_attributes().items():
             class_obj = class_pyname.get_object()
-            if not FlextInfraUtilitiesRopeAnalysis.is_pyclass(class_obj):
+            if not u.Infra.abstract_class(class_obj):
                 continue
             block_edits = self._class_block_edits(
                 class_name=class_name, class_obj=class_obj, lines=lines
@@ -75,24 +68,25 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
         class_name: str,
         class_obj: t.Infra.RopePyObject,
         lines: t.SequenceOf[str],
-    ) -> list[tuple[int, int, str]]:
+    ) -> list[t.Triple[int, int, str]]:
         """Return reorder edits for each contiguous method block in one class."""
         method_chunks = self._collect_method_chunks(class_obj=class_obj, lines=lines)
         if len(method_chunks) < c.Infra.MIN_METHODS_FOR_REORDER:
             return []
+
+        def method_sort_key(
+            item: t.Quad[m.Infra.MethodInfo, int, int, str],
+        ) -> t.Triple[int, int, str]:
+            return u.Infra.build_method_sort_key(item[0], self._order_config)
+
         source = "".join(lines)
-        edits: list[tuple[int, int, str]] = []
+        edits: list[t.Triple[int, int, str]] = []
         for block in self._contiguous_method_blocks(
             method_chunks=method_chunks, source=source
         ):
             if len(block) < c.Infra.MIN_METHODS_FOR_REORDER:
                 continue
-            sorted_chunks = sorted(
-                block,
-                key=lambda item: u.Infra.build_method_sort_key(
-                    item[0], self._order_config
-                ),
-            )
+            sorted_chunks = sorted(block, key=method_sort_key)
             if [item[0].name for item in block] == [
                 item[0].name for item in sorted_chunks
             ]:
@@ -112,16 +106,16 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
 
     def _collect_method_chunks(
         self, *, class_obj: t.Infra.RopePyObject, lines: t.SequenceOf[str]
-    ) -> list[tuple[m.Infra.MethodInfo, int, int, str]]:
+    ) -> list[t.Quad[m.Infra.MethodInfo, int, int, str]]:
         """Collect ``(MethodInfo, start_offset, end_offset, source_chunk)`` ordered by line."""
         line_offsets = self._line_offsets(lines)
         source = "".join(lines)
-        raw: list[tuple[int, int, m.Infra.MethodInfo]] = []
+        raw: list[t.Triple[int, int, m.Infra.MethodInfo]] = []
         for method_name, method_pyname in class_obj.get_attributes().items():
             method_obj = method_pyname.get_object()
-            if not FlextInfraUtilitiesRopeAnalysis.is_pyfunction(method_obj):
+            if not u.Infra.py_function(method_obj):
                 continue
-            # mro-j47u (codex): Rope returns a tuple; only its line is optional.
+            # flext-j47u (codex): Rope returns a tuple; only its line is optional.
             location = method_pyname.get_definition_location()
             if location[1] is None:
                 continue
@@ -129,8 +123,8 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
             definition_line = raw_line.lstrip()
             if not definition_line.startswith(("def ", "async def ", "@")):
                 continue
-            decorators = FlextInfraUtilitiesRopeAnalysis.decorator_names(method_obj)
-            start_line = FlextInfraUtilitiesRopeAnalysis.first_decorator_line(
+            decorators = u.Infra.decorator_names(method_obj)
+            start_line = u.Infra.first_decorator_line(
                 method_obj, default_line=location[1]
             )
             method_scope = method_obj.get_scope()
@@ -145,7 +139,7 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
             )
             raw.append((start_line, end_line, method_info))
         raw.sort(key=operator.itemgetter(0))
-        chunks: list[tuple[m.Infra.MethodInfo, int, int, str]] = []
+        chunks: list[t.Quad[m.Infra.MethodInfo, int, int, str]] = []
         for start_line, end_line, method_info in raw:
             block_start = line_offsets[start_line - 1]
             block_end = (
@@ -162,13 +156,13 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
     @staticmethod
     def _contiguous_method_blocks(
         *,
-        method_chunks: t.SequenceOf[tuple[m.Infra.MethodInfo, int, int, str]],
+        method_chunks: t.SequenceOf[t.Quad[m.Infra.MethodInfo, int, int, str]],
         source: str,
-    ) -> list[list[tuple[m.Infra.MethodInfo, int, int, str]]]:
+    ) -> list[list[t.Quad[m.Infra.MethodInfo, int, int, str]]]:
         """Split method chunks into reorderable blocks separated only by spacing/comments."""
         if not method_chunks:
             return []
-        blocks: list[list[tuple[m.Infra.MethodInfo, int, int, str]]] = [
+        blocks: list[list[t.Quad[m.Infra.MethodInfo, int, int, str]]] = [
             [method_chunks[0]]
         ]
         for chunk in method_chunks[1:]:

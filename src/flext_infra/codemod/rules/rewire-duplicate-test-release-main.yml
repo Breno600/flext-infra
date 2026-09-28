@@ -1,0 +1,12 @@
+id: rewire-duplicate-test-release-main
+language: Python
+severity: error
+files:
+  - "**/tests/unit/release/protocol_tests.py"
+  - "**/tests/unit/release/test_release_dag.py"
+  - "**/tests/unit/release/orchestrator_helpers_tests.py"
+  - "**/tests/unit/release/orchestrator_publish_tests.py"
+rule:
+  pattern: _run_release_main($$$ARGS)
+fix: u.Tests.run_release_main($$$ARGS)
+message: Reuse the existing public release CLI test owner.

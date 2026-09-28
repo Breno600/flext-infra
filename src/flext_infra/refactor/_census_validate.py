@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra import u
+from flext_infra import m, u
 
 if TYPE_CHECKING:
-    from flext_infra import m, p, t
+    from pathlib import Path
+
+    from flext_infra import p, t
 
 _log = u.fetch_logger(__name__)
 
@@ -17,53 +19,42 @@ class FlextInfraRefactorCensusValidateMixin:
     """Filter removal candidates through dry-run gates, surfacing rejections.
 
     Parent of FlextInfraRefactorCensusCollectMixin (its ``_assemble_report``
-    calls ``_validated_project_reports``); borrows root + dry-run flags + the
-    raw-violation builder from the facade and sibling mixins via MRO.
+    calls ``_validated_project_reports``); borrows root + dry-run flags from
+    the facade via FLEXT.
     """
 
     if TYPE_CHECKING:
         dry_run: bool
-        fail_fast: bool
+
+        @property
+        def fail_fast(self) -> bool: ...
 
         @property
         def root(self) -> Path: ...
 
         @property
         def dry_run_gate_names(self) -> t.StrSequence: ...
-        @staticmethod
-        def _raw_violation(
-            *,
-            project: str,
-            object_name: str,
-            object_kind: str,
-            kind: str,
-            file_path: Path,
-            line: int,
-            description: str,
-            fixable: bool = False,
-            fix_action: str = "",
-        ) -> m.Infra.Census.Violation: ...
 
     def _validated_project_reports(
         self,
         rope: p.Infra.RopeWorkspaceDsl,
-        project_reports: tuple[m.Infra.Census.ProjectReport, ...],
-    ) -> tuple[m.Infra.Census.ProjectReport, ...]:
+        project_reports: t.VariadicTuple[m.Infra.ProjectReport],
+    ) -> t.VariadicTuple[m.Infra.ProjectReport]:
         """Keep only removal candidates that pass the configured dry-run gates.
 
         Gate rejections are surfaced as explicit ``preview_rejected``
         violations so the census still completes with actionable output
         instead of aborting on the first rejected candidate.
         """
-        validated_reports: list[m.Infra.Census.ProjectReport] = []
+        validated_reports: list[m.Infra.ProjectReport] = []
         # Preview writes are restored before the next candidate, so one shared
         # source cache stays valid for the entire dry-run validation pass.
-        source_cache: dict[Path, str] = {}
+        source_cache: MutableMapping[Path, str] = {}
         for report in project_reports:
             if not report.removal_candidates:
                 validated_reports.append(report)
                 continue
-            validated_candidates_list: list[m.Infra.Census.RemovalCandidate] = []
+            validated_candidates_list: list[m.Infra.RemovalCandidate] = []
             validated_violations = list(report.violations)
             for candidate in report.removal_candidates:
                 preview_result = u.Infra.preview_simple_removal_candidate(
@@ -87,18 +78,18 @@ class FlextInfraRefactorCensusValidateMixin:
                         error=msg,
                     )
                     validated_violations.append(
-                        self._raw_violation(
+                        m.Infra.Violation(
                             project=report.project,
                             object_name=candidate.object_name,
                             object_kind=candidate.object_kind,
                             kind="preview_rejected",
-                            file_path=Path(candidate.file_path),
+                            file_path=candidate.file_path,
                             line=candidate.line,
                             description=msg,
                         )
                     )
                     continue
-                if preview_result.unwrap_or(False):
+                if preview_result.unwrap():
                     validated_candidates_list.append(candidate)
             validated_candidates = tuple(validated_candidates_list)
             validated_reports.append(

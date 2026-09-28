@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-{{ base_import_block }}class {{ class_name }}({{ base_class }}):
+from {{ base_module }} import {{ base_class }}
+
+
+class {{ class_name }}({{ base_class }}):
     """{{ docstring }}"""
 
 

@@ -1,4 +1,4 @@
-"""Project-layout engine command service (mro-0wuz, epic mro-hzox).
+"""Project-layout engine command service (flext-0wuz, epic flext-hzox).
 
 Check mode reports layout violations from the declarative SSOT in
 ``config/codegen.yaml``; apply mode performs the reorganization idempotently
@@ -14,10 +14,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, override
 
-from flext_infra import c, m, p, r, t, u
-from flext_infra.base import s
-from flext_infra.codegen._layout_apply import FlextInfraCodegenLayoutApplyMixin
-from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
+from flext_core import r
+from flext_infra import c, m, p, t, u
+
+from ..base import s
+from ._layout_apply import FlextInfraCodegenLayoutApplyMixin
+from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
 
 
 class FlextInfraCodegenLayout(
@@ -34,7 +36,7 @@ class FlextInfraCodegenLayout(
         """Run check (default) or apply across the selected projects."""
         selected = self._project_dirs()
         if selected.failure:
-            return r[str].fail(selected.error or "project selection failed")
+            return r[str].from_failure(selected)
         spec = self._layout_spec
         reports: list[m.Infra.LayoutProjectReport] = []
         for project_dir in selected.value:
@@ -44,11 +46,9 @@ class FlextInfraCodegenLayout(
                 continue
             applied = self.apply_project(project_dir, planned)
             if applied.failure:
-                return r[str].fail(
-                    applied.error or f"layout apply failed: {project_dir.name}"
-                )
+                return r[str].from_failure(applied)
             residual = self.plan_project(project_dir)
-            actionable: tuple[m.Infra.LayoutFinding, ...] = residual.actionable
+            actionable: t.VariadicTuple[m.Infra.LayoutFinding] = residual.actionable
             unresolved = tuple(
                 finding.path for finding in actionable if finding.status == "planned"
             )
@@ -63,7 +63,9 @@ class FlextInfraCodegenLayout(
         if self.effective_dry_run and spec.severity == "error":
             blocking: list[str] = []
             for report in reports:
-                report_actionable: tuple[m.Infra.LayoutFinding, ...] = report.actionable
+                report_actionable: t.VariadicTuple[m.Infra.LayoutFinding] = (
+                    report.actionable
+                )
                 blocking.extend(finding.message for finding in report_actionable)
             if blocking:
                 return r[str].fail(f"layout violations: {'; '.join(blocking)}")
@@ -76,24 +78,26 @@ class FlextInfraCodegenLayout(
     def _project_dirs(self) -> p.Result[t.SequenceOf[Path]]:
         """Resolve the selected project directories, degrading to plain dirs."""
         if self.project_name is not None:
-            candidate = self.workspace_root / self.project_name
+            candidate = self.repository_root / self.project_name
             if candidate.is_dir():
                 return r[t.SequenceOf[Path]].ok((candidate,))
             if (
-                self.workspace_root.name == self.project_name
-                and self.workspace_root.is_dir()
+                self.repository_root.name == self.project_name
+                and self.repository_root.is_dir()
             ):
-                return r[t.SequenceOf[Path]].ok((self.workspace_root,))
+                return r[t.SequenceOf[Path]].ok((self.repository_root,))
             return r[t.SequenceOf[Path]].fail(
                 f"project not found in workspace: {self.project_name}"
             )
-        discovered = u.Infra.projects(self.workspace_root)
+        discovered = u.Infra.projects(self.repository_root)
         if discovered.success and discovered.value:
-            return r[t.SequenceOf[Path]].ok(
-                tuple(project.path for project in discovered.value)
-            )
-        if self.workspace_root.is_dir():
-            return r[t.SequenceOf[Path]].ok((self.workspace_root,))
+            project_dirs = dict.fromkeys((
+                self.repository_root,
+                *(project.path for project in discovered.value),
+            ))
+            return r[t.SequenceOf[Path]].ok(tuple(project_dirs))
+        if self.repository_root.is_dir():
+            return r[t.SequenceOf[Path]].ok((self.repository_root,))
         return r[t.SequenceOf[Path]].fail("no projects discovered")
 
     def _render_output(self, reports: t.SequenceOf[m.Infra.LayoutProjectReport]) -> str:

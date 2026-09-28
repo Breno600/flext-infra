@@ -1,4 +1,4 @@
-{# NOTE (codex, mro-j47u): precompute exact compact/multiline source with zero render whitespace. -#}
+{# NOTE (codex, flext-j47u): precompute exact compact/multiline source with zero render whitespace. -#}
 {%- set config_protocols_line = "from " ~ package_name ~ "._protocols.config import " ~ class_stem ~ "ProtocolsConfig" -%}
 {%- set config_protocols_import = config_protocols_line if config_protocols_line | length <= tooling.tools.ruff.line_length else "from " ~ package_name ~ "._protocols.config import (\n    " ~ class_stem ~ "ProtocolsConfig,\n)" -%}
 {%- set ping_protocols_line = "from " ~ package_name ~ "._protocols.ping import " ~ class_stem ~ "ProtocolsPing" -%}
@@ -14,15 +14,16 @@ Copyright (c) {{ year }} {{ author_name }}. All rights reserved.
 SPDX-License-Identifier: MIT
 """
 
-{# NOTE (multi-agent, mro-wkii.19.1): config/settings protocols compose one declaration-only namespace. -#}
+{# NOTE (multi-agent, flext-wkii.19.1): config/settings protocols compose one declaration-only namespace. -#}
 from __future__ import annotations
 
-from {{ upstream }} import p
+{# NOTE (flext-dv1ga): extend the class the upstream declares for `p` in its own __all__; the letter is rebound below as a plain alias. -#}
+from {{ upstream }} import {{ upstream_facades["p"] }}
 
 {{ protocol_imports }}
 
 
-class {{ class_stem }}Protocols(p):
+class {{ class_stem }}Protocols({{ upstream_facades["p"] }}):
     """{{ class_stem }} protocols extending the upstream facade."""
 
 {{ protocols_namespace_declaration }}

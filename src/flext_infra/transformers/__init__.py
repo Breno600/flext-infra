@@ -3,147 +3,90 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from . import smells as smells
-    from .base import FlextInfraChangeTrackingTransformer, FlextInfraRopeTransformer
-    from .cast_remover import FlextInfraRefactorCastRemover
-    from .census_visitors import (
-        FlextInfraCensusImportDiscoveryVisitor,
-        FlextInfraCensusUsageCollector,
+    from ._canonical_t_import import FlextInfraEnsureCanonicalTImportMixin
+    from ._import_facades import FlextInfraRefactorImportFacades
+    from ._semantic_publication import (
+        publish_semantic_file_plan,
+        publish_semantic_file_plans,
     )
-    from .class_nesting import FlextInfraRefactorClassNestingTransformer
+    from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
     from .class_reconstructor import FlextInfraRefactorClassReconstructor
-    from .cli_modernizer import FlextInfraRefactorCliModernizer
     from .compatibility_alias import FlextInfraRefactorCompatibilityAlias
+    from .dataclass_modelizer import FlextInfraRefactorDataclassModelizer
     from .deprecated_remover import FlextInfraRefactorDeprecatedRemover
     from .future_import import FlextInfraRefactorFutureImport
     from .hardcoded_version import FlextInfraRefactorHardcodedVersion
-    from .helper_consolidation import FlextInfraHelperConsolidationTransformer
     from .import_bypass_remover import FlextInfraRefactorImportBypassRemover
     from .import_modernizer import FlextInfraRefactorImportModernizer
     from .lazy_import_fixer import FlextInfraRefactorLazyImportFixer
-    from .logging_modernizer import FlextInfraRefactorLoggingModernizer
-    from .mro_remover import FlextInfraRefactorMRORemover
-    from .mro_symbol_propagator import FlextInfraRefactorMROSymbolPropagator
-    from .nested_class_propagation import FlextInfraNestedClassPropagationTransformer
+    from .mro_remover import FlextInfraRefactorMroRemover
     from .open_encoding import FlextInfraRefactorOpenEncoding
     from .pattern import FlextInfraRefactorPatternTransformer
-    from .pattern_modernizer import FlextInfraRefactorPatternModernizer
-    from .project_alias_migrator import FlextInfraRefactorProjectAliasMigrator
     from .pydantic_modernizer import FlextInfraRefactorPydanticModernizer
-    from .result_di_modernizer import FlextInfraRefactorResultDiModernizer
+    from .rope_transformer import FlextInfraRopeTransformer
     from .signature_propagator import FlextInfraRefactorSignaturePropagator
-    from .smells.base import (
-        FlextInfraSmellFixer,
-        auto_fixable_smell_tags,
-        register_smell_fixer,
-        smell_fixer_for,
-    )
-    from .smells.boolean_logic import FlextInfraBooleanLogicFixer
     from .symbol_propagator import FlextInfraRefactorSymbolPropagator
-    from .tier0_import_fixer import FlextInfraTransformerTier0ImportFixer
-    from .typing_dict_attr import FlextInfraRefactorTypingDictAttr
-    from .typing_dict_import import FlextInfraRefactorTypingDictImport
     from .typing_unifier import FlextInfraRefactorTypingUnifier
-    from .violation_census_visitor import FlextInfraViolationCensusVisitor
+
+
 __all__: tuple[str, ...] = (
-    "FlextInfraBooleanLogicFixer",
-    "FlextInfraCensusImportDiscoveryVisitor",
-    "FlextInfraCensusUsageCollector",
-    "FlextInfraChangeTrackingTransformer",
-    "FlextInfraHelperConsolidationTransformer",
-    "FlextInfraNestedClassPropagationTransformer",
-    "FlextInfraRefactorCastRemover",
-    "FlextInfraRefactorClassNestingTransformer",
+    "FlextInfraEnsureCanonicalTImportMixin",
     "FlextInfraRefactorClassReconstructor",
-    "FlextInfraRefactorCliModernizer",
     "FlextInfraRefactorCompatibilityAlias",
+    "FlextInfraRefactorDataclassModelizer",
     "FlextInfraRefactorDeprecatedRemover",
     "FlextInfraRefactorFutureImport",
     "FlextInfraRefactorHardcodedVersion",
     "FlextInfraRefactorImportBypassRemover",
+    "FlextInfraRefactorImportFacades",
     "FlextInfraRefactorImportModernizer",
     "FlextInfraRefactorLazyImportFixer",
-    "FlextInfraRefactorLoggingModernizer",
-    "FlextInfraRefactorMRORemover",
-    "FlextInfraRefactorMROSymbolPropagator",
+    "FlextInfraRefactorMroRemover",
     "FlextInfraRefactorOpenEncoding",
-    "FlextInfraRefactorPatternModernizer",
     "FlextInfraRefactorPatternTransformer",
-    "FlextInfraRefactorProjectAliasMigrator",
     "FlextInfraRefactorPydanticModernizer",
-    "FlextInfraRefactorResultDiModernizer",
     "FlextInfraRefactorSignaturePropagator",
     "FlextInfraRefactorSymbolPropagator",
-    "FlextInfraRefactorTypingDictAttr",
-    "FlextInfraRefactorTypingDictImport",
     "FlextInfraRefactorTypingUnifier",
+    "FlextInfraRefactorTypingUnifierRewriteMixin",
     "FlextInfraRopeTransformer",
-    "FlextInfraSmellFixer",
-    "FlextInfraTransformerTier0ImportFixer",
-    "FlextInfraViolationCensusVisitor",
-    "auto_fixable_smell_tags",
-    "register_smell_fixer",
-    "smell_fixer_for",
-    "smells",
+    "publish_semantic_file_plan",
+    "publish_semantic_file_plans",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
-            ".base": (
-                "FlextInfraChangeTrackingTransformer",
-                "FlextInfraRopeTransformer",
+            "._canonical_t_import": ("FlextInfraEnsureCanonicalTImportMixin",),
+            "._import_facades": ("FlextInfraRefactorImportFacades",),
+            "._semantic_publication": (
+                "publish_semantic_file_plan",
+                "publish_semantic_file_plans",
             ),
-            ".cast_remover": ("FlextInfraRefactorCastRemover",),
-            ".census_visitors": (
-                "FlextInfraCensusImportDiscoveryVisitor",
-                "FlextInfraCensusUsageCollector",
-            ),
-            ".class_nesting": ("FlextInfraRefactorClassNestingTransformer",),
+            "._typing_rewrite": ("FlextInfraRefactorTypingUnifierRewriteMixin",),
             ".class_reconstructor": ("FlextInfraRefactorClassReconstructor",),
-            ".cli_modernizer": ("FlextInfraRefactorCliModernizer",),
             ".compatibility_alias": ("FlextInfraRefactorCompatibilityAlias",),
+            ".dataclass_modelizer": ("FlextInfraRefactorDataclassModelizer",),
             ".deprecated_remover": ("FlextInfraRefactorDeprecatedRemover",),
             ".future_import": ("FlextInfraRefactorFutureImport",),
             ".hardcoded_version": ("FlextInfraRefactorHardcodedVersion",),
-            ".helper_consolidation": ("FlextInfraHelperConsolidationTransformer",),
             ".import_bypass_remover": ("FlextInfraRefactorImportBypassRemover",),
             ".import_modernizer": ("FlextInfraRefactorImportModernizer",),
             ".lazy_import_fixer": ("FlextInfraRefactorLazyImportFixer",),
-            ".logging_modernizer": ("FlextInfraRefactorLoggingModernizer",),
-            ".mro_remover": ("FlextInfraRefactorMRORemover",),
-            ".mro_symbol_propagator": ("FlextInfraRefactorMROSymbolPropagator",),
-            ".nested_class_propagation": (
-                "FlextInfraNestedClassPropagationTransformer",
-            ),
+            ".mro_remover": ("FlextInfraRefactorMroRemover",),
             ".open_encoding": ("FlextInfraRefactorOpenEncoding",),
             ".pattern": ("FlextInfraRefactorPatternTransformer",),
-            ".pattern_modernizer": ("FlextInfraRefactorPatternModernizer",),
-            ".project_alias_migrator": ("FlextInfraRefactorProjectAliasMigrator",),
             ".pydantic_modernizer": ("FlextInfraRefactorPydanticModernizer",),
-            ".result_di_modernizer": ("FlextInfraRefactorResultDiModernizer",),
+            ".rope_transformer": ("FlextInfraRopeTransformer",),
             ".signature_propagator": ("FlextInfraRefactorSignaturePropagator",),
-            ".smells": ("smells",),
-            ".smells.base": (
-                "FlextInfraSmellFixer",
-                "auto_fixable_smell_tags",
-                "register_smell_fixer",
-                "smell_fixer_for",
-            ),
-            ".smells.boolean_logic": ("FlextInfraBooleanLogicFixer",),
             ".symbol_propagator": ("FlextInfraRefactorSymbolPropagator",),
-            ".tier0_import_fixer": ("FlextInfraTransformerTier0ImportFixer",),
-            ".typing_dict_attr": ("FlextInfraRefactorTypingDictAttr",),
-            ".typing_dict_import": ("FlextInfraRefactorTypingDictImport",),
             ".typing_unifier": ("FlextInfraRefactorTypingUnifier",),
-            ".violation_census_visitor": ("FlextInfraViolationCensusVisitor",),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,

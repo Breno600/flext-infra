@@ -3,9 +3,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
@@ -14,13 +13,17 @@ if TYPE_CHECKING:
     from .check import FlextInfraProtocolsCheck
     from .deps import FlextInfraProtocolsDeps
     from .docs import FlextInfraProtocolsDocs
+    from .promoted import FlextInfraProtocolsPromoted
     from .rope import FlextInfraProtocolsRope
     from .rope_runtime import FlextInfraProtocolsRopeRuntime
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraProtocolsBase",
     "FlextInfraProtocolsCheck",
     "FlextInfraProtocolsDeps",
     "FlextInfraProtocolsDocs",
+    "FlextInfraProtocolsPromoted",
     "FlextInfraProtocolsRope",
     "FlextInfraProtocolsRopeRuntime",
 )
@@ -32,6 +35,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".check": ("FlextInfraProtocolsCheck",),
             ".deps": ("FlextInfraProtocolsDeps",),
             ".docs": ("FlextInfraProtocolsDocs",),
+            ".promoted": ("FlextInfraProtocolsPromoted",),
             ".rope": ("FlextInfraProtocolsRope",),
             ".rope_runtime": ("FlextInfraProtocolsRopeRuntime",),
         }),

@@ -1,0 +1,100 @@
+# Recomposition of the open-encoding transformer (ENFORCE-029) onto `make mod`.
+#
+# The retired transformer selected the call with the raw `ast` module and then
+# produced the replacement by splicing text into the call's *start* line:
+#
+#     close = line.rfind(")", col_offset)
+#     lines[line_index] = f'{line[:close]}, encoding="utf-8"){line[close + 1:]}'
+#
+# Selection was structural but replacement was textual, so the two disagreed
+# whenever they were not on the same line: a call spanning several lines had the
+# kwarg spliced before the last `)` occurring on its opening line -- inside a
+# nested call, or nowhere at all. A four-positional-argument call
+# (`open(p, "r", -1, "utf-8")`) was rewritten into a duplicate `encoding`
+# argument, a TypeError at runtime.
+#
+# Here the AST node is the unit of both selection and replacement, so the fix
+# cannot land anywhere except on the matched call, and each shape is matched at
+# an exact arity: a call that already carries `encoding` has one argument more
+# than any pattern below and is structurally unreachable.
+#
+# Text-mode proof is unchanged from the transformer's `_is_text_mode`: an absent
+# mode is text, an explicit mode is text only when it is a string literal with
+# no `b`. The `MODE` constraint is a regex over one already-matched AST node
+# (the string literal or the `mode=` keyword argument), never over file text --
+# the same node-scoped use of `regex:` as ban-pydantic-v1-api.
+#
+# Deliberately narrower than the transformer in one place: the single-argument
+# builtin form skips `open(file=p)`, because excluding keyword arguments
+# structurally is what keeps `open(encoding=...)` unreachable. A missed rewrite
+# is a detection the next rule run still reports; a wrong rewrite is not.
+id: add-open-builtin-default-mode-encoding
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: open($PATH)
+constraints:
+  PATH:
+    not:
+      kind: keyword_argument
+fix: open($PATH, encoding="utf-8")
+message: >-
+  A text-mode open() must declare its encoding explicitly; the default depends
+  on the host locale.
+---
+id: add-open-builtin-text-mode-encoding
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: open($PATH, $MODE)
+constraints:
+  MODE:
+    regex: "^(?:mode\\s*=\\s*)?['\"][^'\"b]*['\"]$"
+fix: open($PATH, $MODE, encoding="utf-8")
+message: >-
+  A text-mode open() must declare its encoding explicitly; the default depends
+  on the host locale.
+---
+id: add-path-open-default-mode-encoding
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: $RECV.open()
+constraints:
+  RECV:
+    any:
+      - pattern: Path($$$ARGS)
+      - pattern: $MODULE.Path($$$ARGS)
+fix: $RECV.open(encoding="utf-8")
+message: >-
+  A text-mode Path.open() must declare its encoding explicitly; the default
+  depends on the host locale.
+---
+id: add-path-open-text-mode-encoding
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern: $RECV.open($MODE)
+constraints:
+  RECV:
+    any:
+      - pattern: Path($$$ARGS)
+      - pattern: $MODULE.Path($$$ARGS)
+  MODE:
+    regex: "^(?:mode\\s*=\\s*)?['\"][^'\"b]*['\"]$"
+fix: $RECV.open($MODE, encoding="utf-8")
+message: >-
+  A text-mode Path.open() must declare its encoding explicitly; the default
+  depends on the host locale.

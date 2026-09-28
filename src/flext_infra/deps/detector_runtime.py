@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, p, u
-from flext_infra.deps._detector_runtime_steps import (
-    FlextInfraDependencyDetectorRuntimeSteps,
-)
+
+from ._detector_runtime_steps import FlextInfraDependencyDetectorRuntimeSteps
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping, MutableMapping
@@ -36,16 +36,18 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
     def run(self, params: m.Infra.DetectCommand) -> p.Result[bool]:
         """Execute dependency detection and generate workspace report (orchestrator)."""
         detector = self._detector
-        root = params.workspace_path
-        venv_bin = root / c.Infra.VENV_BIN_REL
+        root = params.repository_root
+        # The environment under inspection is the repository's own; an ambient
+        # UV_PROJECT_ENVIRONMENT would silently redirect detection elsewhere.
+        venv_bin = u.Infra.runtime_environment_dir(root) / (
+            "Scripts" if os.name == "nt" else "bin"
+        )
         env_result = self._validate_environment(params, root, venv_bin)
         if env_result.failure:
-            return r[bool].fail(env_result.error or "environment validation failed")
+            return r[bool].from_failure(env_result)
         projects, limits_path = env_result.value
         do_typings = params.typings or params.apply_typings
-        projects_report: MutableMapping[
-            str, MutableMapping[str, t.Infra.InfraValue]
-        ] = {}
+        projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]] = {}
         report_model = self._workspace_report_factory(
             workspace=str(root),
             projects=projects_report,
@@ -63,27 +65,22 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
                 typing_deps, limits_path, report_model
             )
             if limits_setup.failure:
-                return r[bool].fail(
-                    limits_setup.error or "typings limits configuration failed"
-                )
+                return r[bool].from_failure(limits_setup)
         for project_path in projects:
             project_result = self._run_project_detection(
                 project_path,
-                deps_service=deps_service,
-                typing_deps=typing_deps,
                 venv_bin=venv_bin,
                 limits_path=limits_path,
                 params=params,
-                do_typings=do_typings,
                 projects_report=projects_report,
             )
             if project_result.failure:
-                return r[bool].fail(project_result.error or "project detection failed")
+                return r[bool].from_failure(project_result)
         pip_check_result = self._run_pip_check(
             deps_service, root, venv_bin, params, report_model
         )
         if pip_check_result.failure:
-            return r[bool].fail(pip_check_result.error or "pip check failed")
+            return r[bool].from_failure(pip_check_result)
         pip_ok = pip_check_result.value
         if params.output_format == c.Cli.OutputFormats.JSON:
             return r[bool].ok(True)
@@ -91,7 +88,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
             params, root, report_model, projects_report
         )
         if write_result.failure:
-            return r[bool].fail(write_result.error or "failed to write report")
+            return r[bool].from_failure(write_result)
         return self._summarize_run(
             projects, projects_report, pip_ok=pip_ok, params=params
         )
@@ -101,7 +98,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         params: m.Infra.DetectCommand,
         root: Path,
         report_model: p.Infra.WorkspaceReport,
-        projects_report: Mapping[str, Mapping[str, t.Infra.InfraValue]],
+        projects_report: Mapping[str, Mapping[str, t.JsonValue]],
     ) -> p.Result[Path]:
         """Render and persist the canonical workspace dependency report JSON."""
         out_path: Path = params.output_path or u.Cli.resolve_report_path(
@@ -123,7 +120,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         }
         write_result = u.Cli.json_write(out_path, report_payload)
         if write_result.failure:
-            return r[Path].fail(write_result.error or "failed to write report")
+            return r[Path].from_failure(write_result)
         if not params.quiet:
             self._detector.log.info("deps_report_written", path=str(out_path))
         return r[Path].ok(out_path)
@@ -131,7 +128,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
     def _summarize_run(
         self,
         projects: t.SequenceOf[Path],
-        projects_report: Mapping[str, Mapping[str, t.Infra.InfraValue]],
+        projects_report: Mapping[str, Mapping[str, t.JsonValue]],
         *,
         pip_ok: bool,
         params: m.Infra.DetectCommand,

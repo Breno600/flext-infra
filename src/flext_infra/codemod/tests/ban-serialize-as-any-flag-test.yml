@@ -1,0 +1,14 @@
+id: ban-serialize-as-any-flag
+# `valid` MUST NOT match: the 2.13+ polymorphic flag, explicit False, and
+# unrelated kwargs are all legitimate.
+valid:
+  - payload = outer.model_dump(polymorphic_serialization=True)
+  - payload = outer.model_dump(serialize_as_any=False)
+  - raw = outer.model_dump_json(indent=2)
+  - dumped = adapter.dump_python(value, exclude_none=True)
+invalid:
+  - payload = outer.model_dump(serialize_as_any=True)
+  - payload = outer.model_dump(exclude_none=True, serialize_as_any=True)
+  - raw = outer.model_dump_json(serialize_as_any=True)
+  - dumped = adapter.dump_python(value, serialize_as_any=True)
+  - raw = adapter.dump_json(value, serialize_as_any=True)

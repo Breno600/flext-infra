@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import config, m, u
@@ -26,9 +27,6 @@ from flext_infra.detectors.manual_protocol_detector import (
 from flext_infra.detectors.manual_typing_alias_detector import (
     FlextInfraManualTypingAliasDetector,
 )
-from flext_infra.detectors.mro_completeness_detector import (
-    FlextInfraMROCompletenessDetector,
-)
 from flext_infra.detectors.namespace_source_detector import (
     FlextInfraNamespaceSourceDetector,
 )
@@ -49,11 +47,12 @@ class FlextInfraNamespaceEnforcerProjectMixin:
 
     Composed alongside the phases/orchestration mixins into the concrete
     enforcer; ``self`` provides facade scan / file-collection / detect-apply
-    helpers through the concrete's MRO.
+    helpers through the concrete's FLEXT.
     """
 
     if TYPE_CHECKING:
-        _workspace_root: Path
+        _repository_root: Path
+        _rope_project: t.Infra.RopeProject
 
         def _detect_and_apply[V](
             self,
@@ -67,10 +66,10 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         @staticmethod
         def _scan_facades(
             *,
-            project: tuple[Path, str],
+            project: t.Pair[Path, str],
             rope_project: t.Infra.RopeProject,
             apply: bool,
-            workspace_root: Path,
+            repository_root: Path,
         ) -> t.SequenceOf[m.Infra.FacadeStatus]: ...
 
         @staticmethod
@@ -85,14 +84,13 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         gates: t.StrSequence | None = None,
     ) -> m.Infra.ProjectEnforcementReport:
         """Enforce project."""
-        with u.Infra.open_project(project_root) as rope_project:
-            return self._enforce_project_with_rope(
-                project_root=project_root,
-                project_name=project_name,
-                apply=apply,
-                gates=gates,
-                rope_project=rope_project,
-            )
+        return self._enforce_project_with_rope(
+            project_root=project_root,
+            project_name=project_name,
+            apply=apply,
+            gates=gates,
+            rope_project=self._rope_project,
+        )
 
     @staticmethod
     def _detector_context(
@@ -127,7 +125,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             project=(project_root, project_name),
             rope_project=rope_project,
             apply=apply,
-            workspace_root=self._workspace_root,
+            repository_root=self._repository_root,
         )
         py_files = self._collect_py_files(project_root=project_root)
         project_layout = u.Infra.layout(project_root)
@@ -183,9 +181,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             apply=apply,
         )
         cyclic_imports = FlextInfraCyclicImportDetector.scan_project(
-            project_root=project_root,
-            rope_project=rope_project,
-            _parse_failures=parse_failures,
+            project_root=project_root, rope_project=rope_project
         )
         internal_import_violations = self._detect_and_apply(
             py_files=py_files,
@@ -226,7 +222,8 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     parse_failures=parse_failures,
                     project_name=project_name,
                     project_root=project_root,
-                )
+                ),
+                policy=u.Infra.policy(f, rope_project=rope_project),
             ),
             rewrite_fn=lambda _vs: u.Infra.rewrite_runtime_alias_violations(
                 py_files=py_files, gates=gates
@@ -310,24 +307,9 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             rewrite_fn=None,
             apply=apply,
         )
-        mro_completeness_violations = self._detect_and_apply(
-            py_files=py_files,
-            detect_fn=lambda f: FlextInfraMROCompletenessDetector.detect_file(
-                self._detector_context(
-                    file_path=f,
-                    rope_project=rope_project,
-                    parse_failures=parse_failures,
-                    project_root=project_root,
-                )
-            ),
-            rewrite_fn=lambda vs: u.Infra.rewrite_mro_completeness_violations(
-                violations=vs, parse_failures=parse_failures
-            ),
-            apply=apply,
-        )
         pattern_smells = self._detect_and_apply(
             py_files=py_files,
-            # mro-j47u (codex): config data + u.Infra are the only static-policy path.
+            # flext-j47u (codex): config data + u.Infra are the only static-policy path.
             detect_fn=lambda f: u.Infra.detect_static_rules(
                 self._detector_context(
                     file_path=f,
@@ -341,7 +323,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             rewrite_fn=None,
             apply=apply,
         )
-        smell_buckets: dict[str, list[m.Infra.PatternSmellViolation]] = {
+        smell_buckets: MutableMapping[str, list[m.Infra.PatternSmellViolation]] = {
             "bare_except": [],
             "print": [],
             "breakpoint": [],
@@ -374,7 +356,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             compatibility_alias_violations=list(compatibility_alias_violations),
             foreign_canonical_alias_violations=list(foreign_canonical_alias_violations),
             class_placement_violations=list(class_placement_violations),
-            mro_completeness_violations=list(mro_completeness_violations),
             bare_except_violations=smell_buckets["bare_except"],
             print_violations=smell_buckets["print"],
             breakpoint_violations=smell_buckets["breakpoint"],
@@ -394,7 +375,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         violations: t.SequenceOf[m.Infra.CompatibilityAliasViolation],
         *,
         package_name: str,
-    ) -> tuple[
+    ) -> t.Pair[
         list[m.Infra.CompatibilityAliasViolation],
         list[m.Infra.CompatibilityAliasViolation],
     ]:

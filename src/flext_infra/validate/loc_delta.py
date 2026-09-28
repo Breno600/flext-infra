@@ -11,10 +11,11 @@ from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_infra import c, m, u
-from flext_infra.base import s
+
+from ..base import s
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import p, t
 
 
 class FlextInfraLocDeltaValidator(s[bool]):
@@ -38,7 +39,7 @@ class FlextInfraLocDeltaValidator(s[bool]):
         return r[bool].ok(True)
 
     @staticmethod
-    def _sum_numstat(numstat: str) -> tuple[int, int]:
+    def _sum_numstat(numstat: str) -> t.Pair[int, int]:
         """Sum insertions/deletions from `git diff --numstat` output (skip binary)."""
         insertions = 0
         deletions = 0
@@ -55,16 +56,16 @@ class FlextInfraLocDeltaValidator(s[bool]):
     def execute(self) -> p.Result[bool]:
         """Evaluate the workspace HEAD commit's labelled net-LOC delta."""
         report = u.Infra.git_head_numstat(
-            m.Infra.GitRepoRequest(repo_root=self.workspace_root)
+            m.Infra.GitRepoRequest(repo_root=self.repository_root)
         )
         if report.failure:
-            return r[bool].fail(report.error or "git numstat read failed")
+            return r[bool].from_failure(report)
         insertions, deletions = self._sum_numstat(report.value.numstat)
         verdict = self.evaluate(
             subject=report.value.subject, insertions=insertions, deletions=deletions
         )
         if verdict.failure:
-            return r[bool].fail(verdict.error or "net-LOC-delta violation")
+            return r[bool].from_failure(verdict)
         return r[bool].ok(True)
 
 

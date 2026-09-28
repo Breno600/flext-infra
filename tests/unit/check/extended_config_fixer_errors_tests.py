@@ -9,16 +9,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from flext_tests import tm
 
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
-from flext_tests import tm
 from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TestConfigFixerPublicBehavior:
+class TestsFlextInfraExtendedConfigFixerErrors:
     """Exercise ``FlextInfraConfigFixer`` only through its public surface."""
 
     @pytest.mark.parametrize(
@@ -34,7 +34,7 @@ class TestConfigFixerPublicBehavior:
         file_path = tmp_path / f"{name}.toml"
         file_path.write_text(pyproject, encoding="utf-8")
 
-        result = FlextInfraConfigFixer(workspace=tmp_path).process_file(file_path)
+        result = FlextInfraConfigFixer(repository_root=tmp_path).process_file(file_path)
 
         tm.ok(result)
         tm.that(result.value, eq=[])
@@ -46,7 +46,7 @@ class TestConfigFixerPublicBehavior:
             tmp_path, "project1", pyproject="[tool.pyrefly]\nsearch-path = []\n"
         )
 
-        result = FlextInfraConfigFixer(workspace=tmp_path).run(
+        result = FlextInfraConfigFixer(repository_root=tmp_path).run(
             ["project1"], verbose=True
         )
 
@@ -65,7 +65,7 @@ class TestConfigFixerPublicBehavior:
         pyproject = project_dir / "pyproject.toml"
         original = pyproject.read_text(encoding="utf-8")
 
-        result = FlextInfraConfigFixer(workspace=tmp_path).run(
+        result = FlextInfraConfigFixer(repository_root=tmp_path).run(
             ["project1"], dry_run=True, verbose=True
         )
 

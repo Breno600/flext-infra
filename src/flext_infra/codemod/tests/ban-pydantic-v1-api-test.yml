@@ -1,0 +1,13 @@
+id: ban-pydantic-v1-api
+valid:
+  - from pydantic import BaseModel, ConfigDict
+  - from flext_core import m, u
+  - value = response.json()
+  - value = payload.dict()
+  - value = repository.from_orm(record)
+  - from project.validators import validator
+  - from pydantic import field_validator as validator
+invalid:
+  - from pydantic import BaseModel, root_validator
+  - from pydantic.v1 import BaseModel
+  - import pydantic.v1 as legacy

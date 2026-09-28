@@ -1,0 +1,11 @@
+id: test-worktree-fixture-public-import
+snapshots:
+  ? |
+    from tests.unit.workspace.worktree_fixture import WorktreeFixture
+  : fixed: |
+      from tests import WorktreeFixture
+    labels:
+    - source: from tests.unit.workspace.worktree_fixture import WorktreeFixture
+      style: primary
+      start: 0
+      end: 65

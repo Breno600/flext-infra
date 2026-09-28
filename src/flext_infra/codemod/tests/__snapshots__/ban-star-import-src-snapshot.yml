@@ -1,0 +1,22 @@
+id: ban-star-import-src
+snapshots:
+  from .services import *:
+    labels:
+    - source: from .services import *
+      style: primary
+      start: 0
+      end: 23
+    - source: '*'
+      style: secondary
+      start: 22
+      end: 23
+  from flext_core import *:
+    labels:
+    - source: from flext_core import *
+      style: primary
+      start: 0
+      end: 24
+    - source: '*'
+      style: secondary
+      start: 23
+      end: 24

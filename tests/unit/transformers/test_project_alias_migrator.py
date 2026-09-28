@@ -5,9 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from flext_tests import tm
 
-from flext_infra.transformers import FlextInfraRefactorProjectAliasMigrator
-from tests import tm
+from flext_infra.refactor.project_alias_migrator import (
+    FlextInfraRefactorProjectAliasMigrator,
+)
 
 
 class TestsFlextInfraRefactorProjectAliasMigrator:

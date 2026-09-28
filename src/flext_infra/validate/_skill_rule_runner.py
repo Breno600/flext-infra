@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from flext_infra import c, u
 
 if TYPE_CHECKING:
-    from flext_infra import p, t
+    from flext_infra import m, p, t
 
 
 class FlextInfraSkillRuleRunnerMixin:
@@ -22,16 +22,12 @@ class FlextInfraSkillRuleRunnerMixin:
 
     def _evaluate_single_rule(
         self,
-        rule_obj: t.MappingKV[str, t.Infra.InfraValue],
-        skill_dir: Path,
-        root: Path,
-        mode: c.Infra.OperationMode,
-        include_globs: t.StrSequence,
-        exclude_globs: t.StrSequence,
+        rule_obj: t.MappingKV[str, t.JsonValue],
+        context: m.Infra.SkillRuleEvaluationContext,
         counts: t.MutableIntMapping,
         violations: t.MutableSequenceOf[str],
     ) -> None:
-        """Evaluate one rule entry and accumulate counts/violations."""
+        """Evaluate one rule entry of the skill pass and accumulate its outcome."""
         rule_id = u.Cli.json_get_str_key(rule_obj, c.Infra.RK_ID)
         rule_type = u.Cli.json_get_str_key(rule_obj, "type")
         group = (
@@ -40,10 +36,16 @@ class FlextInfraSkillRuleRunnerMixin:
         match rule_type:
             case "ast-grep":
                 count = self._run_ast_grep_count(
-                    rule_obj, skill_dir, root, include_globs, exclude_globs
+                    rule_obj,
+                    context.skill_dir,
+                    context.root,
+                    context.include_globs,
+                    context.exclude_globs,
                 )
             case "custom":
-                count = self._run_custom_count(rule_obj, skill_dir, root, mode)
+                count = self._run_custom_count(
+                    rule_obj, context.skill_dir, context.root, context.mode
+                )
             case _:
                 return
         counts[group] = counts.get(group, 0) + count
@@ -55,7 +57,7 @@ class FlextInfraSkillRuleRunnerMixin:
 
     def _run_ast_grep_count(
         self,
-        rule: t.MappingKV[str, t.Infra.InfraValue],
+        rule: t.MappingKV[str, t.JsonValue],
         skill_dir: Path,
         project_path: Path,
         include_globs: t.StrSequence,
@@ -85,9 +87,11 @@ class FlextInfraSkillRuleRunnerMixin:
             msg = result_wrapper.error or "ast-grep execution failed"
             raise RuntimeError(msg)
         result: p.Cli.CommandOutput = result_wrapper.value
-        if result.exit_code not in {0, 1}:
+        if result.outcome.raw_return_code not in {0, 1}:
             detail = (result.stderr or result.stdout).strip() or "no diagnostics"
-            msg = f"ast-grep exited with code {result.exit_code}: {detail}"
+            msg = (
+                f"ast-grep exited with code {result.outcome.raw_return_code}: {detail}"
+            )
             raise RuntimeError(msg)
         count = 0
         for raw_line in (result.stdout or "").splitlines():
@@ -117,7 +121,7 @@ class FlextInfraSkillRuleRunnerMixin:
 
     def _run_custom_count(
         self,
-        rule: t.MappingKV[str, t.Infra.InfraValue],
+        rule: t.MappingKV[str, t.JsonValue],
         skill_dir: Path,
         project_path: Path,
         mode: c.Infra.OperationMode,
@@ -138,7 +142,7 @@ class FlextInfraSkillRuleRunnerMixin:
             if script.suffix == c.Infra.EXT_PYTHON
             else [str(script)]
         )
-        cmd.extend(["--workspace", str(project_path)])
+        cmd.extend(["--repository", str(project_path)])
         if bool(rule.get("pass_mode")):
             cmd.extend(["--mode", mode.value])
         result_wrapper = u.Cli.run_raw(
@@ -148,12 +152,12 @@ class FlextInfraSkillRuleRunnerMixin:
             msg = result_wrapper.error or "custom rule execution failed"
             raise RuntimeError(msg)
         result: p.Cli.CommandOutput = result_wrapper.value
-        if result.exit_code not in {0, 1}:
+        if result.outcome.raw_return_code not in {0, 1}:
             detail = (result.stderr or result.stdout).strip() or "no diagnostics"
-            msg = f"custom rule exited with code {result.exit_code}: {detail}"
+            msg = f"custom rule exited with code {result.outcome.raw_return_code}: {detail}"
             raise RuntimeError(msg)
         count = self._parse_violation_count(result.stdout or "")
-        if result.exit_code == 1:
+        if result.outcome.raw_return_code == 1:
             count = max(count, 1)
         return count
 

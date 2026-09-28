@@ -5,54 +5,60 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_tests import tm
+
 from tests import m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-
-def _write_file(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-
-
-def _build_project(tmp_path: Path) -> tuple[Path, Path]:
-    project_root = tmp_path / "flext-demo"
-    package_root = project_root / "src" / "demo_pkg"
-    _write_file(
-        project_root / "pyproject.toml",
-        '[project]\nname = "flext-demo"\nversion = "0.1.0"\n',
-    )
-    _write_file(project_root / "Makefile", "check:\n\t@true\n")
-    _write_file(package_root / "__init__.py", "from __future__ import annotations\n")
-    return (project_root, package_root)
+    from tests import t
 
 
 class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
     """Behavior contract for test_infra_refactor_namespace_moves."""
 
+    @staticmethod
+    def _write_file(path: Path, content: str) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+
+    @classmethod
+    def _build_project(cls, tmp_path: Path) -> t.Pair[Path, Path]:
+        project_root = tmp_path / "flext-demo"
+        package_root = project_root / "src" / "demo_pkg"
+        cls._write_file(
+            project_root / "pyproject.toml",
+            '[project]\nname = "flext-demo"\nversion = "0.1.0"\n',
+        )
+        cls._write_file(project_root / "Makefile", "check:\n\t@true\n")
+        cls._write_file(
+            package_root / "__init__.py", "from __future__ import annotations\n"
+        )
+        return (project_root, package_root)
+
     def test_rewrite_manual_protocol_violations_uses_public_runtime_api(
         self, tmp_path: Path
     ) -> None:
-        project_root, package_root = _build_project(tmp_path)
+        project_root, package_root = self._build_project(tmp_path)
         protocols_file = package_root / "protocols.py"
         source_file = package_root / "service.py"
         consumer_file = package_root / "consumer.py"
-        _write_file(
+        self._write_file(
             protocols_file,
             "from __future__ import annotations\n\nclass ExistingProtocol:\n    pass\n",
         )
-        _write_file(
+        self._write_file(
             source_file,
             (
                 "from __future__ import annotations\n\n"
                 "from typing import Protocol\n\n"
                 "class External(Protocol):\n"
                 "    def call(self) -> str:\n"
+                '        """Return the external value."""\n'
                 "        ...\n"
             ),
         )
-        _write_file(
+        self._write_file(
             consumer_file,
             (
                 "from __future__ import annotations\n\n"
@@ -89,13 +95,13 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
     def test_rewrite_manual_typing_alias_violations_uses_public_runtime_api(
         self, tmp_path: Path
     ) -> None:
-        project_root, package_root = _build_project(tmp_path)
+        project_root, package_root = self._build_project(tmp_path)
         typings_file = package_root / "typings.py"
         source_file = package_root / "service.py"
-        _write_file(
+        self._write_file(
             typings_file, "from __future__ import annotations\n\nTYPE_READY = True\n"
         )
-        _write_file(
+        self._write_file(
             source_file,
             (
                 "from __future__ import annotations\n\n"
@@ -119,8 +125,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         source_text = source_file.read_text(encoding="utf-8")
         typings_text = typings_file.read_text(encoding="utf-8")
         tm.that(source_text, lacks="PayloadMap: TypeAlias = t.StrMapping")
-        tm.that(typings_text, has="PayloadMap: TypeAlias = t.StrMapping")
-        tm.that(typings_text, has="from typing import TypeAlias")
+        tm.that(typings_text, has="type PayloadMap = t.StrMapping")
+        tm.that(typings_text, lacks="from typing import TypeAlias")
         tm.that(typings_text, has="from flext_core import t")
         tm.that(source_file.with_suffix(".py.bak").exists(), eq=True)
         tm.that(typings_file.with_suffix(".py.bak").exists(), eq=True)
@@ -128,9 +134,9 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
     def test_rewrite_compatibility_alias_violations_uses_public_runtime_api(
         self, tmp_path: Path
     ) -> None:
-        _, package_root = _build_project(tmp_path)
+        _, package_root = self._build_project(tmp_path)
         source_file = package_root / "models.py"
-        _write_file(
+        self._write_file(
             source_file,
             (
                 "from __future__ import annotations\n\n"
@@ -161,9 +167,9 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
     def test_rewrite_compatibility_alias_violations_migrates_foreign_canonical_alias(
         self, tmp_path: Path
     ) -> None:
-        _project_root, package_root = _build_project(tmp_path)
+        _project_root, package_root = self._build_project(tmp_path)
         source_file = package_root / "service.py"
-        _write_file(
+        self._write_file(
             source_file,
             (
                 "from __future__ import annotations\n\n"

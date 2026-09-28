@@ -5,28 +5,24 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from flext_cli import u
 from flext_infra import c, config, m
-from flext_infra._utilities._docs_audit_detectors import (
-    FlextInfraUtilitiesDocsAuditDetectorsMixin,
-)
-from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
-from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
-from flext_infra._utilities.docs_api import FlextInfraUtilitiesDocsApi
-from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+
+from ._docs_audit_detectors import FlextInfraUtilitiesDocsAuditDetectorsMixin
+from ._docs_command_contract import FlextInfraUtilitiesDocsCommandContractMixin
+from ._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from .docs import FlextInfraUtilitiesDocs
+from .docs_api import FlextInfraUtilitiesDocsApi
+from .docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
-class FlextInfraUtilitiesDocsAudit(FlextInfraUtilitiesDocsAuditDetectorsMixin):
+class FlextInfraUtilitiesDocsAudit(
+    FlextInfraUtilitiesDocsAuditDetectorsMixin,
+    FlextInfraUtilitiesDocsCommandContractMixin,
+):
     """Reusable audit helpers exposed through ``u.Infra``."""
-
-    @staticmethod
-    def docs_is_external(target: str) -> bool:
-        """Return whether a docs link target points outside the repository."""
-        lower: str = u.norm_str(target, case="lower").lstrip("<")
-        return lower.startswith(("http://", "https://", "mailto:", "tel:", "data:"))
 
     @staticmethod
     def docs_normalize_link(target: str) -> str:
@@ -39,7 +35,7 @@ class FlextInfraUtilitiesDocsAudit(FlextInfraUtilitiesDocsAuditDetectorsMixin):
     @staticmethod
     def docs_should_skip_target(raw: str, target: str) -> bool:
         """Return whether the target should be ignored as prose, not a path."""
-        if target.startswith("http"):
+        if FlextInfraUtilitiesDocs.docs_is_secure_web_url(target):
             return False
         looks_like_prose = ".md" not in raw and "/" not in raw
         return looks_like_prose and ("," in raw or " " in raw)
@@ -78,10 +74,11 @@ class FlextInfraUtilitiesDocsAudit(FlextInfraUtilitiesDocsAuditDetectorsMixin):
         scope: m.Infra.DocScope, section: str, key: str
     ) -> t.StrSequence:
         """Read one list of policy tokens from the minimal root docs settings."""
-        workspace_root = (
-            scope.path if scope.name == c.Infra.RK_ROOT else scope.path.parent
-        )
-        payload = FlextInfraUtilitiesDocsScope.load_config(workspace_root)
+        # Why: the scope's own declared `repository_root` (not a `.parent`
+        # heuristic) owns docs policy resolution — a workspace-root project
+        # scope IS its own repository root, and only a genuine member-project
+        # scope carries a `repository_root_override` set at scope build time.
+        payload = FlextInfraUtilitiesDocsScope.load_config(scope.repository_root)
         container = payload.get(section)
         if not isinstance(container, dict):
             return []
@@ -155,7 +152,7 @@ class FlextInfraUtilitiesDocsAudit(FlextInfraUtilitiesDocsAuditDetectorsMixin):
                         continue
                     if not target or target.startswith("#"):
                         continue
-                    if FlextInfraUtilitiesDocsAudit.docs_is_external(target):
+                    if FlextInfraUtilitiesDocs.docs_is_external(target):
                         issues.extend(
                             FlextInfraUtilitiesDocsGithubLinks.docs_github_link_issues(
                                 file=rel, line_number=number, raw=raw, target=target

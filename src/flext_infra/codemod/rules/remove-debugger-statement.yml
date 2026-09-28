@@ -1,0 +1,49 @@
+# Recomposition of enforcement rule ENFORCE-028 onto `make mod`.
+#
+# ENFORCE-028 drove the generic regex `pattern` transformer with two
+# line-oriented `re.MULTILINE` patterns that deleted whole lines:
+#
+#     ^[ \t]*breakpoint\s*\(\s*\)\s*[;\n]                      -> "\n"
+#     ^[ \t]*import\s+pdb\s*;\s*pdb\.set_trace\s*\(\s*\)\s*[;\n] -> "\n"
+#
+# Deleting by line is why the construct had to be alone on its line: the regex
+# could not see a statement, only a run of characters between newlines, so it
+# silently ignored `if debug: breakpoint()` and would have deleted a line of a
+# docstring that quoted the call. Matching the `call` node removes exactly the
+# debugger call wherever it appears and never reaches text inside a string.
+#
+# `import pdb` is deliberately not matched here. The regex only removed it when
+# it shared a line with the call; on its own line it survived. Removing an
+# import is Ruff F401's contract once its last consumer is gone, and F401
+# handles every import-list shape, which a per-shape ast-grep rule cannot.
+#
+# `fix: ""` empties the statement and leaves its blank line; `ruff format`,
+# which `make mod` requires to be clean afterwards, closes the gap.
+id: remove-breakpoint-debugger-statement
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  kind: expression_statement
+  has:
+    pattern: breakpoint()
+fix: ""
+message: >-
+  A debugger entry point must never reach a committed source tree.
+---
+id: remove-pdb-set-trace-statement
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  kind: expression_statement
+  has:
+    pattern: pdb.set_trace()
+fix: ""
+message: >-
+  A debugger entry point must never reach a committed source tree. The now
+  unused `import pdb` is removed by Ruff F401.

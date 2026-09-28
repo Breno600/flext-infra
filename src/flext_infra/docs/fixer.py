@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, u
-from flext_infra.docs.base import FlextInfraDocServiceBase
+
+from .base import FlextInfraDocServiceBase
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -17,7 +18,7 @@ class FlextInfraDocFixer(FlextInfraDocServiceBase):
 
     def fix(
         self,
-        workspace_root: Path,
+        repository_root: Path,
         *,
         projects: t.StrSequence | None = None,
         output_dir: Path | str | None = None,
@@ -25,7 +26,7 @@ class FlextInfraDocFixer(FlextInfraDocServiceBase):
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
         """Run documentation fixes across project scopes."""
         return self.run_scoped_docs(
-            workspace_root,
+            repository_root,
             projects=projects,
             output_dir=output_dir,
             handler=lambda scope: self._fix_scope(scope, apply=apply),
@@ -37,7 +38,7 @@ class FlextInfraDocFixer(FlextInfraDocServiceBase):
         return self._propagate_phase_outcome(
             "fix",
             self.fix(
-                workspace_root=self.workspace_root,
+                repository_root=self.repository_root,
                 projects=self.selected_projects,
                 output_dir=self.output_dir,
                 apply=self.apply_changes,

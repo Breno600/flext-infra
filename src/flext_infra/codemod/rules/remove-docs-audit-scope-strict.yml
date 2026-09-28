@@ -1,0 +1,9 @@
+id: remove-docs-audit-scope-strict
+language: Python
+severity: error
+files:
+  - "tests/unit/docs/*.py"
+rule:
+  pattern: m.Infra.AuditScopeParams(check=$CHECK, strict=$STRICT)
+fix: m.Infra.AuditScopeParams(check=$CHECK)
+message: Documentation findings always fail; remove the obsolete audit strict switch.

@@ -18,23 +18,10 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout repository
-        uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].sha }}  # {{ github_actions["checkout"].version }}
+        uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
         with:
           submodules: {{ checkout_submodules }}
           fetch-depth: 0
-
-      - name: Setup Python
-        uses: {{ github_actions["setup-python"].repository }}@{{ github_actions["setup-python"].sha }}  # {{ github_actions["setup-python"].version }}
-        with:
-          python-version: "{{ python_version }}"
-
-      - name: Install uv
-        uses: {{ github_actions["setup-uv"].repository }}@{{ github_actions["setup-uv"].sha }}  # {{ github_actions["setup-uv"].version }}
-        with:
-          enable-cache: true
-
-      - name: Install declared toolchain
-        uses: {{ github_actions["mise"].repository }}@{{ github_actions["mise"].sha }}  # {{ github_actions["mise"].version }}
 
       - name: Setup
         run: make setup

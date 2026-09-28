@@ -3,34 +3,20 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, Self, override
+from typing import TYPE_CHECKING, Annotated, Self, override
 
 from flext_core import r
 from flext_infra import m, u
-from flext_infra.base import s
+
+from ..base import s
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfraTestmonCacheState(m.Value):
-    """Decision record after a testmon DB integrity pass."""
-
-    seed_needed: Annotated[bool, m.Field(description="No usable DB was present.")]
-    restored_accepted: Annotated[
-        bool, m.Field(description="An existing DB passed integrity checks.")
-    ]
-    changed: Annotated[
-        bool, m.Field(description="DB content changed relative to pre-run digest.")
-    ]
-    saveable: Annotated[
-        bool, m.Field(description="DB may be uploaded as a cache generation.")
-    ]
-    reason: Annotated[str, m.Field(min_length=1, description="Decisive state reason.")]
-
-
-class FlextInfraTestmonDbInspector(s[FlextInfraTestmonCacheState]):
+class FlextInfraTestmonDbInspector(s[m.Infra.TestmonCacheState]):
     """Checkpoint WAL, verify integrity, and compute saveability."""
 
     db_path: Annotated[Path, m.Field(description="Absolute .testmondata path.")]
@@ -38,13 +24,6 @@ class FlextInfraTestmonDbInspector(s[FlextInfraTestmonCacheState]):
         str | None,
         m.Field(default=None, description="Hex digest of DB bytes before pytest."),
     ] = None
-    run_succeeded: Annotated[
-        bool, m.Field(description="Pytest finished green without timeout/cancel.")
-    ]
-    mode: Annotated[
-        Literal["test"],
-        m.Field(description="Runner mode; testmon-backed pytest runs only."),
-    ]
 
     @u.model_validator(mode="after")
     def _validate_absolute_db(self) -> Self:
@@ -56,37 +35,31 @@ class FlextInfraTestmonDbInspector(s[FlextInfraTestmonCacheState]):
 
     @staticmethod
     def digest_file(path: Path) -> str | None:
-        """Return a stable hex digest for an existing regular file, else None."""
-        if path.is_symlink() or not path.is_file() or path.stat().st_size == 0:
+        """Return a stable digest; absence alone denotes an unseeded cache."""
+        if path.is_symlink():
+            msg = f"testmon db must not be a symlink: {path}"
+            raise ValueError(msg)
+        if not path.exists():
             return None
+        if not path.is_file():
+            msg = f"testmon db must be a regular file: {path}"
+            raise ValueError(msg)
+        if path.stat().st_size == 0:
+            msg = f"testmon db must not be empty: {path}"
+            raise ValueError(msg)
         return u.Cli.sha256_file(path)
 
-    def _reject(self, reason: str, *, seed_needed: bool) -> FlextInfraTestmonCacheState:
-        """Build a non-saveable state with a decisive reason."""
-        return FlextInfraTestmonCacheState(
-            seed_needed=seed_needed,
-            restored_accepted=False,
-            changed=False,
-            saveable=False,
-            reason=reason,
-        )
-
-    def _validate_open_db(
-        self, connection: sqlite3.Connection
-    ) -> p.Result[FlextInfraTestmonCacheState] | None:
-        """Return a reject Result when the open DB fails validation."""
+    @staticmethod
+    def _validate_open_db(connection: sqlite3.Connection) -> None:
+        """Raise on the first invalid SQLite cache property."""
         checkpoint = connection.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
         if checkpoint is None or int(checkpoint[0]) != 0:
-            return r[FlextInfraTestmonCacheState].ok(
-                self._reject(
-                    f"testmon wal_checkpoint busy={checkpoint!r}", seed_needed=False
-                )
-            )
+            msg = f"testmon wal_checkpoint busy={checkpoint!r}"
+            raise RuntimeError(msg)
         integrity = connection.execute("PRAGMA integrity_check").fetchone()
         if integrity is None or integrity[0] != "ok":
-            return r[FlextInfraTestmonCacheState].ok(
-                self._reject(f"testmon integrity_check={integrity!r}", seed_needed=True)
-            )
+            msg = f"testmon integrity_check={integrity!r}"
+            raise RuntimeError(msg)
         tables = {
             row[0]
             for row in connection.execute(
@@ -94,52 +67,37 @@ class FlextInfraTestmonDbInspector(s[FlextInfraTestmonCacheState]):
             ).fetchall()
         }
         if not tables:
-            return r[FlextInfraTestmonCacheState].ok(
-                self._reject("testmon schema empty", seed_needed=True)
-            )
-        return None
+            msg = "testmon schema empty"
+            raise RuntimeError(msg)
 
-    def _inspect_existing(self) -> p.Result[FlextInfraTestmonCacheState]:
+    def _inspect_existing(self) -> p.Result[m.Infra.TestmonCacheState]:
         """Validate one on-disk DB after pytest has closed it."""
         path = self.db_path
         if path.is_symlink():
-            return r[FlextInfraTestmonCacheState].ok(
-                self._reject("testmon db is a symlink", seed_needed=True)
-            )
-        if not path.is_file() or path.stat().st_size == 0:
-            return r[FlextInfraTestmonCacheState].ok(
-                self._reject("testmon db missing or empty", seed_needed=True)
-            )
-        try:
-            connection = sqlite3.connect(f"file:{path}?mode=rw", uri=True)
-        except sqlite3.Error as exc:
-            return r[FlextInfraTestmonCacheState].ok(
-                self._reject(f"testmon db open failed: {exc}", seed_needed=True)
-            )
-        try:
-            rejected = self._validate_open_db(connection)
-        except sqlite3.Error as exc:
-            return r[FlextInfraTestmonCacheState].ok(
-                self._reject(f"testmon pragma failed: {exc}", seed_needed=True)
-            )
-        finally:
-            connection.close()
-        if rejected is not None:
-            return rejected
+            msg = f"testmon db must not be a symlink: {path}"
+            raise ValueError(msg)
+        if not path.exists():
+            raise FileNotFoundError(path)
+        if not path.is_file():
+            msg = f"testmon db must be a regular file: {path}"
+            raise ValueError(msg)
+        if path.stat().st_size == 0:
+            msg = f"testmon db must not be empty: {path}"
+            raise ValueError(msg)
+        with closing(sqlite3.connect(f"file:{path}?mode=rw", uri=True)) as connection:
+            self._validate_open_db(connection)
         post_digest = self.digest_file(path)
         changed = post_digest is not None and post_digest != self.pre_run_digest
         seed_needed = self.pre_run_digest is None
-        saveable = self.run_succeeded and (seed_needed or changed)
-        if seed_needed and saveable:
+        saveable = seed_needed or changed
+        if seed_needed:
             reason = "seed_ready"
-        elif changed and saveable:
+        elif changed:
             reason = "changed_saveable"
-        elif self.run_succeeded and not changed:
-            reason = "unchanged"
         else:
-            reason = "run_not_saveable"
-        return r[FlextInfraTestmonCacheState].ok(
-            FlextInfraTestmonCacheState(
+            reason = "unchanged"
+        return r[m.Infra.TestmonCacheState].ok(
+            m.Infra.TestmonCacheState(
                 seed_needed=seed_needed,
                 restored_accepted=self.pre_run_digest is not None,
                 changed=changed,
@@ -149,13 +107,9 @@ class FlextInfraTestmonDbInspector(s[FlextInfraTestmonCacheState]):
         )
 
     @override
-    def execute(self) -> p.Result[FlextInfraTestmonCacheState]:
+    def execute(self) -> p.Result[m.Infra.TestmonCacheState]:
         """Return typed cache state after a successful testmon-backed pytest run."""
-        if not self.run_succeeded:
-            return r[FlextInfraTestmonCacheState].ok(
-                self._reject("pytest run not successful", seed_needed=False)
-            )
         return self._inspect_existing()
 
 
-__all__: list[str] = ["FlextInfraTestmonCacheState", "FlextInfraTestmonDbInspector"]
+__all__: list[str] = ["FlextInfraTestmonDbInspector"]

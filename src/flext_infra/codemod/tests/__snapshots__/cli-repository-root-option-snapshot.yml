@@ -1,0 +1,9 @@
+id: cli-repository-root-option
+snapshots:
+  main(["docs", "audit", "--workspace", str(root)]):
+    fixed: main(["docs", "audit", "--repository-root", str(root)])
+    labels:
+    - source: '"--workspace"'
+      style: primary
+      start: 23
+      end: 36

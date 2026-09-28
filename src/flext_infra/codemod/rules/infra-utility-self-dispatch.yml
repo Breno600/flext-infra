@@ -1,0 +1,18 @@
+# A member of ``u.Infra`` cannot bind that still-assembling facade at module
+# import time. Cross-member calls use a method-local canonical import so runtime
+# dispatch reaches the final explicit MRO without weakening static contracts.
+---
+id: ban-infra-utility-module-self-facade-import
+language: Python
+severity: error
+rule:
+  all:
+    - kind: import_from_statement
+    - regex: '^from\s+flext_infra\s+import\s+[^\n]*\bu\b'
+    - not:
+        inside:
+          kind: function_definition
+          stopBy: end
+message: Import flext_infra.u at the method point of use, never while its private utility facade is assembling.
+files:
+  - "src/flext_infra/_utilities/**/*.py"

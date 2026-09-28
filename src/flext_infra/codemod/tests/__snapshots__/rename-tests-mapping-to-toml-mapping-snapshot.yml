@@ -1,0 +1,16 @@
+id: rename-tests-mapping-to-toml-mapping
+snapshots:
+  value = test_u.Tests.mapping(payload):
+    fixed: value = test_u.Tests.toml_mapping(payload)
+    labels:
+    - source: test_u.Tests.mapping(payload)
+      style: primary
+      start: 8
+      end: 37
+  value = u.Tests.mapping(payload):
+    fixed: value = u.Tests.toml_mapping(payload)
+    labels:
+    - source: u.Tests.mapping(payload)
+      style: primary
+      start: 8
+      end: 32

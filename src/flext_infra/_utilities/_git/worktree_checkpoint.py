@@ -8,12 +8,9 @@ from typing import TYPE_CHECKING
 from git import GitCommandError
 
 from flext_core import r
-from flext_infra._utilities._git.worktree_materialization import (
-    FlextInfraUtilitiesGitWorktreeMaterializationMixin,
-)
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
+from flext_infra import c, m, t
+
+from .worktree_materialization import FlextInfraUtilitiesGitWorktreeMaterializationMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -35,9 +32,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
         # pointers it never touched, and `gen` aborted before applying anything.
         submodules_result = cls.git_declared_submodule_paths(worktree_root)
         if submodules_result.failure:
-            return r[str].fail(
-                submodules_result.error or "failed to resolve declared submodules"
-            )
+            return r[str].from_failure(submodules_result)
         gitlink_exclusions = tuple(
             f":(exclude){path.as_posix()}" for path in submodules_result.value
         )
@@ -46,16 +41,16 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
                 worktree_root, gitlink_exclusions, excluded, message
             )
         except GitCommandError as exc:
-            return r[str].fail(str(exc))
+            return r[str].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
-            return r[str].fail(f"failed to create checkpoint: {exc}")
+            return r[str].fail(f"failed to create checkpoint: {exc}", exception=exc)
         return r[str].ok(commit_sha)
 
     @classmethod
     def _git_create_checkpoint_commit(
         cls,
         worktree_root: Path,
-        gitlink_exclusions: tuple[str, ...],
+        gitlink_exclusions: t.VariadicTuple[str],
         excluded: t.SequenceOf[Path],
         message: str,
     ) -> str:
@@ -114,7 +109,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
         return commit_sha
 
     @staticmethod
-    def _transaction_exclusion_pathspecs() -> tuple[str, ...]:
+    def _transaction_exclusion_pathspecs() -> t.VariadicTuple[str]:
         """Pathspecs that exclude tool-cache directories from operation deltas."""
         return tuple(
             f":(exclude){name}"
@@ -170,10 +165,10 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
                 *exclusions,
             ).encode(c.Cli.ENCODING_DEFAULT)
         except GitCommandError as exc:
-            return r[m.Infra.RepositoryDelta].fail(str(exc))
+            return r[m.Infra.RepositoryDelta].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.RepositoryDelta].fail(
-                f"failed to capture operation patch: {exc}"
+                f"failed to capture operation patch: {exc}", exception=exc
             )
         # git apply rejects a patch whose final line has no terminating newline
         # ("corrupt patch"). `git diff --binary` can emit exactly that when the

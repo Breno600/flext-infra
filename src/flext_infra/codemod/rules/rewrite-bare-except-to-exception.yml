@@ -1,0 +1,37 @@
+# Recomposition of enforcement rule ENFORCE-026 onto `make mod`.
+#
+# ENFORCE-026 drove the generic regex `pattern` transformer with:
+#
+#     regex:       ^(?P<indent>\s*)except\s*:(?P<trail>.*)$      (re.MULTILINE)
+#     replacement: \g<indent>except Exception:\g<trail>
+#
+# `re.MULTILINE` anchors `^` after every newline, including the newlines inside
+# a docstring or a triple-quoted constant, so a module documenting the defect it
+# forbids had its own documentation rewritten. `except_clause` is a syntax node,
+# so the same characters inside a string are a `string` node and unreachable.
+#
+# The clause body is carried through the `$$$BODY` metavariable, which
+# reproduces the original statements and their relative indentation, so a
+# multi-statement handler and a following `else`/`finally` survive unchanged.
+# The regex, by contrast, kept whatever text followed the colon on that one line
+# and could not see the rest of the clause at all.
+id: rewrite-bare-except-to-exception
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+  - "tests/**/*.py"
+rule:
+  pattern:
+    context: |
+      try:
+          pass
+      except:
+          $$$BODY
+    selector: except_clause
+fix: |-
+  except Exception:
+      $$$BODY
+message: >-
+  A bare `except:` also swallows KeyboardInterrupt and SystemExit. Catch
+  Exception explicitly.

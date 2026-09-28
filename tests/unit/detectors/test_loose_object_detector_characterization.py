@@ -2,38 +2,35 @@
 
 These lock the current behavior of every ``LooseObjectViolation.kind`` the
 detector emits BEFORE the rope-structure boundary conversion, so the migration
-is proven to preserve domain behavior (flext-law: no domain regression).
+is proven to preserve the FLEXT domain invariant against regression.
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_tests import tm
+
 from flext_infra import m, u
 from flext_infra.detectors.loose_object_detector import FlextInfraLooseObjectDetector
-from flext_tests import tm
+from tests import u as test_u
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from tests import t
 
 
 class TestsFlextInfraLooseObjectCharacterization:
     """Pin every positive loose-object detection kind."""
 
     @staticmethod
-    def _project(tmp_path: Path) -> tuple[Path, Path]:
-        project = tmp_path / "demo-project"
-        package_dir = project / "src" / "demo_project"
-        package_dir.mkdir(parents=True)
-        _ = (project / "pyproject.toml").write_text(
-            "[project]\nname='demo-project'\n", encoding="utf-8"
-        )
-        _ = (project / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
-        _ = (package_dir / "__init__.py").write_text("", encoding="utf-8")
+    def _project(tmp_path: Path) -> t.Pair[Path, Path]:
+        project, package_dir = test_u.Tests.demo_project(tmp_path)
         return project, package_dir
 
     @classmethod
-    def _kinds_for(cls, tmp_path: Path, source: str) -> set[tuple[str, str]]:
+    def _kinds_for(cls, tmp_path: Path, source: str) -> set[t.Pair[str, str]]:
         project, package_dir = cls._project(tmp_path)
         module_file = package_dir / "widget.py"
         _ = module_file.write_text(source, encoding="utf-8")

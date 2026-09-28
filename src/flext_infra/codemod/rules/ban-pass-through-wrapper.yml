@@ -1,6 +1,6 @@
 # Ban pass-through wrapper functions (epic i2h4 flext-core refactor).
 #
-# FLEXT law: deduplicate via MRO / facade projections. A function whose entire
+# FLEXT law: deduplicate via FLEXT / facade projections. A function whose entire
 # body is `return other.fn(<the exact same args>)` adds an indirection layer
 # with zero behavior — it hides the real owner, breaks rename/refactor
 # chains, and violates "root cause, one owner".
@@ -12,8 +12,7 @@
 # Detection-only: the correct replacement is to delete the wrapper and call
 # the real owner directly, updating every consumer in the same cutover.
 
----
-id: ban-pass-through-wrapper-def
+id: ban-pass-through-wrapper
 language: Python
 severity: error
 rule:
@@ -30,27 +29,6 @@ rule:
     - pattern: |
         def $FN(*$ARGS: $ATYPE, **$KWARGS: $KTYPE) -> $RET:
             return $CALLEE(*$ARGS, **$KWARGS)
-message: >-
-  Pass-through wrapper: this function only forwards its arguments unchanged
-  to $CALLEE. Delete the wrapper and call the real owner directly.
-note: >-
-  Migration: point every caller at $CALLEE (the single owner), delete this
-  def, and complete the cutover in one change. If the wrapper exists only to
-  rename the callee, expose the name on the owning facade instead of
-  duplicating the call.
-files:
-  - "**/*.py"
-ignores:
-  - "**/.git/**"
-  - "**/.venv/**"
-  - "**/__pycache__/**"
-
----
-id: ban-pass-through-wrapper-async-def
-language: Python
-severity: error
-rule:
-  any:
     - pattern: |
         async def $FN($$$ARGS):
             return await $CALLEE($$$ARGS)
@@ -64,15 +42,10 @@ rule:
         async def $FN(*$ARGS: $ATYPE, **$KWARGS: $KTYPE) -> $RET:
             return await $CALLEE(*$ARGS, **$KWARGS)
 message: >-
-  Pass-through async wrapper: this coroutine only forwards its arguments
-  unchanged to $CALLEE. Delete the wrapper and call the real owner directly.
+  Pass-through wrapper: this function only forwards its arguments unchanged
+  to $CALLEE. Delete it and call the real owner directly.
 note: >-
-  Migration: point every caller at $CALLEE (the single owner), delete this
-  coroutine, and complete the cutover in one change. If the wrapper exists
-  only to rename the callee, expose the name on the owning facade instead.
+  Rewire every caller to $CALLEE before deleting the wrapper. If the wrapper
+  only renames the callee, expose the canonical name on the owning facade.
 files:
   - "**/*.py"
-ignores:
-  - "**/.git/**"
-  - "**/.venv/**"
-  - "**/__pycache__/**"

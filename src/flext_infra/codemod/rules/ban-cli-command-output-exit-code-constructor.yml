@@ -1,0 +1,16 @@
+# Synthetic exit-code payloads discard timeout and forwarded-signal causality.
+id: ban-cli-command-output-exit-code-constructor
+language: Python
+severity: error
+rule:
+  all:
+    - kind: keyword_argument
+    - has:
+        field: name
+        regex: "^exit_code$"
+    - inside:
+        any:
+          - pattern: m.Cli.CommandOutput($$$ARGS)
+          - pattern: m.Cli.CommandBytesOutput($$$ARGS)
+        stopBy: end
+message: Build command payloads from one causal ProcessOutcome; synthetic exit codes are forbidden.

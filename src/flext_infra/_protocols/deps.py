@@ -19,13 +19,33 @@ class FlextInfraProtocolsDeps(Protocol):
         """Resolve selected workspace projects without a concrete utility dependency."""
 
         def resolve_projects(
-            self,
-            workspace_root: Path,
-            names: t.StrSequence,
-            *,
-            include_attached: bool = False,
+            self, repository_root: Path, names: t.StrSequence
         ) -> p.Result[t.SequenceOf[m.Infra.ProjectInfo]]:
             """Resolve project names into canonical project descriptors."""
+            ...
+
+    @runtime_checkable
+    class TypeCheckerPathRules(Protocol):
+        """Path-rule fields every type-checker configuration declares."""
+
+        @property
+        def source_dir(self) -> str:
+            """Import root the generated search paths order first."""
+            ...
+
+        @property
+        def project_root(self) -> str:
+            """Project-root entry the generated search paths order last."""
+            ...
+
+        @property
+        def root_typings_paths(self) -> t.StrSequence:
+            """Typings roots configured for a workspace root."""
+            ...
+
+        @property
+        def project_typings_paths(self) -> t.StrSequence:
+            """Typings roots configured for a non-root project."""
             ...
 
 

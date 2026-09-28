@@ -11,26 +11,25 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from flext_tests import tm
+
 from flext_infra import main
 from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
-from flext_tests import tm
 from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
 
-
-class TestConstantsQualityGateCLIDispatch:
-    """CLI dispatch and argument parsing for constants-quality-gate."""
+class TestsFlextInfraCodegenConstantsQualityGate:
+    """CLI dispatch, argument parsing, and verdict classification."""
 
     def test_dispatch_returns_int(self, tmp_path: Path) -> None:
         """main() dispatches constants-quality-gate command to handler."""
         result = main([
             "codegen",
             "constants-quality-gate",
-            "--workspace",
+            "--repository-root",
             str(tmp_path),
         ])
         tm.that(result, is_=int)
@@ -40,7 +39,7 @@ class TestConstantsQualityGateCLIDispatch:
         result = main([
             "codegen",
             "constants-quality-gate",
-            "--workspace",
+            "--repository-root",
             str(tmp_path),
             "--format",
             "json",
@@ -52,16 +51,12 @@ class TestConstantsQualityGateCLIDispatch:
         result = main([
             "codegen",
             "constants-quality-gate",
-            "--workspace",
+            "--repository-root",
             str(tmp_path),
             "--format",
             "text",
         ])
         tm.that(result, is_=int)
-
-
-class TestConstantsQualityGateVerdict:
-    """Verdict classification and real workspace execution."""
 
     def test_success_verdict_accepts_pass(self) -> None:
         """successful_verdict returns True for PASS."""
@@ -80,7 +75,7 @@ class TestConstantsQualityGateVerdict:
 
     def test_real_workspace_run_returns_report(self, tmp_path: Path) -> None:
         """Quality gate runs on real empty workspace without errors."""
-        gate = FlextInfraCodegenQualityGate(workspace_root=tmp_path)
+        gate = FlextInfraCodegenQualityGate(repository_root=tmp_path)
         report_result = gate.build_report()
         tm.ok(report_result)
         tm.that(report_result.value, has="verdict")
@@ -104,8 +99,12 @@ class TestConstantsQualityGateVerdict:
                     "typings.py": '"""Empty typing fixture."""\n',
                 },
             )
-
-        gate = FlextInfraCodegenQualityGate(workspace_root=tmp_path)
+        u.Tests.declare_workspace_projects(tmp_path, ("flext-cli", "flext-core"))
+        # Why: the workspace-wide rope index now discovers every governed
+        # project (flext-1wjg1), so the gate's own lazy-init precheck sees the
+        # fixture's real __init__.py files and requires them conformant first.
+        tm.that(u.Tests.run_lazy_init(tmp_path), eq=0)
+        gate = FlextInfraCodegenQualityGate(repository_root=tmp_path)
         report_result = gate.build_report()
         tm.ok(report_result)
         report = report_result.value
@@ -122,6 +121,3 @@ class TestConstantsQualityGateVerdict:
         ]
         tm.that(matching_groups, length=1)
         tm.that(u.Cli.json_pick_str(matching_groups[0], "canonical"), eq="flext-cli")
-
-
-__all__: t.StrSequence = []

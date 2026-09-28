@@ -23,15 +23,17 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from flext_tests import tm
+
 from flext_infra import c, config, m
 from flext_infra.codegen.conform import FlextInfraCodegenConform
-from flext_tests import tm
+from tests import t
 
 
 class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
     def test_every_declared_profile_has_a_custom_handler_policy(self) -> None:
         """Each Make profile declares the contract for its own custom surface."""
-        codegen_profiles: tuple[m.Infra.ProfileSpec, ...] = (
+        codegen_profiles: t.VariadicTuple[m.Infra.ProfileSpec] = (
             config.Infra.codegen.profiles
         )
         declared = frozenset(
@@ -46,11 +48,11 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
 
         tm.that(declared - covered, eq=frozenset())
 
-    def test_workspace_root_may_own_public_orchestration_targets(self) -> None:
+    def test_repository_root_may_own_public_orchestration_targets(self) -> None:
         """The root profile permits the public targets it actually ships."""
         policy: m.Infra.CustomHandlerPolicy = (
             config.Infra.codegen.make.custom_handler_policies[
-                c.Infra.MakeProfile.WORKSPACE_ROOT
+                c.Infra.MakeProfile.WORKSPACE
             ]
         )
 
@@ -70,7 +72,7 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
         """A permissive policy accepts what a strict one rejects.
 
         The ``allow_*`` flags were declarative only: the validator read just
-        ``target_pattern``, so a workspace root's own public targets and
+        ``target_pattern``, so a repository root's own public targets and
         variables were rejected no matter what the config permitted.
         """
         content = "WORKSPACE_BASE ?= 0.12.0-dev\ndone-check:\n\t@echo hi\n"
@@ -81,7 +83,7 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
         )
         permissive: m.Infra.CustomHandlerPolicy = (
             config.Infra.codegen.make.custom_handler_policies[
-                c.Infra.MakeProfile.WORKSPACE_ROOT
+                c.Infra.MakeProfile.WORKSPACE
             ]
         )
         validate = FlextInfraCodegenConform.validate_custom_make
@@ -96,12 +98,12 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
         profile passed as an enum member must resolve to ONE entry. If the two
         forms produced separate keys, a lookup would silently miss and fall back
         to the strict base policy -- exactly the failure that made conform
-        reject the workspace root's own custom surface.
+        reject the repository root's own custom surface.
         """
-        policies: dict[str, m.Infra.CustomHandlerPolicy] = dict(
+        policies: t.MutableMappingKV[str, m.Infra.CustomHandlerPolicy] = dict(
             config.Infra.codegen.make.custom_handler_policies
         )
-        profile: c.Infra.MakeProfile = c.Infra.MakeProfile.WORKSPACE_ROOT
+        profile: c.Infra.MakeProfile = c.Infra.MakeProfile.WORKSPACE
 
         tm.that(set(policies), eq={member.value for member in c.Infra.MakeProfile})
         tm.that(policies[profile] is policies[profile.value], eq=True)

@@ -7,10 +7,9 @@ from typing import TYPE_CHECKING
 from git import GitCommandError, Repo
 
 from flext_core import r
-from flext_infra._utilities._git.semantic_index import (
-    FlextInfraUtilitiesGitSemanticIndexMixin,
-)
-from flext_infra.models import m
+from flext_infra import m
+
+from .semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -30,10 +29,10 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
             repo = cls._repo(request.repo_root)
             text = cls._git_add_worktree_args(repo, request)
         except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc))
+            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitTextReport].fail(
-                f"failed to add worktree for {request.branch}: {exc}"
+                f"failed to add worktree for {request.branch}: {exc}", exception=exc
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text))
 
@@ -78,7 +77,7 @@ class FlextInfraUtilitiesGitSemanticWorktreeMixin(
             repo.git.symbolic_ref("HEAD", f"refs/heads/{request.branch}")
         except (GitCommandError, OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to attach {request.branch} at HEAD: {exc}"
+                f"failed to attach {request.branch} at HEAD: {exc}", exception=exc
             )
         try:
             repo.git.branch(

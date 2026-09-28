@@ -7,7 +7,10 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from enum import StrEnum, unique
-from typing import Final
+from typing import TYPE_CHECKING, ClassVar
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraConstantsRope:
@@ -60,11 +63,14 @@ class FlextInfraConstantsRope:
         OTHER = "other"
         "Any statement not matched by a more specific category."
 
-    # NOTE (mro-0ftd.3.10.2.4): runtime engine types and exception-boundary
+    # NOTE (flext-0ftd.3.10.2.4): runtime engine types and exception-boundary
     # tuples live in u.Infra (FlextInfraUtilitiesRopeRuntimeTypes), not in the
     # constants layer, to keep c.Infra declarative and cycle-free.
 
-    ROPE_IGNORED_RESOURCES: Final[tuple[str, ...]] = (
+    ROPE_IMPORTUTILS_MODULE: ClassVar[str] = "rope.refactor.importutils"
+    "Public Rope import planning and organization module."
+
+    ROPE_IGNORED_RESOURCES: ClassVar[t.VariadicTuple[str]] = (
         ".venv",
         "venv",
         "node_modules",
@@ -81,7 +87,7 @@ class FlextInfraConstantsRope:
     )
     "Resources rope should ignore when scanning the project tree."
 
-    PROPERTY_DECORATORS: Final[frozenset[str]] = frozenset({
+    PROPERTY_DECORATORS: ClassVar[frozenset[str]] = frozenset({
         "property",
         "cached_property",
         "computed_field",

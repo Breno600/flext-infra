@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+from flext_tests import tm
 
 import flext_infra
 from flext_infra import c, m, u as infra_u
-from flext_tests import tm
-from tests import u
+from tests import u as test_u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,7 +22,7 @@ class TestsFlextInfraRefactorCensusPreview:
         self, tmp_path: Path
     ) -> None:
         """Plan one class removal without leaving excess blank lines."""
-        workspace_root, package_root = u.Tests.create_lazy_init_workspace(
+        repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
             tmp_path, project_name="flext-demo", package_name="flext_demo"
         )
         module_path = package_root / "service.py"
@@ -38,7 +38,7 @@ class TestsFlextInfraRefactorCensusPreview:
             ),
             encoding="utf-8",
         )
-        candidate = m.Infra.Census.RemovalCandidate(
+        candidate = m.Infra.RemovalCandidate(
             project="flext-demo",
             file_path=str(module_path.resolve()),
             line=6,
@@ -49,7 +49,7 @@ class TestsFlextInfraRefactorCensusPreview:
             suggested_action="remove",
         )
 
-        with flext_infra.infra.rope_workspace(workspace_root) as rope:
+        with flext_infra.infra.rope_workspace(repository_root) as rope:
             updates = infra_u.Infra.build_simple_removal_sources(rope, candidate)
 
         tm.that(updates, none=False)
@@ -64,7 +64,7 @@ class TestsFlextInfraRefactorCensusPreview:
         self, tmp_path: Path
     ) -> None:
         """Plan removal of a base used by a multiline test facade."""
-        workspace_root, package_root = u.Tests.create_lazy_init_workspace(
+        repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
             tmp_path, project_name="flext-demo", package_name="flext_demo"
         )
         base_path = package_root / "base.py"
@@ -72,7 +72,7 @@ class TestsFlextInfraRefactorCensusPreview:
             "from __future__ import annotations\n\nclass Shared:\n    pass\n",
             encoding="utf-8",
         )
-        scripts_dir = workspace_root / c.Infra.DIR_SCRIPTS
+        scripts_dir = repository_root / c.Infra.DIR_SCRIPTS
         scripts_dir.mkdir(parents=True, exist_ok=True)
         consumer_path = scripts_dir / "constants.py"
         consumer_path.write_text(
@@ -90,7 +90,7 @@ class TestsFlextInfraRefactorCensusPreview:
             ),
             encoding="utf-8",
         )
-        candidate = m.Infra.Census.RemovalCandidate(
+        candidate = m.Infra.RemovalCandidate(
             project="flext-demo",
             file_path=str(base_path.resolve()),
             line=3,
@@ -100,12 +100,12 @@ class TestsFlextInfraRefactorCensusPreview:
             reason="script_only",
             suggested_action="remove",
             script_reference_sites=(
-                m.Infra.Census.ReferenceSite(
+                m.Infra.ReferenceSite(
                     file_path=str(consumer_path.resolve()),
                     line=3,
                     surface=c.Infra.DIR_SCRIPTS,
                 ),
-                m.Infra.Census.ReferenceSite(
+                m.Infra.ReferenceSite(
                     file_path=str(consumer_path.resolve()),
                     line=11,
                     surface=c.Infra.DIR_SCRIPTS,
@@ -113,7 +113,7 @@ class TestsFlextInfraRefactorCensusPreview:
             ),
         )
 
-        with flext_infra.infra.rope_workspace(workspace_root) as rope:
+        with flext_infra.infra.rope_workspace(repository_root) as rope:
             updates = infra_u.Infra.build_simple_removal_sources(rope, candidate)
 
         tm.that(updates, none=False)
@@ -128,7 +128,7 @@ class TestsFlextInfraRefactorCensusPreview:
         self, tmp_path: Path
     ) -> None:
         """Validate a public preview while preserving the source artifact."""
-        workspace_root, package_root = u.Tests.create_lazy_init_workspace(
+        repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
             tmp_path, project_name="flext-demo", package_name="flext_demo"
         )
         module_path = package_root / "dispatcher.py"
@@ -142,7 +142,8 @@ class TestsFlextInfraRefactorCensusPreview:
             "        return run()\n"
         )
         module_path.write_text(original_source, encoding="utf-8")
-        candidate = m.Infra.Census.RemovalCandidate(
+        test_u.Tests.provision_checkout(repository_root)
+        candidate = m.Infra.RemovalCandidate(
             project="flext-demo",
             file_path=str(module_path.resolve()),
             line=6,
@@ -153,13 +154,10 @@ class TestsFlextInfraRefactorCensusPreview:
             suggested_action="remove",
         )
 
-        with flext_infra.infra.rope_workspace(workspace_root) as rope:
+        with flext_infra.infra.rope_workspace(repository_root) as rope:
             preview = infra_u.Infra.preview_simple_removal_candidate(
-                rope, workspace_root, candidate, gates=("lint",)
+                rope, repository_root, candidate, gates=("lint",)
             )
 
         tm.ok(preview)
         tm.that(module_path.read_text(encoding="utf-8"), eq=original_source)
-
-
-__all__: tuple[str, ...] = ()

@@ -1,0 +1,92 @@
+id: ban-pydantic-v1-config-class
+snapshots:
+  ? |
+    class Model(BaseModel):
+        class Config:
+            frozen = True
+  : labels:
+    - source: |-
+        class Config:
+                frozen = True
+      style: primary
+      start: 28
+      end: 63
+    - source: BaseModel
+      style: secondary
+      start: 12
+      end: 21
+    - source: BaseModel
+      style: secondary
+      start: 12
+      end: 21
+    - source: |-
+        class Model(BaseModel):
+            class Config:
+                frozen = True
+      style: secondary
+      start: 0
+      end: 63
+    - source: Config
+      style: secondary
+      start: 34
+      end: 40
+  ? |
+    class Model(BaseSettings):
+        class Config:
+            env_prefix = "APP_"
+  : labels:
+    - source: |-
+        class Config:
+                env_prefix = "APP_"
+      style: primary
+      start: 31
+      end: 72
+    - source: BaseSettings
+      style: secondary
+      start: 12
+      end: 24
+    - source: BaseSettings
+      style: secondary
+      start: 12
+      end: 24
+    - source: |-
+        class Model(BaseSettings):
+            class Config:
+                env_prefix = "APP_"
+      style: secondary
+      start: 0
+      end: 72
+    - source: Config
+      style: secondary
+      start: 37
+      end: 43
+  ? |
+    class Model(RootModel[int]):
+        class Config:
+            frozen = True
+  : labels:
+    - source: |-
+        class Config:
+                frozen = True
+      style: primary
+      start: 33
+      end: 68
+    - source: RootModel
+      style: secondary
+      start: 12
+      end: 21
+    - source: RootModel
+      style: secondary
+      start: 12
+      end: 21
+    - source: |-
+        class Model(RootModel[int]):
+            class Config:
+                frozen = True
+      style: secondary
+      start: 0
+      end: 68
+    - source: Config
+      style: secondary
+      start: 39
+      end: 45

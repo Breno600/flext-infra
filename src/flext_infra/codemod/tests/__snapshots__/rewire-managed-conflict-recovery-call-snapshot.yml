@@ -1,0 +1,9 @@
+id: rewire-managed-conflict-recovery-call
+snapshots:
+  FlextInfraCodegenManagedConflicts.recover_toml(content, conflict_sections=sections):
+    fixed: u.Infra.recover_managed_toml(content, conflict_sections=sections)
+    labels:
+    - source: FlextInfraCodegenManagedConflicts.recover_toml(content, conflict_sections=sections)
+      style: primary
+      start: 0
+      end: 83

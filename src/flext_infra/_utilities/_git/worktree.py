@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from flext_infra._utilities._git.worktree_removal import (
-    FlextInfraUtilitiesGitWorktreeRemovalMixin,
-)
+from .worktree_removal import FlextInfraUtilitiesGitWorktreeRemovalMixin
 
 
 class FlextInfraUtilitiesGitWorktreeMixin(FlextInfraUtilitiesGitWorktreeRemovalMixin):

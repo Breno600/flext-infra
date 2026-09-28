@@ -1,0 +1,5 @@
+id: rewire-infra-typings-submodule-import-to-root-facade
+valid:
+  - from flext_infra import t
+invalid:
+  - from flext_infra.typings import t

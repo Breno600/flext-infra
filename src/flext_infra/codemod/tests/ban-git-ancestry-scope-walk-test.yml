@@ -1,0 +1,25 @@
+id: ban-git-ancestry-scope-walk
+valid:
+  - |
+    while True:
+        if queue.empty():
+            break
+        item = queue.get()
+  - |
+    while pending:
+        if (pending.pop() / ".git").exists():
+            found = True
+invalid:
+  - |
+    while True:
+        if (current / ".git").exists():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+  - |
+    while True:
+        if (current / ".git").is_dir():
+            return current
+        current = current.parent

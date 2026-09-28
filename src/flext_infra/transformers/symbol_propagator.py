@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import override
 
-from flext_infra import c
-from flext_infra.transformers.base import FlextInfraRopeTransformer
+from flext_infra import c, t
 
-if TYPE_CHECKING:
-    from flext_infra import t
+from .rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraRefactorSymbolPropagator(FlextInfraRopeTransformer):
@@ -78,7 +76,7 @@ class FlextInfraRefactorSymbolPropagator(FlextInfraRopeTransformer):
 
     def _rename_import_symbol(
         self, source: str, *, old_name: str, new_name: str
-    ) -> tuple[str, bool]:
+    ) -> t.Pair[str, bool]:
         """Rename symbol in import statement within target modules."""
         # Match the symbol in from-import lines for any target module
         for target_module in self._target_modules:

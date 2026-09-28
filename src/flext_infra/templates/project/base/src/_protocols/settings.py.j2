@@ -1,13 +1,14 @@
-{# NOTE (codex, mro-j47u): precompute compact/multiline Protocol declarations from line length. -#}
-{%- set settings_property_line = "        def " ~ ns ~ "(self) -> m." ~ ns ~ ".SettingsRoot.SettingsNamespace:" -%}
-{%- set settings_property_declaration = settings_property_line if settings_property_line | length <= tooling.tools.ruff.line_length else "        def " ~ ns ~ "(\n            self,\n        ) -> m." ~ ns ~ ".SettingsRoot.SettingsNamespace:" -%}
-"""Structural settings declarations for {{ package_name }}.
+{# Config and settings expose the same read-only namespace protocol shape. -#}
+{%- macro namespace_protocol(kind) -%}
+{%- set property_line = "        def " ~ ns ~ "(self) -> m." ~ ns ~ "." ~ kind ~ "Root." ~ kind ~ "Namespace:" -%}
+{%- set property_declaration = property_line if property_line | length <= tooling.tools.ruff.line_length else "        def " ~ ns ~ "(\n            self,\n        ) -> m." ~ ns ~ "." ~ kind ~ "Root." ~ kind ~ "Namespace:" -%}
+"""Structural {{ kind | lower }} declarations for {{ package_name }}.
 
 Copyright (c) {{ year }} {{ author_name }}. All rights reserved.
 SPDX-License-Identifier: MIT
 """
 
-{# NOTE (multi-agent, mro-wkii.19.1): field-only protocols describe direct singleton data without forwarding properties. -#}
+{# NOTE (multi-agent, flext-wkii.19.1): field-only protocols describe direct singleton data without forwarding properties. -#}
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
@@ -16,17 +17,19 @@ if TYPE_CHECKING:
     from {{ package_name }}.models import m
 
 
-class {{ class_stem }}ProtocolsSettings:
-    """Protocol namespace for validated settings data."""
+class {{ class_stem }}Protocols{{ kind }}:
+    """Protocol namespace for validated {{ kind | lower }} data."""
 
     @runtime_checkable
-    class Settings(Protocol):
-        """Direct project settings singleton surface."""
+    class {{ kind }}(Protocol):
+        """Direct project {{ kind | lower }} singleton surface."""
 
         @property
-{{ settings_property_declaration }}
-            """The canonical validated settings namespace model."""
+{{ property_declaration }}
+            """The canonical validated {{ kind | lower }} namespace model."""
             ...
 
 
-__all__: list[str] = ["{{ class_stem }}ProtocolsSettings"]
+__all__: list[str] = ["{{ class_stem }}Protocols{{ kind }}"]
+{%- endmacro -%}
+{{ namespace_protocol("Settings") }}

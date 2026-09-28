@@ -9,7 +9,8 @@ from typing import TYPE_CHECKING, Annotated, Literal, Self, override
 
 from flext_core import r
 from flext_infra import m, u
-from flext_infra.base import s
+
+from ..base import s
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -39,7 +40,7 @@ class FlextInfraCProfileReport(s[bool]):
     @u.model_validator(mode="after")
     def _validate_report_paths(self) -> Self:
         """Keep profile input and output inside the workspace report tree."""
-        report_root = (self.workspace_root / ".reports").resolve()
+        report_root = (self.repository_root / ".reports").resolve()
         for path in (self.profile, self.output):
             try:
                 path.resolve().relative_to(report_root)
@@ -59,12 +60,10 @@ class FlextInfraCProfileReport(s[bool]):
             stats.strip_dirs().sort_stats(self.sort).print_stats(self.limit)
             self.output.parent.mkdir(parents=True, exist_ok=True)
         except (OSError, ValueError, TypeError) as exc:
-            return r[bool].fail_op("render cProfile report", exc)
+            return r[bool].fail(f"render cProfile report failed: {exc}", exception=exc)
         written = u.Cli.atomic_write_text_file(self.output, stream.getvalue())
         if written.failure:
-            return r[bool].fail(
-                written.error or f"failed to write cProfile report: {self.output}"
-            )
+            return r[bool].from_failure(written)
         return r[bool].ok(True)
 
 

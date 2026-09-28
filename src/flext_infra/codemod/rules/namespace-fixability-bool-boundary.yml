@@ -1,0 +1,14 @@
+# A public predicate must return a concrete bool even when a composed constants
+# facade is typed dynamically by a downstream analyzer.
+---
+id: namespace-fixability-bool-boundary
+language: Python
+severity: error
+rule:
+  pattern: return Path($MODULE).name not in (c.Infra.TYPINGS_PY,)
+fix: |
+  typings_filename: str = c.Infra.TYPINGS_PY
+  return Path($MODULE).name != typings_filename
+message: Namespace fixability predicates must expose a concrete bool boundary.
+files:
+  - "src/flext_infra/_utilities/namespace.py"

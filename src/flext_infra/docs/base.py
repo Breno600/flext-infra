@@ -46,9 +46,14 @@ class FlextInfraDocServiceBase(FlextInfraProjectSelectionServiceBase[bool], ABC)
         if result.failure:
             return e.fail_operation(label, result.error)
         if failure_predicate is not None:
-            failures = sum(1 for report in result.value if failure_predicate(report))
+            failures = tuple(
+                report for report in result.value if failure_predicate(report)
+            )
             if failures:
-                return e.fail_operation(label, f"{failures} failure(s)")
+                details = "\n".join(
+                    f"{report.scope}: {report.reason}" for report in failures
+                )
+                return e.fail_operation(label, f"{len(failures)} failure(s)\n{details}")
         return r[bool].ok(True)
 
 

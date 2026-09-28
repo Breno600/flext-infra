@@ -1,0 +1,68 @@
+id: ban-ai-hub-library-boundary
+snapshots:
+  CRG_HOME = ".state/crg":
+    labels:
+    - source: CRG_HOME
+      style: primary
+      start: 0
+      end: 8
+  'class FlextInfraCodeReviewGraphGate: ...':
+    labels:
+    - source: FlextInfraCodeReviewGraphGate
+      style: primary
+      start: 6
+      end: 35
+  'def code_review_graph_run(): ...':
+    labels:
+    - source: code_review_graph_run
+      style: primary
+      start: 4
+      end: 25
+  from ai_hub import api:
+    labels:
+    - source: from ai_hub import api
+      style: primary
+      start: 0
+      end: 22
+  from ai_hub.services.crg import AiHubCrgService:
+    labels:
+    - source: from ai_hub.services.crg import AiHubCrgService
+      style: primary
+      start: 0
+      end: 47
+  from ai_hub_client import Client:
+    labels:
+    - source: from ai_hub_client import Client
+      style: primary
+      start: 0
+      end: 32
+  from code_review_graph import Graph:
+    labels:
+    - source: from code_review_graph import Graph
+      style: primary
+      start: 0
+      end: 35
+  import ai_hub:
+    labels:
+    - source: import ai_hub
+      style: primary
+      start: 0
+      end: 13
+  import ai_hub.services.crg as crg:
+    labels:
+    - source: import ai_hub.services.crg as crg
+      style: primary
+      start: 0
+      end: 33
+  import ai_hub_client:
+    labels:
+    - source: import ai_hub_client
+      style: primary
+      start: 0
+      end: 20
+  import code_review_graph:
+    labels:
+    - source: import code_review_graph
+      style: primary
+      start: 0
+      end: 24

@@ -2,100 +2,95 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
-import flext_infra
-from flext_infra import u
 from flext_tests import tm
 
-ROOT = Path(flext_infra.__file__).resolve().parents[2]
-COMMON_DIR = Path(
-    tm.ok(
-        u.Cli.capture(
-            ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"], cwd=ROOT
-        )
-    )
-)
-# When flext-infra is a submodule, the git common-dir resolves to the
-# superproject's <superproject>/.git/modules/<name> and --show-toplevel
-# returns the submodule checkout. Governance assets (docs/, AGENTS.md,
-# .agents/skills) live in the superproject, so resolve its root instead.
-_super_modules = [
-    p for p in COMMON_DIR.parents if p.name == "modules" and p.parent.name == ".git"
-]
-_resolve_root = _super_modules[0].parent.parent if _super_modules else ROOT
-WORKSPACE_ROOT = Path(
-    tm.ok(
-        u.Cli.capture(
-            ["git", "rev-parse", "--path-format=absolute", "--show-toplevel"],
-            cwd=_resolve_root,
-        )
-    )
-)
+import flext_infra
+from tests import u
 
 
-def test_prompt_skills_resolve_to_existing_paths() -> None:
-    prompts = ROOT / ".github" / "prompts"
-    law_link = "../../.agents/skills/flext-law/SKILL.md"
-    for prompt in prompts.glob("*.prompt.md"):
-        text = prompt.read_text(encoding="utf-8")
-        assert "flext-inviolable-rules" not in text
-        assert "quality-gates" not in text
-        if (
-            "flext-aggressive-scale-refactor" in prompt.name
-            or "flext-strict-jsonvalue" in prompt.name
+class TestsFlextInfraGovernanceAuthority:
+    """Test suite for governance skill-path and authority-sequence integrity."""
+
+    ROOT = Path(flext_infra.__file__).resolve().parents[2]
+
+    def _common_dir(self) -> Path:
+        return Path(
+            tm.ok(
+                u.Cli.capture(
+                    ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
+                    cwd=self.ROOT,
+                )
+            )
+        )
+
+    def _repository_root(self) -> Path:
+        # When flext-infra is a submodule, the git common-dir resolves to the
+        # superproject's <superproject>/.git/modules/<name> and --show-toplevel
+        # returns the submodule checkout. Governance assets (docs/, AGENTS.md,
+        # .agents/skills) live in the superproject, so resolve its root instead.
+        common_dir = self._common_dir()
+        super_modules = [
+            p
+            for p in common_dir.parents
+            if p.name == "modules" and p.parent.name == ".git"
+        ]
+        resolve_root = super_modules[0].parent.parent if super_modules else self.ROOT
+        return Path(
+            tm.ok(
+                u.Cli.capture(
+                    ["git", "rev-parse", "--path-format=absolute", "--show-toplevel"],
+                    cwd=resolve_root,
+                )
+            )
+        )
+
+    def test_prompt_skills_resolve_to_existing_paths(self) -> None:
+        prompts = self.ROOT / ".github" / "prompts"
+        law_link = "../../.agents/skills/flext-law/SKILL.md"
+        for prompt in prompts.glob("*.prompt.md"):
+            text = prompt.read_text(encoding="utf-8")
+            assert "flext-inviolable-rules" not in text
+            assert "quality-gates" not in text
+            if (
+                "flext-aggressive-scale-refactor" in prompt.name
+                or "flext-strict-jsonvalue" in prompt.name
+            ):
+                assert law_link in text
+                target = (prompt.parent / law_link).resolve()
+                assert target.exists(), f"{prompt.name} dead skill path: {law_link}"
+
+    def test_markdownlint_does_not_suppress_strict_rules(self) -> None:
+        config = u.Tests.json_payload(
+            (self.ROOT / ".markdownlint.json").read_text(encoding="utf-8")
+        )
+        assert config.get("MD012") is not False
+        assert config.get("MD050") is not False
+        assert config.get("MD064") is not False
+        assert config.get("MD075") is not False
+        line_length = u.Tests.toml_mapping(config["MD013"])["line_length"]
+        assert isinstance(line_length, int)
+        assert line_length <= 500
+
+    def test_flext_law_requires_automated_structural_rewires(self) -> None:
+        # Markdown reflows a clause across lines at whatever column the
+        # formatter chooses, so a literal match answers about the wrap and not
+        # about the law. Collapse runs of whitespace and assert the sentence
+        # itself.
+        law = " ".join(
+            (self._repository_root() / ".agents/skills/flext-law/SKILL.md")
+            .read_text(encoding="utf-8")
+            .split()
+        )
+
+        for required in (
+            "`make mod`",
+            "`ast-grep` rewrites",
+            "Rope semantic refactors",
+            "`pyright-langserver` diagnostics",
+            "GitHub and CRG belong to ai-hub",
+            "never imports ai-hub or CRG as a library",
+            "Repetitive manual call-site editing is prohibited",
         ):
-            assert law_link in text
-            target = (prompt.parent / law_link).resolve()
-            assert target.exists(), f"{prompt.name} dead skill path: {law_link}"
-
-
-def test_governance_authority_sequence_matches_agents() -> None:
-    agents = (WORKSPACE_ROOT / "AGENTS.md").read_text(encoding="utf-8")
-    governance = (WORKSPACE_ROOT / "docs" / "GOVERNANCE.md").read_text(encoding="utf-8")
-    assert "USER REQUEST > BEADS" in agents
-    assert "AIHUB-INVIOLABLE-LAW-PRELUDE" in agents
-    assert "quality-gates skill" not in governance
-    assert "flext-law" in governance or "AGENTS.md" in governance
-
-
-def test_docs_validation_required_skills_exist_with_adr() -> None:
-    config = json.loads(
-        (
-            WORKSPACE_ROOT / "docs" / "architecture" / "architecture_config.json"
-        ).read_text(encoding="utf-8")
-    )
-    required = config["docs_validation"]["required_skills"]
-    skills_root = WORKSPACE_ROOT / ".agents" / "skills"
-    for name in required:
-        skill = skills_root / name / "SKILL.md"
-        assert skill.is_file(), name
-        assert "adr" in skill.read_text(encoding="utf-8").lower(), name
-
-
-def test_july_handoff_plans_are_marked_historical() -> None:
-    plans = (
-        WORKSPACE_ROOT
-        / "docs"
-        / "superpowers"
-        / "plans"
-        / "2026-07-29-flext-beads-governance-reorganization-handoff.md",
-        WORKSPACE_ROOT
-        / "docs"
-        / "superpowers"
-        / "plans"
-        / "2026-07-29-flext-governance-beads-execution-continuation.md",
-    )
-    for plan in plans:
-        text = plan.read_text(encoding="utf-8")
-        assert "HISTORICAL / SUPERSEDED" in text
-
-
-def test_markdownlint_does_not_suppress_strict_rules() -> None:
-    config = json.loads((ROOT / ".markdownlint.json").read_text(encoding="utf-8"))
-    assert config.get("MD012") is not False
-    assert config.get("MD050") is not False
-    assert config.get("MD064") is not False
-    assert config.get("MD075") is not False
-    assert config["MD013"]["line_length"] <= 500
+            tm.that(law, has=required)

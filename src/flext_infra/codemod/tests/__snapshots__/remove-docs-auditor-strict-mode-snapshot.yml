@@ -1,0 +1,16 @@
+id: remove-docs-auditor-strict-mode
+snapshots:
+  FlextInfraDocAuditor(repository_root=root, strict_mode=False):
+    fixed: FlextInfraDocAuditor(repository_root=root)
+    labels:
+    - source: FlextInfraDocAuditor(repository_root=root, strict_mode=False)
+      style: primary
+      start: 0
+      end: 61
+  FlextInfraDocAuditor(repository_root=root, strict_mode=True):
+    fixed: FlextInfraDocAuditor(repository_root=root)
+    labels:
+    - source: FlextInfraDocAuditor(repository_root=root, strict_mode=True)
+      style: primary
+      start: 0
+      end: 60

@@ -3,96 +3,120 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from types import MappingProxyType
+from typing import TYPE_CHECKING
 
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
+    from ._accessor_report import FlextInfraAccessorMigrationReportMixin
+    from ._accessor_rewrite import FlextInfraAccessorMigrationRewriteMixin
+    from ._census_apply import FlextInfraRefactorCensusApplyMixin
+    from ._census_apply_formatting import FlextInfraRefactorCensusApplyFormattingMixin
+    from ._census_collect import FlextInfraRefactorCensusCollectMixin
+    from ._census_collect_helpers import FlextInfraRefactorCensusCollectHelpersMixin
+    from ._census_filters import FlextInfraRefactorCensusFiltersMixin
+    from ._census_inventory import FlextInfraRefactorCensusInventoryMixin
+    from ._census_objects import FlextInfraRefactorCensusObjectsMixin
+    from ._census_project import FlextInfraRefactorCensusProjectMixin
+    from ._census_render import FlextInfraRefactorCensusRenderMixin
+    from ._census_rules_alias import FlextInfraRefactorCensusRulesAliasMixin
+    from ._census_rules_dispatch import FlextInfraRefactorCensusRulesDispatchMixin
+    from ._census_rules_shared import FlextInfraRefactorCensusRulesSharedMixin
+    from ._census_rules_struct import FlextInfraRefactorCensusRulesStructMixin
+    from ._census_symbols import FlextInfraRefactorCensusSymbolsMixin
+    from ._census_validate import FlextInfraRefactorCensusValidateMixin
+    from ._namespace_enforcer_project import FlextInfraNamespaceEnforcerProjectMixin
+    from ._project_classifier_deps import FlextInfraProjectClassifierDepsMixin
+    from ._project_classifier_family import FlextInfraProjectClassifierFamilyMixin
+    from ._wrapper_rewrite import FlextInfraWrapperRootNamespaceRewriteMixin
     from .accessor_migration import FlextInfraAccessorMigrationOrchestrator
     from .census import FlextInfraRefactorCensus
-    from .class_nesting_analyzer import FlextInfraRefactorClassNestingAnalyzer
     from .classvar_constant_autofix import FlextInfraRefactorClassvarConstantAutofix
-    from .declarative_enforcement import FlextInfraRefactorDeclarativeEnforcement
-    from .file_executor import (
-        FlextInfraClassNestingPostCheckGate,
-        FlextInfraRefactorFileExecutor,
-    )
-    from .legacy_text_ops import FlextInfraRefactorLegacyTextOps
-    from .loader import FlextInfraRefactorRuleLoader
-    from .migrate_to_class_mro import FlextInfraRefactorMigrateToClassMRO
     from .modernize_orchestrator import FlextInfraModernizeOrchestrator
-    from .mro_import_rewriter import FlextInfraRefactorMROImportRewriter
-    from .mro_migration_validator import FlextInfraRefactorMROMigrationValidator
-    from .mro_resolver import FlextInfraRefactorMROResolver
     from .namespace_enforcer import FlextInfraNamespaceEnforcer
     from .namespace_enforcer_phases import FlextInfraNamespaceEnforcerPhasesMixin
-    from .orchestrator import FlextInfraRefactorOrchestrator
+    from .project_alias_migrator import FlextInfraRefactorProjectAliasMigrator
     from .project_classifier import FlextInfraProjectClassifier
-    from .safety import FlextInfraRefactorSafetyManager
-    from .scanner import FlextInfraRefactorLooseClassScanner
-    from .service import FlextInfraRefactorService
-    from .text_executor import FlextInfraRefactorTextExecutor
-    from .violation_analyzer import FlextInfraRefactorViolationAnalyzer
+    from .signature_propagation import FlextInfraRefactorSignaturePropagation
     from .wrapper_root_namespace import FlextInfraWrapperRootNamespaceRefactor
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraAccessorMigrationOrchestrator",
-    "FlextInfraClassNestingPostCheckGate",
+    "FlextInfraAccessorMigrationReportMixin",
+    "FlextInfraAccessorMigrationRewriteMixin",
     "FlextInfraModernizeOrchestrator",
     "FlextInfraNamespaceEnforcer",
     "FlextInfraNamespaceEnforcerPhasesMixin",
+    "FlextInfraNamespaceEnforcerProjectMixin",
     "FlextInfraProjectClassifier",
+    "FlextInfraProjectClassifierDepsMixin",
+    "FlextInfraProjectClassifierFamilyMixin",
     "FlextInfraRefactorCensus",
-    "FlextInfraRefactorClassNestingAnalyzer",
+    "FlextInfraRefactorCensusApplyFormattingMixin",
+    "FlextInfraRefactorCensusApplyMixin",
+    "FlextInfraRefactorCensusCollectHelpersMixin",
+    "FlextInfraRefactorCensusCollectMixin",
+    "FlextInfraRefactorCensusFiltersMixin",
+    "FlextInfraRefactorCensusInventoryMixin",
+    "FlextInfraRefactorCensusObjectsMixin",
+    "FlextInfraRefactorCensusProjectMixin",
+    "FlextInfraRefactorCensusRenderMixin",
+    "FlextInfraRefactorCensusRulesAliasMixin",
+    "FlextInfraRefactorCensusRulesDispatchMixin",
+    "FlextInfraRefactorCensusRulesSharedMixin",
+    "FlextInfraRefactorCensusRulesStructMixin",
+    "FlextInfraRefactorCensusSymbolsMixin",
+    "FlextInfraRefactorCensusValidateMixin",
     "FlextInfraRefactorClassvarConstantAutofix",
-    "FlextInfraRefactorDeclarativeEnforcement",
-    "FlextInfraRefactorFileExecutor",
-    "FlextInfraRefactorLegacyTextOps",
-    "FlextInfraRefactorLooseClassScanner",
-    "FlextInfraRefactorMROImportRewriter",
-    "FlextInfraRefactorMROMigrationValidator",
-    "FlextInfraRefactorMROResolver",
-    "FlextInfraRefactorMigrateToClassMRO",
-    "FlextInfraRefactorOrchestrator",
-    "FlextInfraRefactorRuleLoader",
-    "FlextInfraRefactorSafetyManager",
-    "FlextInfraRefactorService",
-    "FlextInfraRefactorTextExecutor",
-    "FlextInfraRefactorViolationAnalyzer",
+    "FlextInfraRefactorProjectAliasMigrator",
+    "FlextInfraRefactorSignaturePropagation",
     "FlextInfraWrapperRootNamespaceRefactor",
+    "FlextInfraWrapperRootNamespaceRewriteMixin",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
+            "._accessor_report": ("FlextInfraAccessorMigrationReportMixin",),
+            "._accessor_rewrite": ("FlextInfraAccessorMigrationRewriteMixin",),
+            "._census_apply": ("FlextInfraRefactorCensusApplyMixin",),
+            "._census_apply_formatting": (
+                "FlextInfraRefactorCensusApplyFormattingMixin",
+            ),
+            "._census_collect": ("FlextInfraRefactorCensusCollectMixin",),
+            "._census_collect_helpers": (
+                "FlextInfraRefactorCensusCollectHelpersMixin",
+            ),
+            "._census_filters": ("FlextInfraRefactorCensusFiltersMixin",),
+            "._census_inventory": ("FlextInfraRefactorCensusInventoryMixin",),
+            "._census_objects": ("FlextInfraRefactorCensusObjectsMixin",),
+            "._census_project": ("FlextInfraRefactorCensusProjectMixin",),
+            "._census_render": ("FlextInfraRefactorCensusRenderMixin",),
+            "._census_rules_alias": ("FlextInfraRefactorCensusRulesAliasMixin",),
+            "._census_rules_dispatch": ("FlextInfraRefactorCensusRulesDispatchMixin",),
+            "._census_rules_shared": ("FlextInfraRefactorCensusRulesSharedMixin",),
+            "._census_rules_struct": ("FlextInfraRefactorCensusRulesStructMixin",),
+            "._census_symbols": ("FlextInfraRefactorCensusSymbolsMixin",),
+            "._census_validate": ("FlextInfraRefactorCensusValidateMixin",),
+            "._namespace_enforcer_project": (
+                "FlextInfraNamespaceEnforcerProjectMixin",
+            ),
+            "._project_classifier_deps": ("FlextInfraProjectClassifierDepsMixin",),
+            "._project_classifier_family": ("FlextInfraProjectClassifierFamilyMixin",),
+            "._wrapper_rewrite": ("FlextInfraWrapperRootNamespaceRewriteMixin",),
             ".accessor_migration": ("FlextInfraAccessorMigrationOrchestrator",),
             ".census": ("FlextInfraRefactorCensus",),
-            ".class_nesting_analyzer": ("FlextInfraRefactorClassNestingAnalyzer",),
             ".classvar_constant_autofix": (
                 "FlextInfraRefactorClassvarConstantAutofix",
             ),
-            ".declarative_enforcement": ("FlextInfraRefactorDeclarativeEnforcement",),
-            ".file_executor": (
-                "FlextInfraClassNestingPostCheckGate",
-                "FlextInfraRefactorFileExecutor",
-            ),
-            ".legacy_text_ops": ("FlextInfraRefactorLegacyTextOps",),
-            ".loader": ("FlextInfraRefactorRuleLoader",),
-            ".migrate_to_class_mro": ("FlextInfraRefactorMigrateToClassMRO",),
             ".modernize_orchestrator": ("FlextInfraModernizeOrchestrator",),
-            ".mro_import_rewriter": ("FlextInfraRefactorMROImportRewriter",),
-            ".mro_migration_validator": ("FlextInfraRefactorMROMigrationValidator",),
-            ".mro_resolver": ("FlextInfraRefactorMROResolver",),
             ".namespace_enforcer": ("FlextInfraNamespaceEnforcer",),
             ".namespace_enforcer_phases": ("FlextInfraNamespaceEnforcerPhasesMixin",),
-            ".orchestrator": ("FlextInfraRefactorOrchestrator",),
+            ".project_alias_migrator": ("FlextInfraRefactorProjectAliasMigrator",),
             ".project_classifier": ("FlextInfraProjectClassifier",),
-            ".safety": ("FlextInfraRefactorSafetyManager",),
-            ".scanner": ("FlextInfraRefactorLooseClassScanner",),
-            ".service": ("FlextInfraRefactorService",),
-            ".text_executor": ("FlextInfraRefactorTextExecutor",),
-            ".violation_analyzer": ("FlextInfraRefactorViolationAnalyzer",),
+            ".signature_propagation": ("FlextInfraRefactorSignaturePropagation",),
             ".wrapper_root_namespace": ("FlextInfraWrapperRootNamespaceRefactor",),
         }),
         alias_groups=MappingProxyType({}),

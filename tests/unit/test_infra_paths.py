@@ -4,35 +4,38 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_infra import u
 from flext_tests import tm
+
+from flext_infra import u
 
 
 class TestsFlextInfraInfraPaths:
     """Verify workspace path resolution through the public utility."""
 
-    def test_resolve_workspace_root_with_current_directory(self) -> None:
-        result = u.Infra.resolve_workspace_root_or_cwd(None)
+    def test_resolve_repository_root_with_current_directory(self) -> None:
+        result = u.Infra.resolve_repository_root_or_cwd(None)
         tm.that(result.is_absolute(), eq=True)
 
-    def test_resolve_workspace_root_with_absolute_path(self, tmp_path: Path) -> None:
-        result = u.Infra.resolve_workspace_root_or_cwd(tmp_path)
+    def test_resolve_repository_root_with_absolute_path(self, tmp_path: Path) -> None:
+        result = u.Infra.resolve_repository_root_or_cwd(tmp_path)
         tm.that(result.is_absolute(), eq=True)
 
-    def test_resolve_workspace_root_returns_resolved_path(self, tmp_path: Path) -> None:
-        result = u.Infra.resolve_workspace_root_or_cwd(tmp_path)
+    def test_resolve_repository_root_returns_resolved_path(
+        self, tmp_path: Path
+    ) -> None:
+        result = u.Infra.resolve_repository_root_or_cwd(tmp_path)
         tm.that(result, eq=tmp_path.resolve())
 
-    def test_resolve_workspace_root_with_none_uses_cwd(self) -> None:
-        result = u.Infra.resolve_workspace_root_or_cwd(None)
+    def test_resolve_repository_root_with_none_uses_cwd(self) -> None:
+        result = u.Infra.resolve_repository_root_or_cwd(None)
         tm.that(result, eq=Path.cwd().resolve())
 
-    def test_resolve_workspace_root_with_file_returns_parent(
+    def test_resolve_repository_root_with_file_returns_parent(
         self, tmp_path: Path
     ) -> None:
         file_path = tmp_path / "some_file.txt"
         file_path.write_text("", encoding="utf-8")
-        result = u.Infra.resolve_workspace_root_or_cwd(file_path)
+        result = u.Infra.resolve_repository_root_or_cwd(file_path)
         tm.that(result, eq=tmp_path.resolve())
 
     def test_member_checkout_never_escalates_to_its_superproject(
@@ -84,6 +87,6 @@ class TestsFlextInfraInfraPaths:
             cwd=superproject,
         ).unwrap()
 
-        result = u.Infra.resolve_workspace_root_or_cwd(member)
+        result = u.Infra.resolve_repository_root_or_cwd(member)
 
         tm.that(result, eq=member.resolve())

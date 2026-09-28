@@ -8,13 +8,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from types import MappingProxyType
 from typing import Annotated, ClassVar
 
 from flext_cli import m
 
 from flext_infra import c, t
-from flext_infra._models.mixins import FlextInfraModelsMixins as mm
+
+from .mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsBase:
@@ -24,10 +24,7 @@ class FlextInfraModelsBase:
         """Structured process outcome propagated through a Result failure."""
 
         exit_code: Annotated[
-            int, m.Field(ge=0, le=255, description="Process-compatible exit code")
-        ]
-        raw_exit_code: Annotated[
-            int, m.Field(description="Raw subprocess return code before signal mapping")
+            int, m.Field(description="Exact subprocess return code without remapping")
         ]
         classification: Annotated[
             t.NonEmptyStr,
@@ -51,7 +48,7 @@ class FlextInfraModelsBase:
             m.Field(description="Aggregate SHA-256 for HEAD, index, and worktree"),
         ]
         entries: Annotated[
-            tuple[FlextInfraModelsBase.WorkspaceFingerprintEntry, ...],
+            t.VariadicTuple[FlextInfraModelsBase.WorkspaceFingerprintEntry],
             m.Field(description="Ordered per-path fingerprints"),
         ]
 
@@ -106,7 +103,7 @@ class FlextInfraModelsBase:
         }
 
         workspace: Annotated[
-            Path, m.Field(description="Workspace root used for lint and pytest checks")
+            Path, m.Field(description="Repository root used for lint and pytest checks")
         ]
         updated_source: Annotated[
             str, m.Field(description="Replacement source content to write")
@@ -123,15 +120,17 @@ class FlextInfraModelsBase:
         """Validated options for transactionally writing multiple sources."""
 
         workspace: Annotated[
-            Path, m.Field(description="Workspace root used for lint and pytest checks")
+            Path, m.Field(description="Repository root used for lint and pytest checks")
         ]
         expected_sources: Annotated[
-            t.MappingKV[Path, str],
+            t.MappingKV[Path, str | None],
             m.Field(
-                default_factory=lambda: MappingProxyType({}),
-                description="Expected current source bytes keyed by updated path",
+                description=(
+                    "Expected current source bytes keyed by updated path; None "
+                    "requires the path to be absent"
+                )
             ),
-        ] = m.Field(default_factory=lambda: MappingProxyType({}))
+        ]
         keep_backup: Annotated[
             bool, m.Field(description="Whether to preserve .bak copies before editing")
         ] = False
@@ -151,7 +150,7 @@ class FlextInfraModelsBase:
         """Validated options for a protected single-file edit pipeline."""
 
         workspace: Annotated[
-            Path, m.Field(description="Workspace root used for lint and pytest checks")
+            Path, m.Field(description="Repository root used for lint and pytest checks")
         ]
         before_source: Annotated[
             str, m.Field(description="Original source text used for diff and restore")
@@ -190,5 +189,11 @@ class FlextInfraModelsBase:
             str, m.Field(description="Transformer class name to apply")
         ]
         gates: Annotated[
-            str, m.Field(description="Comma-separated gate names for post-validation")
-        ] = c.Infra.SAFE_EXECUTION_DEFAULT_GATES
+            str,
+            m.Field(
+                description=(
+                    "Comma-separated gate names for post-validation; empty selects"
+                    " the SSOT snapshot gates (make.check_gates_ci)."
+                )
+            ),
+        ] = ""

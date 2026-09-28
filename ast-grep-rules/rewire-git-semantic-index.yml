@@ -1,0 +1,11 @@
+id: rewire-git-semantic-index-module
+language: Python
+severity: error
+rule:
+  kind: import_from_statement
+  has:
+    field: module_name
+    kind: dotted_name
+    regex: '^flext_infra\._utilities\._git\.semantic$'
+fix: from flext_infra._utilities._git.semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
+message: Rewire the Git scope mixin to the canonical semantic index owner.

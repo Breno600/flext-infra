@@ -1,0 +1,5 @@
+from __future__ import annotations
+from flext_test._models.base import FlextTestModelsDeps
+
+class FlextTestDetector:
+    pass

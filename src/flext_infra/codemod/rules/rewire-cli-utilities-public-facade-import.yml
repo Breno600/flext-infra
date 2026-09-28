@@ -1,0 +1,14 @@
+id: rewire-cli-utilities-public-facade-import
+language: Python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  any:
+    - pattern: from flext_cli import FlextCliUtilities as u
+    - pattern: |
+        from flext_cli import (
+            FlextCliUtilities as u,
+        )
+fix: from flext_cli import u
+message: Consume the public flext-cli utility facade instead of its concrete class.

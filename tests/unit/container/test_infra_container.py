@@ -1,7 +1,9 @@
-"""Tests for flext_infra service importability and u.Infra MRO pattern.
+"""Behavioral tests for the DI container and the shared ``u`` namespace.
 
-Tests verify that all FlextInfra services are accessible via u.Infra MRO
-and that the current output namespace works correctly.
+Every test exercises a real contract through the public facades: container
+singleton identity and unknown-service failure, version parsing/bumping,
+JSON IO round-trips, pattern matching, output streaming, and workspace
+project discovery.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -11,96 +13,50 @@ from __future__ import annotations
 
 from contextlib import redirect_stdout
 from io import StringIO
+from pathlib import Path
 
-import pytest
+from flext_tests import tm
 
 from flext_core import FlextContainer
-from flext_tests import tm
-from tests import c, u
+from tests import u
 
 
 class TestsFlextInfraContainerInfraContainer:
-    """Test container accessor functions."""
+    """Exercise container lifecycle and shared namespace behavior."""
 
-    pytestmark = pytest.mark.usefixtures("setup")
+    def test_container_is_process_singleton(self) -> None:
+        """FlextContainer returns the same process-wide instance."""
+        first = FlextContainer()
+        tm.that(FlextContainer() is first, eq=True)
 
-    @pytest.fixture
-    def setup(self) -> None:
-        """Ensure container is configured before each test."""
-        FlextContainer().initialize_di_components()
-
-    def test_get_flext_infra_container_returns_singleton(self) -> None:
-        """Verify FlextContainer is a singleton-like container."""
+    def test_container_has_and_fail_on_unknown_service(self) -> None:
+        """Unknown names are reported through ``has`` and a failed resolve."""
         container = FlextContainer()
-        tm.that(callable(container.has), eq=True)
-        tm.that(callable(container.resolve), eq=True)
+        tm.that(container.has("definitely-not-registered"), eq=False)
+        resolved = container.resolve("definitely-not-registered")
+        tm.that(resolved.failure, eq=True)
 
-    def test_get_flext_infra_service_returns_result(self) -> None:
-        """Verify container get returns values for registered services."""
-        container = FlextContainer()
-        tm.that(callable(container.bind), eq=True)
-        tm.that(callable(container.resolve), eq=True)
+    def test_versioning_parse_and_bump_round_trip(self) -> None:
+        """parse_semver and bump_version agree on a real release chain."""
+        parsed = u.Infra.parse_semver("1.2.3")
+        tm.that(tm.ok(parsed), eq=(1, 2, 3))
+        bumped = u.Infra.bump_version("1.2.3", "patch")
+        tm.that(tm.ok(bumped), eq="1.2.4")
 
-    def test_io_methods_available(self) -> None:
-        """Verify IO methods are accessible via u.Infra MRO."""
-        tm.that(callable(u.Cli.json_write), eq=True)
+    def test_json_io_round_trip(self, tmp_path: Path) -> None:
+        """json_write/json_read preserve a typed payload through the file."""
+        target = tmp_path / "payload.json"
+        tm.ok(u.Cli.json_write(target, {"alpha": 1, "nested": {"beta": "ok"}}))
+        loaded = tm.ok(u.Cli.json_read(target))
+        tm.that(loaded, eq={"alpha": 1, "nested": {"beta": "ok"}})
 
-    def test_cli_runtime_methods_available(self) -> None:
-        """Verify command runtime methods are accessible via u.Cli."""
-        tm.that(callable(u.Cli.run_checked), eq=True)
-        tm.that(callable(u.Cli.run_raw), eq=True)
-        tm.that(callable(u.Cli.capture), eq=True)
-        tm.that(callable(u.Cli.run_to_file), eq=True)
-
-    def test_discovery_methods_available(self) -> None:
-        """Verify discovery methods are accessible via u.Infra MRO."""
-        tm.that(callable(u.Infra.discover_projects), eq=True)
-        tm.that(callable(u.Infra.discover_project_roots), eq=True)
-
-    def test_output_methods_available(self) -> None:
-        """Verify output methods are accessible via u.Infra MRO."""
-        tm.that(callable(u.Cli.status), eq=True)
-        tm.that(callable(u.Cli.summary), eq=True)
-        tm.that(callable(u.Cli.error), eq=True)
-        tm.that(callable(u.Cli.warning), eq=True)
-        tm.that(callable(u.Cli.info), eq=True)
-        tm.that(callable(u.Cli.header), eq=True)
-        tm.that(callable(u.Cli.progress), eq=True)
-
-    def test_path_methods_available(self) -> None:
-        """Verify path methods are accessible via u.Infra MRO."""
-        tm.that(callable(u.Infra.rope_workspace_root), eq=True)
-
-    def test_template_methods_available(self) -> None:
-        """Verify template constants are accessible via c.Infra MRO."""
-        tm.that(c.Infra.TOC_START, is_=str)
-        tm.that(c.Infra.TOC_END, is_=str)
-        tm.that(c.Infra.GENERATED_HEADER, is_=str)
-
-    def test_versioning_methods_available(self) -> None:
-        """Verify versioning methods are accessible via u.Infra MRO."""
-        tm.that(callable(u.Infra.parse_semver), eq=True)
-        tm.that(callable(u.Infra.bump_version), eq=True)
-
-    def test_toml_methods_available(self) -> None:
-        """Verify TOML methods are accessible via u.Infra MRO."""
-        tm.that(callable(u.Cli.toml_ensure_table), eq=True)
-        tm.that(callable(u.Cli.toml_table_path), eq=True)
-
-    def test_patterns_available(self) -> None:
-        """Verify pattern constants are accessible via u.Infra MRO."""
-        tm.that(callable(u.Cli.matches), eq=True)
-
-    def test_container_has_service_method(self) -> None:
-        """Verify FlextContainer has has_service method."""
-        tm.that(callable(FlextContainer().has), eq=True)
-
-    def test_container_list_services_method(self) -> None:
-        """Verify FlextContainer has list_services method."""
-        tm.that(callable(FlextContainer().names), eq=True)
+    def test_pattern_matching_matches_declared_patterns(self) -> None:
+        """u.Cli.matches reports hits and misses on declared patterns."""
+        tm.that(u.Cli.matches("deploy failed", "deploy", "rollback"), eq=True)
+        tm.that(u.Cli.matches("all good", "deploy", "rollback"), eq=False)
 
     def test_output_methods_write_to_configured_stream(self) -> None:
-        """Verify output methods write through the shared namespace stream."""
+        """Output methods write through the shared namespace stream."""
         stream = StringIO()
 
         with redirect_stdout(stream):
@@ -108,3 +64,21 @@ class TestsFlextInfraContainerInfraContainer:
             u.Cli.warning("careful")
 
         tm.that(stream.getvalue(), eq="INFO: hello\nWARN: careful\n")
+
+    def test_discover_projects_finds_declared_member(self, tmp_path: Path) -> None:
+        """Discovery lists exactly the members declared in ``.gitmodules``."""
+        service = u.Infra()
+        member = tmp_path / "demo_source"
+        member.mkdir()
+        (member / "pyproject.toml").write_text(
+            "[project]\nname='demo_source'\ndependencies=['flext-core>=0.1.0']\n",
+            encoding="utf-8",
+        )
+        (tmp_path / ".gitmodules").write_text(
+            '[submodule "demo_source"]\n'
+            "\tpath = demo_source\n"
+            "\turl = https://github.com/flext-sh/demo_source.git\n",
+            encoding="utf-8",
+        )
+        projects = tm.ok(service.discover_projects(tmp_path))
+        tm.that([project.name for project in projects], eq=["demo_source"])

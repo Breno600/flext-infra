@@ -1,0 +1,9 @@
+id: rewire-infra-models-submodule-import-to-root-facade
+snapshots:
+  from flext_infra.models import m:
+    fixed: from flext_infra import m
+    labels:
+    - source: from flext_infra.models import m
+      style: primary
+      start: 0
+      end: 32

@@ -1,0 +1,20 @@
+# Pydantic models are constructed by their own constructor, never by a `create`
+# factory that does not exist (flext-itpd1.3, 2026-09-19).
+#
+# `m.Plugin.Entity` and the `FlextPluginPlatform` models extend `cli_m.Entity`;
+# neither declares `create`, so every call site raised `missing-attribute` and
+# would fail at runtime. The fleet idiom builds entities directly
+# (`m.Web.Entity(...)`, `FlextWebModelsEntity.Entity(...)`); `create` exists only
+# on `FlextContext`/`FlextRegistry`, which are different concepts and must keep
+# it — hence the receiver constraint instead of a bare `$RECV.create(...)`.
+
+id: plugin-model-create-to-constructor
+language: Python
+severity: error
+rule:
+  pattern: $RECV.create($$$ARGS)
+constraints:
+  RECV:
+    regex: '^(FlextPluginPlatform\.(PluginExecution|PluginRegistry|Plugin)|m\.Plugin\.Entity|u\.Plugin\.Platform\.PluginRegistry)$'
+fix: $RECV($$$ARGS)
+message: Construct the Pydantic model directly; `create` is not part of its contract.

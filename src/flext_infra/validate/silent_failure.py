@@ -6,10 +6,11 @@ from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, u
-from flext_infra.base import s
 from flext_infra.detectors.silent_failure_detector import (
     FlextInfraSilentFailureDetector,
 )
+
+from ..base import s
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -22,22 +23,11 @@ class FlextInfraSilentFailureValidator(s[bool]):
         str | None, m.Field(description="Project filter (comma-separated)")
     ] = None
 
-    def _selected_projects(
-        self, projects: t.SequenceOf[p.Infra.ProjectInfo]
-    ) -> t.SequenceOf[p.Infra.ProjectInfo]:
-        """Return the selected projects."""
-        if self.project_filter is None:
-            return projects
-        selected = {
-            item.strip() for item in self.project_filter.split(",") if item.strip()
-        }
-        return [project for project in projects if project.name in selected]
-
     def build_report(self) -> p.Result[m.Infra.ValidationReport]:
         """Build one validation report for the selected workspace projects."""
         issues: t.MutableSequenceOf[str] = []
-        projects_result = u.Infra.projects(self.workspace_root)
-        projects = self._selected_projects(
+        projects_result = u.Infra.projects(self.repository_root)
+        projects = self._filtered_projects(
             tuple(projects_result.unwrap()) if projects_result.success else ()
         )
         for project in projects:
@@ -45,10 +35,7 @@ class FlextInfraSilentFailureValidator(s[bool]):
                 m.Infra.SourceScanRequest(project_roots=(project.path,))
             )
             if iter_result.failure:
-                return r[m.Infra.ValidationReport].fail(
-                    iter_result.error
-                    or f"python file iteration failed for {project.name}"
-                )
+                return r[m.Infra.ValidationReport].from_failure(iter_result)
             rope_project = u.Infra.init_rope_project(project.path)
             try:
                 for file_path in iter_result.value:
@@ -85,9 +72,7 @@ class FlextInfraSilentFailureValidator(s[bool]):
         """
         report_result = self.build_report()
         if report_result.failure:
-            return r[bool].fail(
-                report_result.error or "silent failure validation failed"
-            )
+            return r[bool].from_failure(report_result)
         report = report_result.value
         if report.passed:
             return r[bool].ok(True)

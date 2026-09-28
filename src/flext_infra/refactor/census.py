@@ -7,37 +7,29 @@ from pathlib import Path
 from typing import Annotated, override
 
 from flext_cli import cli
+
 from flext_core import r
 from flext_infra import c, m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
-from flext_infra.refactor._census_apply import FlextInfraRefactorCensusApplyMixin
-from flext_infra.refactor._census_collect import FlextInfraRefactorCensusCollectMixin
-from flext_infra.refactor._census_collect_helpers import (
-    FlextInfraRefactorCensusCollectHelpersMixin,
-)
-from flext_infra.refactor._census_filters import FlextInfraRefactorCensusFiltersMixin
-from flext_infra.refactor._census_inventory import (
-    FlextInfraRefactorCensusInventoryMixin,
-)
-from flext_infra.refactor._census_objects import FlextInfraRefactorCensusObjectsMixin
-from flext_infra.refactor._census_project import FlextInfraRefactorCensusProjectMixin
-from flext_infra.refactor._census_render import FlextInfraRefactorCensusRenderMixin
-from flext_infra.refactor._census_rules_alias import (
-    FlextInfraRefactorCensusRulesAliasMixin,
-)
-from flext_infra.refactor._census_rules_dispatch import (
-    FlextInfraRefactorCensusRulesDispatchMixin,
-)
-from flext_infra.refactor._census_rules_struct import (
-    FlextInfraRefactorCensusRulesStructMixin,
-)
-from flext_infra.refactor._census_symbols import FlextInfraRefactorCensusSymbolsMixin
-from flext_infra.refactor._census_validate import FlextInfraRefactorCensusValidateMixin
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
+
+from ._census_apply import FlextInfraRefactorCensusApplyMixin
+from ._census_collect import FlextInfraRefactorCensusCollectMixin
+from ._census_collect_helpers import FlextInfraRefactorCensusCollectHelpersMixin
+from ._census_filters import FlextInfraRefactorCensusFiltersMixin
+from ._census_inventory import FlextInfraRefactorCensusInventoryMixin
+from ._census_objects import FlextInfraRefactorCensusObjectsMixin
+from ._census_project import FlextInfraRefactorCensusProjectMixin
+from ._census_render import FlextInfraRefactorCensusRenderMixin
+from ._census_rules_alias import FlextInfraRefactorCensusRulesAliasMixin
+from ._census_rules_dispatch import FlextInfraRefactorCensusRulesDispatchMixin
+from ._census_rules_struct import FlextInfraRefactorCensusRulesStructMixin
+from ._census_symbols import FlextInfraRefactorCensusSymbolsMixin
+from ._census_validate import FlextInfraRefactorCensusValidateMixin
 
 
 class FlextInfraRefactorCensus(
-    FlextInfraProjectSelectionServiceBase[m.Infra.Census.WorkspaceReport],
+    FlextInfraProjectSelectionServiceBase[m.Infra.WorkspaceReport],
     FlextInfraRefactorCensusApplyMixin,
     FlextInfraRefactorCensusCollectMixin,
     FlextInfraRefactorCensusCollectHelpersMixin,
@@ -91,16 +83,19 @@ class FlextInfraRefactorCensus(
         return path
 
     @property
+    @override
     def kind_names(self) -> t.StrSequence | None:
         """Normalized symbol-kind filters."""
         return u.Infra.normalize_sequence_values(self.kinds)
 
     @property
+    @override
     def rule_names(self) -> t.StrSequence | None:
         """Normalized violation-rule filters."""
         return u.Infra.normalize_sequence_values(self.rules)
 
     @property
+    @override
     def family_names(self) -> t.StrSequence | None:
         """Normalized family filters."""
         return u.Infra.normalize_sequence_values(self.families)
@@ -139,26 +134,18 @@ class FlextInfraRefactorCensus(
 
     def _execution_reports(
         self,
-    ) -> tuple[m.Infra.Census.WorkspaceReport, m.Infra.Census.WorkspaceReport | None]:
+    ) -> t.Pair[m.Infra.WorkspaceReport, m.Infra.WorkspaceReport | None]:
         """Collect the final report and the pre-apply impact-map report."""
         started = time.monotonic()
         applied = frozenset[str]()
-        impact_map_report: m.Infra.Census.WorkspaceReport | None = None
+        impact_map_report: m.Infra.WorkspaceReport | None = None
         rope_root = self._rope_root_for_selection()
         with FlextInfraRopeWorkspace.open_workspace(
-            self.root, rope_workspace_root=rope_root
+            self.root, rope_repository_root=rope_root
         ) as rope:
 
-            def collect(applied: frozenset[str]) -> m.Infra.Census.WorkspaceReport:
-                return self._collect_report(
-                    rope,
-                    project_names=self.project_names,
-                    kind_names=self.kind_names,
-                    family_names=self.family_names,
-                    rule_names=self.rule_names,
-                    include_local_scopes=self.include_local_scopes,
-                    applied=applied,
-                )
+            def collect(applied: frozenset[str]) -> m.Infra.WorkspaceReport:
+                return self._collect_report(rope, applied=applied)
 
             report = collect(applied)
             impact_map_report = report
@@ -173,13 +160,13 @@ class FlextInfraRefactorCensus(
         )
         return finalized_report, impact_map_report
 
-    def build_report(self) -> m.Infra.Census.WorkspaceReport:
+    def build_report(self) -> m.Infra.WorkspaceReport:
         """Build the canonical workspace census report without CLI side effects."""
         report, _ = self._execution_reports()
         return report
 
     @override
-    def execute(self) -> p.Result[m.Infra.Census.WorkspaceReport]:
+    def execute(self) -> p.Result[m.Infra.WorkspaceReport]:
         """Execute the census with one shared Rope session."""
         report, impact_map_report = self._execution_reports()
         cli.display_text(self.render_text(report))
@@ -192,11 +179,9 @@ class FlextInfraRefactorCensus(
                 self.impact_map_output_path,
             )
             if impact_result.failure:
-                return r[m.Infra.Census.WorkspaceReport].fail(
-                    impact_result.error or "impact map write failed"
-                )
+                return r[m.Infra.WorkspaceReport].from_failure(impact_result)
             u.Cli.info(f"Impact map exported to: {self.impact_map_output_path}")
-        return r[m.Infra.Census.WorkspaceReport].ok(report)
+        return r[m.Infra.WorkspaceReport].ok(report)
 
 
 __all__: list[str] = ["FlextInfraRefactorCensus"]

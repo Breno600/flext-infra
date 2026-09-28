@@ -1,0 +1,7 @@
+id: rewire-project-managed-artifacts-call
+valid:
+  - u.Infra.snapshot_project_managed_artifacts(root)
+  - u.Infra.snapshot_config_sources(project_root)
+invalid:
+  - FlextInfraUtilitiesProjectManagedArtifacts.snapshot_project_managed_artifacts(root)
+  - FlextInfraUtilitiesProjectManagedArtifacts.compose_mise_toml_from_snapshot(sources, rendered)

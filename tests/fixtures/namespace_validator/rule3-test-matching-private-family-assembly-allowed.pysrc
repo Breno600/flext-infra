@@ -1,0 +1,6 @@
+from tests import m
+from tests._models.domain import TestsFlextTestModelsDomain
+
+class TestsFlextTestModels(m):
+    class TestsFlextTest(TestsFlextTestModelsDomain, TestsFlextTestModelsBase):
+        pass

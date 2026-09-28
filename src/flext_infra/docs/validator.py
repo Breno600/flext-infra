@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 from flext_infra import c, m, u
-from flext_infra.docs.base import FlextInfraDocServiceBase
+
+from .base import FlextInfraDocServiceBase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -19,12 +20,12 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
     def validate_workspace(
         self, request: m.Infra.DocsGenerateRequest
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Validate documentation across the workspace root and governed projects."""
+        """Validate documentation across the repository root and governed projects."""
         return self.run_scoped_docs(
-            request.workspace_root,
+            request.repository_root,
             projects=request.projects,
             output_dir=request.output_dir,
-            handler=lambda scope: self._validate_scope(scope, apply_mode=request.apply),
+            handler=lambda scope: self._validate_scope(scope, apply_mode=False),
         )
 
     @override
@@ -32,10 +33,9 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
         """Execute the configured docs validation flow."""
         result = self.validate_workspace(
             m.Infra.DocsGenerateRequest(
-                workspace_root=self.workspace_root,
+                repository_root=self.repository_root,
                 projects=self.selected_projects,
                 output_dir=self.output_dir,
-                apply=self.apply_changes,
             )
         )
         return self._propagate_phase_outcome(
@@ -44,19 +44,16 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
             failure_predicate=lambda report: report.result == c.Infra.ResultStatus.FAIL,
         )
 
-    def _run_adr_skill_check(self, workspace_root: Path) -> t.Pair[int, t.StrSequence]:
+    def _run_adr_skill_check(self, repository_root: Path) -> t.Pair[int, t.StrSequence]:
         """Run the ADR skill validation check for the root docs scope."""
-        required_result = u.Infra.docs_load_required_skills(workspace_root)
+        required_result = u.Infra.docs_load_required_skills(repository_root)
         if required_result.failure:
             self.logger.warning(
                 "adr_skill_check_failed", error=required_result.error or ""
             )
             return (1, [])
-        required_skills = required_result.value or [
-            "flext-law",
-            "flext-context-routing",
-        ]
-        skills_root = workspace_root / ".agents/skills"
+        required_skills = required_result.value or ["flext-development"]
+        skills_root = repository_root / ".agents/skills"
         missing: list[str] = []
         for skill_name in required_skills:
             skill_path = skills_root / skill_name / "SKILL.md"
@@ -93,13 +90,16 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
             status = c.Infra.ResultStatus.FAIL
             messages.extend(contract_messages)
         message = "; ".join(messages) if messages else "validation passed"
-        wrote_todo = u.Infra.docs_write_todo(scope, apply_mode=apply_mode).unwrap_or(
-            False
-        )
+        todo_result = u.Infra.docs_write_todo(scope, apply_mode=apply_mode)
+        if todo_result.failure:
+            status = c.Infra.ResultStatus.FAIL
+            messages.append(f"failed to write docs todo: {todo_result.error}")
+        wrote_todo = todo_result.unwrap()
         report = m.Infra.DocsPhaseReport(
             phase="validate",
             scope=scope.name,
             result=status,
+            reason=message,
             message=message,
             missing_adr_skills=missing_adr_skills,
             todo_written=wrote_todo,

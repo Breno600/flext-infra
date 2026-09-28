@@ -2,13 +2,32 @@
 
 from __future__ import annotations
 
-from flext_infra import config
-from flext_infra.codegen.managed_conflicts import FlextInfraCodegenManagedConflicts
 from flext_tests import tm
 
+from flext_infra import c, u
 
-class TestsFlextInfraCodegenManagedConflicts:
+
+class TestsFlextInfraManagedConflictRecovery:
     """Prove conflict recovery remains bounded by the document SSOT."""
+
+    def test_every_table_the_conform_pipeline_writes_is_recoverable(self) -> None:
+        """Whatever the owner writes, the owner must be able to recover.
+
+        The table is named by the same constant the conform pipeline writes
+        through, so the writer and this declaration cannot drift. They did
+        drift once: the pipeline gained a table while the declaration did not,
+        and absorbing the integration base then dead-ended the superproject
+        merge on the owner's own output.
+        """
+        pyproject = tm.ok(u.Infra.pyproject_managed_file())
+
+        tm.that(
+            u.Infra.toml_section_is_owned(
+                u.Cli.toml_dot_path(*c.Infra.CONFORM_NAMESPACE_TABLE),
+                pyproject.conflict_sections,
+            ),
+            eq=True,
+        )
 
     def test_every_generated_pyproject_section_declares_recovery(self) -> None:
         """A section the owner renders must be recoverable, or a merge dead-ends.
@@ -18,18 +37,16 @@ class TestsFlextInfraCodegenManagedConflicts:
         integration base that still carries the previous lint projection left
         the superproject merge unresolvable through the canonical surface.
         """
-        managed = config.Infra.codegen.managed_files
-        pyproject = next(
-            spec for spec in managed if spec.path.as_posix() == "pyproject.toml"
-        )
-
+        pyproject = tm.ok(u.Infra.pyproject_managed_file())
+        tm.that("tool.uv" in pyproject.conflict_sections, eq=True)
+        tm.that("build-system" in pyproject.conflict_sections, eq=True)
+        tm.that(pyproject.preserve_project_keys, empty=False)
+        tm.that(pyproject.overwrite_project_keys, empty=False)
         tm.that(
-            set(pyproject.conflict_sections),
-            eq={
-                "tool.pytest.ini_options",
-                "tool.uv",
-                "tool.ruff.lint.per-file-ignores",
-            },
+            set(pyproject.overwrite_project_keys).isdisjoint(
+                pyproject.preserve_project_keys
+            ),
+            eq=True,
         )
 
     def test_recovers_the_lint_policy_section(self) -> None:
@@ -44,7 +61,7 @@ class TestsFlextInfraCodegenManagedConflicts:
         )
 
         recovered = tm.ok(
-            FlextInfraCodegenManagedConflicts.recover_toml(
+            u.Infra.recover_managed_toml(
                 content, conflict_sections=("tool.ruff.lint.per-file-ignores",)
             )
         )
@@ -75,10 +92,8 @@ class TestsFlextInfraCodegenManagedConflicts:
             "line-length = 100\n"
         )
 
-        recovered = tm.ok(
-            FlextInfraCodegenManagedConflicts.recover_toml(
-                content, conflict_sections=("tool.uv",)
-            )
+        recovered: str = tm.ok(
+            u.Infra.recover_managed_toml(content, conflict_sections=("tool.uv",))
         )
 
         tm.that(
@@ -106,9 +121,7 @@ class TestsFlextInfraCodegenManagedConflicts:
             ">>>>>>> origin/0.12.0-dev\n"
         )
 
-        result = FlextInfraCodegenManagedConflicts.recover_toml(
-            content, conflict_sections=("tool.uv",)
-        )
+        result = u.Infra.recover_managed_toml(content, conflict_sections=("tool.uv",))
 
         tm.fail(result, has="outside owner-declared TOML sections: project")
 
@@ -116,10 +129,8 @@ class TestsFlextInfraCodegenManagedConflicts:
         """Leave documents without conflict markers byte-identical."""
         content = '[tool.uv]\nlink-mode = "copy"\n'
 
-        recovered = tm.ok(
-            FlextInfraCodegenManagedConflicts.recover_toml(
-                content, conflict_sections=("tool.uv",)
-            )
+        recovered: str = tm.ok(
+            u.Infra.recover_managed_toml(content, conflict_sections=("tool.uv",))
         )
 
         tm.that(recovered, eq=content)

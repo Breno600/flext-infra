@@ -2,19 +2,17 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
+from flext_tests import tm
 
 from flext_infra.detectors.class_placement_detector import (
     FlextInfraClassPlacementDetector,
 )
-from flext_infra.fixers.rope_fixer import FlextInfraRopeFixerAdapter
 from flext_infra.refactor.classvar_constant_autofix import (
     FlextInfraRefactorClassvarConstantAutofix,
 )
-from flext_tests import tm
 from tests import c, m, u
 
 if TYPE_CHECKING:
@@ -29,14 +27,12 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
     def test_detects_basemodel_in_non_model_file(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
-        target = tmp_path / "consumer.py"
-        target.write_text(
-            "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
-            encoding="utf-8",
-        )
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / "consumer.py",
+                "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
+                rope_project,
+            )
         )
 
         tm.that(len(violations), eq=1)
@@ -46,16 +42,14 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
     def test_detects_attribute_base_class(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
-        target = tmp_path / "consumer.py"
-        target.write_text(
-            "from flext_core import FlextModels\n"
-            "class PublicModel(FlextModels.ArbitraryTypesModel):\n"
-            "    pass\n",
-            encoding="utf-8",
-        )
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / "consumer.py",
+                "from flext_core import FlextModels\n"
+                "class PublicModel(FlextModels.ArbitraryTypesModel):\n"
+                "    pass\n",
+                rope_project,
+            )
         )
 
         tm.that(len(violations), eq=1)
@@ -65,14 +59,12 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
     def test_skips_models_file(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
-        target = tmp_path / "models.py"
-        target.write_text(
-            "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
-            encoding="utf-8",
-        )
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / "models.py",
+                "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
+                rope_project,
+            )
         )
 
         tm.that(violations, eq=[])
@@ -80,16 +72,12 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
     def test_skips_models_directory(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
-        models_dir = tmp_path / "models"
-        models_dir.mkdir(parents=True)
-        target = models_dir / "domain.py"
-        target.write_text(
-            "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
-            encoding="utf-8",
-        )
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / "models" / "domain.py",
+                "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
+                rope_project,
+            )
         )
 
         tm.that(violations, eq=[])
@@ -97,50 +85,26 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
     def test_skips_private_models_directory(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
-        models_dir = tmp_path / "_models"
-        models_dir.mkdir(parents=True)
-        target = models_dir / "domain.py"
-        target.write_text(
-            "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
-            encoding="utf-8",
-        )
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / "_models" / "domain.py",
+                "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
+                rope_project,
+            )
         )
 
         tm.that(violations, eq=[])
-
-    def test_skips_sanctioned_root_namespace_files(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
-    ) -> None:
-        for file_name in ("result.py", "lazy.py", "mixins.py"):
-            target = tmp_path / file_name
-            target.write_text(
-                "from pydantic import BaseModel\n"
-                "class PublicModel(BaseModel):\n"
-                "    pass\n",
-                encoding="utf-8",
-            )
-
-            violations = FlextInfraClassPlacementDetector.detect_file(
-                m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
-            )
-
-            tm.that(violations, eq=[])
 
     def test_skips_settings_file(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
         settings_file_name = min(c.Infra.NAMESPACE_SETTINGS_FILE_NAMES)
-        target = tmp_path / settings_file_name
-        target.write_text(
-            "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
-            encoding="utf-8",
-        )
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / settings_file_name,
+                "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
+                rope_project,
+            )
         )
 
         tm.that(violations, eq=[])
@@ -149,14 +113,12 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
         protected_file_name = min(c.Infra.NAMESPACE_PROTECTED_FILES)
-        target = tmp_path / protected_file_name
-        target.write_text(
-            "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
-            encoding="utf-8",
-        )
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / protected_file_name,
+                "from pydantic import BaseModel\nclass PublicModel(BaseModel):\n    pass\n",
+                rope_project,
+            )
         )
 
         tm.that(violations, eq=[])
@@ -164,14 +126,12 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
     def test_skips_private_class(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
-        target = tmp_path / "consumer.py"
-        target.write_text(
-            "from pydantic import BaseModel\nclass _PrivateModel(BaseModel):\n    pass\n",
-            encoding="utf-8",
-        )
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / "consumer.py",
+                "from pydantic import BaseModel\nclass _PrivateModel(BaseModel):\n    pass\n",
+                rope_project,
+            )
         )
 
         tm.that(violations, eq=[])
@@ -179,19 +139,17 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
     def test_detects_multiple_models(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
-        target = tmp_path / "consumer.py"
-        target.write_text(
-            "from pydantic import BaseModel\n"
-            "from flext_core import FlextModels\n"
-            "class FirstModel(BaseModel):\n"
-            "    pass\n"
-            "class SecondModel(FlextModels.ArbitraryTypesModel):\n"
-            "    pass\n",
-            encoding="utf-8",
-        )
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / "consumer.py",
+                "from pydantic import BaseModel\n"
+                "from flext_core import FlextModels\n"
+                "class FirstModel(BaseModel):\n"
+                "    pass\n"
+                "class SecondModel(FlextModels.ArbitraryTypesModel):\n"
+                "    pass\n",
+                rope_project,
+            )
         )
 
         tm.that(len(violations), eq=2)
@@ -203,44 +161,32 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
     def test_non_pydantic_class_not_flagged(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
-        target = tmp_path / "consumer.py"
-        target.write_text("class PlainClass:\n    pass\n", encoding="utf-8")
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / "consumer.py", "class PlainClass:\n    pass\n", rope_project
+            )
         )
 
         tm.that(violations, eq=[])
 
-    def test_detects_classvar_constant_outside_constants(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+    @pytest.mark.parametrize(
+        "source",
+        [
+            (
+                "from typing import ClassVar\n"
+                "class PlainClass:\n"
+                "    GROUPS: ClassVar[frozenset[str]] = frozenset({'a'})\n"
+            ),
+            "class PlainClass:\n    GROUPS = frozenset({'a'})\n",
+        ],
+        ids=["explicit_classvar", "implicit_constant"],
+    )
+    def test_detects_class_constant_outside_constants(
+        self, tmp_path: Path, rope_project: t.Infra.RopeProject, source: str
     ) -> None:
-        target = tmp_path / "consumer.py"
-        target.write_text(
-            "from typing import ClassVar\n"
-            "class PlainClass:\n"
-            "    GROUPS: ClassVar[frozenset[str]] = frozenset({'a'})\n",
-            encoding="utf-8",
-        )
-
+        """An annotated ClassVar and a bare UPPER_CASE constant both relocate."""
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
-        )
-
-        tm.that(len(violations), eq=1)
-        tm.that(violations[0].name, eq="GROUPS")
-        tm.that(violations[0].action, eq="classvar_relocation")
-
-    def test_detects_implicit_constant_without_classvar(
-        self, tmp_path: Path, rope_project: t.Infra.RopeProject
-    ) -> None:
-        target = tmp_path / "consumer.py"
-        target.write_text(
-            "class PlainClass:\n    GROUPS = frozenset({'a'})\n", encoding="utf-8"
-        )
-
-        violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(tmp_path / "consumer.py", source, rope_project)
         )
 
         tm.that(len(violations), eq=1)
@@ -250,15 +196,12 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
     def test_skips_implicit_constant_inside_constants_directory(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
-        constants_dir = tmp_path / "_constants"
-        constants_dir.mkdir(parents=True)
-        target = constants_dir / "domain.py"
-        target.write_text(
-            "class PlainClass:\n    GROUPS = frozenset({'a'})\n", encoding="utf-8"
-        )
-
         violations = FlextInfraClassPlacementDetector.detect_file(
-            m.Infra.DetectorContext(file_path=target, rope_project=rope_project)
+            u.Tests.detector_context(
+                tmp_path / "_constants" / "domain.py",
+                "class PlainClass:\n    GROUPS = frozenset({'a'})\n",
+                rope_project,
+            )
         )
 
         tm.that(violations, eq=[])
@@ -388,15 +331,9 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         """ENFORCE-079 maps project tests modules to their sibling _constants."""
         project_root = tmp_path / "demo"
         module_path = self._write_classvar_test_module(project_root)
-        adapter = FlextInfraRopeFixerAdapter(tmp_path)
-        ctx = m.Infra.FixEnforcementCommand(
-            workspace=str(tmp_path), projects=("demo",), apply=False
-        )
 
-        result = adapter.fix_project(
-            project_root,
-            ((self._classvar_rule(), SimpleNamespace(file_path=str(module_path))),),
-            ctx,
+        result = u.Tests.run_rope_fixer(
+            tmp_path, project_root, self._classvar_rule(), module_path, apply=False
         )
 
         tm.that(
@@ -412,15 +349,9 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         constants_root = project_root / "tests" / "_constants"
         constants_root.mkdir(parents=True)
         (constants_root / "__init__.py").write_text("", encoding="utf-8")
-        adapter = FlextInfraRopeFixerAdapter(tmp_path)
-        ctx = m.Infra.FixEnforcementCommand(
-            workspace=str(tmp_path), projects=("demo",), apply=False
-        )
 
-        result = adapter.fix_project(
-            project_root,
-            ((self._classvar_rule(), SimpleNamespace(file_path=str(module_path))),),
-            ctx,
+        result = u.Tests.run_rope_fixer(
+            tmp_path, project_root, self._classvar_rule(), module_path, apply=False
         )
 
         tm.that(

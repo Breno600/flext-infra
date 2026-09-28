@@ -11,7 +11,8 @@ from urllib.request import url2pathname
 
 from flext_core import r
 from flext_infra import m, u
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
+from .detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -25,24 +26,22 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         cls, request: p.Infra.WorkspaceEnvironmentRequest
     ) -> p.Result[int]:
         """Validate one CLI request without mutating the environment."""
-        return cls.validate(request.workspace_root)
+        return cls.validate(request.repository_root)
 
     @classmethod
     def validate(
-        cls, workspace_root: Path, *, metadata_paths: t.StrSequence | None = None
+        cls, repository_root: Path, *, metadata_paths: t.StrSequence | None = None
     ) -> p.Result[int]:
         """Validate PEP 610 and editable path metadata for active members."""
-        resolved_root = workspace_root.resolve()
+        resolved_root = repository_root.resolve()
         workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
             resolved_root
         )
         if workspace_result.failure:
-            return r[int].fail(
-                workspace_result.error or "workspace manifest validation failed"
-            )
+            return r[int].from_failure(workspace_result)
         repositories = tuple(
             repository
-            for repository in workspace_result.value.members
+            for repository in workspace_result.value.subprojects
             if repository.package and repository.editable
         )
         validated = 0
@@ -136,9 +135,7 @@ class FlextInfraWorkspaceEnvironmentProvenance:
         """Validate the distribution-owned editable path file."""
         read_result = u.Cli.files_read_text(pth_file)
         if read_result.failure:
-            return r[int].fail(
-                read_result.error or f"editable provenance pth read failed: {pth_file}"
-            )
+            return r[int].from_failure(read_result)
         entries = tuple(
             line.strip()
             for line in read_result.value.splitlines()

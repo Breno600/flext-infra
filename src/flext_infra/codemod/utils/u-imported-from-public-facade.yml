@@ -1,0 +1,14 @@
+# Public test utilities imported from either the shared flext-tests facade or
+# the package's generated tests facade. Rewrites that emit ``u.Tests`` must use
+# this guard so they never create an unbound consumer.
+id: test-u-imported-from-public-facade
+language: python
+rule:
+  kind: import_from_statement
+  all:
+    - has:
+        pattern: u
+        stopBy: end
+    - has:
+        field: module_name
+        regex: "^(?:tests|flext_tests)$"

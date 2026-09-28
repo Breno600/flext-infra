@@ -1,0 +1,6 @@
+id: rewire-transformer-header-module-call
+valid:
+  - u.Infra.ensure_alias_import(source, module, alias)
+invalid:
+  - _header.ensure_alias_import(source, module, alias)
+  - _header.has_alias_import(source, alias)
