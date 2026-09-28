@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, ClassVar, Literal
+from typing import Annotated, ClassVar, Literal, TYPE_CHECKING
 
 from flext_cli import m
 
 from flext_infra.constants import FlextInfraConstants as c
 from flext_infra.typings import FlextInfraTypes as t
+
+if TYPE_CHECKING:
+    from .._constants.validate import FlextInfraConstantsSharedInfra
+
+    BeadIssueStatus = FlextInfraConstantsSharedInfra.BeadIssueStatus
 
 
 class FlextInfraModelsWorkLane:
@@ -206,7 +211,7 @@ class FlextInfraModelsWorkLane:
 
         id: Annotated[t.NonEmptyStr, m.Field(description="Canonical Beads issue id")]
         status: Annotated[
-            c.Infra.BeadIssueStatus, m.Field(description="Current Beads issue status")
+            BeadIssueStatus, m.Field(description="Current Beads issue status")
         ]
         issue_type: Annotated[
             t.NonEmptyStr | None,
