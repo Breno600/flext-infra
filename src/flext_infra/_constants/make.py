@@ -22,6 +22,13 @@ class FlextInfraConstantsMake:
         FULL = "full"
         COVERAGE = "coverage"
 
+    class PytestCacheEnvironment(StrEnum):
+        """OS and pytest-testmon environment keys in the generated Make contract."""
+
+        DATA_HOME = "XDG_CACHE_HOME"
+        USER_HOME = "HOME"
+        DATABASE_FILE = "TESTMON_DATAFILE"
+
     MAKE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^[A-Za-z_][A-Za-z0-9_]*\s*(?::?:|\?|\+)?="
     )

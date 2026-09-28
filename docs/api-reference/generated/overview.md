@@ -28,7 +28,7 @@
 - Public symbol exports: `FlextInfra`, `FlextInfraAbstractionBoundaryGate`,
   `FlextInfraAccessorMigrationOrchestrator`, `FlextInfraApplyRenames`,
   `FlextInfraBanditGate`, `FlextInfraCProfileReport`, `FlextInfraCanonicalAliasGate`,
-  `FlextInfraClassPlacementDetector`, `FlextInfraCleanService`, `FlextInfraCli` (+195
+  `FlextInfraClassPlacementDetector`, `FlextInfraCleanService`, `FlextInfraCli` (+196
   more)
 - Exported module shortcuts: `check`, `codegen`, `codemod`, `deps`, `detectors`, `docs`,
   `fixers`, `gates` (+7 more)

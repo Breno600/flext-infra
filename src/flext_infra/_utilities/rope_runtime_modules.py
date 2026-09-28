@@ -83,6 +83,22 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         return result if isinstance(result, p.Infra.RopeImportedName) else None
 
     @staticmethod
+    def source_offset(source: str, node: p.Infra.RopeAstNode) -> int:
+        """Resolve Rope AST byte coordinates to a Python source offset."""
+        line = getattr(node, "lineno", None)
+        column = getattr(node, "col_offset", None)
+        lines = source.splitlines(keepends=True)
+        if not isinstance(line, int) or not isinstance(column, int):
+            msg = "Rope AST node has no source position"
+            raise TypeError(msg)
+        if line < 1 or line > len(lines):
+            msg = f"Rope AST node line is outside its source: {line}"
+            raise ValueError(msg)
+        encoded_prefix = lines[line - 1].encode("utf-8")[:column]
+        prefix = encoded_prefix.decode("utf-8")
+        return sum(map(len, lines[: line - 1])) + len(prefix)
+
+    @staticmethod
     def scope_at(
         pymodule: p.Infra.RopePyModule,
         offset: int,
@@ -112,7 +128,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
 
     @classmethod
     def resolve_symbol(
-        cls, scope: p.Infra.RopeScope, expression: ast.expr
+        cls, scope: p.Infra.RopeScope, expression: p.Infra.RopeAstNode
     ) -> p.Infra.RopePyName | None:
         """Resolve an identifier chain without evaluating Python expressions."""
         primary = expression

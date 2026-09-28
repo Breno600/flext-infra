@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from flext_infra import m, t
+from flext_core import r
+from flext_infra import m, p, t
+from flext_infra.api import infra
 from flext_infra.services.cli_route_base import FlextInfraCliRouteBase
 from flext_infra.validate.cprofile_report import FlextInfraCProfileReport
 from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
@@ -14,7 +16,6 @@ from flext_infra.validate.lazy_map_freshness import FlextInfraValidateLazyMapFre
 from flext_infra.validate.metadata_discipline import (
     FlextInfraValidateMetadataDiscipline,
 )
-from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 from flext_infra.validate.scanner import FlextInfraTextPatternScanner
@@ -22,6 +23,20 @@ from flext_infra.validate.silent_failure import FlextInfraSilentFailureValidator
 from flext_infra.validate.skill_validator import FlextInfraSkillValidator
 from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
 from flext_infra.validate.tier_whitelist import FlextInfraValidateTierWhitelist
+
+
+def _validate_namespace_command(
+    request: m.Infra.NamespaceValidateCommand,
+) -> p.Result[m.Infra.ValidationReport]:
+    """Run namespace validation through the facade-owned Rope composition."""
+    result = infra.validate_namespace(request)
+    if result.failure:
+        return r[m.Infra.ValidationReport].from_failure(result)
+    report = result.unwrap()
+    if report.passed:
+        return r[m.Infra.ValidationReport].ok(report)
+    details = "\n".join((report.summary, *report.violations))
+    return r[m.Infra.ValidationReport].fail(details)
 
 
 class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
@@ -105,8 +120,8 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                 (
                     "namespace",
                     "Guard: static namespace rules (NS-000..003) via rope",
-                    FlextInfraNamespaceValidator,
-                    FlextInfraNamespaceValidator.execute,
+                    m.Infra.NamespaceValidateCommand,
+                    _validate_namespace_command,
                 ),
                 (
                     "tier-whitelist",

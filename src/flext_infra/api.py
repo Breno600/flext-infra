@@ -84,12 +84,12 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentSync, s[t.JsonDict]):
             ).execute()
 
     def validate_namespace(
-        self, repository_root: Path
+        self, request: m.Infra.NamespaceValidateCommand
     ) -> p.Result[m.Infra.ValidationReport]:
         """Validate one project through a single composed Rope cycle."""
-        with FlextInfraRopeWorkspace.open_workspace(repository_root) as rope:
+        with FlextInfraRopeWorkspace.open_workspace(request.repository_root) as rope:
             return FlextInfraNamespaceValidator(
-                repository_root=repository_root, rope=rope
+                repository_root=request.repository_root, rope=rope
             ).build_report()
 
     @staticmethod

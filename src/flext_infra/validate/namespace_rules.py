@@ -38,7 +38,7 @@ class FlextInfraNamespaceRules(
             *cls.check_imports(
                 visit.tree, filepath, package_name=visit.convention.package_name
             ),
-            *cls.check_contracts(visit.tree, filepath),
+            *cls.check_contracts(visit, filepath),
         )
 
 

@@ -297,6 +297,24 @@ class FlextInfraConfigModelsMake:
         database_filename: Annotated[
             t.NonEmptyStr, m.Field(description="pytest-testmon database filename")
         ]
+        database_environment_variable: Annotated[
+            FlextInfraConstantsMake.PytestCacheEnvironment,
+            m.Field(description="pytest-testmon's supported database-path variable"),
+        ]
+        data_home_environment_variable: Annotated[
+            FlextInfraConstantsMake.PytestCacheEnvironment,
+            m.Field(description="XDG persistent cache-home variable"),
+        ]
+        user_home_environment_variable: Annotated[
+            FlextInfraConstantsMake.PytestCacheEnvironment,
+            m.Field(description="User home variable for the XDG default"),
+        ]
+        home_cache_directory: Annotated[
+            Path, m.Field(description="Standard cache directory below the user home")
+        ]
+        external_storage_directory: Annotated[
+            Path, m.Field(description="FLEXT-owned directory below the cache home")
+        ]
         target_directory: Annotated[
             Path, m.Field(description="Repository-relative pytest target")
         ]
@@ -338,9 +356,47 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Refs allowed to save cache generations"),
         ]
+
         key_prefix: Annotated[
             t.NonEmptyStr, m.Field(description="Immutable cache key prefix")
         ]
+
+        @u.model_validator(mode="after")
+        def require_external_database_contract(self) -> Self:
+            """Keep testmon's official path variable and external path policy exact."""
+            for name, actual, expected in (
+                (
+                    "database_environment_variable",
+                    self.database_environment_variable,
+                    FlextInfraConstantsMake.PytestCacheEnvironment.DATABASE_FILE,
+                ),
+                (
+                    "data_home_environment_variable",
+                    self.data_home_environment_variable,
+                    FlextInfraConstantsMake.PytestCacheEnvironment.DATA_HOME,
+                ),
+                (
+                    "user_home_environment_variable",
+                    self.user_home_environment_variable,
+                    FlextInfraConstantsMake.PytestCacheEnvironment.USER_HOME,
+                ),
+            ):
+                if actual != expected:
+                    msg = f"testmon cache {name} must be {expected.value}"
+                    raise ValueError(msg)
+            for name, path in (
+                ("home_cache_directory", self.home_cache_directory),
+                ("external_storage_directory", self.external_storage_directory),
+            ):
+                if path.is_absolute() or any(
+                    part in {"", ".", ".."} for part in path.parts
+                ):
+                    msg = f"testmon cache {name} must be normalized and relative"
+                    raise ValueError(msg)
+            if Path(self.database_filename).name != self.database_filename:
+                msg = "testmon cache database_filename must be a filename"
+                raise ValueError(msg)
+            return self
 
         @u.model_validator(mode="after")
         def _validate_thresholds(self) -> Self:

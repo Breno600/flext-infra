@@ -39,7 +39,10 @@ class FlextInfraPytestRunnerExecution(
         overrides = {
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
                 self.root / c.Infra.DEFAULT_SRC_DIR
-            )
+            ),
+            config.Infra.codegen.make.testmon_cache.database_environment_variable: str(
+                self.testmon_db
+            ),
         }
         if manifest is not None:
             overrides[c.Infra.PYTEST_ENV_COLLECTION_MANIFEST] = str(manifest)
