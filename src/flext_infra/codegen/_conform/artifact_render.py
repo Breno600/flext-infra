@@ -112,9 +112,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         prepends to a render failure.
         """
         artifact_context = self._artifact_render_context(
-            render_inputs,
-            destination=destination,
-            project_context=project_context,
+            render_inputs, destination=destination, project_context=project_context
         )
         if artifact_context.failure:
             return r[str].from_failure(artifact_context)

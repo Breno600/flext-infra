@@ -37,7 +37,9 @@ class FlextInfraWorkspaceEnvironmentMixin:
             if envrc_result.failure:
                 return r[result_type].from_failure(envrc_result)
             changed = (
-                (repository_root / c.Infra.ENVRC_FILENAME,) if envrc_result.value else ()
+                (repository_root / c.Infra.ENVRC_FILENAME,)
+                if envrc_result.value
+                else ()
             )
             result = r[result_type].ok(result_type(changed_files=changed))
         if result.failure:
@@ -63,10 +65,7 @@ class FlextInfraWorkspaceEnvironmentMixin:
         )
 
     @classmethod
-    def _render_environment_template(
-        cls,
-        destination: str,
-    ) -> p.Result[str]:
+    def _render_environment_template(cls, destination: str) -> p.Result[str]:
         """Render one SSOT environment template from the toolchain spec."""
         template_path = (
             Path(__file__).resolve().parents[1]

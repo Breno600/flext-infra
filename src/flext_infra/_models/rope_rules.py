@@ -35,7 +35,9 @@ class FlextInfraModelsRopeRules:
         ]
         body_classes_or_assigns: Annotated[
             bool | None,
-            u.Field(default=None, description="Whether the body declares classes/assigns"),
+            u.Field(
+                default=None, description="Whether the body declares classes/assigns"
+            ),
         ]
 
     class RopeOp(m.ImmutableValueModel):
@@ -54,8 +56,7 @@ class FlextInfraModelsRopeRules:
             u.Field(default=0, description="Attribute chain segments dropped by lift"),
         ]
         delete_source: Annotated[
-            bool,
-            u.Field(default=False, description="Lift deletes the source class"),
+            bool, u.Field(default=False, description="Lift deletes the source class")
         ]
         strip_underscore: Annotated[
             bool,

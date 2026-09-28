@@ -190,8 +190,10 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
         ):
             return ()
         return (
-            (f"{filepath}:{cls.line(node)} — legacy Pydantic member {member!r}; "
-            "use Pydantic v2"),
+            (
+                f"{filepath}:{cls.line(node)} — legacy Pydantic member {member!r}; "
+                "use Pydantic v2"
+            ),
         )
 
     @classmethod

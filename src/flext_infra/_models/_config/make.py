@@ -318,6 +318,7 @@ class FlextInfraConfigModelsMake:
         reports_directory: Annotated[
             Path, m.Field(description="Repository-relative pytest reports root")
         ]
+
         @u.model_validator(mode="after")
         def require_external_database_contract(self) -> Self:
             """Keep testmon's official path variable and external path policy exact."""
