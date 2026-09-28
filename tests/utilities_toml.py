@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 
 from flext_tests import tm
 
@@ -13,6 +14,36 @@ from tests import c, m, p, t
 
 class TestsFlextInfraUtilitiesTomlMixin:
     """TOML, JSON payload, and typed-mapping test helpers."""
+
+    @staticmethod
+    def write_mise_lock(
+        root: Path, tool: str, version: str, selector: str = "latest"
+    ) -> None:
+        """Pin ``tool`` in a fixture mise.lock the way ``make upg`` writes it."""
+        (root / "mise.lock").write_text(
+            f"[[tools.{tool}]]\n"
+            f'version = "{version}"\n'
+            f'backend = "aqua:tamasfe/{tool}"\n'
+            f'specifiers = ["{selector}"]\n',
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+
+    @staticmethod
+    def repo_mise_lock() -> str:
+        """Return the repository's committed mise.lock text."""
+        return (Path(__file__).resolve().parents[2] / "mise.lock").read_text(
+            encoding=c.Cli.ENCODING_DEFAULT
+        )
+
+    @staticmethod
+    def pinned_mise_version(lock_text: str, tool: str) -> str:
+        """Return the ``str`` version a mise.lock text pins for ``tool``."""
+        entry = TestsFlextInfraUtilitiesTomlMixin.toml_tables_at(
+            lock_text, "tools", tool
+        )[0]
+        version = entry["version"]
+        assert isinstance(version, str), f"mise.lock pins no {tool} version: {entry!r}"
+        return version
 
     @staticmethod
     def codegen_file_text(plan: m.Infra.CodegenFilePlan) -> str:

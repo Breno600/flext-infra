@@ -45,8 +45,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
                     column=1,
                     code="pyrefly-empty-analysis",
                     message=(
-                        "no python targets discovered: content-only project "
-                        "topology"
+                        "no python targets discovered: content-only project topology"
                     ),
                     severity="information",
                 ),
@@ -163,7 +162,7 @@ class FlextInfraPyreflyGate(FlextInfraGate):
                             "topology (tool output is informational only)"
                         ),
                         severity="information",
-                    ),
+                    )
                 ]
             message = (result.stderr or result.stdout).strip()
             if not message:

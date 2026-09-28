@@ -248,6 +248,11 @@ class TestsFlextInfraDepsModernizerMainExtra:
 
     def test_conform_source_preserves_taplo_process_error(self, tmp_path: Path) -> None:
         """Return the exact formatter process failure from the public conform path."""
+        u.Tests.write_mise_lock(
+            tmp_path,
+            "taplo",
+            u.Tests.pinned_mise_version(u.Tests.repo_mise_lock(), "taplo"),
+        )
         (tmp_path / ".taplo.toml").write_text('include = ["/x/["]\n', encoding="utf-8")
         source = '[project]\nname = "sample"\nversion = "0.1.0"\n'
         modernizer = FlextInfraPyprojectModernizer(repository_root=tmp_path)

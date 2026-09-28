@@ -195,6 +195,19 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
+        mise_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Pinned mise version for bootstrap, e.g. '2026.9.15'"
+            ),
+        ]
+        mise_namespace: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                default="mise",
+                description="Mise tool namespace in generated config"
+            ),
+        ] = "mise"
         npm_package_manager: Annotated[
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
@@ -279,7 +292,13 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
         taplo_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Taplo release selector; the committed mise.lock pins the "
+                    "version generation authenticates (flext-t7668)"
+                )
+            ),
         ]
         ast_grep_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")

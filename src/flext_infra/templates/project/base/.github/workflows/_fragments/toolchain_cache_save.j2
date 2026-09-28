@@ -1,0 +1,12 @@
+      # Why: save on every outcome — including a failing gate — so the next run
+      # starts warm. Only written when the restore missed.
+      - name: Save tool caches
+        if: {% raw %}${{ always() && steps.tool-cache.outputs.cache-hit != 'true' }}{% endraw %}
+        uses: {{ github_actions["cache"].repository }}/save@{{ github_actions["cache"].version }}
+        with:
+          path: |
+            {{ make.clean.cache_dirs | join("\n            ") }}
+            ~/.cache/uv
+            ~/.cache/pyright
+            ~/.local/share/mise
+          key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}{% raw %}-tools-${{ hashFiles('uv.lock', 'mise.lock', 'pyproject.toml') }}{% endraw %}
