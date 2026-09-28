@@ -1012,21 +1012,17 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
-        tm.that(makefile, has="upg: _builtin_require_runtime_root _bootstrap_setup_tools")
+        tm.that(
+            makefile, has="upg: _builtin_require_runtime_root _bootstrap_setup_tools"
+        )
         tm.that(makefile, has="_builtin-fmt: _builtin_fmt_all")
         tm.that(makefile, has="_builtin-fix: _builtin_fix_all")
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
         tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
         tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
-        tm.that(
-            makefile, has="_builtin-self-fix-enforcement: _builtin_fix_enforcement"
-        )
-        tm.that(
-            makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace"
-        )
-        tm.that(
-            makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors"
-        )
+        tm.that(makefile, has="_builtin-self-fix-enforcement: _builtin_fix_enforcement")
+        tm.that(makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
             makefile,
@@ -1065,3 +1061,43 @@ class TestsFlextInfraCodegenMakeEnvironment:
             "_builtin-conform",
         ):
             tm.that(makefile, lacks=forbidden)
+
+    def test_every_declared_verb_renders_implementation_target(
+        self, tmp_path: Path
+    ) -> None:
+        """Every codegen.yaml-declared verb renders a reachable implementation.
+
+        Derived from the typed SSOT (``config.Infra.codegen.make.verbs``), never
+        a hand list: a verb declared in config without a rendered body in the
+        template — the silent ``Nothing to be done`` exit-0 class reported on
+        ``fix-accessors`` — fails here for the profile it declares.
+        """
+        declared = tuple(config.Infra.codegen.make.verbs)
+        # Template-declared shapes without a _builtin twin: setup/upg carry
+        # their own bootstrap recipes; help/clean render short bodies.
+        body_free = frozenset({"setup", "upg", "help", "clean"})
+        for profile in c.Infra.MakeProfile:
+            project_root, _repository_root = u.Tests.render_make_environment(
+                tmp_path / profile.value, profile
+            )
+            makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+            lines = makefile.splitlines()
+            public_tokens = next(
+                line[len("PUBLIC_VERBS :=") :].split()
+                for line in lines
+                if line.startswith("PUBLIC_VERBS :=")
+            )
+            builtin_tokens = next(
+                line[len("BUILTIN_VERBS :=") :].split()
+                for line in lines
+                if line.startswith("BUILTIN_VERBS :=")
+            )
+            public_padded = f" {' '.join(public_tokens)} "
+            builtin_padded = f" {' '.join(builtin_tokens)} "
+            for verb in declared:
+                if profile not in verb.profiles:
+                    continue
+                tm.that(public_padded, has=f" {verb.name} ")
+                tm.that(builtin_padded, has=f" {verb.name} ")
+                if verb.name not in body_free:
+                    tm.that(makefile, has=f"_builtin-{verb.name}:")

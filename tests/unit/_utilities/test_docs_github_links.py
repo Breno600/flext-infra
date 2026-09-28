@@ -246,8 +246,15 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
         """Verify local checkout path resolution for governed URLs."""
 
         def test_shared_policy_does_not_require_personal_checkouts(self) -> None:
-            """Standalone consumers do not depend on the policy author's home tree."""
+            """Standalone consumers do not depend on the policy author's home tree.
+
+            The shared (committed) policy has no local_checkout entries; local
+            overrides are operator-private and must not affect standalone consumers.
+            """
             for repo in u.Infra.docs_github_repos():
+                # Only test repos without local_checkout (shared policy)
+                if repo.local_checkout:
+                    continue
                 target = u.Infra.docs_canonical_github_url(
                     repo.organization, repo.repository, "README.md"
                 )
