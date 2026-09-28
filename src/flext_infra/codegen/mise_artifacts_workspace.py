@@ -10,6 +10,7 @@ from flext_core import r
 
 from .. import c, m, u
 from ..workspace import FlextInfraWorkspaceDetector
+from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
 from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
 
 if TYPE_CHECKING:
@@ -414,8 +415,12 @@ class FlextInfraMiseWorkspacePlanner:
         """Capture the triple every project projects from its runtime root.
 
         `make upg` writes it at the runtime root. A runtime root that has never
-        carried one (a new repository) starts from flext-infra's packaged copy
-        of its own upg-written triple; a partial set is a broken projection.
+        carried one (a new repository), or still carries the pre-bake
+        projection whose launchers resolve the latest release at run time,
+        starts from flext-infra's packaged copy of its own upg-written triple:
+        that projection predates the `make upg` recipe that bakes a release,
+        so only the packaged copy can seed a baked triple for it. A partial
+        set is a broken projection.
         """
         result_type = r[m.Infra.MiseToolchainArtifactSet]
         paths = tuple(scope_root / name for name, _mode in c.Infra.ARTIFACT_SPECS)
@@ -426,8 +431,11 @@ class FlextInfraMiseWorkspacePlanner:
             return runtime
         present = tuple(state.content is not None for state in runtime.value.states)
         if all(present):
-            return runtime
-        if any(present):
+            if not FlextInfraMiseArtifactsDerivation.resolves_at_run_time(
+                runtime.value
+            ):
+                return runtime
+        elif any(present):
             missing = ", ".join(
                 str(path)
                 for path, found in zip(paths, present, strict=True)

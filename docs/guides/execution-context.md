@@ -109,7 +109,10 @@ chamadas diretas, por PATH ou por shim nunca consultam a rede para escolher vers
 pin; um membro de workspace recebe do `make gen` da raiz a cópia exata desse trio, e só
 a raiz de runtime executa `make upg`. O pacote `flext_infra` distribui em
 `templates/bootstrap/` a cópia do trio do próprio flext-infra, usada apenas por um
-repositório que ainda não tem nenhum. Nunca edite esses arquivos; a correção é
+repositório que ainda não tem nenhum ou que ainda carrega a projeção anterior ao bake,
+cujos launchers resolvem `releases/latest` em tempo de execução: o `make gen` desse
+repositório publica a cópia empacotada, já assada, e o `make upg` seguinte a regrava para
+o release resolvido. Nunca edite esses arquivos; a correção é
 `make upg`. Um `bin/` de projeto nunca entra no PATH (shell, `BASH_ENV` ou `GITHUB_PATH`
 do CI): o Mise liga os shims compartilhados ao primeiro `mise` do PATH. Versione o pin,
 `mise.lock` e os grafos nativos referenciados em `.mise/locks/` juntos; para ferramentas
