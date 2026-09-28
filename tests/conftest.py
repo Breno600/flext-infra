@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib
-import os
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -12,7 +11,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config, infra, p
-from tests import c, m, t, u
+from tests import c, t, u
 
 # NOTE(flext-p68a.9.4, agent codex): the installed flext-tests pytest11 plugin is
 # the only fixture owner; conftest must not re-export or shadow its fixtures.
@@ -56,22 +55,6 @@ def _guard_tracked_codegen_config_untouched() -> Iterator[None]:
             "writers must target an isolated workspace, never the real "
             "checkout (flext-eles2)"
         )
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _isolate_host_gas_city_identity() -> Iterator[None]:
-    """Keep the operator's Gas City identity out of every fixture process.
-
-    The generated ``.envrc`` selects its Gas City Beads branch from the
-    caller's identity variable. A host shell connected to a city exports it,
-    so every fixture repository (declaring no city) would inherit the host
-    city and fail reading its absent ``.beads/metadata.json``. Tests that
-    exercise the city branch pass the variable explicitly.
-    """
-    name = m.Infra.BeadsWorkspaceEnvironmentSpec().identity_var
-    original = os.environ.pop(name, None)
-    yield
-    u.Tests.restore_env(name, original)
 
 
 @pytest.fixture

@@ -192,15 +192,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         codegen.toolchain.environment_path_prepends
                     ),
                     mise_bootstrap=u.Infra.mise_bootstrap_environment(),
-                    gascity=(
-                        m.Infra.BeadsWorkspaceEnvironmentSpec(backend="none")
-                        if target.beads is None
-                        else (
-                            m.Infra.BeadsWorkspaceEnvironmentSpec()
-                            if target.gascity_enabled
-                            else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
-                        )
-                    ),
                 )
             )
         if destination in {c.Infra.MISE_TOML_FILENAME, c.Infra.PYTHON_VERSION_FILENAME}:

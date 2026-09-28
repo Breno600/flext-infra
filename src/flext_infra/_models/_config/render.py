@@ -10,7 +10,6 @@ from flext_cli import m
 from ... import t
 from ..._constants import FlextInfraConstantsCodegenProject
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
-from .beads import FlextInfraConfigModelsBeads
 from .contexts import FlextInfraConfigModelsContexts
 from .contract import FlextInfraConfigModelsContract
 from .make import FlextInfraConfigModelsMake
@@ -211,15 +210,6 @@ class FlextInfraConfigModelsRender:
             FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
             m.Field(description="Strict persistent Mise storage contract"),
         ]
-        gascity: Annotated[
-            FlextInfraConfigModelsBeads.BeadsWorkspaceEnvironmentSpec | None,
-            m.Field(
-                description=(
-                    "Gas City Beads projection present only when the repository "
-                    "declares gascity_enabled"
-                )
-            ),
-        ] = None
 
     class SonarcloudIssueExclusionSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One SonarCloud issue exclusion applied as a server-side project setting.
