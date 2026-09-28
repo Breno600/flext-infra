@@ -82,7 +82,7 @@ class TestsFlextInfraTransactionDirectoryJournal:
             )
             session = tm.ok(owner.begin_locked(scope_root, (plan,), (plan,)))
             return owner.commit_locked(
-                session, lambda: mise_owner.validate_artifacts(root)
+                session, lambda: mise_owner.validate_artifacts(root, scope_root)
             )
 
         tm.ok(owner.run_locked(prepare=True, operation=publish))

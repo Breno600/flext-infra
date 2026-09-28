@@ -55,11 +55,13 @@ class TestsFlextInfraSemanticPhaseContract:
             files=frozenset({path}),
             entries=(finding,),
         )
-        tm.ok(FlextInfraCodemodSemanticApply.apply(root, report))
+        with infra.rope_workspace(root) as rope:
+            tm.ok(FlextInfraCodemodSemanticApply.apply(root, report, rope))
         published = path.read_text(encoding="utf-8")
         tm.that(published, has="from __future__ import annotations")
         tm.that(published, has=f"    class {owner}Member")
-        tm.ok(FlextInfraCodemodSemanticApply.apply(root, report))
+        with infra.rope_workspace(root) as rope:
+            tm.ok(FlextInfraCodemodSemanticApply.apply(root, report, rope))
         tm.that(path.read_text(encoding="utf-8"), eq=published)
 
     def test_nesting_replans_proposed_sources_without_publishing(

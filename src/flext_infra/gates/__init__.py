@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from .markdown import FlextInfraMarkdownGate
     from .markdown_code import FlextInfraMarkdownCodeGate
     from .markdown_code_sources import (
-        is_syntax_broken,
         source_name,
         write_docstring_sources,
         write_fenced_block_sources,
@@ -73,7 +72,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraSmellsGate",
     "FlextInfraTierWhitelistGate",
     "collect_markdown_files",
-    "is_syntax_broken",
     "read_ignore_patterns",
     "source_name",
     "write_docstring_sources",
@@ -96,7 +94,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".markdown": ("FlextInfraMarkdownGate",),
             ".markdown_code": ("FlextInfraMarkdownCodeGate",),
             ".markdown_code_sources": (
-                "is_syntax_broken",
                 "source_name",
                 "write_docstring_sources",
                 "write_fenced_block_sources",

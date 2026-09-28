@@ -9,7 +9,6 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import config, u
-from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_infra.worktree import FlextInfraWorktreeService
@@ -317,19 +316,6 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                     encoding="utf-8",
                 )
         return project
-
-    @staticmethod
-    def create_checker_project(
-        tmp_path: Path, *, project_name: str = "p1", with_src: bool = False
-    ) -> t.Pair[FlextInfraWorkspaceChecker, Path]:
-        """Provide the typed test helper `create_checker_project`."""
-        checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
-        project_dir = TestsFlextInfraUtilitiesWorkspaceFixtureMixin.mk_project(
-            tmp_path, project_name
-        )
-        if with_src:
-            (project_dir / "src").mkdir(parents=True, exist_ok=True)
-        return checker, project_dir
 
     class WorktreeFixture:
         """Provide one repository and lane-path contract without collecting tests."""

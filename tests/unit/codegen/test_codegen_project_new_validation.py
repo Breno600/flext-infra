@@ -26,10 +26,10 @@ class TestsFlextInfraCodegenProjectNewValidation:
             "repository_branch": "0.12.0-dev",
             "flext_repository_url": u.Tests.repository_ref(config.Infra.name).url,
             "flext_repository_ref": u.Tests.provider_branch(),
+            "flext_source": u.Tests.flext_source(),
         }
         resolved = {**defaults, **overrides}
         return FlextInfraCodegenProjectNew(
-            flext_source=u.Tests.flext_source(),
             name="flext-demo",
             kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
             output_root=root,
@@ -44,6 +44,7 @@ class TestsFlextInfraCodegenProjectNewValidation:
             repository_branch=resolved["repository_branch"],
             flext_repository_url=resolved["flext_repository_url"],
             flext_repository_ref=resolved["flext_repository_ref"],
+            flext_source=resolved["flext_source"],
         )
 
     def test_whitespace_flext_ref_is_rejected_without_effects(

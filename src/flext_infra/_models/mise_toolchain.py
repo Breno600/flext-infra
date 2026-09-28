@@ -392,6 +392,32 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
+        version_pin_header: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                min_length=1,
+                description="Generated-marker comments `make upg` writes above the release",
+            ),
+        ]
+        version_pin_reader: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="POSIX awk program selecting the first release line"),
+        ]
+        release_selector: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^[a-z]+:[A-Za-z0-9._/-]+$",
+                description="Tool selector `make upg` resolves for the Mise release",
+            ),
+        ]
+        artifact_specs: Annotated[
+            t.VariadicTuple[t.Pair[t.NonEmptyStr, int]],
+            m.Field(
+                min_length=3,
+                max_length=3,
+                description="Unix launcher, Windows launcher, and pin with modes",
+            ),
+        ]
         lock_file: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -446,6 +472,14 @@ class FlextInfraModelsMiseToolchain:
                     if path.startswith("/") or ".." in path:
                         msg = f"relative path must not be absolute or escape: {path}"
                         raise ValueError(msg)
+            unsafe = ("'", "\n", "\r", "\0")
+            for line in (*self.version_pin_header, self.version_pin_reader):
+                if any(character in line for character in unsafe):
+                    msg = "Mise pin header and reader must be literal-shell safe"
+                    raise ValueError(msg)
+            if not all(line.startswith("#") for line in self.version_pin_header):
+                msg = "Mise pin header lines must be comments"
+                raise ValueError(msg)
             return self
 
 

@@ -77,29 +77,19 @@ class FlextInfraMiseArtifactsFiles:
         return u.Cli.sha256_bytes(content)
 
     @classmethod
-    def packaged_launchers(cls) -> p.Result[t.VariadicTuple[bytes]]:
-        """Load the packaged unlocked bootstrap launcher pair for fresh seeding.
+    def package_directory(cls) -> Path:
+        """Return the physical directory of the running ``flext_infra`` package."""
+        return Path(__file__).resolve().parents[1]
 
-        Package resources are immutable data: the installer may hard-link them
-        to its cache (uv does), so they are read as resources, never as
-        uniquely owned atomic state. Staging owns the destination's atomic
-        publication and executable-output permissions.
+    @classmethod
+    def cold_start_directory(cls) -> Path:
+        """Return the packaged copy of flext-infra's own upg-written triple.
+
+        Its only writer is flext-infra's own generation, which projects its
+        runtime-root ``bin/mise``, ``bin/mise.cmd`` and ``mise.version`` here;
+        a repository that has never carried a triple starts from it.
         """
-        seed_directory = (
-            Path(__file__).resolve().parents[1] / c.Infra.MISE_BOOTSTRAP_SEED_DIRECTORY
-        )
-        contents: list[bytes] = []
-        for name in c.Infra.ARTIFACT_NAMES:
-            path = seed_directory / Path(name).name
-            loaded = u.Cli.files_read_binary(path)
-            if loaded.failure:
-                return r[t.VariadicTuple[bytes]].from_failure(loaded)
-            if not loaded.value:
-                return r[t.VariadicTuple[bytes]].fail(
-                    f"packaged Mise launcher seed is empty: {path}"
-                )
-            contents.append(loaded.value)
-        return r[t.VariadicTuple[bytes]].ok(tuple(contents))
+        return cls.package_directory() / c.Infra.MISE_COLD_START_DIRECTORY
 
     @classmethod
     def read_state(

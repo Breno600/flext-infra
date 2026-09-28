@@ -52,6 +52,8 @@ class FlextInfraTypesBase:
 
     type PlanSourceTimestamp = str | date | datetime | None
     "Native YAML timestamp ingress; dates retain their original precision."
+    type DocsRenderedArtifactTuple = t.Triple[_Path, _Path, str | None]
+    "Rendered document destination, source, and optional project owner."
 
     type RegexPattern = t.RegexPattern
     "Compiled regex pattern for string matching."

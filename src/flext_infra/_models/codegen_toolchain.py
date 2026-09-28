@@ -25,6 +25,9 @@ class FlextInfraModelsCodegenToolchain:
         windows_launcher: Annotated[
             Path, m.Field(description="Windows launcher destination")
         ]
+        version_pin: Annotated[
+            Path, m.Field(description="Pinned Mise release destination")
+        ]
 
     class MiseToolchainProjectLayout(m.ArbitraryTypesModel):
         """Stable paths needed to validate and recover one project."""
@@ -183,11 +186,13 @@ class FlextInfraModelsCodegenToolchain:
                 self.layout.artifacts.config,
                 self.layout.artifacts.unix_launcher,
                 self.layout.artifacts.windows_launcher,
+                self.layout.artifacts.version_pin,
             )
             observed = (
                 self.config.before.path,
                 self.artifacts.unix_launcher.path,
                 self.artifacts.windows_launcher.path,
+                self.artifacts.version_pin.path,
             )
             if observed != expected:
                 msg = "Mise project states differ from declared destinations"
@@ -206,6 +211,15 @@ class FlextInfraModelsCodegenToolchain:
             m.Cli.AtomicFileState,
             m.Field(description="Observed Windows launcher state"),
         ]
+        version_pin: Annotated[
+            m.Cli.AtomicFileState, m.Field(description="Observed Mise pin state")
+        ]
+
+        @m.computed_field
+        @property
+        def states(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
+            """The triple in ``c.Infra.ARTIFACT_SPECS`` order."""
+            return (self.unix_launcher, self.windows_launcher, self.version_pin)
 
     class MiseToolchainWorkspacePlan(m.ArbitraryTypesModel):
         """One stable layout plus a coherent mutable-state snapshot."""
@@ -220,6 +234,24 @@ class FlextInfraModelsCodegenToolchain:
             t.VariadicTuple[FlextInfraModelsCodegenToolchain.MiseToolchainProjectState],
             m.Field(min_length=1, description="Ordered complete workspace topology"),
         ]
+        runtime_artifacts: Annotated[
+            FlextInfraModelsCodegenToolchain.MiseToolchainArtifactSet,
+            m.Field(
+                description=(
+                    "Runtime-root `make upg` triple every project projects, or the "
+                    "packaged cold-start copy when the runtime root has none"
+                )
+            ),
+        ]
+
+        @m.computed_field
+        @property
+        def sources(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
+            """Every state the publication reads: declarations, then the triple."""
+            return (
+                *(state for project in self.projects for state in project.config.sources),
+                *self.runtime_artifacts.states,
+            )
 
         @u.model_validator(mode="after")
         def _validate_project_layouts(self) -> Self:
