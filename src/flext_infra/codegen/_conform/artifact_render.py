@@ -117,20 +117,12 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
     def _rendered_artifact_source(
         self,
+        render_inputs: m.Infra.CodegenRenderInputs,
         *,
-        templates_root: Path,
         template_relpath: Path,
-        failure_prefix: str,
-        dist: str,
-        repository: m.Infra.RepositoryRef,
-        repository_root: Path,
-        target: m.Infra.RepositoryConformTarget,
-        workspace: m.Infra.WorkspaceSpec,
-        codegen: m.Infra.CodegenConfigSpec,
         destination: str,
-        tooling_runtime: m.Infra.ToolingRuntimeContext,
+        failure_prefix: str,
         project_context: m.Infra.ProjectRenderContext | None,
-        managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
     ) -> p.Result[str]:
         """Resolve one artifact render context and render its template source.
 
@@ -138,22 +130,28 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         existing-repository planners: the stage banner the scaffold planner
         prepends to a render failure.
         """
+        target = render_inputs.target
         artifact_context = self._artifact_render_context(
-            dist=dist,
-            repository=repository,
-            repository_root=repository_root,
+            dist=(
+                project_context.dist
+                if project_context is not None
+                else target.repository.distribution
+            ),
+            repository=target.repository,
+            repository_root=target.root,
             target=target,
-            workspace=workspace,
-            codegen=codegen,
+            workspace=render_inputs.workspace,
+            codegen=render_inputs.codegen,
             destination=destination,
-            tooling_runtime=tooling_runtime,
+            tooling_runtime=render_inputs.tooling_runtime,
             project_context=project_context,
-            managed_artifacts=managed_artifacts,
+            managed_artifacts=render_inputs.managed_artifacts.resolution,
         )
         if artifact_context.failure:
             return r[str].from_failure(artifact_context)
         rendered = u.Cli.template_render(
-            templates_root / template_relpath, artifact_context.value
+            u.Infra.codegen_templates_root(render_inputs.codegen) / template_relpath,
+            artifact_context.value,
         )
         if rendered.failure:
             return r[str].fail(
