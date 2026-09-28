@@ -176,6 +176,8 @@ class FlextInfraConstantsCodegenProject:
     WORKSPACE_MANIFEST_VERSION: ClassVar[int] = 3
     UV_LOCK_FILENAME: ClassVar[str] = "uv.lock"
     MISE_LOCK_FILENAME: ClassVar[str] = "mise.lock"
+    MISE_MOVING_SELECTOR: ClassVar[str] = "latest"
+    "Selector resolved only by ``make upg`` into the committed ``mise.lock``."
     GIT_URL_SUFFIX: ClassVar[str] = ".git"
     "Canonical clone-URL suffix every governed RepositoryRef URL carries."
     CUSTOM_MAKE_FILENAME: ClassVar[str] = "custom.mk"

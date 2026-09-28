@@ -346,7 +346,12 @@ class FlextInfraPytestRunnerExecution(
             and cache_restored
         )
         completed_failure = (
-            outcome.raw_return_code == pytest.ExitCode.TESTS_FAILED
+            # Why: under xdist the declared max-failures stop exits as
+            # Interrupted, not TestsFailed; it is still one completed suite
+            # lifecycle whose bounded evidence must be published. An operator
+            # signal keeps forwarded_signal set and never reaches here.
+            outcome.raw_return_code
+            in {pytest.ExitCode.TESTS_FAILED, pytest.ExitCode.INTERRUPTED}
             and not outcome.timed_out
             and outcome.forwarded_signal is None
         )

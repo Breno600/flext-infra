@@ -135,11 +135,7 @@ class FlextInfraWorktreeProvisioning:
         )
         if setup.failure:
             return r[bool].from_failure(setup)
-        interpreter = (
-            lane_venv / "Scripts" / "python.exe"
-            if os.name == "nt"
-            else lane_venv / "bin" / "python"
-        )
+        interpreter = u.Infra.runtime_python(lane)
         if not interpreter.is_file() or not os.access(interpreter, os.X_OK):
             return r[bool].fail(
                 f"lane setup did not create an interpreter: {interpreter}"

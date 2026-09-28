@@ -262,21 +262,19 @@ class FlextInfraUtilitiesProjectDiscovery(
         ).unwrap()
         return runtime.repository_root / c.Infra.ENVIRONMENT_DIRECTORY
 
-    @staticmethod
-    def runtime_python(project_root: Path, *, runtime_root: Path | None = None) -> Path:
-        """Resolve the checkout's own interpreter inside its runtime environment.
+    @classmethod
+    def runtime_python(
+        cls, project_root: Path, *, runtime_root: Path | None = None
+    ) -> Path:
+        """Resolve the fixed Python entrypoint inside the managed environment.
 
-        The generated Makefile's ``RUNTIME_PYTHON``: a verb that executes the
-        checkout's code runs it here, never in whichever environment happens
-        to host the running tool.
+        ``runtime_root`` mirrors ``runtime_environment_dir``: a declared runtime
+        root (the generated Makefile's ``RUNTIME_ROOT``) owns the environment.
         """
-        windows = sys.platform == "win32"
         return (
-            FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
-                project_root, runtime_root=runtime_root
-            )
-            / ("Scripts" if windows else "bin")
-            / ("python.exe" if windows else c.Infra.PromotedSelector.VENV_PYTHON)
+            cls.runtime_environment_dir(project_root, runtime_root=runtime_root)
+            / ("Scripts" if sys.platform == "win32" else "bin")
+            / ("python.exe" if sys.platform == "win32" else c.Infra.PYTHON)
         )
 
 

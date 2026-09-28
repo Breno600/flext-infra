@@ -49,9 +49,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             environments=tuple(toolchain.uv_environments),
         )
 
-    def test_attached_members_render_on_the_workspace_line_of_any_family(
-        self,
-    ) -> None:
+    def test_attached_members_render_on_the_workspace_line_of_any_family(self) -> None:
         """A non-FLEXT member gets its declared source on the workspace line.
 
         The workspace integrates on its own line (``develop``) while the FLEXT
@@ -65,9 +63,8 @@ class TestsFlextInfraPyprojectConformTopologySources:
         workspace = self._workspace(flext_member, other_member).model_copy(
             update={
                 "integration": m.Infra.WorkspaceIntegrationSpec(
-                    provider=test_u.Tests.integration().provider,
-                    branch=workspace_line,
-                ),
+                    provider=test_u.Tests.integration().provider, branch=workspace_line
+                )
             }
         )
         infra = test_u.Tests.repository_ref("flext-infra")
