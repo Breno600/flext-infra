@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import u
+from tests import m, u
 
 
 class TestsFlextInfraPydanticLegacyDetection:
@@ -182,7 +182,9 @@ class TestsFlextInfraPydanticLegacyDetection:
             module_name="validation.py",
         )
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(report.passed, eq=not legacy, msg=str(report.violations))
         tm.that(
@@ -213,7 +215,9 @@ class TestsFlextInfraPydanticLegacyDetection:
             module_name="client.py",
         )
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(
             sum("legacy Pydantic member" in item for item in report.violations),

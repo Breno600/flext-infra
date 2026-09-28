@@ -376,6 +376,11 @@ Infra:
       # database in platformdirs' external per-worktree cache.
       testmon_cache:
         database_filename: .testmondata
+        database_environment_variable: TESTMON_DATAFILE
+        data_home_environment_variable: XDG_CACHE_HOME
+        user_home_environment_variable: HOME
+        home_cache_directory: .cache
+        external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
       # Public verbs execute their declared operation without mode selectors.
@@ -445,7 +450,6 @@ Infra:
           - .reports
         root_files:
           - .coverage
-          - .testmondata
           - flext-infra-codegen-transaction-journal.json.lock
         trace_globs:
           - "*.pstats"
@@ -615,9 +619,6 @@ Infra:
       - {name: .omo}
       - {name: .pylance_cache, vscode_exclude: false}
       - {name: .pytest_cache, source_scan_ignore: true}
-      - {name: .testmondata, is_dir: false, source_scan_ignore: true}
-      - {name: .testmondata-wal, is_dir: false, source_scan_ignore: true}
-      - {name: .testmondata-shm, is_dir: false, source_scan_ignore: true}
       - {name: .reports, source_scan_ignore: true}
       - {name: .ropeproject}
       - {name: .ruff_cache, source_scan_ignore: true}
