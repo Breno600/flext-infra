@@ -10,49 +10,35 @@ rule:
         context: |
             def _captured_process_result(
                 cls,
-                cmd: t.StrSequence,
-                return_code: int | None,
-                received_signals: list[int],
-                diagnostics: t.VariadicTuple[str],
-                stdout_output: bytearray,
-                stderr_output: bytearray,
-                duration: float,
+                cmd: $COMMAND_TYPE,
+                $$$PARAMETERS,
                 *,
-                timed_out: bool,
-                timeout_seconds: int | None,
-                timeout_exit_code: int,
-            ) -> p.Result[p.Cli.CommandBytesOutput]:
+                timed_out: $TIMED_OUT_TYPE,
+                timeout_seconds: $SECONDS_TYPE,
+                timeout_exit_code: $EXIT_CODE_TYPE,
+            ) -> $RESULT_TYPE:
                 $DOC
                 return cls._process_exit_result(
                     cmd,
-                    return_code,
-                    received_signals,
-                    diagnostics,
+                    $$$ARGUMENTS,
                     timed_out=timed_out,
                     legacy_timeout=timeout_seconds is not None,
                     legacy_timeout_seconds=timeout_seconds,
                     timeout_exit_code=timeout_exit_code,
-                ).map($CONVERT)
+                ).map($MAPPER)
         selector: function_definition
 fix: |
     def _captured_process_result(
         cls,
-        return_code: int | None,
-        received_signals: list[int],
-        diagnostics: t.VariadicTuple[str],
-        stdout_output: bytearray,
-        stderr_output: bytearray,
-        duration: float,
+        $$$PARAMETERS,
         *,
-        timed_out: bool,
-    ) -> p.Result[p.Cli.CommandBytesOutput]:
+        timed_out: $TIMED_OUT_TYPE,
+    ) -> $RESULT_TYPE:
         $DOC
         return cls._process_exit_result(
-            return_code,
-            received_signals,
-            diagnostics,
+            $$$ARGUMENTS,
             timed_out=timed_out,
-        ).map($CONVERT)
+        ).map($MAPPER)
 message: Remove timeout policy from captured ProcessOutcome construction.
 ---
 id: rewire-cli-captured-process-outcome-model
@@ -61,30 +47,28 @@ severity: error
 files:
   - "flext-cli/src/flext_cli/_utilities/_runtime_process_outcome.py"
 rule:
-    pattern:
-        context: |
-            def _captured_process_result($$$PARAMS) -> $RESULT:
-                $DOC
-                return $PROCESS.map(
-                    lambda outcome: m.Cli.CommandBytesOutput(
-                        stdout=$STDOUT,
-                        stderr=$STDERR,
-                        outcome=outcome,
-                        duration=$DURATION,
-                    )
-                )
-        selector: function_definition
-fix: |
-    def _captured_process_result($$$PARAMS) -> $RESULT:
-        $DOC
-        return $PROCESS.map(
-            lambda outcome: m.Cli.CommandBytesOutput(
-                stdout=$STDOUT,
-                stderr=$STDERR,
-                outcome=m.Cli.ProcessOutcome.model_validate(
-                    outcome, from_attributes=True
-                ),
-                duration=$DURATION,
-            )
+    pattern: |
+        lambda $OUTCOME: m.Cli.CommandBytesOutput(
+            $$$BEFORE,
+            outcome=$OUTCOME,
+            $$$AFTER,
         )
+    inside:
+        pattern:
+            context: |
+                def _captured_process_result(
+                    cls,
+                    $$$PARAMETERS,
+                    *,
+                    timed_out: $TIMED_OUT_TYPE,
+                ) -> $RESULT_TYPE:
+                    $$$BODY
+            selector: function_definition
+        stopBy: end
+fix: |
+    lambda $OUTCOME: m.Cli.CommandBytesOutput(
+        $$$BEFORE,
+        outcome=m.Cli.ProcessOutcome.model_validate($OUTCOME, from_attributes=True),
+        $$$AFTER,
+    )
 message: Materialize the structural process outcome at the Pydantic command boundary.

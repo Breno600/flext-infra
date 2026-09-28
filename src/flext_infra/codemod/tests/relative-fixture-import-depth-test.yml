@@ -1,5 +1,0 @@
-id: relative-fixture-import-depth
-valid:
-  - from ._fixtures import TestsFlextInfraValidateNamespaceBase
-invalid:
-  - from .._fixtures import TestsFlextInfraValidateNamespaceBase

@@ -16,11 +16,11 @@ class FlextInfraPromotedRegistry:
     def __init__(self) -> None:
         """Initialize an empty command registry."""
         self._commands: t.MutableMappingKV[
-            str, t.MutableMappingKV[str, p.Infra.Promoted.Command]
+            str, t.MutableMappingKV[str, p.Infra.PromotedCommand]
         ] = {}
-        self._aliases: t.MutableMappingKV[str, p.Infra.Promoted.AliasTarget] = {}
+        self._aliases: t.MutableMappingKV[str, p.Infra.PromotedAliasTarget] = {}
 
-    def add(self, command: p.Infra.Promoted.Command) -> None:
+    def add(self, command: p.Infra.PromotedCommand) -> None:
         """Add one command and its ``alias`` or ``alias=WHAT`` specifications."""
         message = c.Infra.PromotedMessage
         by_what = self._commands.setdefault(command.verb, {})
@@ -31,7 +31,7 @@ class FlextInfraPromotedRegistry:
         by_what[command.what] = command
         for alias in command.aliases:
             name, separator, what = alias.partition(c.Infra.PromotedSelector.ALIAS)
-            target = m.Infra.Promoted.AliasTarget(
+            target = m.Infra.PromotedAliasTarget(
                 verb=command.verb, what=what.strip() if separator else command.what
             )
             if not name.strip() or not target.what:
@@ -92,15 +92,15 @@ class FlextInfraPromotedRegistry:
             u.Infra.promoted_fail(c.Infra.PromotedMessage.UNKNOWN_VERB, verb=verb)
         return resolved
 
-    def alias_target(self, verb: str) -> p.Infra.Promoted.AliasTarget | None:
+    def alias_target(self, verb: str) -> p.Infra.PromotedAliasTarget | None:
         """Return the alias target for a requested verb, if any."""
         return self._aliases.get(verb)
 
-    def commands(self, verb: str) -> t.MappingKV[str, p.Infra.Promoted.Command]:
+    def commands(self, verb: str) -> t.MappingKV[str, p.Infra.PromotedCommand]:
         """Return commands registered for a verb or alias."""
         return self._commands[self.resolve_verb(verb)]
 
-    def command(self, verb: str, what: str) -> p.Infra.Promoted.Command:
+    def command(self, verb: str, what: str) -> p.Infra.PromotedCommand:
         """Return one command by verb and WHAT."""
         commands = self.commands(verb)
         if what not in commands:

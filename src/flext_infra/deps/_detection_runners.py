@@ -22,7 +22,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
         # Conversion helper provided by the concrete analyzer; declared for static
         # resolution only (runtime impl lives on the concrete via FLEXT).
         def _to_toml_config(
-            self, payload: t.MappingKV[str, t.Infra.InfraValue]
+            self, payload: t.MappingKV[str, t.JsonValue]
         ) -> t.JsonMapping: ...
 
     def _read_plain(self, path: Path) -> p.Result[t.JsonMapping]:
@@ -54,7 +54,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
         extend_exclude: t.StrSequence | None = None,
     ) -> p.Result[t.Pair[t.SequenceOf[t.JsonMapping], int]]:
         """Run deptry analysis on a project and parse JSON output."""
-        settings = config_path or project_path / c.Infra.PYPROJECT_FILENAME
+        settings = config_path or project_path / c.PYPROJECT_FILENAME
         if not settings.exists():
             return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].ok(([], 0))
         out_file = json_output_path or project_path / ".deptry-report.json"
@@ -131,7 +131,7 @@ class FlextInfraDependencyDetectionRunnersMixin:
             c.Infra.MYPY,
             c.Infra.DEFAULT_SRC_DIR,
             "--config-file",
-            c.Infra.PYPROJECT_FILENAME,
+            c.PYPROJECT_FILENAME,
             "--no-error-summary",
             "--no-color-output",
         ))

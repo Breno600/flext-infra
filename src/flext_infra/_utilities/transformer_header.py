@@ -57,20 +57,34 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         return "".join(body)
 
     @classmethod
-    def ensure_alias_import(cls, source: str, module: str, alias: str) -> str:
-        """Inject ``from <module> import <alias>`` when the alias is actually used."""
+    def ensure_alias_import(
+        cls, source: str, module: str, alias: str, *, runtime_required: bool = False
+    ) -> str:
+        """Honor the consumer's runtime requirement when introducing an alias."""
         if not alias:
             msg = "canonical import alias must be non-empty"
             raise ValueError(msg)
         if not cls.alias_used(source, alias):
             return source
-        if cls.has_alias_import(source, alias) or cls.alias_locally_bound(
-            source, alias
-        ):
+        if cls.has_alias_import(source, alias):
+            deferred = (
+                not runtime_required
+                and "from __future__ import annotations" in source
+                and cls._alias_is_annotation_only(source, alias)
+            )
+            if cls.has_runtime_alias_import(source, alias) or deferred:
+                return source
+            msg = (
+                f"canonical alias {alias!r} has only deferred or conditional imports "
+                "but its consumer requires a runtime binding"
+            )
+            raise ValueError(msg)
+        if cls.alias_locally_bound(source, alias):
             return source
-        typed = cls._alias_import_under_type_checking(source, module, alias)
-        if typed is not None:
-            return typed
+        if not runtime_required:
+            typed = cls._alias_import_under_type_checking(source, module, alias)
+            if typed is not None:
+                return typed
         info = cls._parse_header(source)
         offset = info.span.last_import_end or max(
             info.span.shebang_end,
@@ -82,6 +96,23 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         if offset < len(source) and not source[offset:].startswith("\n"):
             line = f"{line}\n"
         return f"{source[:offset]}{line}{source[offset:]}"
+
+    @staticmethod
+    def has_runtime_alias_import(source: str, alias: str | None = None) -> bool:
+        """Prove one or any canonical facade alias in the runtime import header."""
+        module = ast.parse(source)
+        header = (
+            module.body[1:] if ast.get_docstring(module) is not None else module.body
+        )
+        expected = (
+            frozenset({alias}) if alias is not None else c.ENFORCEMENT_CANONICAL_ALIASES
+        )
+        for node in header:
+            if not isinstance(node, ast.ImportFrom | ast.Import):
+                return False
+            if any((name.asname or name.name) in expected for name in node.names):
+                return True
+        return False
 
     @classmethod
     def _alias_import_under_type_checking(
@@ -173,7 +204,8 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         Every binding counts, including one inside ``if TYPE_CHECKING:``. The
         header scan stops at the first non-header statement, so an alias
         imported in that block read as absent and a duplicate was injected
-        next to it.
+        next to it. This proves a lexical declaration only; callers requiring
+        runtime availability use ``has_runtime_alias_import``.
         """
         try:
             module = ast.parse(source)
@@ -232,7 +264,7 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         runtime_ids = (
             FlextInfraUtilitiesTransformerHeader._runtime_model_annotation_ids(module)
         )
-        spans: list[tuple[int, int, int, int]] = []
+        spans: list[t.Quad[int, int, int, int]] = []
         for node in ast.walk(module):
             annotations = []
             if isinstance(node, ast.AnnAssign | ast.arg):

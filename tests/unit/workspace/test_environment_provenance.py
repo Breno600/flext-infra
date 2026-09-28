@@ -149,6 +149,3 @@ class TestsFlextInfraWorkspaceEnvironmentProvenance:
         error = self._provenance_failure(workspace, site_packages)
         tm.that(error, has="distribution count mismatch")
         tm.that(error, has="distribution=sample-member")
-
-
-__all__: list[str] = ["TestsFlextInfraWorkspaceEnvironmentProvenance"]

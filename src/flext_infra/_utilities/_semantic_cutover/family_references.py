@@ -6,23 +6,25 @@ from flext_infra import c, m, p, t
 
 from ..rope_runtime_refactors import FlextInfraUtilitiesRopeRuntimeRefactors
 from ..rope_structure import FlextInfraUtilitiesRopeStructure
+from .family_type_references import FlextInfraUtilitiesSemanticFamilyTypeReferences
 
 
-class FlextInfraUtilitiesSemanticFamilyReferences:
+class FlextInfraUtilitiesSemanticFamilyReferences(
+    FlextInfraUtilitiesSemanticFamilyTypeReferences
+):
     """Use Rope occurrences, never textual wrapper-name substitutions."""
 
-    @staticmethod
+    @classmethod
     def _family_consumer_rewrites(
-        project: p.Infra.RopeProject,
+        cls,
         resource: p.Infra.RopeResource,
         source: str,
         *,
-        owner_name: str,
-        wrapper_name: str,
-        wrapper: p.Infra.RopePyName,
-        names: t.MappingKV[str, str],
+        flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, t.VariadicTuple[m.Infra.SourceRewrite]]:
         runtime = FlextInfraUtilitiesRopeRuntimeRefactors
+        project, wrapper, names = flatten.project, flatten.wrapper, flatten.names
+        wrapper_name = flatten.wrapper_name
         finder = runtime.create_occurrence_finder(
             project, wrapper_name, wrapper, imports=True, in_hierarchy=False
         )
@@ -71,7 +73,7 @@ class FlextInfraUtilitiesSemanticFamilyReferences:
                             == c.Infra.RopeScopeKind.FUNCTION
                             for statement in statements
                         )
-                        parent = owner_name if in_function else ""
+                        parent = flatten.owner_name if in_function else ""
                     text = f"{parent}.{replacement}" if parent else replacement
                     edits.append(
                         m.Infra.SourceRewrite(
@@ -82,7 +84,8 @@ class FlextInfraUtilitiesSemanticFamilyReferences:
                     edits.append(
                         m.Infra.SourceRewrite(start=start, end=end, text=replacement)
                     )
-        return (False, tuple(edits))
+        blocked, quoted = cls._family_quoted_rewrites(resource, source, flatten=flatten)
+        return (True, ()) if blocked else (False, (*edits, *quoted))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesSemanticFamilyReferences"]

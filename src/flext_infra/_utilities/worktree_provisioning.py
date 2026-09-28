@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, m
+from flext_infra import c, m
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -121,18 +121,13 @@ class FlextInfraWorktreeProvisioning:
         gitlinks = cls._prepare_governed_gitlinks(lane)
         if gitlinks.failure:
             return gitlinks
-        if not (lane / c.Infra.PYPROJECT_FILENAME).is_file():
+        if not (lane / c.PYPROJECT_FILENAME).is_file():
             return r[bool].ok(True)
-        venv_name = config.Infra.tooling.tools.pyright.path_rules.venv_name
-        lane_venv = lane / venv_name
+        lane_venv = u.Infra.runtime_environment_dir(lane)
         if lane_venv.is_symlink():
-            try:
-                lane_venv.unlink()
-            except OSError as exc:
-                return r[bool].fail(
-                    f"failed to remove foreign lane environment link: {exc}",
-                    exception=exc,
-                )
+            return r[bool].fail(
+                f"lane environment must be physical, not a symlink: {lane_venv}"
+            )
         setup = u.Cli.run_live(
             (c.Infra.MAKE, "setup"),
             cwd=lane,

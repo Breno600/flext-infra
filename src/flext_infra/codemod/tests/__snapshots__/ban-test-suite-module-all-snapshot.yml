@@ -1,0 +1,59 @@
+id: ban-test-suite-module-all
+snapshots:
+  __all__ += ("TestsFlextDemoExtra",):
+    fixed: ''
+    labels:
+    - source: __all__ += ("TestsFlextDemoExtra",)
+      style: primary
+      start: 0
+      end: 35
+    - source: __all__ += ("TestsFlextDemoExtra",)
+      style: secondary
+      start: 0
+      end: 35
+    - source: __all__
+      style: secondary
+      start: 0
+      end: 7
+    - source: __all__ += ("TestsFlextDemoExtra",)
+      style: secondary
+      start: 0
+      end: 35
+  __all__ = ["TestsFlextDemo"]:
+    fixed: ''
+    labels:
+    - source: __all__ = ["TestsFlextDemo"]
+      style: primary
+      start: 0
+      end: 28
+    - source: __all__ = ["TestsFlextDemo"]
+      style: secondary
+      start: 0
+      end: 28
+    - source: __all__
+      style: secondary
+      start: 0
+      end: 7
+    - source: __all__ = ["TestsFlextDemo"]
+      style: secondary
+      start: 0
+      end: 28
+  '__all__: list[str] = ["TestsFlextDemo"]':
+    fixed: ''
+    labels:
+    - source: '__all__: list[str] = ["TestsFlextDemo"]'
+      style: primary
+      start: 0
+      end: 39
+    - source: '__all__: list[str] = ["TestsFlextDemo"]'
+      style: secondary
+      start: 0
+      end: 39
+    - source: __all__
+      style: secondary
+      start: 0
+      end: 7
+    - source: '__all__: list[str] = ["TestsFlextDemo"]'
+      style: secondary
+      start: 0
+      end: 39

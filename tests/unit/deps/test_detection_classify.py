@@ -109,7 +109,7 @@ class TestsFlextInfraDepsDetectionClassify:
             "custom_module": "types-custom"
         })
         tm.that(inner, none=False)
-        limits: t.MappingKV[str, t.Infra.InfraValue] = {
+        limits: t.MappingKV[str, t.JsonValue] = {
             "typing_libraries": {"module_to_package": inner}
         }
         tm.that(

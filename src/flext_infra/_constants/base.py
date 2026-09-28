@@ -214,16 +214,28 @@ class FlextInfraConstantsBase(
     "Ambient Gitleaks policy variables removed from release scans."
     SOURCE_DATE_EPOCH: ClassVar[str] = "SOURCE_DATE_EPOCH"
     "Reproducible-build timestamp environment variable."
-    RELEASE_BUILD_CONSTRAINTS_PATH: ClassVar[str] = "config/build-constraints.txt"
-    "Workspace-relative release build constraints snapshot path."
     TRANSACTION_STATE_DIRNAME: ClassVar[str] = ".state"
     "Root of regenerable codegen transaction state; never repository content."
     RELEASE_GITLEAKS_CONFIG_PATH: ClassVar[str] = "config/gitleaks-release.toml"
     "Workspace-relative trusted release secret-scan configuration."
     PYPI_SIMPLE_INDEX_URL: ClassVar[str] = "https://pypi.org/simple"
     "Canonical public package index used by isolated release builds."
-    PYPI_UPLOAD_URL: ClassVar[str] = "https://upload.pypi.org/legacy/"
-    "Canonical public package upload endpoint."
+    RELEASE_UV_BUILD_ARGS: ClassVar[t.StrSequence] = (
+        UV,
+        "build",
+        "--force-pep517",
+        "--no-config",
+        "--no-sources",
+        "--no-python-downloads",
+        "--no-create-gitignore",
+        "--no-progress",
+        "--color",
+        "never",
+        "--default-index",
+        PYPI_SIMPLE_INDEX_URL,
+        "--require-hashes",
+    )
+    "Fail-closed isolated build of one release artifact from staged source."
     JSON_RPC_VERSION: ClassVar[str] = "2.0"
     "Canonical JSON-RPC protocol version used by LSP transports."
     GATE_ATTESTATION_SCHEMA: ClassVar[str] = "https://flext.sh/attestations/gates/v1"

@@ -24,7 +24,17 @@ class TestsFlextInfraRefactorMainCli:
 
     _FUTURE_INIT = "from __future__ import annotations\n"
 
-    _MISSING_RUNTIME_ALIAS_MODULE = (
+    # The letter is published in __all__ but never bound: the published
+    # declaration is the defect, so the fix un-publishes it. A runtime alias
+    # is never inferred from the module's file family.
+    _UNBOUND_RUNTIME_ALIAS_EXPORT_MODULE = (
+        "from __future__ import annotations\n\n"
+        '__all__: list[str] = ["FlextDemoModels", "m"]\n\n'
+        "class FlextDemoModels:\n"
+        "    pass\n"
+    )
+
+    _UNDECLARED_RUNTIME_ALIAS_MODULE = (
         "from __future__ import annotations\n\n"
         '__all__: list[str] = ["FlextDemoModels"]\n\n'
         "class FlextDemoModels:\n"
@@ -251,6 +261,7 @@ class TestsFlextInfraRefactorMainCli:
         cls, workspace: Path, *, rules: str, kinds: str | None = None
     ) -> None:
         """Run one applying census through the CLI, asserting a clean exit."""
+        u.Tests.provision_checkout(workspace)
         args = [
             "census",
             "--repository-root",
@@ -406,18 +417,33 @@ class TestsFlextInfraRefactorMainCli:
         result = self._refactor_main("census", "--repository-root", str(workspace))
         tm.that(result, eq=0)
 
-    def test_refactor_census_apply_fixes_missing_runtime_alias(
+    def test_refactor_census_does_not_infer_runtime_alias_from_filename(
         self, tmp_path: Path
     ) -> None:
+        """A module that declares no letter never acquires one from its name."""
         workspace, module_path = self._build_module_workspace(
-            tmp_path, self._MISSING_RUNTIME_ALIAS_MODULE
+            tmp_path, self._UNDECLARED_RUNTIME_ALIAS_MODULE
         )
 
         self._apply_census(workspace, rules="runtime_alias")
 
         source = module_path.read_text(encoding="utf-8")
-        tm.that(source, has='"m"')
-        tm.that(source, has="m = FlextDemoModels")
+        tm.that(source, lacks='"m"')
+        tm.that(source, lacks="m = FlextDemoModels")
+
+    def test_refactor_census_removes_unbound_declared_runtime_alias_export(
+        self, tmp_path: Path
+    ) -> None:
+        """An unbound letter is removed from ``__all__``, never inferred."""
+        workspace, module_path = self._build_module_workspace(
+            tmp_path, self._UNBOUND_RUNTIME_ALIAS_EXPORT_MODULE
+        )
+
+        self._apply_census(workspace, rules="runtime_alias")
+
+        source = module_path.read_text(encoding="utf-8")
+        tm.that(source, lacks='"m"')
+        tm.that(source, lacks="m = FlextDemoModels")
 
     def test_refactor_census_reports_duplicate_runtime_alias(
         self, tmp_path: Path
@@ -542,6 +568,7 @@ class TestsFlextInfraRefactorMainCli:
         self, tmp_path: Path
     ) -> None:
         workspace = self._build_test_only_workspace(tmp_path)
+        u.Tests.initialize_git_repo(workspace)
 
         report = u.Tests.census_report(
             workspace, kinds=("function",), rules=("unused",)
@@ -926,6 +953,3 @@ class TestsFlextInfraRefactorMainCli:
         tm.that(report.removal_candidate_count, eq=0)
 
         tm.that(len(self._impact_map_entries(impact_map_path)), eq=1)
-
-
-__all__: list[str] = ["TestsFlextInfraRefactorMainCli"]

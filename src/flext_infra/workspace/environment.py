@@ -28,7 +28,7 @@ class FlextInfraWorkspaceEnvironmentMixin:
         """Sync one workspace's generated environment files."""
         result_type = m.Infra.WorkspaceEnvironmentSyncResult
         repository_root = request.repository_root
-        if not (repository_root / c.Infra.PYPROJECT_FILENAME).is_file():
+        if not (repository_root / c.PYPROJECT_FILENAME).is_file():
             return cls._remove_generated_environment_files(request)
         envrc_result = cls._sync_envrc(request)
         if envrc_result.failure:
@@ -103,12 +103,6 @@ class FlextInfraWorkspaceEnvironmentMixin:
             context
             if context is not None
             else m.Infra.EnvrcRenderSpec(
-                state_directory_name=config.Infra.codegen.toolchain.state_directory_name,
-                scratch_namespace=config.Infra.codegen.toolchain.scratch_namespace,
-                scratch_home_relative=(
-                    config.Infra.codegen.toolchain.scratch_home_relative
-                ),
-                pycache_namespace=config.Infra.codegen.toolchain.pycache_namespace,
                 environment_path_prepends=(
                     config.Infra.codegen.toolchain.environment_path_prepends
                 ),

@@ -21,6 +21,60 @@ if TYPE_CHECKING:
 class TestsFlextInfraFileParticipantRecovery:
     """Recover prepared file-only journals through their physical owners."""
 
+    @pytest.mark.parametrize("invalid_later_plan", ["participant", "destination"])
+    def test_later_invalid_plan_leaves_no_partial_staging(
+        self, tmp_path: Path, invalid_later_plan: str
+    ) -> None:
+        """A rejected phase cannot strand earlier replacements outside its journal."""
+        root = test_u.Tests.git_repository(tmp_path)
+        nested = root / "unregistered"
+        nested.mkdir()
+        first = root / "first.md"
+        second = nested / "second.md"
+        roots = {"@docs-0": root}
+        owner = FlextInfraCodegenTransaction(
+            FlextInfraCodegenMiseArtifacts(repository_root=root)
+        )
+
+        def publish(scope: Path) -> p.Result[m.Infra.CodegenTransactionSession]:
+            session = tm.ok(owner.begin_files_locked(scope, roots, ()))
+            plans = tuple(
+                m.Infra.CodegenFilePlan(
+                    project=project,
+                    path=destination,
+                    before=tm.ok(
+                        u.Cli.atomic_read_binary_file_state(destination, required=False)
+                    ),
+                    desired_content=b"generated replacement\n",
+                    desired_mode=session.journal_state.mode,
+                    owner="docs",
+                )
+                for project, destination in (
+                    (root, first),
+                    (nested if invalid_later_plan == "participant" else root, second),
+                )
+            )
+            if invalid_later_plan == "destination":
+                second.write_bytes(b"concurrent content\n")
+            return owner.append_phase_locked(session, "docs", plans)
+
+        failed = owner.run_files_locked(roots, publish)
+
+        tm.fail(
+            failed,
+            has="no transaction participant"
+            if invalid_later_plan == "participant"
+            else "destination",
+        )
+        tm.that(first.exists(), eq=False)
+        if invalid_later_plan == "destination":
+            tm.that(second.read_bytes(), eq=b"concurrent content\n")
+        else:
+            tm.that(second.exists(), eq=False)
+        # A fresh public transaction entry authenticates and reconciles the tree;
+        # the previous implementation refuses its unregistered phase directory.
+        tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
+
     def test_fresh_import_failure_restores_published_initializer(
         self, tmp_path: Path
     ) -> None:
@@ -34,15 +88,13 @@ class TestsFlextInfraFileParticipantRecovery:
             FlextInfraCodegenMiseArtifacts(repository_root=root)
         )
         roots = {"@lazy-init": root}
-        publication = tm.ok(
-            u.Infra.planned_file(
-                root,
-                initializer,
-                required=True,
-                desired_content=b"__all__ = ('missing_export',)\n",
-                desired_mode=before.mode,
-                owner="lazy-init",
-            )
+        publication = m.Infra.CodegenFilePlan(
+            project=root,
+            path=initializer,
+            before=before,
+            desired_content=b"__all__ = ('missing_export',)\n",
+            desired_mode=before.mode,
+            owner="lazy-init",
         )
         validator = FlextInfraValidateFreshImport(
             repository_root=root, packages=(package.name,)
@@ -107,15 +159,15 @@ class TestsFlextInfraFileParticipantRecovery:
 
         def prepare(scope_root: Path) -> p.Result[m.Infra.CodegenTransactionSession]:
             session = tm.ok(owner.begin_files_locked(scope_root, roots, ()))
-            plan = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    target,
-                    required=False,
-                    desired_content=b"owned publication\n",
-                    desired_mode=session.journal_state.mode,
-                    owner="docs",
-                )
+            plan = m.Infra.CodegenFilePlan(
+                project=root,
+                path=target,
+                before=tm.ok(
+                    u.Cli.atomic_read_binary_file_state(target, required=False)
+                ),
+                desired_content=b"owned publication\n",
+                desired_mode=session.journal_state.mode,
+                owner="docs",
             )
             return owner.append_phase_locked(session, "docs", (plan,))
 
@@ -208,15 +260,15 @@ class TestsFlextInfraFileParticipantRecovery:
 
         def fail_session(scope: Path) -> p.Result[bool]:
             session = tm.ok(owner.begin_files_locked(scope, roots, ()))
-            plan = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    target,
-                    required=False,
-                    desired_content=b"prepared publication\n",
-                    desired_mode=session.journal_state.mode,
-                    owner="docs",
-                )
+            plan = m.Infra.CodegenFilePlan(
+                project=root,
+                path=target,
+                before=tm.ok(
+                    u.Cli.atomic_read_binary_file_state(target, required=False)
+                ),
+                desired_content=b"prepared publication\n",
+                desired_mode=session.journal_state.mode,
+                owner="docs",
             )
             initial = session
             session = tm.ok(owner.append_phase_locked(session, "docs", (plan,)))
@@ -267,6 +319,3 @@ class TestsFlextInfraFileParticipantRecovery:
             return r[bool].ok(True)
 
         tm.ok(owner.run_files_locked(roots, fail_session))
-
-
-__all__ = ["TestsFlextInfraFileParticipantRecovery"]

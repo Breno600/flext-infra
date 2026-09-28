@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
-from flext_infra import c, m, t, u
+from flext_infra import c, m, settings, t, u
 
 from .base_gate import FlextInfraGate
 
@@ -34,7 +34,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
     # flext-pulj: process results stay structural outside the Pydantic boundary.
     _scan_cache: ClassVar[MutableMapping[str, p.Cli.CommandOutput]] = {}
     _python_behavior_cache: ClassVar[
-        MutableMapping[tuple[str, int, int], tuple[tuple[int, int], ...]]
+        MutableMapping[t.Triple[str, int, int], t.VariadicTuple[t.Pair[int, int]]]
     ] = {}
 
     @override
@@ -145,13 +145,22 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         discovered = u.Infra.resolve_projects(self._repository_root, ())
         if discovered.failure:
             return r[t.StrSequence].from_failure(discovered)
+        projects = (
+            tuple(
+                project
+                for project in discovered.value
+                if project.path.resolve() == project_dir.resolve()
+            )
+            if settings.Infra.github_actions
+            else discovered.value
+        )
         declared_trees = self._declared_duplication_trees()
         if declared_trees.failure:
             return r[t.StrSequence].from_failure(declared_trees)
         return r[t.StrSequence].ok(
             tuple(
                 str(project.path / candidate)
-                for project in discovered.value
+                for project in projects
                 for candidate in (
                     *self._existing_check_dirs(project.path),
                     *(
@@ -297,7 +306,7 @@ class FlextInfraDuplicationGate(FlextInfraGate):
     def _failure_issue(message: str | None) -> m.Infra.Issue:
         """Represent malformed or absent jscpd output as a blocking issue."""
         return m.Infra.Issue(
-            file=c.Infra.PYPROJECT_FILENAME,
+            file=c.PYPROJECT_FILENAME,
             line=1,
             column=0,
             code=FlextInfraDuplicationGate.gate_id,

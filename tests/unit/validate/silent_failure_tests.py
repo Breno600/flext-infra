@@ -169,7 +169,7 @@ class TestsFlextInfraSilentFailure:
         file_path = project / "src" / "flext_infra" / "utilities.py"
         rope_project = u.Infra.init_rope_project(project)
         try:
-            resource = u.Infra.get_resource_from_path(rope_project, file_path)
+            resource = u.Infra.resolve_resource_from_path(rope_project, file_path)
             resource = tm.not_none(resource)
             updated, changes = u.Infra.fix_silent_failure_sentinels(
                 rope_project, resource, apply=False
@@ -253,6 +253,3 @@ class TestsFlextInfraSilentFailure:
 
     def test_validate_cli_route_help_returns_zero(self) -> None:
         tm.that(infra_main(["validate", "silent-failure", "--help"]), eq=0)
-
-
-__all__: list[str] = ["TestsFlextInfraSilentFailure"]

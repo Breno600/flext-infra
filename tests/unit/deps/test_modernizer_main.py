@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra import FlextInfraPyprojectModernizer, main
-from tests import c
+from tests import c, m
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,11 +27,15 @@ class TestsFlextInfraDepsModernizerMain:
         self, modernizer_workspace: Path
     ) -> None:
         """Invalid TOML fails closed with the offending path."""
-        pyproject = modernizer_workspace / c.Infra.PYPROJECT_FILENAME
+        pyproject = modernizer_workspace / c.PYPROJECT_FILENAME
         tm.fail(
             FlextInfraPyprojectModernizer(
                 repository_root=modernizer_workspace
-            ).conform_source("invalid [[[", path=pyproject),
+            ).conform_source(
+                "invalid [[[",
+                path=pyproject,
+                topology=m.Infra.PyprojectDeclaredTopology(),
+            ),
             has="invalid TOML",
         )
 
@@ -46,9 +50,7 @@ class TestsFlextInfraDepsModernizerMain:
         exit_code = modernizer.run()
         tm.that(exit_code, eq=0)
         tm.that(
-            (modernizer_workspace / c.Infra.PYPROJECT_FILENAME).read_text(
-                encoding="utf-8"
-            ),
+            (modernizer_workspace / c.PYPROJECT_FILENAME).read_text(encoding="utf-8"),
             has='build-backend = "hatchling.build"',
         )
 

@@ -139,6 +139,3 @@ class TestsFlextInfraAuditor:
         self, *, is_external: Callable[[str], bool]
     ) -> None:
         tm.that(is_external("path/to/file.md"), eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraAuditor"]

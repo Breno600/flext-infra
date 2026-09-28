@@ -8,54 +8,41 @@
 # === SECTION: strict evaluation and watched inputs (managed) ===
 # Source: template (direnv stdlib contract)
 strict_env
-watch_file .mise.toml
-watch_file pyproject.toml
 # End SECTION: strict evaluation and watched inputs
 
 # === SECTION: repository environment (managed) ===
 # Source: computed:nearest-pyproject-via-direnv-find_up + template
 PROJECT_ROOT="$(find_up pyproject.toml)"
 PROJECT_ROOT="${PROJECT_ROOT%/*}"
-VENV_DIR="${PROJECT_ROOT}/.venv"
-PROJECT_STATE_ROOT="${PROJECT_ROOT%/*}/{{ state_directory_name }}/${PROJECT_ROOT##*/}"
-# Scratch never lives inside a versioned tree: the home scratch root mirrors
-# the absolute checkout path so a sandbox is never a tracked scope of any
-# enclosing repository (workspace or linked worktree). Checkouts nested in a
-# VCS directory rename that segment, so the mirror never contains one.
-PROJECT_SCRATCH_IDENTITY="${PROJECT_ROOT}/"
-{% for segment, alias in scratch_identity_segment_aliases -%}
-scratch_segment="/{{ segment }}/"
-scratch_alias="/{{ alias }}/"
-while [[ "${PROJECT_SCRATCH_IDENTITY}" == *"${scratch_segment}"* ]]; do
-  PROJECT_SCRATCH_IDENTITY="${PROJECT_SCRATCH_IDENTITY//"${scratch_segment}"/"${scratch_alias}"}"
-done
-{% endfor -%}
-PROJECT_SCRATCH_IDENTITY="${PROJECT_SCRATCH_IDENTITY%/}"
-PROJECT_SCRATCH="${HOME}/{{ scratch_home_relative }}/{{ state_directory_name }}${PROJECT_SCRATCH_IDENTITY}/{{ scratch_namespace }}"
-mkdir -p "${PROJECT_SCRATCH}"
-if command -v chattr >/dev/null 2>&1; then
-  project_scratch_fs="$(stat -f -c %T "${PROJECT_SCRATCH}")"
-  if [[ "${project_scratch_fs}" == "btrfs" ]]; then
-    chattr +C "${PROJECT_SCRATCH}"
-  fi
-fi
+# A nested standalone checkout never inherits an enclosing repository's tools.
+# A member checked out as a submodule shares its Git superproject runtime, the
+# same root its Makefile resolves (flext-x8gn6).
+RUNTIME_ROOT="$(git -C "${PROJECT_ROOT}" rev-parse --show-superproject-working-tree)"
+RUNTIME_ROOT="${RUNTIME_ROOT:-${PROJECT_ROOT}}"
+watch_file "${PROJECT_ROOT}/pyproject.toml"
+watch_file "${RUNTIME_ROOT}/pyproject.toml"
+watch_file "${RUNTIME_ROOT}/.mise.toml"
+watch_file "${RUNTIME_ROOT}/{{ mise_bootstrap.version_pin_file }}"
+watch_file "${RUNTIME_ROOT}/{{ mise_bootstrap.lock_file }}"
+runtime_parent="$(cd "${RUNTIME_ROOT}/.." && pwd -P)"
+export GIT_CEILING_DIRECTORIES="${runtime_parent}"
+export MISE_CEILING_PATHS="${runtime_parent}"
+# D-VENV: a member inside a workspace uses the workspace environment; a
+# standalone checkout or a linked worktree owns its own. Nothing lives outside
+# the checkout.
+VENV_DIR="${RUNTIME_ROOT}/.venv"
 export PROJECT_ROOT
-export TMPDIR="${PROJECT_SCRATCH}"
-export GOTMPDIR="${PROJECT_SCRATCH}"
 export PYTHON_KEYRING_BACKEND="keyring.backends.null.Keyring"
-# Bytecode caching is required. The external cache prefix preserves compiled
-# modules between commands while Git remains the sole owner of file visibility.
-export PYTHONPYCACHEPREFIX="${PROJECT_STATE_ROOT}/{{ pycache_namespace }}"
 export PYTHONUNBUFFERED=1
 # End SECTION: repository environment
 
 # === SECTION: mise activation (managed) ===
 # Source: typed generated Mise storage contract; setup owns installation.
-if [[ -v {{ mise_bootstrap.storage_root_variable }} ]] && [[ -n "${{ '{' }}{{ mise_bootstrap.storage_root_variable }}{{ '}' }}" ]]; then
+if [[ -n "${{ '{' }}{{ mise_bootstrap.storage_root_variable }}-}" ]]; then
   MISE_STORAGE_ROOT="${{ '{' }}{{ mise_bootstrap.storage_root_variable }}{{ '}' }}"
-elif [[ -v XDG_DATA_HOME ]] && [[ -n "${XDG_DATA_HOME}" ]]; then
+elif [[ -n "${XDG_DATA_HOME-}" ]]; then
   MISE_STORAGE_ROOT="${XDG_DATA_HOME}/mise"
-elif [[ -v HOME ]] && [[ -n "${HOME}" ]]; then
+elif [[ -n "${HOME-}" ]]; then
   MISE_STORAGE_ROOT="${HOME}/.local/share/mise"
 else
   log_error "{{ mise_bootstrap.storage_root_variable }}, XDG_DATA_HOME, or HOME must identify persistent Mise storage"
@@ -66,15 +53,95 @@ case "${MISE_STORAGE_ROOT}" in
   *) log_error "{{ mise_bootstrap.storage_root_variable }} must be absolute"; return 1 ;;
 esac
 export {{ mise_bootstrap.storage_root_variable }}="${MISE_STORAGE_ROOT}"
+mise_pin_file="${RUNTIME_ROOT}/{{ mise_bootstrap.version_pin_file }}"
+if [[ ! -s "${mise_pin_file}" ]]; then
+  log_error "missing or empty ${mise_pin_file}; make upg records the Mise release"
+  return 1
+fi
+mise_release="$(awk '{{ mise_bootstrap.version_pin_reader }}' "${mise_pin_file}")"
+if [[ ! "${mise_release}" =~ ^{{ mise_bootstrap.resolved_release_pattern }}$ ]]; then
+  log_error "${mise_pin_file} must contain a resolved Mise release; make upg writes it"
+  return 1
+fi
+mise_runtime="${MISE_STORAGE_ROOT}/{{ mise_bootstrap.runtime_install_relative_template | replace('{release}', '${mise_release}') }}"
+if [[ "${OS:-}" == "Windows_NT" ]]; then
+  mise_runtime="${mise_runtime}.exe"
+fi
+if [[ ! -x "${mise_runtime}" ]]; then
+  log_error "missing pinned Mise runtime ${mise_runtime}; run make setup"
+  return 1
+fi
+# Read installed tool paths through the pinned runtime. Shared shims can belong
+# to an older host Mise that cannot read this repository's lockfile version.
+# Reuse setup's isolated environment; activation never installs or resolves.
+if mise_bin_paths="$(
+  scratch="$(mktemp -d)" || exit $?
+  trap 'find "${scratch}" -depth -delete' EXIT
+  mkdir -p{% for _name, relative in mise_bootstrap.transient_environment if relative not in mise_bootstrap.empty_files %} "${scratch}/{{ relative }}"{% endfor %} || exit $?
+{% for relative in mise_bootstrap.empty_files -%}
+  : > "${scratch}/{{ relative }}" || exit $?
+{% endfor -%}
+  if env -i \
+{% for name, value in mise_bootstrap.fixed_environment -%}
+    '{{ name }}={{ value }}' \
+{% endfor -%}
+{% for name, relative in mise_bootstrap.transient_environment -%}
+    "{{ name }}=${scratch}/{{ relative }}" \
+{% endfor -%}
+{% for name, relative in mise_bootstrap.persistent_environment -%}
+    "{{ name }}=${MISE_STORAGE_ROOT}{% if relative != '.' %}/{{ relative }}{% endif %}" \
+{% endfor -%}
+    "PATH=${PATH}" \
+    "GIT_CEILING_DIRECTORIES=${runtime_parent}" \
+    "MISE_CEILING_PATHS=${runtime_parent}" \
+    "MISE_TRUSTED_CONFIG_PATHS=${RUNTIME_ROOT}" \
+    "MISE_OFFLINE=true" \
+    "${mise_runtime}" -C "${RUNTIME_ROOT}" bin-paths >"${scratch}/paths" 2>"${scratch}/stderr"; then
+    cat "${scratch}/stderr" >&2
+  else
+    mise_status=$?
+    cat "${scratch}/stderr" >&2
+    cat "${scratch}/paths" >&2
+    exit "${mise_status}"
+  fi
+  if [[ -s "${scratch}/stderr" ]]; then
+    log_error "Mise emitted diagnostics during activation; run make setup"
+    exit 1
+  fi
+  cat "${scratch}/paths"
+)"; then
+  :
+else
+  mise_status=$?
+  return "${mise_status}"
+fi
+if [[ -z "${mise_bin_paths}" ]]; then
+  log_error "Mise returned no installed tool paths; run make setup"
+  return 1
+fi
+mise_paths=()
+while IFS= read -r runtime_bin; do
+  if [[ "${runtime_bin}" != /* || ! -d "${runtime_bin}" ]]; then
+    log_error "Mise returned an unavailable tool directory ${runtime_bin}; run make setup"
+    return 1
+  fi
+  mise_paths+=("${runtime_bin}")
+done <<< "${mise_bin_paths}"
 {% for name, relative in mise_bootstrap.persistent_environment if name == "MISE_SHIMS_DIR" -%}
 export {{ name }}="${MISE_STORAGE_ROOT}{% if relative != "." %}/{{ relative }}{% endif %}"
 PATH_add "${{ '{' }}{{ name }}{{ '}' }}"
 {% endfor -%}
+for ((index={{ '${#mise_paths[@]}' }}-1; index>=0; index--)); do
+  PATH_add "${mise_paths[index]}"
+done
 # End SECTION: mise activation
 
 # === SECTION: configured paths (managed) ===
-# Source: template + config:environment_path_prepends
-PATH_add "${PROJECT_ROOT}/bin"
+# Source: config:environment_path_prepends
+# The tracked bin/mise launcher is reached by the Makefile through its own
+# path, never through PATH: a project bin on PATH made `mise reshim` inside a
+# direnv-loaded checkout bind every shim of the shared MISE_DATA_DIR to that
+# checkout's launcher.
 {%- for extra_path in environment_path_prepends %}
 if [[ -d "${PROJECT_ROOT}/{{ extra_path }}" ]]; then
   PATH_add "${PROJECT_ROOT}/{{ extra_path }}"
@@ -83,11 +150,15 @@ fi
 # End SECTION: configured paths
 
 # === SECTION: virtual environment (managed) ===
-# Source: computed:nearest-pyproject-root/.venv + template
+# Source: configured external runtime state + template
 if [[ -f "${PROJECT_ROOT}/pyproject.toml" && -d "${VENV_DIR}" ]]; then
   export UV_PROJECT_ENVIRONMENT="${VENV_DIR}"
   export VIRTUAL_ENV="${VENV_DIR}"
-  PATH_add "${VENV_DIR}/bin"
+  if [[ "${OS:-}" == "Windows_NT" ]]; then
+    PATH_add "${VENV_DIR}/Scripts"
+  else
+    PATH_add "${VENV_DIR}/bin"
+  fi
 else
   unset UV_PROJECT_ENVIRONMENT
   unset VIRTUAL_ENV

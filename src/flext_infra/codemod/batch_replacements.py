@@ -11,7 +11,7 @@ from flext_infra import c, m, u
 from flext_infra.transformers import publish_semantic_file_plans
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import p, t
 
 
 class FlextInfraModReplacements:
@@ -49,7 +49,7 @@ class FlextInfraModReplacements:
                 return r[bool].fail(
                     f"actionable finding lacks authenticated state: {path}"
                 )
-            replacements: list[tuple[int, int, bytes]] = []
+            replacements: list[t.Triple[int, int, bytes]] = []
             for finding in findings:
                 if finding.source_state != before or finding.replacement is None:
                     return r[bool].fail(

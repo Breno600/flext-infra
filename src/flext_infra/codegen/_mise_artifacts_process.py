@@ -124,16 +124,7 @@ class FlextInfraMiseArtifactsProcess:
         if not u.Cli.process_succeeded(command_output.outcome):
             detail = output.strip() or f"exit {command_output.outcome.raw_return_code}"
             return r[str].fail(f"{operation} failed: {detail}")
-        # The version-update nag is informational, not a configuration warning:
-        # lock-free mode always resolves the newest published release.
-        real_warnings = tuple(
-            line
-            for line in output.splitlines()
-            if "mise WARN" in line
-            and "mise version" not in line
-            and "self-update" not in line
-        )
-        if real_warnings:
+        if "mise WARN" in output:
             return r[str].fail(f"{operation} emitted a warning: {output.strip()}")
         u.Cli.info(f"mise-toolchain: complete operation={operation}")
         return r[str].ok(command_output.stdout.strip())

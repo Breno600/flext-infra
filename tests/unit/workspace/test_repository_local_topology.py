@@ -77,6 +77,38 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.that(workspace.repository.kind, eq=c.Infra.ProjectKind.THIRD_PARTY_FORK)
         tm.that(workspace.repository.uv_link_mode, eq="clone")
 
+    def test_declared_beads_free_repository_loads_without_ledger(
+        self, tmp_path: Path
+    ) -> None:
+        """An explicit standalone policy needs no Beads or Gas City identity."""
+        root = self._self_named_governed_root(tmp_path, "without-beads")
+        observed = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        manifest: t.MutableMappingKV[str, t.JsonValue] = {
+            "version": c.Infra.WORKSPACE_MANIFEST_VERSION,
+            "name": observed.name,
+            "repository": observed.repository.model_dump(mode="json"),
+            "repository_policy_overlays": [
+                {
+                    "project": observed.repository.distribution,
+                    "beads_enabled": False,
+                    "gascity_enabled": False,
+                }
+            ],
+        }
+        tm.ok(
+            u.Cli.yaml_dump(
+                root / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME, manifest
+            )
+        )
+        (root / "config" / c.Infra.BEADS_CONFIG_FILENAME).unlink()
+        ledger = root / c.Infra.BEADS_DIRNAME
+        if ledger.is_dir():
+            shutil.rmtree(ledger)
+        workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        tm.that(workspace.name, eq=observed.name)
+        tm.that(workspace.beads, none=True)
+        tm.that(workspace.gascity_enabled, eq=False)
+
     def test_selected_workspace_manifest_rejects_git_contradiction(
         self, tmp_path: Path
     ) -> None:
@@ -229,7 +261,13 @@ class TestsFlextInfraRepositoryLocalTopology:
     ) -> None:
         """Ignore every parent input when deriving one child repository."""
         parent = tmp_path / "parent"
-        parent.mkdir()
+        u.Tests.WorktreeFixture.initialize_governed_project(
+            parent,
+            "parent",
+            workspace="parent-workspace",
+            database="parent-database",
+            issue_prefix="parent-prefix",
+        )
         u.Tests.WorktreeFixture.write_gitmodules(parent, ("child",))
         child = parent / "child"
         u.Tests.WorktreeFixture.initialize_governed_project(
@@ -302,7 +340,7 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.that(workspace.repository.path, eq=Path())
         tm.that(workspace.repository.role, eq=c.Infra.MakeProfile.STANDALONE)
         tm.that(workspace.repository.editable, eq=True)
-        tm.that(workspace.beads.workspace, eq="parent-workspace")
+        tm.that(tm.not_none(workspace.beads).workspace, eq="parent-workspace")
 
     def test_composed_self_load_accepts_a_self_coordinate_manifest(
         self, tmp_path: Path
@@ -617,6 +655,10 @@ class TestsFlextInfraRepositoryLocalTopology:
             "\tflext-managed = false\n",
             encoding="utf-8",
         )
+        # A root declaring submodules is a workspace; its manifest must agree.
+        _ = u.Tests.write_workspace_manifest(
+            root, "fixture-workspace", role=c.Infra.MakeProfile.WORKSPACE
+        )
 
         workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
 
@@ -654,6 +696,10 @@ class TestsFlextInfraRepositoryLocalTopology:
             "\tbranch = develop\n",
             encoding="utf-8",
         )
+        # A root declaring submodules is a workspace; its manifest must agree.
+        _ = u.Tests.write_workspace_manifest(
+            root, "fixture-workspace", role=c.Infra.MakeProfile.WORKSPACE
+        )
 
         workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
 
@@ -682,8 +728,10 @@ class TestsFlextInfraRepositoryLocalTopology:
     def test_gitmodule_rejects_unknown_provider_without_raw_url(
         self, tmp_path: Path
     ) -> None:
-        """Reject unknown declared_repository ownership before inspecting its checkout."""
+        """Reject an unknown declared owner without leaking its raw URL."""
         root = u.Tests.WorktreeFixture.governed_workspace(tmp_path, "unknown-provider")
+        # The detector requires the governed checkout before comparing origins.
+        _ = u.Tests.WorktreeFixture.attach_member_child(root)
         raw_host_marker = "private-submodule-host"
         (root / c.Infra.GITMODULES).write_text(
             '[submodule "fixture-child"]\n'
@@ -709,6 +757,3 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.that(first, eq=second)
         tm.that(first.name, eq=u.Tests.provider().name)
         tm.that(first.organization, eq=u.Tests.provider().organization)
-
-
-__all__: list[str] = ["TestsFlextInfraRepositoryLocalTopology"]

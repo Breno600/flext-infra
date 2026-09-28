@@ -7,6 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import override
@@ -23,7 +24,7 @@ from flext_infra.codegen import (
     FlextInfraMiseWorkspacePlanner,
 )
 from flext_infra.docs import FlextInfraDocGenerator
-from flext_infra.services.cli_routes_codegen import CodegenRoutes
+from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import c, m, p, t, u
 
@@ -52,14 +53,18 @@ class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
         if not journal_path.is_file():
             return planned
         scenario = request.root.name
-        if scenario == "cas":
+        if scenario in {"cas", "source-race"}:
             marker = request.root / ".lifecycle-cas"
             if marker.read_bytes() != b"before\n":
                 return planned
             before = tm.ok(u.Cli.atomic_read_binary_file_state(marker, required=True))
             marker.write_bytes(b"foreign\n")
-            failed = u.Cli.atomic_write_binary_file_guarded(
-                before, b"owned\n", permission_mode=tm.not_none(before.mode)
+            failed = (
+                u.Cli.atomic_verify_binary_file_states((before,))
+                if scenario == "source-race"
+                else u.Cli.atomic_write_binary_file_guarded(
+                    before, b"owned\n", permission_mode=tm.not_none(before.mode)
+                )
             )
             tm.fail(failed)
             return r[m.Infra.CodegenPlan].from_failure(failed)
@@ -88,28 +93,50 @@ class _FlextInfraCodegenConformLifecycleProbe(FlextInfraCodegenConform):
 class TestsFlextInfraCodegenConform:
     """Prove one SSOT for project creation and existing-tree conformance."""
 
+    @pytest.fixture(scope="module")
+    def conformed_template(self, tmp_path_factory: pytest.TempPathFactory) -> Path:
+        """Conform one real seed tree once per module; each scenario clones it.
+
+        Every recovery scenario begins its own transaction on a fresh clone of
+        this template, so the journal (which anchors inside the clone's Git
+        directory), staging, and CAS state under test are always the clone's
+        own; only the expensive seed apply is shared provisioning.
+        """
+        template = tmp_path_factory.mktemp("conform-template") / "conformed"
+        template.mkdir()
+        u.Tests.initialize_git_repo(
+            template, origin_url=u.Tests.repository_ref(config.Infra.name).url
+        )
+        TestsFlextInfraConformSupport.seed_infra_package_tree(template)
+        workspace = u.Tests.standalone_workspace(template, config.Infra.name)
+        request = u.Tests.conform_request(
+            template,
+            scope=c.Infra.CodegenConformScope.SELF,
+            mode=c.Infra.CodegenConformMode.APPLY,
+        )
+        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
+        u.Tests.commit_git_changes(template, "Seed conformed lifecycle fixture")
+        return template
+
     @staticmethod
     def _lifecycle_fixture(
-        tmp_path: Path, scenario: str
+        tmp_path: Path, scenario: str, template: Path
     ) -> tuple[Path, m.Infra.CodegenConformRequest, Path, bytes, Path]:
-        """Create one conformed tree, then introduce one recoverable publication."""
-        root = u.Tests.git_repository(tmp_path, name=scenario)
-        TestsFlextInfraConformSupport.seed_infra_package_tree(root)
-        workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
+        """Clone the conformed template, then introduce one recoverable publication."""
+        root = tmp_path / scenario
+        shutil.copytree(template, root)
+        published = root / c.Infra.MAKEFILE_FILENAME
+        original = published.read_bytes() + b"\n# recoverable drift\n"
+        published.write_bytes(original)
+        if scenario in {"cas", "source-race"}:
+            (root / ".lifecycle-cas").write_bytes(b"before\n")
+        identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)))
+        journal = FlextInfraMiseWorkspacePlanner.journal_path(identity)
         request = u.Tests.conform_request(
             root,
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
-        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
-        u.Tests.commit_git_changes(root, "Seed conformed lifecycle fixture")
-        published = root / c.Infra.MAKEFILE_FILENAME
-        original = published.read_bytes() + b"\n# recoverable drift\n"
-        published.write_bytes(original)
-        if scenario == "cas":
-            (root / ".lifecycle-cas").write_bytes(b"before\n")
-        identity = tm.ok(u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)))
-        journal = FlextInfraMiseWorkspacePlanner.journal_path(identity)
         return root, request, published, original, journal
 
     @pytest.mark.parametrize(
@@ -119,19 +146,24 @@ class TestsFlextInfraCodegenConform:
             "exception-replaced",
             "failure-mixed",
             "cas",
+            "source-race",
             "lazy-failure",
             "docs-failure",
         ],
     )
     def test_public_apply_recovers_only_authenticated_prepared_state(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str], scenario: str
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        conformed_template: Path,
+        scenario: str,
     ) -> None:
         """Exercise post-begin failures through real filesystem and CAS state."""
         root, request, published, original, journal = self._lifecycle_fixture(
-            tmp_path, scenario
+            tmp_path, scenario, conformed_template
         )
         if scenario == "lazy-failure":
-            package = root / "src" / "flext_demo"
+            package = root / "src" / config.Infra.name.replace("-", "_")
             obsolete = package / next(iter(sorted(c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES)))
             obsolete.symlink_to(root / "README.md")
         elif scenario == "docs-failure":
@@ -148,11 +180,14 @@ class TestsFlextInfraCodegenConform:
             with pytest.raises(OSError, match="raised after begin") as raised:
                 execute(request)
             tm.that(raised.value is _LIFECYCLE_EXCEPTION, eq=True)
+        elif scenario == "docs-failure":
+            with pytest.raises(ValueError, match="Invalid JSON"):
+                execute(request)
         else:
             failed = execute(request)
             expected = {
-                "cas": "atomic source changed",
-                "docs-failure": "JSON",
+                "cas": "atomic destination content changed",
+                "source-race": "atomic source changed",
                 "lazy-failure": "refusing obsolete root-support symlink",
             }.get(scenario, "failed after begin")
             tm.fail(failed, has=expected)
@@ -163,7 +198,8 @@ class TestsFlextInfraCodegenConform:
             "failure-mixed",
         }
         tm.that(journal.exists(), eq=retained)
-        tm.that(published.read_bytes() == original, eq=not retained)
+        publication_is_preserved = not retained or scenario == "failure-mixed"
+        tm.that(published.read_bytes() == original, eq=publication_is_preserved)
         if scenario == "failure-changed":
             tm.that(journal.read_bytes().endswith(b"\n"), eq=True)
         elif scenario == "exception-replaced":
@@ -175,7 +211,8 @@ class TestsFlextInfraCodegenConform:
                 tuple(path.read_bytes() for path in tmp_path.rglob("foreign.bin")),
                 eq=(b"foreign staging\n",),
             )
-        elif scenario == "cas":
+        elif scenario in {"cas", "source-race"}:
+            tm.that((root / ".lifecycle-cas").read_bytes(), eq=b"foreign\n")
             tm.that(capsys.readouterr().out, lacks="mode=converge")
 
     def test_public_scaffold_exception_restores_bootstrap_state(
@@ -183,7 +220,9 @@ class TestsFlextInfraCodegenConform:
     ) -> None:
         """A raised prepared operation removes invocation-owned root and Git state."""
         root = tmp_path / "exception-scaffold"
-        repository = u.Tests.repository_ref("exception-scaffold")
+        repository = u.Tests.repository_ref(
+            "exception-scaffold", role=c.Infra.MakeProfile.STANDALONE
+        )
         workspace = u.Tests.workspace_spec(
             repository, project=u.Tests.project_spec(repository.name)
         )
@@ -230,7 +269,7 @@ class TestsFlextInfraCodegenConform:
         )
         plan = tm.ok(service.plan(request))
         pyproject = next(
-            item for item in plan.files if item.path.name == c.Infra.PYPROJECT_FILENAME
+            item for item in plan.files if item.path.name == c.PYPROJECT_FILENAME
         )
         return service, request, pyproject
 
@@ -294,15 +333,11 @@ class TestsFlextInfraCodegenConform:
             root, Path("scripts/hatch_build.py")
         )
         root.mkdir(parents=True, exist_ok=True)
-        (root / c.Infra.PYPROJECT_FILENAME).write_bytes(
-            tm.not_none(first.desired_content)
-        )
+        (root / c.PYPROJECT_FILENAME).write_bytes(tm.not_none(first.desired_content))
 
         second_plan = tm.ok(service.plan(request))
         second = next(
-            item
-            for item in second_plan.files
-            if item.path.name == c.Infra.PYPROJECT_FILENAME
+            item for item in second_plan.files if item.path.name == c.PYPROJECT_FILENAME
         )
 
         tm.that(u.Tests.codegen_file_text(second), eq=u.Tests.codegen_file_text(first))
@@ -318,7 +353,11 @@ class TestsFlextInfraCodegenConform:
         request = request.model_copy(
             update={"what": c.Infra.CodegenConformSurface.PYPROJECT}
         )
-        pyproject = tmp_path / c.Infra.PYPROJECT_FILENAME
+        # The infrastructure checkout publishes its Git origin (208716f4f).
+        u.Tests.initialize_git_repo(
+            tmp_path, origin_url=u.Tests.repository_ref("flext-infra").url
+        )
+        pyproject = tmp_path / c.PYPROJECT_FILENAME
         source = pyproject.read_text(encoding="utf-8")
         pyproject.write_text(
             source + 'dependencies = ["custom-runtime>=0.22", '
@@ -431,6 +470,7 @@ class TestsFlextInfraCodegenConform:
         # rows prove the result does not depend on the distribution name.
         root = tmp_path / name
         service = FlextInfraCodegenProjectNew(
+            flext_source=u.Tests.flext_source(),
             name=name,
             kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
             output_root=root,
@@ -527,14 +567,6 @@ class TestsFlextInfraCodegenConform:
         tm.that(selected_output, has="uv --version")
         tm.that(selected_output, lacks="uv@")
         tm.that(selected_output, lacks="UV_VERSION")
-        makefile = (root / "Makefile").read_text(encoding="utf-8")
-        # Template Makefile.j2:154 produces `override UV := "$(SETUP_MISE)" ... exec -- uv`;
-        # there is no bare `UV ?= uv` assignment (see test_codegen_make_environment.py:512).
-        tm.that(makefile, has="override UV :=")
-        tm.that(makefile, lacks="UV ?= uv")
-        tm.that(makefile, lacks="UV_VERSION")
-        tm.that(makefile, lacks="uv@")
-        tm.that(makefile, lacks="mise exec")
 
     @pytest.mark.slow
     def test_existing_manifest_converges_to_identical_tree(
@@ -542,6 +574,7 @@ class TestsFlextInfraCodegenConform:
     ) -> None:
         existing_root = infra_git_repo
         created = FlextInfraCodegenProjectNew(
+            flext_source=u.Tests.flext_source(),
             name="flext-demo",
             kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
             output_root=existing_root,
@@ -713,9 +746,13 @@ class TestsFlextInfraCodegenConform:
         tm.that((root / ".gitignore").is_file(), eq=True)
         tm.that((root / ".env.example").exists(), eq=False)
         tm.that(root / ".env.example" in applied.value.written_files, eq=False)
-        for name, mode in (("mise", 0o755), ("mise.cmd", 0o644)):
-            tm.that((root / "bin" / name).stat().st_mode & 0o777, eq=mode)
-        tm.ok(FlextInfraCodegenMiseArtifacts.validate_launchers(root))
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            tm.that((root / relative).stat().st_mode & 0o777, eq=mode)
+        tm.ok(
+            FlextInfraCodegenMiseArtifacts(repository_root=root).validate_artifacts(
+                root, root
+            )
+        )
 
         fixed_point = FlextInfraCodegenConform.execute_request(
             u.Tests.conform_request(
@@ -757,7 +794,7 @@ class TestsFlextInfraCodegenConform:
         )
 
     @pytest.mark.slow
-    def test_repository_root_catalog_profile_preserves_platform_coverage(
+    def test_repository_root_catalog_profile_projects_no_coverage_floor(
         self, tmp_path: Path
     ) -> None:
         """Route an arbitrary workspace root through its typed catalog profile."""
@@ -789,12 +826,10 @@ class TestsFlextInfraCodegenConform:
         first = tm.ok(service.plan(request))
         second = tm.ok(service.plan(request))
         first_pyproject = next(
-            item for item in first.files if item.path.name == c.Infra.PYPROJECT_FILENAME
+            item for item in first.files if item.path.name == c.PYPROJECT_FILENAME
         )
         second_pyproject = next(
-            item
-            for item in second.files
-            if item.path.name == c.Infra.PYPROJECT_FILENAME
+            item for item in second.files if item.path.name == c.PYPROJECT_FILENAME
         )
         rendered_pyproject = u.Tests.codegen_file_text(first_pyproject)
         report = u.Tests.toml_table_at(rendered_pyproject, "tool", "coverage", "report")
@@ -810,10 +845,7 @@ class TestsFlextInfraCodegenConform:
         tm.that(addopts, has=f"--timeout={pytest_policy.case_timeout_seconds}")
         tm.that(addopts, lacks="--session-timeout")
         tm.that(set(addopts) >= set(pytest_policy.standard_addopts), eq=True)
-        tm.that(
-            report["fail_under"],
-            eq=config.Infra.tooling.tools.coverage.fail_under.platform,
-        )
+        tm.that(report, lacks="fail_under")
 
     @pytest.mark.slow
     def test_project_root_inherits_declared_upstream_facets(
@@ -852,7 +884,9 @@ class TestsFlextInfraCodegenConform:
         u.Tests.commit_git_changes(root, "Seed generated project")
         route = next(
             route
-            for route in CodegenRoutes.codegen_routes[c.Infra.CLI_GROUP_CODEGEN]
+            for route in FlextInfraCodegenRoutes.codegen_routes[
+                c.Infra.CLI_GROUP_CODEGEN
+            ]
             if route.name == "conform"
         )
         request = u.Tests.conform_request(

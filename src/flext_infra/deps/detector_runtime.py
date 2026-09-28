@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -38,15 +39,15 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         root = params.repository_root
         # The environment under inspection is the repository's own; an ambient
         # UV_PROJECT_ENVIRONMENT would silently redirect detection elsewhere.
-        venv_bin = root / Path(c.Infra.VENV_BIN_REL)
+        venv_bin = u.Infra.runtime_environment_dir(root) / (
+            "Scripts" if os.name == "nt" else "bin"
+        )
         env_result = self._validate_environment(params, root, venv_bin)
         if env_result.failure:
             return r[bool].from_failure(env_result)
         projects, limits_path = env_result.value
         do_typings = params.typings or params.apply_typings
-        projects_report: MutableMapping[
-            str, MutableMapping[str, t.Infra.InfraValue]
-        ] = {}
+        projects_report: MutableMapping[str, MutableMapping[str, t.JsonValue]] = {}
         report_model = self._workspace_report_factory(
             workspace=str(root),
             projects=projects_report,
@@ -68,12 +69,9 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         for project_path in projects:
             project_result = self._run_project_detection(
                 project_path,
-                deps_service=deps_service,
-                typing_deps=typing_deps,
                 venv_bin=venv_bin,
                 limits_path=limits_path,
                 params=params,
-                do_typings=do_typings,
                 projects_report=projects_report,
             )
             if project_result.failure:
@@ -100,7 +98,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
         params: m.Infra.DetectCommand,
         root: Path,
         report_model: p.Infra.WorkspaceReport,
-        projects_report: Mapping[str, Mapping[str, t.Infra.InfraValue]],
+        projects_report: Mapping[str, Mapping[str, t.JsonValue]],
     ) -> p.Result[Path]:
         """Render and persist the canonical workspace dependency report JSON."""
         out_path: Path = params.output_path or u.Cli.resolve_report_path(
@@ -130,7 +128,7 @@ class FlextInfraDependencyDetectorRuntime(FlextInfraDependencyDetectorRuntimeSte
     def _summarize_run(
         self,
         projects: t.SequenceOf[Path],
-        projects_report: Mapping[str, Mapping[str, t.Infra.InfraValue]],
+        projects_report: Mapping[str, Mapping[str, t.JsonValue]],
         *,
         pip_ok: bool,
         params: m.Infra.DetectCommand,

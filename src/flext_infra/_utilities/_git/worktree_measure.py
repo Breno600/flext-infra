@@ -56,7 +56,7 @@ class FlextInfraUtilitiesGitWorktreeMeasureMixin(
         directory: Path,
     ) -> t.Pair[t.VariadicTuple[os.DirEntry[str]], bool]:
         """List one directory paired with whether it was readable."""
-        entries: tuple[os.DirEntry[str], ...] = ()
+        entries: t.VariadicTuple[os.DirEntry[str]] = ()
         readable = True
         try:
             with os.scandir(directory) as iterator:

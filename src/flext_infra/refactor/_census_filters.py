@@ -23,20 +23,20 @@ class FlextInfraRefactorCensusFiltersMixin:
 
     @staticmethod
     def _duplicate_groups(
-        project_objects: t.VariadicTuple[t.SequenceOf[m.Infra.Census.Object]],
-    ) -> t.VariadicTuple[m.Infra.Census.DuplicateGroup]:
+        project_objects: t.VariadicTuple[t.SequenceOf[m.Infra.Object]],
+    ) -> t.VariadicTuple[m.Infra.DuplicateGroup]:
         """Duplicate groups."""
 
-        def object_location(item: m.Infra.Census.Object) -> t.Triple[str, str, int]:
+        def object_location(item: m.Infra.Object) -> t.Triple[str, str, int]:
             return item.project, item.file_path, item.line
 
-        groups: MutableMapping[tuple[str, str, str], list[m.Infra.Census.Object]] = (
+        groups: MutableMapping[t.Triple[str, str, str], list[m.Infra.Object]] = (
             defaultdict(list)
         )
         for item in (obj for objects in project_objects for obj in objects):
             owner = item.scope_path.rpartition(".")[0]
             groups[item.kind, item.name, owner].append(item)
-        duplicates: list[m.Infra.Census.DuplicateGroup] = []
+        duplicates: list[m.Infra.DuplicateGroup] = []
         for key in sorted(groups):
             definitions = groups[key]
             if (
@@ -46,7 +46,7 @@ class FlextInfraRefactorCensusFiltersMixin:
                 continue
             canonical = min(definitions, key=object_location)
             duplicates.append(
-                m.Infra.Census.DuplicateGroup(
+                m.Infra.DuplicateGroup(
                     name=definitions[0].name,
                     kind=definitions[0].kind,
                     definitions=tuple(definitions),
@@ -59,7 +59,7 @@ class FlextInfraRefactorCensusFiltersMixin:
 
     @staticmethod
     def _include_object(
-        item: m.Infra.Census.Object,
+        item: m.Infra.Object,
         *,
         kind_names: t.StrSequence | None,
         selected_families: frozenset[str],
@@ -104,8 +104,8 @@ class FlextInfraRefactorCensusFiltersMixin:
 
     @staticmethod
     def _named_object(
-        objects: t.VariadicTuple[m.Infra.Census.Object], name: str
-    ) -> m.Infra.Census.Object | None:
+        objects: t.VariadicTuple[m.Infra.Object], name: str
+    ) -> m.Infra.Object | None:
         """Named object."""
         return next(
             (item for item in objects if name in {item.scope_path, item.name}), None
@@ -114,8 +114,8 @@ class FlextInfraRefactorCensusFiltersMixin:
     @staticmethod
     def _runtime_alias_target(
         convention: m.Infra.RopeModuleConvention,
-        objects: t.VariadicTuple[m.Infra.Census.Object] | None,
-    ) -> m.Infra.Census.Object | None:
+        objects: t.VariadicTuple[m.Infra.Object] | None,
+    ) -> m.Infra.Object | None:
         """Runtime alias target."""
         if objects is None:
             return None

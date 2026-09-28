@@ -8,7 +8,6 @@ from flext_tests import tm
 
 from flext_infra import c, config, t, u
 from flext_infra.services.codegen import FlextInfraCodegen
-from tests import TestsFlextInfraUtilities as test_utilities
 
 
 class TestsFlextInfraVscodeOwnerMerge:
@@ -35,12 +34,9 @@ class TestsFlextInfraVscodeOwnerMerge:
             tm.that(doc[key], eq=expected_value)
         for stripped in config.Infra.codegen.vscode.stripped_keys:
             tm.that(stripped in doc, eq=False)
-        search_paths = t.Cli.JSON_LIST_ADAPTER.validate_python(
-            doc[c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY]
-        )
-        expected = test_utilities.Tests.vscode_declared_search_paths()
-        tm.that(search_paths, eq=expected)
-        tm.that("./apps/*/.venv" in search_paths, eq=False)
+        search_paths_key = c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY
+        tm.that(search_paths_key in config.Infra.codegen.vscode.list_settings, eq=False)
+        tm.that(search_paths_key in doc, eq=False)
 
     def test_merge_reaches_fixed_point_after_apply(self, tmp_path: Path) -> None:
         """Replan a written merge artifact with zero residual drift."""
@@ -105,6 +101,3 @@ class TestsFlextInfraVscodeOwnerMerge:
         )
         tm.that("python.analysis.typeCheckingMode" in doc, eq=False)
         tm.that("python.analysis.diagnosticSeverityOverrides" in doc, eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraVscodeOwnerMerge"]

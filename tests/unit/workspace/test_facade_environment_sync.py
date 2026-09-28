@@ -6,7 +6,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, config, infra, m, t, u
+from flext_infra import infra
+from tests import c, m, t, u
 
 
 class TestsFlextInfraFacadeEnvironmentSync:
@@ -26,13 +27,23 @@ class TestsFlextInfraFacadeEnvironmentSync:
     ) -> str:
         """Return one variable as the real direnv activation of ``workspace`` sees it.
 
-        ``HOME`` is isolated so the activation creates its scratch root under the
-        test tree instead of the operator's home.
+        ``HOME`` is isolated so activation never reads the operator's home; the
+        inherited Mise storage still provides the pinned runtime ``make setup``
+        installed.
         """
+        # A governed checkout is a Git work tree (activation resolves its
+        # runtime root from the Git superproject topology) carrying its Mise
+        # declaration, launcher, and release pin.
+        u.Tests.initialize_git_repo(workspace)
+        u.Tests.copy_tracked_mise_seeds(workspace)
         activation_env = {"HOME": str(home), **env}
+        isolation = c.Tests.DIRENV_STATE_ENV_KEYS
         tm.ok(
             u.Cli.run_checked(
-                ["direnv", "allow", str(workspace)], cwd=workspace, env=activation_env
+                ["direnv", "allow", str(workspace)],
+                cwd=workspace,
+                env=activation_env,
+                remove_env_keys=isolation,
             )
         )
         return tm.ok(
@@ -40,33 +51,31 @@ class TestsFlextInfraFacadeEnvironmentSync:
                 ["direnv", "exec", str(workspace), "printenv", name],
                 cwd=workspace,
                 env=activation_env,
+                remove_env_keys=isolation,
             )
         )
 
-    def test_scratch_root_never_mirrors_a_vcs_directory(self, tmp_path: Path) -> None:
-        """A checkout nested in a VCS directory activates a VCS-free scratch root."""
+    def test_activation_leaves_the_temp_directory_to_the_caller(
+        self, tmp_path: Path
+    ) -> None:
+        """Activation forces no scratch root: the caller's TMPDIR survives."""
         home = tmp_path / "home"
         home.mkdir()
-        for segment, alias in c.Infra.SCRATCH_IDENTITY_SEGMENT_ALIASES:
-            workspace = tmp_path / "superproject" / segment / "modules" / "member"
-            self._write_pyproject(workspace)
-            tm.ok(
-                infra.sync_environment_files(
-                    m.Infra.WorkspaceEnvironmentSyncRequest(
-                        repository_root=workspace, allow_direnv=False
-                    )
+        workspace = tmp_path / "workspace"
+        self._write_pyproject(workspace)
+        tm.ok(
+            infra.sync_environment_files(
+                m.Infra.WorkspaceEnvironmentSyncRequest(
+                    repository_root=workspace, allow_direnv=False
                 )
             )
-            toolchain = config.Infra.codegen.toolchain
-            scratch = Path(self._activated_value(workspace, home, "TMPDIR", {}))
-            scratch_home = (
-                home / toolchain.scratch_home_relative / toolchain.state_directory_name
-            )
-            tm.that(scratch.is_relative_to(scratch_home), eq=True)
-            tm.that(scratch.name, eq=toolchain.scratch_namespace)
-            tm.that(segment in scratch.parts, eq=False)
-            tm.that(alias in scratch.parts, eq=True)
-            tm.that(scratch.is_dir(), eq=True)
+        )
+        caller_tmp = tmp_path / "caller-tmp"
+        caller_tmp.mkdir()
+        activated = self._activated_value(
+            workspace, home, "TMPDIR", {"TMPDIR": str(caller_tmp)}
+        )
+        tm.that(activated.strip(), eq=str(caller_tmp))
 
     def test_activation_preserves_caller_beads_routing(self, tmp_path: Path) -> None:
         """A caller-selected Beads ledger survives activation (linked worktrees)."""
@@ -162,6 +171,3 @@ class TestsFlextInfraFacadeEnvironmentSync:
         )
         tm.ok(result)
         tm.that((workspace / ".envrc").exists(), eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraFacadeEnvironmentSync"]

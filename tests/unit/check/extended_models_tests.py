@@ -151,6 +151,3 @@ class TestsFlextInfraModels:
         proj2 = m.Infra.ProjectResult(project="proj2", gates={"format": exec2})
         tm.that(proj1.total_errors, eq=2)
         tm.that(proj2.total_errors, eq=1)
-
-
-__all__: list[str] = ["TestsFlextInfraModels"]

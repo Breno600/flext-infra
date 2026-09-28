@@ -219,6 +219,3 @@ class TestsFlextInfraAuditorLinks:
             text = target.read_text()
             tm.that("flext-sh/flext" in text, eq=True)
             tm.that("0.12.0-dev" in text, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraAuditorLinks"]

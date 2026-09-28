@@ -59,7 +59,7 @@ class FlextInfraModelsGitWorktreeFacts:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         facts: Annotated[
-            tuple[FlextInfraModelsGitWorktreeFacts.WorktreeFact, ...],
+            t.VariadicTuple[FlextInfraModelsGitWorktreeFacts.WorktreeFact],
             m.Field(default=(), description="One fact per registered worktree"),
         ]
 

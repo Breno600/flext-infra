@@ -470,6 +470,3 @@ class TestsFlextInfraTransformersEnforcementFixers:
         tm.that(code, has="from flext_core import u")
         tm.that(code, lacks="structlog.get_logger()")
         tm.that(changes, empty=False)
-
-
-__all__: list[str] = ["TestsFlextInfraTransformersEnforcementFixers"]

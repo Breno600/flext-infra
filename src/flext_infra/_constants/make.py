@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from enum import StrEnum
 from typing import TYPE_CHECKING, ClassVar
 
 from .._constants.check import FlextInfraConstantsCheck
@@ -13,6 +14,13 @@ if TYPE_CHECKING:
 
 class FlextInfraConstantsMake:
     """One canonical vocabulary shared by generated Make and its services."""
+
+    class PytestExecutionMode(StrEnum):
+        """Public operations whose test scope and accounting are distinct."""
+
+        INCREMENTAL = "incremental"
+        FULL = "full"
+        COVERAGE = "coverage"
 
     MAKE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^[A-Za-z_][A-Za-z0-9_]*\s*(?::?:|\?|\+)?="
@@ -27,13 +35,13 @@ class FlextInfraConstantsMake:
     "Make variable the workspace orchestrator passes to attached members."
 
     VERB_CHECK: ClassVar[str] = "check"
-    VERB_DEPS: ClassVar[str] = "deps"
     VERB_TEST: ClassVar[str] = "test"
     VERB_CLEAN: ClassVar[str] = "clean"
     VERB_VALIDATE: ClassVar[str] = "validate"
     VERB_PUBLISH: ClassVar[str] = "publish"
     VERB_RUN: ClassVar[str] = "run"
     VERB_CHECKS: ClassVar[str] = "checks"
+    VERB_SONARCLOUD_SYNC: ClassVar[str] = "sonarcloud-sync"
 
     CLI_GROUP_CHECK: ClassVar[str] = "check"
     CLI_GROUP_CODEGEN: ClassVar[str] = "codegen"
@@ -50,7 +58,8 @@ class FlextInfraConstantsMake:
     MYPY_MEMORY_LIMIT_MB_ENV: ClassVar[str] = "MYPY_MEMORY_LIMIT_MB"
     MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
     MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 600
+    MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
+    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 100
     MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
     PRLIMIT_COMMAND: ClassVar[str] = "prlimit"
     PRLIMIT_ADDRESS_SPACE_OPTION: ClassVar[str] = "--as"
@@ -89,7 +98,6 @@ class FlextInfraConstantsMake:
         "markdown",
         "markdown-code",
         "canonical-alias",
-        "smells",
     )
     # markdown-format is deliberately absent: prettier is a formatter, so the
     # gate's mutating side is owned by `make fmt` (check = `prettier --check`),
@@ -102,7 +110,11 @@ class FlextInfraConstantsMake:
         "fmt",
         "fix",
         "fix-enforcement",
+        "fix-namespace",
+        "fix-accessors",
+        "sonarcloud-sync",
         "test",
+        "test-full",
     )
     ORCHESTRATOR_REMOVE_ENV_KEYS: ClassVar[t.StrSequence] = (
         "GNUMAKEFLAGS",
@@ -135,16 +147,12 @@ class FlextInfraConstantsMake:
     PYTEST_ENV_REPORTS: ClassVar[str] = "FLEXT_PYTEST_REPORTS_RAW"
     PYTEST_ENV_TARGET: ClassVar[str] = "FLEXT_PYTEST_TARGET_RAW"
     PYTEST_ENV_CI: ClassVar[str] = "CI"
-    PYTEST_ENV_TESTMON_DATAFILE: ClassVar[str] = "TESTMON_DATAFILE"
-    PYTEST_DESELECTED_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"(?P<count>[0-9]+)\s+deselected\b"
-    )
-    PYTEST_COVERAGE_FAILURE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"(?:Coverage failure:|required test coverage .* not reached)", re.IGNORECASE
-    )
+    PYTEST_ENV_COLLECTION_MANIFEST: ClassVar[str] = "FLEXT_PYTEST_COLLECTION_MANIFEST"
+    PYTEST_WARNING_EVENTS_SUFFIX: ClassVar[str] = ".warnings.jsonl"
     PYTEST_INHERITED_ENV_REMOVE_KEYS: ClassVar[t.StrSequence] = (
         "PYTEST_ADDOPTS",
         "PYTHONPATH",
+        PYTEST_ENV_COLLECTION_MANIFEST,
     )
 
 

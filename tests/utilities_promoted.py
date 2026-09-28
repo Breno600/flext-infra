@@ -25,12 +25,12 @@ class TestsFlextInfraUtilitiesPromotedMixin:
         *,
         path: Path,
         mutates: bool = True,
-        params: t.VariadicTuple[m.Infra.Promoted.Param] = (),
+        params: t.VariadicTuple[m.Infra.PromotedParam] = (),
         verb: str = "probe",
         what: str = "all",
-    ) -> m.Infra.Promoted.Command:
+    ) -> m.Infra.PromotedCommand:
         """Build one real promoted command model for contract tests."""
-        return m.Infra.Promoted.Command(
+        return m.Infra.PromotedCommand(
             verb=verb,
             what=what,
             domain="probe",

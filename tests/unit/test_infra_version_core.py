@@ -37,6 +37,3 @@ class TestsFlextInfraInfraVersionCore:
     def test_package_version_fields_have_public_runtime_types(self) -> None:
         tm.that(infra_pkg.__version__, is_=str)
         tm.that(infra_pkg.__version_info__, is_=tuple)
-
-
-__all__: list[str] = ["TestsFlextInfraInfraVersionCore"]

@@ -57,6 +57,3 @@ class TestsFlextInfraBuilderScope:
         tm.that(result.value[0].result, eq=c.Infra.ResultStatus.FAIL)
         tm.that(result.value[0].passed, eq=False)
         tm.that(result.value[0].site_dir, eq="")
-
-
-__all__: list[str] = ["TestsFlextInfraBuilderScope"]

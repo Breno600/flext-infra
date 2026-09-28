@@ -44,6 +44,20 @@ Use conventional commit messages:
 make test
 ```
 
+`make test` runs the incremental scope with the persistent external Testmon cache.
+For the complete suite, including external and CI-excluded markers, run:
+
+```bash
+make test-full
+```
+
+The full verb first runs the incremental phase, then the complete phase. Both share
+one database and one absolute deadline. The first failure stops the operation.
+External tests retain their required services and authentication. Each phase emits
+its own receipts; warnings include selection, inventory, and execution counts.
+Zero execution is accepted only as a typed, integrity-checked incremental cache hit,
+never as tests passed. Never invoke the underlying test runner directly.
+
 ## Code Quality
 
 All quality gates run through canonical `make` verbs:

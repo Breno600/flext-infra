@@ -21,7 +21,6 @@ class FlextInfraPytestRunnerBase(s[int]):
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
-    testmon_db: Annotated[Path, m.Field(description="External persistent testmon DB.")]
     ci_context: Annotated[
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
@@ -42,14 +41,16 @@ class FlextInfraPytestRunnerBase(s[int]):
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
-            testmon_db=Path(
-                cls._environment_value(c.Infra.PYTEST_ENV_TESTMON_DATAFILE)
-            ),
         )
+
+    @property
+    def testmon_db(self) -> Path:
+        """Pytest-testmon's own default database in the repository root."""
+        return self.root / config.Infra.codegen.make.testmon_cache.database_filename
 
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
-        """Require contained inputs and an external absolute cache path."""
+        """Require repository-contained target and report paths."""
         for name, path in (("target", self.target), ("reports", self.reports)):
             raw = str(path)
             if (
@@ -68,12 +69,6 @@ class FlextInfraPytestRunnerBase(s[int]):
         if not target_path.is_dir() or target_path.is_symlink():
             msg = f"test target must be an existing directory: {self.target}"
             raise ValueError(msg)
-        if not self.testmon_db.is_absolute():
-            msg = "TESTMON_DATAFILE must be absolute"
-            raise ValueError(msg)
-        if self.testmon_db.resolve().is_relative_to(self.root.resolve()):
-            msg = "TESTMON_DATAFILE must be outside the repository checkout"
-            raise ValueError(msg)
         return self
 
     @staticmethod
@@ -90,8 +85,32 @@ class FlextInfraPytestRunnerBase(s[int]):
             raise ValueError(msg)
         return memory_gb
 
+    def _declared_worker_ceiling(self, policy: PytestPolicy) -> int:
+        """Resolve the declared project's ceiling over the fleet default.
+
+        A tree without a declared ``[project].name`` (fixture projects, raw
+        workbenches) is an expected state and takes the fleet-wide default.
+        """
+        if not policy.parallel_worker_overrides:
+            return policy.parallel_workers
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        try:
+            name = u.Infra.project_name_from_payload(
+                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+            )
+        except (TypeError, ValueError):
+            return policy.parallel_workers
+        return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
+
     def parallel_worker_budget(self, policy: PytestPolicy) -> int:
-        """Bound xdist by configuration, CPU, and physical memory."""
+        """Bound xdist by configuration, CPU, and physical memory.
+
+        The per-project override map (``[project].name`` → workers) is where
+        a consumer whose measured suite cannot fit the single-worker process
+        boundary declares its ceiling; the fleet-wide default stays one
+        worker so ``max-failures: 1`` remains exact everywhere else.
+        """
+        ceiling = self._declared_worker_ceiling(policy)
         cpu_count = os.cpu_count()
         if cpu_count is None or cpu_count <= 0:
             msg = "CPU capacity is unavailable"
@@ -100,7 +119,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         if memory_workers <= 0:
             msg = "physical memory cannot support one pytest worker"
             raise ValueError(msg)
-        return min(policy.parallel_workers, cpu_count, memory_workers)
+        return min(ceiling, cpu_count, memory_workers)
 
     def _report_directory(self) -> Path:
         """Create a collision-resistant report directory."""

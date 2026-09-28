@@ -56,7 +56,10 @@ class FlextInfraMiseArtifactsState:
 
     @classmethod
     def plan_transaction_directories(
-        cls, layout: m.Infra.MiseToolchainWorkspaceLayout
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        *,
+        destinations: t.VariadicTuple[Path] = (),
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenJournalDirectory]]:
         """Prove every transaction path absent before journal publication."""
         roots: list[Path] = []
@@ -73,6 +76,7 @@ class FlextInfraMiseArtifactsState:
                         project.artifacts.config,
                         project.artifacts.unix_launcher,
                         project.artifacts.windows_launcher,
+                        project.artifacts.version_pin,
                     )
                 }
                 project_device = cls._hosting_device(project.root)
@@ -101,9 +105,21 @@ class FlextInfraMiseArtifactsState:
                     project.artifacts.config,
                     project.artifacts.unix_launcher,
                     project.artifacts.windows_launcher,
+                    project.artifacts.version_pin,
                 )
                 if artifact.parent != project.root
             )
+        )
+        project_roots = {item.root for item in files.transaction_participants(layout)}
+        parents = tuple(
+            dict.fromkeys((
+                *parents,
+                *(
+                    path.parent
+                    for path in destinations
+                    if path.parent not in project_roots
+                ),
+            ))
         )
         generated = cls.plan_directories(
             layout, phase="mise", requested=parents, disposition="generated"
@@ -372,7 +388,7 @@ class FlextInfraMiseArtifactsState:
         """Return every transaction-prefixed child or unsafe state-root alias."""
         residue: list[Path] = []
         for project in files.transaction_participants(layout):
-            state_root = project.root / files.STATE_DIRECTORY
+            state_root = project.root / c.Infra.MISE_ARTIFACTS_STATE_DIRECTORY
             if not state_root.exists() and not state_root.is_symlink():
                 continue
             if state_root.is_symlink():
@@ -515,26 +531,20 @@ class FlextInfraMiseArtifactsState:
     def _hosts_lease_lock(
         layout: m.Infra.MiseToolchainWorkspaceLayout, directory: Path
     ) -> bool:
-        """Whether the directory houses persistent state the cleanup must keep.
-
-        The journal lease lock and the lazy-init class-receipt cache are
-        persistent residents of the ignored state root: both survive
-        transactions by design (the lock keeps its file identity across runs;
-        the receipts are the content-addressed cache), so a directory
-        containing either is durable state, never a transient cleanup target.
-        """
-        candidates = [layout.journal_path.with_name(f"{layout.journal_path.name}.lock")]
-        state_root = next(
-            (
-                ancestor
-                for ancestor in (directory, *directory.parents)
-                if ancestor.name == c.Infra.TRANSACTION_STATE_DIRNAME
+        """Keep journal and participant lease identities across transactions."""
+        lease_paths = (
+            layout.journal_path,
+            *(
+                participant.root
+                / c.Infra.TRANSACTION_STATE_DIRNAME
+                / c.Infra.JOURNAL_NAME
+                for participant in layout.file_participants
             ),
-            None,
         )
-        if state_root is not None:
-            candidates.append(state_root / c.Infra.LAZY_INIT_CLASS_RECEIPTS_RELPATH)
-        return any(path.is_relative_to(directory) for path in candidates)
+        return any(
+            lease.with_name(f"{lease.name}.lock").is_relative_to(directory)
+            for lease in lease_paths
+        )
 
     @classmethod
     def validate_transaction_roots(
@@ -594,6 +604,15 @@ class FlextInfraMiseArtifactsState:
                 )
                 if authorized.failure:
                     return r[bool].from_failure(authorized)
+        # Foreign residents inside recorded temporary trees never block the
+        # restore itself. The journal receipt authenticates the destinations;
+        # staging residue revokes only the cleanup, which still fails closed
+        # after the rollback (guarded deletion refuses unmanifested or
+        # non-empty trees), so a mixed recovery retains the journal and the
+        # foreign bytes instead of stranding published destinations behind
+        # them. Pre-restore authentication of every recorded tree and resident
+        # aborted the rollback before it started, which replaced the tested
+        # mixed outcome with a lost publication.
         return r[bool].ok(True)
 
     @classmethod

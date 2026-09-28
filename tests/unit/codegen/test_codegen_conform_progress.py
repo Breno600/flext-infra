@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m
+from flext_infra import c, config, m
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import u
 
@@ -20,7 +20,9 @@ class TestsFlextInfraCodegenConformProgress:
     ) -> None:
         """A check-mode conform must report stage and per-repository progress."""
         root = infra_git_repo
-        workspace = u.Tests.standalone_workspace(root)
+        # The check pass re-detects the checkout, so the manifest must declare
+        # the identity the fixture's Git origin carries.
+        workspace = u.Tests.standalone_workspace(root, config.Infra.name)
         request = m.Infra.CodegenConformRequest(
             root=root,
             scope=c.Infra.CodegenConformScope.SELF,

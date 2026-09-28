@@ -17,8 +17,6 @@ from tests import c
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
-
 
 class TestsFlextInfraCodegenPyTyped:
     def test_creates_marker_in_dir_with_py_files(self, tmp_path: Path) -> None:
@@ -149,6 +147,3 @@ class TestsFlextInfraCodegenPyTyped:
         tm.that(count, eq=3)
         for name in ("pkga", "pkgb", "pkgc"):
             tm.that((tmp_path / "src" / name / c.Infra.PY_TYPED).exists(), eq=True)
-
-
-__all__: t.StrSequence = []

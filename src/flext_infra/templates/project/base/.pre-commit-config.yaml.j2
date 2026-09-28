@@ -4,15 +4,11 @@ repos:
     hooks:
     # Why: each make verb is its own pre-commit/pre-push hook so the operator
     # sees per-step status (Passed/Failed) natively via the pre-commit runner.
-    # Every step states the CI token instead of inheriting it. A git hook runs
-    # with the invoking environment, so a caller that already exported
-    # CI={{ make.ci.value }} would otherwise reach the pre-push steps and
-    # revoke exactly the gates a push must not skip (9b604d43: lint, format,
-    # pyrefly; flext-v4p5: pytest). Declaring the token closes that carrier.
+    # Every step owns its CI context instead of inheriting the caller's token.
     # pre-commit is the fast mutation pass and runs the CI gate set
-    # (CI={{ make.ci.value }}). pre-push is the local blocking gate and runs
-    # the full set with CI={{ make.ci.local_value }}. Context never changes the
-    # declared operation. Pytest deselects tooling.tools.pytest.ci_excluded_markers
+    # (CI={{ make.ci.value }}). pre-push check unsets {{ make.ci.variable }} to run
+    # every active gate; its other verbs retain CI={{ make.ci.local_value }}.
+    # Pytest deselects tooling.tools.pytest.ci_excluded_markers
     # only with CI={{ make.ci.value }}, shared by CI and pre-commit. Local and
     # pre-push runs retain those tests; deselection is recorded in test reports.
     # Every hook step owns a shell because Git exports repository-local state,
@@ -42,7 +38,7 @@ repos:
         name: make {{ step.verb }}
         language: system
         entry: >-
-          bash -eu -o pipefail -c 'unset $(git rev-parse --local-env-vars); unset MAKEFLAGS ; {{ make.ci.variable }}={{ make.ci.local_value }} make {{ step.verb }}'
+          bash -eu -o pipefail -c 'unset $(git rev-parse --local-env-vars); unset MAKEFLAGS ; {% if step.verb == "check" %}unset {{ make.ci.variable }}; {% else %}{{ make.ci.variable }}={{ make.ci.local_value }} {% endif %}make {{ step.verb }}'
         pass_filenames: false
         always_run: true
         stages: [pre-push]

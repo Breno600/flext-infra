@@ -10,24 +10,24 @@ from flext_infra import c, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t
+    from flext_infra import p, t
 
 
 class FlextInfraNamespaceRulesBase:
     """Provide deterministic AST and layer operations to every rule family."""
 
     @staticmethod
-    def kind(node: object) -> str:
+    def kind(node: p.AttributeProbe) -> str:
         """Return the Rope-compatible AST node kind."""
         return u.Infra.node_kind(u.Infra.ensure_ast_node(node))
 
     @staticmethod
-    def walk(node: object) -> t.SequenceOf[object]:
+    def walk(node: p.AttributeProbe) -> t.SequenceOf[t.Infra.RopeAstNode]:
         """Walk a Rope-provided AST without reparsing source text."""
         return tuple(u.Infra.walk_ast_nodes(u.Infra.ensure_ast_node(node)))
 
     @classmethod
-    def outer_classes(cls, tree: object) -> t.SequenceOf[object]:
+    def outer_classes(cls, tree: p.AttributeProbe) -> t.SequenceOf[t.Infra.RopeAstNode]:
         """Return top-level class declarations."""
         return tuple(
             node
@@ -36,7 +36,7 @@ class FlextInfraNamespaceRulesBase:
         )
 
     @classmethod
-    def name_of(cls, node: object | None) -> str:
+    def name_of(cls, node: p.AttributeProbe) -> str:
         """Return the final identifier represented by an AST expression."""
         if node is None:
             return ""
@@ -60,7 +60,7 @@ class FlextInfraNamespaceRulesBase:
         return ""
 
     @classmethod
-    def dotted_name(cls, node: object | None) -> str:
+    def dotted_name(cls, node: p.AttributeProbe) -> str:
         """Return a dotted Name/Attribute expression."""
         if node is None:
             return ""
@@ -73,7 +73,7 @@ class FlextInfraNamespaceRulesBase:
         return f"{parent}.{leaf}" if parent else leaf
 
     @classmethod
-    def is_type_checking_guard(cls, node: object) -> bool:
+    def type_checking_guard(cls, node: p.AttributeProbe) -> bool:
         """Return whether a statement is exactly ``if TYPE_CHECKING``."""
         return (
             cls.kind(node) == "If"
@@ -82,13 +82,13 @@ class FlextInfraNamespaceRulesBase:
 
     @classmethod
     def imports_with_context(
-        cls, tree: object
+        cls, tree: p.AttributeProbe
     ) -> t.SequenceOf[t.Pair[t.Infra.PythonImportNode, bool]]:
         """Return every import with its TYPE_CHECKING-only state."""
         guarded = {
             id(child)
             for node in cls.walk(tree)
-            if cls.is_type_checking_guard(node)
+            if cls.type_checking_guard(node)
             for child in cls.walk(node)
             if cls.kind(child) in {"Import", "ImportFrom"}
         }
@@ -97,6 +97,51 @@ class FlextInfraNamespaceRulesBase:
             for node in cls.walk(tree)
             if isinstance(node, (Import, ImportFrom))
         )
+
+    @classmethod
+    def imported_callable_names(
+        cls, tree: p.AttributeProbe
+    ) -> t.MappingKV[t.Pair[int, int], frozenset[str]]:
+        """Index imported call/decorator names from the existing Rope AST."""
+        bindings: t.MutableMappingKV[str, str] = {}
+        for node in cls.walk(tree):
+            kind = cls.kind(node)
+            if kind == "Import":
+                for alias in getattr(node, "names", ()) or ():
+                    imported = getattr(alias, "name", "")
+                    local = (
+                        getattr(alias, "asname", None) or str(imported).split(".")[0]
+                    )
+                    if isinstance(imported, str) and isinstance(local, str):
+                        bindings[local] = (
+                            imported if getattr(alias, "asname", None) else local
+                        )
+            elif kind == "ImportFrom":
+                module = getattr(node, "module", "")
+                if not isinstance(module, str):
+                    continue
+                for alias in getattr(node, "names", ()) or ():
+                    imported = getattr(alias, "name", "")
+                    local = getattr(alias, "asname", None) or imported
+                    if isinstance(imported, str) and isinstance(local, str):
+                        bindings[local] = f"{module}.{imported}"
+        resolved: t.MutableMappingKV[t.Pair[int, int], frozenset[str]] = {}
+        for node in cls.walk(tree):
+            callable_node = (
+                getattr(node, "func", None) if cls.kind(node) == "Call" else node
+            )
+            if cls.kind(callable_node) not in {"Name", "Attribute"}:
+                continue
+            dotted = cls.dotted_name(callable_node)
+            root, separator, suffix = dotted.partition(".")
+            imported = bindings.get(root)
+            if imported is None:
+                continue
+            qualified = f"{imported}.{suffix}" if separator else imported
+            resolved[
+                cls.line(callable_node), getattr(callable_node, "col_offset", 0)
+            ] = frozenset({qualified})
+        return resolved
 
     @staticmethod
     def violations(code: str, messages: t.StrSequence) -> t.StrSequence:
@@ -131,7 +176,7 @@ class FlextInfraNamespaceRulesBase:
         return direct or c.Infra.NAMESPACE_LAYER_BY_FAMILY.get(first)
 
     @staticmethod
-    def line(node: object) -> int:
+    def line(node: p.AttributeProbe) -> int:
         """Return a stable source line for one AST node."""
         value = getattr(node, "lineno", 1)
         return value if isinstance(value, int) else 1

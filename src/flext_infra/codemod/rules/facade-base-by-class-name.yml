@@ -25,11 +25,21 @@
 # that declares the letter in its own `__all__` and rewrites the import, the
 # base, and the rebind in one transaction. Modules that extend a letter without
 # rebinding it (`class FlextInfra(s[...])`) never match.
+#
+# Scope: FLEXT family facades only (Pattern-B peers, named `Flext*` or
+# `TestsFlext*` by the facade naming law). A Pattern-A consumer of the family
+# keeps the letter base: flext-core ENFORCE-046 forbids a consumer's canonical
+# facade from importing a bare `FlextXxx` class ("unless Pattern-B peer"), so
+# rewriting `class AiHubProtocols(p)` would break the consumer's `make check`
+# (operator decision 2026-09-25, flext-dv1ga).
 id: facade-base-by-class-name
 language: python
 severity: error
 files:
   - "**/*.py"
+constraints:
+  C:
+    regex: "^(?:Tests)?Flext[A-Z]"
 rule:
   all:
     - kind: assignment
@@ -87,4 +97,6 @@ message: >-
 note: >-
   Run `make mod`: the facade-base semantic phase derives the parent class name
   from the parent module's `__all__` and rewrites the import, the base, and an
-  annotated rebind atomically.
+  annotated rebind atomically. Only FLEXT family facades (`Flext*`,
+  `TestsFlext*`) are selected; a consumer facade keeps its letter base
+  (flext-core ENFORCE-046).

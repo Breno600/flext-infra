@@ -105,8 +105,13 @@ rule:
     - inside:
         kind: module
         has:
-          kind: import_from_statement
-          regex: '^from\s+tests\s+import\s+(?:[^,\n]+,\s*)*u(?:\s*,[^,\n]+)*$'
+          all:
+            - kind: import_from_statement
+            - regex: '^from\s+tests\s+import\s+(?:[^,\n]+,\s*)*u(?:\s*,[^,\n]+)*$'
+            - not:
+                inside:
+                  kind: function_definition
+                  stopBy: end
           stopBy: end
         stopBy: end
 fix: u.Tests.$METHOD($$$ARGS)

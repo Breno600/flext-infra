@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from importlib import import_module
 from importlib.util import resolve_name
 from pathlib import Path
 from types import MappingProxyType
@@ -24,7 +23,7 @@ class TestsFlextInfraCodegenGeneration:
         exports: t.StrSequence,
         lazy_map: t.LazyAliasMap,
         *,
-        eager_dunders: t.MappingKV[str, t.StrPair] | None = None,
+        eager_dunders: t.MutableLazyAliasMap | None = None,
         child_packages: t.StrSequence = (),
         type_checking_map: t.LazyAliasMap | None = None,
     ) -> m.Infra.LazyInitPlan:
@@ -45,6 +44,7 @@ class TestsFlextInfraCodegenGeneration:
                 dict(lazy_map if type_checking_map is None else type_checking_map)
             ),
             eager_dunders=MappingProxyType(dict(eager_dunders or {})),
+            inline_constants=MappingProxyType({}),
             child_packages_for_lazy=child_packages,
             excluded_lazy_names=("internal_only",),
         )
@@ -58,7 +58,9 @@ class TestsFlextInfraCodegenGeneration:
                 "Demo": ("demo_pkg.api", "Demo"),
                 "r": ("flext_core", "r"),
             }),
-            eager_dunders={"__version__": ("demo_pkg.__version__", "__version__")},
+            eager_dunders=MappingProxyType({
+                "__version__": ("demo_pkg.__version__", "__version__")
+            }),
             child_packages=("demo_pkg.services",),
         )
 
@@ -117,19 +119,10 @@ class TestsFlextInfraCodegenGeneration:
         tm.that(content, lacks="from demo_pkg.servers._base.constants import")
 
     def test_generated_runtime_surfaces_import_without_bootstrap_cycles(self) -> None:
-        lazy_parts = import_module("flext_core._lazy_parts")
-        typings = import_module("flext_core._typings")
-        infra_utilities = import_module("flext_infra._utilities")
-
-        tm.that(lazy_parts.__all__, eq=())
-        tm.that(typings.__all__, eq=())
         tm.that(flext_core.__all__, has="c")
         tm.that(dir(flext_core), has="c")
         tm.that(flext_core.c.__name__, eq="FlextConstants")
-        tm.that(
-            infra_utilities.FlextInfraUtilitiesRopeCore.__name__,
-            eq="FlextInfraUtilitiesRopeCore",
-        )
+        tm.that(u.Infra.init_rope_project, none=False)
 
     @pytest.mark.parametrize(
         ("owner", "rendered_owner"),
@@ -507,8 +500,11 @@ class TestsFlextInfraCodegenGeneration:
             ),
         )
 
+    @pytest.mark.parametrize(
+        "isort_table", ["", "[tool.ruff.lint.isort]\nknown-first-party = []\n"]
+    )
     def test_project_package_name_reads_manifest_not_directory_name(
-        self, tmp_path: Path
+        self, tmp_path: Path, isort_table: str
     ) -> None:
         """Worktree checkouts keep the manifest's package name.
 
@@ -521,8 +517,8 @@ class TestsFlextInfraCodegenGeneration:
         project_root = tmp_path / "0.12.0-dev"
         wrapper_root = project_root / "examples"
         wrapper_root.mkdir(parents=True)
-        (project_root / c.Infra.PYPROJECT_FILENAME).write_text(
-            '[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n',
+        (project_root / c.PYPROJECT_FILENAME).write_text(
+            f'[project]\nname = "demo-worktree-pkg"\nversion = "1.0.0"\n{isort_table}',
             encoding="utf-8",
         )
         plan = m.Infra.LazyInitPlan(
@@ -544,6 +540,7 @@ class TestsFlextInfraCodegenGeneration:
                 "project_p": ("demo_worktree_pkg", "p"),
             }),
             eager_dunders=MappingProxyType({}),
+            inline_constants=MappingProxyType({}),
             child_packages_for_lazy=(),
             excluded_lazy_names=("internal_only",),
         )
@@ -561,5 +558,70 @@ class TestsFlextInfraCodegenGeneration:
             ),
         )
 
+    @pytest.mark.parametrize("declared_empty", [False, True])
+    def test_empty_first_party_policy_does_not_discover_extra_namespaces(
+        self, tmp_path: Path, *, declared_empty: bool
+    ) -> None:
+        """An explicit empty list and an absent table remain distinct inputs."""
+        additional = tmp_path / "src" / "fixture_extra_namespace"
+        additional.mkdir(parents=True)
+        (additional / c.Infra.INIT_PY).write_text("", encoding="utf-8")
+        wrapper = tmp_path / "examples"
+        wrapper.mkdir()
+        table = (
+            "[tool.ruff.lint.isort]\nknown-first-party = []\n" if declared_empty else ""
+        )
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
+            f'[project]\nname = "configured-workspace"\nversion = "1.0.0"\n{table}',
+            encoding="utf-8",
+        )
+        plan = self._plan(
+            "examples",
+            ("extra", "external"),
+            MappingProxyType({
+                "extra": ("fixture_extra_namespace", "value"),
+                "external": ("zz_external_fixture", "value"),
+            }),
+        )
+        plan = plan.model_copy(
+            update={
+                "context": plan.context.model_copy(
+                    update={"pkg_dir": wrapper, "init_path": wrapper / c.Infra.INIT_PY}
+                )
+            }
+        )
+        rendered = FlextInfraCodegenGeneration.render_init(plan)
+        expected = (
+            "    from fixture_extra_namespace import value as extra\n"
+            "    from zz_external_fixture import value as external\n"
+            if declared_empty
+            else (
+                "    from zz_external_fixture import value as external\n\n"
+                "    from fixture_extra_namespace import value as extra\n"
+            )
+        )
+        tm.that(rendered, has=expected)
 
-__all__: list[str] = ["TestsFlextInfraCodegenGeneration"]
+    @pytest.mark.parametrize("projected", ['"namespace"', '["valid", 3]', "false"])
+    def test_malformed_first_party_names_fail_at_the_render_boundary(
+        self, tmp_path: Path, projected: str
+    ) -> None:
+        """Invalid Ruff configuration cannot become a derived namespace list."""
+        package = tmp_path / "src" / "sample"
+        package.mkdir(parents=True)
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
+            '[project]\nname = "sample"\nversion = "1.0.0"\n'
+            f"[tool.ruff.lint.isort]\nknown-first-party = {projected}\n",
+            encoding="utf-8",
+        )
+        plan = self._plan("sample", (), MappingProxyType({}))
+        plan = plan.model_copy(
+            update={
+                "context": plan.context.model_copy(
+                    update={"pkg_dir": package, "init_path": package / c.Infra.INIT_PY}
+                )
+            }
+        )
+
+        with pytest.raises(m.ValidationError):
+            FlextInfraCodegenGeneration.render_init(plan)

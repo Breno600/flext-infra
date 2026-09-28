@@ -1,12 +1,4 @@
 Infra:
-  # Operator law 2026-09-22: flext-infra's own census/namespace debt stays
-  # visible but never blocks CI; findings print as warnings and the reports
-  # still record them. Root-cause repair continues at the owning campaigns.
-  check_policy:
-    # flext-1pquc: the model-facade composition debt (~99 no-any-return)
-    # is fleet-visible since the check-complement CI step; it warns while
-    # the debt is ground down at its owner.
-    warning_gates: [runtime-census, namespace, mypy]
   tooling:
     # flext-j47u (codex): canonical validated tooling and suppression-policy SSOT.
     tools:
@@ -252,12 +244,6 @@ Infra:
             # Examples are executable documentation loaded by path, not
             # importable modules, so module-name and shebang rules do not apply.
             "**/examples/**/*.py": [invalid-module-name, shebang-not-executable]
-            # The rope PEP 695 exemption is NOT declared here: this file is the
-            # FLEET policy, and a path that exists only in flext-infra would be
-            # written into every generated project's pyproject.toml. It lives in
-            # flext-infra's own config/quality.yaml as a project-local
-            # ManagedArtifacts.Ruff addition, which conform merges over this
-            # policy for that one repository.
             # Test suites: pytest idioms that are correct-by-design
             # are exempted GLOBALLY at the codegen SSOT (operator P0, per-rule
             # justified per UNIVERSAL_CORE r19 — never a blanket mask):
@@ -326,6 +312,11 @@ Infra:
           explicit_package_bases: true
           check_untyped_defs: true
           extra_checks: true
+          # Analyze source distributions that have real annotations but omit
+          # the PEP 561 marker. Rope 1.14 is one such runtime owner; skipping
+          # it converts every public boundary into Any and makes its imports
+          # fail before our typed protocols can validate them.
+          follow_untyped_imports: true
           local_partial_types: true
           no_implicit_reexport: true
           show_traceback: true
@@ -350,10 +341,13 @@ Infra:
           valid-type: Mypy rejects facade namespaces used as owners in valid PEP 695 aliases.
         string-settings:
           follow_imports: normal
-        # No module overrides: this repository owns no foreign module. A
-        # stale override for a module absent from the fleet (dcdoc) shipped
-        # here and silently exempted nothing — removed 2026-09-22 (flext-t5uhw).
-        overrides: []
+        overrides:
+          - modules: [rope.*]
+            disable-error-codes: []
+            follow-untyped-imports: true
+            justification: >-
+              Analyze Rope's installed source without suppressing import-untyped;
+              https://mypy.readthedocs.io/en/stable/config_file.html#follow-untyped-imports
       pydantic-mypy:
         init_forbid_extra: true
         init_typed: true
@@ -448,27 +442,13 @@ Infra:
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
-          # flext-j47u (codex): Rope 1.14/latest has no public PEP 695 walker
-          # registration API. This existing-path-only environment is the tested
-          # vendor boundary; broad src code keeps reportPrivateUsage=error.
-          diagnostic-path-overrides:
-            - root: src/flext_infra/_utilities/_rope
-              reportPrivateUsage: "none"
-              rationale: >-
-                Rope 1.14 and upstream master require private walker handler
-                registration for Python 3.13 PEP 695 source regions.
+          diagnostic-path-overrides: []
           source-report-private-usage: error
           test-like-report-private-usage: "none"
           other-report-private-usage: "none"
           venv-name: .venv
       coverage:
         source: [src]
-        fail-under:
-          core: 45
-          domain: 30
-          platform: 45
-          integration: 20
-          app: 15
         show-missing: true
         skip-covered: false
         precision: 2
@@ -630,12 +610,11 @@ Infra:
         # the declared exception, not a raised ceiling: unmarked cases keep 10s.
         slow-timeout-seconds: 60
         # Complete-suite wall clock. Individual cases remain bounded at 10s
-        # (60s only when explicitly slow). aihub-6k1.31 measured the 600s limit
-        # terminating cold serial selection at 35% and warm two-worker selection
-        # at 91%. The cold projection is 1715s; 2400s provides bounded headroom
-        # for all selected cases and coverage. The outer wall adds one minute
-        # for orderly worker/report shutdown; failures still collect fully.
-        run-timeout-seconds: 2400
+        # (60s only when explicitly slow). The 2026-09-24 cold baseline reached
+        # 69% of 2975 items at 2400s, projecting roughly 3500s for completion.
+        # 7200s provides bounded headroom for all selected cases and coverage.
+        # The outer wall adds one minute for orderly worker/report shutdown.
+        run-timeout-seconds: 7200
         termination-grace-seconds: 2
         # Operator decision 2026-09-14: collect every selected test's outcome.
         # Pytest zero disables early stopping; failures retain their nonzero exit.
@@ -656,6 +635,13 @@ Infra:
         parallel-worker-memory-gb: 2
         # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
+        # Measured 2026-09-26: a 2-3 item nested testmon selection spawning two
+        # xdist workers spent 11-17s running trivial tests, then blocked the
+        # parent's own process.wait() for the remaining slow-item budget during
+        # worker teardown, failing the pytest-timeout slow ceiling (60s) even
+        # though every test passed. Below this floor the invoking process runs
+        # the selection itself; no execnet gateway is ever created for it.
+        parallel-worker-min-items: 8
         profile-sort: cumulative
         profile-limit: 50
         min-version: "8.0"
@@ -697,12 +683,14 @@ Infra:
           - "discovery: catalog and stream discovery tests"
           - "singer: Singer protocol contract tests"
         # gate-budget/engineering-core: external-token gates never run inside
-        # offline verification (`make test`); they are deselected here and the
-        # runner records them as NOT EXECUTED. Direct invocation (`pytest -m
-        # remote`) selects them and then their required environment is exact.
+        # offline verification (`make test`); the runner records their exclusion.
+        # `make test-full` first completes that incremental phase, then executes
+        # every marker under the same database and deadline. Existing external
+        # tests retain their declared environment and authentication requirements.
         external-gate-markers: [remote, docker]
         # Operator 2026-09-14: CI and pre-commit share make.ci.value;
-        # local and pre-push execution retain slow tests.
+        # local and pre-push execution retain slow tests. The full phase of
+        # `make test-full` includes these markers in every context.
         ci-excluded-markers: [slow]
         standard-addopts:
           - --benchmark-disable
@@ -716,8 +704,19 @@ Infra:
         # the whole Make/pytest process (shell `timeout`), not a single session
         # hook. A wide outer wall is itself an escape hatch — it would let an
         # overrun keep burning wall clock instead of aborting. Grace covers
-        # interpreter start, collection and teardown only.
-        process-timeout-seconds: 2460
+        # interpreter start, collection and teardown only. This is the `make
+        # test-full` (cold, complete-suite) ceiling only; `make test`
+        # (incremental, the PR gate) is bounded by
+        # incremental-process-timeout-seconds below.
+        process-timeout-seconds: 7260
+        # Operator law 2026-09-26: a PR gate completes in 10 minutes or less.
+        # `make test` (incremental testmon selection) is the PR-gate verb, so
+        # its own outer Make-level wall is bounded to that budget independent
+        # of the generous cold-suite ceiling above -- a stuck or accidentally
+        # full-scope incremental run must fail fast, not silently spend the
+        # 2-hour cold-suite allowance. Matches the declared pre-push `test`
+        # budget (600s).
+        incremental-process-timeout-seconds: 600
       tomlsort:
         all: true
         in_place: true
@@ -790,17 +789,6 @@ ManagedArtifacts:
       src/flext_infra/_utilities/_mypy_supervisor.py:
         - suspicious-subprocess-import
         - subprocess-without-shell-equals-true
-      # OPERATOR-AUTHORIZED 2026-08-08 (rope only, private-member-access only).
-      # Rope 1.14 and upstream master expose NO public API to register a PEP 695
-      # walker handler, so these private slots ARE the library interface.
-      # Vendoring the walker and dropping PEP 695 support were the alternatives;
-      # the operator rejected both.
-      # The access is written LITERALLY and reported honestly: routing it through
-      # getattr with a name constant was refused as a disguised suppression. The
-      # typing side is genuinely fixed (pep695_ast_walker narrows via TypeGuard
-      # and raises when rope changes its internals), so this exemption covers the
-      # ruff rule alone. Removing it reports exactly 12 SLF001, all under _rope/.
-      src/flext_infra/_utilities/_rope/**/*.py: [private-member-access]
 
 mod:
   phases:

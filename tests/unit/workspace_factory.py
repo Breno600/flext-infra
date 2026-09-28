@@ -128,6 +128,3 @@ class TestsFlextInfraWorkspaceFactory:
             + poetry_deps
             + f"{dependencies}\n"
         )
-
-
-__all__: list[str] = ["TestsFlextInfraWorkspaceFactory"]

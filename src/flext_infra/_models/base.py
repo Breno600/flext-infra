@@ -14,7 +14,6 @@ from flext_cli import m
 
 from flext_infra import c, t
 
-from ._defaults import FlextInfraModelsDefaults
 from .mixins import FlextInfraModelsMixins as mm
 
 
@@ -124,9 +123,14 @@ class FlextInfraModelsBase:
             Path, m.Field(description="Repository root used for lint and pytest checks")
         ]
         expected_sources: Annotated[
-            t.MappingKV[Path, str],
-            m.Field(description="Expected current source bytes keyed by updated path"),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+            t.MappingKV[Path, str | None],
+            m.Field(
+                description=(
+                    "Expected current source bytes keyed by updated path; None "
+                    "requires the path to be absent"
+                )
+            ),
+        ]
         keep_backup: Annotated[
             bool, m.Field(description="Whether to preserve .bak copies before editing")
         ] = False
@@ -189,7 +193,7 @@ class FlextInfraModelsBase:
             m.Field(
                 description=(
                     "Comma-separated gate names for post-validation; empty selects"
-                    " the SSOT snapshot gates (make.ci.check_gates)."
+                    " the SSOT snapshot gates (make.check_gates_ci)."
                 )
             ),
         ] = ""

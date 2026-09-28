@@ -239,6 +239,3 @@ class TestsFlextInfraGitIdentitySubmodules:
         )
         tm.that(identity.repo_root, eq=root.resolve())
         tm.that(identity.requested_path, eq=(nested / "module.py").resolve())
-
-
-__all__: list[str] = ["TestsFlextInfraGitIdentitySubmodules"]

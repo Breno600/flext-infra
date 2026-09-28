@@ -32,6 +32,3 @@ class TestsFlextInfraValidateCli:
 
     def test_stub_validate_help_returns_zero(self) -> None:
         tm.that(infra_main(["validate", "stub-validate", "--help"]), eq=0)
-
-
-__all__: list[str] = ["TestsFlextInfraValidateCli"]

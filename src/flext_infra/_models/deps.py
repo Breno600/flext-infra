@@ -5,10 +5,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import t
 
-from ._defaults import FlextInfraModelsDefaults
 from .deps_toml import FlextInfraModelsDepsToml
 from .deps_tool_config import FlextInfraModelsDepsToolConfig
 from .mixins import FlextInfraModelsMixins as mm
@@ -21,7 +21,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         """Canonical CLI payload for ``flext-infra deps detect``.
 
         Inherits ``apply``/``dry_run``, ``repository_root``, ``projects``,
-        ``fail_fast``, ``verbose`` from ``WriteMixin``.
+        ``verbose`` from ``WriteMixin``.
         """
 
         output_format: Annotated[
@@ -127,6 +127,74 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.MutableJsonMapping, m.Field(description="Validated plain TOML payload")
         ] = m.Field(default_factory=dict)
 
+    class PyprojectDeclaredTopology(m.ContractModel):
+        """Project topology a caller declares instead of discovering it on disk.
+
+        An atomic scaffold knows its shipped roots and analyzer roots before
+        they exist; an empty declaration keeps filesystem discovery.
+        """
+
+        root_modules: Annotated[
+            t.StrTuple,
+            m.Field(description="Top-level single-file modules the package ships"),
+        ] = ()
+        root_packages: Annotated[
+            t.StrTuple,
+            m.Field(description="Top-level packages shipped beyond the primary one"),
+        ] = ()
+        declared_python_dirs: Annotated[
+            t.StrTuple, m.Field(description="Python roots declared for the project")
+        ] = ()
+        declared_python_dirs_are_complete: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Declared roots are the full set; discovery must not widen it"
+                )
+            ),
+        ] = False
+        project_kind: Annotated[
+            str | None,
+            m.Field(description="Declared project kind; absent classifies on demand"),
+        ] = None
+        analysis_exclusions: Annotated[
+            t.StrTuple | None,
+            m.Field(
+                description=(
+                    "Workspace-relative paths excluded from analysis; absent "
+                    "derives them from the workspace"
+                )
+            ),
+        ] = None
+
+    class PyprojectAnalyzerContext(m.ContractModel):
+        """Placement and Python roots of one pyproject the analyzer phases conform.
+
+        Paths are absent while an atomic scaffold renders a project that is not
+        on disk yet; the declared roots then stand in for discovery.
+        """
+
+        is_root: Annotated[
+            bool, m.Field(description="Whether the pyproject is the repository root")
+        ]
+        repository_root: Annotated[
+            Path | None, m.Field(description="Repository root on disk")
+        ] = None
+        project_dir: Annotated[
+            Path | None, m.Field(description="Project directory on disk")
+        ] = None
+        declared_python_dirs: Annotated[
+            t.StrTuple, m.Field(description="Python roots declared for the project")
+        ] = ()
+        declared_python_dirs_are_complete: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Declared roots are the full set; discovery must not widen it"
+                )
+            ),
+        ] = False
+
     class DependencyLimitsInfo(m.ArbitraryTypesModel):
         """Dependency limits configuration metadata."""
 
@@ -216,6 +284,15 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         python_version: Annotated[
             str | None, m.Field(None, description="Python version")
         ] = None
+        untyped_imports_followed: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Governed mypy follow_untyped_imports policy; when true, "
+                    "missing stubs are not findings"
+                )
+            ),
+        ]
 
     class ProjectRuntimeReport(m.ArbitraryTypesModel):
         """Project runtime dependency and typings report."""
@@ -234,8 +311,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
 
         workspace: Annotated[str, m.Field(description="Workspace name")]
         projects: t.MappingKV[str, FlextInfraModelsDeps.ProjectRuntimeReport] = m.Field(
-            default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
-            description="Per-project reports",
+            description="Per-project reports"
         )
         pip_check: FlextInfraModelsDeps.PipCheckReport | None = m.Field(
             None, description="Pip check report", validate_default=True

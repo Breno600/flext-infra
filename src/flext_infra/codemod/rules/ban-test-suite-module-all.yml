@@ -1,0 +1,53 @@
+# Test-suite modules publish nothing (operator ruling 2026-09-24).
+#
+# A module under tests/{unit,integration,e2e,performance,benchmark} is a pytest
+# collection target, never an import source. An explicit `__all__` there makes
+# the lazy-init generator publish its classes through the generated
+# `tests/<suite>/__init__.py`, which in turn lets other tests import one test
+# module from another and produces the duplicate-class elections `make gen`
+# reports (e.g. `TestsFlextCliService` in both `test_cli_service` and its parts).
+#
+# Tests import shared behaviour only from conftest fixtures, `tm`, `config`,
+# `settings` and the `c/t/p/m/u` facades of their tier; anything a suite module
+# exported that another module still needs moves to those owners.
+#
+# Root tier facades (tests/constants.py, tests/models.py, ...) and private
+# `_parts` packages are out of scope: their `__all__` is the declaration the
+# generator must propagate (ADR-018 p.1/p.5). Generated `__init__.py` files are
+# projections and are never edited by a rule.
+#
+# `fix: ""` empties the statement; `ruff format`, which `make mod` requires to
+# be clean afterwards, closes the gap.
+id: ban-test-suite-module-all
+language: python
+severity: error
+files:
+  - "tests/unit/**/*.py"
+  - "tests/integration/**/*.py"
+  - "tests/e2e/**/*.py"
+  - "tests/performance/**/*.py"
+  - "tests/benchmark/**/*.py"
+ignores:
+  - "tests/unit/**/__init__.py"
+  - "tests/integration/**/__init__.py"
+  - "tests/e2e/**/__init__.py"
+  - "tests/performance/**/__init__.py"
+  - "tests/benchmark/**/__init__.py"
+rule:
+  kind: expression_statement
+  inside:
+    kind: module
+  has:
+    any:
+      - kind: assignment
+        has:
+          field: left
+          regex: ^__all__$
+      - kind: augmented_assignment
+        has:
+          field: left
+          regex: ^__all__$
+fix: ""
+message: >-
+  Test-suite modules publish nothing: delete `__all__`; share code through
+  conftest fixtures, tm, config, settings and the c/t/p/m/u facades.

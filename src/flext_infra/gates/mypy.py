@@ -78,7 +78,7 @@ class FlextInfraMypyGate(FlextInfraGate):
 
     def _resolve_config(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
         """Resolve Mypy settings from the project, then the workspace."""
-        pyproject_name: str = c.Infra.PYPROJECT_FILENAME
+        pyproject_name: str = c.PYPROJECT_FILENAME
         proj_py = project_dir / pyproject_name
         doc = u.Cli.toml_read(proj_py)
         if doc is not None:
@@ -97,6 +97,8 @@ class FlextInfraMypyGate(FlextInfraGate):
     ) -> t.StrSequence:
         """Build check command."""
         cfg = self._resolve_config(project_dir, ctx)
+        timing = self._check_report_path(project_dir, ctx)
+        timing.parent.mkdir(parents=True, exist_ok=True)
         return u.Infra.mypy_limited_command(
             self._python_module_command(
                 c.Infra.MYPY,
@@ -107,26 +109,39 @@ class FlextInfraMypyGate(FlextInfraGate):
                 c.Infra.OUTPUT_JSON,
                 "--no-error-summary",
                 "--no-color-output",
-                "--linecoverage-report",
-                str(self._check_report_path(project_dir, ctx).parent),
+                # Any Mypy reporter disables its incremental cache, so the
+                # source inventory comes from the verbose log instead; the
+                # timing files rank per-module and per-line checking cost.
+                "--verbose",
+                "--timing-stats",
+                str(timing),
+                "--line-checking-stats",
+                str(timing.with_name("lines.txt")),
             )
         )
 
     @override
     def _check_report_path(self, project_dir: Path, ctx: m.Infra.GateContext) -> Path:
-        """Keep Mypy's native source inventory within the existing report root."""
-        return ctx.reports_dir / f"{project_dir.name}-mypy" / "coverage.json"
+        """Keep Mypy's native timing evidence within the existing report root."""
+        return ctx.reports_dir / f"{project_dir.name}-mypy" / "timing.txt"
 
     @override
     def _validate_check_report(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
+        result: p.Cli.CommandOutput,
     ) -> None:
         """Account for every submitted target using Mypy's native source set."""
-        report = m.Infra.MypyCoverageReport.model_validate_json(
-            self._check_report_path(project_dir, ctx).read_text(encoding="utf-8"),
-            strict=True,
-        )
-        sources = tuple(Path(source).resolve() for source in report.lines)
+        _ = ctx
+        inventory = m.Infra.MypySourceInventory.model_validate({
+            "sources": tuple(
+                str((project_dir / found["path"]).resolve())
+                for found in c.Infra.MYPY_FOUND_SOURCE_RE.finditer(result.stderr)
+            )
+        })
+        sources = tuple(Path(source) for source in inventory.sources)
         submitted = tuple((project_dir / target).resolve() for target in targets)
         for target in submitted:
             if not any(
@@ -175,7 +190,7 @@ class FlextInfraMypyGate(FlextInfraGate):
                 False,
                 (
                     m.Infra.Issue(
-                        file=c.Infra.PYPROJECT_FILENAME,
+                        file=c.PYPROJECT_FILENAME,
                         line=1,
                         column=1,
                         code="mypy-resource-limit",
@@ -220,7 +235,7 @@ class FlextInfraMypyGate(FlextInfraGate):
                 message = f"mypy exited with code {result.outcome.raw_return_code} without JSON diagnostics"
             issues.append(
                 m.Infra.Issue(
-                    file=c.Infra.PYPROJECT_FILENAME,
+                    file=c.PYPROJECT_FILENAME,
                     line=1,
                     column=1,
                     code="mypy-exec",

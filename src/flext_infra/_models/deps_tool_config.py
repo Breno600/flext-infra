@@ -228,6 +228,20 @@ class FlextInfraModelsDepsToolConfig(
                 description="Pytest-xdist scheduler for full runs.",
             ),
         ]
+        parallel_worker_min_items: Annotated[
+            int,
+            m.Field(
+                alias="parallel-worker-min-items",
+                gt=0,
+                description=(
+                    "Minimum selected node count before xdist workers are"
+                    " spawned; each worker pays a full interpreter and plugin"
+                    " boot, measured well past the tests it then runs for a"
+                    " small selection, so a selection below this floor runs"
+                    " serialized in the invoking process instead."
+                ),
+            ),
+        ]
         profile_sort: Annotated[
             Literal[
                 "calls",
@@ -328,7 +342,19 @@ class FlextInfraModelsDepsToolConfig(
             m.Field(
                 alias="process-timeout-seconds",
                 gt=0,
-                description="Hard timeout for the complete pytest process.",
+                description="Hard timeout for the complete cold/full pytest process.",
+            ),
+        ]
+        incremental_process_timeout_seconds: Annotated[
+            int,
+            m.Field(
+                alias="incremental-process-timeout-seconds",
+                gt=0,
+                description=(
+                    "Hard timeout for the incremental (PR-gate) pytest process;"
+                    " tighter than process-timeout-seconds so a stuck or"
+                    " accidentally full-scope incremental run fails fast."
+                ),
             ),
         ]
 
@@ -381,6 +407,20 @@ class FlextInfraModelsDepsToolConfig(
                 self.run_timeout_seconds + self.termination_grace_seconds
             ):
                 msg = "pytest process timeout must exceed run and termination budgets"
+                raise ValueError(msg)
+            if self.incremental_process_timeout_seconds >= self.process_timeout_seconds:
+                msg = (
+                    "pytest incremental process timeout must be tighter than the"
+                    " full/cold process timeout"
+                )
+                raise ValueError(msg)
+            if self.incremental_process_timeout_seconds <= (
+                self.case_timeout_seconds + self.termination_grace_seconds
+            ):
+                msg = (
+                    "pytest incremental process timeout must include item and"
+                    " termination budgets"
+                )
                 raise ValueError(msg)
             derived_options = ("--timeout", "--session-timeout")
             if any(
@@ -473,25 +513,6 @@ class FlextInfraModelsDepsToolConfig(
             bool, m.Field(description="Emit explicit YAML start marker.")
         ]
 
-    class CoverageFailUnderConfig(m.ArbitraryTypesModel):
-        """Coverage fail-under thresholds by layer."""
-
-        core: int = m.Field(
-            description="Minimum coverage percentage required for core layer."
-        )
-        domain: int = m.Field(
-            description="Minimum coverage percentage required for domain layer."
-        )
-        platform: int = m.Field(
-            description="Minimum coverage percentage required for platform layer."
-        )
-        integration: int = m.Field(
-            description="Minimum coverage percentage required for integration layer."
-        )
-        app: int = m.Field(
-            description="Minimum coverage percentage required for app layer."
-        )
-
     class CoverageConfig(m.ArbitraryTypesModel):
         """Coverage baseline settings loaded from YAML."""
 
@@ -499,9 +520,6 @@ class FlextInfraModelsDepsToolConfig(
             t.StrSequence,
             m.Field(description="Production roots measured by full coverage runs."),
         ]
-        fail_under: FlextInfraModelsDepsToolConfig.CoverageFailUnderConfig = m.Field(
-            alias="fail-under", description="Coverage fail-under thresholds by layer."
-        )
         show_missing: Annotated[
             bool,
             m.Field(
@@ -787,13 +805,6 @@ class FlextInfraModelsDepsToolConfig(
     class ToolingConformedTools(m.FlexibleModel):
         """Typed view of the ``[tool]`` tables one conformed pyproject carries."""
 
-        coverage_fail_under: Annotated[
-            int,
-            m.Field(
-                validation_alias=m.AliasPath("coverage", "report", "fail_under"),
-                description="Conformed coverage threshold",
-            ),
-        ]
         deptry: Annotated[t.JsonMapping, m.Field(description="Conformed deptry table")]
         mypy: Annotated[t.JsonMapping, m.Field(description="Conformed mypy table")]
         mypy_path: Annotated[
@@ -853,9 +864,6 @@ class FlextInfraModelsDepsToolConfig(
 
         project_kind: Annotated[
             t.NonEmptyStr, m.Field(description="Resolved project classification")
-        ]
-        coverage_fail_under: Annotated[
-            int, m.Field(ge=0, le=100, description="Resolved coverage threshold")
         ]
         first_party: Annotated[
             t.StrTuple, m.Field(description="Resolved first-party namespaces")

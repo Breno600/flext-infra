@@ -21,6 +21,9 @@ class TestsFlextInfraSemanticPhaseContract:
         self, tmp_path: Path
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
+        # Publication runs through the codegen transaction, which coordinates
+        # only inside an exact Git worktree root, exactly as in production.
+        u.Tests.initialize_git_repo(root)
         owner = f"{u.derive_class_stem(root.name)}{c.Infra.FAMILY_SUFFIXES['c']}"
         path = package / "constants.py"
         u.Tests.write_lazy_init_namespace_module(
@@ -30,6 +33,9 @@ class TestsFlextInfraSemanticPhaseContract:
             "from __future__ import annotations\n", ""
         )
         path.write_text(source, encoding="utf-8")
+        # Semantic publication runs inside a codegen transaction, which only
+        # coordinates through a real repository rooted at the project.
+        u.Tests.initialize_git_repo(root)
         finding = m.Infra.ModScanFinding(
             rule_file="require-future-annotations.yml",
             rule_id="require-future-annotations",
@@ -49,11 +55,13 @@ class TestsFlextInfraSemanticPhaseContract:
             files=frozenset({path}),
             entries=(finding,),
         )
-        tm.ok(FlextInfraCodemodSemanticApply.apply(root, report))
+        with infra.rope_workspace(root) as rope:
+            tm.ok(FlextInfraCodemodSemanticApply.apply(root, report, rope))
         published = path.read_text(encoding="utf-8")
         tm.that(published, has="from __future__ import annotations")
         tm.that(published, has=f"    class {owner}Member")
-        tm.ok(FlextInfraCodemodSemanticApply.apply(root, report))
+        with infra.rope_workspace(root) as rope:
+            tm.ok(FlextInfraCodemodSemanticApply.apply(root, report, rope))
         tm.that(path.read_text(encoding="utf-8"), eq=published)
 
     def test_nesting_replans_proposed_sources_without_publishing(

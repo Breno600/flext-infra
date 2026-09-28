@@ -16,7 +16,10 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
 
     @staticmethod
     def _scaffold_python_dirs(
-        entries: t.SequenceOf[p.Infra.TemplateEntrySpec], profile: c.Infra.MakeProfile
+        entries: t.SequenceOf[p.Infra.TemplateEntrySpec],
+        profile: c.Infra.MakeProfile,
+        *,
+        package: bool = True,
     ) -> t.StrSequence:
         """Return Python roots the selected scaffold manifest actually creates."""
         # Derive future roots from both
@@ -25,63 +28,79 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             Path(entry.destination).parts[0]
             for entry in entries
             if profile in entry.profiles
-            and entry.delegate == "render"
+            and entry.delegate == c.Infra.TemplateDelegate.RENDER
             and Path(entry.destination).parts
         }
+        # An existing package:false repository (a solo workspace root)
+        # materializes no package source dir: its manifest declares no
+        # importable package, so analyzers must not include it — pyright
+        # fails hard on an include entry whose directory does not exist.
+        # The atomic scaffold path never passes ``package=False``: its own
+        # manifest renders the source tree, and dropping ``src`` there made
+        # the first plan fall back to disk discovery for mypy/pyrefly search
+        # paths, which oscillates once the scaffold's directory chain exists.
+        source_dir = config.Infra.tooling.tools.pyright.path_rules.source_dir
         return tuple(
             directory
             for directory in config.Infra.tooling.tools.pyright.path_rules.env_dirs
-            if directory in generated_roots
+            if directory in generated_roots and (package or directory != source_dir)
         )
 
     @classmethod
     def conformed_pyproject_source(
-        cls,
-        source: str,
-        *,
-        repository: m.Infra.RepositoryRef,
-        workspace: m.Infra.WorkspaceSpec,
-        codegen: m.Infra.CodegenConfigSpec,
-        workspace_mode: c.Infra.MakeProfile,
-        uv_exclude_dependencies: t.VariadicTuple[
-            m.Infra.UvScopedDependencyExclusionSpec
-        ],
+        cls, source: str, *, render_inputs: m.Infra.CodegenRenderInputs
     ) -> p.Result[str]:
         """Conform one pyproject source."""
+        target = render_inputs.target
+        workspace = render_inputs.workspace
+        codegen = render_inputs.codegen
+        flext_line = u.Infra.flext_integration_line_for_checkout(
+            codegen=codegen, repository_root=target.root, workspace=workspace
+        )
+        if flext_line.failure:
+            return r[str].from_failure(flext_line)
+        declared_sources = {
+            member.distribution: f"git+{member.url}@{flext_line.value.branch}"
+            for member in workspace.subprojects
+        }
         return u.Infra.pyproject_conform(
             source,
             workspace=workspace,
-            workspace_mode=workspace_mode,
-            toolchain=codegen.toolchain,
             required_dev_dependencies=codegen.scaffold.project.dev,
-            uv_link_mode=cls.link_mode(repository, codegen.toolchain),
-            uv_exclude_dependencies=uv_exclude_dependencies,
-            namespace_scan_dirs=(
-                workspace.project.namespace_scan_dirs
-                if workspace.project is not None
-                else None
+            uv_resolution=m.Infra.UvResolutionSpec(
+                link_mode=cls.link_mode(target.repository, codegen.toolchain),
+                constraint_dependencies=tuple(
+                    codegen.toolchain.uv_constraint_dependencies
+                ),
+                exclude_dependencies=cls.routed_uv_exclude_dependencies(render_inputs),
+                environments=tuple(codegen.toolchain.uv_environments),
             ),
+            declared_sources=declared_sources,
         )
 
     @staticmethod
     def routed_uv_exclude_dependencies(
-        *,
-        repository: m.Infra.RepositoryRef,
-        target: m.Infra.RepositoryConformTarget,
-        codegen: m.Infra.CodegenConfigSpec,
+        render_inputs: m.Infra.CodegenRenderInputs,
     ) -> t.VariadicTuple[m.Infra.UvScopedDependencyExclusionSpec]:
         """Return the uv dependency exclusions routed to one repository.
 
-        Workspace root owns resolution for attached subprojects (uv reads
-        exclude-dependencies only from the workspace root). Subprojects still
-        receive their own routed excludes for standalone CI clones.
+        An exclusion drops a reverse edge onto a project installed from its
+        local checkout. It applies only where that project is local: the
+        repository itself or, at a workspace root (uv reads
+        exclude-dependencies only from the root), one of its declared
+        members. Routing an exclusion for an absent project would drop the
+        only edge that installs it.
         """
+        target = render_inputs.target
+        local = {target.repository.distribution}
         if target.make_profile is c.Infra.MakeProfile.WORKSPACE:
-            return tuple(codegen.uv_exclude_dependencies)
+            local.update(
+                member.distribution for member in render_inputs.workspace.subprojects
+            )
         return tuple(
             item
-            for item in codegen.uv_exclude_dependencies
-            if item.project == repository.distribution
+            for item in render_inputs.codegen.uv_exclude_dependencies
+            if item.project in local
         )
 
     @staticmethod
@@ -95,7 +114,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         # directives like `.PHONY` can span multiple physical lines. Only
         # collapse non-recipe lines (recipe lines start with whitespace and are
         # skipped below); the reported line number is the first physical line.
-        logical_lines: list[tuple[int, str]] = []
+        logical_lines: list[t.Pair[int, str]] = []
         pending_line: str | None = None
         pending_number: int = 0
         for line_number, raw_line in enumerate(content.splitlines(), start=1):

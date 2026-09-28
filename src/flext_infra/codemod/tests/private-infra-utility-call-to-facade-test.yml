@@ -1,0 +1,6 @@
+id: private-infra-utility-call-to-facade
+valid:
+  - u.Infra.public_reference(class_bases=u.Infra.class_bases(modules))
+invalid:
+  - FlextInfraUtilitiesPrivateImportFacades.discover(modules)
+  - FlextInfraUtilitiesPrivateImportFacades.public_reference(class_bases=FlextInfraUtilitiesPrivateImportAncestry.class_bases(modules))

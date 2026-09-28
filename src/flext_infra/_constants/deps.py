@@ -43,7 +43,7 @@ class FlextInfraConstantsDeps:
     )
     BANNER: ClassVar[str] = (
         "# @flext-generated: continuous\n"
-        "# @flext-owner: flext-infra de/config/codegen.yaml"
+        "# @flext-owner: flext-infra/config/codegen.yaml"
         " + flext-infra/src/flext_infra/templates/project/base/pyproject.toml.j2\n"
         "# @flext-adjust: MANAGED=conflict_sections + overwrite_project_keys."
         " CUSTOM=preserve_project_keys and [tool.*] outside conflict_sections."
@@ -61,6 +61,12 @@ class FlextInfraConstantsDeps:
     )
     DEPENDENCY_LIMITS_FILENAME: ClassVar[str] = "limits.toml"
     """Packaged dependency-limit configuration resource."""
+    DEPTRY_UNUSED_DEPENDENCY_CODE: ClassVar[str] = "DEP002"
+    """Deptry rule code for a declared dependency the code never imports."""
+    MYPY_FOLLOW_UNTYPED_IMPORTS: ClassVar[str] = "follow_untyped_imports"
+    """Mypy option that analyzes installed packages lacking stubs or py.typed."""
+    MYPY_FOLLOW_UNTYPED_IMPORTS_DEFAULT: ClassVar[bool] = False
+    """Mypy's own default when neither governed policy nor project declares it."""
 
 
 __all__: list[str] = ["FlextInfraConstantsDeps"]

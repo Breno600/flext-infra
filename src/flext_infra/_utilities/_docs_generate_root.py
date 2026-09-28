@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -9,7 +10,6 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import c, m, t
 
-from ._docs_generate_plan import DocsRenderedArtifactTuple
 from ._docs_generate_project import FlextInfraUtilitiesDocsGenerateProjectMixin
 from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_contract import FlextInfraUtilitiesDocsContract
@@ -27,7 +27,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
     @staticmethod
     def docs_root_artifacts(
         repository_root: Path, scopes: t.SequenceOf[m.Infra.DocScope]
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Render aggregate root targets from the complete discovered project set."""
         workspace_contract = FlextInfraUtilitiesDocsContract.docs_workspace_contract(
             repository_root
@@ -36,11 +36,10 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             workspace_contract, "exclude_docs"
         )
         project_scopes = [scope for scope in scopes if scope.path != repository_root]
-        catalog_entries: t.MutableSequenceOf[MutableMapping[str, str]] = []
-        class_counts: MutableMapping[str, int] = {}
+        catalog_entries: t.MutableSequenceOf[m.Infra.DocsCatalogEntry] = []
         scope_modules: MutableMapping[str, list[str]] = {}
         src_paths: t.MutableSequenceOf[str] = []
-        root_api: list[tuple[Path, str]] = []
+        root_api: list[t.Pair[Path, str]] = []
         for scope in scopes:
             if scope.name == c.Infra.RK_ROOT:
                 continue
@@ -51,9 +50,9 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 )
             )
             if src_exists.failure:
-                return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(
-                    src_exists
-                )
+                return r[
+                    t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]
+                ].from_failure(src_exists)
             if src_exists.value:
                 src_paths.append(src_dir.relative_to(repository_root).as_posix())
             if scope.path == repository_root:
@@ -64,9 +63,6 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                         )
                     )
                 continue
-            class_counts[scope.project_class] = (
-                class_counts.get(scope.project_class, 0) + 1
-            )
             analyzed_contract = FlextInfraUtilitiesDocsApi.public_contract(
                 scope.path, scope.package_name
             )
@@ -78,14 +74,17 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             scope_modules[scope.name] = (
                 FlextInfraUtilitiesDocsGenerateRootMixin._module_names(scope)
             )
-            catalog_entries.append({
-                "name": scope.name,
-                "project_class": scope.project_class,
-                "package_name": scope.package_name,
-                "description": str(project_contract.get("description", "")).strip(),
-                "api_page": f"../../api-reference/generated/{scope.name}.md",
-            })
-        rendered: list[tuple[Path, str]] = [
+            catalog_entries.append(
+                m.Infra.DocsCatalogEntry(
+                    name=scope.name,
+                    project_class=scope.project_class,
+                    package_name=scope.package_name,
+                    description=str(project_contract.get("description", "")).strip(),
+                    api_page=f"../../api-reference/generated/{scope.name}.md",
+                )
+            )
+        class_counts = Counter(entry.project_class for entry in catalog_entries)
+        rendered: list[t.Pair[Path, str]] = [
             *root_api,
             (
                 repository_root / "mkdocs.yml",
@@ -98,7 +97,10 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 FlextInfraUtilitiesDocsRender.docs_root_overview_page(
                     workspace_contract,
                     project_count=len(project_scopes),
-                    class_counts=class_counts,
+                    class_counts=tuple(
+                        m.Infra.DocsClassCount(project_class=name, count=count)
+                        for name, count in sorted(class_counts.items())
+                    ),
                 ),
             ),
             (
@@ -108,7 +110,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                 ),
             ),
         ]
-        projects_index_entries: t.MutableSequenceOf[MutableMapping[str, str]] = []
+        projects_index_entries: t.MutableSequenceOf[m.Infra.DocsProjectIndexEntry] = []
         for scope in project_scopes:
             rendered.append((
                 repository_root / "docs/api-reference/generated" / f"{scope.name}.md",
@@ -137,10 +139,11 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
                         module_name, module_name
                     ),
                 ))
-            projects_index_entries.append({
-                "name": scope.name,
-                "module_count": str(len(module_names)),
-            })
+            projects_index_entries.append(
+                m.Infra.DocsProjectIndexEntry(
+                    name=scope.name, module_count=len(module_names)
+                )
+            )
         rendered.append((
             repository_root / "docs/api-reference/generated/projects/index.md",
             FlextInfraUtilitiesDocsRender.docs_root_projects_index(
@@ -155,7 +158,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             )
         )
         if api_pruned.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
                 api_pruned
             )
         projects_pruned = (
@@ -164,7 +167,7 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
             )
         )
         if projects_pruned.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
                 projects_pruned
             )
         return FlextInfraUtilitiesDocsGenerateRootMixin.docs_normalize_artifacts((
@@ -180,8 +183,11 @@ class FlextInfraUtilitiesDocsGenerateRootMixin(
         repository_root: Path,
         aggregate_scopes: t.SequenceOf[m.Infra.DocScope],
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
-        """Return the rendered artifact inventory for one docs scope."""
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
+        """Return the rendered artifact inventory for one docs scope.
+
+        The scope label is the only topology input (see ``build_scopes``).
+        """
         if scope.name == c.Infra.RK_ROOT:
             return FlextInfraUtilitiesDocsGenerateRootMixin.docs_root_artifacts(
                 repository_root, aggregate_scopes

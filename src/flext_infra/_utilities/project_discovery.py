@@ -13,7 +13,6 @@ from typing import override
 
 from flext_cli import u
 
-from .._config import FlextInfraConfig
 from ..constants import c
 from ..models import m
 from ..typings import t
@@ -195,7 +194,7 @@ class FlextInfraUtilitiesProjectDiscovery(
             for child in sorted(resolved_root.iterdir(), key=attrgetter("name"))
             if child.is_dir()
             and not child.name.startswith(".")
-            and (child / c.Infra.PYPROJECT_FILENAME).is_file()
+            and (child / c.PYPROJECT_FILENAME).is_file()
             and not cls._is_nonparticipant(child, resolved_root, nonparticipants)
         )
         return tuple(sorted({*declared, *direct}, key=Path.as_posix))
@@ -244,33 +243,17 @@ class FlextInfraUtilitiesProjectDiscovery(
         )
 
     @staticmethod
-    def external_tool_state_dir(
-        repository_root: Path, project_root: Path, tool_name: str
-    ) -> Path:
-        """Resolve one governed project's canonical state outside the checkout."""
-        resolved_workspace = repository_root.resolve()
-        resolved_project = project_root.resolve()
-        if not resolved_project.is_relative_to(resolved_workspace):
-            msg = f"project root is outside workspace: {resolved_project}"
-            raise ValueError(msg)
-        tool_component = Path(tool_name)
-        if (
-            tool_component.is_absolute()
-            or tool_component.name != tool_name
-            or tool_name in {"", ".", ".."}
-        ):
-            msg = f"tool_name must be one relative directory name: {tool_name!r}"
-            raise ValueError(msg)
-        state_root: Path = (
-            resolved_workspace.parent
-            / FlextInfraConfig.fetch_global().Infra.codegen.toolchain.state_directory_name
-            / resolved_workspace.name
-            / tool_name
-        )
-        relative_project = resolved_project.relative_to(resolved_workspace)
-        return (
-            state_root if relative_project == Path() else state_root / relative_project
-        )
+    def runtime_environment_dir(project_root: Path) -> Path:
+        """Resolve the checkout's Python environment (D-VENV, flext-x8gn6).
+
+        A subproject checked out inside a workspace uses the workspace
+        environment; a standalone checkout or a linked worktree owns its own,
+        exactly as the generated Makefile resolves ``REPOSITORY_ROOT``.
+        """
+        runtime = FlextInfraUtilitiesGit.git_repository_root(
+            m.Infra.GitRepoRequest(repo_root=project_root)
+        ).unwrap()
+        return runtime.repository_root / c.Infra.ENVIRONMENT_DIRECTORY
 
 
 __all__: list[str] = ["FlextInfraUtilitiesProjectDiscovery"]

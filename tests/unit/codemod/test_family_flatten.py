@@ -68,14 +68,14 @@ class TestsFlextInfraFamilyFlatten:
             proposed.update({
                 edit.file_path: edit.updated_source for edit in planned.value
             })
-            expected_member = "GroupingEntity" if collision else "Entity"
+            expected_member = "GroupingEntity"
             tm.that(proposed[path], has=f"    class {expected_member}(Enum):")
             tm.that(
                 proposed[path],
                 has="'''first\n        literal indentation\n        last'''",
             )
             tm.that(proposed[consumer], has=f"VALUE = Public.{expected_member}.VALUE")
-            tm.that(proposed[consumer], has="TEXT = Part.TEXT")
+            tm.that(proposed[consumer], has="TEXT = Part.GroupingTEXT")
             tm.that(proposed[homonym], eq=unrelated)
             remaining = u.Infra.plan_semantic_cutover(
                 c.Infra.SemanticCutoverPhase.CLASS_NESTING,
@@ -118,8 +118,11 @@ class TestsFlextInfraFamilyFlatten:
         tm.ok(planned)
         tm.that(planned.value, empty=True)
 
-    def test_wrapper_used_as_a_value_is_preserved_without_edits(
-        self, tmp_path: Path
+    @pytest.mark.parametrize(
+        "reference", ["ALIAS = {owner}.Wrapper", 'alias: "{owner}.Wrapper"']
+    )
+    def test_wrapper_used_as_an_entity_is_preserved_without_edits(
+        self, tmp_path: Path, reference: str
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         directory = c.Infra.FAMILY_DIRECTORIES["c"]
@@ -128,7 +131,10 @@ class TestsFlextInfraFamilyFlatten:
         (family / "__init__.py").write_text("", encoding="utf-8")
         path = family / "payload.py"
         owner = f"{u.derive_class_stem(root.name)}ConstantsPayload"
-        source = f"class {owner}:\n    class Wrapper:\n        VALUE = 1\n\nALIAS = {owner}.Wrapper\n\n__all__ = ['{owner}']\n"
+        source = (
+            f"class {owner}:\n    class Wrapper:\n        VALUE = 1\n\n"
+            f"{reference.format(owner=owner)}\n\n__all__ = ['{owner}']\n"
+        )
         path.write_text(source, encoding="utf-8")
         with infra.rope_workspace(root) as rope:
             planned = u.Infra.plan_semantic_cutover(
@@ -139,6 +145,3 @@ class TestsFlextInfraFamilyFlatten:
         tm.ok(planned)
         tm.that(planned.value, empty=True)
         tm.that(path.read_text(encoding="utf-8"), eq=source)
-
-
-__all__: list[str] = ["TestsFlextInfraFamilyFlatten"]

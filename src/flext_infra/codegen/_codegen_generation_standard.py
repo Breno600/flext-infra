@@ -6,14 +6,12 @@ from collections.abc import MutableMapping
 from sys import stdlib_module_names
 from typing import TYPE_CHECKING
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, m, t, u
 
 from ._codegen_generation_renderers import FlextInfraCodegenGenerationRenderersMixin
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from flext_infra import t
 
 
 # flext-wkii.17.26 (codex): Keep lazy loading only at the public package root and
@@ -158,6 +156,62 @@ class FlextInfraCodegenGenerationStandardMixin(
         wrapped = ",\n    ".join(f'"{name}"' for name in exports)
         return "(\n    " + wrapped + ",\n)"
 
+    @staticmethod
+    def _lazy_module_argument_inline(
+        groups: t.SequenceOf[t.StrSequencePair],
+    ) -> str | None:
+        """Render the module mapping as one indent-free call argument."""
+        if not groups:
+            return "MappingProxyType({})"
+        if len(groups) != 1:
+            return None
+        module, names = groups[0]
+        inner = ", ".join(f'"{name}"' for name in names)
+        if len(names) == 1:
+            inner = f"{inner},"
+        return f'MappingProxyType({{"{module}": ({inner})}})'
+
+    @staticmethod
+    def _lazy_alias_argument_inline(
+        groups: t.SequenceOf[t.StrPairSequencePair],
+    ) -> str | None:
+        """Render the alias mapping as one indent-free call argument."""
+        if not groups:
+            return "alias_groups=MappingProxyType({})"
+        if len(groups) != 1:
+            return None
+        module, pairs = groups[0]
+        values = tuple(
+            f'("{export_name}", "{attr_name}")' for export_name, attr_name in pairs
+        )
+        inner = ", ".join(values)
+        if len(values) == 1:
+            inner = f"{inner},"
+        return f'alias_groups=MappingProxyType({{"{module}": ({inner})}})'
+
+    @classmethod
+    def _format_lazy_call_arguments(
+        cls,
+        module_groups: t.SequenceOf[t.StrSequencePair],
+        alias_groups: t.SequenceOf[t.StrPairSequencePair],
+    ) -> str:
+        """Join the lazy-import call arguments on one line when they fit.
+
+        The project fixer flattens a call whose joined arguments fit on one
+        continuation line, so an always-exploded render oscillates between
+        ``make gen`` and ``make fix`` (the fleet-wide dirty ``__init__.py``
+        residue). Emitting the joined form keeps the projection a fixed
+        point of both tools; 8 is the argument continuation indent.
+        """
+        module_argument = cls._lazy_module_argument_inline(module_groups)
+        alias_argument = cls._lazy_alias_argument_inline(alias_groups)
+        if module_argument is None or alias_argument is None:
+            return ""
+        joined = f"{module_argument}, {alias_argument}, sort_keys=False"
+        if 8 + len(joined) > c.Infra.MAX_LINE_LENGTH:
+            return ""
+        return joined
+
     @classmethod
     def _format_lazy_module_mapping(
         cls, groups: t.SequenceOf[t.StrSequencePair]
@@ -166,13 +220,11 @@ class FlextInfraCodegenGenerationStandardMixin(
         if not groups:
             return "        MappingProxyType({}),"
         if len(groups) == 1:
-            module, names = groups[0]
-            inner = ", ".join(f'"{name}"' for name in names)
-            if len(names) == 1:
-                inner = f"{inner},"
-            compact = f'        MappingProxyType({{"{module}": ({inner})}}),'
-            if len(compact) <= c.Infra.MAX_LINE_LENGTH:
-                return compact
+            inline = cls._lazy_module_argument_inline(groups)
+            if inline is not None:
+                compact = f"        {inline},"
+                if len(compact) <= c.Infra.MAX_LINE_LENGTH:
+                    return compact
         lines: t.MutableSequenceOf[str] = ["        MappingProxyType({"]
         for module, names in groups:
             lines.extend(
@@ -193,18 +245,11 @@ class FlextInfraCodegenGenerationStandardMixin(
         if not groups:
             return "        alias_groups=MappingProxyType({}),"
         if len(groups) == 1:
-            module, pairs = groups[0]
-            values = tuple(
-                f'("{export_name}", "{attr_name}")' for export_name, attr_name in pairs
-            )
-            inner = ", ".join(values)
-            if len(values) == 1:
-                inner = f"{inner},"
-            compact = (
-                f'        alias_groups=MappingProxyType({{"{module}": ({inner})}}),'
-            )
-            if len(compact) <= c.Infra.MAX_LINE_LENGTH:
-                return compact
+            inline = cls._lazy_alias_argument_inline(groups)
+            if inline is not None:
+                compact = f"        {inline},"
+                if len(compact) <= c.Infra.MAX_LINE_LENGTH:
+                    return compact
         lines: t.MutableSequenceOf[str] = ["        alias_groups=MappingProxyType({"]
         for module, pairs in groups:
             lines.extend(
@@ -238,13 +283,34 @@ class FlextInfraCodegenGenerationStandardMixin(
         prior behavior.
         """
         for candidate in (pkg_dir, *pkg_dir.parents):
-            if not (candidate / c.Infra.PYPROJECT_FILENAME).is_file():
+            if not (candidate / c.PYPROJECT_FILENAME).is_file():
                 continue
             metadata_result = u.Infra.read_project_metadata_result(candidate)
             if metadata_result.success:
                 return metadata_result.value.package_name
             return candidate.name.replace("-", "_")
         return None
+
+    @staticmethod
+    def _project_first_party_names(project_root: Path) -> t.StrSequence:
+        """Read strict Ruff policy, deriving namespaces only when it is absent."""
+        project_payload = u.Infra.pyproject_payload(
+            (project_root / c.PYPROJECT_FILENAME).resolve()
+        )
+        projected: t.JsonValue | None = project_payload.get("tool")
+        for section in ("ruff", "lint", "isort", "known-first-party"):
+            if projected is None:
+                break
+            if not isinstance(projected, dict):
+                msg = f"Ruff configuration before {section!r} must be a table"
+                raise TypeError(msg)
+            projected = projected.get(section)
+        if projected is not None:
+            return t.str_sequence_adapter().validate_python(projected, strict=True)
+        return (
+            *u.Infra.discover_first_party_namespaces(project_root),
+            *u.Infra.flext_dependency_namespaces_from_payload(project_payload),
+        )
 
     @classmethod
     def _root_context(cls, plan: m.Infra.LazyInitPlan) -> m.Infra.LazyInitRootRender:
@@ -270,6 +336,23 @@ class FlextInfraCodegenGenerationStandardMixin(
         project_pkg = cls._project_package_name(plan.context.pkg_dir)
         if project_pkg is not None:
             first_party_names.add(project_pkg)
+        # I001 parity is judged by THIS project's ruff table, so the render
+        # reads the same projected ``known-first-party`` list the linter reads
+        # (flext-3t4z2 S1). Deriving the set from declared dependencies races
+        # the deps projection: a pyproject whose tool tables predate a
+        # dependency wave renders one order while ruff enforces another, and
+        # the generated block fails I001 on every cycle. The derived set stays
+        # only as the fallback for projects without a projected table.
+        project_root = next(
+            (
+                candidate
+                for candidate in (plan.context.pkg_dir, *plan.context.pkg_dir.parents)
+                if (candidate / c.PYPROJECT_FILENAME).is_file()
+            ),
+            None,
+        )
+        if project_root is not None:
+            first_party_names.update(cls._project_first_party_names(project_root))
         type_checking_root_names = frozenset(first_party_names)
         type_checking_lines = "\n".join(
             cls.generate_type_checking(
@@ -301,6 +384,9 @@ class FlextInfraCodegenGenerationStandardMixin(
             ),
             lazy_module_mapping=cls._format_lazy_module_mapping(lazy_module_groups),
             lazy_alias_mapping=cls._format_lazy_alias_mapping(lazy_alias_groups),
+            lazy_call_arguments=cls._format_lazy_call_arguments(
+                lazy_module_groups, lazy_alias_groups
+            ),
         )
 
     @classmethod

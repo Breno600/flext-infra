@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Annotated, ClassVar
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import t
 
 from .deps_tool_config import FlextInfraModelsDepsToolConfig
@@ -117,6 +118,13 @@ class FlextInfraModelsCodegenRender:
         )
         lazy_alias_mapping: t.NonEmptyStr = m.Field(
             description="Canonical rendered lazy alias mapping."
+        )
+        lazy_call_arguments: str = m.Field(
+            default="",
+            description=(
+                "Lazy-import call arguments joined on one continuation line when "
+                "they fit the line budget; empty keeps the exploded rendering"
+            ),
         )
 
     class StaticPackageInitRender(m.ArbitraryTypesModel):

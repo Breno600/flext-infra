@@ -8,11 +8,11 @@ from flext_infra import c, m, t
 
 
 class FlextInfraUtilitiesPyprojectTomlPhases:
-    """Apply ``m.Infra.Deps.Toml.PhaseConfig`` phases to plain TOML payloads."""
+    """Apply ``m.Infra.DepsToml.PhaseConfig`` phases to plain TOML payloads."""
 
     @classmethod
     def apply_toml_phases(
-        cls, payload: t.MutableJsonMapping, *phases: m.Infra.Deps.Toml.PhaseConfig
+        cls, payload: t.MutableJsonMapping, *phases: m.Infra.DepsToml.PhaseConfig
     ) -> t.StrSequence:
         """Apply declarative phases in order and return one flat change list."""
         return [
@@ -25,7 +25,7 @@ class FlextInfraUtilitiesPyprojectTomlPhases:
     def _apply_toml_phase(
         cls,
         payload: t.MutableJsonMapping,
-        phase: m.Infra.Deps.Toml.PhaseConfig,
+        phase: m.Infra.DepsToml.PhaseConfig,
         *,
         parent_path: t.StrSequence,
     ) -> t.StrSequence:
@@ -47,17 +47,17 @@ class FlextInfraUtilitiesPyprojectTomlPhases:
     @staticmethod
     def _apply_toml_operation(
         table: t.MutableJsonMapping,
-        operation: m.Infra.Deps.Toml.SetOp
-        | m.Infra.Deps.Toml.ListOp
-        | m.Infra.Deps.Toml.RemoveOp,
+        operation: m.Infra.DepsToml.SetOp
+        | m.Infra.DepsToml.ListOp
+        | m.Infra.DepsToml.RemoveOp,
     ) -> t.SequenceOf[t.Pair[t.StrSequence, str]]:
         """Apply one operation; return its ``(relative key path, outcome)`` change."""
-        if isinstance(operation, m.Infra.Deps.Toml.SetOp):
+        if isinstance(operation, m.Infra.DepsToml.SetOp):
             changed = u.Cli.toml_mapping_sync_value(
                 table, operation.key, operation.value
             )
             return (((operation.key,), f"set to {operation.value}"),) if changed else ()
-        if isinstance(operation, m.Infra.Deps.Toml.ListOp):
+        if isinstance(operation, m.Infra.DepsToml.ListOp):
             if operation.strategy == c.Infra.TomlMergeMode.REPLACE:
                 changed = u.Cli.toml_mapping_sync_string_list(
                     table, operation.key, operation.values, sort_values=operation.sort

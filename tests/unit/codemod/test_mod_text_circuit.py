@@ -24,7 +24,7 @@ class TestsFlextInfraModTextGateEngine:
     """Exercise the declarative sed-by-list engine through its public scan."""
 
     @staticmethod
-    def _publication_inputs(root: Path) -> tuple[Path, Path]:
+    def _publication_inputs(root: Path) -> t.Pair[Path, Path]:
         """Declare two authored inputs and one exact text rewrite catalogue."""
         u.Cli.atomic_write_text_file(
             root / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
@@ -325,6 +325,3 @@ class TestsFlextInfraModTextGateEngine:
             )
         )
         tm.that(excluded.findings, eq=0)
-
-
-__all__: list[str] = ["TestsFlextInfraModTextGateEngine"]

@@ -12,7 +12,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Self, override
+from typing import TYPE_CHECKING, Self, override
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 from rope.base.project import Project
 
@@ -39,7 +42,7 @@ class FlextInfraRopeProject(Project):
 
     @classmethod
     def from_snapshot(
-        cls, root: str, sources: Mapping[Path, str], source_folders: list[str]
+        cls, root: str, sources: Mapping[Path, str], source_folders: t.SequenceOf[str]
     ) -> Self:
         """Construct a fresh Rope identity graph without persistent state."""
         if not Path(root).is_dir():

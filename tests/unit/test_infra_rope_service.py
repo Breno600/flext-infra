@@ -8,8 +8,9 @@ import pytest
 from flext_tests import tm
 
 import flext_infra
+from flext_core import r
 from flext_infra.workspace.rope import FlextInfraRopeWorkspace
-from tests import c, m, t, u
+from tests import c, m, p, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -72,7 +73,7 @@ class TestsFlextInfraInfraRopeService:
 
     def _module_objects_by_name(
         self, repository_root: Path, module_path: Path
-    ) -> t.MutableMappingKV[str, m.Infra.Census.Object]:
+    ) -> t.MutableMappingKV[str, m.Infra.Object]:
         """Index one module's non-local objects by their declared name."""
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             return {
@@ -121,6 +122,79 @@ class TestsFlextInfraInfraRopeService:
             tm.that(exports, has="m")
         finally:
             rope.close()
+
+    def test_callback_cycle_observes_and_mutates_one_live_rope_session(
+        self, tmp_path: Path
+    ) -> None:
+        """A later callback observes a prior callback's write in the same cycle."""
+        repository_root, module_path = self._demo_module(
+            tmp_path, "cycle.py", 'VALUE = "before"\n'
+        )
+        observed: t.MutableSequenceOf[str] = []
+        written: t.MutableSequenceOf[str] = []
+
+        def rewrite(
+            _workspace: p.Infra.RopeWorkspaceDsl, visit: m.Infra.RopeModuleVisit
+        ) -> p.Result[m.Infra.RopeCallbackOutcome]:
+            if visit.file_path != module_path:
+                return r[m.Infra.RopeCallbackOutcome].ok(
+                    m.Infra.RopeCallbackOutcome(
+                        file_path=visit.file_path,
+                        project_root=visit.project_root,
+                        callback_id="rewrite",
+                    )
+                )
+            updated_source = visit.source.replace('"before"', '"after"')
+            visit.resource.write(updated_source)
+            written.append(updated_source)
+            return r[m.Infra.RopeCallbackOutcome].ok(
+                m.Infra.RopeCallbackOutcome(
+                    file_path=visit.file_path,
+                    project_root=visit.project_root,
+                    callback_id="rewrite",
+                    changed=True,
+                    changes=("value updated",),
+                )
+            )
+
+        def collect(
+            _workspace: p.Infra.RopeWorkspaceDsl, visit: m.Infra.RopeModuleVisit
+        ) -> p.Result[m.Infra.RopeCallbackOutcome]:
+            if visit.file_path == module_path:
+                observed.append(visit.source)
+            return r[m.Infra.RopeCallbackOutcome].ok(
+                m.Infra.RopeCallbackOutcome(
+                    file_path=visit.file_path,
+                    project_root=visit.project_root,
+                    callback_id="collect",
+                )
+            )
+
+        with FlextInfraRopeWorkspace.open_workspace(repository_root) as rope:
+            file_paths = frozenset(
+                entry.file_path.resolve() for entry in rope.modules()
+            )
+            report = tm.ok(
+                rope.cycle((
+                    m.Infra.RopeCallbackBinding(
+                        callback=rewrite, file_paths=file_paths
+                    ),
+                    m.Infra.RopeCallbackBinding(
+                        callback=collect, file_paths=file_paths
+                    ),
+                ))
+            )
+
+        tm.that(observed, eq=written)
+        tm.that(report.callbacks_executed, eq=report.modules_visited * 2)
+        tm.that(len(written), eq=1)
+        rewrite_outcome = next(
+            outcome
+            for outcome in report.outcomes
+            if outcome.file_path == module_path and outcome.callback_id == "rewrite"
+        )
+        tm.that(rewrite_outcome.changes, eq=("value updated",))
+        tm.that(module_path.read_text(encoding="utf-8"), eq=written[0])
 
     def test_script_guard_bindings_are_not_exports(self, tmp_path: Path) -> None:
         """A name bound under ``if __name__ == "__main__":`` is not a module export.
@@ -285,10 +359,10 @@ class TestsFlextInfraInfraRopeService:
     def test_open_workspace_keeps_the_requested_repository_boundary(
         self, tmp_path: Path
     ) -> None:
-        """Only an explicit workspace call includes sibling repositories."""
+        """Only an explicit workspace call includes declared sibling repositories."""
         monorepo_root = tmp_path / "repo"
         monorepo_root.mkdir()
-        u.Tests.declare_workspace_projects(monorepo_root, ("flext-infra",))
+        u.Tests.declare_workspace_projects(monorepo_root, ("flext-infra", "flext-demo"))
         (
             repository_root,
             package_root,
@@ -864,6 +938,3 @@ class TestsFlextInfraInfraRopeService:
             eq={str(module_path)},
         )
         tm.that([site.line for site in candidate.runtime_reference_sites], eq=[6])
-
-
-__all__: list[str] = ["TestsFlextInfraInfraRopeService"]

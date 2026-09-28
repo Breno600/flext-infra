@@ -46,7 +46,7 @@ class TestsFlextInfraLazyInitRuntime:
     @staticmethod
     def _generate_package(tmp_path: Path) -> t.Pair[Path, Path]:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-runtime", package_name="flext_runtime"
+            tmp_path, project_name="flext-lazy-demo", package_name="flext_lazy_demo"
         )
         package_root.joinpath("api.py").write_text(
             "from pathlib import Path\n"
@@ -65,9 +65,9 @@ class TestsFlextInfraLazyInitRuntime:
     ) -> None:
         repository_root, package_root = self._generate_package(tmp_path)
         with tm.scope(python_paths=[str(repository_root / c.Infra.DEFAULT_SRC_DIR)]):
-            package = importlib.import_module("flext_runtime")
+            package = importlib.import_module("flext_lazy_demo")
 
-            tm.that("flext_runtime.api" in sys.modules, eq=False)
+            tm.that("flext_lazy_demo.api" in sys.modules, eq=False)
             tm.that(package.__all__, eq=("FlextDemo", "primary"))
             tm.that(dir(package), eq=list(package.__all__))
             first = package.FlextDemo
@@ -154,7 +154,13 @@ class TestsFlextInfraLazyInitRuntime:
     def test_internal_facade_requires_its_local_declaration(
         self, tmp_path: Path
     ) -> None:
-        """Repair a missing local alias without substituting the parent class."""
+        """An undeclared letter propagates the declaring root's binding.
+
+        Operator ruling (tier-alias propagation): a module declaring the
+        letter wins. A facet that declares no letter inherits the root's
+        declared letter, and the generator never rewrites the facet to
+        substitute a local class for it.
+        """
         repository, package = u.Tests.create_lazy_init_workspace(
             tmp_path, project_name="flext-local", package_name="flext_local"
         )
@@ -167,30 +173,19 @@ class TestsFlextInfraLazyInitRuntime:
         examples.mkdir()
         examples.joinpath("__init__.py").write_text("", encoding=c.Cli.ENCODING_DEFAULT)
         facet = examples / "constants.py"
-        facet.write_text(
+        facet_source = (
             "from flext_local.constants import Parent\n"
-            "class Local(Parent):\n    pass\n__all__ = ('Local',)\n",
-            encoding=c.Cli.ENCODING_DEFAULT,
+            "class Local(Parent):\n    pass\n__all__ = ('Local',)\n"
         )
+        facet.write_text(facet_source, encoding=c.Cli.ENCODING_DEFAULT)
         tm.that(u.Tests.run_lazy_init(repository), eq=0)
-        tm.that(
-            "c"
-            in u.Infra.public_export_names_source(
-                examples.joinpath("__init__.py").read_text(
-                    encoding=c.Cli.ENCODING_DEFAULT
-                )
-            ),
-            eq=False,
+        # The facet declares no letter, so the generator leaves it untouched:
+        # no runtime-alias repair may invent a local binding for one.
+        tm.that(facet.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=facet_source)
+        exports = u.Infra.public_export_names_source(
+            examples.joinpath("__init__.py").read_text(encoding=c.Cli.ENCODING_DEFAULT)
         )
-        with infra.rope_workspace(repository) as rope:
-            policy = rope.convention(facet).module_policy
-            repaired = u.Infra.ensure_runtime_alias(
-                facet.read_text(encoding=c.Cli.ENCODING_DEFAULT),
-                alias=tm.not_none(policy.expected_alias),
-                target_name=tm.not_none(policy.expected_family),
-            )
-        facet.write_text(repaired, encoding=c.Cli.ENCODING_DEFAULT)
-        tm.that(u.Tests.run_lazy_init(repository), eq=0)
+        tm.that("c" in exports, eq=True)
         probe_env = dict(os.environ)
         probe_env["PYTHONPATH"] = os.pathsep.join([
             str(repository),
@@ -201,15 +196,15 @@ class TestsFlextInfraLazyInitRuntime:
             "import examples as generated\n"
             "import examples.constants as local\n"
             "import flext_local.constants as parent\n"
+            "print('c' in generated.__all__)\n"
+            "print(generated.c is parent.c)\n"
+            "print(generated.c is parent.Parent)\n"
             "print(generated.c is local.Local)\n"
-            "print(generated.c is not parent.Parent)\n"
-            "print(generated.c.__bases__ == (parent.Parent,))\n"
             "print(all(hasattr(generated, name) for name in generated.__all__))\n"
         )
         result = tm.ok(
             u.Cli.run([sys.executable, "-c", probe], env=probe_env, cwd=repository)
         )
-        tm.that(result.stdout.splitlines(), eq=["True", "True", "True", "True"])
-
-
-__all__: list[str] = ["TestsFlextInfraLazyInitRuntime"]
+        tm.that(
+            result.stdout.splitlines(), eq=["True", "True", "True", "False", "True"]
+        )

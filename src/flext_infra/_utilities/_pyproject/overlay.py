@@ -84,17 +84,19 @@ class FlextInfraUtilitiesPyprojectOverlay:
                     # retain full specs, including distinct markers for one name.
                     # Conformance uses this same order: overlay must not move
                     # generated requirements ahead of preserved custom ones.
-                    project[key] = sorted(
-                        dict.fromkeys((
-                            *required,
-                            *(
-                                item
-                                for item in custom
-                                if FlextInfraUtilitiesDependencies.dep_name(item)
-                                not in owned_names
-                            ),
-                        )),
-                        key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
+                    project[key] = list[t.JsonValue](
+                        sorted(
+                            dict.fromkeys((
+                                *required,
+                                *(
+                                    item
+                                    for item in custom
+                                    if FlextInfraUtilitiesDependencies.dep_name(item)
+                                    not in owned_names
+                                ),
+                            )),
+                            key=FlextInfraUtilitiesPyprojectRequirements.dependency_order_key,
+                        )
                     )
                 else:
                     project[key] = live_project[key]

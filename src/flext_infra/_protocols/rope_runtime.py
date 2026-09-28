@@ -316,7 +316,9 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         """Rope MoveGlobal refactoring shape."""
 
         def get_changes(
-            self, target: FlextInfraProtocolsRopeRuntime.RopeResource
+            self,
+            target: FlextInfraProtocolsRopeRuntime.RopeResource,
+            resources: list[FlextInfraProtocolsRopeRuntime.RopeResource] | None = None,
         ) -> FlextInfraProtocolsRopeRuntime.RopeChangeSet: ...
 
     @runtime_checkable

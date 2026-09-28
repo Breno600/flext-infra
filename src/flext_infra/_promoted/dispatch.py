@@ -25,7 +25,7 @@ class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):
         argv: Sequence[str] | None = None,
         *,
         script_roots: Sequence[Path] | None = None,
-        spec: p.Infra.Promoted.WorkspaceSpec | None = None,
+        spec: p.Infra.PromotedWorkspaceSpec | None = None,
     ) -> int:
         """Run the promoted command dispatcher.
 
@@ -45,7 +45,7 @@ class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):
         args: Sequence[str],
         *,
         script_roots: Sequence[Path] | None,
-        spec: p.Infra.Promoted.WorkspaceSpec | None,
+        spec: p.Infra.PromotedWorkspaceSpec | None,
     ) -> int:
         """Discover the registry, then validate, dispatch, or render help."""
         workspace = spec or u.Infra.promoted_discovered_workspace_spec()
@@ -64,7 +64,7 @@ class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):
 
     @staticmethod
     def dispatch(
-        registry: p.Infra.Promoted.Registry, requested_verb: str, requested_what: str
+        registry: p.Infra.PromotedRegistry, requested_verb: str, requested_what: str
     ) -> int:
         """Dispatch one requested verb to help or its selected promoted command.
 

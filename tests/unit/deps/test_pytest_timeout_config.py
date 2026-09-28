@@ -133,6 +133,47 @@ class TestsFlextInfraPytestTimeoutConfig:
         ):
             type(policy).model_validate(payload)
 
+    def test_incremental_process_budget_is_tighter_than_the_full_budget(self) -> None:
+        """`make test` (PR gate) never inherits the cold/full-suite wall."""
+        policy = config.Infra.tooling.tools.pytest
+
+        tm.that(
+            policy.incremental_process_timeout_seconds < policy.process_timeout_seconds,
+            eq=True,
+        )
+
+    def test_incremental_process_budget_must_exceed_case_and_termination_windows(
+        self,
+    ) -> None:
+        policy = config.Infra.tooling.tools.pytest
+        payload = policy.model_dump(by_alias=True)
+        payload["incremental-process-timeout-seconds"] = (
+            policy.case_timeout_seconds + policy.termination_grace_seconds
+        )
+
+        with pytest.raises(
+            c.ValidationError,
+            match=(
+                "pytest incremental process timeout must include item and"
+                " termination budgets"
+            ),
+        ):
+            type(policy).model_validate(payload)
+
+    def test_incremental_process_budget_must_be_tighter_than_full_budget(self) -> None:
+        policy = config.Infra.tooling.tools.pytest
+        payload = policy.model_dump(by_alias=True)
+        payload["incremental-process-timeout-seconds"] = policy.process_timeout_seconds
+
+        with pytest.raises(
+            c.ValidationError,
+            match=(
+                "pytest incremental process timeout must be tighter than the"
+                " full/cold process timeout"
+            ),
+        ):
+            type(policy).model_validate(payload)
+
     def test_progress_policy_cannot_hide_item_names(self) -> None:
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True)

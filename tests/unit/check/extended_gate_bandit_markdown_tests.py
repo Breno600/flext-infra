@@ -36,18 +36,21 @@ class TestsFlextInfraBanditAndMarkdownGates:
 
         tm.that(result.issues[0].code, eq="B101")
 
-    def test_bandit_rejects_missing_source_scope(self, tmp_path: Path) -> None:
-        _, project_dir = u.Tests.create_checker_project(tmp_path)
+    def test_bandit_without_source_tree_has_no_audit_surface(
+        self, tmp_path: Path
+    ) -> None:
+        """A project without ``src`` declares no package to audit (d94decf10)."""
+        project_dir = u.Tests.mk_project(tmp_path, "p1")
 
         result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
 
-        tm.that(result.result.passed, eq=False)
-        tm.that(len(result.result.errors), eq=1)
-        tm.that(len(result.issues), eq=0)
+        tm.that(result.result.passed, eq=True)
+        tm.that(result.result.errors, empty=True)
+        tm.that(result.issues, empty=True)
 
     def test_bandit_scans_large_tree_with_sanitized_path(self, tmp_path: Path) -> None:
         """The workspace interpreter runs Bandit without any PATH-provided tool."""
-        _, project_dir = u.Tests.create_checker_project(tmp_path, with_src=True)
+        project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         for index in range(51):
             (project_dir / c.Infra.DEFAULT_SRC_DIR / f"module_{index}.py").write_text(
                 "def identity(value):\n    return value\n", encoding="utf-8"
@@ -64,13 +67,13 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tm.that(result.raw_output, lacks="Working...")
 
     @pytest.mark.parametrize(
-        ("markdown_text", "config_text", "passed", "codes"),
+        ("markdown_text", "config_text", "findings_block", "codes"),
         [
             # A project with no markdown has nothing to check, so the gate is
             # not applicable and skips neutrally (4dc7027ed).
-            ("", None, True, []),
-            (HEADING_SKIP, None, False, ["MD001"]),
-            ("# Test\n", '{"broken": [', False, ["TOOL_ERROR"]),
+            ("", None, False, []),
+            (HEADING_SKIP, None, True, ["MD001"]),
+            ("# Test\n", '{"broken": [', True, ["TOOL_ERROR"]),
         ],
     )
     def test_markdown_check(
@@ -79,7 +82,7 @@ class TestsFlextInfraBanditAndMarkdownGates:
         tmp_path: Path,
         markdown_text: str,
         config_text: str | None,
-        passed: bool,
+        findings_block: bool,
         codes: t.StrSequence,
     ) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "markdown-project")
@@ -94,11 +97,16 @@ class TestsFlextInfraBanditAndMarkdownGates:
             FlextInfraMarkdownGate,
             tmp_path,
             project_dir,
-            passed=passed,
+            passed=not findings_block,
             issues_len=len(codes),
         )
 
         tm.that([issue.code for issue in result.issues], eq=list(codes))
+        if codes:
+            tm.that(
+                [issue.severity.lower() for issue in result.issues],
+                eq=[str(c.Infra.GateSeverity.ERROR.value)] * len(codes),
+            )
 
     def test_markdown_applies_only_the_local_config(self, tmp_path: Path) -> None:
         """A standalone project's gate never crosses its repository boundary."""
@@ -265,6 +273,3 @@ class TestsFlextInfraBanditAndMarkdownGates:
         _ = u.Tests.check_gate_asserting(
             FlextInfraMarkdownGate, tmp_path, project_dir, passed=True, issues_len=0
         )
-
-
-__all__: t.StrSequence = ["TestsFlextInfraBanditAndMarkdownGates"]

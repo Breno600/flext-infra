@@ -115,6 +115,3 @@ class TestsFlextInfraLazyInitCleanup:
         tm.that(result.failure, eq=True)
         tm.that(obsolete_module.is_file(), eq=True)
         tm.that(unexpected.is_file(), eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraLazyInitCleanup"]

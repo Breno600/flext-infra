@@ -143,6 +143,3 @@ class TestsFlextInfraInventory:
             tm.that(result.failure, eq=True)
         finally:
             output_dir.chmod(0o755)
-
-
-__all__: list[str] = ["TestsFlextInfraInventory"]

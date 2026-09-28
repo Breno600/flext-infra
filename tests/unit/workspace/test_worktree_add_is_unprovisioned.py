@@ -1,4 +1,4 @@
-"""Worktree ADD creates a checkout without owning project lane lifecycle."""
+"""Worktree ADD creates a checkout and leaves provisioning to the work saga."""
 
 from __future__ import annotations
 
@@ -39,6 +39,3 @@ class TestsFlextInfraWorktreeAddIsUnprovisioned:
 
         tm.that(lane.is_dir(), eq=True)
         tm.that((lane / marker).exists(), eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraWorktreeAddIsUnprovisioned"]

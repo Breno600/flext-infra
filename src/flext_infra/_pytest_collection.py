@@ -1,0 +1,131 @@
+"""Enforce the runner's collection manifest through pytest's public hook API.
+
+The runner resolves selected node IDs once and passes that ordered manifest as
+pytest arguments. Testmon still records dependencies in every worker, but its
+worker-local stable/unstable classification must not define xdist's index order.
+Missing, additional or duplicate tests fail loudly. The same installed plugin
+records warning identities before report-log reduces their categories to names.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Generator
+from pathlib import Path
+from warnings import WarningMessage
+
+import pytest
+
+from ._constants.check import FlextInfraConstantsCheck
+
+
+class FlextInfraPytestCollection:
+    """Pytest entry-point plugin for the runner's explicit selection contract."""
+
+    @staticmethod
+    def pytest_addoption(parser: pytest.Parser) -> None:
+        """Require explicit activation by the canonical runner."""
+        parser.addoption(
+            FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,
+            action="store_true",
+            help="Enforce the runner's ordered node-ID selection in every worker.",
+        )
+
+    @staticmethod
+    def pytest_configure(config: pytest.Config) -> None:
+        """Record warnings once, on the controller or in serial execution."""
+        report_log = config.getoption("report_log")
+        if report_log and not hasattr(config, "workerinput"):
+            config.pluginmanager.register(
+                FlextInfraPytestCollection.WarningAccounting(
+                    Path(report_log),
+                    enforcement_strict=config.getoption("--flext-enforce-strict"),
+                )
+            )
+
+    @staticmethod
+    @pytest.hookimpl(wrapper=True, tryfirst=True)
+    def pytest_collection_finish(session: pytest.Session) -> Generator[None]:
+        """Validate before xdist publishes worker IDs, preserving raw failures."""
+        if session.config.getoption(
+            FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION
+        ):
+            from flext_infra import c, m, u
+
+            manifest_path = u.Infra.env_lookup(c.Infra.PYTEST_ENV_COLLECTION_MANIFEST)
+            if not manifest_path:
+                msg = "Runner collection requires its canonical selection manifest"
+                raise ValueError(msg)
+            manifest = m.Infra.PytestCollectionManifest.model_validate_json(
+                Path(manifest_path).read_text(encoding="utf-8")
+            )
+            order = {node_id: index for index, node_id in enumerate(manifest.node_ids)}
+            collected = [item.nodeid for item in session.items]
+            if len(order) != len(manifest.node_ids) or len(set(collected)) != len(
+                collected
+            ):
+                msg = "Runner collection manifest contains duplicate node IDs"
+                raise ValueError(msg)
+            if set(collected) != set(order):
+                missing = sorted(set(order) - set(collected))
+                unexpected = sorted(set(collected) - set(order))
+                msg = f"Runner collection differs from selection: {missing=}, {unexpected=}"
+                raise ValueError(msg)
+            session.items.sort(key=lambda item: order[item.nodeid])
+        yield
+        FlextInfraPytestCollection._write_collection_manifest(session)
+
+    @staticmethod
+    def _write_collection_manifest(session: pytest.Session) -> None:
+        """Publish final selected items after testmon and every collection hook."""
+        from flext_infra import c, m, u
+
+        target = u.Infra.env_lookup(c.Infra.PYTEST_ENV_COLLECTION_MANIFEST)
+        if target is None:
+            return
+        if not target:
+            msg = "collection manifest requires a nonempty path"
+            raise ValueError(msg)
+        if not session.config.getoption("collectonly"):
+            return
+        manifest = m.Infra.PytestCollectionManifest(
+            node_ids=tuple(item.nodeid for item in session.items)
+        )
+        u.Cli.atomic_write_text_file(
+            Path(target), manifest.model_dump_json() + "\n"
+        ).unwrap()
+
+    class WarningAccounting:
+        """Preserve real class identity and the existing enforcement strict mode."""
+
+        def __init__(self, report_log: Path, *, enforcement_strict: bool) -> None:
+            from flext_infra import c
+
+            self.report = report_log.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX)
+            self.enforcement_strict = enforcement_strict
+            self.report.parent.mkdir(parents=True, exist_ok=True)
+            self.report.write_text("", encoding="utf-8")
+
+        @pytest.hookimpl(tryfirst=True)
+        def pytest_warning_recorded(self, warning_message: WarningMessage) -> None:
+            """Record the real warning once before report-log serializes it."""
+            from flext_infra import c, m
+
+            category = warning_message.category
+            event = m.Infra.PytestWarningEvent(
+                category=category.__name__,
+                category_module=category.__module__,
+                category_qualname=category.__qualname__,
+                filename=warning_message.filename,
+                lineno=warning_message.lineno,
+                message=str(warning_message.message),
+                enforcement_strict=self.enforcement_strict,
+                suspended=(
+                    not self.enforcement_strict
+                    and issubclass(category, c.FlextMroViolation)
+                ),
+            )
+            with self.report.open("a", encoding="utf-8") as stream:
+                stream.write(event.model_dump_json() + "\n")
+
+
+__all__: list[str] = ["FlextInfraPytestCollection"]

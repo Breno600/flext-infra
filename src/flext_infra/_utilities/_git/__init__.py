@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from .scope import FlextInfraUtilitiesGitScopeMixin
     from .semantic_identity import FlextInfraUtilitiesGitSemanticIdentityMixin
     from .semantic_index import FlextInfraUtilitiesGitSemanticIndexMixin
+    from .semantic_lane import FlextInfraUtilitiesGitSemanticLaneMixin
     from .semantic_paths import FlextInfraUtilitiesGitSemanticPathsMixin
     from .semantic_publish import FlextInfraUtilitiesGitSemanticPublishMixin
     from .semantic_refs import FlextInfraUtilitiesGitSemanticRefsMixin
@@ -42,6 +43,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitScopeMixin",
     "FlextInfraUtilitiesGitSemanticIdentityMixin",
     "FlextInfraUtilitiesGitSemanticIndexMixin",
+    "FlextInfraUtilitiesGitSemanticLaneMixin",
     "FlextInfraUtilitiesGitSemanticPathsMixin",
     "FlextInfraUtilitiesGitSemanticPublishMixin",
     "FlextInfraUtilitiesGitSemanticRefsMixin",
@@ -69,6 +71,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".scope": ("FlextInfraUtilitiesGitScopeMixin",),
             ".semantic_identity": ("FlextInfraUtilitiesGitSemanticIdentityMixin",),
             ".semantic_index": ("FlextInfraUtilitiesGitSemanticIndexMixin",),
+            ".semantic_lane": ("FlextInfraUtilitiesGitSemanticLaneMixin",),
             ".semantic_paths": ("FlextInfraUtilitiesGitSemanticPathsMixin",),
             ".semantic_publish": ("FlextInfraUtilitiesGitSemanticPublishMixin",),
             ".semantic_refs": ("FlextInfraUtilitiesGitSemanticRefsMixin",),

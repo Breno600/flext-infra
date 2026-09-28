@@ -87,6 +87,3 @@ class TestsFlextInfraDocsFormatter:
         tm.ok(result)
         tm.that(result.value[0].passed, eq=False)
         tm.that(result.value[0].result, eq=c.Infra.ResultStatus.FAIL)
-
-
-__all__: list[str] = ["TestsFlextInfraDocsFormatter"]

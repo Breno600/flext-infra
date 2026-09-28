@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from flext_cli import FlextCliModels
 
+from ._models._codegen.base import FlextInfraCodegen
 from ._models._config import FlextInfraConfigModels
 from ._models.base import FlextInfraModelsBase
 from ._models.census import FlextInfraModelsCensus
 from ._models.check import FlextInfraModelsCheck
-from ._models.codegen import FlextInfraCodegen
 from ._models.codemod import FlextInfraModelsCodemod
 from ._models.deps import FlextInfraModelsDeps
 from ._models.docs import FlextInfraModelsDocs
@@ -31,6 +31,7 @@ from ._models.rope import FlextInfraModelsRope
 from ._models.rope_move import FlextInfraModelsRopeMove
 from ._models.scan import FlextInfraModelsScan
 from ._models.settings import FlextInfraSettingsModels
+from ._models.sonarcloud import FlextInfraModelsSonarcloud
 from ._models.testmon import FlextInfraModelsTestmon
 from ._models.transformers import FlextInfraModelsTransformers
 from ._models.validate import FlextInfraModelsCore
@@ -63,6 +64,7 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsRope,
         FlextInfraModelsRopeMove,
         FlextInfraModelsScan,
+        FlextInfraModelsSonarcloud,
         FlextInfraModelsTestmon,
         FlextInfraSettingsModels,
         FlextInfraModelsCore,

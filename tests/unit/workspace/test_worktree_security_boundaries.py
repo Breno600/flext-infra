@@ -120,6 +120,3 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
         result = self._add(repository, "feature/shared-child", epic=second)
 
         tm.fail(result, has="already registered")
-
-
-__all__: list[str] = ["TestsFlextInfraWorktreeSecurityBoundaries"]

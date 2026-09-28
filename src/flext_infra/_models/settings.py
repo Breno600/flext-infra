@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated
 
-from flext_cli import m
+from flext_cli import m, t
 
 
 class FlextInfraSettingsModels:
@@ -118,6 +118,17 @@ class FlextInfraSettingsModels:
                 default=None,
                 validation_alias="PATH",
                 description="Process PATH captured for isolated subprocess builds.",
+            ),
+        ]
+        sonar_token: Annotated[
+            t.SecretStr | None,
+            m.Field(
+                default=None,
+                validation_alias="SONAR_TOKEN",
+                description=(
+                    "SonarCloud web API token; required only by the explicit "
+                    "sonarcloud-sync verb, never read from any other source."
+                ),
             ),
         ]
         mise_github_credential_command: Annotated[

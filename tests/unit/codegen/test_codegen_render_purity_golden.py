@@ -54,11 +54,8 @@ class TestsFlextInfraCodegenRenderPurityGolden:
             "search.exclude": dict(codegen.vscode_search_exclude_map),
         }
         if environment == "host-runtime":
-            runtime = tmp_path / config.Infra.codegen.toolchain.state_directory_name
-            runtime.mkdir()
-            (runtime / project.name).mkdir()
-            (runtime / project.name / "testmondata").touch()
-            (project / config.Infra.codegen.toolchain.state_directory_name).mkdir()
+            (project / c.Infra.ENVIRONMENT_DIRECTORY).mkdir()
+            (project / codegen.make.testmon_cache.database_filename).touch()
         if environment == "host-concurrent-wip":
             (project / "wip_module.py").write_text(
                 "def leaked_private_call():\n    return object().__class__\n",
@@ -113,6 +110,3 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         spec: m.Infra.ProjectSpec = u.Tests.project_spec("year-owner")
 
         tm.that(spec.year, eq=year)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenRenderPurityGolden"]
