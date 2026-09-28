@@ -79,7 +79,22 @@ class FlextInfraModelsMiseToolchain:
                 raise ValueError(msg)
             return self
 
-    class ToolchainSpec(_ConfigContract):
+    class RuntimeStorageSpec(_ConfigContract):
+        """Canonical runtime-storage contract shared by toolchain renderers."""
+
+        state_directory_name: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="External runtime state directory beside checkout"),
+        ]
+        scratch_namespace: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Scratch namespace below the home scratch root"),
+        ]
+        scratch_home_relative: Annotated[
+            t.NonEmptyStr, m.Field(description="Home-relative scratch root")
+        ]
+
+    class ToolchainSpec(RuntimeStorageSpec):
         """Language-runtime and native-tool versions shared by generated projects.
 
         Language runtimes and native tools are declared as moving ``latest``
@@ -109,64 +124,10 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
-        # External runtime state directory (sibling of checkout, not inside it).
-        # Governs PROJECT_STATE_ROOT, PROJECT_SCRATCH_ROOT, PYTHONPYCACHEPREFIX.
-        state_directory_name: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Directory name for external runtime state. Sibling of the "
-                    "checkout so generated state never lives inside a versioned "
-                    "tree (storage law). Default: '.flext-runtime'."
-                )
-            ),
-        ] = ".flext-runtime"
-        # Scratch namespace for TMPDIR, test basetemp, Mise bootstrap staging.
-        # Never lives inside a versioned tree (storage law).
-        scratch_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Namespace component for scratch directories. Combined with "
-                    "scratch_home_relative and state_directory_name to form the "
-                    "full scratch path. Default: 'scratch'."
-                )
-            ),
-        ] = "scratch"
         # Scratch home-relative path: platform home plus this path mirrors the
         # absolute checkout path below it. Workspace mode: sibling state root
         # under superproject, so every sandbox became a tracked scope of the
         # enclosing repository.
-        scratch_home_relative: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Home-relative path for scratch root. Combined with "
-                    "state_directory_name and checkout identity to form the "
-                    "PROJECT_SCRATCH_ROOT. Default: 'tmp'."
-                )
-            ),
-        ] = "tmp"
-        # Bytecode cache namespace under PROJECT_STATE_ROOT.
-        pycache_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Namespace component for Python bytecode cache directory "
-                    "under PROJECT_STATE_ROOT. Default: 'pycache'."
-                )
-            ),
-        ] = "pycache"
-        # Mise artifacts namespace under state directory.
-        mise_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Namespace component for Mise artifacts directory "
-                    "under the state directory. Default: 'mise-artifacts'."
-                )
-            ),
-        ] = "mise-artifacts"
         uv_link_mode: Annotated[
             t.NonEmptyStr, m.Field(description="Portable uv installation link mode")
         ]
@@ -255,9 +216,7 @@ class FlextInfraModelsMiseToolchain:
         ]
         npm_package_manager: Annotated[
             Literal["aube"],
-            m.Field(
-                description="Mise npm installer with a locked dependency graph"
-            ),
+            m.Field(description="Mise npm installer with a locked dependency graph"),
         ]
         qlty_selector: Annotated[
             t.NonEmptyStr,
@@ -452,6 +411,32 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
+        version_pin_header: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                min_length=1,
+                description="Generated-marker comments `make upg` writes above the release",
+            ),
+        ]
+        version_pin_reader: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="POSIX awk program selecting the first release line"),
+        ]
+        release_selector: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^[a-z]+:[A-Za-z0-9._/-]+$",
+                description="Tool selector `make upg` resolves for the Mise release",
+            ),
+        ]
+        artifact_specs: Annotated[
+            t.VariadicTuple[t.Pair[t.NonEmptyStr, int]],
+            m.Field(
+                min_length=3,
+                max_length=3,
+                description="Unix launcher, Windows launcher, and pin with modes",
+            ),
+        ]
         lock_file: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -506,6 +491,14 @@ class FlextInfraModelsMiseToolchain:
                     if path.startswith("/") or ".." in path:
                         msg = f"relative path must not be absolute or escape: {path}"
                         raise ValueError(msg)
+            unsafe = ("'", "\n", "\r", "\0")
+            for line in (*self.version_pin_header, self.version_pin_reader):
+                if any(character in line for character in unsafe):
+                    msg = "Mise pin header and reader must be literal-shell safe"
+                    raise ValueError(msg)
+            if not all(line.startswith("#") for line in self.version_pin_header):
+                msg = "Mise pin header lines must be comments"
+                raise ValueError(msg)
             return self
 
 

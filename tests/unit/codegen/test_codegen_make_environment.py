@@ -332,20 +332,21 @@ class TestsFlextInfraCodegenMakeEnvironment:
             )
         )
         tm.that(u.Cli.process_succeeded(unlocked.outcome), eq=False)
-        tm.that((project_root / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
-
-        # `upg` is the only resolver: the run's template was upgraded under the
-        # same foreign environment with a declared post-upg hook. It wrote both
-        # locks, provisioned the environment frozen from them, and ran the
-        # hook inside the activated environment, exactly as setup runs post-setup.
-        template = resolved_make_templates[profile]
-        receipts = template.parent.parent
-        upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
-        tm.that(upgraded.stdout, has="upg-hook-ran")
-        for lock in (c.Infra.UV_LOCK_FILENAME, c.Infra.MISE_LOCK_FILENAME):
-            tm.that((template / lock).is_file(), eq=True)
-        tm.that((template / ".venv" / "pyvenv.cfg").is_file(), eq=True)
-        template_hostile = receipts / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
+        tm.that(lock_path.exists(), eq=False)
+        # `upg` is the only resolver: it writes both locks and provisions the
+        # environment frozen from them, then runs the declared post-upg hook
+        # inside the activated environment, exactly as setup runs post-setup.
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                project_root / "custom.mk",
+                ".PHONY: post-upg\npost-upg:\n\t@printf '%s\\n' 'upg-hook-ran'\n",
+            )
+        )
+        upgraded = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "upg"], cwd=project_root, env=active_env
+            )
+        )
         tm.that(
             (template_hostile / "sentinel").read_text(encoding="utf-8"),
             eq="untouched\n",
@@ -497,35 +498,20 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that("UV ?= uv" in makefile, eq=False)
         # UV_RUN's environment binding is exercised by the real runtime test
         # above, including a parent uv workspace with a different default venv.
-        toolchain = config.Infra.codegen.toolchain
-        # The state root is a SIBLING of the checkout, never a directory inside
-        # it: derived from the Makefile's own PROJECT_ROOT so a verb invoked
-        # from a foreign CWD still writes beside the tree that owns the verb.
-        tm.that(
-            (
-                "PROJECT_STATE_ROOT := $(abspath $(PROJECT_ROOT)/../"
-                f"{toolchain.state_directory_name}/$(notdir $(PROJECT_ROOT)))"
-            )
-            in makefile,
-            eq=True,
-        )
-        # Root cause: storage law forbids scratch inside the versioned tree —
-        # PROJECT_SCRATCH_ROOT is HOME-rooted, mirroring the checkout identity
-        # (absolute path with VCS directory segments renamed) under it, never
-        # nested under PROJECT_STATE_ROOT.
-        tm.that(makefile, has="PROJECT_SCRATCH_IDENTITY := $(abspath $(PROJECT_ROOT))/")
-        for segment, alias in c.Infra.SCRATCH_IDENTITY_SEGMENT_ALIASES:
-            tm.that(makefile, has=f"$(subst /{segment}/,/{alias}/,")
+        # Nothing forces an external location (operator 2026-09-27): the
+        # environment is the runtime checkout's own, and temp files, bytecode
+        # and the testmon database use the tools' defaults.
         tm.that(
             makefile,
-            has=(
-                f"PROJECT_SCRATCH_ROOT := $(HOME)/{toolchain.scratch_home_relative}/"
-                f"{toolchain.state_directory_name}"
-                "$(patsubst %/,%,$(PROJECT_SCRATCH_IDENTITY))/"
-                f"{toolchain.scratch_namespace}"
-            ),
+            has=f"override RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}",
         )
-        tm.that('TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp"' in makefile, eq=True)
+        for forced in (
+            "PROJECT_STATE_ROOT",
+            "PROJECT_SCRATCH",
+            'TMPDIR="$$test_tmp"',
+            "TESTMON_DATAFILE",
+        ):
+            tm.that(makefile, lacks=forced)
         # Every gate the typed owner schedules by default reaches the runtime
         # in ONE `check run --gates` invocation. The Make layer no longer
         # publishes a per-gate selector, so the gate list itself is the
@@ -538,20 +524,11 @@ class TestsFlextInfraCodegenMakeEnvironment:
             eq=True,
         )
         tm.that("$(UV_RUN) actionlint" in makefile, eq=False)
-        tm.that('$(UV) sync --project "$(PROJECT_ROOT)"' in makefile, eq=True)
+        tm.that('$(UV) sync --project "$(UV_PROJECT)"' in makefile, eq=True)
         tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
-        # Bytecode still lands in the project state root and never inside the
-        # checkout. The Makefile stopped exporting it because the shell owns
-        # the interactive environment now, so the guarantee is proved at .envrc
-        # — its current owner — instead of being dropped with the old export.
         envrc = (project_root / ".envrc").read_text(encoding="utf-8")
-        tm.that(
-            envrc,
-            has=(
-                "export PYTHONPYCACHEPREFIX="
-                f'"${{PROJECT_STATE_ROOT}}/{toolchain.pycache_namespace}"'
-            ),
-        )
+        for forced in ("PYTHONPYCACHEPREFIX", "export TMPDIR", "PROJECT_STATE_ROOT"):
+            tm.that(envrc, lacks=forced)
 
     @pytest.mark.parametrize(
         "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
@@ -995,8 +972,16 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-fmt: _builtin_fmt_all")
         tm.that(makefile, has="_builtin-fix: _builtin_fix_all")
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
+        tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
         tm.that(
             makefile, has="_builtin-self-fix-enforcement: _builtin_require_environment"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-namespace: _builtin_require_environment"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-accessors: _builtin_require_environment"
         )
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(

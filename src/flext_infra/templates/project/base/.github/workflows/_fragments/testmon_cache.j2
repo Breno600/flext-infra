@@ -5,7 +5,7 @@
         uses: {{ github_actions["cache"].repository }}@{{ github_actions["cache"].version }}
         with:
           path: |
-            {% raw %}${{ github.workspace }}{% endraw %}/../{{ state_directory_name }}/*/{{ tc.namespace }}/{{ tc.database_filename }}
+            {% raw %}${{ github.workspace }}{% endraw %}/{{ tc.database_filename }}
           key: {{ tc.key_prefix }}-{% raw %}${{ runner.os }}-${{ runner.arch }}{% endraw %}-py{{ python_version }}-{% raw %}${{ hashFiles('pyproject.toml', '**/pyproject.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}{% endraw %}
           restore-keys: |
             {{ tc.key_prefix }}-{% raw %}${{ runner.os }}-${{ runner.arch }}{% endraw %}-py{{ python_version }}-{% raw %}${{ hashFiles('pyproject.toml', '**/pyproject.toml') }}-{% endraw %}
@@ -17,6 +17,6 @@
         uses: {{ github_actions["cache"].repository }}@{{ github_actions["cache"].version }}
         with:
           path: |
-            {% raw %}${{ github.workspace }}{% endraw %}/../{{ state_directory_name }}/*/{{ tc.namespace }}/{{ tc.database_filename }}
+            {% raw %}${{ github.workspace }}{% endraw %}/{{ tc.database_filename }}
           key: {{ tc.key_prefix }}-{% raw %}${{ runner.os }}-${{ runner.arch }}{% endraw %}-py{{ python_version }}-{% raw %}${{ hashFiles('pyproject.toml', '**/pyproject.toml') }}-${{ github.run_id }}-${{ github.run_attempt }}{% endraw %}
 {%- endif %}

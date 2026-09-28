@@ -21,7 +21,6 @@ from .rope_fixer import FlextInfraRopeFixerAdapter
 from .transformer_fixer import FlextInfraTransformerFixerAdapter
 
 if TYPE_CHECKING:
-
     from .base import FlextInfraFixerAdapter
 
 
@@ -240,7 +239,6 @@ class FlextInfraEnforcementFixerOrchestrator(
             rules=self.rules,
             safe_only=self.safe_only,
             check_after=self.check_after and self.apply,
-            fail_fast=self.fail_fast,
         )
 
     @staticmethod

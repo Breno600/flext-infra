@@ -230,7 +230,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         self, tmp_path: Path
     ) -> None:
         """Allow same-package imports used to assemble a facade."""
-        workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path, declare=False)
+        workspace, _project, pkg = u.Tests.namespace_workspace(tmp_path)
         parts_pkg = pkg / "_parts"
         nested_pkg = pkg / "nested"
         parts_pkg.mkdir(parents=True)
@@ -319,7 +319,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "[tool.hatch.build.targets.wheel]\n"
                 "packages=['src/sample_pkg']\n"
             ),
-            declare=False,
         )
         parts_pkg = pkg / "_parts"
         tests_dir = project / "tests"
@@ -603,6 +602,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "from __future__ import annotations\nfrom typing import Protocol\n\nclass ServiceContract(Protocol):\n    def run(self) -> str:\n        ...\n\nclass ServiceImpl:\n    def run(self) -> str:\n        return 'ok'",
             encoding="utf-8",
         )
+        u.Tests.provision_checkout(workspace)
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
             apply=True
@@ -633,6 +633,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "        ...\n",
             encoding="utf-8",
         )
+        u.Tests.provision_checkout(workspace)
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
             apply=True
@@ -704,7 +705,6 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             pyproject=(
                 "[project]\nname='sample'\n\n[tool.flext.namespace]\nscan_dirs = ['src']\n"
             ),
-            declare=False,
         )
         examples_dir = project / "examples"
         examples_dir.mkdir(parents=True)
@@ -712,12 +712,17 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
             "from __future__ import annotations\n\nclass DemoConstants:\n    pass\n",
             encoding="utf-8",
         )
+        alias_file = examples_dir / "aliases.py"
+        alias_source = "from __future__ import annotations\n\ntype LocalAlias = str\n"
+        _ = alias_file.write_text(alias_source, encoding="utf-8")
 
         report = FlextInfraNamespaceEnforcer(repository_root=workspace).enforce(
-            apply=False
+            apply=True
         )
 
-        tm.that(report.projects[0].runtime_alias_violations, empty=True)
+        tm.that(report.total_runtime_alias_violations, eq=0)
+        tm.that(report.total_manual_typing_violations, eq=0)
+        tm.that(alias_file.read_text(encoding="utf-8"), eq=alias_source)
 
     def test_namespace_enforcer_skips_dynamic_dirs_by_default(
         self, tmp_path: Path

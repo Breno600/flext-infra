@@ -25,6 +25,7 @@ def publication_plan(
             project.config.before,
             project.artifacts.unix_launcher,
             project.artifacts.windows_launcher,
+            project.artifacts.version_pin,
         )
         for before, (name, mode) in zip(
             before_states, c.Infra.PUBLICATION_SPECS, strict=True

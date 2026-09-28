@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
+from flext_infra.api import infra
 from tests import u
 
 
@@ -106,7 +107,7 @@ class TestsFlextInfraRule3ImportRules:
             module_name="_settings.py",
         )
 
-        result = u.Tests.namespace_validator().validate_project(root)
+        result = infra.validate_namespace(root)
 
         tm.ok(result)
         u.Tests.assert_namespace_no_violation_contains(root, "reverse runtime import")

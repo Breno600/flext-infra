@@ -108,7 +108,7 @@ class TestsFlextInfraCodegenConform:
             template, origin_url=u.Tests.repository_ref(config.Infra.name).url
         )
         TestsFlextInfraConformSupport.seed_infra_package_tree(template)
-        workspace = TestsFlextInfraConformSupport.standalone_workspace(template)
+        workspace = u.Tests.standalone_workspace(template, config.Infra.name)
         request = u.Tests.conform_request(
             template,
             scope=c.Infra.CodegenConformScope.SELF,
@@ -163,7 +163,7 @@ class TestsFlextInfraCodegenConform:
             tmp_path, scenario, conformed_template
         )
         if scenario == "lazy-failure":
-            package = root / "src" / "flext_demo"
+            package = root / "src" / config.Infra.name.replace("-", "_")
             obsolete = package / next(iter(sorted(c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES)))
             obsolete.symlink_to(root / "README.md")
         elif scenario == "docs-failure":
@@ -746,9 +746,13 @@ class TestsFlextInfraCodegenConform:
         tm.that((root / ".gitignore").is_file(), eq=True)
         tm.that((root / ".env.example").exists(), eq=False)
         tm.that(root / ".env.example" in applied.value.written_files, eq=False)
-        for name, mode in (("mise", 0o755), ("mise.cmd", 0o644)):
-            tm.that((root / "bin" / name).stat().st_mode & 0o777, eq=mode)
-        tm.ok(FlextInfraCodegenMiseArtifacts.validate_launchers(root))
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            tm.that((root / relative).stat().st_mode & 0o777, eq=mode)
+        tm.ok(
+            FlextInfraCodegenMiseArtifacts(repository_root=root).validate_artifacts(
+                root, root
+            )
+        )
 
         fixed_point = FlextInfraCodegenConform.execute_request(
             u.Tests.conform_request(
@@ -880,7 +884,9 @@ class TestsFlextInfraCodegenConform:
         u.Tests.commit_git_changes(root, "Seed generated project")
         route = next(
             route
-            for route in FlextInfraCodegenRoutes.codegen_routes[c.Infra.CLI_GROUP_CODEGEN]
+            for route in FlextInfraCodegenRoutes.codegen_routes[
+                c.Infra.CLI_GROUP_CODEGEN
+            ]
             if route.name == "conform"
         )
         request = u.Tests.conform_request(

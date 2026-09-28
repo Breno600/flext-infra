@@ -5,7 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import c, t
 
 from ._config import FlextInfraConfigModels
@@ -16,8 +17,7 @@ from .docs_generation import FlextInfraModelsDocsGeneration
 # NOTE (multi-agent, flext-wkii.17.23 / agent: uv_overlay_owner): docs transport
 # retains the exact metadata/config models and declares only analysis deltas.
 class FlextInfraModelsDocs(
-    FlextInfraModelsDocsGeneration,
-    FlextInfraModelsDocsCollection,
+    FlextInfraModelsDocsGeneration, FlextInfraModelsDocsCollection
 ):
     """Models for documentation services."""
 

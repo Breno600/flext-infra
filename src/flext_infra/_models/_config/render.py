@@ -203,52 +203,6 @@ class FlextInfraConfigModelsRender:
             t.NonEmptyStr,
             m.Field(description="Project-relative owner of the runtime environment"),
         ] = "."
-        # External runtime state directory (sibling of checkout, not inside it).
-        # Governs PROJECT_STATE_ROOT, PROJECT_SCRATCH_ROOT, PYTHONPYCACHEPREFIX.
-        state_directory_name: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Directory name for external runtime state. Sibling of the "
-                    "checkout so generated state never lives inside a versioned "
-                    "tree (storage law). Default: '.flext-runtime'."
-                )
-            ),
-        ] = ".flext-runtime"
-        # Scratch namespace for TMPDIR, test basetemp, Mise bootstrap staging.
-        # Never lives inside a versioned tree (storage law).
-        scratch_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Namespace component for scratch directories. Combined with "
-                    "scratch_home_relative and state_directory_name to form the "
-                    "full scratch path. Default: 'scratch'."
-                )
-            ),
-        ] = "scratch"
-        # Scratch home-relative path: platform home plus this path mirrors the
-        # absolute checkout path below it.
-        scratch_home_relative: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Home-relative path for scratch root. Combined with "
-                    "state_directory_name and checkout identity to form the "
-                    "PROJECT_SCRATCH_ROOT. Default: 'tmp'."
-                )
-            ),
-        ] = "tmp"
-        # Bytecode cache namespace under PROJECT_STATE_ROOT.
-        pycache_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Namespace component for Python bytecode cache directory "
-                    "under PROJECT_STATE_ROOT. Default: 'pycache'."
-                )
-            ),
-        ] = "pycache"
         environment_path_prepends: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Project-relative executable paths"),
@@ -366,4 +320,26 @@ class FlextInfraConfigModelsRender:
         dependencies: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Excluded transitive dependency names"),
+        ]
+
+    class UvResolutionSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Resolver keys conform owns in one project's ``[tool.uv]`` table.
+
+        Every key is declared: an empty sequence removes it from the table.
+        """
+
+        link_mode: Annotated[str, m.Field(description="uv installation link mode")]
+        constraint_dependencies: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Declared constraints; the uv pin is never kept"),
+        ]
+        exclude_dependencies: Annotated[
+            t.VariadicTuple[
+                FlextInfraConfigModelsRender.UvScopedDependencyExclusionSpec
+            ],
+            m.Field(description="Scoped dependency exclusions routed to the project"),
+        ]
+        environments: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Resolved environment markers uv resolves for"),
         ]

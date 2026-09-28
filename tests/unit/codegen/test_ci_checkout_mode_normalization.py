@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from flext_cli import t, u
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, t, u
 
 from .test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,

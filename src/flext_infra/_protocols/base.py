@@ -84,8 +84,10 @@ class FlextInfraProtocolsBase(Protocol):
             """Repository whose generated Mise surfaces are transacted."""
             ...
 
-        def validate_artifacts(self, project_root: Path) -> p.Result[bool]:
-            """Validate one project's committed Mise declaration and launchers."""
+        def validate_artifacts(
+            self, project_root: Path, runtime_root: Path
+        ) -> p.Result[bool]:
+            """Validate one project's Mise declaration, pin, and launchers."""
             ...
 
     # These declaration-only
@@ -316,34 +318,17 @@ class FlextInfraProtocolsBase(Protocol):
         ) -> t.VariadicTuple[Path]: ...
 
         def _project_render_context(
-            self,
-            repository: m.Infra.RepositoryRef,
-            target: m.Infra.RepositoryConformTarget,
-            workspace: m.Infra.WorkspaceSpec,
-            codegen: m.Infra.CodegenConfigSpec,
-            *,
-            tooling_runtime: m.Infra.ToolingRuntimeContext,
-            repository_root: Path,
-            managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
-            use_committed_artifacts: bool = True,
+            self, render_inputs: m.Infra.CodegenRenderInputs
         ) -> p.Result[m.Infra.ProjectRenderContext]: ...
 
         def _rendered_artifact_source(
             self,
+            render_inputs: m.Infra.CodegenRenderInputs,
             *,
-            templates_root: Path,
             template_relpath: Path,
-            failure_prefix: str,
-            dist: str,
-            repository: m.Infra.RepositoryRef,
-            repository_root: Path,
-            target: m.Infra.RepositoryConformTarget,
-            workspace: m.Infra.WorkspaceSpec,
-            codegen: m.Infra.CodegenConfigSpec,
             destination: str,
-            tooling_runtime: m.Infra.ToolingRuntimeContext,
-            project_context: m.Infra.ProjectRenderContext | None = None,
-            managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
+            failure_prefix: str,
+            project_context: m.Infra.ProjectRenderContext | None,
         ) -> p.Result[str]: ...
 
         @classmethod
@@ -353,11 +338,7 @@ class FlextInfraProtocolsBase(Protocol):
             destination: str,
             rendered: str,
             *,
-            managed_artifacts: m.Infra.ProjectManagedArtifactsSnapshot | None = None,
-            workspace: m.Infra.WorkspaceSpec | None = None,
-            codegen: m.Infra.CodegenConfigSpec | None = None,
-            repository: m.Infra.RepositoryRef | None = None,
-            target: m.Infra.RepositoryConformTarget | None = None,
+            render_inputs: m.Infra.CodegenRenderInputs | None = None,
         ) -> p.Result[m.Infra.CodegenArtifactComposition]: ...
 
         @staticmethod
@@ -369,19 +350,6 @@ class FlextInfraProtocolsBase(Protocol):
         def _absent_file_plan(
             root: Path, path: Path
         ) -> p.Result[m.Infra.CodegenFilePlan]: ...
-
-        @staticmethod
-        def _gitignore_sections(
-            codegen: m.Infra.CodegenConfigSpec,
-            *,
-            profile: c.Infra.MakeProfile,
-            project_name: str | None = None,
-            workspace: m.Infra.WorkspaceSpec | None = None,
-            project_patterns: t.StrSequence = (),
-        ) -> t.VariadicTuple[m.Infra.ScaffoldGitignoreSectionSpec]: ...
-
-        @staticmethod
-        def _mise_bootstrap_environment() -> m.Infra.MiseBootstrapEnvironmentSpec: ...
 
         @staticmethod
         def _repository_provider(
@@ -757,7 +725,7 @@ class FlextInfraProtocolsBase(Protocol):
             *,
             output_format: str = "json",
             projects: t.SequenceOf[FlextInfraProtocolsBase.ProjectInfo] | None = None,
-        ) -> t.SequenceOf[m.Infra.CensusReport]:
+        ) -> p.Result[t.VariadicTuple[m.Infra.CensusReport]]:
             """Run census and return typed reports."""
             ...
 

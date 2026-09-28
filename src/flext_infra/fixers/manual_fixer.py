@@ -47,21 +47,7 @@ class FlextInfraManualFixerAdapter(FlextInfraFixerAdapter):
             rule_id = rule.id
             file_path = getattr(probe, "file_path", "") or getattr(probe, "file", "")
             line = getattr(probe, "line", 0)
-            object_name = getattr(probe, "object_name", "")
-            literal = getattr(probe, "literal", "")
-            class_name = getattr(probe, "class_name", "")
-            first_base = getattr(probe, "first_base", "")
-            expected_base = getattr(probe, "expected_base", "")
-            detail = getattr(probe, "detail", "")
-            message = self._message(
-                rule,
-                object_name=object_name,
-                literal=literal,
-                class_name=class_name,
-                first_base=first_base,
-                expected_base=expected_base,
-                detail=detail,
-            )
+            message = self._message(rule, probe)
             if ctx.apply:
                 failed.append(
                     m.Infra.FailedFix(
@@ -86,17 +72,14 @@ class FlextInfraManualFixerAdapter(FlextInfraFixerAdapter):
         )
 
     @staticmethod
-    def _message(
-        rule: m.EnforcementRuleSpec,
-        *,
-        object_name: str,
-        literal: str,
-        class_name: str = "",
-        first_base: str = "",
-        expected_base: str = "",
-        detail: str = "",
-    ) -> str:
-        """Build a concise human-readable preview message."""
+    def _message(rule: m.EnforcementRuleSpec, probe: p.AttributeProbe) -> str:
+        """Build a concise human-readable preview message from one violation probe."""
+        literal = getattr(probe, "literal", "")
+        class_name = getattr(probe, "class_name", "")
+        first_base = getattr(probe, "first_base", "")
+        expected_base = getattr(probe, "expected_base", "")
+        detail = getattr(probe, "detail", "")
+        object_name = getattr(probe, "object_name", "")
         if rule.id == "ENFORCE-097" and literal:
             return f"magic literal {literal} should become a named constant"
         if class_name and first_base:

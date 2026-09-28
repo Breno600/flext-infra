@@ -53,6 +53,8 @@ if TYPE_CHECKING:
         FlextInfraCodegenLazyInitPlannerPublicRootMixin,
     )
     from ._mise_artifacts_candidates import publication_plan
+    from ._mise_artifacts_cold_start import FlextInfraMiseColdStart
+    from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
     from ._mise_artifacts_journal import FlextInfraMiseArtifactsJournal
     from ._mise_artifacts_process import FlextInfraMiseArtifactsProcess
     from ._mise_artifacts_publication import publish
@@ -68,6 +70,7 @@ if TYPE_CHECKING:
     from .conform import FlextInfraCodegenConform
     from .consolidator import FlextInfraCodegenConsolidator
     from .constants_quality_gate import FlextInfraCodegenQualityGate
+    from .file_leases import FlextInfraCodegenFileLeases
     from .fixer import FlextInfraCodegenFixer
     from .layout import FlextInfraCodegenLayout
     from .lazy_init import FlextInfraCodegenLazyInit
@@ -107,6 +110,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConsolidator",
     "FlextInfraCodegenConsolidatorStepsMixin",
     "FlextInfraCodegenExecutionBase",
+    "FlextInfraCodegenFileLeases",
     "FlextInfraCodegenFixer",
     "FlextInfraCodegenFixerPassesMixin",
     "FlextInfraCodegenFixerResultsMixin",
@@ -143,11 +147,13 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenScaffolder",
     "FlextInfraCodegenTransaction",
     "FlextInfraCodegenVersionFile",
+    "FlextInfraMiseArtifactsDerivation",
     "FlextInfraMiseArtifactsFiles",
     "FlextInfraMiseArtifactsJournal",
     "FlextInfraMiseArtifactsProcess",
     "FlextInfraMiseArtifactsState",
     "FlextInfraMiseArtifactsVerification",
+    "FlextInfraMiseColdStart",
     "FlextInfraMiseRecovery",
     "FlextInfraMiseStaging",
     "FlextInfraMiseWorkspacePlanner",
@@ -211,6 +217,8 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraCodegenLazyInitPlannerPublicRootMixin",
             ),
             "._mise_artifacts_candidates": ("publication_plan",),
+            "._mise_artifacts_cold_start": ("FlextInfraMiseColdStart",),
+            "._mise_artifacts_derivation": ("FlextInfraMiseArtifactsDerivation",),
             "._mise_artifacts_journal": ("FlextInfraMiseArtifactsJournal",),
             "._mise_artifacts_process": ("FlextInfraMiseArtifactsProcess",),
             "._mise_artifacts_publication": ("publish",),
@@ -228,6 +236,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".conform": ("FlextInfraCodegenConform",),
             ".consolidator": ("FlextInfraCodegenConsolidator",),
             ".constants_quality_gate": ("FlextInfraCodegenQualityGate",),
+            ".file_leases": ("FlextInfraCodegenFileLeases",),
             ".fixer": ("FlextInfraCodegenFixer",),
             ".layout": ("FlextInfraCodegenLayout",),
             ".lazy_init": ("FlextInfraCodegenLazyInit",),

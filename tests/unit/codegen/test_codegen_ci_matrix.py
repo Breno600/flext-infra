@@ -450,9 +450,7 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(content, has="cp -R /source/. /workspace/")
             # The source tree arrives only through the read-only bind mount;
             # the one COPY brings .git from the named build context.
-            copies = [
-                line for line in content.splitlines() if line.startswith("COPY")
-            ]
+            copies = [line for line in content.splitlines() if line.startswith("COPY")]
             tm.that(len(copies), eq=1)
             tm.that(copies[0], has="--from=git")
             tm.that(copies[0], has="/workspace/.git/")
@@ -473,14 +471,10 @@ class TestsFlextInfraCodegenCiMatrix:
         root = rendered_project
         docker_dir = root / "tests" / "fixtures" / "ci" / "docker"
         for distro in ("ubuntu", "debian", "fedora"):
-            content = (docker_dir / f"{distro}.Dockerfile").read_text(
-                encoding="utf-8"
-            )
+            content = (docker_dir / f"{distro}.Dockerfile").read_text(encoding="utf-8")
             tm.that(content, has="libatomic", msg=distro)
         for distro in ("alpine", "arch"):
-            content = (docker_dir / f"{distro}.Dockerfile").read_text(
-                encoding="utf-8"
-            )
+            content = (docker_dir / f"{distro}.Dockerfile").read_text(encoding="utf-8")
             tm.that("libatomic" not in content, eq=True, msg=distro)
 
     def test_dockerfiles_render_byte_idempotently(self, tmp_path: Path) -> None:
@@ -518,7 +512,7 @@ class TestsFlextInfraCodegenCiMatrix:
     def test_host_legs_bootstrap_only_through_make_setup(
         self, rendered_project: Path
     ) -> None:
-        """MacOS and Windows bootstrap through the same Make surface."""
+        """MacOS and Windows bootstrap and run one lifecycle through Make."""
         root = rendered_project
         content = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
             encoding="utf-8"
@@ -529,8 +523,9 @@ class TestsFlextInfraCodegenCiMatrix:
         windows = content.split("\n  windows:", maxsplit=1)[1]
         for host in (macos, windows):
             tm.that(host, has="run: CI=Y make setup")
-            tm.that(host, has="run: CI=Y make help")
-        tm.that(windows.count("shell: bash"), eq=3)
+        verbs = [re.findall(r"CI=Y make (\S+)", host) for host in (macos, windows)]
+        tm.that(verbs[0], eq=verbs[1])
+        tm.that(windows.count("shell: bash"), eq=windows.count("run:"))
 
     def test_runtime_jobs_supply_the_native_github_credential(
         self, rendered_project: Path
@@ -641,7 +636,7 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(setup_jobs, empty=False)
         for job in setup_jobs:
             tm.that(job, has="GITHUB_TOKEN: ${{ github.token }}")
-            tm.that(job, has="MISE_GITHUB_TOKEN: ${{ github.token }}")
+            tm.that(job, lacks="MISE_GITHUB_TOKEN")
 
     def test_ci_matrix_checks_each_distro_and_tests_ubuntu(
         self, rendered_project: Path
@@ -701,7 +696,7 @@ class TestsFlextInfraCodegenCiMatrix:
         )
         header = rendered.split("\n\n", 1)[0]
         tm.that(header.startswith("# @flext-regenerate: make gen\n"), eq=True)
-        tm.that(header, has=entry.source.as_posix())
+        tm.that(header, has=tm.not_none(entry.source).as_posix())
         properties = {
             key: value
             for key, _, value in (

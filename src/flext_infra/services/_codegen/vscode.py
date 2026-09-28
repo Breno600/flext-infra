@@ -12,7 +12,6 @@ by ``FlextInfraCodegenConform``.
 
 from __future__ import annotations
 
-import os
 from collections.abc import Mapping, MutableMapping
 from typing import TYPE_CHECKING
 
@@ -172,13 +171,6 @@ class FlextInfraCodegenVscodeMixin:
         )
         if changed.failure:
             return r[bool].from_failure(changed)
-        runtime_venv = u.Infra.runtime_environment_dir(repository_root)
-        relative_venv = os.path.relpath(runtime_venv, repository_root).replace(
-            "\\", "/"
-        )
-        settings["python.defaultInterpreterPath"] = (
-            f"${{workspaceFolder}}/{relative_venv}"
-        )
         # The three exclude maps are complete projections of the artifact SSOT.
         # Replacing them removes retired artifacts instead of preserving stale
         # generated keys forever. Only explicitly declared non-artifact maps use

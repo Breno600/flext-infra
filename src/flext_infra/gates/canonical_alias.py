@@ -91,7 +91,6 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                 file_path_str,
                 passed=False,
                 started=started,
-                ctx=ctx,
             )
 
         rope_project = u.Infra.init_rope_project(project_dir)
@@ -135,7 +134,7 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
             rope_project.close()
 
         return self._detected_gate_execution(
-            project_dir, ctx, issues=issues, started=started
+            project_dir, issues=issues, started=started
         )
 
     @override
@@ -154,12 +153,7 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
         if files_result.failure:
             message = files_result.error or "canonical-alias fix failed"
             return self._build_single_issue_result(
-                project_dir,
-                project_dir,
-                message,
-                passed=False,
-                started=started,
-                ctx=ctx,
+                project_dir, project_dir, message, passed=False, started=started
             )
 
         rope_project = u.Infra.init_rope_project(project_dir)
@@ -176,7 +170,6 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                     file_path=project_dir,
                     message=plan_result.error or "canonical-alias planning failed",
                     started=started,
-                    ctx=ctx,
                 )
             edits = plan_result.value
             if not edits:
@@ -207,7 +200,6 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                 file_path=project_dir,
                 message=f"prospective import cycle blocks canonical-alias fix: {cycle}",
                 started=started,
-                ctx=ctx,
             )
 
         changed_files = tuple(edit.file_path for edit in edits)
@@ -233,7 +225,6 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
                 message="canonical-alias transactional write failed: "
                 + " | ".join(write_reports),
                 started=started,
-                ctx=ctx,
             )
 
         return self.check(project_dir, ctx)
@@ -316,17 +307,11 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
             raise RuntimeError(msg)
 
     def _fix_failure_result(
-        self,
-        *,
-        project_dir: Path,
-        file_path: Path,
-        message: str,
-        started: float,
-        ctx: m.Infra.GateContext,
+        self, *, project_dir: Path, file_path: Path, message: str, started: float
     ) -> m.Infra.GateExecution:
         """Build a failed fix result for local rewrite failures."""
         return self._build_single_issue_result(
-            project_dir, file_path, message, passed=False, started=started, ctx=ctx
+            project_dir, file_path, message, passed=False, started=started
         )
 
 

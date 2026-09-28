@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from ._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
     from ._codegen.transaction import FlextInfraModelsCodegenTransactionModels
     from ._config.artifact import FlextInfraConfigModelsArtifact
-    from ._config.base import FlextInfraConfigModels
     from ._config.beads import FlextInfraConfigModelsBeads
     from ._config.contexts import FlextInfraConfigModelsContexts
     from ._config.contract import FlextInfraConfigModelsContract
@@ -25,33 +24,26 @@ if TYPE_CHECKING:
     from ._config.provider import FlextInfraConfigModelsProvider
     from ._config.release import FlextInfraConfigModelsRelease
     from ._config.render import FlextInfraConfigModelsRender
-    from ._config.root import FlextInfraConfigModelsRoot
     from ._config.scaffold import FlextInfraConfigModelsScaffold
     from ._config.static import FlextInfraConfigModelsStatic
     from ._config.templates import FlextInfraConfigModelsTemplates
     from ._config.workspace import FlextInfraConfigModelsWorkspace
+    from ._defaults import FlextInfraModelsDefaults
     from ._git.identity import FlextInfraModelsGitIdentity
-    from ._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
     from .base import FlextInfraModelsBase
     from .census import FlextInfraModelsCensus
     from .check import FlextInfraModelsCheck
-    from .codegen import FlextInfraCodegen
+    from .codegen import FlextInfraModelsCodegen
+    from .codegen_journal import FlextInfraModelsCodegenJournal
     from .codegen_render import FlextInfraModelsCodegenRender
     from .codegen_toolchain import FlextInfraModelsCodegenToolchain
     from .codemod import FlextInfraModelsCodemod
+    from .config import FlextInfraConfigModels
     from .deps import FlextInfraModelsDeps
     from .deps_toml import FlextInfraModelsDepsToml
-    from .deps_tool_config import FlextInfraModelsDepsToolConfig
+    from .deps_tool_config import FlextInfraModelsDepsToolSettings
     from .deps_tool_config_linters import FlextInfraModelsDepsToolConfigLinters
     from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
-    from .deps_tool_config_project_artifacts import (
-        FlextInfraModelsDepsToolConfigProjectArtifacts,
-    )
-    from .deps_tool_config_project_gitignore import (
-        FlextInfraModelsDepsToolConfigProjectGitignore,
-    )
-    from .deps_tool_config_project_mise import FlextInfraModelsDepsToolConfigProjectMise
-    from .deps_tool_config_project_ruff import FlextInfraModelsDepsToolConfigProjectRuff
     from .deps_tool_config_type_checkers import (
         FlextInfraModelsDepsToolConfigTypeCheckers,
     )
@@ -64,27 +56,24 @@ if TYPE_CHECKING:
     from .git import FlextInfraModelsGit
     from .layout import FlextInfraModelsLayout
     from .mise_toolchain import FlextInfraModelsMiseToolchain
-    from .mise_toolchain_base import FlextInfraModelsMiseToolchainBase
     from .mixins import FlextInfraModelsMixins
     from .promoted import FlextInfraModelsPromoted
     from .refactor import FlextInfraModelsRefactor
     from .refactor_ast_grep import FlextInfraModelsRefactorGrep
+    from .refactor_census import FlextInfraModelsRefactorCensus
     from .refactor_namespace_enforcer import FlextInfraModelsNamespaceEnforcer
+    from .refactor_violations import FlextInfraModelsRefactorViolations
     from .release import FlextInfraModelsRelease
     from .rope import FlextInfraModelsRope
     from .rope_move import FlextInfraModelsRopeMove
     from .scan import FlextInfraModelsScan
     from .settings import FlextInfraSettingsModels
-    from .sonarcloud import FlextInfraModelsSonarcloud
     from .testmon import FlextInfraModelsTestmon
     from .transformers import FlextInfraModelsTransformers
     from .validate import FlextInfraModelsCore
     from .workspace import FlextInfraModelsWorkspace
     from .worktree import FlextInfraModelsWorktree
-
-
-__all__: tuple[str, ...] = (
-    "FlextInfraCodegen",
+__all__: t.VariadicTuple[str] = (
     "FlextInfraConfigModels",
     "FlextInfraConfigModelsArtifact",
     "FlextInfraConfigModelsBeads",
@@ -94,7 +83,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraConfigModelsProvider",
     "FlextInfraConfigModelsRelease",
     "FlextInfraConfigModelsRender",
-    "FlextInfraConfigModelsRoot",
     "FlextInfraConfigModelsScaffold",
     "FlextInfraConfigModelsStatic",
     "FlextInfraConfigModelsTemplates",
@@ -102,7 +90,9 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsBase",
     "FlextInfraModelsCensus",
     "FlextInfraModelsCheck",
+    "FlextInfraModelsCodegen",
     "FlextInfraModelsCodegenFixModels",
+    "FlextInfraModelsCodegenJournal",
     "FlextInfraModelsCodegenJournalModels",
     "FlextInfraModelsCodegenLazyInitModels",
     "FlextInfraModelsCodegenPipelineModels",
@@ -114,14 +104,10 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsCore",
     "FlextInfraModelsDeps",
     "FlextInfraModelsDepsToml",
-    "FlextInfraModelsDepsToolConfig",
     "FlextInfraModelsDepsToolConfigLinters",
     "FlextInfraModelsDepsToolConfigProject",
-    "FlextInfraModelsDepsToolConfigProjectArtifacts",
-    "FlextInfraModelsDepsToolConfigProjectGitignore",
-    "FlextInfraModelsDepsToolConfigProjectMise",
-    "FlextInfraModelsDepsToolConfigProjectRuff",
     "FlextInfraModelsDepsToolConfigTypeCheckers",
+    "FlextInfraModelsDepsToolSettings",
     "FlextInfraModelsDocs",
     "FlextInfraModelsDocsCollection",
     "FlextInfraModelsDocsGeneration",
@@ -130,7 +116,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsGates",
     "FlextInfraModelsGit",
     "FlextInfraModelsGitIdentity",
-    "FlextInfraModelsGitWorktreeFacts",
     "FlextInfraModelsLayout",
     "FlextInfraModelsMiseToolchain",
     "FlextInfraModelsMiseToolchainBase",
@@ -138,20 +123,23 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsNamespaceEnforcer",
     "FlextInfraModelsPromoted",
     "FlextInfraModelsRefactor",
+    "FlextInfraModelsRefactorCensus",
     "FlextInfraModelsRefactorGrep",
+    "FlextInfraModelsRefactorViolations",
     "FlextInfraModelsRelease",
     "FlextInfraModelsRope",
     "FlextInfraModelsRopeMove",
     "FlextInfraModelsScan",
-    "FlextInfraModelsSonarcloud",
     "FlextInfraModelsTestmon",
     "FlextInfraModelsTransformers",
     "FlextInfraModelsWorkspace",
     "FlextInfraModelsWorktree",
     "FlextInfraSettingsModels",
+    "ImmutableEmptyMapping",
     "_codegen",
     "_config",
     "_git",
+    "immutable_empty_mapping",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -166,7 +154,6 @@ _LAZY_IMPORTS = MappingProxyType(
             "._codegen.transaction": ("FlextInfraModelsCodegenTransactionModels",),
             "._config": ("_config",),
             "._config.artifact": ("FlextInfraConfigModelsArtifact",),
-            "._config.base": ("FlextInfraConfigModels",),
             "._config.beads": ("FlextInfraConfigModelsBeads",),
             "._config.contexts": ("FlextInfraConfigModelsContexts",),
             "._config.contract": ("FlextInfraConfigModelsContract",),
@@ -174,38 +161,31 @@ _LAZY_IMPORTS = MappingProxyType(
             "._config.provider": ("FlextInfraConfigModelsProvider",),
             "._config.release": ("FlextInfraConfigModelsRelease",),
             "._config.render": ("FlextInfraConfigModelsRender",),
-            "._config.root": ("FlextInfraConfigModelsRoot",),
             "._config.scaffold": ("FlextInfraConfigModelsScaffold",),
             "._config.static": ("FlextInfraConfigModelsStatic",),
             "._config.templates": ("FlextInfraConfigModelsTemplates",),
             "._config.workspace": ("FlextInfraConfigModelsWorkspace",),
+            "._defaults": (
+                "ImmutableEmptyMapping",
+                "immutable_empty_mapping",
+                "tool_version_field",
+            ),
             "._git": ("_git",),
             "._git.identity": ("FlextInfraModelsGitIdentity",),
-            "._git.worktree_facts": ("FlextInfraModelsGitWorktreeFacts",),
             ".base": ("FlextInfraModelsBase",),
             ".census": ("FlextInfraModelsCensus",),
             ".check": ("FlextInfraModelsCheck",),
-            ".codegen": ("FlextInfraCodegen",),
+            ".codegen": ("FlextInfraModelsCodegen",),
+            ".codegen_journal": ("FlextInfraModelsCodegenJournal",),
             ".codegen_render": ("FlextInfraModelsCodegenRender",),
             ".codegen_toolchain": ("FlextInfraModelsCodegenToolchain",),
             ".codemod": ("FlextInfraModelsCodemod",),
+            ".config": ("FlextInfraConfigModels",),
             ".deps": ("FlextInfraModelsDeps",),
             ".deps_toml": ("FlextInfraModelsDepsToml",),
-            ".deps_tool_config": ("FlextInfraModelsDepsToolConfig",),
+            ".deps_tool_config": ("FlextInfraModelsDepsToolSettings",),
             ".deps_tool_config_linters": ("FlextInfraModelsDepsToolConfigLinters",),
             ".deps_tool_config_project": ("FlextInfraModelsDepsToolConfigProject",),
-            ".deps_tool_config_project_artifacts": (
-                "FlextInfraModelsDepsToolConfigProjectArtifacts",
-            ),
-            ".deps_tool_config_project_gitignore": (
-                "FlextInfraModelsDepsToolConfigProjectGitignore",
-            ),
-            ".deps_tool_config_project_mise": (
-                "FlextInfraModelsDepsToolConfigProjectMise",
-            ),
-            ".deps_tool_config_project_ruff": (
-                "FlextInfraModelsDepsToolConfigProjectRuff",
-            ),
             ".deps_tool_config_type_checkers": (
                 "FlextInfraModelsDepsToolConfigTypeCheckers",
             ),
@@ -218,18 +198,18 @@ _LAZY_IMPORTS = MappingProxyType(
             ".git": ("FlextInfraModelsGit",),
             ".layout": ("FlextInfraModelsLayout",),
             ".mise_toolchain": ("FlextInfraModelsMiseToolchain",),
-            ".mise_toolchain_base": ("FlextInfraModelsMiseToolchainBase",),
             ".mixins": ("FlextInfraModelsMixins",),
             ".promoted": ("FlextInfraModelsPromoted",),
             ".refactor": ("FlextInfraModelsRefactor",),
             ".refactor_ast_grep": ("FlextInfraModelsRefactorGrep",),
+            ".refactor_census": ("FlextInfraModelsRefactorCensus",),
             ".refactor_namespace_enforcer": ("FlextInfraModelsNamespaceEnforcer",),
+            ".refactor_violations": ("FlextInfraModelsRefactorViolations",),
             ".release": ("FlextInfraModelsRelease",),
             ".rope": ("FlextInfraModelsRope",),
             ".rope_move": ("FlextInfraModelsRopeMove",),
             ".scan": ("FlextInfraModelsScan",),
             ".settings": ("FlextInfraSettingsModels",),
-            ".sonarcloud": ("FlextInfraModelsSonarcloud",),
             ".testmon": ("FlextInfraModelsTestmon",),
             ".transformers": ("FlextInfraModelsTransformers",),
             ".validate": ("FlextInfraModelsCore",),

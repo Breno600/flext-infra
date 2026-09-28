@@ -8,11 +8,12 @@ consumer-order defects. Imported workspace modules must belong to this checkout.
 from __future__ import annotations
 
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, ClassVar, override
 
 from flext_core import r
-from flext_infra import c, m, p, t, u
+from flext_infra import c, config, m, p, t, u
 
 from ..base import FlextInfraServiceBase
 
@@ -145,17 +146,23 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 )
             )
         env = self._workspace_import_env(tuple(layout.src_dir for layout in layouts))
-        for probe in probes:
-            # The probe source travels on stdin: a workspace probe carries every
-            # owned publication and outgrows the kernel's single-argument limit
-            # (E2BIG) long before it outgrows the interpreter.
-            smoke = u.Cli.run_raw(
+        workers = config.Infra.codegen.fresh_import_workers
+        u.Cli.info(f"fresh-import: running {len(probes)} probes with {workers} workers")
+
+        # Each source travels on stdin because the workspace export probe may
+        # exceed the kernel's single-argument limit. map preserves report order.
+        def run_probe(probe: m.Infra.FreshImportProbe) -> p.Result[p.Cli.CommandOutput]:
+            return u.Cli.run_raw(
                 [sys.executable, "-W", "error", "-"],
                 cwd=self.repository_root,
                 timeout=c.Infra.TIMEOUT_SHORT,
                 env=env,
                 input_data=probe.code,
             )
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            outcomes = tuple(executor.map(run_probe, probes))
+        for probe, smoke in zip(probes, outcomes, strict=True):
             if smoke.failure:
                 return r[m.Infra.ValidationReport].from_failure(smoke)
             output = smoke.value
@@ -175,12 +182,9 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                     summary=f"fresh-import failed: {probe.subject}",
                 )
             )
+        summary = f"{len(probes)} fresh-import probe(s) passed"
         return r[m.Infra.ValidationReport].ok(
-            m.Infra.ValidationReport(
-                passed=True,
-                violations=(),
-                summary=f"{len(probes)} fresh-import probe(s) passed",
-            )
+            m.Infra.ValidationReport(passed=True, violations=(), summary=summary)
         )
 
     def _workspace_import_env(
