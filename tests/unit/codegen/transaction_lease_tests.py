@@ -254,14 +254,10 @@ class TestsFlextInfraTransactionLease:
         )
 
         tm.ok(
-            transaction.run_files_locked(
-                {"@docs-0": participant_root}, self._ok_path
-            )
+            transaction.run_files_locked({"@docs-0": participant_root}, self._ok_path)
         )
         tm.ok(
-            transaction.run_files_locked(
-                {"@docs-0": participant_root}, self._ok_path
-            )
+            transaction.run_files_locked({"@docs-0": participant_root}, self._ok_path)
         )
 
         tm.that(

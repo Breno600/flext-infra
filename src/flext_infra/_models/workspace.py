@@ -9,8 +9,8 @@ from flext_cli import m
 
 from .. import c, t
 from ._config.base import FlextInfraConfigModels
-from .mixins import FlextInfraModelsMixins as mm
 from ._git import FlextInfraModelsGitIdentity
+from .mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsWorkspace:

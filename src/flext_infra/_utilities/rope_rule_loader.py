@@ -12,18 +12,16 @@ from flext_infra.base import FlextInfraServiceBase
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from flext_cli import t as cli_t
 
-
-class FlextInfraRopeRuleLoaderService(FlextInfraServiceBase[cli_t.Cli.ResultValue]):
+class FlextInfraRopeRuleLoaderService(FlextInfraServiceBase[t.Cli.ResultValue]):
     """Load and validate ``codemod/rope_rules/**.yml`` into typed models."""
 
     @override
-    def execute(self) -> p.Result[cli_t.Cli.ResultValue]:
+    def execute(self) -> p.Result[t.Cli.ResultValue]:
         """Load every declared Rope rule shipped with the engine package."""
         loaded = self.load_rules()
         if loaded.failure:
-            return r[bool].from_failure(loaded)
+            return r[t.Cli.ResultValue].from_failure(loaded)
         return r.ok(True)
 
     @classmethod

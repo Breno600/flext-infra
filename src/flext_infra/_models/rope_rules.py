@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Literal
 
-from flext_meltano import m, u
+from flext_cli import m, u
 
 
 class FlextInfraModelsRopeRules:
@@ -35,7 +35,9 @@ class FlextInfraModelsRopeRules:
         ]
         body_classes_or_assigns: Annotated[
             bool | None,
-            u.Field(default=None, description="Whether the body declares classes/assigns"),
+            u.Field(
+                default=None, description="Whether the body declares classes/assigns"
+            ),
         ]
 
     class RopeOp(m.ImmutableValueModel):
@@ -54,8 +56,7 @@ class FlextInfraModelsRopeRules:
             u.Field(default=0, description="Attribute chain segments dropped by lift"),
         ]
         delete_source: Annotated[
-            bool,
-            u.Field(default=False, description="Lift deletes the source class"),
+            bool, u.Field(default=False, description="Lift deletes the source class")
         ]
         strip_underscore: Annotated[
             bool,
@@ -85,11 +86,11 @@ class FlextInfraModelsRopeRules:
             tuple[str, ...], u.Field(description="Package-relative glob selectors")
         ]
         select: Annotated[
-            "FlextInfraModelsRopeRules.RopeSelect",
+            FlextInfraModelsRopeRules.RopeSelect,
             u.Field(description="Selection predicate"),
         ]
         ops: Annotated[
-            tuple["FlextInfraModelsRopeRules.RopeOp", ...],
+            tuple[FlextInfraModelsRopeRules.RopeOp, ...],
             u.Field(description="Ordered generic operations"),
         ]
         auto_fix: Annotated[
@@ -121,7 +122,7 @@ class FlextInfraModelsRopeRules:
         reference: Annotated[str, u.Field(description="Short group-number reference")]
         rendered: Annotated[str, u.Field(description="Message resolved with context")]
         ops: Annotated[
-            tuple["FlextInfraModelsRopeRules.RopeOp", ...],
+            tuple[FlextInfraModelsRopeRules.RopeOp, ...],
             u.Field(description="Ops the engine will apply"),
         ]
 

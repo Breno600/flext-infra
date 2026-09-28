@@ -112,9 +112,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         prepends to a render failure.
         """
         artifact_context = self._artifact_render_context(
-            render_inputs,
-            destination=destination,
-            project_context=project_context,
+            render_inputs, destination=destination, project_context=project_context
         )
         if artifact_context.failure:
             return r[str].from_failure(artifact_context)
@@ -345,9 +343,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 m.Infra.MakefileRenderSpec(
                     pytest=config.Infra.tooling.tools.pytest,
                     mise_bootstrap=u.Infra.mise_bootstrap_environment(),
-                    state_directory_name=codegen.toolchain.state_directory_name,
-                    scratch_namespace=codegen.toolchain.scratch_namespace,
-                    scratch_home_relative=codegen.toolchain.scratch_home_relative,
                     dist=dist,
                     infra_cli=config.Infra.name,
                     make_profile=profile,
