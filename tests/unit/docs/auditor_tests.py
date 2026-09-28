@@ -89,18 +89,28 @@ class TestsFlextInfraAuditor:
         output_dir: str,
     ) -> None:
         # The command-contract check loads the governed workspace spec, whose
-        # repository-local Beads configuration every real repository carries.
-        u.Tests.write_project_beads_config(tmp_path, "audit-fixture")
+        # repository-local Beads configuration every real repository carries,
+        # and it resolves a Git identity from the audited root. A selected
+        # ``projects`` entry only matches a scope the workspace actually
+        # declares, so the fixture is built by the canonical docs workspace
+        # owner with exactly the declared members rather than a bare temp
+        # directory that happens to carry a Beads file.
+        workspace = u.Tests.create_docs_workspace(
+            tmp_path, project_names=tuple(projects or ())
+        )
         output_dir_value = (
-            str(tmp_path / output_dir) if output_dir == "custom_output" else output_dir
+            str(workspace / output_dir) if output_dir == "custom_output" else output_dir
         )
         result = auditor.audit(
-            tmp_path,
+            workspace,
             projects=projects,
             output_dir=output_dir_value,
             params=m.Infra.AuditScopeParams(check=check),
         )
-        tm.that(result.success or result.failure, eq=True)
+        # Every variant here is a valid option combination, so the observable
+        # outcome is a successful audit. Asserting "success or failure" would
+        # hold whatever the runtime did and prove nothing.
+        tm.ok(result)
 
     def test_report_frozen(self) -> None:
         tm.that(m.Infra.DocsPhaseReport.model_config.get("frozen"), eq=True)
