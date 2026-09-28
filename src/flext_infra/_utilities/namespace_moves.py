@@ -450,9 +450,14 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 source=source, blocks=blocks
             )
         )
-        target_source = (
+        expected_target_source = (
             target_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            if target_file.exists()
+            if target_file.is_file()
+            else None
+        )
+        target_source = (
+            expected_target_source
+            if expected_target_source is not None
             else f"{c.Infra.FUTURE_ANNOTATIONS}\n"
         )
         target_lines = target_source.splitlines()
@@ -474,7 +479,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             },
             request=m.Infra.ProtectedSourceWritesRequest(
                 workspace=project_root,
-                expected_sources={target_file: target_source, source_file: source},
+                expected_sources={
+                    target_file: expected_target_source,
+                    source_file: source,
+                },
                 keep_backup=True,
                 gates=gates,
             ),
@@ -635,9 +643,14 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             source_file=source_file,
             filename=c.Infra.TYPINGS_PY,
         )
-        target_source = (
+        expected_target_source = (
             target_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            if target_file.exists()
+            if target_file.is_file()
+            else None
+        )
+        target_source = (
+            expected_target_source
+            if expected_target_source is not None
             else f"{c.Infra.FUTURE_ANNOTATIONS}\n"
         )
         # The destination may already bind a required name to a DIFFERENT
@@ -737,7 +750,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             },
             request=m.Infra.ProtectedSourceWritesRequest(
                 workspace=project_root,
-                expected_sources={target_file: target_source, source_file: source},
+                expected_sources={
+                    target_file: expected_target_source,
+                    source_file: source,
+                },
                 keep_backup=True,
                 gates=gates,
             ),

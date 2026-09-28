@@ -232,8 +232,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(makefile, lacks="curl ")
         tm.that(makefile, lacks="--windows --version")
         tm.that(makefile, lacks="mise_install_path=")
-        tm.that(makefile, has='latest_mise="$$mise"')
-        tm.that(makefile, has="receipt_runtime")
+        tm.that(makefile, has='pinned_mise="$$mise"')
+        tm.that(makefile, has="mise_receipt runtime-version")
         tm.that(
             tuple(type(config.Infra.codegen.toolchain).model_fields),
             lacks="mise_version",

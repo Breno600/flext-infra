@@ -13,7 +13,7 @@ from .codegen.census import FlextInfraCodegenCensus
 from .codegen.fixer import FlextInfraCodegenFixer
 from .codegen.pipeline import FlextInfraCodegenPipeline
 from .validate.namespace_validator import FlextInfraNamespaceValidator
-from .workspace.environment_beads import FlextInfraWorkspaceEnvironmentSync
+from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
 from .workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from flext_infra import p
 
 
-class FlextInfra(FlextInfraWorkspaceEnvironmentSync, s[t.JsonDict]):
+class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
     """Thin public FLEXT facade over infra services."""
 
     app_name: ClassVar[str] = "flext-infra"

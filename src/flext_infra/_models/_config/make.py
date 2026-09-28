@@ -289,11 +289,8 @@ class FlextInfraConfigModelsMake:
             return self
 
     class TestmonCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Adaptive pytest-testmon GitHub Actions cache policy."""
+        """Persistent pytest-testmon database and runner paths."""
 
-        schema_version: Annotated[
-            int, m.Field(ge=1, description="Cache key schema version")
-        ]
         database_filename: Annotated[
             t.NonEmptyStr, m.Field(description="pytest-testmon database filename")
         ]
@@ -303,56 +300,6 @@ class FlextInfraConfigModelsMake:
         reports_directory: Annotated[
             Path, m.Field(description="Repository-relative pytest reports root")
         ]
-        mode: Annotated[
-            Literal["bootstrap", "stable"], m.Field(description="Cache renewal phase")
-        ]
-        save_enabled: Annotated[
-            bool,
-            m.Field(
-                description=(
-                    "Whether CI may upload a new testmon generation. False while "
-                    "quota/HTTP 402 blocks fleet-wide saves (QUOTA_HOLD)."
-                )
-            ),
-        ]
-        max_bootstrap_generations: Annotated[
-            int, m.Field(ge=1, le=10, description="Max retained bootstrap generations")
-        ]
-        max_stable_generations: Annotated[
-            int, m.Field(ge=1, le=10, description="Max retained stable generations")
-        ]
-        per_repo_budget_bytes: Annotated[
-            int, m.Field(ge=1, description="Per-repo testmon namespace budget in bytes")
-        ]
-        warning_threshold_percent: Annotated[
-            int, m.Field(ge=1, le=100, description="Quota warning threshold percent")
-        ]
-        maintenance_threshold_percent: Annotated[
-            int,
-            m.Field(ge=1, le=100, description="Quota maintenance threshold percent"),
-        ]
-        block_threshold_percent: Annotated[
-            int, m.Field(ge=1, le=100, description="Quota block-save threshold percent")
-        ]
-        allowed_save_refs: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(min_length=1, description="Refs allowed to save cache generations"),
-        ]
-        key_prefix: Annotated[
-            t.NonEmptyStr, m.Field(description="Immutable cache key prefix")
-        ]
-
-        @u.model_validator(mode="after")
-        def _validate_thresholds(self) -> Self:
-            """Require warning < maintenance < block."""
-            if not (
-                self.warning_threshold_percent
-                < self.maintenance_threshold_percent
-                < self.block_threshold_percent
-            ):
-                msg = "testmon cache thresholds must satisfy warning < maintenance < block"
-                raise ValueError(msg)
-            return self
 
     class MakeWorkInProgressSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Predicate for work-in-progress branches and draft-PR gate behavior.

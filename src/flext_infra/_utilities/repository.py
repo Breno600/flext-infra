@@ -184,6 +184,32 @@ class FlextInfraUtilitiesRepository:
         )
 
     @classmethod
+    def flext_integration_line_for_checkout(
+        cls,
+        *,
+        codegen: m.Infra.CodegenConfigSpec,
+        repository_root: Path,
+        workspace: m.Infra.WorkspaceSpec,
+    ) -> p.Result[m.Infra.WorkspaceIntegrationSpec]:
+        """Resolve the FLEXT line for one workspace checkout.
+
+        The single owner of the bootstrap provenance decision every line
+        consumer shares: a declared ``flext_source`` applies only while the
+        checkout has no project file of its own (there would be nothing to
+        bootstrap); an existing project file means the line is detected from
+        the checkout itself.
+        """
+        return cls.flext_integration_line(
+            codegen=codegen,
+            repository_root=repository_root,
+            bootstrap_source=(
+                workspace.flext_source
+                if not (repository_root / c.PYPROJECT_FILENAME).exists()
+                else None
+            ),
+        )
+
+    @classmethod
     def _detected_infra_source(
         cls, *, repository_root: Path, distribution: str, preference: t.StrSequence
     ) -> p.Result[t.Pair[str, str]]:
@@ -280,13 +306,13 @@ class FlextInfraUtilitiesRepository:
     ) -> p.Result[t.Pair[str, str]]:
         """Return the family line the pyproject declares, as a source for one member.
 
-        Every declared direct Git source of an internal ``{prefix}*``
-        dependency names the same line: one provider base URL and one ref. A
-        plain (source-less) requirement names a workspace dependency whose URL
-        the workspace manifest owns, so it is not a failure here. Members
-        declared from different lines in one document are a loud failure —
-        the family renders from one source — and the detected line is
-        returned as the source of ``distribution``.
+        Unpinned internal dependencies name one provider base URL and ref.
+        The manifest owns immutable revisions: a generated pyproject may still
+        carry the preceding ref while codegen plans its replacement. Pinned
+        dependencies must retain one consistent declared Git provenance, and
+        every family member must use the same provider. A plain (source-less)
+        requirement names a workspace dependency whose URL the workspace
+        manifest owns. The unpinned line supplies the source of ``distribution``.
         """
         from flext_infra import u
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
@@ -333,6 +359,8 @@ class FlextInfraUtilitiesRepository:
             else {}
         )
         lines: dict[t.Pair[str, str], str] = {}
+        provider_bases: set[str] = set()
+        pinned_sources: dict[str, t.Pair[str, str]] = {}
         for requirement in requirements:
             name = FlextInfraUtilitiesDependencies.dep_name(requirement)
             if name is None or not name.startswith(prefix):
@@ -354,20 +382,29 @@ class FlextInfraUtilitiesRepository:
                     f"internal dependency source must be the {name} repository: "
                     f"{requirement}"
                 )
+            base_url = url.removesuffix(suffix)
+            provider_bases.add(base_url)
             declared_revision = revisions.get(name)
             if declared_revision is not None:
-                if ref != declared_revision:
+                source = (url, ref)
+                previous = pinned_sources.setdefault(name, source)
+                if previous != source:
                     return r[t.Pair[str, str]].fail(
-                        f"declared revision differs from dependency source for {name}: "
-                        f"{declared_revision!r} != {ref!r}"
+                        f"{pyproject_path.name} declares conflicting pinned sources "
+                        f"for {name}: {previous!r} != {source!r}"
                     )
                 continue
-            lines.setdefault((url.removesuffix(suffix), ref), requirement)
+            lines.setdefault((base_url, ref), requirement)
         if len(lines) > 1:
             declared = "; ".join(sorted(lines.values()))
             return r[t.Pair[str, str]].fail(
                 f"{pyproject_path.name} declares conflicting {prefix}* line sources "
                 f"(one family, one provider and ref): {declared}"
+            )
+        if len(provider_bases) > 1:
+            return r[t.Pair[str, str]].fail(
+                f"{pyproject_path.name} declares conflicting {prefix}* providers: "
+                f"{', '.join(sorted(provider_bases))}"
             )
         if lines:
             (base_url, ref), _ = next(iter(lines.items()))

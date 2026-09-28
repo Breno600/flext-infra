@@ -16,15 +16,17 @@ class TestsFlextInfraTestmonDbInspector:
 
     def test_missing_db_fails_loud(self, tmp_path: Path) -> None:
         filename = config.Infra.codegen.make.testmon_cache.database_filename
+        db = tmp_path.parent / f"{tmp_path.name}-{filename}"
         inspector = FlextInfraTestmonDbInspector(
-            repository_root=tmp_path, db_path=tmp_path / filename, pre_run_digest=None
+            repository_root=tmp_path, db_path=db, pre_run_digest=None
         )
 
         with pytest.raises(FileNotFoundError):
             inspector.execute()
 
     def test_corrupt_db_preserves_sqlite_failure(self, tmp_path: Path) -> None:
-        db = tmp_path / config.Infra.codegen.make.testmon_cache.database_filename
+        filename = config.Infra.codegen.make.testmon_cache.database_filename
+        db = tmp_path.parent / f"{tmp_path.name}-{filename}"
         db.write_text("not a sqlite database", encoding="utf-8")
 
         with pytest.raises(sqlite3.DatabaseError):
@@ -33,7 +35,8 @@ class TestsFlextInfraTestmonDbInspector:
             ).execute()
 
     def test_healthy_new_db_is_saveable_seed(self, tmp_path: Path) -> None:
-        db = tmp_path / config.Infra.codegen.make.testmon_cache.database_filename
+        filename = config.Infra.codegen.make.testmon_cache.database_filename
+        db = tmp_path.parent / f"{tmp_path.name}-{filename}"
         connection = sqlite3.connect(db)
         connection.execute("CREATE TABLE meta (k TEXT, v TEXT)")
         connection.execute("INSERT INTO meta VALUES ('schema', '1')")
@@ -49,7 +52,8 @@ class TestsFlextInfraTestmonDbInspector:
         tm.that(state.reason, eq="seed_ready")
 
     def test_unchanged_db_is_not_saveable(self, tmp_path: Path) -> None:
-        db = tmp_path / config.Infra.codegen.make.testmon_cache.database_filename
+        filename = config.Infra.codegen.make.testmon_cache.database_filename
+        db = tmp_path.parent / f"{tmp_path.name}-{filename}"
         connection = sqlite3.connect(db)
         connection.execute("CREATE TABLE meta (k TEXT)")
         connection.commit()
@@ -63,3 +67,13 @@ class TestsFlextInfraTestmonDbInspector:
         tm.that(state.changed, eq=False)
         tm.that(state.saveable, eq=False)
         tm.that(state.reason, eq="unchanged")
+
+    def test_in_checkout_database_is_rejected(self, tmp_path: Path) -> None:
+        filename = config.Infra.codegen.make.testmon_cache.database_filename
+
+        with pytest.raises(ValueError, match="outside the repository checkout"):
+            FlextInfraTestmonDbInspector(
+                repository_root=tmp_path,
+                db_path=tmp_path / filename,
+                pre_run_digest=None,
+            )

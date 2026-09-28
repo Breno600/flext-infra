@@ -76,6 +76,7 @@ class FlextInfraMiseArtifactsState:
                         project.artifacts.config,
                         project.artifacts.unix_launcher,
                         project.artifacts.windows_launcher,
+                        project.artifacts.version_pin,
                     )
                 }
                 project_device = cls._hosting_device(project.root)
@@ -104,6 +105,7 @@ class FlextInfraMiseArtifactsState:
                     project.artifacts.config,
                     project.artifacts.unix_launcher,
                     project.artifacts.windows_launcher,
+                    project.artifacts.version_pin,
                 )
                 if artifact.parent != project.root
             )
@@ -532,9 +534,6 @@ class FlextInfraMiseArtifactsState:
         """Keep journal and participant lease identities across transactions."""
         lease_paths = (
             layout.journal_path,
-            layout.scope_root
-            / c.Infra.TRANSACTION_STATE_DIRNAME
-            / c.Infra.JOURNAL_NAME,
             *(
                 participant.root
                 / c.Infra.TRANSACTION_STATE_DIRNAME

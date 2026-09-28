@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from flext_cli import p, r
+from flext_cli import r
 
-from flext_infra import m, t, u
+from flext_infra import m, p, t, u
 from flext_infra.refactor.modernize_orchestrator import FlextInfraModernizeOrchestrator
 from flext_infra.transformers.signature_propagator import (
     FlextInfraRefactorSignaturePropagator,

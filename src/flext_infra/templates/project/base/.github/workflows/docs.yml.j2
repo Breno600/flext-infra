@@ -37,7 +37,6 @@ jobs:
     # governed sibling repos. The job token authenticates both, as in CI.
     env:
       GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
-      MISE_GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}
@@ -109,7 +108,6 @@ jobs:
     # Why: same authenticated toolchain and docs-source resolution as docs-quality.
     env:
       GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
-      MISE_GITHUB_TOKEN: {% raw %}${{ github.token }}{% endraw %}
     steps:
       - name: Checkout
         uses: {{ github_actions["checkout"].repository }}@{{ github_actions["checkout"].version }}

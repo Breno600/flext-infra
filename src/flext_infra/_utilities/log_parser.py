@@ -29,17 +29,6 @@ class FlextInfraUtilitiesLogParser:
     # Inline patterns moved to c.Infra.LogParser
 
     @staticmethod
-    def append_process_failure(log_path: Path, failure: str) -> str:
-        """Persist one process-lifecycle failure beside the child output."""
-        diagnostic = f"ERROR: workspace process lifecycle failed: {failure}"
-        try:
-            with log_path.open("a", encoding=c.Cli.ENCODING_DEFAULT) as stream:
-                stream.write(f"\n{diagnostic}\n")
-        except OSError as exc:
-            return f"{diagnostic}; diagnostic persistence failed: {exc}"
-        return diagnostic
-
-    @staticmethod
     def extract_errors(
         log_path: Path, *, max_lines: int = 5
     ) -> t.Pair[int, t.StrSequence]:

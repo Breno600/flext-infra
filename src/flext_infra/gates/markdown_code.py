@@ -22,6 +22,7 @@ from flext_infra import c, m, u
 
 from .base_gate import FlextInfraGate
 from .markdown_code_sources import (
+    is_syntax_broken,
     source_name,
     write_docstring_sources,
     write_fenced_block_sources,
@@ -216,7 +217,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         ):
             content = md_path.read_text(c.Cli.ENCODING_DEFAULT)
             relative_posix = md_path.relative_to(project_dir).as_posix()
-            # Keep the extraction index stable across every declared Python fence.
+            # Preserve indexes across fragments the formatter does not own.
             staged: t.MutableSequenceOf[t.Pair[int, str]] = []
             for index, match in enumerate(
                 match
@@ -224,25 +225,37 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
                 if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
             ):
                 code = match.group("code")
-                compile(code, str(md_path), "exec")
+                if is_syntax_broken(code, md_path):
+                    continue
                 staged.append((index, code))
             if not staged:
                 continue
             blocks: t.MutableSequenceOf[str] = []
+            round_trips = True
             for index, _original in staged:
                 source = sources_dir / source_name(relative_posix, index)
                 if not source.is_file():
-                    raise FileNotFoundError(source)
+                    round_trips = False
+                    break
                 formatted = source.read_text(c.Cli.ENCODING_DEFAULT)
-                compile(formatted, str(md_path), "exec")
+                if is_syntax_broken(formatted, md_path):
+                    round_trips = False
+                    break
                 blocks.append(formatted)
+            if not round_trips:
+                continue
             blocks_iter = iter(blocks)
 
             def _resubstitute(
-                match: re.Match[str], *, replacements: Iterator[str] = blocks_iter
+                match: re.Match[str],
+                *,
+                origin_path: Path = md_path,
+                replacements: Iterator[str] = blocks_iter,
             ) -> str:
-                """Splice one formatted block; declared skip markers stay verbatim."""
-                keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group("info")
+                """Splice formatted code; prose fragments stay byte-identical."""
+                keep = c.Infra.MARKDOWN_CODE_SKIP_MARKER in match.group(
+                    "info"
+                ) or is_syntax_broken(match.group("code"), origin_path)
                 if keep:
                     return match.group(0)
                 return match.group(0).replace(match.group("code"), next(replacements))

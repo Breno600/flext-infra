@@ -11,8 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, config, m, u
-from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+from flext_infra import c, config, m, t, u
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -23,55 +22,37 @@ class FlextInfraWorkspaceEnvironmentMixin:
 
     @classmethod
     def sync_environment_files(
-        cls, request: m.Infra.WorkspaceEnvironmentSyncRequest
+        cls,
+        request: m.Infra.WorkspaceEnvironmentSyncRequest,
+        *,
+        runner: p.Cli.CommandRunner | None = None,
     ) -> p.Result[m.Infra.WorkspaceEnvironmentSyncResult]:
         """Sync one workspace's generated environment files."""
         result_type = m.Infra.WorkspaceEnvironmentSyncResult
         repository_root = request.repository_root
         if not (repository_root / c.PYPROJECT_FILENAME).is_file():
-            return cls._remove_generated_environment_files(request)
-        envrc_result = cls._sync_envrc(request)
-        if envrc_result.failure:
-            return r[result_type].from_failure(envrc_result)
-        changed = (
-            (repository_root / c.Infra.ENVRC_FILENAME,) if envrc_result.value else ()
-        )
-        return r[result_type].ok(result_type(changed_files=changed))
+            result = cls._remove_generated_environment_files(request)
+        else:
+            envrc_result = cls._sync_envrc(request)
+            if envrc_result.failure:
+                return r[result_type].from_failure(envrc_result)
+            changed = (
+                (repository_root / c.Infra.ENVRC_FILENAME,) if envrc_result.value else ()
+            )
+            result = r[result_type].ok(result_type(changed_files=changed))
+        if result.failure:
+            return result
+        allow_result = cls._allow_direnv_if_requested(request, runner=runner)
+        if allow_result.failure:
+            return r[result_type].from_failure(allow_result)
+        return result
 
     @classmethod
     def _sync_envrc(
         cls, request: m.Infra.WorkspaceEnvironmentSyncRequest
     ) -> p.Result[bool]:
-        """Write canonical ``.envrc`` when absent, generated, or forced.
-
-        The rendered activation tier is declarative per repository: a
-        governed Beads identity with ``gascity_enabled`` renders the city
-        server wiring, one with city participation disabled renders the
-        repository-local ``bd`` base, and a repository without any Beads
-        identity renders only the terminal unset chain. A programmatic
-        ``request.beads`` spec always carries its own backend.
-        """
-        gascity = request.beads
-        identity = (
-            request.repository_root / c.CONFIG_DIR_NAME / c.Infra.BEADS_CONFIG_FILENAME
-        )
-        if gascity is None:
-            if not identity.is_file():
-                gascity = m.Infra.BeadsWorkspaceEnvironmentSpec(backend="none")
-            else:
-                workspace = FlextInfraWorkspaceDetector.load_workspace_spec(
-                    request.repository_root
-                )
-                if workspace.failure:
-                    return r[bool].from_failure(workspace)
-                gascity = (
-                    m.Infra.BeadsWorkspaceEnvironmentSpec()
-                    if workspace.value.gascity_enabled
-                    else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
-                )
-        rendered = cls._render_environment_template(
-            c.Infra.ENVRC_FILENAME, gascity=gascity
-        )
+        """Write the Python workspace ``.envrc`` without storage routing."""
+        rendered = cls._render_environment_template(c.Infra.ENVRC_FILENAME)
         if rendered.failure:
             return r[bool].from_failure(rendered)
         return cls._write_generated_text(
@@ -85,9 +66,6 @@ class FlextInfraWorkspaceEnvironmentMixin:
     def _render_environment_template(
         cls,
         destination: str,
-        *,
-        context: m.Infra.BeadsWorkspaceEnvironmentSpec | None = None,
-        gascity: m.Infra.BeadsWorkspaceEnvironmentSpec | None = None,
     ) -> p.Result[str]:
         """Render one SSOT environment template from the toolchain spec."""
         template_path = (
@@ -103,6 +81,7 @@ class FlextInfraWorkspaceEnvironmentMixin:
             context
             if context is not None
             else m.Infra.EnvrcRenderSpec(
+                repository_root_rel=".",
                 environment_path_prepends=(
                     config.Infra.codegen.toolchain.environment_path_prepends
                 ),
@@ -111,6 +90,45 @@ class FlextInfraWorkspaceEnvironmentMixin:
             )
         )
         return u.Cli.template_render(template_path, render_context)
+
+    @classmethod
+    def _allow_direnv_if_requested(
+        cls,
+        request: m.Infra.WorkspaceEnvironmentSyncRequest,
+        *,
+        runner: p.Cli.CommandRunner | None = None,
+    ) -> p.Result[bool]:
+        """Run ``direnv allow`` for one applied sync that owns the envrc."""
+        envrc = request.repository_root / c.Infra.ENVRC_FILENAME
+        if not request.apply or not request.allow_direnv or not envrc.is_file():
+            return r[bool].ok(False)
+        runner_service = runner or u.Cli
+        result = runner_service.run_raw(
+            (c.Infra.CLI_DIRENV, "allow", str(request.repository_root)),
+            cwd=request.repository_root,
+            timeout=c.Infra.TIMEOUT_DEFAULT,
+        )
+        if result.failure:
+            return r[bool].from_failure(result)
+        output = result.value
+        if not u.Cli.process_succeeded(output.outcome):
+            return r[bool].fail(
+                f"direnv allow failed for {request.repository_root}: "
+                f"{output.stderr.strip() or output.stdout.strip()}"
+            )
+        return r[bool].ok(True)
+
+    @classmethod
+    def execute_request(
+        cls, request: m.Infra.WorkspaceEnvironmentSyncRequest
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Run one sync request through the public workspace owner."""
+        result = cls.sync_environment_files(request)
+        if result.failure:
+            return r[t.Cli.ResultValue].from_failure(result)
+        return r[t.Cli.ResultValue].ok(
+            tuple(str(path) for path in result.value.changed_files)
+        )
 
     @classmethod
     def _remove_generated_environment_files(
