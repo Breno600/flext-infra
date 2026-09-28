@@ -21,10 +21,7 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
 
     @classmethod
     def _sync_uv_sources(
-        cls,
-        document: t.Cli.TomlDocument,
-        *,
-        resolution: m.Infra.UvResolutionSpec,
+        cls, document: t.Cli.TomlDocument, *, resolution: m.Infra.UvResolutionSpec
     ) -> p.Result[bool]:
         """Render the conform-owned ``[tool.uv]`` keys and drop workspace sources.
 

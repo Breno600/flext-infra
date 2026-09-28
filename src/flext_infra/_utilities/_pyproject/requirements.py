@@ -109,10 +109,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @classmethod
     def _canonical_requirement(
-        cls,
-        requirement: str,
-        *,
-        declared_sources: t.StrMapping,
+        cls, requirement: str, *, declared_sources: t.StrMapping
     ) -> p.Result[str]:
         """Render one internal requirement from its own declared Git source.
 
