@@ -84,8 +84,10 @@ class FlextInfraProtocolsBase(Protocol):
             """Repository whose generated Mise surfaces are transacted."""
             ...
 
-        def validate_artifacts(self, project_root: Path) -> p.Result[bool]:
-            """Validate one project's committed Mise declaration and launchers."""
+        def validate_artifacts(
+            self, project_root: Path, runtime_root: Path
+        ) -> p.Result[bool]:
+            """Validate one project's Mise declaration, pin, and launchers."""
             ...
 
     # These declaration-only
@@ -723,7 +725,7 @@ class FlextInfraProtocolsBase(Protocol):
             *,
             output_format: str = "json",
             projects: t.SequenceOf[FlextInfraProtocolsBase.ProjectInfo] | None = None,
-        ) -> t.SequenceOf[m.Infra.CensusReport]:
+        ) -> p.Result[t.VariadicTuple[m.Infra.CensusReport]]:
             """Run census and return typed reports."""
             ...
 

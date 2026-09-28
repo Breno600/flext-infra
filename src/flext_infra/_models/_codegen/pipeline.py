@@ -8,6 +8,7 @@ from flext_cli import m, u
 
 from ... import p, t
 from .._config.base import FlextInfraConfigModels
+from ..mixins import FlextInfraModelsMixins as mm
 from .fix import FlextInfraModelsCodegenFixModels
 from .lazy_init import FlextInfraModelsCodegenLazyInitModels
 from .scaffold import FlextInfraModelsCodegenScaffoldModels
@@ -15,6 +16,23 @@ from .scaffold import FlextInfraModelsCodegenScaffoldModels
 
 class FlextInfraModelsCodegenPipelineModels:
     """Phase analysis and pipeline state models."""
+
+    class CodegenCommand(mm.WriteMixin, m.ContractModel):
+        """CLI request shared by Rope-backed codegen operations."""
+
+        check_only: Annotated[bool, m.Field(description="Validate without writing")] = (
+            False
+        )
+        output_format: Annotated[
+            str, m.Field(description="Output format (json|text)")
+        ] = "text"
+
+    class CodegenAutoFixCommand(CodegenCommand):
+        """Auto-fix request with its one additional rule selector."""
+
+        rules_only: Annotated[
+            bool, m.Field(description="Run only deterministic namespace rules")
+        ] = False
 
     class CodegenPhaseAnalysis(m.ArbitraryTypesModel):
         """Immutable planner receipt reused for publication verification."""

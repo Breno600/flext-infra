@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, infra, p
 from tests import c, m, t, u
 
 # NOTE(flext-p68a.9.4, agent codex): the installed flext-tests pytest11 plugin is
@@ -23,6 +23,13 @@ _TRACKED_CODEGEN_CONFIG_PATH = (
     / c.Infra.CODEGEN_CONFIG_DIR
     / c.Infra.CODEGEN_CONFIG_FILENAME
 )
+
+
+@pytest.fixture
+def rope_workspace(tmp_path: Path) -> Iterator[p.Infra.RopeWorkspaceDsl]:
+    """Provide one real Rope workspace through the public composition root."""
+    with infra.rope_workspace(tmp_path) as workspace:
+        yield workspace
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -114,12 +114,12 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
         attr_seen: set[str] = set()
         for statement in ast.walk(tree):
-            if (
-                isinstance(statement, ast.Call)
-                and isinstance(statement.func, ast.Name)
-                and statement.func.id == "print"
-            ):
-                issues.append(self._issue(path, "uses print() — use cli.print"))
+            if isinstance(statement, ast.Call):
+                call_name = self._call_name(statement.func)
+                message = c.Infra.BOUNDARY_CALL_RULES.get(call_name)
+                if message is not None and message not in attr_seen:
+                    attr_seen.add(message)
+                    issues.append(self._issue(path, message))
             if isinstance(statement, ast.Attribute) and isinstance(
                 statement.value, ast.Name
             ):
@@ -148,6 +148,15 @@ class FlextInfraAbstractionBoundaryGate(FlextInfraGate):
                     )
                 )
         return issues
+
+    @staticmethod
+    def _call_name(node: ast.expr) -> str:
+        """Return the qualified name for a directly named call target."""
+        if isinstance(node, ast.Name):
+            return node.id
+        if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+            return f"{node.value.id}.{node.attr}"
+        return ""
 
     def _issue(self, path: Path, message: str) -> m.Infra.Issue:
         """Build a boundary Issue anchored at the file head."""

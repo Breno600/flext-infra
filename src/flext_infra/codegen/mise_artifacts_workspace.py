@@ -316,8 +316,13 @@ class FlextInfraMiseWorkspacePlanner:
             if project.failure:
                 return r[m.Infra.MiseToolchainWorkspacePlan].from_failure(project)
             projects.append(project.value)
+        runtime = self.runtime_artifacts(layout.scope_root)
+        if runtime.failure:
+            return r[m.Infra.MiseToolchainWorkspacePlan].from_failure(runtime)
         return r[m.Infra.MiseToolchainWorkspacePlan].ok(
-            m.Infra.MiseToolchainWorkspacePlan(layout=layout, projects=tuple(projects))
+            m.Infra.MiseToolchainWorkspacePlan(
+                layout=layout, projects=tuple(projects), runtime_artifacts=runtime.value
+            )
         )
 
     @staticmethod
@@ -359,15 +364,13 @@ class FlextInfraMiseWorkspacePlanner:
                     current_sources
                 )
             config_sources = current_sources.value
-        artifacts: list[m.Cli.AtomicFileState] = []
-        for path in (layout.artifacts.unix_launcher, layout.artifacts.windows_launcher):
-            state = files.read_state(path, required=False)
-            if state.failure:
-                return r[m.Infra.MiseToolchainProjectState].from_failure(state)
-            artifacts.append(state.value)
-        artifact_set = m.Infra.MiseToolchainArtifactSet(
-            unix_launcher=artifacts[0], windows_launcher=artifacts[1]
+        artifact_set = FlextInfraMiseWorkspacePlanner._artifact_set(
+            layout.artifacts.unix_launcher,
+            layout.artifacts.windows_launcher,
+            layout.artifacts.version_pin,
         )
+        if artifact_set.failure:
+            return r[m.Infra.MiseToolchainProjectState].from_failure(artifact_set)
         return r[m.Infra.MiseToolchainProjectState].ok(
             m.Infra.MiseToolchainProjectState(
                 layout=layout,
@@ -377,8 +380,64 @@ class FlextInfraMiseWorkspacePlanner:
                     replacement_mode=c.Infra.CONFIG_SPEC[1],
                     sources=config_sources,
                 ),
-                artifacts=artifact_set,
+                artifacts=artifact_set.value,
             )
+        )
+
+    @staticmethod
+    def _artifact_set(
+        unix_launcher: Path,
+        windows_launcher: Path,
+        version_pin: Path,
+        *,
+        required: bool = False,
+    ) -> p.Result[m.Infra.MiseToolchainArtifactSet]:
+        """Read the launcher pair and pin as named file states."""
+        states: list[m.Cli.AtomicFileState] = []
+        for path in (unix_launcher, windows_launcher, version_pin):
+            state = files.read_state(path, required=required)
+            if state.failure:
+                return r[m.Infra.MiseToolchainArtifactSet].from_failure(state)
+            states.append(state.value)
+        return r[m.Infra.MiseToolchainArtifactSet].ok(
+            m.Infra.MiseToolchainArtifactSet(
+                unix_launcher=states[0], windows_launcher=states[1], version_pin=states[2]
+            )
+        )
+
+    @staticmethod
+    def runtime_artifacts(
+        scope_root: Path,
+    ) -> p.Result[m.Infra.MiseToolchainArtifactSet]:
+        """Capture the triple every project projects from its runtime root.
+
+        `make upg` writes it at the runtime root. A runtime root that has never
+        carried one (a new repository) starts from flext-infra's packaged copy
+        of its own upg-written triple; a partial set is a broken projection.
+        """
+        result_type = r[m.Infra.MiseToolchainArtifactSet]
+        paths = tuple(scope_root / name for name, _mode in c.Infra.ARTIFACT_SPECS)
+        runtime = FlextInfraMiseWorkspacePlanner._artifact_set(
+            paths[0], paths[1], paths[2]
+        )
+        if runtime.failure:
+            return runtime
+        present = tuple(state.content is not None for state in runtime.value.states)
+        if all(present):
+            return runtime
+        if any(present):
+            missing = ", ".join(
+                str(path) for path, found in zip(paths, present, strict=True) if not found
+            )
+            return result_type.fail(
+                f"runtime root lacks {missing}; run make upg in {scope_root}"
+            )
+        packaged = tuple(
+            files.cold_start_directory() / Path(name).name
+            for name, _mode in c.Infra.ARTIFACT_SPECS
+        )
+        return FlextInfraMiseWorkspacePlanner._artifact_set(
+            packaged[0], packaged[1], packaged[2], required=True
         )
 
     def _project_layout(
@@ -404,6 +463,7 @@ class FlextInfraMiseWorkspacePlanner:
                     config=root.value / c.Infra.CONFIG_SPEC[0],
                     unix_launcher=root.value / c.Infra.ARTIFACT_NAMES[0],
                     windows_launcher=root.value / c.Infra.ARTIFACT_NAMES[1],
+                    version_pin=root.value / c.Infra.ARTIFACT_NAMES[2],
                 ),
             )
         )

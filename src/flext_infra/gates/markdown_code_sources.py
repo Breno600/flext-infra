@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 
 def is_syntax_broken(code: str, origin: Path) -> bool:
-    """True when one embedded source does not compile (documentation fragment)."""
+    """Identify documentation fragments owned by the Markdown syntax validator."""
     try:
         compile(code, str(origin), "exec")
     except SyntaxError:
@@ -40,10 +40,9 @@ def write_fenced_block_sources(
 ) -> dict[str, t.Pair[str, int]]:
     """Write one temp source per parseable fenced ``python`` block.
 
-    Blocks carrying the ``notest`` fence marker are skipped (opted out of
-    code validation by declaration). Every other block must compile: an
-    unparseable block in a python fence is a documentation defect and its
-    ``SyntaxError`` escapes unchanged.
+    Blocks carrying the ``notest`` fence marker and unparseable fragments are
+    excluded. The Markdown validator owns syntax errors; this gate owns only
+    formatting of Python blocks that compile.
     """
     origin_by_source: dict[str, t.Pair[str, int]] = {}
     for md_path in markdown_files:
@@ -55,13 +54,6 @@ def write_fenced_block_sources(
             if c.Infra.MARKDOWN_CODE_SKIP_MARKER not in match.group("info")
         ):
             source_text = match.group("code")
-            # A python fence that cannot compile is a documentation fragment,
-            # not a formatting subject: its syntax findings belong to the
-            # flext-tests markdown validator (MD-001 with approved
-            # exceptions), and the ``notest`` marker is the declared way to
-            # keep a deliberate non-Python snippet out of every probe. The
-            # fragment keeps its enumeration slot so a later parseable block
-            # never shifts its source name.
             if is_syntax_broken(source_text, md_path):
                 continue
             name = source_name(relative_posix, index)

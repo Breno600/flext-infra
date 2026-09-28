@@ -68,6 +68,7 @@ if TYPE_CHECKING:
     from .conform import FlextInfraCodegenConform
     from .consolidator import FlextInfraCodegenConsolidator
     from .constants_quality_gate import FlextInfraCodegenQualityGate
+    from .file_leases import FlextInfraCodegenFileLeases
     from .fixer import FlextInfraCodegenFixer
     from .layout import FlextInfraCodegenLayout
     from .lazy_init import FlextInfraCodegenLazyInit
@@ -107,6 +108,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenConsolidator",
     "FlextInfraCodegenConsolidatorStepsMixin",
     "FlextInfraCodegenExecutionBase",
+    "FlextInfraCodegenFileLeases",
     "FlextInfraCodegenFixer",
     "FlextInfraCodegenFixerPassesMixin",
     "FlextInfraCodegenFixerResultsMixin",
@@ -228,6 +230,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".conform": ("FlextInfraCodegenConform",),
             ".consolidator": ("FlextInfraCodegenConsolidator",),
             ".constants_quality_gate": ("FlextInfraCodegenQualityGate",),
+            ".file_leases": ("FlextInfraCodegenFileLeases",),
             ".fixer": ("FlextInfraCodegenFixer",),
             ".layout": ("FlextInfraCodegenLayout",),
             ".lazy_init": ("FlextInfraCodegenLazyInit",),

@@ -88,7 +88,9 @@ endif
 endif
 export GITHUB_TOKEN
 override export GH_TOKEN := $(GITHUB_TOKEN)
-override export MISE_GITHUB_TOKEN := $(GITHUB_TOKEN)
+# One credential, one variable: mise reads GITHUB_TOKEN, and a tool-scoped
+# alias inherited from a caller would silently outrank it.
+unexport MISE_GITHUB_TOKEN
 
 # === SECTION: project identity (managed) ===
 # Source: config:dist / config:make_profile / config:repository_root_rel / config:uv_link_mode
@@ -164,28 +166,7 @@ ifneq ($(wildcard $(MISE_VERSION_PIN)),)
 export MISE_VERSION := $(strip $(file < $(MISE_VERSION_PIN)))
 endif
 override export FLEXT_PYTEST_TARGET_RAW := {{ make.testmon_cache.target_directory }}
-# A linked worktree (`git worktree add`) owns its own --git-dir nested under the
-# repository's shared --git-common-dir; anchoring persistent state to
-# PROJECT_ROOT there cold-starts a fresh testmon database and pycache per
-# worktree even though every worktree of one repository shares one toolchain
-# and history. A plain checkout (standalone or submodule) already has
-# --git-dir == --git-common-dir, so STATE_ANCHOR_ROOT there is PROJECT_ROOT
-# itself and this changes nothing for it (flext-infra testmon sharing,
-# operator law 2026-09-26).
-override GIT_DIR_RESOLVED := $(shell cd "$(PROJECT_ROOT)" && git rev-parse --path-format=absolute --git-dir 2>&1)
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot resolve the git directory for $(PROJECT_ROOT): $(GIT_DIR_RESOLVED))
-endif
-override GIT_COMMON_DIR_RESOLVED := $(shell cd "$(PROJECT_ROOT)" && git rev-parse --path-format=absolute --git-common-dir 2>&1)
-ifneq ($(.SHELLSTATUS),0)
-$(error Cannot resolve the git common directory for $(PROJECT_ROOT): $(GIT_COMMON_DIR_RESOLVED))
-endif
-ifeq ($(GIT_DIR_RESOLVED),$(GIT_COMMON_DIR_RESOLVED))
-override STATE_ANCHOR_ROOT := $(PROJECT_ROOT)
-else
-override STATE_ANCHOR_ROOT := $(patsubst %/.git,%,$(GIT_COMMON_DIR_RESOLVED))
-endif
-PROJECT_STATE_ROOT := $(abspath $(STATE_ANCHOR_ROOT)/../{{ state_directory_name }}/$(notdir $(STATE_ANCHOR_ROOT)))
+PROJECT_STATE_ROOT := $(abspath $(PROJECT_ROOT)/../{{ state_directory_name }}/$(notdir $(PROJECT_ROOT)))
 # Scratch never lives inside a versioned tree: the home scratch root mirrors
 # the absolute checkout path so a sandbox is never a tracked scope of any
 # enclosing repository (workspace or linked worktree). Checkouts nested in a
@@ -257,6 +238,16 @@ CALLER_VIRTUAL_ENV := $(patsubst %/,%,$(VIRTUAL_ENV))
 override RUNTIME_ROOT := $(REPOSITORY_ROOT)
 override export GIT_CEILING_DIRECTORIES := $(abspath $(RUNTIME_ROOT)/..)
 override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
+# The physical runtime owns both its environment and frozen tool identities.
+# Attached members retain their own lock inputs for standalone consumption.
+# The pin is `make upg` output: a generated header, then its release line.
+override MISE_VERSION_PIN := $(RUNTIME_ROOT)/{{ mise_bootstrap.version_pin_file }}
+ifneq ($(wildcard $(MISE_VERSION_PIN)),)
+override export MISE_VERSION := $(strip $(shell awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)"))
+ifneq ($(.SHELLSTATUS),0)
+$(error Cannot read the pinned Mise release from $(MISE_VERSION_PIN))
+endif
+endif
 # End SECTION: profile routing
 
 override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
@@ -301,9 +292,19 @@ TOOL_BOOTSTRAP_LIFECYCLE := _setup_lifecycle
 TOOL_BOOTSTRAP_RESOLVE :=
 {{ tool_bootstrap_recipe("_bootstrap_setup_tools", "$(PROJECT_ROOT)", "$(SETUP_MISE)", uv_version, "$(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)", mise_bootstrap, make, mise_lockfile_platforms, qlty_selector, jscpd_selector, prettier_selector, scc_selector, waza_selector) }}
 
+# Under a CI token ({{ make.ci.variable }}={{ make.ci.value }} or {{ make.ci.variable }}={{ make.ci.local_value }}) every workspace root verb covers only
+# this workspace -- setup, gen, check, fmt, fix, test, docs -- because every
+# member runs its own CI; an unset token keeps the fleet-wide local run. This is
+# the single definition every scoped setting below reads.
+CI_SCOPED := $(filter {{ make.ci.value }} {{ make.ci.local_value }},$({{ make.ci.variable }}))
 ifeq ($(MAKE_PROFILE),workspace)
+ifneq ($(CI_SCOPED),)
+CODEGEN_SCOPE := self
+ALLOWED_PROJECTS := .
+else
 CODEGEN_SCOPE := all
 ALLOWED_PROJECTS := . $(WORKSPACE_SUBPROJECTS)
+endif
 else
 CODEGEN_SCOPE := self
 ALLOWED_PROJECTS := .
@@ -328,7 +329,7 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	$(UV) sync --project "$(PROJECT_ROOT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
 	XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" allow "$(PROJECT_ROOT)"; \
-	for member in $(WORKSPACE_SUBPROJECTS); do \
+	for member in $(filter-out .,$(ALLOWED_PROJECTS)); do \
 		if [ -f "$(PROJECT_ROOT)/$$member/.envrc" ]; then \
 			XDG_DATA_HOME="$$SETUP_DIRENV_XDG_DATA_HOME" "$$SETUP_DIRENV" allow "$(PROJECT_ROOT)/$$member"; \
 		fi; \
@@ -354,9 +355,9 @@ _bootstrap_setup_tools: _builtin_require_workspace
 
 WORKSPACE_ORCHESTRATE = $(UV_RUN) python -m flext_infra {{ workspace_cli_group }} orchestrate
 # Workspace runs include the root project itself: `.` maps to the
-# _builtin-self-* targets, so all 32 distributions execute their own gates
-# (plan contract: no member of the fleet is excluded from required cycles).
-DEFAULT_PROJECTS := $(WORKSPACE_SUBPROJECTS) .
+# _builtin-self-* targets. The member set is ALLOWED_PROJECTS (above), so a CI
+# token narrows every root verb to `.` while an unset token covers the fleet.
+DEFAULT_PROJECTS := $(filter-out .,$(ALLOWED_PROJECTS)) .
 SELECTED_PROJECTS := $(DEFAULT_PROJECTS)
 WORKSPACE_PROJECT_ARGS := $(foreach project,$(SELECTED_PROJECTS),--projects $(project))
 DOCS_PROJECT_ARGS := $(foreach project,$(SELECTED_PROJECTS),--projects $(project))
@@ -381,7 +382,13 @@ SHARED_RUNTIME := $(if $(filter-out $(PROJECT_ROOT),$(RUNTIME_ROOT)),1,$(if $(st
 # the CI path and must be stable. A missing or stale lock fails through uv's own
 # error; `make upg` is the only verb that resolves and rewrites it
 # (operator 2026-09-24).
+# A CI-scoped workspace root installs its dependencies as regular, non-editable
+# packages and never provisions the member checkouts.
+ifneq ($(and $(CI_SCOPED),$(filter workspace,$(MAKE_PROFILE))),)
+UV_SYNC_FLAGS := --no-editable --all-extras --all-groups --locked
+else
 UV_SYNC_FLAGS := $(if $(SHARED_RUNTIME),--all-packages --reinstall-package flext-infra ,)--all-extras --all-groups --locked
+endif
 
 ifeq ($(GEN_INIT_ONLY),)
 {{ makefile_custom_include }}
@@ -477,8 +484,16 @@ setup: _bootstrap_setup_tools
 # must not require an existing environment.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
-upg: export MISE_VERSION :=
-upg: _bootstrap_setup_tools
+upg: _builtin_require_runtime_root _bootstrap_setup_tools
+
+# Only the runtime root resolves the Mise release. An attached member's pin and
+# launchers are projections of that root, published by the root's `make gen`.
+.PHONY: _builtin_require_runtime_root
+_builtin_require_runtime_root:
+	@if [ "$(PROJECT_ROOT)" != "$(RUNTIME_ROOT)" ]; then \
+		printf 'ERROR: %s projects the Mise pin and launchers of %s; run make upg there\n' "$(PROJECT_ROOT)" "$(RUNTIME_ROOT)" >&2; \
+		exit 2; \
+	fi
 
 .PHONY: _setup_lifecycle
 _setup_lifecycle:
@@ -533,11 +548,11 @@ _builtin_require_mise_pin:
 		printf 'ERROR: missing or empty %s; make upg records the Mise release\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi; \
-	case "$(MISE_VERSION)" in ''|latest) \
-		printf 'ERROR: %s must contain a resolved Mise release\n' "$(MISE_VERSION_PIN)" >&2; \
-		exit 2 ;; \
-	esac; \
-	if [ "$(MISE_VERSION)" != "$$(cat "$(MISE_VERSION_PIN)")" ]; then \
+	if ! printf '%s\n' "$(MISE_VERSION)" | grep -Eq '^{{ mise_bootstrap.resolved_release_pattern }}$$'; then \
+		printf 'ERROR: %s must contain a resolved Mise release; make upg writes it\n' "$(MISE_VERSION_PIN)" >&2; \
+		exit 2; \
+	fi; \
+	if [ "$(MISE_VERSION)" != "$$(awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)")" ]; then \
 		printf 'ERROR: MISE_VERSION conflicts with %s\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi
@@ -619,7 +634,7 @@ _upg_activated:
 # runs its own evidence in the global cycles.
 _builtin-self-test: _builtin_require_environment
 {{ test_report_recipe(
-    runner="$(PYTEST_INCREMENTAL_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
+    runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
     invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
@@ -640,6 +655,12 @@ _builtin-self-fix: _builtin_require_environment
 
 _builtin-self-fix-enforcement: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
+
+_builtin-self-fix-namespace: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor namespace-enforce --repository-root "$(PROJECT_ROOT)" --apply
+
+_builtin-self-fix-accessors: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor accessor-migrate --repository-root "$(PROJECT_ROOT)" --apply
 
 _builtin-self-build:
 	@$(UV) build --project "$(PROJECT_ROOT)"
@@ -682,6 +703,12 @@ _builtin_fix_all: _builtin_require_environment
 _builtin_fix_enforcement: _builtin_require_environment
 	@$(WORKSPACE_ORCHESTRATE) --verb fix-enforcement $(WORKSPACE_PROJECT_ARGS)
 
+_builtin_fix_namespace: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb fix-namespace $(WORKSPACE_PROJECT_ARGS)
+
+_builtin_fix_accessors: _builtin_require_environment
+	@$(WORKSPACE_ORCHESTRATE) --verb fix-accessors $(WORKSPACE_PROJECT_ARGS)
+
 _builtin_sonarcloud_sync_all: _builtin_require_environment
 	@$(WORKSPACE_ORCHESTRATE) --verb sonarcloud-sync $(WORKSPACE_PROJECT_ARGS)
 
@@ -704,7 +731,7 @@ _builtin_check_all: _builtin_require_environment
 
 _builtin_test_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner="$(PYTEST_INCREMENTAL_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
+    runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
     invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
@@ -730,6 +757,12 @@ _builtin_fix_all: _builtin_require_environment
 _builtin_fix_enforcement: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
 
+_builtin_fix_namespace: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor namespace-enforce --repository-root "$(PROJECT_ROOT)" --apply
+
+_builtin_fix_accessors: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor accessor-migrate --repository-root "$(PROJECT_ROOT)" --apply
+
 _builtin_sonarcloud_sync_all: _builtin_sonarcloud_sync_project
 
 {% endif %}
@@ -739,6 +772,7 @@ _builtin_run_default: _builtin_require_environment
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
 		'$(MAKE_PROFILE)' '$(PROJECT_ROOT)' '$(RUNTIME_ROOT)'
+	@$(PROJECT_TOOL_EXEC) $(SHELL) -c 'command -v uv'
 	@$(UV) --version
 	@if [ -x "$(RUNTIME_PYTHON)" ]; then \
 		$(UV) pip check --python "$(RUNTIME_VENV)"; \
@@ -828,6 +862,8 @@ _builtin-test-full: _builtin_test_full_all
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
 _builtin-fix-enforcement: _builtin_fix_enforcement
+_builtin-fix-namespace: _builtin_fix_namespace
+_builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope "$(CODEGEN_SCOPE)" --mode check

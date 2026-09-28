@@ -636,7 +636,7 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(setup_jobs, empty=False)
         for job in setup_jobs:
             tm.that(job, has="GITHUB_TOKEN: ${{ github.token }}")
-            tm.that(job, has="MISE_GITHUB_TOKEN: ${{ github.token }}")
+            tm.that(job, lacks="MISE_GITHUB_TOKEN")
 
     def test_ci_matrix_checks_each_distro_and_tests_ubuntu(
         self, rendered_project: Path
@@ -696,7 +696,7 @@ class TestsFlextInfraCodegenCiMatrix:
         )
         header = rendered.split("\n\n", 1)[0]
         tm.that(header.startswith("# @flext-regenerate: make gen\n"), eq=True)
-        tm.that(header, has=entry.source.as_posix())
+        tm.that(header, has=tm.not_none(entry.source).as_posix())
         properties = {
             key: value
             for key, _, value in (
