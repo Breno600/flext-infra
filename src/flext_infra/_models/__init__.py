@@ -101,7 +101,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraConfigModelsTemplates",
     "FlextInfraConfigModelsWorkspace",
     "FlextInfraModelsBase",
-    "FlextInfraModelsDefaults",
     "FlextInfraModelsCensus",
     "FlextInfraModelsCheck",
     "FlextInfraModelsCodegenFixModels",
