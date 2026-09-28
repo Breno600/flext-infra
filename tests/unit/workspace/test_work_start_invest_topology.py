@@ -120,7 +120,7 @@ def test_start_adopts_and_provisions_an_invest_shaped_lane(
     lane = Path(
         tm.ok(
             FlextInfraWorktreeService(
-                workspace_root=primary,
+                repository_root=primary,
                 operation=c.Infra.WorktreeOperation.ADD,
                 branch=branch,
                 base="HEAD",
