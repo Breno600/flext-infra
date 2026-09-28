@@ -14,7 +14,7 @@
 {% for name in bootstrap.passthrough_environment if name != "PATH" -%}
 	caller_{{ name | lower }}="{{ '$${' ~ name ~ ':-}' }}"; \
 {% endfor -%}
-	mise_pin_file="$$project_root/{{ bootstrap.version_pin_file }}"; \
+	mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \
 		mise_pin=$$(awk '{{ bootstrap.version_pin_reader | replace('$', '$$') }}' "$$mise_pin_file"); \
