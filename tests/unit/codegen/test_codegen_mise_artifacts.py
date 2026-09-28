@@ -71,6 +71,39 @@ class TestsFlextInfraCodegenMiseArtifacts:
             has="differs from the runtime root",
         )
 
+    def test_runtime_root_seed_falls_back_to_the_packaged_triple(
+        self, tmp_path: Path
+    ) -> None:
+        """A scope root still carrying the bootstrap seed starts from the packaged triple."""
+        from flext_infra.codegen.mise_artifacts_workspace import (
+            FlextInfraMiseWorkspacePlanner,
+        )
+
+        root = tmp_path / "seed-project"
+        for relative, _mode in c.Infra.ARTIFACT_SPECS:
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if relative == c.Infra.MISE_VERSION_PIN_FILENAME:
+                lines = (*c.Infra.MISE_VERSION_PIN_HEADER, self.RELEASE)
+            elif path.suffix == ".cmd":
+                lines = ("@echo off",)
+            else:
+                lines = (
+                    "#!/usr/bin/env bash",
+                    f"# {c.Infra.MISE_LATEST_RESOLUTION_MARKER}",
+                )
+            path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+        result = FlextInfraMiseWorkspacePlanner.runtime_artifacts(root)
+
+        packaged = files("flext_infra").joinpath(c.Infra.MISE_COLD_START_DIRECTORY)
+        tm.ok(result)
+        for state, (relative, _mode) in zip(
+            result.value.states, c.Infra.ARTIFACT_SPECS, strict=True
+        ):
+            expected = packaged.joinpath(Path(relative).name).read_bytes()
+            tm.that(state.content, eq=expected)
+
     @pytest.mark.parametrize("shape", ["absolute", "tilde"])
     def test_packaged_launcher_runs_its_baked_release_offline(
         self, tmp_path: Path, shape: str

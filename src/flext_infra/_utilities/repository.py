@@ -24,6 +24,17 @@ class FlextInfraUtilitiesRepository:
     """Resolve detected identity and branch policy for one governed repository."""
 
     @staticmethod
+    def ref_is_commit(ref: str) -> bool:
+        """Whether one Git ref names a commit rather than an integration line.
+
+        uv.lock, written only by ``make upg``, owns every resolved commit. In a
+        generated pyproject a commit ref is projection residue that generation
+        re-renders on the family line; in a hand-authored source it is a pin
+        beside the lock and fails loudly.
+        """
+        return c.Infra.GIT_COMMIT_OID_RE.fullmatch(ref) is not None
+
+    @staticmethod
     def declared_git_source(requirement: str) -> p.Result[t.Pair[str, str]]:
         """Parse one requirement's declared direct Git source.
 
@@ -33,7 +44,9 @@ class FlextInfraUtilitiesRepository:
         dependency's canonical URL and branch: canonicalization normalizes the
         transport scheme (``ssh://``, SCP-style, ``http``) to ``https`` and
         never invents an organization, host, or ref. A declared source that is
-        not a Git URL, or a Git URL without a ref, fails loudly.
+        not a Git URL, or a Git URL without a ref, fails loudly. Whether a
+        commit ref is projection residue or a hand-authored pin is the
+        caller's decision (``ref_is_commit``).
         """
         requirement_part, _, _ = requirement.partition(";")
         head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(requirement_part.strip())
@@ -260,10 +273,41 @@ class FlextInfraUtilitiesRepository:
             if branch.failure:
                 return r[t.Pair[str, str]].from_failure(branch)
             return r[t.Pair[str, str]].ok((manifest.value, branch.value))
+        declared_line = cls._manifest_flext_source(repository_root)
+        if declared_line.failure or declared_line.value[0]:
+            return declared_line
         return r[t.Pair[str, str]].fail(
             f"infrastructure repository {distribution} is undeclared by this "
-            f"checkout: no project identity, no direct git dependency source, "
-            f"and no workspace manifest entry: {repository_root}"
+            f"checkout: no project identity, no direct git dependency line, "
+            f"no workspace manifest entry, and no manifest flext_source: "
+            f"{repository_root}"
+        )
+
+    @classmethod
+    def _manifest_flext_source(
+        cls, repository_root: Path
+    ) -> p.Result[t.Pair[str, str]]:
+        """Return the manifest's hand-authored ``project.flext_source`` line.
+
+        It declares the family line when the generated pyproject carries none
+        (every internal requirement is commit residue of a retired pin). Being
+        hand-authored, a commit ref there is a pin beside uv.lock and fails.
+        """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
+        loaded = FlextInfraWorkspaceDetector.load_workspace_manifest(repository_root)
+        if loaded.failure:
+            return r[t.Pair[str, str]].from_failure(loaded)
+        project = loaded.value[0].project if loaded.value else None
+        if project is None or project.flext_source is None:
+            # Absence is an EMPTY payload, never None (flext-core result law).
+            return r[t.Pair[str, str]].ok(("", ""))
+        parsed = cls.declared_git_source(project.flext_source)
+        if parsed.failure or not cls.ref_is_commit(parsed.value[1]):
+            return parsed
+        return r[t.Pair[str, str]].fail(
+            "project.flext_source declares an integration line, never a commit "
+            f"(uv.lock records it and only `make upg` moves it): {project.flext_source}"
         )
 
     @classmethod
@@ -306,16 +350,14 @@ class FlextInfraUtilitiesRepository:
     ) -> p.Result[t.Pair[str, str]]:
         """Return the family line the pyproject declares, as a source for one member.
 
-        Unpinned internal dependencies name one provider base URL and ref.
-        The manifest owns immutable revisions: a generated pyproject may still
-        carry the preceding ref while codegen plans its replacement. Pinned
-        dependencies must retain one consistent declared Git provenance, and
-        every family member must use the same provider. A plain (source-less)
-        requirement names a workspace dependency whose URL the workspace
-        manifest owns. The unpinned line supplies the source of ``distribution``.
+        Internal dependencies name one provider base URL and one integration
+        line; uv.lock alone records the commit each line resolves to, so a
+        commit ref left in the projection declares no line. A plain
+        (source-less) requirement names a workspace dependency whose URL the
+        workspace manifest owns. The line supplies the source of
+        ``distribution``.
         """
         from flext_infra import u
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
         from .pyproject_conform import FlextInfraUtilitiesPyprojectConform
 
@@ -345,22 +387,7 @@ class FlextInfraUtilitiesRepository:
                 requirements.extend(
                     FlextInfraUtilitiesPyprojectConform.raw_requirement_values(group)
                 )
-        declared_manifest = FlextInfraWorkspaceDetector.load_workspace_manifest(
-            pyproject_path.parent
-        )
-        if declared_manifest.failure:
-            return r[t.Pair[str, str]].from_failure(declared_manifest)
-        manifest_project = (
-            declared_manifest.value[0].project if declared_manifest.value else None
-        )
-        revisions: t.StrMapping = (
-            manifest_project.dependency_revisions
-            if manifest_project is not None
-            else {}
-        )
         lines: dict[t.Pair[str, str], str] = {}
-        provider_bases: set[str] = set()
-        pinned_sources: dict[str, t.Pair[str, str]] = {}
         for requirement in requirements:
             name = FlextInfraUtilitiesDependencies.dep_name(requirement)
             if name is None or not name.startswith(prefix):
@@ -382,29 +409,15 @@ class FlextInfraUtilitiesRepository:
                     f"internal dependency source must be the {name} repository: "
                     f"{requirement}"
                 )
-            base_url = url.removesuffix(suffix)
-            provider_bases.add(base_url)
-            declared_revision = revisions.get(name)
-            if declared_revision is not None:
-                source = (url, ref)
-                previous = pinned_sources.setdefault(name, source)
-                if previous != source:
-                    return r[t.Pair[str, str]].fail(
-                        f"{pyproject_path.name} declares conflicting pinned sources "
-                        f"for {name}: {previous!r} != {source!r}"
-                    )
+            if cls.ref_is_commit(ref):
+                # Projection residue of a retired pin: it names no line.
                 continue
-            lines.setdefault((base_url, ref), requirement)
+            lines.setdefault((url.removesuffix(suffix), ref), requirement)
         if len(lines) > 1:
             declared = "; ".join(sorted(lines.values()))
             return r[t.Pair[str, str]].fail(
                 f"{pyproject_path.name} declares conflicting {prefix}* line sources "
                 f"(one family, one provider and ref): {declared}"
-            )
-        if len(provider_bases) > 1:
-            return r[t.Pair[str, str]].fail(
-                f"{pyproject_path.name} declares conflicting {prefix}* providers: "
-                f"{', '.join(sorted(provider_bases))}"
             )
         if lines:
             (base_url, ref), _ = next(iter(lines.items()))

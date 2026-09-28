@@ -94,9 +94,15 @@ As correções mais recentes do operador (2026-09-24) declaram `latest` na confi
 fazem de `make upg` o único verbo que resolve versões novas e grava os `uv.lock` e
 `mise.lock` versionados. `make setup`, `make gen` e `make fmt` nunca atualizam: instalam
 congelados a partir desses locks, que é o caminho do CI. Dependências Git seguem os tips
-das branches de integração declaradas e `APPLY` continua removido. Corrija o responsável
-do setup ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o
-ciclo.
+das branches de integração declaradas e `APPLY` continua removido. Cada requisito
+interno `flext-*` declara no `pyproject.toml` a sua linha de integração, nunca um
+commit: o commit resolvido existe só no `uv.lock`, e só o `make upg` o move para o tip
+da linha. O manifesto não fixa revisões (`project.dependency_revisions` foi removido).
+Um commit deixado na projeção do `pyproject.toml` é resíduo: o `make gen` o re-renderiza
+na linha detectada e nunca o regrava; quando a projeção não traz linha alguma, o
+`project.flext_source` escrito à mão no manifesto a declara, e um commit numa fonte
+escrita à mão falha (operador 2026-09-28, `flext-oe420`). Corrija o responsável do setup
+ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o ciclo.
 
 O mesmo `make upg` é o único escritor de `mise.version`, `bin/mise` e `bin/mise.cmd`.
 Ele resolve o release do Mise uma vez, pelo próprio Mise (`mise latest github:jdx/mise`,
@@ -206,6 +212,15 @@ continuam exigindo execução sem warnings ou findings residuais.
 O handoff final relaciona PRs, commits de merge e prova após integração aos Beads. Se
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
 declarar fechamento funcional.
+
+## Abstraction-boundary project identity
+
+The boundary gate reads the declared project identity through
+`u.Infra.read_project_metadata_result`. Owner exemptions and TOML allowances use that
+typed identity, so renaming a checkout or creating a linked worktree does not change its
+policy. A consumer placed in an owner's named directory remains a consumer. Missing or
+malformed project metadata blocks the gate and preserves the metadata reader's
+diagnostic; directory names are never identity fallbacks.
 
 ## Codemod scanner contract
 

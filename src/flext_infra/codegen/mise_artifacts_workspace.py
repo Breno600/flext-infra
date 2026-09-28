@@ -415,12 +415,14 @@ class FlextInfraMiseWorkspacePlanner:
         """Capture the triple every project projects from its runtime root.
 
         `make upg` writes it at the runtime root. A runtime root that has never
-        carried one (a new repository), or still carries the pre-bake
-        projection whose launchers resolve the latest release at run time,
-        starts from flext-infra's packaged copy of its own upg-written triple:
-        that projection predates the `make upg` recipe that bakes a release,
-        so only the packaged copy can seed a baked triple for it. A partial
-        set is a broken projection.
+        carried one (a new repository) — or still carries the packaged bootstrap
+        seed, whose launchers resolve ``releases/latest`` at run time instead of
+        baking a release — starts from flext-infra's packaged copy of its own
+        upg-written triple; a partial set is a broken projection. Treating the
+        seed as absent is what lets one generation publish the baked triple and
+        land the launcher-baking ``upg`` recipe the same transaction; otherwise
+        the validator's own repair path ("run make upg") can never complete on a
+        checkout whose committed Makefile predates the bake.
         """
         result_type = r[m.Infra.MiseToolchainArtifactSet]
         paths = tuple(scope_root / name for name, _mode in c.Infra.ARTIFACT_SPECS)
@@ -430,6 +432,7 @@ class FlextInfraMiseWorkspacePlanner:
         if runtime.failure:
             return runtime
         present = tuple(state.content is not None for state in runtime.value.states)
+        seed = False
         if all(present):
             if not FlextInfraMiseArtifactsDerivation.resolves_at_run_time(
                 runtime.value

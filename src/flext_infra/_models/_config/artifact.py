@@ -184,6 +184,17 @@ class FlextInfraConfigModelsArtifact:
                 )
             ),
         ]
+        ci_package_registry_read: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Distributions whose generated CI gates resolve GitHub "
+                    "Packages (for example private GHCR OCI dependencies); only "
+                    "these grant the ci job packages: read, every other job "
+                    "and distribution stays contents-only"
+                )
+            ),
+        ]
         uv_exclude_dependencies: Annotated[
             t.VariadicTuple[
                 FlextInfraConfigModelsRender.UvScopedDependencyExclusionSpec
