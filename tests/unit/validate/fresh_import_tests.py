@@ -156,7 +156,9 @@ class TestsFlextInfraFreshImport:
         )
         tm.that(publication.action, eq=c.Infra.LazyInitAction.REMOVE)
 
-        result = FlextInfraValidateFreshImport(repository_root=repository_root).build_report(
+        result = FlextInfraValidateFreshImport(
+            repository_root=repository_root
+        ).build_report(
             publications=analysis.publications, repository_roots=(repository_root,)
         )
 
