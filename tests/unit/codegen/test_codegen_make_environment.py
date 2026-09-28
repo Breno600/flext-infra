@@ -1012,20 +1012,20 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
-        tm.that(makefile, has="upg: _bootstrap_setup_tools")
+        tm.that(makefile, has="upg: _builtin_require_runtime_root _bootstrap_setup_tools")
         tm.that(makefile, has="_builtin-fmt: _builtin_fmt_all")
         tm.that(makefile, has="_builtin-fix: _builtin_fix_all")
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
         tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
         tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
         tm.that(
-            makefile, has="_builtin-self-fix-enforcement: _builtin_require_environment"
+            makefile, has="_builtin-self-fix-enforcement: _builtin_fix_enforcement"
         )
         tm.that(
-            makefile, has="_builtin-self-fix-namespace: _builtin_require_environment"
+            makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace"
         )
         tm.that(
-            makefile, has="_builtin-self-fix-accessors: _builtin_require_environment"
+            makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors"
         )
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
@@ -1042,6 +1042,21 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-gen: _builtin_gen_all")
         tm.that(makefile, has="_builtin-mod: _builtin_mod_apply")
         tm.that(makefile, has="mode=--apply ;;")
+        profile = c.Infra.MakeProfile.STANDALONE
+        for verb in config.Infra.codegen.make.verbs:
+            if profile not in verb.profiles:
+                continue
+            rendered = re.search(
+                rf"^_builtin-{re.escape(verb.name)}:(\s|$)"
+                rf"|^{re.escape(verb.name)}:(\s|$)",
+                makefile,
+                re.MULTILINE,
+            )
+            tm.that(
+                rendered is not None,
+                eq=True,
+                msg=f"declared verb {verb.name!r} renders no Make target",
+            )
         for forbidden in (
             "CHECK_ONLY",
             "APPLY",

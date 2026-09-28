@@ -220,11 +220,6 @@ class FlextInfraConstantsCheck:
     BOUNDARY_SELF_FILES: ClassVar[frozenset[str]] = frozenset({
         "flext_infra/_constants/check.py",
         "flext_infra/gates/abstraction_boundary.py",
-        # Why: the Darwin supervisor is a std-lib-only bootstrap executable that
-        # must own its process group BEFORE the fleet stack (and its CLI
-        # facade) is importable; subprocess with constant argv is its core
-        # mechanism, not an untrusted-input boundary.
-        "flext_infra/_utilities/_mypy_supervisor.py",
     })
     BOUNDARY_JSON_ATTRS: ClassVar[frozenset[str]] = frozenset({
         "dump",
