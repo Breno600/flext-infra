@@ -85,7 +85,7 @@ class FlextInfraToolTablesPhase:
         )
 
     def _phases(
-        self, *, first_party: t.StrSequence
+        self, *, first_party: t.StrSequence, project_dir: Path
     ) -> t.SequenceOf[m.Infra.DepsToml.PhaseConfig]:
         """Build every policy table; coverage is measured, never floor-gated."""
         tools = self._tool_config.tools
@@ -227,7 +227,16 @@ class FlextInfraToolTablesPhase:
                     toml.SetOp(
                         key="min_confidence", value=tools.vulture.min_confidence
                     ),
-                    toml.ListOp(key="paths", values=tools.vulture.paths),
+                    # Production roots are config-declared; a retired tree
+                    # (e.g. scripts/) must not stay in the dead-code scan scope.
+                    toml.ListOp(
+                        key="paths",
+                        values=tuple(
+                            root
+                            for root in tools.vulture.paths
+                            if (project_dir / root).is_dir()
+                        ),
+                    ),
                     toml.SetOp(key="verbose", value=tools.vulture.verbose),
                 ),
             ),
@@ -260,7 +269,10 @@ class FlextInfraToolTablesPhase:
         """Apply every policy table to one normalized payload."""
         return u.Infra.apply_toml_phases(
             payload,
-            *self._phases(first_party=self.first_party_namespaces(payload, path=path)),
+            *self._phases(
+                first_party=self.first_party_namespaces(payload, path=path),
+                project_dir=path.parent,
+            ),
         )
 
 
