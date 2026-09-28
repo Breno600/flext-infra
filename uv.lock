@@ -462,7 +462,7 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-typings = [
+dev = [
     { name = "types-markdown" },
 ]
 
@@ -550,10 +550,10 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "rope", git = "https://github.com/marlon-costa-dc/rope.git?rev=1.14.0%2Bdc.3" },
     { name = "structlog", specifier = ">=25.5.0,<27" },
-    { name = "types-markdown", marker = "extra == 'typings'" },
+    { name = "types-markdown", marker = "extra == 'dev'" },
     { name = "typing-extensions", specifier = ">=4.16.0" },
 ]
-provides-extras = ["typings"]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
