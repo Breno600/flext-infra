@@ -79,6 +79,15 @@ class FlextInfraConstantsWorkspace:
 
         SETUP = "setup"
 
+    @unique
+    class BeadIssueStatus(StrEnum):
+        """Beads issue states relevant to live lane ownership."""
+
+        OPEN = "open"
+        IN_PROGRESS = "in_progress"
+        BLOCKED = "blocked"
+        CLOSED = "closed"
+
     WORK_FORBIDDEN_SLUGS: ClassVar[frozenset[str]] = frozenset({
         "teste",
         "ajuste",
@@ -144,6 +153,11 @@ class FlextInfraConstantsWorkspace:
     # checkout nested in a VCS directory (submodule worktrees under
     # .git/modules) reproduced that directory in the mirror, so every process
     # whose TMPDIR lived there discovered a config-less repository.
+    SCRATCH_IDENTITY_SEGMENT_ALIASES: ClassVar[t.VariadicTuple[t.StrPair]] = (
+        (FlextInfraConstantsSharedInfra.GIT_DIR, "_git"),
+    )
+    "Checkout path segments renamed when mirrored into the scratch identity."
+
     SCRATCH_IDENTITY_SEGMENT_ALIASES: ClassVar[t.VariadicTuple[t.StrPair]] = (
         (FlextInfraConstantsSharedInfra.GIT_DIR, "_git"),
     )
