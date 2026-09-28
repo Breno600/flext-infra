@@ -381,30 +381,32 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             return project_root, target
 
         @staticmethod
-        def validate_namespace_project(root: Path) -> m.Infra.ValidationReport:
+        def validate_namespace_project(
+            request: m.Infra.NamespaceValidateCommand,
+        ) -> m.Infra.ValidationReport:
             """Validate one project and require the public result to succeed."""
             from flext_infra.api import infra
 
-            result = infra.validate_namespace(root)
+            result = infra.validate_namespace(request)
             tm.ok(result)
             return result.value
 
         @staticmethod
-        def assert_namespace_valid(root: Path) -> None:
+        def assert_namespace_valid(request: m.Infra.NamespaceValidateCommand) -> None:
             """Require a namespace project to have no violations."""
-            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(root)
+            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(request)
             tm.that(report.passed, eq=True, msg=str(report.violations))
             tm.that(report.violations, empty=True)
 
         @staticmethod
         def assert_namespace_invalid(
-            root: Path,
+            request: m.Infra.NamespaceValidateCommand,
             *,
             expected_violation_substr: str | None = None,
             expected_violation_count: int | None = None,
         ) -> None:
             """Require a namespace project to expose its expected violations."""
-            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(root)
+            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(request)
             tm.that(report.passed, eq=False, msg=str(report.violations))
             if expected_violation_substr is not None:
                 tm.that(
@@ -421,9 +423,11 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 tm.that(len(report.violations), eq=expected_violation_count)
 
         @staticmethod
-        def assert_namespace_violation_contains(root: Path, substring: str) -> None:
+        def assert_namespace_violation_contains(
+            request: m.Infra.NamespaceValidateCommand, substring: str
+        ) -> None:
             """Require at least one namespace violation to contain text."""
-            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(root)
+            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(request)
             tm.that(
                 any(substring in item for item in report.violations),
                 eq=True,
@@ -431,9 +435,11 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             )
 
         @staticmethod
-        def assert_namespace_no_violation_contains(root: Path, substring: str) -> None:
+        def assert_namespace_no_violation_contains(
+            request: m.Infra.NamespaceValidateCommand, substring: str
+        ) -> None:
             """Require every namespace violation to omit text."""
-            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(root)
+            report = TestsFlextInfraUtilities.Tests.validate_namespace_project(request)
             tm.that(
                 any(substring in item for item in report.violations),
                 eq=False,

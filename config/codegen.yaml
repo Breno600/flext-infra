@@ -25,10 +25,21 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
-      # Runtime and scratch storage roots consumed by generated Makefiles.
+      # External runtime state directory (sibling of checkout, not inside it).
+      # Governs PROJECT_STATE_ROOT, PROJECT_SCRATCH_ROOT, PYTHONPYCACHEPREFIX.
       state_directory_name: ".flext-runtime"
+      # Scratch namespace for TMPDIR, test basetemp, Mise bootstrap staging.
+      # Never lives inside a versioned tree (storage law).
       scratch_namespace: "scratch"
+      # Scratch home-relative path: platform home plus this path mirrors the
+      # absolute checkout path below it. Workspace mode: sibling state root
+      # under superproject, so every sandbox became a tracked scope of the
+      # enclosing repository.
       scratch_home_relative: "tmp"
+      # Bytecode cache namespace under PROJECT_STATE_ROOT.
+      pycache_namespace: "pycache"
+      # Mise artifacts namespace under state directory.
+      mise_namespace: "mise-artifacts"
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -129,7 +140,7 @@ Infra:
         # The city owns the endpoint; a repository declares only that it
         # inherits one. Both values are rendered into .beads/config.yaml as
         # gc.endpoint_origin / gc.endpoint_status.
-        endpoint_origin: inherited_city
+        endpoint_origin: managed_city
         endpoint_status: verified
         # Issue types every governed ledger must know, unioned with each
         # repository's own custom types when the projection is rendered.
@@ -361,24 +372,17 @@ Infra:
         - gate: smells
           authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
           reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
-      # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
-      # save_enabled stays false while storage-limit API returns HTTP 402 /
-      # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
+      # One filename and the root-relative runner paths; the runner places the
+      # database in platformdirs' external per-worktree cache.
       testmon_cache:
-        schema_version: 1
         database_filename: .testmondata
+        database_environment_variable: TESTMON_DATAFILE
+        data_home_environment_variable: XDG_CACHE_HOME
+        user_home_environment_variable: HOME
+        home_cache_directory: .cache
+        external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
-        mode: bootstrap
-        save_enabled: false
-        max_bootstrap_generations: 3
-        max_stable_generations: 2
-        per_repo_budget_bytes: 536870912
-        warning_threshold_percent: 70
-        maintenance_threshold_percent: 75
-        block_threshold_percent: 80
-        allowed_save_refs: [refs/heads/0.12.0-dev]
-        key_prefix: testmon-v1
       # Public verbs execute their declared operation without mode selectors.
       ci:
         variable: CI
@@ -446,7 +450,6 @@ Infra:
           - .reports
         root_files:
           - .coverage
-          - .testmondata
           - flext-infra-codegen-transaction-journal.json.lock
         trace_globs:
           - "*.pstats"
@@ -616,9 +619,6 @@ Infra:
       - {name: .omo}
       - {name: .pylance_cache, vscode_exclude: false}
       - {name: .pytest_cache, source_scan_ignore: true}
-      - {name: .testmondata, is_dir: false, source_scan_ignore: true}
-      - {name: .testmondata-wal, is_dir: false, source_scan_ignore: true}
-      - {name: .testmondata-shm, is_dir: false, source_scan_ignore: true}
       - {name: .reports, source_scan_ignore: true}
       - {name: .ropeproject}
       - {name: .ruff_cache, source_scan_ignore: true}
@@ -1191,6 +1191,7 @@ Infra:
           - pytest-testmon>=2.2.0
           - pytest-timeout
           - pytest-xdist
+          - platformdirs>=4.12.0
         # types-* stub floors are declared here (cooldown-eligible dates).
         # Lock-fed raising wrote dated stub versions into the projections;
         # dated stubs churn weekly, so the SSOT owns the clamp and the

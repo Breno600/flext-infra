@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import FlextInfraWorktreeService, c, m, u
+from flext_infra import FlextInfraWorktreeService, c, m, t, u
 from flext_infra._utilities._work.topology import FlextInfraWorkTopology
 
 if TYPE_CHECKING:
@@ -19,12 +19,15 @@ class FlextInfraWorkStartSupport(FlextInfraWorkTopology):
     workspace_root: Path
 
     @staticmethod
-    def _reusable_lane(primary_root: Path, branch: str) -> Path | None:
-        registered = FlextInfraWorktreeService.registered_lane(primary_root, branch)
+    def _reusable_lane(
+        primary_root: Path, branch: str
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        registered = FlextInfraWorktreeService.registered_lanes(primary_root, branch)
         if registered.failure:
-            return None
-        lane = registered.value
-        return lane if lane.is_dir() else None
+            return r[t.VariadicTuple[Path]].from_failure(registered)
+        return r[t.VariadicTuple[Path]].ok(
+            tuple(lane for lane in registered.value if lane.is_dir())
+        )
 
     @staticmethod
     def _rollback_started_lane(

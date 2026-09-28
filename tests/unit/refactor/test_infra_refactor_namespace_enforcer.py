@@ -728,7 +728,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         self, tmp_path: Path
     ) -> None:
         """Skip dynamic directories when no scan override is declared."""
-        workspace, project, _pkg = u.Tests.namespace_workspace(tmp_path, declare=False)
+        workspace, project, _pkg = u.Tests.namespace_workspace(tmp_path)
         docs_dir = project / "docs"
         docs_dir.mkdir(parents=True)
         _ = (docs_dir / "contracts.py").write_text(

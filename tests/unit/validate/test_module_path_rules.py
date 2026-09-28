@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c, u
+from tests import c, m, u
 
 
 class TestsFlextInfraModulePathRules:
@@ -40,7 +40,9 @@ class TestsFlextInfraModulePathRules:
                 f'__all__: list[str] = ["TestsFlextTest{suffix}", "{target_alias}"]\n'
             ),
         )
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
         tm.that(report.passed, eq=valid_alias, msg=str(report.violations))
 
     @pytest.mark.parametrize(
@@ -224,7 +226,9 @@ class TestsFlextInfraModulePathRules:
         )
         u.Tests.assert_namespace_file_in_inventory(root, target)
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         if expect_passed is not None:
             tm.that(report.passed, eq=expect_passed, msg=str(report.violations))

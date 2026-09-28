@@ -262,7 +262,6 @@ if TYPE_CHECKING:
     from .work import FlextInfraWorkService
     from .workspace.detector import FlextInfraWorkspaceDetector
     from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
-    from .workspace.environment_beads import FlextInfraWorkspaceEnvironmentSync
     from .workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
     from .workspace.environment_provenance import (
         FlextInfraWorkspaceEnvironmentProvenance,
@@ -465,7 +464,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspaceEnvironmentContracts",
     "FlextInfraWorkspaceEnvironmentMixin",
     "FlextInfraWorkspaceEnvironmentProvenance",
-    "FlextInfraWorkspaceEnvironmentSync",
     "FlextInfraWorkspacePropagation",
     "FlextInfraWorkspaceRoutes",
     "FlextInfraWorktreeService",
@@ -785,7 +783,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".workspace": ("workspace",),
             ".workspace.detector": ("FlextInfraWorkspaceDetector",),
             ".workspace.environment": ("FlextInfraWorkspaceEnvironmentMixin",),
-            ".workspace.environment_beads": ("FlextInfraWorkspaceEnvironmentSync",),
             ".workspace.environment_contracts": (
                 "FlextInfraWorkspaceEnvironmentContracts",
             ),

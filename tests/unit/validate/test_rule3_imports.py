@@ -8,7 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra.api import infra
-from tests import u
+from tests import m, u
 
 
 class TestsFlextInfraRule3ImportRules:
@@ -50,7 +50,8 @@ class TestsFlextInfraRule3ImportRules:
             tmp_path, module_source=module_source, module_name=module_name
         )
         u.Tests.assert_namespace_invalid(
-            root, expected_violation_substr=expected_violation_substr
+            m.Infra.NamespaceValidateCommand(repository_root=root),
+            expected_violation_substr=expected_violation_substr,
         )
 
     def test_rule3_utilities_facade_import_remains_allowed(
@@ -63,7 +64,9 @@ class TestsFlextInfraRule3ImportRules:
             ),
             module_name="utilities.py",
         )
-        u.Tests.assert_namespace_valid(root)
+        u.Tests.assert_namespace_valid(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
     def test_rule3_models_facade_import_remains_allowed(self, tmp_path: Path) -> None:
         root = u.Tests.namespace_project(
@@ -71,7 +74,9 @@ class TestsFlextInfraRule3ImportRules:
             module_source=u.Tests.namespace_fixture("rule0_valid.pysrc"),
             module_name="models.py",
         )
-        u.Tests.assert_namespace_valid(root)
+        u.Tests.assert_namespace_valid(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
     def test_rule3_settings_owner_declaration_facade_runtime_imports_allowed(
         self, tmp_path: Path
@@ -90,7 +95,9 @@ class TestsFlextInfraRule3ImportRules:
             ),
             module_name="_settings.py",
         )
-        u.Tests.assert_namespace_valid(root)
+        u.Tests.assert_namespace_valid(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
     def test_rule3_settings_owner_c_import_allowed(self, tmp_path: Path) -> None:
         """Operator ruling 2026-09-19: settings defaults read declared constants.
@@ -107,7 +114,10 @@ class TestsFlextInfraRule3ImportRules:
             module_name="_settings.py",
         )
 
-        result = infra.validate_namespace(root)
+        request = m.Infra.NamespaceValidateCommand(repository_root=root)
+        result = infra.validate_namespace(request)
 
         tm.ok(result)
-        u.Tests.assert_namespace_no_violation_contains(root, "reverse runtime import")
+        u.Tests.assert_namespace_no_violation_contains(
+            request, "reverse runtime import"
+        )
