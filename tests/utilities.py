@@ -94,6 +94,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             *,
             local_infra: bool = False,
             bootstrap: bool = False,
+            package: bool = True,
             extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
             script_dispatch: m.Infra.ScriptDispatchSpec | None = None,
         ) -> t.Pair[Path, Path]:
@@ -104,6 +105,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             ).model_copy(
                 update={
                     "editable": True,
+                    "package": package,
                     "extra_verbs": extra_verbs,
                     "script_dispatch": script_dispatch,
                 }

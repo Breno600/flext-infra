@@ -61,6 +61,9 @@ class FlextInfraConfigModelsContexts:
             FlextInfraConstantsCodegenProject.MakeProfile,
             m.Field(description="Selected repository Make profile"),
         ]
+        package: Annotated[
+            bool, m.Field(description="Repository publishes a Python package")
+        ]
         repository_root_rel: Annotated[
             t.NonEmptyStr, m.Field(description="Relative workspace root path")
         ]
@@ -561,13 +564,6 @@ class FlextInfraConfigModelsContexts:
                 description="Direct Git infrastructure requirement declared for scaffolding"
             ),
         ] = None
-
-        dependency_revisions: Annotated[
-            Mapping[t.NonEmptyStr, Annotated[str, m.Field(pattern=r"^[0-9a-f]{40}$")]],
-            m.Field(
-                description="Explicit immutable revisions of provider-owned dependencies"
-            ),
-        ]
 
         # NOTE (multi-agent, flext-get3j): ProjectSpec is the sole declaration
         # owner; absence is meaningful and must never select a conventional hook.

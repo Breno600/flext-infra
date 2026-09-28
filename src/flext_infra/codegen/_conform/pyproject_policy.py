@@ -59,10 +59,23 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         )
         if flext_line.failure:
             return r[str].from_failure(flext_line)
-        declared_sources = {
-            member.distribution: f"git+{member.url}@{flext_line.value.branch}"
-            for member in workspace.subprojects
-        }
+        if workspace.integration is None:
+            # Attached members render on the workspace's own integration line
+            # (a governed .gitmodules branch must equal it), derived from the
+            # checkout when the manifest does not declare it.
+            branch = u.Infra.resolve_integration_branch(
+                target.root,
+                preference=codegen.branch_policy.integration_branch_preference,
+            )
+            if branch.failure:
+                return r[str].from_failure(branch)
+            workspace = workspace.model_copy(
+                update={
+                    "integration": m.Infra.WorkspaceIntegrationSpec(
+                        provider=workspace.repository.provider, branch=branch.value
+                    )
+                }
+            )
         return u.Infra.pyproject_conform(
             source,
             workspace=workspace,
@@ -75,7 +88,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
                 exclude_dependencies=cls.routed_uv_exclude_dependencies(render_inputs),
                 environments=tuple(codegen.toolchain.uv_environments),
             ),
-            declared_sources=declared_sources,
+            family_line=flext_line.value.branch,
         )
 
     @staticmethod

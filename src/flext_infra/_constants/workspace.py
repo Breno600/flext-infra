@@ -78,6 +78,34 @@ class FlextInfraConstantsWorkspace:
     )
     ENVIRONMENT_DIRECTORY: ClassVar[str] = ".venv"
     "Python environment directory owned by the runtime checkout (D-VENV)."
+    ENVIRONMENT_METADATA: ClassVar[str] = "pyvenv.cfg"
+    "Interpreter metadata identifying a provisioned virtual environment."
+    BINDING_RESOLUTION_FILES: ClassVar[t.VariadicTuple[t.StrPair]] = (
+        ("--overrides", "overrides.txt"),
+        ("--constraints", "constraints.txt"),
+    )
+    "UV resolution inputs written only inside the consumer environment."
+    BINDING_MARKER_SCRIPT: ClassVar[str] = """import json, os, platform, sys
+version = sys.implementation.version
+implementation_version = '.'.join(str(part) for part in version[:3])
+if version.releaselevel != 'final':
+    implementation_version += version.releaselevel[0] + str(version.serial)
+print(json.dumps({
+    'prefix': sys.prefix,
+    'implementation_name': sys.implementation.name,
+    'implementation_version': implementation_version,
+    'os_name': os.name,
+    'platform_machine': platform.machine(),
+    'platform_release': platform.release(),
+    'platform_system': platform.system(),
+    'platform_version': platform.version(),
+    'platform_python_implementation': platform.python_implementation(),
+    'python_full_version': platform.python_version(),
+    'python_version': '.'.join(platform.python_version_tuple()[:2]),
+    'sys_platform': sys.platform,
+}))
+"""
+    "Standard-library probe for complete PEP 508 marker facts and environment identity."
 
     PROPAGATION_BRANCH: ClassVar[str] = "propagation/flext-infra"
     "One lane per member carries the workspace's flext-infra projections."

@@ -46,18 +46,16 @@ class FlextInfraUtilitiesPyprojectRequirements:
         cls,
         document: t.Cli.TomlDocument,
         *,
-        workspace: p.Infra.WorkspaceSpec,
-        declared_sources: t.StrMapping | None = None,
+        declared_sources: t.StrMapping,
+        family_line: str | None,
     ) -> p.Result[bool]:
         """Render internal requirements from their declared Git provenance."""
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
         normalized = cls._normalize_requirement_field(
             project,
             c.Infra.DEPENDENCIES,
-            revisions=workspace.project.dependency_revisions
-            if workspace.project
-            else {},
-            declared_sources=declared_sources or {},
+            declared_sources=declared_sources,
+            family_line=family_line,
         )
         if normalized.failure:
             return normalized
@@ -65,10 +63,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
             group_result = cls._normalize_requirement_field(
                 section,
                 group_name,
-                revisions=workspace.project.dependency_revisions
-                if workspace.project
-                else {},
-                declared_sources=declared_sources or {},
+                declared_sources=declared_sources,
+                family_line=family_line,
             )
             if group_result.failure:
                 return group_result
@@ -80,8 +76,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
         container: t.Cli.TomlDocument | t.Cli.TomlTable,
         key: str,
         *,
-        revisions: t.StrMapping,
         declared_sources: t.StrMapping,
+        family_line: str | None,
     ) -> p.Result[bool]:
         """Normalize one dependency array and fail on model-less entries."""
         raw_value = u.Cli.toml_value(container, key)
@@ -99,7 +95,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         normalized_items: t.MutableSequenceOf[str] = []
         for item in items:
             normalized = cls._canonical_requirement(
-                item, revisions=revisions, declared_sources=declared_sources
+                item, declared_sources=declared_sources, family_line=family_line
             )
             if normalized.failure:
                 return r[bool].from_failure(normalized)
@@ -124,21 +120,26 @@ class FlextInfraUtilitiesPyprojectRequirements:
         cls,
         requirement: str,
         *,
-        revisions: t.StrMapping,
         declared_sources: t.StrMapping,
+        family_line: str | None,
     ) -> p.Result[str]:
         """Render one internal requirement from its own declared Git source.
 
         The requirement line is the only authority for an internal
         dependency's canonical URL and branch: it is parsed and canonicalized
-        (transport scheme only), never rewritten from provider policy. The
-        workspace manifest may pin the ref to an explicit immutable revision —
-        a declared SHA, never an invented default. A source-less internal
-        dependency that the active workspace overlay does not own is a loud
-        failure.
+        (transport scheme only), never rewritten from provider policy. The ref
+        is the dependency's integration line: uv.lock alone records the commit
+        it resolves to, so a commit left in this generated projection is
+        residue re-rendered on its line (an attached member's declared line,
+        otherwise the detected FLEXT line) and never written back; without a
+        line it fails loudly. Internal means the FLEXT family or an attached
+        workspace member of any family. A source-less internal dependency that
+        the active workspace overlay does not own is a loud failure.
         """
         dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
-        if dependency_name is None or not dependency_name.startswith("flext-"):
+        if dependency_name is None or not (
+            dependency_name.startswith("flext-") or dependency_name in declared_sources
+        ):
             return r[str].ok(requirement.strip())
         requirement_part, separator, marker = requirement.partition(";")
         head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(requirement_part.strip())
@@ -150,23 +151,33 @@ class FlextInfraUtilitiesPyprojectRequirements:
         if source.failure:
             return r[str].from_failure(source)
         url, declared_ref = source.value
-        if not url:
-            declared = declared_sources.get(dependency_name)
-            if declared is None:
-                return r[str].fail(
-                    "internal flext dependency declares no direct git source: "
-                    f"{dependency_name}"
-                )
+        line = family_line
+        declared = declared_sources.get(dependency_name)
+        if declared is not None:
+            # An attached member renders on the line its declaration carries.
             parsed = FlextInfraUtilitiesRepository.declared_git_source(
                 f"{head} @ {declared}"
             )
             if parsed.failure:
                 return r[str].from_failure(parsed)
-            url, declared_ref = parsed.value
-        ref = revisions.get(dependency_name, declared_ref)
+            declared_url, line = parsed.value
+            if not url:
+                url, declared_ref = declared_url, line
+        if not url:
+            return r[str].fail(
+                f"internal dependency declares no direct git source: {dependency_name}"
+            )
+        if FlextInfraUtilitiesRepository.ref_is_commit(declared_ref):
+            if line is None:
+                return r[str].fail(
+                    f"internal dependency {dependency_name} pins commit "
+                    f"{declared_ref} and no line is declared to re-render "
+                    "it: uv.lock records the commit and only `make upg` moves it"
+                )
+            declared_ref = line
         # The inline Git source is the sole provenance for each independent
         # project lock, including the orchestration repository.
-        inline = f"{head} @ git+{url}@{ref}"
+        inline = f"{head} @ git+{url}@{declared_ref}"
         return r[str].ok(
             f"{inline}; {marker_text}" if separator and marker_text else inline
         )
@@ -178,6 +189,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
         *,
         project_name: str,
         required_dev_dependencies: t.StrSequence,
+        workspace_members: t.StrSequence,
     ) -> None:
         """Migrate optional dev dependencies and normalize declared groups."""
         project = u.Cli.toml_ensure_table(document, c.Infra.PROJECT)
@@ -229,7 +241,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
             )
         else:
             u.Cli.toml_remove_key_if_present(groups, "codegen")
-        cls._remove_workspace_dependency_group(document)
+        cls._sync_workspace_dependency_group(document, workspace_members)
 
         if optional is not None:
             u.Cli.toml_remove_key_if_present(optional, str(c.Infra.DEV))
@@ -256,9 +268,25 @@ class FlextInfraUtilitiesPyprojectRequirements:
             and name in sourced_live_names
         )
 
-    @classmethod
-    def _remove_workspace_dependency_group(cls, document: t.Cli.TomlDocument) -> None:
-        """Remove the retired workspace dependency group from every project."""
+    @staticmethod
+    def _sync_workspace_dependency_group(
+        document: t.Cli.TomlDocument, workspace_members: t.StrSequence
+    ) -> None:
+        """Declare the attached members in the workspace root's own group.
+
+        A workspace root environment serves every attached member, so its lock
+        must carry the member distributions: setup syncs every group, and an
+        absent group makes the exact sync uninstall the members. Each name is
+        canonicalized afterwards to its inline Git source like any other
+        internal requirement, so the root keeps its own independent lock and
+        no uv workspace. Every other repository carries no such group.
+        """
+        if workspace_members:
+            groups = u.Cli.toml_ensure_table(document, c.Infra.DEPENDENCY_GROUPS)
+            u.Cli.toml_sync_string_list(
+                groups, "workspace", tuple(sorted(workspace_members))
+            )
+            return
         groups = u.Cli.toml_table_child(document, c.Infra.DEPENDENCY_GROUPS)
         if groups is not None:
             u.Cli.toml_remove_key_if_present(groups, "workspace")

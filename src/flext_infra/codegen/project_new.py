@@ -220,7 +220,6 @@ class FlextInfraCodegenProjectNew(
                 documentation=repository_page,
                 repository_root_rel=".",
                 year=self.year,
-                dependency_revisions={},
             ),
         )
         request = m.Infra.CodegenConformRequest(

@@ -15,7 +15,6 @@ from flext_infra import m, p, t, u
 from flext_infra.base_selection import FlextInfraProjectSelectionServiceBase
 
 from .._enforcement.engine import FlextInfraEnforcementEngine
-from .gate_fixer import FlextInfraGateFixerAdapter
 from .manual_fixer import FlextInfraManualFixerAdapter
 from .rope_fixer import FlextInfraRopeFixerAdapter
 from .transformer_fixer import FlextInfraTransformerFixerAdapter
@@ -36,7 +35,6 @@ class FlextInfraEnforcementFixerOrchestrator(
     """
 
     _ADAPTER_CLASSES: ClassVar[t.VariadicTuple[type[FlextInfraFixerAdapter]]] = (
-        FlextInfraGateFixerAdapter,
         FlextInfraManualFixerAdapter,
         FlextInfraRopeFixerAdapter,
         FlextInfraTransformerFixerAdapter,

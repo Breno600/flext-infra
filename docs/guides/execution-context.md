@@ -6,6 +6,7 @@
 - [Registrar antes de ampliar o trabalho](#registrar-antes-de-ampliar-o-trabalho)
 - [Reconciliar decisões com seus responsáveis](#reconciliar-decisoes-com-seus-responsaveis)
 - [Diferenciar checkpoint de conclusão](#diferenciar-checkpoint-de-conclusao)
+- [Abstraction-boundary project identity](#abstraction-boundary-project-identity)
 - [Codemod scanner contract](#codemod-scanner-contract)
 
 <!-- TOC END -->
@@ -94,9 +95,27 @@ As correções mais recentes do operador (2026-09-24) declaram `latest` na confi
 fazem de `make upg` o único verbo que resolve versões novas e grava os `uv.lock` e
 `mise.lock` versionados. `make setup`, `make gen` e `make fmt` nunca atualizam: instalam
 congelados a partir desses locks, que é o caminho do CI. Dependências Git seguem os tips
-das branches de integração declaradas e `APPLY` continua removido. Corrija o responsável
-do setup ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o
-ciclo.
+das branches de integração declaradas e `APPLY` continua removido. Cada requisito
+interno `flext-*` declara no `pyproject.toml` a sua linha de integração, nunca um
+commit: o commit resolvido existe só no `uv.lock`, e só o `make upg` o move para o tip
+da linha. O manifesto não fixa revisões (`project.dependency_revisions` foi removido).
+Um commit deixado na projeção do `pyproject.toml` é resíduo: o `make gen` o re-renderiza
+na linha detectada e nunca o regrava; quando a projeção não traz linha alguma, o
+`project.flext_source` escrito à mão no manifesto a declara, e um commit numa fonte
+escrita à mão falha (operador 2026-09-28, `flext-oe420`). Corrija o responsável do setup
+ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o ciclo.
+
+O código de um checkout executa no ambiente do seu `RUNTIME_ROOT`. O Makefile gerado
+exporta esse `RUNTIME_ROOT` e o `flext-infra` o lê como declaração tipada: a validação
+`fresh-import` roda as sondas com `<RUNTIME_ROOT>/.venv/bin/python`, nunca com o
+interpretador que hospeda a ferramenta. Sem declaração, o dono deriva a raiz Git do
+checkout; uma declaração sem interpretador falha.
+
+Uma raiz de workspace declara cada membro anexado, de qualquer família (`flext-*` ou
+não), como fonte Git inline na linha de integração do próprio workspace, a mesma que o
+`.gitmodules` governado exige do membro; só as dependências `flext-*` que não são
+membros seguem a linha FLEXT. Assim o `uv.lock` da raiz resolve todos os membros sem
+overlay `[tool.uv.workspace]` (`flext-kd07c`).
 
 O mesmo `make upg` é o único escritor de `mise.version`, `bin/mise` e `bin/mise.cmd`.
 Ele resolve o release do Mise uma vez, pelo próprio Mise (`mise latest github:jdx/mise`,
@@ -109,13 +128,16 @@ chamadas diretas, por PATH ou por shim nunca consultam a rede para escolher vers
 pin; um membro de workspace recebe do `make gen` da raiz a cópia exata desse trio, e só
 a raiz de runtime executa `make upg`. O pacote `flext_infra` distribui em
 `templates/bootstrap/` a cópia do trio do próprio flext-infra, usada apenas por um
-repositório que ainda não tem nenhum. Nunca edite esses arquivos; a correção é
-`make upg`. Um `bin/` de projeto nunca entra no PATH (shell, `BASH_ENV` ou `GITHUB_PATH`
-do CI): o Mise liga os shims compartilhados ao primeiro `mise` do PATH. Versione o pin,
-`mise.lock` e os grafos nativos referenciados em `.mise/locks/` juntos; para ferramentas
-npm, o grafo contém `package.json` e `aube-lock.yaml`. Esses arquivos também entram no
-contexto Docker e nas fixtures de checkout. O setup congelado exige o grafo e seu digest
-válido, conforme o
+repositório que ainda não tem nenhum ou que ainda carrega a projeção anterior ao bake,
+cujos launchers resolvem `releases/latest` em tempo de execução: o `make gen` desse
+repositório publica a cópia empacotada, já assada, e o `make upg` seguinte a regrava
+para o release resolvido. Nunca edite esses arquivos; a correção é `make upg`. Um `bin/`
+de projeto nunca entra no PATH (shell, `BASH_ENV` ou `GITHUB_PATH` do CI): o Mise liga
+os shims compartilhados ao primeiro `mise` do PATH. Versione o pin, `mise.lock` e os
+grafos nativos referenciados em `.mise/locks/` juntos; para ferramentas npm, o grafo
+contém `package.json` e `aube-lock.yaml`. Esses arquivos também entram no contexto
+Docker e nas fixtures de checkout. O setup congelado exige o grafo e seu digest válido,
+conforme o
 [contrato oficial de sidecars do Mise](https://mise.jdx.dev/dev-tools/mise-lock.html#native-dependency-sidecars).
 Caches, instalações e grafos de locks locais continuam fora do Git. Não formate nem
 edite o payload nativo: uma alteração dos bytes exige nova resolução pelo `make upg`. As
@@ -203,6 +225,15 @@ continuam exigindo execução sem warnings ou findings residuais.
 O handoff final relaciona PRs, commits de merge e prova após integração aos Beads. Se
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
 declarar fechamento funcional.
+
+## Abstraction-boundary project identity
+
+The boundary gate reads the declared project identity through
+`u.Infra.read_project_metadata_result`. Owner exemptions and TOML allowances use that
+typed identity, so renaming a checkout or creating a linked worktree does not change its
+policy. A consumer placed in an owner's named directory remains a consumer. Missing or
+malformed project metadata blocks the gate and preserves the metadata reader's
+diagnostic; directory names are never identity fallbacks.
 
 ## Codemod scanner contract
 

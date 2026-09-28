@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from flext_tests import tm
 
 from flext_infra import c, config, m, u
@@ -50,27 +49,30 @@ class TestsFlextInfraPyprojectConformTopologySources:
             environments=tuple(toolchain.uv_environments),
         )
 
-    def test_declared_revision_survives_generation_and_controls_transitives(
-        self,
-    ) -> None:
-        """The same declared SHA reaches runtime, dev, codegen and uv resolution."""
-        revision = "a1" * 20
-        project = test_u.Tests.project_spec("workspace")
-        project = m.Infra.ProjectSpec.model_validate({
-            **project.model_dump(),
-            "dependency_revisions": {"flext-core": revision},
-        })
-        workspace = self._workspace().model_copy(update={"project": project})
-        declared = (
-            "flext-core @ git+"
-            f"{test_u.Tests.repository_ref('flext-core').url}@"
-            f"{test_u.Tests.provider_branch()}"
+    def test_attached_members_render_on_the_workspace_line_of_any_family(self) -> None:
+        """A non-FLEXT member gets its declared source on the workspace line.
+
+        The workspace integrates on its own line (``develop``) while the FLEXT
+        family line stays the fixture branch: every attached member, FLEXT or
+        not, renders inline on the workspace line; a FLEXT dependency that is
+        not a member keeps the FLEXT line.
+        """
+        workspace_line = "develop"
+        flext_member = self._member_ref("flext-core", "flext-core")
+        other_member = self._member_ref("acme-charts", "apps/acme-charts")
+        workspace = self._workspace(flext_member, other_member).model_copy(
+            update={
+                "integration": m.Infra.WorkspaceIntegrationSpec(
+                    provider=test_u.Tests.integration().provider, branch=workspace_line
+                )
+            }
         )
+        infra = test_u.Tests.repository_ref("flext-infra")
+        infra_requirement = self._inline_requirement(infra)
         source = (
             '[project]\nname = "workspace"\nversion = "0.1.0"\n'
-            f'dependencies = ["{declared}"]\n'
-            f'[dependency-groups]\ndev = ["{declared}"]\n'
-            f'codegen = ["{declared}"]\n'
+            'dependencies = ["acme-charts", "flext-core", '
+            f'"{infra_requirement}"]\n'
         )
         rendered = tm.ok(
             u.Infra.pyproject_conform(
@@ -78,21 +80,26 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
+                family_line=test_u.Tests.provider_branch(),
             )
         )
-        for section, key in (
-            ("project", "dependencies"),
-            ("dependency-groups", "dev"),
-            ("dependency-groups", "codegen"),
-        ):
-            requirements = tu.Tests.toml_strings_at(rendered, section, key)
-            tm.that(len(requirements), eq=1)
-            tm.that(requirements[0].endswith(f"@{revision}"), eq=True)
-        parsed = tu.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
-        uv = tu.Tests.toml_mapping(tu.Tests.toml_mapping(parsed["tool"])["uv"])
+        expected = {
+            f"{ref.distribution} @ git+{ref.url}@{workspace_line}"
+            for ref in (flext_member, other_member)
+        } | {infra_requirement}
         tm.that(
-            uv["override-dependencies"],
-            eq=list(tu.Tests.toml_strings_at(rendered, "project", "dependencies")),
+            set(tu.Tests.toml_strings_at(rendered, "project", "dependencies")),
+            eq=expected,
+        )
+        workspace_group = tu.Tests.toml_strings_at(
+            rendered, "dependency-groups", "workspace"
+        )
+        tm.that(
+            set(workspace_group),
+            eq={
+                f"{ref.distribution} @ git+{ref.url}@{workspace_line}"
+                for ref in (flext_member, other_member)
+            },
         )
         second = tm.ok(
             u.Infra.pyproject_conform(
@@ -100,21 +107,10 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 workspace=workspace,
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
+                family_line=test_u.Tests.provider_branch(),
             )
         )
         tm.that(second, eq=rendered)
-
-    @pytest.mark.parametrize("revision", ["main", "1234", "z" * 40])
-    def test_dependency_revision_rejects_mutable_or_invalid_refs(
-        self, revision: str
-    ) -> None:
-        """A declared fixed revision must be an immutable full commit id."""
-        project = test_u.Tests.project_spec("workspace")
-        with pytest.raises(ValueError, match="dependency_revisions"):
-            m.Infra.ProjectSpec.model_validate({
-                **project.model_dump(),
-                "dependency_revisions": {"flext-core": revision},
-            })
 
     def _assert_direct_source(self, rendered: str, ref: m.Infra.RepositoryRef) -> None:
         """Assert the canonical standalone output: one direct Git requirement."""

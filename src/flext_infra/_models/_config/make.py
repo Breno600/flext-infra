@@ -32,6 +32,20 @@ class FlextInfraConfigModelsMake:
         reason: Annotated[
             t.NonEmptyStr, m.Field(description="Reason recorded in gate receipts")
         ]
+        census_rule_families: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description=(
+                    "Runtime-census rule families this suspension also covers. "
+                    "A family starting with 'ENFORCE-' matches a census "
+                    "violation rule id exactly; every other family matches the "
+                    "violation tag by prefix. Matching families are dropped "
+                    "from the census failure count under one loud INFO line "
+                    "per family; unmapped families stay fully blocking"
+                ),
+            ),
+        ] = ()
 
         @u.model_validator(mode="after")
         def _validate_evidence(self) -> Self:
@@ -540,6 +554,17 @@ class FlextInfraConfigModelsMake:
             unknown = sorted(set(gates) - set(self.check_gates_allowed))
             if unknown:
                 msg = f"make check_gate_suspensions contains unknown gates: {', '.join(unknown)}"
+                raise ValueError(msg)
+            families = [
+                family
+                for item in self.check_gate_suspensions
+                for family in item.census_rule_families
+            ]
+            if len(families) != len(set(families)):
+                msg = (
+                    "make check_gate_suspensions census_rule_families must be "
+                    "declared by exactly one gate"
+                )
                 raise ValueError(msg)
             return self
 
