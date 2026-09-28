@@ -212,8 +212,7 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
         RELEASE_TAG_TARGET: ClassVar[str] = "v1.0.0"
         RELEASE_VERSION_TARGET: ClassVar[str] = "1.0.0"
         RELEASE_NOTES_HEADING: ClassVar[str] = "# Release v1.0.0"
-        RELEASE_NOTES_CHANGE_LINE: ClassVar[str] = "fix: release flow"
-        RELEASE_NOTES_CHANGE_BULLET: ClassVar[str] = "- fix: release flow"
+        RELEASE_NOTES_CHANGE_LINE: ClassVar[str] = "- fix: release flow"
         RELEASE_INITIAL_CHANGE_LINE: ClassVar[str] = "- Initial tagged release"
         RELEASE_CHANGELOG_HEADER: ClassVar[str] = "# Changelog\n\n"
 

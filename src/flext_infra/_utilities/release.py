@@ -165,24 +165,6 @@ class FlextInfraUtilitiesRelease:
         return match is not None and match.group("version") == version
 
     @staticmethod
-    def _markdown_safe_bullet(subject: str) -> str:
-        """Return one release-notes bullet the canonical formatter keeps byte-identical.
-
-        Subjects arrive verbatim from Git, so markdown-active characters are
-        escaped (prettier keeps necessary backslash escapes) and the bullet is
-        wrapped to the print budget here — prettier's ``proseWrap: preserve``
-        never rewraps prose, so what this writes is the fixed point.
-        """
-        escaped = c.Infra.MARKDOWN_ACTIVE_RE.sub(r"\\\g<0>", subject.strip())
-        return textwrap.fill(
-            f"- {escaped}",
-            width=c.Infra.MARKDOWN_PRINT_WIDTH,
-            subsequent_indent="  ",
-            break_long_words=False,
-            break_on_hyphens=False,
-        )
-
-    @staticmethod
     def generate_notes(
         version: str,
         tag: str,
@@ -190,17 +172,7 @@ class FlextInfraUtilitiesRelease:
         changes: str,
         output_path: Path,
     ) -> p.Result[bool]:
-        """Generate release notes markdown from release context.
-
-        ``changes`` carries one raw merge subject per line; the markdown form
-        (escaping, bulleting, wrapping) is owned here so the notes are
-        markdown-safe and formatter-stable by construction.
-        """
-        rendered = "\n".join(
-            FlextInfraUtilitiesRelease._markdown_safe_bullet(subject)
-            for subject in changes.splitlines()
-            if subject.strip()
-        )
+        """Generate release notes markdown from release context."""
         lines: t.MutableSequenceOf[str] = [
             f"# Release {tag}",
             "",
@@ -218,7 +190,9 @@ class FlextInfraUtilitiesRelease:
             "",
             "## Pull requests since last release",
             "",
-            rendered or "- Initial tagged release",
+            FlextInfraUtilitiesRelease._markdown_changelog(
+                changes or "- Initial tagged release"
+            ),
         ])
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -233,6 +207,40 @@ class FlextInfraUtilitiesRelease:
             return r[bool].ok(True)
         except OSError as exc:
             return r[bool].fail(f"failed to write release notes: {exc}", exception=exc)
+
+    @staticmethod
+    def _markdown_changelog(changes: str) -> str:
+        """Render merged subjects as escaped, width-bounded markdown bullets.
+
+        A GitHub merge subject is untrusted markdown: a bare ``*`` or ``_`` made
+        the formatter rewrite the emphasis and split the subject, and an
+        unwrapped subject overran the 88-column markdown ceiling. Escaping the
+        inline punctuation first keeps every character literal, and wrapping
+        each bullet keeps it inside the ceiling. The transform is deterministic,
+        so re-stamping an unchanged plan is byte-identical.
+        """
+        rendered: t.MutableSequenceOf[str] = []
+        for raw in changes.splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            marker = ""
+            if line.startswith("- "):
+                marker, line = "- ", line[2:]
+            escaped = c.Infra.MARKDOWN_INLINE_ESCAPE_RE.sub(r"\\\1", line)
+            rendered.append(
+                textwrap.fill(
+                    escaped,
+                    width=c.Infra.RELEASE_NOTES_LINE_LENGTH,
+                    initial_indent=marker,
+                    subsequent_indent=(
+                        c.Infra.RELEASE_NOTES_CONTINUATION_INDENT if marker else ""
+                    ),
+                    break_long_words=False,
+                    break_on_hyphens=False,
+                )
+            )
+        return "\n".join(rendered)
 
     @staticmethod
     def update_changelog(
