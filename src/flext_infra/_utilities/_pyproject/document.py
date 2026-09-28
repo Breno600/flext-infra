@@ -115,40 +115,6 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         if provenance_result.failure:
             return r[str].from_failure(provenance_result)
-        workspace_context_root = cls._is_workspace_context_root(
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
-        )
-        if workspace_context_root:
-            sources_result = cls._validate_root_uv_sources(source, workspace=workspace)
-            if sources_result.failure:
-                return r[str].from_failure(sources_result)
-        normalized = cls._normalize_requirements(
-            source, workspace=workspace, canonicalize_all=False
-        )
-        if normalized.failure:
-            return r[str].from_failure(normalized)
-        cls._remove_workspace_dependency_group(source)
-        # On the dependency-only surface the declared document constraints are
-        # the SSOT: they flow through the same uv-pin filter as the toolchain
-        # path so a legacy `uv` cap is removed and every other constraint is
-        # preserved verbatim.
-        sources_result = (
-            r[bool].ok(True)
-            if workspace_context_root
-            else cls._sync_uv_sources(
-                source,
-                project_name=project_name,
-                workspace=workspace,
-                workspace_mode=workspace_mode,
-                constraint_dependencies=cls._declared_uv_constraint_dependencies(
-                    source
-                ),
-            )
-        )
-        if sources_result.failure:
-            return r[str].from_failure(sources_result)
         return cls._rendered_conformed_document(
             source,
             workspace=workspace,
