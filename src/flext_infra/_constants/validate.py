@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from enum import IntEnum, unique
+from enum import IntEnum, StrEnum, unique
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
@@ -22,6 +22,16 @@ class FlextInfraConstantsSharedInfra:
         FAIL = 1
         USAGE = 2
         INFRA = 3
+
+    @unique
+    class BeadIssueStatus(StrEnum):
+        """Beads issue status values."""
+
+        OPEN = "open"
+        IN_PROGRESS = "in_progress"
+        BLOCKED = "blocked"
+        DEFERRED = "deferred"
+        CLOSED = "closed"
 
     EXEMPT_FILENAMES: ClassVar[frozenset[str]] = frozenset({
         "__init__.py",

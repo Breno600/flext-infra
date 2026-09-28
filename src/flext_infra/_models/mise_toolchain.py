@@ -396,6 +396,16 @@ class FlextInfraModelsMiseToolchain:
                 )
             ),
         ]
+        mise_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Moving mise release selector (latest); mise provisions itself "
+                    "so the bootstrap binary is pinned. Override toolchain.mise_version; "
+                    "never pin."
+                )
+            ),
+        ]
         beads: Annotated[
             FlextInfraModelsMiseToolchain.BeadsToolSpec,
             m.Field(description="Beads ledger projection (.beads config)"),

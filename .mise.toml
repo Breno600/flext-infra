@@ -49,6 +49,7 @@ node = "latest"
 "npm:prettier" = "3.5.3"
 go = "latest"
 make = "latest"
+mise = "2026.9.15"
 [tools."github:qltysh/qlty"]
 version = "0.642.0"
 github_attestations = false

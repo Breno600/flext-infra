@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
-from flext_core import r
 
+from flext_core import r
 from flext_infra.constants import FlextInfraConstants as c
 from flext_infra.models import FlextInfraModels as m
 

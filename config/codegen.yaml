@@ -133,6 +133,9 @@ Infra:
       # through the lifecycle; make is the one tool the Makefile cannot resolve
       # from itself, so mise must provision it.
       make_version: latest
+      # Mise self-provisioning: pin the mise bootstrap binary so it never
+      # resolves 'latest' at runtime. Override to pin a specific release.
+      mise_version: "2026.9.15"
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools owned by ai-hub's global mise
@@ -383,6 +386,16 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
+        mode: stable
+        save_enabled: true
+        max_bootstrap_generations: 3
+        max_stable_generations: 3
+        per_repo_budget_bytes: 52428800
+        warning_threshold_percent: 80
+        maintenance_threshold_percent: 90
+        block_threshold_percent: 95
+        allowed_save_refs: [main]
+        key_prefix: flext-testmon
       # Public verbs execute their declared operation without mode selectors.
       ci:
         variable: CI
