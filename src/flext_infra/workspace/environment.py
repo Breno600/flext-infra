@@ -74,20 +74,13 @@ class FlextInfraWorkspaceEnvironmentMixin:
             / "base"
             / f"{destination}.j2"
         )
-        render_context: (
-            m.Infra.BeadsWorkspaceEnvironmentSpec | m.Infra.EnvrcRenderSpec
-        ) = (
-            context
-            if context is not None
-            else m.Infra.EnvrcRenderSpec(
+        render_context: m.Infra.EnvrcRenderSpec = m.Infra.EnvrcRenderSpec(
                 repository_root_rel=".",
                 environment_path_prepends=(
                     config.Infra.codegen.toolchain.environment_path_prepends
                 ),
                 mise_bootstrap=u.Infra.mise_bootstrap_environment(),
-                gascity=gascity,
             )
-        )
         return u.Cli.template_render(template_path, render_context)
 
     @classmethod
