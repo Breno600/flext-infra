@@ -217,6 +217,7 @@ if TYPE_CHECKING:
     from .transformer_header import FlextInfraUtilitiesTransformerHeader
     from .transformer_header_parser import FlextInfraUtilitiesTransformerHeaderParser
     from .versioning import FlextInfraUtilitiesVersioning
+    from .work_beads import FlextInfraUtilitiesWorkBeads
     from .work_saga_common import FlextInfraWorkSagaCommon
     from .work_saga_finish import FlextInfraWorkSagaFinish
     from .work_saga_publish import FlextInfraWorkSagaPublish
@@ -392,6 +393,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesTransformerHeader",
     "FlextInfraUtilitiesTransformerHeaderParser",
     "FlextInfraUtilitiesVersioning",
+    "FlextInfraUtilitiesWorkBeads",
     "FlextInfraUtilitiesWorkspaceFingerprint",
     "FlextInfraUtilitiesWorkspaceManifest",
     "FlextInfraWorkOwnership",
@@ -653,6 +655,7 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraUtilitiesTransformerHeaderParser",
             ),
             ".versioning": ("FlextInfraUtilitiesVersioning",),
+            ".work_beads": ("FlextInfraUtilitiesWorkBeads",),
             ".work_saga_common": ("FlextInfraWorkSagaCommon",),
             ".work_saga_finish": ("FlextInfraWorkSagaFinish",),
             ".work_saga_publish": ("FlextInfraWorkSagaPublish",),
