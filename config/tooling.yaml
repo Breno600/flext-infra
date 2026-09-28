@@ -653,12 +653,23 @@ Infra:
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
           cosmos-docgen: 4
+          # flext-itpd1.3.7 measurement: raising this ceiling above 4 measurably
+          # regressed the cold run (16 workers lost one to an early death and
+          # executed fewer tests before the fixed deadline than 4), so the
+          # declared ceiling stays at the measured incumbent.
           flext-infra: 4
         # Reserve physical memory for each xdist worker and its child process
         # tree; this bound may reduce the tested ceiling on smaller hosts.
         parallel-worker-memory-gb: 2
         # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
+        # flext-itpd1.3.7: xdist queues the shutdown marker behind each
+        # worker's pre-dispatched chunk, so the declared max-failures stop only
+        # took effect after every worker drained minutes of assigned items at
+        # fleet scale and red cold runs were deadline-killed untyped. One test
+        # per dispatch step makes that stop immediate; per-item dispatch cost
+        # is noise against this suite's measured per-case time.
+        parallel-schedule-chunk: 1
         profile-sort: cumulative
         profile-limit: 50
         min-version: "8.0"

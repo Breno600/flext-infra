@@ -61,6 +61,9 @@ class FlextInfraConfigModelsContexts:
             FlextInfraConstantsCodegenProject.MakeProfile,
             m.Field(description="Selected repository Make profile"),
         ]
+        package: Annotated[
+            bool, m.Field(description="Repository publishes a Python package")
+        ]
         repository_root_rel: Annotated[
             t.NonEmptyStr, m.Field(description="Relative workspace root path")
         ]

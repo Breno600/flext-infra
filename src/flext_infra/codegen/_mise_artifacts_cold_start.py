@@ -19,8 +19,9 @@ if TYPE_CHECKING:
 class FlextInfraMiseColdStart:
     """Keep the packaged cold-start triple a byte copy of the runtime root's.
 
-    A repository that has never carried a Mise pin and launchers starts from
-    the copy the installed flext-infra ships. Only the repository whose
+    A repository that has never carried a Mise pin and launchers, or still
+    carries the pre-bake projection whose launchers resolve the latest release
+    at run time, starts from the copy the installed flext-infra ships. Only the repository whose
     ``src/`` holds the running ``flext_infra`` package owns that copy, so every
     other repository plans nothing and nobody maintains a hand-written seed.
     """

@@ -64,6 +64,7 @@ if TYPE_CHECKING:
     from ._pyproject.document import FlextInfraUtilitiesPyprojectDocument
     from ._pyproject.overlay import FlextInfraUtilitiesPyprojectOverlay
     from ._pyproject.requirements import FlextInfraUtilitiesPyprojectRequirements
+    from ._pyproject.session import FlextInfraUtilitiesPyprojectSession
     from ._pyproject.toml_phases import FlextInfraUtilitiesPyprojectTomlPhases
     from ._pyproject.uv_sources import FlextInfraUtilitiesPyprojectUvSources
     from ._rope.project import FlextInfraRopeProject
@@ -316,6 +317,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesPyprojectDocument",
     "FlextInfraUtilitiesPyprojectOverlay",
     "FlextInfraUtilitiesPyprojectRequirements",
+    "FlextInfraUtilitiesPyprojectSession",
     "FlextInfraUtilitiesPyprojectTomlPhases",
     "FlextInfraUtilitiesPyprojectUvSources",
     "FlextInfraUtilitiesPyrefly",
@@ -459,6 +461,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._pyproject.document": ("FlextInfraUtilitiesPyprojectDocument",),
             "._pyproject.overlay": ("FlextInfraUtilitiesPyprojectOverlay",),
             "._pyproject.requirements": ("FlextInfraUtilitiesPyprojectRequirements",),
+            "._pyproject.session": ("FlextInfraUtilitiesPyprojectSession",),
             "._pyproject.toml_phases": ("FlextInfraUtilitiesPyprojectTomlPhases",),
             "._pyproject.uv_sources": ("FlextInfraUtilitiesPyprojectUvSources",),
             "._rope": ("_rope",),

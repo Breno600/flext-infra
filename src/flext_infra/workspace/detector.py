@@ -491,22 +491,13 @@ class FlextInfraWorkspaceDetector(
         if contract.failure:
             return result_type.from_failure(contract)
         declared_url, declared_branch = contract.value
-        sections = u.Infra.git_submodule_sections(
+        unmanaged = u.Infra.git_unmanaged_submodule_paths(
             m.Infra.GitRepoRequest(repo_root=repository_root)
         )
-        if sections.failure:
-            return result_type.from_failure(sections)
-        section = sections.value.get(path.as_posix())
-        if section is not None:
-            managed = u.Infra.git_submodule_config_value(
-                m.Infra.GitSubmoduleConfigRequest(
-                    repo_root=repository_root, section=section, key="flext-managed"
-                )
-            )
-            if managed.failure:
-                return result_type.from_failure(managed)
-            if managed.value.text and managed.value.text.lower() != "true":
-                return result_type.ok(path)
+        if unmanaged.failure:
+            return result_type.from_failure(unmanaged)
+        if path in unmanaged.value:
+            return result_type.ok(path)
         if not u.Infra.gitmodule_branch_is_governed(
             declared_branch, integration_branch=integration_branch
         ):

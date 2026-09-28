@@ -102,7 +102,7 @@ class FlextInfraWorktreeProvisioning:
                 )
             managed = u.Infra.git_submodule_config_value(
                 m.Infra.GitSubmoduleConfigRequest(
-                    repo_root=lane, section=section, key="flext-managed"
+                    repo_root=lane, section=section, key=c.Infra.GITMODULE_MANAGED_KEY
                 )
             )
             if managed.failure:
