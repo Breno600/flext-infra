@@ -120,7 +120,6 @@ Infra:
       make_version: latest
       # Mise self-provisioning: pin the mise bootstrap binary so it never
       # resolves 'latest' at runtime. Override to pin a specific release.
-      mise_version: latest
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools owned by ai-hub's global mise

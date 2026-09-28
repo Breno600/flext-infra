@@ -516,10 +516,6 @@ class FlextInfraConfigModelsContexts:
             t.NonEmptyStr,
             m.Field(description="Moving Make release selector, e.g. 'latest'"),
         ]
-        mise_version: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Moving mise release selector, e.g. 'latest'"),
-        ]
         author_name: Annotated[
             t.NonEmptyStr, m.Field(description="Author display name")
         ]
