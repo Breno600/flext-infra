@@ -114,7 +114,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolSettings, FlextInfraModelsDep
         mutable state.
         """
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(validate_default=False)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(validate_default=False)
 
         pyproject_path: Annotated[Path, m.Field(description="Resolved pyproject path")]
         original_rendered: Annotated[

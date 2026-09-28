@@ -19,7 +19,7 @@ class FlextInfraModelsRefactorViolations:
     ):
         """Loose top-level class and the facade its module policy derives for it."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
         class_name: Annotated[t.NonEmptyStr, m.Field(description="Class name")]
         target_namespace: Annotated[
             str,

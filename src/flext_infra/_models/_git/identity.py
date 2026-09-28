@@ -16,7 +16,7 @@ class FlextInfraModelsGitIdentity:
     class GitIdentityReport(m.ContractModel):
         """Consolidated Git identity snapshot for one repository path."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         primary_root: Annotated[

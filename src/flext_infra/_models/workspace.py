@@ -26,14 +26,14 @@ class FlextInfraModelsWorkspace:
     class WorkspaceEnvironmentRequest(m.ContractModel):
         """Read-only request for validating the active workspace environment."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(populate_by_name=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
     class WorkspaceProjectContext(m.ContractModel):
         """Canonical context derived from one runtime working directory."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         cwd: Annotated[Path, m.Field(description="Resolved submitted directory")]
         identity: Annotated[
@@ -56,7 +56,7 @@ class FlextInfraModelsWorkspace:
     class FlextBindingRequest(m.ContractModel):
         """Session request binding one consumer onto a flext worktree."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(populate_by_name=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
         repository_root: Annotated[Path, m.Field(description="Consumer project root")]
         flext_root: Annotated[
@@ -85,7 +85,7 @@ class FlextInfraModelsWorkspace:
     class ProjectInfo(mm.ProjectEntryNameMixin, m.ArbitraryTypesModel):
         """Discovered project metadata for workspace operations."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             frozen=True, validate_default=False
         )
 
@@ -119,7 +119,7 @@ class FlextInfraModelsWorkspace:
         mutable state.
         """
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             frozen=True, validate_default=False
         )
 

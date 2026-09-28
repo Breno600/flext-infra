@@ -17,7 +17,7 @@ class FlextInfraModelsRefactorGrep:
     class RefactorConfig(m.ContractModel):
         """Refactor file-selection config."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         project_scan_dirs: t.StrSequence = m.Field(
             default_factory=lambda: [
@@ -36,7 +36,7 @@ class FlextInfraModelsRefactorGrep:
     class CodemodRule(m.ArbitraryTypesModel):
         """One validated ast-grep rule document from a composed provider."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         id: Annotated[t.NonEmptyStr, m.Field(description="Canonical ast-grep rule ID")]
         digest: Annotated[
@@ -55,7 +55,7 @@ class FlextInfraModelsRefactorGrep:
     class CodemodRuleset(m.ArbitraryTypesModel):
         """One provider config and its elected, conflict-free rule IDs."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         provider: Annotated[
             t.NonEmptyStr, m.Field(description="Distribution or local rule provider")
@@ -74,7 +74,7 @@ class FlextInfraModelsRefactorGrep:
     class CodemodRulePlan(m.ArbitraryTypesModel):
         """Topologically composed dependency rules followed by the local delta."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         provider_order: Annotated[
             t.StrSequence, m.Field(description="Dependency-first provider precedence")
@@ -91,7 +91,7 @@ class FlextInfraModelsRefactorGrep:
     class ModGateSnapshot(m.ArbitraryTypesModel):
         """Complete Ruff and Pyrefly evidence for one mod-circuit measurement."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         ruff_errors: Annotated[
             t.NonNegativeInt, m.Field(description="Ruff error count")
@@ -115,7 +115,7 @@ class FlextInfraModelsRefactorGrep:
         mutable state.
         """
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict()
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict()
 
         category: Annotated[str | None, m.Field(description="Method category")] = None
         visibility: Annotated[str | None, m.Field(description="Visibility filter")] = (
@@ -183,7 +183,7 @@ class FlextInfraModelsRefactorGrep:
     class AccessorMigrationRule(m.ContractModel):
         """Declarative symbol-rename rule for accessor migration."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         source_name: Annotated[
             t.NonEmptyStr, m.Field(description="Canonical symbol name to replace")
@@ -203,7 +203,7 @@ class FlextInfraModelsRefactorGrep:
     class AccessorMigrationChange(m.ArbitraryTypesModel):
         """Single automated rename or manual warning emitted by accessor migration."""
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         file: Annotated[t.NonEmptyStr, m.Field(description="Absolute file path")]
         line: Annotated[
@@ -231,7 +231,7 @@ class FlextInfraModelsRefactorGrep:
         mutable state.
         """
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         file: Annotated[t.NonEmptyStr, m.Field(description="Absolute file path")]
         lint_tools: t.VariadicTuple[str] = m.Field(
@@ -272,7 +272,7 @@ class FlextInfraModelsRefactorGrep:
         mutable state.
         """
 
-        model_config: ClassVar[t.ConfigDict] = m.ConfigDict(frozen=True)
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         workspace: Annotated[t.NonEmptyStr, m.Field(description="Repository root path")]
         dry_run: Annotated[bool, m.Field(description="Dry-run indicator")]
