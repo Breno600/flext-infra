@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import config, m, u
+from flext_infra import config, m, t, u
 
 
 class TestsDependencyRevisionCutover:
@@ -21,7 +21,7 @@ class TestsDependencyRevisionCutover:
         revision = "b" * 40
         root = tmp_path / "consumer"
         (root / "config").mkdir(parents=True)
-        manifest = {
+        manifest: t.MappingKV[str, t.JsonValue] = {
             "version": 3,
             "name": "consumer",
             "repository": {

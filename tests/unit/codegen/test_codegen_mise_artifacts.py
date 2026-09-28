@@ -178,6 +178,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         version: str = "latest",
     ) -> Path:
         root.mkdir(parents=True)
+        test_u.Tests.initialize_git_repo(root)
         cls._write_triple(root)
         cls._write_config(root, selector=selector, version=version)
         (root / "pyproject.toml").write_text(
@@ -232,6 +233,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
     def test_full_validation_requires_committed_launchers(self, tmp_path: Path) -> None:
         root = tmp_path / "project"
         root.mkdir()
+        test_u.Tests.initialize_git_repo(root)
         self._write_config(root)
 
         result = FlextInfraCodegenMiseArtifacts.model_validate({

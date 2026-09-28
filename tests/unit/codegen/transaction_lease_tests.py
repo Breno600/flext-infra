@@ -234,7 +234,8 @@ class TestsFlextInfraTransactionLease:
         owner = FlextInfraCodegenMiseArtifacts(repository_root=member)
         tm.ok(
             FlextInfraCodegenTransaction(owner).run_locked(
-                prepare=True, operation=lambda scope: owner.validate_artifacts(member, scope)
+                prepare=True,
+                operation=lambda scope: owner.validate_artifacts(member, scope),
             )
         )
         tm.that(lock_path.stat().st_ino, eq=lock_after.st_ino)
