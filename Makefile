@@ -1536,7 +1536,9 @@ _builtin-self-sonarcloud-sync: _builtin_sonarcloud_sync_project
 
 
 _builtin_build_artifacts:
+
 	@$(UV) build --project "$(PROJECT_ROOT)"
+
 
 # Check is read-only: it runs the gates without --apply, so the tree is left
 # unchanged; fix applies the declared repairs of the fixable gates.
