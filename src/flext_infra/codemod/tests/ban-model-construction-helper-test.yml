@@ -1,0 +1,114 @@
+id: ban-model-construction-helper
+valid:
+  # A service operation computing a domain result returns it inside a Result.
+  - |
+    def build_report(self, rows: t.SequenceOf[str]) -> r[m.Report]:
+        return r.ok(m.Report(rows=rows))
+  # A builder that computes (loops over input) is not a construction helper.
+  - |
+    def build_summary(rows: t.SequenceOf[str]) -> m.Summary:
+        total = 0
+        for row in rows:
+            total += len(row)
+        return m.Summary(total=total)
+  # A builder that reads a resource inside `with` is computation.
+  - |
+    def create_manifest(path: Path) -> m.Manifest:
+        with path.open(encoding="utf-8") as handle:
+            text = handle.read()
+        return m.Manifest.model_validate_json(text)
+  # A `from_*` classmethod on the model itself is annotated `Self`.
+  - |
+    @classmethod
+    def from_text(cls, text: str) -> Self:
+        return cls(value=text)
+  # Returning a different model than the annotation is not self-assembly.
+  - |
+    def build_event(name: str) -> m.Event:
+        return m.Envelope(name=name)
+  # A name that does not mark a constructor helper is out of scope.
+  - |
+    def registration(name: str) -> m.ServiceRegistration:
+        return m.ServiceRegistration(name=name)
+  # A non-model return annotation is out of scope.
+  - |
+    def build_path(name: str) -> Path:
+        return Path(name)
+  # Resolving collaborators through call chains is a service operation.
+  - |
+    def build_service_runtime(cls, source: m.Options) -> m.ServiceRuntime:
+        container = cls._container_type().shared().scope(source)
+        dispatcher = container.dispatcher().unwrap()
+        return m.ServiceRuntime(container=container, dispatcher=dispatcher)
+  # Observing the filesystem is a service operation.
+  - |
+    def _build_file_info(self, params: m.Tests.InfoParams) -> m.Tests.FileInfo:
+        stat = params.path.stat()
+        return m.Tests.FileInfo(path=params.path, size=stat.st_size)
+  # Test doubles are owned by the test-double laws, not this rule.
+  - |
+    def build_project_report(self) -> TestsFlextInfraUtilitiesDepsMixin.DetectorReportStub:
+        return TestsFlextInfraUtilitiesDepsMixin.DetectorReportStub(0)
+  # `from_*` declared on the model class itself is its own construction surface.
+  - |
+    class ViolationKey(m.ContractModel):
+        module: str
+        @staticmethod
+        def from_violation(violation: m.Census) -> m.ViolationKey:
+            return m.ViolationKey(module=violation.module)
+invalid:
+  # `from_*` on a non-model owner (utility module/class) is a helper.
+  - |
+    class FlextCliUtilitiesAtomic:
+        @staticmethod
+        def from_observed(path: Path, observed: Stat | None) -> m.Cli.AtomicDirectoryState:
+            return m.Cli.AtomicDirectoryState(path=path, exists=observed is not None)
+  # A chained call inside the returned construction is still assembly.
+  - |
+    @classmethod
+    def _build_metadata(cls, plugin_path: Path) -> m.Plugin.Metadata:
+        version, description = cls._metadata_fields(plugin_path)
+        return m.Plugin.Metadata(name=plugin_path.stem, discovered_at=u.now().isoformat())
+  # Default-model factory used as `default_factory`.
+  - |
+    def _new_audit_metrics() -> FlextQualityModels.Quality.AuditMetrics:
+        return FlextQualityModels.Quality.AuditMetrics()
+  # Exact flext-core S2 shape (container registration record).
+  - |
+    @staticmethod
+    def _service_record(
+        name: str, value: m.ServiceRegistration | t.RegisterableService
+    ) -> m.ServiceRegistration:
+        """Build (or keep) the validated record of an object-backed service."""
+        if isinstance(value, m.ServiceRegistration) and not isinstance(value, type):
+            return value
+        return m.ServiceRegistration(
+            name=name, service=value, service_type=u.type_name(value)
+        )
+  - |
+    @staticmethod
+    def _factory_record(
+        name: str, value: m.FactoryRegistration | t.FactoryCallable
+    ) -> m.FactoryRegistration:
+        if isinstance(value, m.FactoryRegistration):
+            return value
+        return m.FactoryRegistration(name=name, factory=value)
+  # Test-data factory whose build() only assembles a model from defaults.
+  - |
+    @classmethod
+    def build(
+        cls,
+        *,
+        input_value: str | None = None,
+        description: str | None = None,
+    ) -> m.Tests.ServiceTestCase:
+        actual_input = input_value if input_value is not None else cls._next_word()
+        return m.Tests.ServiceTestCase(input_value=actual_input, description=description)
+  # Boundary validation wrapped in a helper.
+  - |
+    def make_settings(payload: t.JsonMapping) -> m.Cli.Settings:
+        return m.Cli.Settings.model_validate(payload)
+  # Class-path model annotation.
+  - |
+    def new_entry(dn: str) -> FlextLdifModels.Entry:
+        return FlextLdifModels.Entry.model_construct(dn=dn)
