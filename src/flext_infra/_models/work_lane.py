@@ -7,7 +7,8 @@ from typing import TYPE_CHECKING, Annotated, ClassVar, Literal
 
 from flext_cli import m
 
-from .. import c, t
+from flext_infra.constants import FlextInfraConstants as c
+from flext_infra.typings import FlextInfraTypes as t
 
 if TYPE_CHECKING:
     from .._constants.validate import FlextInfraConstantsSharedInfra
