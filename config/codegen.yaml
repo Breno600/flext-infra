@@ -140,7 +140,7 @@ Infra:
         # The city owns the endpoint; a repository declares only that it
         # inherits one. Both values are rendered into .beads/config.yaml as
         # gc.endpoint_origin / gc.endpoint_status.
-        endpoint_origin: managed_city
+        endpoint_origin: inherited_city
         endpoint_status: verified
         # Issue types every governed ledger must know, unioned with each
         # repository's own custom types when the projection is rendered.
