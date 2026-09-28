@@ -111,8 +111,22 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         existing-repository planners: the stage banner the scaffold planner
         prepends to a render failure.
         """
+        target = render_inputs.target
         artifact_context = self._artifact_render_context(
-            render_inputs, destination=destination, project_context=project_context
+            dist=(
+                project_context.dist
+                if project_context is not None
+                else target.repository.distribution
+            ),
+            repository=target.repository,
+            repository_root=target.root,
+            target=target,
+            workspace=render_inputs.workspace,
+            codegen=render_inputs.codegen,
+            destination=destination,
+            tooling_runtime=render_inputs.tooling_runtime,
+            project_context=project_context,
+            managed_artifacts=render_inputs.managed_artifacts.resolution,
         )
         if artifact_context.failure:
             return r[str].from_failure(artifact_context)
@@ -353,9 +367,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     pytest=config.Infra.tooling.tools.pytest,
                     mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                     dist=dist,
-                    state_directory_name=codegen.toolchain.state_directory_name,
-                    scratch_namespace=codegen.toolchain.scratch_namespace,
-                    scratch_home_relative=codegen.toolchain.scratch_home_relative,
                     infra_cli=config.Infra.name,
                     make_profile=profile,
                     makefile_custom_include=c.Infra.MAKEFILE_CUSTOM_INCLUDE,
@@ -368,9 +379,11 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     uv_link_mode=self.link_mode(repository, codegen.toolchain),
                     uv_version=codegen.toolchain.uv_version,
                     mise_lockfile_platforms=codegen.toolchain.mise_lockfile_platforms,
+                    npm_package_manager=codegen.toolchain.npm_package_manager,
                     qlty_selector=codegen.toolchain.qlty_selector,
                     jscpd_selector=codegen.toolchain.jscpd_selector,
                     prettier_selector=codegen.toolchain.prettier_selector,
+                    ast_grep_selector=codegen.toolchain.ast_grep_selector,
                     scc_selector=codegen.toolchain.scc_selector,
                     waza_selector=codegen.toolchain.waza_selector,
                     make=codegen.make,
@@ -397,9 +410,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     timeout_kill_after_seconds=c.Infra.TIMEOUT_KILL_AFTER_SECONDS,
                     pytest_process_timeout_seconds=(
                         config.Infra.tooling.tools.pytest.process_timeout_seconds
-                    ),
-                    pytest_incremental_process_timeout_seconds=(
-                        config.Infra.tooling.tools.pytest.incremental_process_timeout_seconds
                     ),
                 )
             )

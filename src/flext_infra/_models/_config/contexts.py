@@ -11,11 +11,9 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m
 
 from ... import t
-from ..._constants import (
-    FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsWorkspace,
-)
+from ..._constants import FlextInfraConstantsCodegenProject
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
+from ..mise_toolchain import FlextInfraModelsMiseToolchain
 from .beads import FlextInfraConfigModelsBeads
 from .contract import FlextInfraConfigModelsContract
 from .make import FlextInfraConfigModelsMake
@@ -53,20 +51,9 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Typed pytest execution policy"),
         ]
 
-    class ScratchRootContext(FlextInfraConfigModelsContract.ConfigContract):
+    class ScratchRootContext(FlextInfraModelsMiseToolchain.RuntimeStorageSpec):
         """Shared state and scratch roots every generated environment derives."""
 
-        state_directory_name: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="External runtime state directory beside checkout"),
-        ]
-        scratch_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Scratch namespace below the home scratch root"),
-        ]
-        scratch_home_relative: Annotated[
-            t.NonEmptyStr, m.Field(description="Home-relative scratch root")
-        ]
         scratch_identity_segment_aliases: Annotated[
             t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
             m.Field(
@@ -116,6 +103,9 @@ class FlextInfraConfigModelsContexts:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Platforms carried by artifact-tool lock entries"),
         ]
+        npm_package_manager: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise installer for npm CLIs")
+        ]
         qlty_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Configured Mise selector for qlty")
         ]
@@ -124,6 +114,9 @@ class FlextInfraConfigModelsContexts:
         ]
         prettier_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Configured Mise selector for Prettier")
+        ]
+        ast_grep_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for ast-grep")
         ]
         scc_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Configured Mise selector for scc")
@@ -177,12 +170,7 @@ class FlextInfraConfigModelsContexts:
             int, m.Field(gt=0, description="Forced-termination grace period")
         ]
         pytest_process_timeout_seconds: Annotated[
-            int,
-            m.Field(gt=0, description="Pytest full/cold process wall-time boundary"),
-        ]
-        pytest_incremental_process_timeout_seconds: Annotated[
-            int,
-            m.Field(gt=0, description="Pytest incremental process wall-time boundary"),
+            int, m.Field(gt=0, description="Pytest process wall-time boundary")
         ]
 
     class MakeRenderContext(MakeCommandContext):
@@ -237,11 +225,10 @@ class FlextInfraConfigModelsContexts:
         ruff_per_file_ignores: Annotated[
             t.MappingKV[str, t.StrSequence],
             m.Field(
-                default_factory=partial(MappingProxyType, {}),
                 description=(
                     "Effective Ruff exemptions: fleet policy composed with this "
                     "repository's own ManagedArtifacts overlay"
-                ),
+                )
             ),
         ]
         make_profile: Annotated[
@@ -594,8 +581,7 @@ class FlextInfraConfigModelsContexts:
         dependency_revisions: Annotated[
             Mapping[t.NonEmptyStr, Annotated[str, m.Field(pattern=r"^[0-9a-f]{40}$")]],
             m.Field(
-                default_factory=partial(MappingProxyType, {}),
-                description="Explicit immutable revisions of provider-owned dependencies",
+                description="Explicit immutable revisions of provider-owned dependencies"
             ),
         ]
 

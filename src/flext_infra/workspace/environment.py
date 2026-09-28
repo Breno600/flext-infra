@@ -103,6 +103,7 @@ class FlextInfraWorkspaceEnvironmentMixin:
             context
             if context is not None
             else m.Infra.EnvrcRenderSpec(
+                repository_root_rel=".",
                 environment_path_prepends=(
                     config.Infra.codegen.toolchain.environment_path_prepends
                 ),

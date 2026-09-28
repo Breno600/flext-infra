@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from functools import partial
-from pathlib import Path
-from types import MappingProxyType
+from collections.abc import Mapping
 from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
@@ -35,13 +33,8 @@ class FlextInfraModelsDepsToolConfig(
     class ModConfig(m.ArbitraryTypesModel):
         """Declarative policy for the unified modernize verb ``mod``."""
 
-        @staticmethod
-        def _default_phases() -> FlextInfraModelsDepsToolConfig.ModPhasesConfig:
-            return FlextInfraModelsDepsToolConfig.ModPhasesConfig()
-
         phases: FlextInfraModelsDepsToolConfig.ModPhasesConfig = m.Field(
-            default_factory=_default_phases,
-            description="Phase toggles read from config/tooling.yaml.",
+            description="Phase toggles read from config/tooling.yaml."
         )
 
     class DeptryConfig(m.ArbitraryTypesModel):
@@ -87,42 +80,6 @@ class FlextInfraModelsDepsToolConfig(
     class PytestConfig(m.ArbitraryTypesModel):
         """Pytest baseline settings loaded from YAML."""
 
-        testmon_state_home_variable: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                alias="testmon-state-home-variable",
-                description="Required environment variable owning persistent test state.",
-            ),
-        ]
-        testmon_datafile_variable: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                alias="testmon-datafile-variable",
-                description="pytest-testmon environment variable selecting its database.",
-            ),
-        ]
-        testmon_namespace: Annotated[
-            Path,
-            m.Field(
-                alias="testmon-namespace",
-                description="Relative namespace below the persistent state home.",
-            ),
-        ]
-        testmon_database_filename: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                alias="testmon-database-filename",
-                description="pytest-testmon SQLite database filename.",
-            ),
-        ]
-        testmon_lock_filename: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                alias="testmon-lock-filename",
-                description="Exclusive writer lock filename beside the database.",
-            ),
-        ]
-
         # flext-j47u (codex): every rendered pytest value is validated config data.
         case_timeout_seconds: Annotated[
             int,
@@ -157,10 +114,11 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         max_failures: Annotated[
-            Literal[0],
+            int,
             m.Field(
                 alias="max-failures",
-                description="Run every selected test while preserving failure status.",
+                ge=1,
+                description="Maximum failures before the pytest invocation stops.",
             ),
         ]
         enforcement_plugin: Annotated[
@@ -229,20 +187,19 @@ class FlextInfraModelsDepsToolConfig(
                 description="Pytest-xdist scheduler for full runs.",
             ),
         ]
-        parallel_worker_min_items: Annotated[
-            int,
+        parallel_worker_overrides: Annotated[
+            Mapping[str, int],
             m.Field(
-                alias="parallel-worker-min-items",
-                gt=0,
+                alias="parallel-worker-overrides",
                 description=(
-                    "Minimum selected node count before xdist workers are"
-                    " spawned; each worker pays a full interpreter and plugin"
-                    " boot, measured well past the tests it then runs for a"
-                    " small selection, so a selection below this floor runs"
-                    " serialized in the invoking process instead."
+                    "Per declared-project worker ceilings (``[project].name`` "
+                    "→ workers) resolved by the runner over the fleet-wide "
+                    "``parallel-workers`` default: a consumer whose measured "
+                    "suite cannot fit the single-worker process boundary "
+                    "declares its ceiling here, inside the fleet cycle."
                 ),
             ),
-        ]
+        ] = {}
         profile_sort: Annotated[
             Literal[
                 "calls",
@@ -338,47 +295,14 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
 
-        process_timeout_seconds: Annotated[
-            int,
-            m.Field(
-                alias="process-timeout-seconds",
-                gt=0,
-                description="Hard timeout for the complete cold/full pytest process.",
-            ),
-        ]
-        incremental_process_timeout_seconds: Annotated[
-            int,
-            m.Field(
-                alias="incremental-process-timeout-seconds",
-                gt=0,
-                description=(
-                    "Hard timeout for the incremental (PR-gate) pytest process;"
-                    " tighter than process-timeout-seconds so a stuck or"
-                    " accidentally full-scope incremental run fails fast."
-                ),
-            ),
-        ]
+        @property
+        def process_timeout_seconds(self) -> int:
+            """Derive the outer wall without creating a second config field."""
+            return self.run_timeout_seconds + (self.termination_grace_seconds * 2)
 
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
             """Keep item and termination budgets inside the hard invocation cap."""
-            if (
-                self.testmon_namespace.is_absolute()
-                or self.testmon_namespace == Path()
-                or ".." in self.testmon_namespace.parts
-            ):
-                msg = "pytest testmon namespace must be a non-empty relative path"
-                raise ValueError(msg)
-            for field_name, filename in (
-                ("database", self.testmon_database_filename),
-                ("lock", self.testmon_lock_filename),
-            ):
-                if Path(filename).name != filename or filename in {".", ".."}:
-                    msg = f"pytest testmon {field_name} filename must be one basename"
-                    raise ValueError(msg)
-            if self.testmon_database_filename == self.testmon_lock_filename:
-                msg = "pytest testmon database and lock filenames must differ"
-                raise ValueError(msg)
             if self.case_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest case timeout must be less than run timeout"
                 raise ValueError(msg)
@@ -396,32 +320,6 @@ class FlextInfraModelsDepsToolConfig(
                 raise ValueError(msg)
             if self.slow_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest slow timeout must be less than run timeout"
-                raise ValueError(msg)
-            if self.process_timeout_seconds <= self.run_timeout_seconds:
-                msg = (
-                    "pytest process timeout must exceed the run timeout: the"
-                    " process boundary caps the whole invocation, so a value at"
-                    " or below the session budget kills healthy suites"
-                )
-                raise ValueError(msg)
-            if self.process_timeout_seconds <= (
-                self.run_timeout_seconds + self.termination_grace_seconds
-            ):
-                msg = "pytest process timeout must exceed run and termination budgets"
-                raise ValueError(msg)
-            if self.incremental_process_timeout_seconds >= self.process_timeout_seconds:
-                msg = (
-                    "pytest incremental process timeout must be tighter than the"
-                    " full/cold process timeout"
-                )
-                raise ValueError(msg)
-            if self.incremental_process_timeout_seconds <= (
-                self.case_timeout_seconds + self.termination_grace_seconds
-            ):
-                msg = (
-                    "pytest incremental process timeout must include item and"
-                    " termination budgets"
-                )
                 raise ValueError(msg)
             derived_options = ("--timeout", "--session-timeout")
             if any(
@@ -615,18 +513,10 @@ class FlextInfraModelsDepsToolConfig(
             description="Glob patterns excluded from Markdown quality checks."
         )
 
-        @staticmethod
-        def _default_prettier() -> (
-            FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig
-        ):
-            """Resolve the policy owner after the enclosing model is defined."""
-            return FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig()
-
         prettier: Annotated[
             FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig,
             m.Field(
-                default_factory=_default_prettier,
-                description="Prettier formatting policy projected into .prettierrc.",
+                description="Prettier formatting policy projected into .prettierrc."
             ),
         ]
 
@@ -681,10 +571,7 @@ class FlextInfraModelsDepsToolConfig(
 
         pyright: Annotated[
             t.StrMapping,
-            m.Field(
-                default_factory=partial(MappingProxyType, {}),
-                description="Pyright override settings for this project type.",
-            ),
+            m.Field(description="Pyright override settings for this project type."),
         ]
 
     class ProjectTypeOverridesConfig(m.ArbitraryTypesModel):
@@ -777,13 +664,8 @@ class FlextInfraModelsDepsToolConfig(
             alias="lazy-init", description="Declarative lazy-init generation policy."
         )
 
-        @staticmethod
-        def _default_mod() -> FlextInfraModelsDepsToolConfig.ModConfig:
-            return FlextInfraModelsDepsToolConfig.ModConfig()
-
         mod: FlextInfraModelsDepsToolConfig.ModConfig = m.Field(
-            default_factory=_default_mod,
-            description="Declarative make-mod phase policy.",
+            description="Declarative make-mod phase policy."
         )
 
     class ToolingScalarSetting(m.ArbitraryTypesModel):
