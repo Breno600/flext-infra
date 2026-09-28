@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tarfile
+import textwrap
 from collections.abc import Mapping, MutableMapping, Sequence
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
@@ -164,6 +165,24 @@ class FlextInfraUtilitiesRelease:
         return match is not None and match.group("version") == version
 
     @staticmethod
+    def _markdown_safe_bullet(subject: str) -> str:
+        """Return one release-notes bullet the canonical formatter keeps byte-identical.
+
+        Subjects arrive verbatim from Git, so markdown-active characters are
+        escaped (prettier keeps necessary backslash escapes) and the bullet is
+        wrapped to the print budget here — prettier's ``proseWrap: preserve``
+        never rewraps prose, so what this writes is the fixed point.
+        """
+        escaped = c.Infra.MARKDOWN_ACTIVE_RE.sub(r"\\\g<0>", subject.strip())
+        return textwrap.fill(
+            f"- {escaped}",
+            width=c.Infra.MARKDOWN_PRINT_WIDTH,
+            subsequent_indent="  ",
+            break_long_words=False,
+            break_on_hyphens=False,
+        )
+
+    @staticmethod
     def generate_notes(
         version: str,
         tag: str,
@@ -171,7 +190,17 @@ class FlextInfraUtilitiesRelease:
         changes: str,
         output_path: Path,
     ) -> p.Result[bool]:
-        """Generate release notes markdown from release context."""
+        """Generate release notes markdown from release context.
+
+        ``changes`` carries one raw merge subject per line; the markdown form
+        (escaping, bulleting, wrapping) is owned here so the notes are
+        markdown-safe and formatter-stable by construction.
+        """
+        rendered = "\n".join(
+            FlextInfraUtilitiesRelease._markdown_safe_bullet(subject)
+            for subject in changes.splitlines()
+            if subject.strip()
+        )
         lines: t.MutableSequenceOf[str] = [
             f"# Release {tag}",
             "",
@@ -189,7 +218,7 @@ class FlextInfraUtilitiesRelease:
             "",
             "## Pull requests since last release",
             "",
-            changes or "- Initial tagged release",
+            rendered or "- Initial tagged release",
         ])
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)

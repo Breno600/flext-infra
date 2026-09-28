@@ -172,6 +172,10 @@ class FlextInfraConstantsSharedInfra:
     MARKDOWNLINT_IGNORE_FILENAME: ClassVar[str] = ".markdownlintignore"
     PRETTIER_CONFIG_FILENAME: ClassVar[str] = ".prettierrc"
     PRETTIER_IGNORE_FILENAME: ClassVar[str] = ".prettierignore"
+    MARKDOWN_PRINT_WIDTH: ClassVar[int] = 88
+    "Print budget of the canonical markdown formatter (SSOT: .prettierrc printWidth)."
+    MARKDOWN_ACTIVE_RE: ClassVar[t.RegexPattern] = re.compile(r"[\\`*_\[\]<>~]")
+    "Markdown-active characters that change prose rendering and must be escaped in generated notes."
     "Generated markdown-formatting projections (SSOT: tooling.tools.markdown)."
     "Hook-config projection whose presence decides whether a checkout runs hooks."
     SONARCLOUD_PROPERTIES_FILENAME: ClassVar[str] = ".sonarcloud.properties"

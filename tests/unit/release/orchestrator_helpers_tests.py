@@ -36,14 +36,95 @@ class TestsFlextInfraReleaseHelpers:
             tm.that(notes, has=c.Tests.RELEASE_NOTES_HEADING)
             tm.that(notes, has="- root")
             tm.that(notes, has="- flext-a")
-            tm.that(notes, has=c.Tests.RELEASE_NOTES_CHANGE_LINE)
+            tm.that(notes, has=c.Tests.RELEASE_NOTES_CHANGE_BULLET)
+
+        @staticmethod
+        def test_generate_notes_escapes_and_wraps_markdown_active_subjects(
+            tmp_path: Path,
+        ) -> None:
+            """Verbatim subjects are escaped and wrapped inside the print budget."""
+            notes_path = tmp_path / "release" / c.Infra.RELEASE_NOTES_FILENAME
+            long_subject = (
+                "fix(release): a subject line that keeps going well past the "
+                "eighty-eight column print budget of the canonical markdown "
+                "formatter and therefore must wrap with a hanging indent"
+            )
+            special_subject = (
+                "feat(x): add *.aihub-prior-* _em_ [link](x) <tag> ~tilde~ `code`"
+            )
+            changes = f"{long_subject}\n{special_subject}"
+
+            result = u.Infra.generate_notes(
+                c.Tests.RELEASE_VERSION_TARGET,
+                c.Tests.RELEASE_TAG_TARGET,
+                [],
+                changes,
+                notes_path,
+            )
+
+            notes = notes_path.read_text(encoding="utf-8")
+            tm.ok(result)
+            bullets = notes.split("## Pull requests since last release")[1]
+            bullet_lines = [line for line in bullets.splitlines() if line.strip()]
+            tm.that(len(bullet_lines) > 1, eq=True)
+            for line in bullet_lines:
+                tm.that(len(line) <= c.Infra.MARKDOWN_PRINT_WIDTH, eq=True)
+                tm.that(line.startswith(("- ", "  ")), eq=True)
+            tm.that(notes, has="\\*.aihub-prior-\\*")
+            tm.that(notes, has="\\_em\\_")
+            tm.that(notes, has="\\[link\\](x)")
+            tm.that(notes, has="\\<tag\\>")
+            tm.that(notes, has="\\~tilde\\~")
+            tm.that(notes, has="\\`code\\`")
+            tm.that(notes, lacks="*.aihub-prior-* marker")
+
+        @staticmethod
+        def test_generate_notes_is_prettier_stable(tmp_path: Path) -> None:
+            """The canonical formatter leaves generated notes byte-identical."""
+            import shutil
+
+            prettier = shutil.which(c.Infra.PRETTIER_BINARY)
+            tm.that(bool(prettier), eq=True)
+            notes_path = tmp_path / "release" / c.Infra.RELEASE_NOTES_FILENAME
+            first_subject = (
+                "fix(release): *.aihub-prior-* marker and a subject long enough to "
+                "cross the print budget and wrap onto a continuation line"
+            )
+            second_subject = "feat(x): add [link](x) and `code` and _em_ and ~tilde~"
+            changes = f"{first_subject}\n{second_subject}"
+
+            first = u.Infra.generate_notes(
+                c.Tests.RELEASE_VERSION_TARGET,
+                c.Tests.RELEASE_TAG_TARGET,
+                [],
+                changes,
+                notes_path,
+            )
+            second = u.Infra.generate_notes(
+                c.Tests.RELEASE_VERSION_TARGET,
+                c.Tests.RELEASE_TAG_TARGET,
+                [],
+                changes,
+                notes_path,
+            )
+            tm.ok(first)
+            tm.ok(second)
+            config_dir = Path(__file__).resolve().parents[3]
+            checked = u.Cli.run_raw([
+                str(prettier),
+                "--check",
+                "--config",
+                str(config_dir / c.Infra.PRETTIER_CONFIG_FILENAME),
+                str(notes_path),
+            ])
+            tm.ok(checked)
+            tm.that(checked.value.outcome.raw_return_code, eq=0)
 
         @staticmethod
         def test_generate_notes_failure_returns_result_error(tmp_path: Path) -> None:
             """Return a typed failure when the note path is a directory."""
             notes_path = tmp_path / "release" / c.Infra.RELEASE_NOTES_FILENAME
             notes_path.mkdir(parents=True, exist_ok=True)
-
             result = u.Infra.generate_notes(
                 c.Tests.RELEASE_VERSION_TARGET,
                 c.Tests.RELEASE_TAG_TARGET,
