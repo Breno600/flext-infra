@@ -13,7 +13,7 @@ import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from itertools import islice
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from flext_cli import m as cli_m, u
 
@@ -93,39 +93,6 @@ class FlextInfraUtilitiesCodegenFilePlan:
                     msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
             finally:
                 os.close(descriptor)
-
-    @staticmethod
-    def planned_file(
-        project: Path,
-        target: Path,
-        *,
-        required: bool,
-        desired_content: bytes | None,
-        desired_mode: int | None,
-        source_states: t.SequenceOf[cli_m.Cli.AtomicFileState] = (),
-        owner: str = "",
-        policy: Literal["full", "merge"] | None = None,
-    ) -> p.Result[m.Infra.CodegenFilePlan]:
-        """Capture one destination's before state and bind it to its desired state.
-
-        ``required`` says whether the destination must already exist: a removal
-        plan reads an existing file, a publication plan tolerates its absence.
-        """
-        before = u.Cli.atomic_read_binary_file_state(target, required=required)
-        if before.failure:
-            return r[m.Infra.CodegenFilePlan].from_failure(before)
-        return r[m.Infra.CodegenFilePlan].ok(
-            m.Infra.CodegenFilePlan(
-                project=project,
-                path=target,
-                before=before.value,
-                desired_content=desired_content,
-                desired_mode=desired_mode,
-                source_states=tuple(source_states),
-                owner=owner,
-                policy=policy,
-            )
-        )
 
     @staticmethod
     def required_file_states(

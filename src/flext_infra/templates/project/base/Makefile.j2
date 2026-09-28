@@ -37,6 +37,18 @@
 {%- macro fix_body() -%}
 {{ "\t" }}@{{ check_run(gates_csv(make.check_gates_fixable), " --apply --report-findings") }}
 {%- endmacro -%}
+{%- macro pytest_testmon_guard() -%}
+set -eu; \
+database="$(FLEXT_PYTEST_TESTMON_DATABASE)"; \
+case "$$database" in /*) ;; *) printf 'ERROR: persistent testmon database requires XDG_CACHE_HOME or HOME\n' >&2; exit 2 ;; esac; \
+case "$$database" in "$(PROJECT_ROOT)"/*) printf 'ERROR: persistent testmon database must be outside the checkout: %s\n' "$$database" >&2; exit 2 ;; esac; \
+case "$$database" in "$${TMPDIR:-/tmp}"/*|/tmp/*) printf 'ERROR: persistent testmon database must not live under the temporary directory: %s\n' "$$database" >&2; exit 2 ;; esac; \
+mkdir -p "$$(dirname "$$database")"; \
+{%- endmacro -%}
+{%- macro pytest_test_runner(operation="") -%}
+{{ pytest_testmon_guard() }}
+{{ make.testmon_cache.database_environment_variable }}="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry{% if operation %} {{ operation }}{% endif %}
+{%- endmacro -%}
 # @flext-generated: continuous
 # @flext-owner: flext-infra/config/codegen.yaml + flext-infra/src/flext_infra/templates/project/base/Makefile.j2
 # @flext-adjust: edit the owner configuration or template; never this projection
@@ -92,7 +104,9 @@ endif
 endif
 export GITHUB_TOKEN
 override export GH_TOKEN := $(GITHUB_TOKEN)
-override export MISE_GITHUB_TOKEN := $(GITHUB_TOKEN)
+# One credential, one variable: mise reads GITHUB_TOKEN, and a tool-scoped
+# alias inherited from a caller would silently outrank it.
+unexport MISE_GITHUB_TOKEN
 
 # === SECTION: project identity (managed) ===
 # Source: config:dist / config:make_profile / config:repository_root_rel / config:uv_link_mode
@@ -119,6 +133,10 @@ PYTEST_PROCESS_TIMEOUT_SECONDS := {{ pytest_process_timeout_seconds }}
 # run is terminated even if the runner itself stalls.
 PYTEST_BOUNDED = {{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := {{ make.testmon_cache.reports_directory }}
+PYTEST_CACHE_HOME = $(if $(strip $({{ make.testmon_cache.data_home_environment_variable }})),$({{ make.testmon_cache.data_home_environment_variable }}),$(if $(strip $({{ make.testmon_cache.user_home_environment_variable }})),$({{ make.testmon_cache.user_home_environment_variable }})/{{ make.testmon_cache.home_cache_directory }},))
+override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/{{ make.testmon_cache.external_storage_directory }}/$(subst /,_,$(PROJECT_ROOT))/{{ make.testmon_cache.database_filename }})
+# Profiles sit beside the other reports of this checkout (.reports is ignored).
+PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := {{ pytest.case_timeout_seconds }}
 override PYTEST_RUN_TIMEOUT_SECONDS := {{ pytest.run_timeout_seconds }}
 override PYTEST_TERMINATION_GRACE_SECONDS := {{ pytest.termination_grace_seconds }}
@@ -130,6 +148,7 @@ override PYTEST_DIAG_ARGS :={% for item in pytest.diagnostic_args %} {{ item }}{
 override PYTEST_PARALLEL_WORKERS := {{ pytest.parallel_workers }}
 override PYTEST_PARALLEL_WORKER_MEMORY_GB := {{ pytest.parallel_worker_memory_gb }}
 override PYTEST_PARALLEL_DISTRIBUTION := {{ pytest.parallel_distribution }}
+override PYTEST_PARALLEL_SCHEDULE_CHUNK := {{ pytest.parallel_schedule_chunk }}
 override PYTEST_PROFILE_SORT := {{ pytest.profile_sort }}
 override PYTEST_PROFILE_LIMIT := {{ pytest.profile_limit }}
 override PROCESS_TIMEOUT_COMMAND := {{ timeout_command }}
@@ -155,22 +174,6 @@ override TRACKED_MISE := $(PROJECT_ROOT)/bin/mise
 endif
 override SETUP_MISE := $(TRACKED_MISE)
 override export FLEXT_PYTEST_TARGET_RAW := {{ make.testmon_cache.target_directory }}
-PROJECT_STATE_ROOT := $(abspath $(PROJECT_ROOT)/../{{ state_directory_name }}/$(notdir $(PROJECT_ROOT)))
-# Scratch never lives inside a versioned tree: the home scratch root mirrors
-# the absolute checkout path so a sandbox is never a tracked scope of any
-# enclosing repository (workspace or linked worktree). Checkouts nested in a
-# VCS directory rename that segment, so the mirror never contains one; two
-# substitution passes rename adjacent repeated segments too.
-ifeq ($(strip $(HOME)),)
-$(error HOME is required to derive the scratch root)
-endif
-PROJECT_SCRATCH_IDENTITY := $(abspath $(PROJECT_ROOT))/
-{% for segment, alias in scratch_identity_segment_aliases -%}
-PROJECT_SCRATCH_IDENTITY := $(subst /{{ segment }}/,/{{ alias }}/,$(subst /{{ segment }}/,/{{ alias }}/,$(PROJECT_SCRATCH_IDENTITY)))
-{% endfor -%}
-PROJECT_SCRATCH_ROOT := $(HOME)/{{ scratch_home_relative }}/{{ state_directory_name }}$(patsubst %/,%,$(PROJECT_SCRATCH_IDENTITY))/{{ scratch_namespace }}
-TESTMON_DATAFILE := $(PROJECT_STATE_ROOT)/{{ make.testmon_cache.namespace }}/{{ make.testmon_cache.database_filename }}
-export TESTMON_DATAFILE
 # === SECTION: REPOSITORY_ROOT isolation (managed) ===
 # Source: physical checkout topology; caller variables cannot select a workspace.
 # Operator law 2026-09-24 (flext-x8gn6): inside a workspace every make run, root
@@ -229,9 +232,10 @@ override export GIT_CEILING_DIRECTORIES := $(abspath $(RUNTIME_ROOT)/..)
 override export MISE_CEILING_PATHS := $(abspath $(RUNTIME_ROOT)/..)
 # The physical runtime owns both its environment and frozen tool identities.
 # Attached members retain their own lock inputs for standalone consumption.
+# The pin is `make upg` output: a generated header, then its release line.
 override MISE_VERSION_PIN := $(RUNTIME_ROOT)/{{ mise_bootstrap.version_pin_file }}
 ifneq ($(wildcard $(MISE_VERSION_PIN)),)
-override export MISE_VERSION := $(strip $(shell cat "$(MISE_VERSION_PIN)"))
+override export MISE_VERSION := $(strip $(shell awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)"))
 ifneq ($(.SHELLSTATUS),0)
 $(error Cannot read the pinned Mise release from $(MISE_VERSION_PIN))
 endif
@@ -274,7 +278,7 @@ override UV_PROJECT_ENVIRONMENT := $(RUNTIME_VENV)
 override VIRTUAL_ENV := $(RUNTIME_VENV)
 override PATH := $(RUNTIME_BIN):$(SANITIZED_CALLER_PATH)
 unexport UV
-export FLEXT_INFRA_PYTHON UV_PROJECT UV_PROJECT_ENVIRONMENT VIRTUAL_ENV PATH
+export FLEXT_INFRA_PYTHON UV_PROJECT UV_PROJECT_ENVIRONMENT VIRTUAL_ENV PATH RUNTIME_ROOT
 
 # Resolve native tools through the same isolated lock reader used by setup.
 # Execute the caller's command with that PATH without reloading host Mise tools.
@@ -284,9 +288,11 @@ endef
 PROJECT_TOOL_EXEC = $(SHELL) -c '$(subst ','"'"',$(PROJECT_TOOL_RUNTIME))' --
 
 # One bootstrap serves `setup` (frozen) and `upg` (resolving); the public verb
-# selects its lifecycle and resolution through target-specific variables.
+# selects its lifecycle, Mise release resolution and tool locking through
+# target-specific variables.
 TOOL_BOOTSTRAP_LIFECYCLE := _setup_lifecycle
 TOOL_BOOTSTRAP_RESOLVE :=
+TOOL_BOOTSTRAP_LOCK :=
 {{ tool_bootstrap_recipe("_bootstrap_setup_tools", "$(PROJECT_ROOT)", "$(SETUP_MISE)", uv_version, "$(SELF_MAKE) $(TOOL_BOOTSTRAP_LIFECYCLE)", mise_bootstrap, make) }}
 
 ifeq ($(MAKE_PROFILE),workspace)
@@ -312,11 +318,15 @@ SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	desired_python="$${SETUP_PYTHON:?missing Mise-resolved Python executable}"; \
 	if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
 		$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"; \
-	elif [ "$$(readlink -f "$(RUNTIME_PYTHON)")" != "$$(readlink -f "$$desired_python")" ]; then \
-		printf 'setup: replacing environment for Python %s\n' "$$desired_python"; \
-		$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
+	else \
+		installed_base=$$("$(RUNTIME_PYTHON)" -c 'from pathlib import Path; import sys; print(Path(sys.base_prefix).resolve())'); \
+		desired_base=$$("$$desired_python" -c 'from pathlib import Path; import sys; print(Path(sys.prefix).resolve())'); \
+		if [ "$$installed_base" != "$$desired_base" ]; then \
+			printf 'setup: replacing environment for Python %s\n' "$$desired_python"; \
+			$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"; \
+		fi; \
 	fi; \
-	$(UV) sync --project "$(PROJECT_ROOT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
+	$(UV) sync --project "$(UV_PROJECT)" $(UV_SYNC_FLAGS) --link-mode "$(UV_LINK_MODE)"; \
 	XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" allow "$(PROJECT_ROOT)"; \
 	for member in $(WORKSPACE_SUBPROJECTS); do \
@@ -362,20 +372,11 @@ override PROJECT_INFRA_PYTHONPATH := $(MAKEFILE_ROOT)/src
 PROJECT_INFRA_RUN = if [ ! -x "$(FLEXT_INFRA_PYTHON)" ]; then printf 'ERROR: FLEXT_INFRA_PYTHON must name an executable managed Python\n' >&2; exit 2; fi; $(PROJECT_TOOL_EXEC) env -u PYTHONPATH -u MYPYPATH -u VIRTUAL_ENV -u UV_PROJECT -u UV_PROJECT_ENVIRONMENT PYTHONPATH="$(PROJECT_INFRA_PYTHONPATH)" $(FLEXT_INFRA_PYTHON)
 PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra
 # Scaffold dev tools live in the validated optional dev
-# profile; setup resolves the declared dependency branches at their current tips.
-# Keyed on the environment's OWNER, not on the caller's profile. A member has
-# no local venv -- RUNTIME_VENV is RUNTIME_ROOT/.venv -- so every checkout that
-# provisions a shared environment must describe the same contents. A member
-# syncing without --all-packages treats the siblings already installed there as
-# surplus and uninstalls them, undoing the root's provisioning and leaving
-# `uv sync --check` permanently divergent. A standalone project owns its venv
-# alone and has no workspace packages to include.
-SHARED_RUNTIME := $(if $(filter-out $(PROJECT_ROOT),$(RUNTIME_ROOT)),1,$(if $(strip $(WORKSPACE_SUBPROJECTS)),1,))
 # Setup installs frozen from the committed uv.lock and never re-resolves: it is
 # the CI path and must be stable. A missing or stale lock fails through uv's own
 # error; `make upg` is the only verb that resolves and rewrites it
 # (operator 2026-09-24).
-UV_SYNC_FLAGS := $(if $(SHARED_RUNTIME),--all-packages --reinstall-package flext-infra ,)--all-extras --all-groups --locked
+UV_SYNC_FLAGS := --all-extras --all-groups --locked
 
 ifeq ($(GEN_INIT_ONLY),)
 {{ makefile_custom_include }}
@@ -468,8 +469,17 @@ setup: _bootstrap_setup_tools
 # must not require an existing environment.
 upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle
 upg: TOOL_BOOTSTRAP_RESOLVE := 1
-upg: export MISE_VERSION :=
-upg: _bootstrap_setup_tools
+upg: TOOL_BOOTSTRAP_LOCK := 1
+upg: _builtin_require_runtime_root _bootstrap_setup_tools
+
+# Only the runtime root resolves the Mise release. An attached member's pin and
+# launchers are projections of that root, published by the root's `make gen`.
+.PHONY: _builtin_require_runtime_root
+_builtin_require_runtime_root:
+	@if [ "$(PROJECT_ROOT)" != "$(RUNTIME_ROOT)" ]; then \
+		printf 'ERROR: %s projects the Mise pin and launchers of %s; run make upg there\n' "$(PROJECT_ROOT)" "$(RUNTIME_ROOT)" >&2; \
+		exit 2; \
+	fi
 
 .PHONY: _setup_lifecycle
 _setup_lifecycle:
@@ -524,11 +534,11 @@ _builtin_require_mise_pin:
 		printf 'ERROR: missing or empty %s; make upg records the Mise release\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi; \
-	case "$(MISE_VERSION)" in ''|latest) \
-		printf 'ERROR: %s must contain a resolved Mise release\n' "$(MISE_VERSION_PIN)" >&2; \
-		exit 2 ;; \
-	esac; \
-	if [ "$(MISE_VERSION)" != "$$(cat "$(MISE_VERSION_PIN)")" ]; then \
+	if ! printf '%s\n' "$(MISE_VERSION)" | grep -Eq '^{{ mise_bootstrap.resolved_release_pattern }}$$'; then \
+		printf 'ERROR: %s must contain a resolved Mise release; make upg writes it\n' "$(MISE_VERSION_PIN)" >&2; \
+		exit 2; \
+	fi; \
+	if [ "$(MISE_VERSION)" != "$$(awk '{{ mise_bootstrap.version_pin_reader | replace('$', '$$') }}' "$(MISE_VERSION_PIN)")" ]; then \
 		printf 'ERROR: MISE_VERSION conflicts with %s\n' "$(MISE_VERSION_PIN)" >&2; \
 		exit 2; \
 	fi
@@ -553,7 +563,7 @@ endif
 # missing and is never cleared while present, because a concurrent lane may be
 # running against it.
 ifeq ($(MAKE_PROFILE),workspace)
-_builtin_setup_environment: _builtin_setup_submodules
+_builtin_setup_environment: $(if $(GITHUB_CI_SELF),,_builtin_setup_submodules)
 	@$(SETUP_ENVIRONMENT_RECIPE)
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 else
@@ -562,20 +572,20 @@ _builtin_setup_environment: _builtin_setup_submodules
 endif
 # End SECTION: setup environment
 
-# `upg` is the only recipe that resolves: the bootstrap above bumps mise.lock
-# before installing, and this lifecycle upgrades every uv.lock, provisions the
-# environment frozen from the new locks, and conforms dependency floors.
-# The floors land in the codegen SSOT, so `gen` projects them into every
-# pyproject and the locks are re-resolved against those raised floors before
-# the frozen reprovision: the committed lock must match the committed
-# pyproject, or `setup --locked` (the CI path) rejects it.
+# `upg` is the only recipe that resolves. Its first half provisions the
+# generator: the bootstrap above resolves the Mise release and locks the tools
+# the committed manifest declares, then this lifecycle upgrades every uv.lock
+# (which carries the generator itself), provisions the environment frozen from
+# it, and conforms dependency floors. The floors land in the codegen SSOT, so
+# `gen` projects them into every pyproject and renders the managed tool
+# manifests (.mise.toml) of the upgraded generator.
 # Branch-tracked git dependencies are moving sources by declaration
 # (workspace.yaml owns the branch): --refresh re-reads their metadata so a
 # stale cached requires-dist can never block or skew the resolution
 # (flext-62fbu). Like `setup`, it runs the declared pre-/post-upg lifecycle
 # hooks, post-upg inside the activated environment.
 .PHONY: _upg_lifecycle
-_upg_lifecycle: _builtin_setup_submodules
+_upg_lifecycle: $(if $(GITHUB_CI_SELF),,_builtin_setup_submodules)
 	@set -eu; \
 	case " $(CUSTOM_DECLARED_TARGETS) " in \
 		*" pre-upg "*) $(SELF_MAKE) pre-upg ;; \
@@ -590,6 +600,23 @@ _upg_lifecycle: _builtin_setup_submodules
 	$(PROJECT_FLEXT_INFRA) deps modernize --repository-root "$(PROJECT_ROOT)" \
 		--apply --rewrite-constraints "$$@"
 	@$(SELF_MAKE) gen
+	@$(SELF_MAKE) _upg_relock
+
+# The second half belongs to the Makefile `gen` just rendered, so it runs as a
+# fresh make invocation rather than as lines of the recipe already expanded
+# above. It locks mise.lock from the rendered .mise.toml (never from the
+# manifest the generator was provisioned with), installs exactly that lock,
+# re-resolves uv.lock against the raised floors and reprovisions frozen from
+# both: the committed locks must match the committed manifests, or `setup`
+# (the CI path, `--locked`) rejects them. The Mise release is not resolved
+# again; the first half already pinned it.
+.PHONY: _upg_relock
+_upg_relock: TOOL_BOOTSTRAP_LIFECYCLE := _upg_converge
+_upg_relock: TOOL_BOOTSTRAP_LOCK := 1
+_upg_relock: _bootstrap_setup_tools
+
+.PHONY: _upg_converge
+_upg_converge:
 	$(call _lock_project,)
 	@$(SELF_MAKE) _builtin_setup_environment
 	$(call _lock_project,--check)
@@ -616,7 +643,6 @@ _upg_activated:
 _builtin-self-test: _builtin_require_environment
 {{ test_report_recipe(
     runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
-    invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
 _builtin-self-check: _builtin_require_environment
@@ -625,7 +651,6 @@ _builtin-self-check: _builtin_require_environment
 _builtin-self-test-full: _builtin_require_environment
 {{ test_report_recipe(
     runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full",
-    invocation_namespace=make.testmon_cache.invocation_namespace,
 ) }}
 
 _builtin-self-fmt: _builtin_require_environment
@@ -639,8 +664,18 @@ _builtin-self-fix: _builtin_require_environment
 _builtin-self-fix-enforcement: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
 
+_builtin-self-fix-namespace: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor namespace-enforce --repository-root "$(PROJECT_ROOT)" --apply
+
+_builtin-self-fix-accessors: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor accessor-migrate --repository-root "$(PROJECT_ROOT)" --apply
+
 _builtin-self-build:
+{% if package %}
 	@$(UV) build --project "$(PROJECT_ROOT)"
+{% else %}
+	@printf '%s\n' 'INFO: build: repository declares package=false (content-only root); no distribution to build'
+{% endif %}
 {% else %}
 # Standalone: the `_all` twins own the one emitted body (SSOT); each carries
 # its own `_builtin_require_environment` edge.
@@ -655,6 +690,10 @@ _builtin-self-fmt: _builtin_fmt_all
 _builtin-self-fix: _builtin_fix_all
 
 _builtin-self-fix-enforcement: _builtin_fix_enforcement
+
+_builtin-self-fix-namespace: _builtin_fix_namespace
+
+_builtin-self-fix-accessors: _builtin_fix_accessors
 
 _builtin-self-build: _builtin_build_artifacts
 {% endif %}
@@ -707,7 +746,11 @@ _builtin-propagate: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} propagate --repository-root "$(PROJECT_ROOT)"
 {% else %}
 _builtin_build_artifacts:
+{% if package %}
 	@$(UV) build --project "$(PROJECT_ROOT)"
+{% else %}
+	@printf '%s\n' 'INFO: build: repository declares package=false (content-only root); no distribution to build'
+{% endif %}
 
 # Check is read-only: it runs the gates without --apply, so the tree is left
 # unchanged; fix applies the declared repairs of the fixable gates.
@@ -719,14 +762,12 @@ _builtin_check_all: _builtin_require_environment
 
 _builtin_test_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry",
-    invocation_namespace=make.testmon_cache.invocation_namespace,
+    runner=pytest_test_runner(),
 ) }}
 
 _builtin_test_full_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner="$(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra._pytest_entry full",
-    invocation_namespace=make.testmon_cache.invocation_namespace,
+    runner=pytest_test_runner("full"),
 ) }}
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
@@ -752,27 +793,27 @@ _builtin_run_default: _builtin_require_environment
 	@$(UV_RUN) $(PROJECT_NAME) $(ARGS)
 
 # Profile the real runtime-census gate through the same installed CLI selected
-# by the root dispatcher. The report remains in the external runtime state.
+# by the root dispatcher. The report stays in this checkout's .reports tree.
 .PHONY: profile-census
 profile-census: _builtin_require_environment
-	@mkdir -p "$(PROJECT_SCRATCH_ROOT)/profiles"
+	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); status = profile.runcall(main, sys.argv[2:]); profile.dump_stats(sys.argv[1]); raise SystemExit(status)' \
-		"$(PROJECT_SCRATCH_ROOT)/profiles/runtime-census.pstats" check run \
+		"$(PROFILE_REPORTS_DIR)/runtime-census.pstats" check run \
 		--repository-root "$(PROJECT_ROOT)" --gates runtime-census --projects .
 
 .PHONY: profile-census-report
 profile-census-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(35)' \
-		"$(PROJECT_SCRATCH_ROOT)/profiles/runtime-census.pstats"
+		"$(PROFILE_REPORTS_DIR)/runtime-census.pstats"
 
 # Profile the checker process itself while retaining the canonical Mypy gate,
-# its resource limit, native source inventory, and external report directory.
+# its resource limit, native source inventory, and report directory.
 .PHONY: profile-mypy
 profile-mypy: _builtin_require_environment
-	@mkdir -p "$(PROJECT_SCRATCH_ROOT)/profiles"
-	@export FLEXT_MYPY_PROFILE_OUTPUT="$(PROJECT_SCRATCH_ROOT)/profiles/mypy.pstats"; \
+	@mkdir -p "$(PROFILE_REPORTS_DIR)"
+	@export FLEXT_MYPY_PROFILE_OUTPUT="$(PROFILE_REPORTS_DIR)/mypy.pstats"; \
 		$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" \
 		--gates mypy --projects . --report-findings
 
@@ -780,21 +821,40 @@ profile-mypy: _builtin_require_environment
 profile-mypy-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
-		"$(PROJECT_SCRATCH_ROOT)/profiles/mypy.pstats"
+		"$(PROFILE_REPORTS_DIR)/mypy.pstats"
 
 .PHONY: profile-gen
 profile-gen: _builtin_require_environment
-	@mkdir -p "$(PROJECT_SCRATCH_ROOT)/profiles"
+	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); status = profile.runcall(main, sys.argv[2:]); profile.dump_stats(sys.argv[1]); raise SystemExit(status)' \
-		"$(PROJECT_SCRATCH_ROOT)/profiles/lazy-init.pstats" codegen lazy-init \
+		"$(PROFILE_REPORTS_DIR)/lazy-init.pstats" codegen lazy-init \
 		--repository-root "$(PROJECT_ROOT)" --module {{ dist | replace('-', '_') }} --dry-run
 
 .PHONY: profile-gen-report
 profile-gen-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
-		"$(PROJECT_SCRATCH_ROOT)/profiles/lazy-init.pstats"
+		"$(PROFILE_REPORTS_DIR)/lazy-init.pstats"
+
+# Profile the canonical pytest entry (flext_infra._pytest_entry) under cProfile
+# for cold-run diagnosis (flext-itpd1.3.7): the same persistent testmon database
+# guard and environment as the bounded gate, but deliberately NOT wrapped in
+# PYTEST_BOUNDED so the diagnostic completes and dumps its profile; the gate's
+# own timeout on `make test` stays untouched.
+.PHONY: profile-test
+profile-test: _builtin_require_environment
+	@mkdir -p "$(PROFILE_REPORTS_DIR)"
+	@{{ pytest_testmon_guard() }}
+	{{ make.testmon_cache.database_environment_variable }}="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import cProfile, sys; path = sys.argv[1]; sys.argv = [sys.argv[0]]; from flext_infra._pytest_entry import FlextInfraPytestEntry; profile = cProfile.Profile(); status = profile.runcall(FlextInfraPytestEntry.main); profile.dump_stats(path); raise SystemExit(status)' \
+		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
+
+.PHONY: profile-test-report
+profile-test-report: _builtin_require_environment
+	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
+		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
+		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
 
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
@@ -884,15 +944,29 @@ _builtin_gen_all:
 _builtin_mod_apply: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) refactor mod --apply
 
+# Namespace and accessor migration are the same selector-free refactor surface
+# as `mod`: each public verb owns one fixed rewrite of every resolved consumer.
+_builtin_fix_namespace: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor namespace-enforce --repository-root "$(PROJECT_ROOT)" --apply
+
+_builtin_fix_accessors: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor accessor-migrate --repository-root "$(PROJECT_ROOT)" --apply
+
 # Selector-free public verbs map one-to-one to their canonical implementation;
 # each implementation owns one fixed operation.
 _builtin-build: _builtin_build_artifacts
+{% if make_profile == "workspace" %}
+_builtin-examples: _builtin_require_environment
+	@{{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "{{ make.examples_timeout_seconds }}s" $(UV_RUN) python -m examples.runtime
+{% endif %}
 _builtin-check: _builtin_check_all
 _builtin-test: _builtin_test_all
 _builtin-test-full: _builtin_test_full_all
 _builtin-fmt: _builtin_fmt_all
 _builtin-fix: _builtin_fix_all
 _builtin-fix-enforcement: _builtin_fix_enforcement
+_builtin-fix-namespace: _builtin_fix_namespace
+_builtin-fix-accessors: _builtin_fix_accessors
 _builtin-audit:
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --scope "$(CODEGEN_SCOPE)" --mode check

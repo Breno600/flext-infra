@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import sys
 from functools import lru_cache
 from operator import attrgetter
 from pathlib import Path
@@ -13,7 +14,6 @@ from typing import override
 
 from flext_cli import u
 
-from .._config import FlextInfraConfig
 from ..constants import c
 from ..models import m
 from ..typings import t
@@ -244,32 +244,37 @@ class FlextInfraUtilitiesProjectDiscovery(
         )
 
     @staticmethod
-    def external_tool_state_dir(
-        repository_root: Path, project_root: Path, tool_name: str
+    def runtime_environment_dir(
+        project_root: Path, *, runtime_root: Path | None = None
     ) -> Path:
-        """Resolve one governed project's canonical state outside the checkout."""
-        resolved_workspace = repository_root.resolve()
-        resolved_project = project_root.resolve()
-        if not resolved_project.is_relative_to(resolved_workspace):
-            msg = f"project root is outside workspace: {resolved_project}"
-            raise ValueError(msg)
-        tool_component = Path(tool_name)
-        if (
-            tool_component.is_absolute()
-            or tool_component.name != tool_name
-            or tool_name in {"", ".", ".."}
-        ):
-            msg = f"tool_name must be one relative directory name: {tool_name!r}"
-            raise ValueError(msg)
-        state_root: Path = (
-            resolved_workspace.parent
-            / FlextInfraConfig.fetch_global().Infra.codegen.toolchain.state_directory_name
-            / resolved_workspace.name
-            / tool_name
-        )
-        relative_project = resolved_project.relative_to(resolved_workspace)
+        """Resolve the checkout's Python environment (D-VENV, flext-x8gn6).
+
+        A declared ``runtime_root`` (the generated Makefile's ``RUNTIME_ROOT``)
+        owns the environment. Undeclared, the owner derives it: a subproject
+        checked out inside a workspace uses the workspace environment; a
+        standalone checkout or a linked worktree owns its own, exactly as the
+        generated Makefile resolves ``REPOSITORY_ROOT``.
+        """
+        if runtime_root is not None:
+            return runtime_root / c.Infra.ENVIRONMENT_DIRECTORY
+        runtime = FlextInfraUtilitiesGit.git_repository_root(
+            m.Infra.GitRepoRequest(repo_root=project_root)
+        ).unwrap()
+        return runtime.repository_root / c.Infra.ENVIRONMENT_DIRECTORY
+
+    @classmethod
+    def runtime_python(
+        cls, project_root: Path, *, runtime_root: Path | None = None
+    ) -> Path:
+        """Resolve the fixed Python entrypoint inside the managed environment.
+
+        ``runtime_root`` mirrors ``runtime_environment_dir``: a declared runtime
+        root (the generated Makefile's ``RUNTIME_ROOT``) owns the environment.
+        """
         return (
-            state_root if relative_project == Path() else state_root / relative_project
+            cls.runtime_environment_dir(project_root, runtime_root=runtime_root)
+            / ("Scripts" if sys.platform == "win32" else "bin")
+            / ("python.exe" if sys.platform == "win32" else c.Infra.PYTHON)
         )
 
 

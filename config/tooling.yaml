@@ -21,11 +21,22 @@ Infra:
           # MD013.line_length, converging with ruff/yamlfix at 88. Headings
           # stay at 200 because no tool can reflow a heading — a shorter limit
           # would only manufacture unfixable findings.
+          #
+          # flext-md-converge: wrapping is owned by rumdl (`make fix`), not
+          # prettier. `reflow`/`reflow-mode: normalize` make MD013 fixable
+          # (`[*]`) and give rumdl's own reflow-aware writer (atomic code
+          # spans, GFM task-item post-checkbox column) the authority over
+          # line breaks that prettier's proseWrap could not reach (a
+          # 294-char line inside backtick spans that prettier left
+          # unwrapped). prettier keeps `prose-wrap: preserve` below so it
+          # never re-wraps what rumdl already wrapped.
           MD013:
             line_length: 88
             heading_line_length: 200
             code_block_line_length: 88
             tables: false
+            reflow: true
+            reflow-mode: normalize
           MD022: false
           MD023: false
           MD024: { siblings_only: true }
@@ -45,8 +56,21 @@ Infra:
         # Prettier formatting policy (markdown-format gate): rendered into the
         # managed .prettierrc. prettier --write is owned by `make fmt` and
         # prettier --check by `make check`; `make fix` never runs it.
+        #
+        # flext-md-converge: `prose-wrap: preserve` (not `always`) so prettier
+        # never reflows a paragraph or a link-reference definition onto a
+        # fresh, bracket-less line — the exact shape rumdl's MD034 (bare URL)
+        # flags. `always` also forces prettier's list-continuation printer to
+        # reindent a GFM task item whose text starts with a manual ordinal
+        # (`- [ ] 1. text`) to a column neither of MD077's two valid columns
+        # accepts, on every rerun, regardless of `prose-wrap` (a prettier
+        # 3.5.3 defect confirmed empirically: it reproduces under `preserve`
+        # too). `preserve` removes the reflow trigger for MD034 and for the
+        # ordinary case; wrapping ownership moves to rumdl (MD013 above), so
+        # `make fix` (not `make fmt` alone) is required for full MD013
+        # coverage on newly authored long lines.
         prettier:
-          prose-wrap: always
+          prose-wrap: preserve
           tab-width: 4
           md-tab-width: 2
         exclude:
@@ -452,7 +476,6 @@ Infra:
           source-report-private-usage: error
           test-like-report-private-usage: "none"
           other-report-private-usage: "none"
-          venv-name: .venv
       coverage:
         source: [src]
         show-missing: true
@@ -594,11 +617,6 @@ Infra:
           # scripts/legado/dispatch.py.
           project-shared-search-paths: []
       pytest:
-        testmon-state-home-variable: XDG_STATE_HOME
-        testmon-datafile-variable: TESTMON_DATAFILE
-        testmon-namespace: flext/testmon
-        testmon-database-filename: .testmondata
-        testmon-lock-filename: cache.lock
         # flext-j47u (codex): scaffold/modernizer consume one complete pytest model.
         # A case that does not fit is a test defect to optimize. Fifteen
         # seconds still fails a blocked filesystem
@@ -635,12 +653,23 @@ Infra:
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
           cosmos-docgen: 4
+          # flext-itpd1.3.7 measurement: raising this ceiling above 4 measurably
+          # regressed the cold run (16 workers lost one to an early death and
+          # executed fewer tests before the fixed deadline than 4), so the
+          # declared ceiling stays at the measured incumbent.
           flext-infra: 4
         # Reserve physical memory for each xdist worker and its child process
         # tree; this bound may reduce the tested ceiling on smaller hosts.
         parallel-worker-memory-gb: 2
         # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
+        # flext-itpd1.3.7: xdist queues the shutdown marker behind each
+        # worker's pre-dispatched chunk, so the declared max-failures stop only
+        # took effect after every worker drained minutes of assigned items at
+        # fleet scale and red cold runs were deadline-killed untyped. One test
+        # per dispatch step makes that stop immediate; per-item dispatch cost
+        # is noise against this suite's measured per-case time.
+        parallel-schedule-chunk: 1
         profile-sort: cumulative
         profile-limit: 50
         min-version: "8.0"

@@ -313,9 +313,8 @@ class FlextInfraWorkspaceDetector(
                 f"({manifest_path}): {manifest.ledger_id!r} != "
                 f"{beads.database if beads is not None else None!r}"
             )
-        if (
-            manifest.ledger_prefix is not None
-            and (beads is None or manifest.ledger_prefix != beads.issue_prefix)
+        if manifest.ledger_prefix is not None and (
+            beads is None or manifest.ledger_prefix != beads.issue_prefix
         ):
             return r[
                 tuple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None]
@@ -492,22 +491,13 @@ class FlextInfraWorkspaceDetector(
         if contract.failure:
             return result_type.from_failure(contract)
         declared_url, declared_branch = contract.value
-        sections = u.Infra.git_submodule_sections(
+        unmanaged = u.Infra.git_unmanaged_submodule_paths(
             m.Infra.GitRepoRequest(repo_root=repository_root)
         )
-        if sections.failure:
-            return result_type.from_failure(sections)
-        section = sections.value.get(path.as_posix())
-        if section is not None:
-            managed = u.Infra.git_submodule_config_value(
-                m.Infra.GitSubmoduleConfigRequest(
-                    repo_root=repository_root, section=section, key="flext-managed"
-                )
-            )
-            if managed.failure:
-                return result_type.from_failure(managed)
-            if managed.value.text and managed.value.text.lower() != "true":
-                return result_type.ok(path)
+        if unmanaged.failure:
+            return result_type.from_failure(unmanaged)
+        if path in unmanaged.value:
+            return result_type.ok(path)
         if not u.Infra.gitmodule_branch_is_governed(
             declared_branch, integration_branch=integration_branch
         ):
@@ -634,7 +624,11 @@ class FlextInfraWorkspaceDetector(
             beads = beads_result.value
         member_root = identity.value.primary_root
         member_beads = member_root / c.Infra.BEADS_DIRNAME
-        if beads_enabled and identity.value.is_attached_submodule and member_beads.is_symlink():
+        if (
+            beads_enabled
+            and identity.value.is_attached_submodule
+            and member_beads.is_symlink()
+        ):
             superproject_root = identity.value.superproject_root
             if superproject_root is None:
                 return r[m.Infra.WorkspaceSpec].fail(
@@ -812,7 +806,7 @@ class FlextInfraWorkspaceDetector(
         # that carries .beads/.gitmodules but no .git (a test sandbox, a
         # scratch copy) is ungoverned; asking Git here would discover an
         # ancestor checkout and validate *its* submodules against *this*
-        # .gitmodules (sandbox escape observed under flext/.flext-runtime).
+        # .gitmodules (a sandbox nested inside a workspace checkout).
         if not (resolved_root / ".git").exists():
             return r[t.VariadicTuple[Path]].ok(())
         # Governance is declared, not matched: only a checkout that declares

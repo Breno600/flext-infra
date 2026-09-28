@@ -5,13 +5,62 @@ from __future__ import annotations
 import shutil
 import sys
 from pathlib import Path
+from textwrap import indent
 
-from flext_infra import u
-from tests import c, p, t
+from flext_infra import config, u
+from tests import c, m, p, t
+from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 
 
 class TestsFlextInfraUtilitiesToolingFixtureMixin:
     """Executable, Make, and toolchain-environment fixture helpers."""
+
+    @staticmethod
+    def mypy_deadline_limit() -> m.Infra.MypyResourceLimit:
+        """Reserve harness startup and cleanup inside the configured slow budget."""
+        policy = config.Infra.tooling.tools.pytest
+        available = (
+            policy.slow_timeout_seconds
+            - c.Infra.MYPY_TIMEOUT_GRACE_SECONDS
+            - policy.termination_grace_seconds
+        )
+        return m.Infra.MypyResourceLimit(
+            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
+            timeout_seconds=min(c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT, available // 2),
+        )
+
+    @staticmethod
+    def reap_mypy_descendant(pid_file: Path, timeout: int) -> None:
+        """Reap a registered workload in pytest teardown, preserving call failures."""
+        pid = pid_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        snapshot = u.Cli.run_raw(
+            ("/bin/ps", "-p", str(int(pid)), "-o", "stat="), timeout=timeout
+        ).unwrap()
+        if snapshot.outcome.raw_return_code not in {0, 1} or snapshot.stderr:
+            raise RuntimeError(snapshot.stderr)
+        state = snapshot.stdout.strip()
+        if state and not state.startswith("Z"):
+            u.Cli.run(("/bin/kill", "-KILL", pid), timeout=timeout).unwrap()
+
+    @staticmethod
+    def mypy_workload(root: Path, plugin_body: str = "") -> m.Infra.MypyInvocation:
+        """Create a real checker project with an optional workload plugin."""
+        source = root / "checked.py"
+        source.write_text("value: int = 1\n", encoding=c.Cli.ENCODING_DEFAULT)
+        config_file = root / "mypy.ini"
+        config_source = "[mypy]\n"
+        if plugin_body:
+            plugin = root / "workload.py"
+            plugin.write_text(
+                "from mypy.plugin import Plugin\n\n"
+                "def plugin(version: str) -> type[Plugin]:\n"
+                + indent(plugin_body, "    ")
+                + "\n    return Plugin\n",
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+            config_source += f"plugins = {plugin}\n"
+        config_file.write_text(config_source, encoding=c.Cli.ENCODING_DEFAULT)
+        return m.Infra.MypyInvocation(targets=(source,), config_file=config_file)
 
     @staticmethod
     def create_python_environment(root: Path) -> p.Result[bool]:
@@ -19,6 +68,40 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         return u.Cli.run_checked(
             ["uv", "venv", "--python", sys.executable, str(root / ".venv")], cwd=root
         )
+
+    @staticmethod
+    def provision_checkout(root: Path) -> None:
+        """Make a fixture root a checkout whose environment owns the edit tools.
+
+        Protected edits resolve every ``c.Infra.LINT_TOOLS`` executable plus
+        python and pytest fail-closed from the checkout's runtime environment
+        (``u.Infra.runtime_environment_dir``), which requires a Git checkout.
+        The fixture becomes one through the single fixture Git owner and
+        receives the real binaries this suite was provisioned with, linked
+        inside the pytest-managed tree; a missing tool fails the fixture.
+        """
+        TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
+        provisioned = Path(sys.executable).parent
+        bin_dir = u.Infra.runtime_environment_dir(root) / provisioned.name
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        tools = {command[0] for _, command in c.Infra.LINT_TOOLS}
+        for name in sorted(tools | {c.Infra.PYTHON, c.Infra.PYTEST}):
+            source = provisioned / name
+            if not source.is_file():
+                msg = f"setup did not provision {name}: {source}"
+                raise FileNotFoundError(msg)
+            destination = bin_dir / name
+            if destination.is_symlink():
+                if destination.resolve(strict=True) == source.resolve(strict=True):
+                    continue
+                msg = (
+                    f"fixture tool conflicts with provisioned executable: {destination}"
+                )
+                raise FileExistsError(msg)
+            if destination.exists():
+                msg = f"fixture tool path is already occupied: {destination}"
+                raise FileExistsError(msg)
+            destination.symlink_to(source)
 
     @staticmethod
     def make_read_only(path: Path) -> None:
@@ -56,9 +139,7 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         for relative in (
             c.Infra.MISE_TOML_FILENAME,
             c.Infra.MISE_LOCK_FILENAME,
-            c.Infra.MISE_VERSION_PIN_FILENAME,
-            "bin/mise",
-            "bin/mise.cmd",
+            *c.Infra.ARTIFACT_NAMES,
         ):
             source = source_root / relative
             destination = root / relative

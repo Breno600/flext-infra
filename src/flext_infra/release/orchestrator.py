@@ -121,7 +121,7 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             plan.next,
             plan.tag,
             projects.value,
-            "\n".join(f"- {subject}" for subject in plan.merges),
+            "\n".join(plan.merges),
             notes,
         )
         if generated.failure:
@@ -137,7 +137,7 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
         if head.failure:
             return r[bool].from_failure(head)
         subject, _, oid = head.value.strip().partition("\n")
-        if not u.Infra.is_release_subject(subject, ctx.version):
+        if not u.Infra.release_subject(subject, ctx.version):
             expected = c.Infra.RELEASE_COMMIT_SUBJECT.format(version=ctx.version)
             return r[bool].fail(
                 f"release tag requires HEAD to be the release commit {expected!r}, "

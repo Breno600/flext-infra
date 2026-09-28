@@ -3,8 +3,8 @@
 Per ADR-005 this is the single source of truth describing *which* templates make
 up a new project and *where* each lands. The engine (``u.Cli.template_render_dir``,
 flext-cli) is policy-free; this manifest + the rope-derived context carry all the
-FLEXT naming policy. Adding a file or a kind is a data edit here + a ``.j2`` drop
-in ``templates/``.
+FLEXT naming policy. Template-backed artifacts use ``.j2`` sources; typed
+manifest artifacts serialize their Pydantic contract in the scaffold cycle.
 
 Output paths use ``{token}`` placeholders (resolved by the service from rope) so
 the engine never sees FLEXT naming. NOTE: the large-row form migrates to
@@ -34,6 +34,13 @@ class FlextInfraConstantsCodegenProject:
     # one public conform contract shared by new and existing repositories. The
     # declarative values live in config/codegen.yaml; constants only type the
     # closed vocabulary used by models and CLI dispatch.
+
+    @unique
+    class TemplateDelegate(StrEnum):
+        """Rendering owner for a scaffold catalog entry."""
+
+        RENDER = "render"
+        MANIFEST = "manifest"
 
     @unique
     class CodegenConformScope(StrEnum):
@@ -169,6 +176,8 @@ class FlextInfraConstantsCodegenProject:
     WORKSPACE_MANIFEST_VERSION: ClassVar[int] = 3
     UV_LOCK_FILENAME: ClassVar[str] = "uv.lock"
     MISE_LOCK_FILENAME: ClassVar[str] = "mise.lock"
+    MISE_MOVING_SELECTOR: ClassVar[str] = "latest"
+    "Selector resolved only by ``make upg`` into the committed ``mise.lock``."
     GIT_URL_SUFFIX: ClassVar[str] = ".git"
     "Canonical clone-URL suffix every governed RepositoryRef URL carries."
     CUSTOM_MAKE_FILENAME: ClassVar[str] = "custom.mk"

@@ -15,6 +15,17 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
     """Load Rope project/module/import objects behind protocols."""
 
     @classmethod
+    def parse_rope_module(cls, source: str, *, filename: str) -> t.Infra.RopeAstNode:
+        """Parse one source snapshot through Rope's canonical syntax boundary."""
+        parsed = cls._runtime_callable("rope.base.ast", "parse")(
+            source, filename=filename
+        )
+        if not isinstance(parsed, p.Infra.RopeAstNode):
+            msg = "rope parser returned an invalid module node"
+            raise TypeError(msg)
+        return parsed
+
+    @classmethod
     def snapshot_project(
         cls, project: p.Infra.RopeProject, sources: t.MappingKV[Path, str]
     ) -> p.Infra.RopeProject:
@@ -72,6 +83,22 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
         return result if isinstance(result, p.Infra.RopeImportedName) else None
 
     @staticmethod
+    def source_offset(source: str, node: p.Infra.RopeAstNode) -> int:
+        """Resolve Rope AST byte coordinates to a Python source offset."""
+        line = getattr(node, "lineno", None)
+        column = getattr(node, "col_offset", None)
+        lines = source.splitlines(keepends=True)
+        if not isinstance(line, int) or not isinstance(column, int):
+            msg = "Rope AST node has no source position"
+            raise TypeError(msg)
+        if line < 1 or line > len(lines):
+            msg = f"Rope AST node line is outside its source: {line}"
+            raise ValueError(msg)
+        encoded_prefix = lines[line - 1].encode("utf-8")[:column]
+        prefix = encoded_prefix.decode("utf-8")
+        return sum(map(len, lines[: line - 1])) + len(prefix)
+
+    @staticmethod
     def scope_at(
         pymodule: p.Infra.RopePyModule,
         offset: int,
@@ -101,7 +128,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
 
     @classmethod
     def resolve_symbol(
-        cls, scope: p.Infra.RopeScope, expression: ast.expr
+        cls, scope: p.Infra.RopeScope, expression: p.Infra.RopeAstNode
     ) -> p.Infra.RopePyName | None:
         """Resolve an identifier chain without evaluating Python expressions."""
         primary = expression
@@ -230,7 +257,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
                 raise TypeError(msg)
 
     @classmethod
-    def get_string_module(
+    def build_string_module(
         cls,
         rope_project: t.Infra.RopeProject,
         source: str,

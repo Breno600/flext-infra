@@ -36,7 +36,8 @@ class TestsFlextInfraCodegenMakeAuthentication:
             "check=True, capture_output=True, text=True).stdout.rstrip('\\n')\n"
             "assert credential\n"
             "assert all(os.environ[name] == credential for name in "
-            "('GITHUB_TOKEN', 'GH_TOKEN', 'MISE_GITHUB_TOKEN'))\n"
+            "('GITHUB_TOKEN', 'GH_TOKEN'))\n"
+            "assert 'MISE_GITHUB_TOKEN' not in os.environ\n"
             "assert all(os.environ[name] == str(Path(sys.argv[1]).parent) "
             "for name in ('GIT_CEILING_DIRECTORIES', 'MISE_CEILING_PATHS'))\n"
             "print('mise-authenticated')\n",

@@ -35,6 +35,7 @@ class FlextInfraTierWhitelistGate(FlextInfraGate):
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
         """Run the tier-whitelist scan scoped to ``project_dir``."""
+        _ = ctx
         started = time.monotonic()
         validator = FlextInfraValidateTierWhitelist(repository_root=project_dir)
         report = validator.build_report(project_dir)
@@ -44,7 +45,6 @@ class FlextInfraTierWhitelistGate(FlextInfraGate):
                 passed=False,
                 errors=[report.error or "tier-whitelist validation failed"],
                 started=started,
-                ctx=ctx,
             )
         validated = report.unwrap()
         return self._build_project_error_gate_result(
@@ -52,7 +52,6 @@ class FlextInfraTierWhitelistGate(FlextInfraGate):
             passed=validated.passed,
             errors=list(validated.violations),
             started=started,
-            ctx=ctx,
         )
 
 

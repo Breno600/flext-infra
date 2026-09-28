@@ -497,35 +497,19 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that("UV ?= uv" in makefile, eq=False)
         # UV_RUN's environment binding is exercised by the real runtime test
         # above, including a parent uv workspace with a different default venv.
-        toolchain = config.Infra.codegen.toolchain
-        # The state root is a SIBLING of the checkout, never a directory inside
-        # it: derived from the Makefile's own PROJECT_ROOT so a verb invoked
-        # from a foreign CWD still writes beside the tree that owns the verb.
-        tm.that(
-            (
-                "PROJECT_STATE_ROOT := $(abspath $(PROJECT_ROOT)/../"
-                f"{toolchain.state_directory_name}/$(notdir $(PROJECT_ROOT)))"
-            )
-            in makefile,
-            eq=True,
-        )
-        # Root cause: storage law forbids scratch inside the versioned tree —
-        # PROJECT_SCRATCH_ROOT is HOME-rooted, mirroring the checkout identity
-        # (absolute path with VCS directory segments renamed) under it, never
-        # nested under PROJECT_STATE_ROOT.
-        tm.that(makefile, has="PROJECT_SCRATCH_IDENTITY := $(abspath $(PROJECT_ROOT))/")
-        for segment, alias in c.Infra.SCRATCH_IDENTITY_SEGMENT_ALIASES:
-            tm.that(makefile, has=f"$(subst /{segment}/,/{alias}/,")
+        # Make does not inject a caller-selected database path. The canonical
+        # pytest runner binds TESTMON_DATAFILE to its external persistent cache.
         tm.that(
             makefile,
-            has=(
-                f"PROJECT_SCRATCH_ROOT := $(HOME)/{toolchain.scratch_home_relative}/"
-                f"{toolchain.state_directory_name}"
-                "$(patsubst %/,%,$(PROJECT_SCRATCH_IDENTITY))/"
-                f"{toolchain.scratch_namespace}"
-            ),
+            has=f"override RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}",
         )
-        tm.that('TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp"' in makefile, eq=True)
+        for forced in (
+            "PROJECT_STATE_ROOT",
+            "PROJECT_SCRATCH",
+            'TMPDIR="$$test_tmp"',
+            "TESTMON_DATAFILE",
+        ):
+            tm.that(makefile, lacks=forced)
         # Every gate the typed owner schedules by default reaches the runtime
         # in ONE `check run --gates` invocation. The Make layer no longer
         # publishes a per-gate selector, so the gate list itself is the
@@ -538,20 +522,57 @@ class TestsFlextInfraCodegenMakeEnvironment:
             eq=True,
         )
         tm.that("$(UV_RUN) actionlint" in makefile, eq=False)
-        tm.that('$(UV) sync --project "$(PROJECT_ROOT)"' in makefile, eq=True)
+        tm.that('$(UV) sync --project "$(UV_PROJECT)"' in makefile, eq=True)
         tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
-        # Bytecode still lands in the project state root and never inside the
-        # checkout. The Makefile stopped exporting it because the shell owns
-        # the interactive environment now, so the guarantee is proved at .envrc
-        # — its current owner — instead of being dropped with the old export.
         envrc = (project_root / ".envrc").read_text(encoding="utf-8")
-        tm.that(
-            envrc,
-            has=(
-                "export PYTHONPYCACHEPREFIX="
-                f'"${{PROJECT_STATE_ROOT}}/{toolchain.pycache_namespace}"'
-            ),
+        for forced in ("PYTHONPYCACHEPREFIX", "export TMPDIR", "PROJECT_STATE_ROOT"):
+            tm.that(envrc, lacks=forced)
+
+    @pytest.mark.parametrize(
+        "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
+    )
+    def test_build_verb_renders_uv_build_for_packaged_repositories(
+        self, tmp_path: Path, profile: c.Infra.MakeProfile
+    ) -> None:
+        """A repository that publishes a package keeps the real build recipe.
+
+        The `package` flag is an input of the fixture, not a frozen constant:
+        both branches of the flag are exercised (the false branch lives in the
+        twin test) so the contract holds for any valid manifest value.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, profile, package=True
         )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+        tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
+        tm.that(makefile, lacks="package=false (content-only root)")
+
+    @pytest.mark.parametrize(
+        "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
+    )
+    def test_build_verb_renders_typed_noop_for_package_false_roots(
+        self, tmp_path: Path, profile: c.Infra.MakeProfile
+    ) -> None:
+        """A content-only root (package=false) builds nothing and says so.
+
+        `uv build` on a package:false root cannot produce a wheel (no content
+        to ship) and fails the wheel step after wasting an sdist — the invest
+        root proof (92MB sdist, wheel failure, exit 2). The generated verb
+        must instead emit a typed receipt and exit zero. The `package` flag is
+        the fixture input; both branches are exercised across the twins.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, profile, package=False
+        )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+        tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=False)
+        tm.that(makefile, has="package=false (content-only root)")
+        # The noop verb itself must still exist in both profiles.
+        if profile is c.Infra.MakeProfile.WORKSPACE:
+            tm.that(makefile, has="_builtin-self-build:")
+        else:
+            tm.that(makefile, has="_builtin-self-build: _builtin_build_artifacts")
+            tm.that(makefile, has="_builtin_build_artifacts:")
 
     @pytest.mark.parametrize(
         "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
@@ -991,12 +1012,20 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
-        tm.that(makefile, has="upg: _bootstrap_setup_tools")
+        tm.that(makefile, has="upg: _builtin_require_runtime_root _bootstrap_setup_tools")
         tm.that(makefile, has="_builtin-fmt: _builtin_fmt_all")
         tm.that(makefile, has="_builtin-fix: _builtin_fix_all")
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
+        tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
         tm.that(
-            makefile, has="_builtin-self-fix-enforcement: _builtin_require_environment"
+            makefile, has="_builtin-self-fix-enforcement: _builtin_fix_enforcement"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace"
+        )
+        tm.that(
+            makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors"
         )
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
@@ -1013,6 +1042,21 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-gen: _builtin_gen_all")
         tm.that(makefile, has="_builtin-mod: _builtin_mod_apply")
         tm.that(makefile, has="mode=--apply ;;")
+        profile = c.Infra.MakeProfile.STANDALONE
+        for verb in config.Infra.codegen.make.verbs:
+            if profile not in verb.profiles:
+                continue
+            rendered = re.search(
+                rf"^_builtin-{re.escape(verb.name)}:(\s|$)"
+                rf"|^{re.escape(verb.name)}:(\s|$)",
+                makefile,
+                re.MULTILINE,
+            )
+            tm.that(
+                rendered is not None,
+                eq=True,
+                msg=f"declared verb {verb.name!r} renders no Make target",
+            )
         for forbidden in (
             "CHECK_ONLY",
             "APPLY",

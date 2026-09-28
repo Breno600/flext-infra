@@ -141,15 +141,22 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             {u.Infra.dep_name(item) for item in owned},
             eq={u.Infra.dep_name(item) for item in profile.runtime},
         )
+        toolchain = config.Infra.codegen.toolchain
         expected = tm.ok(
-            u.Infra.pyproject_dependencies_conform(
+            u.Infra.pyproject_conform(
                 '[project]\nname = "sample-member"\ndependencies = '
                 + u.Cli.toml_array(sorted(owned)).as_string()
                 + "\n",
                 workspace=tm.ok(
                     FlextInfraWorkspaceDetector.load_workspace_spec(member)
                 ),
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
+                required_dev_dependencies=(),
+                uv_resolution=m.Infra.UvResolutionSpec(
+                    link_mode=toolchain.uv_link_mode,
+                    constraint_dependencies=tuple(toolchain.uv_constraint_dependencies),
+                    exclude_dependencies=(),
+                    environments=tuple(toolchain.uv_environments),
+                ),
             )
         )
         tm.that(

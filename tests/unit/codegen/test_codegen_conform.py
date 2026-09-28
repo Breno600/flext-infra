@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+from importlib.resources import files
 from pathlib import Path
 from typing import override
 
@@ -24,7 +25,7 @@ from flext_infra.codegen import (
     FlextInfraMiseWorkspacePlanner,
 )
 from flext_infra.docs import FlextInfraDocGenerator
-from flext_infra.services.cli_routes_codegen import CodegenRoutes
+from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import c, m, p, t, u
 
@@ -108,7 +109,7 @@ class TestsFlextInfraCodegenConform:
             template, origin_url=u.Tests.repository_ref(config.Infra.name).url
         )
         TestsFlextInfraConformSupport.seed_infra_package_tree(template)
-        workspace = TestsFlextInfraConformSupport.standalone_workspace(template)
+        workspace = u.Tests.standalone_workspace(template, config.Infra.name)
         request = u.Tests.conform_request(
             template,
             scope=c.Infra.CodegenConformScope.SELF,
@@ -163,7 +164,7 @@ class TestsFlextInfraCodegenConform:
             tmp_path, scenario, conformed_template
         )
         if scenario == "lazy-failure":
-            package = root / "src" / "flext_demo"
+            package = root / "src" / config.Infra.name.replace("-", "_")
             obsolete = package / next(iter(sorted(c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES)))
             obsolete.symlink_to(root / "README.md")
         elif scenario == "docs-failure":
@@ -746,10 +747,73 @@ class TestsFlextInfraCodegenConform:
         tm.that((root / ".gitignore").is_file(), eq=True)
         tm.that((root / ".env.example").exists(), eq=False)
         tm.that(root / ".env.example" in applied.value.written_files, eq=False)
-        for name, mode in (("mise", 0o755), ("mise.cmd", 0o644)):
-            tm.that((root / "bin" / name).stat().st_mode & 0o777, eq=mode)
-        tm.ok(FlextInfraCodegenMiseArtifacts.validate_launchers(root))
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            tm.that((root / relative).stat().st_mode & 0o777, eq=mode)
+        tm.ok(
+            FlextInfraCodegenMiseArtifacts(repository_root=root).validate_artifacts(
+                root, root
+            )
+        )
 
+        fixed_point = FlextInfraCodegenConform.execute_request(
+            u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.CHECK,
+            )
+        )
+        tm.ok(fixed_point)
+        tm.that(fixed_point.value.written_files, eq=())
+
+    # Why (suite budget): one conform apply plus a check over a full managed
+    # tree on a real git repo; the per-case wall only holds idle.
+    @pytest.mark.slow
+    def test_pre_bake_launcher_projection_converges_to_packaged_triple(
+        self, infra_git_repo: Path
+    ) -> None:
+        """A consumer still carrying the pre-bake triple converges in one gen.
+
+        Its launchers resolve the latest release at run time and predate the
+        ``make upg`` recipe that bakes one, so generation publishes the
+        packaged baked triple instead of re-staging launchers its own
+        validation rejects on every run.
+        """
+        root = infra_git_repo
+        TestsFlextInfraConformSupport.seed_infra_package_tree(root)
+        pre_bake_launcher = (
+            f"#!/bin/sh\n# https://github.com/jdx/mise/"
+            f"{c.Infra.MISE_LATEST_RESOLUTION_MARKER}\n"
+        )
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    root / relative,
+                    "1.2.3\n"
+                    if relative == c.Infra.MISE_VERSION_PIN_FILENAME
+                    else pre_bake_launcher,
+                )
+            )
+            (root / relative).chmod(mode)
+        u.Tests.commit_git_changes(root, "Seed pre-bake Mise projection")
+
+        tm.ok(
+            FlextInfraCodegenConform.execute_request(
+                u.Tests.conform_request(
+                    root,
+                    scope=c.Infra.CodegenConformScope.SELF,
+                    mode=c.Infra.CodegenConformMode.APPLY,
+                )
+            )
+        )
+
+        packaged = files("flext_infra").joinpath(c.Infra.MISE_COLD_START_DIRECTORY)
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            tm.that(
+                (root / relative).read_bytes(),
+                eq=packaged.joinpath(Path(relative).name).read_bytes(),
+            )
+            tm.that((root / relative).stat().st_mode & 0o777, eq=mode)
+        tm.ok(FlextInfraCodegenMiseArtifacts(repository_root=root).execute(), eq=True)
         fixed_point = FlextInfraCodegenConform.execute_request(
             u.Tests.conform_request(
                 root,
@@ -880,7 +944,9 @@ class TestsFlextInfraCodegenConform:
         u.Tests.commit_git_changes(root, "Seed generated project")
         route = next(
             route
-            for route in CodegenRoutes.codegen_routes[c.Infra.CLI_GROUP_CODEGEN]
+            for route in FlextInfraCodegenRoutes.codegen_routes[
+                c.Infra.CLI_GROUP_CODEGEN
+            ]
             if route.name == "conform"
         )
         request = u.Tests.conform_request(

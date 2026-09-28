@@ -48,16 +48,3 @@ class TestsFlextInfraRootMakefileSingleOwner:
 
         tm.that(generic, has="{{ makefile_custom_include }}")
         tm.that(generic, lacks="workspace_custom.mk")
-
-    def test_clean_preserves_active_runtime_scratch(self) -> None:
-        """Clean leaves invocation scratch to each process cleanup trap."""
-        templates_root = Path(flext_infra.__file__).resolve().parent / "templates"
-        generic = (templates_root / "project" / "base" / "Makefile.j2").read_text(
-            encoding="utf-8"
-        )
-
-        tm.that(generic, lacks='find "$(PROJECT_SCRATCH_ROOT)" -depth -delete')
-        tm.that(
-            config.Infra.codegen.make.clean.root_files,
-            has="flext-infra-codegen-transaction-journal.json.lock",
-        )

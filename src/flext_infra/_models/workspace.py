@@ -8,8 +8,9 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from .. import c, t
-from . import FlextInfraConfigModels, FlextInfraModelsMixins as mm
+from ._config.base import FlextInfraConfigModels
 from ._git import FlextInfraModelsGitIdentity
+from .mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsWorkspace:

@@ -8,7 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraPyprojectModernizer
-from tests import c, u
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -85,7 +85,9 @@ class TestsFlextInfraDepsModernizerMainExtra:
 
         # The canonical docs-scope reader owns the typed invalid-TOML error and
         # names the file; the run lets it leave instead of logging an exit code.
-        with pytest.raises(ValueError, match="docs pyproject TOML is invalid") as raised:
+        with pytest.raises(
+            ValueError, match="docs pyproject TOML is invalid"
+        ) as raised:
             modernizer.run()
         tm.that(str(raised.value), has=str(selected_pyproject))
         tm.that(root_pyproject.read_bytes(), eq=root_before)
@@ -246,11 +248,18 @@ class TestsFlextInfraDepsModernizerMainExtra:
 
     def test_conform_source_preserves_taplo_process_error(self, tmp_path: Path) -> None:
         """Return the exact formatter process failure from the public conform path."""
+        u.Tests.write_mise_lock(
+            tmp_path, "taplo", u.Tests.pinned_mise_version(u.Tests.repo_mise_lock(), "taplo")
+        )
         (tmp_path / ".taplo.toml").write_text('include = ["/x/["]\n', encoding="utf-8")
         source = '[project]\nname = "sample"\nversion = "0.1.0"\n'
         modernizer = FlextInfraPyprojectModernizer(repository_root=tmp_path)
 
-        result = modernizer.conform_source(source, path=tmp_path / "pyproject.toml")
+        result = modernizer.conform_source(
+            source,
+            path=tmp_path / "pyproject.toml",
+            topology=m.Infra.PyprojectDeclaredTopology(),
+        )
 
         error = tm.fail(result)
         tm.that(error, has=["taplo format failed (1)", "invalid configuration", "/x/["])

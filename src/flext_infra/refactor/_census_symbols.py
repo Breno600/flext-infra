@@ -30,7 +30,7 @@ class FlextInfraRefactorCensusSymbolsMixin:
         if resource is None:
             return {}
         try:
-            attributes = u.Infra.get_pymodule(
+            attributes = u.Infra.resolve_pymodule(
                 rope.rope_project, resource
             ).get_attributes()
         except (
@@ -48,7 +48,7 @@ class FlextInfraRefactorCensusSymbolsMixin:
         object_kinds: MutableMapping[int, str] = {}
         candidates: list[t.Triple[int, str, t.Infra.RopePyName]] = []
         for name, pyname in attributes.items():
-            if u.Infra.is_imported_name(pyname):
+            if u.Infra.imported_name(pyname):
                 continue
             line = u.Infra.pyname_definition_line(pyname, resource)
             if line is None:
@@ -75,9 +75,9 @@ class FlextInfraRefactorCensusSymbolsMixin:
         inherited_kind = object_kinds.get(id(obj))
         if inherited_kind in {"class", "function"}:
             return inherited_kind
-        if u.Infra.is_abstract_class(obj):
+        if u.Infra.abstract_class(obj):
             return "class"
-        if u.Infra.is_py_function(obj):
+        if u.Infra.py_function(obj):
             return "function"
         return "constant" if name.isupper() else "assignment"
 

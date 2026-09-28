@@ -40,14 +40,12 @@ class FlextInfraUtilitiesPromotedWorkspace:
     @staticmethod
     def promoted_workspace_spec(root: Path) -> p.Infra.PromotedWorkspaceSpec:
         """Build the workspace spec owned by one explicit repository root."""
-        from flext_infra import m
+        from flext_infra import m, u
 
         return m.Infra.PromotedWorkspaceSpec(
             root=root,
             scripts=root / c.Infra.DIR_SCRIPTS,
-            local_python=root
-            / c.Infra.VENV_BIN_REL
-            / c.Infra.PromotedSelector.VENV_PYTHON,
+            local_python=u.Infra.runtime_python(root),
         )
 
     @classmethod

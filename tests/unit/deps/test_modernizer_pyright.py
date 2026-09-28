@@ -12,12 +12,10 @@ from flext_infra import (
     FlextInfraPyprojectModernizer,
     u as infra_u,
 )
-from tests import t, u
+from tests import m, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from tests import m
 
 
 class TestsFlextInfraDepsModernizerPyright:
@@ -26,27 +24,12 @@ class TestsFlextInfraDepsModernizerPyright:
     @staticmethod
     def _applied(
         tool_config_document: m.Infra.ToolConfigDocument,
-        *,
-        is_root: bool,
-        repository_root: Path | None = None,
-        project_dir: Path | None = None,
-        declared_python_dirs: t.StrSequence = (),
-        declared_python_dirs_are_complete: bool = False,
+        context: m.Infra.PyprojectAnalyzerContext,
     ) -> t.JsonMapping:
         """Apply the phase twice to an empty payload; return the converged table."""
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python({})
         phase = FlextInfraEnsurePyrightConfigPhase(tool_config_document)
-        changes = [
-            phase.apply_payload(
-                payload,
-                is_root=is_root,
-                repository_root=repository_root,
-                project_dir=project_dir,
-                declared_python_dirs=declared_python_dirs,
-                declared_python_dirs_are_complete=declared_python_dirs_are_complete,
-            )
-            for _ in range(2)
-        ]
+        changes = [phase.apply_payload(payload, context=context) for _ in range(2)]
         tm.that(changes[0], empty=False)
         tm.that(changes[1], empty=True)
         pyright = u.Tests.toml_mapping(u.Tests.toml_mapping(payload["tool"])["pyright"])
@@ -143,7 +126,8 @@ class TestsFlextInfraDepsModernizerPyright:
         )
 
         pyright = self._applied(
-            tool_config_document, is_root=True, repository_root=tmp_path
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=True, repository_root=tmp_path),
         )
 
         tm.that(
@@ -200,7 +184,8 @@ class TestsFlextInfraDepsModernizerPyright:
         u.Tests.declare_workspace_projects(tmp_path, ("flext-core", "flext-api"))
         u.Tests.write_project_beads_config(tmp_path, "workspace")
         pyright = self._applied(
-            tool_config_document, is_root=True, repository_root=tmp_path
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=True, repository_root=tmp_path),
         )
         envs = pyright["executionEnvironments"]
         tm.that(envs, is_=Sequence)
@@ -230,7 +215,9 @@ class TestsFlextInfraDepsModernizerPyright:
         pyright_rules = tool_config_document.tools.pyright
         rules = pyright_rules.path_rules
 
-        pyright = self._applied(tool_config_document, is_root=False)
+        pyright = self._applied(
+            tool_config_document, m.Infra.PyprojectAnalyzerContext(is_root=False)
+        )
 
         tm.that(
             sorted(u.Tests.toml_strings(pyright["include"])), eq=sorted(rules.env_dirs)
@@ -283,7 +270,8 @@ class TestsFlextInfraDepsModernizerPyright:
         )
 
         pyright = self._applied(
-            tool_config_document, is_root=False, project_dir=project_dir
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=False, project_dir=project_dir),
         )
 
         if rules.ignored_diagnostic_globs:
@@ -318,8 +306,10 @@ class TestsFlextInfraDepsModernizerPyright:
             ).conform_source(
                 pyproject.read_text(encoding="utf-8"),
                 path=pyproject,
-                declared_python_dirs=(rules.source_dir, rules.test_like_dirs[0]),
-                declared_python_dirs_are_complete=True,
+                topology=m.Infra.PyprojectDeclaredTopology(
+                    declared_python_dirs=(rules.source_dir, rules.test_like_dirs[0]),
+                    declared_python_dirs_are_complete=True,
+                ),
             )
         )
 
@@ -337,9 +327,11 @@ class TestsFlextInfraDepsModernizerPyright:
 
         pyright = self._applied(
             tool_config_document,
-            is_root=False,
-            project_dir=project_dir,
-            declared_python_dirs_are_complete=True,
+            m.Infra.PyprojectAnalyzerContext(
+                is_root=False,
+                project_dir=project_dir,
+                declared_python_dirs_are_complete=True,
+            ),
         )
 
         tm.that(pyright, lacks="include")
@@ -353,13 +345,16 @@ class TestsFlextInfraDepsModernizerPyright:
         self._workspace(tmp_path, "flext-core")
 
         fleet = self._applied(
-            tool_config_document, is_root=True, repository_root=tmp_path
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=True, repository_root=tmp_path),
         )
         declared = self._applied(
             tool_config_document,
-            is_root=True,
-            repository_root=tmp_path,
-            declared_python_dirs=(rules.source_dir,),
+            m.Infra.PyprojectAnalyzerContext(
+                is_root=True,
+                repository_root=tmp_path,
+                declared_python_dirs=(rules.source_dir,),
+            ),
         )
 
         tm.that(declared, eq=fleet)
@@ -390,7 +385,8 @@ class TestsFlextInfraDepsModernizerPyright:
         declared = tuple(d for d in rules.env_dirs if d in discovered)
 
         pyright = self._applied(
-            tool_config_document, is_root=False, project_dir=tmp_path
+            tool_config_document,
+            m.Infra.PyprojectAnalyzerContext(is_root=False, project_dir=tmp_path),
         )
 
         tm.that(

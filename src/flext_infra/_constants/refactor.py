@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from collections.abc import MutableMapping, Sequence
 from enum import StrEnum, unique
 from pathlib import Path
 from types import MappingProxyType
@@ -15,28 +14,6 @@ from .base import FlextInfraConstantsBase as cb
 
 if TYPE_CHECKING:
     from flext_infra import t
-
-
-def _build_namespace_file_to_family(
-    mapping: Sequence[t.Pair[str, Sequence[str]]],
-) -> t.StrMapping:
-    """Build file name → family alias mapping from (alias, file_names) pairs."""
-    result: MutableMapping[str, str] = {}
-    for alias, file_names in mapping:
-        for file_name in file_names:
-            result[file_name] = alias
-    return MappingProxyType(result)
-
-
-def _build_namespace_family_expected_alias(
-    mapping: Sequence[t.Pair[str, Sequence[str]]], suffixes: t.StrMapping
-) -> t.MappingKV[str, t.StrPair]:
-    """Build file name → (alias, suffix) mapping from family specs."""
-    result: MutableMapping[str, t.StrPair] = {}
-    for alias, file_names in mapping:
-        for file_name in file_names:
-            result[file_name] = (alias, suffixes[alias])
-    return MappingProxyType(result)
 
 
 class FlextInfraConstantsRefactor:
@@ -266,27 +243,14 @@ class FlextInfraConstantsRefactor:
         "u": "utilities",
     })
     "Facade family letter → public facade module suffix mapping."
-    NAMESPACE_FILE_TO_FAMILY: ClassVar[t.StrMapping] = _build_namespace_file_to_family((
-        ("c", tuple(FLEXT_CONSTANTS_FILE_NAMES)),
-        ("t", tuple(FLEXT_TYPINGS_FILE_NAMES)),
-        ("p", tuple(FLEXT_PROTOCOLS_FILE_NAMES)),
-        ("m", tuple(FLEXT_MODELS_FILE_NAMES)),
-        ("u", tuple(FLEXT_UTILITIES_FILE_NAMES)),
-    ))
-    "Canonical facade file name → family alias mapping."
-    NAMESPACE_FAMILY_EXPECTED_ALIAS: ClassVar[t.MappingKV[str, t.StrPair]] = (
-        _build_namespace_family_expected_alias(
-            (
-                ("c", tuple(FLEXT_CONSTANTS_FILE_NAMES)),
-                ("t", tuple(FLEXT_TYPINGS_FILE_NAMES)),
-                ("p", tuple(FLEXT_PROTOCOLS_FILE_NAMES)),
-                ("m", tuple(FLEXT_MODELS_FILE_NAMES)),
-                ("u", tuple(FLEXT_UTILITIES_FILE_NAMES)),
-            ),
-            FAMILY_SUFFIXES,
-        )
+    NAMESPACE_FILE_TO_FAMILY: ClassVar[t.StrMapping] = MappingProxyType(
+        dict.fromkeys(FLEXT_CONSTANTS_FILE_NAMES, "c")
+        | dict.fromkeys(FLEXT_TYPINGS_FILE_NAMES, "t")
+        | dict.fromkeys(FLEXT_PROTOCOLS_FILE_NAMES, "p")
+        | dict.fromkeys(FLEXT_MODELS_FILE_NAMES, "m")
+        | dict.fromkeys(FLEXT_UTILITIES_FILE_NAMES, "u")
     )
-    "Canonical facade file name → expected (alias, suffix) pair."
+    "Canonical facade file name → family alias mapping."
     FLEXT_FAMILIES: ClassVar[frozenset[str]] = frozenset({"c", "t", "p", "m", "u"})
     "All FLEXT families."
     DOMAIN_PACKAGES: ClassVar[frozenset[str]] = frozenset({

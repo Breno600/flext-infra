@@ -20,11 +20,14 @@ class FlextInfraModelsCheck:
 
         Inherits canonical ``repository_root`` (``--repository-root``),
         ``gates`` (parsed to ``t.StrSequence``), ``apply``/``dry_run``,
-        ``projects``, ``fail_fast``, ``verbose`` from ``WriteMixin``; the scope
+        ``projects`` and ``verbose`` from ``WriteMixin``; the scope
         root has exactly one owner so an unmapped option can never fall back
         to the current directory.
         """
 
+        fail_fast: Annotated[
+            bool, m.Field(description="Stop check gates after the first failure")
+        ] = c.Infra.CHECK_FAIL_FAST_DEFAULT
         reports_dir: Annotated[
             str,
             m.Field(
@@ -105,11 +108,37 @@ class FlextInfraModelsCheck:
             """Validated memory limit converted to bytes for the platform owner."""
             return self.memory_limit_mb * 1024 * 1024
 
+    class MypyInvocation(m.ContractModel):
+        """Checker inputs; callers cannot select an executable or Python program."""
+
+        targets: Annotated[
+            t.VariadicTuple[Path],
+            m.Field(min_length=1, description="Files or directories to check"),
+        ]
+        workspace: Annotated[
+            Path | None, m.Field(description="Workspace owning the checker environment")
+        ] = None
+        config_file: Annotated[
+            Path | None, m.Field(description="Owned Mypy configuration")
+        ] = None
+        report_json: Annotated[
+            bool, m.Field(description="Emit native JSON diagnostics")
+        ] = False
+        verbose: Annotated[bool, m.Field(description="Emit Mypy progress")] = False
+        profile_output: Annotated[
+            Path | None, m.Field(description="Optional cProfile output destination")
+        ] = None
+
     class FixPyreflyConfigCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
 
     class FixEnforcementCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-enforcement``."""
+
+        @property
+        def fail_fast(self) -> bool:
+            """Share the service's fail-fast invariant with gate adapters."""
+            return c.Infra.SERVICE_FAIL_FAST
 
         rules: Annotated[
             t.StrSequence,

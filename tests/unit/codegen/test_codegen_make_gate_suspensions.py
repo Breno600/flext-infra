@@ -14,6 +14,71 @@ from tests import c, m, t, u
 class TestsFlextInfraCodegenMakeGateSuspensions:
     """One typed gate universe drives local, CI, and hook execution."""
 
+    def test_default_policy_renders_every_recorded_suspension_receipt(
+        self, tmp_path: Path
+    ) -> None:
+        """The shipped policy renders exactly its recorded suspension receipts.
+
+        The Makefile projection mirrors ``check_gate_suspensions`` whatever it
+        holds: zero suspensions render no receipt line, and every recorded
+        suspension renders its gate, authority, and reason.
+        """
+        root, _ = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.STANDALONE
+        )
+        makefile = (root / c.Infra.MAKEFILE_FILENAME).read_text(encoding="utf-8")
+
+        policy = config.Infra.codegen.make
+        tm.that(
+            makefile.count("SUSPENDED check gate"),
+            eq=len(policy.check_gate_suspensions),
+        )
+        for suspension in policy.check_gate_suspensions:
+            tm.that(
+                makefile,
+                has=(
+                    f"INFO: SUSPENDED check gate {suspension.gate}; "
+                    f"authority={suspension.authority}; reason={suspension.reason}"
+                ),
+            )
+
+    def test_suspension_without_census_families_keeps_the_field_empty(self) -> None:
+        """A suspension that maps no census family parses with an empty map."""
+        payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)
+        payload["check_gate_suspensions"] = (
+            {
+                "gate": config.Infra.codegen.make.check_gates_allowed[0],
+                "authority": "fixture authorization",
+                "reason": "fixture decision",
+            },
+        )
+
+        active = m.Infra.MakeSpec.model_validate(payload)
+
+        tm.that(active.check_gate_suspensions[0].census_rule_families, eq=())
+
+    def test_census_families_must_belong_to_exactly_one_suspension(self) -> None:
+        """Two suspensions claiming the same census family fail validation."""
+        payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)
+        allowed = config.Infra.codegen.make.check_gates_allowed
+        payload["check_gate_suspensions"] = (
+            {
+                "gate": allowed[0],
+                "authority": "fixture authorization",
+                "reason": "fixture decision",
+                "census_rule_families": ["fixture-family"],
+            },
+            {
+                "gate": allowed[1],
+                "authority": "fixture authorization",
+                "reason": "fixture decision",
+                "census_rule_families": ["fixture-family", "fixture-other"],
+            },
+        )
+
+        with pytest.raises(m.ValidationError):
+            m.Infra.MakeSpec.model_validate(payload)
+
     @pytest.mark.parametrize("local_count", [0, 1, 3])
     def test_project_gates_and_suspensions_share_the_ci_partition(
         self, local_count: int

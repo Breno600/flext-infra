@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra import c, u
+from flext_infra import c, p, u
 
 from .base import FlextInfraNamespaceRulesBase
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, t
+    from flext_infra import m, t
 
 
 class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
@@ -19,7 +19,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
 
     @classmethod
     def check_contracts(
-        cls, tree: p.AttributeProbe, filepath: Path, *, source: str
+        cls, visit: m.Infra.RopeModuleVisit, filepath: Path
     ) -> t.StrSequence:
         """Return contract and clean-architecture violations."""
         posix = filepath.as_posix()
@@ -29,7 +29,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
             # ADR-0018 stdlib island: no flext typing surface is importable.
             return []
         messages: list[str] = []
-        imported_names = u.Infra.imported_callable_names(source)
+        tree = visit.tree
         for node in cls.walk(tree):
             kind = cls.kind(node)
             if kind in {"FunctionDef", "AsyncFunctionDef"}:
@@ -37,12 +37,12 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
                 for decorator in getattr(node, "decorator_list", ()) or ():
                     if cls.kind(decorator) != "Call":
                         messages.extend(
-                            cls._legacy_decorator(decorator, filepath, imported_names)
+                            cls._legacy_decorator(decorator, filepath, visit)
                         )
             if kind in {"AnnAssign", "arg", "FunctionDef", "AsyncFunctionDef"}:
                 messages.extend(cls._annotation_contract(node, filepath))
             if kind == "Call":
-                messages.extend(cls._call_contract(node, filepath, imported_names))
+                messages.extend(cls._call_contract(node, filepath, visit))
         messages.extend(cls._composition_root(tree, filepath))
         return cls.violations("NS-CONTRACT", messages)
 
@@ -136,10 +136,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
 
     @classmethod
     def _call_contract(
-        cls,
-        node: p.AttributeProbe,
-        filepath: Path,
-        imported_names: t.MappingKV[t.Pair[int, int], frozenset[str]],
+        cls, node: p.AttributeProbe, filepath: Path, visit: m.Infra.RopeModuleVisit
     ) -> t.StrSequence:
         """Reject legacy Pydantic calls and service-locator access."""
         callable_node = getattr(node, "func", None)
@@ -154,7 +151,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
                 f"{filepath}:{cls.line(node)} — legacy Pydantic member {name!r}; "
                 "use Pydantic v2"
             )
-        messages.extend(cls._legacy_decorator(callable_node, filepath, imported_names))
+        messages.extend(cls._legacy_decorator(callable_node, filepath, visit))
         if name in c.Infra.NAMESPACE_SERVICE_LOCATOR_NAMES:
             messages.append(
                 f"{filepath}:{cls.line(node)} — service locator {name!r} is forbidden; "
@@ -164,26 +161,41 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
 
     @classmethod
     def _legacy_decorator(
-        cls,
-        node: p.AttributeProbe,
-        filepath: Path,
-        imported_names: t.MappingKV[t.Pair[int, int], frozenset[str]],
+        cls, node: p.AttributeProbe, filepath: Path, visit: m.Infra.RopeModuleVisit
     ) -> t.StrSequence:
         """Reject imported Pydantic v1 decorators, never same-spelled local bindings."""
         if cls.kind(node) not in {"Name", "Attribute"}:
             return ()
-        names = imported_names.get(
-            (cls.line(node), getattr(node, "col_offset", 0)), frozenset()
-        )
-        return tuple(
-            f"{filepath}:{cls.line(node)} — legacy Pydantic member {member!r}; "
-            "use Pydantic v2"
-            for member in sorted({
-                name.rpartition(".")[2]
-                for name in names
-                if name.startswith("pydantic.")
-                and name.rpartition(".")[2] in c.Infra.NAMESPACE_PYDANTIC_V1_DECORATORS
-            })
+        root = node
+        while cls.kind(root) == "Attribute":
+            root = getattr(root, "value", None)
+        if not isinstance(root, p.Infra.RopeAstNode):
+            return ()
+        offset = u.Infra.source_offset(visit.source, root)
+        scope = u.Infra.scope_at(visit.pymodule, offset)
+        binding = u.Infra.resolve_symbol(scope, root)
+        imported_module = ""
+        member = ""
+        if isinstance(binding, p.Infra.RopeImportedName):
+            imported_module = binding.imported_module.module_name or ""
+            if root is node:
+                member = binding.imported_name
+            else:
+                member = cls.name_of(node)
+                if imported_module == "pydantic" and binding.imported_name == "v1":
+                    imported_module = "pydantic.v1"
+        elif isinstance(binding, p.Infra.RopeImportedModule):
+            imported_module = binding.module_name or ""
+            member = cls.name_of(node)
+        if imported_module not in {"pydantic", "pydantic.v1"} or (
+            member not in c.Infra.NAMESPACE_PYDANTIC_V1_DECORATORS
+        ):
+            return ()
+        return (
+            (
+                f"{filepath}:{cls.line(node)} — legacy Pydantic member {member!r}; "
+                "use Pydantic v2"
+            ),
         )
 
     @classmethod

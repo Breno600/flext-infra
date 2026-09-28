@@ -6,7 +6,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import u
+from flext_infra.api import infra
+from tests import m, u
 
 
 class TestsFlextInfraRule2TypingsFacade:
@@ -18,7 +19,9 @@ class TestsFlextInfraRule2TypingsFacade:
             module_source=u.Tests.namespace_fixture("rule2_valid_types.pysrc"),
             module_name="typings.py",
         )
-        u.Tests.assert_namespace_valid(root)
+        u.Tests.assert_namespace_valid(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
     def test_rule2_typevar_runtime_module_detected(self, tmp_path: Path) -> None:
         root = u.Tests.namespace_project(
@@ -27,9 +30,10 @@ class TestsFlextInfraRule2TypingsFacade:
             module_name="base.py",
         )
 
-        result = u.Tests.namespace_validator().validate_project(root)
+        request = m.Infra.NamespaceValidateCommand(repository_root=root)
+        result = infra.validate_namespace(request)
 
         tm.ok(result)
         u.Tests.assert_namespace_violation_contains(
-            root, "module alias/data declaration is forbidden"
+            request, "module alias/data declaration is forbidden"
         )

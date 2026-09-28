@@ -104,15 +104,13 @@ class TestsFlextInfraTransactionLease:
             before = tm.ok(
                 u.Cli.atomic_read_binary_file_state(config_path, required=True)
             )
-            plan = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    config_path,
-                    required=True,
-                    desired_content=before.content,
-                    desired_mode=before.mode,
-                    owner="mise",
-                )
+            plan = m.Infra.CodegenFilePlan(
+                project=root,
+                path=config_path,
+                before=before,
+                desired_content=before.content,
+                desired_mode=before.mode,
+                owner="mise",
             )
             session = tm.ok(transaction.begin_locked(scope_root, (plan,), (plan,)))
             ready.set()
@@ -122,7 +120,7 @@ class TestsFlextInfraTransactionLease:
             )
             tm.ok(
                 transaction.commit_locked(
-                    session, lambda: owner.validate_artifacts(root)
+                    session, lambda: owner.validate_artifacts(root, scope_root)
                 )
             )
             return r[bool].ok(True)
@@ -198,7 +196,10 @@ class TestsFlextInfraTransactionLease:
             )
             tm.ok(
                 FlextInfraCodegenTransaction(independent_owner).run_locked(
-                    prepare=True, operation=independent_owner.validate_artifacts
+                    prepare=True,
+                    operation=lambda scope: independent_owner.validate_artifacts(
+                        independent, scope
+                    ),
                 )
             )
             tm.that(journal_path.read_bytes(), eq=journal_before)
@@ -233,7 +234,8 @@ class TestsFlextInfraTransactionLease:
         owner = FlextInfraCodegenMiseArtifacts(repository_root=member)
         tm.ok(
             FlextInfraCodegenTransaction(owner).run_locked(
-                prepare=True, operation=lambda _scope: owner.validate_artifacts(member)
+                prepare=True,
+                operation=lambda scope: owner.validate_artifacts(member, scope),
             )
         )
         tm.that(lock_path.stat().st_ino, eq=lock_after.st_ino)
@@ -243,23 +245,31 @@ class TestsFlextInfraTransactionLease:
     ) -> None:
         """Leasing a publication root adds no entry beside its tracked content."""
         root = test_u.Tests.git_repository(tmp_path)
+        participant_root = root / "docs"
+        participant_root.mkdir()
         test_u.Tests.copy_tracked_mise_seeds(root)
-        before = {path.name for path in root.iterdir()}
+        before = {path.name for path in participant_root.iterdir()}
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root)
         )
 
-        tm.ok(transaction.run_files_locked({"@docs-0": root}, self._ok_path))
-        tm.ok(transaction.run_files_locked({"@docs-0": root}, self._ok_path))
+        tm.ok(
+            transaction.run_files_locked({"@docs-0": participant_root}, self._ok_path)
+        )
+        tm.ok(
+            transaction.run_files_locked({"@docs-0": participant_root}, self._ok_path)
+        )
 
         tm.that(
-            {path.name for path in root.iterdir()} - before,
+            {path.name for path in participant_root.iterdir()} - before,
             eq={c.Infra.TRANSACTION_STATE_DIRNAME},
         )
         tm.that(
             [
                 path.name
-                for path in (root / c.Infra.TRANSACTION_STATE_DIRNAME).iterdir()
+                for path in (
+                    participant_root / c.Infra.TRANSACTION_STATE_DIRNAME
+                ).iterdir()
             ],
             eq=[f"{c.Infra.JOURNAL_NAME}.lock"],
         )

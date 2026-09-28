@@ -13,7 +13,7 @@ from libcst.metadata import MetadataWrapper, ParentNodeProvider, QualifiedNamePr
 from ..qualified_names import FlextInfraUtilitiesQualifiedNames
 
 if TYPE_CHECKING:
-    from flext_infra import t
+    from flext_infra import m, t
 
 
 class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
@@ -76,20 +76,8 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
     class _PrivateImportTransformer(cst.CSTTransformer):
         METADATA_DEPENDENCIES = (ParentNodeProvider, QualifiedNameProvider)
 
-        def __init__(
-            self,
-            *,
-            relative_imports: t.StrMapping,
-            removals: t.MappingKV[str, frozenset[str]],
-            obsolete_imports: t.MappingKV[str, frozenset[str]],
-            replacements: t.StrMapping,
-            public_imports: t.StrMapping,
-        ) -> None:
-            self.relative_imports = relative_imports
-            self.removals = removals
-            self.obsolete_imports = obsolete_imports
-            self.replacements = replacements
-            self.public_imports = dict(public_imports)
+        def __init__(self, plan: m.Infra.PrivateImportRewritePlan) -> None:
+            self.plan = plan
 
         @override
         def leave_Name(
@@ -101,7 +89,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                 for qualified_name in self.get_metadata(
                     QualifiedNameProvider, original_node, ()
                 )
-                if (replacement := self.replacements.get(qualified_name.name))
+                if (replacement := self.plan.replacements.get(qualified_name.name))
                 is not None
             }
             if not targets:
@@ -139,7 +127,7 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
             """Relativize same-owner imports or remove cross-owner bindings."""
             module = FlextInfraUtilitiesQualifiedNames.dotted_name(original_node.module)
             module_name = module or ""
-            relative_module = self.relative_imports.get(module_name)
+            relative_module = self.plan.relative_imports.get(module_name)
             if relative_module is not None:
                 relative_level = len(relative_module) - len(relative_module.lstrip("."))
                 relative_name = relative_module[relative_level:]
@@ -149,12 +137,12 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
                         cst.parse_expression(relative_name) if relative_name else None
                     ),
                 )
-            removed = self.removals.get(
+            removed = self.plan.removals.get(
                 module_name, frozenset()
-            ) | self.obsolete_imports.get(module_name, frozenset())
+            ) | self.plan.obsolete_imports.get(module_name, frozenset())
             canonical = {
                 alias
-                for alias, package in self.public_imports.items()
+                for alias, package in self.plan.public_imports.items()
                 if package == module_name
             }
             if isinstance(updated_node.names, cst.ImportStar) or (
@@ -215,22 +203,13 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImportCst:
     def _rewrite_private_import_source(
         cls,
         source: str,
+        plan: m.Infra.PrivateImportRewritePlan,
         *,
-        relative_imports: t.StrMapping,
-        removals: t.MappingKV[str, frozenset[str]],
-        obsolete_imports: t.MappingKV[str, frozenset[str]],
-        replacements: t.StrMapping,
-        public_imports: t.StrMapping,
         runtime_public_imports: frozenset[str],
     ) -> str:
         """Return a binding-proven rewrite with required public imports."""
-        transformer = cls._PrivateImportTransformer(
-            relative_imports=relative_imports,
-            removals=removals,
-            obsolete_imports=obsolete_imports,
-            replacements=replacements,
-            public_imports=public_imports,
-        )
+        public_imports = plan.public_imports
+        transformer = cls._PrivateImportTransformer(plan)
         rewritten = MetadataWrapper(cst.parse_module(source)).visit(transformer)
         context = CodemodContext()
         for facade_alias in sorted(runtime_public_imports):

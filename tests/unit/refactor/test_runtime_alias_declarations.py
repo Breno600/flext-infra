@@ -54,8 +54,7 @@ class TestsFlextInfraRuntimeAliasDeclarations:
         with infra.rope_workspace(repository) as rope:
             resource = tm.not_none(rope.resource(source))
             tm.that(
-                u.Infra.published_facade_owner(rope.rope_project, resource),
-                none=True,
+                u.Infra.published_facade_owner(rope.rope_project, resource), none=True
             )
             tm.that(
                 u.Infra.publication_policy(
@@ -75,7 +74,7 @@ class TestsFlextInfraRuntimeAliasDeclarations:
             "from flext_declarations.owner import Parent as Renamed\n\n"
             "class Local(Renamed):\n"
             "    capability = 'nested data must survive'\n\n"
-            "__all__: list[str] = [\n    'Local',\n]\n",
+            "__all__: list[str] = [\n    'Local',\n    'capability',\n]\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         with infra.rope_workspace(repository) as rope:
@@ -120,10 +119,9 @@ class TestsFlextInfraRuntimeAliasDeclarations:
             layout = tm.not_none(rope.layout(repository))
             tm.that(
                 FlextInfraNamespaceValidator.check_structure(
-                    u.Infra.get_pymodule(rope.rope_project, resource).get_ast(),
+                    u.Infra.resolve_pymodule(rope.rope_project, resource).get_ast(),
                     source.relative_to(repository),
                     class_stem=layout.class_stem,
-                    is_test_file=False,
                     source=repaired,
                     policy=policy,
                 ),
@@ -214,7 +212,7 @@ class TestsFlextInfraRuntimeAliasDeclarations:
         with infra.rope_workspace(repository) as rope:
             resource = tm.not_none(rope.resource(source))
             tm.that(
-                u.Infra.get_module_classes(rope.rope_project, resource), eq=("Api",)
+                u.Infra.resolve_module_classes(rope.rope_project, resource), eq=("Api",)
             )
             tm.that(
                 u.Infra.declared_facade_owner(rope.rope_project, resource), none=True
@@ -272,7 +270,7 @@ class TestsFlextInfraRuntimeAliasDeclarations:
             tm.that(policy.expected_alias, none=True)
             resource = tm.not_none(rope.resource(source))
             tm.that(
-                u.Infra.get_declared_module_imports(rope.rope_project, resource)[
+                u.Infra.resolve_declared_module_imports(rope.rope_project, resource)[
                     "Settings"
                 ],
                 eq="flext_declarations.Settings",

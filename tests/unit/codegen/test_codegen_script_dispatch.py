@@ -283,6 +283,41 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that(rendered, lacks="_builtin_work_")
         tm.that(rendered, lacks="workspace work")
 
+    def test_profile_test_verb_profiles_the_canonical_pytest_entry(
+        self, tmp_path: Path
+    ) -> None:
+        """profile-test wraps the canonical pytest entry under cProfile, unbounded.
+
+        Cold-run diagnosis (flext-itpd1.3.7) needs the same persistent testmon
+        database guard and environment as the bounded gate, but the diagnostic
+        must complete and dump its pstats artifact, so the gate's
+        PYTEST_BOUNDED wall clock never applies to it.
+        """
+        rendered = self._render_root_makefile(
+            tmp_path, extra_verbs=(), script_dispatch=None
+        )
+        tm.that(
+            rendered, has=[".PHONY: profile-test\n", ".PHONY: profile-test-report\n"]
+        )
+        profile_test = rendered.split("profile-test:", 1)[1].split("\n\n", 1)[0]
+        gate_runner = rendered.split("_builtin_test_all:", 1)[1].split("\n\n", 1)[0]
+        datafile = config.Infra.codegen.make.testmon_cache.database_environment_variable
+        # The diagnostic reuses the canonical runner's testmon database guard
+        # and exports the same database environment.
+        tm.that(profile_test, has='database="$(FLEXT_PYTEST_TESTMON_DATABASE)";')
+        tm.that(profile_test, has=f'{datafile}="$$database"')
+        # It profiles the real entry facade with a clean argv and dumps the
+        # profile artifact beside the other profile reports.
+        tm.that(profile_test, has="FlextInfraPytestEntry.main")
+        tm.that(profile_test, has="sys.argv = [sys.argv[0]]")
+        tm.that(profile_test, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
+        # Only the bounded gate owns the hard pytest wall clock.
+        tm.that(profile_test, lacks="PYTEST_BOUNDED")
+        tm.that(gate_runner, has="PYTEST_BOUNDED")
+        report = rendered.split("profile-test-report:", 1)[1].split("\n\n", 1)[0]
+        tm.that(report, has='sort_stats("cumtime").print_stats(50)')
+        tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
+
     # A test asserting a downstream consumer's verbs from this
     # engine's catalog was removed. The engine is consumer-agnostic: a consumer
     # declares extra_verbs/script_dispatch in its own typed repository input. The

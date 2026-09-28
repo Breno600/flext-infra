@@ -74,7 +74,7 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
         constants_path = context.pkg_dir / c.Infra.CONSTANTS_PY
         resource = self.rope_workspace.resource(constants_path)
         if resource is not None:
-            imports = u.Infra.get_declared_module_imports(
+            imports = u.Infra.resolve_declared_module_imports(
                 self.rope_workspace.rope_project, resource
             )
             if any(

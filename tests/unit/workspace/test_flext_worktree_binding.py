@@ -1,4 +1,4 @@
-"""``FLEXT=<worktree>`` rebinds an external consumer onto one flext checkout.
+"""The explicit binding CLI rebinds a consumer onto one flext checkout.
 
 An external project declares flext packages by pinned git URL, so it validates
 PUBLISHED code and never the checkout being worked on. Reviewing a cross-project
@@ -6,18 +6,20 @@ change then required publishing first, which is backwards.
 
 The binding is a SESSION override, not a declaration: the consumer's
 ``pyproject.toml`` keeps its pins untouched, so nothing local is ever committed
-and dropping the flag restores the pinned resolution. Which distributions get
+and canonical setup restores the pinned resolution. Which distributions get
 rebound is derived from the worktree's own manifest, never a hardcoded list.
 """
 
 from __future__ import annotations
 
+import sys
+import sysconfig
 from pathlib import Path
 
 from flext_tests import tm
 
 from flext_core import p as core_p
-from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
+from flext_infra import FlextInfraFlextBindingService, c, config
 from tests import t, u
 
 
@@ -44,7 +46,24 @@ class TestsFlextInfraWorktreeBinding:
             "]\n",
             encoding="utf-8",
         )
+        u.Tests.initialize_git_repo(consumer)
+        tm.ok(u.Tests.create_python_environment(consumer))
         return consumer
+
+    @staticmethod
+    def _python(consumer: Path) -> Path:
+        """Use the fixture consumer's physical environment."""
+        environment = u.Infra.runtime_environment_dir(consumer)
+        return (
+            Path(
+                sysconfig.get_path(
+                    "scripts",
+                    scheme="venv",
+                    vars={"base": str(environment), "platbase": str(environment)},
+                )
+            )
+            / c.Infra.PromotedSelector.VENV_PYTHON
+        )
 
     @staticmethod
     def _flext_workspace(tmp_path: Path) -> Path:
@@ -93,7 +112,9 @@ class TestsFlextInfraWorktreeBinding:
 
         planned: core_p.Result[t.VariadicTuple[str]] = (
             FlextInfraFlextBindingService.plan_targets(
-                consumer_root=consumer, flext_root=self._flext_workspace(tmp_path)
+                consumer_root=consumer,
+                flext_root=self._flext_workspace(tmp_path),
+                python=self._python(consumer),
             )
         )
 
@@ -109,16 +130,16 @@ class TestsFlextInfraWorktreeBinding:
         not_flext.mkdir()
 
         planned = FlextInfraFlextBindingService.plan_targets(
-            consumer_root=consumer, flext_root=not_flext
+            consumer_root=consumer, flext_root=not_flext, python=self._python(consumer)
         )
 
         tm.that(planned.failure, eq=True)
         tm.that(planned.error or "", has="workspace")
 
-    def test_a_consumer_without_flext_dependencies_binds_nothing(
+    def test_a_consumer_without_flext_dependencies_rejects_empty_binding(
         self, tmp_path: Path
     ) -> None:
-        """No flext dependency means no rebind, not an error."""
+        """An explicit request cannot succeed without selecting a supplier."""
         consumer = tmp_path / "plain"
         consumer.mkdir()
         (consumer / "pyproject.toml").write_text(
@@ -126,9 +147,75 @@ class TestsFlextInfraWorktreeBinding:
             'requires-python = ">=3.13"\ndependencies = ["httpx>=0.27"]\n',
             encoding="utf-8",
         )
+        u.Tests.initialize_git_repo(consumer)
+        tm.ok(u.Tests.create_python_environment(consumer))
 
         planned = FlextInfraFlextBindingService.plan_targets(
-            consumer_root=consumer, flext_root=self._flext_workspace(tmp_path)
+            consumer_root=consumer,
+            flext_root=self._flext_workspace(tmp_path),
+            python=self._python(consumer),
         )
 
-        tm.that(tm.ok(planned), eq=())
+        tm.that(planned.failure, eq=True)
+        tm.that(planned.error or "", has="no active declared dependency")
+
+    def test_binding_rejects_foreign_interpreter(self, tmp_path: Path) -> None:
+        """A valid supplier cannot redirect installation to the running agent."""
+        consumer = self._consumer(tmp_path)
+        result = FlextInfraFlextBindingService.consumer_marker_environment(
+            consumer_root=consumer, python=Path(sys.executable)
+        )
+        tm.that(result.failure, eq=True)
+        tm.that(result.error or "", has="must belong to the consumer")
+
+    def test_consumer_markers_match_the_actual_interpreter(
+        self, tmp_path: Path
+    ) -> None:
+        """Marker selection uses full consumer interpreter facts."""
+        consumer = self._consumer(tmp_path)
+        facts = tm.ok(
+            FlextInfraFlextBindingService.consumer_marker_environment(
+                consumer_root=consumer, python=self._python(consumer)
+            )
+        )
+        for key in ("python_full_version", "implementation_version", "sys_platform"):
+            requirement = f"binding-candidate; {key} == '{facts[key]}'"
+            tm.that(
+                u.Infra.active_requirement(requirement, environment=facts), none=False
+            )
+        tm.that(
+            u.Infra.active_requirement(
+                "binding-candidate; python_version < '0'", environment=facts
+            ),
+            none=True,
+        )
+
+    def test_ci_binding_rejects_before_consumer_or_supplier_access(
+        self, tmp_path: Path
+    ) -> None:
+        """The real public CLI rejects CI before any environment mutation."""
+        ci = config.Infra.codegen.make.ci
+        result = tm.ok(
+            u.Cli.run_raw(
+                (
+                    sys.executable,
+                    "-m",
+                    "flext_infra",
+                    "workspace",
+                    "flext-binding",
+                    "--repository-root",
+                    str(tmp_path / "consumer"),
+                    "--flext-root",
+                    str(tmp_path / "supplier"),
+                    "--python",
+                    str(tmp_path / "python"),
+                ),
+                env={ci.variable: ci.value},
+            )
+        )
+        tm.that(result.outcome.raw_return_code != 0, eq=True)
+        tm.that(
+            f"{result.stdout}{result.stderr}",
+            has=f"prohibited with {ci.variable}={ci.value}",
+        )
+        tm.that(tuple(tmp_path.iterdir()), eq=())

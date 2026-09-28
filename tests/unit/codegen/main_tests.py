@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import CliRouteService, c, config, main as infra_main
-from tests import t, u
+from flext_infra import FlextInfraCliRouteService, c, config, main as infra_main
+from tests import m, t, u
 
 
 class TestsFlextInfraCodegenMain:
@@ -83,17 +83,11 @@ class TestsFlextInfraCodegenMain:
 
     @staticmethod
     def _mise_transaction_state(root: Path) -> t.Pair[Path, Path]:
-        """Return the public workspace journal and root-project staging paths."""
-        toolchain = config.Infra.codegen.toolchain
-        state_root = (
-            root.parent
-            / toolchain.state_directory_name
-            / root.name
-            / toolchain.mise_namespace
-        )
+        """Return the workspace journal and the Mise transaction state root."""
+        identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)).unwrap()
         return (
-            state_root / "journal.json",
-            state_root / "projects" / "root" / "transaction",
+            identity.git_dir / c.Infra.JOURNAL_NAME,
+            root / c.Infra.MISE_ARTIFACTS_STATE_DIRECTORY,
         )
 
     @staticmethod
@@ -210,7 +204,9 @@ class TestsFlextInfraCodegenMain:
             """The root process entrypoint serves the route owner's declared help."""
             route = next(
                 item
-                for item in CliRouteService.route_table_for(c.Infra.CLI_GROUP_CODEGEN)
+                for item in FlextInfraCliRouteService.route_table_for(
+                    c.Infra.CLI_GROUP_CODEGEN
+                )
                 if item.name == "init"
             )
             result = u.Cli.run_raw([

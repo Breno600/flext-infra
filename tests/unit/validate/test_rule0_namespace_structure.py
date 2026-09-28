@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from tests import c, u
+from tests import c, m, u
 
 
 class TestsFlextInfraRule0NamespaceStructure:
@@ -24,7 +24,8 @@ class TestsFlextInfraRule0NamespaceStructure:
         )
         layout = tm.not_none(u.Infra.layout(root))
         facade = layout.package_dir / c.Infra.FAMILY_FILES[family].lstrip("*")
-        alias, suffix = c.Infra.NAMESPACE_FAMILY_EXPECTED_ALIAS[facade.name]
+        alias = c.Infra.NAMESPACE_FILE_TO_FAMILY[facade.name]
+        suffix = c.Infra.FAMILY_SUFFIXES[alias]
         class_name = f"{layout.class_stem}{suffix}"
         content = facade.read_text(encoding="utf-8")
         if f"{alias} = {class_name}" not in content:
@@ -35,7 +36,9 @@ class TestsFlextInfraRule0NamespaceStructure:
                 encoding="utf-8",
             )
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
         tm.that(report.violations, empty=True)
@@ -66,7 +69,9 @@ class TestsFlextInfraRule0NamespaceStructure:
             tmp_path, module_source=source, module_path=module_path
         )
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(report.passed, eq=False)
         tm.that(
@@ -90,7 +95,9 @@ class TestsFlextInfraRule0NamespaceStructure:
             tmp_path, module_source=source, module_name="models.py"
         )
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(report.passed, eq=False)
         tm.that(
@@ -104,7 +111,9 @@ class TestsFlextInfraRule0NamespaceStructure:
             module_source=u.Tests.namespace_fixture("rule0_valid.py"),
             module_name="models.py",
         )
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
         tm.that(report.passed, eq=True)
         tm.that(report.violations, empty=True)
 
@@ -122,7 +131,9 @@ class TestsFlextInfraRule0NamespaceStructure:
         (package / "services" / "__init__.py").unlink()
         (package / "services").rmdir()
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
@@ -142,7 +153,9 @@ class TestsFlextInfraRule0NamespaceStructure:
         (package / "api.py").unlink()
         (package / "base.py").unlink()
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(report.passed, eq=False)
         tm.that(
@@ -167,7 +180,9 @@ class TestsFlextInfraRule0NamespaceStructure:
             module_name="settings.py",
         )
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
         tm.that(
@@ -193,7 +208,9 @@ class TestsFlextInfraRule0NamespaceStructure:
             module_name="base.py",
         )
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
         tm.that(
@@ -227,7 +244,9 @@ class TestsFlextInfraRule0NamespaceStructure:
             encoding="utf-8",
         )
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
@@ -244,7 +263,9 @@ class TestsFlextInfraRule0NamespaceStructure:
             tmp_path, module_source=module_source, module_name="api.py"
         )
 
-        result = u.Tests.validate_namespace_project(root)
+        result = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(
             any(violation.startswith("[NS-000") for violation in result.violations),
@@ -267,7 +288,9 @@ class TestsFlextInfraRule0NamespaceStructure:
             tmp_path, module_source=module_source, module_name="runtime.py"
         )
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(report.violations, empty=False)
 
@@ -302,7 +325,9 @@ class TestsFlextInfraRule0NamespaceStructure:
             tmp_path, module_source=module_source, module_name="models.py"
         )
 
-        report = u.Tests.validate_namespace_project(root)
+        report = u.Tests.validate_namespace_project(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.that(
             any(

@@ -11,7 +11,7 @@ from ._namespace_rules.structure import FlextInfraNamespaceRulesStructure
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import m, p, t
+    from flext_infra import m, t
 
 
 class FlextInfraNamespaceRules(
@@ -23,28 +23,22 @@ class FlextInfraNamespaceRules(
 
     @classmethod
     def check_module(
-        cls,
-        tree: p.AttributeProbe,
-        filepath: Path,
-        *,
-        class_stem: str,
-        package_name: str,
-        source: str,
-        is_test_file: bool,
-        policy: m.Infra.NamespaceModulePolicy,
+        cls, visit: m.Infra.RopeModuleVisit, filepath: Path
     ) -> t.StrSequence:
-        """Evaluate the complete strict contract for one Rope AST module."""
+        """Evaluate one shared Rope visit against its declared convention."""
+        layout = visit.convention.project_layout
         return (
             *cls.check_structure(
-                tree,
+                visit.tree,
                 filepath,
-                class_stem=class_stem,
-                is_test_file=is_test_file,
-                policy=policy,
-                source=source,
+                class_stem=layout.class_stem if layout is not None else "",
+                policy=visit.convention.module_policy,
+                source=visit.source,
             ),
-            *cls.check_imports(tree, filepath, package_name=package_name),
-            *cls.check_contracts(tree, filepath, source=source),
+            *cls.check_imports(
+                visit.tree, filepath, package_name=visit.convention.package_name
+            ),
+            *cls.check_contracts(visit, filepath),
         )
 
 

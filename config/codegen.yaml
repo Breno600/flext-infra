@@ -7,6 +7,9 @@ Infra:
     # validate-git-hook.sh).
     retired_projections: [.github/scripts/install-git-hooks.sh]
 
+    # Fresh import probes are independent subprocesses within one validation.
+    fresh_import_workers: 3
+
     # Per-module scc code-LOC ceiling. Operator instruction 2026-09-07:
     # the former 1000-LOC allowance stands (supersedes the 200 constant).
     loc_cap:
@@ -22,16 +25,6 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
-      state_directory_name: .flext-runtime
-      scratch_namespace: scratch
-      # Scratch (TMPDIR, test basetemp, Mise bootstrap staging) never lives
-      # inside a versioned tree: in workspace mode the sibling state root sits
-      # under the superproject, so every sandbox became a tracked-scope of the
-      # enclosing repository. The scratch root is the platform home plus this
-      # path, mirroring the absolute checkout path below it (storage law).
-      scratch_home_relative: tmp
-      pycache_namespace: pycache
-      mise_namespace: mise-artifacts
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -125,6 +118,8 @@ Infra:
       # through the lifecycle; make is the one tool the Makefile cannot resolve
       # from itself, so mise must provision it.
       make_version: latest
+      # Mise self-provisioning: pin the mise bootstrap binary so it never
+      # resolves 'latest' at runtime. Override to pin a specific release.
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools owned by ai-hub's global mise
@@ -185,6 +180,11 @@ Infra:
       flext-cli:
       # tests/test_xlsx_recalc.py: headless LibreOffice recalculation.
         - libreoffice-calc
+    # Distributions whose CI gates resolve GitHub Packages (private GHCR OCI
+    # dependencies). Least privilege: only these grant the generated ci job
+    # packages: read; every other distribution and job stays contents-only.
+    # Org repositories declare themselves in their own config/codegen-org.yaml.
+    ci_package_registry_read: []
     # Per-distribution private composed-project auth for CI. The default
     # GITHUB_TOKEN cannot clone sibling private repos; projects that need
     # private submodules declare read-only deploy-key secrets via
@@ -336,6 +336,7 @@ Infra:
         discovery_scope: none
 
     make:
+      examples_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -357,29 +358,28 @@ Infra:
         - gate: namespace
           authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
           reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
-        - gate: codemod
-          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
-          reason: "Structural codemod backlog is applied through make mod after the fleet is green."
-      # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
-      # save_enabled stays false while storage-limit API returns HTTP 402 /
-      # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
+          # Census consistency (gc-wisp-d7mnad): the runtime census honors the
+          # SAME suspension for the rule families this gate owns — ENFORCE ids
+          # match a census rule id exactly, tag families by prefix. Unmapped
+          # families (e.g. ENFORCE-079) stay fully blocking.
+          census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
+        - gate: smells
+          authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
+          reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
+          # Census consistency (gc-wisp-d7mnad): same ruling, same families in
+          # the runtime census; suppressed findings still surface as INFO.
+          census_rule_families: [smell_, no_accessor_methods, utility_not_static]
+      # One filename and the root-relative runner paths; the runner places the
+      # database in platformdirs' external per-worktree cache.
       testmon_cache:
-        schema_version: 1
-        namespace: testmon
-        invocation_namespace: pytest
         database_filename: .testmondata
+        database_environment_variable: TESTMON_DATAFILE
+        data_home_environment_variable: XDG_CACHE_HOME
+        user_home_environment_variable: HOME
+        home_cache_directory: .cache
+        external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
-        mode: bootstrap
-        save_enabled: false
-        max_bootstrap_generations: 3
-        max_stable_generations: 2
-        per_repo_budget_bytes: 536870912
-        warning_threshold_percent: 70
-        maintenance_threshold_percent: 75
-        block_threshold_percent: 80
-        allowed_save_refs: [refs/heads/0.12.0-dev]
-        key_prefix: testmon-v1
       # Public verbs execute their declared operation without mode selectors.
       ci:
         variable: CI
@@ -441,14 +441,12 @@ Infra:
           - .benchmarks
           - .hypothesis
         root_dirs:
-          - .flext-runtime
           - build
           - dist
           - htmlcov
           - .reports
         root_files:
           - .coverage
-          - .testmondata
           - flext-infra-codegen-transaction-journal.json.lock
         trace_globs:
           - "*.pstats"
@@ -521,6 +519,9 @@ Infra:
           profiles: [workspace]
         - name: build
           description: Build the project distribution artifacts.
+        - name: examples
+          description: Run the workspace public runtime examples.
+          profiles: [workspace]
         - name: check
           description: Run every configured non-test gate.
         - name: test
@@ -533,6 +534,10 @@ Infra:
           description: Apply ruff check --fix --unsafe-fixes --preview plus every other configured safe correction. Ruff is the rule; change code, never ruff.
         - name: fix-enforcement
           description: Apply the safe fix actions declared by the enforcement catalog.
+        - name: fix-namespace
+          description: Apply the canonical namespace enforcer to the selected workspace.
+        - name: fix-accessors
+          description: Migrate forbidden accessor names and every resolved consumer.
         - name: audit
           description: Inspect ownership, dependency, and generated-state health.
         - name: status
@@ -611,10 +616,6 @@ Infra:
       - {name: .omo}
       - {name: .pylance_cache, vscode_exclude: false}
       - {name: .pytest_cache, source_scan_ignore: true}
-      - {name: .flext-runtime, source_scan_ignore: true}
-      - {name: .testmondata, is_dir: false, source_scan_ignore: true}
-      - {name: .testmondata-wal, is_dir: false, source_scan_ignore: true}
-      - {name: .testmondata-shm, is_dir: false, source_scan_ignore: true}
       - {name: .reports, source_scan_ignore: true}
       - {name: .ropeproject}
       - {name: .ruff_cache, source_scan_ignore: true}
@@ -714,13 +715,6 @@ Infra:
         githubPullRequests.autoRepositoryDetection: true
         githubPullRequests.ignoreSubmodules: false
       list_settings:
-        python-envs.workspaceSearchPaths:
-          - ./.venv
-          - ./*/.venv
-        ruff.interpreter:
-          - ${workspaceFolder}/.venv/bin/python
-        ruff.path:
-          - ${workspaceFolder}/.venv/bin/ruff
         markdownlint.lintWorkspaceGlobs:
           - "!**/.git/**"
           - "!**/.planning/**"
@@ -754,9 +748,6 @@ Infra:
         "[markdown]":
           editor.defaultFormatter: esbenp.prettier-vscode
           editor.formatOnSave: false
-        terminal.integrated.env.linux:
-          PATH: ${workspaceFolder}/.venv/bin:${env:PATH}
-          VIRTUAL_ENV: ${workspaceFolder}/.venv
       stripped_keys:
       # Pylance emits settingsNotOverridable diagnostics (severity=warning) when
       # these keys appear in .vscode/settings.json alongside a [tool.pyright] section
@@ -815,6 +806,7 @@ Infra:
       canonical_root_dirs:
         - .mise
         - bin
+        - infra
         - src
         - tests
         - docs
@@ -1196,6 +1188,7 @@ Infra:
           - pytest-testmon>=2.2.0
           - pytest-timeout
           - pytest-xdist
+          - platformdirs>=4.12.0
         # types-* stub floors are declared here (cooldown-eligible dates).
         # Lock-fed raising wrote dated stub versions into the projections;
         # dated stubs churn weekly, so the SSOT owns the clamp and the
@@ -1283,7 +1276,7 @@ Infra:
             runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.8]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.9]
           - upstream: flext_cli
             project: flext-db-oracle
             runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]
@@ -2123,8 +2116,9 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
-        - source: base/config/workspace.yaml.j2
-          destination: config/workspace.yaml
+      # New-project declaration is serialized once from WorkspaceManifestSpec.
+      # Existing-tree conform reads this file as input and never overwrites it.
+        - destination: config/workspace.yaml
           profiles: [workspace, standalone]
           delegate: manifest
           overwrite: false

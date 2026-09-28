@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Annotated, ClassVar
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import c, t
 
 
@@ -148,13 +149,6 @@ class FlextInfraModelsDepsToolConfigTypeCheckers:
                 m.Field(
                     alias="other-report-private-usage",
                     description="reportPrivateUsage value for non-source/non-test-like envs.",
-                ),
-            ]
-            venv_name: Annotated[
-                str,
-                m.Field(
-                    alias="venv-name",
-                    description="Virtualenv directory name shared across pyright configs.",
                 ),
             ]
 

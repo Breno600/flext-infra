@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import m
+from flext_infra import m, u
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
 from .base_gate import FlextInfraGate
@@ -32,8 +32,15 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
         """Run the runtime census scoped to ``project_dir``."""
         _ = ctx
         started = time.monotonic()
+        # The filter is the declared project name, never the checkout directory
+        # name: a worktree or renamed checkout keeps its manifest identity, and
+        # the census discovery keys projects by exactly that pyproject name.
+        metadata = u.Infra.read_project_metadata_result(project_dir)
         validator = FlextInfraRuntimeCensusValidator(
-            repository_root=project_dir, project_filter=project_dir.name
+            repository_root=project_dir,
+            project_filter=(
+                metadata.value.project.name if metadata.success else project_dir.name
+            ),
         )
         # ``build_report`` (not ``execute``) keeps violations structured so the
         # gate can grade a broken invocation separately from found violations.
@@ -44,7 +51,6 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
                 passed=False,
                 errors=[report_result.error or "runtime census failed"],
                 started=started,
-                ctx=ctx,
             )
         report = report_result.value
         return self._build_project_error_gate_result(
@@ -52,7 +58,6 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
             passed=report.passed,
             errors=list(report.violations),
             started=started,
-            ctx=ctx,
         )
 
 

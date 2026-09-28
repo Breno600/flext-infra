@@ -21,7 +21,10 @@ class FlextInfraPytestRunnerBase(s[int]):
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
-    testmon_db: Annotated[Path, m.Field(description="External persistent testmon DB.")]
+    testmon_db: Annotated[
+        Path,
+        m.Field(description="Absolute external pytest-testmon SQLite database path."),
+    ]
     ci_context: Annotated[
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
@@ -43,13 +46,15 @@ class FlextInfraPytestRunnerBase(s[int]):
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
             testmon_db=Path(
-                cls._environment_value(c.Infra.PYTEST_ENV_TESTMON_DATAFILE)
+                cls._environment_value(
+                    config.Infra.codegen.make.testmon_cache.database_environment_variable
+                )
             ),
         )
 
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
-        """Require contained inputs and an external absolute cache path."""
+        """Require repository-contained target and report paths."""
         for name, path in (("target", self.target), ("reports", self.reports)):
             raw = str(path)
             if (
@@ -69,10 +74,10 @@ class FlextInfraPytestRunnerBase(s[int]):
             msg = f"test target must be an existing directory: {self.target}"
             raise ValueError(msg)
         if not self.testmon_db.is_absolute():
-            msg = "TESTMON_DATAFILE must be absolute"
+            msg = "testmon database path must be absolute"
             raise ValueError(msg)
         if self.testmon_db.resolve().is_relative_to(self.root.resolve()):
-            msg = "TESTMON_DATAFILE must be outside the repository checkout"
+            msg = f"testmon database must be outside the checkout: {self.testmon_db}"
             raise ValueError(msg)
         return self
 
@@ -98,7 +103,7 @@ class FlextInfraPytestRunnerBase(s[int]):
         """
         if not policy.parallel_worker_overrides:
             return policy.parallel_workers
-        pyproject_path = self.root / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
         try:
             name = u.Infra.project_name_from_payload(
                 pyproject_path, u.Infra.pyproject_payload(pyproject_path)

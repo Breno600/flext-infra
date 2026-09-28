@@ -46,26 +46,21 @@ class FlextInfraAccessorMigrationRewriteMixin:
         self, rope_project: t.Infra.RopeProject, py_file: Path, source: str
     ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]:
         """Apply automated rewrites."""
-        resource = u.Infra.get_resource_from_path(rope_project, py_file)
+        resource = u.Infra.resolve_resource_from_path(rope_project, py_file)
         if resource is None:
             return source, ()
         updated_source = source
         changes: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []
         for rule in self._AUTOMATED_RULES:
             updated_source, rule_changes = self._rename_symbol_tokens(
-                updated_source,
-                rule=rule,
-                file_path=py_file,
+                updated_source, rule=rule, file_path=py_file
             )
             changes.extend(rule_changes)
         return updated_source, changes
 
     @staticmethod
     def _rename_symbol_tokens(
-        source: str,
-        *,
-        rule: m.Infra.AccessorMigrationRule,
-        file_path: Path,
+        source: str, *, rule: m.Infra.AccessorMigrationRule, file_path: Path
     ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]:
         """Rename symbol tokens."""
         token_lines: t.MutableSequenceOf[m.Infra.AccessorMigrationChange] = []

@@ -32,6 +32,20 @@ class FlextInfraConfigModelsMake:
         reason: Annotated[
             t.NonEmptyStr, m.Field(description="Reason recorded in gate receipts")
         ]
+        census_rule_families: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description=(
+                    "Runtime-census rule families this suspension also covers. "
+                    "A family starting with 'ENFORCE-' matches a census "
+                    "violation rule id exactly; every other family matches the "
+                    "violation tag by prefix. Matching families are dropped "
+                    "from the census failure count under one loud INFO line "
+                    "per family; unmapped families stay fully blocking"
+                ),
+            ),
+        ] = ()
 
         @u.model_validator(mode="after")
         def _validate_evidence(self) -> Self:
@@ -289,19 +303,28 @@ class FlextInfraConfigModelsMake:
             return self
 
     class TestmonCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Adaptive pytest-testmon GitHub Actions cache policy."""
+        """Persistent pytest-testmon database and runner paths."""
 
-        schema_version: Annotated[
-            int, m.Field(ge=1, description="Cache key schema version")
-        ]
-        namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="Persistent state namespace")
-        ]
-        invocation_namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="Pytest invocation namespace")
-        ]
         database_filename: Annotated[
             t.NonEmptyStr, m.Field(description="pytest-testmon database filename")
+        ]
+        database_environment_variable: Annotated[
+            FlextInfraConstantsMake.PytestCacheEnvironment,
+            m.Field(description="pytest-testmon's supported database-path variable"),
+        ]
+        data_home_environment_variable: Annotated[
+            FlextInfraConstantsMake.PytestCacheEnvironment,
+            m.Field(description="XDG persistent cache-home variable"),
+        ]
+        user_home_environment_variable: Annotated[
+            FlextInfraConstantsMake.PytestCacheEnvironment,
+            m.Field(description="User home variable for the XDG default"),
+        ]
+        home_cache_directory: Annotated[
+            Path, m.Field(description="Standard cache directory below the user home")
+        ]
+        external_storage_directory: Annotated[
+            Path, m.Field(description="FLEXT-owned directory below the cache home")
         ]
         target_directory: Annotated[
             Path, m.Field(description="Repository-relative pytest target")
@@ -309,54 +332,41 @@ class FlextInfraConfigModelsMake:
         reports_directory: Annotated[
             Path, m.Field(description="Repository-relative pytest reports root")
         ]
-        mode: Annotated[
-            Literal["bootstrap", "stable"], m.Field(description="Cache renewal phase")
-        ]
-        save_enabled: Annotated[
-            bool,
-            m.Field(
-                description=(
-                    "Whether CI may upload a new testmon generation. False while "
-                    "quota/HTTP 402 blocks fleet-wide saves (QUOTA_HOLD)."
-                )
-            ),
-        ]
-        max_bootstrap_generations: Annotated[
-            int, m.Field(ge=1, le=10, description="Max retained bootstrap generations")
-        ]
-        max_stable_generations: Annotated[
-            int, m.Field(ge=1, le=10, description="Max retained stable generations")
-        ]
-        per_repo_budget_bytes: Annotated[
-            int, m.Field(ge=1, description="Per-repo testmon namespace budget in bytes")
-        ]
-        warning_threshold_percent: Annotated[
-            int, m.Field(ge=1, le=100, description="Quota warning threshold percent")
-        ]
-        maintenance_threshold_percent: Annotated[
-            int,
-            m.Field(ge=1, le=100, description="Quota maintenance threshold percent"),
-        ]
-        block_threshold_percent: Annotated[
-            int, m.Field(ge=1, le=100, description="Quota block-save threshold percent")
-        ]
-        allowed_save_refs: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(min_length=1, description="Refs allowed to save cache generations"),
-        ]
-        key_prefix: Annotated[
-            t.NonEmptyStr, m.Field(description="Immutable cache key prefix")
-        ]
 
         @u.model_validator(mode="after")
-        def _validate_thresholds(self) -> Self:
-            """Require warning < maintenance < block."""
-            if not (
-                self.warning_threshold_percent
-                < self.maintenance_threshold_percent
-                < self.block_threshold_percent
+        def require_external_database_contract(self) -> Self:
+            """Keep testmon's official path variable and external path policy exact."""
+            for name, actual, expected in (
+                (
+                    "database_environment_variable",
+                    self.database_environment_variable,
+                    FlextInfraConstantsMake.PytestCacheEnvironment.DATABASE_FILE,
+                ),
+                (
+                    "data_home_environment_variable",
+                    self.data_home_environment_variable,
+                    FlextInfraConstantsMake.PytestCacheEnvironment.DATA_HOME,
+                ),
+                (
+                    "user_home_environment_variable",
+                    self.user_home_environment_variable,
+                    FlextInfraConstantsMake.PytestCacheEnvironment.USER_HOME,
+                ),
             ):
-                msg = "testmon cache thresholds must satisfy warning < maintenance < block"
+                if actual != expected:
+                    msg = f"testmon cache {name} must be {expected.value}"
+                    raise ValueError(msg)
+            for name, path in (
+                ("home_cache_directory", self.home_cache_directory),
+                ("external_storage_directory", self.external_storage_directory),
+            ):
+                if path.is_absolute() or any(
+                    part in {"", ".", ".."} for part in path.parts
+                ):
+                    msg = f"testmon cache {name} must be normalized and relative"
+                    raise ValueError(msg)
+            if Path(self.database_filename).name != self.database_filename:
+                msg = "testmon cache database_filename must be a filename"
                 raise ValueError(msg)
             return self
 
@@ -434,6 +444,10 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
+        examples_timeout_seconds: Annotated[
+            int,
+            m.Field(gt=0, le=120, description="Workspace examples process deadline"),
+        ]
         ruff: Annotated[
             FlextInfraConfigModelsMake.MakeRuffSpec,
             m.Field(description="Ruff CLI flags for fmt/fix/check Make verbs"),
@@ -540,6 +554,17 @@ class FlextInfraConfigModelsMake:
             unknown = sorted(set(gates) - set(self.check_gates_allowed))
             if unknown:
                 msg = f"make check_gate_suspensions contains unknown gates: {', '.join(unknown)}"
+                raise ValueError(msg)
+            families = [
+                family
+                for item in self.check_gate_suspensions
+                for family in item.census_rule_families
+            ]
+            if len(families) != len(set(families)):
+                msg = (
+                    "make check_gate_suspensions census_rule_families must be "
+                    "declared by exactly one gate"
+                )
                 raise ValueError(msg)
             return self
 

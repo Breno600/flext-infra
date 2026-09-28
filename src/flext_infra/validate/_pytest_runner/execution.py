@@ -29,7 +29,7 @@ class FlextInfraPytestRunnerExecution(
     def _inspect_cache(
         self, *, digest: str | None
     ) -> p.Result[m.Infra.TestmonCacheState]:
-        """Run the SQLite integrity owner for the external database."""
+        """Run the SQLite integrity owner for the testmon database."""
         return FlextInfraTestmonDbInspector(
             repository_root=self.root, db_path=self.testmon_db, pre_run_digest=digest
         ).execute()
@@ -39,6 +39,9 @@ class FlextInfraPytestRunnerExecution(
         overrides = {
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
                 self.root / c.Infra.DEFAULT_SRC_DIR
+            ),
+            config.Infra.codegen.make.testmon_cache.database_environment_variable: str(
+                self.testmon_db
             ),
             c.Infra.PYTEST_ENV_TESTMON_DATAFILE: str(self.testmon_db),
         }
@@ -284,6 +287,7 @@ class FlextInfraPytestRunnerExecution(
 
     def _execute_testmon(self, *, complete: bool) -> p.Result[int]:
         """Execute one selected testmon phase without resetting shared state."""
+        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
         report_dir = self._report_directory()
         execution_mode = (
             c.Infra.PytestExecutionMode.FULL
@@ -298,7 +302,6 @@ class FlextInfraPytestRunnerExecution(
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
             ),
         )
-        u.Cli.ensure_dir(self.testmon_db.parent).unwrap()
         pre_digest = FlextInfraTestmonDbInspector.digest_file(self.testmon_db)
         cache_restored = False
         if pre_digest is not None:
@@ -343,7 +346,12 @@ class FlextInfraPytestRunnerExecution(
             and cache_restored
         )
         completed_failure = (
-            outcome.raw_return_code == pytest.ExitCode.TESTS_FAILED
+            # Why: under xdist the declared max-failures stop exits as
+            # Interrupted, not TestsFailed; it is still one completed suite
+            # lifecycle whose bounded evidence must be published. An operator
+            # signal keeps forwarded_signal set and never reaches here.
+            outcome.raw_return_code
+            in {pytest.ExitCode.TESTS_FAILED, pytest.ExitCode.INTERRUPTED}
             and not outcome.timed_out
             and outcome.forwarded_signal is None
         )

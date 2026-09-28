@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from flext_infra import c, config, m, t
+from flext_tests import tm
+
+from flext_infra import c, config, m, t, u
 
 
 class CodegenTestSupport:
@@ -65,6 +67,7 @@ class CodegenTestSupport:
             repository_branch: t.NonEmptyStr,
             ci_trigger_branches: t.VariadicTuple[t.NonEmptyStr],
             system_packages: t.VariadicTuple[t.NonEmptyStr] = (),
+            packages_read: bool = False,
             custom_steps: str = "",
             has_devcontainer: bool = False,
             workspace_repositories: t.VariadicTuple[m.Infra.RepositoryRef] = (),
@@ -77,12 +80,32 @@ class CodegenTestSupport:
                 repository_branch=repository_branch,
                 ci_trigger_branches=ci_trigger_branches,
                 system_packages=system_packages,
+                packages_read=packages_read,
                 python_version=codegen.toolchain.python_version,
-                state_directory_name=codegen.toolchain.state_directory_name,
                 github_actions=codegen.github_actions,
                 make=codegen.make,
                 workspace_repositories=workspace_repositories,
                 checkout_submodules=codegen.checkout_submodules,
                 custom_steps=custom_steps,
                 has_devcontainer=has_devcontainer,
+            )
+
+        @staticmethod
+        def ci_job_steps(rendered: str) -> t.VariadicTuple[t.JsonMapping]:
+            """Parse the rendered ci workflow into its ordered job steps.
+
+            One owner for the YAML parse and the jobs/ci/steps navigation every
+            CI-contract test shares; consumers assert on the returned steps.
+            """
+            document = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
+                tm.ok(u.Cli.yaml_parse(rendered))
+            )
+            jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(document["jobs"])
+            job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["ci"])
+            steps = job["steps"]
+            if not isinstance(steps, list):
+                msg = "workflow job steps must be a sequence"
+                raise TypeError(msg)
+            return tuple(
+                t.Cli.JSON_MAPPING_ADAPTER.validate_python(step) for step in steps
             )

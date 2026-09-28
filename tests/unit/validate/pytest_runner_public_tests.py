@@ -118,15 +118,14 @@ class TestsFlextInfraPytestRunner:
         cached_runner_project: Path, *, ci_context: bool = False
     ) -> FlextInfraPytestRunner:
         """Bind one runner to the fixture project's canonical cache paths."""
-        codegen = config.Infra.codegen
-        cache = codegen.make.testmon_cache
+        cache = config.Infra.codegen.make.testmon_cache
         testmon_db = (
             cached_runner_project.parent
-            / codegen.toolchain.state_directory_name
+            / ".testmon-cache"
             / cached_runner_project.name
-            / cache.namespace
             / cache.database_filename
         )
+        testmon_db.parent.mkdir(parents=True, exist_ok=True)
         return FlextInfraPytestRunner(
             repository_root=cached_runner_project,
             ci_context=ci_context,
@@ -147,21 +146,16 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path
     ) -> None:
         """One public execution collects every test and publishes real evidence."""
-        codegen = config.Infra.codegen
-        cache = codegen.make.testmon_cache
-        testmon_db = (
-            cached_runner_project.parent
-            / codegen.toolchain.state_directory_name
-            / cached_runner_project.name
-            / cache.namespace
-            / cache.database_filename
-        )
+        cache = config.Infra.codegen.make.testmon_cache
         runner = self._runner_for(cached_runner_project)
+        testmon_db = runner.testmon_db
 
         exit_code = tm.ok(runner.execute())
 
         tm.that(exit_code, eq=0)
         tm.that(testmon_db.is_file(), eq=True)
+        tm.that(testmon_db.is_relative_to(cached_runner_project), eq=False)
+        tm.that((cached_runner_project / cache.database_filename).exists(), eq=False)
         reports_root = cached_runner_project / cache.reports_directory
         latest_name = tm.ok(u.Cli.files_read_text(reports_root / "latest.txt")).strip()
         summary = tm.ok(
@@ -569,6 +563,18 @@ class TestsFlextInfraPytestRunner:
             [context.execution_mode for context in parsed], eq=["incremental", "full"]
         )
         tm.that({context.testmon_db for context in parsed}, eq={runner.testmon_db})
+        tm.that(runner.testmon_db.is_absolute(), eq=True)
+        tm.that(
+            runner.testmon_db.is_relative_to(cached_runner_project.resolve()), eq=False
+        )
+        tm.that(runner.testmon_db.is_file(), eq=True)
+        tm.that(
+            (
+                cached_runner_project
+                / config.Infra.codegen.make.testmon_cache.database_filename
+            ).exists(),
+            eq=False,
+        )
         tm.that(
             {context.deadline_monotonic for context in parsed},
             eq={
@@ -829,7 +835,6 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path
     ) -> None:
         runner = self._runner_for(cached_runner_project)
-        runner.testmon_db.parent.mkdir(parents=True)
         runner.testmon_db.write_bytes(b"not a SQLite database")
 
         with pytest.raises(sqlite3.DatabaseError):

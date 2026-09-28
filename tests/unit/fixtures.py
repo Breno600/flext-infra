@@ -8,13 +8,14 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import config, infra
+from flext_infra import config, infra, u as infra_u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import c, m, p, t, u
 
@@ -350,7 +351,10 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     setup = tm.ok(u.Tests.run_isolated_make(["setup"], cwd=root, capture=False))
     u.Tests.record_dependency_command_output(setup)
     tm.that(u.Cli.process_succeeded(setup.outcome), eq=True, msg=setup.stderr)
-    tm.that((root / c.Infra.VENV_BIN_REL / c.Infra.DEPTRY).is_file(), eq=True)
+    runtime = infra_u.Infra.runtime_environment_dir(root)
+    executable = c.Infra.DEPTRY + (".exe" if os.name == "nt" else "")
+    tool_path = runtime / ("Scripts" if os.name == "nt" else "bin") / executable
+    tm.that(tool_path.is_file(), eq=True)
     (root / "limits.toml").write_text(
         "[typing_libraries]\nexclude = []\n", encoding="utf-8"
     )
@@ -426,8 +430,11 @@ def real_python_package(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def cached_runner_project(tmp_path: Path) -> Path:
+def cached_runner_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Create a real one-test consumer for the public cached pytest runner."""
+    external_cache = tmp_path / "external-cache"
+    monkeypatch.setenv("XDG_CACHE_HOME", str(external_cache))
+    monkeypatch.setenv("LOCALAPPDATA", str(external_cache))
     project_root = tmp_path / "cached_runner_project"
     policy = config.Infra.codegen.make.testmon_cache
     package_root = project_root / c.Infra.DEFAULT_SRC_DIR / "runner_sample"
@@ -641,7 +648,7 @@ def real_docs_project(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]:
+def semantic_rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]:
     """Create a real rope workspace with semantic-analysis fixtures."""
     repository_root = tmp_path / "rope_workspace"
     package_root = repository_root / "src" / "rope_demo"
@@ -677,11 +684,11 @@ def rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]:
 
 @pytest.fixture
 def models_resource(
-    rope_workspace: t.Pair[t.Infra.RopeProject, Path],
+    semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic models fixture module."""
-    rope_project, repository_root = rope_workspace
-    resource = u.Infra.get_resource_from_path(
+    rope_project, repository_root = semantic_rope_workspace
+    resource = u.Infra.resolve_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "models.py"
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
@@ -690,11 +697,11 @@ def models_resource(
 
 @pytest.fixture
 def services_resource(
-    rope_workspace: t.Pair[t.Infra.RopeProject, Path],
+    semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic services fixture module."""
-    rope_project, repository_root = rope_workspace
-    resource = u.Infra.get_resource_from_path(
+    rope_project, repository_root = semantic_rope_workspace
+    resource = u.Infra.resolve_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "services.py"
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)

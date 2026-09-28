@@ -146,7 +146,7 @@ class FlextInfraModelsCore:
             description="Canonical test operation for this report directory"
         )
         testmon_db: Path | None = m.Field(
-            description="Persistent external testmon database; absent for coverage"
+            description="External pytest-testmon database; absent for coverage"
         )
         deadline_monotonic: float = m.Field(
             gt=0, description="Shared absolute deadline across all execution phases"
@@ -363,19 +363,16 @@ class FlextInfraModelsCore:
         exit_code: Annotated[int, m.Field(description="Process exit code")]
         violation_count: Annotated[int, m.Field(description="Error count")]
 
-    class NamespaceValidateCommand(mm.ReadMixin, m.ContractModel):
+    class NamespaceValidateCommand(m.ContractModel):
         """CLI payload for ``flext-infra validate namespace``.
 
-        Read-only namespace rule scan (NS-000..003) across selected projects.
+        Read-only namespace rule scan (NS-000..003) for one repository root.
         """
 
-        scan_tests: Annotated[
-            bool,
-            m.Field(
-                alias="scan-tests",
-                description="Include test packages in the namespace scan",
-            ),
-        ] = False
+        repository_root: Path = m.Field(
+            default_factory=Path.cwd,
+            description="Repository root whose namespace contract is validated",
+        )
 
 
 __all__: list[str] = ["FlextInfraModelsCore"]

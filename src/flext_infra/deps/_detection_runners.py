@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from flext_core import r
-from flext_infra import c, t, u
+from flext_infra import c, m, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -125,16 +124,12 @@ class FlextInfraDependencyDetectionRunnersMixin:
         # silently zeroing every detected stub hint. `--no-color-output`
         # matches the plain-text contract the regexes already assume (see
         # gates/mypy.py, which disables color for the same reason).
-        cmd = u.Infra.mypy_limited_command((
-            sys.executable,
-            "-m",
-            c.Infra.MYPY,
-            c.Infra.DEFAULT_SRC_DIR,
-            "--config-file",
-            c.PYPROJECT_FILENAME,
-            "--no-error-summary",
-            "--no-color-output",
-        ))
+        cmd = u.Infra.mypy_limited_command(
+            m.Infra.MypyInvocation(
+                targets=(project_path / c.Infra.DEFAULT_SRC_DIR,),
+                config_file=project_path / c.PYPROJECT_FILENAME,
+            )
+        )
         result = self._run_raw(
             cmd, cwd=project_path, timeout=u.Infra.mypy_runner_timeout()
         )

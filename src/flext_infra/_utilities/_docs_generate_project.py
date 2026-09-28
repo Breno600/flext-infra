@@ -8,10 +8,7 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import config, m, t
 
-from ._docs_generate_plan import (
-    DocsRenderedArtifactTuple,
-    FlextInfraUtilitiesDocsGeneratePlanMixin,
-)
+from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
 from ._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
 from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_contract import FlextInfraUtilitiesDocsContract
@@ -67,13 +64,15 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
         *,
         repository_root: Path,
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Render the complete target inventory for one FLEXT project."""
         guides = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guides_artifacts(
             scope, repository_root=repository_root, source_states=source_states
         )
         if guides.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(guides)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                guides
+            )
         guide_paths = {
             state.path
             for state in source_states
@@ -132,7 +131,9 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             )
         )
         if pruned.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(pruned)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                pruned
+            )
         return FlextInfraUtilitiesDocsGenerateProjectMixin.docs_normalize_artifacts((
             *((scope.path, path, content) for path, content in rendered),
             *guides.value,

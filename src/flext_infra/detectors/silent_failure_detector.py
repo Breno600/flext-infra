@@ -91,7 +91,7 @@ def _rope_module_ast(
     rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
 ) -> ast.Module | None:
     """Return the rope-backed module AST; rope parse failures escape loudly."""
-    pymodule = u.Infra.get_pymodule(rope_project, resource)
+    pymodule = u.Infra.resolve_pymodule(rope_project, resource)
     tree = pymodule.get_ast()
     return tree if isinstance(tree, ast.Module) else None
 

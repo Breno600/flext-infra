@@ -23,7 +23,7 @@ class TestsFlextInfraCodegenGeneration:
         exports: t.StrSequence,
         lazy_map: t.LazyAliasMap,
         *,
-        eager_dunders: t.MappingKV[str, t.StrPair] | None = None,
+        eager_dunders: t.LazyAliasMap | None = None,
         child_packages: t.StrSequence = (),
         type_checking_map: t.LazyAliasMap | None = None,
     ) -> m.Infra.LazyInitPlan:
@@ -58,7 +58,9 @@ class TestsFlextInfraCodegenGeneration:
                 "Demo": ("demo_pkg.api", "Demo"),
                 "r": ("flext_core", "r"),
             }),
-            eager_dunders={"__version__": ("demo_pkg.__version__", "__version__")},
+            eager_dunders=MappingProxyType({
+                "__version__": ("demo_pkg.__version__", "__version__")
+            }),
             child_packages=("demo_pkg.services",),
         )
 

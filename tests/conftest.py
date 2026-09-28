@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib
-import os
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -11,8 +10,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
-from tests import c, m, t, u
+from flext_infra import config, infra, p
+from tests import c, t, u
 
 # NOTE(flext-p68a.9.4, agent codex): the installed flext-tests pytest11 plugin is
 # the only fixture owner; conftest must not re-export or shadow its fixtures.
@@ -23,6 +22,31 @@ _TRACKED_CODEGEN_CONFIG_PATH = (
     / c.Infra.CODEGEN_CONFIG_DIR
     / c.Infra.CODEGEN_CONFIG_FILENAME
 )
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register the slow-timeout ini option consumed by the test suite.
+
+    Why (root cause, rc0 plugin gap): the pyproject ``[tool.pytest.ini_options]``
+    declares ``flext_slow_timeout_seconds`` (consumed by ``flext_tests``) and
+    ``tests/unit/deps/test_modernizer_pytest`` reads it back through
+    ``config.getini``. The installed ``flext-tests 0.12.0rc0`` entry-point does
+    not register the option, so pytest aborts collection with
+    ``Unknown config option`` before any test runs. This conftest owns its ini
+    surface and declares the option here; a real plugin re-registering the same
+    name is a no-op merge.
+    """
+    parser.addini(
+        "flext_slow_timeout_seconds",
+        help="Seconds after which a test is flagged slow (flext-tests option)",
+    )
+
+
+@pytest.fixture
+def rope_workspace(tmp_path: Path) -> Iterator[p.Infra.RopeWorkspaceDsl]:
+    """Provide one real Rope workspace through the public composition root."""
+    with infra.rope_workspace(tmp_path) as workspace:
+        yield workspace
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -49,22 +73,6 @@ def _guard_tracked_codegen_config_untouched() -> Iterator[None]:
             "writers must target an isolated workspace, never the real "
             "checkout (flext-eles2)"
         )
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _isolate_host_gas_city_identity() -> Iterator[None]:
-    """Keep the operator's Gas City identity out of every fixture process.
-
-    The generated ``.envrc`` selects its Gas City Beads branch from the
-    caller's identity variable. A host shell connected to a city exports it,
-    so every fixture repository (declaring no city) would inherit the host
-    city and fail reading its absent ``.beads/metadata.json``. Tests that
-    exercise the city branch pass the variable explicitly.
-    """
-    name = m.Infra.BeadsWorkspaceEnvironmentSpec().identity_var
-    original = os.environ.pop(name, None)
-    yield
-    u.Tests.restore_env(name, original)
 
 
 @pytest.fixture

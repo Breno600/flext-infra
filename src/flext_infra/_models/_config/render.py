@@ -10,7 +10,6 @@ from flext_cli import m
 from ... import t
 from ..._constants import FlextInfraConstantsCodegenProject
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
-from .beads import FlextInfraConfigModelsBeads
 from .contexts import FlextInfraConfigModelsContexts
 from .contract import FlextInfraConfigModelsContract
 from .make import FlextInfraConfigModelsMake
@@ -48,9 +47,6 @@ class FlextInfraConfigModelsRender:
         ]
         python_version: Annotated[
             t.NonEmptyStr, m.Field(description="Python major.minor line")
-        ]
-        state_directory_name: Annotated[
-            t.NonEmptyStr, m.Field(description="External runtime state directory name")
         ]
         github_actions: Annotated[
             Mapping[str, FlextInfraConfigModelsProvider.GithubActionPinSpec],
@@ -163,6 +159,17 @@ class FlextInfraConfigModelsRender:
                 ),
             ),
         ] = ()
+        packages_read: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description=(
+                    "Grant the ci job packages: read because this "
+                    "distribution's gates resolve GitHub Packages; False keeps "
+                    "the job contents-only"
+                ),
+            ),
+        ] = False
 
     class MakeWorkflowRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input shared by generated local workflow surfaces."""
@@ -199,16 +206,13 @@ class FlextInfraConfigModelsRender:
             m.Field(description="Strict Mise environment projected into containers"),
         ]
 
-    class EnvrcRenderSpec(FlextInfraConfigModelsContexts.ScratchRootContext):
+    class EnvrcRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input consumed only by the generated project ``.envrc``."""
 
         repository_root_rel: Annotated[
             t.NonEmptyStr,
             m.Field(description="Project-relative owner of the runtime environment"),
         ] = "."
-        pycache_namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="External bytecode cache namespace")
-        ]
         environment_path_prepends: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Project-relative executable paths"),
@@ -217,15 +221,6 @@ class FlextInfraConfigModelsRender:
             FlextInfraConfigModelsContract.MiseBootstrapEnvironmentSpec,
             m.Field(description="Strict persistent Mise storage contract"),
         ]
-        gascity: Annotated[
-            FlextInfraConfigModelsBeads.BeadsWorkspaceEnvironmentSpec | None,
-            m.Field(
-                description=(
-                    "Gas City Beads projection present only when the repository "
-                    "declares gascity_enabled"
-                )
-            ),
-        ] = None
 
     class SonarcloudIssueExclusionSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One SonarCloud issue exclusion applied as a server-side project setting.
@@ -326,4 +321,26 @@ class FlextInfraConfigModelsRender:
         dependencies: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Excluded transitive dependency names"),
+        ]
+
+    class UvResolutionSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Resolver keys conform owns in one project's ``[tool.uv]`` table.
+
+        Every key is declared: an empty sequence removes it from the table.
+        """
+
+        link_mode: Annotated[str, m.Field(description="uv installation link mode")]
+        constraint_dependencies: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Declared constraints; the uv pin is never kept"),
+        ]
+        exclude_dependencies: Annotated[
+            t.VariadicTuple[
+                FlextInfraConfigModelsRender.UvScopedDependencyExclusionSpec
+            ],
+            m.Field(description="Scoped dependency exclusions routed to the project"),
+        ]
+        environments: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Resolved environment markers uv resolves for"),
         ]

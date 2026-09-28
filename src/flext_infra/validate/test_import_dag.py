@@ -52,7 +52,7 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
                 file_path = u.Infra.resource_file_path(project, resource)
                 if file_path is None:
                     continue
-                module_imports = u.Infra.get_module_imports(project, resource)
+                module_imports = u.Infra.resolve_module_imports(project, resource)
                 for imported in u.Infra.imported_module_paths(module_imports):
                     reason = self._edge_violation(
                         file_path,
