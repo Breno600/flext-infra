@@ -69,6 +69,18 @@ class FlextInfraConstantsWorkspace:
         CHILD = "child"
 
     @unique
+    class BeadIssueStatus(StrEnum):
+        """Canonical statuses exposed by the configured Beads service."""
+
+        OPEN = "open"
+        IN_PROGRESS = "in_progress"
+        BLOCKED = "blocked"
+        DEFERRED = "deferred"
+        CLOSED = "closed"
+        PINNED = "pinned"
+        HOOKED = "hooked"
+
+    @unique
     class WorkProvisioningState(StrEnum):
         """Lifecycle state persisted for one work-lane reservation."""
 
