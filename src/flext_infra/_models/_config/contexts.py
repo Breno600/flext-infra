@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from functools import partial
 from pathlib import Path, PureWindowsPath
+from types import MappingProxyType
 from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
@@ -13,7 +15,6 @@ from ..._constants import (
     FlextInfraConstantsCodegenProject,
     FlextInfraConstantsWorkspace,
 )
-from .. import FlextInfraModelsDefaults
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
 from .beads import FlextInfraConfigModelsBeads
 from .contract import FlextInfraConfigModelsContract
@@ -236,7 +237,7 @@ class FlextInfraConfigModelsContexts:
         ruff_per_file_ignores: Annotated[
             t.MappingKV[str, t.StrSequence],
             m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
+                default_factory=partial(MappingProxyType, {}),
                 description=(
                     "Effective Ruff exemptions: fleet policy composed with this "
                     "repository's own ManagedArtifacts overlay"
@@ -591,7 +592,7 @@ class FlextInfraConfigModelsContexts:
         dependency_revisions: Annotated[
             Mapping[t.NonEmptyStr, Annotated[str, m.Field(pattern=r"^[0-9a-f]{40}$")]],
             m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
+                default_factory=partial(MappingProxyType, {}),
                 description="Explicit immutable revisions of provider-owned dependencies",
             ),
         ]
