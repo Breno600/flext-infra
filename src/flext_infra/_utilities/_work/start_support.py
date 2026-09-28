@@ -37,7 +37,7 @@ class FlextInfraWorkStartSupport(FlextInfraWorkTopology):
         if reused is not None:
             return reason
         removed = FlextInfraWorktreeService(
-            workspace_root=primary_root,
+            repository_root=primary_root,
             operation=c.Infra.WorktreeOperation.REMOVE,
             branch=branch,
             apply_changes=True,

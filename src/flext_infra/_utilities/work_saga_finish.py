@@ -144,7 +144,7 @@ class FlextInfraWorkSagaFinish(FlextInfraWorkSagaCommon):
             if advanced.failure:
                 return r.fail(advanced.error or "work finish epic merge-forward failed")
         removed = FlextInfraWorktreeService(
-            workspace_root=primary_root,
+            repository_root=primary_root,
             operation=c.Infra.WorktreeOperation.REMOVE,
             branch=branch,
             apply_changes=True,
