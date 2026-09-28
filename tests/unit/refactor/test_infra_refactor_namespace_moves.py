@@ -34,6 +34,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         cls._write_file(
             package_root / "__init__.py", "from __future__ import annotations\n"
         )
+        u.Tests.provision_checkout(project_root)
         return (project_root, package_root)
 
     def test_rewrite_manual_protocol_violations_uses_public_runtime_api(

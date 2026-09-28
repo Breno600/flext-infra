@@ -42,7 +42,16 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
             if not source.is_file():
                 msg = f"setup did not provision {name}: {source}"
                 raise FileNotFoundError(msg)
-            (bin_dir / name).symlink_to(source)
+            destination = bin_dir / name
+            if destination.is_symlink():
+                if destination.resolve(strict=True) == source.resolve(strict=True):
+                    continue
+                msg = f"fixture tool conflicts with provisioned executable: {destination}"
+                raise FileExistsError(msg)
+            if destination.exists():
+                msg = f"fixture tool path is already occupied: {destination}"
+                raise FileExistsError(msg)
+            destination.symlink_to(source)
 
     @staticmethod
     def make_read_only(path: Path) -> None:

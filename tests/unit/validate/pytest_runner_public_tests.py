@@ -119,12 +119,20 @@ class TestsFlextInfraPytestRunner:
     ) -> FlextInfraPytestRunner:
         """Bind one runner to the fixture project's canonical cache paths."""
         cache = config.Infra.codegen.make.testmon_cache
+        testmon_db = (
+            cached_runner_project.parent
+            / ".testmon-cache"
+            / cached_runner_project.name
+            / cache.database_filename
+        )
+        testmon_db.parent.mkdir(parents=True, exist_ok=True)
         return FlextInfraPytestRunner(
             repository_root=cached_runner_project,
             ci_context=ci_context,
             started_at_monotonic=time.monotonic(),
             target=cache.target_directory,
             reports=cache.reports_directory,
+            testmon_db=testmon_db,
         )
 
     @staticmethod
@@ -139,14 +147,15 @@ class TestsFlextInfraPytestRunner:
     ) -> None:
         """One public execution collects every test and publishes real evidence."""
         cache = config.Infra.codegen.make.testmon_cache
-        # pytest-testmon keeps its own default database in the repository root.
-        testmon_db = cached_runner_project / cache.database_filename
         runner = self._runner_for(cached_runner_project)
+        testmon_db = runner.testmon_db
 
         exit_code = tm.ok(runner.execute())
 
         tm.that(exit_code, eq=0)
         tm.that(testmon_db.is_file(), eq=True)
+        tm.that(testmon_db.is_relative_to(cached_runner_project), eq=False)
+        tm.that((cached_runner_project / cache.database_filename).exists(), eq=False)
         reports_root = cached_runner_project / cache.reports_directory
         latest_name = tm.ok(u.Cli.files_read_text(reports_root / "latest.txt")).strip()
         summary = tm.ok(
@@ -826,7 +835,6 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path
     ) -> None:
         runner = self._runner_for(cached_runner_project)
-        runner.testmon_db.parent.mkdir(parents=True)
         runner.testmon_db.write_bytes(b"not a SQLite database")
 
         with pytest.raises(sqlite3.DatabaseError):

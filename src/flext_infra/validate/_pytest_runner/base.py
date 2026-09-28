@@ -24,6 +24,10 @@ class FlextInfraPytestRunnerBase(s[int]):
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
+    testmon_db: Annotated[
+        Path,
+        m.Field(description="Absolute external pytest-testmon SQLite database path."),
+    ]
     ci_context: Annotated[
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
@@ -44,6 +48,11 @@ class FlextInfraPytestRunnerBase(s[int]):
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
+            testmon_db=Path(
+                cls._environment_value(
+                    config.Infra.codegen.make.testmon_cache.database_environment_variable
+                )
+            ),
         )
 
     @property
@@ -90,6 +99,12 @@ class FlextInfraPytestRunnerBase(s[int]):
         target_path = self.root / self.target
         if not target_path.is_dir() or target_path.is_symlink():
             msg = f"test target must be an existing directory: {self.target}"
+            raise ValueError(msg)
+        if not self.testmon_db.is_absolute():
+            msg = "testmon database path must be absolute"
+            raise ValueError(msg)
+        if self.testmon_db.resolve().is_relative_to(self.root.resolve()):
+            msg = f"testmon database must be outside the checkout: {self.testmon_db}"
             raise ValueError(msg)
         return self
 

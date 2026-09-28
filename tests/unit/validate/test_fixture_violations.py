@@ -8,7 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra.api import infra
-from tests import u
+from tests import m, u
 
 
 class TestsFlextInfraFixtureViolations:
@@ -78,7 +78,8 @@ class TestsFlextInfraFixtureViolations:
             module_source=u.Tests.namespace_fixture(fixture_name),
             module_name=module_name,
         )
-        result = infra.validate_namespace(root)
+        request = m.Infra.NamespaceValidateCommand(repository_root=root)
+        result = infra.validate_namespace(request)
         tm.that(result.success, eq=True)
         tm.that(not result.value.passed, eq=True)
-        u.Tests.assert_namespace_violation_contains(root, expected_violation_substr)
+        u.Tests.assert_namespace_violation_contains(request, expected_violation_substr)

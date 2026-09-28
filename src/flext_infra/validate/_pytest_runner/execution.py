@@ -40,6 +40,9 @@ class FlextInfraPytestRunnerExecution(
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
                 self.root / c.Infra.DEFAULT_SRC_DIR
             ),
+            config.Infra.codegen.make.testmon_cache.database_environment_variable: str(
+                self.testmon_db
+            ),
             c.Infra.PYTEST_ENV_TESTMON_DATAFILE: str(self.testmon_db),
         }
         if manifest is not None:

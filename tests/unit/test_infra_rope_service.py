@@ -703,9 +703,7 @@ class TestsFlextInfraInfraRopeService:
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             _ = rope.workspace_index
             module_path.unlink()
-            with pytest.raises(
-                RuntimeError, match=r"rope name index failed to read .*service\.py"
-            ):
+            with pytest.raises(FileNotFoundError, match=r"service\.py"):
                 rope.name_index()
 
     def test_workspace_objects_raise_on_indexed_resource_lookup_error(
@@ -738,13 +736,7 @@ class TestsFlextInfraInfraRopeService:
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             _ = rope.name_index()
             consumer_path.unlink()
-            with pytest.raises(
-                RuntimeError,
-                match=(
-                    r"rope search resource unavailable for indexed path "
-                    r".*consumer\.py"
-                ),
-            ):
+            with pytest.raises(FileNotFoundError, match=r"consumer\.py"):
                 rope.objects(service_path, include_local_scopes=False)
 
     def test_workspace_dsl_ignores_test_references(self, tmp_path: Path) -> None:

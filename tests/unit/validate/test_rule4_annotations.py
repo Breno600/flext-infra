@@ -7,7 +7,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra.api import infra
-from tests import u
+from tests import m, u
 
 
 class TestsFlextInfraRule4Annotations:
@@ -36,7 +36,9 @@ class TestsFlextInfraRule4Annotations:
             tmp_path, module_source=module_source, module_name="_settings.py"
         )
 
-        result = infra.validate_namespace(root)
+        result = infra.validate_namespace(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.ok(result)
         tm.that(
@@ -57,10 +59,11 @@ class TestsFlextInfraRule4Annotations:
             tmp_path, module_source=module_source, module_name="services.py"
         )
 
-        result = infra.validate_namespace(root)
+        request = m.Infra.NamespaceValidateCommand(repository_root=root)
+        result = infra.validate_namespace(request)
 
         tm.ok(result)
-        u.Tests.assert_namespace_violation_contains(root, "banned annotation")
+        u.Tests.assert_namespace_violation_contains(request, "banned annotation")
 
     def test_rule4_canonical_singleton_with_trailing_docstring_allowed(
         self, tmp_path: Path
@@ -83,13 +86,14 @@ class TestsFlextInfraRule4Annotations:
             tmp_path, module_source=module_source, module_name="api.py"
         )
 
-        result = infra.validate_namespace(root)
+        request = m.Infra.NamespaceValidateCommand(repository_root=root)
+        result = infra.validate_namespace(request)
 
         tm.ok(result)
         u.Tests.assert_namespace_no_violation_contains(
-            root, "module alias/data declaration"
+            request, "module alias/data declaration"
         )
-        u.Tests.assert_namespace_no_violation_contains(root, "nested namespace")
+        u.Tests.assert_namespace_no_violation_contains(request, "nested namespace")
 
     def test_rule4_bare_module_annotation_is_not_import_time_wiring(
         self, tmp_path: Path
@@ -112,10 +116,11 @@ class TestsFlextInfraRule4Annotations:
             tmp_path, module_source=module_source, module_name="services.py"
         )
 
-        result = infra.validate_namespace(root)
+        request = m.Infra.NamespaceValidateCommand(repository_root=root)
+        result = infra.validate_namespace(request)
 
         tm.ok(result)
-        u.Tests.assert_namespace_no_violation_contains(root, "import-time wiring")
+        u.Tests.assert_namespace_no_violation_contains(request, "import-time wiring")
 
     def test_rule4_module_level_construction_still_flagged(
         self, tmp_path: Path
@@ -131,7 +136,8 @@ class TestsFlextInfraRule4Annotations:
             tmp_path, module_source=module_source, module_name="services.py"
         )
 
-        result = infra.validate_namespace(root)
+        request = m.Infra.NamespaceValidateCommand(repository_root=root)
+        result = infra.validate_namespace(request)
 
         tm.ok(result)
-        u.Tests.assert_namespace_violation_contains(root, "import-time wiring")
+        u.Tests.assert_namespace_violation_contains(request, "import-time wiring")

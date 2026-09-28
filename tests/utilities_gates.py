@@ -12,6 +12,7 @@ from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
 from flext_infra.fixers.rope_fixer import FlextInfraRopeFixerAdapter
 from flext_infra.refactor.census import FlextInfraRefactorCensus
 from tests import m, t
+from tests.utilities_fixture_tooling import TestsFlextInfraUtilitiesToolingFixtureMixin
 
 if TYPE_CHECKING:
     from flext_infra.gates.base_gate import FlextInfraGate
@@ -182,6 +183,7 @@ class TestsFlextInfraUtilitiesGatesMixin:
         dry_run: bool = False,
     ) -> m.Infra.WorkspaceReport:
         """Execute one refactor census and unwrap its successful report."""
+        TestsFlextInfraUtilitiesToolingFixtureMixin.provision_checkout(workspace)
         result = FlextInfraRefactorCensus(
             repository_root=workspace,
             apply_changes=apply_changes,
