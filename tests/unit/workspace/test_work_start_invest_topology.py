@@ -15,7 +15,7 @@ from tests.unit.workspace.test_work_start_provisions_every_lane import (
     _metadata,
 )
 
-_VENV_NAME = config.Infra.tooling.tools.pyright.path_rules.venv_name
+_VENV_NAME = c.Infra.ENVIRONMENT_DIRECTORY
 
 
 def _submodule_source(tmp_path: Path, name: str) -> Path:

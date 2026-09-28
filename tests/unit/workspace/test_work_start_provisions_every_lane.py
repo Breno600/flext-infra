@@ -19,7 +19,7 @@ from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, c, con
 from tests import u
 
 _SETUP_LOG = "setup-runs.log"
-_VENV_NAME = config.Infra.tooling.tools.pyright.path_rules.venv_name
+_VENV_NAME = c.Infra.ENVIRONMENT_DIRECTORY
 
 
 def _repository(tmp_path: Path, *, content_only: bool = False) -> Path:

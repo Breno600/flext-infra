@@ -23,7 +23,7 @@ class TestsFlextInfraWorkService:
 
     @staticmethod
     def _repository(tmp_path: PathType) -> PathType:
-        venv_name = config.Infra.tooling.tools.pyright.path_rules.venv_name
+        venv_name = c.Infra.ENVIRONMENT_DIRECTORY
         repository = tmp_path / "repository"
         repository.mkdir()
         (repository / "README.md").write_text("fixture\n", encoding="utf-8")

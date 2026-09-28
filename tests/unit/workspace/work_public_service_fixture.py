@@ -49,7 +49,7 @@ class WorkPublicServiceFixture:
             'description = "A standard PEP 621 description string"\n',
             encoding="utf-8",
         )
-        venv_name = config.Infra.tooling.tools.pyright.path_rules.venv_name
+        venv_name = c.Infra.ENVIRONMENT_DIRECTORY
         (repository / "Makefile").write_text(
             ".PHONY: setup\n"
             "setup:\n"
