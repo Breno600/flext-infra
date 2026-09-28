@@ -47,8 +47,7 @@ class FlextInfraMypyDarwinSupervisor:
     @staticmethod
     def _usage(pid: int) -> t.Pair[int, bool]:
         snapshot = u.Cli.run(
-            ("/bin/ps", "-axo", "pgid=,rss=,stat="),
-            timeout=1,
+            ("/bin/ps", "-axo", "pgid=,rss=,stat="), timeout=1
         ).unwrap()
         total_kib = 0
         alive = False
@@ -75,9 +74,7 @@ class FlextInfraMypyDarwinSupervisor:
         cls._usage(os.getpgrp())
         deadline = time.monotonic() + timeout
         child = u.Cli.process_start(
-            u.Infra.mypy_command(invocation),
-            capture=False,
-            start_new_session=True,
+            u.Infra.mypy_command(invocation), capture=False, start_new_session=True
         ).unwrap()
         received_signal: int = 0
 
