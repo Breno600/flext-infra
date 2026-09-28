@@ -210,6 +210,15 @@ O handoff final relaciona PRs, commits de merge e prova após integração aos B
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
 declarar fechamento funcional.
 
+## Abstraction-boundary project identity
+
+The boundary gate reads the declared project identity through
+`u.Infra.read_project_metadata_result`. Owner exemptions and TOML allowances use that
+typed identity, so renaming a checkout or creating a linked worktree does not change its
+policy. A consumer placed in an owner's named directory remains a consumer. Missing or
+malformed project metadata blocks the gate and preserves the metadata reader's
+diagnostic; directory names are never identity fallbacks.
+
 ## Codemod scanner contract
 
 The operator's 2026-09-24 decision, retained by `flext-1pquc`, makes codemod policy
