@@ -383,6 +383,16 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
+        mode: stable
+        save_enabled: true
+        max_bootstrap_generations: 3
+        max_stable_generations: 3
+        per_repo_budget_bytes: 52428800
+        warning_threshold_percent: 80
+        maintenance_threshold_percent: 90
+        block_threshold_percent: 95
+        allowed_save_refs: [main]
+        key_prefix: flext-testmon
       # Public verbs execute their declared operation without mode selectors.
       ci:
         variable: CI
