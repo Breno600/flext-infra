@@ -30,28 +30,30 @@ class TestsFlextInfraFreshImport:
         """Shared validator instance."""
         return FlextInfraValidateFreshImport()
 
-    @staticmethod
-    def _validator(root: Path) -> FlextInfraValidateFreshImport:
-        """Validate one fixture checkout that owns its runtime environment."""
-        u.Tests.provision_runtime_environment(root)
-        return FlextInfraValidateFreshImport(repository_root=root)
+    def test_probes_run_in_the_declared_target_environment(
+        self, tmp_path: Path
+    ) -> None:
+        """The declared target interpreter runs the probes, not the tool's.
 
-    def test_probes_run_in_the_target_environment(self, tmp_path: Path) -> None:
-        """The target checkout's interpreter runs the probes, not the tool's.
-
-        The tool's environment imports flext_core; the target's fresh stdlib
-        environment does not, so the probe must fail there.
+        The tool's environment imports flext_core; the declared target's fresh
+        stdlib environment does not, so the probe must fail there.
         """
-        report = tm.ok(self._validator(tmp_path).build_report(packages=("flext_core",)))
+        u.Tests.provision_runtime_environment(tmp_path)
+        validator = FlextInfraValidateFreshImport(
+            repository_root=tmp_path, runtime_root=tmp_path
+        )
+        report = tm.ok(validator.build_report(packages=("flext_core",)))
         tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="No module named 'flext_core'")
 
-    def test_missing_target_environment_fails_loudly(self, tmp_path: Path) -> None:
-        """No target interpreter is a failure, never the tool's interpreter."""
-        u.Tests.initialize_git_repo(tmp_path)
-        result = FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
-            packages=("sys",)
+    def test_declared_target_without_interpreter_fails_loudly(
+        self, tmp_path: Path
+    ) -> None:
+        """A declared target lacking its interpreter fails, never falls back."""
+        validator = FlextInfraValidateFreshImport(
+            repository_root=tmp_path, runtime_root=tmp_path
         )
+        result = validator.build_report(packages=("sys",))
         tm.fail(result, has="fresh-import target interpreter is missing")
 
     def test_empty_package_list_passes(self, v: FlextInfraValidateFreshImport) -> None:
@@ -104,7 +106,7 @@ class TestsFlextInfraFreshImport:
         package_root = tmp_path / "src" / "demo_external"
         package_root.mkdir(parents=True)
         package_root.joinpath("__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
-        validator = self._validator(tmp_path)
+        validator = FlextInfraValidateFreshImport(repository_root=tmp_path)
         report: m.Infra.ValidationReport = tm.ok(
             validator.build_report(packages=("demo_external",))
         )
@@ -126,7 +128,7 @@ class TestsFlextInfraFreshImport:
         tm.that(publication.action, eq=c.Infra.LazyInitAction.SKIP)
 
         report = tm.ok(
-            self._validator(repository_root).build_report(
+            FlextInfraValidateFreshImport(repository_root=repository_root).build_report(
                 publications=analysis.publications, repository_roots=(repository_root,)
             )
         )
@@ -154,7 +156,7 @@ class TestsFlextInfraFreshImport:
         )
         tm.that(publication.action, eq=c.Infra.LazyInitAction.REMOVE)
 
-        result = self._validator(repository_root).build_report(
+        result = FlextInfraValidateFreshImport(repository_root=repository_root).build_report(
             publications=analysis.publications, repository_roots=(repository_root,)
         )
 
@@ -195,7 +197,7 @@ class TestsFlextInfraFreshImport:
             inline_constants={},
         )
         report = tm.ok(
-            self._validator(tmp_path).build_report(
+            FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
                 publications=(publication,), repository_roots=(tmp_path,)
             )
         )
@@ -240,7 +242,7 @@ class TestsFlextInfraFreshImport:
             inline_constants={},
         )
         report = tm.ok(
-            self._validator(tmp_path).build_report(
+            FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
                 publications=(publication,), repository_roots=(tmp_path,)
             )
         )
@@ -254,7 +256,7 @@ class TestsFlextInfraFreshImport:
             "__all__ = ('missing_export',)\n", encoding=c.Cli.ENCODING_DEFAULT
         )
         report = tm.ok(
-            self._validator(tmp_path).build_report(
+            FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
                 packages=(package.name,)
             )
         )
@@ -299,7 +301,7 @@ class TestsFlextInfraFreshImport:
             inline_constants={},
         )
         report = tm.ok(
-            self._validator(tmp_path).build_report(
+            FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
                 publications=(publication,), repository_roots=(tmp_path,)
             )
         )
@@ -342,7 +344,7 @@ class TestsFlextInfraFreshImport:
             inline_constants={},
         )
         report = tm.ok(
-            self._validator(tmp_path).build_report(
+            FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
                 publications=(publication,), repository_roots=(tmp_path,)
             )
         )
@@ -385,7 +387,7 @@ class TestsFlextInfraFreshImport:
             inline_constants={},
         )
         report = tm.ok(
-            self._validator(tmp_path).build_report(
+            FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
                 publications=(publication,), repository_roots=(tmp_path,)
             )
         )
@@ -437,7 +439,7 @@ class TestsFlextInfraFreshImport:
             inline_constants={},
         )
         report = tm.ok(
-            self._validator(tmp_path).build_report(
+            FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
                 packages=(package.name,),
                 publications=(publication,),
                 repository_roots=(tmp_path,),
@@ -494,7 +496,7 @@ class TestsFlextInfraFreshImport:
             )
         )
         report = tm.ok(
-            self._validator(tmp_path).build_report(
+            FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
                 publications=publications, repository_roots=(tmp_path,)
             )
         )

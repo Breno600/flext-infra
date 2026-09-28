@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Annotated, ClassVar, override
 
 from flext_core import r
-from flext_infra import c, config, m, p, t, u
+from flext_infra import c, config, m, p, settings, t, u
 
 from ..base import FlextInfraServiceBase
 
@@ -23,6 +23,16 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
     packages: Annotated[
         t.StrSequence, m.Field(description="Packages to validate in fresh subprocesses")
     ] = (c.Infra.PKG_CORE_UNDERSCORE, "flext_infra", "flext_tests")
+    runtime_root: Annotated[
+        Path | None,
+        m.Field(
+            default_factory=lambda: type(settings).fetch_global().Infra.runtime_root,
+            description=(
+                "Declared runtime root whose environment runs the probes; "
+                "undeclared, the target checkout's own environment"
+            ),
+        ),
+    ]
 
     _PRELUDE: ClassVar[str] = (
         "import importlib, sys\n"
@@ -152,7 +162,9 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             )
         # The probes execute the target checkout's code, so they run in the
         # target's own environment, never the one hosting this tool.
-        interpreter = u.Infra.runtime_python(self.repository_root)
+        interpreter = u.Infra.runtime_python(
+            self.repository_root, runtime_root=self.runtime_root
+        )
         if not interpreter.is_file():
             return r[m.Infra.ValidationReport].fail(
                 f"fresh-import target interpreter is missing: {interpreter}; "

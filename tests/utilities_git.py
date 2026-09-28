@@ -228,19 +228,17 @@ class TestsFlextInfraUtilitiesGitMixin:
         return root
 
     @staticmethod
-    def provision_runtime_environment(repo_root: Path) -> Path:
-        """Create the checkout's own runtime environment as real fixture state.
+    def provision_runtime_environment(runtime_root: Path) -> Path:
+        """Create a declared runtime root's environment as real fixture state.
 
         A stdlib venv built from the base interpreter with nothing installed,
-        at the location the production owner resolves: the fixture checkout
-        owns an environment independent of the runner's, as ``make setup``
-        gives a real checkout. Returns that environment's interpreter.
+        at the path the production owner resolves for that declared root: an
+        environment independent of the runner's. Returns its interpreter.
         """
-        TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(repo_root)
         venv.EnvBuilder(with_pip=False, symlinks=True).create(
-            u.Infra.runtime_environment_dir(repo_root)
+            u.Infra.runtime_environment_dir(runtime_root, runtime_root=runtime_root)
         )
-        return u.Infra.runtime_python(repo_root)
+        return u.Infra.runtime_python(runtime_root, runtime_root=runtime_root)
 
     @staticmethod
     def _read_origin_url(repo_root: Path, remote: str) -> str:
