@@ -7,6 +7,7 @@
 !README.md
 !uv.lock
 !.mise.toml
+!.envrc
 !mise.lock
 !mise.version
 !.mise/

@@ -7,13 +7,8 @@ Infra:
     # validate-git-hook.sh).
     retired_projections: [.github/scripts/install-git-hooks.sh]
 
-    # Operator law 2026-09-22: the pyproject template declares `.cli:main`
-    # for every distribution while most member cli facades predate that
-    # contract. Until the fleet converges the facades (bead
-    # flext-1pquc, gen-fixed-point campaign), declared-script import
-    # failures warn instead of failing the conformance transaction.
-    # Package-export probes stay blocking either way.
-    fresh_import_entry_points_warn_only: true
+    # Fresh import probes are independent subprocesses within one validation.
+    fresh_import_workers: 3
 
     # Per-module scc code-LOC ceiling. Operator instruction 2026-09-07:
     # the former 1000-LOC allowance stands (supersedes the 200 constant).
@@ -30,16 +25,6 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
-      state_directory_name: .flext-runtime
-      scratch_namespace: scratch
-      # Scratch (TMPDIR, test basetemp, Mise bootstrap staging) never lives
-      # inside a versioned tree: in workspace mode the sibling state root sits
-      # under the superproject, so every sandbox became a tracked-scope of the
-      # enclosing repository. The scratch root is the platform home plus this
-      # path, mirroring the absolute checkout path below it (storage law).
-      scratch_home_relative: tmp
-      pycache_namespace: pycache
-      mise_namespace: mise-artifacts
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -63,7 +48,14 @@ Infra:
       kind_version: latest
       direnv_version: latest
       taplo_version: latest
+      # The npm CLI publishes a native musl binary; the GitHub CLI release does
+      # not. One selector therefore covers the declared Linux libc variants.
+      ast_grep_selector: npm:@ast-grep/cli
       ast_grep_version: latest
+      # ast-grep's native binary is selected by its npm lifecycle script.
+      # The embedded aube installer preserves the locked dependency graph;
+      # the approved package lifecycle is declared in the mise projection.
+      npm_package_manager: aube
       gitleaks_version: latest
       kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
@@ -81,6 +73,7 @@ Infra:
       # mise safe mode ignores project [settings].
       mise_lockfile_platforms:
         - linux-x64
+        - linux-x64-musl
         - linux-arm64
         - macos-x64
         - macos-arm64
@@ -99,6 +92,7 @@ Infra:
       # one per platform, so `mise lock` recorded no URL for them.
       jscpd_asset_patterns:
         linux-x64: jscpd-linux-x64-gnu.tar.gz
+        linux-x64-musl: jscpd-linux-x64-musl.tar.gz
         linux-arm64: jscpd-linux-arm64-gnu.tar.gz
         macos-x64: jscpd-darwin-x64.tar.gz
         macos-arm64: jscpd-darwin-arm64.tar.gz
@@ -335,6 +329,7 @@ Infra:
         discovery_scope: none
 
     make:
+      examples_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -352,13 +347,21 @@ Infra:
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
       fmt_gates: [markdown-format]
+      check_gate_suspensions:
+        - gate: namespace
+          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
+          reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
+        - gate: codemod
+          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
+          reason: "Structural codemod backlog is applied through make mod after the fleet is green."
+        - gate: smells
+          authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
+          reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
       # Why (mro-dipb): adaptive testmon GitHub Actions cache policy.
       # save_enabled stays false while storage-limit API returns HTTP 402 /
       # flext-infra sits near the default Actions cache ceiling (QUOTA_HOLD).
       testmon_cache:
         schema_version: 1
-        namespace: testmon
-        invocation_namespace: pytest
         database_filename: .testmondata
         target_directory: tests
         reports_directory: .reports/tests
@@ -395,8 +398,8 @@ Infra:
         # CI=N owns the complementary local check gates; absent uses testmon
         # for incremental developer runs.
         #
-        # The set is the SLOW whole-program type checkers, matching
-        # PROJECT_CHECK_GATES_LOCAL_VALUES: those are the gates worth deferring
+        # The set is the SLOW whole-program type checkers: those are the gates
+        # worth deferring
         # off the fast CI leg, and they are what CI=N exists to own. `lint` is
         # not here -- ruff is cheap, so making CI skip it buys nothing and
         # leaves the fast leg without a linter.
@@ -433,7 +436,6 @@ Infra:
           - .benchmarks
           - .hypothesis
         root_dirs:
-          - .flext-runtime
           - build
           - dist
           - htmlcov
@@ -513,6 +515,9 @@ Infra:
           profiles: [workspace]
         - name: build
           description: Build the project distribution artifacts.
+        - name: examples
+          description: Run the workspace public runtime examples.
+          profiles: [workspace]
         - name: check
           description: Run every configured non-test gate.
         - name: test
@@ -525,6 +530,10 @@ Infra:
           description: Apply ruff check --fix --unsafe-fixes --preview plus every other configured safe correction. Ruff is the rule; change code, never ruff.
         - name: fix-enforcement
           description: Apply the safe fix actions declared by the enforcement catalog.
+        - name: fix-namespace
+          description: Apply the canonical namespace enforcer to the selected workspace.
+        - name: fix-accessors
+          description: Migrate forbidden accessor names and every resolved consumer.
         - name: audit
           description: Inspect ownership, dependency, and generated-state health.
         - name: status
@@ -578,8 +587,8 @@ Infra:
     # mro-operator-20260918b: governance content (.agents/.claude) and direnv
     # runtime state stay visible to the editor and watcher — removed from the
     # default vscode/watch excludes; source_scan keeps its dotdir skip.
-      - {name: .agents, vscode_exclude: false, watch_exclude: false}
-      - {name: .beads}
+      - {name: .agents, source_scan_ignore: true, vscode_exclude: false, watch_exclude: false}
+      - {name: .beads, source_scan_ignore: true}
       - {name: .benchmarks}
     # mro-0wuz: archive-not-delete target for the layout engine; the generated
     # .gitignore projection must never track archived loose files.
@@ -603,7 +612,6 @@ Infra:
       - {name: .omo}
       - {name: .pylance_cache, vscode_exclude: false}
       - {name: .pytest_cache, source_scan_ignore: true}
-      - {name: .flext-runtime, source_scan_ignore: true}
       - {name: .testmondata, is_dir: false, source_scan_ignore: true}
       - {name: .testmondata-wal, is_dir: false, source_scan_ignore: true}
       - {name: .testmondata-shm, is_dir: false, source_scan_ignore: true}
@@ -706,13 +714,6 @@ Infra:
         githubPullRequests.autoRepositoryDetection: true
         githubPullRequests.ignoreSubmodules: false
       list_settings:
-        python-envs.workspaceSearchPaths:
-          - ./.venv
-          - ./*/.venv
-        ruff.interpreter:
-          - ${workspaceFolder}/.venv/bin/python
-        ruff.path:
-          - ${workspaceFolder}/.venv/bin/ruff
         markdownlint.lintWorkspaceGlobs:
           - "!**/.git/**"
           - "!**/.planning/**"
@@ -746,9 +747,6 @@ Infra:
         "[markdown]":
           editor.defaultFormatter: esbenp.prettier-vscode
           editor.formatOnSave: false
-        terminal.integrated.env.linux:
-          PATH: ${workspaceFolder}/.venv/bin:${env:PATH}
-          VIRTUAL_ENV: ${workspaceFolder}/.venv
       stripped_keys:
       # Pylance emits settingsNotOverridable diagnostics (severity=warning) when
       # these keys appear in .vscode/settings.json alongside a [tool.pyright] section
@@ -807,6 +805,7 @@ Infra:
       canonical_root_dirs:
         - .mise
         - bin
+        - infra
         - src
         - tests
         - docs
@@ -1046,6 +1045,13 @@ Infra:
       - path: .python-version
         owner: codegen
         policy: full
+    # The docs auditor's placeholder/forbidden-term lists are fleet policy: one
+    # template owns them, so the placeholder and forbidden-term checks in
+    # _auditor_checks.py enforce on every governed repository instead of
+    # silently reading an absent file as empty lists.
+      - path: docs/docs_config.json
+        owner: codegen
+        policy: full
     # Qlty refuses to scan without a repository configuration. Keep the
     # blocking smells posture fleet-wide and generated from this SSOT.
       - path: .qlty/qlty.toml
@@ -1242,7 +1248,7 @@ Infra:
             runtime: [flext-web, httpx>=0.28.1, msgpack>=1.2.2]
           - upstream: flext_core
             project: flext-auth
-            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.14.0]
+            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.0]
           - upstream: flext_core
             project: flext-cli
           # click floor mirrors the shared fleet lock (8.3.3); meltano upstream
@@ -1259,19 +1265,19 @@ Infra:
             runtime: [flext-cli, grpcio>=1.84.0]
           - upstream: flext_cli
             project: flext-observability
-            runtime: [flext-cli, flask>=3.1.3, starlette>=1.6.0, psutil>=7.2.2]
+            runtime: [flext-cli, flask>=3.1.3, starlette>=1.7.0, psutil>=7.2.2]
           - upstream: flext_cli
             project: flext-plugin
             runtime: [flext-cli]
           - upstream: flext_cli
             project: flext-quality
-            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.5, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
+            runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.53.0, fastapi>=0.141.1, starlette>=1.6.0, werkzeug>=3.1.8]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.8]
           - upstream: flext_cli
             project: flext-db-oracle
-            runtime: [flext-cli, oracledb>=26.0.0, sqlalchemy>=2.0.54]
+            runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]
           - upstream: flext_cli
             project: flext-ldif
             runtime: [flext-cli]
@@ -1966,6 +1972,13 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true
+      # Static docs-auditor policy: no Jinja vars; the docs scope policy and
+      # the auditor read it as data (docs_policy_list).
+        - source: base/docs/docs_config.json.j2
+          destination: docs/docs_config.json
+          profiles: [workspace, standalone]
+          delegate: render
+          overwrite: false
         - source: base/gitignore.j2
           destination: .gitignore
           profiles: [workspace, standalone]
@@ -2101,8 +2114,9 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
-        - source: base/config/workspace.yaml.j2
-          destination: config/workspace.yaml
+      # New-project declaration is serialized once from WorkspaceManifestSpec.
+      # Existing-tree conform reads this file as input and never overwrites it.
+        - destination: config/workspace.yaml
           profiles: [workspace, standalone]
           delegate: manifest
           overwrite: false

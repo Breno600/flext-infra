@@ -54,6 +54,10 @@ class FlextInfraUtilitiesCodegen(
                 c.Infra.MISE_BOOTSTRAP_PASSTHROUGH_ENVIRONMENT
             ),
             version_pin_file=c.Infra.MISE_VERSION_PIN_FILENAME,
+            version_pin_header=c.Infra.MISE_VERSION_PIN_HEADER,
+            version_pin_reader=c.Infra.MISE_VERSION_PIN_READER,
+            release_selector=c.Infra.MISE_RELEASE_SELECTOR,
+            artifact_specs=c.Infra.ARTIFACT_SPECS,
             lock_file=c.Infra.MISE_LOCK_FILENAME,
             runtime_install_relative_template=c.Infra.MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE,
             resolved_release_pattern=c.Infra.MISE_RELEASE_PATTERN,
@@ -64,10 +68,6 @@ class FlextInfraUtilitiesCodegen(
         """Return the sole typed context every generated ``.envrc`` renders from."""
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
-            state_directory_name=toolchain.state_directory_name,
-            scratch_namespace=toolchain.scratch_namespace,
-            scratch_home_relative=toolchain.scratch_home_relative,
-            pycache_namespace=toolchain.pycache_namespace,
             environment_path_prepends=toolchain.environment_path_prepends,
             mise_bootstrap=FlextInfraUtilitiesCodegen.mise_bootstrap_environment(),
         )
@@ -170,6 +170,25 @@ class FlextInfraUtilitiesCodegen(
         return r[Path].ok(physical_root)
 
     @staticmethod
+    def mise_pinned_release(content: str) -> p.Result[str]:
+        """Return the release a ``mise.version`` pin records: its sole data line.
+
+        Comment and blank lines are the generated header; the shell readers
+        apply the same rule through ``c.Infra.MISE_VERSION_PIN_READER``.
+        """
+        data = tuple(
+            line
+            for line in content.split("\n")
+            if line.strip() and not line.lstrip().startswith("#")
+        )
+        release = data[0] if len(data) == 1 else ""
+        if re.fullmatch(c.Infra.MISE_RELEASE_PATTERN, release) is None:
+            return r[str].fail(
+                f"pin records no resolved Mise release ({release or 'empty'})"
+            )
+        return r[str].ok(release)
+
+    @staticmethod
     def mise_runtime_install_path(storage_root: Path, release: str) -> p.Result[Path]:
         """Return the immutable persistent binary path for one exact release."""
         if re.fullmatch(c.Infra.MISE_RELEASE_PATTERN, release) is None:
@@ -227,29 +246,13 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def generate_test_module_skeleton(
-        *,
-        class_name: str,
-        base_class: str,
-        project_module: str,
-        alias: str,
-        namespace: str,
-        project_namespace: str,
-        docstring: str,
+        *, context: m.Infra.TestModuleSkeletonRenderContext
     ) -> str:
-        """Render one canonical test facade skeleton."""
+        """Render one canonical test facade skeleton from its validated context."""
         template_path = (
             Path(__file__).resolve().parent.parent
             / "templates"
             / c.Infra.TEMPLATE_TEST_MODULE_SKELETON
-        )
-        context = m.Infra.TestModuleSkeletonRenderContext(
-            class_name=class_name,
-            base_class=base_class,
-            project_module=project_module,
-            alias=alias,
-            namespace=namespace,
-            project_namespace=project_namespace,
-            docstring=docstring,
         )
         rendered: p.Result[str] = u.Cli.template_render(template_path, context)
         return rendered.unwrap()

@@ -24,7 +24,8 @@ class TestsFlextInfraRule0NamespaceStructure:
         )
         layout = tm.not_none(u.Infra.layout(root))
         facade = layout.package_dir / c.Infra.FAMILY_FILES[family].lstrip("*")
-        alias, suffix = c.Infra.NAMESPACE_FAMILY_EXPECTED_ALIAS[facade.name]
+        alias = c.Infra.NAMESPACE_FILE_TO_FAMILY[facade.name]
+        suffix = c.Infra.FAMILY_SUFFIXES[alias]
         class_name = f"{layout.class_stem}{suffix}"
         content = facade.read_text(encoding="utf-8")
         if f"{alias} = {class_name}" not in content:
@@ -107,6 +108,129 @@ class TestsFlextInfraRule0NamespaceStructure:
         report = u.Tests.validate_namespace_project(root)
         tm.that(report.passed, eq=True)
         tm.that(report.violations, empty=True)
+
+    def test_project_without_services_needs_no_service_facades(
+        self, tmp_path: Path
+    ) -> None:
+        root = u.Tests.namespace_project(
+            tmp_path,
+            module_source=u.Tests.namespace_fixture("rule0_valid.py"),
+            module_name="models.py",
+        )
+        package = tm.not_none(u.Infra.layout(root)).package_dir
+        (package / "api.py").unlink()
+        (package / "base.py").unlink()
+        (package / "services" / "__init__.py").unlink()
+        (package / "services").rmdir()
+
+        report = u.Tests.validate_namespace_project(root)
+
+        tm.that(report.passed, eq=True, msg=str(report.violations))
+
+    def test_project_with_service_requires_composition_facades(
+        self, tmp_path: Path
+    ) -> None:
+        root = u.Tests.namespace_project(
+            tmp_path,
+            module_source=u.Tests.namespace_fixture("rule0_valid.py"),
+            module_name="models.py",
+        )
+        package = tm.not_none(u.Infra.layout(root)).package_dir
+        (package / "services" / "search.py").write_text(
+            '"""Search use case."""\nclass FlextTestSearch:\n    pass\n',
+            encoding="utf-8",
+        )
+        (package / "api.py").unlink()
+        (package / "base.py").unlink()
+
+        report = u.Tests.validate_namespace_project(root)
+
+        tm.that(report.passed, eq=False)
+        tm.that(
+            any("missing api facade" in item for item in report.violations), eq=True
+        )
+        tm.that(
+            any("missing base facade" in item for item in report.violations), eq=True
+        )
+
+    def test_settings_model_inherits_without_redundant_nested_namespace(
+        self, tmp_path: Path
+    ) -> None:
+        root = u.Tests.namespace_project(
+            tmp_path,
+            module_source=(
+                "from flext_core import FlextSettings\n\n"
+                "class FlextTestSettings(FlextSettings):\n"
+                '    """Project settings inherit the canonical settings model."""\n'
+                "\nsettings = FlextTestSettings\n"
+                "__all__ = ('FlextTestSettings', 'settings')\n"
+            ),
+            module_name="settings.py",
+        )
+
+        report = u.Tests.validate_namespace_project(root)
+
+        tm.that(report.passed, eq=True, msg=str(report.violations))
+        tm.that(
+            any(
+                "must declare or inherit a nested namespace" in violation
+                for violation in report.violations
+            ),
+            eq=False,
+        )
+
+    def test_project_service_base_inherits_without_artificial_namespace(
+        self, tmp_path: Path
+    ) -> None:
+        root = u.Tests.namespace_project(
+            tmp_path,
+            module_source=(
+                "import flext_core\n\n"
+                "class FlextTestServiceBase(flext_core.s[bool]):\n"
+                '    """Base inherited by the project\'s use cases."""\n'
+                "\ns = FlextTestServiceBase\n"
+                "__all__ = ('FlextTestServiceBase', 's')\n"
+            ),
+            module_name="base.py",
+        )
+
+        report = u.Tests.validate_namespace_project(root)
+
+        tm.that(report.passed, eq=True, msg=str(report.violations))
+        tm.that(
+            any(
+                "must declare or inherit a nested namespace" in violation
+                for violation in report.violations
+            ),
+            eq=False,
+        )
+
+    def test_api_does_not_publish_inherited_service_base_alias(
+        self, tmp_path: Path
+    ) -> None:
+        root = u.Tests.namespace_project(
+            tmp_path,
+            module_source=(
+                "from .base import FlextTestServiceBase\n\n"
+                "class FlextTestApi(FlextTestServiceBase):\n"
+                '    """Public composition root."""\n'
+                "\napi = FlextTestApi.fetch_global()\n"
+                "__all__ = ('FlextTestApi', 'api')\n"
+            ),
+            module_name="api.py",
+        )
+        (root / "src" / "flext_test" / "base.py").write_text(
+            "import flext_core\n\n"
+            "class FlextTestServiceBase(flext_core.s[bool]):\n"
+            '    """Project service base."""\n'
+            "\ns = FlextTestServiceBase\n"
+            "__all__ = ('FlextTestServiceBase', 's')\n",
+            encoding="utf-8",
+        )
+
+        report = u.Tests.validate_namespace_project(root)
+
+        tm.that(report.passed, eq=True, msg=str(report.violations))
 
     def test_rule0_does_not_flag_non_namespace_runtime_module(
         self, tmp_path: Path

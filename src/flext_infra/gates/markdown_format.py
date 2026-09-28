@@ -55,7 +55,7 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
         """Run prettier --check only when markdown files exist."""
         started = time.monotonic()
         if self._resolve_binary() is None:
-            return self._binary_missing_result(project_dir, started, ctx)
+            return self._binary_missing_result(project_dir, started)
         config_path = project_dir / c.Infra.PRETTIER_CONFIG_FILENAME
         if not config_path.is_file():
             # .prettierrc is a codegen-managed artifact (policy full): absence
@@ -71,12 +71,11 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
                 ),
                 passed=False,
                 started=started,
-                ctx=ctx,
             )
         return super().check(project_dir, ctx)
 
     def _binary_missing_result(
-        self, project_dir: Path, started: float, ctx: m.Infra.GateContext
+        self, project_dir: Path, started: float
     ) -> m.Infra.GateExecution:
         """A missing provisioned binary is a tool error, never a clean pass."""
         return self._build_single_issue_result(
@@ -88,7 +87,6 @@ class FlextInfraMarkdownFormatGate(FlextInfraMarkdownGateBase):
             ),
             passed=False,
             started=started,
-            ctx=ctx,
         )
 
     @override

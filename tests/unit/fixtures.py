@@ -8,14 +8,14 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import fcntl
+import os
 import tempfile
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import config, infra
+from flext_infra import config, infra, u as infra_u
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import c, m, p, t, u
 
@@ -40,24 +40,17 @@ def _modernizer_workspace_pyproject(*members: str) -> str:
 
 
 def _write_modernizer_codegen_config(workspace: Path) -> None:
-    """Give the workspace its own governed SSOT so ``--rewrite-constraints``.
+    """Copy the valid governed SSOT into the isolated modernizer owner.
 
-    stays inside the fixture (flext-eles2): the floor writer resolves its
-    target from the modernizer's own ``repository_root``, never the real
-    flext-infra checkout, so every isolated workspace needs a minimal
-    ``config/codegen.yaml`` of its own.
+    Constraint rewriting validates the complete typed codegen contract and
+    must never write the installed infrastructure checkout (flext-eles2).
     """
     config_dir = workspace / c.Infra.CODEGEN_CONFIG_DIR
     config_dir.mkdir(parents=True, exist_ok=True)
-    (config_dir / c.Infra.CODEGEN_CONFIG_FILENAME).write_text(
+    (config_dir / c.Infra.CODEGEN_CONFIG_FILENAME).write_bytes(
         (
-            "Infra:\n"
-            "  codegen:\n"
-            "    scaffold:\n"
-            "      project:\n"
-            "        dependency_profiles: []\n"
-        ),
-        encoding="utf-8",
+            _PROJECT_ROOT / c.Infra.CODEGEN_CONFIG_DIR / c.Infra.CODEGEN_CONFIG_FILENAME
+        ).read_bytes()
     )
 
 
@@ -74,7 +67,6 @@ def tool_config_document() -> m.Infra.ToolConfigDocument:
     return u.Tests.tool_config_document()
 
 
-_DETECTOR_FIXTURE = "real_detector_project"
 _DETECTOR_PROJECT_NAME = "detector-fixture"
 _DETECTOR_UPGRADE_RECEIPT = "upgrade-receipt.json"
 
@@ -178,10 +170,8 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
     _write_receipt(parent / _DETECTOR_UPGRADE_RECEIPT, upgrade)
 
 
-_MAKE_TEMPLATES_FIXTURE = "resolved_make_templates"
 _MAKE_UPGRADE_RECEIPT = c.Tests.MAKE_TEMPLATE_UPG_RECEIPT
 _MAKE_CI_SETUP_RECEIPT = c.Tests.MAKE_TEMPLATE_CI_RECEIPT
-_INFRA_CHECKOUT_FIXTURE = "provisioned_infra_checkout"
 _INFRA_SETUP_RECEIPT = "setup-receipt.json"
 # Every scenario that provisions the candidate's own environment before `gen`.
 _INFRA_CHECKOUT_SCENARIOS = (
@@ -275,67 +265,26 @@ def _provision_infra_checkout(scenario: str) -> None:
     _write_receipt(parent / _INFRA_SETUP_RECEIPT, setup)
 
 
-def pytest_collection_finish(session: pytest.Session) -> None:
-    """Provision every selected run-scoped consumer before any item runs.
+def _ensure_provisioned(
+    parent: Path, receipt: str, key: c.Infra.MakeProfile | str | t.StrSequence
+) -> None:
+    """Provision only a consumed fixture under the canonical filesystem lease.
 
-    Network resolution and environment installation are provisioning, not the
-    behaviour under test, so they never run inside an item's time budget.
-    Workers of one run share the provisioned consumers; the first worker
-    provisions one while the others wait on its lock and reuse its receipt.
+    Testmon inventory and selection collect tests without network or writes.
+    Provisioning belongs to the item that actually consumes the checkout, so
+    its cost and failure remain visible to the test deadline and report.
     """
-    functions = tuple(
-        item for item in session.items if isinstance(item, pytest.Function)
-    )
-    detector = dict.fromkeys(
-        tuple(
-            t.Infra.STR_SEQ_ADAPTER.validate_python(
-                item.callspec.params[_DETECTOR_FIXTURE]
-            )
-        )
-        for item in functions
-        if _DETECTOR_FIXTURE in item.fixturenames
-    )
-    profiles = (
-        tuple(c.Infra.MakeProfile)
-        if any(_MAKE_TEMPLATES_FIXTURE in item.fixturenames for item in functions)
-        else ()
-    )
-    scenarios = dict.fromkeys(
-        str(item.callspec.params[_INFRA_CHECKOUT_FIXTURE])
-        for item in functions
-        if _INFRA_CHECKOUT_FIXTURE in item.fixturenames
-    )
-    jobs = (
-        *(
-            (_detector_template_parent(modules), _DETECTOR_UPGRADE_RECEIPT, modules)
-            for modules in detector
-        ),
-        *(
-            (
-                _run_scoped("make-templates", profile.value),
-                _MAKE_UPGRADE_RECEIPT,
-                profile,
-            )
-            for profile in profiles
-        ),
-        *(
-            (_run_scoped("infra-checkouts", scenario), _INFRA_SETUP_RECEIPT, scenario)
-            for scenario in scenarios
-        ),
-    )
-    for parent, receipt, key in jobs:
-        parent.mkdir(parents=True, exist_ok=True)
-        with (parent.with_suffix(".lock")).open("a", encoding="utf-8") as lock:
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            if (parent / receipt).is_file():
-                continue
-            match key:
-                case c.Infra.MakeProfile():
-                    _provision_make_template(key)
-                case str():
-                    _provision_infra_checkout(key)
-                case _:
-                    _provision_detector_template(key)
+    parent.mkdir(parents=True, exist_ok=True)
+    with u.Infra.codegen_transaction_lease(parent / receipt):
+        if (parent / receipt).is_file():
+            return
+        match key:
+            case c.Infra.MakeProfile():
+                _provision_make_template(key)
+            case str():
+                _provision_infra_checkout(key)
+            case _:
+                _provision_detector_template(key)
 
 
 @pytest.fixture
@@ -348,6 +297,7 @@ def resolved_make_templates() -> t.MappingKV[c.Infra.MakeProfile, Path]:
     templates: dict[c.Infra.MakeProfile, Path] = {}
     for profile in c.Infra.MakeProfile:
         parent = _run_scoped("make-templates", profile.value)
+        _ensure_provisioned(parent, _MAKE_UPGRADE_RECEIPT, profile)
         upgrade = u.Tests.command_receipt(parent / _MAKE_UPGRADE_RECEIPT)
         tm.that(
             u.Cli.process_succeeded(upgrade.outcome),
@@ -363,6 +313,7 @@ def provisioned_infra_checkout(request: pytest.FixtureRequest) -> t.Pair[str, Pa
     """Return one scenario's candidate checkout, set up from committed locks."""
     scenario = str(request.param)
     parent = _run_scoped("infra-checkouts", scenario)
+    _ensure_provisioned(parent, _INFRA_SETUP_RECEIPT, scenario)
     setup = u.Tests.command_receipt(parent / _INFRA_SETUP_RECEIPT)
     tm.that(
         u.Cli.process_succeeded(setup.outcome), eq=True, msg=setup.stdout + setup.stderr
@@ -382,6 +333,7 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     """
     modules = t.Infra.STR_SEQ_ADAPTER.validate_python(request.param)
     parent = _detector_template_parent(modules)
+    _ensure_provisioned(parent, _DETECTOR_UPGRADE_RECEIPT, modules)
     upgrade = m.Cli.CommandOutput.model_validate_json(
         (parent / _DETECTOR_UPGRADE_RECEIPT).read_text(encoding="utf-8")
     )
@@ -399,7 +351,10 @@ def real_detector_project(tmp_path: Path, request: pytest.FixtureRequest) -> Pat
     setup = tm.ok(u.Tests.run_isolated_make(["setup"], cwd=root, capture=False))
     u.Tests.record_dependency_command_output(setup)
     tm.that(u.Cli.process_succeeded(setup.outcome), eq=True, msg=setup.stderr)
-    tm.that((root / c.Infra.VENV_BIN_REL / c.Infra.DEPTRY).is_file(), eq=True)
+    runtime = infra_u.Infra.runtime_environment_dir(root)
+    executable = c.Infra.DEPTRY + (".exe" if os.name == "nt" else "")
+    tool_path = runtime / ("Scripts" if os.name == "nt" else "bin") / executable
+    tm.that(tool_path.is_file(), eq=True)
     (root / "limits.toml").write_text(
         "[typing_libraries]\nexclude = []\n", encoding="utf-8"
     )
@@ -460,7 +415,6 @@ def real_python_package(tmp_path: Path) -> Path:
     (src_dir / "__init__.py").write_text('"""Test package."""\n__version__ = "0.1.0"\n')
     (src_dir / "identity.py").write_text(
         '"""Substantive unique source consumed by real scanner fixtures."""\n\n'
-        "from __future__ import annotations\n\n"
         "def normalize_identity(parts: tuple[str, ...]) -> str:\n"
         '    """Normalize one ordered identity without duplicated code."""\n'
         "    normalized = tuple(part.strip() for part in parts if part.strip())\n"
@@ -691,7 +645,7 @@ def real_docs_project(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]:
+def semantic_rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]:
     """Create a real rope workspace with semantic-analysis fixtures."""
     repository_root = tmp_path / "rope_workspace"
     package_root = repository_root / "src" / "rope_demo"
@@ -727,11 +681,11 @@ def rope_workspace(tmp_path: Path) -> t.Pair[t.Infra.RopeProject, Path]:
 
 @pytest.fixture
 def models_resource(
-    rope_workspace: t.Pair[t.Infra.RopeProject, Path],
+    semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic models fixture module."""
-    rope_project, repository_root = rope_workspace
-    resource = u.Infra.get_resource_from_path(
+    rope_project, repository_root = semantic_rope_workspace
+    resource = u.Infra.resolve_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "models.py"
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
@@ -740,11 +694,11 @@ def models_resource(
 
 @pytest.fixture
 def services_resource(
-    rope_workspace: t.Pair[t.Infra.RopeProject, Path],
+    semantic_rope_workspace: t.Pair[t.Infra.RopeProject, Path],
 ) -> t.Infra.RopeResource:
     """Return the Rope resource for the semantic services fixture module."""
-    rope_project, repository_root = rope_workspace
-    resource = u.Infra.get_resource_from_path(
+    rope_project, repository_root = semantic_rope_workspace
+    resource = u.Infra.resolve_resource_from_path(
         rope_project, repository_root / "src" / "rope_demo" / "services.py"
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)

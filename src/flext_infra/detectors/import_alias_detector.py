@@ -29,7 +29,7 @@ class FlextInfraImportAliasDetector:
         runtime_aliases = u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
         source_lines = source.splitlines()
         violations: list[m.Infra.ImportAliasViolation] = []
-        for from_import in u.Infra.get_absolute_from_imports(
+        for from_import in u.Infra.resolve_absolute_from_imports(
             ctx.rope_project, resource
         ):
             if not (

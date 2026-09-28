@@ -98,8 +98,12 @@ class FlextInfraUtilitiesDocsValidate:
 
     @staticmethod
     def docs_missing_required_paths(scope: m.Infra.DocScope) -> t.StrSequence:
-        """Return required docs paths that are still missing from one scope."""
-        if FlextInfraUtilitiesDocsScope.docs_aggregate_root(scope):
+        """Return required docs paths that are still missing from one scope.
+
+        The scope label is the only topology input: the scope builder assigns
+        ``root`` from the manifest's typed role (``is_fleet_umbrella``).
+        """
+        if scope.name == c.Infra.RK_ROOT:
             required = [
                 "README.md",
                 "docs/index.md",
@@ -110,6 +114,14 @@ class FlextInfraUtilitiesDocsValidate:
             ]
         else:
             required = list(FlextInfraUtilitiesDocsScope.required_project_files())
+        if not scope.package_name:
+            # The api-reference generated surface is the mkdocstrings product
+            # over an importable package; a package-less scope (a workspace
+            # orchestrator root) has no generator that can produce it, so
+            # requiring it is an unsatisfiable contract, not a docs defect.
+            required = [
+                rel_path for rel_path in required if "/generated/" not in rel_path
+            ]
         missing: t.MutableSequenceOf[str] = []
         for rel_path in sorted(set(required)):
             if not (scope.path / rel_path).exists():

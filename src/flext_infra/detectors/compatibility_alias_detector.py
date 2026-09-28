@@ -166,7 +166,7 @@ class FlextInfraCompatibilityAliasDetector:
                 or c.Infra.PKG_CORE_UNDERSCORE not in statement.text
             ):
                 continue
-            pymodule = u.Infra.get_string_module(
+            pymodule = u.Infra.build_string_module(
                 ctx.rope_project, statement.text.strip()
             )
             module_imports = u.Infra.module_imports_for_pymodule(
@@ -174,7 +174,7 @@ class FlextInfraCompatibilityAliasDetector:
             )
             for import_statement in u.Infra.import_statements(module_imports):
                 from_import = import_statement.import_info
-                if not u.Infra.is_from_import(from_import):
+                if not u.Infra.from_import_info(from_import):
                     continue
                 module = cls._resolve_imported_module(
                     current_module=current_module, from_import=from_import
@@ -209,12 +209,12 @@ class FlextInfraCompatibilityAliasDetector:
         rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
     ) -> t.SequenceOf[t.Infra.RopeFromImport]:
         """Return all ``from ... import ...`` descriptors in a module."""
-        module_imports = u.Infra.get_module_imports(rope_project, resource)
+        module_imports = u.Infra.resolve_module_imports(rope_project, resource)
         import_statements = u.Infra.import_statements(module_imports)
         return tuple(
             import_stmt.import_info
             for import_stmt in import_statements
-            if u.Infra.is_from_import(import_stmt.import_info)
+            if u.Infra.from_import_info(import_stmt.import_info)
         )
 
     @staticmethod

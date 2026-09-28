@@ -149,16 +149,18 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
     def test_mypy_resource_limit_parses_environment_at_boundary(self) -> None:
         """Convert valid process text once before strict model validation."""
+        memory_limit = c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 2
+        timeout_limit = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 2
         with tm.scope(
             env={
-                c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: "1024",
-                c.Infra.MYPY_TIMEOUT_SECONDS_ENV: "120",
+                c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: str(memory_limit),
+                c.Infra.MYPY_TIMEOUT_SECONDS_ENV: str(timeout_limit),
             }
         ):
             limit = u.Infra.mypy_resource_limit()
 
-        tm.that(limit.memory_limit_mb, eq=1024)
-        tm.that(limit.timeout_seconds, eq=120)
+        tm.that(limit.memory_limit_mb, eq=memory_limit)
+        tm.that(limit.timeout_seconds, eq=timeout_limit)
 
     @pytest.mark.parametrize("invalid_value", ["", "1024.0", "-1", " 1024"])
     def test_mypy_resource_limit_rejects_non_integer_environment(

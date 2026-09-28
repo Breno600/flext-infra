@@ -25,33 +25,24 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     @classmethod
     def _family_quoted_rewrites(
         cls,
-        project: p.Infra.RopeProject,
         resource: p.Infra.RopeResource,
         source: str,
         *,
-        owner_name: str,
-        wrapper: p.Infra.RopePyName,
-        names: t.MappingKV[str, str],
+        flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, t.VariadicTuple[m.Infra.SourceRewrite]]:
         runtime = FlextInfraUtilitiesRopeRuntimeModules
-        module = project.get_pymodule(resource)
+        module = flatten.project.get_pymodule(resource)
         edits: list[m.Infra.SourceRewrite] = []
         for annotation, declaration_line in cls._annotation_roots(ast.parse(source)):
             start, _end = cls._expression_range(source, annotation)
             scope = runtime.scope_at(module, start, declaration_line=declaration_line)
-            for node in cls._type_nodes(annotation, project, scope):
+            for node in cls._type_nodes(annotation, flatten.project, scope):
                 if not isinstance(node, ast.Constant) or not isinstance(
                     node.value, str
                 ):
                     continue
                 blocked, updated = cls._quoted_type_source(
-                    node.value,
-                    project,
-                    resource,
-                    scope,
-                    owner_name=owner_name,
-                    wrapper=wrapper,
-                    names=names,
+                    node.value, resource, scope, flatten=flatten
                 )
                 if blocked:
                     return (True, ())
@@ -66,29 +57,19 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
     def _quoted_type_source(
         cls,
         source: str,
-        project: p.Infra.RopeProject,
         resource: p.Infra.RopeResource,
         scope: p.Infra.RopeScope,
         *,
-        owner_name: str,
-        wrapper: p.Infra.RopePyName,
-        names: t.MappingKV[str, str],
+        flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, str]:
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         nodes = tuple(
-            cls._type_nodes(ast.parse(source, mode="eval").body, project, scope)
+            cls._type_nodes(ast.parse(source, mode="eval").body, flatten.project, scope)
         )
         edits: list[m.Infra.SourceRewrite] = []
         for node in nodes:
             blocked, edit = cls._quoted_node_rewrite(
-                node,
-                source,
-                project,
-                resource,
-                scope,
-                owner_name=owner_name,
-                wrapper=wrapper,
-                names=names,
+                node, source, resource, scope, flatten=flatten
             )
             if blocked:
                 return (True, source)
@@ -98,7 +79,9 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
             start, end = cls._expression_range(source, node)
             if not any(
                 edit.start <= start and end <= edit.end for edit in edits
-            ) and runtime.same_name(wrapper, runtime.resolve_symbol(scope, node)):
+            ) and runtime.same_name(
+                flatten.wrapper, runtime.resolve_symbol(scope, node)
+            ):
                 return (True, source)
         change = FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
             resource, source, edits
@@ -110,26 +93,18 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         cls,
         node: ast.expr,
         source: str,
-        project: p.Infra.RopeProject,
         resource: p.Infra.RopeResource,
         scope: p.Infra.RopeScope,
         *,
-        owner_name: str,
-        wrapper: p.Infra.RopePyName,
-        names: t.MappingKV[str, str],
+        flatten: m.Infra.FamilyWrapperFlatten,
     ) -> t.Pair[bool, m.Infra.SourceRewrite | None]:
         """Resolve one selected node; nested strings retain their original scope."""
         runtime = FlextInfraUtilitiesRopeRuntimeModules
+        names = flatten.names
         start, end = cls._expression_range(source, node)
         if isinstance(node, ast.Constant) and isinstance(node.value, str):
             blocked, updated = cls._quoted_type_source(
-                node.value,
-                project,
-                resource,
-                scope,
-                owner_name=owner_name,
-                wrapper=wrapper,
-                names=names,
+                node.value, resource, scope, flatten=flatten
             )
             if blocked or updated == node.value:
                 return (blocked, None)
@@ -138,17 +113,19 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
                 m.Infra.SourceRewrite(start=start, end=end, text=repr(updated)),
             )
         if isinstance(node, ast.Attribute) and runtime.same_name(
-            wrapper, runtime.resolve_symbol(scope, node.value)
+            flatten.wrapper, runtime.resolve_symbol(scope, node.value)
         ):
             if node.attr not in names:
                 return (True, None)
-            text = cls._promoted_attribute(node, scope, owner_name, names[node.attr])
+            text = cls._promoted_attribute(
+                node, scope, flatten.owner_name, names[node.attr]
+            )
             return (False, m.Infra.SourceRewrite(start=start, end=end, text=text))
         if (
             isinstance(node, ast.Name)
             and node.id in names
             and runtime.same_name(
-                wrapper.get_object().get_attribute(node.id),
+                flatten.wrapper.get_object().get_attribute(node.id),
                 runtime.resolve_symbol(scope, node),
             )
         ):

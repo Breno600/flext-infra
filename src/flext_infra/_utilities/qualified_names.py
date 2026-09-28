@@ -5,14 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 import libcst as cst
-from libcst.metadata import (
-    CodePosition,
-    CodeRange,
-    MetadataWrapper,
-    PositionProvider,
-    QualifiedNameProvider,
-    QualifiedNameSource,
-)
+from libcst.metadata import MetadataWrapper, QualifiedNameProvider
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -36,39 +29,6 @@ class FlextInfraUtilitiesQualifiedNames:
                 if qualified_name.name in self.candidates
             )
             return True
-
-    class _CallableCollector(cst.CSTVisitor):
-        METADATA_DEPENDENCIES = (PositionProvider, QualifiedNameProvider)
-
-        def __init__(self, source: str) -> None:
-            self.lines = source.splitlines()
-            self.names: t.MutableMappingKV[t.Pair[int, int], frozenset[str]] = {}
-
-        def _collect(self, node: cst.BaseExpression) -> None:
-            if not isinstance(node, (cst.Name, cst.Attribute)):
-                return
-            location = self.get_metadata(
-                PositionProvider,
-                node,
-                CodeRange(CodePosition(0, 0), CodePosition(0, 0)),
-            )
-            position = location.start
-            # Python AST columns count UTF-8 bytes; LibCST columns count characters.
-            column = len(self.lines[position.line - 1][: position.column].encode())
-            self.names[position.line, column] = frozenset(
-                name.name
-                for name in self.get_metadata(QualifiedNameProvider, node, ())
-                if name.source is QualifiedNameSource.IMPORT
-            )
-
-        @override
-        def visit_Call(self, node: cst.Call) -> None:
-            self._collect(node.func)
-
-        @override
-        def visit_Decorator(self, node: cst.Decorator) -> None:
-            if not isinstance(node.decorator, cst.Call):
-                self._collect(node.decorator)
 
     @staticmethod
     def dotted_name(node: cst.BaseExpression | None) -> str | None:
@@ -166,15 +126,6 @@ class FlextInfraUtilitiesQualifiedNames:
         collector = cls._ResidueCollector(candidates)
         MetadataWrapper(cst.parse_module(source)).visit(collector)
         return frozenset(collector.residue)
-
-    @classmethod
-    def imported_callable_names(
-        cls, source: str
-    ) -> t.MappingKV[t.Pair[int, int], frozenset[str]]:
-        """Resolve call/decorator import provenance at Python AST source positions."""
-        collector = cls._CallableCollector(source)
-        MetadataWrapper(cst.parse_module(source)).visit(collector)
-        return collector.names
 
 
 __all__: list[str] = ["FlextInfraUtilitiesQualifiedNames"]

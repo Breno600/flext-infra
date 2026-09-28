@@ -73,7 +73,7 @@ class FlextInfraNamespaceRulesBase:
         return f"{parent}.{leaf}" if parent else leaf
 
     @classmethod
-    def is_type_checking_guard(cls, node: p.AttributeProbe) -> bool:
+    def type_checking_guard(cls, node: p.AttributeProbe) -> bool:
         """Return whether a statement is exactly ``if TYPE_CHECKING``."""
         return (
             cls.kind(node) == "If"
@@ -88,7 +88,7 @@ class FlextInfraNamespaceRulesBase:
         guarded = {
             id(child)
             for node in cls.walk(tree)
-            if cls.is_type_checking_guard(node)
+            if cls.type_checking_guard(node)
             for child in cls.walk(node)
             if cls.kind(child) in {"Import", "ImportFrom"}
         }
@@ -97,6 +97,51 @@ class FlextInfraNamespaceRulesBase:
             for node in cls.walk(tree)
             if isinstance(node, (Import, ImportFrom))
         )
+
+    @classmethod
+    def imported_callable_names(
+        cls, tree: p.AttributeProbe
+    ) -> t.MappingKV[t.Pair[int, int], frozenset[str]]:
+        """Index imported call/decorator names from the existing Rope AST."""
+        bindings: t.MutableMappingKV[str, str] = {}
+        for node in cls.walk(tree):
+            kind = cls.kind(node)
+            if kind == "Import":
+                for alias in getattr(node, "names", ()) or ():
+                    imported = getattr(alias, "name", "")
+                    local = (
+                        getattr(alias, "asname", None) or str(imported).split(".")[0]
+                    )
+                    if isinstance(imported, str) and isinstance(local, str):
+                        bindings[local] = (
+                            imported if getattr(alias, "asname", None) else local
+                        )
+            elif kind == "ImportFrom":
+                module = getattr(node, "module", "")
+                if not isinstance(module, str):
+                    continue
+                for alias in getattr(node, "names", ()) or ():
+                    imported = getattr(alias, "name", "")
+                    local = getattr(alias, "asname", None) or imported
+                    if isinstance(imported, str) and isinstance(local, str):
+                        bindings[local] = f"{module}.{imported}"
+        resolved: t.MutableMappingKV[t.Pair[int, int], frozenset[str]] = {}
+        for node in cls.walk(tree):
+            callable_node = (
+                getattr(node, "func", None) if cls.kind(node) == "Call" else node
+            )
+            if cls.kind(callable_node) not in {"Name", "Attribute"}:
+                continue
+            dotted = cls.dotted_name(callable_node)
+            root, separator, suffix = dotted.partition(".")
+            imported = bindings.get(root)
+            if imported is None:
+                continue
+            qualified = f"{imported}.{suffix}" if separator else imported
+            resolved[
+                cls.line(callable_node), getattr(callable_node, "col_offset", 0)
+            ] = frozenset({qualified})
+        return resolved
 
     @staticmethod
     def violations(code: str, messages: t.StrSequence) -> t.StrSequence:

@@ -9,10 +9,7 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m
 
 from ... import t
-from ..._constants import (
-    FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsWorkspace,
-)
+from ..._constants import FlextInfraConstantsCodegenProject
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
 from .beads import FlextInfraConfigModelsBeads
 from .contract import FlextInfraConfigModelsContract
@@ -51,31 +48,7 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Typed pytest execution policy"),
         ]
 
-    class ScratchRootContext(FlextInfraConfigModelsContract.ConfigContract):
-        """Shared state and scratch roots every generated environment derives."""
-
-        state_directory_name: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="External runtime state directory beside checkout"),
-        ]
-        scratch_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Scratch namespace below the home scratch root"),
-        ]
-        scratch_home_relative: Annotated[
-            t.NonEmptyStr, m.Field(description="Home-relative scratch root")
-        ]
-        scratch_identity_segment_aliases: Annotated[
-            t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Checkout path segments renamed in the home scratch mirror "
-                    "so a scratch root never contains a VCS directory"
-                )
-            ),
-        ] = tuple(FlextInfraConstantsWorkspace.SCRATCH_IDENTITY_SEGMENT_ALIASES)
-
-    class MakefileRenderSpec(MakeCommandContext, ScratchRootContext):
+    class MakefileRenderSpec(MakeCommandContext):
         """Field-only render input for an existing repository Makefile."""
 
         mise_bootstrap: Annotated[
@@ -114,6 +87,9 @@ class FlextInfraConfigModelsContexts:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Platforms carried by artifact-tool lock entries"),
         ]
+        npm_package_manager: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise installer for npm CLIs")
+        ]
         qlty_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Configured Mise selector for qlty")
         ]
@@ -122,6 +98,9 @@ class FlextInfraConfigModelsContexts:
         ]
         prettier_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Configured Mise selector for Prettier")
+        ]
+        ast_grep_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for ast-grep")
         ]
         scc_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Configured Mise selector for scc")
@@ -454,6 +433,15 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        cli_module: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether the package ships its cli entry module; see the "
+                    "ProjectSpec namesake."
+                )
+            ),
+        ]
         runtime_dependency_overlay: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -506,6 +494,9 @@ class FlextInfraConfigModelsContexts:
         taplo_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
         ]
+        ast_grep_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")
+        ]
         ast_grep_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact ast-grep analyzer version")
         ]
@@ -552,16 +543,6 @@ class FlextInfraConfigModelsContexts:
         repository_branch: Annotated[
             t.NonEmptyStr, m.Field(description="Canonical repository Git branch")
         ]
-        workspace_dependency_distributions: Annotated[
-            t.VariadicTuple[str],
-            m.Field(
-                description=(
-                    "Exact local distributions whose source is owned by this "
-                    "workspace root's uv overlay. Every external dependency and "
-                    "every standalone member retains its declared Git source."
-                )
-            ),
-        ] = ()
         year: Annotated[int, m.Field(description="Copyright year")]
 
         @m.field_validator("hatch_build_hook_path")
@@ -674,6 +655,18 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        cli_module: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether the package ships its cli entry module. A scaffold "
+                    "renders the cli seed in the same plan; an existing checkout "
+                    "derives the fact from its source tree. The default console "
+                    "script is declared only then, because conform loads every "
+                    "declared entry point in its fresh-import stage."
+                )
+            ),
+        ] = True
         runtime_dependency_overlay: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(

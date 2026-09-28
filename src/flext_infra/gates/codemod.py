@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 class FlextInfraCodemodGate(FlextInfraGate):
-    """Report codemod rule findings observationally across every project."""
+    """Report codemod rule findings for the selected repository."""
 
     gate_id: ClassVar[str] = "codemod"
     gate_name: ClassVar[str] = "Codemod Enforcement"
@@ -36,8 +36,14 @@ class FlextInfraCodemodGate(FlextInfraGate):
     def check(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
-        """Run ast-grep scan with cascaded codemod rules."""
-        return self._execute_check_command(project_dir, ctx, (".",), time.monotonic())
+        """Run ast-grep only on this repository's first-class source roots."""
+        targets = (
+            *self._existing_check_dirs(project_dir),
+            *(path.name for path in project_dir.glob("*.py") if path.is_file()),
+        )
+        if not targets:
+            raise FileNotFoundError(project_dir)
+        return self._execute_check_command(project_dir, ctx, targets, time.monotonic())
 
     @override
     def check_files(
@@ -151,13 +157,17 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 for finding in report.root
             )
 
-        return self._build_check_gate_execution(
-            project_dir,
-            # Operator order (2026-09-24): codemod policy findings are
-            # observational. Native scanner failures remain blocking.
-            passed=not failures,
-            issues=failures,
-            observational_issues=findings,
+        # Operator order (2026-09-24): codemod policy findings are
+        # observational. Native scanner failures remain blocking.
+        return m.Infra.GateExecution(
+            result=self._gate_result(
+                project_dir,
+                passed=not failures,
+                errors=[issue.formatted for issue in failures],
+                started=started,
+            ),
+            issues=tuple(failures),
+            observational_issues=tuple(findings),
             raw_output="\n".join((
                 (
                     f"{len(findings)} observational findings; "
@@ -165,7 +175,6 @@ class FlextInfraCodemodGate(FlextInfraGate):
                 ),
                 *raw_output,
             )),
-            started=started,
         )
 
     @staticmethod

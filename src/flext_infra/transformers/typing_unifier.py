@@ -21,10 +21,10 @@ from libcst.metadata import (
 
 from flext_infra import c, t, u
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
 from ._canonical_t_import import FlextInfraEnsureCanonicalTImportMixin
 from ._import_facades import FlextInfraRefactorImportFacades
 from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
+from .rope_transformer import FlextInfraRopeTransformer
 
 if TYPE_CHECKING:
     from pathlib import Path

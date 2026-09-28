@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -11,14 +10,6 @@ from flext_infra import c, m
 
 if TYPE_CHECKING:
     from flext_infra import p, t
-
-
-@dataclass(frozen=True, slots=True)
-class FlextInfraEnforcementEvaluation:
-    """Collected rule probes and collection failures for one project."""
-
-    violations: list[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]]
-    failures: list[m.Infra.FailedFix]
 
 
 class FlextInfraEnforcementCollectionBase:
@@ -67,7 +58,4 @@ class FlextInfraEnforcementCollectionBase:
         return [], [self.collection_failure(project_dir, rule, message)]
 
 
-__all__: list[str] = [
-    "FlextInfraEnforcementCollectionBase",
-    "FlextInfraEnforcementEvaluation",
-]
+__all__: list[str] = ["FlextInfraEnforcementCollectionBase"]

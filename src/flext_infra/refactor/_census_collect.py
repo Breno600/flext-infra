@@ -10,6 +10,7 @@ from ._census_rules_dispatch import FlextInfraRefactorCensusRulesDispatchMixin
 from ._census_validate import FlextInfraRefactorCensusValidateMixin
 
 if TYPE_CHECKING:
+    from collections.abc import MutableMapping
     from pathlib import Path
 
     from flext_infra import p, t
@@ -39,6 +40,10 @@ class FlextInfraRefactorCensusCollectMixin(
             module: m.Infra.RopeModuleIndexEntry,
             convention: m.Infra.RopeModuleConvention,
         ) -> str: ...
+        @classmethod
+        def _lightweight_symbol_index(
+            cls, rope: p.Infra.RopeWorkspaceDsl, file_path: Path
+        ) -> MutableMapping[str, t.Pair[str, int]]: ...
         def _handle_rope_stage_failure(
             self, *, file_path: Path, stage: str, exc: BaseException
         ) -> None: ...
@@ -60,12 +65,9 @@ class FlextInfraRefactorCensusCollectMixin(
             self,
             project: str,
             *,
-            objects: t.VariadicTuple[m.Infra.Object],
-            seed_violations: t.VariadicTuple[m.Infra.Violation],
-            fixes: t.VariadicTuple[m.Infra.Fix],
+            findings: m.Infra.ScanFindings,
             duplicate_keys: frozenset[str],
-            rule_names: t.StrSequence | None,
-            selected_rules: frozenset[str] | None = None,
+            scan_config: m.Infra.ScanConfig,
         ) -> m.Infra.ProjectReport: ...
 
     def _scan_module(
@@ -74,10 +76,7 @@ class FlextInfraRefactorCensusCollectMixin(
         module: m.Infra.RopeModuleIndexEntry,
         scan_config: m.Infra.ScanConfig,
         *,
-        project_objects: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Object]],
-        project_violations: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Violation]],
-        project_fixes: t.MappingKV[str, t.MutableSequenceOf[m.Infra.Fix]],
-        report_projects: set[str],
+        findings: m.Infra.ScanFindings,
     ) -> None:
         """Scan one module, accumulating objects/violations/fixes per project."""
         convention = rope.convention(module.file_path)
@@ -114,48 +113,43 @@ class FlextInfraRefactorCensusCollectMixin(
                     )
                 )
                 if objects:
-                    project_objects[project].extend(objects)
+                    findings.project_objects.setdefault(project, []).extend(objects)
         if objects:
-            report_projects.add(project)
+            findings.report_projects.add(project)
         if inventory_failed:
             return
         try:
             violations, fixes = self._module_rules(
-                rope,
-                module.file_path,
-                objects=module_objects,
-                project_name=project,
-                applied=scan_config.applied,
-                kind_names=scan_config.kind_names,
-                rule_names=scan_config.rule_names,
-                selected_kinds=scan_config.selected_kinds,
-                selected_rules=scan_config.selected_rules,
-                convention=convention,
+                m.Infra.ModuleScan(
+                    rope=rope,
+                    file_path=module.file_path,
+                    project=project,
+                    convention=convention,
+                    objects=module_objects,
+                    symbol_index=self._lightweight_symbol_index(rope, module.file_path),
+                    scan_config=scan_config,
+                )
             )
         except _ROPE_SAFE_EXCEPTIONS as exc:
             self._handle_rope_stage_failure(
                 file_path=module.file_path, stage="rules", exc=exc
             )
         else:
-            report_projects.add(project)
+            findings.report_projects.add(project)
             if not objects and not violations and not fixes:
                 return
-            project_violations[project].extend(violations)
-            project_fixes[project].extend(fixes)
+            findings.project_violations.setdefault(project, []).extend(violations)
+            findings.project_fixes.setdefault(project, []).extend(fixes)
 
     def _assemble_report(
         self,
         rope: p.Infra.RopeWorkspaceDsl,
         *,
-        project_objects: t.MappingKV[str, t.SequenceOf[m.Infra.Object]],
-        project_violations: t.MappingKV[str, t.SequenceOf[m.Infra.Violation]],
-        project_fixes: t.MappingKV[str, t.SequenceOf[m.Infra.Fix]],
-        report_projects: set[str],
-        rule_names: t.StrSequence | None,
-        selected_rules: frozenset[str] | None,
+        findings: m.Infra.ScanFindings,
+        scan_config: m.Infra.ScanConfig,
     ) -> m.Infra.WorkspaceReport:
         """Aggregate per-project scans into the final workspace census report."""
-        duplicates = self._duplicate_groups(tuple(project_objects.values()))
+        duplicates = self._duplicate_groups(tuple(findings.project_objects.values()))
         duplicate_keys = frozenset(
             self._object_key(item)
             for group in duplicates
@@ -163,21 +157,18 @@ class FlextInfraRefactorCensusCollectMixin(
         )
         report_project_names = tuple(
             sorted(
-                report_projects
-                | set(project_objects)
-                | set(project_violations)
-                | set(project_fixes)
+                findings.report_projects
+                | set(findings.project_objects)
+                | set(findings.project_violations)
+                | set(findings.project_fixes)
             )
         )
         project_reports = tuple(
             self._project_report(
                 project,
-                objects=tuple(project_objects[project]),
-                seed_violations=tuple(project_violations[project]),
-                fixes=tuple(project_fixes[project]),
+                findings=findings,
                 duplicate_keys=duplicate_keys,
-                rule_names=rule_names,
-                selected_rules=selected_rules,
+                scan_config=scan_config,
             )
             for project in report_project_names
         )

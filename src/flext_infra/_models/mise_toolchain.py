@@ -109,29 +109,6 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
-        state_directory_name: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Runtime state directory beside the checkout"),
-        ]
-        scratch_namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="Scratch directory namespace")
-        ]
-        scratch_home_relative: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description=(
-                    "Home-relative scratch root; scratch never lives inside a "
-                    "versioned tree, so it mirrors the checkout path below it"
-                )
-            ),
-        ]
-        pycache_namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="Python bytecode cache namespace")
-        ]
-        mise_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Mise publication namespace under runtime state"),
-        ]
         uv_link_mode: Annotated[
             t.NonEmptyStr, m.Field(description="Portable uv installation link mode")
         ]
@@ -218,6 +195,10 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
+        npm_package_manager: Annotated[
+            Literal["aube"],
+            m.Field(description="Mise npm installer with a locked dependency graph"),
+        ]
         qlty_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -299,6 +280,9 @@ class FlextInfraModelsMiseToolchain:
         ]
         taplo_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
+        ]
+        ast_grep_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")
         ]
         ast_grep_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact ast-grep analyzer version")
@@ -408,6 +392,32 @@ class FlextInfraModelsMiseToolchain:
                 ),
             ),
         ]
+        version_pin_header: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                min_length=1,
+                description="Generated-marker comments `make upg` writes above the release",
+            ),
+        ]
+        version_pin_reader: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="POSIX awk program selecting the first release line"),
+        ]
+        release_selector: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                pattern=r"^[a-z]+:[A-Za-z0-9._/-]+$",
+                description="Tool selector `make upg` resolves for the Mise release",
+            ),
+        ]
+        artifact_specs: Annotated[
+            t.VariadicTuple[t.Pair[t.NonEmptyStr, int]],
+            m.Field(
+                min_length=3,
+                max_length=3,
+                description="Unix launcher, Windows launcher, and pin with modes",
+            ),
+        ]
         lock_file: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -462,6 +472,14 @@ class FlextInfraModelsMiseToolchain:
                     if path.startswith("/") or ".." in path:
                         msg = f"relative path must not be absolute or escape: {path}"
                         raise ValueError(msg)
+            unsafe = ("'", "\n", "\r", "\0")
+            for line in (*self.version_pin_header, self.version_pin_reader):
+                if any(character in line for character in unsafe):
+                    msg = "Mise pin header and reader must be literal-shell safe"
+                    raise ValueError(msg)
+            if not all(line.startswith("#") for line in self.version_pin_header):
+                msg = "Mise pin header lines must be comments"
+                raise ValueError(msg)
             return self
 
 

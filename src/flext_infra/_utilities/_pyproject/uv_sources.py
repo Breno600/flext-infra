@@ -1,8 +1,8 @@
-"""Root workspace ``[tool.uv]`` overlay rendering and validation."""
+"""Conform-owned ``[tool.uv]`` rendering for one pyproject document."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping, MutableMapping
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 from flext_cli import r, u
@@ -14,25 +14,11 @@ from ..repository import FlextInfraUtilitiesRepository
 from .requirements import FlextInfraUtilitiesPyprojectRequirements
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import m, p
 
 
 class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirements):
-    """Keep managed uv sources only as the root local-workspace overlay."""
-
-    @classmethod
-    def _declared_uv_constraint_dependencies(
-        cls, document: t.Cli.TomlDocument
-    ) -> t.SequenceOf[str]:
-        """Return the document-declared ``[tool.uv] constraint-dependencies``."""
-        tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
-        if tool is None:
-            return ()
-        uv = u.Cli.toml_table_child(tool, "uv")
-        if uv is None:
-            return ()
-        declared = u.Cli.toml_value(uv, "constraint-dependencies")
-        return tuple(u.Cli.toml_as_string_list(declared))
+    """Render the conform-owned ``[tool.uv]`` keys of one pyproject document."""
 
     @classmethod
     def _document_requirement_lines(
@@ -99,20 +85,14 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
         cls,
         document: t.Cli.TomlDocument,
         *,
-        project_name: str,
         workspace: p.Infra.WorkspaceSpec,
-        workspace_mode: c.Infra.MakeProfile,
-        link_mode: str | None = None,
-        constraint_dependencies: t.SequenceOf[str] | None = None,
-        exclude_dependencies: t.SequenceOf[p.Model] | None = None,
-        uv_environments: t.StrSequence | None = None,
+        resolution: m.Infra.UvResolutionSpec,
     ) -> p.Result[bool]:
-        """Keep managed uv sources only as the root local-workspace overlay."""
-        repository_root = cls._is_workspace_context_root(
-            project_name=project_name,
-            workspace=workspace,
-            workspace_mode=workspace_mode,
-        )
+        """Render the conform-owned ``[tool.uv]`` keys and drop workspace sources.
+
+        The resolver keys are always declared, so the table always exists and
+        never ends empty.
+        """
         declared_requirements = cls._document_requirement_lines(document)
         if declared_requirements.failure:
             return r[bool].from_failure(declared_requirements)
@@ -123,25 +103,9 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
             return r[bool].from_failure(overrides)
         tool = u.Cli.toml_table_child(document, c.Infra.TOOL)
         if tool is None:
-            if (
-                not repository_root
-                and link_mode is None
-                and not exclude_dependencies
-                and not constraint_dependencies
-                and not overrides.value
-            ):
-                return r[bool].ok(True)
             tool = u.Cli.toml_ensure_table(document, c.Infra.TOOL)
         uv = u.Cli.toml_table_child(tool, "uv")
         if uv is None:
-            if (
-                not repository_root
-                and link_mode is None
-                and not exclude_dependencies
-                and not constraint_dependencies
-                and not overrides.value
-            ):
-                return r[bool].ok(True)
             uv = u.Cli.toml_ensure_table(tool, "uv")
         if overrides.value:
             u.Cli.toml_sync_string_list(uv, "override-dependencies", overrides.value)
@@ -151,10 +115,9 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
         # Constraints are SSOT-rendered: the declared config value is the only
         # source, so a removed declaration exterminates the key everywhere and
         # no orphan cap can survive without an owner (flext-gzfd2 class).
-        selected_constraints = tuple(constraint_dependencies or ())
         retained_constraints = tuple(
             requirement
-            for requirement in selected_constraints
+            for requirement in resolution.constraint_dependencies
             if FlextInfraUtilitiesDependencies.dep_name(requirement) != "uv"
         )
         if retained_constraints:
@@ -163,8 +126,7 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
             )
         else:
             u.Cli.toml_remove_key_if_present(uv, "constraint-dependencies")
-        if link_mode is not None:
-            u.Cli.toml_sync_value(uv, "link-mode", link_mode)
+        u.Cli.toml_sync_value(uv, "link-mode", resolution.link_mode)
         # The supply-chain cooldown was exterminated fleet-wide (flext-fphyv):
         # uv resolves every version published up to now. Removed declarations
         # exterminate the keys everywhere so no orphan cap survives without an
@@ -176,72 +138,45 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
         # sequence skips the splits the fleet does not support (win32 resolves
         # meltano's structlog cap against flext-core's floor and is
         # unsatisfiable).
-        if uv_environments is not None and uv_environments:
+        if resolution.environments:
             # Declared as list[JsonValue], not list[str]: `list` is invariant,
             # so the narrower element type is not assignable to the writer's
             # parameter even though every element is a valid JsonValue.
-            environments: list[t.JsonValue] = list(uv_environments)
+            environments: list[t.JsonValue] = list(resolution.environments)
             u.Cli.toml_sync_value(uv, "environments", environments)
-        elif uv_environments is not None:
+        else:
             u.Cli.toml_remove_key_if_present(uv, "environments")
         # Project is a flext-infra routing key only; uv scoped form is
         # {package={name, version?}, dependencies=[...]} (uv settings docs).
         # Emit on every owning pyproject so standalone CI clones resolve;
         # do not gate on owns_uv_root_policy (that stripped member excludes).
-        if exclude_dependencies is not None:
-            exclude_payload = list(
-                t.Cli.JSON_LIST_ADAPTER.validate_python([
-                    {
-                        key: value
-                        for key, value in item.model_dump(
-                            mode="json", exclude_none=True
-                        ).items()
-                        if key != "project"
-                    }
-                    for item in exclude_dependencies
-                ])
-            )
-            if exclude_payload:
-                u.Cli.toml_sync_value(uv, "exclude-dependencies", exclude_payload)
-            else:
-                u.Cli.toml_remove_key_if_present(uv, "exclude-dependencies")
-        member_paths = tuple(member.path.as_posix() for member in workspace.subprojects)
-        # Only an actual multi-project owner declares a uv workspace. A leaf
-        # can also be a composed member; inserting an empty workspace there
-        # breaks execution from the parent with uv's nested-workspace error.
-        if repository_root and member_paths:
-            workspace_table = u.Cli.toml_table_child(uv, "workspace")
-            if workspace_table is None:
-                workspace_table = u.Cli.toml_ensure_table(uv, "workspace")
-            u.Cli.toml_sync_string_list(workspace_table, "members", member_paths)
+        exclude_payload = list(
+            t.Cli.JSON_LIST_ADAPTER.validate_python([
+                {
+                    key: value
+                    for key, value in item.model_dump(
+                        mode="json", exclude_none=True
+                    ).items()
+                    if key != "project"
+                }
+                for item in resolution.exclude_dependencies
+            ])
+        )
+        if exclude_payload:
+            u.Cli.toml_sync_value(uv, "exclude-dependencies", exclude_payload)
         else:
-            u.Cli.toml_remove_key_if_present(uv, "workspace")
+            u.Cli.toml_remove_key_if_present(uv, "exclude-dependencies")
+        # Each repository owns its own frozen lock and external environment.
+        # A root uv workspace would require every gitlink in root-only CI.
+        u.Cli.toml_remove_key_if_present(uv, "workspace")
         sources = u.Cli.toml_table_child(uv, "sources")
-        if sources is None and repository_root:
-            sources = u.Cli.toml_ensure_table(uv, "sources")
         if sources is None:
-            if not repository_root and not tuple(uv):
-                u.Cli.toml_remove_key_if_present(tool, "uv")
             return r[bool].ok(True)
-        workspace_names = {member.distribution for member in workspace.subprojects}
         for source_name in tuple(sources):
-            # Member documents resolve internal siblings through the direct
-            # Git requirement; a git [tool.uv.sources] entry on a workspace
-            # member is rejected by uv itself, and only the root carries the
-            # workspace overlay.
-            if source_name.startswith("flext-") and (
-                not repository_root or source_name not in workspace_names
-            ):
+            if source_name.startswith("flext-"):
                 u.Cli.toml_remove_key_if_present(sources, source_name)
-        if repository_root:
-            for member in workspace.subprojects:
-                u.Cli.toml_sync_mapping_table(
-                    sources, member.distribution, {"workspace": True}
-                )
-        elif not tuple(sources):
+        if not tuple(sources):
             u.Cli.toml_remove_key_if_present(uv, "sources")
-        if not repository_root and not tuple(uv):
-            u.Cli.toml_remove_key_if_present(tool, "uv")
         return r[bool].ok(True)
 
     @staticmethod
@@ -262,76 +197,6 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
         if isinstance(raw, (list, tuple)):
             return [item for item in raw if isinstance(item, str)]
         return []
-
-    @staticmethod
-    def _resolved_root_sources(
-        *, workspace: p.Infra.WorkspaceSpec
-    ) -> MutableMapping[str, MutableMapping[str, t.JsonValue]]:
-        """Resolve the workspace source overlay from the declared topology."""
-        return {
-            member.distribution: {"workspace": True} for member in workspace.subprojects
-        }
-
-    @classmethod
-    def _validate_root_uv_sources(
-        cls, document: t.Cli.TomlDocument, *, workspace: p.Infra.WorkspaceSpec
-    ) -> p.Result[bool]:
-        """Validate the root overlay without rewriting out-of-order TOML tables."""
-        payload = u.Cli.toml_as_mapping(document)
-        if payload is None:
-            return r[bool].fail("pyproject document is not a TOML mapping")
-        tool = payload.get(c.Infra.TOOL)
-        if not isinstance(tool, Mapping):
-            return r[bool].fail("root pyproject must define [tool]")
-        uv = tool.get("uv")
-        if not isinstance(uv, Mapping):
-            return r[bool].fail("root pyproject must define [tool.uv]")
-        declared_requirements = cls._document_requirement_lines(document)
-        if declared_requirements.failure:
-            return r[bool].from_failure(declared_requirements)
-        overrides = cls._dependency_overrides(
-            workspace, requirements=declared_requirements.value
-        )
-        if overrides.failure:
-            return r[bool].from_failure(overrides)
-        declared = u.Cli.toml_as_string_list(uv.get("override-dependencies"))
-        if tuple(declared) != overrides.value:
-            return r[bool].fail("root dependency overrides differ from workspace SSOT")
-        uv_workspace = uv.get("workspace")
-        if not isinstance(uv_workspace, Mapping):
-            return r[bool].fail("root pyproject must define [tool.uv.workspace]")
-        validated_members: p.Result[t.StrSequence] = u.validate_value(
-            t.Infra.STR_SEQ_ADAPTER, uv_workspace.get("members"), strict=True
-        )
-        if validated_members.failure:
-            return r[bool].fail_op(
-                "validate root uv workspace package entries", validated_members.error
-            )
-        members = validated_members.value
-        expected_members = tuple(
-            member.path.as_posix() for member in workspace.subprojects
-        )
-        if tuple(members) != expected_members:
-            return r[bool].fail(
-                "root uv workspace package entries differ from workspace SSOT"
-            )
-        sources = uv.get("sources")
-        if not isinstance(sources, Mapping):
-            return r[bool].fail("root pyproject must define [tool.uv.sources]")
-        expected_sources = cls._resolved_root_sources(workspace=workspace)
-        if tuple(sources) != tuple(expected_sources):
-            return r[bool].fail("root uv workspace sources differ from workspace SSOT")
-        for source_name, expected_source in expected_sources.items():
-            source = sources.get(source_name)
-            if (
-                not isinstance(source, Mapping)
-                or tuple(source) != tuple(expected_source)
-                or dict(source) != expected_source
-            ):
-                return r[bool].fail(
-                    f"root uv workspace sources differ from workspace SSOT: {source_name}"
-                )
-        return r[bool].ok(True)
 
 
 __all__: list[str] = ["FlextInfraUtilitiesPyprojectUvSources"]

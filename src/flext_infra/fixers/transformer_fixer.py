@@ -34,7 +34,7 @@ from .base import FlextInfraFixerAdapter
 if TYPE_CHECKING:
     from flext_infra import p, t
 
-    from .._utilities.transformer_base import FlextInfraRopeTransformer
+    from ..transformers.rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
@@ -125,30 +125,36 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         """Apply transformer fixes file-by-file for the given violations."""
         if not violations:
             return m.Infra.ProjectFixResult(project=project_dir.name)
-        fixed: t.MutableSequenceOf[m.Infra.FixedViolation] = []
-        previewed: t.MutableSequenceOf[m.Infra.PreviewedViolation] = []
-        skipped: t.MutableSequenceOf[m.Infra.SkippedViolation] = []
-        failed: t.MutableSequenceOf[m.Infra.FailedFix] = []
-        files_modified: set[str] = set()
+        results: t.MutableSequenceOf[m.Infra.ProjectFixResult] = []
         for target, target_violations in self._group_by_target(violations).items():
+            rule_id = self._rule_id(target_violations)
             deactivation = self._DEACTIVATED_TARGETS.get(target)
             if deactivation is not None:
-                skipped.append(
-                    m.Infra.SkippedViolation(
-                        rule_id=self._rule_id(target_violations),
-                        file_path=str(project_dir),
-                        reason=deactivation,
+                results.append(
+                    m.Infra.ProjectFixResult(
+                        project=project_dir.name,
+                        skipped=(
+                            m.Infra.SkippedViolation(
+                                rule_id=rule_id,
+                                file_path=str(project_dir),
+                                reason=deactivation,
+                            ),
+                        ),
                     )
                 )
                 continue
             transformer_cls = self._TRANSFORMERS.get(target)
             if transformer_cls is None:
-                rule_id = self._rule_id(target_violations)
-                failed.append(
-                    m.Infra.FailedFix(
-                        rule_id=rule_id,
-                        file_path=str(project_dir),
-                        error=f"transformer {target} not registered",
+                results.append(
+                    m.Infra.ProjectFixResult(
+                        project=project_dir.name,
+                        failed=(
+                            m.Infra.FailedFix(
+                                rule_id=rule_id,
+                                file_path=str(project_dir),
+                                error=f"transformer {target} not registered",
+                            ),
+                        ),
                     )
                 )
                 continue
@@ -156,41 +162,51 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
             file_paths = self._collect_file_paths(project_dir, target_violations)
             for file_path in file_paths:
                 if self._is_owned_library_exempt(project_dir, fix_action, file_path):
-                    skipped.append(
-                        m.Infra.SkippedViolation(
-                            rule_id=self._rule_id(target_violations),
-                            file_path=str(file_path),
-                            reason=(
-                                f"project {project_dir.name} owns library abstraction"
+                    results.append(
+                        m.Infra.ProjectFixResult(
+                            project=project_dir.name,
+                            skipped=(
+                                m.Infra.SkippedViolation(
+                                    rule_id=rule_id,
+                                    file_path=str(file_path),
+                                    reason=(
+                                        f"project {project_dir.name} "
+                                        "owns library abstraction"
+                                    ),
+                                ),
                             ),
                         )
                     )
                     continue
-                result = self._fix_file(
-                    file_path=file_path,
-                    transformer_cls=transformer_cls,
-                    fix_action=fix_action,
-                    ctx=ctx,
-                    rule_id=self._rule_id(target_violations),
+                results.append(
+                    self._fix_file(
+                        file_path=file_path,
+                        transformer_cls=transformer_cls,
+                        fix_action=fix_action,
+                        ctx=ctx,
+                        rule_id=rule_id,
+                    )
                 )
-                fixed.extend(result.fixed)
-                previewed.extend(result.previewed)
-                skipped.extend(result.skipped)
-                failed.extend(result.failed)
-                files_modified.update(result.files_modified)
+        files_modified = {path for result in results for path in result.files_modified}
         if ctx.apply and files_modified:
             normalize_result = self._normalize_imports(tuple(files_modified))
             if normalize_result.failure:
-                failed.append(
-                    m.Infra.FailedFix(
-                        rule_id="",
-                        file_path=str(project_dir),
-                        error=normalize_result.error or "import normalization failed",
+                results.append(
+                    m.Infra.ProjectFixResult(
+                        project=project_dir.name,
+                        failed=(
+                            m.Infra.FailedFix(
+                                rule_id="",
+                                file_path=str(project_dir),
+                                error=(
+                                    normalize_result.error
+                                    or "import normalization failed"
+                                ),
+                            ),
+                        ),
                     )
                 )
-        return self._build_project_fix_result(
-            project_dir, fixed, previewed, skipped, failed, files_modified
-        )
+        return self._merge_project_fix_results(project_dir, results)
 
     @staticmethod
     def _is_owned_library_exempt(

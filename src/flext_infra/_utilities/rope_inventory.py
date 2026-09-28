@@ -15,23 +15,27 @@ from .rope_runtime import FlextInfraUtilitiesRopeRuntime
 class FlextInfraUtilitiesRopeInventory:
     """Generic Rope-only inventory helpers for Python objects."""
 
-    get_pymodule = staticmethod(FlextInfraUtilitiesRopeCore.get_pymodule)
-
     @classmethod
     def objects(
         cls,
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        file_path: Path,
         *,
-        module_entry: m.Infra.RopeModuleIndexEntry | None,
-        convention: m.Infra.RopeModuleConvention,
         include_local_scopes: bool,
         include_references: bool = True,
-        rope_workspace: p.Infra.RopeWorkspaceDsl | None = None,
     ) -> t.VariadicTuple[m.Infra.Object]:
-        """Return all same-file defined objects for one Rope module."""
+        """Return all same-file defined objects for one workspace module."""
+        rope_project = rope_workspace.rope_project
+        resource = rope_workspace.resource(file_path)
+        if resource is None:
+            msg = f"path is outside the active rope workspace: {file_path}"
+            raise ValueError(msg)
+        module_entry = rope_workspace.module(file_path)
+        convention = rope_workspace.convention(file_path)
         try:
-            pymodule = cls.get_pymodule(rope_project, resource)
+            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
+                rope_project, resource
+            )
         except FlextInfraUtilitiesRopeRuntime.rope_runtime_errors() as exc:
             msg = (
                 "rope inventory failed to load "
@@ -202,7 +206,7 @@ class FlextInfraUtilitiesRopeInventory:
         """Sorted names."""
         candidates: list[t.Triple[int, str, t.Infra.RopePyName]] = []
         for name, pyname in names.items():
-            if FlextInfraUtilitiesRopeRuntime.is_imported_name(pyname):
+            if FlextInfraUtilitiesRopeRuntime.imported_name(pyname):
                 continue
             line = FlextInfraUtilitiesRopeInventory._definition_line(pyname, resource)
             if line is None:
@@ -242,13 +246,7 @@ class FlextInfraUtilitiesRopeInventory:
             and not options.name.startswith("_")
         ):
             runtime_reference_sites, script_reference_sites = cls._reference_sites(
-                options.rope_project,
-                options.resource,
-                source=options.source,
-                module_name=options.module_name,
-                name=options.name,
-                line=line,
-                rope_workspace=options.rope_workspace,
+                options, line=line
             )
         else:
             runtime_reference_sites = ()
@@ -311,9 +309,9 @@ class FlextInfraUtilitiesRopeInventory:
         if scope is not None:
             validated_existing_scope: p.Infra.RopeScopeDsl = scope
             return validated_existing_scope
-        if FlextInfraUtilitiesRopeRuntime.is_assigned_name(
+        if FlextInfraUtilitiesRopeRuntime.assigned_name(
             pyname
-        ) or FlextInfraUtilitiesRopeRuntime.is_parameter_name(pyname):
+        ) or FlextInfraUtilitiesRopeRuntime.parameter_name(pyname):
             return None
         getter = getattr(pyname.get_object(), "get_scope", None)
         candidate = getter() if callable(getter) else None
@@ -332,9 +330,9 @@ class FlextInfraUtilitiesRopeInventory:
     ) -> str:
         """Kind for."""
         result: str
-        if FlextInfraUtilitiesRopeRuntime.is_parameter_name(pyname):
+        if FlextInfraUtilitiesRopeRuntime.parameter_name(pyname):
             result = "parameter"
-        elif FlextInfraUtilitiesRopeRuntime.is_assigned_name(pyname):
+        elif FlextInfraUtilitiesRopeRuntime.assigned_name(pyname):
             if class_chain and len(scope_chain) == len(class_chain):
                 result = "attribute"
             elif scope_chain:
@@ -345,9 +343,9 @@ class FlextInfraUtilitiesRopeInventory:
                 result = "assignment"
         else:
             obj = pyname.get_object()
-            if FlextInfraUtilitiesRopeRuntime.is_abstract_class(obj):
+            if FlextInfraUtilitiesRopeRuntime.abstract_class(obj):
                 result = "class"
-            elif FlextInfraUtilitiesRopeRuntime.is_py_function(obj):
+            elif FlextInfraUtilitiesRopeRuntime.py_function(obj):
                 result = (
                     "method"
                     if class_chain and len(scope_chain) == len(class_chain)
@@ -357,10 +355,7 @@ class FlextInfraUtilitiesRopeInventory:
                 result = "attribute"
             elif scope_chain:
                 result = "local" if not name.isupper() else "constant"
-            elif (
-                FlextInfraUtilitiesRopeRuntime.is_defined_name(pyname)
-                and name.isupper()
-            ):
+            elif FlextInfraUtilitiesRopeRuntime.defined_name(pyname) and name.isupper():
                 result = "constant"
             else:
                 result = "assignment"
@@ -368,29 +363,24 @@ class FlextInfraUtilitiesRopeInventory:
 
     @staticmethod
     def _reference_sites(
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
-        *,
-        source: str,
-        name: str,
-        line: int,
-        rope_workspace: p.Infra.RopeWorkspaceDsl | None = None,
-        module_name: str,
+        options: m.Infra.RopeInventoryRecordInput, *, line: int
     ) -> t.Pair[
         t.VariadicTuple[m.Infra.ReferenceSite], t.VariadicTuple[m.Infra.ReferenceSite]
     ]:
-        """Collect the reference sites for a symbol."""
-        lines = source.splitlines(keepends=True)
+        """Collect the reference sites for the symbol one record describes."""
+        name = options.name
+        lines = options.source.splitlines(keepends=True)
         offset = FlextInfraUtilitiesRopeCore.find_identifier_offset_in_lines(
             lines, line=line, symbol=name
         )
         if offset is None:
             return ((), ())
         definition_path = FlextInfraUtilitiesRopeCore.resource_file_path(
-            rope_project, resource
+            options.rope_project, options.resource
         )
         search_resources: t.VariadicTuple[t.Infra.RopeResource] | None = None
-        if rope_workspace is not None and definition_path is not None:
+        if definition_path is not None:
+            module_name = options.module_name
             dependent_import_targets = (
                 (module_name, f"{module_name}.{name}")
                 if module_name
@@ -399,14 +389,14 @@ class FlextInfraUtilitiesRopeInventory:
                 else ()
             )
             search_resources = FlextInfraUtilitiesRopeImports.indexed_search_resources(
-                rope_workspace,
-                resource=resource,
+                options.rope_workspace,
+                resource=options.resource,
                 name=name,
                 definition_path=definition_path,
                 dependent_import_targets=dependent_import_targets,
             )
         hits = FlextInfraUtilitiesRopeImports.find_occurrences(
-            rope_project, resource, offset, resources=search_resources
+            options.rope_project, options.resource, offset, resources=search_resources
         )
         runtime_reference_sites: list[m.Infra.ReferenceSite] = []
         script_reference_sites: list[m.Infra.ReferenceSite] = []

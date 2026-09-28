@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra import FlextInfraPyprojectModernizer, main
-from tests import c
+from tests import c, m
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -31,7 +31,11 @@ class TestsFlextInfraDepsModernizerMain:
         tm.fail(
             FlextInfraPyprojectModernizer(
                 repository_root=modernizer_workspace
-            ).conform_source("invalid [[[", path=pyproject),
+            ).conform_source(
+                "invalid [[[",
+                path=pyproject,
+                topology=m.Infra.PyprojectDeclaredTopology(),
+            ),
             has="invalid TOML",
         )
 

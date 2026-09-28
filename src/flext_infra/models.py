@@ -9,13 +9,13 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from flext_cli import m as cli_m
+from flext_cli import FlextCliModels
 
+from ._models._codegen.base import FlextInfraCodegen
 from ._models._config import FlextInfraConfigModels
 from ._models.base import FlextInfraModelsBase
 from ._models.census import FlextInfraModelsCensus
 from ._models.check import FlextInfraModelsCheck
-from ._models.codegen import FlextInfraCodegen
 from ._models.codemod import FlextInfraModelsCodemod
 from ._models.deps import FlextInfraModelsDeps
 from ._models.docs import FlextInfraModelsDocs
@@ -39,7 +39,7 @@ from ._models.workspace import FlextInfraModelsWorkspace
 from ._models.worktree import FlextInfraModelsWorktree
 
 
-class FlextInfraModels(cli_m):
+class FlextInfraModels(FlextCliModels):
     """Merged model namespace for flext-infra domain objects."""
 
     class Infra(

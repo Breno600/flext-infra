@@ -452,7 +452,6 @@ Infra:
           source-report-private-usage: error
           test-like-report-private-usage: "none"
           other-report-private-usage: "none"
-          venv-name: .venv
       coverage:
         source: [src]
         show-missing: true
@@ -594,28 +593,20 @@ Infra:
           # scripts/legado/dispatch.py.
           project-shared-search-paths: []
       pytest:
-        testmon-state-home-variable: XDG_STATE_HOME
-        testmon-datafile-variable: TESTMON_DATAFILE
-        testmon-namespace: flext/testmon
-        testmon-database-filename: .testmondata
-        testmon-lock-filename: cache.lock
         # flext-j47u (codex): scaffold/modernizer consume one complete pytest model.
-        # OPERATOR LAW flext-38p39 (2026-08-13), reaffirmed by flext-09686
-        # measurement. 10s per case, 60s for an explicitly slow case.
-        # A case that does not fit is a TEST DEFECT and is
-        # OPTIMIZED; raising the ceiling to accommodate it is forbidden and is
-        # itself a violation. Fifteen seconds still fails a blocked filesystem
+        # A case that does not fit is a test defect to optimize. Fifteen
+        # seconds still fails a blocked filesystem
         # operation quickly without pretending that an uninterruptible host
         # fsync can obey a five-second Python signal deadline. The aggregate
         # budget below independently terminates an incomplete full suite.
-        case-timeout-seconds: 15
+        case-timeout-seconds: 10
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
         slow-timeout-seconds: 30
-        # A local suite that cannot finish within three minutes is a performance
+        # A local suite that cannot finish within two minutes is a performance
         # defect. The generated process wall is derived from this value and the
         # termination grace by the typed model; no second timeout source exists.
-        run-timeout-seconds: 180
+        run-timeout-seconds: 120
         termination-grace-seconds: 2
         # Operator decision 2026-09-26: one failure stops the invocation. The
         # next run starts from the corrected owner instead of accumulating a
@@ -638,6 +629,7 @@ Infra:
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
           cosmos-docgen: 4
+          flext-infra: 4
         # Reserve physical memory for each xdist worker and its child process
         # tree; this bound may reduce the tested ceiling on smaller hosts.
         parallel-worker-memory-gb: 2

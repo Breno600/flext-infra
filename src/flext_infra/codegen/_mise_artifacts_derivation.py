@@ -1,0 +1,102 @@
+"""Offline derivation checks for the `make upg`-written Mise pin and launchers."""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from flext_core import r
+from flext_infra import c, u
+
+if TYPE_CHECKING:
+    from flext_infra import p
+
+
+class FlextInfraMiseArtifactsDerivation:
+    """Prove each launcher is mise's own output for the committed release.
+
+    ``make upg`` is the only writer of the triple: it resolves the release,
+    runs ``mise generate install-script`` with that release and records the
+    pin. Every other verb verifies the triple offline and names ``make upg``
+    as the only repair.
+    """
+
+    @classmethod
+    def validate(cls, project_root: Path, runtime_root: Path) -> p.Result[bool]:
+        """Validate one project's triple and its projection of the runtime root."""
+        release = cls.pinned_release(project_root)
+        if release.failure:
+            return r[bool].from_failure(release)
+        for relative, mode in c.Infra.ARTIFACT_SPECS:
+            if relative == c.Infra.MISE_VERSION_PIN_FILENAME:
+                continue
+            launcher = cls._validate_launcher(
+                project_root / relative, relative, mode, release.value
+            )
+            if launcher.failure:
+                return launcher
+        if project_root.resolve() == runtime_root.resolve():
+            return r[bool].ok(True)
+        for relative, _mode in c.Infra.ARTIFACT_SPECS:
+            projected = cls._read(project_root / relative)
+            if projected.failure:
+                return r[bool].from_failure(projected)
+            owner = cls._read(runtime_root / relative)
+            if owner.failure:
+                return r[bool].from_failure(owner)
+            if projected.value != owner.value:
+                return r[bool].fail(
+                    f"{project_root / relative} differs from the runtime root "
+                    f"{runtime_root / relative}; run make upg in {runtime_root}"
+                )
+        return r[bool].ok(True)
+
+    @classmethod
+    def pinned_release(cls, root: Path) -> p.Result[str]:
+        """Return the release recorded by ``root``'s ``mise.version``."""
+        path = root / c.Infra.MISE_VERSION_PIN_FILENAME
+        content = cls._read(path)
+        if content.failure:
+            return r[str].from_failure(content)
+        release = u.Infra.mise_pinned_release(content.value)
+        if release.failure:
+            return r[str].fail(f"{path}: {release.error}; run make upg")
+        return release
+
+    @classmethod
+    def _validate_launcher(
+        cls, path: Path, relative: str, mode: int, release: str
+    ) -> p.Result[bool]:
+        """Require the generator's baked release, no live resolution, and mode."""
+        content = cls._read(path)
+        if content.failure:
+            return r[bool].from_failure(content)
+        if c.Infra.MISE_LATEST_RESOLUTION_MARKER in content.value:
+            return r[bool].fail(
+                f"{path} resolves {c.Infra.MISE_LATEST_RESOLUTION_MARKER} at run "
+                "time instead of baking a release; run make upg"
+            )
+        pattern = c.Infra.MISE_LAUNCHER_BAKED_RELEASE_PATTERNS[relative]
+        baked = sorted({
+            match.group("release") for match in re.finditer(pattern, content.value)
+        })
+        if baked != [release]:
+            return r[bool].fail(
+                f"{path} bakes Mise {', '.join(baked) or 'no release'} but "
+                f"{c.Infra.MISE_VERSION_PIN_FILENAME} records {release}; run make upg"
+            )
+        if mode & 0o100 and not path.stat().st_mode & 0o100:
+            return r[bool].fail(f"{path} is not executable; run make upg")
+        return r[bool].ok(True)
+
+    @staticmethod
+    def _read(path: Path) -> p.Result[str]:
+        """Read one committed artifact, naming ``make upg`` when it is absent."""
+        content = u.Cli.files_read_text(path)
+        if content.failure:
+            return r[str].fail(f"{path}: {content.error}; run make upg")
+        return content
+
+
+__all__: list[str] = ["FlextInfraMiseArtifactsDerivation"]

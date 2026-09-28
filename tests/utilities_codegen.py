@@ -337,7 +337,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
     @staticmethod
     def extract_lazy_init_exports(source: str) -> t.Pair[bool, t.StrSequence]:
         """Read the published lazy export contract from generated source."""
-        assignments = dict(u.Infra.get_module_level_assignments(source))
+        assignments = dict(u.Infra.extract_module_level_assignments(source))
         all_value = assignments.get(c.Infra.DUNDER_ALL)
         if all_value is None:
             return (False, ())

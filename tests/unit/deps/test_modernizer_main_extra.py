@@ -8,7 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraPyprojectModernizer
-from tests import c, u
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -67,11 +67,9 @@ class TestsFlextInfraDepsModernizerMainExtra:
         tm.that(audit_exit, eq=0)
 
     def test_run_fails_when_selected_project_has_invalid_toml(
-        self,
-        modernizer_workspace_with_projects: Path,
-        capsys: pytest.CaptureFixture[str],
+        self, modernizer_workspace_with_projects: Path
     ) -> None:
-        """Reject invalid TOML in a declared member before any write."""
+        """Invalid TOML in a declared member escapes before any write."""
         selected_pyproject = (
             modernizer_workspace_with_projects / "selected" / c.PYPROJECT_FILENAME
         )
@@ -85,8 +83,13 @@ class TestsFlextInfraDepsModernizerMainExtra:
             skip_check=False,
         )
 
-        tm.that(modernizer.run(), eq=2)
-        tm.that(capsys.readouterr().out, has=str(selected_pyproject))
+        # The canonical docs-scope reader owns the typed invalid-TOML error and
+        # names the file; the run lets it leave instead of logging an exit code.
+        with pytest.raises(
+            ValueError, match="docs pyproject TOML is invalid"
+        ) as raised:
+            modernizer.run()
+        tm.that(str(raised.value), has=str(selected_pyproject))
         tm.that(root_pyproject.read_bytes(), eq=root_before)
         tm.that(selected_pyproject.read_text(encoding="utf-8"), eq="[invalid")
 
@@ -249,7 +252,11 @@ class TestsFlextInfraDepsModernizerMainExtra:
         source = '[project]\nname = "sample"\nversion = "0.1.0"\n'
         modernizer = FlextInfraPyprojectModernizer(repository_root=tmp_path)
 
-        result = modernizer.conform_source(source, path=tmp_path / "pyproject.toml")
+        result = modernizer.conform_source(
+            source,
+            path=tmp_path / "pyproject.toml",
+            topology=m.Infra.PyprojectDeclaredTopology(),
+        )
 
         error = tm.fail(result)
         tm.that(error, has=["taplo format failed (1)", "invalid configuration", "/x/["])

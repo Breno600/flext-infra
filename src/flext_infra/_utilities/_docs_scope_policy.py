@@ -7,7 +7,7 @@ from pathlib import Path
 
 from flext_cli import u
 
-from flext_infra import c, m, t
+from flext_infra import c, t
 
 from ._docs_scope_state import FlextInfraUtilitiesDocsScopeStateMixin
 from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
@@ -138,7 +138,7 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         return [str(item).strip() for item in raw if str(item).strip()]
 
     @staticmethod
-    def is_excluded_doc_path(project_root: Path, relative_path: Path) -> bool:
+    def excluded_doc_path(project_root: Path, relative_path: Path) -> bool:
         """Return whether a relative docs path is excluded by ``tool.flext.docs``."""
         candidate = relative_path.as_posix()
         for pattern in FlextInfraUtilitiesDocsScopePolicyMixin.docs_meta_list(
@@ -149,7 +149,7 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         return False
 
     @staticmethod
-    def is_governed_project(project_name: str, repository_root: Path) -> bool:
+    def governed_project(project_name: str, repository_root: Path) -> bool:
         """Return whether a project belongs to the governed FLEXT docs scope."""
         project_root = repository_root / project_name
         docs_meta = FlextInfraUtilitiesDocsScopePolicyMixin.project_docs_meta(
@@ -189,20 +189,6 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         if project_name == f"{c.Infra.PKG_PREFIX_HYPHEN}tests":
             return "test"
         return "domain"
-
-    @staticmethod
-    def docs_aggregate_root(scope: m.Infra.DocScope) -> bool:
-        """Whether one docs scope publishes the aggregate workspace contract.
-
-        Only the root label or a manifest whose typed role is ``workspace``
-        qualifies. Every governed standalone project carries the same manifest
-        file and stays a project scope, so generate and validate share this one
-        predicate instead of testing for the file.
-        """
-        return (
-            scope.name == c.Infra.RK_ROOT
-            or FlextInfraUtilitiesWorkspaceManifest.is_fleet_umbrella(scope.path)
-        )
 
     @staticmethod
     def required_project_files() -> t.StrSequence:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import concurrent.futures
 import difflib
+import os
 from collections.abc import MutableMapping
 from itertools import islice
 from pathlib import Path
@@ -15,6 +16,7 @@ from flext_infra import c, m, t
 
 from .._config import FlextInfraConfig
 from .discovery import FlextInfraUtilitiesDiscovery
+from .project_discovery import FlextInfraUtilitiesProjectDiscovery
 from .resource_limits import FlextInfraUtilitiesResourceLimits
 
 
@@ -46,11 +48,16 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @staticmethod
     def _workspace_tool_command(workspace: Path, tool_name: str) -> t.StrSequence:
-        """Resolve one tool against the workspace venv before falling back to PATH."""
-        tool_path = (workspace.resolve() / c.Infra.VENV_BIN_REL / tool_name).resolve()
-        if tool_path.is_file():
-            return (str(tool_path),)
-        return (tool_name,)
+        """Resolve one tool from the managed external workspace environment."""
+        environment = FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
+            workspace
+        )
+        executable = tool_name + (".exe" if os.name == "nt" else "")
+        tool_path = environment / ("Scripts" if os.name == "nt" else "bin") / executable
+        if not tool_path.is_file():
+            msg = f"managed workspace tool is missing: {tool_path}"
+            raise FileNotFoundError(msg)
+        return (str(tool_path),)
 
     @staticmethod
     def _normalize_lint_line(line: str) -> str:
@@ -274,8 +281,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
     ) -> t.Infra.LintSnapshot:
         """Execute selected lint tools."""
         command_cwd = cls._command_cwd(py_file, workspace)
-        command_env = cls._command_env()
-        gate_timeout = max(5, min(15, c.Infra.TIMEOUT_SHORT))
 
         # flext-38p39: every gate is an independent subprocess -- _run_lint_gate
         # builds its own command and returns a value, touching no shared state.
@@ -290,8 +295,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         # resource-limited deadline of its own); a shorter pool budget cut the
         # gate short and reported the cut as lint errors, reverting valid edits.
         timeout_budget = (
-            max(cls._gate_deadline(entry[0], gate_timeout) for entry in selected_tools)
-            + 10
+            max(cls._gate_deadline(entry[0]) for entry in selected_tools) + 10
         )
         pool = concurrent.futures.ThreadPoolExecutor(
             max_workers=max(1, min(cls._SNAPSHOT_MAX_WORKERS, len(selected_tools)))
@@ -302,8 +306,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
                 py_file=py_file,
                 workspace=workspace,
                 command_cwd=command_cwd,
-                command_env=command_env,
-                gate_timeout=gate_timeout,
                 tool_name=entry[0],
                 template=entry[1],
             ): entry[0]
@@ -330,11 +332,11 @@ class FlextInfraUtilitiesProtectedEditLinting:
         return cls._lint_snapshot_from_results(tuple(results))
 
     @staticmethod
-    def _gate_deadline(tool_name: str, gate_timeout: int) -> int:
+    def _gate_deadline(tool_name: str) -> int:
         """Return the one declared deadline for a lint gate subprocess."""
         if tool_name == c.Infra.MYPY:
             return FlextInfraUtilitiesResourceLimits.mypy_runner_timeout()
-        return gate_timeout
+        return max(5, min(15, c.Infra.TIMEOUT_SHORT))
 
     @classmethod
     def _run_lint_gate(
@@ -343,8 +345,6 @@ class FlextInfraUtilitiesProtectedEditLinting:
         py_file: Path,
         workspace: Path,
         command_cwd: Path,
-        command_env: t.StrMapping,
-        gate_timeout: int,
         tool_name: str,
         template: t.StrSequence,
     ) -> m.Infra.LintGateResult:
@@ -359,9 +359,9 @@ class FlextInfraUtilitiesProtectedEditLinting:
         run_result = u.Cli.run_raw(
             cmd,
             cwd=command_cwd,
-            env=command_env,
+            env=cls._command_env(),
             remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
-            timeout=cls._gate_deadline(tool_name, gate_timeout),
+            timeout=cls._gate_deadline(tool_name),
         )
         if run_result.failure:
             error = run_result.error or f"{tool_name} failed"

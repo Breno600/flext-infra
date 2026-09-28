@@ -21,6 +21,10 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
         m.Infra.CodegenConformRequest | None,
         m.Field(default=None, exclude=True, description="Validated conform request"),
     ] = None
+    repository_root: Annotated[
+        Path,
+        m.Field(default=Path(), exclude=True, description="Conform repository root"),
+    ] = Path()
     initial_workspace: Annotated[
         m.Infra.WorkspaceSpec | None,
         m.Field(

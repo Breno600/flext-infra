@@ -8,6 +8,7 @@ from pathlib import Path
 
 from flext_infra import u
 from tests import c, p, t
+from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 
 
 class TestsFlextInfraUtilitiesToolingFixtureMixin:
@@ -19,6 +20,29 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         return u.Cli.run_checked(
             ["uv", "venv", "--python", sys.executable, str(root / ".venv")], cwd=root
         )
+
+    @staticmethod
+    def provision_checkout(root: Path) -> None:
+        """Make a fixture root a checkout whose environment owns the edit tools.
+
+        Protected edits resolve every ``c.Infra.LINT_TOOLS`` executable plus
+        python and pytest fail-closed from the checkout's runtime environment
+        (``u.Infra.runtime_environment_dir``), which requires a Git checkout.
+        The fixture becomes one through the single fixture Git owner and
+        receives the real binaries this suite was provisioned with, linked
+        inside the pytest-managed tree; a missing tool fails the fixture.
+        """
+        TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
+        provisioned = Path(sys.executable).parent
+        bin_dir = u.Infra.runtime_environment_dir(root) / provisioned.name
+        bin_dir.mkdir(parents=True, exist_ok=True)
+        tools = {command[0] for _, command in c.Infra.LINT_TOOLS}
+        for name in sorted(tools | {c.Infra.PYTHON, c.Infra.PYTEST}):
+            source = provisioned / name
+            if not source.is_file():
+                msg = f"setup did not provision {name}: {source}"
+                raise FileNotFoundError(msg)
+            (bin_dir / name).symlink_to(source)
 
     @staticmethod
     def make_read_only(path: Path) -> None:
@@ -56,9 +80,7 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         for relative in (
             c.Infra.MISE_TOML_FILENAME,
             c.Infra.MISE_LOCK_FILENAME,
-            c.Infra.MISE_VERSION_PIN_FILENAME,
-            "bin/mise",
-            "bin/mise.cmd",
+            *c.Infra.ARTIFACT_NAMES,
         ):
             source = source_root / relative
             destination = root / relative

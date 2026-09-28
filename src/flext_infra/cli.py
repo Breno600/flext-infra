@@ -6,10 +6,10 @@ import sys
 
 from flext_infra import c, t
 
-from .services.cli_dispatch import CliDispatchService
+from .services.cli_dispatch import FlextInfraCliDispatchService
 
 
-class FlextInfraCli(CliDispatchService):
+class FlextInfraCli(FlextInfraCliDispatchService):
     """Single CLI entry surface for every flext-infra command group."""
 
 

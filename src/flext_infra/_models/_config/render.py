@@ -49,9 +49,6 @@ class FlextInfraConfigModelsRender:
         python_version: Annotated[
             t.NonEmptyStr, m.Field(description="Python major.minor line")
         ]
-        state_directory_name: Annotated[
-            t.NonEmptyStr, m.Field(description="External runtime state directory name")
-        ]
         github_actions: Annotated[
             Mapping[str, FlextInfraConfigModelsProvider.GithubActionPinSpec],
             m.Field(description="Immutable GitHub Action catalog"),
@@ -199,16 +196,13 @@ class FlextInfraConfigModelsRender:
             m.Field(description="Strict Mise environment projected into containers"),
         ]
 
-    class EnvrcRenderSpec(FlextInfraConfigModelsContexts.ScratchRootContext):
+    class EnvrcRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input consumed only by the generated project ``.envrc``."""
 
         repository_root_rel: Annotated[
             t.NonEmptyStr,
             m.Field(description="Project-relative owner of the runtime environment"),
         ] = "."
-        pycache_namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="External bytecode cache namespace")
-        ]
         environment_path_prepends: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Project-relative executable paths"),
@@ -326,4 +320,26 @@ class FlextInfraConfigModelsRender:
         dependencies: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Excluded transitive dependency names"),
+        ]
+
+    class UvResolutionSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Resolver keys conform owns in one project's ``[tool.uv]`` table.
+
+        Every key is declared: an empty sequence removes it from the table.
+        """
+
+        link_mode: Annotated[str, m.Field(description="uv installation link mode")]
+        constraint_dependencies: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Declared constraints; the uv pin is never kept"),
+        ]
+        exclude_dependencies: Annotated[
+            t.VariadicTuple[
+                FlextInfraConfigModelsRender.UvScopedDependencyExclusionSpec
+            ],
+            m.Field(description="Scoped dependency exclusions routed to the project"),
+        ]
+        environments: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Resolved environment markers uv resolves for"),
         ]
