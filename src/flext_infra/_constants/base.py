@@ -107,6 +107,8 @@ class FlextInfraConstantsBase(
     "Interpreter-selection file consumed by pyenv/asdf/mise."
     TAPLO_CONFIG_FILENAME: ClassVar[str] = ".taplo.toml"
     "Taplo workspace formatting configuration filename."
+    TAPLO_MISE_TOOL_NAME: ClassVar[str] = "taplo"
+    "Mise selector key whose locked release formats managed TOML."
     PYTHON_VERSION_UNDERSCORE: ClassVar[str] = "python_version"
     "Mypy python_version settings key (underscored)."
     EXTEND: ClassVar[str] = "extend"
