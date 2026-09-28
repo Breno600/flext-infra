@@ -25,6 +25,21 @@ Infra:
       # writes the committed uv.lock and mise.lock; setup, gen, and fmt install
       # frozen from those locks (operator 2026-09-24).
       python_version: "3.13"
+      # External runtime state directory (sibling of checkout, not inside it).
+      # Governs PROJECT_STATE_ROOT, PROJECT_SCRATCH_ROOT, PYTHONPYCACHEPREFIX.
+      state_directory_name: ".flext-runtime"
+      # Scratch namespace for TMPDIR, test basetemp, Mise bootstrap staging.
+      # Never lives inside a versioned tree (storage law).
+      scratch_namespace: "scratch"
+      # Scratch home-relative path: platform home plus this path mirrors the
+      # absolute checkout path below it. Workspace mode: sibling state root
+      # under superproject, so every sandbox became a tracked scope of the
+      # enclosing repository.
+      scratch_home_relative: "tmp"
+      # Bytecode cache namespace under PROJECT_STATE_ROOT.
+      pycache_namespace: "pycache"
+      # Mise artifacts namespace under state directory.
+      mise_namespace: "mise-artifacts"
       uv_link_mode: copy
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
@@ -1274,7 +1289,7 @@ Infra:
             runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.8]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.9]
           - upstream: flext_cli
             project: flext-db-oracle
             runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]

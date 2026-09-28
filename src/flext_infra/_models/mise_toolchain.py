@@ -79,7 +79,22 @@ class FlextInfraModelsMiseToolchain:
                 raise ValueError(msg)
             return self
 
-    class ToolchainSpec(_ConfigContract):
+    class RuntimeStorageSpec(_ConfigContract):
+        """Canonical runtime-storage contract shared by toolchain renderers."""
+
+        state_directory_name: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="External runtime state directory beside checkout"),
+        ]
+        scratch_namespace: Annotated[
+            t.NonEmptyStr,
+            m.Field(description="Scratch namespace below the home scratch root"),
+        ]
+        scratch_home_relative: Annotated[
+            t.NonEmptyStr, m.Field(description="Home-relative scratch root")
+        ]
+
+    class ToolchainSpec(RuntimeStorageSpec):
         """Language-runtime and native-tool versions shared by generated projects.
 
         Language runtimes and native tools are declared as moving ``latest``
@@ -109,6 +124,64 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
+        # External runtime state directory (sibling of checkout, not inside it).
+        # Governs PROJECT_STATE_ROOT, PROJECT_SCRATCH_ROOT, PYTHONPYCACHEPREFIX.
+        state_directory_name: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Directory name for external runtime state. Sibling of the "
+                    "checkout so generated state never lives inside a versioned "
+                    "tree (storage law). Default: '.flext-runtime'."
+                )
+            ),
+        ] = ".flext-runtime"
+        # Scratch namespace for TMPDIR, test basetemp, Mise bootstrap staging.
+        # Never lives inside a versioned tree (storage law).
+        scratch_namespace: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Namespace component for scratch directories. Combined with "
+                    "scratch_home_relative and state_directory_name to form the "
+                    "full scratch path. Default: 'scratch'."
+                )
+            ),
+        ] = "scratch"
+        # Scratch home-relative path: platform home plus this path mirrors the
+        # absolute checkout path below it. Workspace mode: sibling state root
+        # under superproject, so every sandbox became a tracked scope of the
+        # enclosing repository.
+        scratch_home_relative: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Home-relative path for scratch root. Combined with "
+                    "state_directory_name and checkout identity to form the "
+                    "PROJECT_SCRATCH_ROOT. Default: 'tmp'."
+                )
+            ),
+        ] = "tmp"
+        # Bytecode cache namespace under PROJECT_STATE_ROOT.
+        pycache_namespace: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Namespace component for Python bytecode cache directory "
+                    "under PROJECT_STATE_ROOT. Default: 'pycache'."
+                )
+            ),
+        ] = "pycache"
+        # Mise artifacts namespace under state directory.
+        mise_namespace: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Namespace component for Mise artifacts directory "
+                    "under the state directory. Default: 'mise-artifacts'."
+                )
+            ),
+        ] = "mise-artifacts"
         uv_link_mode: Annotated[
             t.NonEmptyStr, m.Field(description="Portable uv installation link mode")
         ]
