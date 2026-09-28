@@ -106,6 +106,10 @@ class FlextInfraConfigModelsArtifact:
                 )
             ),
         ] = ()
+        fresh_import_workers: Annotated[
+            int,
+            m.Field(ge=1, le=16, description="Concurrent fresh-import subprocesses"),
+        ] = 1
         loc_cap: Annotated[
             FlextInfraConfigModelsArtifact.CodegenLocCapSpec,
             m.Field(description="Per-module code-LOC ceiling policy"),

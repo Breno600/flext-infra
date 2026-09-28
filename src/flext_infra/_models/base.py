@@ -123,8 +123,13 @@ class FlextInfraModelsBase:
             Path, m.Field(description="Repository root used for lint and pytest checks")
         ]
         expected_sources: Annotated[
-            t.MappingKV[Path, str],
-            m.Field(description="Expected current source bytes keyed by updated path"),
+            t.MappingKV[Path, str | None],
+            m.Field(
+                description=(
+                    "Expected current source bytes keyed by updated path; None "
+                    "requires the path to be absent"
+                )
+            ),
         ]
         keep_backup: Annotated[
             bool, m.Field(description="Whether to preserve .bak copies before editing")

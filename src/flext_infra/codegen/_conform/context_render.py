@@ -242,14 +242,8 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         # consumes (the infrastructure dependency's own source), never from
         # the consumer's organization or branch: a repository in another org
         # otherwise renders a mixed family and uv rejects conflicting URLs.
-        flext_line = u.Infra.flext_integration_line(
-            codegen=codegen,
-            repository_root=repository_root,
-            bootstrap_source=(
-                workspace.flext_source
-                if not (repository_root / c.PYPROJECT_FILENAME).exists()
-                else None
-            ),
+        flext_line = u.Infra.flext_integration_line_for_checkout(
+            codegen=codegen, repository_root=repository_root, workspace=workspace
         )
         if flext_line.failure:
             return r[m.Infra.ProjectRenderContext].from_failure(flext_line)

@@ -157,7 +157,6 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
                 ],
                 cwd=cls._command_cwd(py_file, workspace),
                 env=cls._command_env(),
-                remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
                 timeout=c.Infra.TIMEOUT_SHORT,
             )
             if compile_result.failure:
@@ -173,7 +172,6 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
             ],
             cwd=cls._command_cwd(py_file, workspace),
             env=cls._command_env(),
-            remove_env_keys=cls._COMMAND_ENV_REMOVE_KEYS,
             timeout=c.Infra.TIMEOUT_MEDIUM,
         )
         if run_result.failure:

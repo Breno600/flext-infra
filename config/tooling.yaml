@@ -659,6 +659,13 @@ Infra:
         parallel-worker-memory-gb: 2
         # Keep scheduling centralized within the measured worker budget.
         parallel-distribution: load
+        # Measured 2026-09-26: a 2-3 item nested testmon selection spawning two
+        # xdist workers spent 11-17s running trivial tests, then blocked the
+        # parent's own process.wait() for the remaining slow-item budget during
+        # worker teardown, failing the pytest-timeout slow ceiling (60s) even
+        # though every test passed. Below this floor the invoking process runs
+        # the selection itself; no execnet gateway is ever created for it.
+        parallel-worker-min-items: 8
         profile-sort: cumulative
         profile-limit: 50
         min-version: "8.0"
@@ -721,8 +728,19 @@ Infra:
         # the whole Make/pytest process (shell `timeout`), not a single session
         # hook. A wide outer wall is itself an escape hatch — it would let an
         # overrun keep burning wall clock instead of aborting. Grace covers
-        # interpreter start, collection and teardown only.
+        # interpreter start, collection and teardown only. This is the `make
+        # test-full` (cold, complete-suite) ceiling only; `make test`
+        # (incremental, the PR gate) is bounded by
+        # incremental-process-timeout-seconds below.
         process-timeout-seconds: 7260
+        # Operator law 2026-09-26: a PR gate completes in 10 minutes or less.
+        # `make test` (incremental testmon selection) is the PR-gate verb, so
+        # its own outer Make-level wall is bounded to that budget independent
+        # of the generous cold-suite ceiling above -- a stuck or accidentally
+        # full-scope incremental run must fail fast, not silently spend the
+        # 2-hour cold-suite allowance. Matches the declared pre-push `test`
+        # budget (600s).
+        incremental-process-timeout-seconds: 600
       tomlsort:
         all: true
         in_place: true

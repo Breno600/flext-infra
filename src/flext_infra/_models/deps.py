@@ -5,7 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import t
 
 from .deps_toml import FlextInfraModelsDepsToml
@@ -20,7 +21,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         """Canonical CLI payload for ``flext-infra deps detect``.
 
         Inherits ``apply``/``dry_run``, ``repository_root``, ``projects``,
-        ``fail_fast``, ``verbose`` from ``WriteMixin``.
+        ``verbose`` from ``WriteMixin``.
         """
 
         output_format: Annotated[

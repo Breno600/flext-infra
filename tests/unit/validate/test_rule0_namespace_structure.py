@@ -24,7 +24,8 @@ class TestsFlextInfraRule0NamespaceStructure:
         )
         layout = tm.not_none(u.Infra.layout(root))
         facade = layout.package_dir / c.Infra.FAMILY_FILES[family].lstrip("*")
-        alias, suffix = c.Infra.NAMESPACE_FAMILY_EXPECTED_ALIAS[facade.name]
+        alias = c.Infra.NAMESPACE_FILE_TO_FAMILY[facade.name]
+        suffix = c.Infra.FAMILY_SUFFIXES[alias]
         class_name = f"{layout.class_stem}{suffix}"
         content = facade.read_text(encoding="utf-8")
         if f"{alias} = {class_name}" not in content:

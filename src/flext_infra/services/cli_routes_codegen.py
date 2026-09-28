@@ -6,20 +6,13 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m
-
-if TYPE_CHECKING:
-    from flext_infra import t
-from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
-from flext_infra.codegen.census import FlextInfraCodegenCensus
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.constants_quality_gate import FlextInfraCodegenQualityGate
-from flext_infra.codegen.fixer import FlextInfraCodegenFixer
 from flext_infra.codegen.layout import FlextInfraCodegenLayout
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from flext_infra.codegen.make_bootstrap import FlextInfraCodegenMakeBootstrap
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from flext_infra.codegen.pipeline import FlextInfraCodegenPipeline
 from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
 from flext_infra.codegen.py_typed import FlextInfraCodegenPyTyped
 from flext_infra.codegen.scaffolder import FlextInfraCodegenScaffolder
@@ -30,7 +23,11 @@ from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
 from flext_infra.fixers.orchestrator import FlextInfraEnforcementFixerOrchestrator
 
+from ..api import infra
 from .cli_route_base import FlextInfraCliRouteBase
+
+if TYPE_CHECKING:
+    from flext_infra import t
 
 
 class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
@@ -44,9 +41,7 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                 name=c.Infra.VERB_RUN,
                 help_text="Run workspace quality gates",
                 model_cls=m.Infra.RunCommand,
-                handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraWorkspaceChecker.execute_payload
-                ),
+                handler=FlextInfraCliRouteBase.result_handler(infra.check),
             ),
             m.Cli.ResultCommandRoute(
                 name="fix-pyrefly-settings",
@@ -117,10 +112,8 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                     (
                         "census",
                         "Count namespace violations across workspace projects",
-                        FlextInfraCodegenCensus,
-                        FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenCensus.execute
-                        ),
+                        m.Infra.CodegenCommand,
+                        FlextInfraCliRouteBase.result_handler(infra.codegen_census),
                         None,
                     ),
                     (
@@ -135,10 +128,8 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                     (
                         "auto-fix",
                         "Auto-fix namespace violations (move Finals/TypeVars)",
-                        FlextInfraCodegenFixer,
-                        FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenFixer.execute
-                        ),
+                        m.Infra.CodegenAutoFixCommand,
+                        FlextInfraCliRouteBase.result_handler(infra.codegen_auto_fix),
                         None,
                     ),
                     (
@@ -153,10 +144,8 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                     (
                         "pipeline",
                         "Run full codegen pipeline",
-                        FlextInfraCodegenPipeline,
-                        FlextInfraCliRouteBase.result_handler(
-                            FlextInfraCodegenPipeline.execute
-                        ),
+                        m.Infra.CodegenCommand,
+                        FlextInfraCliRouteBase.result_handler(infra.codegen_pipeline),
                         None,
                     ),
                     (

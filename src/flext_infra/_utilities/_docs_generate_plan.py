@@ -8,8 +8,7 @@ from typing import TYPE_CHECKING
 from flext_cli import u as cli_u
 
 from flext_core import r
-from flext_infra import m
-from flext_infra.typings import DocsRenderedArtifactTuple, t
+from flext_infra import m, t
 
 from ._docs_generate_sources import FlextInfraUtilitiesDocsGenerateSourcesMixin
 from .docs_contract import FlextInfraUtilitiesDocsContract
@@ -30,10 +29,10 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
 
     @staticmethod
     def docs_normalize_artifacts(
-        artifacts: t.SequenceOf[DocsRenderedArtifactTuple],
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
+        artifacts: t.SequenceOf[t.Infra.DocsRenderedArtifactTuple],
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Validate one unique lexical owner and target without dereferencing."""
-        normalized: list[DocsRenderedArtifactTuple] = []
+        normalized: list[t.Infra.DocsRenderedArtifactTuple] = []
         targets: set[Path] = set()
         for project, target, content in artifacts:
             if (
@@ -42,22 +41,24 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
                 or ".." in project.parts
                 or ".." in target.parts
             ):
-                return r[t.VariadicTuple[DocsRenderedArtifactTuple]].fail(
+                return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"docs publication paths must be absolute and lexical: {target}"
                 )
             try:
                 target.relative_to(project)
             except ValueError:
-                return r[t.VariadicTuple[DocsRenderedArtifactTuple]].fail(
+                return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"docs publication target escapes project {project}: {target}"
                 )
             if target in targets:
-                return r[t.VariadicTuple[DocsRenderedArtifactTuple]].fail(
+                return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"duplicate docs publication target: {target}"
                 )
             targets.add(target)
             normalized.append((project, target, content))
-        return r[t.VariadicTuple[DocsRenderedArtifactTuple]].ok(tuple(normalized))
+        return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].ok(
+            tuple(normalized)
+        )
 
     @staticmethod
     def docs_required_directories(
@@ -117,20 +118,24 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
     @staticmethod
     def _prune_generated_tree_artifacts(
         project: Path, root: Path, rendered: t.SequenceOf[t.Pair[Path, str]]
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Describe stale files owned by one generated tree as absent artifacts."""
         planned = cli_u.Cli.atomic_plan_directory_chain(root)
         if planned.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(planned)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                planned
+            )
         if planned.value.directories:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].ok(())
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].ok(())
         inventory = cli_u.Cli.atomic_inventory_physical_tree(root)
         if inventory.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(inventory)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                inventory
+            )
         expected_paths = {
             path for path, _content in rendered if path.is_relative_to(root)
         }
-        return r[t.VariadicTuple[DocsRenderedArtifactTuple]].ok(
+        return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].ok(
             tuple(
                 (project, entry.path, None)
                 for entry in inventory.value.entries

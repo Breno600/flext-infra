@@ -14,6 +14,16 @@ from tests import c, m, t, u
 class TestsFlextInfraCodegenMakeGateSuspensions:
     """One typed gate universe drives local, CI, and hook execution."""
 
+    def test_default_policy_suspends_no_check_gate(self, tmp_path: Path) -> None:
+        """The shipped policy executes every declared default gate."""
+        root, _ = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.STANDALONE
+        )
+        makefile = (root / c.Infra.MAKEFILE_FILENAME).read_text(encoding="utf-8")
+
+        tm.that(config.Infra.codegen.make.check_gate_suspensions, eq=())
+        tm.that(makefile, lacks="SUSPENDED check gate")
+
     @pytest.mark.parametrize("local_count", [0, 1, 3])
     def test_project_gates_and_suspensions_share_the_ci_partition(
         self, local_count: int

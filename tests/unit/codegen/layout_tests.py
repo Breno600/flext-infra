@@ -60,7 +60,13 @@ class TestsFlextInfraCodegenLayout:
         candidates = tuple(f"consumer-note-{index}.fixture" for index in range(3))
         for filename in candidates:
             (project / filename).write_text(f"{filename}\n", encoding="utf-8")
-        baseline = cls._fresh_layout_report(project)
+        # Why in-process: no org overlay exists yet, so the baseline carries no
+        # config the long-lived worker's frozen config singleton could leak
+        # across parametrized cases. Only the post-override read below (which
+        # must observe the just-written project-scoped overlay) pays for a
+        # fresh interpreter; halving the subprocess count keeps both reads
+        # inside the default per-test budget.
+        baseline = layout_engine(project).check_project(project)
         baseline_paths = {finding.path for finding in baseline.findings}
         tm.that(set(candidates) <= baseline_paths, eq=True)
         override = m.Infra.LayoutProjectOverrideSpec(
@@ -72,11 +78,13 @@ class TestsFlextInfraCodegenLayout:
         overlay: t.JsonMapping = {
             "Infra": {
                 "codegen": {
+                    "checkout_submodules_overrides": {},
+                    "ci_private_submodules": {},
                     "layout": {
                         "project_overrides": {
                             distribution: override.model_dump(mode="json")
                         }
-                    }
+                    },
                 }
             }
         }
@@ -258,6 +266,19 @@ class TestsFlextInfraCodegenLayout:
         paths = {finding.path for finding in report.findings}
         tm.that("data" in paths, eq=False)
         tm.that("external-docs" in paths, eq=False)
+
+    def test_infrastructure_root_is_canonical(self, tmp_path: Path) -> None:
+        """Pulumi and Ansible share the canonical root infrastructure directory."""
+        project = build_loose_project(tmp_path)
+        infrastructure = project / "infra"
+        infrastructure.mkdir()
+        (infrastructure / "Pulumi.yaml").write_text("name: fixture\n", encoding="utf-8")
+        engine = layout_engine(tmp_path)
+
+        report = engine.check_project(project)
+
+        paths = {finding.path for finding in report.findings}
+        tm.that("infra" in paths, eq=False)
 
     def test_declared_repositories_are_canonical_root_entries(
         self, tmp_path: Path

@@ -28,7 +28,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             Path(entry.destination).parts[0]
             for entry in entries
             if profile in entry.profiles
-            and entry.delegate == "render"
+            and entry.delegate == c.Infra.TemplateDelegate.RENDER
             and Path(entry.destination).parts
         }
         # An existing package:false repository (a solo workspace root)
@@ -54,14 +54,8 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
-        flext_line = u.Infra.flext_integration_line(
-            codegen=codegen,
-            repository_root=target.root,
-            bootstrap_source=(
-                workspace.flext_source
-                if not (target.root / c.PYPROJECT_FILENAME).exists()
-                else None
-            ),
+        flext_line = u.Infra.flext_integration_line_for_checkout(
+            codegen=codegen, repository_root=target.root, workspace=workspace
         )
         if flext_line.failure:
             return r[str].from_failure(flext_line)
