@@ -118,6 +118,8 @@ Infra:
       # through the lifecycle; make is the one tool the Makefile cannot resolve
       # from itself, so mise must provision it.
       make_version: latest
+      # Mise self-provisioning: pin the mise bootstrap binary so it never
+      # resolves 'latest' at runtime. Override to pin a specific release.
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools owned by ai-hub's global mise
@@ -356,9 +358,17 @@ Infra:
         - gate: namespace
           authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
           reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
+          # Census consistency (gc-wisp-d7mnad): the runtime census honors the
+          # SAME suspension for the rule families this gate owns — ENFORCE ids
+          # match a census rule id exactly, tag families by prefix. Unmapped
+          # families (e.g. ENFORCE-079) stay fully blocking.
+          census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
         - gate: smells
           authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
           reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
+          # Census consistency (gc-wisp-d7mnad): same ruling, same families in
+          # the runtime census; suppressed findings still surface as INFO.
+          census_rule_families: [smell_, no_accessor_methods, utility_not_static]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
       testmon_cache:

@@ -10,7 +10,7 @@ from flext_core import r
 from flext_infra import c, u
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import m, p
 
 
 class FlextInfraMiseArtifactsDerivation:
@@ -63,6 +63,21 @@ class FlextInfraMiseArtifactsDerivation:
         if release.failure:
             return r[str].fail(f"{path}: {release.error}; run make upg")
         return release
+
+    @staticmethod
+    def resolves_at_run_time(artifacts: m.Infra.MiseToolchainArtifactSet) -> bool:
+        """Report launchers that resolve the latest release when they run.
+
+        Only the pre-bake projection (before ``make upg`` generated the
+        launchers) has this shape; a launcher ``mise`` generated for one
+        release never contains the live-resolution endpoint.
+        """
+        marker = c.Infra.MISE_LATEST_RESOLUTION_MARKER.encode()
+        return any(
+            marker in state.content
+            for state in (artifacts.unix_launcher, artifacts.windows_launcher)
+            if state.content is not None
+        )
 
     @classmethod
     def _validate_launcher(

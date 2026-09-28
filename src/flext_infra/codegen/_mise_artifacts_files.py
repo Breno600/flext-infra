@@ -87,7 +87,8 @@ class FlextInfraMiseArtifactsFiles:
 
         Its only writer is flext-infra's own generation, which projects its
         runtime-root ``bin/mise``, ``bin/mise.cmd`` and ``mise.version`` here;
-        a repository that has never carried a triple starts from it.
+        a repository that has never carried a triple, or carries the pre-bake
+        projection whose launchers resolve the latest release, starts from it.
         """
         return cls.package_directory() / c.Infra.MISE_COLD_START_DIRECTORY
 

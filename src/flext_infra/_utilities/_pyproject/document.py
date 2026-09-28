@@ -54,10 +54,10 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
 
         The workspace manifest owns the topology facts, including the
         namespace production scope its project declares and the members a
-        workspace root environment serves. ``family_line`` is the detected
-        FLEXT integration branch: source-less member requirements render on it
-        and it re-renders commit residue in internal requirements; without it,
-        both fail loudly.
+        workspace root environment serves. Attached members, of any family,
+        render on the workspace's declared integration line; ``family_line``
+        is the detected FLEXT integration branch that re-renders commit residue
+        in the other internal requirements. Without a line, both fail loudly.
         """
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
@@ -77,10 +77,10 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         declared_sources = (
             {
-                member.distribution: f"git+{member.url}@{family_line}"
+                member.distribution: f"git+{member.url}@{workspace.integration.branch}"
                 for member in workspace.subprojects
             }
-            if family_line is not None
+            if workspace.integration is not None
             else {}
         )
         normalized = cls._normalize_requirements(

@@ -244,25 +244,39 @@ class FlextInfraUtilitiesProjectDiscovery(
         )
 
     @staticmethod
-    def runtime_environment_dir(project_root: Path) -> Path:
+    def runtime_environment_dir(
+        project_root: Path, *, runtime_root: Path | None = None
+    ) -> Path:
         """Resolve the checkout's Python environment (D-VENV, flext-x8gn6).
 
-        A subproject checked out inside a workspace uses the workspace
-        environment; a standalone checkout or a linked worktree owns its own,
-        exactly as the generated Makefile resolves ``REPOSITORY_ROOT``.
+        A declared ``runtime_root`` (the generated Makefile's ``RUNTIME_ROOT``)
+        owns the environment. Undeclared, the owner derives it: a subproject
+        checked out inside a workspace uses the workspace environment; a
+        standalone checkout or a linked worktree owns its own, exactly as the
+        generated Makefile resolves ``REPOSITORY_ROOT``.
         """
+        if runtime_root is not None:
+            return runtime_root / c.Infra.ENVIRONMENT_DIRECTORY
         runtime = FlextInfraUtilitiesGit.git_repository_root(
             m.Infra.GitRepoRequest(repo_root=project_root)
         ).unwrap()
         return runtime.repository_root / c.Infra.ENVIRONMENT_DIRECTORY
 
-    @classmethod
-    def runtime_python(cls, project_root: Path) -> Path:
-        """Resolve the fixed Python entrypoint inside the managed environment."""
+    @staticmethod
+    def runtime_python(project_root: Path, *, runtime_root: Path | None = None) -> Path:
+        """Resolve the checkout's own interpreter inside its runtime environment.
+
+        The generated Makefile's ``RUNTIME_PYTHON``: a verb that executes the
+        checkout's code runs it here, never in whichever environment happens
+        to host the running tool.
+        """
+        windows = sys.platform == "win32"
         return (
-            cls.runtime_environment_dir(project_root)
-            / ("Scripts" if sys.platform == "win32" else "bin")
-            / ("python.exe" if sys.platform == "win32" else c.Infra.PYTHON)
+            FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(
+                project_root, runtime_root=runtime_root
+            )
+            / ("Scripts" if windows else "bin")
+            / ("python.exe" if windows else c.Infra.PromotedSelector.VENV_PYTHON)
         )
 
 

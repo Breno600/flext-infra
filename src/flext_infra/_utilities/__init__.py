@@ -49,7 +49,6 @@ if TYPE_CHECKING:
     from ._git.worktree_removal import FlextInfraUtilitiesGitWorktreeRemovalMixin
     from ._git.worktree_roots import FlextInfraUtilitiesGitWorktreeRootsMixin
     from ._git.worktree_status import FlextInfraUtilitiesGitWorktreeStatusMixin
-    from ._mypy_profile import FlextInfraMypyProfiler
     from ._mypy_supervisor import FlextInfraMypyDarwinSupervisor
     from ._project_discovery_candidates import (
         FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
@@ -64,6 +63,7 @@ if TYPE_CHECKING:
     from ._pyproject.document import FlextInfraUtilitiesPyprojectDocument
     from ._pyproject.overlay import FlextInfraUtilitiesPyprojectOverlay
     from ._pyproject.requirements import FlextInfraUtilitiesPyprojectRequirements
+    from ._pyproject.session import FlextInfraUtilitiesPyprojectSession
     from ._pyproject.toml_phases import FlextInfraUtilitiesPyprojectTomlPhases
     from ._pyproject.uv_sources import FlextInfraUtilitiesPyprojectUvSources
     from ._rope.project import FlextInfraRopeProject
@@ -215,7 +215,6 @@ if TYPE_CHECKING:
 
 __all__: tuple[str, ...] = (
     "FlextInfraMypyDarwinSupervisor",
-    "FlextInfraMypyProfiler",
     "FlextInfraRopeProject",
     "FlextInfraRopeRuleLoaderService",
     "FlextInfraUtilitiesBase",
@@ -316,6 +315,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesPyprojectDocument",
     "FlextInfraUtilitiesPyprojectOverlay",
     "FlextInfraUtilitiesPyprojectRequirements",
+    "FlextInfraUtilitiesPyprojectSession",
     "FlextInfraUtilitiesPyprojectTomlPhases",
     "FlextInfraUtilitiesPyprojectUvSources",
     "FlextInfraUtilitiesPyrefly",
@@ -440,7 +440,6 @@ _LAZY_IMPORTS = MappingProxyType(
             "._git.worktree_removal": ("FlextInfraUtilitiesGitWorktreeRemovalMixin",),
             "._git.worktree_roots": ("FlextInfraUtilitiesGitWorktreeRootsMixin",),
             "._git.worktree_status": ("FlextInfraUtilitiesGitWorktreeStatusMixin",),
-            "._mypy_profile": ("FlextInfraMypyProfiler",),
             "._mypy_supervisor": ("FlextInfraMypyDarwinSupervisor",),
             "._project_discovery_candidates": (
                 "FlextInfraUtilitiesProjectDiscoveryCandidatesMixin",
@@ -459,6 +458,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._pyproject.document": ("FlextInfraUtilitiesPyprojectDocument",),
             "._pyproject.overlay": ("FlextInfraUtilitiesPyprojectOverlay",),
             "._pyproject.requirements": ("FlextInfraUtilitiesPyprojectRequirements",),
+            "._pyproject.session": ("FlextInfraUtilitiesPyprojectSession",),
             "._pyproject.toml_phases": ("FlextInfraUtilitiesPyprojectTomlPhases",),
             "._pyproject.uv_sources": ("FlextInfraUtilitiesPyprojectUvSources",),
             "._rope": ("_rope",),

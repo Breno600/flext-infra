@@ -72,10 +72,6 @@ class FlextInfraConfigModelsWorkspace:
                 )
             ),
         ] = True
-        extra_ignored_patterns: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Repository-local generated ignore patterns"),
-        ] = ()
 
     class WorkspaceExclusionSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One explicitly excluded workspace-relative path."""

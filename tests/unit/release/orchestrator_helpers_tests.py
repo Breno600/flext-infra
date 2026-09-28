@@ -55,6 +55,74 @@ class TestsFlextInfraReleaseHelpers:
             tm.fail(result)
             tm.that(result.error or "", has="failed to write release notes")
 
+        @staticmethod
+        def test_generate_notes_escapes_subject_markdown(tmp_path: Path) -> None:
+            """Escape inline punctuation so an untrusted subject stays literal."""
+            notes_path = tmp_path / "release" / c.Infra.RELEASE_NOTES_FILENAME
+
+            result = u.Infra.generate_notes(
+                c.Tests.RELEASE_VERSION_TARGET,
+                c.Tests.RELEASE_TAG_TARGET,
+                [],
+                "- chore(deps): bump *.aihub-prior-* and _underscore_",
+                notes_path,
+            )
+
+            notes = notes_path.read_text(encoding="utf-8")
+            tm.ok(result)
+            tm.that(notes, has=r"\*.aihub-prior-\*")
+            tm.that(notes, has=r"\_underscore\_")
+
+        @staticmethod
+        def test_generate_notes_wraps_within_the_markdown_ceiling(
+            tmp_path: Path,
+        ) -> None:
+            """Wrap an overlong subject so no line overruns the markdown ceiling."""
+            notes_path = tmp_path / "release" / c.Infra.RELEASE_NOTES_FILENAME
+            subject = "feat(x): " + " and ".join("segment" for _ in range(30))
+
+            result = u.Infra.generate_notes(
+                c.Tests.RELEASE_VERSION_TARGET,
+                c.Tests.RELEASE_TAG_TARGET,
+                [],
+                f"- {subject}",
+                notes_path,
+            )
+
+            notes = notes_path.read_text(encoding="utf-8")
+            tm.ok(result)
+            widest = max(len(line) for line in notes.splitlines())
+            tm.that(widest <= c.Infra.RELEASE_NOTES_LINE_LENGTH, eq=True)
+
+        @staticmethod
+        def test_generate_notes_is_deterministic(tmp_path: Path) -> None:
+            """Re-stamping an unchanged subject set produces byte-identical notes."""
+            first = tmp_path / "first" / c.Infra.RELEASE_NOTES_FILENAME
+            second = tmp_path / "second" / c.Infra.RELEASE_NOTES_FILENAME
+            changes = "- fix: *.aihub-prior-* and a long trailing subject that wraps"
+
+            first_result = u.Infra.generate_notes(
+                c.Tests.RELEASE_VERSION_TARGET,
+                c.Tests.RELEASE_TAG_TARGET,
+                [],
+                changes,
+                first,
+            )
+            second_result = u.Infra.generate_notes(
+                c.Tests.RELEASE_VERSION_TARGET,
+                c.Tests.RELEASE_TAG_TARGET,
+                [],
+                changes,
+                second,
+            )
+
+            tm.ok(first_result)
+            tm.ok(second_result)
+            tm.that(
+                first.read_text(encoding="utf-8") == second.read_text(encoding="utf-8"),
+                eq=True,
+            )
+
     class TestsChangelog:
         """Changelog behavior."""
 

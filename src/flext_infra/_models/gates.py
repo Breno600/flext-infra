@@ -143,10 +143,16 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         ] = None
 
     class PyrightSummary(m.ContractModel):
-        """Native completed-analysis counters; zero collection is not success."""
+        """Native completed-analysis counters.
+
+        ``filesAnalyzed=0`` is a legitimate outcome for content-only project
+        topologies (package:false roots whose discovery yields no python): the
+        tool ran, analyzed nothing, and reported zero diagnostics. The gate
+        layer — not the model — turns that shape into a typed receipt.
+        """
 
         files_analyzed: Annotated[
-            t.PositiveInt,
+            t.NonNegativeInt,
             m.Field(alias="filesAnalyzed", description="Number of analyzed files"),
         ]
         error_count: Annotated[

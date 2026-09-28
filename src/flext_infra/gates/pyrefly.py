@@ -24,6 +24,37 @@ class FlextInfraPyreflyGate(FlextInfraGate):
     checker_info_prefixes: ClassVar[t.StrSequence] = ("INFO",)
 
     @override
+    def _empty_targets_result(
+        self, project_dir: Path, started: float
+    ) -> m.Infra.GateExecution:
+        """Content-only topology: zero python targets is the designed outcome.
+
+        A package:false root (or any project without python files) has no
+        checker inputs by declared design — pass with a typed observation
+        naming the condition instead of the loud empty-targets failure.
+        """
+        return m.Infra.GateExecution(
+            result=self._gate_result(
+                project_dir, passed=True, errors=(), started=started
+            ),
+            issues=(),
+            observational_issues=(
+                m.Infra.Issue(
+                    file=str(project_dir / c.PYPROJECT_FILENAME),
+                    line=1,
+                    column=1,
+                    code="pyrefly-empty-analysis",
+                    message=(
+                        "no python targets discovered: content-only project "
+                        "topology"
+                    ),
+                    severity="information",
+                ),
+            ),
+            raw_output=f"{self.gate_id}: no check targets were collected",
+        )
+
+    @override
     def _get_check_dirs(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrSequence:
@@ -108,6 +139,32 @@ class FlextInfraPyreflyGate(FlextInfraGate):
         ]
         issues.extend(self._checker_stderr_issues(result, project_dir))
         if (not issues) and not u.Cli.process_succeeded(result.outcome):
+            output_lines = [
+                line
+                for line in (f"{result.stderr}\n{result.stdout}").splitlines()
+                if line.strip()
+            ]
+            if output_lines and all(
+                line.lstrip().startswith(tuple(self.checker_info_prefixes))
+                for line in output_lines
+            ):
+                # Content-only project topology (package:false root, no python
+                # targets by design): pyrefly exits nonzero while printing only
+                # its INFO banner and reporting zero diagnostics — a typed
+                # receipt, not a false red.
+                return True, [
+                    m.Infra.Issue(
+                        file=str(project_dir / c.PYPROJECT_FILENAME),
+                        line=1,
+                        column=1,
+                        code="pyrefly-empty-analysis",
+                        message=(
+                            "no python targets analyzed: content-only project "
+                            "topology (tool output is informational only)"
+                        ),
+                        severity="information",
+                    ),
+                ]
             message = (result.stderr or result.stdout).strip()
             if not message:
                 message = (

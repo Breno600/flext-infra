@@ -1,16 +1,111 @@
-"""A selected census must never report success without selecting a project."""
+"""Runtime census selection and gate-suspension consistency behavior."""
 
 from __future__ import annotations
 
+import importlib
+import sys
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
+from flext_infra import config, m, t
 from flext_infra.gates.runtime_census import FlextInfraRuntimeCensusGate
-from tests import m
+from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
+
+
+_MIXED_SOURCES: t.MappingKV[str, str] = {
+    "pyproject.toml": '[project]\nname = "fixturecensusmixed"\nversion = "0.1.0"\n',
+    "src/fixturecensusmixed/__init__.py": (
+        '"""Fixture package tripping suspended and genuine census families."""\n'
+        "\n"
+        "from typing import ClassVar\n"
+        "\n"
+        "\n"
+        "class Plain:\n"
+        '    """Missing the project class prefix."""\n'
+        "\n"
+        "    def run(self, a, b, c, d, e, f, g):\n"
+        '        """Too many parameters for one function."""\n'
+        "        return a + b + c + d + e + f + g\n"
+        "\n"
+        "\n"
+        "class Holder:\n"
+        '    """Missing prefix plus a constant outside _constants."""\n'
+        "\n"
+        '    LABEL: ClassVar[str] = "x"\n'
+    ),
+}
+_GENUINE_SOURCES: t.MappingKV[str, str] = {
+    "pyproject.toml": ('[project]\nname = "fixturecensusgenuine"\nversion = "0.1.0"\n'),
+    "src/fixturecensusgenuine/__init__.py": (
+        '"""Fixture package whose only census violation is a genuine rule."""\n'
+        "\n"
+        "from typing import ClassVar\n"
+        "\n"
+        "\n"
+        "class FixturecensusgenuineHolder:\n"
+        '    """Correctly prefixed class with a constant outside _constants."""\n'
+        "\n"
+        '    LABEL: ClassVar[str] = "x"\n'
+    ),
+}
+
+
+def _owning_suspension(token: str) -> m.Infra.MakeGateSuspensionSpec | None:
+    """Return the suspension whose census families cover ``token``, if any.
+
+    Mirrors the census family contract the SSOT declares: ENFORCE-* families
+    match one exact rule id, every other family matches the tag by prefix.
+    """
+    for suspension in config.Infra.codegen.make.check_gate_suspensions:
+        for family in suspension.census_rule_families:
+            if family.startswith("ENFORCE-"):
+                covered = token == family
+            else:
+                covered = token.startswith(family)
+            if covered:
+                return suspension
+    return None
+
+
+def _write_project(root: Path, sources: t.MappingKV[str, str]) -> Path:
+    """Materialize one fixture project and return its repository root."""
+    for relative, text in sources.items():
+        target = root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+    return root
+
+
+@pytest.fixture
+def mixed_project(tmp_path: Path) -> Iterator[Path]:
+    """Importable project tripping suspended and genuine families at once."""
+    root = _write_project(tmp_path / "mixed", _MIXED_SOURCES)
+    yield from _importable_project(root)
+
+
+@pytest.fixture
+def genuine_project(tmp_path: Path) -> Iterator[Path]:
+    """Importable project tripping exactly one genuine census rule."""
+    root = _write_project(tmp_path / "genuine", _GENUINE_SOURCES)
+    yield from _importable_project(root)
+
+
+def _importable_project(root: Path) -> Iterator[Path]:
+    """Expose one fixture ``src`` tree to the import system for the census."""
+    src = str(root / "src")
+    sys.path.insert(0, src)
+    importlib.invalidate_caches()
+    try:
+        yield root
+    finally:
+        sys.path.remove(src)
+        importlib.invalidate_caches()
 
 
 class TestRuntimeCensusSelection:
@@ -24,3 +119,79 @@ class TestRuntimeCensusSelection:
         result = gate.check(tmp_path, context).result
         tm.that(result.passed, eq=False)
         tm.that(" | ".join(result.errors), has="no projects")
+
+
+class TestsRuntimeCensusSuspensionConsistency:
+    """The census honors recorded gate suspensions for the same families."""
+
+    def test_suspended_families_leave_the_failure_count_under_loud_info(
+        self, mixed_project: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Suspended tag families are suppressed with their recorded authority."""
+        report = tm.ok(
+            FlextInfraRuntimeCensusValidator(
+                repository_root=mixed_project
+            ).build_report()
+        )
+        output = capsys.readouterr().out
+        for token in ("class_prefix", "smell_function_parameters"):
+            owner = _owning_suspension(token)
+            joined = "\n".join(report.violations)
+            if owner is None:
+                tm.that(joined, has=f"[{token}]")
+                continue
+            tm.that(joined, lacks=f"[{token}]")
+            tm.that(output, has="SUSPENDED census rule family")
+            tm.that(output, has=f"(gate {owner.gate})")
+            tm.that(output, has=f"authority={owner.authority}")
+        genuine_owner = _owning_suspension("ENFORCE-079")
+        if genuine_owner is None:
+            tm.that(report.passed, eq=False)
+            tm.that("\n".join(report.violations), has="[ENFORCE-079]")
+        else:
+            tm.that(report.passed, eq=True)
+        if any(
+            _owning_suspension(token) is not None
+            for token in ("class_prefix", "smell_function_parameters")
+        ):
+            tm.that(report.summary, has="suppressed under recorded gate suspensions")
+
+    def test_genuine_rule_family_stays_fully_blocking(
+        self, genuine_project: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """An unmapped rule keeps the census red with no suspension receipt."""
+        report = tm.ok(
+            FlextInfraRuntimeCensusValidator(
+                repository_root=genuine_project
+            ).build_report()
+        )
+        output = capsys.readouterr().out
+        owner = _owning_suspension("ENFORCE-079")
+        if owner is None:
+            tm.that(report.passed, eq=False)
+            tm.that("\n".join(report.violations), has="[ENFORCE-079]")
+            tm.that(output, lacks="SUSPENDED census rule family")
+            tm.that(report.summary, lacks="suppressed")
+        else:
+            tm.that(report.passed, eq=True)
+            tm.that(output, has="SUSPENDED census rule family")
+            tm.that(output, has=f"(gate {owner.gate})")
+
+    def test_unmatched_project_reports_verbatim(
+        self, genuine_project: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """Without a matching suspension the report is the pre-contract census.
+
+        The genuine fixture's findings stay verbatim: one violation, no
+        suppression note, and no census suspension receipt on stdout.
+        """
+        report = tm.ok(
+            FlextInfraRuntimeCensusValidator(
+                repository_root=genuine_project
+            ).build_report()
+        )
+        output = capsys.readouterr().out
+        if _owning_suspension("ENFORCE-079") is None:
+            tm.that(report.violations, length=1)
+            tm.that(report.summary, eq="runtime census found 1 violation(s)")
+            tm.that(output, eq="")
