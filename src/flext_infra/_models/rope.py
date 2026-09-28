@@ -422,6 +422,13 @@ class FlextInfraModelsRope:
             t.Infra.RopeAstNode,
             m.Field(exclude=True, description="AST owned by the live Rope module"),
         ]
+        pymodule: Annotated[
+            t.Infra.RopePyModule,
+            m.Field(
+                exclude=True,
+                description="Semantic module owned by the same live Rope session",
+            ),
+        ]
         source: Annotated[
             str, m.Field(description="Source snapshot read from the Rope resource")
         ]

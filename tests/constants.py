@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_tests import FlextTestsConstants
 
-from flext_infra import FlextInfraConstants, FlextInfraModels
+from flext_infra import FlextInfraConstants
 from tests.constants_scan import TestsFlextInfraConstantsScanMixin
 
 if TYPE_CHECKING:
@@ -136,19 +136,13 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
             FlextInfraConstants.Infra.MAKE_REPOSITORY_ROOT,
             *FlextInfraConstants.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
             *DIRENV_SESSION_ENV_KEYS,
-            # The host's Gas City identity selects the generated .envrc beads
-            # branch; a fixture project declares no city, so the owner-declared
-            # identity variable never crosses into an isolated run.
-            FlextInfraModels.Infra.BeadsWorkspaceEnvironmentSpec.model_fields[
-                "identity_var"
-            ].default,
         )
         """Environment inherited from an outer Make invocation to discard in tests.
 
         Keys with a product owner are imported from that owner
         (``ORCHESTRATOR_REMOVE_ENV_KEYS``, ``PYTEST_INHERITED_ENV_REMOVE_KEYS``,
-        ``ENV_VAR_*``, ``MAKE_REPOSITORY_ROOT``, ``PromotedEnv.WHAT``, the Beads
-        identity variable); the remainder are direnv/Git external protocols or
+        ``ENV_VAR_*``, ``MAKE_REPOSITORY_ROOT``, ``PromotedEnv.WHAT``); the
+        remainder are direnv/Git external protocols or
         template-declared Make variables that no Python constant declares.
         """
 

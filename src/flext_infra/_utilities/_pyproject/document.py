@@ -41,29 +41,6 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         return r[t.Pair[t.Cli.TomlDocument, str]].ok((source, project_name_raw.strip()))
 
     @classmethod
-    def _rendered_conformed_document(
-        cls,
-        document: t.Cli.TomlDocument,
-        *,
-        workspace: p.Infra.WorkspaceSpec,
-        invalid_render_error: str,
-    ) -> p.Result[str]:
-        """Validate dependency provenance, then render canonical TOML.
-
-        ``invalid_render_error`` carries the only difference between the two
-        public conformers: the message each reports for an unparsable render.
-        """
-        provenance_result = cls._validate_dependency_provenance(
-            document, workspace=workspace
-        )
-        if provenance_result.failure:
-            return r[str].from_failure(provenance_result)
-        rendered = u.Cli.toml_dumps(document)
-        if u.Cli.toml_parse_text(rendered) is None:
-            return r[str].fail(invalid_render_error)
-        return r[str].ok(rendered)
-
-    @classmethod
     def pyproject_conform(
         cls,
         pyproject_content: str,
@@ -115,11 +92,10 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         if provenance_result.failure:
             return r[str].from_failure(provenance_result)
-        return cls._rendered_conformed_document(
-            source,
-            workspace=workspace,
-            invalid_render_error="dependency conformance produced invalid TOML",
-        )
+        rendered = u.Cli.toml_dumps(source)
+        if u.Cli.toml_parse_text(rendered) is None:
+            return r[str].fail("canonical pyproject rendering produced invalid TOML")
+        return r[str].ok(rendered)
 
     @staticmethod
     def _remove_legacy_tooling(document: t.Cli.TomlDocument) -> None:

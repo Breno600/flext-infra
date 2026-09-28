@@ -56,7 +56,9 @@ class TestsFlextInfraCoreValidationBehavior:
         tm.ok(add_result)
         tm.that(u.Cli.process_succeeded(add_result.value.outcome), eq=True)
 
-        result = infra.validate_namespace(project_root)
+        result = infra.validate_namespace(
+            m.Infra.NamespaceValidateCommand(repository_root=project_root)
+        )
 
         tm.ok(result)
         tm.that(result.value.passed, eq=True)
@@ -80,7 +82,9 @@ class TestsFlextInfraCoreValidationBehavior:
             tmp_path, module_source=module_source, module_name="models.py"
         )
 
-        result = infra.validate_namespace(root)
+        result = infra.validate_namespace(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
 
         tm.ok(result)
         locator = f"exceed the {cap} limit"
@@ -108,7 +112,9 @@ class TestsFlextInfraCoreValidationBehavior:
         )
         tm.that(files, has=package_dir / "__init__.py")
         tm.that(files, has=package_dir / "__version__.py")
-        result = infra.validate_namespace(project_root)
+        result = infra.validate_namespace(
+            m.Infra.NamespaceValidateCommand(repository_root=project_root)
+        )
         tm.that(result.success, eq=True)
         tm.that(result.value.passed, eq=True)
         tm.that(result.value.violations, empty=True)
@@ -120,7 +126,9 @@ class TestsFlextInfraCoreValidationBehavior:
             module_source=u.Tests.namespace_fixture("rule0_valid.py"),
             module_name="constants.py",
         )
-        result = infra.validate_namespace(root)
+        result = infra.validate_namespace(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
         tm.that(result.success, eq=True)
         tm.that(result.value, is_=m.Infra.ValidationReport)
         tm.that(result.value.summary, has="files checked")
@@ -131,7 +139,9 @@ class TestsFlextInfraCoreValidationBehavior:
             module_source=u.Tests.namespace_fixture("rule0_no_class.py"),
             module_name="models.py",
         )
-        result = infra.validate_namespace(root)
+        result = infra.validate_namespace(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )
         tm.that(result.success, eq=True)
         tm.that(len(result.value.violations), gt=0)
         first = result.value.violations[0]

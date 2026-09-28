@@ -55,7 +55,14 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         }
         if environment == "host-runtime":
             (project / c.Infra.ENVIRONMENT_DIRECTORY).mkdir()
-            (project / codegen.make.testmon_cache.database_filename).touch()
+            external_cache = (
+                project.parent
+                / "testmon-cache"
+                / project.name
+                / codegen.make.testmon_cache.database_filename
+            )
+            external_cache.parent.mkdir(parents=True)
+            external_cache.touch()
         if environment == "host-concurrent-wip":
             (project / "wip_module.py").write_text(
                 "def leaked_private_call():\n    return object().__class__\n",

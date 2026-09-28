@@ -119,54 +119,6 @@ class FlextInfraConfigModelsBeads:
             ),
         ] = None
 
-    class BeadsWorkspaceEnvironmentSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Declarative contract for one generated beads-workspace .envrc.
-
-        The ``backend`` field selects the declared activation tier rendered
-        from this spec: ``gascity`` wires the inherited city Dolt server
-        through the single identity variable (``AGENTS_GAS_CITY_ROOT``) and
-        fails loudly when the canonical checkout is not declared or its
-        publication is unhealthy, ``local`` leaves ``bd`` owning a
-        repository-local Dolt base through ``.beads/config.yaml`` with every
-        inherited endpoint variable cleared, and ``none`` renders only the
-        terminal unset chain for a repository without a Beads identity.
-        """
-
-        backend: Annotated[
-            Literal["gascity", "local", "none"],
-            m.Field(description="Declared beads activation tier"),
-        ] = "gascity"
-        environment_sources: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Environment files sourced on activation"),
-        ] = ("$HOME/.config/environment.d/projects/agent-tools.envrc",)
-        identity_var: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Required variable naming the Gas City checkout"),
-        ] = "AGENTS_GAS_CITY_ROOT"
-        city_state_relpath: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Gas City Dolt state path relative to the checkout"),
-        ] = ".gc/runtime/packs/dolt/dolt-state.json"
-        beads_metadata_relpath: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Beads metadata path relative to the workspace"),
-        ] = ".beads/metadata.json"
-        # BEADS_DIR is caller-owned routing and never cleared: bd discovers the
-        # checkout's tracked .beads by itself, and a linked worktree whose
-        # caller selects a ledger keeps that selection (clearing it broke bd
-        # inside worktrees).
-        unset_vars: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Inherited orchestration variables cleared on entry"),
-        ] = (
-            "GT_ROOT",
-            "GT_TOWN_ROOT",
-            "BEADS_DOLT_PORT",
-            "BEADS_DOLT_DATA_DIR",
-            "BEADS_DOLT_SHARED_SERVER",
-        )
-
     class WorkspaceEnvironmentCliRequest(FlextInfraConfigModelsContract.ConfigContract):
         """CLI-safe request for one Python workspace environment sync."""
 
@@ -198,16 +150,6 @@ class FlextInfraConfigModelsBeads:
         force: Annotated[
             bool, m.Field(description="Replace custom files with generated content")
         ] = False
-        beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsWorkspaceEnvironmentSpec | None,
-            m.Field(
-                exclude=True,
-                description=(
-                    "Programmatic-only Beads activation, composed with Python "
-                    "when the repository owns a pyproject"
-                ),
-            ),
-        ] = None
         allow_direnv: Annotated[
             bool,
             m.Field(
