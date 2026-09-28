@@ -130,9 +130,9 @@ class TestsFlextInfraUpgOwnedDependencyPin:
 
     def test_the_manifest_carries_no_revision_pins(self) -> None:
         """The retired manifest pin is rejected, never silently ignored."""
-        project = test_u.Tests.project_spec("consumer")
+        retired = {
+            **test_u.Tests.project_spec("consumer").model_dump(),
+            "dependency_revisions": {"flext-core": self.COMMIT},
+        }
         with pytest.raises(ValueError, match="dependency_revisions"):
-            m.Infra.ProjectSpec.model_validate({
-                **project.model_dump(),
-                "dependency_revisions": {"flext-core": self.COMMIT},
-            })
+            m.Infra.ProjectSpec.model_validate(retired)
