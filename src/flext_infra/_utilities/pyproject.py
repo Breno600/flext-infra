@@ -13,7 +13,7 @@ from pathlib import Path
 from flext_cli import u
 
 from flext_core import r
-from flext_infra import c, p, t
+from flext_infra import c, m, p, t
 
 from .git import FlextInfraUtilitiesGit
 from .managed_conflicts import FlextInfraUtilitiesManagedConflicts
@@ -357,18 +357,29 @@ class FlextInfraUtilitiesPyproject:
     @staticmethod
     @cache
     def workspace_project_paths(repository_root: Path) -> t.StrSequence:
-        """Return project paths declared by this directory's own ``.gitmodules``.
+        """Return governed project paths declared by this directory's ``.gitmodules``.
 
         A missing file denotes a standalone project and therefore an empty
         sequence. A malformed declaration is an invalid workspace contract and
         remains a loud error; no pyproject table or parent directory is used as
-        an alternate topology source.
+        an alternate topology source. A submodule that opts out through
+        ``flext-managed`` is not a workspace project, the same contract the
+        workspace detector applies; every governed path stays in the sequence
+        so a missing or unreadable member pyproject still fails at its reader.
         """
         declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(repository_root)
         if declared.failure:
             msg = declared.error or f"invalid workspace topology: {repository_root}"
             raise ValueError(msg)
-        return tuple(path.as_posix() for path in declared.value)
+        unmanaged = FlextInfraUtilitiesGit.git_unmanaged_submodule_paths(
+            m.Infra.GitRepoRequest(repo_root=repository_root)
+        )
+        if unmanaged.failure:
+            msg = unmanaged.error or f"invalid workspace topology: {repository_root}"
+            raise ValueError(msg)
+        return tuple(
+            path.as_posix() for path in declared.value if path not in unmanaged.value
+        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesPyproject"]
