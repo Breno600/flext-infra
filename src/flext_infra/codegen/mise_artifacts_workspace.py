@@ -401,7 +401,9 @@ class FlextInfraMiseWorkspacePlanner:
             states.append(state.value)
         return r[m.Infra.MiseToolchainArtifactSet].ok(
             m.Infra.MiseToolchainArtifactSet(
-                unix_launcher=states[0], windows_launcher=states[1], version_pin=states[2]
+                unix_launcher=states[0],
+                windows_launcher=states[1],
+                version_pin=states[2],
             )
         )
 
@@ -427,7 +429,9 @@ class FlextInfraMiseWorkspacePlanner:
             return runtime
         if any(present):
             missing = ", ".join(
-                str(path) for path, found in zip(paths, present, strict=True) if not found
+                str(path)
+                for path, found in zip(paths, present, strict=True)
+                if not found
             )
             return result_type.fail(
                 f"runtime root lacks {missing}; run make upg in {scope_root}"

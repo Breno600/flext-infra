@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 from enum import StrEnum, unique
 from pathlib import Path
+from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar
 
 from .._constants.codegen_detection import FlextInfraConstantsCodegenDetection
@@ -128,10 +129,10 @@ class FlextInfraConstantsCodegen(
     "Tool selector `make upg` resolves through the pinned mise (`mise latest`)."
     MISE_LATEST_RESOLUTION_MARKER: ClassVar[str] = "releases/latest"
     "Live-resolution endpoint a pinned, offline launcher must never contain."
-    MISE_LAUNCHER_BAKED_RELEASE_PATTERNS: ClassVar[t.StrMapping] = {
+    MISE_LAUNCHER_BAKED_RELEASE_PATTERNS: ClassVar[t.StrMapping] = MappingProxyType({
         ARTIFACT_SPECS[0][0]: r"\$\{MISE_VERSION:-v?(?P<release>[^}\"]+)\}",
         ARTIFACT_SPECS[1][0]: r"set \"pinned_version=v?(?P<release>[^\"]+)\"",
-    }
+    })
     "Release defaults `mise generate install-script` bakes into each launcher."
     MISE_VERSION_PIN_HEADER: ClassVar[t.VariadicTuple[str]] = (
         "# @flext-generated: upg",

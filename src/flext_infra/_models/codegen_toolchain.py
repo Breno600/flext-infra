@@ -249,7 +249,11 @@ class FlextInfraModelsCodegenToolchain:
         def sources(self) -> t.VariadicTuple[m.Cli.AtomicFileState]:
             """Every state the publication reads: declarations, then the triple."""
             return (
-                *(state for project in self.projects for state in project.config.sources),
+                *(
+                    state
+                    for project in self.projects
+                    for state in project.config.sources
+                ),
                 *self.runtime_artifacts.states,
             )
 

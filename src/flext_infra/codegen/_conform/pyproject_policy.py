@@ -55,9 +55,7 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
         flext_line = u.Infra.flext_integration_line_for_checkout(
-            codegen=codegen,
-            repository_root=target.root,
-            workspace=workspace,
+            codegen=codegen, repository_root=target.root, workspace=workspace
         )
         if flext_line.failure:
             return r[str].from_failure(flext_line)

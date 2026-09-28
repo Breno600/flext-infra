@@ -53,6 +53,9 @@ endif
 endif
 export GITHUB_TOKEN
 override export GH_TOKEN := $(GITHUB_TOKEN)
+# One credential, one variable: mise reads GITHUB_TOKEN, and a tool-scoped
+# alias inherited from a caller would silently outrank it.
+unexport MISE_GITHUB_TOKEN
 
 # === SECTION: project identity (managed) ===
 # Source: config:dist / config:make_profile / config:repository_root_rel / config:uv_link_mode
