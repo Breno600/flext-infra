@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import sys
 from functools import lru_cache
 from operator import attrgetter
 from pathlib import Path
@@ -254,6 +255,21 @@ class FlextInfraUtilitiesProjectDiscovery(
             m.Infra.GitRepoRequest(repo_root=project_root)
         ).unwrap()
         return runtime.repository_root / c.Infra.ENVIRONMENT_DIRECTORY
+
+    @staticmethod
+    def runtime_python(project_root: Path) -> Path:
+        """Resolve the checkout's own interpreter inside its runtime environment.
+
+        The generated Makefile's ``RUNTIME_PYTHON``: a verb that executes the
+        checkout's code runs it here, never in whichever environment happens
+        to host the running tool.
+        """
+        windows = sys.platform == "win32"
+        return (
+            FlextInfraUtilitiesProjectDiscovery.runtime_environment_dir(project_root)
+            / ("Scripts" if windows else "bin")
+            / ("python.exe" if windows else c.Infra.PromotedSelector.VENV_PYTHON)
+        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesProjectDiscovery"]

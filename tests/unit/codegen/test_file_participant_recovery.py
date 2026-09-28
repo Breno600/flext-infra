@@ -79,6 +79,7 @@ class TestsFlextInfraFileParticipantRecovery:
         self, tmp_path: Path
     ) -> None:
         root = test_u.Tests.git_repository(tmp_path)
+        test_u.Tests.provision_runtime_environment(root)
         package = root / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         initializer = package / c.Infra.INIT_PY

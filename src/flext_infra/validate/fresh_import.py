@@ -7,7 +7,6 @@ consumer-order defects. Imported workspace modules must belong to this checkout.
 
 from __future__ import annotations
 
-import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, ClassVar, override
@@ -145,6 +144,20 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                     + self._EXPORT_RESOLVE_CODE.format(exports=()),
                 )
             )
+        if not probes:
+            return r[m.Infra.ValidationReport].ok(
+                m.Infra.ValidationReport(
+                    passed=True, violations=(), summary="0 fresh-import probe(s) passed"
+                )
+            )
+        # The probes execute the target checkout's code, so they run in the
+        # target's own environment, never the one hosting this tool.
+        interpreter = u.Infra.runtime_python(self.repository_root)
+        if not interpreter.is_file():
+            return r[m.Infra.ValidationReport].fail(
+                f"fresh-import target interpreter is missing: {interpreter}; "
+                "make setup provisions it"
+            )
         env = self._workspace_import_env(tuple(layout.src_dir for layout in layouts))
         workers = config.Infra.codegen.fresh_import_workers
         u.Cli.info(f"fresh-import: running {len(probes)} probes with {workers} workers")
@@ -153,7 +166,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         # exceed the kernel's single-argument limit. map preserves report order.
         def run_probe(probe: m.Infra.FreshImportProbe) -> p.Result[p.Cli.CommandOutput]:
             return u.Cli.run_raw(
-                [sys.executable, "-W", "error", "-"],
+                [str(interpreter), "-W", "error", "-"],
                 cwd=self.repository_root,
                 timeout=c.Infra.TIMEOUT_SHORT,
                 env=env,
