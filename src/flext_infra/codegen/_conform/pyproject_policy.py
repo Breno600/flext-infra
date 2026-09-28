@@ -76,6 +76,13 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
                 environments=tuple(codegen.toolchain.uv_environments),
             ),
             declared_sources=declared_sources,
+            workspace_members=tuple(
+                member.distribution
+                for member in workspace.subprojects
+                if member.package
+            )
+            if target.make_profile is c.Infra.MakeProfile.WORKSPACE
+            else (),
         )
 
     @staticmethod
