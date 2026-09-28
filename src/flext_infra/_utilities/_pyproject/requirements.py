@@ -165,8 +165,7 @@ class FlextInfraUtilitiesPyprojectRequirements:
                 url, declared_ref = declared_url, line
         if not url:
             return r[str].fail(
-                "internal dependency declares no direct git source: "
-                f"{dependency_name}"
+                f"internal dependency declares no direct git source: {dependency_name}"
             )
         if FlextInfraUtilitiesRepository.ref_is_commit(declared_ref):
             if line is None:
