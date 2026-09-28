@@ -49,6 +49,72 @@ class TestsFlextInfraPyprojectConformTopologySources:
             environments=tuple(toolchain.uv_environments),
         )
 
+    def test_attached_members_render_on_the_workspace_line_of_any_family(
+        self,
+    ) -> None:
+        """A non-FLEXT member gets its declared source on the workspace line.
+
+        The workspace integrates on its own line (``develop``) while the FLEXT
+        family line stays the fixture branch: every attached member, FLEXT or
+        not, renders inline on the workspace line; a FLEXT dependency that is
+        not a member keeps the FLEXT line.
+        """
+        workspace_line = "develop"
+        flext_member = self._member_ref("flext-core", "flext-core")
+        other_member = self._member_ref("acme-charts", "apps/acme-charts")
+        workspace = self._workspace(flext_member, other_member).model_copy(
+            update={
+                "integration": m.Infra.WorkspaceIntegrationSpec(
+                    provider=test_u.Tests.integration().provider,
+                    branch=workspace_line,
+                ),
+            }
+        )
+        infra = test_u.Tests.repository_ref("flext-infra")
+        infra_requirement = self._inline_requirement(infra)
+        source = (
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+            'dependencies = ["acme-charts", "flext-core", '
+            f'"{infra_requirement}"]\n'
+        )
+        rendered = tm.ok(
+            u.Infra.pyproject_conform(
+                source,
+                workspace=workspace,
+                required_dev_dependencies=(),
+                uv_resolution=self._toolchain_resolution(),
+                family_line=test_u.Tests.provider_branch(),
+            )
+        )
+        expected = {
+            f"{ref.distribution} @ git+{ref.url}@{workspace_line}"
+            for ref in (flext_member, other_member)
+        } | {infra_requirement}
+        tm.that(
+            set(tu.Tests.toml_strings_at(rendered, "project", "dependencies")),
+            eq=expected,
+        )
+        workspace_group = tu.Tests.toml_strings_at(
+            rendered, "dependency-groups", "workspace"
+        )
+        tm.that(
+            set(workspace_group),
+            eq={
+                f"{ref.distribution} @ git+{ref.url}@{workspace_line}"
+                for ref in (flext_member, other_member)
+            },
+        )
+        second = tm.ok(
+            u.Infra.pyproject_conform(
+                rendered,
+                workspace=workspace,
+                required_dev_dependencies=(),
+                uv_resolution=self._toolchain_resolution(),
+                family_line=test_u.Tests.provider_branch(),
+            )
+        )
+        tm.that(second, eq=rendered)
+
     def _assert_direct_source(self, rendered: str, ref: m.Infra.RepositoryRef) -> None:
         """Assert the canonical standalone output: one direct Git requirement."""
         dependencies = tu.Tests.toml_strings_at(rendered, "project", "dependencies")

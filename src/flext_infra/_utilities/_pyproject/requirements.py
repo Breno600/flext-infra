@@ -130,13 +130,16 @@ class FlextInfraUtilitiesPyprojectRequirements:
         (transport scheme only), never rewritten from provider policy. The ref
         is the dependency's integration line: uv.lock alone records the commit
         it resolves to, so a commit left in this generated projection is
-        residue re-rendered on the detected family line and never written
-        back; without a detected line it fails loudly. A source-less internal
-        dependency that the active workspace overlay does not own is a loud
-        failure.
+        residue re-rendered on its line (an attached member's declared line,
+        otherwise the detected FLEXT line) and never written back; without a
+        line it fails loudly. Internal means the FLEXT family or an attached
+        workspace member of any family. A source-less internal dependency that
+        the active workspace overlay does not own is a loud failure.
         """
         dependency_name = FlextInfraUtilitiesDependencies.dep_name(requirement)
-        if dependency_name is None or not dependency_name.startswith("flext-"):
+        if dependency_name is None or not (
+            dependency_name.startswith("flext-") or dependency_name in declared_sources
+        ):
             return r[str].ok(requirement.strip())
         requirement_part, separator, marker = requirement.partition(";")
         head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(requirement_part.strip())
@@ -148,27 +151,31 @@ class FlextInfraUtilitiesPyprojectRequirements:
         if source.failure:
             return r[str].from_failure(source)
         url, declared_ref = source.value
-        if not url:
-            declared = declared_sources.get(dependency_name)
-            if declared is None:
-                return r[str].fail(
-                    "internal flext dependency declares no direct git source: "
-                    f"{dependency_name}"
-                )
+        line = family_line
+        declared = declared_sources.get(dependency_name)
+        if declared is not None:
+            # An attached member renders on the line its declaration carries.
             parsed = FlextInfraUtilitiesRepository.declared_git_source(
                 f"{head} @ {declared}"
             )
             if parsed.failure:
                 return r[str].from_failure(parsed)
-            url, declared_ref = parsed.value
+            declared_url, line = parsed.value
+            if not url:
+                url, declared_ref = declared_url, line
+        if not url:
+            return r[str].fail(
+                "internal dependency declares no direct git source: "
+                f"{dependency_name}"
+            )
         if FlextInfraUtilitiesRepository.ref_is_commit(declared_ref):
-            if family_line is None:
+            if line is None:
                 return r[str].fail(
                     f"internal dependency {dependency_name} pins commit "
-                    f"{declared_ref} and no FLEXT line is detected to re-render "
+                    f"{declared_ref} and no line is declared to re-render "
                     "it: uv.lock records the commit and only `make upg` moves it"
                 )
-            declared_ref = family_line
+            declared_ref = line
         # The inline Git source is the sole provenance for each independent
         # project lock, including the orchestration repository.
         inline = f"{head} @ git+{url}@{declared_ref}"
