@@ -178,6 +178,11 @@ Infra:
       flext-cli:
       # tests/test_xlsx_recalc.py: headless LibreOffice recalculation.
         - libreoffice-calc
+    # Distributions whose CI gates resolve GitHub Packages (private GHCR OCI
+    # dependencies). Least privilege: only these grant the generated ci job
+    # packages: read; every other distribution and job stays contents-only.
+    # Org repositories declare themselves in their own config/codegen-org.yaml.
+    ci_package_registry_read: []
     # Per-distribution private composed-project auth for CI. The default
     # GITHUB_TOKEN cannot clone sibling private repos; projects that need
     # private submodules declare read-only deploy-key secrets via

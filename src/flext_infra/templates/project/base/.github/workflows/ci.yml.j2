@@ -48,9 +48,14 @@ jobs:
   # Source: template + config:github_actions.*
   ci:
     name: ci
-    # Only the checkout job needs repository contents.
+    # Only the checkout job needs repository contents; packages: read is
+    # granted solely to distributions declared in codegen
+    # ci_package_registry_read, whose gates resolve GitHub Packages.
     permissions:
       contents: read
+{%- if packages_read %}
+      packages: read
+{%- endif %}
     if: {% raw %}${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}{% endraw %}
     runs-on: ubuntu-latest
     timeout-minutes: 60
