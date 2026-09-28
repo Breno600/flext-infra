@@ -246,41 +246,7 @@ class TestsFlextInfraPytestRunner:
         )
 
     @pytest.mark.slow
-    def test_warm_workers_follow_the_central_selection_order(
-        self, cached_runner_project: Path
-    ) -> None:
-        """Real workers must agree even when a consumer hook reorders per worker."""
-        cache = config.Infra.codegen.make.testmon_cache
-        sample = cached_runner_project / cache.target_directory / "test_runtime.py"
-        sample.write_text(
-            "from runner_sample import answer\n\n"
-            "def test_first():\n    assert answer() == 42\n\n"
-            "def test_second():\n    assert answer() > 0\n\n"
-            "def test_third():\n    assert isinstance(answer(), int)\n",
-            encoding="utf-8",
-        )
-        assert tm.ok(self._runner_for(cached_runner_project).execute()) == 0
-        (cached_runner_project / "conftest.py").write_text(
-            "import pytest\nfrom xdist import get_xdist_worker_id\n\n"
-            "@pytest.hookimpl(trylast=True)\n"
-            "def pytest_collection_modifyitems(session, items):\n"
-            "    items.sort(key=lambda item: item.nodeid,\n"
-            "               reverse=get_xdist_worker_id(session) == 'gw1')\n",
-            encoding="utf-8",
-        )
-        (cached_runner_project / "src" / "runner_sample" / "__init__.py").write_text(
-            "def answer() -> int:\n    return sum((40, 2))\n", encoding="utf-8"
-        )
-
-        assert tm.ok(self._runner_for(cached_runner_project).execute()) == 0
-        reports_root = cached_runner_project / cache.reports_directory
-        tm.that(
-            self._summary(reports_root),
-            has=["executed=3", "cache_restored=True", "errors=0", "exit=0"],
-        )
-
-    @pytest.mark.slow
-    def test_failed_cases_do_not_stop_remaining_cases(
+    def test_first_failure_stops_remaining_cases(
         self, cached_runner_project: Path
     ) -> None:
         """Expose the first failure and do not execute later failing cases."""

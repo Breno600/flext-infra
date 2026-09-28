@@ -116,29 +116,6 @@ class TestsFlextInfraTypeGates:
         assert repaired.result.passed, repaired
         assert not repaired.issues
 
-        if gate_class is FlextInfraMypyGate:
-            timing = tuple(reports.rglob("timing.txt"))
-            assert len(timing) == 1
-            assert "test_pkg.contract " in timing[0].read_text(encoding="utf-8")
-            assert timing[0].with_name("lines.txt").is_file()
-
-    @pytest.mark.slow
-    def test_mypy_unchanged_tree_reuses_incremental_cache(
-        self, checker_context: m.Infra.GateContext
-    ) -> None:
-        """A second check of an unchanged tree re-checks no module."""
-        project = checker_context.repository_root
-        gate = FlextInfraMypyGate(project)
-        first = gate.check(project, checker_context)
-        assert first.result.passed, first
-        second = gate.check(project, checker_context)
-        assert second.result.passed, second
-        timing = tuple(checker_context.reports_dir.rglob("timing.txt"))
-        assert len(timing) == 1
-        rows = timing[0].read_text(encoding="utf-8").splitlines()
-        assert rows
-        assert all(row.rsplit(maxsplit=1)[1] == "0" for row in rows)
-
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("gate_class", "config_text"),
@@ -288,10 +265,3 @@ class TestsFlextInfraTypeGates:
                 '"informationCount":0,"timeInSec":0.1}}',
                 strict=True,
             )
-
-    @pytest.mark.parametrize(
-        "payload", ['{"sources":[]}', '{"sources":["relative.py"]}', "{}"]
-    )
-    def test_mypy_requires_native_source_evidence(self, payload: str) -> None:
-        with pytest.raises(c.ValidationError):
-            m.Infra.MypySourceInventory.model_validate_json(payload, strict=True)

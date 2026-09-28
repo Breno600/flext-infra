@@ -5,7 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar, Literal
 
-from flext_infra import c, m, t
+from flext_cli import m
+
+from .. import c, t
 
 
 class FlextInfraModelsWorkLane:
