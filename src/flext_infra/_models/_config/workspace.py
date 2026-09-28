@@ -47,8 +47,14 @@ class FlextInfraConfigModelsWorkspace:
             t.NonEmptyStr, m.Field(description="Canonical project distribution")
         ]
         beads_enabled: Annotated[
-            bool, m.Field(description="Whether the repository participates in Beads")
-        ] = False
+            bool,
+            m.Field(
+                description=(
+                    "Whether the repository participates in Beads; an overlay "
+                    "that omits it means the same as no overlay (enabled)"
+                )
+            ),
+        ] = True
         ci_enabled: Annotated[
             bool, m.Field(description="Whether conform owns the CI surface")
         ] = True
