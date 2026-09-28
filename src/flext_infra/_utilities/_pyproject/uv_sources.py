@@ -12,12 +12,15 @@ from flext_infra import c, t
 from ..dependencies import FlextInfraUtilitiesDependencies
 from ..repository import FlextInfraUtilitiesRepository
 from .requirements import FlextInfraUtilitiesPyprojectRequirements
+from .session import FlextInfraUtilitiesPyprojectSession
 
 if TYPE_CHECKING:
     from flext_infra import m, p
 
 
-class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirements):
+class FlextInfraUtilitiesPyprojectUvSources(
+    FlextInfraUtilitiesPyprojectRequirements, FlextInfraUtilitiesPyprojectSession
+):
     """Render the conform-owned ``[tool.uv]`` keys of one pyproject document."""
 
     @classmethod
@@ -38,6 +41,22 @@ class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirem
             for group in groups.values():
                 requirements.extend(cls.raw_requirement_values(group))
         return r[list[str]].ok(requirements)
+
+    @classmethod
+    def active_session_requirements(
+        cls, document: t.Cli.TomlDocument, *, environment: t.StrMapping
+    ) -> t.VariadicTuple[str]:
+        """Read strictly parsed requirements active on the consumer interpreter."""
+        return tuple(
+            active
+            for item in cls._document_requirement_lines(document).unwrap()
+            if (
+                active := FlextInfraUtilitiesDependencies.active_requirement(
+                    item, environment=environment
+                )
+            )
+            is not None
+        )
 
     @classmethod
     def _dependency_overrides(
