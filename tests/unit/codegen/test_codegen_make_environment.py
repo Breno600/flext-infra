@@ -1012,21 +1012,17 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
-        tm.that(makefile, has="upg: _builtin_require_runtime_root _bootstrap_setup_tools")
+        tm.that(
+            makefile, has="upg: _builtin_require_runtime_root _bootstrap_setup_tools"
+        )
         tm.that(makefile, has="_builtin-fmt: _builtin_fmt_all")
         tm.that(makefile, has="_builtin-fix: _builtin_fix_all")
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
         tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
         tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
-        tm.that(
-            makefile, has="_builtin-self-fix-enforcement: _builtin_fix_enforcement"
-        )
-        tm.that(
-            makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace"
-        )
-        tm.that(
-            makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors"
-        )
+        tm.that(makefile, has="_builtin-self-fix-enforcement: _builtin_fix_enforcement")
+        tm.that(makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
             makefile,
