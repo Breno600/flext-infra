@@ -616,7 +616,7 @@ Infra:
         # Operator decision 2026-09-26: one failure stops the invocation. The
         # next run starts from the corrected owner instead of accumulating a
         # permissive backlog of unrelated failures.
-        max-failures: 1
+        max-failures: 0
         enforcement-plugin: flext_tests_enforcement
         asyncio-default-fixture-loop-scope: function
         progress-args: [--verbose]
