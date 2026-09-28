@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from ._orchestrator_execution import FlextInfraWorkspaceOrchestratorExecutionMixin
     from .detector import FlextInfraWorkspaceDetector
     from .environment import FlextInfraWorkspaceEnvironmentMixin
-    from .environment_beads import FlextInfraWorkspaceEnvironmentSync
     from .environment_contracts import FlextInfraWorkspaceEnvironmentContracts
     from .environment_provenance import FlextInfraWorkspaceEnvironmentProvenance
     from .flext_binding import FlextInfraFlextBindingService
@@ -31,7 +30,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraWorkspaceEnvironmentContracts",
     "FlextInfraWorkspaceEnvironmentMixin",
     "FlextInfraWorkspaceEnvironmentProvenance",
-    "FlextInfraWorkspaceEnvironmentSync",
     "FlextInfraWorkspaceGovernanceMixin",
     "FlextInfraWorkspaceOrchestratorDiscoveryMixin",
     "FlextInfraWorkspaceOrchestratorExecutionMixin",
@@ -50,7 +48,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ),
             ".detector": ("FlextInfraWorkspaceDetector",),
             ".environment": ("FlextInfraWorkspaceEnvironmentMixin",),
-            ".environment_beads": ("FlextInfraWorkspaceEnvironmentSync",),
             ".environment_contracts": ("FlextInfraWorkspaceEnvironmentContracts",),
             ".environment_provenance": ("FlextInfraWorkspaceEnvironmentProvenance",),
             ".flext_binding": ("FlextInfraFlextBindingService",),

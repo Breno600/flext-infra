@@ -165,43 +165,6 @@ else
 fi
 # End SECTION: virtual environment
 
-{% if gascity is not none %}
-{%- if gascity.backend == "gascity" %}
-# Repository policy permits this capability; the caller's explicit city
-# identity selects its runtime. Standalone activation owns no inherited ledger.
-if [[ -v {{ gascity.identity_var }} ]]; then
-{% include "_envrc_beads.j2" %}
-else
-{% for var in gascity.unset_vars -%}
-  unset {{ var }}
-{% endfor -%}
-  unset BEADS_DOLT_SERVER_HOST BEADS_DOLT_SERVER_PORT
-  unset BEADS_DOLT_SERVER_DATABASE BEADS_DOLT_SERVER_MODE
-  unset BEADS_DOLT_AUTO_START
-fi
-{%- elif gascity.backend == "local" %}
-# Repository-owned Beads base: bd owns the local Dolt server lifecycle
-# through .beads/config.yaml; inherited orchestration endpoints never apply.
-checkout_root="$(pwd -P)"
-watch_file "${checkout_root}/{{ gascity.beads_metadata_relpath }}"
-{% for var in gascity.unset_vars -%}
-unset {{ var }}
-{% endfor -%}
-unset BEADS_DOLT_SERVER_HOST BEADS_DOLT_SERVER_PORT
-unset BEADS_DOLT_SERVER_DATABASE BEADS_DOLT_SERVER_MODE
-unset BEADS_DOLT_AUTO_START
-{%- else %}
-# No Beads identity in this repository: inherited orchestration and Beads
-# endpoint variables never leak into the activation.
-{% for var in gascity.unset_vars -%}
-unset {{ var }}
-{% endfor -%}
-unset BEADS_DOLT_SERVER_HOST BEADS_DOLT_SERVER_PORT
-unset BEADS_DOLT_SERVER_DATABASE BEADS_DOLT_SERVER_MODE
-unset BEADS_DOLT_AUTO_START
-{%- endif %}
-{%- endif %}
-
 # === SECTION: local overrides (managed) ===
 # Source: template. Repository-local, tracked overrides load last and win;
 # every other runtime value comes from the caller's environment.
