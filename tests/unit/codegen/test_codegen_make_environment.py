@@ -332,21 +332,20 @@ class TestsFlextInfraCodegenMakeEnvironment:
             )
         )
         tm.that(u.Cli.process_succeeded(unlocked.outcome), eq=False)
-        tm.that(lock_path.exists(), eq=False)
-        # `upg` is the only resolver: it writes both locks and provisions the
-        # environment frozen from them, then runs the declared post-upg hook
-        # inside the activated environment, exactly as setup runs post-setup.
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                project_root / "custom.mk",
-                ".PHONY: post-upg\npost-upg:\n\t@printf '%s\\n' 'upg-hook-ran'\n",
-            )
-        )
-        upgraded = tm.ok(
-            u.Tests.run_isolated_make(
-                ["--no-print-directory", "upg"], cwd=project_root, env=active_env
-            )
-        )
+        tm.that((project_root / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
+
+        # `upg` is the only resolver: the run's template was upgraded under the
+        # same foreign environment with a declared post-upg hook. It wrote both
+        # locks, provisioned the environment frozen from them, and ran the
+        # hook inside the activated environment, exactly as setup runs post-setup.
+        template = resolved_make_templates[profile]
+        receipts = template.parent.parent
+        upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
+        tm.that(upgraded.stdout, has="upg-hook-ran")
+        for lock in (c.Infra.UV_LOCK_FILENAME, c.Infra.MISE_LOCK_FILENAME):
+            tm.that((template / lock).is_file(), eq=True)
+        tm.that((template / ".venv" / "pyvenv.cfg").is_file(), eq=True)
+        template_hostile = receipts / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
         tm.that(
             (template_hostile / "sentinel").read_text(encoding="utf-8"),
             eq="untouched\n",

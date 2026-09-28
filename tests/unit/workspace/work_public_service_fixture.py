@@ -11,7 +11,7 @@ from typing import Self
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, u
+from flext_infra import c, m, u
 from tests import u as test_u
 
 
@@ -49,7 +49,7 @@ class WorkPublicServiceFixture:
             'description = "A standard PEP 621 description string"\n',
             encoding="utf-8",
         )
-        venv_name = config.Infra.tooling.tools.pyright.path_rules.venv_name
+        venv_name = c.Infra.ENVIRONMENT_DIRECTORY
         (repository / "Makefile").write_text(
             ".PHONY: setup\n"
             "setup:\n"
