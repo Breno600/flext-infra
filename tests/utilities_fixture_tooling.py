@@ -46,7 +46,9 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
             if destination.is_symlink():
                 if destination.resolve(strict=True) == source.resolve(strict=True):
                     continue
-                msg = f"fixture tool conflicts with provisioned executable: {destination}"
+                msg = (
+                    f"fixture tool conflicts with provisioned executable: {destination}"
+                )
                 raise FileExistsError(msg)
             if destination.exists():
                 msg = f"fixture tool path is already occupied: {destination}"

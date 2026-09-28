@@ -9,10 +9,7 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m
 
 from ... import t
-from ..._constants import (
-    FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsWorkspace,
-)
+from ..._constants import FlextInfraConstantsCodegenProject
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
 from .beads import FlextInfraConfigModelsBeads
 from .contract import FlextInfraConfigModelsContract
