@@ -57,6 +57,7 @@ class FlextInfraUtilitiesPyprojectUvSources(
             is not None
         )
 
+    @classmethod
     def _sync_uv_sources(
         cls, document: t.Cli.TomlDocument, *, resolution: m.Infra.UvResolutionSpec
     ) -> p.Result[bool]:
