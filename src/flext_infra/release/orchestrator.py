@@ -121,7 +121,7 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             plan.next,
             plan.tag,
             projects.value,
-            "\n".join(f"- {subject}" for subject in plan.merges),
+            "\n".join(plan.merges),
             notes,
         )
         if generated.failure:
