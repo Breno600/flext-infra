@@ -168,14 +168,13 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             validated = FlextInfraModGateEngine.validate(root)
             if validated.failure:
                 return r[t.Cli.ResultValue].from_failure(validated)
-            current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
-            current_text = FlextInfraModTextGateEngine.scan(root, fix=False).unwrap()
-            if (
-                fingerprint(root, current) != after
-                or current.actionable
-                or current_text.actionable
-            ):
-                continue
+            # Validation is read-only. Authenticate the source identity once;
+            # repeating two complete scanner passes cannot strengthen that
+            # contract and makes a no-change mod run exceed its deadline.
+            if fingerprint(root, current) != after:
+                return r[t.Cli.ResultValue].fail(
+                    "mod validation changed source after the fixed-point scan"
+                )
             # Repair reports non-rewritable defects; check owns their verdict.
             if current.detection_only or current.non_actionable_with_fix:
                 detection_rules = sorted({
