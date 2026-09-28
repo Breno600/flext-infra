@@ -126,11 +126,13 @@ class TestsFlextInfraCodegenRepositoryRootFanout:
             "SETUP_DIRENV_XDG_DATA_HOME": str(tmp_path / "direnv-data"),
         }
         first, second, database = (
-            tm.ok(u.Tests.run_isolated_make(arguments, cwd=repository_root, env=env))
-            for arguments, env in (
-                (["--dry-run", "_upg_lifecycle"], handoff),
-                (["--dry-run", "_upg_converge"], handoff),
-                (["--dry-run", "--print-data-base", "help"], {}),
+            tm.ok(
+                u.Tests.run_isolated_make(arguments, cwd=repository_root, env=handoff)
+            )
+            for arguments in (
+                ["--dry-run", "_upg_lifecycle"],
+                ["--dry-run", "_upg_converge"],
+                ["--dry-run", "--print-data-base", "help"],
             )
         )
         for execution in (first, second, database):
