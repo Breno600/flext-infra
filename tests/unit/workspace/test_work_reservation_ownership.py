@@ -7,9 +7,9 @@ import os
 from pathlib import Path
 
 import pytest
+from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, c
-from flext_tests import tm
 from tests.unit.workspace.test_work_service import (
     TestsFlextInfraWorkService as _WorkFixture,
 )

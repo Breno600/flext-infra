@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-
 from flext_infra import FlextInfraWorktreeService, c, m, u
 from flext_infra._utilities.work_saga_common import FlextInfraWorkSagaCommon
 

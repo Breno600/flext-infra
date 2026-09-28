@@ -6,9 +6,9 @@ import os
 from pathlib import Path
 
 import pytest
+from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, c, config
-from flext_tests import tm
 from tests import u
 from tests.unit.workspace.test_work_start_provisions_every_lane import (
     _install_bd_shim,

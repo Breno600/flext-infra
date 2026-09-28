@@ -31,9 +31,9 @@ class FlextInfraMiseColdStart:
         result_type = r[tuple[m.Infra.CodegenFilePlan, ...]]
         project = root.expanduser().resolve()
         package = files.package_directory()
-        if not package.is_relative_to(project) or package.relative_to(
-            project
-        ).parts[:1] != (c.Infra.DEFAULT_SRC_DIR,):
+        if not package.is_relative_to(project) or package.relative_to(project).parts[
+            :1
+        ] != (c.Infra.DEFAULT_SRC_DIR,):
             return result_type.ok(())
         planner = FlextInfraMiseWorkspacePlanner(
             FlextInfraCodegenMiseArtifacts(repository_root=project)

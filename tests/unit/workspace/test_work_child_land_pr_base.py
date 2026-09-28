@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, c, m, u
-from flext_tests import tm
 from tests.unit.workspace.work_public_service_fixture import WorkPublicServiceFixture
 
 

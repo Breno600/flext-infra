@@ -157,6 +157,7 @@ if TYPE_CHECKING:
     from .gates.markdown import FlextInfraMarkdownGate
     from .gates.markdown_code import FlextInfraMarkdownCodeGate
     from .gates.markdown_code_sources import (
+        is_syntax_broken,
         source_name,
         write_docstring_sources,
         write_fenced_block_sources,
@@ -258,6 +259,7 @@ if TYPE_CHECKING:
     from .validate.stub_chain import FlextInfraStubSupplyChain
     from .validate.testmon_db import FlextInfraTestmonDbInspector
     from .validate.tier_whitelist import FlextInfraValidateTierWhitelist
+    from .work import FlextInfraWorkService
     from .workspace.detector import FlextInfraWorkspaceDetector
     from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
     from .workspace.environment_beads import FlextInfraWorkspaceEnvironmentSync
@@ -456,6 +458,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraValidateTierWhitelist",
     "FlextInfraValidationCommandRoutes",
     "FlextInfraValidationRoutes",
+    "FlextInfraWorkService",
     "FlextInfraWorkspaceCheckGatesMixin",
     "FlextInfraWorkspaceChecker",
     "FlextInfraWorkspaceDetector",
@@ -491,6 +494,7 @@ __all__: tuple[str, ...] = (
     "gates",
     "h",
     "infra",
+    "is_syntax_broken",
     "m",
     "main",
     "maintenance",
@@ -651,6 +655,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.markdown": ("FlextInfraMarkdownGate",),
             ".gates.markdown_code": ("FlextInfraMarkdownCodeGate",),
             ".gates.markdown_code_sources": (
+                "is_syntax_broken",
                 "source_name",
                 "write_docstring_sources",
                 "write_fenced_block_sources",
@@ -776,6 +781,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".validate.stub_chain": ("FlextInfraStubSupplyChain",),
             ".validate.testmon_db": ("FlextInfraTestmonDbInspector",),
             ".validate.tier_whitelist": ("FlextInfraValidateTierWhitelist",),
+            ".work": ("FlextInfraWorkService",),
             ".workspace": ("workspace",),
             ".workspace.detector": ("FlextInfraWorkspaceDetector",),
             ".workspace.environment": ("FlextInfraWorkspaceEnvironmentMixin",),

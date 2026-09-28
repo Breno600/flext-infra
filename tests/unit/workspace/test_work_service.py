@@ -7,11 +7,11 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import flext_infra
 import pytest
-from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, config
 from flext_tests import tm
 
+import flext_infra
+from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, config
 from tests import c, m, u
 
 if TYPE_CHECKING:

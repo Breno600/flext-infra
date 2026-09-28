@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Self
 
 import pytest
+from flext_tests import tm
 
 from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, c, m, p, u
-from flext_tests import tm
 from tests import u as test_u
 from tests.unit.workspace.work_public_finish_fixture import (
     ChildFinishState,

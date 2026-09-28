@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, c
 from flext_tests import tm
 
+from flext_infra import FlextInfraWorkService, FlextInfraWorktreeService, c
 from tests.unit import WorkPublicFinishFixture
 
 # Why (suite budget): full child FINISH saga over real epic/child worktrees
