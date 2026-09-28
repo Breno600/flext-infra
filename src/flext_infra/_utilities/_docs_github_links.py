@@ -13,11 +13,12 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from flext_infra import m, t
+
 # Concrete-owner imports: this module resolves during the root's lazy ``u``
-# export, so re-entering the partially initialized root namespace is invalid.
+# export, when the root namespace is still initializing — a root from-import
+# would re-enter the partial namespace and fail.
 from .._config import config
-from ..models import m
-from ..typings import t
 
 if TYPE_CHECKING:
     from flext_infra import FlextInfraConfig

@@ -78,7 +78,10 @@ class FlextInfraWorkSagaStart(FlextInfraWorkSagaCommon):
         )
         if reserved_path.failure:
             return r.fail(reserved_path.error or "lane reservation refused start")
-        reused = self._reusable_lane(primary_root, branch)
+        reusable = self._reusable_lane(primary_root, branch)
+        if reusable.failure:
+            return r.fail(reusable.error or "failed to read registered lanes")
+        reused = reusable.value[0] if reusable.value else None
         if reused is not None and reused.resolve() != reserved_path.value.resolve():
             return r.fail(
                 f"registered lane path differs from canonical reservation: "

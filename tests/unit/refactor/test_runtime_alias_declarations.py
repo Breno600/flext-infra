@@ -74,7 +74,7 @@ class TestsFlextInfraRuntimeAliasDeclarations:
             "from flext_declarations.owner import Parent as Renamed\n\n"
             "class Local(Renamed):\n"
             "    capability = 'nested data must survive'\n\n"
-            "__all__: list[str] = [\n    'Local',\n]\n",
+            "__all__: list[str] = [\n    'Local',\n    'capability',\n]\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         with infra.rope_workspace(repository) as rope:

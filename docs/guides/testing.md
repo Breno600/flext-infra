@@ -41,6 +41,13 @@ make test
 The test verb owns test selection and the retained Testmon cache. Never clear or bypass
 that cache, and never invoke the underlying test runner directly.
 
+The generated root Makefile gives pytest-testmon the official `TESTMON_DATAFILE`
+pointing outside the checkout: `${XDG_CACHE_HOME:-$HOME/.cache}/flext/infra/testmon/`
+plus a key derived from the physical checkout and the configured database filename.
+Incremental selection, execution, and the full-suite phase share that database;
+`make clean` does not delete it. The directory, environment-variable names, and filename
+are owned by `Infra.codegen.make.testmon_cache` in `config/codegen.yaml`.
+
 CI and generated pre-commit hooks use the configured `make.ci.value` token. In that
 context, flext-infra deselects `tooling.tools.pytest.ci-excluded-markers`, currently
 `slow`, consistently in collection, execution and coverage. Local runs and pre-push
