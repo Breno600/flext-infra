@@ -1,7 +1,7 @@
 """Darwin Mypy supervisor: sampled process-group RSS and wall-clock deadline.
 
-This executable module uses only the standard library, so supervising starts
-before importing the checker or its dependencies. Darwin's initial VM mappings
+This supervisor validates the owned checker request before launching Mypy.
+Darwin's initial VM mappings
 can already exceed the configured memory budget; RLIMIT_AS cannot represent a
 usable allocation ceiling there. RSS is sampled every 100 ms instead. It is a
 termination threshold, not a kernel allocation barrier: transient overshoot is
@@ -12,12 +12,11 @@ from __future__ import annotations
 
 import os
 import signal
-import subprocess  # nosec B404 - std-lib-only bootstrap supervisor; must run before fleet imports
 import sys
 import time
 from types import FrameType
 
-from flext_infra import t
+from flext_infra import m, t, u
 
 
 class FlextInfraMypyDarwinSupervisor:
@@ -47,13 +46,10 @@ class FlextInfraMypyDarwinSupervisor:
 
     @staticmethod
     def _usage(pid: int) -> t.Pair[int, bool]:
-        snapshot = subprocess.run(  # nosec B603 - constant argv (/bin/ps), no shell, no untrusted input
+        snapshot = u.Cli.run(
             ("/bin/ps", "-axo", "pgid=,rss=,stat="),
-            capture_output=True,
-            text=True,
-            check=True,
             timeout=1,
-        )
+        ).unwrap()
         total_kib = 0
         alive = False
         for row in snapshot.stdout.splitlines():
@@ -66,21 +62,23 @@ class FlextInfraMypyDarwinSupervisor:
     @classmethod
     def run(
         cls,
-        command: t.SequenceOf[str],
+        invocation: m.Infra.MypyInvocation,
         memory_bytes: int,
         timeout: int,
         kill_after: int,
     ) -> int:
-        """Run one command with inherited streams and bounded group lifetime."""
-        if not command or min(memory_bytes, timeout, kill_after) <= 0:
-            msg = "command and positive memory, timeout and kill-after are required"
+        """Run the owned checker with inherited streams and bounded group lifetime."""
+        if min(memory_bytes, timeout, kill_after) <= 0:
+            msg = "positive memory, timeout and kill-after are required"
             raise ValueError(msg)
         # Probe the native accounting boundary before launching any workload.
         cls._usage(os.getpgrp())
         deadline = time.monotonic() + timeout
-        child = subprocess.Popen(  # nosec B603 - fleet-constructed command; group ownership is the module's purpose
-            command, start_new_session=True
-        )
+        child = u.Cli.process_start(
+            u.Infra.mypy_command(invocation),
+            capture=False,
+            start_new_session=True,
+        ).unwrap()
         received_signal: int = 0
 
         def receive_signal(signum: int, _frame: FrameType | None) -> None:
@@ -121,15 +119,19 @@ class FlextInfraMypyDarwinSupervisor:
                 try:
                     if cls._usage(child.pid)[1]:
                         cls._signal_group(child.pid, signal.SIGKILL)
-                    child.wait()
+                    child.wait().unwrap()
                 finally:
                     for signum, handler in previous.items():
                         signal.signal(signum, handler)
 
 
 if __name__ == "__main__":
+    memory, timeout, kill_after, request = sys.argv[1:]
     raise SystemExit(
         FlextInfraMypyDarwinSupervisor.run(
-            sys.argv[4:], int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
+            m.Infra.MypyInvocation.model_validate_json(request),
+            int(memory),
+            int(timeout),
+            int(kill_after),
         )
     )

@@ -5,14 +5,35 @@ from __future__ import annotations
 import shutil
 import sys
 from pathlib import Path
+from textwrap import indent
 
 from flext_infra import u
-from tests import c, p, t
+from tests import c, m, p, t
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 
 
 class TestsFlextInfraUtilitiesToolingFixtureMixin:
     """Executable, Make, and toolchain-environment fixture helpers."""
+
+    @staticmethod
+    def mypy_workload(root: Path, plugin_body: str = "") -> m.Infra.MypyInvocation:
+        """Create a real checker project with an optional workload plugin."""
+        source = root / "checked.py"
+        source.write_text("value: int = 1\n", encoding=c.Cli.ENCODING_DEFAULT)
+        config_file = root / "mypy.ini"
+        config_source = "[mypy]\n"
+        if plugin_body:
+            plugin = root / "workload.py"
+            plugin.write_text(
+                "from mypy.plugin import Plugin\n\n"
+                "def plugin(version: str) -> type[Plugin]:\n"
+                + indent(plugin_body, "    ")
+                + "\n    return Plugin\n",
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+            config_source += f"plugins = {plugin}\n"
+        config_file.write_text(config_source, encoding=c.Cli.ENCODING_DEFAULT)
+        return m.Infra.MypyInvocation(targets=(source,), config_file=config_file)
 
     @staticmethod
     def create_python_environment(root: Path) -> p.Result[bool]:

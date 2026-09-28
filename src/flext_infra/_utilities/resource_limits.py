@@ -5,7 +5,6 @@ from __future__ import annotations
 import platform
 import shutil
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
@@ -66,24 +65,59 @@ class FlextInfraUtilitiesResourceLimits:
         )
 
     @staticmethod
+    def mypy_arguments(invocation: m.Infra.MypyInvocation) -> t.StrSequence:
+        """Build checker options shared by the CLI and public profiling API."""
+        return (
+            *(
+                ("--config-file", str(invocation.config_file.resolve()))
+                if invocation.config_file is not None
+                else ()
+            ),
+            "--no-error-summary",
+            "--no-color-output",
+            *(("--output", c.Infra.OUTPUT_JSON) if invocation.report_json else ()),
+            *(("--verbose",) if invocation.verbose else ()),
+            "--",
+            *(str(target.resolve()) for target in invocation.targets),
+        )
+
+    @staticmethod
+    def mypy_command(invocation: m.Infra.MypyInvocation) -> t.StrSequence:
+        """Construct the owned checker entrypoint from typed data, never command text."""
+        if invocation.profile_output is not None:
+            return (
+                sys.executable,
+                "-m",
+                f"{__package__}._mypy_profile",
+                invocation.model_dump_json(),
+            )
+        return (
+            sys.executable,
+            "-m",
+            c.Infra.MYPY,
+            *FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation),
+        )
+
+    @staticmethod
     def mypy_limited_command(
-        command: t.StrSequence,
+        invocation: m.Infra.MypyInvocation,
         limit: m.Infra.MypyResourceLimit | None = None,
         *,
         host_system: str | None = None,
     ) -> t.StrSequence:
-        """Prefix one Mypy command with limits for the selected host system."""
+        """Bound the canonical checker; no caller-provided executable can run."""
         validated_limit = (
             limit or FlextInfraUtilitiesResourceLimits.mypy_resource_limit()
         )
         if (host_system or platform.system()) == "Darwin":
             return (
                 sys.executable,
-                str(Path(__file__).with_name("_mypy_supervisor.py")),
+                "-m",
+                f"{__package__}._mypy_supervisor",
                 str(validated_limit.memory_limit_bytes),
                 str(validated_limit.timeout_seconds),
                 str(c.Infra.TIMEOUT_KILL_AFTER_SECONDS),
-                *command,
+                invocation.model_dump_json(),
             )
         prlimit_executable = FlextInfraUtilitiesResourceLimits._required_executable(
             c.Infra.PRLIMIT_COMMAND
@@ -103,7 +137,7 @@ class FlextInfraUtilitiesResourceLimits:
                 f"{validated_limit.memory_limit_bytes}"
             ),
             "--",
-            *command,
+            *FlextInfraUtilitiesResourceLimits.mypy_command(invocation),
         )
 
     @staticmethod

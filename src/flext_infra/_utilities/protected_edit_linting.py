@@ -208,6 +208,10 @@ class FlextInfraUtilitiesProtectedEditLinting:
         template: t.StrSequence,
     ) -> t.StrSequence:
         """Build one canonical protected-edit lint command."""
+        if tool_name == c.Infra.MYPY:
+            return FlextInfraUtilitiesResourceLimits.mypy_limited_command(
+                m.Infra.MypyInvocation(targets=(py_file.resolve(),))
+            )
         command: t.StrSequence = (
             *cls._workspace_tool_command(workspace, template[0]),
             *(item.replace("{file}", str(py_file)) for item in template[1:]),
@@ -217,11 +221,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
             and (project_config := command_cwd / c.PYPROJECT_FILENAME).is_file()
         ):
             command = (*command, "--config", str(project_config))
-        return (
-            FlextInfraUtilitiesResourceLimits.mypy_limited_command(command)
-            if tool_name == c.Infra.MYPY
-            else command
-        )
+        return command
 
     @classmethod
     def lint_commands(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import pstats
 import sys
 from pathlib import Path
 
@@ -16,39 +17,54 @@ from tests import u as test_u
 class TestsFlextInfraUtilitiesResourceLimits:
     """Behavior tests for the canonical Mypy resource-limit command."""
 
-    def test_mypy_command_runs_harmless_process_with_memory_and_time_limits(
-        self,
+    def test_mypy_command_checks_source_with_memory_and_time_limits(
+        self, tmp_path: Path
     ) -> None:
-        """Run a harmless process through both validated resource ceilings."""
+        """Check a real typed source through both validated resource ceilings."""
         limit = m.Infra.MypyResourceLimit(
             memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT, timeout_seconds=60
         )
         command = u.Infra.mypy_limited_command(
-            (
-                sys.executable,
-                "-c",
-                "import sys; sys.stdout.write('bounded-process\\n')",
-            ),
-            limit,
+            test_u.Tests.mypy_workload(tmp_path), limit
         )
         result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
 
-        if sys.platform == "darwin":
-            tm.that(command[0], eq=sys.executable)
-            tm.that(Path(command[1]).name, eq="_mypy_supervisor.py")
-            tm.that(command[2], eq=str(limit.memory_limit_bytes))
-            tm.that(command[3], eq=str(limit.timeout_seconds))
-        else:
-            tm.that(Path(command[0]).name, eq=c.Infra.TIMEOUT_COMMAND)
-            tm.that(command[3], eq=f"{limit.timeout_seconds}s")
-            tm.that(Path(command[4]).name, eq=c.Infra.PRLIMIT_COMMAND)
-            tm.that(
-                command[5],
-                eq=f"--as={limit.memory_limit_bytes}:{limit.memory_limit_bytes}",
-            )
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
-        tm.that(result.value.stdout, has="bounded-process")
+        tm.that(result.value.outcome.raw_return_code, eq=0)
+
+    def test_mypy_profile_records_the_real_checker(self, tmp_path: Path) -> None:
+        """Keep the public profiling contract while removing executable selection."""
+        project = test_u.Tests.mypy_workload(tmp_path)
+        profile = tmp_path / "checker.pstats"
+        invocation = m.Infra.MypyInvocation(
+            targets=project.targets,
+            config_file=project.config_file,
+            profile_output=profile,
+        )
+        result = u.Cli.run_raw(
+            u.Infra.mypy_limited_command(invocation),
+            timeout=u.Infra.mypy_runner_timeout(),
+        )
+        tm.ok(result)
+        tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
+        tm.that(
+            bool(pstats.Stats(str(profile)).get_stats_profile().func_profiles), eq=True
+        )
+
+    def test_supervisor_rejects_executable_selection_before_launch(
+        self, tmp_path: Path
+    ) -> None:
+        """A hostile request cannot turn the supervisor into an arbitrary executor."""
+        project = test_u.Tests.mypy_workload(tmp_path)
+        command = u.Infra.mypy_limited_command(project, host_system="Darwin")
+        injected = project.model_dump_json()[:-1] + ',"command":["/bin/sh"]}'
+        result = u.Cli.run_raw(
+            (*command[:-1], injected), timeout=u.Infra.mypy_runner_timeout()
+        )
+        tm.ok(result)
+        tm.that(result.value.outcome.raw_return_code, eq=1)
+        tm.that(result.value.stderr, has="Extra inputs are not permitted")
 
     @pytest.mark.parametrize(
         ("source", "memory_mb", "seconds", "expected"),
@@ -66,14 +82,16 @@ class TestsFlextInfraUtilitiesResourceLimits:
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
-        self, source: str, memory_mb: int, seconds: int, expected: int
+        self, tmp_path: Path, source: str, memory_mb: int, seconds: int, expected: int
     ) -> None:
         """Exercise a real exit, deadline and resident allocation through the owner."""
         limit = m.Infra.MypyResourceLimit(
             memory_limit_mb=memory_mb, timeout_seconds=seconds
         )
         result = u.Cli.run_raw(
-            u.Infra.mypy_limited_command((sys.executable, "-c", source), limit),
+            u.Infra.mypy_limited_command(
+                test_u.Tests.mypy_workload(tmp_path, source), limit
+            ),
             timeout=u.Infra.mypy_runner_timeout(limit),
         )
         tm.ok(result)
@@ -83,7 +101,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         ("tail", "expected"), [("sys.exit(7)", 7), ("time.sleep(30)", 124)]
     )
     def test_resource_limit_stops_resistant_descendant_group(
-        self, tail: str, expected: int
+        self, tmp_path: Path, tail: str, expected: int
     ) -> None:
         """Kill a TERM-resistant descendant after leader exit or deadline."""
         source = (
@@ -96,12 +114,14 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
         limit = m.Infra.MypyResourceLimit(memory_limit_mb=512, timeout_seconds=2)
         result = u.Cli.run_raw(
-            u.Infra.mypy_limited_command((sys.executable, "-c", source), limit),
+            u.Infra.mypy_limited_command(
+                test_u.Tests.mypy_workload(tmp_path, source), limit
+            ),
             timeout=u.Infra.mypy_runner_timeout(limit),
         )
         tm.ok(result)
         tm.that(result.value.outcome.raw_return_code, eq=expected)
-        pid = int(result.value.stdout.strip())
+        pid = int(result.value.stdout.splitlines()[0])
         remaining = u.Cli.run_raw(("/bin/ps", "-p", str(pid), "-o", "stat="), timeout=2)
         tm.ok(remaining)
         state = remaining.value.stdout.strip()
@@ -115,15 +135,13 @@ class TestsFlextInfraUtilitiesResourceLimits:
         else:
             u.Cli.run_raw(("/bin/kill", "-9", str(pid)), timeout=2)
 
-    def test_resource_limit_stops_workload_on_termination(self) -> None:
+    def test_resource_limit_stops_workload_on_termination(self, tmp_path: Path) -> None:
         """Preserve external termination and reap the running workload."""
         limit = m.Infra.MypyResourceLimit(memory_limit_mb=512, timeout_seconds=20)
         started = u.Cli.process_start(
             u.Infra.mypy_limited_command(
-                (
-                    sys.executable,
-                    "-c",
-                    "import time; print('ready', flush=True); time.sleep(30)",
+                test_u.Tests.mypy_workload(
+                    tmp_path, "import time; print('ready', flush=True); time.sleep(30)"
                 ),
                 limit,
             )
