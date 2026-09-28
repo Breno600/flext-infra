@@ -245,23 +245,35 @@ class TestsFlextInfraTransactionLease:
     ) -> None:
         """Leasing a publication root adds no entry beside its tracked content."""
         root = test_u.Tests.git_repository(tmp_path)
+        participant_root = root / "docs"
+        participant_root.mkdir()
         test_u.Tests.copy_tracked_mise_seeds(root)
-        before = {path.name for path in root.iterdir()}
+        before = {path.name for path in participant_root.iterdir()}
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root)
         )
 
-        tm.ok(transaction.run_files_locked({"@docs-0": root}, self._ok_path))
-        tm.ok(transaction.run_files_locked({"@docs-0": root}, self._ok_path))
+        tm.ok(
+            transaction.run_files_locked(
+                {"@docs-0": participant_root}, self._ok_path
+            )
+        )
+        tm.ok(
+            transaction.run_files_locked(
+                {"@docs-0": participant_root}, self._ok_path
+            )
+        )
 
         tm.that(
-            {path.name for path in root.iterdir()} - before,
+            {path.name for path in participant_root.iterdir()} - before,
             eq={c.Infra.TRANSACTION_STATE_DIRNAME},
         )
         tm.that(
             [
                 path.name
-                for path in (root / c.Infra.TRANSACTION_STATE_DIRNAME).iterdir()
+                for path in (
+                    participant_root / c.Infra.TRANSACTION_STATE_DIRNAME
+                ).iterdir()
             ],
             eq=[f"{c.Infra.JOURNAL_NAME}.lock"],
         )

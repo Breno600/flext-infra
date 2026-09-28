@@ -99,10 +99,6 @@ jobs:
 {%- for step in make.workflow if step.verb == "test" and "ci" in step.contexts %}
 {%- set ci_tests.selected = true %}
 {%- endfor %}
-{%- if ci_tests.selected %}
-
-{%- include "_fragments/testmon_cache.j2" %}
-{%- endif %}
 
 {%- for step in make.workflow if "ci" in step.contexts %}
       - name: {{ step.verb }} (blocking)

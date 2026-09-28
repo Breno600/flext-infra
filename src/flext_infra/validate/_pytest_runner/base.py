@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import os
 from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
 from typing import Annotated, Self
+
+from platformdirs import user_cache_path
 
 from flext_infra import c, config, m, u
 from flext_infra.base import s
@@ -21,6 +24,10 @@ class FlextInfraPytestRunnerBase(s[int]):
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
+    testmon_db: Annotated[
+        Path,
+        m.Field(description="Absolute external pytest-testmon SQLite database path."),
+    ]
     ci_context: Annotated[
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
@@ -41,12 +48,36 @@ class FlextInfraPytestRunnerBase(s[int]):
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
+            testmon_db=Path(
+                cls._environment_value(
+                    config.Infra.codegen.make.testmon_cache.database_environment_variable
+                )
+            ),
         )
 
     @property
     def testmon_db(self) -> Path:
-        """Pytest-testmon's own default database in the repository root."""
-        return self.root / config.Infra.codegen.make.testmon_cache.database_filename
+        """Persistent Testmon database outside this workspace's checkout."""
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        project_name = u.Infra.project_name_from_payload(
+            pyproject_path, u.Infra.pyproject_payload(pyproject_path)
+        )
+        cache_root = user_cache_path(appname=project_name, appauthor=False)
+        if not cache_root.is_absolute():
+            msg = f"platform cache root must be absolute: {cache_root}"
+            raise ValueError(msg)
+        workspace_key = sha256(
+            os.path.normcase(str(self.root.resolve())).encode("utf-8")
+        ).hexdigest()
+        database = (
+            cache_root
+            / workspace_key
+            / config.Infra.codegen.make.testmon_cache.database_filename
+        ).resolve()
+        if database.is_relative_to(self.root.resolve()):
+            msg = f"testmon database must be outside the checkout: {database}"
+            raise ValueError(msg)
+        return database
 
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
@@ -68,6 +99,12 @@ class FlextInfraPytestRunnerBase(s[int]):
         target_path = self.root / self.target
         if not target_path.is_dir() or target_path.is_symlink():
             msg = f"test target must be an existing directory: {self.target}"
+            raise ValueError(msg)
+        if not self.testmon_db.is_absolute():
+            msg = "testmon database path must be absolute"
+            raise ValueError(msg)
+        if self.testmon_db.resolve().is_relative_to(self.root.resolve()):
+            msg = f"testmon database must be outside the checkout: {self.testmon_db}"
             raise ValueError(msg)
         return self
 

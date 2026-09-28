@@ -568,8 +568,6 @@ class TestsFlextInfraRefactorMainCli:
         self, tmp_path: Path
     ) -> None:
         workspace = self._build_test_only_workspace(tmp_path)
-        u.Tests.initialize_git_repo(workspace)
-
         report = u.Tests.census_report(
             workspace, kinds=("function",), rules=("unused",)
         )
@@ -753,6 +751,7 @@ class TestsFlextInfraRefactorMainCli:
         workspace, service_file = self._build_test_only_workspace_with_source_import(
             tmp_path
         )
+        u.Tests.provision_checkout(workspace)
 
         report = u.Tests.census_report(
             workspace, kinds=("function",), rules=("unused",)
@@ -918,6 +917,7 @@ class TestsFlextInfraRefactorMainCli:
         self, tmp_path: Path
     ) -> None:
         workspace = self._build_test_only_workspace(tmp_path)
+        u.Tests.provision_checkout(workspace)
         impact_map_path = tmp_path / "cli-impact-map.json"
 
         result = self._refactor_main(

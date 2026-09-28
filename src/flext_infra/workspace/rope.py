@@ -548,6 +548,12 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         resource = self.resource(file_path)
         if resource is not None:
             return resource
+        resolved_path = file_path.resolve()
+        if (
+            resolved_path.is_relative_to(self._rope_repository_root.resolve())
+            and not resolved_path.exists()
+        ):
+            raise FileNotFoundError(resolved_path)
         msg = f"path is outside the active rope workspace: {file_path}"
         raise ValueError(msg)
 
@@ -561,6 +567,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         started = perf_counter()
         resource = self._resource_for(entry.file_path)
         source = resource.read()
+        pymodule = u.Infra.resolve_pymodule(self.rope_project, resource)
         self._visit_source_seconds += perf_counter() - started
         started = perf_counter()
         tree = u.Infra.parse_rope_module(source, filename=str(entry.file_path))
@@ -574,6 +581,7 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
             entry=entry,
             resource=resource,
             tree=tree,
+            pymodule=pymodule,
             source=source,
             convention=convention,
         )

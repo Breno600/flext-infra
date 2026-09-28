@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests import u
+from tests import m, u
 
 
 class TestsFlextInfraRule1ConstantsFacade:
@@ -16,4 +16,6 @@ class TestsFlextInfraRule1ConstantsFacade:
             module_source=u.Tests.namespace_fixture("rule1_valid_constants.pysrc"),
             module_name="constants.py",
         )
-        u.Tests.assert_namespace_valid(root)
+        u.Tests.assert_namespace_valid(
+            m.Infra.NamespaceValidateCommand(repository_root=root)
+        )

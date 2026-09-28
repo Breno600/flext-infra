@@ -112,7 +112,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         prepends to a render failure.
         """
         artifact_context = self._artifact_render_context(
-            render_inputs, destination=destination, project_context=project_context
+            render_inputs,
+            destination=destination,
+            project_context=project_context,
         )
         if artifact_context.failure:
             return r[str].from_failure(artifact_context)
@@ -192,15 +194,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         codegen.toolchain.environment_path_prepends
                     ),
                     mise_bootstrap=u.Infra.mise_bootstrap_environment(),
-                    gascity=(
-                        m.Infra.BeadsWorkspaceEnvironmentSpec(backend="none")
-                        if target.beads is None
-                        else (
-                            m.Infra.BeadsWorkspaceEnvironmentSpec()
-                            if target.gascity_enabled
-                            else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
-                        )
-                    ),
                 )
             )
         if destination in {c.Infra.MISE_TOML_FILENAME, c.Infra.PYTHON_VERSION_FILENAME}:

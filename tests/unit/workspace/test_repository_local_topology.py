@@ -109,6 +109,31 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.that(workspace.beads, none=True)
         tm.that(workspace.gascity_enabled, eq=False)
 
+    def test_overlay_omitting_beads_policy_keeps_beads_enabled(
+        self, tmp_path: Path
+    ) -> None:
+        """An overlay that omits beads_enabled resolves like no overlay at all."""
+        root = self._self_named_governed_root(tmp_path, "overlay-default-beads")
+        observed = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        manifest: t.MutableMappingKV[str, t.JsonValue] = {
+            "version": c.Infra.WORKSPACE_MANIFEST_VERSION,
+            "name": observed.name,
+            "repository": observed.repository.model_dump(mode="json"),
+            "repository_policy_overlays": [
+                {"project": observed.repository.distribution, "ci_enabled": False}
+            ],
+        }
+        tm.ok(
+            u.Cli.yaml_dump(
+                root / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME, manifest
+            )
+        )
+
+        workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+
+        tm.that(workspace.beads, eq=observed.beads)
+        tm.that(workspace.gascity_enabled, eq=observed.gascity_enabled)
+
     def test_selected_workspace_manifest_rejects_git_contradiction(
         self, tmp_path: Path
     ) -> None:
