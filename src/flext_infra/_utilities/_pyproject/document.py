@@ -53,10 +53,11 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         """Return canonical TOML with autonomous dependencies and uv policy.
 
         The workspace manifest owns the topology facts, including the
-        namespace production scope its project declares. ``family_line`` is
-        the detected FLEXT integration branch: source-less member requirements
-        render on it and it re-renders commit residue in internal
-        requirements; without it, both fail loudly.
+        namespace production scope its project declares and the members a
+        workspace root environment serves. ``family_line`` is the detected
+        FLEXT integration branch: source-less member requirements render on it
+        and it re-renders commit residue in internal requirements; without it,
+        both fail loudly.
         """
         parsed = cls._parsed_pyproject(pyproject_content)
         if parsed.failure:
@@ -66,6 +67,13 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             source,
             project_name=project_name,
             required_dev_dependencies=required_dev_dependencies,
+            workspace_members=tuple(
+                member.distribution
+                for member in workspace.subprojects
+                if member.package
+            )
+            if workspace.repository.role is c.Infra.MakeProfile.WORKSPACE
+            else (),
         )
         declared_sources = (
             {
@@ -80,7 +88,6 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         if normalized.failure:
             return r[str].from_failure(normalized)
-        cls._remove_workspace_dependency_group(source)
         cls._remove_legacy_tooling(source)
         typecheck_paths = cls._sync_typecheck_paths(source)
         if typecheck_paths.failure:
