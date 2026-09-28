@@ -33,7 +33,9 @@ class FlextInfraUtilitiesRepository:
         dependency's canonical URL and branch: canonicalization normalizes the
         transport scheme (``ssh://``, SCP-style, ``http``) to ``https`` and
         never invents an organization, host, or ref. A declared source that is
-        not a Git URL, or a Git URL without a ref, fails loudly.
+        not a Git URL, or a Git URL without a ref, fails loudly. The ref is an
+        integration line: the commit it resolves to lives only in uv.lock,
+        which `make upg` alone moves, so a commit ref fails loudly too.
         """
         requirement_part, _, _ = requirement.partition(";")
         head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(requirement_part.strip())
@@ -57,6 +59,12 @@ class FlextInfraUtilitiesRepository:
             return r[t.Pair[str, str]].fail(
                 f"internal dependency git source must declare a branch or ref: "
                 f"{requirement}"
+            )
+        if c.Infra.GIT_COMMIT_OID_RE.fullmatch(ref):
+            return r[t.Pair[str, str]].fail(
+                f"internal dependency git source pins commit {ref}: declare its "
+                "integration line; uv.lock records the commit and only "
+                f"`make upg` moves it: {requirement}"
             )
         if url.startswith("https://"):
             canonical = url
@@ -126,10 +134,8 @@ class FlextInfraUtilitiesRepository:
         whole family from one source. It is detected, never cataloged, from the
         first declaration the checkout carries — the infrastructure checkout's
         own origin and integration branch, a declared direct Git source for
-        the distribution (URL and ref; a fully manifest-pinned family keeps
-        its provider URL on this checkout's integration branch), or the owning
-        workspace manifest's member entry on that workspace's integration
-        branch. Two declared
+        the distribution (URL and ref), or the owning workspace manifest's
+        member entry on that workspace's integration branch. Two declared
         sources that disagree, or none at all, fail loudly.
 
         A fully explicit caller declaration (``declared`` carrying both
@@ -248,19 +254,8 @@ class FlextInfraUtilitiesRepository:
             )
             if declared.failure:
                 return r[t.Pair[str, str]].from_failure(declared)
-            declared_url, declared_ref = declared.value
-            if declared_url and declared_ref:
+            if declared.value[0]:
                 return declared
-            if declared_url:
-                # Every internal dependency is manifest-pinned: the pins are
-                # revisions, never a line, so the line follows this
-                # checkout's integration branch like a manifest entry does.
-                branch = cls.resolve_integration_branch(
-                    repository_root, preference=preference
-                )
-                if branch.failure:
-                    return r[t.Pair[str, str]].from_failure(branch)
-                return r[t.Pair[str, str]].ok((declared_url, branch.value))
         manifest = cls._manifest_declared_url(
             repository_root=repository_root, distribution=distribution
         )
@@ -319,18 +314,13 @@ class FlextInfraUtilitiesRepository:
     ) -> p.Result[t.Pair[str, str]]:
         """Return the family line the pyproject declares, as a source for one member.
 
-        Unpinned internal dependencies name one provider base URL and ref.
-        The manifest owns immutable revisions: a generated pyproject may still
-        carry the preceding ref while codegen plans its replacement. Pinned
-        dependencies must retain one consistent declared Git provenance, and
-        every family member must use the same provider. A plain (source-less)
-        requirement names a workspace dependency whose URL the workspace
-        manifest owns. The unpinned line supplies the source of ``distribution``;
-        when every internal dependency is pinned, the pinned provider supplies
-        its URL with an empty ref, because a pin is a revision and never a line.
+        Internal dependencies name one provider base URL and one integration
+        line; uv.lock alone records the commit each line resolves to. A plain
+        (source-less) requirement names a workspace dependency whose URL the
+        workspace manifest owns. The line supplies the source of
+        ``distribution``.
         """
         from flext_infra import u
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
         from .pyproject_conform import FlextInfraUtilitiesPyprojectConform
 
@@ -360,22 +350,7 @@ class FlextInfraUtilitiesRepository:
                 requirements.extend(
                     FlextInfraUtilitiesPyprojectConform.raw_requirement_values(group)
                 )
-        declared_manifest = FlextInfraWorkspaceDetector.load_workspace_manifest(
-            pyproject_path.parent
-        )
-        if declared_manifest.failure:
-            return r[t.Pair[str, str]].from_failure(declared_manifest)
-        manifest_project = (
-            declared_manifest.value[0].project if declared_manifest.value else None
-        )
-        revisions: t.StrMapping = (
-            manifest_project.dependency_revisions
-            if manifest_project is not None
-            else {}
-        )
         lines: dict[t.Pair[str, str], str] = {}
-        provider_bases: set[str] = set()
-        pinned_sources: dict[str, t.Pair[str, str]] = {}
         for requirement in requirements:
             name = FlextInfraUtilitiesDependencies.dep_name(requirement)
             if name is None or not name.startswith(prefix):
@@ -397,36 +372,16 @@ class FlextInfraUtilitiesRepository:
                     f"internal dependency source must be the {name} repository: "
                     f"{requirement}"
                 )
-            base_url = url.removesuffix(suffix)
-            provider_bases.add(base_url)
-            declared_revision = revisions.get(name)
-            if declared_revision is not None:
-                source = (url, ref)
-                previous = pinned_sources.setdefault(name, source)
-                if previous != source:
-                    return r[t.Pair[str, str]].fail(
-                        f"{pyproject_path.name} declares conflicting pinned sources "
-                        f"for {name}: {previous!r} != {source!r}"
-                    )
-                continue
-            lines.setdefault((base_url, ref), requirement)
+            lines.setdefault((url.removesuffix(suffix), ref), requirement)
         if len(lines) > 1:
             declared = "; ".join(sorted(lines.values()))
             return r[t.Pair[str, str]].fail(
                 f"{pyproject_path.name} declares conflicting {prefix}* line sources "
                 f"(one family, one provider and ref): {declared}"
             )
-        if len(provider_bases) > 1:
-            return r[t.Pair[str, str]].fail(
-                f"{pyproject_path.name} declares conflicting {prefix}* providers: "
-                f"{', '.join(sorted(provider_bases))}"
-            )
         if lines:
             (base_url, ref), _ = next(iter(lines.items()))
             return r[t.Pair[str, str]].ok((f"{base_url}/{distribution}.git", ref))
-        if provider_bases:
-            (base_url,) = provider_bases
-            return r[t.Pair[str, str]].ok((f"{base_url}/{distribution}.git", ""))
         # No declared source: absence is an EMPTY payload, never None.
         return r[t.Pair[str, str]].ok(("", ""))
 

@@ -65,7 +65,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             required_dev_dependencies=required_dev_dependencies,
         )
         normalized = cls._normalize_requirements(
-            source, workspace=workspace, declared_sources=declared_sources
+            source, declared_sources=declared_sources
         )
         if normalized.failure:
             return r[str].from_failure(normalized)
@@ -82,9 +82,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
         )
         if namespace_scope.failure:
             return r[str].from_failure(namespace_scope)
-        sources_result = cls._sync_uv_sources(
-            source, workspace=workspace, resolution=uv_resolution
-        )
+        sources_result = cls._sync_uv_sources(source, resolution=uv_resolution)
         if sources_result.failure:
             return r[str].from_failure(sources_result)
         provenance_result = cls._validate_dependency_provenance(

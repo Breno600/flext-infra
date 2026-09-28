@@ -94,7 +94,11 @@ As correções mais recentes do operador (2026-09-24) declaram `latest` na confi
 fazem de `make upg` o único verbo que resolve versões novas e grava os `uv.lock` e
 `mise.lock` versionados. `make setup`, `make gen` e `make fmt` nunca atualizam: instalam
 congelados a partir desses locks, que é o caminho do CI. Dependências Git seguem os tips
-das branches de integração declaradas e `APPLY` continua removido. Corrija o responsável
+das branches de integração declaradas e `APPLY` continua removido. Cada requisito interno
+`flext-*` declara no `pyproject.toml` a sua linha de integração, nunca um commit: o
+commit resolvido existe só no `uv.lock`, e só o `make upg` o move para o tip da linha. O
+manifesto não fixa revisões (`project.dependency_revisions` foi removido) e o `make gen`
+recusa um commit declarado em vez de regravá-lo (operador 2026-09-28, `flext-oe420`). Corrija o responsável
 do setup ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o
 ciclo.
 
