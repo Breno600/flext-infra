@@ -215,6 +215,83 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             )
         )
 
+    @staticmethod
+    def _violation_rule_token(violation: str) -> str | None:
+        """Return the trailing ``[rule]`` token of one census violation line.
+
+        Every enforcement violation ends with its rule id (``[ENFORCE-046]``)
+        when the catalog maps the tag, else the raw tag itself
+        (``[class_prefix]``); bracketless lines (import failures) own no rule
+        and can never be suspended.
+        """
+        match = re.search(r"\[([^[\]]+)\]$", violation)
+        if match is None:
+            return None
+        token: str = match.group(1)
+        return token
+
+    @staticmethod
+    def _matches_census_family(token: str, family: str) -> bool:
+        """Match one rule token against one configured census family.
+
+        ENFORCE-* families name one exact catalog rule and must never
+        prefix-capture a sibling (``ENFORCE-04`` would otherwise swallow
+        ``ENFORCE-046``); every other family is a tag prefix.
+        """
+        if family.startswith("ENFORCE-"):
+            return token == family
+        return token.startswith(family)
+
+    @classmethod
+    def _partition_suspended(
+        cls, violations: t.SequenceOf[str]
+    ) -> t.Pair[tuple[str, ...], tuple[t.Pair[str, int], ...]]:
+        """Split violations into kept lines and per-suspended-gate counts.
+
+        Consistency contract (gc-wisp-d7mnad): the census honors exactly the
+        rule families the operator already suspended for their dedicated
+        check gates in ``check_gate_suspensions`` — no new waiver surface.
+        Matching families leave the failure count under one loud INFO line
+        per family carrying the recorded authority; every unmapped family
+        stays fully blocking.
+        """
+        suspensions = config.Infra.codegen.make.check_gate_suspensions
+        kept: list[str] = []
+        family_counts: dict[t.Pair[str, str], int] = {}
+        gate_counts: dict[str, int] = {}
+        for violation in violations:
+            token = cls._violation_rule_token(violation)
+            owner = None
+            if token is not None:
+                for suspension in suspensions:
+                    if any(
+                        cls._matches_census_family(token, family)
+                        for family in suspension.census_rule_families
+                    ):
+                        owner = suspension
+                        break
+            if owner is None or token is None:
+                kept.append(violation)
+                continue
+            for family in owner.census_rule_families:
+                if cls._matches_census_family(token, family):
+                    family_counts[owner.gate, family] = (
+                        family_counts.get((owner.gate, family), 0) + 1
+                    )
+            gate_counts[owner.gate] = gate_counts.get(owner.gate, 0) + 1
+        for suspension in suspensions:
+            for family in suspension.census_rule_families:
+                count = family_counts.get((suspension.gate, family), 0)
+                if count:
+                    u.Cli.info(
+                        f"SUSPENDED census rule family {family} "
+                        f"(gate {suspension.gate}); "
+                        f"authority={suspension.authority}; "
+                        f"reason={suspension.reason}; "
+                        f"suppressed {count} finding(s)"
+                    )
+        return tuple(kept), tuple(gate_counts.items())
+
     def build_report(self) -> p.Result[m.Infra.ValidationReport]:
         """Build one validation report for the selected workspace projects."""
         projects_result = u.Infra.resolve_projects(self.repository_root, ())
@@ -233,15 +310,27 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 return r[m.Infra.ValidationReport].from_failure(report_result)
             report = report_result.value
             merged_violations.extend(report.violations)
-        passed = not merged_violations
-        summary = (
-            "runtime census passed"
-            if passed
-            else f"runtime census found {len(merged_violations)} violation(s)"
+        kept_violations, suppressed_by_gate = self._partition_suspended(
+            merged_violations
         )
+        suppressed_total = len(merged_violations) - len(kept_violations)
+        suppression_note = (
+            (
+                f"; {suppressed_total} suppressed under recorded gate suspensions "
+                f"({', '.join(f'{gate}={count}' for gate, count in suppressed_by_gate)})"
+            )
+            if suppressed_total
+            else ""
+        )
+        passed = not kept_violations
+        summary = (
+            f"runtime census found {len(kept_violations)} violation(s)"
+            if not passed
+            else "runtime census passed"
+        ) + suppression_note
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=tuple(merged_violations), summary=summary
+                passed=passed, violations=kept_violations, summary=summary
             )
         )
 
