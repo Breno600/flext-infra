@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, u
+from flext_infra import c, config, m, u
 from tests import u as test_u
 
 
@@ -131,19 +131,36 @@ class TestsFlextInfraUtilitiesResourceLimits:
     @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])
     def test_resource_limit_stops_resistant_descendant_group(
-        self, tmp_path: Path, expected: int
+        self, tmp_path: Path, expected: int, request: pytest.FixtureRequest
     ) -> None:
         """Kill a TERM-resistant descendant after leader exit or deadline."""
         limit = test_u.Tests.mypy_deadline_limit()
-        sleep = f"time.sleep({limit.timeout_seconds + c.Infra.TIMEOUT_KILL_AFTER_SECONDS + 1})"
+        policy = config.Infra.tooling.tools.pytest
+        pid_file = tmp_path / "descendant.pid"
+        error_file = tmp_path / "descendant.stderr"
+        request.addfinalizer(
+            lambda: test_u.Tests.reap_mypy_descendant(
+                pid_file, policy.termination_grace_seconds
+            )
+        )
+        sleep = f"time.sleep({u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds})"
         tail = "sys.exit(7)" if expected == 7 else sleep
+        descendant = (
+            "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+            f"print('ready', flush=True); {sleep}"
+        )
         source = (
-            "import subprocess,sys,time; "
-            "p=subprocess.Popen([sys.executable, '-c', "
-            '"import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); '
-            f"print('ready', flush=True); {sleep}\"], "
-            "stdout=subprocess.PIPE, text=True); "
-            f"p.stdout.readline(); print(p.pid, flush=True); {tail}"
+            "import subprocess,sys,time\nfrom pathlib import Path\n"
+            f"errors = Path({str(error_file)!r})\n"
+            "with errors.open('w', encoding='utf-8') as stderr:\n"
+            f"    p = subprocess.Popen([sys.executable, '-c', {descendant!r}], "
+            "stdout=subprocess.PIPE, stderr=stderr, text=True)\n"
+            f"    Path({str(pid_file)!r}).write_text(str(p.pid), encoding='utf-8')\n"
+            "    if p.stdout is None or p.stdout.readline() != 'ready\\n':\n"
+            "        stderr.flush()\n"
+            "        sys.stderr.write(errors.read_text(encoding='utf-8'))\n"
+            "        raise RuntimeError('descendant readiness failed')\n"
+            f"    print(p.pid, flush=True)\n    {tail}"
         )
         result = u.Cli.run_raw(
             u.Infra.mypy_limited_command(
@@ -155,18 +172,21 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(result.value.outcome.raw_return_code, eq=expected)
         tm.that(bool(result.value.stdout.splitlines()), eq=True)
         pid = int(result.value.stdout.splitlines()[0])
-        remaining = u.Cli.run_raw(("/bin/ps", "-p", str(pid), "-o", "stat="), timeout=2)
+        tm.that(int(pid_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)), eq=pid)
+        tm.that(error_file.read_text(encoding=c.Cli.ENCODING_DEFAULT), empty=True)
+        remaining = u.Cli.run_raw(
+            ("/bin/ps", "-p", str(pid), "-o", "stat="),
+            timeout=policy.termination_grace_seconds,
+        )
         tm.ok(remaining)
         state = remaining.value.stdout.strip()
         if sys.platform == "darwin":
             tm.that(not state or state.startswith("Z"), eq=True)
         # GNU timeout reaps the resistant group when it stops the leader at
         # the deadline; on a clean leader exit the group outlives the
-        # wrapper, so the probe reaps its own descendant instead.
+        # wrapper, so pytest teardown reaps its own descendant instead.
         elif expected == 124:
             tm.that(not state, eq=True)
-        else:
-            u.Cli.run_raw(("/bin/kill", "-9", str(pid)), timeout=2)
 
     def test_resource_limit_stops_workload_on_termination(self, tmp_path: Path) -> None:
         """Preserve external termination and reap the running workload."""

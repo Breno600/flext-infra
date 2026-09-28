@@ -52,3 +52,10 @@ received signal), then KILL after the configured grace period, including descend
 left after the checker exits. Accounting failures terminate the workload and propagate
 the error; they never cause an unbounded execution. No GNU utility, extra package, or
 shell shim is required on macOS.
+
+The real deadline and resistant-descendant test scenarios use the configured slow
+harness budget. Their checker deadlines reserve time for interpreter startup, the
+runner's termination grace, and assertions. Local `make test` includes these cases;
+CI's default marker policy excludes slow cases, so native macOS acceptance requires
+`make test-full`, whose full phase includes every marker. A default CI test receipt
+alone does not prove the supervisor's deadline and descendant behavior.

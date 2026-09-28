@@ -30,6 +30,19 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         )
 
     @staticmethod
+    def reap_mypy_descendant(pid_file: Path, timeout: int) -> None:
+        """Reap a registered workload in pytest teardown, preserving call failures."""
+        pid = pid_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        snapshot = u.Cli.run_raw(
+            ("/bin/ps", "-p", str(int(pid)), "-o", "stat="), timeout=timeout
+        ).unwrap()
+        if snapshot.outcome.raw_return_code not in (0, 1) or snapshot.stderr:
+            raise RuntimeError(snapshot.stderr)
+        state = snapshot.stdout.strip()
+        if state and not state.startswith("Z"):
+            u.Cli.run(("/bin/kill", "-KILL", pid), timeout=timeout).unwrap()
+
+    @staticmethod
     def mypy_workload(root: Path, plugin_body: str = "") -> m.Infra.MypyInvocation:
         """Create a real checker project with an optional workload plugin."""
         source = root / "checked.py"
