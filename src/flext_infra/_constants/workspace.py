@@ -60,6 +60,18 @@ class FlextInfraConstantsWorkspace:
         CHILD = "child"
 
     @unique
+    class BeadIssueStatus(StrEnum):
+        """Canonical statuses exposed by the configured Beads service."""
+
+        OPEN = "open"
+        IN_PROGRESS = "in_progress"
+        BLOCKED = "blocked"
+        DEFERRED = "deferred"
+        CLOSED = "closed"
+        PINNED = "pinned"
+        HOOKED = "hooked"
+
+    @unique
     class WorkProvisioningState(StrEnum):
         """Lifecycle state persisted for one work-lane reservation."""
 
@@ -78,6 +90,15 @@ class FlextInfraConstantsWorkspace:
         """Provisioning stage that failed after lane reservation."""
 
         SETUP = "setup"
+
+    @unique
+    class BeadIssueStatus(StrEnum):
+        """Beads issue states relevant to live lane ownership."""
+
+        OPEN = "open"
+        IN_PROGRESS = "in_progress"
+        BLOCKED = "blocked"
+        CLOSED = "closed"
 
     WORK_FORBIDDEN_SLUGS: ClassVar[frozenset[str]] = frozenset({
         "teste",
