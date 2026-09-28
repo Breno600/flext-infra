@@ -247,7 +247,7 @@ class TestsFlextInfraUtilitiesDocsGithubLinks:
 
         def test_shared_policy_does_not_require_personal_checkouts(self) -> None:
             """Standalone consumers do not depend on the policy author's home tree.
-            
+
             The shared (committed) policy has no local_checkout entries; local
             overrides are operator-private and must not affect standalone consumers.
             """
