@@ -135,6 +135,9 @@ endif
 PUBLIC_VERBS :={% for verb in make.verbs %} {{ verb.name }}{% endfor %}{% for verb in extra_verbs %} {{ verb.name }}{% endfor %}
 BUILTIN_VERBS :={% for verb in make.verbs %} {{ verb.name }}{% endfor %}
 SCRIPT_VERBS :={% for verb in extra_verbs %} {{ verb.name }}{% endfor %}
+{% if script_dispatch %}
+_SCRIPT_DISPATCH_ROOTS :={% for root in script_dispatch.roots %} {{ root }}{% endfor %}
+{% endif %}
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/{{ make.custom_handler_policy.filename }}
 CUSTOM_DECLARED_TARGETS :=
 ifneq ($(wildcard $(CUSTOM_MAKEFILE)),)
@@ -679,3 +682,13 @@ _builtin-waza:
 	@cd "$(PROJECT_ROOT)" && "$(SETUP_MISE)" exec -- waza check --no-update-check
 _builtin-duplication:
 	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates duplication --projects .
+
+{% if script_dispatch %}
+{% for verb in extra_verbs %}
+# Generated _builtin-{{ verb.name }} target
+# Source: auto-discovered from scripts/{{ verb.name }}/all.sh
+# Regenerate: make gen APPLY=Y
+_builtin-{{ verb.name }}:
+	$(UV_RUN) python "$(PROJECT_ROOT)/{{ script_dispatch.dispatcher }}" {{ verb.name }}
+{% endfor %}
+{% endif %}

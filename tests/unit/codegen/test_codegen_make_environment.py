@@ -27,11 +27,19 @@ class TestsCodegenMakeEnvironment:
         *,
         local_infra: bool = False,
         bootstrap: bool = False,
+        extra_verbs: tuple[m.Infra.MakeVerbSpec, ...] = (),
+        script_dispatch: m.Infra.ScriptDispatchSpec | None = None,
     ) -> tuple[Path, Path]:
         role = c.Infra.MakeProfile(profile.value)
         repository = test_u.Tests.repository_ref(
             "fixture-project", role=role
-        ).model_copy(update={"editable": True})
+        ).model_copy(
+            update={
+                "editable": True,
+                "extra_verbs": extra_verbs,
+                "script_dispatch": script_dispatch,
+            }
+        )
         project_root = tmp_path / profile.value / "fixture-project"
         WorktreeFixture.write_python_project(project_root, repository.distribution)
         if bootstrap:
@@ -798,3 +806,33 @@ class TestsCodegenMakeEnvironment:
             process.stdout + process.stderr,
             has="Ignoring unsupported Make input(s): FORBIDDEN_VAR",
         )
+
+    def test_generated_make_dispatches_script_verbs_to_builtin_targets(
+        self, tmp_path: Path
+    ) -> None:
+        """Auto-discovered script verbs get _builtin-<verb> dispatch targets."""
+        extra_verbs = (
+            m.Infra.MakeVerbSpec(
+                name="sync",
+                description="Dispatch sync through the declared script dispatcher.",
+                requires_apply=True,
+            ),
+        )
+        script_dispatch = m.Infra.ScriptDispatchSpec(
+            dispatcher="scripts/dispatch.py",
+            roots=("scripts",),
+        )
+        project_root, _repository_root = self._render_makefile(
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+            extra_verbs=extra_verbs,
+            script_dispatch=script_dispatch,
+        )
+        (project_root / "scripts" / "sync").mkdir(parents=True)
+        (project_root / "scripts" / "sync" / "all.sh").write_text(
+            "#!/bin/sh\necho sync\n", encoding="utf-8"
+        )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+        tm.that("_builtin-sync:" in makefile, eq=True)
+        tm.that("scripts/dispatch.py" in makefile, eq=True)
+        tm.that("sync" in makefile, eq=True)

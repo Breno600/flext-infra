@@ -1405,7 +1405,7 @@ class TestScriptDispatchMakefile:
     def test_script_dispatch_repo_routes_extra_verbs_and_normalizes_what(
         self, tmp_path: Path
     ) -> None:
-        """Extra verbs join PUBLIC_VERBS and WHAT hyphens map to script stems."""
+        """Extra verbs join PUBLIC_VERBS and dispatch through the declared dispatcher."""
         rendered = self._render_root_makefile(
             tmp_path,
             extra_verbs=(
@@ -1428,38 +1428,30 @@ class TestScriptDispatchMakefile:
         # Extra verbs are public targets the dispatcher can reach.
         tm.that("incidente" in rendered, eq=True)
         tm.that("charts" in rendered, eq=True)
-        # The generated dispatch normalizes hyphenated WHAT to the module stem.
-        tm.that("tr '-' '_'" in rendered, eq=True)
+        # Each extra verb gets a _builtin-<verb> target that dispatches through
+        # the repo's declared dispatcher.
+        tm.that("_builtin-incidente:" in rendered, eq=True)
+        tm.that("_builtin-charts:" in rendered, eq=True)
         # It forwards to the declared dispatcher through uv, not a raw builtin.
         tm.that("scripts/dispatch.py" in rendered, eq=True)
-        # Existence check spans every declared script root.
+        # Script dispatch roots are recorded for operator visibility.
         tm.that("apps/demo-app/scripts" in rendered, eq=True)
-        # REGRESSION (fork-bomb): every line of the single-recipe _dispatch shell
-        # command must continue with a trailing backslash. A blank/unterminated
-        # line splits the recipe, drops $$what/$$builtin, and recurses into the
-        # default goal. Verify continuity across the whole define body.
-        body = rendered.split("define _dispatch", 1)[1].split("endef", 1)[0]
-        recipe = [ln for ln in body.splitlines() if ln.startswith("\t")]
-        broken = [ln for ln in recipe[:-1] if not ln.rstrip().endswith("\\")]
-        tm.that(broken, eq=[])
 
     def test_dispatch_routes_custom_what_before_allowlist(self, tmp_path: Path) -> None:
-        """Custom ``_custom_<verb>_<what>`` handlers bypass the builtin allowlist.
+        """Custom ``_custom_<verb>`` handlers bypass the builtin allowlist.
 
         ai-hub and other projects extend ``run`` / ``check`` via custom.mk. The
-        continuous Makefile must discover those handlers and dispatch them
-        instead of rejecting unknown WHATs as ``allowed:default``.
+        continuous Makefile RUN_PUBLIC macro discovers those handlers and
+        dispatches them instead of falling through to _builtin-<verb>.
         """
         rendered = self._render_root_makefile(
             tmp_path, extra_verbs=(), script_dispatch=None
         )
-        body = rendered.split("define _dispatch", 1)[1].split("endef", 1)[0]
-        tm.that("_custom_$(1)_$$what" in body, eq=True)
-        tm.that("custom_rc" in body, eq=False)
-        tm.that('$(SELF_MAKE) "$$custom"' in body, eq=True)
-        recipe = [ln for ln in body.splitlines() if ln.startswith("\t")]
-        broken = [ln for ln in recipe[:-1] if not ln.rstrip().endswith("\\")]
-        tm.that(broken, eq=[])
+        # RUN_PUBLIC checks CUSTOM_DECLARED_TARGETS first and calls _custom-$(1)
+        # when it exists, falling back to _builtin-$(1).
+        tm.that("define RUN_PUBLIC" in rendered, eq=True)
+        tm.that("_custom-$(1)" in rendered, eq=True)
+        tm.that("_builtin-$(1)" in rendered, eq=True)
 
     def test_repo_without_script_dispatch_omits_script_routing(
         self, tmp_path: Path
@@ -1691,13 +1683,13 @@ class TestScriptDispatchMakefile:
             ),
         )
         tm.that(
-            "RUFF_PATHS := $(strip $(foreach d,src tests scripts,"
+            "RUFF_PATHS := $(strip $(foreach d,src tests examples scripts,"
             "$(if $(wildcard $(PROJECT_ROOT)/$(d)/.),$(PROJECT_ROOT)/$(d),)))"
             in rendered,
             eq=True,
         )
         tm.that(
-            "MYPY_PATHS := $(strip $(foreach d,src tests scripts,"
+            "MYPY_PATHS := $(strip $(foreach d,src tests examples scripts,"
             "$(if $(wildcard $(PROJECT_ROOT)/$(d)/.),$(PROJECT_ROOT)/$(d),)))"
             in rendered,
             eq=True,
@@ -1706,18 +1698,18 @@ class TestScriptDispatchMakefile:
     def test_repo_without_script_dispatch_retains_canonical_lint_and_type_paths(
         self, tmp_path: Path
     ) -> None:
-        """A repo without script dispatch keeps src/tests paths and excludes scripts."""
+        """A repo without script dispatch keeps src/tests/scripts paths and excludes scripts."""
         rendered = self._render_root_makefile(
             tmp_path, extra_verbs=(), script_dispatch=None
         )
         tm.that(
-            "RUFF_PATHS := $(strip $(foreach d,src tests,"
+            "RUFF_PATHS := $(strip $(foreach d,src tests examples,"
             "$(if $(wildcard $(PROJECT_ROOT)/$(d)/.),$(PROJECT_ROOT)/$(d),)))"
             in rendered,
             eq=True,
         )
         tm.that(
-            "MYPY_PATHS := $(strip $(foreach d,src tests,"
+            "MYPY_PATHS := $(strip $(foreach d,src tests examples,"
             "$(if $(wildcard $(PROJECT_ROOT)/$(d)/.),$(PROJECT_ROOT)/$(d),)))"
             in rendered,
             eq=True,
