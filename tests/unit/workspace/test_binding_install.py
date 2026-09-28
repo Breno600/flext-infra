@@ -17,7 +17,15 @@ class TestsFlextInfraBindingInstall:
     """Exercise the public binding CLI with real consumer and supplier packages."""
 
     @pytest.mark.parametrize(
-        "scenario", ["extras", "constraint", "inactive", "borrowed", "override", "override-constraint"]
+        "scenario",
+        [
+            "extras",
+            "constraint",
+            "inactive",
+            "borrowed",
+            "override",
+            "override-constraint",
+        ],
     )
     def test_binding_uses_consumer_contract(
         self, tmp_path: Path, scenario: str
@@ -112,7 +120,7 @@ class TestsFlextInfraBindingInstall:
             else:
                 tm.that(output, has="binding-candidate")
             return
-        tm.that(outcome.outcome.raw_return_code, eq=0, msg=output)
+        tm.that(u.Cli.process_succeeded(outcome.outcome), eq=True, msg=output)
         installed = tm.ok(
             u.Cli.run((
                 str(python),

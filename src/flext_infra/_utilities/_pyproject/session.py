@@ -65,7 +65,8 @@ class FlextInfraUtilitiesPyprojectSession:
             is not None
         )
         overrides = tuple(
-            item for item in active_overrides
+            item
+            for item in active_overrides
             if FlextInfraUtilitiesDependencies.dep_name(item) not in selected
         )
         override_names = frozenset(
