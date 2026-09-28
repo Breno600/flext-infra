@@ -111,6 +111,12 @@ exporta esse `RUNTIME_ROOT` e o `flext-infra` o lê como declaração tipada: a 
 interpretador que hospeda a ferramenta. Sem declaração, o dono deriva a raiz Git do
 checkout; uma declaração sem interpretador falha.
 
+Uma raiz de workspace declara cada membro anexado, de qualquer família (`flext-*` ou
+não), como fonte Git inline na linha de integração do próprio workspace, a mesma que o
+`.gitmodules` governado exige do membro; só as dependências `flext-*` que não são
+membros seguem a linha FLEXT. Assim o `uv.lock` da raiz resolve todos os membros sem
+overlay `[tool.uv.workspace]` (`flext-kd07c`).
+
 O mesmo `make upg` é o único escritor de `mise.version`, `bin/mise` e `bin/mise.cmd`.
 Ele resolve o release do Mise uma vez, pelo próprio Mise (`mise latest github:jdx/mise`,
 autenticado por `GITHUB_TOKEN` e sujeito ao `minimum_release_age` do Mise), e gera os
