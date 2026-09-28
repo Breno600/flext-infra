@@ -193,6 +193,25 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
         tm.that(violations[0].name, eq="GROUPS")
         tm.that(violations[0].action, eq="classvar_relocation")
 
+    def test_detects_every_class_constant_in_one_class(
+        self, tmp_path: Path, rope_project: t.Infra.RopeProject
+    ) -> None:
+        """Every class-level constant is reported, not only the first one."""
+        source = (
+            "class PlainClass:\n"
+            "    VERSION = '1.0'\n"
+            "    VENDOR_STRING_MAX_TOKENS = 64\n"
+        )
+        violations = FlextInfraClassPlacementDetector.detect_file(
+            u.Tests.detector_context(tmp_path / "consumer.py", source, rope_project)
+        )
+
+        tm.that(
+            sorted(v.name for v in violations),
+            eq=["VENDOR_STRING_MAX_TOKENS", "VERSION"],
+        )
+        tm.that({v.action for v in violations}, eq={"classvar_relocation"})
+
     def test_skips_implicit_constant_inside_constants_directory(
         self, tmp_path: Path, rope_project: t.Infra.RopeProject
     ) -> None:
@@ -358,6 +377,37 @@ class TestsFlextInfraRefactorInfraRefactorClassPlacement:
             " ".join(preview.message for preview in result.previewed),
             has="tests._constants",
         )
+
+    def test_classvar_relocation_moves_every_constant_in_one_run(
+        self, tmp_path: Path
+    ) -> None:
+        """ENFORCE-079 relocates every class constant in a single pass."""
+        project_root = tmp_path / "demo"
+        tests_pkg = project_root / "tests" / "unit"
+        tests_pkg.mkdir(parents=True)
+        (project_root / "tests" / "__init__.py").write_text("", encoding="utf-8")
+        (tests_pkg / "__init__.py").write_text("", encoding="utf-8")
+        constants_root = project_root / "tests" / "_constants"
+        constants_root.mkdir(parents=True)
+        (constants_root / "__init__.py").write_text(
+            '"""Constants."""\n', encoding="utf-8"
+        )
+        module_path = tests_pkg / "test_execution_result.py"
+        module_path.write_text(
+            "class TestsDemo:\n"
+            "    VERSION = '1.0'\n"
+            "    VENDOR_STRING_MAX_TOKENS = 64\n",
+            encoding="utf-8",
+        )
+
+        result = u.Tests.run_rope_fixer(
+            tmp_path, project_root, self._classvar_rule(), module_path, apply=True
+        )
+
+        tm.that(result.failed, eq=[])
+        source_text = module_path.read_text(encoding="utf-8")
+        tm.that(source_text, lacks="VERSION = '1.0'")
+        tm.that(source_text, lacks="VENDOR_STRING_MAX_TOKENS = 64")
 
     def test_autofix_dry_run_resolves_package_constants_module(
         self, tmp_path: Path
