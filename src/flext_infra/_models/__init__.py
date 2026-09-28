@@ -73,6 +73,7 @@ if TYPE_CHECKING:
     from .release import FlextInfraModelsRelease
     from .rope import FlextInfraModelsRope
     from .rope_move import FlextInfraModelsRopeMove
+    from .rope_rules import FlextInfraModelsRopeRules
     from .scan import FlextInfraModelsScan
     from .settings import FlextInfraSettingsModels
     from .sonarcloud import FlextInfraModelsSonarcloud
@@ -143,6 +144,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsRelease",
     "FlextInfraModelsRope",
     "FlextInfraModelsRopeMove",
+    "FlextInfraModelsRopeRules",
     "FlextInfraModelsScan",
     "FlextInfraModelsSonarcloud",
     "FlextInfraModelsTestmon",
@@ -224,12 +226,12 @@ _LAZY_IMPORTS = MappingProxyType(
             ".mixins": ("FlextInfraModelsMixins",),
             ".promoted": ("FlextInfraModelsPromoted",),
             ".refactor": ("FlextInfraModelsRefactor",),
-            "._codegen.journal": ("FlextInfraModelsCodegenJournal",),
             ".refactor_ast_grep": ("FlextInfraModelsRefactorGrep",),
             ".refactor_namespace_enforcer": ("FlextInfraModelsNamespaceEnforcer",),
             ".release": ("FlextInfraModelsRelease",),
             ".rope": ("FlextInfraModelsRope",),
             ".rope_move": ("FlextInfraModelsRopeMove",),
+            ".rope_rules": ("FlextInfraModelsRopeRules",),
             ".scan": ("FlextInfraModelsScan",),
             ".settings": ("FlextInfraSettingsModels",),
             ".sonarcloud": ("FlextInfraModelsSonarcloud",),
