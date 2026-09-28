@@ -100,15 +100,6 @@ class FlextInfraConstantsWorkspace:
 
         SETUP = "setup"
 
-    @unique
-    class BeadIssueStatus(StrEnum):
-        """Beads issue states relevant to live lane ownership."""
-
-        OPEN = "open"
-        IN_PROGRESS = "in_progress"
-        BLOCKED = "blocked"
-        CLOSED = "closed"
-
     WORK_ACTIVE_ISSUE_STATUSES: ClassVar[frozenset[BeadIssueStatus]] = frozenset({
         BeadIssueStatus.OPEN,
         BeadIssueStatus.IN_PROGRESS,
