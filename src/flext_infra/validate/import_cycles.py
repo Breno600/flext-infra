@@ -115,7 +115,7 @@ class FlextInfraValidateImportCycles(FlextInfraProjectSelectionServiceBase[bool]
                     continue
                 module_name = module_name_result.value
                 graph.setdefault(module_name, set())
-                module_imports = u.Infra.get_module_imports(project, resource)
+                module_imports = u.Infra.resolve_module_imports(project, resource)
                 for imported_name in self._iter_imported_modules(module_imports):
                     graph[module_name].add(imported_name)
         return graph
@@ -130,11 +130,11 @@ class FlextInfraValidateImportCycles(FlextInfraProjectSelectionServiceBase[bool]
         rope runtime/type errors or paths that do not yield a name.
         """
         try:
-            pymodule = u.Infra.get_pymodule(project, resource)
+            pymodule = u.Infra.resolve_pymodule(project, resource)
         except u.Infra.rope_runtime_errors() as exc:
-            return r[str].fail(f"get_pymodule rope error: {exc!s}", exception=exc)
+            return r[str].fail(f"resolve_pymodule rope error: {exc!s}", exception=exc)
         except TypeError as exc:
-            return r[str].fail(f"get_pymodule type error: {exc!s}", exception=exc)
+            return r[str].fail(f"resolve_pymodule type error: {exc!s}", exception=exc)
         try:
             name = pymodule.get_name()
         except c.EXC_ATTR_TYPE:

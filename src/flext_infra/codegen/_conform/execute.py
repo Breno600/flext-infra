@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Self, override
+from typing import Self, override
 
 from flext_core import r
 
@@ -19,44 +19,15 @@ from .. import (
 from .plan import FlextInfraCodegenConformPlan
 
 
-class _ConformExecuteRoles:
-    if TYPE_CHECKING:
-        request: m.Infra.CodegenConformRequest | None
-        repository_root: Path
-        initial_workspace: m.Infra.WorkspaceSpec | None
+class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
+    """Transactional execution of conformance plans.
 
-        def plan(
-            self, request: m.Infra.CodegenConformRequest
-        ) -> p.Result[m.Infra.CodegenPlan]: ...
-
-        @staticmethod
-        def mise_config_plans(
-            plan: m.Infra.CodegenPlan,
-        ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]: ...
-
-        def conform_workspace_beads_routes(
-            self, request: m.Infra.CodegenConformRequest
-        ) -> p.Result[bool]: ...
-
-        @staticmethod
-        def owned_docs_files(
-            request: m.Infra.CodegenConformRequest,
-            files: t.SequenceOf[m.Infra.CodegenFilePlan],
-        ) -> t.VariadicTuple[m.Infra.CodegenFilePlan]: ...
-
-        @classmethod
-        def _owned_docs_directories(
-            cls,
-            request: m.Infra.CodegenConformRequest,
-            plan: m.Infra.CodegenPlan,
-            directories: t.SequenceOf[Path],
-        ) -> t.VariadicTuple[Path]: ...
-
-
-class FlextInfraCodegenConformExecute(
-    _ConformExecuteRoles, FlextInfraCodegenConformPlan
-):
-    """Transactional execution of conformance plans."""
+    The chain is linear in dependency order, so execution statically inherits
+    everything it calls: bootstrap (service root, request state) <- gitignore
+    <- docs ownership <- beads routes <- file plans <- pyproject policy <-
+    context render <- artifact render <- existing plan <- scaffold plan <- plan
+    <- execute.
+    """
 
     @classmethod
     def execute_request(
@@ -519,7 +490,6 @@ class FlextInfraCodegenConformExecute(
             lambda: self._validate_managed_fixed_point(
                 request,
                 with_docs.value,
-                transaction,
                 owned_lazy_analysis,
                 docs_analysis,
                 verified_plan,
@@ -672,7 +642,6 @@ class FlextInfraCodegenConformExecute(
         self,
         request: m.Infra.CodegenConformRequest,
         session: m.Infra.CodegenTransactionSession,
-        transaction: FlextInfraCodegenTransaction,
         lazy_analysis: m.Infra.CodegenPhaseAnalysis,
         docs_analysis: m.Infra.CodegenPhaseAnalysis,
         verified_plan: list[m.Infra.CodegenPlan],
@@ -701,11 +670,15 @@ class FlextInfraCodegenConformExecute(
                 f"codegen publication did not reach a fixed point: {paths}\n{drift}"
             )
         u.Cli.info("stage=verify-lazy-init-receipt")
-        lazy_fixed_point = transaction.validate_phase_analysis_locked(lazy_analysis)
+        lazy_fixed_point = FlextInfraCodegenTransaction.validate_phase_analysis_locked(
+            lazy_analysis
+        )
         if lazy_fixed_point.failure:
             return r[bool].from_failure(lazy_fixed_point)
         u.Cli.info("stage=verify-docs-receipt")
-        docs_fixed_point = transaction.validate_phase_analysis_locked(docs_analysis)
+        docs_fixed_point = FlextInfraCodegenTransaction.validate_phase_analysis_locked(
+            docs_analysis
+        )
         if docs_fixed_point.failure:
             return r[bool].from_failure(docs_fixed_point)
         mise = FlextInfraCodegenMiseArtifacts(repository_root=request.root)
@@ -715,7 +688,9 @@ class FlextInfraCodegenConformExecute(
         else:
             project_layouts = plan.layout.projects
         for project_layout in project_layouts:
-            validated = mise.validate_artifacts(project_layout.root)
+            validated = mise.validate_artifacts(
+                project_layout.root, plan.layout.scope_root
+            )
             if validated.failure:
                 return r[bool].from_failure(validated)
         u.Cli.info("stage=verify-fresh-imports")

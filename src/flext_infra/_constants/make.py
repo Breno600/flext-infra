@@ -98,7 +98,6 @@ class FlextInfraConstantsMake:
         "markdown",
         "markdown-code",
         "canonical-alias",
-        "smells",
     )
     # markdown-format is deliberately absent: prettier is a formatter, so the
     # gate's mutating side is owned by `make fmt` (check = `prettier --check`),
@@ -111,6 +110,8 @@ class FlextInfraConstantsMake:
         "fmt",
         "fix",
         "fix-enforcement",
+        "fix-namespace",
+        "fix-accessors",
         "sonarcloud-sync",
         "test",
         "test-full",
@@ -146,7 +147,6 @@ class FlextInfraConstantsMake:
     PYTEST_ENV_REPORTS: ClassVar[str] = "FLEXT_PYTEST_REPORTS_RAW"
     PYTEST_ENV_TARGET: ClassVar[str] = "FLEXT_PYTEST_TARGET_RAW"
     PYTEST_ENV_CI: ClassVar[str] = "CI"
-    PYTEST_ENV_TESTMON_DATAFILE: ClassVar[str] = "TESTMON_DATAFILE"
     PYTEST_ENV_COLLECTION_MANIFEST: ClassVar[str] = "FLEXT_PYTEST_COLLECTION_MANIFEST"
     PYTEST_WARNING_EVENTS_SUFFIX: ClassVar[str] = ".warnings.jsonl"
     PYTEST_INHERITED_ENV_REMOVE_KEYS: ClassVar[t.StrSequence] = (

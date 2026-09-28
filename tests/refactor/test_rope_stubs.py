@@ -34,7 +34,7 @@ class TestsFlextInfraRefactorRopeStubs:
         project = u.Infra.init_rope_project(tmp_path)
         project = tm.not_none(project)
         try:
-            resource = u.Infra.get_resource_from_path(project, target)
+            resource = u.Infra.resolve_resource_from_path(project, target)
             resource = tm.not_none(resource)
             offset = u.Infra.find_definition_offset(project, resource, "Demo")
             offset = tm.not_none(offset)

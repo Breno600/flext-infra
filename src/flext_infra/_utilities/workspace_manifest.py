@@ -31,7 +31,7 @@ class FlextInfraUtilitiesWorkspaceManifest:
         return repository_root / c.CONFIG_DIR_NAME / c.Infra.WORKSPACE_MANIFEST_FILENAME
 
     @classmethod
-    def is_fleet_umbrella(cls, repository_root: Path) -> bool:
+    def fleet_umbrella(cls, repository_root: Path) -> bool:
         """Whether this checkout declares itself a fleet umbrella.
 
         The typed role in the handwritten workspace manifest is the only signal.

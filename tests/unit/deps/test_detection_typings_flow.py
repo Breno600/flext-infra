@@ -45,7 +45,7 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
         followed = self._governed_follow()
         limits = self._typed_reader(tmp_path, follow=followed)
         report = tm.ok(
-            FlextInfraDependencyDetectionService().get_required_typings(
+            FlextInfraDependencyDetectionService().analyze_required_typings(
                 tmp_path, limits
             )
         )
@@ -60,7 +60,7 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
         followed = self._governed_follow()
         limits = self._typed_reader(tmp_path, follow=not followed)
         tm.fail(
-            FlextInfraDependencyDetectionService().get_required_typings(
+            FlextInfraDependencyDetectionService().analyze_required_typings(
                 tmp_path, limits
             ),
             has="policy conflict",
@@ -97,11 +97,11 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
         )
         service = FlextInfraDependencyDetectionService()
         tm.that(
-            service.get_current_typings_from_pyproject(tmp_path),
+            service.read_current_typings_from_pyproject(tmp_path),
             eq=["pytest", "types-python-dateutil", "types-pyyaml", "types-requests"],
         )
         tm.that(
-            service.get_current_typings_from_pyproject(tmp_path, include_dev=False),
+            service.read_current_typings_from_pyproject(tmp_path, include_dev=False),
             eq=["types-pyyaml", "types-requests"],
         )
 
@@ -111,7 +111,7 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
             encoding="utf-8",
         )
         tm.that(
-            FlextInfraDependencyDetectionService().get_current_typings_from_pyproject(
+            FlextInfraDependencyDetectionService().read_current_typings_from_pyproject(
                 tmp_path
             ),
             empty=True,
@@ -123,13 +123,13 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
             encoding="utf-8",
         )
         with pytest.raises(c.ValidationError):
-            FlextInfraDependencyDetectionService().get_current_typings_from_pyproject(
+            FlextInfraDependencyDetectionService().read_current_typings_from_pyproject(
                 tmp_path
             )
 
     def test_absent_pyproject_has_no_declarations(self, tmp_path: Path) -> None:
         tm.that(
-            FlextInfraDependencyDetectionService().get_current_typings_from_pyproject(
+            FlextInfraDependencyDetectionService().read_current_typings_from_pyproject(
                 tmp_path
             ),
             empty=True,
@@ -144,13 +144,13 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
             encoding="utf-8",
         )
         with pytest.raises(ValueError, match="must not be blank"):
-            FlextInfraDependencyDetectionService().get_current_typings_from_pyproject(
+            FlextInfraDependencyDetectionService().read_current_typings_from_pyproject(
                 tmp_path
             )
 
     def test_malformed_pyproject_preserves_read_failure(self, tmp_path: Path) -> None:
         (tmp_path / "pyproject.toml").write_text("[broken", encoding="utf-8")
         with pytest.raises(RuntimeError, match="failed to read"):
-            FlextInfraDependencyDetectionService().get_current_typings_from_pyproject(
+            FlextInfraDependencyDetectionService().read_current_typings_from_pyproject(
                 tmp_path
             )

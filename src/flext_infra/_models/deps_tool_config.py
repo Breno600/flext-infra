@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from pathlib import Path
 from typing import Annotated, Literal, Self
 
@@ -10,6 +9,7 @@ from flext_cli import m, u
 
 from flext_infra import t
 
+from . import FlextInfraModelsDefaults
 from .deps_tool_config_linters import FlextInfraModelsDepsToolConfigLinters
 from .deps_tool_config_type_checkers import FlextInfraModelsDepsToolConfigTypeCheckers
 
@@ -34,8 +34,13 @@ class FlextInfraModelsDepsToolConfig(
     class ModConfig(m.ArbitraryTypesModel):
         """Declarative policy for the unified modernize verb ``mod``."""
 
+        @staticmethod
+        def _default_phases() -> FlextInfraModelsDepsToolConfig.ModPhasesConfig:
+            return FlextInfraModelsDepsToolConfig.ModPhasesConfig()
+
         phases: FlextInfraModelsDepsToolConfig.ModPhasesConfig = m.Field(
-            description="Phase toggles read from config/tooling.yaml."
+            default_factory=_default_phases,
+            description="Phase toggles read from config/tooling.yaml.",
         )
 
     class DeptryConfig(m.ArbitraryTypesModel):
@@ -151,11 +156,10 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         max_failures: Annotated[
-            int,
+            Literal[0],
             m.Field(
                 alias="max-failures",
-                ge=1,
-                description="Maximum failures before the pytest invocation stops.",
+                description="Run every selected test while preserving failure status.",
             ),
         ]
         enforcement_plugin: Annotated[
@@ -224,19 +228,20 @@ class FlextInfraModelsDepsToolConfig(
                 description="Pytest-xdist scheduler for full runs.",
             ),
         ]
-        parallel_worker_overrides: Annotated[
-            Mapping[str, int],
+        parallel_worker_min_items: Annotated[
+            int,
             m.Field(
-                alias="parallel-worker-overrides",
+                alias="parallel-worker-min-items",
+                gt=0,
                 description=(
-                    "Per declared-project worker ceilings (``[project].name`` "
-                    "→ workers) resolved by the runner over the fleet-wide "
-                    "``parallel-workers`` default: a consumer whose measured "
-                    "suite cannot fit the single-worker process boundary "
-                    "declares its ceiling here, inside the fleet cycle."
+                    "Minimum selected node count before xdist workers are"
+                    " spawned; each worker pays a full interpreter and plugin"
+                    " boot, measured well past the tests it then runs for a"
+                    " small selection, so a selection below this floor runs"
+                    " serialized in the invoking process instead."
                 ),
             ),
-        ] = {}
+        ]
         profile_sort: Annotated[
             Literal[
                 "calls",
@@ -332,10 +337,26 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
 
-        @property
-        def process_timeout_seconds(self) -> int:
-            """Derive the outer wall without creating a second config field."""
-            return self.run_timeout_seconds + (self.termination_grace_seconds * 2)
+        process_timeout_seconds: Annotated[
+            int,
+            m.Field(
+                alias="process-timeout-seconds",
+                gt=0,
+                description="Hard timeout for the complete cold/full pytest process.",
+            ),
+        ]
+        incremental_process_timeout_seconds: Annotated[
+            int,
+            m.Field(
+                alias="incremental-process-timeout-seconds",
+                gt=0,
+                description=(
+                    "Hard timeout for the incremental (PR-gate) pytest process;"
+                    " tighter than process-timeout-seconds so a stuck or"
+                    " accidentally full-scope incremental run fails fast."
+                ),
+            ),
+        ]
 
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
@@ -374,6 +395,32 @@ class FlextInfraModelsDepsToolConfig(
                 raise ValueError(msg)
             if self.slow_timeout_seconds >= self.run_timeout_seconds:
                 msg = "pytest slow timeout must be less than run timeout"
+                raise ValueError(msg)
+            if self.process_timeout_seconds <= self.run_timeout_seconds:
+                msg = (
+                    "pytest process timeout must exceed the run timeout: the"
+                    " process boundary caps the whole invocation, so a value at"
+                    " or below the session budget kills healthy suites"
+                )
+                raise ValueError(msg)
+            if self.process_timeout_seconds <= (
+                self.run_timeout_seconds + self.termination_grace_seconds
+            ):
+                msg = "pytest process timeout must exceed run and termination budgets"
+                raise ValueError(msg)
+            if self.incremental_process_timeout_seconds >= self.process_timeout_seconds:
+                msg = (
+                    "pytest incremental process timeout must be tighter than the"
+                    " full/cold process timeout"
+                )
+                raise ValueError(msg)
+            if self.incremental_process_timeout_seconds <= (
+                self.case_timeout_seconds + self.termination_grace_seconds
+            ):
+                msg = (
+                    "pytest incremental process timeout must include item and"
+                    " termination budgets"
+                )
                 raise ValueError(msg)
             derived_options = ("--timeout", "--session-timeout")
             if any(
@@ -567,10 +614,18 @@ class FlextInfraModelsDepsToolConfig(
             description="Glob patterns excluded from Markdown quality checks."
         )
 
+        @staticmethod
+        def _default_prettier() -> (
+            FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig
+        ):
+            """Resolve the policy owner after the enclosing model is defined."""
+            return FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig()
+
         prettier: Annotated[
             FlextInfraModelsDepsToolConfig.MarkdownPrettierConfig,
             m.Field(
-                description="Prettier formatting policy projected into .prettierrc."
+                default_factory=_default_prettier,
+                description="Prettier formatting policy projected into .prettierrc.",
             ),
         ]
 
@@ -626,7 +681,7 @@ class FlextInfraModelsDepsToolConfig(
         pyright: Annotated[
             t.StrMapping,
             m.Field(description="Pyright override settings for this project type."),
-        ]
+        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
 
     class ProjectTypeOverridesConfig(m.ArbitraryTypesModel):
         """Project-type-specific override matrix from ``config/tooling.yaml``."""
@@ -718,8 +773,13 @@ class FlextInfraModelsDepsToolConfig(
             alias="lazy-init", description="Declarative lazy-init generation policy."
         )
 
+        @staticmethod
+        def _default_mod() -> FlextInfraModelsDepsToolConfig.ModConfig:
+            return FlextInfraModelsDepsToolConfig.ModConfig()
+
         mod: FlextInfraModelsDepsToolConfig.ModConfig = m.Field(
-            description="Declarative make-mod phase policy."
+            default_factory=_default_mod,
+            description="Declarative make-mod phase policy.",
         )
 
     class ToolingScalarSetting(m.ArbitraryTypesModel):

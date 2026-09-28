@@ -146,7 +146,7 @@ class FlextInfraModelsCore:
             description="Canonical test operation for this report directory"
         )
         testmon_db: Path | None = m.Field(
-            description="Persistent external testmon database; absent for coverage"
+            description="pytest-testmon database in the repository root; absent for coverage"
         )
         deadline_monotonic: float = m.Field(
             gt=0, description="Shared absolute deadline across all execution phases"

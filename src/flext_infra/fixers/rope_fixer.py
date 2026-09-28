@@ -94,32 +94,25 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
         """Apply rope fixes grouped by target."""
         if not violations:
             return m.Infra.ProjectFixResult(project=project_dir.name)
-        fixed: list[m.Infra.FixedViolation] = []
-        previewed: list[m.Infra.PreviewedViolation] = []
-        skipped: list[m.Infra.SkippedViolation] = []
-        failed: list[m.Infra.FailedFix] = []
-        files_modified: set[str] = set()
+        results: list[m.Infra.ProjectFixResult] = []
         for target, target_violations in self._group_by_target(violations).items():
             handler = self._target_dispatch().get(target)
             if handler is None:
-                rule_id = target_violations[0][0].id
-                failed.append(
-                    m.Infra.FailedFix(
-                        rule_id=rule_id,
-                        file_path=str(project_dir),
-                        error=f"rope target {target} not registered",
+                results.append(
+                    m.Infra.ProjectFixResult(
+                        project=project_dir.name,
+                        failed=(
+                            m.Infra.FailedFix(
+                                rule_id=target_violations[0][0].id,
+                                file_path=str(project_dir),
+                                error=f"rope target {target} not registered",
+                            ),
+                        ),
                     )
                 )
                 continue
-            result = handler(project_dir, target_violations, ctx)
-            fixed.extend(result.fixed)
-            previewed.extend(result.previewed)
-            skipped.extend(result.skipped)
-            failed.extend(result.failed)
-            files_modified.update(result.files_modified)
-        return self._build_project_fix_result(
-            project_dir, fixed, previewed, skipped, failed, files_modified
-        )
+            results.append(handler(project_dir, target_violations, ctx))
+        return self._merge_project_fix_results(project_dir, results)
 
     def _target_dispatch(
         self,
@@ -232,7 +225,6 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
             [m.Infra.FileFixTarget, m.Infra.DetectorContext], m.Infra.FileFixOutcome
         ],
         targets: t.SequenceOf[m.Infra.FileFixTarget] | None = None,
-        empty_batch_reason: str | None = None,
     ) -> m.Infra.ProjectFixResult:
         """Run one per-file fix step across a batch and aggregate its outcomes.
 
@@ -249,74 +241,113 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
         selected = (
             self._file_targets(project_dir, violations) if targets is None else targets
         )
-        if not selected and empty_batch_reason is not None:
-            return self._empty_batch_result(project_dir, rule_id, empty_batch_reason)
-        fixed: list[m.Infra.FixedViolation] = []
-        previewed: list[m.Infra.PreviewedViolation] = []
-        skipped: list[m.Infra.SkippedViolation] = []
-        failed: list[m.Infra.FailedFix] = []
-        files_modified: set[str] = set()
         with u.Infra.open_project(self._repository_root) as rope_project:
-            for target in selected:
-                outcome = step(
+            results = tuple(
+                self._outcome_result(
+                    project_dir,
+                    rule_id,
                     target,
-                    m.Infra.DetectorContext(
-                        file_path=target.file_path,
-                        rope_project=rope_project,
-                        project_name=project_dir.name,
-                        project_root=project_dir,
+                    step(
+                        target,
+                        m.Infra.DetectorContext(
+                            file_path=target.file_path,
+                            rope_project=rope_project,
+                            project_name=project_dir.name,
+                            project_root=project_dir,
+                        ),
                     ),
+                    apply=ctx.apply,
                 )
-                skipped.extend(
-                    m.Infra.SkippedViolation(
-                        rule_id=rule_id, file_path=target.record_path, reason=reason
-                    )
-                    for reason in outcome.skipped
+                for target in selected
+            )
+        return self._merge_project_fix_results(project_dir, results)
+
+    @staticmethod
+    def _outcome_result(
+        project_dir: Path,
+        rule_id: str,
+        target: m.Infra.FileFixTarget,
+        outcome: m.Infra.FileFixOutcome,
+        *,
+        apply: bool,
+    ) -> m.Infra.ProjectFixResult:
+        """Record what one per-file step decided as skipped/failed/fixed/previewed.
+
+        Change messages are fixes when applying and previews otherwise; only an
+        applied change reports the files it modified.
+        """
+        return m.Infra.ProjectFixResult(
+            project=project_dir.name,
+            skipped=tuple(
+                m.Infra.SkippedViolation(
+                    rule_id=rule_id, file_path=target.record_path, reason=reason
                 )
-                failed.extend(
-                    m.Infra.FailedFix(
-                        rule_id=rule_id, file_path=target.record_path, error=error
-                    )
-                    for error in outcome.errors
+                for reason in outcome.skipped
+            ),
+            failed=tuple(
+                m.Infra.FailedFix(
+                    rule_id=rule_id, file_path=target.record_path, error=error
                 )
-                if ctx.apply:
-                    files_modified.update(outcome.files_modified)
-                    fixed.extend(
-                        m.Infra.FixedViolation(
-                            rule_id=rule_id,
-                            file_path=target.record_path,
-                            message=message,
-                        )
-                        for message in outcome.messages
-                    )
-                else:
-                    previewed.extend(
-                        m.Infra.PreviewedViolation(
-                            rule_id=rule_id,
-                            file_path=target.record_path,
-                            message=message,
-                        )
-                        for message in outcome.messages
-                    )
-        return self._build_project_fix_result(
-            project_dir, fixed, previewed, skipped, failed, files_modified
+                for error in outcome.errors
+            ),
+            fixed=tuple(
+                m.Infra.FixedViolation(
+                    rule_id=rule_id, file_path=target.record_path, message=message
+                )
+                for message in outcome.messages
+                if apply
+            ),
+            previewed=tuple(
+                m.Infra.PreviewedViolation(
+                    rule_id=rule_id, file_path=target.record_path, message=message
+                )
+                for message in outcome.messages
+                if not apply
+            ),
+            files_modified=outcome.files_modified if apply else (),
+        )
+
+    def _run_batch_file_fix_steps(
+        self,
+        *,
+        project_dir: Path,
+        violations: t.SequenceOf[t.Pair[m.EnforcementRuleSpec, p.AttributeProbe]],
+        ctx: m.Infra.FixEnforcementCommand,
+        step: Callable[
+            [m.Infra.FileFixTarget, m.Infra.DetectorContext], m.Infra.FileFixOutcome
+        ],
+    ) -> m.Infra.ProjectFixResult:
+        """Run ``step`` over the batch's own files, recording an empty batch as skip."""
+        targets = self._file_targets(project_dir, violations)
+        if not targets:
+            return self._empty_batch_result(
+                project_dir, self._rule_id(violations), "no files in violation batch"
+            )
+        return self._run_file_fix_steps(
+            project_dir=project_dir,
+            violations=violations,
+            ctx=ctx,
+            step=step,
+            targets=targets,
         )
 
     @staticmethod
     def _detect_and_rewrite_step[V](
         *,
         detector: Callable[[m.Infra.DetectorContext], t.SequenceOf[V]],
-        filter_violations: Callable[[t.SequenceOf[V]], t.SequenceOf[V]],
+        auto_fixable: Callable[[t.SequenceOf[V]], t.SequenceOf[V]] | None,
         rewrite: Callable[[m.Infra.DetectorContext, t.SequenceOf[V]], None],
-        empty_reason: str,
-        change_message: Callable[[int, bool], str],
-        detector_error_detail: str,
-        rewrite_error_detail: str,
+        violation_kind: str,
         apply: bool,
     ) -> Callable[
         [m.Infra.FileFixTarget, m.Infra.DetectorContext], m.Infra.FileFixOutcome
     ]:
-        """Build a per-file step that detects, filters, then rewrites in place."""
+        """Build a per-file step that detects, selects, then rewrites in place.
+
+        ``auto_fixable`` narrows the detected violations to the ones this step
+        may rewrite (``None`` rewrites every detected one); ``violation_kind``
+        names them in every skip, failure and change message.
+        """
 
         def _step(
             target: m.Infra.FileFixTarget, detect_ctx: m.Infra.DetectorContext
@@ -325,19 +356,31 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
                 file_violations = detector(detect_ctx)
             except c.EXC_BROAD_RUNTIME as exc:
                 return m.Infra.FileFixOutcome(
-                    errors=(f"{detector_error_detail}: {exc}",)
+                    errors=(f"{violation_kind} detector failed: {exc}",)
                 )
-            selected = filter_violations(file_violations)
+            selected = (
+                file_violations
+                if auto_fixable is None
+                else auto_fixable(file_violations)
+            )
             if not selected:
-                return m.Infra.FileFixOutcome(skipped=(empty_reason,))
+                qualifier = "" if auto_fixable is None else "auto-fixable "
+                return m.Infra.FileFixOutcome(
+                    skipped=(f"no {qualifier}{violation_kind} violations",)
+                )
             try:
                 rewrite(detect_ctx, selected)
             except c.EXC_BROAD_RUNTIME as exc:
                 return m.Infra.FileFixOutcome(
-                    errors=(f"{rewrite_error_detail}: {exc}",)
+                    errors=(f"{violation_kind} rewrite failed: {exc}",)
                 )
             return m.Infra.FileFixOutcome(
-                messages=(change_message(len(selected), apply),),
+                messages=(
+                    (
+                        f"{'rewrote' if apply else 'would rewrite'} "
+                        f"{len(selected)} {violation_kind} violation(s)"
+                    ),
+                ),
                 files_modified=(target.record_path,),
             )
 
@@ -354,7 +397,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
         def _step(
             target: m.Infra.FileFixTarget, detect_ctx: m.Infra.DetectorContext
         ) -> m.Infra.FileFixOutcome:
-            resource = u.Infra.get_resource_from_path(
+            resource = u.Infra.resolve_resource_from_path(
                 detect_ctx.rope_project, target.file_path
             )
             if resource is None:
@@ -400,22 +443,15 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
                     violations=file_violations, parse_failures=[]
                 )
 
-        return self._run_file_fix_steps(
+        return self._run_batch_file_fix_steps(
             project_dir=project_dir,
             violations=violations,
             ctx=ctx,
-            empty_batch_reason="no files in violation batch",
             step=self._detect_and_rewrite_step(
                 detector=FlextInfraCompatibilityAliasDetector.detect_file,
-                filter_violations=lambda v: v,
+                auto_fixable=None,
                 rewrite=_rewrite,
-                empty_reason="no compatibility alias violations",
-                change_message=lambda count, applying: (
-                    f"{'rewrote' if applying else 'would rewrite'} "
-                    f"{count} compatibility alias violation(s)"
-                ),
-                detector_error_detail="compatibility alias detector failed",
-                rewrite_error_detail="compatibility alias rewrite failed",
+                violation_kind="compatibility alias",
                 apply=ctx.apply,
             ),
         )
@@ -428,57 +464,41 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
     ) -> m.Infra.ProjectFixResult:
         """Remove source ``.pyi`` stubs when apply mode is enabled."""
         rule_id = self._rule_id(violations)
-        fixed: list[m.Infra.FixedViolation] = []
-        previewed: list[m.Infra.PreviewedViolation] = []
-        skipped: list[m.Infra.SkippedViolation] = []
-        failed: list[m.Infra.FailedFix] = []
-        files_modified: set[str] = set()
-        file_paths = self._collect_file_paths(project_dir, violations)
-        stub_paths = tuple(path for path in file_paths if path.suffix == ".pyi")
-        if not stub_paths:
+        stub_targets = tuple(
+            target
+            for target in self._file_targets(project_dir, violations)
+            if target.file_path.suffix == ".pyi"
+        )
+        if not stub_targets:
             return self._empty_batch_result(
                 project_dir, rule_id, "no .pyi stubs in violation batch"
             )
-        for file_path in stub_paths:
-            if not file_path.is_file():
-                skipped.append(
-                    m.Infra.SkippedViolation(
-                        rule_id=rule_id,
-                        file_path=str(file_path),
-                        reason="stub file not found",
-                    )
-                )
-                continue
+
+        def _remove(target: m.Infra.FileFixTarget) -> m.Infra.FileFixOutcome:
+            if not target.file_path.is_file():
+                return m.Infra.FileFixOutcome(skipped=("stub file not found",))
             message = (
                 f"{'would remove' if not ctx.apply else 'removed'} "
-                f"source stub {file_path.relative_to(project_dir)}"
+                f"source stub {target.file_path.relative_to(project_dir)}"
             )
             if not ctx.apply:
-                previewed.append(
-                    m.Infra.PreviewedViolation(
-                        rule_id=rule_id, file_path=str(file_path), message=message
-                    )
-                )
-                continue
+                return m.Infra.FileFixOutcome(messages=(message,))
             try:
-                file_path.unlink()
+                target.file_path.unlink()
             except OSError as exc:
-                failed.append(
-                    m.Infra.FailedFix(
-                        rule_id=rule_id,
-                        file_path=str(file_path),
-                        error=f"stub removal failed: {exc}",
-                    )
-                )
-                continue
-            files_modified.add(str(file_path))
-            fixed.append(
-                m.Infra.FixedViolation(
-                    rule_id=rule_id, file_path=str(file_path), message=message
-                )
+                return m.Infra.FileFixOutcome(errors=(f"stub removal failed: {exc}",))
+            return m.Infra.FileFixOutcome(
+                messages=(message,), files_modified=(target.record_path,)
             )
-        return self._build_project_fix_result(
-            project_dir, fixed, previewed, skipped, failed, files_modified
+
+        return self._merge_project_fix_results(
+            project_dir,
+            tuple(
+                self._outcome_result(
+                    project_dir, rule_id, target, _remove(target), apply=ctx.apply
+                )
+                for target in stub_targets
+            ),
         )
 
     def _fix_private_import_bypass(
@@ -500,24 +520,17 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
                 apply=ctx.apply,
             )
 
-        return self._run_file_fix_steps(
+        return self._run_batch_file_fix_steps(
             project_dir=project_dir,
             violations=violations,
             ctx=ctx,
-            empty_batch_reason="no files in violation batch",
             step=self._detect_and_rewrite_step(
                 detector=FlextInfraPrivateImportBypassDetector.detect_file,
-                filter_violations=lambda detected: tuple(
+                auto_fixable=lambda detected: tuple(
                     violation for violation in detected if violation.symbol_exported
                 ),
                 rewrite=_rewrite,
-                empty_reason="no auto-fixable private import bypass violations",
-                change_message=lambda count, applying: (
-                    f"{'rewrote' if applying else 'would rewrite'} "
-                    f"{count} private import bypass violation(s)"
-                ),
-                detector_error_detail="private import bypass detector failed",
-                rewrite_error_detail="private import bypass rewrite failed",
+                violation_kind="private import bypass",
                 apply=ctx.apply,
             ),
         )
@@ -583,7 +596,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
             )
             if not hoistable:
                 return m.Infra.FileFixOutcome(skipped=(empty_reason,))
-            resource = u.Infra.get_resource_from_path(
+            resource = u.Infra.resolve_resource_from_path(
                 detect_ctx.rope_project, target.file_path
             )
             if resource is None:
@@ -816,7 +829,7 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
                 return m.Infra.FileFixOutcome(skipped=("rope resource not found",))
             class_infos = tuple(
                 class_info
-                for class_info in u.Infra.get_class_info(
+                for class_info in u.Infra.resolve_class_info(
                     detect_ctx.rope_project, resource
                 )
                 if not any(

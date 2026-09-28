@@ -154,7 +154,7 @@ class FlextInfraUtilitiesRelease:
         return r[c.Infra.VersionBump].ok(bump)
 
     @staticmethod
-    def is_release_subject(subject: str, version: str) -> bool:
+    def release_subject(subject: str, version: str) -> bool:
         """Whether ``subject`` is the protocol's release commit for ``version``.
 
         Matches the commit as the lane wrote it and as GitHub merged it, which
@@ -210,15 +210,9 @@ class FlextInfraUtilitiesRelease:
         repository_root: Path, version: str, tag: str, notes_path: Path
     ) -> p.Result[bool]:
         """Update docs/changelog and docs/releases entries."""
-        docs = repository_root / c.Infra.DIR_DOCS
-        changelog_path = docs / "CHANGELOG.md"
-        latest_path = docs / "releases" / "latest.md"
-        tagged_path = docs / "releases" / f"{tag}.md"
         try:
             FlextInfraUtilitiesRelease._write_changelog_files(
-                changelog_path=changelog_path,
-                latest_path=latest_path,
-                tagged_path=tagged_path,
+                repository_root=repository_root,
                 version=version,
                 tag=tag,
                 notes_path=notes_path,
@@ -229,15 +223,13 @@ class FlextInfraUtilitiesRelease:
 
     @staticmethod
     def _write_changelog_files(
-        *,
-        changelog_path: Path,
-        latest_path: Path,
-        tagged_path: Path,
-        version: str,
-        tag: str,
-        notes_path: Path,
+        *, repository_root: Path, version: str, tag: str, notes_path: Path
     ) -> None:
-        """Write changelog and release note files."""
+        """Write the docs changelog plus the latest and tagged release notes."""
+        docs = repository_root / c.Infra.DIR_DOCS
+        changelog_path = docs / "CHANGELOG.md"
+        latest_path = docs / "releases" / "latest.md"
+        tagged_path = docs / "releases" / f"{tag}.md"
         notes_text = notes_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         existing = (
             changelog_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)

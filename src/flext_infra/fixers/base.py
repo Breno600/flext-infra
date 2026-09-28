@@ -44,29 +44,26 @@ class FlextInfraFixerAdapter:
         raise NotImplementedError(msg)
 
     @staticmethod
-    def _build_project_fix_result(
-        project_dir: Path,
-        fixed: t.SequenceOf[m.Infra.FixedViolation],
-        previewed: t.SequenceOf[m.Infra.PreviewedViolation],
-        skipped: t.SequenceOf[m.Infra.SkippedViolation],
-        failed: t.SequenceOf[m.Infra.FailedFix],
-        files_modified: t.IterableOf[str] = (),
+    def _merge_project_fix_results(
+        project_dir: Path, results: t.SequenceOf[m.Infra.ProjectFixResult]
     ) -> m.Infra.ProjectFixResult:
-        """Build the immutable ``ProjectFixResult`` from accumulated outcomes.
+        """Merge per-target or per-file results into the project's one result.
 
-        Every adapter ends its run by naming the same six things, so the shape
-        belongs to the adapter contract rather than to each adapter. Callers
-        accumulate ``files_modified`` in a set, whose iteration order is not
-        stable between runs; sorting here makes the reported file list
-        deterministic for the caller that prints or diffs it.
+        Every adapter step already reports a ``ProjectFixResult``, so merging
+        them belongs to the adapter contract rather than to each adapter.
+        Records keep their order per outcome kind; ``files_modified`` is
+        deduplicated and sorted so the reported file list is deterministic for
+        the caller that prints or diffs it.
         """
         return m.Infra.ProjectFixResult(
             project=project_dir.name,
-            fixed=tuple(fixed),
-            previewed=tuple(previewed),
-            skipped=tuple(skipped),
-            failed=tuple(failed),
-            files_modified=tuple(sorted(files_modified)),
+            fixed=tuple(item for result in results for item in result.fixed),
+            previewed=tuple(item for result in results for item in result.previewed),
+            skipped=tuple(item for result in results for item in result.skipped),
+            failed=tuple(item for result in results for item in result.failed),
+            files_modified=tuple(
+                sorted({path for result in results for path in result.files_modified})
+            ),
         )
 
     @staticmethod

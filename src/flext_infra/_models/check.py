@@ -20,11 +20,14 @@ class FlextInfraModelsCheck:
 
         Inherits canonical ``repository_root`` (``--repository-root``),
         ``gates`` (parsed to ``t.StrSequence``), ``apply``/``dry_run``,
-        ``projects``, ``fail_fast``, ``verbose`` from ``WriteMixin``; the scope
+        ``projects`` and ``verbose`` from ``WriteMixin``; the scope
         root has exactly one owner so an unmapped option can never fall back
         to the current directory.
         """
 
+        fail_fast: Annotated[
+            bool, m.Field(description="Stop check gates after the first failure")
+        ] = c.Infra.CHECK_FAIL_FAST_DEFAULT
         reports_dir: Annotated[
             str,
             m.Field(
@@ -110,6 +113,11 @@ class FlextInfraModelsCheck:
 
     class FixEnforcementCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-enforcement``."""
+
+        @property
+        def fail_fast(self) -> bool:
+            """Share the service's fail-fast invariant with gate adapters."""
+            return c.Infra.SERVICE_FAIL_FAST
 
         rules: Annotated[
             t.StrSequence,

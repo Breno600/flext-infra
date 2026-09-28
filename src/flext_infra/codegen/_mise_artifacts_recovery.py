@@ -452,73 +452,56 @@ class FlextInfraMiseRecovery:
         entry: m.Infra.CodegenJournalEntry,
         prefix: Literal["original", "desired", "rollback"],
     ) -> _FileIdentity:
-        if prefix == "original":
-            return FlextInfraMiseRecovery._stored_identity(
-                exists=entry.original_exists,
-                parent_device=entry.original_parent_device,
-                parent_inode=entry.original_parent_inode,
-                sha256=entry.original_sha256,
-                mode=entry.original_mode,
-                device=entry.original_device,
-                inode=entry.original_inode,
-                link_count=entry.original_link_count,
-                file_attributes=entry.original_file_attributes,
-                reparse_tag=entry.original_reparse_tag,
-            )
-        if prefix == "desired":
-            return FlextInfraMiseRecovery._stored_identity(
-                exists=entry.desired_exists,
-                parent_device=entry.desired_parent_device,
-                parent_inode=entry.desired_parent_inode,
-                sha256=entry.desired_sha256,
-                mode=entry.desired_mode,
-                device=entry.desired_device,
-                inode=entry.desired_inode,
-                link_count=entry.desired_link_count,
-                file_attributes=entry.desired_file_attributes,
-                reparse_tag=entry.desired_reparse_tag,
-            )
-        return FlextInfraMiseRecovery._stored_identity(
-            exists=entry.rollback_exists,
-            parent_device=entry.rollback_parent_device,
-            parent_inode=entry.rollback_parent_inode,
-            sha256=entry.rollback_sha256,
-            mode=entry.rollback_mode,
-            device=entry.rollback_device,
-            inode=entry.rollback_inode,
-            link_count=entry.rollback_link_count,
-            file_attributes=entry.rollback_file_attributes,
-            reparse_tag=entry.rollback_reparse_tag,
-        )
-
-    @staticmethod
-    def _stored_identity(
-        *,
-        exists: bool | None,
-        parent_device: int | None,
-        parent_inode: int | None,
-        sha256: str | None,
-        mode: int | None,
-        device: int | None,
-        inode: int | None,
-        link_count: int | None,
-        file_attributes: int | None,
-        reparse_tag: int | None,
-    ) -> _FileIdentity:
         """Build one journal identity without dynamically addressing model fields."""
-        parent = (parent_device, parent_inode)
+        stored: t.MappingKV[str, t.Pair[bool | None, _FileIdentity]] = {
+            "original": (
+                entry.original_exists,
+                (
+                    entry.original_parent_device,
+                    entry.original_parent_inode,
+                    entry.original_sha256,
+                    entry.original_mode,
+                    entry.original_device,
+                    entry.original_inode,
+                    entry.original_link_count,
+                    entry.original_file_attributes,
+                    entry.original_reparse_tag,
+                ),
+            ),
+            "desired": (
+                entry.desired_exists,
+                (
+                    entry.desired_parent_device,
+                    entry.desired_parent_inode,
+                    entry.desired_sha256,
+                    entry.desired_mode,
+                    entry.desired_device,
+                    entry.desired_inode,
+                    entry.desired_link_count,
+                    entry.desired_file_attributes,
+                    entry.desired_reparse_tag,
+                ),
+            ),
+            "rollback": (
+                entry.rollback_exists,
+                (
+                    entry.rollback_parent_device,
+                    entry.rollback_parent_inode,
+                    entry.rollback_sha256,
+                    entry.rollback_mode,
+                    entry.rollback_device,
+                    entry.rollback_inode,
+                    entry.rollback_link_count,
+                    entry.rollback_file_attributes,
+                    entry.rollback_reparse_tag,
+                ),
+            ),
+        }
+        exists, identity = stored[prefix]
         if not exists:
-            return (*parent, None, None, None, None, None, None, None)
-        return (
-            *parent,
-            sha256,
-            mode,
-            device,
-            inode,
-            link_count,
-            file_attributes,
-            reparse_tag,
-        )
+            # An absent file keeps only its parent directory identity.
+            return (identity[0], identity[1], None, None, None, None, None, None, None)
+        return identity
 
 
 __all__: list[str] = ["FlextInfraMiseRecovery"]

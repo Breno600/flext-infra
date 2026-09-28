@@ -38,7 +38,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         if workspace.beads is None:
             if owner.exists() or owner.is_symlink():
                 return r[bool].fail(
-                    f"Beads is disabled but a ledger route exists: {owner}"
+                    f"Beads-disabled repository still has Beads state: {owner}"
                 )
             return r[bool].ok(True)
         # The ledger directory is a conform projection: absent before the
@@ -96,7 +96,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
             entry.name
             for entry in route.iterdir()
             if entry.name not in allowed_entries
-            and not FlextInfraCodegenConformBeadsRoutes.is_dry_run_config_backup(
+            and not FlextInfraCodegenConformBeadsRoutes.dry_run_config_backup(
                 entry.name
             )
         )
@@ -109,7 +109,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         return r[bool].ok(True)
 
     @staticmethod
-    def is_dry_run_config_backup(name: str) -> bool:
+    def dry_run_config_backup(name: str) -> bool:
         """Return whether ``name`` is a dry-run ``config.yaml`` backup snapshot.
 
         Why (cosmos-3flk9): the bd client rewrites ``last-touched`` on every

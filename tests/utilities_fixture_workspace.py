@@ -9,7 +9,6 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import config, u
-from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_infra.worktree import FlextInfraWorktreeService
@@ -126,8 +125,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         managed Makefile renders into its help block, so a caller controls
         real rendered content through the declaration the loader validates.
 
-        ``gascity_enabled`` declares the repository policy overlay's Gas City
-        participation; ``None`` writes no overlay at all (the fleet default).
+        ``gascity_enabled`` declares the Gas City participation of a repository
+        that participates in Beads; ``None`` writes no overlay at all (the fleet
+        default). An overlay states every participation explicitly: its Beads
+        default is off, and Gas City requires Beads.
         """
         repository = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
             name, role=role
@@ -159,7 +160,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 update={
                     "repository_policy_overlays": (
                         m.Infra.RepositoryPolicyOverlaySpec(
-                            project=name, gascity_enabled=gascity_enabled
+                            project=name,
+                            beads_enabled=True,
+                            gascity_enabled=gascity_enabled,
                         ),
                     )
                 }
@@ -201,6 +204,17 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
             project_dir, name
         )
+        # Provider identity is declared, never a checkout path: the governed
+        # HTTPS URL is the origin the manifest carries, so the workspace the
+        # detector loads satisfies the canonical-HTTPS provider gate (a bare
+        # ``str(root)`` origin reads as a path, not an identity).
+        TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(
+            project_dir,
+            origin_url=(
+                f"{TestsFlextInfraUtilitiesProjectFixtureMixin.provider().base_url.rstrip('/')}/"
+                f"{name}.git"
+            ),
+        )
         origin = tm.ok(
             u.Infra.git_remote_url(
                 m.Infra.GitRemoteUrlRequest(
@@ -222,10 +236,14 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
     @staticmethod
     def required_beads(workspace: m.Infra.WorkspaceSpec) -> m.Infra.BeadsProjectSpec:
-        """Assert that a Beads-enabled fixture resolved its ledger identity."""
-        beads = workspace.beads
-        assert beads is not None
-        return beads
+        """Return the ledger identity the observed loader must always resolve.
+
+        Callers use this only for fixtures that explicitly enable Beads.
+        """
+        if workspace.beads is None:
+            msg = "test fixture requires Beads participation"
+            raise ValueError(msg)
+        return workspace.beads
 
     @staticmethod
     def to_pascal(snake: str) -> str:
@@ -309,19 +327,6 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                     encoding="utf-8",
                 )
         return project
-
-    @staticmethod
-    def create_checker_project(
-        tmp_path: Path, *, project_name: str = "p1", with_src: bool = False
-    ) -> t.Pair[FlextInfraWorkspaceChecker, Path]:
-        """Provide the typed test helper `create_checker_project`."""
-        checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
-        project_dir = TestsFlextInfraUtilitiesWorkspaceFixtureMixin.mk_project(
-            tmp_path, project_name
-        )
-        if with_src:
-            (project_dir / "src").mkdir(parents=True, exist_ok=True)
-        return checker, project_dir
 
     class WorktreeFixture:
         """Provide one repository and lane-path contract without collecting tests."""

@@ -60,7 +60,9 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
     class GateContext(m.ContractModel):
         """Quality gate execution context and configuration."""
 
-        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = True
+        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = (
+            c.Infra.CHECK_FAIL_FAST_DEFAULT
+        )
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", arbitrary_types_allowed=True, populate_by_name=True
         )
@@ -102,6 +104,21 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         severity: Annotated[
             Literal["error", "note"], m.Field(description="Mypy diagnostic severity")
         ]
+
+    class MypySourceInventory(m.ContractModel):
+        """Native source set one Mypy build logged, valid on cache hits too."""
+
+        sources: Annotated[
+            t.SequenceOf[str],
+            m.Field(min_length=1, description="Absolute paths of the build sources"),
+        ]
+
+        @u.model_validator(mode="after")
+        def _validate_sources(self) -> Self:
+            if any(not Path(path).is_absolute() for path in self.sources):
+                msg = "Mypy source inventory must identify absolute source paths"
+                raise ValueError(msg)
+            return self
 
     class PyrightPosition(m.ContractModel):
         """Zero-based native diagnostic position."""

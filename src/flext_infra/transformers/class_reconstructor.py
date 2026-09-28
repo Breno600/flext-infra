@@ -47,7 +47,7 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
         edits: list[t.Triple[int, int, str]] = []
         for class_name, class_pyname in pymodule.get_attributes().items():
             class_obj = class_pyname.get_object()
-            if not u.Infra.is_pyclass(class_obj):
+            if not u.Infra.abstract_class(class_obj):
                 continue
             block_edits = self._class_block_edits(
                 class_name=class_name, class_obj=class_obj, lines=lines
@@ -113,7 +113,7 @@ class FlextInfraRefactorClassReconstructor(FlextInfraRopeTransformer):
         raw: list[t.Triple[int, int, m.Infra.MethodInfo]] = []
         for method_name, method_pyname in class_obj.get_attributes().items():
             method_obj = method_pyname.get_object()
-            if not u.Infra.is_pyfunction(method_obj):
+            if not u.Infra.py_function(method_obj):
                 continue
             # flext-j47u (codex): Rope returns a tuple; only its line is optional.
             location = method_pyname.get_definition_location()

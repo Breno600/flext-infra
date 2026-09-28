@@ -73,7 +73,6 @@ class FlextInfraValidateTierWhitelist(FlextInfraRopeImportBoundaryBase):
             ".worktrees",
             "worktrees",
             "flext-infra-worktrees",
-            ".flext-runtime",
             "dist",
             ".agents-sync-home",
             ".beads",

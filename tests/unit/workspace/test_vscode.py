@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, config, u as infra_u
+from flext_infra import c, config
 from flext_infra.services.codegen import FlextInfraCodegen
 from tests import u
 
@@ -47,20 +47,14 @@ class TestsFlextInfraCodegenVscode:
         doc = u.Tests.json_payload(result.value)
         tm.that("python.analysis.typeCheckingMode" in doc, eq=False)
         tm.that("python.analysis.diagnosticSeverityOverrides" in doc, eq=False)
-        setting = config.Infra.codegen.vscode.runtime_interpreter_setting
-        projected_path = str(doc[setting])
-        tm.that(projected_path.startswith("${workspaceFolder}/"), eq=True)
+        interpreter = "python.defaultInterpreterPath"
         tm.that(
-            (
-                project_root / projected_path.removeprefix("${workspaceFolder}/")
-            ).resolve(),
-            eq=infra_u.Infra.runtime_environment_dir(project_root),
+            doc[interpreter],
+            eq=config.Infra.codegen.vscode.scalar_settings[interpreter],
         )
-        search_paths = u.Tests.toml_strings(
-            doc[c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY]
-        )
-        tm.that(search_paths, eq=tuple(u.Tests.vscode_declared_search_paths()))
-        tm.that("./apps/*/.venv" in search_paths, eq=False)
+        search_paths_key = c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY
+        tm.that(search_paths_key in config.Infra.codegen.vscode.list_settings, eq=False)
+        tm.that(search_paths_key in doc, eq=False)
         excludes = u.Tests.toml_mapping(doc["files.exclude"])
         tm.that("**/.retired-cache" in excludes, eq=False)
         tm.that(excludes["**/.mypy_cache"], eq=True)
@@ -107,7 +101,7 @@ class TestsFlextInfraCodegenVscode:
         tm.ok(second)
         tm.that(second.value, eq=first.value)
 
-    def test_search_paths_are_independent_from_repository_topology(
+    def test_python_environment_settings_are_independent_from_repository_topology(
         self, tmp_path: Path
     ) -> None:
         """Keep opened-folder settings canonical for roots and subprojects."""
@@ -135,12 +129,9 @@ class TestsFlextInfraCodegenVscode:
         tm.ok(standalone)
         tm.that(result.value.encode(), eq=standalone.value.encode())
         doc = u.Tests.json_payload(result.value)
-        search_paths = u.Tests.toml_strings(
-            doc[c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY]
-        )
-        tm.that(search_paths, eq=tuple(u.Tests.vscode_declared_search_paths()))
-        tm.that("./apps/a/.venv" in search_paths, eq=False)
-        tm.that("./libs/b/.venv" in search_paths, eq=False)
+        search_paths_key = c.Infra.VSCODE_PYTHON_ENVS_SEARCH_PATHS_KEY
+        tm.that(search_paths_key in config.Infra.codegen.vscode.list_settings, eq=False)
+        tm.that(search_paths_key in doc, eq=False)
 
     def test_invalid_json_fails_without_producing_a_document(
         self, tmp_path: Path

@@ -31,6 +31,14 @@ class FlextInfraAccessorMigrationReportMixin:
         @property
         def lint_tool_names(self) -> t.StrSequence: ...
 
+        def _apply_automated_rewrites(
+            self, rope_project: t.Infra.RopeProject, py_file: Path, source: str
+        ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]: ...
+
+        def _collect_manual_warnings(
+            self, py_file: Path, source: str
+        ) -> t.SequenceOf[m.Infra.AccessorMigrationChange]: ...
+
     @staticmethod
     def _accumulate_lint_totals(
         totals: MutableMapping[str, int], snapshot: t.Infra.LintSnapshot
@@ -41,15 +49,18 @@ class FlextInfraAccessorMigrationReportMixin:
 
     def _process_file(
         self,
+        rope_project: t.Infra.RopeProject,
         py_file: Path,
-        *,
         source: str,
-        updated_source: str,
-        automated_changes: t.SequenceOf[m.Infra.AccessorMigrationChange],
-        warnings: t.MutableSequenceOf[m.Infra.AccessorMigrationChange],
-        include_preview: bool,
+        *,
+        preview_available: bool,
     ) -> m.Infra.AccessorMigrationFile:
-        """Process file."""
+        """Rewrite one file, collect its manual warnings and lint evidence."""
+        updated_source, automated_changes = self._apply_automated_rewrites(
+            rope_project, py_file, source
+        )
+        warnings = list(self._collect_manual_warnings(py_file, source))
+        include_preview = bool(automated_changes or warnings) and preview_available
         lint_before: MutableMapping[str, t.StrSequence] = {}
         lint_after: MutableMapping[str, t.StrSequence] = {}
         new_lint_errors: MutableMapping[str, t.StrSequence] = {}

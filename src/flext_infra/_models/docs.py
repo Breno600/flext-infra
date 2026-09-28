@@ -5,7 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import c, t
 
 from ._config import FlextInfraConfigModels
@@ -15,8 +16,10 @@ from .docs_generation import FlextInfraModelsDocsGeneration
 
 # NOTE (multi-agent, flext-wkii.17.23 / agent: uv_overlay_owner): docs transport
 # retains the exact metadata/config models and declares only analysis deltas.
-class _FlextInfraDocsContracts:
-    """Field-only source and rendering contracts for documentation."""
+class FlextInfraModelsDocs(
+    FlextInfraModelsDocsGeneration, FlextInfraModelsDocsCollection
+):
+    """Models for documentation services."""
 
     class DocsTocToken(m.ContractModel):
         """One rendered heading and its nested headings from Python-Markdown."""
@@ -29,7 +32,7 @@ class _FlextInfraDocsContracts:
             str, m.Field(alias="data-toc-label", description="Explicit TOC label")
         ]
         children: Annotated[
-            t.SequenceOf[_FlextInfraDocsContracts.DocsTocToken],
+            t.SequenceOf[FlextInfraModelsDocs.DocsTocToken],
             m.Field(description="Nested heading tokens"),
         ]
 
@@ -37,7 +40,7 @@ class _FlextInfraDocsContracts:
         """Validated output of Python-Markdown's registered TOC extension."""
 
         toc_tokens: Annotated[
-            t.SequenceOf[_FlextInfraDocsContracts.DocsTocToken],
+            t.SequenceOf[FlextInfraModelsDocs.DocsTocToken],
             m.Field(description="Rendered table of contents tokens"),
         ]
 
@@ -69,14 +72,6 @@ class _FlextInfraDocsContracts:
 
         project_class: Annotated[str, m.Field(description="Project class")]
         count: Annotated[t.NonNegativeInt, m.Field(description="Project count")]
-
-
-class FlextInfraModelsDocs(
-    FlextInfraModelsDocsGeneration,
-    FlextInfraModelsDocsCollection,
-    _FlextInfraDocsContracts,
-):
-    """Models for documentation services."""
 
     class DocsCollectRequest(m.ContractModel):
         """Fixed-effect collection command with repository-owned configuration."""
@@ -203,7 +198,7 @@ class FlextInfraModelsDocs(
             t.StrTuple, m.Field(default=(), description="Rope-resolved public symbols")
         ] = ()
         export_bindings: Annotated[
-            t.VariadicTuple[_FlextInfraDocsContracts.DocsExportBinding],
+            t.VariadicTuple[FlextInfraModelsDocs.DocsExportBinding],
             m.Field(default=(), description="Export-to-module bindings"),
         ] = ()
         modules: Annotated[

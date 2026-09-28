@@ -10,6 +10,7 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
     from . import _codegen, _config, _git
+    from ._codegen.base import FlextInfraCodegen
     from ._codegen.fix import FlextInfraModelsCodegenFixModels
     from ._codegen.journal import FlextInfraModelsCodegenJournalModels
     from ._codegen.lazy_init import FlextInfraModelsCodegenLazyInitModels
@@ -35,7 +36,6 @@ if TYPE_CHECKING:
     from .base import FlextInfraModelsBase
     from .census import FlextInfraModelsCensus
     from .check import FlextInfraModelsCheck
-    from .codegen import FlextInfraCodegen
     from .codegen_render import FlextInfraModelsCodegenRender
     from .codegen_toolchain import FlextInfraModelsCodegenToolchain
     from .codemod import FlextInfraModelsCodemod
@@ -79,6 +79,7 @@ if TYPE_CHECKING:
     from .testmon import FlextInfraModelsTestmon
     from .transformers import FlextInfraModelsTransformers
     from .validate import FlextInfraModelsCore
+    from .work_lane import FlextInfraModelsWorkLane
     from .workspace import FlextInfraModelsWorkspace
     from .worktree import FlextInfraModelsWorktree
 
@@ -146,6 +147,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsSonarcloud",
     "FlextInfraModelsTestmon",
     "FlextInfraModelsTransformers",
+    "FlextInfraModelsWorkLane",
     "FlextInfraModelsWorkspace",
     "FlextInfraModelsWorktree",
     "FlextInfraSettingsModels",
@@ -158,6 +160,7 @@ _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
             "._codegen": ("_codegen",),
+            "._codegen.base": ("FlextInfraCodegen",),
             "._codegen.fix": ("FlextInfraModelsCodegenFixModels",),
             "._codegen.journal": ("FlextInfraModelsCodegenJournalModels",),
             "._codegen.lazy_init": ("FlextInfraModelsCodegenLazyInitModels",),
@@ -185,7 +188,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".base": ("FlextInfraModelsBase",),
             ".census": ("FlextInfraModelsCensus",),
             ".check": ("FlextInfraModelsCheck",),
-            ".codegen": ("FlextInfraCodegen",),
             ".codegen_render": ("FlextInfraModelsCodegenRender",),
             ".codegen_toolchain": ("FlextInfraModelsCodegenToolchain",),
             ".codemod": ("FlextInfraModelsCodemod",),
@@ -233,6 +235,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".testmon": ("FlextInfraModelsTestmon",),
             ".transformers": ("FlextInfraModelsTransformers",),
             ".validate": ("FlextInfraModelsCore",),
+            ".work_lane": ("FlextInfraModelsWorkLane",),
             ".workspace": ("FlextInfraModelsWorkspace",),
             ".worktree": ("FlextInfraModelsWorktree",),
         }),

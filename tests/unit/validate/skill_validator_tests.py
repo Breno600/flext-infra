@@ -167,7 +167,7 @@ class TestsFlextInfraSkillValidator:
             'rules:\n  - id: t\n    type: ast-grep\n    file: "rule.yaml"\n',
         )
         self._write_target(tmp_path, "forbidden_token = 1\n")
-        report: m.Infra.ValidationReport = tm.ok(
+        report = tm.ok(
             FlextInfraSkillValidator(skill="test-skill").build_report(
                 tmp_path, "test-skill", mode=c.Infra.OperationMode.STRICT
             )
@@ -213,7 +213,7 @@ class TestsFlextInfraSkillValidator:
             tm.ok(u.Cli.json_dumps({"counts": {"t": 0}})), encoding="utf-8"
         )
 
-        report: m.Infra.ValidationReport = tm.ok(
+        report = tm.ok(
             FlextInfraSkillValidator(skill="test-skill").build_report(
                 tmp_path, "test-skill", mode=c.Infra.OperationMode.BASELINE
             )

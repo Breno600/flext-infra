@@ -67,8 +67,8 @@ class TestsFlextInfraCodegenMakeLockContract:
         (root.parent / c.Infra.MISE_TOML_FILENAME).write_text(
             "invalid-parent = [\n", encoding="utf-8"
         )
-        pin = (root / c.Infra.MISE_VERSION_PIN_FILENAME).read_text().strip()
-
+        # The launcher bakes the pinned release itself: no MISE_VERSION is
+        # injected, and an inherited one must not leak into the probe.
         process = tm.ok(
             u.Cli.run_raw(
                 [
@@ -80,8 +80,8 @@ class TestsFlextInfraCodegenMakeLockContract:
                     "--json",
                 ],
                 cwd=root,
-                env={"MISE_VERSION": pin},
                 remove_env_keys=(
+                    "MISE_VERSION",
                     *c.Tests.MAKE_ISOLATION_ENV_KEYS,
                     "GIT_CEILING_DIRECTORIES",
                     "MISE_CEILING_PATHS",
@@ -171,12 +171,16 @@ class TestsFlextInfraCodegenMakeLockContract:
         )
         bootstrap = u.Infra.mise_bootstrap_environment()
         cold_storage = tmp_path / "unprovisioned-mise"
-        release = (root / bootstrap.version_pin_file).read_text(encoding="utf-8")
+        release = tm.ok(
+            u.Infra.mise_pinned_release(
+                (root / bootstrap.version_pin_file).read_text(encoding="utf-8")
+            )
+        )
         # The host's direnv launcher may itself be a Mise shim that provisions
         # direnv into the storage it is handed; the activation contract is only
         # that the pinned Mise runtime is never installed.
         template = bootstrap.runtime_install_relative_template
-        pinned_runtime = cold_storage / template.format(release=release.strip())
+        pinned_runtime = cold_storage / template.format(release=release)
 
         process = tm.ok(
             u.Cli.run_raw(

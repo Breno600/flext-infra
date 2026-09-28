@@ -252,11 +252,13 @@ class TestsFlextInfraDepsModernizerToolTables:
             repository_root=tmp_path, skip_check=True
         )
         root_path = tmp_path / "pyproject.toml"
+        root_topology = m.Infra.PyprojectDeclaredTopology(project_kind="platform")
+        member_topology = m.Infra.PyprojectDeclaredTopology()
         root_first: str = tm.ok(
             modernizer.conform_source(
                 '[project]\nname = "arbitrary-root"\n',
                 path=root_path,
-                project_kind="platform",
+                topology=root_topology,
             )
         )
         member_path = tmp_path / "arbitrary-member" / "pyproject.toml"
@@ -266,18 +268,23 @@ class TestsFlextInfraDepsModernizerToolTables:
                 '[project]\nname = "arbitrary-member"\n'
                 'dependencies = ["flext-core", "flext-cli", "flext-ldap"]\n',
                 path=member_path,
+                topology=member_topology,
             )
         )
         tm.that(
             tm.ok(
                 modernizer.conform_source(
-                    root_first, path=root_path, project_kind="platform"
+                    root_first, path=root_path, topology=root_topology
                 )
             ),
             eq=root_first,
         )
         tm.that(
-            tm.ok(modernizer.conform_source(member_first, path=member_path)),
+            tm.ok(
+                modernizer.conform_source(
+                    member_first, path=member_path, topology=member_topology
+                )
+            ),
             eq=member_first,
         )
         for rendered in (root_first, member_first):

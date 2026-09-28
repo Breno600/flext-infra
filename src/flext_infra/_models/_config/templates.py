@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from flext_cli import m
 
@@ -17,9 +17,12 @@ class FlextInfraConfigModelsTemplates:
     """Managed file and template entry specification models."""
 
     class TemplateEntrySpec(FlextInfraConfigModelsContract.ConfigContract):
-        """One scaffold-only template mapping consumed by ``codegen new``."""
+        """One scaffold artifact and its typed rendering owner."""
 
-        source: Annotated[Path, m.Field(description="Template-root-relative source")]
+        source: Annotated[
+            Path | None,
+            m.Field(description="Template-root-relative source for render entries"),
+        ] = None
         destination: Annotated[
             t.NonEmptyStr,
             m.Field(description="Tokenized repository-relative destination"),
@@ -29,7 +32,8 @@ class FlextInfraConfigModelsTemplates:
             m.Field(description="Profiles that consume the template"),
         ]
         delegate: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical rendering delegate")
+            FlextInfraConstantsCodegenProject.TemplateDelegate,
+            m.Field(description="Canonical rendering delegate"),
         ]
         overwrite: Annotated[
             bool, m.Field(description="Whether the template owns existing content")
@@ -49,8 +53,23 @@ class FlextInfraConfigModelsTemplates:
             m.Field(description="Whether the projection requires Beads participation"),
         ] = False
 
+        @m.model_validator(mode="after")
+        def validate_delegate_source(self) -> Self:
+            """Require a template only for the delegate that renders one."""
+            if (
+                self.delegate
+                == FlextInfraConstantsCodegenProject.TemplateDelegate.RENDER
+            ):
+                if self.source is None:
+                    msg = "render delegate requires a template source"
+                    raise ValueError(msg)
+            elif self.source is not None:
+                msg = "manifest delegate must not declare a template source"
+                raise ValueError(msg)
+            return self
+
     class TemplatesSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """New-project scaffold root and its complete ordered manifest."""
+        """New-project scaffold root and ordered artifact declarations."""
 
         root: Annotated[Path, m.Field(description="Package-relative template root")]
         entries: Annotated[

@@ -294,12 +294,6 @@ class FlextInfraConfigModelsMake:
         schema_version: Annotated[
             int, m.Field(ge=1, description="Cache key schema version")
         ]
-        namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="Persistent state namespace")
-        ]
-        invocation_namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="Pytest invocation namespace")
-        ]
         database_filename: Annotated[
             t.NonEmptyStr, m.Field(description="pytest-testmon database filename")
         ]

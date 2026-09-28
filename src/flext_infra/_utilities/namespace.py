@@ -330,14 +330,12 @@ class FlextInfraUtilitiesCodegenNamespace:
         resolved_rel_path: Path,
         package_parts: t.StrSequence,
         family_alias: str | None,
-        expected_alias: str | None,
-        expected_family: str | None,
-    ) -> tuple[bool, bool, bool, bool, bool, bool, bool, bool, str | None]:
-        """Return all is_* booleans and resolved surface_name.
+    ) -> tuple[bool, bool, bool, bool, bool, bool, bool]:
+        """Return the module/package placement booleans for one file.
 
         Returns: (is_fixture_module, is_family_module, is_family_package,
                   is_services_module, is_services_package, is_namespace_file,
-                  is_root_namespace, is_governed_namespace, resolved expected_alias)
+                  is_root_namespace)
         """
         package_depth = len(package_parts)
         is_fixture_module = file_path.parent.name == "_fixtures"
@@ -351,9 +349,6 @@ class FlextInfraUtilitiesCodegenNamespace:
         is_services_module = "services" in resolved_rel_path.parts
         is_services_package = "services" in package_parts
         is_namespace_file = bool(cls._declared_exports(file_path))
-        is_governed_namespace = (
-            expected_alias is not None or expected_family is not None
-        )
         is_root_namespace = (
             is_namespace_file
             and len(resolved_rel_path.parts) == 1
@@ -367,8 +362,6 @@ class FlextInfraUtilitiesCodegenNamespace:
             is_services_package,
             is_namespace_file,
             is_root_namespace,
-            is_governed_namespace,
-            expected_alias,
         )
 
     @classmethod
@@ -428,15 +421,11 @@ class FlextInfraUtilitiesCodegenNamespace:
             is_services_package,
             is_namespace_file,
             is_root_namespace,
-            is_governed_namespace,
-            expected_alias,
         ) = cls._resolve_module_flags(
-            file_path,
-            resolved_rel_path,
-            package_parts,
-            family_alias,
-            expected_alias,
-            expected_family,
+            file_path, resolved_rel_path, package_parts, family_alias
+        )
+        is_governed_namespace = (
+            expected_alias is not None or expected_family is not None
         )
 
         surface_name = package_parts[0] if package_parts else ""
@@ -653,7 +642,7 @@ class FlextInfraUtilitiesCodegenNamespace:
             return
         with FlextInfraUtilitiesRopeCore.open_project(file_path.parent) as rope_project:
             resource: t.Infra.RopeResource | None = (
-                FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, file_path
                 )
             )
@@ -661,7 +650,9 @@ class FlextInfraUtilitiesCodegenNamespace:
                 return
             source = resource.read()
             class_infos = sorted(
-                FlextInfraUtilitiesRopeAnalysis.get_class_info(rope_project, resource),
+                FlextInfraUtilitiesRopeAnalysis.resolve_class_info(
+                    rope_project, resource
+                ),
                 key=operator.attrgetter("line"),
             )
             if not class_infos:

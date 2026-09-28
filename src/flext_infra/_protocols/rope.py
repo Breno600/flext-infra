@@ -42,6 +42,19 @@ class FlextInfraProtocolsRope(Protocol):
         def apply_to_source(self, source: str) -> t.Infra.TransformResult: ...
 
     @runtime_checkable
+    class RopeModuleCallback(Protocol):
+        """Validate or alter one module inside the owner Rope cycle."""
+
+        def __call__(
+            self,
+            workspace: FlextInfraProtocolsRope.RopeWorkspaceDsl,
+            visit: m.Infra.RopeModuleVisit,
+            /,
+        ) -> p.Result[m.Infra.RopeCallbackOutcome]:
+            """Return one typed validation or mutation outcome."""
+            ...
+
+    @runtime_checkable
     class RopeScopeDsl(Protocol):
         """Public scope contract for Rope semantic traversal."""
 
@@ -104,6 +117,13 @@ class FlextInfraProtocolsRope(Protocol):
             self, *, project_names: t.StrSequence | None = None
         ) -> t.SequenceOf[m.Infra.RopeModuleIndexEntry]: ...
 
+        def cycle(
+            self,
+            callbacks: t.SequenceOf[m.Infra.RopeCallbackBinding],
+            *,
+            project_names: t.StrSequence | None = None,
+        ) -> p.Result[m.Infra.RopeCycleReport]: ...
+
         def source(self, file_path: Path) -> str: ...
 
         def name_index(
@@ -154,12 +174,12 @@ class FlextInfraProtocolsRope(Protocol):
         """Class contract shared by the Rope analysis mixins."""
 
         @staticmethod
-        def get_module_classes(
+        def resolve_module_classes(
             rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
         ) -> t.StrSequence: ...
 
         @staticmethod
-        def get_class_methods(
+        def resolve_class_methods(
             rope_project: t.Infra.RopeProject,
             resource: t.Infra.RopeResource,
             class_name: str,
@@ -177,30 +197,21 @@ class FlextInfraProtocolsRope(Protocol):
         def init_rope_workspace(repository_root: Path) -> t.Infra.RopeProject: ...
 
         @staticmethod
-        def get_resource_from_path(
+        def resolve_resource_from_path(
             rope_project: t.Infra.RopeProject, file_path: Path
         ) -> t.Infra.RopeResource | None: ...
 
     @runtime_checkable
     class CensusModuleRule(Protocol):
-        """Call contract shared by the symbol-indexed census rule scanners.
+        """Call contract shared by the structural census rule scanners.
 
-        Every structural census rule that consults the module symbol index is
-        invoked through this one contract, so the census dispatcher owns a
-        single call site instead of one hand-written block per rule.
+        Every structural census rule reads one module under census through
+        this one contract, so the census dispatcher owns a single call site
+        instead of one hand-written block per rule.
         """
 
         def __call__(
-            self,
-            rope: p.Infra.RopeWorkspaceDsl,
-            file_path: Path,
-            *,
-            project_name: str,
-            objects: t.VariadicTuple[m.Infra.Object] | None,
-            applied: frozenset[str],
-            selected_kinds: frozenset[str],
-            symbol_index: t.MappingKV[str, t.Pair[str, int]],
-            convention: m.Infra.RopeModuleConvention,
+            self, scan: m.Infra.ModuleScan
         ) -> tuple[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
 
 

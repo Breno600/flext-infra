@@ -15,6 +15,17 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
     """Load Rope project/module/import objects behind protocols."""
 
     @classmethod
+    def parse_rope_module(cls, source: str, *, filename: str) -> t.Infra.RopeAstNode:
+        """Parse one source snapshot through Rope's canonical syntax boundary."""
+        parsed = cls._runtime_callable("rope.base.ast", "parse")(
+            source, filename=filename
+        )
+        if not isinstance(parsed, p.Infra.RopeAstNode):
+            msg = "rope parser returned an invalid module node"
+            raise TypeError(msg)
+        return parsed
+
+    @classmethod
     def snapshot_project(
         cls, project: p.Infra.RopeProject, sources: t.MappingKV[Path, str]
     ) -> p.Infra.RopeProject:
@@ -230,7 +241,7 @@ class FlextInfraUtilitiesRopeRuntimeModules(FlextInfraUtilitiesRopeRuntimeBase):
                 raise TypeError(msg)
 
     @classmethod
-    def get_string_module(
+    def build_string_module(
         cls,
         rope_project: t.Infra.RopeProject,
         source: str,

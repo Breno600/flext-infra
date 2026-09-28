@@ -61,7 +61,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 )
                 conformed = cls.conformed_pyproject_source(
                     rendered,
-                    repository_root=repository_root,
                     repository=repository,
                     workspace=workspace,
                     codegen=codegen,
@@ -222,8 +221,10 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 )
             )
         if destination == c.Infra.ENVRC_FILENAME:
-            # The workspace declaration owns whether a Beads route exists.
-            # A repository without one must not render ledger activation.
+            # Conform targets always own a governed Beads identity, so the
+            # rendered tier is binary here: city server wiring when the
+            # repository declares city participation, the repository-local
+            # bd base otherwise.
             return r[p.Model].ok(
                 m.Infra.EnvrcRenderSpec(
                     repository_root_rel=self._repository_root_rel(workspace),
@@ -236,13 +237,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     ),
                     mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                     gascity=(
-                        None
-                        if workspace.beads is None
-                        else (
-                            m.Infra.BeadsWorkspaceEnvironmentSpec()
-                            if target.gascity_enabled
-                            else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
-                        )
+                        m.Infra.BeadsWorkspaceEnvironmentSpec()
+                        if target.gascity_enabled
+                        else m.Infra.BeadsWorkspaceEnvironmentSpec(backend="local")
                     ),
                 )
             )
@@ -257,10 +254,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[p.Model].ok(m.Infra.ToolchainSpec(**toolchain_data))
 
         if destination == c.Infra.BEADS_CONFIG_RELPATH:
-            if target.beads is None:
-                return r[p.Model].fail(
-                    "Beads artifact selected for a repository with Beads disabled"
-                )
             project_types = target.beads.custom_issue_types
             required_types = codegen.toolchain.beads.required_custom_types
             beads = codegen.toolchain.beads
@@ -280,10 +273,6 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                 )
             )
         if destination == c.Infra.BEADS_METADATA_RELPATH:
-            if target.beads is None:
-                return r[p.Model].fail(
-                    "Beads artifact selected for a repository with Beads disabled"
-                )
             # Why: this marker is regenerated on every `make gen`, but the
             # ledger identity inside it is owned by the checkout, not by the
             # fleet SSOT. Rendering without it stripped the key, and Beads then
@@ -412,11 +401,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     uv_link_mode=self.link_mode(repository, codegen.toolchain),
                     uv_version=codegen.toolchain.uv_version,
                     mise_lockfile_platforms=codegen.toolchain.mise_lockfile_platforms,
-                    npm_package_manager=codegen.toolchain.npm_package_manager,
                     qlty_selector=codegen.toolchain.qlty_selector,
                     jscpd_selector=codegen.toolchain.jscpd_selector,
                     prettier_selector=codegen.toolchain.prettier_selector,
-                    ast_grep_selector=codegen.toolchain.ast_grep_selector,
                     scc_selector=codegen.toolchain.scc_selector,
                     waza_selector=codegen.toolchain.waza_selector,
                     make=codegen.make,
@@ -443,6 +430,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     timeout_kill_after_seconds=c.Infra.TIMEOUT_KILL_AFTER_SECONDS,
                     pytest_process_timeout_seconds=(
                         config.Infra.tooling.tools.pytest.process_timeout_seconds
+                    ),
+                    pytest_incremental_process_timeout_seconds=(
+                        config.Infra.tooling.tools.pytest.incremental_process_timeout_seconds
                     ),
                 )
             )

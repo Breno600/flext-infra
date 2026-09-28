@@ -119,10 +119,9 @@ class TestsFlextInfraRuntimeAliasDeclarations:
             layout = tm.not_none(rope.layout(repository))
             tm.that(
                 FlextInfraNamespaceValidator.check_structure(
-                    u.Infra.get_pymodule(rope.rope_project, resource).get_ast(),
+                    u.Infra.resolve_pymodule(rope.rope_project, resource).get_ast(),
                     source.relative_to(repository),
                     class_stem=layout.class_stem,
-                    is_test_file=False,
                     source=repaired,
                     policy=policy,
                 ),
@@ -213,10 +212,38 @@ class TestsFlextInfraRuntimeAliasDeclarations:
         with infra.rope_workspace(repository) as rope:
             resource = tm.not_none(rope.resource(source))
             tm.that(
-                u.Infra.get_module_classes(rope.rope_project, resource), eq=("Api",)
+                u.Infra.resolve_module_classes(rope.rope_project, resource), eq=("Api",)
             )
             tm.that(
                 u.Infra.declared_facade_owner(rope.rope_project, resource), none=True
+            )
+
+    def test_api_does_not_republish_inherited_service_alias(
+        self, tmp_path: Path
+    ) -> None:
+        """A root service alias does not become an alias of its API subclass."""
+        repository, package = self._workspace(tmp_path)
+        (package / c.Infra.INIT_PY).write_text(
+            "from .owner import Parent as s\n__all__ = ['s']\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        source = package / "api.py"
+        source.write_text(
+            "from flext_declarations import s\n"
+            "class Api(s):\n    pass\n"
+            "__all__ = ['Api']\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        with infra.rope_workspace(repository) as rope:
+            resource = tm.not_none(rope.resource(source))
+            tm.that(
+                u.Infra.published_facade_owner(rope.rope_project, resource), none=True
+            )
+            tm.that(
+                u.Infra.publication_policy(
+                    source, rope_project=rope.rope_project
+                ).expected_alias,
+                none=True,
             )
 
     def test_publication_preserves_inherited_settings_without_inventing_alias(
@@ -243,7 +270,7 @@ class TestsFlextInfraRuntimeAliasDeclarations:
             tm.that(policy.expected_alias, none=True)
             resource = tm.not_none(rope.resource(source))
             tm.that(
-                u.Infra.get_declared_module_imports(rope.rope_project, resource)[
+                u.Infra.resolve_declared_module_imports(rope.rope_project, resource)[
                     "Settings"
                 ],
                 eq="flext_declarations.Settings",

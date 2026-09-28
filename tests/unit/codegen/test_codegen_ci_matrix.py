@@ -427,6 +427,12 @@ class TestsFlextInfraCodegenCiMatrix:
     ) -> None:
         """Every distro runs the canonical self-bootstrap fail-closed."""
         root = rendered_project
+        # The matrix build declares the checkout's Git metadata as a named
+        # build context; the Dockerfiles consume only that context by COPY.
+        matrix = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
+            encoding="utf-8"
+        )
+        tm.that(matrix, has="--build-context git=.git")
         for distro in ("ubuntu", "debian", "fedora", "alpine", "arch"):
             content = (
                 root / "tests" / "fixtures" / "ci" / "docker" / f"{distro}.Dockerfile"
@@ -442,7 +448,12 @@ class TestsFlextInfraCodegenCiMatrix:
             tm.that(content, lacks="./bin/mise install --locked --yes")
             tm.that(content, has="RUN --mount=type=bind,source=.,target=/source,ro")
             tm.that(content, has="cp -R /source/. /workspace/")
-            tm.that(content, lacks="COPY")
+            # The source tree arrives only through the read-only bind mount;
+            # the one COPY brings .git from the named build context.
+            copies = [line for line in content.splitlines() if line.startswith("COPY")]
+            tm.that(len(copies), eq=1)
+            tm.that(copies[0], has="--from=git")
+            tm.that(copies[0], has="/workspace/.git/")
             tm.that(content, lacks="chmod -R a+rwX")
             # BuildKit exposes the credential only for the setup instruction.
             tm.that(content, lacks="ARG GITHUB_TOKEN")
@@ -453,19 +464,17 @@ class TestsFlextInfraCodegenCiMatrix:
             )
             tm.that(content, lacks='GITHUB_TOKEN="')
 
-    def test_fedora_dockerfile_installs_libatomic_only_for_fedora(
+    def test_dockerfiles_install_the_node_atomic_library_on_seed_bases(
         self, rendered_project: Path
     ) -> None:
-        """Fedora's generated Node runtime has its required atomic library."""
+        """The apt and dnf seeds carry the atomic library the Node runtime needs."""
         root = rendered_project
-        fedora = (
-            root / "tests" / "fixtures" / "ci" / "docker" / "fedora.Dockerfile"
-        ).read_text(encoding="utf-8")
-        tm.that(fedora, has="libatomic")
-        for distro in ("ubuntu", "debian", "alpine", "arch"):
-            content = (
-                root / "tests" / "fixtures" / "ci" / "docker" / f"{distro}.Dockerfile"
-            ).read_text(encoding="utf-8")
+        docker_dir = root / "tests" / "fixtures" / "ci" / "docker"
+        for distro in ("ubuntu", "debian", "fedora"):
+            content = (docker_dir / f"{distro}.Dockerfile").read_text(encoding="utf-8")
+            tm.that(content, has="libatomic", msg=distro)
+        for distro in ("alpine", "arch"):
+            content = (docker_dir / f"{distro}.Dockerfile").read_text(encoding="utf-8")
             tm.that("libatomic" not in content, eq=True, msg=distro)
 
     def test_dockerfiles_render_byte_idempotently(self, tmp_path: Path) -> None:
@@ -503,7 +512,7 @@ class TestsFlextInfraCodegenCiMatrix:
     def test_host_legs_bootstrap_only_through_make_setup(
         self, rendered_project: Path
     ) -> None:
-        """MacOS and Windows bootstrap through the same Make surface."""
+        """MacOS and Windows bootstrap and run one lifecycle through Make."""
         root = rendered_project
         content = (root / ".github" / "workflows" / "ci-matrix.yml").read_text(
             encoding="utf-8"
@@ -514,8 +523,9 @@ class TestsFlextInfraCodegenCiMatrix:
         windows = content.split("\n  windows:", maxsplit=1)[1]
         for host in (macos, windows):
             tm.that(host, has="run: CI=Y make setup")
-            tm.that(host, has="run: CI=Y make help")
-        tm.that(windows.count("shell: bash"), eq=3)
+        verbs = [re.findall(r"CI=Y make (\S+)", host) for host in (macos, windows)]
+        tm.that(verbs[0], eq=verbs[1])
+        tm.that(windows.count("shell: bash"), eq=windows.count("run:"))
 
     def test_runtime_jobs_supply_the_native_github_credential(
         self, rendered_project: Path
@@ -626,7 +636,7 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(setup_jobs, empty=False)
         for job in setup_jobs:
             tm.that(job, has="GITHUB_TOKEN: ${{ github.token }}")
-            tm.that(job, has="MISE_GITHUB_TOKEN: ${{ github.token }}")
+            tm.that(job, lacks="MISE_GITHUB_TOKEN")
 
     def test_ci_matrix_checks_each_distro_and_tests_ubuntu(
         self, rendered_project: Path
@@ -686,7 +696,7 @@ class TestsFlextInfraCodegenCiMatrix:
         )
         header = rendered.split("\n\n", 1)[0]
         tm.that(header.startswith("# @flext-regenerate: make gen\n"), eq=True)
-        tm.that(header, has=entry.source.as_posix())
+        tm.that(header, has=tm.not_none(entry.source).as_posix())
         properties = {
             key: value
             for key, _, value in (

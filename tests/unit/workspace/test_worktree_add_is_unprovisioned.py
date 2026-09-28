@@ -1,4 +1,4 @@
-"""Worktree ADD creates a checkout without owning project lane lifecycle."""
+"""Worktree ADD creates a checkout and leaves provisioning to the work saga."""
 
 from __future__ import annotations
 

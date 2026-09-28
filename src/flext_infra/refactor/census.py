@@ -83,16 +83,19 @@ class FlextInfraRefactorCensus(
         return path
 
     @property
+    @override
     def kind_names(self) -> t.StrSequence | None:
         """Normalized symbol-kind filters."""
         return u.Infra.normalize_sequence_values(self.kinds)
 
     @property
+    @override
     def rule_names(self) -> t.StrSequence | None:
         """Normalized violation-rule filters."""
         return u.Infra.normalize_sequence_values(self.rules)
 
     @property
+    @override
     def family_names(self) -> t.StrSequence | None:
         """Normalized family filters."""
         return u.Infra.normalize_sequence_values(self.families)
@@ -142,15 +145,7 @@ class FlextInfraRefactorCensus(
         ) as rope:
 
             def collect(applied: frozenset[str]) -> m.Infra.WorkspaceReport:
-                return self._collect_report(
-                    rope,
-                    project_names=self.project_names,
-                    kind_names=self.kind_names,
-                    family_names=self.family_names,
-                    rule_names=self.rule_names,
-                    include_local_scopes=self.include_local_scopes,
-                    applied=applied,
-                )
+                return self._collect_report(rope, applied=applied)
 
             report = collect(applied)
             impact_map_report = report
