@@ -11,13 +11,51 @@ from flext_infra import c, t
 
 from ..dependencies import FlextInfraUtilitiesDependencies
 from .requirements import FlextInfraUtilitiesPyprojectRequirements
+from .session import FlextInfraUtilitiesPyprojectSession
 
 if TYPE_CHECKING:
     from flext_infra import m, p
 
 
-class FlextInfraUtilitiesPyprojectUvSources(FlextInfraUtilitiesPyprojectRequirements):
+class FlextInfraUtilitiesPyprojectUvSources(
+    FlextInfraUtilitiesPyprojectRequirements, FlextInfraUtilitiesPyprojectSession
+):
     """Render the conform-owned ``[tool.uv]`` keys of one pyproject document."""
+
+    @classmethod
+    def _document_requirement_lines(
+        cls, document: t.Cli.TomlDocument
+    ) -> p.Result[list[str]]:
+        """Collect every declared requirement line of one pyproject document."""
+        payload = u.Cli.toml_as_mapping(document)
+        if payload is None:
+            return r[list[str]].fail("pyproject document is not a TOML mapping")
+        requirements: list[str] = []
+        project = payload.get(c.Infra.PROJECT)
+        if isinstance(project, Mapping):
+            for key in (c.Infra.DEPENDENCIES, c.Infra.OPTIONAL_DEPENDENCIES):
+                requirements.extend(cls.raw_requirement_values(project.get(key)))
+        groups = payload.get(c.Infra.DEPENDENCY_GROUPS)
+        if isinstance(groups, Mapping):
+            for group in groups.values():
+                requirements.extend(cls.raw_requirement_values(group))
+        return r[list[str]].ok(requirements)
+
+    @classmethod
+    def active_session_requirements(
+        cls, document: t.Cli.TomlDocument, *, environment: t.StrMapping
+    ) -> t.VariadicTuple[str]:
+        """Read strictly parsed requirements active on the consumer interpreter."""
+        return tuple(
+            active
+            for item in cls._document_requirement_lines(document).unwrap()
+            if (
+                active := FlextInfraUtilitiesDependencies.active_requirement(
+                    item, environment=environment
+                )
+            )
+            is not None
+        )
 
     @classmethod
     def _sync_uv_sources(

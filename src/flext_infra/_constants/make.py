@@ -140,6 +140,7 @@ class FlextInfraConstantsMake:
         "MYPYPATH",
         "PYTHONDONTWRITEBYTECODE",
         "PYTHONPATH",
+        "RUNTIME_ROOT",
         "UV_PROJECT",
         "UV_PROJECT_ENVIRONMENT",
         "VIRTUAL_ENV",

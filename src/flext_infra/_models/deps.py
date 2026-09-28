@@ -17,6 +17,57 @@ from .mixins import FlextInfraModelsMixins as mm
 class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsToml):
     """Models for dependency detection and modernization reporting."""
 
+    class DependencyMarkerEnvironment(m.Value):
+        """Complete PEP 508 facts reported by the consumer interpreter."""
+
+        prefix: Annotated[
+            Path,
+            m.Field(
+                exclude=True, description="Consumer interpreter environment prefix"
+            ),
+        ]
+        implementation_name: Annotated[
+            str, m.Field(description="PEP 508 implementation name")
+        ]
+        implementation_version: Annotated[
+            str, m.Field(description="PEP 508 implementation version")
+        ]
+        os_name: Annotated[str, m.Field(description="PEP 508 operating system name")]
+        platform_machine: Annotated[
+            str, m.Field(description="PEP 508 machine architecture")
+        ]
+        platform_release: Annotated[
+            str, m.Field(description="PEP 508 platform release")
+        ]
+        platform_system: Annotated[str, m.Field(description="PEP 508 platform system")]
+        platform_version: Annotated[
+            str, m.Field(description="PEP 508 platform version")
+        ]
+        platform_python_implementation: Annotated[
+            str, m.Field(description="PEP 508 Python implementation")
+        ]
+        python_full_version: Annotated[
+            str, m.Field(description="PEP 508 complete Python version")
+        ]
+        python_version: Annotated[
+            str, m.Field(description="PEP 508 Python major and minor version")
+        ]
+        sys_platform: Annotated[
+            str, m.Field(description="PEP 508 interpreter platform")
+        ]
+
+    class BindingResolution(m.Value):
+        """Active consumer declarations preserved during one editable binding."""
+
+        overrides: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Active dependency source overrides"),
+        ]
+        constraints: Annotated[
+            t.VariadicTuple[str],
+            m.Field(description="Active consumer resolution constraints"),
+        ]
+
     class DetectCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra deps detect``.
 

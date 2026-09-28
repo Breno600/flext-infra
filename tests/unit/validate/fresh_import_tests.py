@@ -30,6 +30,32 @@ class TestsFlextInfraFreshImport:
         """Shared validator instance."""
         return FlextInfraValidateFreshImport()
 
+    def test_probes_run_in_the_declared_target_environment(
+        self, tmp_path: Path
+    ) -> None:
+        """The declared target interpreter runs the probes, not the tool's.
+
+        The tool's environment imports flext_core; the declared target's fresh
+        stdlib environment does not, so the probe must fail there.
+        """
+        u.Tests.provision_runtime_environment(tmp_path)
+        validator = FlextInfraValidateFreshImport(
+            repository_root=tmp_path, runtime_root=tmp_path
+        )
+        report = tm.ok(validator.build_report(packages=("flext_core",)))
+        tm.that(report.passed, eq=False)
+        tm.that(report.violations[0], has="No module named 'flext_core'")
+
+    def test_declared_target_without_interpreter_fails_loudly(
+        self, tmp_path: Path
+    ) -> None:
+        """A declared target lacking its interpreter fails, never falls back."""
+        validator = FlextInfraValidateFreshImport(
+            repository_root=tmp_path, runtime_root=tmp_path
+        )
+        result = validator.build_report(packages=("sys",))
+        tm.fail(result, has="fresh-import target interpreter is missing")
+
     def test_empty_package_list_passes(self, v: FlextInfraValidateFreshImport) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=()))
         tm.that(report, is_=m.Infra.ValidationReport)
@@ -130,9 +156,7 @@ class TestsFlextInfraFreshImport:
         )
         tm.that(publication.action, eq=c.Infra.LazyInitAction.REMOVE)
 
-        result = FlextInfraValidateFreshImport(
-            repository_root=repository_root
-        ).build_report(
+        result = FlextInfraValidateFreshImport(repository_root=repository_root).build_report(
             publications=analysis.publications, repository_roots=(repository_root,)
         )
 
