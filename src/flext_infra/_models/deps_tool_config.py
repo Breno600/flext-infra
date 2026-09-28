@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
 
 from flext_infra import t
 
-from . import FlextInfraModelsDefaults
 from .deps_tool_config_linters import FlextInfraModelsDepsToolConfigLinters
 from .deps_tool_config_type_checkers import FlextInfraModelsDepsToolConfigTypeCheckers
 
@@ -680,8 +681,11 @@ class FlextInfraModelsDepsToolConfig(
 
         pyright: Annotated[
             t.StrMapping,
-            m.Field(description="Pyright override settings for this project type."),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+            m.Field(
+                default_factory=partial(MappingProxyType, {}),
+                description="Pyright override settings for this project type.",
+            ),
+        ]
 
     class ProjectTypeOverridesConfig(m.ArbitraryTypesModel):
         """Project-type-specific override matrix from ``config/tooling.yaml``."""
