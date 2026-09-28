@@ -224,6 +224,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".mixins": ("FlextInfraModelsMixins",),
             ".promoted": ("FlextInfraModelsPromoted",),
             ".refactor": ("FlextInfraModelsRefactor",),
+            "._codegen.journal": ("FlextInfraModelsCodegenJournal",),
             ".refactor_ast_grep": ("FlextInfraModelsRefactorGrep",),
             ".refactor_namespace_enforcer": ("FlextInfraModelsNamespaceEnforcer",),
             ".release": ("FlextInfraModelsRelease",),
