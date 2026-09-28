@@ -126,8 +126,10 @@ class FlextInfraUtilitiesRepository:
         whole family from one source. It is detected, never cataloged, from the
         first declaration the checkout carries — the infrastructure checkout's
         own origin and integration branch, a declared direct Git source for
-        the distribution (URL and ref), or the owning workspace manifest's
-        member entry on that workspace's integration branch. Two declared
+        the distribution (URL and ref; a fully manifest-pinned family keeps
+        its provider URL on this checkout's integration branch), or the owning
+        workspace manifest's member entry on that workspace's integration
+        branch. Two declared
         sources that disagree, or none at all, fail loudly.
 
         A fully explicit caller declaration (``declared`` carrying both
@@ -246,8 +248,19 @@ class FlextInfraUtilitiesRepository:
             )
             if declared.failure:
                 return r[t.Pair[str, str]].from_failure(declared)
-            if declared.value[0]:
+            declared_url, declared_ref = declared.value
+            if declared_url and declared_ref:
                 return declared
+            if declared_url:
+                # Every internal dependency is manifest-pinned: the pins are
+                # revisions, never a line, so the line follows this
+                # checkout's integration branch like a manifest entry does.
+                branch = cls.resolve_integration_branch(
+                    repository_root, preference=preference
+                )
+                if branch.failure:
+                    return r[t.Pair[str, str]].from_failure(branch)
+                return r[t.Pair[str, str]].ok((declared_url, branch.value))
         manifest = cls._manifest_declared_url(
             repository_root=repository_root, distribution=distribution
         )
@@ -312,7 +325,9 @@ class FlextInfraUtilitiesRepository:
         dependencies must retain one consistent declared Git provenance, and
         every family member must use the same provider. A plain (source-less)
         requirement names a workspace dependency whose URL the workspace
-        manifest owns. The unpinned line supplies the source of ``distribution``.
+        manifest owns. The unpinned line supplies the source of ``distribution``;
+        when every internal dependency is pinned, the pinned provider supplies
+        its URL with an empty ref, because a pin is a revision and never a line.
         """
         from flext_infra import u
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
@@ -409,6 +424,9 @@ class FlextInfraUtilitiesRepository:
         if lines:
             (base_url, ref), _ = next(iter(lines.items()))
             return r[t.Pair[str, str]].ok((f"{base_url}/{distribution}.git", ref))
+        if provider_bases:
+            (base_url,) = provider_bases
+            return r[t.Pair[str, str]].ok((f"{base_url}/{distribution}.git", ""))
         # No declared source: absence is an EMPTY payload, never None.
         return r[t.Pair[str, str]].ok(("", ""))
 
