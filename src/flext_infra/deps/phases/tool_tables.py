@@ -83,7 +83,7 @@ class FlextInfraToolTablesPhase:
         )
 
     @staticmethod
-    def _excluded_roots(project_dir: Path) -> t.Infra.StrSet:
+    def _excluded_roots(project_dir: Path) -> frozenset[str]:
         """First segments of the workspace SSOT's analysis exclusions.
 
         A workspace that retired a tree declares it here once; every root-
