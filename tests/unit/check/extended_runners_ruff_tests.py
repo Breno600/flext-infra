@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
-from flext_infra import m
+from flext_infra import c, m
 from flext_infra.gates.pyright import FlextInfraPyrightGate
 from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
 from flext_infra.gates.ruff_lint import FlextInfraRuffLintGate
@@ -51,6 +53,50 @@ class TestsFlextInfraRealGateRunners:
 
         tm.that(not result.result.passed, eq=True)
         tm.that([issue.code for issue in result.issues], has=["E501"])
+
+    @pytest.mark.slow
+    def test_ruff_lint_fix_reports_stderr_diagnostics_instead_of_deleting_them(
+        self, tmp_path: Path
+    ) -> None:
+        """make fix applies safe fixes and keeps a stderr diagnostic reachable.
+
+        Ruff's unsafe T201 fix deleted ``print(..., file=sys.stderr)`` from a
+        consumer script and turned its failures silent. Under the rendered
+        fleet policy the lint repair still sorts the imports, while the
+        diagnostic survives and stays reported.
+        """
+        project_dir = u.Tests.mk_project(
+            tmp_path,
+            "fix-safety",
+            pyproject=u.Tests.scaffold_text(
+                tmp_path / "fixture-project", c.PYPROJECT_FILENAME
+            ),
+        )
+        script = project_dir / "scripts" / "report_failure.py"
+        script.parent.mkdir()
+        script.write_text(
+            '"""Report one failure on stderr."""\n\n'
+            "from __future__ import annotations\n\n"
+            "import sys\n"
+            "import json\n\n"
+            'print(json.dumps({"failed": True}), file=sys.stderr)\n',
+            encoding="utf-8",
+        )
+        gate = FlextInfraRuffLintGate(tmp_path)
+
+        before = gate.check(project_dir, self.make_ctx(tmp_path))
+        _ = gate.fix(
+            project_dir,
+            m.Infra.GateContext(
+                repository_root=tmp_path, reports_dir=tmp_path, apply_fixes=True
+            ),
+        )
+        after = gate.check(project_dir, self.make_ctx(tmp_path))
+        emitted = tm.ok(u.Cli.run_raw([sys.executable, str(script)], cwd=project_dir))
+
+        tm.that(len(after.issues), lt=len(before.issues))
+        tm.that(not after.result.passed, eq=True)
+        tm.that(emitted.stderr, has='{"failed": true}')
 
     def test_ruff_lint_scopes_nested_project_to_owned_source_dirs(
         self, tmp_path: Path

@@ -366,6 +366,11 @@ skip-magic-trailing-comma = {{ tooling.tools.ruff.format.skip_magic_trailing_com
 {% for code, rationale in tooling.tools.ruff.lint.ignored_rule_rationales | dictsort %}
 # FLEXT ruff[{{ code }}]: {{ rationale }}
 {% endfor %}
+extend-safe-fixes = [
+{% for item in tooling.tools.ruff.lint.extend_safe_fixes | sort %}
+  {{ item | tojson }},
+{% endfor %}
+]
 ignore = [
 {% for item in tooling_runtime.ruff_ignore | sort %}
   {{ item | tojson }},
@@ -373,6 +378,11 @@ ignore = [
 ]
 select = [
 {% for item in tooling.tools.ruff.lint.select | sort %}
+  {{ item | tojson }},
+{% endfor %}
+]
+unfixable = [
+{% for item in tooling.tools.ruff.lint.unfixable | sort %}
   {{ item | tojson }},
 {% endfor %}
 ]

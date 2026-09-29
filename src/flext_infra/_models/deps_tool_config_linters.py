@@ -105,6 +105,25 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         ignore: Annotated[
             t.StrSequence, m.Field(description="Ruff lint rule ignore list.")
         ] = m.Field(default_factory=tuple)
+        unfixable: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Rules whose Ruff fixes delete code or diagnostics; reported, "
+                    "never auto-fixed."
+                )
+            ),
+        ]
+        extend_safe_fixes: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="extend-safe-fixes",
+                description=(
+                    "Rules whose unsafe Ruff fixes are proven to preserve code, "
+                    "comments and diagnostics."
+                ),
+            ),
+        ]
         ignored_rule_rationales: Annotated[
             t.StrMapping,
             m.Field(
