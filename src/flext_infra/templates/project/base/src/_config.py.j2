@@ -6,8 +6,8 @@
    ``config/{{ ns }}.yaml`` owner declares and ``cli.py`` reads; the class stem
    here would split the namespace in two and hand cli.py a raw dict. -#}
 {%- set ns_name = "_" ~ ns ~ "Namespace" -%}
-{%- set base_import_line = "from " ~ config_base_module ~ " import " ~ config_base_class ~ ", m" -%}
-{%- set base_import = base_import_line if base_import_line | length <= tooling.tools.ruff.line_length else "from " ~ config_base_module ~ " import (\n    " ~ config_base_class ~ ",\n    m,\n)" -%}
+{%- set base_import_line = "from " ~ config_base_module ~ " import " ~ config_base_class ~ ", m, t" -%}
+{%- set base_import = base_import_line if base_import_line | length <= tooling.tools.ruff.line_length else "from " ~ config_base_module ~ " import (\n    " ~ config_base_class ~ ",\n    m,\n    t,\n)" -%}
 {%- set settings_import_line = "from flext_core import FlextSettings" -%}
 {%- set config_class_line = "class " ~ class_stem ~ "Config(FlextSettings, " ~ config_base_class ~ "):" -%}
 {%- set config_class_declaration = config_class_line if config_class_line | length <= tooling.tools.ruff.line_length else "class " ~ class_stem ~ "Config(\n    FlextSettings, " ~ config_base_class ~ "\n):" -%}
@@ -25,6 +25,8 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from typing import Annotated, Self
+
+from pydantic import JsonValue
 
 {{ base_import }}
 
@@ -48,12 +50,12 @@ from ._models.config import (
     # Unlike never-instantiated namespace holders, ``__init__`` delegates to
     # ``super()`` so the frozen, YAML-validated pydantic construction still
     # runs, and the inherited pydantic ``__setattr__`` keeps the frozen guard.
-    def __new__(cls, *args: object, **kwargs: object) -> Self:
-        _ = args, kwargs
+    def __new__(cls, **data: t.ConfigValue) -> Self:
+        _ = data
         return object.__new__(cls)
 
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, **data: t.ConfigValue) -> None:
+        super().__init__(**data)
 
     __eq__ = object.__eq__
 

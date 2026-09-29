@@ -96,9 +96,26 @@ class FlextInfraEnsureRuffConfigPhase:
             if loaded.failure:
                 raise ValueError(loaded.error or "project artifact load failed")
             local_ignores = loaded.value.artifacts.Ruff.per_file_ignores
+        # An exemption glob rooted on a first-class directory that the
+        # workspace retired (e.g. scripts/**, declared as an analysis
+        # exclusion in its workspace SSOT) must not survive the render: it
+        # documents scope that no longer exists and re-created stale entries
+        # on every conformance pass. Declared exclusions are order-independent
+        # — a disk probe oscillated between the deps pass and the
+        # root-materializing gen pass.
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
+        scoped_global = {
+            pattern: rules
+            for pattern, rules in effective_global.items()
+            if (
+                (root := pattern.split("/")[0]).endswith("**")
+                or not root.isidentifier()
+                or root not in excluded_roots
+            )
+        }
         return {
-            pattern: tuple(sorted({*effective_global.get(pattern, ()), *rules}))
-            for pattern, rules in {**effective_global, **local_ignores}.items()
+            pattern: tuple(sorted({*scoped_global.get(pattern, ()), *rules}))
+            for pattern, rules in {**scoped_global, **local_ignores}.items()
         }
 
     def _phase(
@@ -137,6 +154,18 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
+        # Dev/tooling source roots are config-declared, but a workspace that
+        # retired a tree (e.g. scripts/, declared in the workspace SSOT as an
+        # analysis exclusion) must not keep analyzer entries naming it: a
+        # retired root keeps documenting scope that no longer exists, and the
+        # namespace-packages contract only holds for live roots. The exclusion
+        # SSOT filters the projection — order-independent across the deps pass
+        # and the root-materializing gen pass.
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(path.parent)
+        existing_root = tuple(d for d in ruff_cfg.src if d not in excluded_roots)
+        existing_namespace_packages = tuple(
+            d for d in ruff_cfg.namespace_packages if d not in excluded_roots
+        )
         toml = m.Infra.DepsToml
         return toml.PhaseConfig(
             name="ruff",
@@ -148,7 +177,7 @@ class FlextInfraEnsureRuffConfigPhase:
                     values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
                 ),
                 toml.ListOp(
-                    key="namespace-packages", values=sorted(ruff_cfg.namespace_packages)
+                    key="namespace-packages", values=sorted(existing_namespace_packages)
                 ),
                 toml.SetOp(key="fix", value=ruff_cfg.fix),
                 toml.SetOp(key="line-length", value=ruff_cfg.line_length),
@@ -156,7 +185,7 @@ class FlextInfraEnsureRuffConfigPhase:
                 toml.SetOp(key="respect-gitignore", value=ruff_cfg.respect_gitignore),
                 toml.SetOp(key="show-fixes", value=ruff_cfg.show_fixes),
                 toml.SetOp(key="target-version", value=ruff_cfg.target_version),
-                toml.ListOp(key="src", values=sorted(ruff_cfg.src)),
+                toml.ListOp(key="src", values=sorted(existing_root)),
             ),
             nested_tables=(
                 toml.PhaseConfig(

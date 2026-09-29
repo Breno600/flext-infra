@@ -3,127 +3,205 @@
 from __future__ import annotations
 
 import os
+import pstats
 import sys
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, m, u
+from flext_infra import c, config, m, u
 from tests import u as test_u
 
 
 class TestsFlextInfraUtilitiesResourceLimits:
     """Behavior tests for the canonical Mypy resource-limit command."""
 
-    def test_mypy_command_runs_harmless_process_with_memory_and_time_limits(
-        self,
+    def test_mypy_command_checks_source_with_memory_and_time_limits(
+        self, tmp_path: Path
     ) -> None:
-        """Run a harmless process through both validated resource ceilings."""
+        """Check a real typed source through both validated resource ceilings."""
         limit = m.Infra.MypyResourceLimit(
-            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT, timeout_seconds=60
+            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
+            timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
         )
         command = u.Infra.mypy_limited_command(
-            (
-                sys.executable,
-                "-c",
-                "import sys; sys.stdout.write('bounded-process\\n')",
-            ),
-            limit,
+            test_u.Tests.mypy_workload(tmp_path), limit
         )
         result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
 
-        if sys.platform == "darwin":
-            tm.that(command[0], eq=sys.executable)
-            tm.that(Path(command[1]).name, eq="_mypy_supervisor.py")
-            tm.that(command[2], eq=str(limit.memory_limit_bytes))
-            tm.that(command[3], eq=str(limit.timeout_seconds))
-        else:
-            tm.that(Path(command[0]).name, eq=c.Infra.TIMEOUT_COMMAND)
-            tm.that(command[3], eq=f"{limit.timeout_seconds}s")
-            tm.that(Path(command[4]).name, eq=c.Infra.PRLIMIT_COMMAND)
-            tm.that(
-                command[5],
-                eq=f"--as={limit.memory_limit_bytes}:{limit.memory_limit_bytes}",
-            )
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
-        tm.that(result.value.stdout, has="bounded-process")
+        tm.that(result.value.outcome.raw_return_code, eq=0)
+
+    def test_mypy_profile_records_the_real_checker(self, tmp_path: Path) -> None:
+        """Keep the public profiling contract while removing executable selection."""
+        project = test_u.Tests.mypy_workload(tmp_path)
+        profile = tmp_path / "checker.pstats"
+        invocation = m.Infra.MypyInvocation(
+            targets=project.targets,
+            config_file=project.config_file,
+            profile_output=profile,
+        )
+        result = u.Cli.run_raw(
+            u.Infra.mypy_limited_command(invocation),
+            timeout=u.Infra.mypy_runner_timeout(),
+        )
+        tm.ok(result)
+        tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
+        tm.that(
+            bool(pstats.Stats(str(profile)).get_stats_profile().func_profiles), eq=True
+        )
+
+    def test_workspace_checker_requires_its_own_environment(
+        self, tmp_path: Path
+    ) -> None:
+        """An unprovisioned target never borrows the orchestrator's interpreter."""
+        test_u.Tests.initialize_git_repo(tmp_path)
+        project = test_u.Tests.mypy_workload(tmp_path)
+        invocation = m.Infra.MypyInvocation(
+            targets=project.targets, config_file=project.config_file, workspace=tmp_path
+        )
+        with pytest.raises(FileNotFoundError, match="managed workspace interpreter"):
+            u.Infra.mypy_command(invocation)
+        tm.ok(test_u.Tests.create_python_environment(tmp_path))
+        with pytest.raises(FileNotFoundError, match="managed workspace checker"):
+            u.Infra.mypy_command(invocation)
+
+    def test_supervisor_rejects_executable_selection_before_launch(
+        self, tmp_path: Path
+    ) -> None:
+        """A hostile request cannot turn the supervisor into an arbitrary executor."""
+        project = test_u.Tests.mypy_workload(tmp_path)
+        command = u.Infra.mypy_limited_command(project, host_system="Darwin")
+        injected = project.model_dump_json()[:-1] + ',"command":["/bin/sh"]}'
+        result = u.Cli.run_raw(
+            (*command[:-1], injected), timeout=u.Infra.mypy_runner_timeout()
+        )
+        tm.ok(result)
+        tm.that(result.value.outcome.raw_return_code, eq=1)
+        tm.that(result.value.stderr, has="Extra inputs are not permitted")
 
     @pytest.mark.parametrize(
-        ("source", "memory_mb", "seconds", "expected"),
+        ("scenario", "expected"),
         [
-            ("import sys; sys.exit(7)", 512, 10, 7),
-            ("import time; time.sleep(30)", 512, 1, 124),
+            ("exit", 7),
+            # Real interpreter startup and controlled group cleanup use the
+            # existing integration-harness budget, not the default case budget.
+            pytest.param("deadline", 124, marks=pytest.mark.slow),
             # Darwin's supervisor samples group RSS and stops it (137); Linux
-            # prlimit makes the allocation fail inside the process (exit 1).
-            (
-                "import time; a = bytearray(128 * 1024**2); time.sleep(30)",
-                64,
-                10,
-                (137 if sys.platform == "darwin" else 1),
-            ),
+            # prlimit makes the allocation raise inside the checker, which Mypy
+            # reports as an internal error with its documented crash exit (2).
+            ("memory", (137 if sys.platform == "darwin" else 2)),
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
-        self, source: str, memory_mb: int, seconds: int, expected: int
+        self, tmp_path: Path, scenario: str, expected: int
     ) -> None:
         """Exercise a real exit, deadline and resident allocation through the owner."""
         limit = m.Infra.MypyResourceLimit(
-            memory_limit_mb=memory_mb, timeout_seconds=seconds
+            memory_limit_mb=max(1, c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 8)
+            if scenario == "memory"
+            else c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
+            timeout_seconds=test_u.Tests.mypy_deadline_limit().timeout_seconds
+            if scenario == "deadline"
+            else c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
         )
+        source = "import sys,time; print('workload-ready', flush=True); "
+        if scenario == "exit":
+            source += "sys.exit(7)"
+        else:
+            if scenario == "memory":
+                source += f"allocation = bytearray({limit.memory_limit_bytes * 2}); "
+            source += f"time.sleep({limit.timeout_seconds + 1})"
         result = u.Cli.run_raw(
-            u.Infra.mypy_limited_command((sys.executable, "-c", source), limit),
+            u.Infra.mypy_limited_command(
+                test_u.Tests.mypy_workload(tmp_path, source), limit
+            ),
             timeout=u.Infra.mypy_runner_timeout(limit),
         )
         tm.ok(result)
+        tm.that(result.value.stdout, has="workload-ready")
         tm.that(result.value.outcome.raw_return_code, eq=expected)
+        if scenario == "memory":
+            tm.that(
+                f"{result.value.stdout}\n{result.value.stderr}",
+                has="RSS limit reached" if sys.platform == "darwin" else "MemoryError",
+            )
+            tm.that(u.Infra.mypy_failure_diagnostic(result.value, limit), none=False)
 
-    @pytest.mark.parametrize(
-        ("tail", "expected"), [("sys.exit(7)", 7), ("time.sleep(30)", 124)]
-    )
+    @pytest.mark.slow
+    @pytest.mark.parametrize("expected", [7, 124])
     def test_resource_limit_stops_resistant_descendant_group(
-        self, tail: str, expected: int
+        self, tmp_path: Path, expected: int, request: pytest.FixtureRequest
     ) -> None:
         """Kill a TERM-resistant descendant after leader exit or deadline."""
-        source = (
-            "import subprocess,sys,time; "
-            "p=subprocess.Popen([sys.executable, '-c', "
-            '"import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); '
-            "print('ready', flush=True); time.sleep(30)\"], "
-            "stdout=subprocess.PIPE, text=True); "
-            f"p.stdout.readline(); print(p.pid, flush=True); {tail}"
+        limit = test_u.Tests.mypy_deadline_limit()
+        policy = config.Infra.tooling.tools.pytest
+        pid_file = tmp_path / "descendant.pid"
+        error_file = tmp_path / "descendant.stderr"
+        request.addfinalizer(
+            lambda: test_u.Tests.reap_mypy_descendant(
+                pid_file, policy.termination_grace_seconds
+            )
         )
-        limit = m.Infra.MypyResourceLimit(memory_limit_mb=512, timeout_seconds=2)
+        sleep = f"time.sleep({u.Infra.mypy_runner_timeout(limit) + policy.slow_timeout_seconds})"
+        tail = "sys.exit(7)" if expected == 7 else sleep
+        descendant = (
+            "import signal,time; signal.signal(signal.SIGTERM, signal.SIG_IGN); "
+            f"print('ready', flush=True); {sleep}"
+        )
+        source = (
+            "import subprocess,sys,time\nfrom pathlib import Path\n"
+            f"errors = Path({str(error_file)!r})\n"
+            "with errors.open('w', encoding='utf-8') as stderr:\n"
+            f"    p = subprocess.Popen([sys.executable, '-c', {descendant!r}], "
+            "stdout=subprocess.PIPE, stderr=stderr, text=True)\n"
+            f"    Path({str(pid_file)!r}).write_text(str(p.pid), encoding='utf-8')\n"
+            "    if p.stdout is None or p.stdout.readline() != 'ready\\n':\n"
+            "        stderr.flush()\n"
+            "        sys.stderr.write(errors.read_text(encoding='utf-8'))\n"
+            "        raise RuntimeError('descendant readiness failed')\n"
+            f"    print(p.pid, flush=True)\n    {tail}"
+        )
         result = u.Cli.run_raw(
-            u.Infra.mypy_limited_command((sys.executable, "-c", source), limit),
+            u.Infra.mypy_limited_command(
+                test_u.Tests.mypy_workload(tmp_path, source), limit
+            ),
             timeout=u.Infra.mypy_runner_timeout(limit),
         )
         tm.ok(result)
         tm.that(result.value.outcome.raw_return_code, eq=expected)
-        pid = int(result.value.stdout.strip())
-        remaining = u.Cli.run_raw(("/bin/ps", "-p", str(pid), "-o", "stat="), timeout=2)
+        tm.that(bool(result.value.stdout.splitlines()), eq=True)
+        pid = int(result.value.stdout.splitlines()[0])
+        tm.that(int(pid_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)), eq=pid)
+        tm.that(error_file.read_text(encoding=c.Cli.ENCODING_DEFAULT), empty=True)
+        remaining = u.Cli.run_raw(
+            ("/bin/ps", "-p", str(pid), "-o", "stat="),
+            timeout=policy.termination_grace_seconds,
+        )
         tm.ok(remaining)
         state = remaining.value.stdout.strip()
         if sys.platform == "darwin":
             tm.that(not state or state.startswith("Z"), eq=True)
         # GNU timeout reaps the resistant group when it stops the leader at
         # the deadline; on a clean leader exit the group outlives the
-        # wrapper, so the probe reaps its own descendant instead.
+        # wrapper, so pytest teardown reaps its own descendant instead.
         elif expected == 124:
             tm.that(not state, eq=True)
-        else:
-            u.Cli.run_raw(("/bin/kill", "-9", str(pid)), timeout=2)
 
-    def test_resource_limit_stops_workload_on_termination(self) -> None:
+    def test_resource_limit_stops_workload_on_termination(self, tmp_path: Path) -> None:
         """Preserve external termination and reap the running workload."""
-        limit = m.Infra.MypyResourceLimit(memory_limit_mb=512, timeout_seconds=20)
+        limit = m.Infra.MypyResourceLimit(
+            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
+            timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+        )
         started = u.Cli.process_start(
             u.Infra.mypy_limited_command(
-                (
-                    sys.executable,
-                    "-c",
-                    "import time; print('ready', flush=True); time.sleep(30)",
+                test_u.Tests.mypy_workload(
+                    tmp_path,
+                    "import time; print('ready', flush=True); "
+                    f"time.sleep({limit.timeout_seconds + 1})",
                 ),
                 limit,
             )
@@ -131,7 +209,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.ok(started)
         child = started.value
         try:
-            tm.ok(child.stdout_read_until(b"ready", timeout=5))
+            tm.ok(child.stdout_read_until(b"ready", timeout=limit.timeout_seconds))
             tm.ok(child.terminate())
             exited = child.wait(timeout=10)
             tm.ok(exited)
@@ -194,7 +272,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
         ):
             m.Infra.MypyResourceLimit(
                 memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT + 1,
-                timeout_seconds=60,
+                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
             )
 
     def test_mypy_resource_contract_rejects_timeout_above_ceiling(self) -> None:
@@ -211,7 +289,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
     def test_mypy_timeout_has_controlled_exit_and_signal_diagnostic(self) -> None:
         """Expose the configured ceilings and process status on timeout."""
         limit = m.Infra.MypyResourceLimit(
-            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT, timeout_seconds=60
+            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
+            timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
         )
         diagnostic = u.Infra.mypy_failure_diagnostic(
             m.Cli.CommandOutput(
@@ -239,7 +318,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
     def test_mypy_signal_diagnostic_preserves_both_output_streams(self) -> None:
         """Expose traceback output when Mypy also writes an error banner."""
         limit = m.Infra.MypyResourceLimit(
-            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT, timeout_seconds=60
+            memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
+            timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
         )
         diagnostic = u.Infra.mypy_failure_diagnostic(
             m.Cli.CommandOutput(
@@ -253,3 +333,21 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
 
         tm.that(diagnostic, has=["Traceback: checker frame", "INTERNAL ERROR"])
+
+    def test_mypy_cache_directory_is_lock_keyed_and_shared(
+        self, tmp_path: Path
+    ) -> None:
+        """One shared Mypy cache per dependency lock, reused by every checkout."""
+        spec = config.Infra.codegen.make.mypy_cache
+        for lock in spec.lock_files:
+            (tmp_path / lock).write_text(f"{lock}: fixture\n")
+        shared = u.Infra.mypy_cache_directory(tmp_path)
+        # Stable for the same lock: a cold checkout reuses this directory
+        # instead of recomputing the whole dependency fleet.
+        tm.that(u.Infra.mypy_cache_directory(tmp_path), eq=shared)
+        # Declared shared location, never a per-worktree path.
+        tm.that(shared.parent.name, eq=Path(spec.external_storage_directory).name)
+        # A rotated lock re-keys the cache, so a stale analysis can never be
+        # served for a different dependency graph.
+        (tmp_path / spec.lock_files[0]).write_text("rotated\n")
+        tm.that(u.Infra.mypy_cache_directory(tmp_path) != shared, eq=True)

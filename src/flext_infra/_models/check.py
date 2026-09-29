@@ -108,6 +108,27 @@ class FlextInfraModelsCheck:
             """Validated memory limit converted to bytes for the platform owner."""
             return self.memory_limit_mb * 1024 * 1024
 
+    class MypyInvocation(m.ContractModel):
+        """Checker inputs; callers cannot select an executable or Python program."""
+
+        targets: Annotated[
+            t.VariadicTuple[Path],
+            m.Field(min_length=1, description="Files or directories to check"),
+        ]
+        workspace: Annotated[
+            Path | None, m.Field(description="Workspace owning the checker environment")
+        ] = None
+        config_file: Annotated[
+            Path | None, m.Field(description="Owned Mypy configuration")
+        ] = None
+        report_json: Annotated[
+            bool, m.Field(description="Emit native JSON diagnostics")
+        ] = False
+        verbose: Annotated[bool, m.Field(description="Emit Mypy progress")] = False
+        profile_output: Annotated[
+            Path | None, m.Field(description="Optional cProfile output destination")
+        ] = None
+
     class FixPyreflyConfigCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
 
@@ -244,12 +265,6 @@ class FlextInfraModelsCheck:
         failed: Annotated[
             int,
             m.Field(description="Number of projects that failed one or more gates."),
-        ]
-        skipped: Annotated[
-            int,
-            m.Field(
-                description="Number of projects that were skipped during execution."
-            ),
         ]
         total_elapsed: Annotated[
             float,

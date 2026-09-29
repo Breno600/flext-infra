@@ -38,6 +38,8 @@ class TestsFlextInfraFreshImport:
         The tool's environment imports flext_core; the declared target's fresh
         stdlib environment does not, so the probe must fail there.
         """
+        # The target is a real checkout: its own Git root owns the runtime.
+        u.Tests.initialize_git_repo(tmp_path)
         u.Tests.provision_runtime_environment(tmp_path)
         validator = FlextInfraValidateFreshImport(
             repository_root=tmp_path, runtime_root=tmp_path
