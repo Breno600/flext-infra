@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from git import BadName, GitCommandError
 
 from flext_core import r
-from flext_infra import c, m
+from flext_infra import m
 
 from .worktree import FlextInfraUtilitiesGitWorktreeMixin
 
