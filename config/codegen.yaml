@@ -54,7 +54,13 @@ Infra:
       # The npm CLI publishes a native musl binary; the GitHub CLI release does
       # not. One selector therefore covers the declared Linux libc variants.
       ast_grep_selector: npm:@ast-grep/cli
-      ast_grep_version: "0.45.3~7a027ead"
+      # The concrete release. The aube dependency digest belongs to the lock
+      # entry (mise.lock records version = "0.45.3" plus the aube path/digest);
+      # carrying it inside the version selector made mise --locked reject the
+      # tool ('npm:@ast-grep/cli@0.45.3~7a027ead is not in the lockfile') even
+      # though the lock held the same release. mise's npm backend also rejects
+      # semver ranges ('use a concrete version or version prefix').
+      ast_grep_version: "0.45.3"
       # ast-grep's native binary is selected by its npm lifecycle script.
       # The embedded aube installer preserves the locked dependency graph;
       # the approved package lifecycle is declared in the mise projection.

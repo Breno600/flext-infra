@@ -98,7 +98,7 @@ class FlextInfraEnsureRuffConfigPhase:
 
     @classmethod
     def compose_per_file_ignores(
-        self,
+        cls,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,

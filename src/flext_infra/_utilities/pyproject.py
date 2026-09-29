@@ -7,7 +7,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import shutil
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from functools import cache, lru_cache
 from pathlib import Path
 
@@ -231,7 +231,10 @@ class FlextInfraUtilitiesPyproject:
 
     @staticmethod
     def _locked_mise_version(
-        execution_root: Path, tool: str, selector: str
+        execution_root: Path,
+        tool: str,
+        selector: str,
+        declared_version: str = "",
     ) -> p.Result[str]:
         """Resolve the selector's pinned version from the committed mise.lock.
 
@@ -278,7 +281,13 @@ class FlextInfraUtilitiesPyproject:
                 return r[str].fail(
                     f"{lock_path} has a malformed [[tools.{tool}]] entry: {entry!r}"
                 )
-            if selector in specifiers or selector == pinned:
+            # Why (npm/aube): a concrete selector such as ``0.45.3`` need not be
+            # echoed in ``specifiers``. A lock entry written against a moving
+            # selector can keep ``specifiers = ["latest"]`` while ``version``
+            # already holds the same release the declaration now names, and mise
+            # still accepts it (``mise install --locked`` -> already installed).
+            # A stale specifier must not fail the pin: authenticate the release.
+            if selector in specifiers or pinned in {selector, declared_version}:
                 return r[str].ok(pinned)
         return r[str].fail(
             f"{lock_path} pins no {tool} for selector {selector!r}; run make upg"
@@ -296,7 +305,10 @@ class FlextInfraUtilitiesPyproject:
         it, so no shim run ever resolves a moving selector over the network.
         """
         pinned = FlextInfraUtilitiesPyproject._locked_mise_version(
-            execution_root, c.Infra.TAPLO_MISE_TOOL_NAME, taplo_version
+            execution_root,
+            c.Infra.TAPLO_MISE_TOOL_NAME,
+            taplo_version,
+            declared_version=taplo_version,
         )
         if pinned.failure:
             return r[Path].from_failure(pinned)
