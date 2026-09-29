@@ -54,7 +54,7 @@ Infra:
       # The npm CLI publishes a native musl binary; the GitHub CLI release does
       # not. One selector therefore covers the declared Linux libc variants.
       ast_grep_selector: npm:@ast-grep/cli
-      ast_grep_version: "0.45.3~7a027ead"
+      ast_grep_version: "latest"
       # ast-grep's native binary is selected by its npm lifecycle script.
       # The embedded aube installer preserves the locked dependency graph;
       # the approved package lifecycle is declared in the mise projection.
