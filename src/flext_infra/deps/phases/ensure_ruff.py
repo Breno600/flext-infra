@@ -75,11 +75,11 @@ class FlextInfraEnsureRuffConfigPhase:
         projection converges.
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return frozenset()
+            return set()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
-            return frozenset()
-        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
+            raise ValueError(paths.error or "workspace analysis scope is unavailable")
+        return {p.parts[0] for p in paths.value if Path(p).parts}
 
     @staticmethod
     def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
@@ -88,7 +88,7 @@ class FlextInfraEnsureRuffConfigPhase:
             return ()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
-            return ()
+            raise ValueError(paths.error or "workspace analysis scope is unavailable")
         return tuple(path.as_posix() for path in paths.value)
 
     @classmethod
