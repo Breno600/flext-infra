@@ -371,9 +371,9 @@ class TestsFlextInfraCodegenConform:
         tm.fail(result, has="internal dependency direct source must be a git URL")
 
     def _conform_with_rendered_makefile(
-        self, root: Path, help_text: str
+        self, root: Path, help_text: str, *, verb: str = "probe"
     ) -> p.Result[m.Infra.CodegenResult]:
-        """Apply conform after declaring ``help_text`` into the rendered Makefile.
+        """Apply conform after declaring ``verb`` with ``help_text``.
 
         The managed Makefile renders ``verb.description`` for every declared
         ``extra_verbs`` entry into its help block, so a repository manifest
@@ -395,7 +395,7 @@ class TestsFlextInfraCodegenConform:
         u.Tests.write_standalone_workspace_manifest(
             root,
             config.Infra.name,
-            extra_verbs=(m.Infra.MakeVerbSpec(name="probe", description=help_text),),
+            extra_verbs=(m.Infra.MakeVerbSpec(name=verb, description=help_text),),
         )
         return FlextInfraCodegenConform.execute_request(
             u.Tests.conform_request(
@@ -416,6 +416,19 @@ class TestsFlextInfraCodegenConform:
         )
 
         tm.ok(applied)
+
+    @pytest.mark.slow
+    def test_declared_extra_verb_shadowing_a_canonical_builtin_fails_loud(
+        self, infra_git_repo: Path
+    ) -> None:
+        """A config-declared collision is rejected, never silently dropped."""
+        canonical = config.Infra.codegen.make.verbs[0].name
+
+        applied = self._conform_with_rendered_makefile(
+            infra_git_repo, canonical, verb=canonical
+        )
+
+        tm.fail(applied, has="must never shadow canonical make.verbs builtins")
 
     @pytest.mark.slow
     def test_apply_recovers_declared_managed_pyproject_conflict(
