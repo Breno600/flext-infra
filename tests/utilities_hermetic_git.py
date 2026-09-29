@@ -26,7 +26,9 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
     """Build and route the fixture provider through local Git mirrors."""
 
     @staticmethod
-    def locked_git_sources(project_root: Path) -> t.VariadicTuple[t.Triple[str, str, str]]:
+    def locked_git_sources(
+        project_root: Path,
+    ) -> t.VariadicTuple[t.Triple[str, str, str]]:
         """Return every ``(url, rev, sha)`` Git source the checkout lock pins.
 
         The checkout itself is not in its lock; it joins as the infrastructure
@@ -49,7 +51,9 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
             config.Infra.codegen.infra_repository.distribution
         ).url
         head = tm.ok(
-            u.Cli.capture([c.Infra.GIT, "rev-parse", c.Infra.GIT_HEAD], cwd=project_root)
+            u.Cli.capture(
+                [c.Infra.GIT, "rev-parse", c.Infra.GIT_HEAD], cwd=project_root
+            )
         ).strip()
         sources[infra] = (infra, fixture.provider_branch(), head)
         return tuple(sources.values())
@@ -69,14 +73,17 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         client whose uv cache lacks the history).
         """
         storage_root = Path(os.environ[c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE])
-        cache = storage_root / dict(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT)[
-            "UV_CACHE_DIR"
-        ]
+        cache = (
+            storage_root
+            / dict(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT)["UV_CACHE_DIR"]
+        )
         databases = (project_root, *sorted(cache.glob("git-v*/db/*")))
         mirrored: list[str] = []
-        for url, rev, sha in TestsFlextInfraUtilitiesHermeticGitMixin.locked_git_sources(
-            project_root
-        ):
+        for (
+            url,
+            rev,
+            sha,
+        ) in TestsFlextInfraUtilitiesHermeticGitMixin.locked_git_sources(project_root):
             origin = next(
                 (
                     database
@@ -97,7 +104,15 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
                 raise FileNotFoundError(msg)
             parts = urlsplit(url)
             mirror = mirrors / parts.netloc / parts.path.lstrip("/")
-            tm.ok(u.Cli.run_checked([c.Infra.GIT, "init", "--quiet", "--bare", str(mirror)]))
+            tm.ok(
+                u.Cli.run_checked([
+                    c.Infra.GIT,
+                    "init",
+                    "--quiet",
+                    "--bare",
+                    str(mirror),
+                ])
+            )
             common = tm.ok(
                 u.Cli.capture(
                     [

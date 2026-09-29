@@ -524,7 +524,7 @@ class FlextInfraConfigModelsArtifact:
                     "once per plan for the project context and every workflow; "
                     "None when Git publishes none, so a render that needs it "
                     "fails with the resolver's own cause"
-                ),
+                )
             ),
         ]
 

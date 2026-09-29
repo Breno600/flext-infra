@@ -50,7 +50,7 @@ class FlextInfraPytestRunnerExecution(
         overrides = {
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
                 self.root / c.Infra.DEFAULT_SRC_DIR
-            ),
+            )
         }
         if not coverage:
             overrides.update(dict.fromkeys(testmon_keys, str(self.testmon_db)))
@@ -109,7 +109,10 @@ class FlextInfraPytestRunnerExecution(
             raise RuntimeError(msg)
         if not owns_no_tests:
             self._collection_diagnostics(report_log)
-        if owns_no_tests and outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED:
+        if (
+            owns_no_tests
+            and outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED
+        ):
             # No manifest artifact is produced for an empty declared suite.
             return m.Infra.PytestSelectionPlan(
                 manifest_path=manifest_path,
@@ -266,11 +269,15 @@ class FlextInfraPytestRunnerExecution(
         )
         # The zero-test receipt travels on the typed accounting the reports
         # owner parsed from the durable selection plan.
-        if not accounting.executed_count and not accounting.owns_no_tests and not (
-            cache_hit
-            and context.execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
-            and raw_return_code
-            in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
+        if (
+            not accounting.executed_count
+            and not accounting.owns_no_tests
+            and not (
+                cache_hit
+                and context.execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
+                and raw_return_code
+                in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
+            )
         ):
             msg = "zero execution is accepted only for a verified incremental cache hit"
             raise RuntimeError(msg)
@@ -432,11 +439,7 @@ class FlextInfraPytestRunnerExecution(
             whole_target=selection_plan.whole_target,
             execution_mode=execution_mode,
         )
-        outcome = self._run_suite(
-            command,
-            report_dir,
-            execution_mode=execution_mode,
-        )
+        outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (
             not complete
             and outcome.raw_return_code
@@ -502,9 +505,7 @@ class FlextInfraPytestRunnerExecution(
         )
         command = self.build_coverage_command(report_dir)
         outcome = self._run_suite(
-            command,
-            report_dir,
-            execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
+            command, report_dir, execution_mode=c.Infra.PytestExecutionMode.COVERAGE
         )
         if self._completed_failure(outcome):
             return self._finalize(report_dir, raw_return_code=outcome.raw_return_code)
