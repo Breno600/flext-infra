@@ -374,9 +374,7 @@ class TestsFlextInfraRule0NamespaceStructure:
         repository.package=false (bead invest-6n6u family).
         """
         root = u.Tests.namespace_project(
-            tmp_path,
-            module_source="VALUE = 41\n",
-            module_name="loose_module.py",
+            tmp_path, module_source="VALUE = 41\n", module_name="loose_module.py"
         )
         self._write_manifest(root, package=False)
         report = u.Tests.validate_namespace_project(
@@ -396,8 +394,7 @@ class TestsFlextInfraRule0NamespaceStructure:
         root = tmp_path / "broken_packaged"
         root.mkdir()
         (root / "pyproject.toml").write_text(
-            '[project]\nname = "broken-packaged"\nversion = "0.1.0"\n',
-            encoding="utf-8",
+            '[project]\nname = "broken-packaged"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         (root / "loose_module.py").write_text("VALUE = 41\n", encoding="utf-8")
         u.Tests.initialize_git_repo(root)
