@@ -47,6 +47,8 @@ class FlextInfraConstantsMake:
     )
     MAKE_REPOSITORY_ROOT: ClassVar[str] = "REPOSITORY_ROOT"
     "Make variable the workspace orchestrator passes to attached members."
+    RUFF_UNSAFE_FIXES_FLAG: ClassVar[str] = "--unsafe-fixes"
+    "Ruff CLI flag that applies unsafe fixes; never part of the lint repair."
 
     VERB_CHECK: ClassVar[str] = "check"
     VERB_TEST: ClassVar[str] = "test"
@@ -73,7 +75,7 @@ class FlextInfraConstantsMake:
     MYPY_MEMORY_LIMIT_MB_DEFAULT: ClassVar[int] = 6144
     MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
     MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
-    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 100
+    MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 120
     MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
     PRLIMIT_COMMAND: ClassVar[str] = "prlimit"
     PRLIMIT_ADDRESS_SPACE_OPTION: ClassVar[str] = "--as"

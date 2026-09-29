@@ -224,6 +224,20 @@ class FlextInfraEnsureRuffConfigPhase:
                             key=c.Infra.IGNORE,
                             value=u.normalize_to_json_value(effective_ignore),
                         ),
+                        # make fix never deletes information: the fix-safety
+                        # policy comes from the same SSOT the template renders.
+                        toml.SetOp(
+                            key="unfixable",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.unfixable)
+                            ),
+                        ),
+                        toml.SetOp(
+                            key="extend-safe-fixes",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.extend_safe_fixes)
+                            ),
+                        ),
                     ),
                 ),
                 toml.PhaseConfig(

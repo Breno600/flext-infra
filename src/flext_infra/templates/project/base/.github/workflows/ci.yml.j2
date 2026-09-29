@@ -86,6 +86,7 @@ jobs:
       # a cold runner never re-downloads the pinned tarballs, where a network
       # blip failed setup.
 {%- include "_fragments/toolchain_cache_restore.j2" %}
+{%- include "_fragments/mypy_cache_restore.j2" %}
 {%- if custom_steps %}
 
       # Project-owned steps, the CI counterpart of custom.mk: the generator
@@ -193,6 +194,7 @@ jobs:
       # Why (flext-7jnr0): save on every outcome — including a failing gate — so
       # the next run starts warm. Only written when the restore missed.
 {%- include "_fragments/toolchain_cache_save.j2" %}
+{%- include "_fragments/mypy_cache_save.j2" %}
   # End SECTION: ci job
 
   # === SECTION: release-plan job (managed) ===
