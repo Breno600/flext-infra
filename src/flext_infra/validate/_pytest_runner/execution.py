@@ -109,7 +109,10 @@ class FlextInfraPytestRunnerExecution(
             raise RuntimeError(msg)
         if not owns_no_tests:
             self._collection_diagnostics(report_log)
-        if owns_no_tests and outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED:
+        if (
+            owns_no_tests
+            and outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED
+        ):
             # No manifest artifact is produced for an empty declared suite.
             return m.Infra.PytestSelectionPlan(
                 manifest_path=manifest_path,
@@ -266,11 +269,15 @@ class FlextInfraPytestRunnerExecution(
         )
         # The zero-test receipt travels on the typed accounting the reports
         # owner parsed from the durable selection plan.
-        if not accounting.executed_count and not accounting.owns_no_tests and not (
-            cache_hit
-            and context.execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
-            and raw_return_code
-            in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
+        if (
+            not accounting.executed_count
+            and not accounting.owns_no_tests
+            and not (
+                cache_hit
+                and context.execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
+                and raw_return_code
+                in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
+            )
         ):
             msg = "zero execution is accepted only for a verified incremental cache hit"
             raise RuntimeError(msg)

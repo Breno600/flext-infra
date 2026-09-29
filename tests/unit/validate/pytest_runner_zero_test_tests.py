@@ -34,13 +34,10 @@ class TestsFlextInfraPytestRunnerZeroTest:
         package_root.mkdir(parents=True)
         (project_root / cache.target_directory).mkdir(exist_ok=True)
         (project_root / "pyproject.toml").write_text(
-            "[tool.pytest.ini_options]\n"
-            f'pythonpath = ["{c.Infra.DEFAULT_SRC_DIR}"]\n',
+            f'[tool.pytest.ini_options]\npythonpath = ["{c.Infra.DEFAULT_SRC_DIR}"]\n',
             encoding="utf-8",
         )
-        (package_root / "__init__.py").write_text(
-            "VALUE = 41\n", encoding="utf-8"
-        )
+        (package_root / "__init__.py").write_text("VALUE = 41\n", encoding="utf-8")
         return project_root
 
     @staticmethod
