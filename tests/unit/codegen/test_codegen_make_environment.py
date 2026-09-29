@@ -502,7 +502,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has=f'gates="{gates}"')
         tm.that(
             '$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" '
-            '--gates "$$gates" --projects .' in makefile,
+            '--gates "$$gates"' in makefile,
             eq=True,
         )
         tm.that("$(UV_RUN) actionlint" in makefile, eq=False)
@@ -599,14 +599,14 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has=f'gates="{scheduled}"')
         for gate in config.Infra.codegen.make.check_gates_default:
             tm.that(scheduled.split(","), has=gate)
-        tm.that(makefile, has='--gates "$$gates" --projects .')
+        tm.that(makefile, has='--gates "$$gates"')
         check_invocations = tuple(
             line for line in makefile.splitlines() if '--gates "$$gates"' in line
         )
         tm.that(check_invocations, empty=False)
         for invocation in check_invocations:
             tm.that(invocation, lacks="--apply")
-        tm.that(makefile, has="--projects . --apply --report-findings")
+        tm.that(makefile, has="--apply --report-findings")
 
     def test_standalone_check_executes_its_declared_default_gates(
         self, tmp_path: Path
@@ -642,7 +642,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         gates = ",".join(config.Infra.codegen.make.check_gates_default)
         invocation = invocation_log.read_text(encoding="utf-8")
         tm.that(invocation, has="-m flext_infra check run")
-        tm.that(invocation, has=f"--gates {gates} --projects .")
+        tm.that(invocation, has=f"--gates {gates}")
         tm.that(invocation, lacks="--apply")
 
     @staticmethod

@@ -8,7 +8,7 @@
    drift from another. #}
 {%- macro gates_csv(names) -%}{{ names|join(",") }}{%- endmacro -%}
 {%- macro gates_banner(names) -%}{{ names|join(" ") }}{%- endmacro -%}
-{%- macro check_run(gates, extra="") -%}$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "{{ gates }}" --projects .{{ extra }}{%- endmacro -%}
+{%- macro check_run(gates, extra="") -%}$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "{{ gates }}"{{ extra }}{%- endmacro -%}
 {%- macro local_check_body() -%}
 {{ "\t" }}@set -eu; \
 {% for suspension in make.check_gate_suspensions -%}
@@ -696,7 +696,7 @@ profile-census: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
 		'import cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); status = profile.runcall(main, sys.argv[2:]); profile.dump_stats(sys.argv[1]); raise SystemExit(status)' \
 		"$(PROFILE_REPORTS_DIR)/runtime-census.pstats" check run \
-		--repository-root "$(PROJECT_ROOT)" --gates runtime-census --projects .
+		--repository-root "$(PROJECT_ROOT)" --gates runtime-census
 
 .PHONY: profile-census-report
 profile-census-report: _builtin_require_environment
@@ -711,7 +711,7 @@ profile-mypy: _builtin_require_environment
 	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@export FLEXT_MYPY_PROFILE_OUTPUT="$(PROFILE_REPORTS_DIR)/mypy.pstats"; \
 		$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" \
-		--gates mypy --projects . --report-findings
+		--gates mypy --report-findings
 
 .PHONY: profile-mypy-report
 profile-mypy-report: _builtin_require_environment
