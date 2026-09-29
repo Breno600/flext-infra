@@ -307,21 +307,23 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         return result
 
     def _lazy_phase(
-        self, request: m.Infra.CodegenConformRequest
+        self, request: m.Infra.CodegenConformRequest, plan: m.Infra.CodegenPlan
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Single lazy-init analysis pass per conform invocation.
 
         One call site; both CHECK (drift detection) and APPLY
         (phase publication + receipt) consume the same analysis.
         ADR-014: lazy-init ownership stays inside conform's
-        transaction.
+        transaction. Lazy-init plans exactly the repositories conform
+        rewrites: the selected mutable ``internal_flext`` repositories of
+        ``plan``, never a scope-excluded root or a third-party checkout.
         """
         return FlextInfraCodegenLazyInit(
             repository_root=request.root,
-            project_scope_root=(
-                request.root
-                if request.scope == c.Infra.CodegenConformScope.SELF
-                else None
+            project_scope_roots=tuple(
+                (request.root / repository.path).resolve()
+                for repository in plan.repositories
+                if repository.kind is c.Infra.ProjectKind.INTERNAL_FLEXT
             ),
         ).plan_files()
 
@@ -370,7 +372,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 return r[m.Infra.CodegenResult].fail(
                     f"codegen drift detected: {paths}\n{report}"
                 )
-            lazy_analysis = self._lazy_phase(request)
+            lazy_analysis = self._lazy_phase(request, plan)
             if lazy_analysis.failure:
                 return r[m.Infra.CodegenResult].from_failure(lazy_analysis)
             lazy_changed = tuple(
@@ -431,7 +433,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         session: m.Infra.CodegenTransactionSession,
     ) -> p.Result[m.Infra.CodegenResult]:
         """Complete every post-begin phase through prepared-state recovery."""
-        lazy_analysis = self._lazy_phase(request)
+        lazy_analysis = self._lazy_phase(request, plan)
         if lazy_analysis.failure:
             aborted = transaction.abort_locked(
                 session, lazy_analysis.error or "lazy-init planning failed"

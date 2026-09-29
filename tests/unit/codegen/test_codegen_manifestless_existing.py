@@ -230,4 +230,9 @@ class TestsFlextInfraCodegenManifestlessExisting:
             for dependency in profile.runtime
             if u.Infra.dep_name(dependency) != distribution
         )
-        tm.that(owned_runtime[0] in rendered, eq=True)
+        tm.that(
+            set(owned_runtime).issubset(
+                u.Tests.toml_strings_at(rendered, "project", "dependencies")
+            ),
+            eq=True,
+        )
