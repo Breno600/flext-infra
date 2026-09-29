@@ -118,12 +118,6 @@ Infra:
       # through the lifecycle; make is the one tool the Makefile cannot resolve
       # from itself, so mise must provision it.
       make_version: latest
-      # Mise self-provisioning: pin the mise bootstrap binary so it never
-      # resolves 'latest' at runtime. Override to pin a specific release.
-      mise_version: "2026.9.15"
-      # Mise is not a registry tool name; it is provisioned from the aqua
-      # backend, so the generated [tools] key must be the aqua selector.
-      mise_namespace: "aqua:jdx/mise"
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools owned by ai-hub's global mise
@@ -1242,7 +1236,7 @@ Infra:
               - dependency-injector>=4.49.1
               - packaging>=26.3
               - pydantic>=2.13.5
-              - pydantic-settings>=2.14.2,<2.15
+              - pydantic-settings>=2.14.2,<2.16
               - pyyaml>=6.0.3
               - structlog>=25.5.0,<27
               - typing-extensions>=4.16.0
@@ -1252,7 +1246,7 @@ Infra:
               - flext-cli
               - flext-core
               - pydantic>=2.13.5
-              - pydantic-settings>=2.14.2,<2.15
+              - pydantic-settings>=2.14.2,<2.16
             codegen: [flext-infra]
         # Project-scoped requirements extend the shared profile without
         # leaking API/Web dependencies into core consumers. Unbounded entries
