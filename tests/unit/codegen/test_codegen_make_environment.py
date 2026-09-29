@@ -814,7 +814,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
             "SETUP_DIRENV=$$direnv_executable",
             '$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"',
             '$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"',
-            '$(UV) sync --project "$(PROJECT_ROOT)"',
+            # uv syncs the runtime root's project (UV_PROJECT := RUNTIME_ROOT).
+            '$(UV) sync --project "$(UV_PROJECT)"',
             '--link-mode "$(UV_LINK_MODE)"',
             'git -C "$$superproject" submodule update --init -- "$$child_path"',
             'git -C "$$child_root" branch --show-current',
