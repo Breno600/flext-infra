@@ -98,6 +98,9 @@ class TestsFlextInfraCodegenLayoutGitignore:
             )
             if item.gitignore_additions
         )
+        # The new project is created inside a governed workspace: its Taplo pin
+        # resolves through the nearest committed mise.lock above it.
+        u.Tests.copy_tracked_mise_seeds(tmp_path)
         root = tmp_path / f"{owner}{directory_suffix}"
         repository = u.Tests.repository_ref(owner)
         project = u.Tests.project_spec(owner)

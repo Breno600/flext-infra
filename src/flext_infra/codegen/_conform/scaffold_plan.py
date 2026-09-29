@@ -70,7 +70,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         )
         if tooling_result.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(tooling_result)
-        render_inputs = m.Infra.CodegenRenderInputs(
+        render_inputs = self.resolve_render_inputs(
             target=target,
             workspace=workspace,
             codegen=codegen,

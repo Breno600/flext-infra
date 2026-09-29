@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
+from flext_infra import config
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from tests import c, u
 
@@ -454,7 +455,9 @@ class TestsFlextInfraCodegenLazyInitService:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         first, second = "FlextTestsFirst", "FlextTestsSecond"
         compact = f'__all__: tuple[str, ...] = ("{first}", "{second}")'
-        second += "x" * (c.Infra.MAX_LINE_LENGTH + width_offset - len(compact))
+        second += "x" * (
+            config.Infra.tooling.tools.ruff.line_length + width_offset - len(compact)
+        )
         package_root.joinpath("runner.py").write_text(
             f'class {first}:\n    """First export."""\n\n'
             f'class {second}:\n    """Second export."""\n\n'
@@ -474,8 +477,61 @@ class TestsFlextInfraCodegenLazyInitService:
             "--config",
             str(Path(__file__).resolve().parents[3] / c.PYPROJECT_FILENAME),
             "--line-length",
-            str(c.Infra.MAX_LINE_LENGTH),
+            str(config.Infra.tooling.tools.ruff.line_length),
             str(package_root / c.Infra.INIT_PY),
+        ])
+        tm.that(formatted.success, eq=True)
+        tm.that(
+            u.Cli.process_succeeded(formatted.value.outcome),
+            eq=True,
+            msg=f"{formatted.value.stdout}\n{formatted.value.stderr}",
+        )
+
+    def test_multi_group_module_mapping_is_formatter_stable(
+        self, tmp_path: Path
+    ) -> None:
+        """A multi-entry child mapping that fits renders on Ruff's single line."""
+        repository_root, _package_root = u.Tests.create_lazy_init_workspace(tmp_path)
+        tests_root = repository_root / c.Infra.DIR_TESTS
+        unit_root = tests_root / "unit"
+        for package in (tests_root, unit_root):
+            package.mkdir()
+            package.joinpath(c.Infra.INIT_PY).write_text(
+                "", encoding=c.Cli.ENCODING_DEFAULT
+            )
+        for child, class_name in (
+            ("_models", "TestsUnitModels"),
+            ("_utilities", "TestsUnitUtilities"),
+        ):
+            child_root = unit_root / child
+            child_root.mkdir()
+            child_root.joinpath(c.Infra.INIT_PY).write_text(
+                "", encoding=c.Cli.ENCODING_DEFAULT
+            )
+            child_root.joinpath("base.py").write_text(
+                f'class {class_name}:\n    """Child export."""\n\n'
+                f'__all__ = ["{class_name}"]\n',
+                encoding=c.Cli.ENCODING_DEFAULT,
+            )
+        service = u.Tests.create_lazy_init_service(repository_root)
+        service.target_module = c.Infra.DIR_TESTS
+        service.apply_changes = True
+
+        result = u.Tests.materialize_lazy_init(service)
+
+        tm.that(result.success, eq=True)
+        generated = unit_root / c.Infra.INIT_PY
+        tm.that(
+            generated.read_text(encoding=c.Cli.ENCODING_DEFAULT),
+            has=["._models", "._utilities"],
+        )
+        formatted = u.Cli.run_raw([
+            c.Infra.RUFF,
+            "format",
+            "--check",
+            "--config",
+            str(Path(__file__).resolve().parents[3] / c.PYPROJECT_FILENAME),
+            str(generated),
         ])
         tm.that(formatted.success, eq=True)
         tm.that(

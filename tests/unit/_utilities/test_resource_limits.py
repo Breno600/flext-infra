@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import pstats
 import sys
 from pathlib import Path
@@ -32,7 +31,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
-        tm.that(result.value.outcome.raw_return_code, eq=0)
 
     def test_mypy_profile_records_the_real_checker(self, tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
@@ -90,8 +88,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
             # existing integration-harness budget, not the default case budget.
             pytest.param("deadline", 124, marks=pytest.mark.slow),
             # Darwin's supervisor samples group RSS and stops it (137); Linux
-            # prlimit makes the allocation fail inside the process (exit 1).
-            ("memory", (137 if sys.platform == "darwin" else 1)),
+            # prlimit makes the allocation raise inside the checker, which Mypy
+            # reports as an internal error with its documented crash exit (2).
+            ("memory", (137 if sys.platform == "darwin" else 2)),
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
@@ -124,9 +123,10 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(result.value.outcome.raw_return_code, eq=expected)
         if scenario == "memory":
             tm.that(
-                result.value.stderr,
+                f"{result.value.stdout}\n{result.value.stderr}",
                 has="RSS limit reached" if sys.platform == "darwin" else "MemoryError",
             )
+            tm.that(u.Infra.mypy_failure_diagnostic(result.value, limit), none=False)
 
     @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])
@@ -244,23 +244,28 @@ class TestsFlextInfraUtilitiesResourceLimits:
     ) -> None:
         """Reject non-integer process text before constructing the strict model.
 
-        The value reaches the process environment verbatim: ``tm.scope`` routes
-        it through a model whose base config strips whitespace, which would
-        repair `` 1024`` into a valid limit and make the padded case untestable.
-        The contract under test is exactly that no such repair happens.
+        A real child process receives the value verbatim, so nothing test-side
+        can repair `` 1024`` into a valid limit (``tm.scope`` routes env values
+        through a whitespace-stripping model) and the test process's own
+        environment is never mutated. The contract under test is exactly that
+        the parse boundary performs no such repair.
         """
-        original_memory = os.environ.get(c.Infra.MYPY_MEMORY_LIMIT_MB_ENV)
-        original_timeout = os.environ.get(c.Infra.MYPY_TIMEOUT_SECONDS_ENV)
-        os.environ[c.Infra.MYPY_MEMORY_LIMIT_MB_ENV] = invalid_value
-        os.environ[c.Infra.MYPY_TIMEOUT_SECONDS_ENV] = "120"
-        try:
-            with pytest.raises(
-                ValueError, match=f"{c.Infra.MYPY_MEMORY_LIMIT_MB_ENV} must be"
-            ):
-                u.Infra.mypy_resource_limit()
-        finally:
-            test_u.Tests.restore_env(c.Infra.MYPY_MEMORY_LIMIT_MB_ENV, original_memory)
-            test_u.Tests.restore_env(c.Infra.MYPY_TIMEOUT_SECONDS_ENV, original_timeout)
+        result = u.Cli.run_raw(
+            [
+                sys.executable,
+                "-c",
+                "from flext_infra import u; u.Infra.mypy_resource_limit()",
+            ],
+            env={
+                c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: invalid_value,
+                c.Infra.MYPY_TIMEOUT_SECONDS_ENV: str(
+                    c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT
+                ),
+            },
+        )
+        tm.ok(result)
+        tm.that(u.Cli.process_succeeded(result.value.outcome), eq=False)
+        tm.that(result.value.stderr, has=f"{c.Infra.MYPY_MEMORY_LIMIT_MB_ENV} must be")
 
     def test_mypy_resource_contract_rejects_memory_above_ceiling(self) -> None:
         """Reject a configured limit above the canonical hard ceiling."""
@@ -331,3 +336,30 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
 
         tm.that(diagnostic, has=["Traceback: checker frame", "INTERNAL ERROR"])
+
+    def test_mypy_cache_directory_is_project_keyed_and_survives_relocks(
+        self, tmp_path: Path
+    ) -> None:
+        """One shared Mypy cache per project, reused by every checkout and relock."""
+        spec = config.Infra.codegen.make.mypy_cache
+
+        def checkout(name: str, project: str) -> Path:
+            root = tmp_path / name
+            root.mkdir()
+            (root / c.PYPROJECT_FILENAME).write_text(
+                f"[project]\nname = '{project}'\nversion = '0.0.0'\n", encoding="utf-8"
+            )
+            return root
+
+        lane = checkout("lane", "fixture-alpha")
+        primary = checkout("primary", "fixture-alpha")
+        other = checkout("other", "fixture-beta")
+        shared = u.Infra.mypy_cache_directory(lane)
+        # Every checkout of one project reuses one analysis.
+        tm.that(u.Infra.mypy_cache_directory(primary), eq=shared)
+        tm.that(shared.parent.name, eq=Path(spec.external_storage_directory).name)
+        # A relock keeps the directory: Mypy revalidates changed modules itself.
+        (lane / c.Infra.UV_LOCK_FILENAME).write_text("rotated\n", encoding="utf-8")
+        tm.that(u.Infra.mypy_cache_directory(lane), eq=shared)
+        # Distinct projects never share one tests package namespace.
+        tm.that(u.Infra.mypy_cache_directory(other) != shared, eq=True)

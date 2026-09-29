@@ -130,25 +130,10 @@ class FlextInfraConfigModelsContexts:
         ]
         workspace_cli_group: Annotated[
             t.NonEmptyStr,
-            m.Field(description="CLI group used for workspace orchestration"),
-        ]
-        mypy_memory_limit_mb: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy address-space limit in MiB")
-        ]
-        mypy_timeout_seconds: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy wall-time limit in seconds")
+            m.Field(description="CLI group that owns the workspace propagate route"),
         ]
         mypy_timeout_exit_code: Annotated[
             int, m.Field(gt=0, description="Wall-time limiter timeout exit code")
-        ]
-        mypy_signal_exit_offset: Annotated[
-            int, m.Field(gt=0, description="Shell signal exit-code offset")
-        ]
-        prlimit_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter executable")
-        ]
-        prlimit_address_space_option: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter option")
         ]
         timeout_command: Annotated[
             t.NonEmptyStr, m.Field(description="Wall-time limiter executable")
@@ -172,23 +157,8 @@ class FlextInfraConfigModelsContexts:
             FlextInfraConfigModelsMake.MakeSpec,
             m.Field(description="Generated Make command contract"),
         ]
-        mypy_memory_limit_mb: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy address-space limit in MiB")
-        ]
-        mypy_timeout_seconds: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy wall-time limit in seconds")
-        ]
         mypy_timeout_exit_code: Annotated[
             int, m.Field(gt=0, description="Wall-time limiter timeout exit code")
-        ]
-        mypy_signal_exit_offset: Annotated[
-            int, m.Field(gt=0, description="Shell signal exit-code offset")
-        ]
-        prlimit_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter executable")
-        ]
-        prlimit_address_space_option: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter option")
         ]
         timeout_command: Annotated[
             t.NonEmptyStr, m.Field(description="Wall-time limiter executable")
@@ -257,7 +227,7 @@ class FlextInfraConfigModelsContexts:
             str,
             m.Field(
                 description=(
-                    "CLI group name for the flext-infra workspace orchestrate route"
+                    "CLI group name for the flext-infra workspace propagate route"
                 )
             ),
         ] = ""
@@ -495,7 +465,13 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Moving Waza release selector, e.g. 'latest'"),
         ]
         taplo_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Taplo release selector; the committed mise.lock pins the "
+                    "version generation authenticates (flext-t7668)"
+                )
+            ),
         ]
         ast_grep_selector: Annotated[
             t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")

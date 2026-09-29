@@ -2,17 +2,20 @@
 
 from __future__ import annotations
 
+import os
 import platform
 import shutil
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, m, t
+from flext_infra import c, config, m, t
 
 from .process import FlextInfraUtilitiesProcess
 from .project_discovery import FlextInfraUtilitiesProjectDiscovery
+from .pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -117,6 +120,32 @@ class FlextInfraUtilitiesResourceLimits:
             "-m",
             c.Infra.MYPY,
             *FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation),
+        )
+
+    @staticmethod
+    def mypy_cache_directory(project_dir: Path) -> Path:
+        """Resolve the one shared Mypy cache of a project across relocks.
+
+        Mypy keys its cache by module and revalidates each entry by source hash,
+        so every checkout and every relock of one project reuse one analysis: a
+        dependency bump recomputes only the modules it changed. Keying by lock
+        content (flext-7jnr0) forced a cold full-fleet analysis after every
+        relock and broke the bounded Mypy run. Projects keep distinct
+        directories because their ``tests`` packages share one module name.
+        """
+        spec = config.Infra.codegen.make.mypy_cache
+        home = os.environ.get(str(spec.data_home_environment_variable)) or str(
+            Path(os.environ[str(spec.user_home_environment_variable)])
+            / spec.home_cache_directory
+        )
+        metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
+            project_dir
+        )
+        if metadata.failure:
+            msg = metadata.error or f"project metadata unreadable: {project_dir}"
+            raise ValueError(msg)
+        return (
+            Path(home) / spec.external_storage_directory / metadata.value.project.name
         )
 
     @staticmethod

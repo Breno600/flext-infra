@@ -4,8 +4,11 @@ Infra:
     version: 1
     # Projections no template renders any more; generation removes the
     # generated copy from every consumer (renamed: install-git-hooks.sh ->
-    # validate-git-hook.sh).
-    retired_projections: [.github/scripts/install-git-hooks.sh]
+    # validate-git-hook.sh; flext-law-loop.sh validated the whole workspace
+    # from its root and retired with the root fan-out, operator 2026-09-29).
+    retired_projections:
+      - .github/scripts/install-git-hooks.sh
+      - .github/scripts/flext-law-loop.sh
 
     # Fresh import probes are independent subprocesses within one validation.
     fresh_import_workers: 3
@@ -118,8 +121,6 @@ Infra:
       # through the lifecycle; make is the one tool the Makefile cannot resolve
       # from itself, so mise must provision it.
       make_version: latest
-      # Mise self-provisioning: pin the mise bootstrap binary so it never
-      # resolves 'latest' at runtime. Override to pin a specific release.
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools owned by ai-hub's global mise
@@ -145,6 +146,11 @@ Infra:
           - spec
           - convergence
           - step
+          # The Gas City runtime mints startup-health-episode beads and writes
+          # the type into every governed ledger's generated `.beads/config.yaml`
+          # (observed in mcb, gmn and gc). Declaring it here keeps the frozen
+          # projection owned by this SSOT instead of hand-adopted per rig.
+          - startup-health-episode
         # Ledger scalars rendered into .beads/config.yaml. Change them here.
         # Per-repo override of Gas City participation is workspace.yaml
         # `gascity_enabled` (flips dolt.auto-start and omits gc.*). Never edit
@@ -345,11 +351,16 @@ Infra:
       # for remaining findings. Reporting never normalizes a red gate.
       # lint_fix is the lint gate's apply mode and the ONLY lint repair: make
       # fmt runs format only (single-pass verb law), so no lint_apply exists.
+      # make fix never deletes information (flext-itpd1.5): lint_fix applies
+      # Ruff's safe fixes only. Unsafe fixes deleted diagnostics (T201 removed
+      # print(..., file=sys.stderr) from a consumer script, turning a failure
+      # silent), so MakeRuffSpec rejects --unsafe-fixes here, and the rules
+      # whose fixes delete code are declared unfixable in tooling.yaml.
       ruff:
         format_check: [--preview, --check]
         format_apply: [--preview]
         lint_check: [--preview, --no-fix]
-        lint_fix: [--preview, --fix, --unsafe-fixes]
+        lint_fix: [--preview, --fix]
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
@@ -380,6 +391,16 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
+      # One lock-keyed Mypy analysis shared by every checkout on the same
+      # dependency lock. Mypy's cache is content-addressed by module hash, so a
+      # warm cache only removes the cold whole-fleet recompute and can never
+      # mask a finding (flext-7jnr0).
+      mypy_cache:
+        cache_environment_variable: MYPY_CACHE_DIR
+        data_home_environment_variable: XDG_CACHE_HOME
+        user_home_environment_variable: HOME
+        home_cache_directory: .cache
+        external_storage_directory: flext/infra/mypy
       # Public verbs execute their declared operation without mode selectors.
       ci:
         variable: CI
@@ -450,14 +471,9 @@ Infra:
           - flext-infra-codegen-transaction-journal.json.lock
         trace_globs:
           - "*.pstats"
-      # Branch shapes and PR state that let a push skip the pre-push gate, and
-      # the integration branches the merge lock protects. Read by
-      # ci.yml.j2 and .pre-commit-config.yaml.j2.
+      # Head commit subjects that mark work in progress, and the integration
+      # branches the CI merge guard locks against them. Read by ci.yml.j2.
       work_in_progress:
-        draft_pr: true
-        branch_patterns:
-          - "^wip/"
-          - WIP
         head_subject_patterns:
           - "^\\[WIP\\]"
           - "^WIP"
@@ -529,9 +545,9 @@ Infra:
         - name: test-full
           description: Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.
         - name: fmt
-          description: Apply ruff format --preview and ruff check --fix --unsafe-fixes --preview. Ruff is the rule; change code, never ruff.
+          description: Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.
         - name: fix
-          description: Apply ruff check --fix --unsafe-fixes --preview plus every other configured safe correction. Ruff is the rule; change code, never ruff.
+          description: Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.
         - name: fix-enforcement
           description: Apply the safe fix actions declared by the enforcement catalog.
         - name: fix-namespace
@@ -562,7 +578,11 @@ Infra:
         - name: initialize
           description: Materialize the declared package initializer graph.
         - name: mod
-          description: Apply the declared structural codemods.
+          description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
+        # The explicit snapshot regeneration (flext-itpd1.7): `mod` only verifies
+        # snapshots, so a changed rule output lands as a reviewed commit.
+        - name: mod-snapshots
+          description: Regenerate the owned ast-grep rule-test snapshots from their tests for a reviewed commit.
         - name: waza
           description: Validate provider-neutral governance semantics with Waza.
         - name: duplication
@@ -979,10 +999,6 @@ Infra:
         owner: codegen
         policy: full
         mode: 493 # 0o755
-      - path: .github/scripts/flext-law-loop.sh
-        owner: codegen
-        policy: full
-        mode: 493 # 0o755
       - path: tests/fixtures/ci/docker/alpine.Dockerfile
         owner: codegen
         policy: full
@@ -1230,7 +1246,7 @@ Infra:
               - dependency-injector>=4.49.1
               - packaging>=26.3
               - pydantic>=2.13.5
-              - pydantic-settings>=2.14.2,<2.15
+              - pydantic-settings>=2.14.2,<2.16
               - pyyaml>=6.0.3
               - structlog>=25.5.0,<27
               - typing-extensions>=4.16.0
@@ -1240,7 +1256,7 @@ Infra:
               - flext-cli
               - flext-core
               - pydantic>=2.13.5
-              - pydantic-settings>=2.14.2,<2.15
+              - pydantic-settings>=2.14.2,<2.16
             codegen: [flext-infra]
         # Project-scoped requirements extend the shared profile without
         # leaking API/Web dependencies into core consumers. Unbounded entries
@@ -1935,11 +1951,6 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
-        - source: base/.github/scripts/flext-law-loop.sh.j2
-          destination: .github/scripts/flext-law-loop.sh
-          profiles: [workspace]
-          delegate: render
-          overwrite: false
       # Multi-environment CI base: reusable ci-matrix workflow + per-distro
       # clean-machine images validating bootstrap and make verbs everywhere.
         - source: base/.github/workflows/ci-matrix.yml.j2
@@ -2097,7 +2108,7 @@ Infra:
         - source: base/Makefile.j2
           destination: Makefile
         # The generic conform engine is the single Makefile owner for every
-        # profile; workspace fan-out is selected inside this template.
+        # profile; every profile renders the same local verb bodies.
         # Fully generated (overwrite: true): a project never owns a verb.
         # `overwrite: false` froze every existing Makefile at the shape it
         # had when first written, so new builtin verbs never reached the

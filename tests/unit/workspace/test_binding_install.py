@@ -23,17 +23,30 @@ class TestsFlextInfraBindingInstall:
             "constraint",
             "inactive",
             "borrowed",
+            "borrowed-member",
             "override",
             "override-constraint",
+            "inactive-override",
         ],
     )
     def test_binding_uses_consumer_contract(
         self, tmp_path: Path, scenario: str
     ) -> None:
         """Install extras or reject incompatible, inactive, and borrowed candidates."""
-        supplier, consumer, extra = (
-            tmp_path / name for name in ("supplier", "consumer", "extra")
+        supplier, consumer, extra, workspace = (
+            tmp_path / name for name in ("supplier", "consumer", "extra", "workspace")
         )
+        if scenario == "borrowed-member":
+            # The consumer is a composed member: its runtime environment is the
+            # workspace's, so its own environment path must not borrow it.
+            u.Tests.WorktreeFixture.initialize_governed_project(
+                workspace,
+                "binding-workspace",
+                workspace="binding-workspace",
+                database="binding-workspace",
+                issue_prefix="binding-workspace",
+            )
+            consumer = workspace / consumer.name
         for root, name in (
             (supplier, "binding-candidate"),
             (consumer, "binding-consumer"),
@@ -59,14 +72,21 @@ class TestsFlextInfraBindingInstall:
             (root / f"{name.replace('-', '_')}.py").write_text(
                 'VALUE = "installed"\n', encoding=c.Cli.ENCODING_DEFAULT
             )
-        marker = "; python_version < '0'" if scenario == "inactive" else ""
+        inactive = "; python_version < '0'"
+        marker = inactive if scenario == "inactive" else ""
         policy = []
         if scenario in {"override", "override-constraint"}:
             policy.append('override-dependencies = ["binding-candidate==1"]')
+        if scenario == "inactive-override":
+            policy.append(f'override-dependencies = ["binding-candidate==1{inactive}"]')
         if scenario in {"constraint", "override-constraint"}:
             policy.append('constraint-dependencies = ["binding-candidate>=2"]')
         constraints = "\n[tool.uv]\n" + "\n".join(policy) if policy else ""
-        minimum = "2" if scenario in {"override", "override-constraint"} else "1"
+        minimum = (
+            "2"
+            if scenario in {"override", "override-constraint", "inactive-override"}
+            else "1"
+        )
         declaration = consumer / c.PYPROJECT_FILENAME
         declaration.write_text(
             '[project]\nname = "binding-consumer"\nversion = "1.0.0"\n'
@@ -74,7 +94,19 @@ class TestsFlextInfraBindingInstall:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         original = declaration.read_bytes()
-        tm.ok(u.Tests.create_python_environment(consumer))
+        if scenario == "borrowed-member":
+            u.Tests.WorktreeFixture.attach_submodule(
+                workspace,
+                consumer,
+                distribution="binding-consumer",
+                relative_path=consumer.name,
+            )
+            tm.ok(u.Tests.create_python_environment(workspace))
+            (consumer / c.Infra.ENVIRONMENT_DIRECTORY).symlink_to(
+                u.Infra.runtime_environment_dir(consumer), target_is_directory=True
+            )
+        else:
+            tm.ok(u.Tests.create_python_environment(consumer))
         environment = u.Infra.runtime_environment_dir(consumer)
         if scenario == "borrowed":
             foreign = tmp_path / "foreign-environment"
@@ -115,7 +147,7 @@ class TestsFlextInfraBindingInstall:
             tm.that(outcome.outcome.raw_return_code != 0, eq=True, msg=output)
             if scenario == "inactive":
                 tm.that(output, has="no active declared dependency")
-            elif scenario == "borrowed":
+            elif scenario in {"borrowed", "borrowed-member"}:
                 tm.that(output, has="physical consumer environment")
             else:
                 tm.that(output, has="binding-candidate")

@@ -45,9 +45,14 @@ class TestsFlextInfraCodegenMakeGateSuspensions:
     def test_suspension_without_census_families_keeps_the_field_empty(self) -> None:
         """A suspension that maps no census family parses with an empty map."""
         payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)
+        suspendable = tuple(
+            gate
+            for gate in config.Infra.codegen.make.check_gates_allowed
+            if gate not in c.Infra.UNSUSPENDABLE_GATES
+        )
         payload["check_gate_suspensions"] = (
             {
-                "gate": config.Infra.codegen.make.check_gates_allowed[0],
+                "gate": suspendable[0],
                 "authority": "fixture authorization",
                 "reason": "fixture decision",
             },
@@ -60,7 +65,11 @@ class TestsFlextInfraCodegenMakeGateSuspensions:
     def test_census_families_must_belong_to_exactly_one_suspension(self) -> None:
         """Two suspensions claiming the same census family fail validation."""
         payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)
-        allowed = config.Infra.codegen.make.check_gates_allowed
+        allowed = tuple(
+            gate
+            for gate in config.Infra.codegen.make.check_gates_allowed
+            if gate not in c.Infra.UNSUSPENDABLE_GATES
+        )
         payload["check_gate_suspensions"] = (
             {
                 "gate": allowed[0],
@@ -94,7 +103,10 @@ class TestsFlextInfraCodegenMakeGateSuspensions:
         )
         local_gates = builtin_defaults[:local_count]
         payload["ci"] = {**declared.ci.model_dump(), "local_check_gates": local_gates}
-        suspended_gates = (*builtin_defaults[:1], "fixture-suspended")
+        suspendable_defaults = tuple(
+            gate for gate in builtin_defaults if gate not in c.Infra.UNSUSPENDABLE_GATES
+        )
+        suspended_gates = (*suspendable_defaults[:1], "fixture-suspended")
         payload["check_gate_suspensions"] = tuple(
             {
                 "gate": gate,
@@ -142,7 +154,11 @@ class TestsFlextInfraCodegenMakeGateSuspensions:
     ) -> None:
         payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)
         row = {
-            "gate": config.Infra.codegen.make.check_gates_allowed[0],
+            "gate": next(
+                gate
+                for gate in config.Infra.codegen.make.check_gates_allowed
+                if gate not in c.Infra.UNSUSPENDABLE_GATES
+            ),
             "authority": "fixture authorization",
             "reason": "fixture decision",
         }
@@ -157,6 +173,23 @@ class TestsFlextInfraCodegenMakeGateSuspensions:
         )
 
         with pytest.raises(m.ValidationError):
+            m.Infra.MakeSpec.model_validate(payload)
+
+    @pytest.mark.parametrize("gate", sorted(c.Infra.UNSUSPENDABLE_GATES))
+    def test_lint_format_and_type_checker_gates_are_never_suspendable(
+        self, gate: str
+    ) -> None:
+        """A suspension naming a lint, format or type-checker gate is rejected."""
+        payload = config.Infra.codegen.make.model_dump(exclude_computed_fields=True)
+        payload["check_gate_suspensions"] = (
+            {
+                "gate": gate,
+                "authority": "fixture authorization",
+                "reason": "fixture decision",
+            },
+        )
+
+        with pytest.raises(m.ValidationError, match=gate):
             m.Infra.MakeSpec.model_validate(payload)
 
     @pytest.mark.slow

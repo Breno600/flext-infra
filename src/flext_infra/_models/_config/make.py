@@ -370,26 +370,71 @@ class FlextInfraConfigModelsMake:
                 raise ValueError(msg)
             return self
 
-    class MakeWorkInProgressSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Predicate for work-in-progress branches and draft-PR gate behavior.
+    class MypyCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
-        A hook that runs the full gate matrix on every push turns an
-        in-progress branch into a stop-and-wait loop, so contributors start
-        bypassing the hook entirely -- which costs more than it saves. The
-        predicate is DATA so the escape is declared and auditable rather than
-        improvised per-repository with `--no-verify`.
+        cache_environment_variable: Annotated[
+            FlextInfraConstantsMake.MypyCacheEnvironment,
+            m.Field(description="Mypy's cache-directory environment variable"),
+        ]
+        data_home_environment_variable: Annotated[
+            FlextInfraConstantsMake.MypyCacheEnvironment,
+            m.Field(description="XDG persistent cache-home variable"),
+        ]
+        user_home_environment_variable: Annotated[
+            FlextInfraConstantsMake.MypyCacheEnvironment,
+            m.Field(description="User home variable for the XDG default"),
+        ]
+        home_cache_directory: Annotated[
+            Path, m.Field(description="Standard cache directory below the user home")
+        ]
+        external_storage_directory: Annotated[
+            Path, m.Field(description="FLEXT-owned directory below the cache home")
+        ]
+
+        @u.model_validator(mode="after")
+        def require_external_cache_contract(self) -> Self:
+            """Keep the official cache variable and the external path policy exact."""
+            for name, actual, expected in (
+                (
+                    "cache_environment_variable",
+                    self.cache_environment_variable,
+                    FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                ),
+                (
+                    "data_home_environment_variable",
+                    self.data_home_environment_variable,
+                    FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                ),
+                (
+                    "user_home_environment_variable",
+                    self.user_home_environment_variable,
+                    FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                ),
+            ):
+                if actual != expected:
+                    msg = f"mypy cache {name} must be {expected.value}"
+                    raise ValueError(msg)
+            for name, path in (
+                ("home_cache_directory", self.home_cache_directory),
+                ("external_storage_directory", self.external_storage_directory),
+            ):
+                if path.is_absolute() or any(
+                    part in {"", ".", ".."} for part in path.parts
+                ):
+                    msg = f"mypy cache {name} must be normalized and relative"
+                    raise ValueError(msg)
+            return self
+
+    class MakeWorkInProgressSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Predicate the generated CI merge guard applies to pull request heads.
+
+        A GitHub Draft selects no job; a promoted PR whose head commit subject
+        marks work in progress cannot merge into a protected integration
+        branch. The predicate is DATA so the lock is declared and auditable
+        rather than improvised per repository.
         """
 
-        draft_pr: Annotated[
-            bool, m.Field(description="Treat GitHub draft PRs as work-in-progress")
-        ]
-        branch_patterns: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                min_length=1,
-                description="Regex patterns that mark a branch as work-in-progress",
-            ),
-        ]
         head_subject_patterns: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -417,6 +462,11 @@ class FlextInfraConfigModelsMake:
         format only and ``make fix`` owns lint repair through the lint gate —
         there is deliberately no ``lint_apply`` key, because a lint pass
         inside fmt would repeat the lint gate's fix.
+
+        ``make fix`` never deletes information (flext-itpd1.5): the lint repair
+        applies Ruff's safe fixes only, so ``lint_fix`` rejects the unsafe-fix
+        flag. Rules whose fixes delete code stay reported through the
+        ``unfixable`` list rendered from ``tooling.yaml``.
         """
 
         format_check: Annotated[
@@ -435,11 +485,23 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 description=(
-                    "Flags for ruff check --fix including unsafe-fixes; the lint "
-                    "gate's apply mode (make fix), which reports leftovers"
+                    "Flags for ruff check --fix applying safe fixes only; the "
+                    "lint gate's apply mode (make fix), which reports leftovers"
                 )
             ),
         ]
+
+        @u.model_validator(mode="after")
+        def _reject_unsafe_fixes(self) -> Self:
+            """Keep the lint repair information-preserving."""
+            if FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG in self.lint_fix:
+                msg = (
+                    "make.ruff.lint_fix must not enable "
+                    f"{FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG}: unsafe "
+                    "Ruff fixes delete code, comments and diagnostics"
+                )
+                raise ValueError(msg)
+            return self
 
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
@@ -497,6 +559,10 @@ class FlextInfraConfigModelsMake:
             FlextInfraConfigModelsMake.TestmonCacheSpec,
             m.Field(description="Adaptive testmon Actions cache policy"),
         ]
+        mypy_cache: Annotated[
+            FlextInfraConfigModelsMake.MypyCacheSpec,
+            m.Field(description="Project-keyed shared Mypy analysis cache policy"),
+        ]
         verbs: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeVerbSpec],
             m.Field(description="Ordered canonical public verbs"),
@@ -546,7 +612,7 @@ class FlextInfraConfigModelsMake:
 
         @u.model_validator(mode="after")
         def _validate_check_gate_suspensions(self) -> Self:
-            """Suspensions name unique gates in this project's complete vocabulary."""
+            """Suspensions name unique, suspendable gates in this project's vocabulary."""
             gates = tuple(item.gate for item in self.check_gate_suspensions)
             if len(gates) != len(set(gates)):
                 msg = "make check_gate_suspensions must name unique gates"
@@ -554,6 +620,15 @@ class FlextInfraConfigModelsMake:
             unknown = sorted(set(gates) - set(self.check_gates_allowed))
             if unknown:
                 msg = f"make check_gate_suspensions contains unknown gates: {', '.join(unknown)}"
+                raise ValueError(msg)
+            protected = sorted(
+                set(gates) & FlextInfraConstantsCheck.UNSUSPENDABLE_GATES
+            )
+            if protected:
+                msg = (
+                    "make check_gate_suspensions cannot suspend lint, format "
+                    f"or type-checker gates: {', '.join(protected)}"
+                )
                 raise ValueError(msg)
             families = [
                 family

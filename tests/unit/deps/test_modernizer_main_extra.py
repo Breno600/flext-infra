@@ -228,6 +228,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
             ),
         )
         u.Tests.write_project_beads_config(workspace, "flext")
+        # The governed tree above the workspace carries the committed Taplo pin.
+        u.Tests.seed_locked_taplo(tmp_path)
         external = tmp_path / "gruponos-data"
         (external / "src" / "gruponos_data").mkdir(parents=True)
         external_pyproject = external / c.PYPROJECT_FILENAME
@@ -248,6 +250,11 @@ class TestsFlextInfraDepsModernizerMainExtra:
 
     def test_conform_source_preserves_taplo_process_error(self, tmp_path: Path) -> None:
         """Return the exact formatter process failure from the public conform path."""
+        u.Tests.write_mise_lock(
+            tmp_path,
+            "taplo",
+            u.Tests.pinned_mise_version(u.Tests.repo_mise_lock(), "taplo"),
+        )
         (tmp_path / ".taplo.toml").write_text('include = ["/x/["]\n', encoding="utf-8")
         source = '[project]\nname = "sample"\nversion = "0.1.0"\n'
         modernizer = FlextInfraPyprojectModernizer(repository_root=tmp_path)
@@ -259,7 +266,10 @@ class TestsFlextInfraDepsModernizerMainExtra:
         )
 
         error = tm.fail(result)
-        tm.that(error, has=["taplo format failed (1)", "invalid configuration", "/x/["])
+        # taplo 0.10.0 drops its final ERROR log line in ~40% of concurrent
+        # runs; the exit code and the verbatim stderr prefix are its contract.
+        config_path = str(tmp_path / ".taplo.toml")
+        tm.that(error, has=["taplo format failed (1)", config_path])
         tm.that(
             error, lacks=["couldn't exec process", "pyproject tooling render failed"]
         )
