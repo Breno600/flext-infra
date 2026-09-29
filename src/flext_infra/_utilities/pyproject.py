@@ -145,6 +145,43 @@ class FlextInfraUtilitiesPyproject:
         )
 
     @staticmethod
+    def _locked_taplo_version(toolchain_root: Path, *, declared: str) -> p.Result[str]:
+        """Return the exact Taplo release the committed lock pins.
+
+        The configuration declares the moving selector; only ``make upg``
+        resolves it, into ``mise.lock``. Generation therefore reads the pinned
+        release and passes it on, and an absent lock entry fails loud instead
+        of silently accepting whatever binary the host happens to expose.
+        """
+        if declared != c.Infra.MISE_MOVING_SELECTOR:
+            return r[str].ok(declared)
+        return FlextInfraUtilitiesPyproject._locked_tool_version(
+            toolchain_root, c.Infra.TAPLO_MISE_TOOL_NAME
+        )
+
+    @staticmethod
+    def _locked_tool_version(toolchain_root: Path, tool_name: str) -> p.Result[str]:
+        """Return one tool's pinned version from ``mise.lock`` at the root."""
+        lock_path = toolchain_root / c.Infra.MISE_LOCK_FILENAME
+        source = u.Cli.files_read_text(lock_path)
+        if source.failure:
+            return r[str].from_failure(source)
+        payload = u.Cli.toml_mapping_from_text(source.value)
+        if payload is None:
+            return r[str].fail(f"invalid TOML in {lock_path.name}")
+        raw_tools = payload.get("tools")
+        raw_entry = raw_tools.get(tool_name) if isinstance(raw_tools, Mapping) else None
+        if isinstance(raw_entry, Sequence) and not isinstance(raw_entry, str):
+            raw_entry = raw_entry[0] if raw_entry else None
+        version = raw_entry.get("version") if isinstance(raw_entry, Mapping) else None
+        if not isinstance(version, str) or not version.strip():
+            return r[str].fail(
+                f"{lock_path.name} pins no version for {tool_name}: "
+                "run make upg to resolve the lock"
+            )
+        return r[str].ok(version.strip())
+
+    @staticmethod
     @lru_cache(maxsize=128)
     def _format_toml_source_cached(
         source: str,
