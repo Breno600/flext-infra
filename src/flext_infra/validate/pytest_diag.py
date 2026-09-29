@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, override
+from typing import TYPE_CHECKING, Annotated, ClassVar, override
 
 from flext_core import r
 from flext_infra import c, m, u
@@ -30,6 +30,8 @@ class FlextInfraPytestDiagExtractor(FlextInfraPytestDiagXmlMixin, s[bool]):
     and the explicit report-log for every warning occurrence.
     The human-readable pytest log remains required diagnostic evidence.
     """
+
+    model_config: ClassVar[m.ConfigDict] = m.ConfigDict(populate_by_name=True)
 
     junit: Annotated[Path, m.Field(description="JUnit XML path")]
     log_path: Annotated[Path, m.Field(description="Pytest log path")] = m.Field(
