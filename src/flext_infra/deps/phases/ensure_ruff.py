@@ -76,7 +76,7 @@ class FlextInfraEnsureRuffConfigPhase:
         projection converges.
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return set()
+            return frozenset()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
             raise ValueError(
@@ -98,7 +98,7 @@ class FlextInfraEnsureRuffConfigPhase:
 
     @classmethod
     def compose_per_file_ignores(
-        self,
+        cls,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
