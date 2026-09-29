@@ -48,8 +48,24 @@ class TestsFlextInfraExtendedCliEntry:
             eq=0,
         )
 
-    def test_run_auto_discovers_workspace_projects(self, tmp_path: Path) -> None:
+    def test_run_without_projects_evaluates_only_the_repository(
+        self, tmp_path: Path
+    ) -> None:
+        """An omitted --projects is the repository itself, never its members.
+
+        The declared member carries a syntax error that a member scan would
+        report, so a green run proves the root evaluated only itself.
+        """
         workspace = self._workspace(tmp_path)
+        (workspace / "pyproject.toml").write_text(
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n', encoding="utf-8"
+        )
+        package = workspace / "src" / "workspace"
+        package.mkdir(parents=True)
+        (package / "__init__.py").write_text('"""Root package."""\n', encoding="utf-8")
+        (workspace / "p1" / "src" / "broken.py").write_text(
+            "def broken(:\n", encoding="utf-8"
+        )
         tm.that(
             main([
                 "check",

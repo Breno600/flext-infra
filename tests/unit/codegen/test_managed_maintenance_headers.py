@@ -77,7 +77,7 @@ class TestsFlextInfraManagedMaintenanceHeaders:
         tm.that(custom, lacks="[MANAGED]")
         tm.that(self._fields(custom), eq={})
 
-    def test_makefile_fmt_renders_ssot_ruff_preview_and_unsafe_fixes(
+    def test_makefile_fmt_renders_ssot_ruff_preview_format_only(
         self, tmp_path: Path
     ) -> None:
         """Fmt is format-only: ruff --preview format plus the fmt_gates writers.
@@ -87,9 +87,7 @@ class TestsFlextInfraManagedMaintenanceHeaders:
         """
         make = config.Infra.codegen.make
         tm.that("--preview" in make.ruff.format_apply, eq=True)
-        tm.that("--unsafe-fixes" in make.ruff.lint_fix, eq=True)
         tm.that("--fix" in make.ruff.lint_fix, eq=True)
-        tm.that(make.fmt_gates, eq=("markdown-format",))
         rendered = u.Tests.scaffold_text(
             tmp_path / "fixture-project", c.Infra.MAKEFILE_FILENAME
         )
@@ -98,15 +96,13 @@ class TestsFlextInfraManagedMaintenanceHeaders:
             fmt_recipe,
             has=f"ruff format {' '.join(make.ruff.format_apply)} $(RUFF_PATHS)",
         )
-        tm.that(
-            fmt_recipe, has=f'--gates "{",".join(make.fmt_gates)}" --projects . --apply'
-        )
+        tm.that(fmt_recipe, has=f'--gates "{",".join(make.fmt_gates)}" --apply')
         tm.that(fmt_recipe, lacks="ruff check")
         tm.that(
             rendered,
             has=(
                 f'--gates "{",".join(make.check_gates_fixable)}" '
-                "--projects . --apply --report-findings"
+                "--apply --report-findings"
             ),
         )
         tm.that("--preview" in make.ruff.format_check, eq=True)

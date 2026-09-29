@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, settings
+from flext_infra import c
 from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.gates.duplication import FlextInfraDuplicationGate
 from tests import m, u
@@ -156,22 +156,19 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         u.Tests.declare_workspace_projects(root, ("fixture-dup", "fixture-dup-extra"))
         return root
 
-    def test_sibling_prefix_project_never_claims_foreign_clones(
+    def test_project_scan_never_reaches_a_prefix_named_sibling(
         self, tmp_path: Path
     ) -> None:
-        """A prefix-named sibling is a separate owner, never a crash.
+        """A project evaluates only itself, locally exactly as in CI.
 
-        Regression: ownership used a string prefix, so ``fixture-dup`` claimed
-        ``fixture-dup-extra``'s clone and ``Path.relative_to`` raised
-        ``ValueError`` instead of reporting a finding.
+        Both members carry the same module, yet the gate for ``fixture-dup``
+        scans only its own tree: the sibling whose name it prefixes is a
+        library, never scanned, so no cross-project clone is reported.
         """
         root = self._sibling_prefix_workspace(tmp_path)
         own = root / "fixture-dup"
 
         execution = FlextInfraDuplicationGate(root).check(own, self._ctx(root))
 
-        files = tuple(issue.file for issue in execution.issues)
-        tm.that(execution.result.passed, eq=settings.Infra.github_actions)
-        if not settings.Infra.github_actions:
-            tm.that(files, has="src/fixture_dup/duplicated.py")
-        tm.that(tuple(name for name in files if ".." in name), eq=())
+        tm.that(execution.result.passed, eq=True)
+        tm.that(execution.issues, eq=())

@@ -7,7 +7,11 @@ rule:
   pattern: t.$NAME
 constraints:
   NAME:
-    regex: "^(?:PRIMITIVES_TYPES|NUMERIC_TYPES|SEQUENCE_PAIR_TYPES|STR_BYTES_TYPES|STR_BINARY_TYPES|SCALAR_TYPES|CONTAINER_TYPES|CONTAINER_AND_COLLECTION_TYPES)$"
+    # ENFORCE-079 places every isinstance type tuple on FlextConstantsGuards
+    # (flext-core _constants/guards.py) under the *_TYPES convention, and no
+    # typings facade in the fleet declares one: a flat t.<NAME>_TYPES read is a
+    # stale consumer of that constant, so the convention selects the rewrite.
+    regex: "^[A-Z][A-Z0-9_]*_TYPES$"
 fix: c.$NAME
 message: >-
   The isinstance type tuples are runtime constants owned by FlextConstantsGuards

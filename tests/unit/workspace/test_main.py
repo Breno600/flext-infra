@@ -2,17 +2,12 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
-import pytest
 from flext_tests import tm
 
 from flext_infra import c, main as infra_main
-from flext_infra.workspace import (
-    FlextInfraOrchestratorService,
-    FlextInfraWorkspaceDetector,
-)
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import t, u
 
 
@@ -88,69 +83,6 @@ class TestsFlextInfraWorkspaceMain:
         ])
 
         tm.that(exit_code, eq=0)
-
-    def test_workspace_main_orchestrate_returns_failure_for_unknown_verb(self) -> None:
-        """The public command rejects an undeclared operation."""
-        tm.that(self._workspace_main(["orchestrate", "--verb", "legacy-check"]), eq=1)
-
-    @pytest.mark.parametrize("verb", c.Infra.ORCHESTRATED_VERBS)
-    @pytest.mark.parametrize("exit_code", [0, 7])
-    def test_workspace_orchestrate_passes_repository_root_to_member(
-        self,
-        tmp_path: Path,
-        capfd: pytest.CaptureFixture[str],
-        verb: str,
-        exit_code: int,
-    ) -> None:
-        """Members receive REPOSITORY_ROOT and the report accounts every exit."""
-        member_root = tmp_path / "demo-a"
-        member_root.mkdir()
-        sentinel = member_root / "observed-repository-root.txt"
-        (member_root / c.Infra.MAKEFILE_FILENAME).write_text(
-            f"{verb}:\n"
-            "\t@printf '%s\\n' '$(REPOSITORY_ROOT)'"
-            " > observed-repository-root.txt\n"
-            f"\t@exit {exit_code}\n",
-            encoding=c.Infra.ENCODING_DEFAULT,
-        )
-        service = FlextInfraOrchestratorService(
-            repository_root=tmp_path, verb=verb, projects=("demo-a",)
-        )
-        previous = Path.cwd()
-        os.chdir(tmp_path)
-        try:
-            result = service.orchestrate(("demo-a",), verb)
-        finally:
-            os.chdir(previous)
-
-        if exit_code:
-            tm.fail(result, has=f"demo-a exit={exit_code}")
-        else:
-            tm.ok(result)
-        tm.that(
-            sentinel.read_text(encoding=c.Infra.ENCODING_DEFAULT).strip(),
-            eq=str(tmp_path.resolve()),
-        )
-        captured = capfd.readouterr()
-        summary = next(
-            line
-            for line in (captured.out + captured.err).splitlines()
-            if line.startswith("summary scope=")
-        )
-        tm.that(
-            summary,
-            has=[
-                f"verb={verb}",
-                "total=1",
-                f"passed={int(exit_code == 0)}",
-                f"failed={int(exit_code != 0)}",
-                f"exit={exit_code}",
-            ],
-        )
-
-    def test_workspace_orchestrator_declares_enforcement_fix(self) -> None:
-        """The generated workspace Make handler has a matching public allowlist."""
-        tm.that(c.Infra.ORCHESTRATED_VERBS, has="fix-enforcement")
 
     def test_workspace_main_without_command_returns_failure(self) -> None:
         tm.that(self._workspace_main([]), eq=1)
