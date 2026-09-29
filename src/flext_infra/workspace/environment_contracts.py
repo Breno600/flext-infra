@@ -54,7 +54,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
     ) -> Path | None:
         """Resolve one quoted target to a concrete path, or None when dynamic.
 
-        A ``$HOME``/``~`` target describes machine state: it is skipped at
+        A ``${HOME}``/``~`` target describes machine state: it is skipped at
         generation time and, when resolved at check time, the REAL home is
         substituted for the prefix — stripping the prefix without substituting
         would probe a bogus absolute path (``/.config/...``) that never exists.
@@ -70,7 +70,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
         if home_match is not None:
             if not resolve_home:
                 return None
-            # A $HOME target describes machine state, so it probes the real
+            # A ${HOME} target describes machine state, so it probes the real
             # account home (pwd), never the ambient HOME: check pipelines run
             # under redirected homes where the referenced files legitimately
             # live only in the real account.
@@ -99,7 +99,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
           (``${DIRENV_DIR:-...}`` / ``${DIRENV_DIR-}``) stay legal.
         - Every literal ``source_env`` / ``watch_file`` target must exist. Targets
           derived from runtime variables (any remaining ``$``) are skipped. With
-          ``resolve_home=False`` (generation-time lint) ``$HOME`` targets are also
+          ``resolve_home=False`` (generation-time lint) ``${HOME}`` targets are also
           skipped because they describe machine state, not repository state.
         """
         violations: list[str] = []

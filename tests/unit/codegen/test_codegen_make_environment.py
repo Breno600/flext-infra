@@ -856,7 +856,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
     ) -> None:
         """Help preserves quotes and expansion syntax without executing them."""
         description = (
-            'Print checkout\'s "$HOME", $(shell touch make-effect), '
+            'Print checkout\'s "${HOME}", $(shell touch make-effect), '
             "and `touch shell-effect`."
         )
         project_root, _repository_root = u.Tests.render_make_environment(
