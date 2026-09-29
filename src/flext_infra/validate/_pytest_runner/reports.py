@@ -78,7 +78,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             )
             return r.ok(accounting)
         if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
-            assert selection_plan is not None
+            if selection_plan is None:
+                msg = (
+                    "non-coverage accounting requires the durable selection plan: "
+                    f"{log.parent / 'selection-plan.json'}"
+                )
+                raise RuntimeError(msg)
             selected = (
                 m.Infra.PytestCollectionManifest.model_validate_json(
                     selection_plan.manifest_path.read_text(encoding="utf-8")

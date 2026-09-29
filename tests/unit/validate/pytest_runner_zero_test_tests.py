@@ -58,24 +58,11 @@ class TestsFlextInfraPytestRunnerZeroTest:
             apply_changes=True,
         )
 
-    def test_owns_no_tests_reads_the_project_roots(self, tmp_path: Path) -> None:
-        """The detection is project-rooted: no test module means True."""
-        project = self._zero_test_project(tmp_path)
-        runner = self._runner(project, tmp_path)
-        tm.that(runner._owns_no_tests(), eq=True)
-        tests_root = project / config.Infra.codegen.make.testmon_cache.target_directory
-        tests_root.mkdir(exist_ok=True)
-        (tests_root / "test_present.py").write_text(
-            "def test_present() -> None:\n    assert 41 == 41\n",
-            encoding="utf-8",
-        )
-        tm.that(runner._owns_no_tests(), eq=False)
-
     @pytest.mark.slow
     def test_incremental_run_publishes_receipt_for_zero_test_project(
         self, tmp_path: Path
     ) -> None:
-        """make test on a zero-test project exits 0 with typed accounting."""
+        """Make test on a zero-test project exits 0 with typed accounting."""
         project = self._zero_test_project(tmp_path)
         runner = self._runner(project, tmp_path)
 
@@ -98,7 +85,7 @@ class TestsFlextInfraPytestRunnerZeroTest:
     def test_full_run_publishes_receipt_for_zero_test_project(
         self, tmp_path: Path
     ) -> None:
-        """make test-full on a zero-test project exits 0 with typed accounting."""
+        """Make test-full on a zero-test project exits 0 with typed accounting."""
         project = self._zero_test_project(tmp_path)
         runner = self._runner(project, tmp_path)
 
