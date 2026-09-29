@@ -45,13 +45,18 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
                 alias="m",
             )
             u.Tests.commit_git_changes(repository, "Seed scope fixture")
+        if scope is c.Infra.CodegenConformScope.DECLARED:
+            # A members-only run meets a root that already carries its runtime
+            # Mise declaration, launchers and pin: each member's launchers are
+            # validated as projections of that runtime root.
+            u.Tests.copy_tracked_mise_seeds(root)
         u.Tests.WorktreeFixture.attach_submodule(
             root,
             member,
             distribution=member.name,
             relative_path=member.relative_to(root).as_posix(),
         )
-        for repository in (root, member):
+        for repository, package in zip((root, member), packages, strict=True):
             observed = tm.ok(
                 FlextInfraWorkspaceDetector.load_workspace_spec(repository)
             )
@@ -59,7 +64,16 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
                 version=c.Infra.WORKSPACE_MANIFEST_VERSION,
                 name=observed.repository.name,
                 repository=observed.repository,
-                project=u.Tests.project_spec(observed.repository.name),
+                # The declaration states what the tree ships: these packages
+                # own no cli module, so conform declares no console script
+                # for its fresh-import stage to load.
+                project=u.Tests.project_spec(observed.repository.name).model_copy(
+                    update={
+                        "cli_module": (
+                            package / c.Infra.CODEGEN_CLI_MODULE_FILENAME
+                        ).is_file()
+                    }
+                ),
             )
             tm.ok(
                 u.Cli.yaml_dump(
