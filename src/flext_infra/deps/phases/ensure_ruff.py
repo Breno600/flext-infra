@@ -72,8 +72,8 @@ class FlextInfraEnsureRuffConfigPhase:
             raise ValueError(paths.error or "workspace analysis scope is unavailable")
         return sorted(path.as_posix() for path in paths.value)
 
-    @staticmethod
     def compose_per_file_ignores(
+        self,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
@@ -166,6 +166,7 @@ class FlextInfraEnsureRuffConfigPhase:
         # the namespace-packages contract only holds for roots on disk. The
         # declared lists stay the SSOT; existence filters the projection, with
         # roots the active plan is materializing accepted as present.
+
         def _present(directory: str) -> bool:
             return (path.parent / directory).is_dir() or (
                 directory in self._generated_roots
@@ -186,8 +187,7 @@ class FlextInfraEnsureRuffConfigPhase:
                     values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
                 ),
                 toml.ListOp(
-                    key="namespace-packages",
-                    values=sorted(existing_namespace_packages),
+                    key="namespace-packages", values=sorted(existing_namespace_packages)
                 ),
                 toml.SetOp(key="fix", value=ruff_cfg.fix),
                 toml.SetOp(key="line-length", value=ruff_cfg.line_length),

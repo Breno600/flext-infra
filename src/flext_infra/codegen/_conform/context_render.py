@@ -320,7 +320,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 # effective map and concurrent worktree WIP cannot change a
                 # projection.
                 ruff_per_file_ignores=(
-                    FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
+                    FlextInfraEnsureRuffConfigPhase(
+                        config.Infra.tooling
+                    ).compose_per_file_ignores(
                         repository_root, managed_artifacts=catalog_artifacts
                     )
                 ),
