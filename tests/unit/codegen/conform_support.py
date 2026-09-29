@@ -96,7 +96,7 @@ class TestsFlextInfraConformSupport:
 
     @staticmethod
     def seed_infra_package_tree(root: Path) -> None:
-        """Seed the minimal flext-infra tree (pyproject, src package, tests package).
+        """Seed the minimal flext-infra tree (pyproject, src, tests, Mise seeds).
 
         The conform templates materialize tests/fixtures/ci/docker/*, and the
         existing-tree tooling render discovers python roots from directories that
@@ -120,6 +120,7 @@ class TestsFlextInfraConformSupport:
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
+        u.Tests.copy_tracked_mise_seeds(root)
 
     @staticmethod
     def self_check_conform_service(
