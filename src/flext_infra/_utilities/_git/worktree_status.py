@@ -23,11 +23,11 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def _lifecycle_porcelain(cls, repo: Repo, repo_path: Path, porcelain: str) -> str:
-        listed = repo.git.worktree("list", "--porcelain")
         registered = {
-            Path(line.removeprefix("worktree ")).expanduser().resolve()
-            for line in listed.splitlines()
-            if line.startswith("worktree ")
+            entry.path
+            for entry in cls._registered_worktree_entries(
+                repo.git.worktree("list", "--porcelain")
+            )
         }
         administrative = {
             path.relative_to(repo_path).as_posix().rstrip("/")

@@ -89,6 +89,6 @@ class TestsFlextInfraWorktreeTopology(u.Tests.WorktreeFixture):
         tm.that(
             tm.ok(
                 u.Infra.git_list_worktrees(m.Infra.GitRepoRequest(repo_root=repository))
-            ).text,
+            ).porcelain,
             has=f"worktree {child_path}",
         )

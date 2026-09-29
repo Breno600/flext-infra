@@ -20,18 +20,10 @@ class FlextInfraEnsureRuffConfigPhase:
         self,
         tool_config: m.Infra.ToolConfigDocument,
         managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
-        generated_roots: t.StrSequence = (),
     ) -> None:
-        """Store tool configuration used to build canonical Ruff settings.
-
-        ``generated_roots`` carries the roots the active codegen plan is
-        about to materialize: the existence filter must accept them exactly
-        like the search-path owner does, or a first render that runs before
-        the plan writes the tree would drop roots the projection must keep.
-        """
+        """Store tool configuration used to build canonical Ruff settings."""
         self._tool_config = tool_config
         self._managed_artifacts = managed_artifacts
-        self._generated_roots = frozenset(generated_roots)
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
