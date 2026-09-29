@@ -570,7 +570,11 @@ Infra:
         - name: initialize
           description: Materialize the declared package initializer graph.
         - name: mod
-          description: Apply the declared structural codemods.
+          description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
+        # The explicit snapshot regeneration (flext-itpd1.7): `mod` only verifies
+        # snapshots, so a changed rule output lands as a reviewed commit.
+        - name: mod-snapshots
+          description: Regenerate the owned ast-grep rule-test snapshots from their tests for a reviewed commit.
         - name: waza
           description: Validate provider-neutral governance semantics with Waza.
         - name: duplication

@@ -1,0 +1,14 @@
+id: ban-infra-ai-hub-crg-library-import
+# `valid` MUST NOT match: unrelated imports, including names that only start
+# with the banned library names.
+valid:
+  - from flext_infra import u
+  - import importlib
+  - from crgs import graph
+  - import crgtools
+# `invalid` MUST match: any import of the AI Hub or CRG libraries.
+invalid:
+  - from ai_hub import runtime
+  - from crg.graph import build
+  - import code_relationship_graph
+  - import os, crg

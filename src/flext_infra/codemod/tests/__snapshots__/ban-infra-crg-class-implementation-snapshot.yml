@@ -1,0 +1,22 @@
+id: ban-infra-crg-class-implementation
+snapshots:
+  ? |
+    class CrgRuntime:
+        pass
+  : labels:
+    - source: |-
+        class CrgRuntime:
+            pass
+      style: primary
+      start: 0
+      end: 26
+  ? |
+    class FlextInfraCrgBridge(Base):
+        pass
+  : labels:
+    - source: |-
+        class FlextInfraCrgBridge(Base):
+            pass
+      style: primary
+      start: 0
+      end: 41

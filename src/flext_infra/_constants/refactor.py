@@ -134,6 +134,17 @@ class FlextInfraConstantsRefactor:
     })
     CODEMOD_SNAPSHOT_DIRNAME: ClassVar[str] = "__snapshots__"
     CODEMOD_SNAPSHOT_SUFFIX: ClassVar[str] = "-snapshot.yml"
+    # ast-grep rule-test protocol keys: a test names its rule and lists the
+    # invalid cases; a snapshot file maps each invalid case to its projection.
+    CODEMOD_RULE_TEST_ID_KEY: ClassVar[str] = "id"
+    CODEMOD_RULE_TEST_INVALID_KEY: ClassVar[str] = "invalid"
+    CODEMOD_SNAPSHOTS_KEY: ClassVar[str] = "snapshots"
+    # `make mod` only verifies committed snapshots; the regeneration is its own
+    # verb so every snapshot change lands as a reviewed commit.
+    CODEMOD_SNAPSHOT_REFRESH_HINT: ClassVar[str] = (
+        "ast-grep snapshots are projections of the rule tests: run "
+        "`make mod-snapshots`, review the snapshot diff and commit it"
+    )
     CODEMOD_EPHEMERAL_DIRNAME: ClassVar[str] = "__pycache__"
     REFACTOR_CONFIG_KEYS: ClassVar[t.StrSequence] = (
         RK_PROJECT_SCAN_DIRS,

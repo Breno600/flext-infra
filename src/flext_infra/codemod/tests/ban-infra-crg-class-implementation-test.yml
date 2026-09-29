@@ -1,0 +1,14 @@
+id: ban-infra-crg-class-implementation
+# `valid` MUST NOT match: a class whose name carries no CRG marker.
+valid:
+  - |
+    class GraphRuntime:
+        pass
+# `invalid` MUST match: a class named for CRG behavior, in any case.
+invalid:
+  - |
+    class CrgRuntime:
+        pass
+  - |
+    class FlextInfraCrgBridge(Base):
+        pass
