@@ -91,20 +91,33 @@ class FlextInfraPytestRunnerExecution(
         )
         log_text = selection_log.read_text(encoding="utf-8")
         # Exit code 5 is pytest's "no tests ran": testmon selected nothing.
+        # For a zero-test project (no test module under the config-owned
+        # roots) rc=5 is the DECLARED inventory outcome in both phases.
+        owns_no_tests = self._owns_no_tests()
+        accepted = {pytest.ExitCode.OK} | (
+            set() if complete else {pytest.ExitCode.NO_TESTS_COLLECTED}
+        )
+        if owns_no_tests:
+            accepted = {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
         if (
-            outcome.raw_return_code
-            not in (
-                {pytest.ExitCode.OK}
-                if complete
-                else {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
-            )
+            outcome.raw_return_code not in accepted
             or outcome.timed_out
             or outcome.forwarded_signal is not None
         ):
             detail = log_text.strip()
             msg = f"testmon selection failed ({outcome.raw_return_code}): {detail}"
             raise RuntimeError(msg)
-        self._collection_diagnostics(report_log)
+        if not owns_no_tests:
+            self._collection_diagnostics(report_log)
+        if owns_no_tests and outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED:
+            # No manifest artifact is produced for an empty declared suite.
+            return m.Infra.PytestSelectionPlan(
+                manifest_path=manifest_path,
+                node_ids=(),
+                whole_target=True,
+                inventory_collected=complete,
+                owns_no_tests=True,
+            )
         manifest = m.Infra.PytestCollectionManifest.model_validate_json(
             manifest_path.read_text(encoding="utf-8")
         )
@@ -112,7 +125,6 @@ class FlextInfraPytestRunnerExecution(
         if outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED and node_ids:
             msg = "pytest reported no collection with a nonempty manifest"
             raise RuntimeError(msg)
-        owns_no_tests = complete and not node_ids and self._owns_no_tests()
         if complete and not node_ids and not owns_no_tests:
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
@@ -137,20 +149,19 @@ class FlextInfraPytestRunnerExecution(
             owns_no_tests=owns_no_tests,
         )
 
-    @staticmethod
-    def _owns_no_tests() -> bool:
+    def _owns_no_tests(self) -> bool:
         """Return whether the project owns zero test files by design.
 
         The config-owned collection roots (``pytest.test-paths`` SSOT) contain
         no test module at all: an empty suite is the declared topology (a
         content-only workspace shell), not a broken collection. A project that
         DOES own test files but collects nothing keeps the loud failure —
-        zero-execution of an existing suite is never a silent pass.
+        zero-execution of an existing suite is never a silent pass (law 14).
         """
         pytest_settings = config.Infra.tooling.tools.pytest
         patterns = ("test_*.py", "*_test.py")
         for root in pytest_settings.test_paths:
-            base = Path(root)
+            base = self.root / root
             if not base.is_dir():
                 continue
             for pattern in patterns:
@@ -253,7 +264,9 @@ class FlextInfraPytestRunnerExecution(
         context = m.Infra.PytestRunContext.model_validate_json(
             (report_dir / "run-context.json").read_text(encoding="utf-8")
         )
-        if not accounting.executed_count and not (
+        # The zero-test receipt travels on the typed accounting the reports
+        # owner parsed from the durable selection plan.
+        if not accounting.executed_count and not accounting.owns_no_tests and not (
             cache_hit
             and context.execution_mode == c.Infra.PytestExecutionMode.INCREMENTAL
             and raw_return_code
@@ -287,7 +300,14 @@ class FlextInfraPytestRunnerExecution(
             not accounting_complete,
         ))
         accepted_cache_hit = cache_hit and not rejected
-        final_exit = 0 if accepted_cache_hit else raw_return_code or int(rejected)
+        # The zero-test receipt exits green: the suite owns nothing to execute
+        # and the run published its typed accounting.
+        accepted_zero_tests = accounting.owns_no_tests and not rejected
+        final_exit = (
+            0
+            if (accepted_cache_hit or accepted_zero_tests)
+            else raw_return_code or int(rejected)
+        )
         selected_count = (
             None
             if accounting.inventory_count is None
@@ -399,7 +419,7 @@ class FlextInfraPytestRunnerExecution(
             selection_plan.model_dump_json(indent=2) + "\n",
         ).unwrap()
         selection = selection_plan.node_ids
-        if not selection and not cache_restored:
+        if not selection and not cache_restored and not selection_plan.owns_no_tests:
             msg = "empty incremental selection requires an integrity-checked cache"
             raise RuntimeError(msg)
         # Workers execute one centrally ordered selection. The collection plugin
@@ -422,9 +442,20 @@ class FlextInfraPytestRunnerExecution(
             and not selection
             and cache_restored
         )
+        # A zero-test project (empty suite by declared design) completes its
+        # lifecycle with pytest's NO_TESTS_COLLECTED: the run must reach the
+        # finalizer so the typed receipt is published instead of a bare rc=5.
+        completed_zero_tests = (
+            selection_plan.owns_no_tests
+            and outcome.raw_return_code
+            in {pytest.ExitCode.OK, pytest.ExitCode.NO_TESTS_COLLECTED}
+            and not outcome.timed_out
+            and outcome.forwarded_signal is None
+        )
         if (
             not u.Cli.process_succeeded(outcome)
             and not cache_hit
+            and not completed_zero_tests
             and not self._completed_failure(outcome)
         ):
             return r.ok(outcome.raw_return_code)
