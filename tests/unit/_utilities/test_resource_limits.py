@@ -128,9 +128,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 f"{result.value.stdout}\n{result.value.stderr}",
                 has="RSS limit reached" if sys.platform == "darwin" else "MemoryError",
             )
-            tm.that(
-                u.Infra.mypy_failure_diagnostic(result.value, limit), none=False
-            )
+            tm.that(u.Infra.mypy_failure_diagnostic(result.value, limit), none=False)
 
     @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])

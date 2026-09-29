@@ -31,7 +31,7 @@ class TestsFlextInfraUtilitiesTomlMixin:
     @staticmethod
     def repo_mise_lock() -> str:
         """Return the repository's committed mise.lock text."""
-        return (Path(__file__).resolve().parents[2] / "mise.lock").read_text(
+        return (Path(__file__).resolve().parents[1] / "mise.lock").read_text(
             encoding=c.Cli.ENCODING_DEFAULT
         )
 

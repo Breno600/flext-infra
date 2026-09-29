@@ -120,6 +120,7 @@ class TestsFlextInfraConformSupport:
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
+        u.Tests.copy_tracked_mise_seeds(root)
 
     @staticmethod
     def self_check_conform_service(
