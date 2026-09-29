@@ -64,6 +64,8 @@ class TestsFlextInfraDepsModernizerPackaging:
             "flext-packaging-fixture",
             root_modules=[root_module],
             root_packages=[root_package],
+            # The fixture package ships no cli module, so it declares none.
+            cli_module=False,
         )
         u.Tests.git_bootstrap(
             root,

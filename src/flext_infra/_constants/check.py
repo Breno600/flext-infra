@@ -50,6 +50,18 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SILENT_FAILURE: ClassVar[str] = "silent-failure"
+    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset({
+        "pyrefly",
+        "mypy",
+        "pyright",
+    })
+    "Native type-checker gates: independent read-only analyzers of one tree."
+    UNSUSPENDABLE_GATES: ClassVar[frozenset[str]] = frozenset({
+        LINT,
+        FORMAT,
+        *TYPE_CHECKER_GATES,
+    })
+    "Lint, format and type-checker gates: never suspendable from `make check`."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
         "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
         "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),

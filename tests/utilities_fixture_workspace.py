@@ -113,6 +113,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
         gascity_enabled: bool | None = None,
         role: c.Infra.MakeProfile = c.Infra.MakeProfile.STANDALONE,
+        cli_module: bool | None = None,
     ) -> Path:
         """Write the declared ``config/workspace.yaml`` of one standalone repository.
 
@@ -124,6 +125,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         ``extra_verbs`` declares the repository-owned public Make verbs the
         managed Makefile renders into its help block, so a caller controls
         real rendered content through the declaration the loader validates.
+
+        ``cli_module`` declares whether an existing package ships its cli entry
+        module; ``None`` keeps the project model's own default.
 
         ``gascity_enabled`` declares the Gas City participation of a repository
         that participates in Beads; ``None`` writes no overlay at all (the fleet
@@ -142,6 +146,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             project = project.model_copy(
                 update={"inherited_facets": tuple(inherited_facets)}
             )
+        if cli_module is not None:
+            project = project.model_copy(update={"cli_module": cli_module})
         if root_modules or root_packages:
             project = project.model_copy(
                 update={
@@ -288,7 +294,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         project.mkdir()
         (project / "Makefile").touch()
         (project / "pyproject.toml").write_text(
-            (f"[project]\nname='{name}'\ndependencies=['flext-core>=0.1.0']\n"),
+            (
+                f"[project]\nname='{name}'\nversion='0.1.0'\n"
+                "dependencies=['flext-core>=0.1.0']\n"
+            ),
             encoding="utf-8",
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(

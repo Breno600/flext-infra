@@ -191,6 +191,7 @@ class TestsFlextInfraCodegenManifestlessExisting:
             f'"{ref.distribution} @ git+{ref.url}@{u.Tests.provider_branch()}"'
             for ref in internal_dev
         )
+        u.Tests.seed_locked_taplo(tmp_path)
         root = tmp_path / distribution
         package = root / c.Infra.DEFAULT_SRC_DIR / profile.upstream
         package.mkdir(parents=True)

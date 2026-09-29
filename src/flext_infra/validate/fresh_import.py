@@ -161,8 +161,11 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 )
             )
         # The probes execute the target checkout's code, so they run in the
-        # target's own environment, never the one hosting this tool.
-        interpreter = u.Infra.runtime_python(self.repository_root)
+        # declared runtime root's environment (the generated Makefile's
+        # RUNTIME_ROOT), or the target's own, never the one hosting this tool.
+        interpreter = u.Infra.runtime_python(
+            self.repository_root, runtime_root=self.runtime_root
+        )
         if not interpreter.is_file():
             return r[m.Infra.ValidationReport].fail(
                 f"fresh-import target interpreter is missing: {interpreter}; "

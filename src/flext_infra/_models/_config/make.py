@@ -371,25 +371,14 @@ class FlextInfraConfigModelsMake:
             return self
 
     class MakeWorkInProgressSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Predicate for work-in-progress branches and draft-PR gate behavior.
+        """Predicate the generated CI merge guard applies to pull request heads.
 
-        A hook that runs the full gate matrix on every push turns an
-        in-progress branch into a stop-and-wait loop, so contributors start
-        bypassing the hook entirely -- which costs more than it saves. The
-        predicate is DATA so the escape is declared and auditable rather than
-        improvised per-repository with `--no-verify`.
+        A GitHub Draft selects no job; a promoted PR whose head commit subject
+        marks work in progress cannot merge into a protected integration
+        branch. The predicate is DATA so the lock is declared and auditable
+        rather than improvised per repository.
         """
 
-        draft_pr: Annotated[
-            bool, m.Field(description="Treat GitHub draft PRs as work-in-progress")
-        ]
-        branch_patterns: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                min_length=1,
-                description="Regex patterns that mark a branch as work-in-progress",
-            ),
-        ]
         head_subject_patterns: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -546,7 +535,7 @@ class FlextInfraConfigModelsMake:
 
         @u.model_validator(mode="after")
         def _validate_check_gate_suspensions(self) -> Self:
-            """Suspensions name unique gates in this project's complete vocabulary."""
+            """Suspensions name unique, suspendable gates in this project's vocabulary."""
             gates = tuple(item.gate for item in self.check_gate_suspensions)
             if len(gates) != len(set(gates)):
                 msg = "make check_gate_suspensions must name unique gates"
@@ -554,6 +543,15 @@ class FlextInfraConfigModelsMake:
             unknown = sorted(set(gates) - set(self.check_gates_allowed))
             if unknown:
                 msg = f"make check_gate_suspensions contains unknown gates: {', '.join(unknown)}"
+                raise ValueError(msg)
+            protected = sorted(
+                set(gates) & FlextInfraConstantsCheck.UNSUSPENDABLE_GATES
+            )
+            if protected:
+                msg = (
+                    "make check_gate_suspensions cannot suspend lint, format "
+                    f"or type-checker gates: {', '.join(protected)}"
+                )
                 raise ValueError(msg)
             families = [
                 family
