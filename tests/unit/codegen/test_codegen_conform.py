@@ -905,6 +905,7 @@ class TestsFlextInfraCodegenConform:
             repository, project=u.Tests.project_spec("arbitrary-root")
         )
         root = tmp_path / "arbitrary-root"
+        u.Tests.seed_locked_taplo(tmp_path)
         request = u.Tests.conform_request(
             root,
             scope=c.Infra.CodegenConformScope.SELF,
@@ -948,6 +949,7 @@ class TestsFlextInfraCodegenConform:
         )
         workspace = u.Tests.workspace_spec(repository, project=project)
         root = tmp_path / "consumer"
+        u.Tests.seed_locked_taplo(tmp_path)
         tm.ok(
             FlextInfraCodegenConform.execute_request(
                 u.Tests.conform_request(
