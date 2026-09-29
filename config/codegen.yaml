@@ -420,7 +420,12 @@ Infra:
         # off the fast CI leg, and they are what CI=N exists to own. `lint` is
         # not here -- ruff is cheap, so making CI skip it buys nothing and
         # leaves the fast leg without a linter.
-        local_check_gates: [pyrefly, mypy]
+        # Operator decision 2026-09-29: mypy leaves this set and returns to
+        # the CI context — it was the only gate whose red content could merge
+        # unseen (#535/#523/#539), and the project-owned timeout budget
+        # (tools.mypy.timeout_seconds) makes it runnable on the runner.
+        # pyrefly stays local-only (fast; pyright already covers CI).
+        local_check_gates: [pyrefly]
       # Why (operator law 2026-08-24): git-hook stages are disabled by default;
       # the workflow below still declares stage membership so re-enabling is a
       # one-key change, case by case. CI owns read-only setup, generation drift,

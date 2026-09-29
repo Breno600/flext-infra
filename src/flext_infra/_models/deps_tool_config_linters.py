@@ -6,7 +6,7 @@ from typing import Annotated
 
 from flext_cli import m
 
-from flext_infra import t
+from flext_infra import c, t
 
 from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
 
@@ -233,6 +233,19 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
     class MypyConfig(m.ArbitraryTypesModel):
         """Mypy baseline settings loaded from YAML."""
 
+        timeout_seconds: Annotated[
+            int,
+            m.Field(
+                gt=0,
+                le=c.Infra.MYPY_TIMEOUT_SECONDS_MAX,
+                description=(
+                    "Project Mypy wall-time budget in seconds (SSOT; the env"
+                    " MYPY_TIMEOUT_SECONDS overrides it at the ingress"
+                    " boundary). Whole-program cold runs on large members"
+                    " need more than the default."
+                ),
+            ),
+        ] = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT
         plugins: Annotated[t.StrSequence, m.Field(description="Mypy plugins list.")] = (
             m.Field(default_factory=tuple)
         )
