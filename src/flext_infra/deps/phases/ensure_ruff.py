@@ -95,7 +95,6 @@ class FlextInfraEnsureRuffConfigPhase:
             return ()
         return tuple(path.as_posix() for path in paths.value)
 
-    @staticmethod
     def compose_per_file_ignores(
         self,
         project_dir: Path,
