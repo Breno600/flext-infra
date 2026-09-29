@@ -63,7 +63,7 @@ class FlextInfraEnsureRuffConfigPhase:
         return sorted(path.as_posix() for path in paths.value)
 
     @staticmethod
-    def _excluded_root_set(project_dir: Path) -> t.Infra.StrSet:
+    def _excluded_root_set(project_dir: Path) -> frozenset[str]:
         """First segments of the workspace SSOT's declared analysis exclusions.
 
         Unlike a disk probe (which oscillates between the deps pass and the
