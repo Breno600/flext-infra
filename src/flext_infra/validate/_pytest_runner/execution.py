@@ -114,7 +114,8 @@ class FlextInfraPytestRunnerExecution(
         if outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED and node_ids:
             msg = "pytest reported no collection with a nonempty manifest"
             raise RuntimeError(msg)
-        if complete and not node_ids:
+        owns_no_tests = bool(complete and not node_ids) and self._owns_no_tests()
+        if complete and not node_ids and not owns_no_tests:
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
         u.Cli.atomic_write_text_file(
@@ -135,7 +136,29 @@ class FlextInfraPytestRunnerExecution(
             node_ids=node_ids,
             whole_target=whole_target,
             inventory_collected=complete or verify_inventory,
+            owns_no_tests=owns_no_tests,
         )
+
+    @staticmethod
+    def _owns_no_tests() -> bool:
+        """Return whether the project owns zero test files by design.
+
+        The config-owned collection roots (``pytest.test-paths`` SSOT) contain
+        no test module at all: an empty suite is the declared topology (a
+        content-only workspace shell), not a broken collection. A project that
+        DOES own test files but collects nothing keeps the loud failure —
+        zero-execution of an existing suite is never a silent pass.
+        """
+        pytest_settings = config.Infra.tooling.tools.pytest
+        patterns = ("test_*.py", "*_test.py")
+        for root in pytest_settings.test_paths:
+            base = Path(root)
+            if not base.is_dir():
+                continue
+            for pattern in patterns:
+                if any(base.rglob(pattern)):
+                    return False
+        return True
 
     def _process_deadline(self) -> p.Cli.ProcessDeadline:
         """Use the entrypoint clock for selection, execution, and cleanup."""

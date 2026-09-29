@@ -138,6 +138,13 @@ class FlextInfraModelsCore:
         inventory_collected: bool = m.Field(
             description="Whether this run executed the complete inventory phase"
         )
+        owns_no_tests: bool = m.Field(
+            default=False,
+            description=(
+                "The project declares no test files under the config-owned "
+                "collection roots: an empty suite by design, not a broken run"
+            ),
+        )
 
     class PytestRunContext(m.Value):
         """Immutable execution identity shared by a phase's native receipts."""
