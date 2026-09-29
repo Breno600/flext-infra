@@ -1255,10 +1255,10 @@ Infra:
         # are resolved by deps; its floor writer updates this same owner.
           - upstream: flext_core
             project: flext-api
-            runtime: [flext-web, httpx>=0.28.1, msgpack>=1.2.2]
+            runtime: [flext-web, httpx>=0.28.1, msgpack>=1.2.3]
           - upstream: flext_core
             project: flext-auth
-            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.0]
+            runtime: [flext-api, bcrypt>=5.0.0, PyJWT>=2.15.1]
           - upstream: flext_core
             project: flext-cli
           # click floor mirrors the shared fleet lock (8.3.3); meltano upstream
@@ -1284,7 +1284,7 @@ Infra:
             runtime: [flext-cli, flext-infra, flext-web, flext-api, fastmcp>=4.0.10, requests>=2.34.2, aiohttp>=3.14.3, flask>=3.1.3, jinja2>=3.1.6, schedule>=1.2.2, pytest>=9.1.1]
           - upstream: flext_cli
             project: flext-web
-            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.141.1, starlette>=1.7.0, werkzeug>=3.1.9]
+            runtime: [flext-cli, flask>=3.1.3, uvicorn>=0.54.0, fastapi>=0.142.0, starlette>=1.7.0, werkzeug>=3.1.9]
           - upstream: flext_cli
             project: flext-db-oracle
             runtime: [flext-cli, oracledb>=26.0.1, sqlalchemy>=2.0.54]
@@ -1296,7 +1296,7 @@ Infra:
             runtime: [flext-ldif, ldap3>=2.10.2rc4]
           - upstream: flext_cli
             project: flext-meltano
-            runtime: [flext-cli, meltano>=4.3.0, singer-sdk>=0.54.6, sqlalchemy>=2.0.54, psycopg2-binary>=2.9.13, redis>=8.1.0]
+            runtime: [flext-cli, meltano>=4.4.0, singer-sdk>=0.54.7, sqlalchemy>=2.0.54, psycopg2-binary>=2.9.13, redis>=8.1.0]
           - upstream: flext_cli
             project: flext-oracle-oic
             runtime: [flext-cli, flext-auth, flext-api]
@@ -1329,7 +1329,7 @@ Infra:
             runtime: [flext-meltano, flext-oracle-oic, flext-api]
           - upstream: flext_core
             project: flext-tap-oracle-wms
-            runtime: [flext-meltano, flext-oracle-wms, singer-sdk>=0.54.6]
+            runtime: [flext-meltano, flext-oracle-wms, singer-sdk>=0.54.7]
           - upstream: flext_core
             project: flext-target-ldap
             runtime: [flext-meltano, flext-ldap]
