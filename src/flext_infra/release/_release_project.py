@@ -41,6 +41,37 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         )
         return written.map(lambda _: self._record(target, log, exit_code=1))
 
+    @classmethod
+    def _mirror_release_inputs(
+        cls, project_path: Path, stage_path: Path
+    ) -> p.Result[bool]:
+        """Carry the project's prepared release inputs into the staged source.
+
+        A project's own build hook can force-include inputs its lifecycle
+        generates under ``dist/`` (a pylock, a vendored node lock, a source
+        receipt). The stage is a Git archive: ignored build outputs never
+        enter it, so the files prepared in the checkout are mirrored verbatim.
+        The project's hook stays the sole owner of the input names and of
+        failing when one is missing; a project without ``dist/`` stages
+        unchanged.
+        """
+        del cls
+        source = project_path / "dist"
+        if not source.is_dir():
+            return r[bool].ok(True)
+        staged = stage_path / "dist"
+        try:
+            staged.mkdir(parents=True, exist_ok=True)
+            for entry in sorted(source.iterdir()):
+                if not entry.is_file():
+                    return r[bool].fail(
+                        f"project dist must contain only regular files: {entry}"
+                    )
+                shutil.copy2(entry, staged / entry.name)
+        except OSError as exc:
+            return r[bool].fail_op(f"mirror release inputs {source}", exc)
+        return r[bool].ok(True)
+
     def _build_staged(
         self,
         ctx: m.Infra.ReleasePhaseDispatchConfig,
@@ -76,6 +107,9 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             return self._write_release_text(
                 log, f"release metadata staged and validated: {name}\n"
             ).map(lambda _: self._record(target, log, exit_code=0, source=staged.value))
+        mirrored = self._mirror_release_inputs(path, stage)
+        if mirrored.failure:
+            return r[m.Infra.BuildRecord].from_failure(mirrored)
         dist = temporary / "dist"
         build = u.Cli.run_raw(
             [
