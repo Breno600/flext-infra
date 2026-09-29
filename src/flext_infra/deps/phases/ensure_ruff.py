@@ -62,32 +62,28 @@ class FlextInfraEnsureRuffConfigPhase:
         return sorted(path.as_posix() for path in paths.value)
 
     @staticmethod
-    def _excluded_root_set(project_dir: Path) -> t.Infra.StrSet:
+    def _excluded_root_set(project_dir: Path) -> frozenset[str] | None:
         """First segments of the workspace SSOT's declared analysis exclusions.
 
         Unlike a disk probe (which oscillates between the deps pass and the
         root-materializing gen pass), the workspace SSOT is order-independent:
         a repository declares a retired tree here once and every root-scoped
-        projection converges.
+        projection converges. ``None`` means the SSOT does not declare this
+        root as governed (no manifest) — a distinct posture from an empty
+        exclusion set, which is declared and means "nothing excluded".
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return frozenset()
+            return None
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
-            return frozenset()
+            raise ValueError(
+                paths.error or "workspace analysis exclusion scope is unavailable"
+            )
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
-    @staticmethod
-    def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
-        """Return the workspace-declared analysis exclusion paths (SSOT-driven)."""
-        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return ()
-        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            return ()
-        return tuple(path.as_posix() for path in paths.value)
-
+    @classmethod
     def compose_per_file_ignores(
+        cls,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
@@ -176,22 +172,12 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
-        # Dev/tooling source roots are config-declared, but a repository that
-        # retired a tree (e.g. scripts/) must not keep analyzer entries naming
-        # it: ruff fails hard on src roots whose directories do not exist, and
-        # the namespace-packages contract only holds for roots on disk. The
-        # declared lists stay the SSOT; existence filters the projection, with
-        # roots the active plan is materializing accepted as present.
-
-        def _present(directory: str) -> bool:
-            return (path.parent / directory).is_dir() or (
-                directory in self._generated_roots
-            )
-
-        existing_root = tuple(d for d in ruff_cfg.src if _present(d))
-        excluded_roots = self._excluded_root_set(path.parent)
+        declared_roots = self._excluded_root_set(path.parent)
+        excluded_roots = declared_roots if declared_roots is not None else frozenset()
         existing_namespace_packages = tuple(
-            d for d in ruff_cfg.namespace_packages if d not in excluded_roots
+            d
+            for d in ruff_cfg.namespace_packages
+            if d not in excluded_roots
         )
         toml = m.Infra.DepsToml
         return toml.PhaseConfig(
@@ -212,7 +198,14 @@ class FlextInfraEnsureRuffConfigPhase:
                 toml.SetOp(key="respect-gitignore", value=ruff_cfg.respect_gitignore),
                 toml.SetOp(key="show-fixes", value=ruff_cfg.show_fixes),
                 toml.SetOp(key="target-version", value=ruff_cfg.target_version),
-                toml.ListOp(key="src", values=sorted(existing_root)),
+                toml.ListOp(
+                    key="src",
+                    values=sorted(
+                        d
+                        for d in ruff_cfg.src
+                        if d not in self._excluded_root_set(path.parent)
+                    ),
+                ),
             ),
             nested_tables=(
                 toml.PhaseConfig(
