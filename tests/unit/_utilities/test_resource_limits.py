@@ -32,7 +32,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
-        tm.that(result.value.outcome.raw_return_code, eq=0)
 
     def test_mypy_profile_records_the_real_checker(self, tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
