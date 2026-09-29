@@ -8,13 +8,10 @@ them so no per-tool class re-implements the same apply contract.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class FlextInfraToolTablesPhase:

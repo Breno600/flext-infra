@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 from .tool_tables import FlextInfraToolTablesPhase
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class FlextInfraEnsureRuffConfigPhase:
