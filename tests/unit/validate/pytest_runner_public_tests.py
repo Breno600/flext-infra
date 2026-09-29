@@ -211,6 +211,21 @@ class TestsFlextInfraPytestRunner:
         tm.that(seeded.seed_needed, eq=True)
         tm.that(seeded.saveable, eq=True)
 
+    def _seed_cache(self, cached_runner_project: Path) -> Path:
+        """Seed the persistent cache through one public cold run."""
+        tm.that(tm.ok(self._runner_for(cached_runner_project).execute()), eq=0)
+        return (
+            cached_runner_project
+            / config.Infra.codegen.make.testmon_cache.reports_directory
+        )
+
+    @pytest.mark.slow
+    def test_warm_cache_deselects_the_unchanged_suite(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A second run restores the seeded cache and executes nothing."""
+        reports_root = self._seed_cache(cached_runner_project)
+
         second_exit = tm.ok(self._runner_for(cached_runner_project).execute())
         tm.that(second_exit, eq=0)
         second_summary = self._summary(reports_root)
@@ -226,6 +241,12 @@ class TestsFlextInfraPytestRunner:
             tm.that(warm_state.restored_accepted, eq=True)
             tm.that(warm_state.seed_needed, eq=False)
 
+    @pytest.mark.slow
+    def test_seeded_cache_executes_only_an_added_test(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A test added after the seed is the only one the next run executes."""
+        reports_root = self._seed_cache(cached_runner_project)
         (cached_runner_project / "tests" / "test_added.py").write_text(
             "def test_added_after_cache_seed():\n    assert True\n", encoding="utf-8"
         )
@@ -660,8 +681,13 @@ class TestsFlextInfraPytestRunner:
         tm.that(accounting.executed_count > 0, eq=True)
         tm.that(accounting.inventory_count, none=True)
         tm.that((report_dir / "coverage.xml").exists(), eq=False)
+        # failed-tests.txt names each failed case; errors.txt keeps its trace.
         tm.that(
             tm.ok(u.Cli.files_read_text(report_dir / "failed-tests.txt")),
+            has="test_coverage_failure",
+        )
+        tm.that(
+            tm.ok(u.Cli.files_read_text(report_dir / "errors.txt")),
             has="original coverage suite failure",
         )
         tm.that(
