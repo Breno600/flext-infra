@@ -736,13 +736,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         assert isinstance(jscpd, Mapping)
         assert isinstance(waza, Mapping)
         tm.that(jscpd.get("version"), eq=toolchain.jscpd_version)
-        tm.that(
-            jscpd.get("platforms"),
-            eq={
-                platform: {"asset_pattern": pattern}
-                for platform, pattern in toolchain.jscpd_asset_patterns.items()
-            },
-        )
+        tm.that(jscpd.get("platforms"), eq=None)
         tm.that(waza.get("version"), eq=toolchain.waza_version)
         tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
 
