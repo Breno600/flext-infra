@@ -94,7 +94,9 @@ class FlextInfraToolTablesPhase:
         """
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
-            return frozenset()
+            raise ValueError(
+                paths.error or "workspace analysis exclusions are unavailable"
+            )
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
     def _phases(

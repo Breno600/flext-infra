@@ -82,7 +82,9 @@ class FlextInfraEnsureRuffConfigPhase:
             return frozenset()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
-            return frozenset()
+            raise ValueError(
+                paths.error or "workspace analysis exclusions are unavailable"
+            )
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
     @staticmethod
@@ -92,12 +94,13 @@ class FlextInfraEnsureRuffConfigPhase:
             return ()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
-            return ()
+            raise ValueError(
+                paths.error or "workspace analysis exclusions are unavailable"
+            )
         return tuple(path.as_posix() for path in paths.value)
 
     @staticmethod
     def compose_per_file_ignores(
-        self,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
@@ -199,6 +202,7 @@ class FlextInfraEnsureRuffConfigPhase:
             )
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
+        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(path.parent)
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )
