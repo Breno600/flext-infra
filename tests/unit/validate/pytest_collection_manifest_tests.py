@@ -1,4 +1,4 @@
-"""The collection plugin imports its model facade only on a runner request."""
+"""The collection plugin never imports the model facade to honor a runner request."""
 
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ class TestsFlextInfraPytestCollectionManifest:
             tmp_path, f"{c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION}={target}"
         )
 
-        tm.that(loaded, eq="True")
+        tm.that(loaded, eq="False")
         manifest = m.Infra.PytestCollectionManifest.model_validate_json(
             target.read_text(encoding="utf-8")
         )

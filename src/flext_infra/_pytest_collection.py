@@ -66,15 +66,17 @@ class FlextInfraPytestCollection:
         """Validate before xdist publishes worker IDs, preserving raw failures.
 
         Both manifest routes are runner-passed options: a session that names
-        neither never imports the model facade.
+        neither imports no model. A requested manifest loads only its owning
+        model module, never the whole model facade, because every runner
+        collection process pays that import.
         """
         selected: str | None = session.config.getoption(
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION
         )
         if selected is not None:
-            from flext_infra import m
+            from ._models.validate import FlextInfraModelsCore
 
-            manifest = m.Infra.PytestCollectionManifest.model_validate_json(
+            manifest = FlextInfraModelsCore.PytestCollectionManifest.model_validate_json(
                 Path(selected).read_text(encoding="utf-8")
             )
             order = {node_id: index for index, node_id in enumerate(manifest.node_ids)}
@@ -100,9 +102,11 @@ class FlextInfraPytestCollection:
     @staticmethod
     def _write_collection_manifest(session: pytest.Session, target: Path) -> None:
         """Publish final selected items after testmon and every collection hook."""
-        from flext_infra import m, u
+        from flext_cli import u
 
-        manifest = m.Infra.PytestCollectionManifest(
+        from ._models.validate import FlextInfraModelsCore
+
+        manifest = FlextInfraModelsCore.PytestCollectionManifest(
             node_ids=tuple(item.nodeid for item in session.items)
         )
         u.Cli.atomic_write_text_file(target, manifest.model_dump_json() + "\n").unwrap()
