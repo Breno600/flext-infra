@@ -8,13 +8,10 @@ them so no per-tool class re-implements the same apply contract.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class FlextInfraToolTablesPhase:
@@ -98,9 +95,7 @@ class FlextInfraToolTablesPhase:
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
             return frozenset()
-        return frozenset(
-            p.parts[0] for p in paths.value if Path(p).parts
-        )
+        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
     def _phases(
         self, *, first_party: t.StrSequence, path: Path

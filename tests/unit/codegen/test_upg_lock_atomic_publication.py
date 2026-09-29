@@ -113,9 +113,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 u.Cli.atomic_write_text_file(
                     manifest,
                     self.MANIFEST.format(
-                        python=python,
-                        dependencies=dependencies,
-                        links=links.as_posix(),
+                        python=python, dependencies=dependencies, links=links.as_posix()
                     ),
                 )
             )
