@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import time
 from pathlib import Path
@@ -118,8 +119,12 @@ class TestsFlextInfraPytestRunner:
             cached_runner_project
             / config.Infra.codegen.make.testmon_cache.reports_directory
         )
+        declared_ceiling = policy.parallel_worker_overrides[declared_name]
+        expected_workers = runner.resolve_worker_ceiling(
+            declared_ceiling, os.process_cpu_count()
+        )
         budget = runner.parallel_worker_budget(policy)
-        assert budget == policy.parallel_worker_overrides[declared_name]
+        assert budget == expected_workers
         command = runner.build_command(report)
         workers = command[command.index("-n") + 1]
         assert workers == str(budget)

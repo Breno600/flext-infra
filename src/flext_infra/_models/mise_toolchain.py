@@ -228,16 +228,6 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(description="Moving jscpd release selector, e.g. 'latest'"),
         ]
-        jscpd_asset_patterns: Annotated[
-            t.StrMapping,
-            m.Field(
-                description=(
-                    "Mise platform -> release asset pattern for jscpd. Its "
-                    "assets carry libc/ABI suffixes (-gnu, -musl, -msvc) that "
-                    "mise autodetection cannot resolve into a lock entry."
-                )
-            ),
-        ]
         prettier_selector: Annotated[
             t.NonEmptyStr,
             m.Field(

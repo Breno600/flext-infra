@@ -320,17 +320,10 @@ class TestsFlextInfraCodegenMiseArtifacts:
         )
         tools = test_u.Tests.toml_mapping(plan["tools"])
 
-        # jscpd release assets carry libc/ABI suffixes, so the route is a
-        # table: the declared version plus one asset pattern per platform.
+        # jscpd declares a host-invariant version so mise writes one lock
+        # entry per tool; the per-platform asset patterns were removed.
         tm.that(
-            tools.get(toolchain.jscpd_selector),
-            eq={
-                "version": toolchain.jscpd_version,
-                "platforms": {
-                    platform: {"asset_pattern": pattern}
-                    for platform, pattern in toolchain.jscpd_asset_patterns.items()
-                },
-            },
+            tools.get(toolchain.jscpd_selector), eq={"version": toolchain.jscpd_version}
         )
         tm.that("npm:jscpd" in tools, eq=False)
 
