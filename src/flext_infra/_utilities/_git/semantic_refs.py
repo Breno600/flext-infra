@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from git import BadName, GitCommandError
 
 from flext_core import r
-from flext_infra import c, m
+from flext_infra import m
 
 from .worktree import FlextInfraUtilitiesGitWorktreeMixin
 
@@ -22,18 +22,25 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
     @classmethod
     def git_list_worktrees(
         cls, request: m.Infra.GitRepoRequest
-    ) -> p.Result[m.Infra.GitTextReport]:
-        """List registered worktrees in porcelain form."""
+    ) -> p.Result[m.Infra.GitWorktreeListReport]:
+        """Read Git's canonical worktree registry, parsed once for every consumer."""
+        repo_root = request.repo_root.expanduser().resolve()
         try:
-            repo = cls._repo(request.repo_root)
-            text = repo.git.worktree("list", "--porcelain")
+            repo = cls._repo(repo_root)
+            porcelain = repo.git.worktree("list", "--porcelain")
         except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
+            return r[m.Infra.GitWorktreeListReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
-            return r[m.Infra.GitTextReport].fail(
+            return r[m.Infra.GitWorktreeListReport].fail(
                 f"failed to list Git worktrees: {exc}", exception=exc
             )
-        return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text))
+        return r[m.Infra.GitWorktreeListReport].ok(
+            m.Infra.GitWorktreeListReport(
+                root=repo_root,
+                entries=cls._registered_worktree_entries(porcelain),
+                porcelain=porcelain,
+            )
+        )
 
     @classmethod
     def git_check_branch_format(

@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 from .tool_tables import FlextInfraToolTablesPhase
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class FlextInfraEnsureRuffConfigPhase:
@@ -100,6 +97,7 @@ class FlextInfraEnsureRuffConfigPhase:
 
     @staticmethod
     def compose_per_file_ignores(
+        self,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
@@ -137,9 +135,7 @@ class FlextInfraEnsureRuffConfigPhase:
         # on every conformance pass. Declared exclusions are order-independent
         # — a disk probe oscillated between the deps pass and the
         # root-materializing gen pass.
-        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(
-            project_dir
-        )
+        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(project_dir)
         scoped_global = {
             pattern: rules
             for pattern, rules in effective_global.items()
@@ -190,17 +186,19 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
-        # Dev/tooling source roots are config-declared, but a workspace that
-        # retired a tree (e.g. scripts/, declared in the workspace SSOT as an
-        # analysis exclusion) must not keep analyzer entries naming it: ruff
-        # fails hard on src roots whose directories do not exist, and the
-        # namespace-packages contract only holds for live roots. The exclusion
-        # SSOT filters the projection — order-independent across the deps pass
-        # and the root-materializing gen pass.
-        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(
-            path.parent
-        )
-        existing_root = tuple(d for d in ruff_cfg.src if d not in excluded_roots)
+        # Dev/tooling source roots are config-declared, but a repository that
+        # retired a tree (e.g. scripts/) must not keep analyzer entries naming
+        # it: ruff fails hard on src roots whose directories do not exist, and
+        # the namespace-packages contract only holds for roots on disk. The
+        # declared lists stay the SSOT; existence filters the projection, with
+        # roots the active plan is materializing accepted as present.
+
+        def _present(directory: str) -> bool:
+            return (path.parent / directory).is_dir() or (
+                directory in self._generated_roots
+            )
+
+        existing_root = tuple(d for d in ruff_cfg.src if _present(d))
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )
@@ -215,8 +213,7 @@ class FlextInfraEnsureRuffConfigPhase:
                     values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
                 ),
                 toml.ListOp(
-                    key="namespace-packages",
-                    values=sorted(existing_namespace_packages),
+                    key="namespace-packages", values=sorted(existing_namespace_packages)
                 ),
                 toml.SetOp(key="fix", value=ruff_cfg.fix),
                 toml.SetOp(key="line-length", value=ruff_cfg.line_length),
