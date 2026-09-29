@@ -7,7 +7,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import FlextInfraWorktreeService, c, m
-from tests import t, u
+from tests import u
 
 
 class TestsFlextInfraWorktreeTopology(u.Tests.WorktreeFixture):
@@ -89,9 +89,6 @@ class TestsFlextInfraWorktreeTopology(u.Tests.WorktreeFixture):
         tm.that(
             tm.ok(
                 u.Infra.git_list_worktrees(m.Infra.GitRepoRequest(repo_root=repository))
-            ).text,
+            ).porcelain,
             has=f"worktree {child_path}",
         )
-
-
-__all__: t.VariadicTuple[str] = ()

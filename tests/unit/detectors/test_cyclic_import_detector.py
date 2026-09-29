@@ -94,6 +94,3 @@ class TestsFlextInfraCyclicImportDetector:
                 proposed_sources={paths["b.py"]: "from demo_pkg import a\n"},
             )
         tm.that(cycles, eq=[])
-
-
-__all__: t.StrSequence = ["TestsFlextInfraCyclicImportDetector"]

@@ -17,8 +17,6 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
     def _plan_scaffold_repository(
         self,
         *,
-        root: Path,
-        repository: m.Infra.RepositoryRef,
         target: m.Infra.RepositoryConformTarget,
         workspace: m.Infra.WorkspaceSpec,
         codegen: m.Infra.CodegenConfigSpec,
@@ -30,15 +28,17 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                 f"scaffold workspace has no project metadata: {workspace.name}"
             )
+        root = target.root
+        repository = target.repository
         profile = target.make_profile
-        pyproject = root / c.Infra.PYPROJECT_FILENAME
+        pyproject = root / c.PYPROJECT_FILENAME
         managed_artifacts = u.Infra.empty_snapshot()
         # New and existing repositories share the exact same
         # root-scoped modernizer pipeline, so first generation is a fixed point.
         # A declared subproject consumes the workspace root
         # tooling profile even before the atomic scaffold creates files on disk.
         modernizer = FlextInfraPyprojectModernizer(
-            repository_root=target.root,
+            repository_root=root,
             skip_check=True,
             managed_artifacts=managed_artifacts.resolution,
         )
@@ -56,28 +56,28 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             project_name=repository.distribution,
             package_name=project.package_name,
             path=pyproject,
-            root_modules=project.root_modules,
-            root_packages=project.root_packages,
-            declared_python_dirs=self._scaffold_python_dirs(
-                codegen.templates.entries, profile
+            topology=m.Infra.PyprojectDeclaredTopology(
+                root_modules=project.root_modules,
+                root_packages=project.root_packages,
+                declared_python_dirs=tuple(
+                    self._scaffold_python_dirs(codegen.templates.entries, profile)
+                ),
+                declared_python_dirs_are_complete=(
+                    profile is not c.Infra.MakeProfile.WORKSPACE
+                ),
+                analysis_exclusions=analysis_exclusions,
             ),
-            declared_python_dirs_are_complete=(
-                profile is not c.Infra.MakeProfile.WORKSPACE
-            ),
-            analysis_exclusions=analysis_exclusions,
         )
         if tooling_result.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(tooling_result)
-        context_result = self._project_render_context(
-            repository,
-            target,
-            workspace,
-            codegen,
+        render_inputs = self.resolve_render_inputs(
+            target=target,
+            workspace=workspace,
+            codegen=codegen,
             tooling_runtime=tooling_result.value,
-            repository_root=pyproject.parent,
-            managed_artifacts=managed_artifacts.resolution,
-            use_committed_artifacts=False,
+            managed_artifacts=managed_artifacts,
         )
+        context_result = self._project_render_context(render_inputs)
         if context_result.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(context_result)
         context = context_result.value
@@ -95,17 +95,23 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             for entry in codegen.templates.entries
             if profile in entry.profiles
             and (not entry.requires_release_protocol or target.publishes_release)
+            and (not entry.requires_beads or workspace.beads is not None)
             and (
                 contract.destinations is None
                 or entry.destination in contract.destinations
             )
         )
         for entry, destination in scaffold_entries:
-            source = (templates_root / entry.source).resolve()
-            if not source.is_relative_to(templates_root) or not source.is_file():
-                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
-                    f"template source is missing or escapes its root: {entry.source}"
-                )
+            if entry.delegate == c.Infra.TemplateDelegate.RENDER:
+                if entry.source is None:
+                    return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                        f"render entry has no template source: {destination}"
+                    )
+                source = (templates_root / entry.source).resolve()
+                if not source.is_relative_to(templates_root) or not source.is_file():
+                    return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                        f"template source is missing or escapes its root: {entry.source}"
+                    )
             relative = Path(destination)
             if relative.is_absolute() or ".." in relative.parts:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -129,48 +135,49 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                         f"template destination parent is not a directory: {parent}"
                     )
         for entry, destination in scaffold_entries:
-            if entry.delegate != "render":
+            if destination == c.PYPROJECT_FILENAME and not contract.pyproject:
                 continue
-            if destination == c.Infra.PYPROJECT_FILENAME and not contract.pyproject:
+            if not contract.delegates and destination != c.PYPROJECT_FILENAME:
                 continue
-            if not contract.delegates and destination != c.Infra.PYPROJECT_FILENAME:
-                continue
-            if (
-                destination == c.Infra.BEADS_METADATA_RELPATH
-                and not (root / destination).is_file()
-            ):
-                # Why (flext-l2296 family): the ledger metadata is minted by
-                # Beads at first use, so a fresh clone legitimately lacks it.
-                # Planning the absent runtime artifact failed the gen check
-                # gate on every clean checkout. When present, the render below
-                # stays identity-preserving.
-                continue
-            rendered = self._rendered_artifact_source(
-                templates_root=templates_root,
-                template_relpath=entry.source,
-                failure_prefix=f"stage=templates repository={repository.name} ",
-                dist=context.dist,
-                repository=repository,
-                repository_root=root,
-                target=target,
-                workspace=workspace,
-                codegen=codegen,
-                destination=destination,
-                tooling_runtime=tooling_result.value,
-                project_context=context,
-                managed_artifacts=managed_artifacts.resolution,
-            )
+            if entry.delegate == c.Infra.TemplateDelegate.MANIFEST:
+                manifest_path = (
+                    Path(c.CONFIG_DIR_NAME) / c.Infra.WORKSPACE_MANIFEST_FILENAME
+                )
+                if Path(destination) != manifest_path:
+                    return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                        f"manifest delegate has an invalid destination: {destination}"
+                    )
+                manifest = m.Infra.WorkspaceManifestSpec(
+                    version=c.Infra.WORKSPACE_MANIFEST_VERSION,
+                    name=workspace.name,
+                    namespace_scan_dirs=workspace.namespace_scan_dirs,
+                    repository=workspace.repository,
+                    project=project,
+                    members=workspace.subprojects,
+                    external_dependency_paths=workspace.external_dependency_paths,
+                    integration=workspace.integration,
+                )
+                rendered = u.Cli.yaml_roundtrip_dump_text(
+                    manifest.model_dump(
+                        mode="json", exclude_none=True, exclude_computed_fields=True
+                    )
+                )
+            else:
+                if entry.source is None:
+                    return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                        f"render entry has no template source: {destination}"
+                    )
+                rendered = self._rendered_artifact_source(
+                    render_inputs,
+                    template_relpath=entry.source,
+                    destination=destination,
+                    failure_prefix=f"stage=templates repository={repository.name} ",
+                    project_context=context,
+                )
             if rendered.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(rendered)
             rendered_content = self.compose_project_artifact(
-                root,
-                destination,
-                rendered.value,
-                managed_artifacts=managed_artifacts,
-                workspace=workspace,
-                codegen=codegen,
-                repository=repository,
-                target=target,
+                root, destination, rendered.value, render_inputs=render_inputs
             )
             if rendered_content.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(

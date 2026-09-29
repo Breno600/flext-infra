@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 from .tool_tables import FlextInfraToolTablesPhase
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class FlextInfraEnsureRuffConfigPhase:
@@ -28,7 +25,7 @@ class FlextInfraEnsureRuffConfigPhase:
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
         """Discover child project packages when generating repository root settings."""
-        if not (project_dir / c.Infra.PYPROJECT_FILENAME).is_file():
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
         discovered = u.Infra.discover_projects(project_dir)
         if discovered.failure:
@@ -57,7 +54,7 @@ class FlextInfraEnsureRuffConfigPhase:
         never enter Ruff. Explicit ``exclusions`` extend that same typed scope
         for non-repository paths without duplicating repository declarations.
         """
-        if not (project_dir / c.Infra.PYPROJECT_FILENAME).is_file():
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
@@ -96,9 +93,26 @@ class FlextInfraEnsureRuffConfigPhase:
             if loaded.failure:
                 raise ValueError(loaded.error or "project artifact load failed")
             local_ignores = loaded.value.artifacts.Ruff.per_file_ignores
+        # An exemption glob rooted on a first-class directory that the
+        # workspace retired (e.g. scripts/**, declared as an analysis
+        # exclusion in its workspace SSOT) must not survive the render: it
+        # documents scope that no longer exists and re-created stale entries
+        # on every conformance pass. Declared exclusions are order-independent
+        # — a disk probe oscillated between the deps pass and the
+        # root-materializing gen pass.
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
+        scoped_global = {
+            pattern: rules
+            for pattern, rules in effective_global.items()
+            if (
+                (root := pattern.split("/")[0]).endswith("**")
+                or not root.isidentifier()
+                or root not in excluded_roots
+            )
+        }
         return {
-            pattern: tuple(sorted({*effective_global.get(pattern, ()), *rules}))
-            for pattern, rules in {**effective_global, **local_ignores}.items()
+            pattern: tuple(sorted({*scoped_global.get(pattern, ()), *rules}))
+            for pattern, rules in {**scoped_global, **local_ignores}.items()
         }
 
     def _phase(
@@ -109,7 +123,7 @@ class FlextInfraEnsureRuffConfigPhase:
         stale_patterns: t.StrSequence,
         per_file_ignores: t.MappingKV[str, t.StrSequence],
         analysis_exclusions: t.StrSequence | None,
-    ) -> m.Infra.Deps.Toml.PhaseConfig:
+    ) -> m.Infra.DepsToml.PhaseConfig:
         """Build the canonical Ruff phase for one project path."""
         ruff_cfg = self._tool_config.tools.ruff
         workspace_exclusions = (
@@ -137,60 +151,136 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
-        return (
-            m.Infra.Deps.Toml.PhaseConfig
-            .Builder("ruff")
-            .table(c.Infra.RUFF)
-            .deprecated(c.Infra.EXTEND)
-            .list(c.Infra.EXCLUDE, sorted({*ruff_cfg.exclude, *workspace_exclusions}))
-            .list("namespace-packages", sorted(ruff_cfg.namespace_packages))
-            .value("fix", ruff_cfg.fix)
-            .value("line-length", ruff_cfg.line_length)
-            .value("preview", ruff_cfg.preview)
-            .value("respect-gitignore", ruff_cfg.respect_gitignore)
-            .value("show-fixes", ruff_cfg.show_fixes)
-            .value("target-version", ruff_cfg.target_version)
-            .list("src", sorted(ruff_cfg.src))
-            .nested(
-                "format",
-                values=(
-                    ("docstring-code-format", ruff_cfg.format.docstring_code_format),
-                    ("indent-style", ruff_cfg.format.indent_style),
-                    ("line-ending", ruff_cfg.format.line_ending),
-                    ("quote-style", ruff_cfg.format.quote_style),
-                    (
-                        "skip-magic-trailing-comma",
-                        ruff_cfg.format.skip_magic_trailing_comma,
+        # Dev/tooling source roots are config-declared, but a repository that
+        # retired a tree (e.g. scripts/) must not keep analyzer entries naming
+        # it: ruff fails hard on src roots whose directories do not exist, and
+        # the namespace-packages contract only holds for roots on disk. The
+        # declared lists stay the SSOT; existence filters the projection, with
+        # roots the active plan is materializing accepted as present.
+
+        def _present(directory: str) -> bool:
+            return (path.parent / directory).is_dir() or (
+                directory in self._generated_roots
+            )
+
+        existing_root = tuple(d for d in ruff_cfg.src if _present(d))
+        excluded_roots = self._excluded_root_set(path.parent)
+        existing_namespace_packages = tuple(
+            d for d in ruff_cfg.namespace_packages if d not in excluded_roots
+        )
+        toml = m.Infra.DepsToml
+        return toml.PhaseConfig(
+            name="ruff",
+            table_path=(c.Infra.RUFF,),
+            operations=(
+                toml.RemoveOp(key=c.Infra.EXTEND),
+                toml.ListOp(
+                    key=c.Infra.EXCLUDE,
+                    values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
+                ),
+                toml.ListOp(
+                    key="namespace-packages", values=sorted(existing_namespace_packages)
+                ),
+                toml.SetOp(key="fix", value=ruff_cfg.fix),
+                toml.SetOp(key="line-length", value=ruff_cfg.line_length),
+                toml.SetOp(key="preview", value=ruff_cfg.preview),
+                toml.SetOp(key="respect-gitignore", value=ruff_cfg.respect_gitignore),
+                toml.SetOp(key="show-fixes", value=ruff_cfg.show_fixes),
+                toml.SetOp(key="target-version", value=ruff_cfg.target_version),
+                toml.ListOp(key="src", values=sorted(existing_root)),
+            ),
+            nested_tables=(
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=("format",),
+                    operations=tuple(
+                        toml.SetOp(key=key, value=value)
+                        for key, value in (
+                            (
+                                "docstring-code-format",
+                                ruff_cfg.format.docstring_code_format,
+                            ),
+                            ("indent-style", ruff_cfg.format.indent_style),
+                            ("line-ending", ruff_cfg.format.line_ending),
+                            ("quote-style", ruff_cfg.format.quote_style),
+                            (
+                                "skip-magic-trailing-comma",
+                                ruff_cfg.format.skip_magic_trailing_comma,
+                            ),
+                        )
                     ),
                 ),
-            )
-            .nested(
-                c.Infra.LINT_SECTION,
-                values=(
-                    ("select", u.normalize_to_json_value(sorted(ruff_cfg.lint.select))),
-                    (c.Infra.IGNORE, u.normalize_to_json_value(effective_ignore)),
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=(c.Infra.LINT_SECTION,),
+                    operations=(
+                        toml.SetOp(
+                            key="select",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.select)
+                            ),
+                        ),
+                        toml.SetOp(
+                            key=c.Infra.IGNORE,
+                            value=u.normalize_to_json_value(effective_ignore),
+                        ),
+                        # make fix never deletes information: the fix-safety
+                        # policy comes from the same SSOT the template renders.
+                        toml.SetOp(
+                            key="unfixable",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.unfixable)
+                            ),
+                        ),
+                        toml.SetOp(
+                            key="extend-safe-fixes",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.extend_safe_fixes)
+                            ),
+                        ),
+                    ),
                 ),
-            )
-            .nested(
-                c.Infra.LINT_SECTION,
-                "flake8-tidy-imports",
-                "banned-api",
-                values=tuple(
-                    (name, u.normalize_to_json_value({"msg": message}))
-                    for name, message in ruff_cfg.lint.banned_api.items()
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=(
+                        c.Infra.LINT_SECTION,
+                        "flake8-tidy-imports",
+                        "banned-api",
+                    ),
+                    operations=tuple(
+                        toml.SetOp(
+                            key=name, value=u.normalize_to_json_value({"msg": message})
+                        )
+                        for name, message in ruff_cfg.lint.banned_api.items()
+                    ),
                 ),
-            )
-            .nested(c.Infra.LINT_SECTION, c.Infra.ISORT, values=tuple(isort_values))
-            .nested(
-                c.Infra.LINT_SECTION,
-                "per-file-ignores",
-                values=tuple(
-                    (pattern, u.normalize_to_json_value(sorted(rules)))
-                    for pattern, rules in per_file_ignores.items()
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=(c.Infra.LINT_SECTION, c.Infra.ISORT),
+                    operations=tuple(
+                        toml.SetOp(key=key, value=value) for key, value in isort_values
+                    ),
                 ),
-                deprecated_keys=stale_patterns,
-            )
-            .build()
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
+                    table_path=(c.Infra.LINT_SECTION, "per-file-ignores"),
+                    operations=(
+                        *(
+                            toml.SetOp(
+                                key=pattern,
+                                value=u.normalize_to_json_value(sorted(rules)),
+                            )
+                            for pattern, rules in per_file_ignores.items()
+                        ),
+                        *(toml.RemoveOp(key=pattern) for pattern in stale_patterns),
+                    ),
+                ),
+            ),
         )
 
     def apply_payload(

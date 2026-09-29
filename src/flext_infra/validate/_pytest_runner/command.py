@@ -5,37 +5,14 @@ from __future__ import annotations
 import hashlib
 import sys
 from functools import lru_cache
-from importlib.metadata import version
+from importlib.metadata import distributions
 from pathlib import Path
-from typing import Final
+from typing import ClassVar
 
 from flext_infra import c, config, t
 
+from ..._pytest_collection import FlextInfraPytestCollection
 from .base import FlextInfraPytestRunnerBase
-
-_NO_COVERAGE: Final[t.VariadicTuple[str]] = ("--no-cov",)
-_TOOLCHAIN_PACKAGES: Final[t.StrTuple] = (
-    "flext-infra",
-    "flext-tests",
-    "pytest",
-    "pytest-testmon",
-)
-
-
-@lru_cache(maxsize=1)
-def _toolchain_testmon_environment() -> str:
-    """Return the toolchain-fingerprinted testmon environment name.
-
-    The environment name digests the exact runner toolchain versions, so a
-    runner or plugin upgrade can never read a database written by an older
-    toolchain as a hot cache: the new environment starts cold and the first
-    run executes the whole suite for real (no false green).
-    """
-    fingerprint = ";".join(
-        f"{package}={version(package)}" for package in _TOOLCHAIN_PACKAGES
-    )
-    digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
-    return f"toolchain-{digest}"
 
 
 class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
@@ -46,18 +23,66 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     plugin, so the two never share a process).
     """
 
-    def ci_excluded_markers(self) -> t.StrTuple:
+    _NO_COVERAGE: ClassVar[t.VariadicTuple[str]] = ("--no-cov",)
+
+    @staticmethod
+    @lru_cache(maxsize=1)
+    def _toolchain_testmon_environment() -> str:
+        """Fingerprint the interpreter and installed distribution provenance.
+
+        Git branch dependencies can change commits while retaining the same
+        package version, so their PEP 610 receipts participate in cache identity.
+        Registry distributions legitimately have no direct-URL receipt.
+        """
+        fingerprint = "\n".join((
+            sys.version,
+            *sorted(
+                f"{distribution.name}={distribution.version}:"
+                f"{distribution.read_text('direct_url.json')!r}"
+                for distribution in distributions()
+            ),
+        ))
+        digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
+        return f"toolchain-{digest}"
+
+    def suite_stop_monotonic(self) -> float:
+        """Derive the graceful suite stop instant from the entrypoint deadline.
+
+        Selection and inventory consume the same clock, so the instant leaves
+        exactly the typed stop reserve before the process deadline: pytest
+        ends its own session there and testmon persists what ran, instead of
+        the deadline SIGTERM discarding every unflushed result.
+        """
+        pytest = config.Infra.tooling.tools.pytest
+        return (
+            self.started_at_monotonic
+            + pytest.run_timeout_seconds
+            - pytest.suite_stop_reserve_seconds
+        )
+
+    def ci_excluded_markers(
+        self,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+    ) -> t.StrTuple:
         """Use the same CI token as generated workflows and pre-commit hooks."""
-        if self.ci_context:
+        if self.ci_context and execution_mode != c.Infra.PytestExecutionMode.FULL:
             return config.Infra.tooling.tools.pytest.ci_excluded_markers
         return ()
 
-    def _plugin_policy_args(self) -> t.VariadicTuple[str]:
+    def _plugin_policy_args(
+        self, *, execution_mode: c.Infra.PytestExecutionMode
+    ) -> t.VariadicTuple[str]:
         """Apply the same configured plugin contract to collection and execution."""
         pytest = config.Infra.tooling.tools.pytest
-        # External-token gates (SSOT external-gate-markers) are deselected in
-        # both the selection pass and the suite so xdist workers collect the
-        # same set; direct invocation selects them outside this runner.
+        excluded = (
+            (
+                *pytest.external_gate_markers,
+                *self.ci_excluded_markers(execution_mode=execution_mode),
+            )
+            if execution_mode != c.Infra.PytestExecutionMode.FULL
+            else ()
+        )
         return (
             "-p",
             pytest.enforcement_plugin,
@@ -65,39 +90,55 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "no:metadata",
             "-o",
             f"{c.Infra.ASYNCIO_DEFAULT_FIXTURE_LOOP_SCOPE}={pytest.asyncio_default_fixture_loop_scope}",
-            "-m",
-            f"not ({' or '.join((*pytest.external_gate_markers, *self.ci_excluded_markers()))})",
+            *(("-m", f"not ({' or '.join(excluded)})") if excluded else ()),
         )
 
     def build_selection_command(
-        self, *, complete: bool = False
+        self,
+        *,
+        report_log: Path,
+        manifest_path: Path,
+        complete: bool = False,
+        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
         """Build the read-only argv that resolves the testmon selection once.
 
         Every xdist worker otherwise resolves the selection itself, and two
         workers reading the database while a third writes it collect different
         sets, which xdist aborts with "Different tests were collected". This
-        pass runs no test and writes nothing.
+        pass runs no test and records its collection and warning evidence.
+        The coverage inventory owns no testmon plugin, so it never reads or
+        writes the persistent database.
         """
+        testmon = (
+            ()
+            if execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+            else (
+                "--testmon",
+                "--testmon-nocollect",
+                # Why: the external-gate deselection is a ``-m`` expression, and
+                # testmon deactivates its selection whenever ``-m`` is present;
+                # ``--testmon-forceselect`` is testmon's declared override for
+                # exactly that case (never combined with ``--testmon-noselect``).
+                *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
+                "--testmon-env",
+                f"'{self._toolchain_testmon_environment()}'",
+            )
+        )
         return (
             sys.executable,
             "-m",
             "pytest",
             str(self.target),
-            "--testmon",
-            "--testmon-nocollect",
-            # Why: the external-gate deselection is a ``-m`` expression, and
-            # testmon deactivates its selection whenever ``-m`` is present;
-            # ``--testmon-forceselect`` is testmon's declared override for
-            # exactly that case (never combined with ``--testmon-noselect``).
-            *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
-            "--testmon-env",
-            f"'{_toolchain_testmon_environment()}'",
+            *testmon,
             "--collect-only",
+            f"{c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION}={manifest_path}",
+            f"--report-log={report_log}",
             "-q",
-            *self._plugin_policy_args(),
-            "-o",
-            "addopts=--benchmark-disable --strict-markers --timeout=10",
+            *self._plugin_policy_args(execution_mode=execution_mode),
+            "--benchmark-disable",
+            "--strict-markers",
+            f"--timeout={config.Infra.tooling.tools.pytest.case_timeout_seconds}",
             "-o",
             "filterwarnings=",
             "-p",
@@ -112,29 +153,57 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         report_dir: Path,
         selected_node_ids: t.StrSequence | None = None,
         *,
+        manifest_path: Path | None = None,
         serialize: bool = False,
+        whole_target: bool = False,
+        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
-        """Build the testmon suite argv (never the cov plugin)."""
+        """Build the testmon suite argv (never the cov plugin).
+
+        A nonempty selection is enforced from its manifest, so it requires
+        ``manifest_path``.
+        """
         pytest = config.Infra.tooling.tools.pytest
         selection = selected_node_ids or None
-        # Nothing selected means nothing to distribute across workers; a cold
-        # cache serializes the seeding run so every worker would otherwise see
-        # a different testmon set.
-        workers = (
-            "0"
-            if serialize or selected_node_ids == ()
-            else str(self.parallel_worker_budget(pytest))
-        )
+        if selection and manifest_path is None:
+            msg = "a runner selection requires its collection manifest path"
+            raise ValueError(msg)
+        # An empty selection needs no workers, and a selection smaller than the
+        # worker budget never needs more workers than items: every extra worker
+        # only pays startup cost for an empty queue. Explicit serial execution
+        # remains available to callers; cold and warm cache runs share the same
+        # manifest.
+        budget = self.parallel_worker_budget(pytest)
+        if serialize or selected_node_ids == ():
+            workers = "0"
+        elif selection:
+            workers = str(min(budget, len(selection)))
+        else:
+            workers = str(budget)
         return self._suite_argv(
             report_dir,
-            targets=(tuple(selection) if selection else (str(self.target),)),
+            targets=(
+                (str(self.target),)
+                if whole_target or selection is None
+                else tuple(selection)
+            ),
             workers=workers,
             trailing=(
+                *self._plugin_policy_args(execution_mode=execution_mode),
+                *(
+                    (
+                        "-p",
+                        FlextInfraPytestCollection.__module__,
+                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={manifest_path}",
+                    )
+                    if selection
+                    else ()
+                ),
                 "--testmon",
                 *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
                 "--testmon-env",
-                f"'{_toolchain_testmon_environment()}'",
-                *_NO_COVERAGE,
+                f"'{self._toolchain_testmon_environment()}'",
+                *self._NO_COVERAGE,
             ),
         )
 
@@ -154,6 +223,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             targets=(str(self.target),),
             workers=workers,
             trailing=(
+                *self._plugin_policy_args(
+                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE
+                ),
                 f"--cov={self.root / c.Infra.DEFAULT_SRC_DIR}",
                 f"--cov-report=xml:{report_dir / 'coverage.xml'}",
                 "--no-cov-on-fail",
@@ -177,8 +249,8 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *targets,
             *pytest.progress_args,
             *pytest.report_args,
-            *self._plugin_policy_args(),
             f"--timeout={pytest.case_timeout_seconds}",
+            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic()!r}",
             f"--maxfail={pytest.max_failures}",
             f"--junitxml={report_dir / 'junit.xml'}",
             f"--report-log={report_dir / 'events.jsonl'}",
@@ -187,6 +259,12 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             workers,
             "--dist",
             pytest.parallel_distribution,
+            # Why: xdist queues the shutdown marker behind each worker's
+            # pre-dispatched chunk, so the declared max-failures stop only took
+            # effect after every worker drained its assigned items at fleet
+            # scale. A one-item dispatch step makes that stop immediate.
+            "--maxschedchunk",
+            str(pytest.parallel_schedule_chunk),
             "--benchmark-disable",
         )
 

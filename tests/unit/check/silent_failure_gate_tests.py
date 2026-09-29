@@ -17,8 +17,6 @@ from tests import u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
-
 
 class TestsFlextInfraSilentFailureGate:
     _DIRTY_UTILITIES = (
@@ -84,6 +82,3 @@ class TestsFlextInfraSilentFailureGate:
 
         tm.that(result.result.passed, eq=True)
         tm.that(len(result.issues), eq=0)
-
-
-__all__: t.StrSequence = ["TestsFlextInfraSilentFailureGate"]

@@ -49,10 +49,12 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
             init_path = package_dir / c.Infra.INIT_PY
             if self.rope_workspace.resource(init_path) is None:
                 return frozenset()
-            if init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT).startswith(
-                c.Infra.AUTOGEN_HEADERS
-            ):
-                return frozenset()
+            source = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            # A generated __init__ is the parent's published ABI — what an
+            # importer sees — in the workspace exactly as when installed, so
+            # both scopes elect the same nearest re-exporting parent.
+            if source.startswith(c.Infra.AUTOGEN_HEADERS):
+                return frozenset(u.Infra.public_export_names_source(source))
             return frozenset(
                 self.rope_workspace.exports(
                     init_path,

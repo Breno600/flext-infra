@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, assert_never
 from flext_infra import c, m, t
 
 from .aliases import FlextInfraUtilitiesSemanticCutoverAliases
+from .facade_bases import FlextInfraUtilitiesSemanticCutoverFacadeBases
 from .nesting import FlextInfraUtilitiesSemanticCutoverNesting
 from .private_imports import FlextInfraUtilitiesSemanticCutoverPrivateImports
 
@@ -20,6 +21,7 @@ class FlextInfraUtilitiesSemanticCutoverBase(
     FlextInfraUtilitiesSemanticCutoverNesting,
     FlextInfraUtilitiesSemanticCutoverAliases,
     FlextInfraUtilitiesSemanticCutoverPrivateImports,
+    FlextInfraUtilitiesSemanticCutoverFacadeBases,
 ):
     """Plan every semantic ``make mod`` cutover through one typed contract."""
 
@@ -48,6 +50,8 @@ class FlextInfraUtilitiesSemanticCutoverBase(
                 return cls._plan_api_aliases(root, sources, selected)
             case c.Infra.SemanticCutoverPhase.PRIVATE_IMPORT:
                 return cls._plan_private_imports(root, sources, selected)
+            case c.Infra.SemanticCutoverPhase.FACADE_BASE:
+                return cls._plan_facade_bases(root, sources, selected)
             case _:
                 assert_never(phase)
 

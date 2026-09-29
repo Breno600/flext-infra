@@ -191,15 +191,17 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             if request.test_module:
                 alias = c.Infra.NAMESPACE_LAYER_BY_FILE[filename]
                 content = u.Infra.generate_test_module_skeleton(
-                    class_name=class_name,
-                    base_class=base_class,
-                    project_module=request.project_module,
-                    alias=alias,
-                    namespace=f"{request.test_prefix}{request.prefix}",
-                    project_namespace=request.prefix.removeprefix(
-                        c.Infra.PKG_PREFIX_UNDERSCORE.rstrip("_").capitalize()
-                    ),
-                    docstring=docstring,
+                    context=m.Infra.TestModuleSkeletonRenderContext(
+                        class_name=class_name,
+                        base_class=base_class,
+                        project_module=request.project_module,
+                        alias=alias,
+                        namespace=f"{request.test_prefix}{request.prefix}",
+                        project_namespace=request.prefix.removeprefix(
+                            c.Infra.PKG_PREFIX_UNDERSCORE.rstrip("_").capitalize()
+                        ),
+                        docstring=docstring,
+                    )
                 )
             else:
                 content = u.Infra.generate_module_skeleton(
@@ -211,18 +213,19 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
             if request.dry_run:
                 files_created.append(str(filepath))
                 continue
-            planned = u.Infra.planned_file(
-                request.target_dir,
-                filepath,
-                required=False,
+            before = u.Cli.atomic_read_binary_file_state(filepath, required=False)
+            if before.failure:
+                message = f"writing scaffold {filepath}: {before.error}"
+                raise OSError(message)
+            planned = m.Infra.CodegenFilePlan(
+                project=request.target_dir,
+                path=filepath,
+                before=before.value,
                 desired_content=content.encode(c.Cli.ENCODING_DEFAULT),
                 desired_mode=0o644,
                 owner="codegen",
             )
-            if planned.failure:
-                message = f"writing scaffold {filepath}: {planned.error}"
-                raise OSError(message)
-            written = publish_file_plan(planned.value, phase="scaffold")
+            written = publish_file_plan(planned, phase="scaffold")
             if written.failure:
                 message = f"writing scaffold {filepath}: {written.error}"
                 raise OSError(message)

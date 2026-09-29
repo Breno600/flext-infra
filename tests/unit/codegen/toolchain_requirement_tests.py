@@ -24,6 +24,3 @@ class TestsFlextInfraToolchainRequirement:
         major, _, minor = toolchain.python_version.partition(".")
 
         tm.that(toolchain.python_required_version, has=f",<{major}.{int(minor) + 1}")
-
-
-__all__: list[str] = ["TestsFlextInfraToolchainRequirement"]

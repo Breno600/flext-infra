@@ -6,7 +6,7 @@ flext-infra enforcement pipeline.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
@@ -18,7 +18,6 @@ from flext_infra.transformers.hardcoded_version import (
     FlextInfraRefactorHardcodedVersion,
 )
 from flext_infra.transformers.open_encoding import FlextInfraRefactorOpenEncoding
-from flext_infra.transformers.pattern import FlextInfraRefactorPatternTransformer
 from flext_infra.transformers.typing_unifier import FlextInfraRefactorTypingUnifier
 from tests import t
 
@@ -30,31 +29,6 @@ if TYPE_CHECKING:
 class TestsFlextInfraTransformersEnforcementFixers:
     """Behavior contract for the enforcement fixer transformers."""
 
-    _BARE_EXCEPT_PATTERN: ClassVar[t.MappingKV[str, t.JsonValue]] = {
-        "regex": r"^(?P<indent>\s*)except\s*:(?P<trail>.*)$",
-        "replacement": r"\g<indent>except Exception:\g<trail>",
-        "change_message": "Rewrote bare except to except Exception",
-        "flags": ["MULTILINE"],
-    }
-
-    _PRINT_TO_LOGGER_PATTERN: ClassVar[t.MappingKV[str, t.JsonValue]] = {
-        "regex": r"\bprint\s*\(\s*(?P<args>[^)]*)\s*\)",
-        "replacement": r"u.fetch_logger(__name__).info(\g<args>)",
-        "change_message": "Rewrote u.Cli.print() to logger",
-    }
-
-    _TYPING_LIST_PATTERN: ClassVar[t.MappingKV[str, t.JsonValue]] = {
-        "regex": r"\bList\s*\[",
-        "replacement": "t.SequenceOf[",
-        "change_message": "Rewrote List[...] to t.SequenceOf[...]",
-    }
-
-    _TYPING_LIST_ATTR_PATTERN: ClassVar[t.MappingKV[str, t.JsonValue]] = {
-        "regex": r"\btyping\s*\.\s*List\s*\[",
-        "replacement": "t.SequenceOf[",
-        "change_message": "Rewrote typing.List[...] to t.SequenceOf[...]",
-    }
-
     def _transform(
         self,
         source: str,
@@ -62,7 +36,6 @@ class TestsFlextInfraTransformersEnforcementFixers:
         | FlextInfraRefactorFutureImport
         | FlextInfraRefactorHardcodedVersion
         | FlextInfraRefactorOpenEncoding
-        | FlextInfraRefactorPatternTransformer
         | FlextInfraRefactorTypingUnifier,
     ) -> t.Pair[str, Sequence[str]]:
         """Apply a stateless transformer to source text."""
@@ -242,118 +215,6 @@ class TestsFlextInfraTransformersEnforcementFixers:
         tm.that(code, eq=source)
         tm.that(changes, eq=[])
 
-    def test_bare_except_pattern(self) -> None:
-        """Verify bare except pattern."""
-        source = "try:\n    pass\nexcept:\n    pass\n"
-        transformer = FlextInfraRefactorPatternTransformer(
-            patterns=[self._BARE_EXCEPT_PATTERN]
-        )
-        code, changes = transformer.apply_to_source(source)
-        tm.that(code, has="except Exception:")
-        tm.that(code, lacks="except:")
-        tm.that(changes, empty=False)
-
-    def test_specific_except_pattern_unchanged(self) -> None:
-        """Verify specific except pattern unchanged."""
-        source = (
-            "def foo():\n    try:\n        pass\n    except ValueError:\n        pass\n"
-        )
-        transformer = FlextInfraRefactorPatternTransformer(
-            patterns=[self._BARE_EXCEPT_PATTERN]
-        )
-        code, changes = transformer.apply_to_source(source)
-        tm.that(code, eq=source)
-        tm.that(changes, eq=[])
-
-    def test_breakpoint_patterns_remove_debuggers(self) -> None:
-        """Verify breakpoint patterns remove debuggers."""
-        source = "x = 1\n\nbreakpoint()\n\nimport pdb; pdb.set_trace()\n\ny = 2\n"
-        transformer = FlextInfraRefactorPatternTransformer(
-            patterns=[
-                {
-                    "regex": r"^[ \t]*breakpoint\s*\(\s*\)\s*[;\n]",
-                    "replacement": "\n",
-                    "change_message": "Removed debugger statement",
-                    "flags": ["MULTILINE"],
-                },
-                {
-                    "regex": (
-                        r"^[ \t]*import\s+pdb\s*;\s*pdb\.set_trace"
-                        r"\s*\(\s*\)\s*[;\n]"
-                    ),
-                    "replacement": "\n",
-                    "change_message": "Removed debugger statement",
-                    "flags": ["MULTILINE"],
-                },
-            ]
-        )
-        code, changes = transformer.apply_to_source(source)
-        tm.that(code, lacks="breakpoint()")
-        tm.that(code, lacks="pdb.set_trace()")
-        tm.that(code, has="x = 1\n")
-        tm.that(code, has="y = 2\n")
-        tm.that(changes, empty=False)
-
-    def test_open_encoding_pattern(self) -> None:
-        """Verify open encoding pattern."""
-        source = 'with open("x.txt") as f:\n    pass\n'
-        transformer = FlextInfraRefactorPatternTransformer(
-            patterns=[
-                {
-                    "regex": r"\bopen\s*\(\s*(?P<args>[^)]*)\s*\)",
-                    "replacement": r'open(\g<args>, encoding="utf-8")',
-                    "change_message": 'Added encoding="utf-8" to open() call',
-                }
-            ]
-        )
-        code, changes = transformer.apply_to_source(source)
-        tm.that(code, has='open("x.txt", encoding="utf-8")')
-        tm.that(changes, empty=False)
-
-    def test_pattern_with_required_alias(self, tmp_path: Path) -> None:
-        """Verify pattern with required alias."""
-        source = "def foo(x):\n    return u.Cli.print(x)\n"
-        transformer = FlextInfraRefactorPatternTransformer(
-            patterns=[self._PRINT_TO_LOGGER_PATTERN],
-            required_alias="u",
-            file_path=tmp_path / "module.py",
-        )
-        code, changes = transformer.apply_to_source(source)
-        tm.that(code, has="u.fetch_logger(__name__).info")
-        tm.that(code, has="from flext_core import u")
-        tm.that(changes, empty=False)
-
-    def test_pattern_required_alias_not_duplicated(self, tmp_path: Path) -> None:
-        """Verify pattern required alias not duplicated."""
-        source = 'from flext_core import c, u\n\nu.Cli.print("hello")\n'
-        transformer = FlextInfraRefactorPatternTransformer(
-            patterns=[self._PRINT_TO_LOGGER_PATTERN],
-            required_alias="u",
-            file_path=tmp_path / "module.py",
-        )
-        code, changes = transformer.apply_to_source(source)
-        tm.that(code.count("from flext_core import"), eq=1)
-        tm.that(code, has="from flext_core import c, u")
-        tm.that(code, has='u.fetch_logger(__name__).info("hello")')
-        tm.that(changes, empty=False)
-
-    def test_pattern_no_match_leaves_source_unchanged(self) -> None:
-        """Verify pattern no match leaves source unchanged."""
-        source = "x = 1\n"
-        transformer = FlextInfraRefactorPatternTransformer(
-            patterns=[
-                {
-                    "regex": r"\bprint\s*\(\s*(?P<args>[^)]*)\s*\)",
-                    "replacement": r"u.fetch_logger(__name__).info(\g<args>)",
-                    "change_message": "Rewrote u.Cli.print() to logger",
-                }
-            ],
-            required_alias="u",
-        )
-        code, changes = transformer.apply_to_source(source)
-        tm.that(code, eq=source)
-        tm.that(changes, eq=[])
-
     def test_hardcoded_version_reported(self) -> None:
         """Verify hardcoded version reported."""
         source = '__version__ = "1.2.3"\n'
@@ -408,68 +269,3 @@ class TestsFlextInfraTransformersEnforcementFixers:
         code, changes = self._transform(source, FlextInfraRefactorCompatibilityAlias())
         tm.that(code, eq=source)
         tm.that(changes, eq=[])
-
-    def test_typing_list_import_rewritten(self, tmp_path: Path) -> None:
-        """Verify typing list import rewritten."""
-        source = (
-            "from __future__ import annotations\n"
-            "from typing import List\n"
-            "x: List[int] = []\n"
-        )
-        transformer = FlextInfraRefactorPatternTransformer(
-            patterns=[self._TYPING_LIST_PATTERN],
-            required_alias="t",
-            file_path=tmp_path / "module.py",
-        )
-        code, changes = transformer.apply_to_source(source)
-        tm.that(code, has="t.SequenceOf[int]")
-        tm.that(code, has="from flext_core import t")
-        tm.that(code, lacks="List[int]")
-        tm.that(changes, empty=False)
-
-    def test_typing_list_attr_rewritten(self, tmp_path: Path) -> None:
-        """Verify typing list attr rewritten."""
-        source = (
-            "from __future__ import annotations\n"
-            "import typing\n"
-            "x: typing.List[int] = []\n"
-        )
-        transformer = FlextInfraRefactorPatternTransformer(
-            patterns=[self._TYPING_LIST_ATTR_PATTERN],
-            required_alias="t",
-            file_path=tmp_path / "module.py",
-        )
-        code, changes = transformer.apply_to_source(source)
-        tm.that(code, has="t.SequenceOf[int]")
-        tm.that(code, has="from flext_core import t")
-        tm.that(code, lacks="typing.List")
-        tm.that(changes, empty=False)
-
-    def test_structlog_get_logger_rewritten(self, tmp_path: Path) -> None:
-        """Verify structlog get logger rewritten."""
-        source = (
-            "from __future__ import annotations\n"
-            "import structlog\n"
-            "logger = structlog.get_logger()\n"
-        )
-        transformer = FlextInfraRefactorPatternTransformer(
-            patterns=[
-                {
-                    "regex": r"\bstructlog\s*\.\s*get_logger\s*\(\s*\)",
-                    "replacement": "u.fetch_logger(__name__)",
-                    "change_message": (
-                        "Rewrote structlog.get_logger() to u.fetch_logger()"
-                    ),
-                }
-            ],
-            required_alias="u",
-            file_path=tmp_path / "module.py",
-        )
-        code, changes = transformer.apply_to_source(source)
-        tm.that(code, has="u.fetch_logger(__name__)")
-        tm.that(code, has="from flext_core import u")
-        tm.that(code, lacks="structlog.get_logger()")
-        tm.that(changes, empty=False)
-
-
-__all__: list[str] = ["TestsFlextInfraTransformersEnforcementFixers"]

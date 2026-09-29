@@ -8,10 +8,7 @@ from typing import TYPE_CHECKING
 from flext_core import r
 from flext_infra import config, m, t
 
-from ._docs_generate_plan import (
-    DocsRenderedArtifactTuple,
-    FlextInfraUtilitiesDocsGeneratePlanMixin,
-)
+from ._docs_generate_plan import FlextInfraUtilitiesDocsGeneratePlanMixin
 from ._docs_guides import FlextInfraUtilitiesDocsGuidesMixin
 from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_contract import FlextInfraUtilitiesDocsContract
@@ -67,13 +64,15 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
         *,
         repository_root: Path,
         source_states: t.SequenceOf[m.Cli.AtomicFileState],
-    ) -> p.Result[t.VariadicTuple[DocsRenderedArtifactTuple]]:
+    ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Render the complete target inventory for one FLEXT project."""
         guides = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guides_artifacts(
             scope, repository_root=repository_root, source_states=source_states
         )
         if guides.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(guides)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                guides
+            )
         guide_paths = {
             state.path
             for state in source_states
@@ -93,7 +92,7 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             scope.path, analyzed_contract
         )
         module_names = FlextInfraUtilitiesDocsGenerateProjectMixin._module_names(scope)
-        rendered: list[tuple[Path, str]] = [
+        rendered: list[t.Pair[Path, str]] = [
             (
                 scope.path / "README.md",
                 FlextInfraUtilitiesDocsRender.docs_project_readme(scope, contract),
@@ -114,8 +113,16 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             ),
             (
                 scope.path / "mkdocs.yml",
-                FlextInfraUtilitiesDocsRender.docs_project_mkdocs(
-                    scope, contract, module_names
+                (
+                    # A standalone repository publishes its root MkDocs site
+                    # under the canonical repository identity: the per-project
+                    # " Documentation" suffix belongs to member sites, never to
+                    # the repository root (root title contract, c6db82fb2).
+                    FlextInfraUtilitiesDocsRender.docs_root_mkdocs(contract, ("src",))
+                    if scope.path == repository_root
+                    else FlextInfraUtilitiesDocsRender.docs_project_mkdocs(
+                        scope, contract, module_names
+                    )
                 ),
             ),
             (
@@ -132,7 +139,9 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             )
         )
         if pruned.failure:
-            return r[t.VariadicTuple[DocsRenderedArtifactTuple]].from_failure(pruned)
+            return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].from_failure(
+                pruned
+            )
         return FlextInfraUtilitiesDocsGenerateProjectMixin.docs_normalize_artifacts((
             *((scope.path, path, content) for path, content in rendered),
             *guides.value,

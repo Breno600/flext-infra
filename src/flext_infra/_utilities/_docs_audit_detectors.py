@@ -128,7 +128,7 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                 continue
             rel = path.relative_to(scope.path).as_posix()
             if path.is_relative_to(scope.path / c.Infra.DIR_DOCS) and (
-                FlextInfraUtilitiesDocsScope.is_excluded_doc_path(
+                FlextInfraUtilitiesDocsScope.excluded_doc_path(
                     scope.path, path.relative_to(scope.path / c.Infra.DIR_DOCS)
                 )
             ):

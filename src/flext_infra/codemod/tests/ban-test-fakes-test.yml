@@ -1,0 +1,66 @@
+id: ban-test-fakes
+valid:
+  - |
+    class TestsFakeDetection:
+        def test_detects(self) -> None:
+            pass
+  - |
+    class TestStubGeneration:
+        pass
+  - |
+    class Stubborn:
+        pass
+  - |
+    class Mockup:
+        pass
+  - |
+    def test_mock_free_behaviour() -> None:
+        pass
+  - |
+    def mockery() -> None:
+        pass
+  - |
+    class TestsRunnerContract(p.Cli.Runner):
+        pass
+  - |
+    class Settings(m.Value):
+        pass
+  - |
+    class MemoryCounter(p.Tests.Counter):
+        pass
+  - |
+    class TestsFlextOracleWmsProtocols(FlextTestsProtocols):
+        class OracleWms(p.OracleWms):
+            pass
+invalid:
+  - |
+    class FakeRunner:
+        pass
+  - |
+    class _StubClient:
+        pass
+  - |
+    class DummyService(Service):
+        pass
+  - |
+    class Mock:
+        pass
+  - |
+    class RunnerSpy:
+        pass
+  - |
+    class GatewayFake(Gateway):
+        pass
+  - |
+    def fake_run(*args) -> int:
+        return 0
+  - |
+    def _stub_fetch(url: str) -> str:
+        return ""
+  - |
+    class Recorder(p.Cli.Runner):
+        pass
+  - |
+    class TestsFlextInfraUtilitiesTomlMixin:
+        class TomlReaderSequence(p.Infra.TomlReader):
+            pass

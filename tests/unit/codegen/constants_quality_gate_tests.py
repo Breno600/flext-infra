@@ -121,6 +121,3 @@ class TestsFlextInfraCodegenConstantsQualityGate:
         ]
         tm.that(matching_groups, length=1)
         tm.that(u.Cli.json_pick_str(matching_groups[0], "canonical"), eq="flext-cli")
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenConstantsQualityGate"]

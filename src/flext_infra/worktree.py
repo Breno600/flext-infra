@@ -65,7 +65,7 @@ class FlextInfraWorktreeService(s[str]):
         resolved_primary = primary_root.resolve()
         outermost_project = resolved_primary
         for candidate in resolved_primary.parents:
-            if (candidate / c.Infra.PYPROJECT_FILENAME).is_file():
+            if (candidate / c.PYPROJECT_FILENAME).is_file():
                 outermost_project = candidate
             if (candidate / ".git").exists():
                 break
@@ -111,31 +111,32 @@ class FlextInfraWorktreeService(s[str]):
         )
         if listed.failure:
             return r[t.VariadicTuple[t.Pair[Path, str]]].from_failure(listed)
-        entries: list[tuple[Path, str]] = []
-        current: Path | None = None
-        branch = ""
-        for line in (*listed.value.text.splitlines(), ""):
-            if line.startswith("worktree "):
-                current = Path(line.removeprefix("worktree ").strip()).resolve()
-                branch = ""
-            elif line.startswith("branch refs/heads/"):
-                branch = line.removeprefix("branch refs/heads/").strip()
-            elif not line and current is not None:
-                entries.append((current, branch))
-                current = None
-                branch = ""
-        return r[t.VariadicTuple[t.Pair[Path, str]]].ok(tuple(entries))
+        entries = tuple(
+            (entry.path, entry.branch or "") for entry in listed.value.entries
+        )
+        return r[t.VariadicTuple[t.Pair[Path, str]]].ok(entries)
+
+    @classmethod
+    def registered_lanes(
+        cls, primary_root: Path, branch: str
+    ) -> p.Result[t.VariadicTuple[Path]]:
+        """Return the lanes Git registers for a branch; empty means none exists."""
+        entries = cls._registered_worktrees(primary_root)
+        if entries.failure:
+            return r[t.VariadicTuple[Path]].from_failure(entries)
+        return r[t.VariadicTuple[Path]].ok(
+            tuple(root for root, registered in entries.value if registered == branch)
+        )
 
     @classmethod
     def registered_lane(cls, primary_root: Path, branch: str) -> p.Result[Path]:
         """Resolve an existing branch lane from Git's canonical registry."""
-        entries = cls._registered_worktrees(primary_root)
-        if entries.failure:
-            return r[Path].from_failure(entries)
-        for root, registered_branch in entries.value:
-            if registered_branch == branch:
-                return r[Path].ok(root)
-        return r[Path].fail(f"worktree branch is not registered: {branch}")
+        lanes = cls.registered_lanes(primary_root, branch)
+        if lanes.failure:
+            return r[Path].from_failure(lanes)
+        if not lanes.value:
+            return r[Path].fail(f"worktree branch is not registered: {branch}")
+        return r[Path].ok(lanes.value[0])
 
     @classmethod
     def registered_children(
@@ -219,8 +220,10 @@ class FlextInfraWorktreeService(s[str]):
             container = self.epic_lane / c.Infra.WORKTREES_DIRNAME
             if container.is_symlink():
                 return r[str].fail(f"epic worktree container is a symlink: {container}")
-        existing = self.registered_lane(primary_root, branch)
-        if existing.success:
+        existing = self.registered_lanes(primary_root, branch)
+        if existing.failure:
+            return r[str].from_failure(existing)
+        if existing.value:
             return r[str].fail(f"worktree branch is already registered: {branch}")
         lane_result = self._lane_path(primary_root, branch, self.epic_lane)
         if lane_result.failure:
@@ -263,7 +266,7 @@ class FlextInfraWorktreeService(s[str]):
                     created_oid.error or "failed to retain created branch identity",
                 )
             created_branch_oid = created_oid.value.oid
-        pyproject = lane / c.Infra.PYPROJECT_FILENAME
+        pyproject = lane / c.PYPROJECT_FILENAME
         if pyproject.is_file():
             metadata = u.Infra.read_project_metadata_result(lane)
             if metadata.failure:
@@ -323,7 +326,7 @@ class FlextInfraWorktreeService(s[str]):
             )
             if listed.failure:
                 return r[str].from_failure(listed)
-            return r[str].ok(listed.value.text)
+            return r[str].ok(listed.value.porcelain)
         branch = self._validated_branch()
         if branch.failure:
             return r[str].from_failure(branch)

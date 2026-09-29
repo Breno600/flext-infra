@@ -24,13 +24,13 @@ class FlextInfraUtilitiesPrivateImportFacades:
     @staticmethod
     def source_modules(
         sources: t.MappingKV[Path, str], statements: t.SequenceOf[str]
-    ) -> MutableMapping[str, tuple[str, bool]]:
+    ) -> MutableMapping[str, t.Pair[str, bool]]:
         """Index editable sources and referenced installed packages without imports.
 
         Installed files are discovery inputs only. Resolving a top-level spec
         never imports its package initializer or dependency business modules.
         """
-        modules: MutableMapping[str, tuple[str, bool]] = {}
+        modules: MutableMapping[str, t.Pair[str, bool]] = {}
         for path, source in sorted(sources.items()):
             indices = [
                 index
@@ -82,7 +82,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
     @staticmethod
     def declared_exports(
         sources: t.MappingKV[str, t.Pair[str, bool]],
-    ) -> tuple[MutableMapping[str, set[str]], MutableMapping[str, set[str]]]:
+    ) -> t.Pair[MutableMapping[str, set[str]], MutableMapping[str, set[str]]]:
         """Index declared public exports and module-scope import identities."""
         bindings: MutableMapping[str, set[str]] = {}
         exports: MutableMapping[str, set[str]] = {}
@@ -122,7 +122,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
                         node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
                     ):
                         identity = f"{module}.{node.name}"
-                        bindings.setdefault(identity, set()).add(identity)
+                        # A runtime declaration replaces an earlier imported name in
+                        # the same module. Keeping both fabricated an ambiguity for
+                        # the canonical ``from upstream import u; u = Facade`` shape.
+                        bindings[identity] = {identity}
                     elif isinstance(node, ast.Assign | ast.AnnAssign):
                         targets = (
                             node.targets
@@ -137,7 +140,10 @@ class FlextInfraUtilitiesPrivateImportFacades:
                                     if isinstance(node.value, ast.Name)
                                     else identity
                                 )
-                                bindings.setdefault(identity, set()).add(destination)
+                                # Module assignments are runtime rebinding, not an
+                                # additional possible source. The last declaration is
+                                # the single Python authority for the public name.
+                                bindings[identity] = {destination}
                     elif isinstance(node, ast.If):
                         type_only = (
                             isinstance(node.test, ast.Name)
@@ -233,7 +239,7 @@ class FlextInfraUtilitiesPrivateImportFacades:
         sources: t.MappingKV[str, t.Pair[str, bool]],
     ) -> t.MappingKV[str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]]:
         """Discover facade aliases and roots from live source assignments."""
-        discovered: MutableMapping[str, list[tuple[ast.Module, str, str, str]]] = {}
+        discovered: MutableMapping[str, list[t.Quad[ast.Module, str, str, str]]] = {}
         for module, (source, is_package) in sorted(sources.items()):
             if is_package:
                 continue

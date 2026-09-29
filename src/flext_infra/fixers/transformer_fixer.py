@@ -26,7 +26,6 @@ from flext_infra.transformers.import_modernizer import (
 )
 from flext_infra.transformers.mro_remover import FlextInfraRefactorMroRemover
 from flext_infra.transformers.open_encoding import FlextInfraRefactorOpenEncoding
-from flext_infra.transformers.pattern import FlextInfraRefactorPatternTransformer
 from flext_infra.transformers.typing_unifier import FlextInfraRefactorTypingUnifier
 
 from .base import FlextInfraFixerAdapter
@@ -34,7 +33,7 @@ from .base import FlextInfraFixerAdapter
 if TYPE_CHECKING:
     from flext_infra import p, t
 
-    from .._utilities.transformer_base import FlextInfraRopeTransformer
+    from ..transformers.rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
@@ -51,6 +50,9 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         super().__init__(repository_root)
 
     # Canonical transformer registry. New deterministic transformers register here.
+    # A whole-file regex is never a transformer: it cannot tell code from a
+    # docstring, comment or string. The retired regex fixes (ENFORCE-026, 027,
+    # 028, 091, 092, 094) are ast-grep rules applied by ``make mod``.
     _TRANSFORMERS: ClassVar[
         t.MutableMappingKV[str, type[FlextInfraRopeTransformer]]
     ] = {
@@ -60,7 +62,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         "import_modernizer": FlextInfraRefactorImportModernizer,
         "mro_remover": FlextInfraRefactorMroRemover,
         "open_encoding": FlextInfraRefactorOpenEncoding,
-        "pattern": FlextInfraRefactorPatternTransformer,
         "project_alias_migrator": FlextInfraRefactorProjectAliasMigrator,
         "rewrite_foreign_canonical_alias": FlextInfraRefactorProjectAliasMigrator,
         "typing_unifier": FlextInfraRefactorTypingUnifier,
@@ -125,30 +126,36 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         """Apply transformer fixes file-by-file for the given violations."""
         if not violations:
             return m.Infra.ProjectFixResult(project=project_dir.name)
-        fixed: t.MutableSequenceOf[m.Infra.FixedViolation] = []
-        previewed: t.MutableSequenceOf[m.Infra.PreviewedViolation] = []
-        skipped: t.MutableSequenceOf[m.Infra.SkippedViolation] = []
-        failed: t.MutableSequenceOf[m.Infra.FailedFix] = []
-        files_modified: set[str] = set()
+        results: t.MutableSequenceOf[m.Infra.ProjectFixResult] = []
         for target, target_violations in self._group_by_target(violations).items():
+            rule_id = self._rule_id(target_violations)
             deactivation = self._DEACTIVATED_TARGETS.get(target)
             if deactivation is not None:
-                skipped.append(
-                    m.Infra.SkippedViolation(
-                        rule_id=self._rule_id(target_violations),
-                        file_path=str(project_dir),
-                        reason=deactivation,
+                results.append(
+                    m.Infra.ProjectFixResult(
+                        project=project_dir.name,
+                        skipped=(
+                            m.Infra.SkippedViolation(
+                                rule_id=rule_id,
+                                file_path=str(project_dir),
+                                reason=deactivation,
+                            ),
+                        ),
                     )
                 )
                 continue
             transformer_cls = self._TRANSFORMERS.get(target)
             if transformer_cls is None:
-                rule_id = self._rule_id(target_violations)
-                failed.append(
-                    m.Infra.FailedFix(
-                        rule_id=rule_id,
-                        file_path=str(project_dir),
-                        error=f"transformer {target} not registered",
+                results.append(
+                    m.Infra.ProjectFixResult(
+                        project=project_dir.name,
+                        failed=(
+                            m.Infra.FailedFix(
+                                rule_id=rule_id,
+                                file_path=str(project_dir),
+                                error=f"transformer {target} not registered",
+                            ),
+                        ),
                     )
                 )
                 continue
@@ -156,41 +163,51 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
             file_paths = self._collect_file_paths(project_dir, target_violations)
             for file_path in file_paths:
                 if self._is_owned_library_exempt(project_dir, fix_action, file_path):
-                    skipped.append(
-                        m.Infra.SkippedViolation(
-                            rule_id=self._rule_id(target_violations),
-                            file_path=str(file_path),
-                            reason=(
-                                f"project {project_dir.name} owns library abstraction"
+                    results.append(
+                        m.Infra.ProjectFixResult(
+                            project=project_dir.name,
+                            skipped=(
+                                m.Infra.SkippedViolation(
+                                    rule_id=rule_id,
+                                    file_path=str(file_path),
+                                    reason=(
+                                        f"project {project_dir.name} "
+                                        "owns library abstraction"
+                                    ),
+                                ),
                             ),
                         )
                     )
                     continue
-                result = self._fix_file(
-                    file_path=file_path,
-                    transformer_cls=transformer_cls,
-                    fix_action=fix_action,
-                    ctx=ctx,
-                    rule_id=self._rule_id(target_violations),
+                results.append(
+                    self._fix_file(
+                        file_path=file_path,
+                        transformer_cls=transformer_cls,
+                        fix_action=fix_action,
+                        ctx=ctx,
+                        rule_id=rule_id,
+                    )
                 )
-                fixed.extend(result.fixed)
-                previewed.extend(result.previewed)
-                skipped.extend(result.skipped)
-                failed.extend(result.failed)
-                files_modified.update(result.files_modified)
+        files_modified = {path for result in results for path in result.files_modified}
         if ctx.apply and files_modified:
             normalize_result = self._normalize_imports(tuple(files_modified))
             if normalize_result.failure:
-                failed.append(
-                    m.Infra.FailedFix(
-                        rule_id="",
-                        file_path=str(project_dir),
-                        error=normalize_result.error or "import normalization failed",
+                results.append(
+                    m.Infra.ProjectFixResult(
+                        project=project_dir.name,
+                        failed=(
+                            m.Infra.FailedFix(
+                                rule_id="",
+                                file_path=str(project_dir),
+                                error=(
+                                    normalize_result.error
+                                    or "import normalization failed"
+                                ),
+                            ),
+                        ),
                     )
                 )
-        return self._build_project_fix_result(
-            project_dir, fixed, previewed, skipped, failed, files_modified
-        )
+        return self._merge_project_fix_results(project_dir, results)
 
     @staticmethod
     def _is_owned_library_exempt(
@@ -283,7 +300,14 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         transformer = self._build_transformer(
             transformer_cls=transformer_cls, fix_action=fix_action, file_path=file_path
         )
-        updated, changes = transformer.apply_to_source(source)
+        try:
+            updated, changes = transformer.apply_to_source(source)
+        except Exception as exc:
+            exc.add_note(
+                f"enforcement transformer {transformer_cls.__name__} failed for "
+                f"{file_path} (rule {rule_id})"
+            )
+            raise
         if not changes:
             return m.Infra.ProjectFixResult(
                 project=file_path.parent.name,
@@ -369,9 +393,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
             canonical_map: t.MutableMappingKV[frozenset[str], str] = {}
             if "dict" in targets:
                 canonical_map[frozenset({"MutableMapping[K, V]"})] = "t.MappingKV[K, V]"
-                canonical_map[frozenset({"MutableMapping[str, Any]"})] = (
-                    "t.MappingKV[str, t.JsonValue]"
-                )
             return FlextInfraRefactorTypingUnifier(
                 canonical_map=canonical_map, file_path=file_path
             )
@@ -406,17 +427,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                 symbols_to_replace=symbols_to_replace,
                 runtime_aliases=runtime_aliases,
                 blocked_aliases=blocked_aliases,
-            )
-        if transformer_cls is FlextInfraRefactorPatternTransformer:
-            required_alias = params.get("required_alias", "")
-            alias_module = params.get("alias_module", "")
-            return FlextInfraRefactorPatternTransformer(
-                patterns=u.Cli.json_as_mapping_list(params.get("patterns")),
-                required_alias=required_alias
-                if isinstance(required_alias, str)
-                else "",
-                alias_module=alias_module if isinstance(alias_module, str) else "",
-                file_path=file_path,
             )
         # Remaining enforcement transformers require no runtime params.
         return transformer_cls()

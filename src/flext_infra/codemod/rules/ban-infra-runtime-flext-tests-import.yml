@@ -1,0 +1,25 @@
+# Detection-only fixed point for the flext-infra -> flext-tests dependency
+# direction law: the declared dependency is flext-tests -> flext-infra, so
+# flext-infra never imports flext_tests at runtime. Tests-tier validators
+# (tv.*) execute inside the flext-tests pytest dispatcher.
+id: ban-infra-runtime-flext-tests-import
+language: Python
+severity: error
+files:
+  - "flext-infra/src/**/*.py"
+rule:
+  any:
+    - pattern: import flext_tests
+    - pattern: import flext_tests.$MODULE
+    - pattern: from flext_tests import $$$NAMES
+    - pattern: from flext_tests.$MODULE import $$$NAMES
+    - all:
+        - kind: call
+          has:
+            field: function
+            regex: "(^|\\.)import_module$|^__import__$"
+        - has:
+            kind: string
+            stopBy: end
+            regex: "^['\\\"]flext_tests"
+message: flext-infra must not import flext_tests at runtime; tests-tier validators execute inside the flext-tests pytest dispatcher (dependency direction is flext-tests -> flext-infra).

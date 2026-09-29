@@ -14,16 +14,15 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 import collections.abc
-from pathlib import Path
 
-from flext_cli import t as _cli_t
+from flext_cli import FlextCliTypes
 
 from ._typings.adapters import FlextInfraTypesAdapters
 from ._typings.base import FlextInfraTypesBase
 from ._typings.rope import FlextInfraTypesRope
 
 
-class FlextInfraTypes(_cli_t):
+class FlextInfraTypes(FlextCliTypes):
     """Type namespace for flext-infra; extends FlextTypes via FLEXT.
 
     Infra-specific types are nested under the ``Infra`` inner class to
@@ -42,8 +41,6 @@ class FlextInfraTypes(_cli_t):
         """
 
 
-t: type[FlextInfraTypes] = FlextInfraTypes
+t = FlextInfraTypes
 
 __all__: list[str] = ["FlextInfraTypes", "t"]
-
-type DocsRenderedArtifactTuple = t.Triple[Path, Path, str | None]

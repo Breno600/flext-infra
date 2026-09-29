@@ -16,13 +16,12 @@ an unresolved receiver does not establish that the method belongs to Pydantic.
 from __future__ import annotations
 
 import ast
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import ClassVar, override
 
-from .._utilities.transformer_base import FlextInfraRopeTransformer
+from flext_infra import t
+
 from ._rewrite import FlextInfraSourceRewriter
-
-if TYPE_CHECKING:
-    from flext_infra import t
+from .rope_transformer import FlextInfraRopeTransformer
 
 
 class FlextInfraRefactorPydanticModernizer(FlextInfraRopeTransformer):

@@ -13,7 +13,7 @@ from flext_tests import tm
 from flext_infra import config
 from flext_infra.check import FlextInfraGateRegistry
 from flext_infra.gates import FlextInfraCanonicalAliasGate
-from tests import c, m, t
+from tests import c, m, u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -26,6 +26,7 @@ class TestsFlextInfraGateRegistry:
         (project_dir / "pyproject.toml").write_text(
             '[project]\nname = "flext-infra"\nversion = "0.1.0"\n', encoding="utf-8"
         )
+        u.Tests.provision_checkout(project_dir)
         return FlextInfraCanonicalAliasGate(tmp_path).fix(
             project_dir,
             m.Infra.GateContext(
@@ -79,6 +80,43 @@ class TestsFlextInfraGateRegistry:
         tm.that(result.raw_output, has="canonical alias 'c'")
         tm.that(result.raw_output, has="from tests import c")
 
+    def test_canonical_alias_tolerates_content_only_submodule(
+        self, tmp_path: Path
+    ) -> None:
+        """A package:false content-only root is a no-policy-owner tree.
+
+        A workspace submodule whose pyproject declares no ``[project]`` table
+        (mt5docker, ``package: false`` by design) must not crash the gate with
+        ``TypeError: missing [project] table`` — the alias check treats it as
+        the no-owner posture and passes (invest repro: ``make check`` on the
+        invest root with submodules materialized died exactly there, bead
+        invest-awmk).
+        """
+        project_dir = tmp_path / "flext-infra"
+        owned_init = project_dir / "src" / "flext_infra" / "__init__.py"
+        owned_init.parent.mkdir(parents=True)
+        owned_init.write_text("", encoding="utf-8")
+        (project_dir / "pyproject.toml").write_text(
+            '[project]\nname = "flext-infra"\nversion = "0.1.0"\n', encoding="utf-8"
+        )
+        submodule = tmp_path / "mt5docker"
+        submodule.mkdir()
+        (submodule / "pyproject.toml").write_text(
+            "[tool.uv]\npackage = false\n", encoding="utf-8"
+        )
+        submodule_mod = submodule / "pkg" / "mod.py"
+        submodule_mod.parent.mkdir()
+        submodule_mod.write_text("VALUE = 1\n", encoding="utf-8")
+
+        gate = FlextInfraCanonicalAliasGate(tmp_path)
+        result = gate.check(
+            tmp_path,
+            m.Infra.GateContext(
+                repository_root=tmp_path, reports_dir=tmp_path / "reports"
+            ),
+        )
+        tm.that(result.result.passed, eq=True)
+
     def test_canonical_alias_fix_rejects_prospective_import_cycle(
         self, tmp_path: Path
     ) -> None:
@@ -120,6 +158,7 @@ class TestsFlextInfraGateRegistry:
         (project_dir / "pyproject.toml").write_text(
             '[project]\nname = "flext-infra"\nversion = "0.1.0"\n', encoding="utf-8"
         )
+        u.Tests.provision_checkout(project_dir)
         gate = FlextInfraCanonicalAliasGate(tmp_path)
         context = m.Infra.GateContext(
             repository_root=tmp_path, reports_dir=tmp_path / "reports", apply_fixes=True
@@ -237,6 +276,3 @@ class TestsFlextInfraGateRegistry:
         # check vocabulary AND from the fix vocabulary.
         tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_FIXABLE_GATE_IDS, eq=True)
         tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_GATE_IDS, eq=True)
-
-
-__all__: t.StrSequence = ["TestsFlextInfraGateRegistry"]

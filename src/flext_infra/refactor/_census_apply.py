@@ -66,13 +66,13 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
         ) -> str: ...
 
     def _apply_supported_fixes(
-        self, rope: p.Infra.RopeWorkspaceDsl, report: m.Infra.Census.WorkspaceReport
+        self, rope: p.Infra.RopeWorkspaceDsl, report: m.Infra.WorkspaceReport
     ) -> frozenset[str]:
         """Apply supported fixes."""
         applied: set[str] = set()
         touched_paths: set[Path] = set()
         applied_actions: set[str] = set()
-        requested_fixes: MutableMapping[tuple[Path, str], set[str]] = defaultdict(set)
+        requested_fixes: MutableMapping[t.Pair[Path, str], set[str]] = defaultdict(set)
         for project in report.projects:
             for fix in project.fixes:
                 requested_fixes[Path(fix.source_file), fix.action].add(fix.object_name)
@@ -80,7 +80,18 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
             parse_failures: list[m.Infra.ParseFailureViolation] = []
             ctx = self._detector_context(rope, file_path, parse_failures=parse_failures)
             changed = False
-            if action == "rewrite_runtime_alias":
+            if action == "remove_stale_runtime_alias_export":
+                source = rope.source(file_path)
+                alias = next(iter(object_names))
+                updated = u.Infra.remove_runtime_alias_export(source, alias=alias)
+                if updated == source:
+                    continue
+                resource = rope.resource(file_path)
+                if resource is None:
+                    continue
+                resource.write(updated)
+                changed = True
+            elif action == "rewrite_runtime_alias":
                 convention = rope.convention(file_path)
                 alias = convention.module_policy.expected_alias
                 target_name = convention.module_policy.expected_family
@@ -284,7 +295,7 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
         if not violations:
             return False
         try:
-            pymodule = u.Infra.get_pymodule(rope.rope_project, resource)
+            pymodule = u.Infra.resolve_pymodule(rope.rope_project, resource)
             tree = pymodule.get_ast()
         except (*u.Infra.rope_runtime_errors(), TypeError) as exc:
             msg = (
@@ -296,8 +307,8 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
             return False
         source = rope.source(file_path)
         lines = source.splitlines(keepends=True)
-        line_ranges_to_remove: list[tuple[int, int]] = []
-        imports_to_add: list[tuple[str, t.VariadicTuple[str]]] = []
+        line_ranges_to_remove: list[t.Pair[int, int]] = []
+        imports_to_add: list[t.Pair[str, t.VariadicTuple[str]]] = []
         for violation in violations:
             target = self._find_inline_import_node(tree, violation.line)
             if target is None:
@@ -346,13 +357,23 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
     def _apply_classvar_relocation(
         self, *, rope: p.Infra.RopeWorkspaceDsl, file_path: Path, object_names: set[str]
     ) -> bool:
-        """Apply ENFORCE-079: move ClassVar constants to the _constants module."""
+        """Apply ENFORCE-079: move ClassVar constants to the _constants module.
+
+        Every classvar_relocation violation the detector yields for the file is
+        applied, not only the surfaced ``object_names`` subset: the runtime
+        census surfaces one violating constant per class per pass (single
+        violation per target in the enforcement engine), while the detector
+        enumerates them all. Restricting the apply to the surfaced names would
+        need one full pass per constant; applying the complete set keeps the
+        rule strict and the migration mechanical. ``object_names`` still gates
+        WHICH FILES are visited (files with at least one surfaced fix).
+        """
+        _ = object_names
         ctx = self._detector_context(rope, file_path)
         violations = [
             violation
             for violation in FlextInfraClassPlacementDetector.detect_file(ctx)
             if violation.action == "classvar_relocation"
-            and violation.name in object_names
         ]
         if not violations or ctx.project_root is None:
             return False

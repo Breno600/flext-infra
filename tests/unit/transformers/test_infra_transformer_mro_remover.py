@@ -74,6 +74,3 @@ class TestsFlextInfraTransformersMroRemover:
         code, _changes = self._transform(source)
         tm.that(code, lacks="class Cli")
         tm.that(code, has="    class Real(Base):\n        VALUE = 2\n")
-
-
-__all__: list[str] = ["TestsFlextInfraTransformersMroRemover"]

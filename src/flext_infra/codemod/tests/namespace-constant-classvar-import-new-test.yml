@@ -1,0 +1,23 @@
+id: namespace-constant-classvar-import-new
+# `valid` MUST NOT match: a module-level typing import already exists (owned by
+# namespace-constant-classvar-import), or no holder constant is declared.
+valid:
+  - |
+    from __future__ import annotations
+    from typing import Final
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            RETRIES: Final[int] = 30
+  - |
+    from __future__ import annotations
+    class FlextThingConstants:
+        RETRIES = 30
+# `invalid` MUST match and add `from typing import ClassVar`.
+invalid:
+  - |
+    from __future__ import annotations
+    from flext_tests import FlextTestsConstants
+    class C:
+        class Tests(FlextTestsConstants.Tests):
+            EXPECTED_DATA_COUNT: int = 3

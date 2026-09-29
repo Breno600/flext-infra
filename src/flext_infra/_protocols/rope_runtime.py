@@ -6,7 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     # flext-j47u (codex): retained only until the remaining get_ast consumers are
@@ -74,7 +74,7 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         declares the common fields that appear across all node types.
         """
 
-        _fields: t.VariadicTuple[str]
+        _fields: ClassVar[t.VariadicTuple[str]]
 
     @runtime_checkable
     class RopeAssignment(Protocol):
@@ -316,7 +316,9 @@ class FlextInfraProtocolsRopeRuntime(Protocol):
         """Rope MoveGlobal refactoring shape."""
 
         def get_changes(
-            self, target: FlextInfraProtocolsRopeRuntime.RopeResource
+            self,
+            target: FlextInfraProtocolsRopeRuntime.RopeResource,
+            resources: list[FlextInfraProtocolsRopeRuntime.RopeResource] | None = None,
         ) -> FlextInfraProtocolsRopeRuntime.RopeChangeSet: ...
 
     @runtime_checkable

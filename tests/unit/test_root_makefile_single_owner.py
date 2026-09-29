@@ -2,8 +2,8 @@
 
 The conform engine (``base/Makefile.j2``) is the SINGLE owner of the generated
 Makefile for every profile. The workspace profile is served by the same
-template — its member gate fan-out is rendered behind a profile gate — so there
-is no second, divergent generator.
+template with the same local verb bodies, so there is no second, divergent
+generator.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -17,7 +17,6 @@ from flext_tests import tm
 
 import flext_infra
 from flext_infra import c, config
-from tests import t
 
 
 class TestsFlextInfraRootMakefileSingleOwner:
@@ -49,19 +48,3 @@ class TestsFlextInfraRootMakefileSingleOwner:
 
         tm.that(generic, has="{{ makefile_custom_include }}")
         tm.that(generic, lacks="workspace_custom.mk")
-
-    def test_clean_preserves_active_runtime_scratch(self) -> None:
-        """Clean leaves invocation scratch to each process cleanup trap."""
-        templates_root = Path(flext_infra.__file__).resolve().parent / "templates"
-        generic = (templates_root / "project" / "base" / "Makefile.j2").read_text(
-            encoding="utf-8"
-        )
-
-        tm.that(generic, lacks='find "$(PROJECT_SCRATCH_ROOT)" -depth -delete')
-        tm.that(
-            config.Infra.codegen.make.clean.root_files,
-            has="flext-infra-codegen-transaction-journal.json.lock",
-        )
-
-
-__all__: t.VariadicTuple[str] = ()

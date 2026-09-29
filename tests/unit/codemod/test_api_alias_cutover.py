@@ -54,6 +54,3 @@ class TestsFlextInfraApiAliasCutover:
         tm.that(by_path[consumer], has="from flext_sample.api import FlextSample")
         tm.that(by_path[consumer], has="facade = FlextSample")
         tm.that(by_path[consumer], lacks="import sample")
-
-
-__all__: list[str] = ["TestsFlextInfraApiAliasCutover"]

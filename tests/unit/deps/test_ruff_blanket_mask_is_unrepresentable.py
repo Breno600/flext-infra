@@ -85,6 +85,3 @@ class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
 
         with pytest.raises(m.ValidationError):
             _ = m.Infra.ProjectRuffConfig.model_validate(payload)
-
-
-__all__: t.VariadicTuple[str] = ()

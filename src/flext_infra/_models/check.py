@@ -20,11 +20,14 @@ class FlextInfraModelsCheck:
 
         Inherits canonical ``repository_root`` (``--repository-root``),
         ``gates`` (parsed to ``t.StrSequence``), ``apply``/``dry_run``,
-        ``projects``, ``fail_fast``, ``verbose`` from ``WriteMixin``; the scope
+        ``projects`` and ``verbose`` from ``WriteMixin``; the scope
         root has exactly one owner so an unmapped option can never fall back
         to the current directory.
         """
 
+        fail_fast: Annotated[
+            bool, m.Field(description="Stop check gates after the first failure")
+        ] = c.Infra.CHECK_FAIL_FAST_DEFAULT
         reports_dir: Annotated[
             str,
             m.Field(
@@ -77,13 +80,6 @@ class FlextInfraModelsCheck:
         name: Annotated[str, m.Field(description="Display/project name")]
         path: Annotated[Path, m.Field(description="Resolved project root path")]
 
-        @classmethod
-        def from_workspace_name(
-            cls, repository_root: Path, project_name: str
-        ) -> FlextInfraModelsCheck.CheckProjectTarget:
-            """Build a target from the public run_projects name contract."""
-            return cls(name=project_name, path=repository_root / project_name)
-
     class MypyResourceLimit(m.ContractModel):
         """Validated memory and wall-time limits for every Mypy process."""
 
@@ -112,11 +108,37 @@ class FlextInfraModelsCheck:
             """Validated memory limit converted to bytes for the platform owner."""
             return self.memory_limit_mb * 1024 * 1024
 
+    class MypyInvocation(m.ContractModel):
+        """Checker inputs; callers cannot select an executable or Python program."""
+
+        targets: Annotated[
+            t.VariadicTuple[Path],
+            m.Field(min_length=1, description="Files or directories to check"),
+        ]
+        workspace: Annotated[
+            Path | None, m.Field(description="Workspace owning the checker environment")
+        ] = None
+        config_file: Annotated[
+            Path | None, m.Field(description="Owned Mypy configuration")
+        ] = None
+        report_json: Annotated[
+            bool, m.Field(description="Emit native JSON diagnostics")
+        ] = False
+        verbose: Annotated[bool, m.Field(description="Emit Mypy progress")] = False
+        profile_output: Annotated[
+            Path | None, m.Field(description="Optional cProfile output destination")
+        ] = None
+
     class FixPyreflyConfigCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
 
     class FixEnforcementCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-enforcement``."""
+
+        @property
+        def fail_fast(self) -> bool:
+            """Share the service's fail-fast invariant with gate adapters."""
+            return c.Infra.SERVICE_FAIL_FAST
 
         rules: Annotated[
             t.StrSequence,
@@ -177,7 +199,11 @@ class FlextInfraModelsCheck:
             description="Gate result model"
         )
         issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
-            default_factory=tuple, description="Detected issues"
+            default_factory=tuple, description="Blocking gate diagnostics"
+        )
+        observational_issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
+            default_factory=tuple,
+            description="Explicitly observational findings, separate from failures",
         )
         raw_output: str = m.Field(
             "", description="Raw tool output", validate_default=True
@@ -190,6 +216,12 @@ class FlextInfraModelsCheck:
             return sum(
                 1 for issue in self.issues if issue.severity.lower() == c.Infra.ERROR
             )
+
+        @m.computed_field
+        @property
+        def observational_count(self) -> int:
+            """Number of reported findings outside the blocking verdict."""
+            return len(self.observational_issues)
 
     class ProjectResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Aggregated gate results for a single project.
@@ -215,6 +247,12 @@ class FlextInfraModelsCheck:
             """Total error-severity diagnostic count across all gates."""
             return sum(v.error_count for v in self.gates.values())
 
+        @m.computed_field
+        @property
+        def total_observations(self) -> int:
+            """Total observational finding count across all gates."""
+            return sum(v.observational_count for v in self.gates.values())
+
     class LoopOutcome(m.ArbitraryTypesModel):
         """Bundled results from the project-checking loop."""
 
@@ -227,12 +265,6 @@ class FlextInfraModelsCheck:
         failed: Annotated[
             int,
             m.Field(description="Number of projects that failed one or more gates."),
-        ]
-        skipped: Annotated[
-            int,
-            m.Field(
-                description="Number of projects that were skipped during execution."
-            ),
         ]
         total_elapsed: Annotated[
             float,
@@ -337,7 +369,7 @@ class FlextInfraModelsCheck:
         rule_id: Annotated[
             str, m.Field(validation_alias="ruleId", description="Rule identifier")
         ]
-        level: Annotated[str, m.Field(description="Result level (error/warning)")]
+        level: Annotated[str, m.Field(description="Result level (error/warning/note)")]
         message: Annotated[
             str,
             m.Field(

@@ -214,6 +214,3 @@ class TestsFlextInfraCodegenVersionFile:
         result = svc.execute()
 
         tm.ok(result)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenVersionFile"]

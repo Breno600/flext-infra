@@ -32,10 +32,10 @@ class FlextInfraApplyRenames:
     """Execute prefix-safe, idempotent renames from one CSV source of truth."""
 
     @staticmethod
-    def _pairs(csv_path: Path) -> p.Result[t.SequenceOf[tuple[str, str]]]:
+    def _pairs(csv_path: Path) -> p.Result[t.SequenceOf[t.Pair[str, str]]]:
         """Load validated rename pairs longest source name first."""
 
-        def source_name_length(pair: tuple[str, str]) -> int:
+        def source_name_length(pair: t.Pair[str, str]) -> int:
             return len(pair[0])
 
         read_result = u.Cli.files_read_text(csv_path)
@@ -49,7 +49,7 @@ class FlextInfraApplyRenames:
             return r[t.SequenceOf[tuple[str, str]]].fail(
                 f"{csv_path}: header must be exactly 'old,new'"
             )
-        pairs: list[tuple[str, str]] = []
+        pairs: list[t.Pair[str, str]] = []
         for row in rows[1:]:
             if len(row) != _RENAME_COLUMNS or not row[0].strip() or not row[1].strip():
                 return r[t.SequenceOf[tuple[str, str]]].fail(
@@ -93,8 +93,8 @@ class FlextInfraApplyRenames:
 
     @staticmethod
     def _scan(
-        files: t.SequenceOf[Path], pairs: t.SequenceOf[tuple[str, str]]
-    ) -> p.Result[tuple[int, int, t.StrSequence]]:
+        files: t.SequenceOf[Path], pairs: t.SequenceOf[t.Pair[str, str]]
+    ) -> p.Result[t.Triple[int, int, t.StrSequence]]:
         """Collect pending occurrences, affected files, and report lines."""
         occurrences = 0
         affected_files = 0
@@ -126,14 +126,23 @@ class FlextInfraApplyRenames:
     def _apply(
         files: t.SequenceOf[Path],
         roots: t.SequenceOf[Path],
-        pairs: t.SequenceOf[tuple[str, str]],
+        pairs: t.SequenceOf[t.Pair[str, str]],
     ) -> p.Result[bool]:
-        """Rewrite code nodes first, then remaining text occurrences."""
+        """Rewrite code nodes first, then remaining text occurrences.
+
+        The structural pass is bound to Python: without a declared language
+        ast-grep parses every file under the roots with its extension's
+        grammar, and a dotted pattern then matches whole prose paragraphs in
+        Markdown and replaces them with the new name. Every other text file is
+        owned by the word-boundary pass below.
+        """
         root_args = tuple(str(root) for root in roots)
         for old, new in pairs:
             run_result = u.Cli.run_raw((
                 c.Infra.SG,
                 "run",
+                "--lang",
+                c.Infra.PYTHON,
                 "-p",
                 old,
                 "-r",

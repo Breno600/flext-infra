@@ -122,6 +122,3 @@ class TestsFlextInfraCodegenScaffolder:
             (project / "scripts" / "constants.py").read_text(encoding="utf-8"),
             has="from test_project import FlextConstants",
         )
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenScaffolder"]

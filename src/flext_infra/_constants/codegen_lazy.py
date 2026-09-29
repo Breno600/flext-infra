@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 class FlextInfraConstantsCodegenLazy:
     """Lazy-init and export-policy constants for codegen."""
 
-    MAX_LINE_LENGTH: ClassVar[int] = 88
-    "Maximum line length for generated import lines."
     MAX_ALIAS_LENGTH: ClassVar[int] = 2
     "Maximum length of a public facade alias."
     AUTOGEN_HEADER: ClassVar[str] = "# AUTO-GENERATED FILE — Regenerate with: make gen"
@@ -188,8 +186,6 @@ class FlextInfraConstantsCodegenLazy:
         "scripts",
     })
     "Directory segments recognized as project-root wrapper paths."
-    DUPLICATE_CLASS_MIN_LEN: ClassVar[int] = 8
-    "Minimum class-name length for workspace-wide duplicate detection."
     TEST_RUNTIME_ALIAS_TARGETS: ClassVar[t.MappingKV[str, t.StrPair]] = (
         MappingProxyType({
             "c": ("flext_tests", "c"),

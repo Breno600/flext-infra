@@ -47,8 +47,14 @@ class FlextInfraConfigModelsWorkspace:
             t.NonEmptyStr, m.Field(description="Canonical project distribution")
         ]
         beads_enabled: Annotated[
-            bool, m.Field(description="Whether the repository participates in Beads")
-        ] = False
+            bool,
+            m.Field(
+                description=(
+                    "Whether the repository participates in Beads; an overlay "
+                    "that omits it means the same as no overlay (enabled)"
+                )
+            ),
+        ] = True
         ci_enabled: Annotated[
             bool, m.Field(description="Whether conform owns the CI surface")
         ] = True
@@ -66,10 +72,6 @@ class FlextInfraConfigModelsWorkspace:
                 )
             ),
         ] = True
-        extra_ignored_patterns: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Repository-local generated ignore patterns"),
-        ] = ()
 
     class WorkspaceExclusionSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One explicitly excluded workspace-relative path."""
@@ -215,9 +217,9 @@ class FlextInfraConfigModelsWorkspace:
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Workspace name")]
         beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsProjectSpec,
-            m.Field(description="Repository-local Beads identity"),
-        ]
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(description="Repository-local Beads identity when enabled"),
+        ] = None
         gascity_enabled: Annotated[
             bool,
             m.Field(

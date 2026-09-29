@@ -2,9 +2,52 @@ id: ban-test-doubles
 valid:
   - from flext_tests import tm
   - service = RealService()
+  # HTTP PATCH on a real client is a homonym, not a mock patch.
+  - response = client.patch("/items/1", json=payload)
+  # A bare `patch`/`Mock` call without a mock-library import is a project name.
+  - result = patch(document, delta)
+  - model = Mock(name="fixture-owned model")
+  # Environment isolation keeps the real code running against a sandbox.
+  - |
+    def test_env(monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("FLEXT_MODE", "test")
+        monkeypatch.delenv("HOME", raising=False)
+        monkeypatch.chdir(tmp_path)
+  # `setattr` on an unrelated receiver is not a monkeypatch verb.
+  - tree.setattr("name", "value")
+  - from unittest import TestCase
 invalid:
   - from unittest.mock import MagicMock
-  - service = MagicMock()
+  - from unittest import mock
+  - from unittest import TestCase, mock
+  - import unittest.mock
+  - import mock
+  - from mock import patch
+  - import pytest_mock
+  - from pytest_mock import MockerFixture
+  - |
+    def test_runner(mocker) -> None:
+        run(mocker)
+  - |
+    from unittest.mock import MagicMock
+    service = MagicMock()
+  - |
+    from unittest.mock import patch
+    with patch("flext_core.runtime.run"):
+        pass
+  - |
+    from unittest.mock import patch
+    handle = patch.object(Service, "run")
+  - handle = mock.patch("flext_core.runtime.run")
+  - handle = unittest.mock.patch.dict(os.environ, {})
+  - double = mock.create_autospec(Service)
   - |
     def test_internal(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(Service, "run", lambda: True)
+  - |
+    def test_items(monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setitem(registry, "key", value)
+  - |
+    def test_context() -> None:
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(Service, "run", lambda: True)

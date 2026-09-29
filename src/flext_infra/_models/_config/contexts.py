@@ -9,11 +9,7 @@ from typing import Annotated, ClassVar, Literal
 from flext_cli import m
 
 from ... import t
-from ..._constants import (
-    FlextInfraConstantsCodegenProject,
-    FlextInfraConstantsWorkspace,
-)
-from .. import FlextInfraModelsDefaults
+from ..._constants import FlextInfraConstantsCodegenProject
 from ..deps_tool_config import FlextInfraModelsDepsToolConfig
 from .beads import FlextInfraConfigModelsBeads
 from .contract import FlextInfraConfigModelsContract
@@ -52,31 +48,7 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Typed pytest execution policy"),
         ]
 
-    class ScratchRootContext(FlextInfraConfigModelsContract.ConfigContract):
-        """Shared state and scratch roots every generated environment derives."""
-
-        state_directory_name: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="External runtime state directory beside checkout"),
-        ]
-        scratch_namespace: Annotated[
-            t.NonEmptyStr,
-            m.Field(description="Scratch namespace below the home scratch root"),
-        ]
-        scratch_home_relative: Annotated[
-            t.NonEmptyStr, m.Field(description="Home-relative scratch root")
-        ]
-        scratch_identity_segment_aliases: Annotated[
-            t.VariadicTuple[t.Pair[t.NonEmptyStr, t.NonEmptyStr]],
-            m.Field(
-                description=(
-                    "Checkout path segments renamed in the home scratch mirror "
-                    "so a scratch root never contains a VCS directory"
-                )
-            ),
-        ] = tuple(FlextInfraConstantsWorkspace.SCRATCH_IDENTITY_SEGMENT_ALIASES)
-
-    class MakefileRenderSpec(MakeCommandContext, ScratchRootContext):
+    class MakefileRenderSpec(MakeCommandContext):
         """Field-only render input for an existing repository Makefile."""
 
         mise_bootstrap: Annotated[
@@ -88,6 +60,9 @@ class FlextInfraConfigModelsContexts:
         make_profile: Annotated[
             FlextInfraConstantsCodegenProject.MakeProfile,
             m.Field(description="Selected repository Make profile"),
+        ]
+        package: Annotated[
+            bool, m.Field(description="Repository publishes a Python package")
         ]
         repository_root_rel: Annotated[
             t.NonEmptyStr, m.Field(description="Relative workspace root path")
@@ -111,6 +86,31 @@ class FlextInfraConfigModelsContexts:
             t.NonEmptyStr,
             m.Field(description="mise-owned uv version used by bootstrap validation"),
         ]
+        mise_lockfile_platforms: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Platforms carried by artifact-tool lock entries"),
+        ]
+        npm_package_manager: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise installer for npm CLIs")
+        ]
+        qlty_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for qlty")
+        ]
+        jscpd_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for jscpd")
+        ]
+        prettier_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for Prettier")
+        ]
+        ast_grep_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for ast-grep")
+        ]
+        scc_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for scc")
+        ]
+        waza_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Configured Mise selector for Waza")
+        ]
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,
             m.Field(description="Generated Make command contract"),
@@ -130,25 +130,10 @@ class FlextInfraConfigModelsContexts:
         ]
         workspace_cli_group: Annotated[
             t.NonEmptyStr,
-            m.Field(description="CLI group used for workspace orchestration"),
-        ]
-        mypy_memory_limit_mb: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy address-space limit in MiB")
-        ]
-        mypy_timeout_seconds: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy wall-time limit in seconds")
+            m.Field(description="CLI group that owns the workspace propagate route"),
         ]
         mypy_timeout_exit_code: Annotated[
             int, m.Field(gt=0, description="Wall-time limiter timeout exit code")
-        ]
-        mypy_signal_exit_offset: Annotated[
-            int, m.Field(gt=0, description="Shell signal exit-code offset")
-        ]
-        prlimit_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter executable")
-        ]
-        prlimit_address_space_option: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter option")
         ]
         timeout_command: Annotated[
             t.NonEmptyStr, m.Field(description="Wall-time limiter executable")
@@ -172,23 +157,8 @@ class FlextInfraConfigModelsContexts:
             FlextInfraConfigModelsMake.MakeSpec,
             m.Field(description="Generated Make command contract"),
         ]
-        mypy_memory_limit_mb: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy address-space limit in MiB")
-        ]
-        mypy_timeout_seconds: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy wall-time limit in seconds")
-        ]
         mypy_timeout_exit_code: Annotated[
             int, m.Field(gt=0, description="Wall-time limiter timeout exit code")
-        ]
-        mypy_signal_exit_offset: Annotated[
-            int, m.Field(gt=0, description="Shell signal exit-code offset")
-        ]
-        prlimit_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter executable")
-        ]
-        prlimit_address_space_option: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter option")
         ]
         timeout_command: Annotated[
             t.NonEmptyStr, m.Field(description="Wall-time limiter executable")
@@ -212,11 +182,10 @@ class FlextInfraConfigModelsContexts:
         ruff_per_file_ignores: Annotated[
             t.MappingKV[str, t.StrSequence],
             m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
                 description=(
                     "Effective Ruff exemptions: fleet policy composed with this "
                     "repository's own ManagedArtifacts overlay"
-                ),
+                )
             ),
         ]
         make_profile: Annotated[
@@ -258,7 +227,7 @@ class FlextInfraConfigModelsContexts:
             str,
             m.Field(
                 description=(
-                    "CLI group name for the flext-infra workspace orchestrate route"
+                    "CLI group name for the flext-infra workspace propagate route"
                 )
             ),
         ] = ""
@@ -367,20 +336,10 @@ class FlextInfraConfigModelsContexts:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(description="Configured read-only PATH additions for direnv"),
         ] = ()
-        beads_tool_selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Official Beads mise selector")
-        ]
-        beads_tool_version: Annotated[
-            Literal["latest"], m.Field(description="Moving Beads release selector")
-        ]
-        beads_tool_prerelease: Annotated[
-            bool,
-            m.Field(description="Whether mise may resolve prerelease Beads versions"),
-        ] = False
         beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsProjectSpec,
-            m.Field(description="Repository-local Beads identity"),
-        ]
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(description="Repository-local Beads identity when enabled"),
+        ] = None
         canonical_project_name: Annotated[
             t.NonEmptyStr, m.Field(description="Canonical PEP 621 project name")
         ]
@@ -407,6 +366,15 @@ class FlextInfraConfigModelsContexts:
         ]
         upstream: Annotated[
             t.NonEmptyStr, m.Field(description="Upstream FLEXT facade module")
+        ]
+        upstream_facades: Annotated[
+            Mapping[t.NonEmptyStr, t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Facade class the upstream declares for each letter in the "
+                    "__all__ that binds it; scaffolded facades extend that class"
+                )
+            ),
         ]
         inherited_facets: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
@@ -438,6 +406,15 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        cli_module: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether the package ships its cli entry module; see the "
+                    "ProjectSpec namesake."
+                )
+            ),
+        ]
         runtime_dependency_overlay: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -488,7 +465,16 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Moving Waza release selector, e.g. 'latest'"),
         ]
         taplo_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Taplo formatter version")
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Taplo release selector; the committed mise.lock pins the "
+                    "version generation authenticates (flext-t7668)"
+                )
+            ),
+        ]
+        ast_grep_selector: Annotated[
+            t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI")
         ]
         ast_grep_version: Annotated[
             t.NonEmptyStr, m.Field(description="Exact ast-grep analyzer version")
@@ -536,16 +522,6 @@ class FlextInfraConfigModelsContexts:
         repository_branch: Annotated[
             t.NonEmptyStr, m.Field(description="Canonical repository Git branch")
         ]
-        workspace_dependency_distributions: Annotated[
-            t.VariadicTuple[str],
-            m.Field(
-                description=(
-                    "Exact local distributions whose source is owned by this "
-                    "workspace root's uv overlay. Every external dependency and "
-                    "every standalone member retains its declared Git source."
-                )
-            ),
-        ] = ()
         year: Annotated[int, m.Field(description="Copyright year")]
 
         @m.field_validator("hatch_build_hook_path")
@@ -558,13 +534,12 @@ class FlextInfraConfigModelsContexts:
     class ProjectSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Deterministic project metadata required to materialize a new tree."""
 
-        dependency_revisions: Annotated[
-            Mapping[t.NonEmptyStr, Annotated[str, m.Field(pattern=r"^[0-9a-f]{40}$")]],
+        flext_source: Annotated[
+            t.NonEmptyStr | None,
             m.Field(
-                default_factory=FlextInfraModelsDefaults.immutable_empty_mapping,
-                description="Explicit immutable revisions of provider-owned dependencies",
+                description="Direct Git infrastructure requirement declared for scaffolding"
             ),
-        ]
+        ] = None
 
         # NOTE (multi-agent, flext-get3j): ProjectSpec is the sole declaration
         # owner; absence is meaningful and must never select a conventional hook.
@@ -652,6 +627,18 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        cli_module: Annotated[
+            bool,
+            m.Field(
+                description=(
+                    "Whether the package ships its cli entry module. A scaffold "
+                    "renders the cli seed in the same plan; an existing checkout "
+                    "derives the fact from its source tree. The default console "
+                    "script is declared only then, because conform loads every "
+                    "declared entry point in its fresh-import stage."
+                )
+            ),
+        ] = True
         runtime_dependency_overlay: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
@@ -834,9 +821,9 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Make profile inferred from live Git topology"),
         ]
         beads: Annotated[
-            FlextInfraConfigModelsBeads.BeadsProjectSpec,
-            m.Field(description="Repository-local Beads identity"),
-        ]
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(description="Repository-local Beads identity when enabled"),
+        ] = None
         project: Annotated[
             FlextInfraConfigModelsContexts.ProjectSpec | None,
             m.Field(

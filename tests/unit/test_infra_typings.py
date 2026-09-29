@@ -63,10 +63,3 @@ class TestsFlextInfraInfraTypings:
                 "root": Path("/var/lib/flext"),
                 "settings": {"enabled": True},
             })
-
-    def test_factory_and_resource_guards_accept_callables(self) -> None:
-        def build_service() -> str:
-            return "ok"
-
-        tm.that(callable(build_service), eq=True)
-        tm.that(callable(build_service), eq=True)

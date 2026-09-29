@@ -61,7 +61,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
                 if raw_value is None:
                     normalized_item[key] = ""
                     continue
-                if isinstance(raw_value, t.PRIMITIVES_TYPES):
+                if isinstance(raw_value, c.PRIMITIVES_TYPES):
                     normalized_item[key] = raw_value
             error_obj = item.get(c.Infra.ERROR)
             if not isinstance(error_obj, Mapping):
@@ -127,7 +127,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
         projects = [
             project.path
             for project in projects_info
-            if (project.path / c.Infra.PYPROJECT_FILENAME).exists()
+            if (project.path / c.PYPROJECT_FILENAME).exists()
         ]
         return r[t.SequenceOf[Path]].ok(sorted(projects))
 

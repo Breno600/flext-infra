@@ -10,6 +10,7 @@ from pathlib import Path
 
 from flext_infra import c, m, t
 
+from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
 from .discovery import FlextInfraUtilitiesDiscovery
 from .namespace import FlextInfraUtilitiesCodegenNamespace
 from .namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
@@ -71,7 +72,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                     file_path=file_path, source=source
                 ):
                     continue
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, file_path
                 )
                 if resource is None:
@@ -118,7 +119,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         )
         with FlextInfraUtilitiesRopeCore.open_project(repository_root) as rope_project:
             for file_path, moves in grouped.items():
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, file_path
                 )
                 if resource is None:
@@ -136,7 +137,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                             source_module=current_source,
                             target_module=correct_source,
                             aliases=tuple(sorted(aliases)),
-                            apply=True,
                         )
                     )
                     changed = changed or updated is not None
@@ -202,12 +202,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             t.Triple[Path, Path, t.VariadicTuple[str]]
         ] = []
         for source_file, protocol_names in grouped.items():
-            move = FlextInfraUtilitiesRefactorNamespaceMoves._move_named_blocks(
+            move = FlextInfraUtilitiesRefactorNamespaceMoves._move_protocol_blocks(
                 project_root=project_root,
                 source_file=source_file,
-                target_filename=c.Infra.PROTOCOLS_PY,
                 names=protocol_names,
-                header_prefix="class ",
                 gates=gates,
             )
             if move is not None:
@@ -363,7 +361,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
     ) -> None:
         """Rewrite non-canonical facade imports using Rope rename (file-local)."""
         _ = gates
-        resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+        resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
             rope_project, file_path
         )
         if resource is None:
@@ -417,16 +415,14 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             )
 
     @staticmethod
-    def _move_named_blocks(
+    def _move_protocol_blocks(
         *,
         project_root: Path,
         source_file: Path,
-        target_filename: str,
         names: t.Infra.StrSet,
-        header_prefix: str,
         gates: t.StrSequence | None,
     ) -> t.Triple[Path, Path, t.VariadicTuple[str]] | None:
-        """Move named blocks."""
+        """Move named top-level protocol classes into the canonical protocols module."""
         source = source_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         lines = source.splitlines()
         blocks: t.MutableSequenceOf[str] = []
@@ -434,7 +430,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         moved: t.MutableSequenceOf[str] = []
         for name in sorted(names):
             found = FlextInfraUtilitiesRefactorNamespaceCommon.find_top_level_block(
-                lines=lines, header=f"{header_prefix}{name}"
+                lines=lines, header=f"class {name}"
             )
             if found is None:
                 continue
@@ -445,16 +441,23 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         if not blocks:
             return None
         target_file = FlextInfraUtilitiesRefactorNamespaceCommon.canonical_target_file(
-            project_root=project_root, source_file=source_file, filename=target_filename
+            project_root=project_root,
+            source_file=source_file,
+            filename=c.Infra.PROTOCOLS_PY,
         )
         required_imports = (
             FlextInfraUtilitiesRefactorNamespaceMoves._collect_required_import_lines(
                 source=source, blocks=blocks
             )
         )
-        target_source = (
+        expected_target_source = (
             target_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            if target_file.exists()
+            if target_file.is_file()
+            else None
+        )
+        target_source = (
+            expected_target_source
+            if expected_target_source is not None
             else f"{c.Infra.FUTURE_ANNOTATIONS}\n"
         )
         target_lines = target_source.splitlines()
@@ -475,7 +478,13 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 source_file: "\n".join(filtered_lines).rstrip() + "\n",
             },
             request=m.Infra.ProtectedSourceWritesRequest(
-                workspace=project_root, keep_backup=True, gates=gates
+                workspace=project_root,
+                expected_sources={
+                    target_file: expected_target_source,
+                    source_file: source,
+                },
+                keep_backup=True,
+                gates=gates,
             ),
         )
         if not ok:
@@ -537,10 +546,10 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         pymodule = FlextInfraUtilitiesRopeAnalysis.parse_string_module(source)
         lines = source.splitlines()
         module_ast = pymodule.get_ast()
-        if not hasattr(module_ast, "_fields"):
+        if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(module_ast):
             return source
         for node in getattr(module_ast, "body", ()) or ():
-            if not hasattr(node, "_fields"):
+            if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(node):
                 continue
             if c.Infra.DUNDER_ALL not in (
                 FlextInfraUtilitiesRopeAnalysis.assignment_target_names(node)
@@ -634,9 +643,14 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
             source_file=source_file,
             filename=c.Infra.TYPINGS_PY,
         )
-        target_source = (
+        expected_target_source = (
             target_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            if target_file.exists()
+            if target_file.is_file()
+            else None
+        )
+        target_source = (
+            expected_target_source
+            if expected_target_source is not None
             else f"{c.Infra.FUTURE_ANNOTATIONS}\n"
         )
         # The destination may already bind a required name to a DIFFERENT
@@ -735,7 +749,13 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                 source_file: "\n".join(updated_source_lines).rstrip() + "\n",
             },
             request=m.Infra.ProtectedSourceWritesRequest(
-                workspace=project_root, keep_backup=True, gates=gates
+                workspace=project_root,
+                expected_sources={
+                    target_file: expected_target_source,
+                    source_file: source,
+                },
+                keep_backup=True,
+                gates=gates,
             ),
         )
         if not ok:
@@ -777,13 +797,11 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         # only the first made every tests-tree move unresolvable.
         module_name = ""
         for root in (project_root / c.Infra.DEFAULT_SRC_DIR, project_root):
-            try:
+            if target_file.is_relative_to(root):
                 module_name = ".".join(
                     target_file.relative_to(root).with_suffix("").parts
                 )
-            except ValueError:
-                continue
-            break
+                break
         if not module_name:
             return None
         import_line = f"from {module_name} import {', '.join(referenced_aliases)}"
@@ -831,7 +849,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         )
         runtime_aliases = u.runtime_alias_names(c.Infra.PKG_INFRA_UNDERSCORE)
         moved_ast = moved_pymodule.get_ast()
-        if not hasattr(moved_ast, "_fields"):
+        if not FlextInfraUtilitiesRopeAnalysisAstHelpers.ast_node(moved_ast):
             return ()
         moved_aliases: set[str] = set()
         for node in FlextInfraUtilitiesRopeAnalysis.walk_ast_nodes(moved_ast):
@@ -918,19 +936,23 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
         with FlextInfraUtilitiesRopeCore.open_project(project_root) as rope_project:
             mappings: t.MutableSequenceOf[t.Triple[str, str, t.VariadicTuple[str]]] = []
             for source, target, names in moves:
-                source_resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
-                    rope_project, source
+                source_resource = (
+                    FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
+                        rope_project, source
+                    )
                 )
-                target_resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
-                    rope_project, target
+                target_resource = (
+                    FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
+                        rope_project, target
+                    )
                 )
                 if source_resource is None or target_resource is None:
                     continue
                 try:
-                    source_module = FlextInfraUtilitiesRopeCore.get_pymodule(
+                    source_module = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                         rope_project, source_resource
                     ).get_name()
-                    target_module = FlextInfraUtilitiesRopeCore.get_pymodule(
+                    target_module = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                         rope_project, target_resource
                     ).get_name()
                 except (
@@ -953,7 +975,7 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                         f"{resolved_py_file}"
                     )
                     raise ValueError(msg)
-                resource = FlextInfraUtilitiesRopeCore.get_resource_from_path(
+                resource = FlextInfraUtilitiesRopeCore.resolve_resource_from_path(
                     rope_project, resolved_py_file
                 )
                 if resource is None:
@@ -970,7 +992,6 @@ class FlextInfraUtilitiesRefactorNamespaceMoves:
                             source_module=source_module,
                             target_module=target_module,
                             aliases=names,
-                            apply=True,
                         )
                     )
                     changed = changed or updated is not None

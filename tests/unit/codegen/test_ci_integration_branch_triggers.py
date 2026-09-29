@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 from flext_tests import tm
@@ -60,5 +61,14 @@ class TestsFlextInfraCiIntegrationBranchTriggers:
         for branch in self.baseline_branches:
             tm.that(self._branch_count(triggers, branch), eq=2)
 
+    def test_pull_request_title_edits_revalidate_release_metadata(self) -> None:
+        """GitHub dispatches the workflow when release-plan's PR title changes."""
+        workflow = tm.ok(u.Cli.yaml_parse(self.render_ci(repository_branch="develop")))
+        events = workflow["on"]
+        assert isinstance(events, Mapping)
+        pull_request = events["pull_request"]
+        assert isinstance(pull_request, Mapping)
+        activities = pull_request["types"]
+        assert isinstance(activities, list)
 
-__all__: list[str] = ["TestsFlextInfraCiIntegrationBranchTriggers"]
+        tm.that(activities, has="edited")

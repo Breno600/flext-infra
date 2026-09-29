@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import t
 
-from ._defaults import FlextInfraModelsDefaults
 from .deps_tool_config_project import FlextInfraModelsDepsToolConfigProject
 
 
@@ -105,13 +105,32 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         ignore: Annotated[
             t.StrSequence, m.Field(description="Ruff lint rule ignore list.")
         ] = m.Field(default_factory=tuple)
+        unfixable: Annotated[
+            t.StrSequence,
+            m.Field(
+                description=(
+                    "Rules whose Ruff fixes delete code or diagnostics; reported, "
+                    "never auto-fixed."
+                )
+            ),
+        ]
+        extend_safe_fixes: Annotated[
+            t.StrSequence,
+            m.Field(
+                alias="extend-safe-fixes",
+                description=(
+                    "Rules whose unsafe Ruff fixes are proven to preserve code, "
+                    "comments and diagnostics."
+                ),
+            ),
+        ]
         ignored_rule_rationales: Annotated[
             t.StrMapping,
             m.Field(
                 alias="ignored-rule-rationales",
                 description="Global Ruff exclusions mapped to verified architecture rationales.",
             ),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+        ]
         banned_api: Annotated[
             t.StrMapping,
             m.Field(
@@ -192,6 +211,13 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                 description="Error codes disabled for these modules.",
             ),
         ]
+        follow_untyped_imports: Annotated[
+            bool,
+            m.Field(
+                alias="follow-untyped-imports",
+                description="Analyze installed source even without typing metadata.",
+            ),
+        ] = False
         justification: Annotated[
             str,
             m.Field(
@@ -241,7 +267,7 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
                     "(e.g. follow_imports='normal')."
                 ),
             ),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+        ]
         overrides: Annotated[
             t.VariadicTuple[FlextInfraModelsDepsToolConfigLinters.MypyOverrideConfig],
             m.Field(

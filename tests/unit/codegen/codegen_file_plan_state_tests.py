@@ -22,7 +22,7 @@ class TestsFlextInfraCodegenFilePlanState:
 
     def _observed_state(self, root: Path, *, content: bytes) -> m.Cli.AtomicFileState:
         """Read one real file through the canonical binary state owner."""
-        target = root / "member" / c.Infra.PYPROJECT_FILENAME
+        target = root / "member" / c.PYPROJECT_FILENAME
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
         state = u.Cli.atomic_read_binary_file_state(target, required=True)
@@ -74,7 +74,7 @@ class TestsFlextInfraCodegenFilePlanState:
 
     def test_absent_file_is_not_an_empty_file(self, tmp_path: Path) -> None:
         state = u.Cli.atomic_read_binary_file_state(
-            tmp_path / c.Infra.PYPROJECT_FILENAME, required=False
+            tmp_path / c.PYPROJECT_FILENAME, required=False
         )
         if state.failure:
             raise AssertionError(state.error)
@@ -105,18 +105,16 @@ class TestsFlextInfraCodegenFilePlanState:
         self, tmp_path: Path, content: bytes, desired_content: bytes
     ) -> None:
         before = self._observed_state(tmp_path, content=content)
-        planned = FlextInfraUtilitiesCodegenFilePlan.planned_file(
-            tmp_path,
-            before.path,
-            required=True,
+        planned = m.Infra.CodegenFilePlan(
+            project=tmp_path,
+            path=before.path,
+            before=before,
             desired_content=desired_content,
             desired_mode=before.mode,
         )
-        if planned.failure:
-            raise AssertionError(planned.error)
 
         report = FlextInfraUtilitiesCodegenFilePlan.codegen_file_drift_report((
-            planned.value,
+            planned,
         ))
 
         assert repr(content) in report
@@ -125,18 +123,16 @@ class TestsFlextInfraCodegenFilePlanState:
 
     def test_drift_report_names_mode_only_delta(self, tmp_path: Path) -> None:
         before = self._observed_state(tmp_path, content=b'name = "demo"\n')
-        planned = FlextInfraUtilitiesCodegenFilePlan.planned_file(
-            tmp_path,
-            before.path,
-            required=True,
+        planned = m.Infra.CodegenFilePlan(
+            project=tmp_path,
+            path=before.path,
+            before=before,
             desired_content=before.content,
             desired_mode=0o755,
         )
-        if planned.failure:
-            raise AssertionError(planned.error)
 
         report = FlextInfraUtilitiesCodegenFilePlan.codegen_file_drift_report((
-            planned.value,
+            planned,
         ))
 
         assert "mode-only drift" in report
@@ -148,6 +144,3 @@ class TestsFlextInfraCodegenFilePlanState:
             FlextInfraUtilitiesCodegenFilePlan.codegen_file_drift_report(
                 (), limit=limit
             )
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenFilePlanState"]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tarfile
+import textwrap
 from collections.abc import Mapping, MutableMapping, Sequence
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
@@ -41,7 +42,7 @@ class FlextInfraUtilitiesRelease:
             members = tuple(archive.getmembers())
         except tarfile.TarError as exc:
             return r[bool].fail_op("read release archive members", exc)
-        validated_members: list[tuple[tarfile.TarInfo, Path]] = []
+        validated_members: list[t.Pair[tarfile.TarInfo, Path]] = []
         for member in members:
             path_result = FlextInfraUtilitiesRelease.archive_member_path(member.name)
             if path_result.failure:
@@ -86,7 +87,7 @@ class FlextInfraUtilitiesRelease:
     def _write_validated_tar_tree(
         archive: tarfile.TarFile,
         staging: Path,
-        validated_members: Sequence[tuple[tarfile.TarInfo, Path]],
+        validated_members: Sequence[t.Pair[tarfile.TarInfo, Path]],
     ) -> p.Result[bool]:
         """Write prevalidated tar members into a staging directory."""
         for member, relative_path in validated_members:
@@ -154,7 +155,7 @@ class FlextInfraUtilitiesRelease:
         return r[c.Infra.VersionBump].ok(bump)
 
     @staticmethod
-    def is_release_subject(subject: str, version: str) -> bool:
+    def release_subject(subject: str, version: str) -> bool:
         """Whether ``subject`` is the protocol's release commit for ``version``.
 
         Matches the commit as the lane wrote it and as GitHub merged it, which
@@ -189,7 +190,9 @@ class FlextInfraUtilitiesRelease:
             "",
             "## Pull requests since last release",
             "",
-            changes or "- Initial tagged release",
+            FlextInfraUtilitiesRelease._markdown_changelog(
+                changes or "- Initial tagged release"
+            ),
         ])
         try:
             output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -206,19 +209,47 @@ class FlextInfraUtilitiesRelease:
             return r[bool].fail(f"failed to write release notes: {exc}", exception=exc)
 
     @staticmethod
+    def _markdown_changelog(changes: str) -> str:
+        """Render merged subjects as escaped, width-bounded markdown bullets.
+
+        A GitHub merge subject is untrusted markdown: a bare ``*`` or ``_`` made
+        the formatter rewrite the emphasis and split the subject, and an
+        unwrapped subject overran the 88-column markdown ceiling. Escaping the
+        inline punctuation first keeps every character literal, and wrapping
+        each bullet keeps it inside the ceiling. The transform is deterministic,
+        so re-stamping an unchanged plan is byte-identical.
+        """
+        rendered: t.MutableSequenceOf[str] = []
+        for raw in changes.splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            marker = ""
+            if line.startswith("- "):
+                marker, line = "- ", line[2:]
+            escaped = c.Infra.MARKDOWN_INLINE_ESCAPE_RE.sub(r"\\\1", line)
+            rendered.append(
+                textwrap.fill(
+                    escaped,
+                    width=c.Infra.RELEASE_NOTES_LINE_LENGTH,
+                    initial_indent=marker,
+                    subsequent_indent=(
+                        c.Infra.RELEASE_NOTES_CONTINUATION_INDENT if marker else ""
+                    ),
+                    break_long_words=False,
+                    break_on_hyphens=False,
+                )
+            )
+        return "\n".join(rendered)
+
+    @staticmethod
     def update_changelog(
         repository_root: Path, version: str, tag: str, notes_path: Path
     ) -> p.Result[bool]:
         """Update docs/changelog and docs/releases entries."""
-        docs = repository_root / c.Infra.DIR_DOCS
-        changelog_path = docs / "CHANGELOG.md"
-        latest_path = docs / "releases" / "latest.md"
-        tagged_path = docs / "releases" / f"{tag}.md"
         try:
             FlextInfraUtilitiesRelease._write_changelog_files(
-                changelog_path=changelog_path,
-                latest_path=latest_path,
-                tagged_path=tagged_path,
+                repository_root=repository_root,
                 version=version,
                 tag=tag,
                 notes_path=notes_path,
@@ -229,15 +260,13 @@ class FlextInfraUtilitiesRelease:
 
     @staticmethod
     def _write_changelog_files(
-        *,
-        changelog_path: Path,
-        latest_path: Path,
-        tagged_path: Path,
-        version: str,
-        tag: str,
-        notes_path: Path,
+        *, repository_root: Path, version: str, tag: str, notes_path: Path
     ) -> None:
-        """Write changelog and release note files."""
+        """Write the docs changelog plus the latest and tagged release notes."""
+        docs = repository_root / c.Infra.DIR_DOCS
+        changelog_path = docs / "CHANGELOG.md"
+        latest_path = docs / "releases" / "latest.md"
+        tagged_path = docs / "releases" / f"{tag}.md"
         notes_text = notes_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         existing = (
             changelog_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
@@ -320,10 +349,10 @@ class FlextInfraUtilitiesRelease:
         the platform packages test against each other, counting them would
         report the whole workspace as one cycle.
         """
-        pyproject = path / c.Infra.PYPROJECT_FILENAME
+        pyproject = path / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.StrSequence].fail(
-                f"release project has no {c.Infra.PYPROJECT_FILENAME}: {path}"
+                f"release project has no {c.PYPROJECT_FILENAME}: {path}"
             )
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:

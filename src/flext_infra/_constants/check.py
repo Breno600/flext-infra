@@ -14,6 +14,15 @@ if TYPE_CHECKING:
 class FlextInfraConstantsCheck:
     """Check infrastructure constants."""
 
+    CHECK_FAIL_FAST_DEFAULT: ClassVar[bool] = False
+    """Run every independent quality gate unless fail-fast is requested."""
+    SERVICE_FAIL_FAST: ClassVar[bool] = True
+    """Stop mutating service workflows at the first failed project or rule."""
+
+    PYTEST_SELECTED_COLLECTION_OPTION: ClassVar[str] = "--flext-selected-collection"
+    PYTEST_SUITE_STOP_OPTION: ClassVar[str] = "--flext-suite-stop-monotonic"
+    PYTEST_COLLECTION_MANIFEST_OPTION: ClassVar[str] = "--flext-collection-manifest"
+
     @unique
     class SarifSchema(StrEnum):
         """Supported SARIF schema identities."""
@@ -43,6 +52,18 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SILENT_FAILURE: ClassVar[str] = "silent-failure"
+    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset({
+        "pyrefly",
+        "mypy",
+        "pyright",
+    })
+    "Native type-checker gates: independent read-only analyzers of one tree."
+    UNSUSPENDABLE_GATES: ClassVar[frozenset[str]] = frozenset({
+        LINT,
+        FORMAT,
+        *TYPE_CHECKER_GATES,
+    })
+    "Lint, format and type-checker gates: never suspendable from `make check`."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
         "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
         "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
@@ -100,31 +121,6 @@ class FlextInfraConstantsCheck:
     "SARIF 2.1.0 check report: the machine-readable findings owner of ``check run``."
     MUTATING_GATES: ClassVar[frozenset[str]] = frozenset({FORMAT})
     "Gates that rewrite files: owned by `fmt`/`fix`, never a read-only `check` vocabulary."
-    WARNING_GATE_IDS: ClassVar[frozenset[str]] = frozenset({
-        "markdown",
-        "mypy",
-        "namespace",
-        "runtime-census",
-        "silent-failure",
-        "duplication",
-        "tier-whitelist",
-        "pyrefly",
-    })
-    "Gates whose findings are reported without failing the check verdict. "
-    "Operator law 2026-09-22: the census/structural flood (namespace, "
-    "runtime-census, duplication, tier-whitelist) and pyrefly diagnostics "
-    "are warning-only for CI — the debts stay tracked in beads. Extended "
-    "the same day by the docs reorg session: the docs-lint backlog "
-    "(markdown/rumdl) and the sentinel-return backlog (silent-failure) "
-    "also warn. Stabilization close: mypy joins while the pre-existing "
-    "model-facade composition debt (flext-1pquc, ~99 no-any-return made "
-    "fleet-visible when the check complement step entered CI) is ground "
-    "down; the two REAL regressions behind the flood are already fixed at "
-    "root — allow_redefinition restored in the tooling SSOT and "
-    "pydantic-settings held <2.15 (its _env_prefix_target trips the "
-    "pydantic mypy plugin). CI blocks on the correctness gates (lint, "
-    "pyright, security, boundary) while every finding stays visible in "
-    "the run output and report artifacts."
 
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^\s*-->\s*(.+?):\d+:\d+\s*$"
@@ -143,6 +139,8 @@ class FlextInfraConstantsCheck:
     "Canonical fenced-Python-block extractor; the flext-tests markdown validator consumes the same pattern."
     MARKDOWN_CODE_SOURCE_FORMAT: ClassVar[str] = "{}_b{}.py"
     "Temp-file name for one extracted block: sanitized doc path plus block index."
+    MARKDOWN_CODE_SKIP_MARKER: ClassVar[str] = "notest"
+    "Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
     MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+"
     )
@@ -225,26 +223,17 @@ class FlextInfraConstantsCheck:
             ),
             "imports subprocess — use cli.run / cli.capture",
         ),
-        (
-            re.compile(r"^\s*print\(", re.MULTILINE),
-            "uses u.Cli.print() — use cli.print",
-        ),
-        (
-            re.compile(r"^\s*sys\.exit\(", re.MULTILINE),
-            "uses sys.exit() — use cli.exit()",
-        ),
     )
+    BOUNDARY_CALL_RULES: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
+        "print": "uses u.Cli.print() — use cli.print",
+        "sys.exit": "uses sys.exit() — use cli.exit()",
+    })
     # The boundary gate's own rule-definition source files legitimately contain the
     # forbidden-pattern strings as DETECTION RULES (not as usage); exempt them from
     # self-scanning so the detector does not flag its own catalog.
     BOUNDARY_SELF_FILES: ClassVar[frozenset[str]] = frozenset({
         "flext_infra/_constants/check.py",
         "flext_infra/gates/abstraction_boundary.py",
-        # Why: the Darwin supervisor is a std-lib-only bootstrap executable that
-        # must own its process group BEFORE the fleet stack (and its CLI
-        # facade) is importable; subprocess with constant argv is its core
-        # mechanism, not an untrusted-input boundary.
-        "flext_infra/_utilities/_mypy_supervisor.py",
     })
     BOUNDARY_JSON_ATTRS: ClassVar[frozenset[str]] = frozenset({
         "dump",
@@ -301,7 +290,6 @@ class FlextInfraConstantsCheck:
     QLTY_CONFIG_FILENAME: ClassVar[str] = "qlty.toml"
     SMELLS_QLTY_ARGS: ClassVar[t.StrSequence] = (
         "smells",
-        "--all",
         "--sarif",
         "--include-tests",
         "--no-snippets",
@@ -448,41 +436,6 @@ class FlextInfraConstantsCheck:
         "yagni",
         "simplify",
     })
-
-    # Canonical .pre-commit-config.yaml (SSOT; was templates/pre_commit_config.yaml.j2).
-    # Static — no Jinja vars; hooks route through the workspace uv environment.
-    PRE_COMMIT_CONFIG: ClassVar[str] = """\
-# @generated by flext_infra — DO NOT EDIT. Run `make gen` / `make sync` to regenerate.
-#
-# Every hook routes through the canonical `uv run --all-packages python -m flext_infra`
-# workspace monopoly; no standalone scripts and no bare tool invocations
-# (AGENTS.md `Build & Test`).
-# Enable locally with `pre-commit install` from the repository root.
-repos:
-  - repo: local
-    hooks:
-      - id: flext-abstraction-boundary
-        name: Abstraction boundary (§2.7) — CLI-domain libs + concrete FlextCli imports
-        entry: uv run --all-packages python scripts/hooks/check_changed_projects.py boundary
-        language: system
-        pass_filenames: true
-        always_run: false
-        types: [python]
-      - id: flext-loc-cap
-        name: MODULE-LOC SUPREME LAW (§3.1) — module cap via scc
-        entry: uv run --all-packages python scripts/hooks/check_changed_projects.py loc-cap
-        language: system
-        pass_filenames: true
-        always_run: false
-        types: [python]
-      - id: flext-manual-command
-        name: Manual-command blocker (§5) — no bare tool calls in automation
-        entry: uv run --all-packages python -m flext_infra validate --what manual-cmd
-        language: system
-        pass_filenames: false
-        always_run: true
-        types: [python]
-"""
 
 
 __all__: list[str] = ["FlextInfraConstantsCheck"]

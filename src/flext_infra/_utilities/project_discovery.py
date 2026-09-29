@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import sys
 from functools import lru_cache
 from operator import attrgetter
 from pathlib import Path
@@ -13,7 +14,6 @@ from typing import override
 
 from flext_cli import u
 
-from .._config import FlextInfraConfig
 from ..constants import c
 from ..models import m
 from ..typings import t
@@ -178,16 +178,27 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @classmethod
     def discover_rope_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:
-        """Return every direct Python project sharing one Rope workspace root.
+        """Return every Python project this repository's Rope workspace owns.
 
-        The raw child scan below is a second enumerator, so it must honour the
-        same manifest authority as ``discover_project_candidates``. Without that
-        filter every direct child holding a ``pyproject.toml`` re-entered the
-        scope the manifest had just excluded, and lazy-init planned files for a
-        directory the transaction has no participant for -- which aborts staging
-        after the phase root already exists on disk.
+        A declared submodule is another repository: it is consumed as an
+        installed library and never indexed from here (every repository
+        evaluates only itself, operator ruling 2026-09-29). The raw child scan
+        below is a second enumerator, so it must honour the same manifest
+        authority as ``discover_project_candidates``. Without that filter every
+        direct child holding a ``pyproject.toml`` re-entered the scope the
+        manifest had just excluded, and lazy-init planned files for a directory
+        the transaction has no participant for -- which aborts staging after the
+        phase root already exists on disk.
         """
         resolved_root = repository_root.resolve()
+        declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
+            resolved_root
+        )
+        if declared_paths.failure:
+            raise ValueError(declared_paths.error or "invalid .gitmodules")
+        submodules = frozenset(
+            (resolved_root / path).resolve() for path in declared_paths.value
+        )
         declared = cls.discover_project_candidates(resolved_root)
         nonparticipants = cls.manifest_nonparticipant_paths(resolved_root)
         direct = tuple(
@@ -195,10 +206,15 @@ class FlextInfraUtilitiesProjectDiscovery(
             for child in sorted(resolved_root.iterdir(), key=attrgetter("name"))
             if child.is_dir()
             and not child.name.startswith(".")
-            and (child / c.Infra.PYPROJECT_FILENAME).is_file()
+            and (child / c.PYPROJECT_FILENAME).is_file()
             and not cls._is_nonparticipant(child, resolved_root, nonparticipants)
         )
-        return tuple(sorted({*declared, *direct}, key=Path.as_posix))
+        return tuple(
+            sorted(
+                {root for root in (*declared, *direct) if root not in submodules},
+                key=Path.as_posix,
+            )
+        )
 
     @classmethod
     def ast_grep_scan_targets(cls, repository_root: Path) -> t.StrSequence:
@@ -231,45 +247,47 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @classmethod
     def governed_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:
-        """Return the workspace root and each declared repository exactly once."""
-        resolved_root = repository_root.resolve()
-        return tuple(
-            dict.fromkeys((
-                resolved_root,
-                *(
-                    project.resolve()
-                    for project in cls.discover_project_roots(resolved_root)
-                ),
-            ))
-        )
+        """Return the repositories a verb run at ``repository_root`` governs.
+
+        Every repository evaluates and rewrites only itself (operator ruling
+        2026-09-29): a workspace root consumes its declared members as
+        installed libraries and never scans, checks, or rewrites them; each
+        member runs its own verbs in its own repository.
+        """
+        return (repository_root.resolve(),)
 
     @staticmethod
-    def external_tool_state_dir(
-        repository_root: Path, project_root: Path, tool_name: str
+    def runtime_environment_dir(
+        project_root: Path, *, runtime_root: Path | None = None
     ) -> Path:
-        """Resolve one governed project's canonical state outside the checkout."""
-        resolved_workspace = repository_root.resolve()
-        resolved_project = project_root.resolve()
-        if not resolved_project.is_relative_to(resolved_workspace):
-            msg = f"project root is outside workspace: {resolved_project}"
-            raise ValueError(msg)
-        tool_component = Path(tool_name)
-        if (
-            tool_component.is_absolute()
-            or tool_component.name != tool_name
-            or tool_name in {"", ".", ".."}
-        ):
-            msg = f"tool_name must be one relative directory name: {tool_name!r}"
-            raise ValueError(msg)
-        state_root: Path = (
-            resolved_workspace.parent
-            / FlextInfraConfig.fetch_global().Infra.codegen.toolchain.state_directory_name
-            / resolved_workspace.name
-            / tool_name
-        )
-        relative_project = resolved_project.relative_to(resolved_workspace)
+        """Resolve the checkout's Python environment (D-VENV, flext-x8gn6).
+
+        A declared ``runtime_root`` (the generated Makefile's ``RUNTIME_ROOT``)
+        owns the environment. Undeclared, the owner derives it: a subproject
+        checked out inside a workspace uses the workspace environment; a
+        standalone checkout or a linked worktree owns its own, exactly as the
+        generated Makefile resolves ``REPOSITORY_ROOT``.
+        """
+        if runtime_root is not None:
+            return runtime_root / c.Infra.ENVIRONMENT_DIRECTORY
+        runtime = FlextInfraUtilitiesGit.git_repository_root(
+            m.Infra.GitRepoRequest(repo_root=project_root)
+        ).unwrap()
+        return runtime.repository_root / c.Infra.ENVIRONMENT_DIRECTORY
+
+    @classmethod
+    def runtime_python(
+        cls, project_root: Path, *, runtime_root: Path | None = None
+    ) -> Path:
+        """Resolve the fixed Python entrypoint inside the managed environment.
+
+        ``runtime_root`` mirrors ``runtime_environment_dir``: a declared runtime
+        root (the generated Makefile's ``RUNTIME_ROOT``) owns the environment.
+        """
         return (
-            state_root if relative_project == Path() else state_root / relative_project
+            cls.runtime_environment_dir(project_root, runtime_root=runtime_root)
+            / ("Scripts" if sys.platform == "win32" else "bin")
+            / ("python.exe" if sys.platform == "win32" else c.Infra.PYTHON)
         )
 
 

@@ -116,6 +116,3 @@ class TestsFlextInfraRopeStructure:
 
         tm.that(statements[0].text, eq=self._MULTILINE_IMPORT.rstrip("\n"))
         tm.that(statements[0].category, eq=c.Infra.StatementCategory.FROM_IMPORT)
-
-
-__all__: list[str] = ["TestsFlextInfraRopeStructure"]

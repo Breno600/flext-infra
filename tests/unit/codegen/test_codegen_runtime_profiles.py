@@ -129,20 +129,38 @@ class TestsFlextInfraCodegenRuntimeProfiles:
         rendered = u.Tests.codegen_file_text(
             next(item for item in first.files if item.path == pyproject)
         )
+        rendered_dependencies = set(
+            u.Tests.toml_strings_at(rendered, "project", "dependencies")
+        )
+        owned = rendered_dependencies - set(custom)
+        tm.that(rendered_dependencies, has=list(custom))
+        # The profile owns which runtime requirements are restored; the
+        # dependency conform owner (6086621bd) owns their canonical form, so the
+        # restored set must be names of the profile and a conform fixed point.
+        tm.that(
+            {u.Infra.dep_name(item) for item in owned},
+            eq={u.Infra.dep_name(item) for item in profile.runtime},
+        )
+        toolchain = config.Infra.codegen.toolchain
         expected = tm.ok(
-            u.Infra.pyproject_dependencies_conform(
+            u.Infra.pyproject_conform(
                 '[project]\nname = "sample-member"\ndependencies = '
-                + tm.ok(u.Cli.json_dumps([*profile.runtime]))
+                + u.Cli.toml_array(sorted(owned)).as_string()
                 + "\n",
                 workspace=tm.ok(
                     FlextInfraWorkspaceDetector.load_workspace_spec(member)
                 ),
-                workspace_mode=c.Infra.MakeProfile.STANDALONE,
+                required_dev_dependencies=(),
+                uv_resolution=m.Infra.UvResolutionSpec(
+                    link_mode=toolchain.uv_link_mode,
+                    constraint_dependencies=tuple(toolchain.uv_constraint_dependencies),
+                    exclude_dependencies=(),
+                    environments=tuple(toolchain.uv_environments),
+                ),
             )
         )
         tm.that(
-            set(u.Tests.toml_strings_at(rendered, "project", "dependencies")),
-            eq={*u.Tests.toml_strings_at(expected, "project", "dependencies"), *custom},
+            set(u.Tests.toml_strings_at(expected, "project", "dependencies")), eq=owned
         )
         tm.that(first.workspace.repository, eq=before.repository)
         tm.that(first.workspace.subprojects, eq=before.subprojects)
@@ -179,6 +197,3 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             u.Infra.overlay_preserved(rendered, live),
             has="validate runtime dependencies",
         )
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenRuntimeProfiles"]

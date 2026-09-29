@@ -21,13 +21,13 @@ class FlextInfraProjectClassifierDepsMixin:
     if TYPE_CHECKING:
 
         def _as_mapping(
-            self, raw_value: t.Infra.InfraValue | None
-        ) -> t.MappingKV[str, t.Infra.InfraValue]: ...
+            self, raw_value: t.JsonValue | None
+        ) -> t.MappingKV[str, t.JsonValue]: ...
 
     def _append_project_dependencies(
         self,
         *,
-        raw_project: t.MappingKV[str, t.Infra.InfraValue],
+        raw_project: t.MappingKV[str, t.JsonValue],
         dependencies: t.MutableSequenceOf[str],
     ) -> None:
         """Append project dependencies."""
@@ -45,7 +45,7 @@ class FlextInfraProjectClassifierDepsMixin:
     def _append_poetry_dependencies(
         self,
         *,
-        raw_poetry: t.MappingKV[str, t.Infra.InfraValue],
+        raw_poetry: t.MappingKV[str, t.JsonValue],
         dependencies: t.MutableSequenceOf[str],
     ) -> None:
         """Append poetry dependencies."""
@@ -63,7 +63,7 @@ class FlextInfraProjectClassifierDepsMixin:
     def _append_poetry_dependency_mapping(
         self,
         *,
-        raw_mapping: t.MappingKV[str, t.Infra.InfraValue],
+        raw_mapping: t.MappingKV[str, t.JsonValue],
         dependencies: t.MutableSequenceOf[str],
     ) -> None:
         """Append poetry dependency mapping."""
@@ -77,7 +77,7 @@ class FlextInfraProjectClassifierDepsMixin:
             )
 
     def _ordered_mapping_keys(
-        self, raw_mapping: t.MappingKV[str, t.Infra.InfraValue]
+        self, raw_mapping: t.MappingKV[str, t.JsonValue]
     ) -> t.StrSequence:
         """Ordered mapping keys."""
         keys = list(raw_mapping.keys())
@@ -86,7 +86,7 @@ class FlextInfraProjectClassifierDepsMixin:
         return sorted(keys)
 
     def _mapping_order_is_trusted(
-        self, raw_mapping: t.MappingKV[str, t.Infra.InfraValue]
+        self, raw_mapping: t.MappingKV[str, t.JsonValue]
     ) -> bool:
         """Check whether the mapping order is trusted."""
         return isinstance(raw_mapping, dict)

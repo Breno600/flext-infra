@@ -107,6 +107,8 @@ class FlextInfraConstantsBase(
     "Interpreter-selection file consumed by pyenv/asdf/mise."
     TAPLO_CONFIG_FILENAME: ClassVar[str] = ".taplo.toml"
     "Taplo workspace formatting configuration filename."
+    TAPLO_MISE_TOOL_NAME: ClassVar[str] = "taplo"
+    "Mise selector key whose locked release formats managed TOML."
     PYTHON_VERSION_UNDERSCORE: ClassVar[str] = "python_version"
     "Mypy python_version settings key (underscored)."
     EXTEND: ClassVar[str] = "extend"
@@ -214,16 +216,28 @@ class FlextInfraConstantsBase(
     "Ambient Gitleaks policy variables removed from release scans."
     SOURCE_DATE_EPOCH: ClassVar[str] = "SOURCE_DATE_EPOCH"
     "Reproducible-build timestamp environment variable."
-    RELEASE_BUILD_CONSTRAINTS_PATH: ClassVar[str] = "config/build-constraints.txt"
-    "Workspace-relative release build constraints snapshot path."
     TRANSACTION_STATE_DIRNAME: ClassVar[str] = ".state"
     "Root of regenerable codegen transaction state; never repository content."
     RELEASE_GITLEAKS_CONFIG_PATH: ClassVar[str] = "config/gitleaks-release.toml"
     "Workspace-relative trusted release secret-scan configuration."
     PYPI_SIMPLE_INDEX_URL: ClassVar[str] = "https://pypi.org/simple"
     "Canonical public package index used by isolated release builds."
-    PYPI_UPLOAD_URL: ClassVar[str] = "https://upload.pypi.org/legacy/"
-    "Canonical public package upload endpoint."
+    RELEASE_UV_BUILD_ARGS: ClassVar[t.StrSequence] = (
+        UV,
+        "build",
+        "--force-pep517",
+        "--no-config",
+        "--no-sources",
+        "--no-python-downloads",
+        "--no-create-gitignore",
+        "--no-progress",
+        "--color",
+        "never",
+        "--default-index",
+        PYPI_SIMPLE_INDEX_URL,
+        "--require-hashes",
+    )
+    "Fail-closed isolated build of one release artifact from staged source."
     JSON_RPC_VERSION: ClassVar[str] = "2.0"
     "Canonical JSON-RPC protocol version used by LSP transports."
     GATE_ATTESTATION_SCHEMA: ClassVar[str] = "https://flext.sh/attestations/gates/v1"
@@ -351,10 +365,7 @@ class FlextInfraConstantsBase(
     RK_OK: ClassVar[str] = "ok"
     RK_ENABLED: ClassVar[str] = "enabled"
     RK_PROJECTS: ClassVar[str] = "projects"
-    RK_WORKSPACE: ClassVar[str] = "workspace"
     RK_ROOT: ClassVar[str] = "root"
-    ROOT_PROJECT_SELECTOR: ClassVar[str] = "."
-    "Project selector naming the repository root itself."
     RK_ID: ClassVar[str] = "id"
     RK_URL: ClassVar[str] = "url"
     RK_CONFIDENCE: ClassVar[str] = "confidence"

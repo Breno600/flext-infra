@@ -2,18 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraPyprojectModernizer, FlextInfraToolTablesPhase, config
-from tests import t, u
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
-    from tests import m
+from tests import c, m, t, u
 
 
 class TestsFlextInfraDepsModernizerToolTables:
@@ -25,7 +20,6 @@ class TestsFlextInfraDepsModernizerToolTables:
         source: str = "",
         *,
         tool_config: m.Infra.ToolConfigDocument | None = None,
-        project_kind: str = "core",
     ) -> t.Pair[t.MutableJsonMapping, t.StrSequence]:
         """Apply the phase to one named project payload; return payload and changes."""
         project_dir = tmp_path / "flext-sample"
@@ -35,9 +29,7 @@ class TestsFlextInfraDepsModernizerToolTables:
         )
         changes = FlextInfraToolTablesPhase(
             tool_config or config.Infra.tooling
-        ).apply_payload(
-            payload, path=project_dir / "pyproject.toml", project_kind=project_kind
-        )
+        ).apply_payload(payload, path=project_dir / "pyproject.toml")
         return payload, changes
 
     @staticmethod
@@ -76,6 +68,7 @@ class TestsFlextInfraDepsModernizerToolTables:
                 {
                     "module": list(entry.modules),
                     "disable_error_code": list(entry.disable_error_codes),
+                    "follow_untyped_imports": entry.follow_untyped_imports,
                 }
                 for entry in mypy_policy.overrides
             ],
@@ -114,6 +107,46 @@ class TestsFlextInfraDepsModernizerToolTables:
             eq={"custom: custom marker", *policy.standard_markers},
         )
 
+    @pytest.mark.parametrize("follow_untyped", [False, True])
+    def test_mypy_source_analysis_override_round_trips_policy(
+        self, tmp_path: Path, *, follow_untyped: bool
+    ) -> None:
+        """Project the configured import analysis flag without disabling errors."""
+        tooling = config.Infra.tooling
+        entry = m.Infra.MypyOverrideConfig.model_validate({
+            "modules": ("arbitrary_dependency.*",),
+            "disable-error-codes": (),
+            "follow-untyped-imports": follow_untyped,
+            "justification": (
+                "https://mypy.readthedocs.io/en/stable/"
+                "config_file.html#follow-untyped-imports"
+            ),
+        })
+        configured = tooling.model_copy(
+            update={
+                "tools": tooling.tools.model_copy(
+                    update={
+                        "mypy": tooling.tools.mypy.model_copy(
+                            update={"overrides": (entry,)}
+                        )
+                    }
+                )
+            }
+        )
+
+        payload, _ = self._applied(tmp_path, tool_config=configured)
+
+        tm.that(
+            list(u.Tests.toml_list(self._table(payload, "mypy")["overrides"])),
+            eq=[
+                {
+                    "module": list(entry.modules),
+                    "disable_error_code": list(entry.disable_error_codes),
+                    "follow_untyped_imports": follow_untyped,
+                }
+            ],
+        )
+
     def test_formatting_tables_mirror_policy(self, tmp_path: Path) -> None:
         """Render codespell, hatch, tomlsort, yamlfix, pydantic-mypy, and vulture."""
         tools = config.Infra.tooling.tools
@@ -145,24 +178,15 @@ class TestsFlextInfraDepsModernizerToolTables:
         vulture = self._table(payload, "vulture")
         tm.that(vulture["min_confidence"], eq=tools.vulture.min_confidence)
 
-    @pytest.mark.parametrize(
-        "project_kind", ["core", "domain", "platform", "integration", "app"]
-    )
-    def test_coverage_threshold_follows_project_kind(
-        self, tmp_path: Path, project_kind: str
-    ) -> None:
-        """Select the configured threshold for every classified project kind."""
+    def test_coverage_report_measures_without_a_floor(self, tmp_path: Path) -> None:
+        """Keep reporting policy and drop a floor left by an older projection."""
         coverage = config.Infra.tooling.tools.coverage
-        payload, _ = self._applied(tmp_path, project_kind=project_kind)
+        payload, changes = self._applied(
+            tmp_path, "[tool.coverage.report]\nfail_under = 45\n"
+        )
         report = self._table(payload, "coverage", "report")
-        thresholds: t.IntMapping = {
-            "core": coverage.fail_under.core,
-            "domain": coverage.fail_under.domain,
-            "platform": coverage.fail_under.platform,
-            "integration": coverage.fail_under.integration,
-            "app": coverage.fail_under.app,
-        }
-        tm.that(report["fail_under"], eq=thresholds[project_kind])
+        tm.that(report, lacks="fail_under")
+        tm.that(changes, has="tool.coverage.report.fail_under removed")
         tm.that(report["show_missing"], eq=coverage.show_missing)
         tm.that(
             list(u.Tests.strings(self._table(payload, "coverage", "run")["omit"])),
@@ -217,20 +241,22 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that(first, empty=False)
         tm.that(second, empty=True)
 
-    def test_modernizer_roots_and_members_converge_on_their_kind(
+    def test_modernizer_roots_and_members_converge_without_coverage_floor(
         self, tmp_path: Path
     ) -> None:
-        """Keep topology-owned roots distinct from dependency-classified members."""
-        thresholds = config.Infra.tooling.tools.coverage.fail_under
+        """Roots and members converge once and never project a coverage floor."""
+        u.Tests.seed_locked_taplo(tmp_path)
         modernizer = FlextInfraPyprojectModernizer(
             repository_root=tmp_path, skip_check=True
         )
         root_path = tmp_path / "pyproject.toml"
+        root_topology = m.Infra.PyprojectDeclaredTopology(project_kind="platform")
+        member_topology = m.Infra.PyprojectDeclaredTopology()
         root_first: str = tm.ok(
             modernizer.conform_source(
                 '[project]\nname = "arbitrary-root"\n',
                 path=root_path,
-                project_kind="platform",
+                topology=root_topology,
             )
         )
         member_path = tmp_path / "arbitrary-member" / "pyproject.toml"
@@ -240,32 +266,94 @@ class TestsFlextInfraDepsModernizerToolTables:
                 '[project]\nname = "arbitrary-member"\n'
                 'dependencies = ["flext-core", "flext-cli", "flext-ldap"]\n',
                 path=member_path,
+                topology=member_topology,
             )
         )
         tm.that(
             tm.ok(
                 modernizer.conform_source(
-                    root_first, path=root_path, project_kind="platform"
+                    root_first, path=root_path, topology=root_topology
                 )
             ),
             eq=root_first,
         )
         tm.that(
-            tm.ok(modernizer.conform_source(member_first, path=member_path)),
+            tm.ok(
+                modernizer.conform_source(
+                    member_first, path=member_path, topology=member_topology
+                )
+            ),
             eq=member_first,
         )
-        tm.that(
-            u.Tests.toml_table_at(root_first, "tool", "coverage", "report")[
-                "fail_under"
-            ],
-            eq=thresholds.platform,
-        )
-        tm.that(
-            u.Tests.toml_table_at(member_first, "tool", "coverage", "report")[
-                "fail_under"
-            ],
-            eq=thresholds.app,
-        )
+        for rendered in (root_first, member_first):
+            tm.that(
+                u.Tests.toml_table_at(rendered, "tool", "coverage", "report"),
+                lacks="fail_under",
+            )
 
+    @staticmethod
+    def _workspace_with_exclusion(tmp_path: Path, excluded: str) -> Path:
+        """Build a governed workspace root whose manifest excludes one tree.
 
-__all__: list[str] = ["TestsFlextInfraDepsModernizerToolTables"]
+        The canonical standalone fixture provides the repository identity and
+        its manifest declares the one retired tree.
+        """
+        project_dir = tmp_path / "flext-sample"
+        workspace = u.Tests.standalone_workspace(project_dir, project_dir.name)
+        manifest = m.Infra.WorkspaceManifestSpec(
+            version=c.Infra.WORKSPACE_MANIFEST_VERSION,
+            name=workspace.repository.name,
+            repository=workspace.repository,
+            exclusions=(
+                m.Infra.WorkspaceExclusionSpec(path=Path(excluded), reason="retired"),
+            ),
+        )
+        tm.ok(
+            u.Cli.yaml_dump(
+                u.Infra.workspace_manifest_path(project_dir),
+                manifest.model_dump(mode="json"),
+            )
+        )
+        return project_dir
+
+    def test_vulture_paths_filter_excluded_roots(self, tmp_path: Path) -> None:
+        """A workspace-excluded production root leaves the dead-code scope.
+
+        The config list stays the SSOT; the projection filters on the
+        workspace's declared analysis exclusions — order-independent across
+        the deps pass and the root-materializing gen pass (invest repro:
+        scripts/ retired, dead-code scope kept scanning it — bead flext-x44z3).
+        """
+        project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
+        )
+        FlextInfraToolTablesPhase(config.Infra.tooling).apply_payload(
+            payload, path=project_dir / "pyproject.toml"
+        )
+        paths = u.Tests.toml_strings(self._table(payload, "vulture")["paths"])
+        tm.that(paths, lacks="scripts", has="src")
+
+    def test_ruff_root_lists_filter_excluded_roots(self, tmp_path: Path) -> None:
+        """Ruff root projections drop workspace-excluded trees.
+
+        ruff fails hard on a src entry whose directory is absent, and the
+        namespace-packages contract only holds for live roots; the workspace
+        SSOT's exclusions decide (bead flext-x44z3).
+        """
+        from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+
+        project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
+        )
+        FlextInfraEnsureRuffConfigPhase(config.Infra.tooling).apply_payload(
+            payload, path=project_dir / "pyproject.toml"
+        )
+        table = self._table(payload, "ruff")
+        src_roots = u.Tests.toml_strings(table["src"])
+        namespace_packages = u.Tests.toml_strings(table.get("namespace-packages", []))
+        tm.that(src_roots, lacks="scripts", has="src")
+        tm.that(namespace_packages, lacks="scripts")
+        per_file = self._table(payload, "ruff", "lint", "per-file-ignores")
+        tm.that(not any(p.startswith("scripts/") for p in per_file), eq=True)

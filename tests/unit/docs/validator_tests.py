@@ -60,6 +60,30 @@ class TestsFlextInfraDocsValidator:
         tm.ok(result)
         tm.that(all(report.result == "OK" for report in result.value), eq=True)
 
+    def test_standalone_manifest_keeps_project_docs_and_validates(
+        self, tmp_path: Path
+    ) -> None:
+        """A standalone repository carrying its manifest is not a workspace root.
+
+        Regression: treating the manifest file's presence as topology made
+        generate publish an empty root catalog ("Governed projects: 0") for a
+        standalone repository and broke its gen fixed point. The scope label,
+        derived from the manifest's typed role, is the only topology input.
+        """
+        repository = u.Tests.create_docs_workspace(tmp_path)
+        u.Tests.write_standalone_workspace_manifest(repository, "workspace")
+
+        prepared = FlextInfraDocGenerator(repository_root=repository).prepare_bundle()
+        tm.ok(prepared)
+        tm.ok(u.Tests.materialize_docs_bundle(prepared.value))
+        result = FlextInfraDocValidator().validate_workspace(
+            m.Infra.DocsGenerateRequest(repository_root=repository)
+        )
+
+        tm.ok(result)
+        tm.that(all(report.result == "OK" for report in result.value), eq=True)
+        tm.that((repository / "docs/projects/generated/catalog.md").exists(), eq=False)
+
     def test_validate_workspace_does_not_write_project_todo(
         self, tmp_path: Path
     ) -> None:
@@ -77,6 +101,3 @@ class TestsFlextInfraDocsValidator:
 
         tm.ok(result)
         tm.that((workspace / "flext-a/TODOS.md").exists(), eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraDocsValidator"]

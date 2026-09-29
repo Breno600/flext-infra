@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from flext_cli import t, u
 from flext_tests import tm
 
-from flext_infra import c
+from flext_infra import c, t, u
 
 from ._support import CodegenTestSupport
 
@@ -64,6 +63,3 @@ class TestsFlextInfraReleaseCheckoutCredentials:
         tm.that(self.checkout_credentials(jobs["identity"]), eq=False)
         tm.that(self.checkout_credentials(jobs["version"]), eq=True)
         tm.that(self.checkout_credentials(jobs["publish"]), eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraReleaseCheckoutCredentials"]

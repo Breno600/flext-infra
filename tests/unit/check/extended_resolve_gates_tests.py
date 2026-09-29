@@ -54,6 +54,3 @@ class TestsFlextInfraWorkspaceCheckerResolveGates:
         result = FlextInfraWorkspaceChecker.resolve_gates(["silent-failure"])
         tm.ok(result)
         tm.that(result.value, eq=["silent-failure"])
-
-
-__all__: list[str] = ["TestsFlextInfraWorkspaceCheckerResolveGates"]

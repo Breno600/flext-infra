@@ -2,11 +2,11 @@ id: private-infra-utility-call-to-facade
 language: Python
 severity: error
 rule:
-  pattern: $OWNER.$METHOD($$$ARGS)
+  pattern: $OWNER.$METHOD
 constraints:
   OWNER:
     regex: '^FlextInfra(?:Utilities|Worktree)\w+$'
-fix: u.Infra.$METHOD($$$ARGS)
+fix: u.Infra.$METHOD
 message: Consume infrastructure utilities through u.Infra.
 files:
   - "src/flext_infra/worktree.py"

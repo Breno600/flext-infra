@@ -8,12 +8,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from flext_infra import c, u
+from flext_infra import c, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from flext_infra import t
 
 
 class FlextInfraEnsureCanonicalTImportMixin:
@@ -23,9 +21,11 @@ class FlextInfraEnsureCanonicalTImportMixin:
     _IMPORT_ALIAS_PARTS: ClassVar[int] = 2
 
     def _ensure_t_import(self, source: str, module_name: str) -> t.Pair[str, bool]:
-        """Inject ``from <module_name> import t`` if needed."""
+        """Keep newly canonicalized type expressions resolvable at runtime."""
         target_module = module_name or self._DEFAULT_ALIAS_MODULE
-        updated = u.Infra.ensure_alias_import(source, target_module, "t")
+        updated = u.Infra.ensure_alias_import(
+            source, target_module, "t", runtime_required=True
+        )
         return updated, updated != source
 
     def _ensure_alias_import(

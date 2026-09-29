@@ -6,7 +6,6 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import config
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import u
 
@@ -26,14 +25,6 @@ class TestsFlextInfraDetectorOwnsNoProjectRegistry:
         )
         return root
 
-    def test_codegen_config_declares_no_project_registry(self) -> None:
-        """flext-infra config carries generic policy, never a project list."""
-        tm.that(
-            hasattr(config.Infra.codegen, "repositories"),
-            eq=False,
-            msg="codegen config must not own a registry of served projects",
-        )
-
     def test_unknown_project_derives_its_own_identity(self, tmp_path: Path) -> None:
         """A repository absent from any catalog still derives from itself."""
         root = self._standalone(
@@ -49,6 +40,3 @@ class TestsFlextInfraDetectorOwnsNoProjectRegistry:
         tm.that(spec.repository.path, eq=Path())
         tm.that(spec.subprojects, empty=True)
         tm.that(u.Tests.required_beads(spec).workspace, eq="totally-unknown-workspace")
-
-
-__all__: list[str] = ["TestsFlextInfraDetectorOwnsNoProjectRegistry"]

@@ -10,24 +10,24 @@ from flext_infra import c, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import t
+    from flext_infra import p, t
 
 
 class FlextInfraNamespaceRulesBase:
     """Provide deterministic AST and layer operations to every rule family."""
 
     @staticmethod
-    def kind(node: object) -> str:
+    def kind(node: p.AttributeProbe) -> str:
         """Return the Rope-compatible AST node kind."""
         return u.Infra.node_kind(u.Infra.ensure_ast_node(node))
 
     @staticmethod
-    def walk(node: object) -> t.SequenceOf[object]:
+    def walk(node: p.AttributeProbe) -> t.SequenceOf[t.Infra.RopeAstNode]:
         """Walk a Rope-provided AST without reparsing source text."""
         return tuple(u.Infra.walk_ast_nodes(u.Infra.ensure_ast_node(node)))
 
     @classmethod
-    def outer_classes(cls, tree: object) -> t.SequenceOf[object]:
+    def outer_classes(cls, tree: p.AttributeProbe) -> t.SequenceOf[t.Infra.RopeAstNode]:
         """Return top-level class declarations."""
         return tuple(
             node
@@ -36,7 +36,7 @@ class FlextInfraNamespaceRulesBase:
         )
 
     @classmethod
-    def name_of(cls, node: object | None) -> str:
+    def name_of(cls, node: p.AttributeProbe) -> str:
         """Return the final identifier represented by an AST expression."""
         if node is None:
             return ""
@@ -60,7 +60,7 @@ class FlextInfraNamespaceRulesBase:
         return ""
 
     @classmethod
-    def dotted_name(cls, node: object | None) -> str:
+    def dotted_name(cls, node: p.AttributeProbe) -> str:
         """Return a dotted Name/Attribute expression."""
         if node is None:
             return ""
@@ -73,7 +73,7 @@ class FlextInfraNamespaceRulesBase:
         return f"{parent}.{leaf}" if parent else leaf
 
     @classmethod
-    def is_type_checking_guard(cls, node: object) -> bool:
+    def type_checking_guard(cls, node: p.AttributeProbe) -> bool:
         """Return whether a statement is exactly ``if TYPE_CHECKING``."""
         return (
             cls.kind(node) == "If"
@@ -82,13 +82,13 @@ class FlextInfraNamespaceRulesBase:
 
     @classmethod
     def imports_with_context(
-        cls, tree: object
+        cls, tree: p.AttributeProbe
     ) -> t.SequenceOf[t.Pair[t.Infra.PythonImportNode, bool]]:
         """Return every import with its TYPE_CHECKING-only state."""
         guarded = {
             id(child)
             for node in cls.walk(tree)
-            if cls.is_type_checking_guard(node)
+            if cls.type_checking_guard(node)
             for child in cls.walk(node)
             if cls.kind(child) in {"Import", "ImportFrom"}
         }
@@ -131,7 +131,7 @@ class FlextInfraNamespaceRulesBase:
         return direct or c.Infra.NAMESPACE_LAYER_BY_FAMILY.get(first)
 
     @staticmethod
-    def line(node: object) -> int:
+    def line(node: p.AttributeProbe) -> int:
         """Return a stable source line for one AST node."""
         value = getattr(node, "lineno", 1)
         return value if isinstance(value, int) else 1

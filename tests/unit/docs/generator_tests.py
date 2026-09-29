@@ -39,6 +39,28 @@ class TestsFlextInfraDocsGenerator:
         tm.ok(result)
         tm.that([report.scope for report in result.value], eq=["root", "flext-a"])
 
+    def test_standalone_root_mkdocs_publishes_canonical_site_title(
+        self, tmp_path: Path
+    ) -> None:
+        """A standalone repository's root MkDocs site carries no project suffix.
+
+        The repository root publishes the canonical site identity its docs
+        contract declares; the per-project ``" Documentation"`` suffix belongs
+        to member project sites only (root title contract, c6db82fb2).
+        """
+        workspace, generator = u.Tests.docs_workspace_generator(
+            tmp_path, selected_projects=["."]
+        )
+        _ = u.Tests.plan_docs_bundle(generator)
+        result = generator.generate(
+            m.Infra.DocsGenerateRequest(repository_root=workspace, projects=["."])
+        )
+
+        tm.ok(result)
+        mkdocs = (workspace / "mkdocs.yml").read_text(encoding="utf-8")
+        tm.that("site_name: workspace\n" in mkdocs, eq=True)
+        tm.that("site_name: workspace Documentation" in mkdocs, eq=False)
+
     def test_bundle_plans_root_and_selected_project_artifacts(
         self, tmp_path: Path
     ) -> None:
@@ -203,6 +225,7 @@ class TestsFlextInfraDocsGenerator:
             )
             / "flext-infra-fixture"
         )
+        u.Tests.write_standalone_workspace_manifest(workspace, "flext-infra-fixture")
         curated = workspace / "docs/README.md"
         curated_content = curated.read_bytes()
         request = m.Infra.DocsGenerateRequest(
@@ -219,6 +242,11 @@ class TestsFlextInfraDocsGenerator:
 
         result = generator.generate(request)
         tm.ok(result)
+        tm.that(
+            (workspace / "docs/api-reference/generated/public-api.md").is_file(),
+            eq=True,
+        )
+        tm.that((workspace / "docs/projects/generated/catalog.md").exists(), eq=False)
         tm.that([report.scope for report in result.value], eq=["flext-infra-fixture"])
         for report in result.value:
             tm.that(report.changed_files, eq=0)
@@ -547,6 +575,3 @@ class TestsFlextInfraDocsGenerator:
 
         with pytest.raises(ValueError, match="use HTTPS"):
             u.Infra.docs_url_scheme(target)
-
-
-__all__: list[str] = ["TestsFlextInfraDocsGenerator"]

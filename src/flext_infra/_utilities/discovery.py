@@ -30,7 +30,7 @@ class FlextInfraUtilitiesDiscovery(
     """Canonical discovery helpers for path, package, and Rope-backed scans."""
 
     _PARENT_CONSTANTS_FLEXT_CACHE: ClassVar[
-        MutableMapping[tuple[str, bool], t.StrSequence]
+        MutableMapping[t.Pair[str, bool], t.StrSequence]
     ] = {}
 
     @staticmethod
@@ -44,7 +44,7 @@ class FlextInfraUtilitiesDiscovery(
                 for name in child_names
                 if not name.startswith(".") and name not in c.Infra.PYPROJECT_SKIP_DIRS
             ]
-            if c.Infra.PYPROJECT_FILENAME in file_names:
+            if c.PYPROJECT_FILENAME in file_names:
                 nested_roots.add(directory.resolve())
         return tuple(sorted({resolved_root, *nested_roots}))
 
@@ -114,7 +114,7 @@ class FlextInfraUtilitiesDiscovery(
         return ""
 
     @staticmethod
-    def is_pytest_test_module(file_path: Path) -> bool:
+    def pytest_test_module(file_path: Path) -> bool:
         """Return whether a file is a pytest test module, not a production module."""
         if c.Infra.DIR_TESTS not in file_path.parts:
             return False
@@ -173,11 +173,22 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def alias_migration_context(cls, file_path: Path) -> m.Infra.AliasMigrationContext:
-        """Resolve project policy ownership and public import root for one file."""
+        """Resolve project policy ownership and public import root for one file.
+
+        A content-only root (``package: false``, pyproject without a
+        ``[project]`` table — e.g. a vendored submodule inside a workspace)
+        owns no alias policy: the typed no-owner context, exactly the
+        ``project_root is None`` posture, instead of a TypeError crash
+        (invest-awmk repro: the canonical-alias gate died on the mt5docker
+        submodule).
+        """
         project_root = cls.project_root(file_path)
         if project_root is None:
             return m.Infra.AliasMigrationContext(policy_owner="", import_root="")
-        policy_owner = cls.project_package_name(project_root)
+        try:
+            policy_owner = cls.project_package_name(project_root)
+        except TypeError:
+            return m.Infra.AliasMigrationContext(policy_owner="", import_root="")
         try:
             relative_parts = (
                 file_path.resolve().relative_to(project_root.resolve()).parts
@@ -289,7 +300,7 @@ class FlextInfraUtilitiesDiscovery(
         for parent in source.parents:
             if parent == project_dir:
                 return True
-            if (parent / c.Infra.PYPROJECT_FILENAME).is_file():
+            if (parent / c.PYPROJECT_FILENAME).is_file():
                 return False
         return False
 
@@ -326,7 +337,7 @@ class FlextInfraUtilitiesDiscovery(
                 root
                 for root in discovered
                 if root not in declared
-                and not (project_dir / root / c.Infra.PYPROJECT_FILENAME).is_file()
+                and not (project_dir / root / c.PYPROJECT_FILENAME).is_file()
             ),
         )
 
@@ -396,7 +407,7 @@ class FlextInfraUtilitiesDiscovery(
         project_root = discovered_root
         if (
             resolved_root.is_dir()
-            and not (execution_dir / c.Infra.PYPROJECT_FILENAME).is_file()
+            and not (execution_dir / c.PYPROJECT_FILENAME).is_file()
         ):
             relative_parts = (
                 resolved_root.relative_to(discovered_root).parts
@@ -410,7 +421,7 @@ class FlextInfraUtilitiesDiscovery(
             ):
                 project_root = resolved_root
         if project_root is not None and (
-            (project_root / c.Infra.PYPROJECT_FILENAME).is_file()
+            (project_root / c.PYPROJECT_FILENAME).is_file()
             or (project_root / c.Infra.GIT_DIR).exists()
         ):
             return project_root
@@ -438,9 +449,9 @@ class FlextInfraUtilitiesDiscovery(
         all_files: list[Path] = []
         for scan_root in scan_roots:
             if scan_root.is_file():
-                if scan_root.name != c.Infra.PYPROJECT_FILENAME:
+                if scan_root.name != c.PYPROJECT_FILENAME:
                     return r[t.SequenceOf[Path]].fail(
-                        f"explicit project file must be {c.Infra.PYPROJECT_FILENAME}: {scan_root}"
+                        f"explicit project file must be {c.PYPROJECT_FILENAME}: {scan_root}"
                     )
                 all_files.append(scan_root)
                 continue
@@ -452,7 +463,7 @@ class FlextInfraUtilitiesDiscovery(
                 all_files.extend(
                     sorted(
                         path
-                        for path in scan_root.rglob(c.Infra.PYPROJECT_FILENAME)
+                        for path in scan_root.rglob(c.PYPROJECT_FILENAME)
                         if not any(
                             part.startswith(".") or part in effective_skip
                             for part in path.relative_to(scan_root).parts[:-1]
@@ -561,7 +572,7 @@ class FlextInfraUtilitiesDiscovery(
             if file_path.is_relative_to(package_dir / family_dir):
                 return dict.fromkeys(c.Infra.FLEXT_FAMILIES, allowed_sources)
         if file_path.name in {"base.py", c.Infra.NAMESPACE_PRIVATE_BASE_MODULE}:
-            return dict.fromkeys(c.Infra.ENFORCEMENT_CANONICAL_ALIASES, allowed_sources)
+            return dict.fromkeys(c.ENFORCEMENT_CANONICAL_ALIASES, allowed_sources)
         if file_path.name in c.Infra.NAMESPACE_SETTINGS_FILE_NAMES:
             return dict.fromkeys(c.Infra.FLEXT_FAMILIES, allowed_sources)
         return {}

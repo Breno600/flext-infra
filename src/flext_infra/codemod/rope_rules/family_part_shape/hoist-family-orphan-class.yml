@@ -1,0 +1,19 @@
+group: family_part_shape
+number: 1
+name: hoist-family-orphan-class
+severity: error
+message: "{module}:{line} — classe orfa '{class}' no nivel superior de parte de familia; icar como entidade publica aninhada"
+files:
+  - "**/_[constants|models|typings|protocols|utilities]/**/*.py"
+select:
+  level: top_level
+  name_not_prefix_of_stem: true
+ops:
+  - kind: move
+    target: enclosing_part_class
+  - kind: rename
+    strip_underscore: true
+    case: pascal
+auto_fix: true
+propagate_mro: true
+propagate_workspace: true

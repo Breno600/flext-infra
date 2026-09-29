@@ -18,13 +18,11 @@ from typing import Annotated, Literal
 # purpose: flext-cli's lazy __init__ keeps it cheap, flext-cli never imports
 # flext-infra (no cycle), and the runtime census gate evaluates every alias's
 # __value__, so a TYPE_CHECKING-only import would explode as NameError.
-from flext_cli import m as _cli_m, p as _cli_p
+from flext_cli import m, m as _cli_m, p as _cli_p, t
 from jinja2.environment import (
     Environment as _JinjaEnvironment,
     Template as _JinjaTemplate,
 )
-
-from flext_core import m, t
 
 
 class FlextInfraTypesBase:
@@ -52,6 +50,8 @@ class FlextInfraTypesBase:
 
     type PlanSourceTimestamp = str | date | datetime | None
     "Native YAML timestamp ingress; dates retain their original precision."
+    type DocsRenderedArtifactTuple = t.Triple[_Path, _Path, str | None]
+    "Rendered document destination, source, and optional project owner."
 
     type RegexPattern = t.RegexPattern
     "Compiled regex pattern for string matching."

@@ -56,7 +56,7 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
                     u.Infra.git_list_worktrees(
                         m.Infra.GitRepoRequest(repo_root=repository)
                     )
-                ).text.split("worktree ")
+                ).porcelain.split("worktree ")
             )
             == 2
         )
@@ -71,7 +71,7 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
             "feature/missing-base"
             not in tm.ok(
                 u.Infra.git_list_worktrees(m.Infra.GitRepoRequest(repo_root=repository))
-            ).text
+            ).porcelain
         )
 
     @pytest.mark.parametrize("entry", ["epic", "container"])
@@ -120,6 +120,3 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
         result = self._add(repository, "feature/shared-child", epic=second)
 
         tm.fail(result, has="already registered")
-
-
-__all__: list[str] = ["TestsFlextInfraWorktreeSecurityBoundaries"]

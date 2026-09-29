@@ -114,7 +114,7 @@ class FlextInfraRefactorDeclarativeEnforcement:
         cls, ctx: m.Infra.DetectorContext, *, rule_id: str
     ) -> t.SequenceOf[p.AttributeProbe]:
         """Return probes for magic numbers/strings in executable code."""
-        res = u.Infra.get_resource_from_path(ctx.rope_project, ctx.file_path)
+        res = u.Infra.resolve_resource_from_path(ctx.rope_project, ctx.file_path)
         if res is None:
             msg = (
                 f"declarative enforcement {ctx.file_path} failed: "
@@ -122,7 +122,7 @@ class FlextInfraRefactorDeclarativeEnforcement:
             )
             raise RuntimeError(msg)
         try:
-            pymodule = u.Infra.get_pymodule(ctx.rope_project, res)
+            pymodule = u.Infra.resolve_pymodule(ctx.rope_project, res)
             tree = pymodule.get_ast()
         except u.Infra.rope_runtime_errors() as exc:
             msg = (
@@ -276,12 +276,12 @@ class FlextInfraRefactorDeclarativeEnforcement:
         parent = parent_map.get(id(node))
         if parent is None:
             return False
-        if not hasattr(parent, "_fields"):
+        if not u.Infra.ast_node(parent):
             return False
         parent_kind = u.Infra.node_kind(parent)
         return parent_kind in {"arguments", "arg", "keyword", "AnnAssign"} or (
             parent_kind in {"Assign", "AnnAssign"}
-            and u.Infra.is_module_level_node(parent, parent_map)
+            and u.Infra.module_level_node(parent, parent_map)
         )
 
     @staticmethod

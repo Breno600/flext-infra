@@ -76,6 +76,3 @@ def link_count(value: object) -> Literal[1] | None:
         tm.that(len(result.skipped), eq=1)
         tm.that(result.skipped[0].rule_id, eq=rule.id)
         tm.that(result.skipped[0].reason, has="deactivated")
-
-
-__all__: list[str] = ["TestsFlextInfraCastRemoverDeactivated"]

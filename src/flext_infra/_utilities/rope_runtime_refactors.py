@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
+from rope.base import codeanalyze, simplify
+
 from flext_infra import m, p, t
 
 from .rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
@@ -22,10 +24,9 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         header_end: int,
         body_end: int,
         indentation: int,
+        docstring_span: tuple[int, int] | None = None,
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
         """Remove one Rope-resolved header without changing literal payloads."""
-        from rope.base import codeanalyze, simplify
-
         lines = codeanalyze.SourceLinesAdapter(source)
         regions = tuple(simplify.ignored_regions(source))
         start = lines.get_line_start(header_start)
@@ -47,6 +48,10 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         for number in range(header_end + 1, body_end + 1):
             offset = lines.get_line_start(number)
             line = lines.get_line(number)
+            if docstring_span is not None and (
+                docstring_span[0] <= number <= docstring_span[1]
+            ):
+                continue
             if not line.strip() or any(
                 begin < offset < finish
                 for begin, finish, _metadata in regions
@@ -58,6 +63,14 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 raise ValueError(msg)
             edits.append(
                 m.Infra.SourceRewrite(start=offset, end=offset + indentation, text="")
+            )
+        if docstring_span is not None:
+            edits.append(
+                m.Infra.SourceRewrite(
+                    start=lines.get_line_start(docstring_span[0]),
+                    end=min(lines.get_line_end(docstring_span[1]) + 1, len(source)),
+                    text="",
+                )
             )
         return tuple(edits)
 

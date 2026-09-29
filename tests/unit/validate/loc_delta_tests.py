@@ -35,6 +35,3 @@ class TestsFlextInfraLocDelta:
             subject="feat: add new gate", insertions=120, deletions=0
         )
         tm.that(result.success, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraLocDelta"]

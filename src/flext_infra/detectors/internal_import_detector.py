@@ -67,7 +67,7 @@ class FlextInfraInternalImportDetector:
         cls, ctx: m.Infra.DetectorContext, fqn: str
     ) -> bool:
         """Return whether a pytest test module imports its own package internals."""
-        if not u.Infra.is_pytest_test_module(ctx.file_path):
+        if not u.Infra.pytest_test_module(ctx.file_path):
             return False
         if ctx.project_root is None:
             return False
@@ -90,7 +90,7 @@ class FlextInfraInternalImportDetector:
         file_path = ctx.file_path
         rope_project = ctx.rope_project
         current_module = u.Infra.package_name(file_path)
-        imports = u.Infra.get_semantic_module_imports(rope_project, res)
+        imports = u.Infra.resolve_semantic_module_imports(rope_project, res)
 
         def violates_internal_import(local: str, fqn: str) -> bool:
             _ = local

@@ -115,7 +115,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     @property
     def fail_fast(self) -> bool:
         """Stop at the first failure as an invariant, never a CLI choice."""
-        return True
+        return c.Infra.SERVICE_FAIL_FAST
 
     @m.computed_field
     @property

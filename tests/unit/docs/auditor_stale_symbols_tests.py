@@ -316,6 +316,3 @@ class TestsFlextInfraAuditorStaleSymbols:
         issues = u.Infra.docstring_issues(tmp_path, contract)
 
         tm.that(issues, eq=[])
-
-
-__all__: list[str] = ["TestsFlextInfraAuditorStaleSymbols"]

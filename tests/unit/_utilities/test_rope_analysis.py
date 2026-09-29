@@ -46,7 +46,7 @@ class TestsFlextInfraRopeAnalysis:
         )
         with u.Infra.open_project(project) as rope_project:
             resource = tm.not_none(u.Infra.fetch_python_resource(rope_project, source))
-            imports = u.Infra.get_declared_module_imports(rope_project, resource)
+            imports = u.Infra.resolve_declared_module_imports(rope_project, resource)
         tm.that(imports["Local"], eq=package.name + suffix)
         tm.that(imports["path_alias"], eq="os.path")
         tm.that(imports["Path"], eq="pathlib.Path")
@@ -61,7 +61,7 @@ class TestsFlextInfraRopeAnalysis:
         with u.Infra.open_project(project) as rope_project:
             resource = tm.not_none(u.Infra.fetch_python_resource(rope_project, source))
             with pytest.raises(ImportError, match="beyond top-level package"):
-                u.Infra.get_declared_module_imports(rope_project, resource)
+                u.Infra.resolve_declared_module_imports(rope_project, resource)
 
     def test_ast_boundary_validates_before_traversal(self) -> None:
         """Accept actual ASTs and reject unrelated external runtime objects."""
@@ -72,8 +72,9 @@ class TestsFlextInfraRopeAnalysis:
         tm.that(len(nodes), eq=len(list(ast.walk(source_tree))))
         parents = u.Infra.ast_parent_map(tree)
         child = u.Infra.ensure_ast_node(source_tree.body[0])
-        tm.that(u.Infra.is_module_level_node(child, parents), eq=True)
-        with pytest.raises(TypeError, match="Expected AST node"):
+        tm.that(u.Infra.module_level_node(child, parents), eq=True)
+        # The rejection names the offending runtime type; its prose is not a contract.
+        with pytest.raises(TypeError, match=r"\bobject\b"):
             u.Infra.ensure_ast_node(object())
 
     def test_facade_scanner_reads_facade_with_imported_superclass(

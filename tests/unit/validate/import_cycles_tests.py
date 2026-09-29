@@ -163,6 +163,3 @@ class TestsFlextInfraImportCycles:
         tm.that(joined, has="tests.a")
         tm.that(joined, has="tests.b")
         tm.that(joined, lacks="[beta]")
-
-
-__all__: list[str] = ["TestsFlextInfraImportCycles"]

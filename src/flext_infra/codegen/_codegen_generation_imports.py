@@ -7,7 +7,7 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from flext_infra import c
+from flext_infra import config
 
 from ._codegen_generation_paths import FlextInfraCodegenGenerationPathsMixin
 
@@ -29,7 +29,7 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
     def _format_import(indent: str, mod: str, parts: t.StrSequence) -> t.StrSequence:
         """Emit one Ruff-canonical import statement within the configured width."""
         compact = f"{indent}from {mod} import {', '.join(parts)}"
-        if len(compact) <= c.Infra.MAX_LINE_LENGTH:
+        if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
             return (compact,)
         nested_indent = f"{indent}    "
         # One symbol per wrapped line is the only form Ruff's isort accepts
@@ -85,7 +85,10 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
         export_name, imported_name = item
         imported = imported_name or export_name
         category = 0 if imported.isupper() else 1 if imported[:1].isupper() else 2
-        return (category, imported), export_name != imported_name
+        # Ruff isort orders names inside a type group case-insensitively
+        # (``TEST_FACADE_BASES`` < ``TESTS_ROOT``): raw ASCII puts ``S`` (83)
+        # before ``_`` (95) and flips the pair, producing a gen/fmt flip-flop.
+        return (category, imported.casefold()), export_name != imported_name
 
     @staticmethod
     def _generate_import_lines(

@@ -127,6 +127,3 @@ class TestsFlextInfraCheckReportContract:
         tm.that(self._check_run(project, tmp_path / "reports", "--apply"), eq=0)
 
         tm.that(self._sources(project), ne=before)
-
-
-__all__: list[str] = ["TestsFlextInfraCheckReportContract"]

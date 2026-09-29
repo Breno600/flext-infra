@@ -17,12 +17,13 @@ SPDX-License-Identifier: MIT
 {# NOTE (multi-agent, flext-wkii.19.1): config/settings protocols compose one declaration-only namespace. -#}
 from __future__ import annotations
 
-from {{ upstream }} import p
+{# NOTE (flext-dv1ga): extend the class the upstream declares for `p` in its own __all__; the letter is rebound below as a plain alias. -#}
+from {{ upstream }} import {{ upstream_facades["p"] }}
 
 {{ protocol_imports }}
 
 
-class {{ class_stem }}Protocols(p):
+class {{ class_stem }}Protocols({{ upstream_facades["p"] }}):
     """{{ class_stem }} protocols extending the upstream facade."""
 
 {{ protocols_namespace_declaration }}

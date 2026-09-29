@@ -15,14 +15,14 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
-from flext_infra import m, u
+from flext_infra import m, t, u
 
 from ..base import s
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p, t
+    from flext_infra import p
 
 
 class FlextInfraRopeImportBoundaryBase(s[bool]):
@@ -41,24 +41,20 @@ class FlextInfraRopeImportBoundaryBase(s[bool]):
     def build_report(self, repository_root: Path) -> p.Result[m.Infra.ValidationReport]:
         """Scan ``repository_root`` and return a ``ValidationReport``.
 
-        Files under a member repository declared by this root's ``.gitmodules``
-        are out of scope: each member is an independent project with its own
-        boundary run, so scanning it from the parent produces cross-boundary
-        false positives. Membership comes from the declared topology, never from
-        ``.git`` ancestry probes, which a linked worktree (``.git`` file) would
-        misclassify for the whole checkout.
+        Scope is the shared source inventory (``u.Infra.iter_python_files``):
+        the declared source roots, Git visibility and the ``source_scan_ignore``
+        artifact SSOT. A member repository is its own Git repository, so its
+        files never enter this checkout's inventory and get their own run.
         """
-        declared = u.Infra.git_declared_submodule_paths(repository_root)
-        if declared.failure:
-            return r[m.Infra.ValidationReport].from_failure(declared)
-        root = repository_root.resolve()
-        members = tuple(root / path for path in declared.value)
         try:
-            violations = self._collect_violations(repository_root, members)
+            collected = self._collect_violations(repository_root)
         except OSError as exc:
             return r[m.Infra.ValidationReport].fail(
                 f"{self._SCAN_KIND} scan failed: {exc}", exception=exc
             )
+        if collected.failure:
+            return r[m.Infra.ValidationReport].from_failure(collected)
+        violations = collected.value
         passed = not violations
         summary = (
             self._OK_SUMMARY
@@ -71,28 +67,32 @@ class FlextInfraRopeImportBoundaryBase(s[bool]):
             )
         )
 
-    def _collect_violations(
-        self, repository_root: Path, members: t.SequenceOf[Path]
-    ) -> t.StrSequence:
-        """Traverse the rope project and accumulate boundary violations."""
+    def _collect_violations(self, repository_root: Path) -> p.Result[t.StrSequence]:
+        """Resolve each inventory file through rope and accumulate violations."""
+        files = u.Infra.iter_python_files(
+            m.Infra.SourceScanRequest(project_roots=(repository_root,))
+        )
+        if files.failure:
+            return r[t.StrSequence].from_failure(files)
         violations: t.MutableSequenceOf[str] = []
         root = repository_root.resolve()
         with u.Infra.open_project(repository_root) as project:
-            for resource in u.Infra.python_resources(project):
-                file_path = u.Infra.resource_file_path(project, resource)
-                if (
-                    file_path is None
-                    or any(file_path.is_relative_to(member) for member in members)
-                    or not self._is_in_scope(file_path, repository_root=root)
-                ):
+            for file_path in files.value:
+                if not self._is_in_scope(file_path, repository_root=root):
                     continue
-                module_imports = u.Infra.get_module_imports(project, resource)
+                resource = u.Infra.resolve_resource_from_path(project, file_path)
+                if resource is None:
+                    return r[t.StrSequence].fail(
+                        f"{self._SCAN_KIND}: inventory file is not a rope resource: "
+                        f"{file_path}"
+                    )
+                module_imports = u.Infra.resolve_module_imports(project, resource)
                 violations.extend(
                     self._violations_for_module(
                         file_path, module_imports, repository_root=root
                     )
                 )
-        return tuple(violations)
+        return r[t.StrSequence].ok(tuple(violations))
 
     @staticmethod
     def _rooted_posix(file_path: Path, repository_root: Path) -> str:

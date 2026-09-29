@@ -19,8 +19,17 @@ from ._lazy_init_planner_public_root import (
 )
 
 
-class FlextInfraCodegenLazyInitPlannerBase(m.ArbitraryTypesModel):
-    """Pydantic state base for lazy-init planning."""
+class FlextInfraCodegenLazyInitPlanner(
+    m.ArbitraryTypesModel,
+    FlextInfraCodegenLazyInitPlannerAliasesMixin,
+    FlextInfraCodegenLazyInitPlannerExportsMixin,
+    FlextInfraCodegenLazyInitPlannerChildrenMixin,
+    FlextInfraCodegenLazyInitPlannerCollisionMixin,
+    FlextInfraCodegenLazyInitPlannerParentsMixin,
+    FlextInfraCodegenLazyInitPlannerCacheMixin,
+    FlextInfraCodegenLazyInitPlannerPublicRootMixin,
+):
+    """Resolve lazy-init plans using one shared Rope workspace index."""
 
     rope_workspace: Annotated[
         p.Infra.RopeWorkspaceDsl,
@@ -47,6 +56,9 @@ class FlextInfraCodegenLazyInitPlannerBase(m.ArbitraryTypesModel):
     _module_file_by_name: MutableMapping[str, Path] = u.PrivateAttr(
         default_factory=dict
     )
+    _project_layout_cache: MutableMapping[Path, m.Infra.RopeProjectLayout] = (
+        u.PrivateAttr(default_factory=dict)
+    )
     _version_module_name: str = u.PrivateAttr(
         default_factory=lambda: f"{c.Infra.DUNDER_VERSION}.py"
     )
@@ -57,27 +69,11 @@ class FlextInfraCodegenLazyInitPlannerBase(m.ArbitraryTypesModel):
         """Number of unresolved export collisions found so far."""
         return self._collision_count
 
-
-class FlextInfraCodegenLazyInitPlanner(
-    FlextInfraCodegenLazyInitPlannerBase,
-    FlextInfraCodegenLazyInitPlannerAliasesMixin,
-    FlextInfraCodegenLazyInitPlannerExportsMixin,
-    FlextInfraCodegenLazyInitPlannerChildrenMixin,
-    FlextInfraCodegenLazyInitPlannerCollisionMixin,
-    FlextInfraCodegenLazyInitPlannerParentsMixin,
-    FlextInfraCodegenLazyInitPlannerCacheMixin,
-    FlextInfraCodegenLazyInitPlannerPublicRootMixin,
-):
-    """Resolve lazy-init plans using one shared Rope workspace index."""
-
     @override
     def build_plan(
         self, pkg_dir: Path, *, dir_exports: t.MappingKV[str, t.LazyAliasMap]
     ) -> m.Infra.LazyInitPlan:
         """Build the lazy-init render plan for one package directory."""
-        u.Cli.info(
-            f"DEBUG build_plan called for {pkg_dir} ({self.context(pkg_dir).current_pkg})"
-        )
         context = self.context(pkg_dir)
         if not context.importable or self._shadows_stdlib_module(pkg_dir):
             # flext-mh7g4: no generated content can repair a package name that
@@ -92,7 +88,14 @@ class FlextInfraCodegenLazyInitPlanner(
                 else c.Infra.LazyInitAction.SKIP
             )
             return self._publish_plan(
-                m.Infra.LazyInitPlan(context=context, action=residue_action)
+                m.Infra.LazyInitPlan(
+                    context=context,
+                    action=residue_action,
+                    lazy_map={},
+                    type_checking_map={},
+                    eager_dunders={},
+                    inline_constants={},
+                )
             )
         is_test_child_package = (
             context.surface == c.Infra.DIR_TESTS
@@ -134,23 +137,17 @@ class FlextInfraCodegenLazyInitPlanner(
             eager_dunders.pop(name, None)
         if not lazy_map and not eager_dunders:
             return self._publish_plan(
-                m.Infra.LazyInitPlan(context=context, action=empty_action)
+                m.Infra.LazyInitPlan(
+                    context=context,
+                    action=empty_action,
+                    lazy_map={},
+                    type_checking_map={},
+                    eager_dunders={},
+                    inline_constants={},
+                )
             )
         excluded_lazy_names: t.StrSequence = ()
-        is_public_project_root = (
-            context.pkg_dir.parent.name == c.Infra.DEFAULT_SRC_DIR
-            and context.current_pkg
-            and "." not in context.current_pkg
-            # Why (flext-27a9e.1, multi-agent): governed consumers such as ai_hub
-            # are first-class project roots; package prefixes are not architecture.
-            and u.Infra.matches_project_namespace_package(context.current_pkg)
-        )
-        is_test_facade_root = (
-            context.current_pkg == c.Infra.DIR_TESTS
-            and context.pkg_dir.name == c.Infra.DIR_TESTS
-            and context.surface == c.Infra.DIR_TESTS
-        )
-        is_facade_root = is_public_project_root or is_test_facade_root
+        is_facade_root = self._is_facade_root(context)
         export_names = {*lazy_map, *eager_dunders}
         if not is_facade_root:
             # flext-udpm5: a nested package's own modules commonly consume
@@ -212,7 +209,9 @@ class FlextInfraCodegenLazyInitPlanner(
         for entry in declared_entries:
             module_path = entry.file_path
             policy = u.Infra.publication_policy(
-                module_path, rope_project=self.rope_workspace.rope_project
+                module_path,
+                rope_project=self.rope_workspace.rope_project,
+                project_layout=self._project_layout_for(context.pkg_dir),
             )
             alias = policy.expected_alias
             family = policy.expected_family
@@ -241,6 +240,7 @@ class FlextInfraCodegenLazyInitPlanner(
             lazy_map=dict(lazy_map),
             type_checking_map=type_checking_map,
             eager_dunders=eager_dunders,
+            inline_constants={},
             wildcard_runtime_modules=(),
             child_packages_for_lazy=child_lazy,
             excluded_lazy_names=excluded_lazy_names,

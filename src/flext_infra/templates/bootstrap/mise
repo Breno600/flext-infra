@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Canonical packaged bootstrap seed; codegen publishes fresh runtime launchers.
 set -eu
 
 __mise_bootstrap() {
@@ -12,18 +11,8 @@ __mise_bootstrap() {
       "~/"*) mise_data_dir=$HOME/${mise_data_dir#\~/} ;;
     esac
     local cache_home="${XDG_CACHE_HOME:-$HOME/.cache}/mise"
-    # Unlocked fleet: converge on the newest published mise release. Only an
-    # explicit MISE_VERSION pins; the default resolves the latest tag through
-    # the releases/latest redirect and fails loud when resolution is impossible.
-    if [ -n "${MISE_VERSION:-}" ]; then
-      mise_version="${MISE_VERSION#v}"
-    else
-      mise_version="$(command -p curl -fsSI -o /dev/null -w '%{redirect_url}' https://github.com/jdx/mise/releases/latest)"
-      case $mise_version in
-        */tag/*) mise_version="${mise_version##*/tag/}" ; mise_version="${mise_version#v}" ;;
-        *) echo "mise bootstrap: could not resolve the latest mise release; set MISE_VERSION to pin one" >&2; exit 1 ;;
-      esac
-    fi
+    local mise_version="${MISE_VERSION:-2026.9.16}"
+    mise_version="${mise_version#v}"
     # Only a defaulted path may fall back: an explicit MISE_INSTALL_PATH wins even while its file
     # does not exist yet.
     if [ -z "${MISE_INSTALL_PATH:-}" ]; then
@@ -168,24 +157,107 @@ __mise_bootstrap() {
           arch=$3
           ext=$4
           url="https://github.com/jdx/mise/releases/download/v${version}/SHASUMS256.txt"
-          if command -v curl >/dev/null 2>&1; then
-            debug ">" curl -fsSL "$url"
-            checksums="$(curl --compressed -fsSL "$url")"
-          else
-            if command -v wget >/dev/null 2>&1; then
-              debug ">" wget -qO - "$url"
-              checksums="$(wget -qO - "$url")"
-            else
-              error "mise standalone install specific version requires curl or wget but neither is installed. Aborting."
-            fi
-          fi
-          # TODO: verify with minisign or gpg if available
+          current_version="v2026.9.16"
+          current_version="${current_version#v}"
 
-          checksum="$(echo "$checksums" | grep "$os-$arch.$ext")"
-          if ! echo "$checksum" | grep -Eq "^([0-9a-f]{32}|[0-9a-f]{64})"; then
-            warn "no checksum for mise $version and $os-$arch"
+          # For current version use static checksum otherwise
+          # use checksum from releases
+          if [ "$version" = "$current_version" ]; then
+            checksum_linux_x86_64="2e022482d62a3b9e6c0bc51d3e883401bfa7e4684b60f3b819b21eae4ebdb438  ./mise-v2026.9.16-linux-x64.tar.gz"
+            checksum_linux_x86_64_musl="e35454f16624fc4ea19546317589bf773608fd8f275c4d608c8e755ff3b4f72c  ./mise-v2026.9.16-linux-x64-musl.tar.gz"
+            checksum_linux_arm64="a19097ac76225b3ebe78b1a93ad302f1fe3e6fa9f40edf724deb3b83244bb7ff  ./mise-v2026.9.16-linux-arm64.tar.gz"
+            checksum_linux_arm64_musl="d591a1aac4a4cca3fa1b5eb671dc693e636d22bf3aebaa9485c30da7091aea14  ./mise-v2026.9.16-linux-arm64-musl.tar.gz"
+            checksum_linux_armv7="43c461826e9dea708e723f8b743c2ae2e120ac37398645c477b7a54e56b346bb  ./mise-v2026.9.16-linux-armv7.tar.gz"
+            checksum_linux_armv7_musl="bc50b4a6cefd554b95d9779369f98777494584ad51890a3e2eb435471de0bb2a  ./mise-v2026.9.16-linux-armv7-musl.tar.gz"
+            checksum_macos_x86_64="12eabbec662f87fbe8e39bd5e2cc5b0796cd18ebf58cf5ad41fef981c6757d51  ./mise-v2026.9.16-macos-x64.tar.gz"
+            checksum_macos_arm64="ce340c6c4bfd4b515557062276184a4b2be4aeec4120173b017bb1179414de88  ./mise-v2026.9.16-macos-arm64.tar.gz"
+            checksum_linux_x86_64_zstd="9b4658fca05dfd25c78d8c380aaebd4ada8f4e6cb9241eaf6b40d9d6b9d32f96  ./mise-v2026.9.16-linux-x64.tar.zst"
+            checksum_linux_x86_64_musl_zstd="c9693511aa04377365bed0f93a48850d0b32ec9c0cc2e53cf52eedc8b79c3865  ./mise-v2026.9.16-linux-x64-musl.tar.zst"
+            checksum_linux_arm64_zstd="80855b3915d6b11c5ed7407b05781f33636bfd95ca6ba480efccff8df7a3a1d7  ./mise-v2026.9.16-linux-arm64.tar.zst"
+            checksum_linux_arm64_musl_zstd="b6264702bc718aa93269bd8675dd88ecff68d29ff5eee6352f9c415d04aa93d6  ./mise-v2026.9.16-linux-arm64-musl.tar.zst"
+            checksum_linux_armv7_zstd="0fccb4f5caea53e7ef55d9769d2535428841cbed90c1c5af730a142ff51037a9  ./mise-v2026.9.16-linux-armv7.tar.zst"
+            checksum_linux_armv7_musl_zstd="059223bf81d908ba77d619420d9fe15854d6423e9a7ba6d06ff22d509c5bd66f  ./mise-v2026.9.16-linux-armv7-musl.tar.zst"
+            checksum_macos_x86_64_zstd="ff27e64a04288a30b1d03e8725f42a868edd2bea2fe671d1cd9582b778f2c82e  ./mise-v2026.9.16-macos-x64.tar.zst"
+            checksum_macos_arm64_zstd="7d12e81ea1a05de715b97d5a810e05d71fde57bd80581a2ab9a07e9812e1476d  ./mise-v2026.9.16-macos-arm64.tar.zst"
+
+            # TODO: refactor this, it's a bit messy
+            if [ "$ext" = "tar.zst" ]; then
+              if [ "$os" = "linux" ]; then
+                if [ "$arch" = "x64" ]; then
+                  echo "$checksum_linux_x86_64_zstd"
+                elif [ "$arch" = "x64-musl" ]; then
+                  echo "$checksum_linux_x86_64_musl_zstd"
+                elif [ "$arch" = "arm64" ]; then
+                  echo "$checksum_linux_arm64_zstd"
+                elif [ "$arch" = "arm64-musl" ]; then
+                  echo "$checksum_linux_arm64_musl_zstd"
+                elif [ "$arch" = "armv7" ]; then
+                  echo "$checksum_linux_armv7_zstd"
+                elif [ "$arch" = "armv7-musl" ]; then
+                  echo "$checksum_linux_armv7_musl_zstd"
+                else
+                  warn "no checksum for $os-$arch"
+                fi
+              elif [ "$os" = "macos" ]; then
+                if [ "$arch" = "x64" ]; then
+                  echo "$checksum_macos_x86_64_zstd"
+                elif [ "$arch" = "arm64" ]; then
+                  echo "$checksum_macos_arm64_zstd"
+                else
+                  warn "no checksum for $os-$arch"
+                fi
+              else
+                warn "no checksum for $os-$arch"
+              fi
+            else
+              if [ "$os" = "linux" ]; then
+                if [ "$arch" = "x64" ]; then
+                  echo "$checksum_linux_x86_64"
+                elif [ "$arch" = "x64-musl" ]; then
+                  echo "$checksum_linux_x86_64_musl"
+                elif [ "$arch" = "arm64" ]; then
+                  echo "$checksum_linux_arm64"
+                elif [ "$arch" = "arm64-musl" ]; then
+                  echo "$checksum_linux_arm64_musl"
+                elif [ "$arch" = "armv7" ]; then
+                  echo "$checksum_linux_armv7"
+                elif [ "$arch" = "armv7-musl" ]; then
+                  echo "$checksum_linux_armv7_musl"
+                else
+                  warn "no checksum for $os-$arch"
+                fi
+              elif [ "$os" = "macos" ]; then
+                if [ "$arch" = "x64" ]; then
+                  echo "$checksum_macos_x86_64"
+                elif [ "$arch" = "arm64" ]; then
+                  echo "$checksum_macos_arm64"
+                else
+                  warn "no checksum for $os-$arch"
+                fi
+              else
+                warn "no checksum for $os-$arch"
+              fi
+            fi
           else
-            echo "$checksum"
+            if command -v curl >/dev/null 2>&1; then
+              debug ">" curl -fsSL "$url"
+              checksums="$(curl --compressed -fsSL "$url")"
+            else
+              if command -v wget >/dev/null 2>&1; then
+                debug ">" wget -qO - "$url"
+                checksums="$(wget -qO - "$url")"
+              else
+                error "mise standalone install specific version requires curl or wget but neither is installed. Aborting."
+              fi
+            fi
+            # TODO: verify with minisign or gpg if available
+
+            checksum="$(echo "$checksums" | grep "$os-$arch.$ext")"
+            if ! echo "$checksum" | grep -Eq "^([0-9a-f]{32}|[0-9a-f]{64})"; then
+              warn "no checksum for mise $version and $os-$arch"
+            else
+              echo "$checksum"
+            fi
           fi
         }
 
@@ -228,14 +300,16 @@ __mise_bootstrap() {
         }
 
         install_mise() {
-          version="${MISE_VERSION:-${mise_version:-}}"
-          [ -n "$version" ] || error "mise bootstrap: no mise version resolved; set MISE_VERSION to pin one"
+          version="${MISE_VERSION:-v2026.9.16}"
           version="${version#v}"
+          current_version="v2026.9.16"
+          current_version="${current_version#v}"
           os="${MISE_INSTALL_OS:-$(get_os)}"
           arch="${MISE_INSTALL_ARCH:-$(get_arch)}"
           ext="${MISE_INSTALL_EXT:-$(get_ext)}"
           install_path="${MISE_INSTALL_PATH:-$HOME/.local/bin/mise}"
           install_dir="$(dirname "$install_path")"
+          install_from_github="${MISE_INSTALL_FROM_GITHUB:-}"
 
           # Opt-in: skip the download/install if the binary already at the install
           # path matches the requested version. Only the install path is checked (not
@@ -250,7 +324,13 @@ __mise_bootstrap() {
               fi
             fi
           fi
-          tarball_url="${MISE_TARBALL_URL:-https://github.com/jdx/mise/releases/download/v${version}/mise-v${version}-${os}-${arch}.${ext}}"
+          if [ "$version" != "$current_version" ] || [ "$install_from_github" = "1" ] || [ "$install_from_github" = "true" ]; then
+            tarball_url="https://github.com/jdx/mise/releases/download/v${version}/mise-v${version}-${os}-${arch}.${ext}"
+          elif [ -n "${MISE_TARBALL_URL-}" ]; then
+            tarball_url="$MISE_TARBALL_URL"
+          else
+            tarball_url="https://mise.jdx.dev/v${version}/mise-v${version}-${os}-${arch}.${ext}"
+          fi
 
           download_dir="$(mktemp -d)"
           cache_file=$(download_file "$tarball_url" "$download_dir")

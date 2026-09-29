@@ -99,6 +99,7 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
             phase="validate",
             scope=scope.name,
             result=status,
+            reason=message,
             message=message,
             missing_adr_skills=missing_adr_skills,
             todo_written=wrote_todo,

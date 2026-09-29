@@ -33,6 +33,12 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         @staticmethod
         def _publish(name: str, *, allow_main: bool) -> bool: ...
 
+        @staticmethod
+        def _is_facade_root(context: m.Infra.LazyInitPackageContext) -> bool: ...
+
+        @staticmethod
+        def _is_private_owner(module_path: str, *, root_pkg: str) -> bool: ...
+
     def _has_live_package_content(
         self, package_entry: m.Infra.RopePackageIndexEntry
     ) -> bool:
@@ -66,6 +72,11 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         publish_child_exports = (
             parent_context.surface not in c.Infra.NON_PUBLIC_LAZY_ROOTS
         )
+        # A facade root never publishes a symbol owned behind a private segment,
+        # so a private child's exports are not candidates there: merging them
+        # would only let an unpublishable target displace the public owner a
+        # sibling module declares for the same name.
+        is_facade_root = self._is_facade_root(parent_context)
         direct: list[str] = []
         for child_dir in package_entry.descendant_child_dirs:
             # flext-pulj (codex): do not merge retired root registries into the
@@ -114,7 +125,10 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
                 child_pkg_name.rsplit(".", maxsplit=1)[-1],
                 (child_pkg_name, ""),
             )
-            if not publish_child_exports:
+            if not publish_child_exports or (
+                is_facade_root
+                and self._is_private_owner(child_pkg_name, root_pkg=parent_pkg)
+            ):
                 continue
             for name, (module_name, attr) in child_exports.items():
                 source_module_name = module_name.rsplit(".", maxsplit=1)[-1]

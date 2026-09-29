@@ -163,6 +163,8 @@ class FlextInfraConstantsSharedInfra:
         r"(?m)^[ \t]*path[ \t]*=[ \t]*(.+?)[ \t]*$"
     )
     "``.gitmodules`` path assignment value inside a submodule section."
+    GITMODULE_MANAGED_KEY: ClassVar[str] = "flext-managed"
+    "``.gitmodules`` key whose explicit non-``true`` value opts a member out of governance."
     FOLLOW_SUPERPROJECT_BRANCH: ClassVar[str] = "."
     GITIGNORE: ClassVar[str] = ".gitignore"
     PRE_COMMIT_CONFIG_FILENAME: ClassVar[str] = ".pre-commit-config.yaml"
@@ -172,6 +174,17 @@ class FlextInfraConstantsSharedInfra:
     PRETTIER_IGNORE_FILENAME: ClassVar[str] = ".prettierignore"
     "Generated markdown-formatting projections (SSOT: tooling.tools.markdown)."
     "Hook-config projection whose presence decides whether a checkout runs hooks."
+    SONARCLOUD_PROPERTIES_FILENAME: ClassVar[str] = ".sonarcloud.properties"
+    "Generated SonarCloud automatic-analysis scope (SSOT: codegen.sonarcloud)."
+    SONARCLOUD_ISSUE_IGNORE_KEY: ClassVar[str] = "sonar.issue.ignore.multicriteria"
+    "Server-side PROPERTY_SET that automatic analysis honors for issue exclusions."
+    SONARCLOUD_API_AUTH_VALIDATE_PATH: ClassVar[str] = "/api/authentication/validate"
+    SONARCLOUD_API_SETTINGS_VALUES_PATH: ClassVar[str] = "/api/settings/values"
+    SONARCLOUD_API_SETTINGS_SET_PATH: ClassVar[str] = "/api/settings/set"
+    SONARCLOUD_API_SETTINGS_RESET_PATH: ClassVar[str] = "/api/settings/reset"
+    "SonarCloud web API routes of the proven settings-sync contract."
+    SONARCLOUD_PROJECT_KEY_SEPARATOR: ClassVar[str] = "_"
+    "Joins organization and repository into the SonarCloud project key."
     BEADS_CONFIG_RELPATH: ClassVar[str] = ".beads/config.yaml"
     BEADS_METADATA_RELPATH: ClassVar[str] = ".beads/metadata.json"
     "Generated project-owned Beads configuration paths."
@@ -257,7 +270,6 @@ class FlextInfraConstantsSharedInfra:
     TIMEOUT_CI: ClassVar[int] = 900
 
     # --- Path constants (was: class Paths) ---
-    VENV_BIN_REL: ClassVar[str] = ".venv/bin"
     DEFAULT_SRC_DIR: ClassVar[str] = "src"
 
 

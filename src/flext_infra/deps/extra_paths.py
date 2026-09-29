@@ -234,7 +234,7 @@ class FlextInfraExtraPathsManager(
         if not is_root or (not rules.workspace_include_children):
             return sorted(includes)
         for child in sorted(project_dir.iterdir()):
-            if not child.is_dir() or not (child / c.Infra.PYPROJECT_FILENAME).exists():
+            if not child.is_dir() or not (child / c.PYPROJECT_FILENAME).exists():
                 continue
             child_dirs = u.Infra.discover_python_dirs(child)
             includes.update(

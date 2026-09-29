@@ -82,6 +82,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         accumulator.per_project_changes[project_name] += 1
         accumulator.per_project_replacements[project_name] += replacements
         if not self.effective_dry_run and core_updated != source:
+            accumulator.expected_sources[file_path] = source
             accumulator.updates[file_path] = core_updated
 
     @staticmethod
@@ -98,9 +99,9 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         *,
         line_offsets: list[int],
         runtime_aliases: frozenset[str],
-    ) -> list[tuple[int, int, str]]:
+    ) -> list[t.Triple[int, int, str]]:
         """Find every ``<alias>.Core.Tests`` chain and emit ``(start, end, repl)``."""
-        rewrites: list[tuple[int, int, str]] = []
+        rewrites: list[t.Triple[int, int, str]] = []
         for node in u.Infra.walk_ast_nodes(u.Infra.ensure_ast_node(module_ast)):
             if (
                 u.Infra.node_kind(node) != "Attribute"
@@ -108,18 +109,17 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
             ):
                 continue
             parent_attr = getattr(node, "value", None)
-            if not hasattr(parent_attr, "_fields"):
+            if not u.Infra.ast_node(parent_attr):
                 continue
             if (
-                parent_attr is None
-                or u.Infra.node_kind(parent_attr) != "Attribute"
+                u.Infra.node_kind(parent_attr) != "Attribute"
                 or getattr(parent_attr, "attr", "") != "Core"
             ):
                 continue
             base_name = getattr(parent_attr, "value", None)
-            if not hasattr(base_name, "_fields"):
+            if not u.Infra.ast_node(base_name):
                 continue
-            if base_name is None or u.Infra.node_kind(base_name) != "Name":
+            if u.Infra.node_kind(base_name) != "Name":
                 continue
             base_id = getattr(base_name, "id", "")
             if base_id not in runtime_aliases:
@@ -161,7 +161,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
 
     @staticmethod
     def _apply_byte_rewrites(
-        source: str, rewrites: t.SequenceOf[tuple[int, int, str]]
+        source: str, rewrites: t.SequenceOf[t.Triple[int, int, str]]
     ) -> str:
         """Apply ``(start, end, replacement)`` triples to ``source`` (right-to-left)."""
         updated = source

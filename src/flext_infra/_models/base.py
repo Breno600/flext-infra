@@ -14,8 +14,6 @@ from flext_cli import m
 
 from flext_infra import c, t
 
-from ._defaults import FlextInfraModelsDefaults
-from .mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsBase:
@@ -62,17 +60,6 @@ class FlextInfraModelsBase:
         failed: int = m.Field(description="Failed items")
         skipped: int = m.Field(description="Skipped items")
         elapsed: float = m.Field(description="Elapsed time in seconds")
-
-    class ProjectFailureInfo(mm.ProjectNameMixin, m.ContractModel):
-        """Bundled info for project failure output."""
-
-        elapsed: Annotated[float, m.Field(description="Elapsed time in seconds")]
-        log_path: Annotated[Path, m.Field(description="Path to the project log")]
-        error_count: Annotated[int, m.Field(description="Total project errors")]
-        errors: Annotated[
-            t.StrSequence, m.Field(description="Rendered error excerpt lines")
-        ]
-        max_show: Annotated[int, m.Field(description="Maximum errors to render")] = 3
 
     class SafeExecutionResult(m.ContractModel):
         """Result of a safe execution pipeline run."""
@@ -124,9 +111,14 @@ class FlextInfraModelsBase:
             Path, m.Field(description="Repository root used for lint and pytest checks")
         ]
         expected_sources: Annotated[
-            t.MappingKV[Path, str],
-            m.Field(description="Expected current source bytes keyed by updated path"),
-        ] = m.Field(default_factory=FlextInfraModelsDefaults.ImmutableEmptyMapping)
+            t.MappingKV[Path, str | None],
+            m.Field(
+                description=(
+                    "Expected current source bytes keyed by updated path; None "
+                    "requires the path to be absent"
+                )
+            ),
+        ]
         keep_backup: Annotated[
             bool, m.Field(description="Whether to preserve .bak copies before editing")
         ] = False
@@ -189,7 +181,7 @@ class FlextInfraModelsBase:
             m.Field(
                 description=(
                     "Comma-separated gate names for post-validation; empty selects"
-                    " the SSOT snapshot gates (make.ci.check_gates)."
+                    " the SSOT snapshot gates (make.check_gates_ci)."
                 )
             ),
         ] = ""

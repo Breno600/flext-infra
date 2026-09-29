@@ -122,29 +122,33 @@ class FlextInfraPyprojectModernizerDocument:
         return current, ordered
 
     @classmethod
-    def _reorder_item(
-        cls, item: t.Cli.TomlContainer | t.Cli.TomlItem, table_key: str
+    def _reorder_child(
+        cls, container: t.Cli.TomlDocument | t.Cli.TomlTable, table_key: str
     ) -> None:
-        """Reorder one table, or every table of an array, below ``table_key``."""
+        """Reorder a table child or every table in an array child."""
         if table_key == "per-file-ignores":
             return
-        if u.Cli.toml_is_aot(item):
+        table = u.Cli.toml_table_child(container, table_key)
+        if table is not None:
+            cls._reorder_table(table)
+            return
+        item = u.Cli.toml_item_child(container, table_key)
+        if item is not None and u.Cli.toml_is_aot(item):
             for entry in item.body:
-                cls._reorder_item(entry, table_key)
-            return
-        if not u.Cli.toml_is_table(item):
-            return
-        current, ordered = cls._ordered_keys(item, ())
-        items = {key: item[key] for key in current}
+                cls._reorder_table(entry)
+
+    @classmethod
+    def _reorder_table(cls, table: t.Cli.TomlTable) -> None:
+        """Reorder one validated TOML table and its table-like children."""
+        current, ordered = cls._ordered_keys(table, ())
+        for key in ordered:
+            cls._reorder_child(table, key)
+        items = {key: table[key] for key in current}
         if ordered != current:
             for key in current:
-                del item[key]
-        # Children are reordered before re-insertion: tomlkit renders super
-        # tables from the item as inserted.
-        for key in ordered:
-            cls._reorder_item(items[key], key)
-            if ordered != current:
-                item[key] = items[key]
+                del table[key]
+            for key in ordered:
+                table[key] = items[key]
 
     @classmethod
     def _reorder_document(
@@ -158,12 +162,8 @@ class FlextInfraPyprojectModernizerDocument:
                 del doc[key]
             for key in ordered:
                 doc[key] = items[key]
-        tool = u.Cli.toml_table_child(doc, c.Infra.TOOL)
-        if tool is not None:
-            cls._reorder_item(tool, c.Infra.TOOL)
         for key in ordered:
-            if key != c.Infra.TOOL:
-                cls._reorder_item(doc[key], key)
+            cls._reorder_child(doc, key)
 
     def _process_document_state(
         self,
@@ -172,16 +172,27 @@ class FlextInfraPyprojectModernizerDocument:
         canonical_dev: t.StrSequence,
         dry_run: bool,
         skip_comments: bool,
-        format_source: bool = True,
-        root_modules: t.StrSequence = (),
-        root_packages: t.StrSequence = (),
-        declared_python_dirs: t.StrSequence = (),
-        declared_python_dirs_are_complete: bool = False,
-        generated_python_roots: t.StrSequence = (),
-        project_kind: str | None = None,
-        analysis_exclusions: t.StrSequence | None = None,
+    ) -> p.Result[t.StrSequence]:
+        """Run every phase over one discovered state; write unless ``dry_run``."""
+        return self._render_document_state(
+            state,
+            self._apply_document_phases(
+                state,
+                canonical_dev=canonical_dev,
+                topology=m.Infra.PyprojectDeclaredTopology(),
+            ),
+            dry_run=dry_run,
+            skip_comments=skip_comments,
+        )
+
+    def _apply_document_phases(
+        self,
+        state: m.Infra.PyprojectDocumentState,
+        *,
+        canonical_dev: t.StrSequence,
+        topology: m.Infra.PyprojectDeclaredTopology,
     ) -> t.StrSequence:
-        """Run every phase over one parsed state; write unless ``dry_run``."""
+        """Run every managed phase, in order, over one parsed payload."""
         path, payload = state.pyproject_path, state.payload
         is_root = path.parent.resolve() == self.root.resolve()
         # Scaffold (pre-write) contexts have no on-disk project root yet: derive
@@ -191,44 +202,47 @@ class FlextInfraPyprojectModernizerDocument:
         paths_manager = (
             FlextInfraExtraPathsManager(
                 repository_root=self.root,
-                generated_python_roots=generated_python_roots,
-                analysis_exclusions=analysis_exclusions or (),
+                analysis_exclusions=topology.analysis_exclusions or (),
             )
             if exists
             else None
         )
-        resolved_kind = self._project_kind(path, payload, project_kind)
+        resolved_kind = self._project_kind(path, payload, topology.project_kind)
+        analyzer_context = m.Infra.PyprojectAnalyzerContext(
+            is_root=is_root,
+            repository_root=self.root if exists else None,
+            project_dir=path.parent if exists else None,
+            declared_python_dirs=topology.declared_python_dirs,
+            declared_python_dirs_are_complete=(
+                topology.declared_python_dirs_are_complete
+            ),
+        )
         tooling = config.Infra.tooling
         changes: t.MutableSequenceOf[str] = [
             *self._normalize_build_payload(payload),
             *FlextInfraConsolidateGroupsPhase().apply_payload(payload, canonical_dev),
-            *FlextInfraToolTablesPhase(tooling).apply_payload(
-                payload, path=path, project_kind=resolved_kind
-            ),
+            *FlextInfraToolTablesPhase(tooling).apply_payload(payload, path=path),
             # Pyrefly derives its include globs from the canonical Pyright
             # roots, so resolve Pyright first and converge in one pass.
             *FlextInfraEnsurePyrightConfigPhase(tooling).apply_payload(
                 payload,
-                is_root=is_root,
-                repository_root=self.root if exists else None,
-                project_dir=path.parent if exists else None,
+                context=analyzer_context,
                 project_kind=resolved_kind,
                 paths_manager=paths_manager,
-                declared_python_dirs=declared_python_dirs,
-                declared_python_dirs_are_complete=declared_python_dirs_are_complete,
-                analysis_exclusions=analysis_exclusions,
+                analysis_exclusions=topology.analysis_exclusions,
             ),
             # Declared roots are topology facts only during atomic creation;
             # normal modernization derives productive roots on disk.
             *FlextInfraEnsurePyreflyConfigPhase(tooling).apply_payload(
                 payload,
-                is_root=is_root,
-                project_dir=path.parent if exists else None,
-                paths_manager=paths_manager,
-                declared_python_dirs=declared_python_dirs,
-                declared_python_dirs_are_complete=(
-                    declared_python_dirs_are_complete or not exists
+                context=(
+                    analyzer_context
+                    if exists
+                    else analyzer_context.model_copy(
+                        update={"declared_python_dirs_are_complete": True}
+                    )
                 ),
+                paths_manager=paths_manager,
             ),
             *FlextInfraEnsureRuffConfigPhase(
                 tooling, self.managed_artifacts
@@ -236,8 +250,8 @@ class FlextInfraPyprojectModernizerDocument:
             *FlextInfraEnsurePackagingPhase(tooling).apply_payload(
                 payload,
                 path=path,
-                root_modules=root_modules,
-                root_packages=root_packages,
+                root_modules=topology.root_modules,
+                root_packages=topology.root_packages,
             ),
         ]
         if paths_manager is not None:
@@ -246,12 +260,28 @@ class FlextInfraPyprojectModernizerDocument:
                     payload, project_dir=path.parent, is_root=is_root
                 )
             )
-        doc = u.Cli.toml_document_from_mapping(payload)
+        return changes
+
+    def _render_document_state(
+        self,
+        state: m.Infra.PyprojectDocumentState,
+        changes: t.StrSequence,
+        *,
+        dry_run: bool,
+        skip_comments: bool,
+        format_source: bool = True,
+    ) -> p.Result[t.StrSequence]:
+        """Order, annotate, and format one payload; write unless ``dry_run``.
+
+        A formatter failure is the result's failure, never a reported change.
+        """
+        path = state.pyproject_path
+        doc = u.Cli.toml_document_from_mapping(state.payload)
         self._reorder_document(doc, preferred_first=self.tomlsort_sort_first)
         rendered = doc.as_string()
+        comment_changes: t.StrSequence = ()
         if not skip_comments:
             rendered, comment_changes = FlextInfraInjectCommentsPhase().apply(rendered)
-            changes.extend(comment_changes)
         if format_source:
             formatted = u.Infra.format_toml_source(
                 rendered,
@@ -263,14 +293,14 @@ class FlextInfraPyprojectModernizerDocument:
                 ),
             )
             if formatted.failure:
-                return [formatted.error or "taplo format failed"]
+                return r[t.StrSequence].from_failure(formatted)
             rendered = formatted.value
         state.rendered = rendered.rstrip() + "\n"
         if state.rendered == state.original_rendered.rstrip() + "\n":
-            return ()
+            return r[t.StrSequence].ok(())
         if not dry_run:
             u.write_file(path, state.rendered, encoding=c.Cli.ENCODING_DEFAULT)
-        return changes
+        return r[t.StrSequence].ok((*changes, *comment_changes))
 
 
 __all__: list[str] = ["FlextInfraPyprojectModernizerDocument"]

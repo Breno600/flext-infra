@@ -40,11 +40,11 @@ class FlextInfraLooseTestFunctionDetector:
         """Return one violation per loose ``test_*`` function in a test module."""
         if not cls._is_test_file(ctx):
             return []
-        res = u.Infra.get_resource_from_path(ctx.rope_project, ctx.file_path)
+        res = u.Infra.resolve_resource_from_path(ctx.rope_project, ctx.file_path)
         if res is None:
             return []
         try:
-            pymodule = u.Infra.get_pymodule(ctx.rope_project, res)
+            pymodule = u.Infra.resolve_pymodule(ctx.rope_project, res)
         except u.Infra.rope_runtime_errors() as exc:
             msg = (
                 f"loose-test-function detector could not analyze {ctx.file_path}: "

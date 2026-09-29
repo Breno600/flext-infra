@@ -23,31 +23,18 @@ snapshots:
                 duration=duration,
             )
         )
-  : fixed: |+
-      def _captured_process_result(cls,
-      return_code: int | None,
-      received_signals: list[int],
-      diagnostics: t.VariadicTuple[str],
-      stdout_output: bytearray,
-      stderr_output: bytearray,
-      duration: float,
-      *,
-      timed_out: bool,) -> p.Result[p.Cli.CommandBytesOutput]:
-          """Attach captured bytes only after the owned process boundary is empty."""
-          return cls._process_exit_result(
-              return_code, received_signals, diagnostics, timed_out=timed_out
-          ).map(
-              lambda outcome: m.Cli.CommandBytesOutput(
-                  stdout=bytes(stdout_output),
-                  stderr=bytes(stderr_output),
-                  outcome=m.Cli.ProcessOutcome.model_validate(
-                      outcome, from_attributes=True
-                  ),
-                  duration=duration,
-              )
-          )
-
+  : fixed: "def _captured_process_result(\n    cls,\n    return_code: int | None,\n    received_signals: list[int],\n    diagnostics: t.VariadicTuple[str],\n    stdout_output: bytearray,\n    stderr_output: bytearray,\n    duration: float,\n    *,\n    timed_out: bool,\n) -> p.Result[p.Cli.CommandBytesOutput]:\n    \"\"\"Attach captured bytes only after the owned process boundary is empty.\"\"\"\n    return cls._process_exit_result(\n        return_code, received_signals, diagnostics, timed_out=timed_out\n    ).map(\n        lambda outcome: m.Cli.CommandBytesOutput(\n            stdout=bytes(stdout_output),\n            stderr=bytes(stderr_output),\n            outcome=m.Cli.ProcessOutcome.model_validate(outcome, from_attributes=True),\n            duration=duration,\n        )\n        \n    )\n"
     labels:
+    - source: |-
+        lambda outcome: m.Cli.CommandBytesOutput(
+                    stdout=bytes(stdout_output),
+                    stderr=bytes(stderr_output),
+                    outcome=outcome,
+                    duration=duration,
+                )
+      style: primary
+      start: 498
+      end: 691
     - source: |-
         def _captured_process_result(
             cls,
@@ -71,6 +58,6 @@ snapshots:
                     duration=duration,
                 )
             )
-      style: primary
+      style: secondary
       start: 0
       end: 697

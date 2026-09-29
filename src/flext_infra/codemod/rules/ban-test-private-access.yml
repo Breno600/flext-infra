@@ -1,0 +1,83 @@
+# Test law: a test observes the public surface, never an owner's private state.
+#
+# Reading, writing or calling a single-underscore member (`service._cache`,
+# `Service._build()`, `module._helper`) couples the test to internal
+# construction: it passes or fails on implementation shape instead of
+# observable behaviour, and blocks every refactor of the owner.
+#
+# Decisions (documented contract of this rule):
+#   * A Pydantic private attribute (`PrivateAttr`) declared by the module under
+#     test is still private state: reading it from a test is reported.
+#   * The test's own helpers stay legal: `self._helper()` / `cls._declare()`
+#     and `TestsFoo._Scenario` / `ExampleFoo._ok` reach the test (or example)
+#     class the same module declares, not the owner under test.
+#   * Dunders are the public Python data model (`__class__`, `__dict__`,
+#     `__all__`) and are not private.
+#   * Sunder names (`_value_`, `_name_`, `_missing_`) are the public `enum`
+#     protocol, and `_replace`, `_asdict`, `_fields`, `_field_defaults`, `_make`
+#     are the public `namedtuple` protocol; both are external contracts, not
+#     owner internals.
+#   * The bare `_` placeholder is not an attribute access and never matches.
+#
+# Static private module imports (`from pkg._mod import`, `import pkg._mod`)
+# are owned fleet-wide by `ban-private-import`, and string probes through
+# getattr/hasattr/setattr by `ban-getattr-private-probe`. This rule owns the
+# attribute syntax and the dynamic `import_module("pkg._mod")` form inside
+# tests (production packages legitimately load their own private modules
+# lazily), so each site is reported by exactly one law.
+#
+# Detection-only: the replacement asserts the observable result through the
+# public facade. A test that can only observe private state is deleted.
+id: ban-test-private-access
+language: Python
+severity: error
+files:
+  - "**/tests/**/*.py"
+  - "**/examples/**/*.py"
+  - "**/conftest.py"
+rule:
+  any:
+    - all:
+        - kind: attribute
+        - has:
+            field: attribute
+            all:
+              - regex: '^_[A-Za-z0-9]'
+              - not:
+                  regex: '^_[A-Za-z0-9]\w*_$'
+              - not:
+                  regex: '^_(?:replace|asdict|fields|field_defaults|make)$'
+        - not:
+            has:
+              field: object
+              regex: '^(?:self|cls)$'
+        # `TestsFoo._Scenario` / `Example._helper` reach a class this module
+        # declares itself: the test's own helper, not the owner under test.
+        - not:
+            all:
+              - pattern: $OWNER.$MEMBER
+              - inside:
+                  kind: module
+                  stopBy: end
+                  has:
+                    stopBy: end
+                    kind: class_definition
+                    has:
+                      field: name
+                      pattern: $OWNER
+    # A dynamic import of a private module by its absolute dotted name is the
+    # same private-module coupling spelled as a string.
+    - all:
+        - kind: call
+        - has:
+            field: function
+            regex: '^(?:importlib\.)?import_module$'
+        - has:
+            field: arguments
+            has:
+              nthChild: 1
+              kind: string
+              regex: '^[rRbBuU]?["''][\w.]*\._[A-Za-z]\w*(?:\.\w+)*["'']$'
+message: >-
+  Private member access in a test couples it to internal construction. Assert
+  the observable behaviour through the public facade, or delete the test.

@@ -120,6 +120,3 @@ class TestsFlextInfraReleaseDependencyOrder:
         )
 
         tm.that(waves[0], eq=("flext-web",))
-
-
-__all__: list[str] = ["TestsFlextInfraReleaseDependencyOrder"]

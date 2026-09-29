@@ -101,6 +101,3 @@ class TestsFlextInfraBuilder:
         result = builder.build(tmp_path, projects=["proj1", "proj2"])
         if result.success:
             tm.that(len(result.value), gte=0)
-
-
-__all__: list[str] = ["TestsFlextInfraBuilder"]

@@ -117,7 +117,11 @@ class TestsFlextInfraScriptDispatchMakefile:
             ),
             script_dispatch=None,
         )
-        tm.that(rendered.count("\ndeploy:\n"), eq=1)
+        # The verb target may carry prerequisites (the workspace guard).
+        deploy_targets = [
+            line for line in rendered.splitlines() if line.startswith("deploy:")
+        ]
+        tm.that(len(deploy_targets), eq=1)
         tm.that(
             rendered.count("\n_activated-deploy: _builtin_require_environment\n"), eq=1
         )
@@ -165,10 +169,11 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that("codegen" in verb_names, eq=False)
         gen = next(verb for verb in make_config.verbs if verb.name == "gen")
         # WHAT selectors were exterminated: one verb, one meaning, declared once.
-        tm.that(hasattr(gen, "default_what"), eq=False)
-        tm.that(hasattr(gen, "_apply_flag_exterminated"), eq=False)
+        gen_fields = type(gen).model_fields
+        tm.that("default_what" in gen_fields, eq=False)
+        tm.that("_apply_flag_exterminated" in gen_fields, eq=False)
         tm.that("initialize" in verb_names, eq=True)
-        tm.that(hasattr(make_config, "serialization"), eq=False)
+        tm.that("serialization" in type(make_config).model_fields, eq=False)
         rendered = self._render_root_makefile(
             tmp_path, extra_verbs=(), script_dispatch=None
         )
@@ -199,7 +204,7 @@ class TestsFlextInfraScriptDispatchMakefile:
         phony_line = next(
             line
             for line in rendered.splitlines()
-            if line.startswith(".PHONY:") and "_builtin_" in line
+            if line.startswith(".PHONY:") and "_builtin_gen_" in line
         )
         tm.that(phony_line, eq=".PHONY: _builtin_gen_init _builtin_gen_all")
         # The one handler drives the conform engine (CLI namespace is unchanged).
@@ -239,7 +244,7 @@ class TestsFlextInfraScriptDispatchMakefile:
     def test_make_initialize_requires_its_provisioned_interpreter(
         self, tmp_path: Path
     ) -> None:
-        """The public initializer fails before effects when its runtime is absent."""
+        """The public initializer validates the pinned toolchain before effects."""
         rendered = self._render_root_makefile(
             tmp_path, extra_verbs=(), script_dispatch=None
         )
@@ -248,13 +253,19 @@ class TestsFlextInfraScriptDispatchMakefile:
         package.mkdir(parents=True)
         makefile = root / c.Infra.MAKEFILE_FILENAME
         makefile.write_text(rendered, encoding="utf-8")
+        # Every public verb except help/clean/upg requires the Mise pin
+        # (db516968e); seed it so the run reaches the interpreter check.
+        u.Tests.copy_tracked_mise_seeds(root)
         invoked = u.Tests.run_isolated_make(
             ["--no-print-directory", "-f", str(makefile), "initialize"], cwd=root
         )
 
         tm.ok(invoked)
         tm.that(u.Cli.process_succeeded(invoked.value.outcome), eq=False)
-        tm.that(invoked.value.stderr, has="missing environment interpreter")
+        tm.that(
+            invoked.value.stderr,
+            has=["missing environment interpreter", "make setup creates it"],
+        )
         tm.that((package / c.Infra.INIT_PY).exists(), eq=False)
 
     def test_work_lifecycle_is_not_projected(self, tmp_path: Path) -> None:
@@ -271,6 +282,41 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that(" work" in public_line, eq=False)
         tm.that(rendered, lacks="_builtin_work_")
         tm.that(rendered, lacks="workspace work")
+
+    def test_profile_test_verb_profiles_the_canonical_pytest_entry(
+        self, tmp_path: Path
+    ) -> None:
+        """profile-test wraps the canonical pytest entry under cProfile, unbounded.
+
+        Cold-run diagnosis (flext-itpd1.3.7) needs the same persistent testmon
+        database guard and environment as the bounded gate, but the diagnostic
+        must complete and dump its pstats artifact, so the gate's
+        PYTEST_BOUNDED wall clock never applies to it.
+        """
+        rendered = self._render_root_makefile(
+            tmp_path, extra_verbs=(), script_dispatch=None
+        )
+        tm.that(
+            rendered, has=[".PHONY: profile-test\n", ".PHONY: profile-test-report\n"]
+        )
+        profile_test = rendered.split("profile-test:", 1)[1].split("\n\n", 1)[0]
+        gate_runner = rendered.split("_builtin_test_all:", 1)[1].split("\n\n", 1)[0]
+        datafile = config.Infra.codegen.make.testmon_cache.database_environment_variable
+        # The diagnostic reuses the canonical runner's testmon database guard
+        # and exports the same database environment.
+        tm.that(profile_test, has='database="$(FLEXT_PYTEST_TESTMON_DATABASE)";')
+        tm.that(profile_test, has=f'{datafile}="$$database"')
+        # It profiles the real entry facade with a clean argv and dumps the
+        # profile artifact beside the other profile reports.
+        tm.that(profile_test, has="FlextInfraPytestEntry.main")
+        tm.that(profile_test, has="sys.argv = [sys.argv[0]]")
+        tm.that(profile_test, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
+        # Only the bounded gate owns the hard pytest wall clock.
+        tm.that(profile_test, lacks="PYTEST_BOUNDED")
+        tm.that(gate_runner, has="PYTEST_BOUNDED")
+        report = rendered.split("profile-test-report:", 1)[1].split("\n\n", 1)[0]
+        tm.that(report, has='sort_stats("cumtime").print_stats(50)')
+        tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats")
 
     # A test asserting a downstream consumer's verbs from this
     # engine's catalog was removed. The engine is consumer-agnostic: a consumer

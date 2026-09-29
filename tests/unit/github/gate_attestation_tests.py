@@ -189,6 +189,3 @@ class TestsFlextInfraGithubGateAttestation:
 
         with pytest.raises(ValueError, match="gates must be unique"):
             m.Infra.GateAttestationCreateRequest.model_validate(values)
-
-
-__all__: list[str] = ["TestsFlextInfraGithubGateAttestation"]

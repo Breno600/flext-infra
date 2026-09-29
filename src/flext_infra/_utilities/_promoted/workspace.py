@@ -32,26 +32,24 @@ class FlextInfraUtilitiesPromotedWorkspace:
         resolved = start.resolve()
         for candidate in (resolved, *resolved.parents):
             if (candidate / c.Infra.DIR_SCRIPTS).is_dir() and (
-                candidate / c.Infra.PYPROJECT_FILENAME
+                candidate / c.PYPROJECT_FILENAME
             ).is_file():
                 return candidate
         return None
 
     @staticmethod
-    def promoted_workspace_spec(root: Path) -> p.Infra.Promoted.WorkspaceSpec:
+    def promoted_workspace_spec(root: Path) -> p.Infra.PromotedWorkspaceSpec:
         """Build the workspace spec owned by one explicit repository root."""
-        from flext_infra import m
+        from flext_infra import m, u
 
-        return m.Infra.Promoted.WorkspaceSpec(
+        return m.Infra.PromotedWorkspaceSpec(
             root=root,
             scripts=root / c.Infra.DIR_SCRIPTS,
-            local_python=root
-            / c.Infra.VENV_BIN_REL
-            / c.Infra.PromotedSelector.VENV_PYTHON,
+            local_python=u.Infra.runtime_python(root),
         )
 
     @classmethod
-    def promoted_discovered_workspace_spec(cls) -> p.Infra.Promoted.WorkspaceSpec:
+    def promoted_discovered_workspace_spec(cls) -> p.Infra.PromotedWorkspaceSpec:
         """Resolve the spec of the workspace owning the current working directory."""
         root = cls.promoted_find_owner_root(Path.cwd())
         if root is None:
@@ -59,7 +57,7 @@ class FlextInfraUtilitiesPromotedWorkspace:
         return cls.promoted_workspace_spec(root)
 
     @classmethod
-    def promoted_ensure_local_python(cls, spec: p.Infra.Promoted.WorkspaceSpec) -> None:
+    def promoted_ensure_local_python(cls, spec: p.Infra.PromotedWorkspaceSpec) -> None:
         """Fail unless make runs on a virtualenv or the expected local interpreter."""
         from flext_infra import settings
 

@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from flext_tests import tm
+from flext_tests import tm, tv
 
-from flext_infra import c, m, t
+from flext_infra import c, m
 from flext_infra.gates.markdown_code import FlextInfraMarkdownCodeGate
 from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
 from tests import TestsFlextInfraUtilities as u
@@ -26,9 +26,13 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
     SYNTAX_BROKEN = "# Test\n\n```python\ndef broken(:\n    return 1\n```\n"
     NOTEST_PSEUDO = "# Test\n\n```python notest\nthis is @@@ not python\n```\n"
     FRAGMENT_THEN_UNFORMATTED = (
-        "# Test\n\n```python\ndef broken(:\n    return 1\n```\n\n```python\nx=1\n```\n"
+        "# Test\n\n```python notest\ndef broken(:\n    return 1\n```\n\n"
+        "```python\nx=1\n```\n"
     )
-    FRAGMENT_THEN_FORMATTED = "# Test\n\n```python\ndef broken(:\n    return 1\n```\n\n```python\nx = 1\n```\n"
+    FRAGMENT_THEN_FORMATTED = (
+        "# Test\n\n```python notest\ndef broken(:\n    return 1\n```\n\n"
+        "```python\nx = 1\n```\n"
+    )
     # Prettier only rewraps prose under proseWrap=always (the projected fleet
     # contract); fixtures materialize that config the way `make gen` does.
     PROSE_CONFIG = '{"printWidth": 40, "proseWrap": "always"}'
@@ -56,18 +60,15 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(result.issues[0].code, eq=c.Infra.MARKDOWN_FORMAT)
         tm.that(result.issues[0].file, eq="README.md")
 
-    def test_format_gate_skips_neutrally_without_markdown(self, tmp_path: Path) -> None:
+    def test_format_gate_without_markdown_is_red(self, tmp_path: Path) -> None:
+        """Zero collected markdown is red, never a neutral pass."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-format-empty")
 
-        result = u.Tests.check_gate_asserting(
-            FlextInfraMarkdownFormatGate,
-            tmp_path,
-            project_dir,
-            passed=True,
-            issues_len=0,
+        result = FlextInfraMarkdownFormatGate(tmp_path).check(
+            project_dir, u.Tests.gate_context(tmp_path)
         )
 
-        tm.that(result.result.passed, eq=True)
+        tm.that(result.result.passed, eq=False)
 
     def test_format_gate_fix_is_the_single_writer(self, tmp_path: Path) -> None:
         """`make fmt` drives prettier --write once and the tree reaches green."""
@@ -130,19 +131,6 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
             issues_len=issues_len,
         )
 
-    def test_code_gate_fragments_stay_out_of_scope(self, tmp_path: Path) -> None:
-        """Syntax-broken fragments are legitimate docs, not gate findings.
-
-        The flext-tests markdown validator owns their MD-001 findings (with
-        approved exceptions); this formatting gate stays silent about them.
-        """
-        project_dir = u.Tests.mk_project(tmp_path, "markdown-code-broken")
-        (project_dir / "README.md").write_text(self.SYNTAX_BROKEN, encoding="utf-8")
-
-        _ = u.Tests.check_gate_asserting(
-            FlextInfraMarkdownCodeGate, tmp_path, project_dir, passed=True, issues_len=0
-        )
-
     def test_code_gate_fix_splices_formatted_block_back(self, tmp_path: Path) -> None:
         """`make fix` formats fenced blocks whose round-trip recompiles cleanly."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-fix")
@@ -159,7 +147,7 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(readme.read_text(encoding="utf-8"), eq=self.FORMATTED)
 
     def test_code_gate_fix_splices_block_after_fragment(self, tmp_path: Path) -> None:
-        """A parseable block keeps its extractor index when a fragment precedes it.
+        """A parseable block keeps its extractor index after a ``notest`` fragment.
 
         Regression: enumerating only parseable blocks shifted every later
         source name, so a valid block after a fragment was never spliced.
@@ -177,8 +165,10 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(result.result.passed, eq=True)
         tm.that(readme.read_text(encoding="utf-8"), eq=self.FRAGMENT_THEN_FORMATTED)
 
-    def test_code_gate_does_not_splice_broken_blocks(self, tmp_path: Path) -> None:
-        """A fragment that cannot parse stays untouched and reports nothing."""
+    def test_code_gate_fix_preserves_fragment_for_syntax_owner(
+        self, tmp_path: Path
+    ) -> None:
+        """Formatting preserves an invalid fence for the markdown validator."""
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-no-splice")
         readme = project_dir / "README.md"
         readme.write_text(self.SYNTAX_BROKEN, encoding="utf-8")
@@ -186,11 +176,13 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
             repository_root=tmp_path, reports_dir=tmp_path, apply_fixes=True
         )
 
-        result = FlextInfraMarkdownCodeGate(tmp_path).fix(project_dir, context)
-
+        FlextInfraMarkdownCodeGate(tmp_path).fix(project_dir, context)
         tm.that(readme.read_text(encoding="utf-8"), eq=self.SYNTAX_BROKEN)
-        tm.that(result.result.passed, eq=True)
-        tm.that(result.issues, eq=())
+        syntax_report = tv.markdown(project_dir).unwrap()
+        tm.that(syntax_report.passed, eq=False)
+        tm.that(
+            any(item.rule_id == "MD-001" for item in syntax_report.violations), eq=True
+        )
 
     def test_code_gate_reports_unformatted_docstring_example(
         self, tmp_path: Path
@@ -224,6 +216,3 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         )
 
         tm.that(result.result.passed, eq=True)
-
-
-__all__: t.StrSequence = ["TestsFlextInfraMarkdownFormatAndCodeGates"]

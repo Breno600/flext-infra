@@ -246,6 +246,3 @@ class TestsFlextInfraDirenvGate:
                 TestsFlextInfraDirenvGate.issue_codes(execution), eq=["DIRENV_ACTIVATE"]
             )
             tm.that(execution.issues[0].message, ne="")
-
-
-__all__: t.StrSequence = ["TestsFlextInfraDirenvGate"]

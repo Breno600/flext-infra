@@ -9,37 +9,16 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from flext_cli import cli
-    from flext_infra import docs_main, infra, main
-    from flext_tests import (
-        api,
-        config,
-        core,
-        d,
-        e,
-        h,
-        install_local_packages,
-        lazy_attribute,
-        load_infra_report,
-        r,
-        services,
-        settings,
-        td,
-        tf,
-        tk,
-        tm,
-        tv,
-        x,
-    )
+    from flext_tests import api, d, e, h, r, td, tf, tk, tm, tv, x
 
     from . import integration, refactor, unit
     from .base import TestsFlextInfraServiceBase, TestsFlextInfraServiceBase as s
-    from .constants import TestsFlextInfraConstants, c
+    from .constants import TestsFlextInfraConstants, TestsFlextInfraConstants as c
     from .constants_scan import TestsFlextInfraConstantsScanMixin
-    from .models import TestsFlextInfraModels, m
-    from .protocols import TestsFlextInfraProtocols, p
-    from .typings import TestsFlextInfraTypes, t
-    from .utilities import TestsFlextInfraUtilities, u
+    from .models import TestsFlextInfraModels, TestsFlextInfraModels as m
+    from .protocols import TestsFlextInfraProtocols, TestsFlextInfraProtocols as p
+    from .typings import TestsFlextInfraTypes, TestsFlextInfraTypes as t
+    from .utilities import TestsFlextInfraUtilities, TestsFlextInfraUtilities as u
     from .utilities_codegen import TestsFlextInfraUtilitiesCodegenMixin
     from .utilities_deps import TestsFlextInfraUtilitiesDepsMixin
     from .utilities_fixture_docs import TestsFlextInfraUtilitiesDocsFixtureMixin
@@ -52,8 +31,6 @@ if TYPE_CHECKING:
     from .utilities_git import TestsFlextInfraUtilitiesGitMixin
     from .utilities_promoted import TestsFlextInfraUtilitiesPromotedMixin
     from .utilities_release import TestsFlextInfraUtilitiesReleaseMixin
-    from .utilities_replay import TestsFlextInfraUtilitiesReplayRunnerMixin
-    from .utilities_replay_sequence import TestsFlextInfraUtilitiesReplaySequenceMixin
     from .utilities_toml import TestsFlextInfraUtilitiesTomlMixin
     from .utilities_workspace_env import TestsFlextInfraUtilitiesWorkspaceEnvMixin
 
@@ -74,34 +51,21 @@ __all__: tuple[str, ...] = (
     "TestsFlextInfraUtilitiesProjectFixtureMixin",
     "TestsFlextInfraUtilitiesPromotedMixin",
     "TestsFlextInfraUtilitiesReleaseMixin",
-    "TestsFlextInfraUtilitiesReplayRunnerMixin",
-    "TestsFlextInfraUtilitiesReplaySequenceMixin",
     "TestsFlextInfraUtilitiesTomlMixin",
     "TestsFlextInfraUtilitiesToolingFixtureMixin",
     "TestsFlextInfraUtilitiesWorkspaceEnvMixin",
     "TestsFlextInfraUtilitiesWorkspaceFixtureMixin",
     "api",
     "c",
-    "cli",
-    "config",
-    "core",
     "d",
-    "docs_main",
     "e",
     "h",
-    "infra",
-    "install_local_packages",
     "integration",
-    "lazy_attribute",
-    "load_infra_report",
     "m",
-    "main",
     "p",
     "r",
     "refactor",
     "s",
-    "services",
-    "settings",
     "t",
     "td",
     "tf",
@@ -142,27 +106,14 @@ _LAZY_IMPORTS = MappingProxyType(
             ".utilities_git": ("TestsFlextInfraUtilitiesGitMixin",),
             ".utilities_promoted": ("TestsFlextInfraUtilitiesPromotedMixin",),
             ".utilities_release": ("TestsFlextInfraUtilitiesReleaseMixin",),
-            ".utilities_replay": ("TestsFlextInfraUtilitiesReplayRunnerMixin",),
-            ".utilities_replay_sequence": (
-                "TestsFlextInfraUtilitiesReplaySequenceMixin",
-            ),
             ".utilities_toml": ("TestsFlextInfraUtilitiesTomlMixin",),
             ".utilities_workspace_env": ("TestsFlextInfraUtilitiesWorkspaceEnvMixin",),
-            "flext_cli": ("cli",),
-            "flext_infra": ("docs_main", "infra", "main"),
             "flext_tests": (
                 "api",
-                "config",
-                "core",
                 "d",
                 "e",
                 "h",
-                "install_local_packages",
-                "lazy_attribute",
-                "load_infra_report",
                 "r",
-                "services",
-                "settings",
                 "td",
                 "tf",
                 "tk",

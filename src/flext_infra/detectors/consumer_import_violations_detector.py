@@ -61,6 +61,27 @@ class FlextInfraConsumerImportViolationsDetector:
         importer_root = FlextInfraConsumerImportViolationsDetector._importer_root(path)
         family_roots = FlextInfraConsumerImportViolationsDetector._family_roots()
         renames = core_u.compatibility_alias_renames()
+
+        def violation(
+            lineno: int, target: str, symbol: str, detail: str
+        ) -> m.Infra.ConsumerImportViolation:
+            """Build one typed violation with the true line and a derived hint."""
+            canonical = renames.get(symbol)
+            hint = (
+                f"; canonical form: from {target.split('.', maxsplit=1)[0]} import {canonical}"
+                if canonical
+                else ""
+            )
+            return m.Infra.ConsumerImportViolation(
+                file=str(path),
+                line=lineno,
+                current_import=f"from {target} import {symbol}",
+                target_package=target.split(".", maxsplit=1)[0],
+                imported_path=target,
+                imported_symbol=symbol,
+                detail=f"{detail}{hint}",
+            )
+
         violations: list[m.Infra.ConsumerImportViolation] = []
         for node in ast.walk(tree):
             if not isinstance(node, ast.ImportFrom) or node.level != 0:
@@ -74,12 +95,10 @@ class FlextInfraConsumerImportViolationsDetector:
             )
             if "." in target:
                 violations.append(
-                    FlextInfraConsumerImportViolationsDetector._violation(
-                        path,
+                    violation(
                         node.lineno,
                         target,
                         target.rsplit(".", maxsplit=1)[-1],
-                        renames,
                         "submodule path import violates R1 facade-only grammar",
                     )
                 )
@@ -88,12 +107,10 @@ class FlextInfraConsumerImportViolationsDetector:
                 symbol = alias.name
                 if symbol == "*":
                     violations.append(
-                        FlextInfraConsumerImportViolationsDetector._violation(
-                            path,
+                        violation(
                             node.lineno,
                             f"{target}.<star>",
                             "(wildcard)",
-                            renames,
                             "wildcard import cannot prove published membership",
                         )
                     )
@@ -101,42 +118,14 @@ class FlextInfraConsumerImportViolationsDetector:
                 if symbol in published:
                     continue
                 violations.append(
-                    FlextInfraConsumerImportViolationsDetector._violation(
-                        path,
+                    violation(
                         node.lineno,
                         target,
                         symbol,
-                        renames,
                         "symbol not published by target root (R1 facade-only grammar)",
                     )
                 )
         return tuple(violations)
-
-    @staticmethod
-    def _violation(
-        path: Path,
-        lineno: int,
-        target: str,
-        symbol: str,
-        renames: t.StrMapping,
-        detail: str,
-    ) -> m.Infra.ConsumerImportViolation:
-        """Build one typed violation with the true line and a derived hint."""
-        canonical = renames.get(symbol)
-        hint = (
-            f"; canonical form: from {target.split('.', maxsplit=1)[0]} import {canonical}"
-            if canonical
-            else ""
-        )
-        return m.Infra.ConsumerImportViolation(
-            file=str(path),
-            line=lineno,
-            current_import=f"from {target} import {symbol}",
-            target_package=target.split(".", maxsplit=1)[0],
-            imported_path=target,
-            imported_symbol=symbol,
-            detail=f"{detail}{hint}",
-        )
 
 
 __all__: list[str] = ["FlextInfraConsumerImportViolationsDetector"]

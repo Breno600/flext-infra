@@ -21,7 +21,7 @@ class FlextInfraProjectClassifierFamilyMixin:
     via FLEXT.
     """
 
-    _CLASS_DEF_RE: t.Infra.RegexPattern = c.Infra.CLASS_WITH_BASES_RE
+    _CLASS_DEF_RE: t.RegexPattern = c.Infra.CLASS_WITH_BASES_RE
 
     if TYPE_CHECKING:
         _src_path: Path

@@ -23,11 +23,11 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def _lifecycle_porcelain(cls, repo: Repo, repo_path: Path, porcelain: str) -> str:
-        listed = repo.git.worktree("list", "--porcelain")
         registered = {
-            Path(line.removeprefix("worktree ")).expanduser().resolve()
-            for line in listed.splitlines()
-            if line.startswith("worktree ")
+            entry.path
+            for entry in cls._registered_worktree_entries(
+                repo.git.worktree("list", "--porcelain")
+            )
         }
         administrative = {
             path.relative_to(repo_path).as_posix().rstrip("/")
@@ -116,6 +116,37 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
             return r[str].ok(opened.value.head.commit.hexsha)
         except (ValueError, TypeError, OSError) as exc:
             return r[str].fail(f"failed to resolve HEAD: {exc}", exception=exc)
+
+    @classmethod
+    def git_has_staged_changes(
+        cls, request: m.Infra.GitRepoRequest
+    ) -> p.Result[m.Infra.GitBoolReport]:
+        """Return whether the index carries changes staged for the next commit.
+
+        ``git diff --cached --quiet`` exits 0 with nothing staged and 1 with a
+        staged delta; every other exit is the failure it is. Callers that must
+        choose between committing and a NOOP consume this instead of probing
+        the raw command themselves.
+        """
+        repo_path = request.repo_root.expanduser().resolve()
+        try:
+            repo = cls._repo(repo_path)
+            status, _out, _err = repo.git.diff(
+                "--cached", "--quiet", with_extended_output=True, with_exceptions=False
+            )
+        except GitCommandError as exc:
+            return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[m.Infra.GitBoolReport].fail(
+                f"failed to inspect staged state: {exc}", exception=exc
+            )
+        if status == 0:
+            return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
+        if status == 1:
+            return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
+        return r[m.Infra.GitBoolReport].fail(
+            f"git diff --cached --quiet exited {status}: {repo_path}"
+        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitWorktreeStatusMixin"]

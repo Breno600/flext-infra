@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated
 
-from flext_cli import m
+from flext_cli import m, t
 
 
 class FlextInfraSettingsModels:
@@ -48,14 +48,6 @@ class FlextInfraSettingsModels:
                 description="Prefer HTTPS repository URLs during dependency sync.",
             ),
         ]
-        github_actions: Annotated[
-            bool,
-            m.Field(
-                default=False,
-                validation_alias="GITHUB_ACTIONS",
-                description="Whether the process runs in GitHub Actions.",
-            ),
-        ]
         github_head_ref: Annotated[
             str | None,
             m.Field(
@@ -78,6 +70,19 @@ class FlextInfraSettingsModels:
                 default=None,
                 validation_alias="UV",
                 description="uv launcher path resolved for dependency orchestration.",
+            ),
+        ]
+        runtime_root: Annotated[
+            Path | None,
+            m.Field(
+                default=None,
+                validation_alias="RUNTIME_ROOT",
+                description=(
+                    "Declared runtime root whose environment executes the target "
+                    "checkout's code; the generated Makefile exports its "
+                    "RUNTIME_ROOT. Undeclared, the owner derives the checkout's "
+                    "Git root."
+                ),
             ),
         ]
         virtual_env: Annotated[
@@ -118,6 +123,17 @@ class FlextInfraSettingsModels:
                 default=None,
                 validation_alias="PATH",
                 description="Process PATH captured for isolated subprocess builds.",
+            ),
+        ]
+        sonar_token: Annotated[
+            t.SecretStr | None,
+            m.Field(
+                default=None,
+                validation_alias="SONAR_TOKEN",
+                description=(
+                    "SonarCloud web API token; required only by the explicit "
+                    "sonarcloud-sync verb, never read from any other source."
+                ),
             ),
         ]
         mise_github_credential_command: Annotated[

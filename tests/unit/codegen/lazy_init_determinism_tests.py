@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 from flext_tests import tm
@@ -54,12 +53,9 @@ class TestsFlextInfraLazyInitDeterminism:
         init_text = (package_root / c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT
         )
-        map_block = re.search(
-            r"build_lazy_import_map\(\s*MappingProxyType\(\{(.*?)\}\),",
-            init_text,
-            re.DOTALL,
+        entries, _refs = u.Infra.module_mapping_assignment_source(
+            init_text, u.Infra.lazy_imports_name_source(init_text)
         )
-        tm.that(map_block, empty=False)
-        keys = re.findall(r'"([^"]+)":', map_block.group(0))
+        keys = [key for key, _names in entries]
         tm.that(keys, empty=False)
         tm.that(keys, eq=sorted(keys))

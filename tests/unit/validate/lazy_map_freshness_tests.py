@@ -74,6 +74,3 @@ class TestsFlextInfraLazyMapFreshness:
         tm.that(report.passed, eq=False)
         tm.that(report.summary, has="stale")
         tm.that(len(tuple(report.violations)), gte=1)
-
-
-__all__: list[str] = ["TestsFlextInfraLazyMapFreshness"]
