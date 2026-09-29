@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, t, u
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -84,14 +85,32 @@ class FlextInfraToolTablesPhase:
             name="mypy", table_path=(c.Infra.MYPY,), operations=tuple(operations)
         )
 
+    @staticmethod
+    def _excluded_roots(project_dir: Path) -> t.Infra.StrSet:
+        """First segments of the workspace SSOT's analysis exclusions.
+
+        A workspace that retired a tree declares it here once; every root-
+        scoped projection (vulture paths, ruff src/namespace-packages/
+        per-file-ignores) filters on this declared set instead of probing the
+        disk, which oscillates between the deps pass and the root-materializing
+        gen pass.
+        """
+        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
+        if paths.failure:
+            return frozenset()
+        return frozenset(
+            p.parts[0] for p in paths.value if Path(p).parts
+        )
+
     def _phases(
-        self, *, first_party: t.StrSequence, project_dir: Path
+        self, *, first_party: t.StrSequence, path: Path
     ) -> t.SequenceOf[m.Infra.DepsToml.PhaseConfig]:
         """Build every policy table; coverage is measured, never floor-gated."""
         tools = self._tool_config.tools
         toml = m.Infra.DepsToml
         merge, replace = c.Infra.TomlMergeMode.MERGE, c.Infra.TomlMergeMode.REPLACE
         pytest, coverage = tools.pytest, tools.coverage
+        excluded_roots = self._excluded_roots(path.parent)
         codespell_operations: t.MutableSequenceOf[
             m.Infra.DepsToml.SetOp | m.Infra.DepsToml.RemoveOp
         ] = [
@@ -227,14 +246,15 @@ class FlextInfraToolTablesPhase:
                     toml.SetOp(
                         key="min_confidence", value=tools.vulture.min_confidence
                     ),
-                    # Production roots are config-declared; a retired tree
-                    # (e.g. scripts/) must not stay in the dead-code scan scope.
+                    # Production roots are config-declared; a workspace that
+                    # retired a tree (analysis exclusion in its SSOT) must not
+                    # stay in the dead-code scan scope.
                     toml.ListOp(
                         key="paths",
                         values=tuple(
                             root
                             for root in tools.vulture.paths
-                            if (project_dir / root).is_dir()
+                            if root not in excluded_roots
                         ),
                     ),
                     toml.SetOp(key="verbose", value=tools.vulture.verbose),
@@ -271,7 +291,7 @@ class FlextInfraToolTablesPhase:
             payload,
             *self._phases(
                 first_party=self.first_party_namespaces(payload, path=path),
-                project_dir=path.parent,
+                path=path.parent,
             ),
         )
 
