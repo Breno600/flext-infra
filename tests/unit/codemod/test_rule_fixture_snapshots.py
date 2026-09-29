@@ -136,7 +136,8 @@ class TestsFlextInfraModRuleFixtureSnapshots:
             tm.ok(
                 u.Cli.atomic_write_text_file(
                     stale,
-                    self._snapshot(tmp_path)
+                    self
+                    ._snapshot(tmp_path)
                     .read_text(encoding="utf-8")
                     .replace("id: demo", "id: retired"),
                 )

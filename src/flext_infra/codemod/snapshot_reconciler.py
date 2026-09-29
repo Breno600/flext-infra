@@ -142,12 +142,10 @@ class FlextInfraCodemodSnapshotReconciler:
         """Return the test cases one committed snapshot file projects."""
         payload = u.Cli.yaml_safe_load(snapshot).unwrap()
         projections = payload.get(c.Infra.CODEMOD_SNAPSHOTS_KEY, {})
-        if not isinstance(projections, Mapping) or not all(
-            isinstance(case, str) for case in projections
-        ):
+        if not isinstance(projections, Mapping):
             msg = f"invalid ast-grep snapshot contract: {snapshot}"
             raise TypeError(msg)
-        return tuple(str(case) for case in projections)
+        return tuple(projections)
 
 
 __all__: t.StrSequence = ("FlextInfraCodemodSnapshotReconciler",)
