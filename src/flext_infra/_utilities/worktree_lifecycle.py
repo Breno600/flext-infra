@@ -77,7 +77,7 @@ class FlextInfraWorktreeLifecycle:
             return r[str].from_failure(resolved_base)
         base_oid = resolved_base.value.oid
         contains_base = u.Infra.git_is_ancestor(
-            m.Infra.GitCommitishRequest(repo_root=lane, commitish=base_oid)
+            m.Infra.GitAncestryRequest(repo_root=lane, ancestor=base_oid)
         )
         if contains_base.failure:
             return r[str].from_failure(contains_base)

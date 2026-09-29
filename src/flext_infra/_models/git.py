@@ -128,15 +128,20 @@ class FlextInfraModelsGit(
         commitish: Annotated[t.NonEmptyStr, m.Field(description="Commit-ish")]
 
     class GitAncestryRequest(m.ContractModel):
-        """Repository plus the two commit-ishes an ancestry proof relates."""
+        """Repository plus the ancestor and descendant an ancestry proof relates.
+
+        ``descendant`` defaults to ``HEAD``, so the HEAD-bound proof every
+        existing consumer relied on is the same single owner generalized to an
+        arbitrary pair; there is no separate pair verb.
+        """
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         ancestor: Annotated[t.NonEmptyStr, m.Field(description="Candidate ancestor")]
         descendant: Annotated[
-            t.NonEmptyStr, m.Field(description="Candidate descendant")
-        ]
+            t.NonEmptyStr, m.Field(default="HEAD", description="Candidate descendant")
+        ] = "HEAD"
 
     class GitPathPairRequest(m.ContractModel):
         """Repository plus source/target relative paths."""

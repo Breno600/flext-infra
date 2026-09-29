@@ -177,31 +177,13 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
 
     @classmethod
     def git_is_ancestor(
-        cls, request: m.Infra.GitCommitishRequest
-    ) -> p.Result[m.Infra.GitBoolReport]:
-        """Return whether ``commitish`` is an ancestor of HEAD."""
-        try:
-            repo = cls._repo(request.repo_root)
-            ancestor = repo.commit(request.commitish)
-            head = repo.commit(c.Infra.GIT_HEAD)
-            result = repo.is_ancestor(ancestor, head)
-        except GitCommandError as exc:
-            return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
-        except (OSError, ValueError) as exc:
-            return r[m.Infra.GitBoolReport].fail(
-                f"failed to inspect ancestry: {exc}", exception=exc
-            )
-        return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=result))
-
-    @classmethod
-    def git_is_ancestor_of(
         cls, request: m.Infra.GitAncestryRequest
     ) -> p.Result[m.Infra.GitBoolReport]:
         """Return whether ``ancestor`` is an ancestor of ``descendant``.
 
-        The HEAD-bound ``git_is_ancestor`` cannot prove integration of a lane
-        head against a remote integration ref; this pair form can, and it is
-        the single owner every consumer uses for that proof.
+        One owner proves ancestry for any pair. ``descendant`` defaults to
+        ``HEAD``, so the HEAD-bound proof existing consumers relied on is a
+        use of this verb, not a separate one.
         """
         try:
             repo = cls._repo(request.repo_root)

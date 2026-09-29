@@ -323,8 +323,10 @@ class TestsFlextInfraGitFacet:
         tm.fail(result, has="locked worktree")
         assert lane.is_dir()
 
-    def test_is_ancestor_of_proves_both_directions(self, tmp_path: Path) -> None:
-        """Pair ancestry owns the integration proof the HEAD form cannot give."""
+    def test_is_ancestor_proves_any_pair_and_defaults_to_head(
+        self, tmp_path: Path
+    ) -> None:
+        """One owner proves ancestry for a pair and for the HEAD-bound case."""
         repository = test_u.Tests.git_repository(tmp_path)
         base = tm.ok(
             u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=repository))
@@ -346,32 +348,37 @@ class TestsFlextInfraGitFacet:
         ).oid
 
         ancestor = tm.ok(
-            u.Infra.git_is_ancestor_of(
+            u.Infra.git_is_ancestor(
                 m.Infra.GitAncestryRequest(
                     repo_root=repository, ancestor=base, descendant=topic
                 )
             )
         )
         reverse = tm.ok(
-            u.Infra.git_is_ancestor_of(
+            u.Infra.git_is_ancestor(
                 m.Infra.GitAncestryRequest(
                     repo_root=repository, ancestor=topic, descendant=base
                 )
             )
         )
+        defaulted = tm.ok(
+            u.Infra.git_is_ancestor(
+                m.Infra.GitAncestryRequest(repo_root=repository, ancestor=base)
+            )
+        )
 
         tm.that(ancestor.value, eq=True)
         tm.that(reverse.value, eq=False)
+        tm.that(defaulted.value, eq=True)
 
-    def test_is_ancestor_of_fails_on_unknown_commitish(self, tmp_path: Path) -> None:
+    def test_is_ancestor_fails_on_unknown_commitish(self, tmp_path: Path) -> None:
         """An unresolvable side is a failure, never a silent negative."""
         repository = test_u.Tests.git_repository(tmp_path)
 
-        result = u.Infra.git_is_ancestor_of(
+        result = u.Infra.git_is_ancestor(
             m.Infra.GitAncestryRequest(
                 repo_root=repository,
                 ancestor="deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
-                descendant="HEAD",
             )
         )
 
