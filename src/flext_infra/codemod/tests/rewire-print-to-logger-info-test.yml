@@ -19,6 +19,11 @@ valid:
     logger = u.fetch_logger(__name__)
     print("message", flush=True)
   - |
+    from flext_infra import u
+
+    logger = u.fetch_logger(__name__)
+    print(*messages)
+  - |
     """Docstring naming print("x") and u.Cli.print("x") as prose."""
 
     from flext_infra import u

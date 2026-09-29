@@ -22,6 +22,7 @@ from tests.utilities_fixture_workspace import (
 )
 from tests.utilities_gates import TestsFlextInfraUtilitiesGatesMixin
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
+from tests.utilities_hermetic_git import TestsFlextInfraUtilitiesHermeticGitMixin
 from tests.utilities_promoted import TestsFlextInfraUtilitiesPromotedMixin
 from tests.utilities_release import TestsFlextInfraUtilitiesReleaseMixin
 from tests.utilities_toml import TestsFlextInfraUtilitiesTomlMixin
@@ -40,6 +41,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         TestsFlextInfraUtilitiesPromotedMixin,
         TestsFlextInfraUtilitiesReleaseMixin,
         TestsFlextInfraUtilitiesGitMixin,
+        TestsFlextInfraUtilitiesHermeticGitMixin,
         TestsFlextInfraUtilitiesGatesMixin,
         TestsFlextInfraUtilitiesCodegenMixin,
         TestsFlextInfraUtilitiesDepsMixin,

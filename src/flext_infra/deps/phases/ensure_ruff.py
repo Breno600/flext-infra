@@ -17,18 +17,10 @@ class FlextInfraEnsureRuffConfigPhase:
         self,
         tool_config: m.Infra.ToolConfigDocument,
         managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
-        generated_roots: t.StrSequence = (),
     ) -> None:
-        """Store tool configuration used to build canonical Ruff settings.
-
-        ``generated_roots`` carries the roots the active codegen plan is
-        about to materialize: the existence filter must accept them exactly
-        like the search-path owner does, or a first render that runs before
-        the plan writes the tree would drop roots the projection must keep.
-        """
+        """Store tool configuration used to build canonical Ruff settings."""
         self._tool_config = tool_config
         self._managed_artifacts = managed_artifacts
-        self._generated_roots = frozenset(generated_roots)
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
@@ -70,32 +62,6 @@ class FlextInfraEnsureRuffConfigPhase:
         return sorted(path.as_posix() for path in paths.value)
 
     @staticmethod
-    def _excluded_root_set(project_dir: Path) -> t.Infra.StrSet:
-        """First segments of the workspace SSOT's declared analysis exclusions.
-
-        Unlike a disk probe (which oscillates between the deps pass and the
-        root-materializing gen pass), the workspace SSOT is order-independent:
-        a repository declares a retired tree here once and every root-scoped
-        projection converges.
-        """
-        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return frozenset()
-        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            return frozenset()
-        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
-
-    @staticmethod
-    def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
-        """Return the workspace-declared analysis exclusion paths (SSOT-driven)."""
-        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return ()
-        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            return ()
-        return tuple(path.as_posix() for path in paths.value)
-
-    @staticmethod
     def compose_per_file_ignores(
         project_dir: Path,
         *,
@@ -134,7 +100,7 @@ class FlextInfraEnsureRuffConfigPhase:
         # on every conformance pass. Declared exclusions are order-independent
         # — a disk probe oscillated between the deps pass and the
         # root-materializing gen pass.
-        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(project_dir)
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
         scoped_global = {
             pattern: rules
             for pattern, rules in effective_global.items()
@@ -259,6 +225,20 @@ class FlextInfraEnsureRuffConfigPhase:
                         toml.SetOp(
                             key=c.Infra.IGNORE,
                             value=u.normalize_to_json_value(effective_ignore),
+                        ),
+                        # make fix never deletes information: the fix-safety
+                        # policy comes from the same SSOT the template renders.
+                        toml.SetOp(
+                            key="unfixable",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.unfixable)
+                            ),
+                        ),
+                        toml.SetOp(
+                            key="extend-safe-fixes",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.extend_safe_fixes)
+                            ),
                         ),
                     ),
                 ),

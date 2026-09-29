@@ -35,9 +35,14 @@ class TestsFlextInfraPytestRunner:
         )
         expressions = []
         for command in (
-            runner.build_selection_command(report_log=report / "selection.jsonl"),
             runner.build_selection_command(
-                report_log=report / "inventory.jsonl", complete=True
+                report_log=report / "selection.jsonl",
+                manifest_path=report / "selection.json",
+            ),
+            runner.build_selection_command(
+                report_log=report / "inventory.jsonl",
+                manifest_path=report / "inventory.json",
+                complete=True,
             ),
             runner.build_command(report),
             runner.build_coverage_command(report),
@@ -62,9 +67,14 @@ class TestsFlextInfraPytestRunner:
         suite_command = runner.build_command(report)
         names = []
         for command in (
-            runner.build_selection_command(report_log=report / "selection.jsonl"),
             runner.build_selection_command(
-                report_log=report / "inventory.jsonl", complete=True
+                report_log=report / "selection.jsonl",
+                manifest_path=report / "selection.json",
+            ),
+            runner.build_selection_command(
+                report_log=report / "inventory.jsonl",
+                manifest_path=report / "inventory.json",
+                complete=True,
             ),
             suite_command,
         ):
@@ -183,8 +193,10 @@ class TestsFlextInfraPytestRunner:
         command = tm.ok(
             u.Cli.files_read_text(reports_root / latest_name / "command.txt")
         )
-        for node_id in (line for line in selection.splitlines() if line):
-            tm.that(command, has=node_id)
+        # A complete selection runs the whole target; the collection plugin
+        # enforces exactly the selected node ids in the recorded order.
+        tm.that(selection.splitlines(), has="tests/test_runtime.py::test_runtime")
+        tm.that(command, has=c.Infra.PYTEST_SELECTED_COLLECTION_OPTION)
         tm.that(command, has="--no-cov")
         tm.that(command, has="--testmon --testmon-noselect")
         tm.that((reports_root / latest_name / "coverage.xml").is_file(), eq=False)
@@ -198,6 +210,21 @@ class TestsFlextInfraPytestRunner:
         )
         tm.that(seeded.seed_needed, eq=True)
         tm.that(seeded.saveable, eq=True)
+
+    def _seed_cache(self, cached_runner_project: Path) -> Path:
+        """Seed the persistent cache through one public cold run."""
+        tm.that(tm.ok(self._runner_for(cached_runner_project).execute()), eq=0)
+        return (
+            cached_runner_project
+            / config.Infra.codegen.make.testmon_cache.reports_directory
+        )
+
+    @pytest.mark.slow
+    def test_warm_cache_deselects_the_unchanged_suite(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A second run restores the seeded cache and executes nothing."""
+        reports_root = self._seed_cache(cached_runner_project)
 
         second_exit = tm.ok(self._runner_for(cached_runner_project).execute())
         tm.that(second_exit, eq=0)
@@ -214,6 +241,12 @@ class TestsFlextInfraPytestRunner:
             tm.that(warm_state.restored_accepted, eq=True)
             tm.that(warm_state.seed_needed, eq=False)
 
+    @pytest.mark.slow
+    def test_seeded_cache_executes_only_an_added_test(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A test added after the seed is the only one the next run executes."""
+        reports_root = self._seed_cache(cached_runner_project)
         (cached_runner_project / "tests" / "test_added.py").write_text(
             "def test_added_after_cache_seed():\n    assert True\n", encoding="utf-8"
         )
@@ -311,7 +344,12 @@ class TestsFlextInfraPytestRunner:
         tm.that(outcome.raw_return_code, eq=exit_code)
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
-        tm.that(self._summary(reports_root), has=["failed=1", "exit=1"])
+        # The declared max-failures stop interrupts the xdist session, which
+        # pytest reports as INTERRUPTED; the summary carries that raw code.
+        tm.that(
+            self._summary(reports_root),
+            has=["failed=1", f"exit={pytest.ExitCode.INTERRUPTED.value}"],
+        )
         events = tm.ok(u.Cli.files_read_text(report_path.parent / "events.jsonl"))
         tm.that(events, has="first failure evidence", lacks="second failure evidence")
 
@@ -566,6 +604,7 @@ class TestsFlextInfraPytestRunner:
         for command in (
             runner.build_selection_command(
                 report_log=full / "testmon-inventory.events.jsonl",
+                manifest_path=full / "testmon-inventory.json",
                 complete=True,
                 execution_mode=c.Infra.PytestExecutionMode.FULL,
             ),
@@ -599,6 +638,7 @@ class TestsFlextInfraPytestRunner:
         tm.that("--testmon" in command, eq=False)
         inventory_command = runner.build_selection_command(
             report_log=reports_root / latest_name / "testmon-inventory.events.jsonl",
+            manifest_path=reports_root / latest_name / "testmon-inventory.json",
             complete=True,
             execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
         )
@@ -641,8 +681,13 @@ class TestsFlextInfraPytestRunner:
         tm.that(accounting.executed_count > 0, eq=True)
         tm.that(accounting.inventory_count, none=True)
         tm.that((report_dir / "coverage.xml").exists(), eq=False)
+        # failed-tests.txt names each failed case; errors.txt keeps its trace.
         tm.that(
             tm.ok(u.Cli.files_read_text(report_dir / "failed-tests.txt")),
+            has="test_coverage_failure",
+        )
+        tm.that(
+            tm.ok(u.Cli.files_read_text(report_dir / "errors.txt")),
             has="original coverage suite failure",
         )
         tm.that(
@@ -897,17 +942,19 @@ class TestsFlextInfraPytestRunner:
         tm.that(identity.enforcement_strict, eq=strict)
         tm.that(identity.category_module, eq="runner_sample.notices")
         if not blocking:
+            # A cold cache has no stored selection to verify, so the serial
+            # selection pass is the only collection phase of this run.
             summary = self._summary(cached_runner_project / runner.reports).splitlines()
             for count in (
-                "warnings=2",
-                "suspended_warnings=2",
+                "warnings=1",
+                "suspended_warnings=1",
                 "selection_warnings=1",
-                "inventory_warnings=1",
                 "suite_warnings=0",
             ):
                 tm.that(count in summary, eq=True)
+            tm.that(any(line.startswith("inventory_") for line in summary), eq=False)
             evidence = (receipt.parent / "warnings.txt").read_text()
-            tm.that(evidence.count("serial policy evidence"), eq=2)
+            tm.that(evidence.count("serial policy evidence"), eq=1)
 
     @pytest.mark.slow
     def test_warm_inventory_captures_warnings_from_stable_modules(
@@ -917,9 +964,8 @@ class TestsFlextInfraPytestRunner:
         runner = self._runner_for(cached_runner_project)
         target = cached_runner_project / runner.target
         (target / "test_stable.py").write_text(
-            "import os\nfrom pathlib import Path\nimport warnings\n\n"
-            f"if os.environ.get({c.Infra.PYTEST_ENV_COLLECTION_MANIFEST!r}) and "
-            "Path(__file__).with_name('emit-warning').exists():\n"
+            "from pathlib import Path\nimport warnings\n\n"
+            "if Path(__file__).with_name('emit-warning').exists():\n"
             "    warnings.warn('stable inventory finding', RuntimeWarning)\n\n"
             "def test_stable():\n    assert 17 == 17\n",
             encoding="utf-8",
@@ -955,8 +1001,15 @@ class TestsFlextInfraPytestRunner:
             encoding="utf-8",
         )
 
-        tm.that(tm.ok(runner.execute_full()), eq=1)
+        exit_code = tm.ok(runner.execute_full())
 
+        # Items run in randomized order: a failure that leaves items behind
+        # stops xdist through max-failures (INTERRUPTED); a last-item failure
+        # completes the suite (TESTS_FAILED). Both are the incremental red.
+        tm.that(
+            (pytest.ExitCode.TESTS_FAILED.value, pytest.ExitCode.INTERRUPTED.value),
+            has=exit_code,
+        )
         (context_path,) = (cached_runner_project / runner.reports).glob(
             "*/run-context.json"
         )
@@ -965,7 +1018,7 @@ class TestsFlextInfraPytestRunner:
         outcome = m.Cli.ProcessOutcome.model_validate_json(
             (context_path.parent / "suite-outcome.json").read_text()
         )
-        tm.that(outcome.raw_return_code, eq=1)
+        tm.that(outcome.raw_return_code, eq=exit_code)
 
     def test_full_preserves_corrupt_database_failure_before_execution(
         self, cached_runner_project: Path
@@ -985,10 +1038,11 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path
     ) -> None:
         (cached_runner_project / "conftest.py").write_text(
-            "import os\nfrom pathlib import Path\nfrom flext_infra import m\n\n"
+            "from pathlib import Path\nfrom flext_infra import m\n\n"
             "def pytest_collection_modifyitems(config, items):\n"
             "    if config.getoption('collectonly'):\n"
-            f"        target = Path(os.environ[{c.Infra.PYTEST_ENV_COLLECTION_MANIFEST!r}])\n"
+            "        target = Path(config.getoption(\n"
+            f"            {c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION!r}))\n"
             "        context = m.Infra.PytestRunContext.model_validate_json(\n"
             "            (target.parent / 'run-context.json').read_text())\n"
             "        if context.execution_mode == 'full':\n            items.clear()\n",
@@ -1029,9 +1083,10 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path
     ) -> None:
         (cached_runner_project / "conftest.py").write_text(
-            "import os\nfrom pathlib import Path\n\n"
+            "from pathlib import Path\n\n"
             "def pytest_sessionfinish(session):\n"
-            f"    target = os.environ.get({c.Infra.PYTEST_ENV_COLLECTION_MANIFEST!r})\n"
+            "    target = session.config.getoption(\n"
+            f"        {c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION!r})\n"
             "    if target:\n        Path(target).unlink()\n",
             encoding="utf-8",
         )

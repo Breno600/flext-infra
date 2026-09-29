@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraPyprojectModernizer, FlextInfraToolTablesPhase, config
-from tests import m, t, u
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from tests import c, m, t, u
 
 
 class TestsFlextInfraDepsModernizerToolTables:
@@ -248,6 +245,7 @@ class TestsFlextInfraDepsModernizerToolTables:
         self, tmp_path: Path
     ) -> None:
         """Roots and members converge once and never project a coverage floor."""
+        u.Tests.seed_locked_taplo(tmp_path)
         modernizer = FlextInfraPyprojectModernizer(
             repository_root=tmp_path, skip_check=True
         )
@@ -295,29 +293,26 @@ class TestsFlextInfraDepsModernizerToolTables:
 
     @staticmethod
     def _workspace_with_exclusion(tmp_path: Path, excluded: str) -> Path:
-        """Build a governed workspace root whose SSOT excludes one tree."""
+        """Build a governed workspace root whose manifest excludes one tree.
+
+        The canonical standalone fixture provides the repository identity and
+        its manifest declares the one retired tree.
+        """
         project_dir = tmp_path / "flext-sample"
-        (project_dir / "src").mkdir(parents=True)
-        config_dir = project_dir / "config"
-        config_dir.mkdir()
-        (config_dir / "workspace.yaml").write_text(
-            "version: 3\n"
-            'name: "sample-workspace"\n'
-            "repository:\n"
-            '  name: "sample"\n'
-            '  distribution: "flext-sample"\n'
-            '  provider: "sample"\n'
-            '  url: "https://example.com/sample.git"\n'
-            '  path: "."\n'
-            '  role: "standalone"\n'
-            '  state: "active"\n'
-            '  checkout: "root"\n'
-            '  codegen: "conform"\n'
-            "  package: true\n"
-            "  editable: false\n"
-            "  read_only: false\n"
-            f"exclusions:\n  - path: {excluded}\n    reason: retired\n",
-            encoding="utf-8",
+        workspace = u.Tests.standalone_workspace(project_dir, project_dir.name)
+        manifest = m.Infra.WorkspaceManifestSpec(
+            version=c.Infra.WORKSPACE_MANIFEST_VERSION,
+            name=workspace.repository.name,
+            repository=workspace.repository,
+            exclusions=(
+                m.Infra.WorkspaceExclusionSpec(path=Path(excluded), reason="retired"),
+            ),
+        )
+        tm.ok(
+            u.Cli.yaml_dump(
+                u.Infra.workspace_manifest_path(project_dir),
+                manifest.model_dump(mode="json"),
+            )
         )
         return project_dir
 
@@ -336,13 +331,8 @@ class TestsFlextInfraDepsModernizerToolTables:
         FlextInfraToolTablesPhase(config.Infra.tooling).apply_payload(
             payload, path=project_dir / "pyproject.toml"
         )
-        table = self._table(payload, "vulture")
-        paths_value = table["paths"]
-        paths: list[t.JsonValue] = (
-            list(paths_value) if isinstance(paths_value, list) else []
-        )
-        tm.that("scripts" not in paths, eq=True)
-        tm.that("src" in paths, eq=True)
+        paths = u.Tests.toml_strings(self._table(payload, "vulture")["paths"])
+        tm.that(paths, lacks="scripts", has="src")
 
     def test_ruff_root_lists_filter_excluded_roots(self, tmp_path: Path) -> None:
         """Ruff root projections drop workspace-excluded trees.
@@ -361,22 +351,9 @@ class TestsFlextInfraDepsModernizerToolTables:
             payload, path=project_dir / "pyproject.toml"
         )
         table = self._table(payload, "ruff")
-        src_value = table["src"]
-        src: list[t.JsonValue] = list(src_value) if isinstance(src_value, list) else []
-        tm.that("scripts" not in src, eq=True)
-        # An empty filtered namespace-packages list is omitted entirely (the
-        # ListOp drops no-op writes) rather than rendered as [].
-        if "namespace-packages" in table:
-            ns_value = table["namespace-packages"]
-            ns: list[t.JsonValue] = list(ns_value) if isinstance(ns_value, list) else []
-            tm.that("scripts" not in ns, eq=True)
-        tm.that("src" in src, eq=True)
-        lint_value = table["lint"]
-        lint: dict[str, t.JsonValue] = (
-            dict(lint_value) if isinstance(lint_value, dict) else {}
-        )
-        per_file_value = lint.get("per-file-ignores")
-        per_file: dict[str, t.JsonValue] = (
-            dict(per_file_value) if isinstance(per_file_value, dict) else {}
-        )
+        src_roots = u.Tests.toml_strings(table["src"])
+        namespace_packages = u.Tests.toml_strings(table.get("namespace-packages", []))
+        tm.that(src_roots, lacks="scripts", has="src")
+        tm.that(namespace_packages, lacks="scripts")
+        per_file = self._table(payload, "ruff", "lint", "per-file-ignores")
         tm.that(not any(p.startswith("scripts/") for p in per_file), eq=True)

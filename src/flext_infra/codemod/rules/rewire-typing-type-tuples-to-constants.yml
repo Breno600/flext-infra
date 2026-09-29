@@ -1,0 +1,18 @@
+id: rewire-typing-type-tuples-to-constants
+language: Python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  pattern: t.$NAME
+constraints:
+  NAME:
+    # Rewire only the names FlextConstantsGuards (flext-core
+    # _constants/guards.py) actually declares today: a name without a c.*
+    # owner leaves consumers with missing-attribute errors after the fix.
+    # Grow this set in the same change that declares the constant upstream.
+    regex: "^(?:PRIMITIVES_TYPES)$"
+fix: c.$NAME
+message: >-
+  The isinstance type tuples are runtime constants owned by FlextConstantsGuards
+  (ENFORCE-079); read them as c.<NAME>, never through the typings facade.

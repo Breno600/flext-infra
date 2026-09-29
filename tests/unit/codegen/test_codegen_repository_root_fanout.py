@@ -156,7 +156,9 @@ class TestsFlextInfraCodegenRepositoryRootFanout:
         tm.that(sum("lock --project" in step for step in steps), eq=1)
         converge = second.stdout.splitlines()
         final_lock = next(i for i, s in enumerate(converge) if "lock --project" in s)
-        lock_check = next(i for i, s in enumerate(converge) if "--check" in s)
+        # The staged lock step verifies its own mirror; the final check is the
+        # separate step that validates the published uv.lock after it.
+        lock_check = max(i for i, s in enumerate(converge) if "lock --check" in s)
         tm.that(final_lock < lock_check, eq=True)
         tm.that(second.stdout + second.stderr, has="_upg_activated")
         variables = {

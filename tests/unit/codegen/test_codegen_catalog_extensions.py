@@ -234,9 +234,10 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(makefile, lacks="mise_install_path=")
         tm.that(makefile, has='pinned_mise="$$mise"')
         tm.that(makefile, has="mise_receipt runtime-version")
-        tm.that(
-            tuple(type(config.Infra.codegen.toolchain).model_fields), has="mise_version"
+        mise_toml = u.Tests.scaffold_text(
+            tmp_path / "fixture-project", c.Infra.MISE_TOML_FILENAME
         )
+        tm.that(mise_toml, lacks="jdx/mise")
 
     def test_setup_provisions_only_and_gen_owns_conformance(
         self, tmp_path: Path

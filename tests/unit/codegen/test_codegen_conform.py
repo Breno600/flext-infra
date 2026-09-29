@@ -337,7 +337,11 @@ class TestsFlextInfraCodegenConform:
             root, Path("scripts/hatch_build.py")
         )
         root.mkdir(parents=True, exist_ok=True)
-        (root / c.PYPROJECT_FILENAME).write_bytes(tm.not_none(first.desired_content))
+        # Publish exactly what the plan declares: bytes and permission bits, so
+        # the fixed point never depends on the process umask.
+        published = root / c.PYPROJECT_FILENAME
+        published.write_bytes(tm.not_none(first.desired_content))
+        published.chmod(tm.not_none(first.desired_mode))
 
         second_plan = tm.ok(service.plan(request))
         second = next(
@@ -427,11 +431,12 @@ class TestsFlextInfraCodegenConform:
         """A config-declared collision is rejected, never silently dropped."""
         canonical = config.Infra.codegen.make.verbs[0].name
 
-        applied = self._conform_with_rendered_makefile(
-            infra_git_repo, canonical, verb=canonical
-        )
-
-        tm.fail(applied, has="must never shadow canonical make.verbs builtins")
+        with pytest.raises(
+            ValueError, match=r"must never shadow canonical make\.verbs builtins"
+        ):
+            self._conform_with_rendered_makefile(
+                infra_git_repo, canonical, verb=canonical
+            )
 
     @pytest.mark.slow
     def test_apply_recovers_declared_managed_pyproject_conflict(
@@ -486,6 +491,8 @@ class TestsFlextInfraCodegenConform:
         # a scaffold that must come out complete declares that kind; the two
         # rows prove the result does not depend on the distribution name.
         root = tmp_path / name
+        # The governed tree above the scaffold carries the committed Taplo pin.
+        u.Tests.seed_locked_taplo(tmp_path)
         service = FlextInfraCodegenProjectNew(
             flext_source=u.Tests.flext_source(),
             name=name,
@@ -544,7 +551,10 @@ class TestsFlextInfraCodegenConform:
             has=f"MAKE_PROFILE := {c.Infra.MakeProfile.STANDALONE.value}",
         )
         tm.that(first_result.plan.request.root, eq=root.resolve())
-        tm.that((root / "config" / "workspace.yaml").exists(), eq=False)
+        # A new project serializes its own identity once from the typed
+        # manifest contract; later conform runs read it as input.
+        (manifest,) = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(root))
+        tm.that(manifest.name, eq=name)
         tm.that((root / "config" / "beads.yaml").is_file(), eq=True)
         tm.that((root / "pyproject.toml").is_file(), eq=True)
         tm.that((root / ".env.example").is_file(), eq=True)
@@ -590,16 +600,19 @@ class TestsFlextInfraCodegenConform:
         self, infra_git_repo: Path
     ) -> None:
         existing_root = infra_git_repo
+        # The scaffolded manifest is reconciled against Git on every later
+        # read, so it declares the identity the fixture clone actually has.
+        repository = u.Tests.repository_ref(config.Infra.name)
         created = FlextInfraCodegenProjectNew(
             flext_source=u.Tests.flext_source(),
-            name="flext-demo",
+            name=repository.name,
             kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
             output_root=existing_root,
-            repository_url="https://github.com/flext-sh/flext-demo.git",
-            repository_branch="0.12.0-dev",
-            flext_repository_url=u.Tests.repository_ref(config.Infra.name).url,
+            repository_url=repository.url,
+            repository_branch=u.Tests.provider_branch(),
+            flext_repository_url=repository.url,
             flext_repository_ref=u.Tests.provider_branch(),
-            provider="flext-sh",
+            provider=repository.provider,
             license="MIT",
             author_name="FLEXT Team",
             author_email="team@flext.dev",
@@ -852,6 +865,8 @@ class TestsFlextInfraCodegenConform:
             subprojects=(member,),
         )
         root = tmp_path / "flext"
+        # The governed tree above the workspace carries the committed Taplo pin.
+        u.Tests.seed_locked_taplo(tmp_path)
         request = u.Tests.conform_request(
             root,
             scope=c.Infra.CodegenConformScope.SELF,
@@ -890,6 +905,7 @@ class TestsFlextInfraCodegenConform:
             repository, project=u.Tests.project_spec("arbitrary-root")
         )
         root = tmp_path / "arbitrary-root"
+        u.Tests.seed_locked_taplo(tmp_path)
         request = u.Tests.conform_request(
             root,
             scope=c.Infra.CodegenConformScope.SELF,
@@ -927,12 +943,16 @@ class TestsFlextInfraCodegenConform:
     def test_project_root_inherits_declared_upstream_facets(
         self, tmp_path: Path
     ) -> None:
-        repository = u.Tests.repository_ref("consumer")
+        # A lone consumer tree composes no members, so Git derives standalone.
+        repository = u.Tests.repository_ref(
+            "consumer", role=c.Infra.MakeProfile.STANDALONE
+        )
         project = u.Tests.project_spec("consumer").model_copy(
             update={"upstream": "flext_cli"}
         )
         workspace = u.Tests.workspace_spec(repository, project=project)
         root = tmp_path / "consumer"
+        u.Tests.seed_locked_taplo(tmp_path)
         tm.ok(
             FlextInfraCodegenConform.execute_request(
                 u.Tests.conform_request(

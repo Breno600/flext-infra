@@ -26,7 +26,6 @@ from flext_infra.transformers.import_modernizer import (
 )
 from flext_infra.transformers.mro_remover import FlextInfraRefactorMroRemover
 from flext_infra.transformers.open_encoding import FlextInfraRefactorOpenEncoding
-from flext_infra.transformers.pattern import FlextInfraRefactorPatternTransformer
 from flext_infra.transformers.typing_unifier import FlextInfraRefactorTypingUnifier
 
 from .base import FlextInfraFixerAdapter
@@ -51,6 +50,9 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         super().__init__(repository_root)
 
     # Canonical transformer registry. New deterministic transformers register here.
+    # A whole-file regex is never a transformer: it cannot tell code from a
+    # docstring, comment or string. The retired regex fixes (ENFORCE-026, 027,
+    # 028, 091, 092, 094) are ast-grep rules applied by ``make mod``.
     _TRANSFORMERS: ClassVar[
         t.MutableMappingKV[str, type[FlextInfraRopeTransformer]]
     ] = {
@@ -60,7 +62,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         "import_modernizer": FlextInfraRefactorImportModernizer,
         "mro_remover": FlextInfraRefactorMroRemover,
         "open_encoding": FlextInfraRefactorOpenEncoding,
-        "pattern": FlextInfraRefactorPatternTransformer,
         "project_alias_migrator": FlextInfraRefactorProjectAliasMigrator,
         "rewrite_foreign_canonical_alias": FlextInfraRefactorProjectAliasMigrator,
         "typing_unifier": FlextInfraRefactorTypingUnifier,
@@ -426,17 +427,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
                 symbols_to_replace=symbols_to_replace,
                 runtime_aliases=runtime_aliases,
                 blocked_aliases=blocked_aliases,
-            )
-        if transformer_cls is FlextInfraRefactorPatternTransformer:
-            required_alias = params.get("required_alias", "")
-            alias_module = params.get("alias_module", "")
-            return FlextInfraRefactorPatternTransformer(
-                patterns=u.Cli.json_as_mapping_list(params.get("patterns")),
-                required_alias=required_alias
-                if isinstance(required_alias, str)
-                else "",
-                alias_module=alias_module if isinstance(alias_module, str) else "",
-                file_path=file_path,
             )
         # Remaining enforcement transformers require no runtime params.
         return transformer_cls()

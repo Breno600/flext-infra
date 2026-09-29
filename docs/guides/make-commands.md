@@ -57,6 +57,19 @@ phase, fix, or changed-only selector may be attached to a standard verb.
 `docs`, `audit`, `status`, `waza`, `duplication`, and the release verbs retain their own
 single operation and are invoked only when their scope applies.
 
+## Codemod rule fixtures
+
+Every ast-grep rule has a test (`<rule-id>-test.yml` with `valid` and `invalid` cases)
+and, for each invalid case, a committed snapshot of what the rule reports and rewrites.
+`make mod` verifies them with `ast-grep test` and never rewrites a snapshot: a changed
+fix output, a missing snapshot, or a snapshot of a removed rule or deleted test case
+fails the verb instead of being accepted as the new expectation.
+
+`make mod-snapshots` is the one explicit regeneration. It rebuilds the snapshots of the
+rules this repository owns from their tests, prints every created, updated or removed
+snapshot, and leaves the diff for review in the same commit as the rule change.
+Inherited rule providers keep the snapshots their owner ships.
+
 ## Verb single-pass contract
 
 Each mutating verb owns exactly one operation per tool, and `make check` is strictly
@@ -70,11 +83,35 @@ read-only — no verb repeats another verb's work across the canonical sequence
 | `markdown` — rumdl                | `rumdl check`                      | —                       | `rumdl fmt`                                |
 | `markdown-format` — prettier      | `prettier --check`                 | `prettier --write`      | —                                          |
 | `markdown-code` — ruff (embedded) | format verdict on parseable blocks | —                       | one format pass, clean round-trips spliced |
-| `canonical-alias`, `smells`       | read-only scan                     | —                       | declared repair                            |
+| `canonical-alias`                 | read-only scan                     | —                       | declared import rewrite                    |
+| `smells` — qlty                   | read-only scan                     | —                       | —                                          |
 
 `make fmt` never runs a lint pass and `make fix` never formats: each operation runs once
 per verb, residue found by a mutation is reported there and enforced only by
 `make check`, and `make fix`/`make fmt` repeated on a green tree are no-ops.
+
+## Information-preserving repair
+
+`make fix` repairs code; it never deletes information. The lint repair runs
+`ruff check --fix` with the `make.ruff.lint_fix` flags of `config/codegen.yaml`, which
+apply Ruff's safe fixes only: the typed Make contract rejects `--unsafe-fixes`. Ruff's
+unsafe T201 fix once deleted `print(..., file=sys.stderr)` from a consumer script and
+turned its failures silent.
+
+The fix-safety policy lives in `config/tooling.yaml` (`Infra.tooling.tools.ruff.lint`)
+and `make gen` renders it into every generated `pyproject.toml`:
+
+- `unfixable` names the rules whose fixes delete a diagnostic print, an assignment, a
+  redefinition, a duplicated key, value or test case, or a version block. Ruff keeps
+  reporting them and never rewrites them, including a direct or IDE Ruff run.
+- `extend-safe-fixes` is the only channel that promotes an unsafe fix into `make fix`. A
+  rule enters it with evidence that its fix preserves code, comments and diagnostics.
+
+`make mod` rewires `print` diagnostics instead of deleting them. In `src/`, `tests/` and
+`scripts/`, a module that binds the `flext_cli` facade has `print(x)`,
+`print(x, file=sys.stderr)`, `print(x, file=sys.stdout)` and a literal `flush` rewritten
+to `cli.display_text(x)` by the codemod rule `rewire-print-to-cli-display-text`. Every
+other form stays a reported T201 finding for its author.
 
 ## Markdown quality pipeline
 

@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 class FlextInfraConstantsCodegenLazy:
     """Lazy-init and export-policy constants for codegen."""
 
-    MAX_LINE_LENGTH: ClassVar[int] = 88
-    "Maximum line length for generated import lines."
     MAX_ALIAS_LENGTH: ClassVar[int] = 2
     "Maximum length of a public facade alias."
     AUTOGEN_HEADER: ClassVar[str] = "# AUTO-GENERATED FILE — Regenerate with: make gen"
