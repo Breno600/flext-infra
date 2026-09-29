@@ -292,3 +292,50 @@ class TestsFlextInfraDepsModernizerToolTables:
                 u.Tests.toml_table_at(rendered, "tool", "coverage", "report"),
                 lacks="fail_under",
             )
+
+    def test_vulture_paths_filter_retired_roots(self, tmp_path: Path) -> None:
+        """A retired production root leaves the dead-code scan scope.
+
+        The config list stays the SSOT; the projection keeps only roots that
+        exist under the project (invest repro: scripts/ removed while the
+        dead-code scope kept scanning the dead path — bead flext-x44z3).
+        """
+        project_dir = tmp_path / "flext-sample"
+        (project_dir / "src").mkdir(parents=True)
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
+        )
+        FlextInfraToolTablesPhase(config.Infra.tooling).apply_payload(
+            payload, path=project_dir / "pyproject.toml"
+        )
+        table = self._table(payload, "vulture")
+        tm.that("scripts" not in table["paths"], eq=True)
+        tm.that("src" in table["paths"], eq=True)
+
+    def test_ruff_root_lists_filter_retired_roots(self, tmp_path: Path) -> None:
+        """Ruff src/namespace-packages projections keep only existing roots.
+
+        ruff fails hard on a src entry whose directory is absent, and the
+        namespace-packages contract only holds for roots on disk (bead
+        flext-x44z3).
+        """
+        from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+
+        project_dir = tmp_path / "flext-sample"
+        (project_dir / "src").mkdir(parents=True)
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
+        )
+        FlextInfraEnsureRuffConfigPhase(config.Infra.tooling).apply_payload(
+            payload,
+            path=project_dir / "pyproject.toml",
+        )
+        table = self._table(payload, "ruff")
+        tm.that("scripts" not in table["src"], eq=True)
+        # An empty filtered namespace-packages list is omitted entirely (the
+        # ListOp drops no-op writes) rather than rendered as [].
+        if "namespace-packages" in table:
+            tm.that("scripts" not in table["namespace-packages"], eq=True)
+        tm.that("src" in table["src"], eq=True)
+        per_file = u.Tests.toml_mapping(table["lint"]["per-file-ignores"])
+        tm.that(not any(p.startswith("scripts/") for p in per_file), eq=True)

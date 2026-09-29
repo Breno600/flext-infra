@@ -245,7 +245,9 @@ class FlextInfraPyprojectModernizerDocument:
                 paths_manager=paths_manager,
             ),
             *FlextInfraEnsureRuffConfigPhase(
-                tooling, self.managed_artifacts
+                tooling,
+                self.managed_artifacts,
+                generated_roots=topology.declared_python_dirs,
             ).apply_payload(payload, path=path),
             *FlextInfraEnsurePackagingPhase(tooling).apply_payload(
                 payload,

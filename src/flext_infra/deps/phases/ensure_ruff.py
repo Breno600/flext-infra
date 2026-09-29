@@ -20,10 +20,18 @@ class FlextInfraEnsureRuffConfigPhase:
         self,
         tool_config: m.Infra.ToolConfigDocument,
         managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
+        generated_roots: t.StrSequence = (),
     ) -> None:
-        """Store tool configuration used to build canonical Ruff settings."""
+        """Store tool configuration used to build canonical Ruff settings.
+
+        ``generated_roots`` carries the roots the active codegen plan is
+        about to materialize: the existence filter must accept them exactly
+        like the search-path owner does, or a first render that runs before
+        the plan writes the tree would drop roots the projection must keep.
+        """
         self._tool_config = tool_config
         self._managed_artifacts = managed_artifacts
+        self._generated_roots = frozenset(generated_roots)
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
@@ -96,9 +104,24 @@ class FlextInfraEnsureRuffConfigPhase:
             if loaded.failure:
                 raise ValueError(loaded.error or "project artifact load failed")
             local_ignores = loaded.value.artifacts.Ruff.per_file_ignores
+        # An exemption glob rooted on a first-class directory that the
+        # repository retired (e.g. scripts/**) must not survive the render:
+        # it documents scope that no longer exists and re-created stale
+        # entries on every conformance pass. Directory-rooted patterns whose
+        # root is absent from disk are dropped; glob-only patterns pass.
+        scoped_global = {
+            pattern: rules
+            for pattern, rules in effective_global.items()
+            if (
+                (root := pattern.split("/")[0]).endswith("**")
+                or not root.isidentifier()
+                or (project_dir / root).is_dir()
+                or root in self._generated_roots
+            )
+        }
         return {
-            pattern: tuple(sorted({*effective_global.get(pattern, ()), *rules}))
-            for pattern, rules in {**effective_global, **local_ignores}.items()
+            pattern: tuple(sorted({*scoped_global.get(pattern, ()), *rules}))
+            for pattern, rules in {**scoped_global, **local_ignores}.items()
         }
 
     def _phase(
@@ -137,6 +160,21 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
+        # Dev/tooling source roots are config-declared, but a repository that
+        # retired a tree (e.g. scripts/) must not keep analyzer entries naming
+        # it: ruff fails hard on src roots whose directories do not exist, and
+        # the namespace-packages contract only holds for roots on disk. The
+        # declared lists stay the SSOT; existence filters the projection, with
+        # roots the active plan is materializing accepted as present.
+        def _present(directory: str) -> bool:
+            return (path.parent / directory).is_dir() or (
+                directory in self._generated_roots
+            )
+
+        existing_root = tuple(d for d in ruff_cfg.src if _present(d))
+        existing_namespace_packages = tuple(
+            d for d in ruff_cfg.namespace_packages if _present(d)
+        )
         toml = m.Infra.DepsToml
         return toml.PhaseConfig(
             name="ruff",
@@ -148,7 +186,8 @@ class FlextInfraEnsureRuffConfigPhase:
                     values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
                 ),
                 toml.ListOp(
-                    key="namespace-packages", values=sorted(ruff_cfg.namespace_packages)
+                    key="namespace-packages",
+                    values=sorted(existing_namespace_packages),
                 ),
                 toml.SetOp(key="fix", value=ruff_cfg.fix),
                 toml.SetOp(key="line-length", value=ruff_cfg.line_length),
@@ -156,7 +195,7 @@ class FlextInfraEnsureRuffConfigPhase:
                 toml.SetOp(key="respect-gitignore", value=ruff_cfg.respect_gitignore),
                 toml.SetOp(key="show-fixes", value=ruff_cfg.show_fixes),
                 toml.SetOp(key="target-version", value=ruff_cfg.target_version),
-                toml.ListOp(key="src", values=sorted(ruff_cfg.src)),
+                toml.ListOp(key="src", values=sorted(existing_root)),
             ),
             nested_tables=(
                 toml.PhaseConfig(
