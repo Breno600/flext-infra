@@ -123,13 +123,7 @@ class TestsFlextInfraConformSupport:
         # The seed publishes its own config and Mise sources on first apply;
         # only the committed Taplo pin must precede it so TOML formatting
         # authenticates the locked release instead of resolving a selector.
-        u.Tests.write_mise_lock(
-            root,
-            c.Infra.TAPLO_MISE_TOOL_NAME,
-            u.Tests.pinned_mise_version(
-                u.Tests.repo_mise_lock(), c.Infra.TAPLO_MISE_TOOL_NAME
-            ),
-        )
+        u.Tests.seed_locked_taplo(root)
 
     @staticmethod
     def self_check_conform_service(

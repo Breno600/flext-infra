@@ -221,6 +221,8 @@ class TestsFlextInfraCodegenConform:
     ) -> None:
         """A raised prepared operation removes invocation-owned root and Git state."""
         root = tmp_path / "exception-scaffold"
+        # A new project is created inside a tree that already carries the lock.
+        u.Tests.seed_locked_taplo(tmp_path)
         repository = u.Tests.repository_ref(
             "exception-scaffold", role=c.Infra.MakeProfile.STANDALONE
         )
@@ -258,6 +260,7 @@ class TestsFlextInfraCodegenConform:
         FlextInfraCodegenConform, m.Infra.CodegenConformRequest, m.Infra.CodegenFilePlan
     ]:
         """Plan the canonical pyproject through the public conform owner."""
+        u.Tests.seed_locked_taplo(root.parent)
         workspace = TestsFlextInfraCodegenConform._hook_workspace(hook_path)
         request = u.Tests.conform_request(
             root,

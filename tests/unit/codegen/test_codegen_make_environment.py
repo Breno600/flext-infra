@@ -497,18 +497,24 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that("UV ?= uv" in makefile, eq=False)
         # UV_RUN's environment binding is exercised by the real runtime test
         # above, including a parent uv workspace with a different default venv.
-        # Make does not inject a caller-selected database path. The canonical
-        # pytest runner binds TESTMON_DATAFILE to its external persistent cache.
+        # Make never accepts a caller-selected database path: it derives the
+        # external persistent testmon cache from the typed SSOT and hands it
+        # to the runner, which reads it exclusively from that Make input.
         tm.that(
             makefile,
             has=f"override RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}",
         )
-        for forced in (
-            "PROJECT_STATE_ROOT",
-            "PROJECT_SCRATCH",
-            'TMPDIR="$$test_tmp"',
-            "TESTMON_DATAFILE",
-        ):
+        testmon = config.Infra.codegen.make.testmon_cache
+        project_key = "$(subst /,_,$(PROJECT_ROOT))"
+        database = (
+            f"{testmon.external_storage_directory}/{project_key}/"
+            f"{testmon.database_filename}"
+        )
+        tm.that(
+            makefile,
+            has=[database, f'{testmon.database_environment_variable}="$$database"'],
+        )
+        for forced in ("PROJECT_STATE_ROOT", "PROJECT_SCRATCH", 'TMPDIR="$$test_tmp"'):
             tm.that(makefile, lacks=forced)
         # Every gate the typed owner schedules by default reaches the runtime
         # in ONE `check run --gates` invocation. The Make layer no longer
