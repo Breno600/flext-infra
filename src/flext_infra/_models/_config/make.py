@@ -370,6 +370,71 @@ class FlextInfraConfigModelsMake:
                 raise ValueError(msg)
             return self
 
+    class MypyCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Lock-keyed shared Mypy cache: one analysis per dependency lock."""
+
+        cache_environment_variable: Annotated[
+            FlextInfraConstantsMake.MypyCacheEnvironment,
+            m.Field(description="Mypy's cache-directory environment variable"),
+        ]
+        data_home_environment_variable: Annotated[
+            FlextInfraConstantsMake.MypyCacheEnvironment,
+            m.Field(description="XDG persistent cache-home variable"),
+        ]
+        user_home_environment_variable: Annotated[
+            FlextInfraConstantsMake.MypyCacheEnvironment,
+            m.Field(description="User home variable for the XDG default"),
+        ]
+        home_cache_directory: Annotated[
+            Path, m.Field(description="Standard cache directory below the user home")
+        ]
+        external_storage_directory: Annotated[
+            Path, m.Field(description="FLEXT-owned directory below the cache home")
+        ]
+        lock_files: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Dependency locks whose digest keys the cache"),
+        ]
+
+        @u.model_validator(mode="after")
+        def require_external_cache_contract(self) -> Self:
+            """Keep the official cache variable and the external path policy exact."""
+            for name, actual, expected in (
+                (
+                    "cache_environment_variable",
+                    self.cache_environment_variable,
+                    FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                ),
+                (
+                    "data_home_environment_variable",
+                    self.data_home_environment_variable,
+                    FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                ),
+                (
+                    "user_home_environment_variable",
+                    self.user_home_environment_variable,
+                    FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                ),
+            ):
+                if actual != expected:
+                    msg = f"mypy cache {name} must be {expected.value}"
+                    raise ValueError(msg)
+            for name, path in (
+                ("home_cache_directory", self.home_cache_directory),
+                ("external_storage_directory", self.external_storage_directory),
+            ):
+                if path.is_absolute() or any(
+                    part in {"", ".", ".."} for part in path.parts
+                ):
+                    msg = f"mypy cache {name} must be normalized and relative"
+                    raise ValueError(msg)
+            if not self.lock_files or any(
+                Path(lock).name != lock for lock in self.lock_files
+            ):
+                msg = "mypy cache lock_files must be bare filenames"
+                raise ValueError(msg)
+            return self
+
     class MakeWorkInProgressSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Predicate for work-in-progress branches and draft-PR gate behavior.
 
@@ -496,6 +561,10 @@ class FlextInfraConfigModelsMake:
         testmon_cache: Annotated[
             FlextInfraConfigModelsMake.TestmonCacheSpec,
             m.Field(description="Adaptive testmon Actions cache policy"),
+        ]
+        mypy_cache: Annotated[
+            FlextInfraConfigModelsMake.MypyCacheSpec,
+            m.Field(description="Lock-keyed shared Mypy analysis cache policy"),
         ]
         verbs: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeVerbSpec],

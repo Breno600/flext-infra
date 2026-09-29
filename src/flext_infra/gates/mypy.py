@@ -171,15 +171,20 @@ class FlextInfraMypyGate(FlextInfraGate):
     def _check_env(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrMapping | None:
-        """Check env."""
+        """Run Mypy against the shared, lock-keyed analysis cache."""
         _ = project_dir
+        overrides = {
+            c.Infra.MypyCacheEnvironment.CACHE_DIR.value: str(
+                u.Infra.mypy_cache_directory(ctx.repository_root)
+            )
+        }
         typings_generated = ctx.repository_root / c.Infra.DIR_TYPINGS / "generated"
-        if not typings_generated.is_dir():
-            return None
-        base_env = u.Cli.process_env()
-        existing = base_env.get("MYPYPATH", "")
-        mypy_path = str(typings_generated) + (f":{existing}" if existing else "")
-        return u.Cli.process_env(overrides={"MYPYPATH": mypy_path})
+        if typings_generated.is_dir():
+            existing = u.Cli.process_env().get("MYPYPATH", "")
+            overrides["MYPYPATH"] = str(typings_generated) + (
+                f":{existing}" if existing else ""
+            )
+        return u.Cli.process_env(overrides=overrides)
 
     @override
     def _parse_check_output(
