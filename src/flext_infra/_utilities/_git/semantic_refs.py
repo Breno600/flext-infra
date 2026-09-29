@@ -88,7 +88,7 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
     def git_show_toplevel(
         cls, request: m.Infra.GitRepoRequest
     ) -> p.Result[m.Infra.GitRootReport]:
-        """Resolve ``rev-parse --show-toplevel`` as a repository root report."""
+        """Report the resolved top-level directory of the request's worktree."""
         try:
             repo = cls._repo(request.repo_root)
             root = (
@@ -124,26 +124,10 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=branch))
 
     @classmethod
-    def git_symbolic_ref_short(
-        cls, request: m.Infra.GitRepoRequest
-    ) -> p.Result[m.Infra.GitTextReport]:
-        """Resolve ``symbolic-ref --quiet --short HEAD``."""
-        try:
-            repo = cls._repo(request.repo_root)
-            text = repo.git.symbolic_ref("--quiet", "--short", c.Infra.GIT_HEAD)
-        except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
-        except (OSError, ValueError) as exc:
-            return r[m.Infra.GitTextReport].fail(
-                f"failed to resolve symbolic-ref HEAD: {exc}", exception=exc
-            )
-        return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text.strip()))
-
-    @classmethod
     def git_resolve_commit(
         cls, request: m.Infra.GitCommitishRequest
     ) -> p.Result[m.Infra.GitOidReport]:
-        """Resolve a commit-ish to an oid via ``rev-parse --verify``."""
+        """Resolve a commit-ish to its commit oid, failing on a non-commit name."""
         try:
             repo = cls._repo(request.repo_root)
             oid = repo.commit(request.commitish).hexsha
@@ -154,26 +138,6 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
                 f"cannot resolve commitish: {exc}", exception=exc
             )
         return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
-
-    @classmethod
-    def git_abbrev_ref_head(
-        cls, request: m.Infra.GitRepoRequest
-    ) -> p.Result[m.Infra.GitTextReport]:
-        """Resolve ``rev-parse --abbrev-ref HEAD``."""
-        try:
-            repo = cls._repo(request.repo_root)
-            branch = repo.active_branch.name
-        except GitCommandError as exc:
-            return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
-        except (TypeError, OSError, ValueError):
-            # Detached HEAD — fall back to the proxy for the ``HEAD`` text.
-            try:
-                detached_repo = cls._repo(request.repo_root)
-                text = detached_repo.git.rev_parse("--abbrev-ref", c.Infra.GIT_HEAD)
-            except GitCommandError as exc:
-                return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
-            return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text.strip()))
-        return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=branch))
 
     @classmethod
     def git_is_ancestor(
@@ -211,22 +175,6 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitOidReport].fail(
                 f"rev-parse failed for {request.commitish}: {exc}", exception=exc
-            )
-        return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
-
-    @classmethod
-    def git_rev_parse_parent(
-        cls, request: m.Infra.GitCommitishRequest
-    ) -> p.Result[m.Infra.GitOidReport]:
-        """Resolve ``commitish^`` via rev-parse."""
-        try:
-            repo = cls._repo(request.repo_root)
-            oid = repo.commit(f"{request.commitish}^").hexsha
-        except GitCommandError as exc:
-            return r[m.Infra.GitOidReport].fail(str(exc), exception=exc)
-        except (OSError, ValueError) as exc:
-            return r[m.Infra.GitOidReport].fail(
-                f"failed to resolve parent of {request.commitish}: {exc}", exception=exc
             )
         return r[m.Infra.GitOidReport].ok(m.Infra.GitOidReport(oid=oid))
 

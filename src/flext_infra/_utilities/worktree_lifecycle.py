@@ -52,7 +52,7 @@ class FlextInfraWorktreeLifecycle:
 
         if not lane.is_dir():
             return r[str].fail(f"worktree lane does not exist: {lane}")
-        current_branch = u.Infra.git_symbolic_ref_short(
+        current_branch = u.Infra.git_current_branch(
             m.Infra.GitRepoRequest(repo_root=lane)
         )
         if current_branch.failure:
