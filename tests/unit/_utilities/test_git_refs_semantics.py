@@ -149,5 +149,9 @@ class TestsFlextInfraGitRefsSemantics:
             u.Infra.git_list_worktrees(m.Infra.GitRepoRequest(repo_root=repository))
         )
 
-        assert str(repository) in listed.text
-        assert str(lane) in listed.text
+        assert listed.root == repository.resolve()
+        assert str(repository) in listed.porcelain
+        assert str(lane) in listed.porcelain
+        by_path = {entry.path: entry for entry in listed.entries}
+        tm.that(by_path[repository.resolve()].branch, eq=c.Infra.GIT_MAIN)
+        tm.that(by_path[lane.resolve()].branch, eq="list-lane")
