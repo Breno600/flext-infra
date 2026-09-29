@@ -83,19 +83,20 @@ class FlextInfraToolTablesPhase:
         )
 
     @staticmethod
-    def _excluded_roots(project_dir: Path) -> t.Infra.StrSet:
-        """First segments of the workspace SSOT's analysis exclusions.
+    def excluded_roots(project_dir: Path) -> frozenset[str]:
+        """First segments of the workspace manifest's declared non-participants.
 
-        A workspace that retired a tree declares it here once; every root-
-        scoped projection (vulture paths, ruff src/namespace-packages/
-        per-file-ignores) filters on this declared set instead of probing the
-        disk, which oscillates between the deps pass and the root-materializing
-        gen pass.
+        A workspace that retired a tree declares it once in its manifest
+        (``exclusions``, ``content_only`` or ``external_dependency_paths``);
+        every root-scoped projection (vulture paths, ruff src/namespace-
+        packages/per-file-ignores) filters on this declared set instead of
+        probing the disk, which oscillates between the deps pass and the
+        root-materializing gen pass. An invalid manifest fails loud.
         """
-        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            return frozenset()
-        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
+        return frozenset(
+            Path(path).parts[0]
+            for path in u.Infra.manifest_nonparticipant_paths(project_dir.resolve())
+        )
 
     def _phases(
         self, *, first_party: t.StrSequence, path: Path
@@ -105,7 +106,7 @@ class FlextInfraToolTablesPhase:
         toml = m.Infra.DepsToml
         merge, replace = c.Infra.TomlMergeMode.MERGE, c.Infra.TomlMergeMode.REPLACE
         pytest, coverage = tools.pytest, tools.coverage
-        excluded_roots = self._excluded_roots(path.parent)
+        excluded_roots = self.excluded_roots(path.parent)
         codespell_operations: t.MutableSequenceOf[
             m.Infra.DepsToml.SetOp | m.Infra.DepsToml.RemoveOp
         ] = [

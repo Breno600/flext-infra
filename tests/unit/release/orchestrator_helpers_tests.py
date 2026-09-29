@@ -79,7 +79,7 @@ class TestsFlextInfraReleaseHelpers:
                 str(notes_path),
             ])
             tm.ok(checked)
-            tm.that(checked.value.outcome.raw_return_code, eq=0)
+            tm.that(u.Cli.process_succeeded(checked.value.outcome), eq=True)
 
         @staticmethod
         def test_generate_notes_failure_returns_result_error(tmp_path: Path) -> None:

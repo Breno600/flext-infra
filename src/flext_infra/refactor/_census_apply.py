@@ -357,13 +357,23 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
     def _apply_classvar_relocation(
         self, *, rope: p.Infra.RopeWorkspaceDsl, file_path: Path, object_names: set[str]
     ) -> bool:
-        """Apply ENFORCE-079: move ClassVar constants to the _constants module."""
+        """Apply ENFORCE-079: move ClassVar constants to the _constants module.
+
+        Every classvar_relocation violation the detector yields for the file is
+        applied, not only the surfaced ``object_names`` subset: the runtime
+        census surfaces one violating constant per class per pass (single
+        violation per target in the enforcement engine), while the detector
+        enumerates them all. Restricting the apply to the surfaced names would
+        need one full pass per constant; applying the complete set keeps the
+        rule strict and the migration mechanical. ``object_names`` still gates
+        WHICH FILES are visited (files with at least one surfaced fix).
+        """
+        _ = object_names
         ctx = self._detector_context(rope, file_path)
         violations = [
             violation
             for violation in FlextInfraClassPlacementDetector.detect_file(ctx)
             if violation.action == "classvar_relocation"
-            and violation.name in object_names
         ]
         if not violations or ctx.project_root is None:
             return False

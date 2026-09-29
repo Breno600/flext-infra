@@ -8,8 +8,12 @@ with a recording ``gh`` on PATH instead of GitHub.
 
 from __future__ import annotations
 
+import hashlib
 import os
+import shutil
+import tempfile
 from contextlib import contextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -21,7 +25,6 @@ from tests import TestsFlextInfraUtilities as u, c, t
 
 if TYPE_CHECKING:
     from collections.abc import Generator
-    from pathlib import Path
 
 
 # Why: each propagation conforms and relocks real member repositories, the
@@ -36,41 +39,72 @@ class TestsFlextInfraWorkspaceMemberPropagation:
     SETTLED = "fixture-beta"
     MEMBERS = (CHANGED, SETTLED)
 
+    RECEIPT = "propagation-workspace.receipt"
+
+    def _template(self, settled: t.StrSequence, hermetic: t.StrMapping) -> Path:
+        """Return the declared workspace with ``settled`` conformed, built once.
+
+        Declaring members and settling one is this class's arrange phase, not
+        its behavior under test, so it runs once per locked-source set (the
+        hermetic mirror routes encode it) and member layout under the canonical
+        lease; the first consumer pays it inside its own deadline and every
+        test clones the result.
+        """
+        material = "\n".join((
+            *(f"{name}={value}" for name, value in sorted(hermetic.items())),
+            *self.MEMBERS,
+            "settled:",
+            *settled,
+        ))
+        key = hashlib.sha256(material.encode()).hexdigest()[:16]
+        parent = Path(tempfile.gettempdir()) / "propagation-workspace" / key
+        parent.mkdir(parents=True, exist_ok=True)
+        with u.Infra.codegen_transaction_lease(parent / self.RECEIPT):
+            if not (parent / self.RECEIPT).is_file():
+                root = u.Tests.WorktreeFixture.governed_workspace(parent, "workspace")
+                for name in self.MEMBERS:
+                    u.Tests.WorktreeFixture.initialize_governed_project(
+                        root / name,
+                        name,
+                        workspace="fixture-workspace",
+                        database="fixture_workspace",
+                        issue_prefix="fixture-workspace",
+                    )
+                    u.Tests.checkout_integration(root / name)
+                u.Tests.WorktreeFixture.write_gitmodules(root, self.MEMBERS)
+                for name in self.MEMBERS:
+                    head = u.Tests.git_capture(
+                        root / name, "rev-parse", c.Infra.GIT_HEAD
+                    )
+                    u.Tests.git_run(
+                        root,
+                        "update-index",
+                        "--add",
+                        "--cacheinfo",
+                        f"160000,{head.strip()},{name}",
+                    )
+                u.Tests.commit_git_changes(root, "declare members")
+                for name in settled:
+                    tm.ok(FlextInfraCodegenConform.settle_repository(root / name))
+                    u.Tests.commit_git_changes(root / name, "settle projections")
+                tm.ok(u.Cli.atomic_write_text_file(parent / self.RECEIPT, key + "\n"))
+        return parent / "workspace"
+
     @contextmanager
     def _workspace(
-        self, tmp_path: Path, *, settled: t.StrSequence
+        self, tmp_path: Path, *, settled: t.StrSequence, hermetic: t.StrMapping
     ) -> Generator[t.Pair[Path, Path]]:
-        """Yield a workspace whose ``settled`` members are already propagated."""
-        root = u.Tests.WorktreeFixture.governed_workspace(tmp_path, "workspace")
-        for name in self.MEMBERS:
-            u.Tests.WorktreeFixture.initialize_governed_project(
-                root / name,
-                name,
-                workspace="fixture-workspace",
-                database="fixture_workspace",
-                issue_prefix="fixture-workspace",
-            )
-            u.Tests.checkout_integration(root / name)
-        u.Tests.WorktreeFixture.write_gitmodules(root, self.MEMBERS)
-        for name in self.MEMBERS:
-            head = u.Tests.git_capture(root / name, "rev-parse", c.Infra.GIT_HEAD)
-            u.Tests.git_run(
-                root,
-                "update-index",
-                "--add",
-                "--cacheinfo",
-                f"160000,{head.strip()},{name}",
-            )
-        u.Tests.commit_git_changes(root, "declare members")
-        for name in settled:
-            tm.ok(FlextInfraCodegenConform.settle_repository(root / name))
-            u.Tests.commit_git_changes(root / name, "settle projections")
-        for name in self.MEMBERS:
-            self._publish_to_local_origin(root / name, tmp_path / "remotes" / name)
-        gh_log = u.Tests.cli_shim(tmp_path / "bin", c.Infra.GH)
-        shim_path = f"{tmp_path / 'bin'}{os.pathsep}{os.environ['PATH']}"
-        with u.Tests.env_vars_context(env_vars={"PATH": shim_path}):
-            yield root, gh_log
+        """Yield a clone of the workspace whose ``settled`` members are propagated."""
+        # Every settle and propagation locks against the run's local mirrors.
+        with u.Tests.env_vars_context(env_vars=hermetic):
+            root = tmp_path / "workspace"
+            shutil.copytree(self._template(settled, hermetic), root, symlinks=True)
+            for name in self.MEMBERS:
+                self._publish_to_local_origin(root / name, tmp_path / "remotes" / name)
+            gh_log = u.Tests.cli_shim(tmp_path / "bin", c.Infra.GH)
+            shim_path = f"{tmp_path / 'bin'}{os.pathsep}{os.environ['PATH']}"
+            with u.Tests.env_vars_context(env_vars={"PATH": shim_path}):
+                yield root, gh_log
 
     @staticmethod
     def _publish_to_local_origin(member: Path, remote_root: Path) -> None:
@@ -124,10 +158,12 @@ class TestsFlextInfraWorkspaceMemberPropagation:
         return current == u.Tests.integration_branch(member) and not status
 
     def test_changed_member_gets_one_lane_and_settled_member_nothing(
-        self, tmp_path: Path
+        self, tmp_path: Path, hermetic_git_environment: t.StrMapping
     ) -> None:
         """Only the member whose projections change is proposed, exactly once."""
-        with self._workspace(tmp_path, settled=(self.SETTLED,)) as (root, gh_log):
+        with self._workspace(
+            tmp_path, settled=(self.SETTLED,), hermetic=hermetic_git_environment
+        ) as (root, gh_log):
             tm.that(self._propagate(root), eq=0)
 
             changed, settled = root / self.CHANGED, root / self.SETTLED
@@ -166,9 +202,13 @@ class TestsFlextInfraWorkspaceMemberPropagation:
                 ),
             )
 
-    def test_rerun_commits_nothing_new(self, tmp_path: Path) -> None:
+    def test_rerun_commits_nothing_new(
+        self, tmp_path: Path, hermetic_git_environment: t.StrMapping
+    ) -> None:
         """A second run continues the open lane and changes no published tip."""
-        with self._workspace(tmp_path, settled=(self.SETTLED,)) as (root, _):
+        with self._workspace(
+            tmp_path, settled=(self.SETTLED,), hermetic=hermetic_git_environment
+        ) as (root, _):
             tm.that(self._propagate(root), eq=0)
             first = self._published(tmp_path, self.CHANGED)
 
@@ -179,9 +219,13 @@ class TestsFlextInfraWorkspaceMemberPropagation:
             tm.that(self._published(tmp_path, self.SETTLED), eq="")
             tm.that(self._on_clean_base(root / self.CHANGED), eq=True)
 
-    def test_failing_member_stops_the_run(self, tmp_path: Path) -> None:
+    def test_failing_member_stops_the_run(
+        self, tmp_path: Path, hermetic_git_environment: t.StrMapping
+    ) -> None:
         """The first member failure ends the run before any later member."""
-        with self._workspace(tmp_path, settled=()) as (root, gh_log):
+        with self._workspace(
+            tmp_path, settled=(), hermetic=hermetic_git_environment
+        ) as (root, gh_log):
             (root / self.CHANGED / "stray.txt").write_text("wip\n", encoding="utf-8")
 
             tm.that(self._propagate(root), ne=0)

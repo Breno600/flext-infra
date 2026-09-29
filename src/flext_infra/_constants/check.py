@@ -20,6 +20,8 @@ class FlextInfraConstantsCheck:
     """Stop mutating service workflows at the first failed project or rule."""
 
     PYTEST_SELECTED_COLLECTION_OPTION: ClassVar[str] = "--flext-selected-collection"
+    PYTEST_SUITE_STOP_OPTION: ClassVar[str] = "--flext-suite-stop-monotonic"
+    PYTEST_COLLECTION_MANIFEST_OPTION: ClassVar[str] = "--flext-collection-manifest"
 
     @unique
     class SarifSchema(StrEnum):
@@ -286,10 +288,8 @@ class FlextInfraConstantsCheck:
     QLTY_BINARY: ClassVar[str] = "qlty"
     QLTY_CONFIG_DIRNAME: ClassVar[str] = ".qlty"
     QLTY_CONFIG_FILENAME: ClassVar[str] = "qlty.toml"
-    SMELLS_QLTY_ALL_ARG: ClassVar[str] = "--all"
     SMELLS_QLTY_ARGS: ClassVar[t.StrSequence] = (
         "smells",
-        SMELLS_QLTY_ALL_ARG,
         "--sarif",
         "--include-tests",
         "--no-snippets",

@@ -20,28 +20,6 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
-    @pytest.mark.parametrize("github_actions", ["true", "false"])
-    def test_workspace_status_reports_repository_owned_ci_scope(
-        self, tmp_path: Path, github_actions: str
-    ) -> None:
-        """GitHub checks this repository; local Make retains the fleet cycle."""
-        project_root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.WORKSPACE, local_infra=True
-        )
-        tm.ok(u.Tests.create_python_environment(project_root))
-        process = tm.ok(
-            u.Tests.run_isolated_make(
-                ["--no-print-directory", "status"],
-                cwd=project_root,
-                env={"GITHUB_ACTIONS": github_actions},
-            )
-        )
-        tm.that(u.Cli.process_succeeded(process.outcome), eq=True, msg=process.stderr)
-        selected = "." if github_actions == "true" else "infra-engine ."
-        tm.that(process.stdout, has=f"selected_projects={selected}\n")
-        scope = "self" if github_actions == "true" else "all"
-        tm.that(process.stdout, has=f"codegen_scope={scope}\n")
-
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
         self, tmp_path: Path, *, failure_return: int | None
@@ -524,7 +502,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has=f'gates="{gates}"')
         tm.that(
             '$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" '
-            '--gates "$$gates" --projects .' in makefile,
+            '--gates "$$gates"' in makefile,
             eq=True,
         )
         tm.that("$(UV_RUN) actionlint" in makefile, eq=False)
@@ -573,12 +551,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
         tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=False)
         tm.that(makefile, has="package=false (content-only root)")
-        # The noop verb itself must still exist in both profiles.
-        if profile is c.Infra.MakeProfile.WORKSPACE:
-            tm.that(makefile, has="_builtin-self-build:")
-        else:
-            tm.that(makefile, has="_builtin-self-build: _builtin_build_artifacts")
-            tm.that(makefile, has="_builtin_build_artifacts:")
+        # The noop verb itself exists with one body in both profiles.
+        tm.that(makefile, has="_builtin-build: _builtin_build_artifacts")
+        tm.that(makefile, has="_builtin_build_artifacts:")
 
     @pytest.mark.parametrize(
         "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
@@ -618,24 +593,20 @@ class TestsFlextInfraCodegenMakeEnvironment:
         # The dispatch chain that carries the declared gate list to the runtime.
         tm.that(makefile, has="_builtin-check: _builtin_check_all")
         tm.that(makefile, has="_builtin_check_all: _builtin_require_environment")
+        # Every profile, the workspace root included, schedules the declared
+        # gates on its own project through one local `check run` body.
         scheduled = ",".join(config.Infra.codegen.make.check_gates_default)
-        if profile == c.Infra.MakeProfile.WORKSPACE:
-            # A workspace root schedules gates through the orchestrator; the
-            # declared list reaches each member's own `check run` owner from
-            # the same config SSOT, so the root Makefile embeds no gate list.
-            tm.that(makefile, has="$(WORKSPACE_ORCHESTRATE) --verb check")
-        else:
-            tm.that(makefile, has=f'gates="{scheduled}"')
-            for gate in config.Infra.codegen.make.check_gates_default:
-                tm.that(scheduled.split(","), has=gate)
-            tm.that(makefile, has='--gates "$$gates" --projects .')
+        tm.that(makefile, has=f'gates="{scheduled}"')
+        for gate in config.Infra.codegen.make.check_gates_default:
+            tm.that(scheduled.split(","), has=gate)
+        tm.that(makefile, has='--gates "$$gates"')
         check_invocations = tuple(
             line for line in makefile.splitlines() if '--gates "$$gates"' in line
         )
         tm.that(check_invocations, empty=False)
         for invocation in check_invocations:
             tm.that(invocation, lacks="--apply")
-        tm.that(makefile, has="--projects . --apply --report-findings")
+        tm.that(makefile, has="--apply --report-findings")
 
     def test_standalone_check_executes_its_declared_default_gates(
         self, tmp_path: Path
@@ -671,7 +642,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         gates = ",".join(config.Infra.codegen.make.check_gates_default)
         invocation = invocation_log.read_text(encoding="utf-8")
         tm.that(invocation, has="-m flext_infra check run")
-        tm.that(invocation, has=f"--gates {gates} --projects .")
+        tm.that(invocation, has=f"--gates {gates}")
         tm.that(invocation, lacks="--apply")
 
     @staticmethod
@@ -810,11 +781,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
             "\t+@set -eu;",
             # Runtime tool identity is exercised through the public status
             # regression, including an invalid ambient Mise configuration.
-            'mise_exec project "$$latest_mise" -C "$$project_root" install --yes',
+            'mise_exec project "$$pinned_mise" -C "$$project_root" install --yes',
             "SETUP_DIRENV=$$direnv_executable",
             '$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"',
             '$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"',
-            '$(UV) sync --project "$(PROJECT_ROOT)"',
+            # uv syncs the runtime root's project (UV_PROJECT := RUNTIME_ROOT).
+            '$(UV) sync --project "$(UV_PROJECT)"',
             '--link-mode "$(UV_LINK_MODE)"',
             'git -C "$$superproject" submodule update --init -- "$$child_path"',
             'git -C "$$child_root" branch --show-current',
@@ -856,7 +828,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
             tm.that(
                 self._recipe_targets_containing(makefile, needle), eq={"_upg_lifecycle"}
             )
-        tm.that(makefile, has="_run_for_all_projects,--check")
+        tm.that(
+            self._recipe_targets_containing(
+                makefile, '$(UV) lock --check --project "$(PROJECT_ROOT)"'
+            ),
+            eq={"_upg_converge"},
+        )
         tm.that(makefile, lacks="--constraint-policy")
 
     def test_workspace_without_local_members_retains_external_flext_sources(
@@ -1026,13 +1003,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
         tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
         tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
-        tm.that(makefile, has="_builtin-self-fix-enforcement: _builtin_fix_enforcement")
-        tm.that(makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace")
-        tm.that(makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
             makefile,
-            has="_builtin_sonarcloud_sync_all: _builtin_sonarcloud_sync_project",
+            has="_builtin_sonarcloud_sync_all: _builtin_require_environment",
         )
         tm.that(
             makefile,

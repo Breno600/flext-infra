@@ -17,18 +17,10 @@ class FlextInfraEnsureRuffConfigPhase:
         self,
         tool_config: m.Infra.ToolConfigDocument,
         managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
-        generated_roots: t.StrSequence = (),
     ) -> None:
-        """Store tool configuration used to build canonical Ruff settings.
-
-        ``generated_roots`` carries the roots the active codegen plan is
-        about to materialize: the existence filter must accept them exactly
-        like the search-path owner does, or a first render that runs before
-        the plan writes the tree would drop roots the projection must keep.
-        """
+        """Store tool configuration used to build canonical Ruff settings."""
         self._tool_config = tool_config
         self._managed_artifacts = managed_artifacts
-        self._generated_roots = frozenset(generated_roots)
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
@@ -96,7 +88,6 @@ class FlextInfraEnsureRuffConfigPhase:
         return tuple(path.as_posix() for path in paths.value)
 
     def compose_per_file_ignores(
-        self,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
@@ -134,7 +125,7 @@ class FlextInfraEnsureRuffConfigPhase:
         # on every conformance pass. Declared exclusions are order-independent
         # — a disk probe oscillated between the deps pass and the
         # root-materializing gen pass.
-        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(project_dir)
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
         scoped_global = {
             pattern: rules
             for pattern, rules in effective_global.items()
@@ -198,6 +189,7 @@ class FlextInfraEnsureRuffConfigPhase:
             )
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
+        excluded_roots = self._excluded_root_set(path.parent)
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )
@@ -258,6 +250,20 @@ class FlextInfraEnsureRuffConfigPhase:
                         toml.SetOp(
                             key=c.Infra.IGNORE,
                             value=u.normalize_to_json_value(effective_ignore),
+                        ),
+                        # make fix never deletes information: the fix-safety
+                        # policy comes from the same SSOT the template renders.
+                        toml.SetOp(
+                            key="unfixable",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.unfixable)
+                            ),
+                        ),
+                        toml.SetOp(
+                            key="extend-safe-fixes",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.extend_safe_fixes)
+                            ),
                         ),
                     ),
                 ),

@@ -306,6 +306,7 @@ __pyrefly_virtual__/
 .dolt_dropped_databases/
 .doltcfg/
 .hypothesis/
+.mimosa/
 .mypy_cache/
 .omo/
 .pylance_cache/
@@ -374,4 +375,3 @@ CLAUDE.local.md
 !.vscode/settings.json
 !config/
 !config/gitleaks-release.toml
-.mimosa/

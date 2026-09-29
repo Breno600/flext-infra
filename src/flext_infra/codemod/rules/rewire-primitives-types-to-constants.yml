@@ -1,9 +1,0 @@
-id: rewire-primitives-types-to-constants
-language: Python
-severity: error
-files:
-  - "**/*.py"
-rule:
-  pattern: t.PRIMITIVES_TYPES
-fix: c.PRIMITIVES_TYPES
-message: PRIMITIVES_TYPES is a runtime constant owned by FlextConstantsGuards (ENFORCE-079); read it as c.PRIMITIVES_TYPES, never through the typings facade.

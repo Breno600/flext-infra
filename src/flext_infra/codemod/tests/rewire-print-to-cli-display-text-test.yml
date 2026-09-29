@@ -7,10 +7,6 @@ valid:
   - |
     from flext_cli import cli
 
-    print("message", flush=True)
-  - |
-    from flext_cli import cli
-
     print(flush=True)
   - |
     from flext_cli import cli
@@ -19,7 +15,51 @@ valid:
   - |
     from flext_cli import cli
 
+    print("message", end="")
+  - |
+    from flext_cli import cli
+
+    print("message", sep=" ")
+  - |
+    from flext_cli import cli
+
+    print("message", "detail")
+  - |
+    from flext_cli import cli
+
+    print(*messages)
+  - |
+    from flext_cli import cli
+
+    print(**options)
+  - |
+    from flext_cli import cli
+
+    with open(REPORT, "w", encoding="utf-8") as handle:
+        print("message", file=handle)
+  - |
+    import sys
+
+    from flext_cli import cli
+
+    print("message", flush=should_flush())
+  - |
+    import sys
+
+    from flext_cli import cli
+
+    print(
+        "message",  # the operator reads this line
+        file=sys.stderr,
+    )
+  - |
+    from flext_cli import cli
+
     console.print("message")
+  - |
+    import sys
+
+    print("message", file=sys.stderr)
   - |
     print("message")
   - |
@@ -38,3 +78,25 @@ invalid:
     from flext_cli import cli
 
     u.Cli.print("message")
+  - |
+    import sys
+
+    from flext_cli import cli
+
+    print(f"catalog load failed: {error}", file=sys.stderr)
+  - |
+    import sys
+
+    from flext_cli import cli
+
+    print("message", file=sys.stdout)
+  - |
+    from flext_cli import cli
+
+    print("message", flush=True)
+  - |
+    import sys
+
+    from flext_cli import cli
+
+    print("message", file=sys.stderr, flush=True)

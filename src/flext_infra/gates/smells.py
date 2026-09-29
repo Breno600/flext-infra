@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import time
-from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
-from flext_infra import c, m, settings, u
+from flext_infra import c, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
@@ -16,24 +15,21 @@ if TYPE_CHECKING:
 
 
 class FlextInfraSmellsGate(FlextInfraGate):
-    """Report qlty smells per project from one fresh workspace scan.
+    """Report qlty smells for one project from a scan of its check directories.
 
-    A single ``qlty smells --all`` scan covers the whole workspace so
-    cross-project duplication clusters stay visible; per-project results are
-    filtered by SARIF URI prefix.
+    Every repository evaluates only itself, locally exactly as in CI: qlty
+    receives the project's own paths and the SARIF URI prefix keys each
+    finding to that project.
     """
 
     gate_id: ClassVar[str] = "smells"
     gate_name: ClassVar[str] = "Code Smells"
     scanner_binary: ClassVar[str] = c.Infra.QLTY_BINARY
 
-    # flext-pulj: process results stay structural outside the Pydantic boundary.
-    _scan_cache: ClassVar[MutableMapping[str, p.Cli.CommandOutput]] = {}
-
     def _scanned_issues(
         self, scan: p.Cli.CommandOutput, project_dir: Path
     ) -> t.SequenceOf[m.Infra.Issue]:
-        """Filter one workspace scan to the blocking issues owned by ``project``.
+        """Filter one scan to the blocking issues owned by ``project``.
 
         The process outcome decides what an unusable payload means: a
         successful scan that emits no SARIF payload is a zero-findings pass,
@@ -63,10 +59,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
     def check(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> m.Infra.GateExecution:
-        """One cached full-workspace qlty scan, filtered to ``project_dir``."""
+        """One qlty scan of ``project_dir``'s check directories."""
         _ = ctx
         started = time.monotonic()
-        scan = self._workspace_scan(project_dir)
+        scan = self._scan(project_dir)
         issues = self._scanned_issues(scan, project_dir)
         return self._build_check_gate_execution(
             project_dir,
@@ -80,7 +76,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
     def _build_check_command(
         self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
     ) -> t.StrSequence:
-        """Full-workspace scan command (check() bypasses per-project dirs)."""
+        """The project's scan command (check() names its check dirs itself)."""
         _ = ctx, check_dirs
         binary = self._resolve_binary()
         if binary is None:
@@ -96,40 +92,8 @@ class FlextInfraSmellsGate(FlextInfraGate):
         issues = self._scanned_issues(result, project_dir)
         return not issues, issues
 
-    def _workspace_scan(self, project_dir: Path) -> p.Cli.CommandOutput:
-        """Scan the workspace once per root and preserve its exact process result."""
-        key = self._scan_key(project_dir)
-        cached = self._scan_cache.get(key)
-        if cached is not None:
-            return cached
-        output = self._uncached_workspace_scan(project_dir)
-        self._scan_cache[key] = output
-        return output
-
-    def _scan_key(self, project_dir: Path) -> str:
-        """Keep CI's selected project separate from a local fleet scan."""
-        return str(
-            project_dir.resolve()
-            if self._project_scoped(project_dir)
-            else self._repository_root.resolve()
-        )
-
-    def _project_scoped(self, project_dir: Path) -> bool:
-        """Keep the workspace root from claiming subproject findings."""
-        return (
-            settings.Infra.github_actions
-            or project_dir.resolve() == self._repository_root.resolve()
-        )
-
     def _scan_command(self, binary: str, project_dir: Path) -> t.StrSequence:
-        """Name the selected project's paths explicitly; qlty scans them in full.
-
-        Qlty rejects ``--all`` together with explicit ``[PATHS]`` ("the argument
-        '--all' cannot be used with specified [PATHS]"): explicit paths are the
-        complete scope, so the flag is dropped only in that form.
-        """
-        if not self._project_scoped(project_dir):
-            return (binary, *c.Infra.SMELLS_QLTY_ARGS)
+        """Name the project's paths explicitly; qlty scans them in full."""
         paths = tuple(
             (project_dir / directory).relative_to(self._repository_root).as_posix()
             for directory in self._existing_check_dirs(project_dir)
@@ -137,15 +101,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
         if not paths:
             message = f"smells: no check targets for {project_dir}"
             raise ValueError(message)
-        return (
-            binary,
-            *(
-                arg
-                for arg in c.Infra.SMELLS_QLTY_ARGS
-                if arg != c.Infra.SMELLS_QLTY_ALL_ARG
-            ),
-            *paths,
-        )
+        return (binary, *c.Infra.SMELLS_QLTY_ARGS, *paths)
 
     @staticmethod
     def _unrunnable_scan_output(stderr: str) -> p.Cli.CommandOutput:
@@ -160,7 +116,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
             ),
         )
 
-    def _uncached_workspace_scan(self, project_dir: Path) -> p.Cli.CommandOutput:
+    def _scan(self, project_dir: Path) -> p.Cli.CommandOutput:
         """Run one qlty scan, or synthesize the blocking reason it cannot run.
 
         Codegen renders the qlty config from its template; this gate used to

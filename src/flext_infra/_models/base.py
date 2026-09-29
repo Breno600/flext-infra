@@ -14,7 +14,6 @@ from flext_cli import m
 
 from flext_infra import c, t
 
-from .mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsBase:
@@ -61,17 +60,6 @@ class FlextInfraModelsBase:
         failed: int = m.Field(description="Failed items")
         skipped: int = m.Field(description="Skipped items")
         elapsed: float = m.Field(description="Elapsed time in seconds")
-
-    class ProjectFailureInfo(mm.ProjectNameMixin, m.ContractModel):
-        """Bundled info for project failure output."""
-
-        elapsed: Annotated[float, m.Field(description="Elapsed time in seconds")]
-        log_path: Annotated[Path, m.Field(description="Path to the project log")]
-        error_count: Annotated[int, m.Field(description="Total project errors")]
-        errors: Annotated[
-            t.StrSequence, m.Field(description="Rendered error excerpt lines")
-        ]
-        max_show: Annotated[int, m.Field(description="Maximum errors to render")] = 3
 
     class SafeExecutionResult(m.ContractModel):
         """Result of a safe execution pipeline run."""

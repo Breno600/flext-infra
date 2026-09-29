@@ -58,10 +58,32 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         )
         deselected = 0
         inventory_count = None
+        owns_no_tests = False
+        selection_plan: m.Infra.PytestSelectionPlan | None = None
         if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
             selection_plan = m.Infra.PytestSelectionPlan.model_validate_json(
                 (log.parent / "selection-plan.json").read_text(encoding="utf-8")
             )
+            owns_no_tests = selection_plan.owns_no_tests
+        if owns_no_tests and selection_plan is not None:
+            # The declared empty suite produces no manifest artifacts: zero
+            # execution with typed accounting IS the receipt.
+            accounting = m.Infra.TestmonRunAccounting(
+                executed_count=executed,
+                reported_count=reported_count,
+                deselected_count=0,
+                inventory_count=0,
+                cache_restored=cache_restored,
+                owns_no_tests=True,
+            )
+            return r.ok(accounting)
+        if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
+            if selection_plan is None:
+                msg = (
+                    "non-coverage accounting requires the durable selection plan: "
+                    f"{log.parent / 'selection-plan.json'}"
+                )
+                raise RuntimeError(msg)
             selected = (
                 m.Infra.PytestCollectionManifest.model_validate_json(
                     selection_plan.manifest_path.read_text(encoding="utf-8")
@@ -89,6 +111,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             deselected_count=deselected,
             inventory_count=inventory_count,
             cache_restored=cache_restored,
+            owns_no_tests=owns_no_tests,
         )
         if executed:
             return r.ok(accounting)
@@ -102,7 +125,7 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         extractor = FlextInfraPytestDiagExtractor(
             repository_root=self.root,
             junit=report_dir / "junit.xml",
-            log_path=report_dir / "pytest.log",
+            log=report_dir / "pytest.log",
             report_log=report_dir / "events.jsonl",
         )
         return extractor.extract(
@@ -140,6 +163,10 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             selection_plan = m.Infra.PytestSelectionPlan.model_validate_json(
                 (report_dir / "selection-plan.json").read_text(encoding="utf-8")
             )
+            if selection_plan.owns_no_tests:
+                # The declared empty suite ran no collection subprocess, so no
+                # per-phase receipt exists: only the suite diagnostics.
+                return (("suite", suite),)
             names = (
                 (
                     ("selection", "inventory")

@@ -130,7 +130,7 @@ class FlextInfraCodegenGenerationStandardMixin(
             inner = f"{inner},"
         separator = "," if trailing else ""
         compact = f'{indent}"{module}": ({inner}){separator}'
-        if len(compact) <= c.Infra.MAX_LINE_LENGTH:
+        if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
             return (compact,)
         value_indent = f"{indent}    "
         return (
@@ -148,7 +148,10 @@ class FlextInfraCodegenGenerationStandardMixin(
         if len(exports) == 1:
             inner = f"{inner},"
         compact = f"({inner})"
-        if len("__all__: tuple[str, ...] = ") + len(compact) <= c.Infra.MAX_LINE_LENGTH:
+        if (
+            len("__all__: tuple[str, ...] = ") + len(compact)
+            <= config.Infra.tooling.tools.ruff.line_length
+        ):
             return compact
         # A wrapped export set renders exactly as Ruff formats it (one name per
         # line): the projection is a formatter fixed point, never re-packed to
@@ -157,37 +160,34 @@ class FlextInfraCodegenGenerationStandardMixin(
         return "(\n    " + wrapped + ",\n)"
 
     @staticmethod
-    def _lazy_module_argument_inline(
-        groups: t.SequenceOf[t.StrSequencePair],
-    ) -> str | None:
-        """Render the module mapping as one indent-free call argument."""
-        if not groups:
-            return "MappingProxyType({})"
-        if len(groups) != 1:
-            return None
-        module, names = groups[0]
-        inner = ", ".join(f'"{name}"' for name in names)
-        if len(names) == 1:
-            inner = f"{inner},"
-        return f'MappingProxyType({{"{module}": ({inner})}})'
+    def _lazy_module_argument_inline(groups: t.SequenceOf[t.StrSequencePair]) -> str:
+        """Render the module mapping as one indent-free call argument.
+
+        Ruff (skip-magic-trailing-comma) joins any mapping that fits the line,
+        whatever its entry count, so the inline form covers every group count;
+        the caller keeps it only when the width fits.
+        """
+        entries: t.MutableSequenceOf[str] = []
+        for module, names in groups:
+            inner = ", ".join(f'"{name}"' for name in names)
+            if len(names) == 1:
+                inner = f"{inner},"
+            entries.append(f'"{module}": ({inner})')
+        return f"MappingProxyType({{{', '.join(entries)}}})"
 
     @staticmethod
-    def _lazy_alias_argument_inline(
-        groups: t.SequenceOf[t.StrPairSequencePair],
-    ) -> str | None:
+    def _lazy_alias_argument_inline(groups: t.SequenceOf[t.StrPairSequencePair]) -> str:
         """Render the alias mapping as one indent-free call argument."""
-        if not groups:
-            return "alias_groups=MappingProxyType({})"
-        if len(groups) != 1:
-            return None
-        module, pairs = groups[0]
-        values = tuple(
-            f'("{export_name}", "{attr_name}")' for export_name, attr_name in pairs
-        )
-        inner = ", ".join(values)
-        if len(values) == 1:
-            inner = f"{inner},"
-        return f'alias_groups=MappingProxyType({{"{module}": ({inner})}})'
+        entries: t.MutableSequenceOf[str] = []
+        for module, pairs in groups:
+            values = tuple(
+                f'("{export_name}", "{attr_name}")' for export_name, attr_name in pairs
+            )
+            inner = ", ".join(values)
+            if len(values) == 1:
+                inner = f"{inner},"
+            entries.append(f'"{module}": ({inner})')
+        return f"alias_groups=MappingProxyType({{{', '.join(entries)}}})"
 
     @classmethod
     def _format_lazy_call_arguments(
@@ -205,10 +205,8 @@ class FlextInfraCodegenGenerationStandardMixin(
         """
         module_argument = cls._lazy_module_argument_inline(module_groups)
         alias_argument = cls._lazy_alias_argument_inline(alias_groups)
-        if module_argument is None or alias_argument is None:
-            return ""
         joined = f"{module_argument}, {alias_argument}, sort_keys=False"
-        if 8 + len(joined) > c.Infra.MAX_LINE_LENGTH:
+        if 8 + len(joined) > config.Infra.tooling.tools.ruff.line_length:
             return ""
         return joined
 
@@ -217,14 +215,9 @@ class FlextInfraCodegenGenerationStandardMixin(
         cls, groups: t.SequenceOf[t.StrSequencePair]
     ) -> str:
         """Render the immutable module mapping without a formatter subprocess."""
-        if not groups:
-            return "        MappingProxyType({}),"
-        if len(groups) == 1:
-            inline = cls._lazy_module_argument_inline(groups)
-            if inline is not None:
-                compact = f"        {inline},"
-                if len(compact) <= c.Infra.MAX_LINE_LENGTH:
-                    return compact
+        compact = f"        {cls._lazy_module_argument_inline(groups)},"
+        if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
+            return compact
         lines: t.MutableSequenceOf[str] = ["        MappingProxyType({"]
         for module, names in groups:
             lines.extend(
@@ -242,14 +235,9 @@ class FlextInfraCodegenGenerationStandardMixin(
         cls, groups: t.SequenceOf[t.StrPairSequencePair]
     ) -> str:
         """Render the immutable alias mapping without a formatter subprocess."""
-        if not groups:
-            return "        alias_groups=MappingProxyType({}),"
-        if len(groups) == 1:
-            inline = cls._lazy_alias_argument_inline(groups)
-            if inline is not None:
-                compact = f"        {inline},"
-                if len(compact) <= c.Infra.MAX_LINE_LENGTH:
-                    return compact
+        compact = f"        {cls._lazy_alias_argument_inline(groups)},"
+        if len(compact) <= config.Infra.tooling.tools.ruff.line_length:
+            return compact
         lines: t.MutableSequenceOf[str] = ["        alias_groups=MappingProxyType({"]
         for module, pairs in groups:
             lines.extend(

@@ -551,33 +551,6 @@ class FlextInfraConstantsSourceCode:
     GITHUB_REPO_NAME: ClassVar[str] = "flext-sh/flext"
     "GitHub repository name in owner/repo format."
 
-    # --- Log parsing constants (was: class LogParser) ---
-    LOG_TAIL_LINES: ClassVar[int] = 50
-    "Number of tail lines to extract from log output."
-    LOG_ERROR_PATTERNS: ClassVar[t.VariadicTuple[t.RegexPattern]] = (
-        re.compile(r"^\s*\S+\.py:\d+"),
-        re.compile(r"^ERROR:", re.IGNORECASE),
-        re.compile(r"^\s+\[B\d+\]"),
-        re.compile(r"^FAIL:", re.IGNORECASE),
-        re.compile(r"^error:", re.IGNORECASE),
-        re.compile(r"^E\s+\w"),
-        re.compile(r"^FAILED\s"),
-    )
-    "Regex patterns for identifying error lines in logs."
-    LOG_MAKE_CHILD_EXIT_PATTERN: ClassVar[t.RegexPattern] = re.compile(
-        r"^make(?:\[\d+\])?: \*\*\* .*? Error (?P<code>\d+)", re.MULTILINE
-    )
-    "GNU make always exits 2 on a failed recipe but reports the recipe's real"
-    " exit code in its error line; this pattern recovers the child's code."
-    LOG_NOISE_PATTERNS: ClassVar[t.VariadicTuple[t.RegexPattern]] = (
-        re.compile(r"^make\["),
-        re.compile(r"warning:\s+(overriding|ignoring)"),
-        re.compile(r"^(Total|Success|Failed|Skipped):"),
-        re.compile(r"^──\s"),
-        re.compile(r"^INFO:"),
-    )
-    "Regex patterns for identifying noise lines in logs."
-
     # --- Class placement detection (was: class ClassPlacement) ---
     PLACEMENT_PYDANTIC_BASE_NAMES: ClassVar[frozenset[str]] = frozenset({
         "BaseModel",

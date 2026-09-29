@@ -130,6 +130,14 @@ class TestsFlextInfraDepsModernizerTooling:
             }),
         )
         tm.that(
+            list(u.Tests.toml_strings(lint["unfixable"])),
+            eq=sorted(ruff_policy.lint.unfixable),
+        )
+        tm.that(
+            list(u.Tests.toml_strings(lint["extend-safe-fixes"])),
+            eq=sorted(ruff_policy.lint.extend_safe_fixes),
+        )
+        tm.that(
             list(
                 u.Tests.toml_strings(
                     u.Tests.toml_mapping(lint["isort"])["known-first-party"]

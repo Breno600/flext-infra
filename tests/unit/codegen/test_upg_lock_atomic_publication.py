@@ -46,13 +46,17 @@ class TestsFlextInfraUpgLockAtomicPublication:
     ) -> None:
         """A run killed while uv resolves leaves the lock and checkout intact."""
         root, lock, committed = self._committed_project(tmp_path, python=">=3.13")
-        # uv opens the find-links wheel to read its metadata; a FIFO holds that
-        # read, so the interruption lands while uv is provably mid-run.
+        # uv opens the find-links wheel to read its metadata. A FIFO without a
+        # writer holds that open() in the kernel's ``wait_for_partner``, so the
+        # interruption lands while uv is provably mid-run. Connecting a writer
+        # would release it: uv seeks the zip, which a FIFO cannot serve.
         wheel = self._wheel_path(tmp_path)
         os.mkfifo(wheel)
-        writers: list[int] = []
+        blocked: list[int] = []
         stop = threading.Event()
-        watcher = threading.Thread(target=self._hold_fifo, args=(wheel, writers, stop))
+        watcher = threading.Thread(
+            target=self._await_blocked_reader, args=(blocked, stop)
+        )
         watcher.start()
         try:
             execution = tm.ok(
@@ -66,9 +70,8 @@ class TestsFlextInfraUpgLockAtomicPublication:
         finally:
             stop.set()
             watcher.join()
-            for writer in writers:
-                os.close(writer)
-        tm.that(writers, len=1, msg="uv never opened the dependency for resolution")
+            self._release_fifo(wheel)
+        tm.that(blocked, len=1, msg="uv never opened the dependency for resolution")
         tm.that(execution.outcome.timed_out, eq=True, msg=execution.stderr)
         tm.that(lock.read_bytes(), eq=committed)
         tm.that(sorted(path.name for path in root.glob(".uv.lock.*")), eq=[])
@@ -78,10 +81,11 @@ class TestsFlextInfraUpgLockAtomicPublication:
     ) -> None:
         """Publication swaps a complete lock in; a reader keeps the old one whole.
 
-        No interpreter satisfies the manifest, so the lifecycle stops at the
-        environment step right after publishing the lock.
+        Outside the setup bootstrap no Mise-resolved interpreter is handed
+        over, so the lifecycle stops at the environment step right after
+        publishing the lock.
         """
-        root, lock, committed = self._committed_project(tmp_path, python=">=3.99")
+        root, lock, committed = self._committed_project(tmp_path, python=">=3.13")
         self._write_wheel(self._wheel_path(tmp_path))
         with lock.open("rb") as reader:
             execution = tm.ok(
@@ -90,11 +94,12 @@ class TestsFlextInfraUpgLockAtomicPublication:
                     cwd=root,
                     env={"UV_PYTHON_DOWNLOADS": "never"},
                     timeout=self.INTERRUPT_AFTER_SECONDS,
-                    remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                    remove_env_keys=(*c.Tests.MAKE_ISOLATION_ENV_KEYS, "SETUP_PYTHON"),
                 )
             )
             tm.that(reader.read(), eq=committed)
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=False)
+        tm.that(execution.stderr, has="missing Mise-resolved Python executable")
         tm.that(lock.read_text(encoding="utf-8"), has=f'name = "{self.DEPENDENCY}"')
         tm.ok(u.Cli.run_checked([c.Infra.UV, "lock", "--check", "--offline"], cwd=root))
 
@@ -122,19 +127,31 @@ class TestsFlextInfraUpgLockAtomicPublication:
         lock = root / c.Infra.UV_LOCK_FILENAME
         return root, lock, lock.read_bytes()
 
-    def _hold_fifo(
-        self, wheel: Path, writers: list[int], stop: threading.Event
-    ) -> None:
-        """Open a FIFO writer once uv reads it, holding uv's read open."""
+    @staticmethod
+    def _await_blocked_reader(blocked: list[int], stop: threading.Event) -> None:
+        """Record the uv process whose thread waits to open the FIFO."""
         while not stop.is_set():
-            try:
-                writers.append(os.open(wheel, os.O_WRONLY | os.O_NONBLOCK))
-            except OSError as error:
-                if error.errno != errno.ENXIO:
-                    raise
-                time.sleep(0.02)
-            else:
-                return
+            for task in Path("/proc").glob("[0-9]*/task/[0-9]*"):
+                try:
+                    command = (task.parents[1] / "comm").read_text(encoding="utf-8")
+                    waiting = (task / "wchan").read_text(encoding="utf-8")
+                except (FileNotFoundError, ProcessLookupError):
+                    continue
+                if command.strip() == "uv" and waiting == "wait_for_partner":
+                    blocked.append(int(task.parents[1].name))
+                    return
+            time.sleep(0.02)
+
+    @staticmethod
+    def _release_fifo(fifo: Path) -> None:
+        """Give any reader still waiting on the FIFO its end of file."""
+        try:
+            writer = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+        except OSError as error:
+            if error.errno != errno.ENXIO:
+                raise
+        else:
+            os.close(writer)
 
     def _wheel_path(self, tmp_path: Path) -> Path:
         name = self.DEPENDENCY.replace("-", "_")

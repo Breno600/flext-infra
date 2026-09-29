@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from .sed_apply import FlextInfraCodemodSedApply
     from .semantic_apply import FlextInfraCodemodSemanticApply
     from .snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
+    from .snapshot_refresh import FlextInfraCodemodSnapshotRefresh
     from .text_gates import FlextInfraModTextGateEngine
 
 
@@ -27,6 +28,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodemodSedApply",
     "FlextInfraCodemodSemanticApply",
     "FlextInfraCodemodSnapshotReconciler",
+    "FlextInfraCodemodSnapshotRefresh",
     "FlextInfraModGateEngine",
     "FlextInfraModReplacements",
     "FlextInfraModTextGateEngine",
@@ -43,6 +45,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".sed_apply": ("FlextInfraCodemodSedApply",),
             ".semantic_apply": ("FlextInfraCodemodSemanticApply",),
             ".snapshot_reconciler": ("FlextInfraCodemodSnapshotReconciler",),
+            ".snapshot_refresh": ("FlextInfraCodemodSnapshotRefresh",),
             ".text_gates": ("FlextInfraModTextGateEngine",),
         }),
         alias_groups=MappingProxyType({}),

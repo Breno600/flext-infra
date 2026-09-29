@@ -55,7 +55,7 @@ class TestsFlextInfraRunProjects:
             ["p1", "nonexistent"], ["lint"], reports_dir=tmp_path / "reports"
         )
 
-        tm.fail(result, has=str(tmp_path / "nonexistent" / c.Infra.PYPROJECT_FILENAME))
+        tm.fail(result, has=str(tmp_path / "nonexistent" / c.PYPROJECT_FILENAME))
         tm.that((tmp_path / "reports" / "p1").exists(), eq=False)
 
     def test_empty_project_selection_fails_loudly(

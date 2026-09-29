@@ -39,6 +39,28 @@ class TestsFlextInfraDocsGenerator:
         tm.ok(result)
         tm.that([report.scope for report in result.value], eq=["root", "flext-a"])
 
+    def test_standalone_root_mkdocs_publishes_canonical_site_title(
+        self, tmp_path: Path
+    ) -> None:
+        """A standalone repository's root MkDocs site carries no project suffix.
+
+        The repository root publishes the canonical site identity its docs
+        contract declares; the per-project ``" Documentation"`` suffix belongs
+        to member project sites only (root title contract, c6db82fb2).
+        """
+        workspace, generator = u.Tests.docs_workspace_generator(
+            tmp_path, selected_projects=["."]
+        )
+        _ = u.Tests.plan_docs_bundle(generator)
+        result = generator.generate(
+            m.Infra.DocsGenerateRequest(repository_root=workspace, projects=["."])
+        )
+
+        tm.ok(result)
+        mkdocs = (workspace / "mkdocs.yml").read_text(encoding="utf-8")
+        tm.that("site_name: workspace\n" in mkdocs, eq=True)
+        tm.that("site_name: workspace Documentation" in mkdocs, eq=False)
+
     def test_bundle_plans_root_and_selected_project_artifacts(
         self, tmp_path: Path
     ) -> None:
