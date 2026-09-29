@@ -58,7 +58,7 @@ class TestsFlextInfraRealGateRunners:
     def test_ruff_lint_fix_reports_stderr_diagnostics_instead_of_deleting_them(
         self, tmp_path: Path
     ) -> None:
-        """make fix applies safe fixes and keeps a stderr diagnostic reachable.
+        """Make fix applies safe fixes and keeps a stderr diagnostic reachable.
 
         Ruff's unsafe T201 fix deleted ``print(..., file=sys.stderr)`` from a
         consumer script and turned its failures silent. Under the rendered
