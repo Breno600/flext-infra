@@ -238,7 +238,7 @@ class TestsFlextInfraUtilitiesGitMixin:
         venv.EnvBuilder(with_pip=False, symlinks=True).create(
             u.Infra.runtime_environment_dir(runtime_root, runtime_root=runtime_root)
         )
-        return u.Infra.runtime_python(runtime_root, runtime_root=runtime_root)
+        return u.Infra.runtime_python(runtime_root)
 
     @staticmethod
     def _read_origin_url(repo_root: Path, remote: str) -> str:
