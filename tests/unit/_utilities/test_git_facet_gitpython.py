@@ -322,3 +322,80 @@ class TestsFlextInfraGitFacet:
 
         tm.fail(result, has="locked worktree")
         assert lane.is_dir()
+
+    def test_is_ancestor_of_proves_both_directions(self, tmp_path: Path) -> None:
+        """Pair ancestry owns the integration proof the HEAD form cannot give."""
+        repository = test_u.Tests.git_repository(tmp_path)
+        base = tm.ok(
+            u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=repository))
+        ).oid
+        tm.ok(
+            test_u.Cli.run_checked(
+                [c.Infra.GIT, "switch", "-c", "topic"], cwd=repository
+            )
+        )
+        (repository / "topic.txt").write_text("topic\n", encoding="utf-8")
+        tm.ok(test_u.Cli.run_checked([c.Infra.GIT, "add", "topic.txt"], cwd=repository))
+        tm.ok(
+            test_u.Cli.run_checked(
+                [c.Infra.GIT, "commit", "-m", "topic"], cwd=repository
+            )
+        )
+        topic = tm.ok(
+            u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=repository))
+        ).oid
+
+        ancestor = tm.ok(
+            u.Infra.git_is_ancestor_of(
+                m.Infra.GitAncestryRequest(
+                    repo_root=repository, ancestor=base, descendant=topic
+                )
+            )
+        )
+        reverse = tm.ok(
+            u.Infra.git_is_ancestor_of(
+                m.Infra.GitAncestryRequest(
+                    repo_root=repository, ancestor=topic, descendant=base
+                )
+            )
+        )
+
+        tm.that(ancestor.value, eq=True)
+        tm.that(reverse.value, eq=False)
+
+    def test_is_ancestor_of_fails_on_unknown_commitish(self, tmp_path: Path) -> None:
+        """An unresolvable side is a failure, never a silent negative."""
+        repository = test_u.Tests.git_repository(tmp_path)
+
+        result = u.Infra.git_is_ancestor_of(
+            m.Infra.GitAncestryRequest(
+                repo_root=repository,
+                ancestor="deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+                descendant="HEAD",
+            )
+        )
+
+        assert result.failure
+        assert result.error is not None
+
+    def test_has_staged_changes_tracks_the_index(self, tmp_path: Path) -> None:
+        """The staged probe distinguishes a staged delta from a clean index."""
+        repository = test_u.Tests.git_repository(tmp_path)
+        request = m.Infra.GitRepoRequest(repo_root=repository)
+
+        tm.that(tm.ok(u.Infra.git_has_staged_changes(request)).value, eq=False)
+
+        (repository / "staged.txt").write_text("staged\n", encoding="utf-8")
+        tm.that(tm.ok(u.Infra.git_has_staged_changes(request)).value, eq=False)
+
+        tm.ok(
+            test_u.Cli.run_checked([c.Infra.GIT, "add", "staged.txt"], cwd=repository)
+        )
+        tm.that(tm.ok(u.Infra.git_has_staged_changes(request)).value, eq=True)
+
+        tm.ok(
+            test_u.Cli.run_checked(
+                [c.Infra.GIT, "commit", "-m", "staged"], cwd=repository
+            )
+        )
+        tm.that(tm.ok(u.Infra.git_has_staged_changes(request)).value, eq=False)

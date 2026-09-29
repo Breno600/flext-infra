@@ -127,6 +127,17 @@ class FlextInfraModelsGit(
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         commitish: Annotated[t.NonEmptyStr, m.Field(description="Commit-ish")]
 
+    class GitAncestryRequest(m.ContractModel):
+        """Repository plus the two commit-ishes an ancestry proof relates."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        ancestor: Annotated[t.NonEmptyStr, m.Field(description="Candidate ancestor")]
+        descendant: Annotated[
+            t.NonEmptyStr, m.Field(description="Candidate descendant")
+        ]
+
     class GitPathPairRequest(m.ContractModel):
         """Repository plus source/target relative paths."""
 
