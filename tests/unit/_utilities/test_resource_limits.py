@@ -89,9 +89,10 @@ class TestsFlextInfraUtilitiesResourceLimits:
             # Real interpreter startup and controlled group cleanup use the
             # existing integration-harness budget, not the default case budget.
             pytest.param("deadline", 124, marks=pytest.mark.slow),
-            # Darwin's supervisor samples group RSS and stops it (137); Linux
-            # prlimit makes the allocation fail inside the process (exit 1).
-            ("memory", (137 if sys.platform == "darwin" else 1)),
+            # Darwin's supervisor samples group RSS and stops it (137); on
+            # Linux the address-space limit aborts the checker itself, which
+            # exits 2 with its INTERNAL ERROR banner.
+            ("memory", (137 if sys.platform == "darwin" else 2)),
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
@@ -125,7 +126,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         if scenario == "memory":
             tm.that(
                 result.value.stderr,
-                has="RSS limit reached" if sys.platform == "darwin" else "MemoryError",
+                has="RSS limit reached"
+                if sys.platform == "darwin"
+                else "INTERNAL ERROR",
             )
 
     @pytest.mark.slow
@@ -331,3 +334,21 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
 
         tm.that(diagnostic, has=["Traceback: checker frame", "INTERNAL ERROR"])
+
+    def test_mypy_cache_directory_is_lock_keyed_and_shared(
+        self, tmp_path: Path
+    ) -> None:
+        """One shared Mypy cache per dependency lock, reused by every checkout."""
+        spec = config.Infra.codegen.make.mypy_cache
+        for lock in spec.lock_files:
+            (tmp_path / lock).write_text(f"{lock}: fixture\n")
+        shared = u.Infra.mypy_cache_directory(tmp_path)
+        # Stable for the same lock: a cold checkout reuses this directory
+        # instead of recomputing the whole dependency fleet.
+        tm.that(u.Infra.mypy_cache_directory(tmp_path), eq=shared)
+        # Declared shared location, never a per-worktree path.
+        tm.that(shared.parent.name, eq=Path(spec.external_storage_directory).name)
+        # A rotated lock re-keys the cache, so a stale analysis can never be
+        # served for a different dependency graph.
+        (tmp_path / spec.lock_files[0]).write_text("rotated\n")
+        tm.that(u.Infra.mypy_cache_directory(tmp_path) != shared, eq=True)
