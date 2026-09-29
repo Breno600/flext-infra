@@ -50,7 +50,7 @@ class FlextInfraPytestRunnerExecution(
         overrides = {
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
                 self.root / c.Infra.DEFAULT_SRC_DIR
-            ),
+            )
         }
         if not coverage:
             overrides.update(dict.fromkeys(testmon_keys, str(self.testmon_db)))
@@ -412,11 +412,7 @@ class FlextInfraPytestRunnerExecution(
             whole_target=selection_plan.whole_target,
             execution_mode=execution_mode,
         )
-        outcome = self._run_suite(
-            command,
-            report_dir,
-            execution_mode=execution_mode,
-        )
+        outcome = self._run_suite(command, report_dir, execution_mode=execution_mode)
         cache_hit = (
             not complete
             and outcome.raw_return_code
@@ -471,9 +467,7 @@ class FlextInfraPytestRunnerExecution(
         )
         command = self.build_coverage_command(report_dir)
         outcome = self._run_suite(
-            command,
-            report_dir,
-            execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
+            command, report_dir, execution_mode=c.Infra.PytestExecutionMode.COVERAGE
         )
         if self._completed_failure(outcome):
             return self._finalize(report_dir, raw_return_code=outcome.raw_return_code)
