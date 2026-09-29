@@ -97,14 +97,14 @@ class TestsFlextInfraManagedMaintenanceHeaders:
             has=f"ruff format {' '.join(make.ruff.format_apply)} $(RUFF_PATHS)",
         )
         tm.that(
-            fmt_recipe, has=f'--gates "{",".join(make.fmt_gates)}" --projects . --apply'
+            fmt_recipe, has=f'--gates "{",".join(make.fmt_gates)}" --apply'
         )
         tm.that(fmt_recipe, lacks="ruff check")
         tm.that(
             rendered,
             has=(
                 f'--gates "{",".join(make.check_gates_fixable)}" '
-                "--projects . --apply --report-findings"
+                "--apply --report-findings"
             ),
         )
         tm.that("--preview" in make.ruff.format_check, eq=True)
