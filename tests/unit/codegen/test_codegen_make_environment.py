@@ -1005,8 +1005,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
-            makefile,
-            has="_builtin_sonarcloud_sync_all: _builtin_require_environment",
+            makefile, has="_builtin_sonarcloud_sync_all: _builtin_require_environment"
         )
         tm.that(
             makefile,

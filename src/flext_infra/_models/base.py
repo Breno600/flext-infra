@@ -15,7 +15,6 @@ from flext_cli import m
 from flext_infra import c, t
 
 
-
 class FlextInfraModelsBase:
     """Base models for flext-infra project."""
 
