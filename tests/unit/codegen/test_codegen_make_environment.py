@@ -736,13 +736,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         assert isinstance(jscpd, Mapping)
         assert isinstance(waza, Mapping)
         tm.that(jscpd.get("version"), eq=toolchain.jscpd_version)
-        tm.that(
-            jscpd.get("platforms"),
-            eq={
-                platform: {"asset_pattern": pattern}
-                for platform, pattern in toolchain.jscpd_asset_patterns.items()
-            },
-        )
+        tm.that(jscpd.get("platforms"), eq=None)
         tm.that(waza.get("version"), eq=toolchain.waza_version)
         tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
 
@@ -1008,8 +1002,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
-            makefile,
-            has="_builtin_sonarcloud_sync_all: _builtin_require_environment",
+            makefile, has="_builtin_sonarcloud_sync_all: _builtin_require_environment"
         )
         tm.that(
             makefile,

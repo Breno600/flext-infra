@@ -96,9 +96,7 @@ class TestsFlextInfraManagedMaintenanceHeaders:
             fmt_recipe,
             has=f"ruff format {' '.join(make.ruff.format_apply)} $(RUFF_PATHS)",
         )
-        tm.that(
-            fmt_recipe, has=f'--gates "{",".join(make.fmt_gates)}" --apply'
-        )
+        tm.that(fmt_recipe, has=f'--gates "{",".join(make.fmt_gates)}" --apply')
         tm.that(fmt_recipe, lacks="ruff check")
         tm.that(
             rendered,
