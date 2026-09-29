@@ -144,7 +144,9 @@ class FlextInfraUtilitiesResourceLimits:
         if metadata.failure:
             msg = metadata.error or f"project metadata unreadable: {project_dir}"
             raise ValueError(msg)
-        return Path(home) / spec.external_storage_directory / metadata.value.project.name
+        return (
+            Path(home) / spec.external_storage_directory / metadata.value.project.name
+        )
 
     @staticmethod
     def mypy_limited_command(

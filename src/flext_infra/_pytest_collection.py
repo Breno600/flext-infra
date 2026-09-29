@@ -76,8 +76,10 @@ class FlextInfraPytestCollection:
         if selected is not None:
             from ._models.validate import FlextInfraModelsCore
 
-            manifest = FlextInfraModelsCore.PytestCollectionManifest.model_validate_json(
-                Path(selected).read_text(encoding="utf-8")
+            manifest = (
+                FlextInfraModelsCore.PytestCollectionManifest.model_validate_json(
+                    Path(selected).read_text(encoding="utf-8")
+                )
             )
             order = {node_id: index for index, node_id in enumerate(manifest.node_ids)}
             collected = [item.nodeid for item in session.items]

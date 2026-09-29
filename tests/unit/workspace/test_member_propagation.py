@@ -73,7 +73,9 @@ class TestsFlextInfraWorkspaceMemberPropagation:
                     u.Tests.checkout_integration(root / name)
                 u.Tests.WorktreeFixture.write_gitmodules(root, self.MEMBERS)
                 for name in self.MEMBERS:
-                    head = u.Tests.git_capture(root / name, "rev-parse", c.Infra.GIT_HEAD)
+                    head = u.Tests.git_capture(
+                        root / name, "rev-parse", c.Infra.GIT_HEAD
+                    )
                     u.Tests.git_run(
                         root,
                         "update-index",

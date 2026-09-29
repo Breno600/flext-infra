@@ -344,8 +344,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
             root = tmp_path / name
             root.mkdir()
             (root / c.PYPROJECT_FILENAME).write_text(
-                f"[project]\nname = '{project}'\nversion = '0.0.0'\n",
-                encoding="utf-8",
+                f"[project]\nname = '{project}'\nversion = '0.0.0'\n", encoding="utf-8"
             )
             return root
 
