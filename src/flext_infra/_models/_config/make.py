@@ -462,6 +462,11 @@ class FlextInfraConfigModelsMake:
         format only and ``make fix`` owns lint repair through the lint gate —
         there is deliberately no ``lint_apply`` key, because a lint pass
         inside fmt would repeat the lint gate's fix.
+
+        ``make fix`` never deletes information (flext-itpd1.5): the lint repair
+        applies Ruff's safe fixes only, so ``lint_fix`` rejects the unsafe-fix
+        flag. Rules whose fixes delete code stay reported through the
+        ``unfixable`` list rendered from ``tooling.yaml``.
         """
 
         format_check: Annotated[
@@ -480,11 +485,23 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 description=(
-                    "Flags for ruff check --fix including unsafe-fixes; the lint "
-                    "gate's apply mode (make fix), which reports leftovers"
+                    "Flags for ruff check --fix applying safe fixes only; the "
+                    "lint gate's apply mode (make fix), which reports leftovers"
                 )
             ),
         ]
+
+        @u.model_validator(mode="after")
+        def _reject_unsafe_fixes(self) -> Self:
+            """Keep the lint repair information-preserving."""
+            if FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG in self.lint_fix:
+                msg = (
+                    "make.ruff.lint_fix must not enable "
+                    f"{FlextInfraConstantsMake.RUFF_UNSAFE_FIXES_FLAG}: unsafe "
+                    "Ruff fixes delete code, comments and diagnostics"
+                )
+                raise ValueError(msg)
+            return self
 
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
