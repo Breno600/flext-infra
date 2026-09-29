@@ -7,6 +7,7 @@ from pathlib import Path
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
+from ..extra_paths import FlextInfraExtraPathsManager
 from .tool_tables import FlextInfraToolTablesPhase
 
 
@@ -88,6 +89,7 @@ class FlextInfraEnsureRuffConfigPhase:
         return tuple(path.as_posix() for path in paths.value)
 
     def compose_per_file_ignores(
+        self,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
@@ -181,12 +183,14 @@ class FlextInfraEnsureRuffConfigPhase:
         # it: ruff fails hard on src roots whose directories do not exist, and
         # the namespace-packages contract only holds for roots on disk. The
         # declared lists stay the SSOT; existence filters the projection, with
-        # roots the active plan is materializing accepted as present.
+        # roots the active plan is materializing accepted as present (the
+        # extra-paths manager owns that set; empty in the deps pass).
+        generated_roots = FlextInfraExtraPathsManager(
+            repository_root=path.parent
+        ).generated_python_roots
 
         def _present(directory: str) -> bool:
-            return (path.parent / directory).is_dir() or (
-                directory in self._generated_roots
-            )
+            return (path.parent / directory).is_dir() or (directory in generated_roots)
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
         excluded_roots = self._excluded_root_set(path.parent)

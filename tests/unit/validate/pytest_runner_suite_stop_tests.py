@@ -48,9 +48,7 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         Both scenarios end with pytest's own interrupt from the stop instant.
         """
         reports = config.Infra.codegen.make.testmon_cache.reports_directory
-        (bounded,) = (
-            path.parent for path in (project / reports).glob("*/summary.txt")
-        )
+        (bounded,) = (path.parent for path in (project / reports).glob("*/summary.txt"))
         outcome = m.Cli.ProcessOutcome.model_validate_json(
             self._read(bounded / "suite-outcome.json")
         )
