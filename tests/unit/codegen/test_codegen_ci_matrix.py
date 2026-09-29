@@ -45,7 +45,9 @@ class TestsFlextInfraCodegenCiMatrix:
     def render_project(root: Path) -> Path:
         """Render one fresh internal_flext project into root and return it."""
         # The governed tree carries the committed Taplo pin generation formats
-        # through; a fresh scaffold never resolves a moving selector.
+        # through; a fresh scaffold never resolves a moving selector. The pin
+        # lands in the output root before the scaffold renders into it.
+        root.mkdir(parents=True, exist_ok=True)
         u.Tests.seed_locked_taplo(root)
         service = FlextInfraCodegenProjectNew(
             flext_source=u.Tests.flext_source(),
@@ -147,18 +149,29 @@ class TestsFlextInfraCodegenCiMatrix:
             (root / ".github" / "workflows" / filename).read_text(encoding="utf-8")
             for filename in ("ci.yml", "ci-matrix.yml")
         )
-        catalog = {
-            f"{action.repository}@{action.version}"
-            for action in config.Infra.codegen.github_actions.values()
-        }
+        catalog = tuple(config.Infra.codegen.github_actions.values())
         used_actions = tuple(
             line.split("uses:", maxsplit=1)[1].strip().split(maxsplit=1)[0]
             for line in workflows.splitlines()
             if "uses:" in line
         )
         tm.that(len(used_actions), gt=0)
+        # A reference names a catalog repository, or one of its sub-actions
+        # (``actions/cache/restore``), at exactly the catalog version.
         for action in used_actions:
-            tm.that(catalog, has=action)
+            reference, version = action.rsplit("@", maxsplit=1)
+            tm.that(
+                any(
+                    version == entry.version
+                    and (
+                        reference == entry.repository
+                        or reference.startswith(f"{entry.repository}/")
+                    )
+                    for entry in catalog
+                ),
+                eq=True,
+                msg=action,
+            )
 
         tm.that(workflows, lacks="continue-on-error")
         tm.that(workflows, lacks="set +e")
@@ -325,6 +338,18 @@ class TestsFlextInfraCodegenCiMatrix:
                 "      # Why: GitHub runners expose umask 002, so git checkout materializes"
             ),
         )
+        # Included fragments start on their own line: a rationale comment is
+        # never glued onto the previous comment line.
+        for filename in ("ci.yml", "docs.yml"):
+            text = (root / ".github" / "workflows" / filename).read_text(
+                encoding="utf-8"
+            )
+            glued = [
+                line
+                for line in text.splitlines()
+                if "# Why" in line and not line.lstrip().startswith("# Why")
+            ]
+            tm.that(glued, eq=[])
         root2 = self.render_project(tmp_path / "member-again")
         workflow2 = (root2 / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
@@ -358,8 +383,14 @@ class TestsFlextInfraCodegenCiMatrix:
         )
         actions = config.Infra.codegen.github_actions
         for action in actions.values():
-            if action.repository in workflow:
-                tm.that(workflow, has=f"{action.repository}@{action.version}")
+            # Every reference to a catalog repository, or to one of its
+            # sub-actions (``actions/cache/restore``), pins the catalog version.
+            references = re.findall(
+                rf"uses: ({re.escape(action.repository)}(?:/[\w.-]+)*)@(\S+)",
+                workflow,
+            )
+            for _reference, version in references:
+                tm.that(version, eq=action.version)
 
     def test_dependabot_does_not_delay_available_updates(
         self, rendered_project: Path
