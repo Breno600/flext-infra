@@ -26,6 +26,8 @@ from __future__ import annotations
 
 from typing import Annotated, Self
 
+from pydantic import JsonValue
+
 {{ base_import }}
 
 {{ settings_import_line }}
@@ -48,12 +50,14 @@ from ._models.config import (
     # Unlike never-instantiated namespace holders, ``__init__`` delegates to
     # ``super()`` so the frozen, YAML-validated pydantic construction still
     # runs, and the inherited pydantic ``__setattr__`` keeps the frozen guard.
-    def __new__(cls, *args: object, **kwargs: object) -> Self:
-        _ = args, kwargs
+    # Pydantic constructs models with keywords only (``cls(**data)``); the
+    # values are the YAML/JSON config payload, typed as Pydantic JSON.
+    def __new__(cls, **data: JsonValue) -> Self:
+        _ = data
         return object.__new__(cls)
 
-    def __init__(self, *args: object, **kwargs: object) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, **data: JsonValue) -> None:
+        super().__init__(**data)
 
     __eq__ = object.__eq__
 
