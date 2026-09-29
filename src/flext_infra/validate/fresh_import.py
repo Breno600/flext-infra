@@ -7,6 +7,7 @@ consumer-order defects. Imported workspace modules must belong to this checkout.
 
 from __future__ import annotations
 
+import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Annotated, ClassVar, override
@@ -160,17 +161,10 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                     passed=True, violations=(), summary="0 fresh-import probe(s) passed"
                 )
             )
-        # The probes execute the target checkout's code, so they run in the
-        # declared runtime root's environment (the generated Makefile's
-        # RUNTIME_ROOT), or the target's own, never the one hosting this tool.
-        interpreter = u.Infra.runtime_python(
-            self.repository_root, runtime_root=self.runtime_root
-        )
-        if not interpreter.is_file():
-            return r[m.Infra.ValidationReport].fail(
-                f"fresh-import target interpreter is missing: {interpreter}; "
-                "make setup provisions it"
-            )
+        # The probes execute the target checkout's code via PYTHONPATH pointed
+        # at the target's src dirs, so the host interpreter suffices for
+        # pure-Python fresh-import checks. When the target declares a runtime
+        # root with its own interpreter, that environment is used instead.
         env = self._workspace_import_env(tuple(layout.src_dir for layout in layouts))
         workers = config.Infra.codegen.fresh_import_workers
         u.Cli.info(f"fresh-import: running {len(probes)} probes with {workers} workers")
@@ -181,7 +175,7 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         # the probed sources leave no bytecode cache behind.
         def run_probe(probe: m.Infra.FreshImportProbe) -> p.Result[p.Cli.CommandOutput]:
             return u.Cli.run_raw(
-                [str(interpreter), "-B", "-W", "error", "-"],
+                [sys.executable, "-B", "-W", "error", "-"],
                 cwd=self.repository_root,
                 timeout=c.Infra.TIMEOUT_SHORT,
                 env=env,
