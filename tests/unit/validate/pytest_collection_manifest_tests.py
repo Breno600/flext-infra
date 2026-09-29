@@ -15,11 +15,7 @@ class TestsFlextInfraPytestCollectionManifest:
 
     @staticmethod
     def _collect(project: Path, *options: str) -> str:
-        """Collect the sample project with only this plugin's FLEXT surface.
-
-        The flext-tests plugins import the model facade for their own
-        fixtures, so they are disabled to observe this plugin in isolation.
-        """
+        """Collect the sample project with every installed pytest plugin."""
         tests = project / "tests"
         tests.mkdir(exist_ok=True)
         (project / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
@@ -42,10 +38,6 @@ class TestsFlextInfraPytestCollectionManifest:
                     "tests",
                     "--collect-only",
                     "-q",
-                    "-p",
-                    "no:flext_tests",
-                    "-p",
-                    "no:flext_tests_enforcement",
                     "-p",
                     "no:randomly",
                     *options,
