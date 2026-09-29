@@ -393,7 +393,6 @@ Infra:
         user_home_environment_variable: HOME
         home_cache_directory: .cache
         external_storage_directory: flext/infra/mypy
-        lock_files: [uv.lock, mise.lock]
       # Public verbs execute their declared operation without mode selectors.
       ci:
         variable: CI

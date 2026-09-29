@@ -171,11 +171,10 @@ class FlextInfraMypyGate(FlextInfraGate):
     def _check_env(
         self, project_dir: Path, ctx: m.Infra.GateContext
     ) -> t.StrMapping | None:
-        """Run Mypy against the shared, lock-keyed analysis cache."""
-        _ = project_dir
+        """Run Mypy against the project's shared analysis cache."""
         overrides = {
             c.Infra.MypyCacheEnvironment.CACHE_DIR.value: str(
-                u.Infra.mypy_cache_directory(ctx.repository_root)
+                u.Infra.mypy_cache_directory(project_dir)
             )
         }
         typings_generated = ctx.repository_root / c.Infra.DIR_TYPINGS / "generated"

@@ -371,7 +371,7 @@ class FlextInfraConfigModelsMake:
             return self
 
     class MypyCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Lock-keyed shared Mypy cache: one analysis per dependency lock."""
+        """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
         cache_environment_variable: Annotated[
             FlextInfraConstantsMake.MypyCacheEnvironment,
@@ -390,10 +390,6 @@ class FlextInfraConfigModelsMake:
         ]
         external_storage_directory: Annotated[
             Path, m.Field(description="FLEXT-owned directory below the cache home")
-        ]
-        lock_files: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(description="Dependency locks whose digest keys the cache"),
         ]
 
         @u.model_validator(mode="after")
@@ -428,11 +424,6 @@ class FlextInfraConfigModelsMake:
                 ):
                     msg = f"mypy cache {name} must be normalized and relative"
                     raise ValueError(msg)
-            if not self.lock_files or any(
-                Path(lock).name != lock for lock in self.lock_files
-            ):
-                msg = "mypy cache lock_files must be bare filenames"
-                raise ValueError(msg)
             return self
 
     class MakeWorkInProgressSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -553,7 +544,7 @@ class FlextInfraConfigModelsMake:
         ]
         mypy_cache: Annotated[
             FlextInfraConfigModelsMake.MypyCacheSpec,
-            m.Field(description="Lock-keyed shared Mypy analysis cache policy"),
+            m.Field(description="Project-keyed shared Mypy analysis cache policy"),
         ]
         verbs: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeVerbSpec],

@@ -334,20 +334,30 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
         tm.that(diagnostic, has=["Traceback: checker frame", "INTERNAL ERROR"])
 
-    def test_mypy_cache_directory_is_lock_keyed_and_shared(
+    def test_mypy_cache_directory_is_project_keyed_and_survives_relocks(
         self, tmp_path: Path
     ) -> None:
-        """One shared Mypy cache per dependency lock, reused by every checkout."""
+        """One shared Mypy cache per project, reused by every checkout and relock."""
         spec = config.Infra.codegen.make.mypy_cache
-        for lock in spec.lock_files:
-            (tmp_path / lock).write_text(f"{lock}: fixture\n")
-        shared = u.Infra.mypy_cache_directory(tmp_path)
-        # Stable for the same lock: a cold checkout reuses this directory
-        # instead of recomputing the whole dependency fleet.
-        tm.that(u.Infra.mypy_cache_directory(tmp_path), eq=shared)
-        # Declared shared location, never a per-worktree path.
+
+        def checkout(name: str, project: str) -> Path:
+            root = tmp_path / name
+            root.mkdir()
+            (root / c.PYPROJECT_FILENAME).write_text(
+                f"[project]\nname = '{project}'\nversion = '0.0.0'\n",
+                encoding="utf-8",
+            )
+            return root
+
+        lane = checkout("lane", "fixture-alpha")
+        primary = checkout("primary", "fixture-alpha")
+        other = checkout("other", "fixture-beta")
+        shared = u.Infra.mypy_cache_directory(lane)
+        # Every checkout of one project reuses one analysis.
+        tm.that(u.Infra.mypy_cache_directory(primary), eq=shared)
         tm.that(shared.parent.name, eq=Path(spec.external_storage_directory).name)
-        # A rotated lock re-keys the cache, so a stale analysis can never be
-        # served for a different dependency graph.
-        (tmp_path / spec.lock_files[0]).write_text("rotated\n")
-        tm.that(u.Infra.mypy_cache_directory(tmp_path) != shared, eq=True)
+        # A relock keeps the directory: Mypy revalidates changed modules itself.
+        (lane / c.Infra.UV_LOCK_FILENAME).write_text("rotated\n", encoding="utf-8")
+        tm.that(u.Infra.mypy_cache_directory(lane), eq=shared)
+        # Distinct projects never share one tests package namespace.
+        tm.that(u.Infra.mypy_cache_directory(other) != shared, eq=True)
