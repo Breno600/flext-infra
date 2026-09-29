@@ -111,6 +111,13 @@ exporta esse `RUNTIME_ROOT` e o `flext-infra` o lê como declaração tipada: a 
 interpretador que hospeda a ferramenta. Sem declaração, o dono deriva a raiz Git do
 checkout; uma declaração sem interpretador falha.
 
+O `.venv` pertence ao `RUNTIME_ROOT` (D-VENV, `flext-x8gn6`). Um membro anexado como
+submódulo usa o `.venv` do superprojeto Git que o contém; um checkout standalone ou uma
+worktree vinculada tem o seu próprio. O Makefile gerado, o `.envrc` gerado e
+`runtime_environment_dir` resolvem essa raiz pelo mesmo caminho físico: entrar no
+checkout por um symlink não muda o ambiente selecionado. Nenhum ambiente vive fora do
+checkout que o possui, nem é emprestado de outro checkout por symlink.
+
 Uma raiz de workspace declara cada membro anexado, de qualquer família (`flext-*` ou
 não), como fonte Git inline na linha de integração do próprio workspace, a mesma que o
 `.gitmodules` governado exige do membro; só as dependências `flext-*` que não são

@@ -865,8 +865,30 @@ endef
 
 # uv resolves the containing workspace and writes its single uv.lock. Invoking
 # it once per member re-resolves that same lock for every member.
+# uv truncates and rewrites uv.lock in place, so a run killed mid-write leaves
+# a partial lock (flext-idihq). The lock therefore resolves in a scratch mirror
+# of the manifests uv itself reports (`uv workspace dir|list`), must pass
+# `uv lock --check` against that mirror (every declared member present), and
+# only then replaces the committed lock by one rename inside its directory. An
+# interrupted run never touches the committed lock.
 define _lock_project
-	@$(UV) lock --project "$(PROJECT_ROOT)" $(1)
+	@set -eu; \
+	workspace=$$($(UV) workspace dir --project "$(PROJECT_ROOT)"); \
+	stage=$$(mktemp -d); candidate="$$workspace/.uv.lock.$$$$"; \
+	trap 'find "$$stage" -depth -delete; rm -f "$$candidate"' EXIT; \
+	trap 'exit 129' HUP; trap 'exit 130' INT; trap 'exit 143' TERM; \
+	$(UV) workspace list --paths --project "$$workspace" > "$$stage/.members"; \
+	while IFS= read -r member; do \
+		relative=$${member#"$$workspace"}; \
+		mkdir -p "$$stage/mirror$$relative"; \
+		cp "$$member/pyproject.toml" "$$stage/mirror$$relative/pyproject.toml"; \
+	done < "$$stage/.members"; \
+	if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$$stage/mirror/uv.lock"; fi; \
+	$(UV) lock --project "$$stage/mirror" $(1); \
+	$(UV) lock --check --project "$$stage/mirror"; \
+	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
+	cp "$$stage/mirror/uv.lock" "$$candidate"; \
+	mv -f "$$candidate" "$$workspace/uv.lock"
 endef
 
 .PHONY: $(PUBLIC_VERBS) $(addprefix _builtin-,$(PUBLIC_VERBS))
@@ -1496,7 +1518,7 @@ _upg_relock: _bootstrap_setup_tools
 _upg_converge:
 	$(call _lock_project,)
 	@$(SELF_MAKE) _builtin_setup_environment
-	$(call _lock_project,--check)
+	@$(UV) lock --check --project "$(PROJECT_ROOT)"
 	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated
 

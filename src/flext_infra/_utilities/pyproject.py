@@ -115,16 +115,11 @@ class FlextInfraUtilitiesPyproject:
     ) -> p.Result[str]:
         """Format TOML through the configured workspace Taplo toolchain.
 
-        ``taplo_version`` is the declared selector; a moving one is resolved
-        against the committed ``mise.lock`` before any shim runs, so generation
-        formats with the locked release and never asks a tool manager to resolve
-        a version mid-run.
+        ``taplo_version`` is the declared selector; the one mise.lock owner
+        (``_locked_mise_version``, nearest lock at or above the execution root)
+        resolves it before any shim runs, so generation formats with the locked
+        release and never asks a tool manager to resolve a version mid-run.
         """
-        exact_version = FlextInfraUtilitiesPyproject._locked_taplo_version(
-            toolchain_root, declared=taplo_version
-        )
-        if exact_version.failure:
-            return r[str].from_failure(exact_version)
         config_path = toolchain_root / c.Infra.TAPLO_CONFIG_FILENAME
         config_content = config_path.read_bytes() if config_path.is_file() else b""
         resolved_path = path.resolve()
@@ -145,7 +140,7 @@ class FlextInfraUtilitiesPyproject:
             config_path=config_path.resolve() if config_content else None,
             config_digest=u.Cli.sha256_bytes(config_content),
             execution_root=execution_root,
-            taplo_version=exact_version.value,
+            taplo_version=taplo_version,
             process_timeout_seconds=process_timeout_seconds,
         )
 

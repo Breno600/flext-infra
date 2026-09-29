@@ -20,10 +20,18 @@ class FlextInfraEnsureRuffConfigPhase:
         self,
         tool_config: m.Infra.ToolConfigDocument,
         managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
+        generated_roots: t.StrSequence = (),
     ) -> None:
-        """Store tool configuration used to build canonical Ruff settings."""
+        """Store tool configuration used to build canonical Ruff settings.
+
+        ``generated_roots`` carries the roots the active codegen plan is
+        about to materialize: the existence filter must accept them exactly
+        like the search-path owner does, or a first render that runs before
+        the plan writes the tree would drop roots the projection must keep.
+        """
         self._tool_config = tool_config
         self._managed_artifacts = managed_artifacts
+        self._generated_roots = frozenset(generated_roots)
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
@@ -65,6 +73,32 @@ class FlextInfraEnsureRuffConfigPhase:
         return sorted(path.as_posix() for path in paths.value)
 
     @staticmethod
+    def _excluded_root_set(project_dir: Path) -> t.Infra.StrSet:
+        """First segments of the workspace SSOT's declared analysis exclusions.
+
+        Unlike a disk probe (which oscillates between the deps pass and the
+        root-materializing gen pass), the workspace SSOT is order-independent:
+        a repository declares a retired tree here once and every root-scoped
+        projection converges.
+        """
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return frozenset()
+        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
+        if paths.failure:
+            return frozenset()
+        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
+
+    @staticmethod
+    def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
+        """Return the workspace-declared analysis exclusion paths (SSOT-driven)."""
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return ()
+        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
+        if paths.failure:
+            return ()
+        return tuple(path.as_posix() for path in paths.value)
+
+    @staticmethod
     def compose_per_file_ignores(
         project_dir: Path,
         *,
@@ -96,9 +130,28 @@ class FlextInfraEnsureRuffConfigPhase:
             if loaded.failure:
                 raise ValueError(loaded.error or "project artifact load failed")
             local_ignores = loaded.value.artifacts.Ruff.per_file_ignores
+        # An exemption glob rooted on a first-class directory that the
+        # workspace retired (e.g. scripts/**, declared as an analysis
+        # exclusion in its workspace SSOT) must not survive the render: it
+        # documents scope that no longer exists and re-created stale entries
+        # on every conformance pass. Declared exclusions are order-independent
+        # — a disk probe oscillated between the deps pass and the
+        # root-materializing gen pass.
+        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(
+            project_dir
+        )
+        scoped_global = {
+            pattern: rules
+            for pattern, rules in effective_global.items()
+            if (
+                (root := pattern.split("/")[0]).endswith("**")
+                or not root.isidentifier()
+                or root not in excluded_roots
+            )
+        }
         return {
-            pattern: tuple(sorted({*effective_global.get(pattern, ()), *rules}))
-            for pattern, rules in {**effective_global, **local_ignores}.items()
+            pattern: tuple(sorted({*scoped_global.get(pattern, ()), *rules}))
+            for pattern, rules in {**scoped_global, **local_ignores}.items()
         }
 
     def _phase(
@@ -137,6 +190,20 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
+        # Dev/tooling source roots are config-declared, but a workspace that
+        # retired a tree (e.g. scripts/, declared in the workspace SSOT as an
+        # analysis exclusion) must not keep analyzer entries naming it: ruff
+        # fails hard on src roots whose directories do not exist, and the
+        # namespace-packages contract only holds for live roots. The exclusion
+        # SSOT filters the projection — order-independent across the deps pass
+        # and the root-materializing gen pass.
+        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(
+            path.parent
+        )
+        existing_root = tuple(d for d in ruff_cfg.src if d not in excluded_roots)
+        existing_namespace_packages = tuple(
+            d for d in ruff_cfg.namespace_packages if d not in excluded_roots
+        )
         toml = m.Infra.DepsToml
         return toml.PhaseConfig(
             name="ruff",
@@ -148,7 +215,8 @@ class FlextInfraEnsureRuffConfigPhase:
                     values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
                 ),
                 toml.ListOp(
-                    key="namespace-packages", values=sorted(ruff_cfg.namespace_packages)
+                    key="namespace-packages",
+                    values=sorted(existing_namespace_packages),
                 ),
                 toml.SetOp(key="fix", value=ruff_cfg.fix),
                 toml.SetOp(key="line-length", value=ruff_cfg.line_length),
@@ -156,7 +224,7 @@ class FlextInfraEnsureRuffConfigPhase:
                 toml.SetOp(key="respect-gitignore", value=ruff_cfg.respect_gitignore),
                 toml.SetOp(key="show-fixes", value=ruff_cfg.show_fixes),
                 toml.SetOp(key="target-version", value=ruff_cfg.target_version),
-                toml.ListOp(key="src", values=sorted(ruff_cfg.src)),
+                toml.ListOp(key="src", values=sorted(existing_root)),
             ),
             nested_tables=(
                 toml.PhaseConfig(

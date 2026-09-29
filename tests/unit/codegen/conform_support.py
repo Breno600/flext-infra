@@ -96,7 +96,7 @@ class TestsFlextInfraConformSupport:
 
     @staticmethod
     def seed_infra_package_tree(root: Path) -> None:
-        """Seed the minimal flext-infra tree (pyproject, src package, tests package).
+        """Seed the minimal flext-infra tree (pyproject, src, tests, Mise seeds).
 
         The conform templates materialize tests/fixtures/ci/docker/*, and the
         existing-tree tooling render discovers python roots from directories that
