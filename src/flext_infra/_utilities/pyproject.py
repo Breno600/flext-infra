@@ -145,19 +145,6 @@ class FlextInfraUtilitiesPyproject:
         )
 
     @staticmethod
-    def _locked_taplo_version(toolchain_root: Path, *, declared: str) -> p.Result[str]:
-        """Return the exact Taplo release the committed lock pins.
-
-        The configuration declares the moving selector; only ``make upg``
-        resolves it, into ``mise.lock``. Generation therefore reads the pinned
-        release and passes it on, and an absent lock entry fails loud instead
-        of silently accepting whatever binary the host happens to expose.
-        """
-        return FlextInfraUtilitiesPyproject._locked_mise_version(
-            toolchain_root, c.Infra.TAPLO_MISE_TOOL_NAME, declared
-        )
-
-    @staticmethod
     @lru_cache(maxsize=128)
     def _format_toml_source_cached(
         source: str,
