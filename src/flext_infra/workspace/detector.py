@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
@@ -129,17 +130,31 @@ class FlextInfraWorkspaceDetector(
         manifest_path = u.Infra.workspace_manifest_path(repository_root)
         if not manifest_path.is_file():
             return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].ok(())
-        loaded = u.Cli.config_load(manifest_path, expand_env=False)
-        if loaded.failure:
-            error = loaded.error
-            if error is None:
-                msg = "workspace manifest load failed without an error"
-                raise RuntimeError(msg)
+        text = u.Cli.files_read_text(manifest_path)
+        if text.failure:
             return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].fail(
-                f"invalid workspace manifest ({manifest_path}): {error}"
+                f"invalid workspace manifest ({manifest_path}): {text.error}"
+            )
+        return cls._parsed_workspace_manifest(text.value, str(manifest_path))
+
+    @staticmethod
+    @lru_cache(maxsize=256)
+    def _parsed_workspace_manifest(
+        text: str, manifest_path: str
+    ) -> p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]:
+        """Parse and validate one manifest text once per exact content.
+
+        One conform plan resolves the same manifest from many owners (the
+        integration branch, provider identity, members); the key is the exact
+        file text, so an edited manifest is a new key, never a stale spec.
+        """
+        loaded = u.Cli.yaml_parse(text)
+        if loaded.failure:
+            return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].fail(
+                f"invalid workspace manifest ({manifest_path}): {loaded.error}"
             )
         validated: p.Result[m.Infra.WorkspaceManifestSpec] = u.validate_value(
-            m.Infra.WorkspaceManifestSpec, loaded.value.data
+            m.Infra.WorkspaceManifestSpec, loaded.value
         )
         if validated.failure:
             return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].fail_op(
@@ -271,26 +286,7 @@ class FlextInfraWorkspaceDetector(
                 True,
                 None,
             ))
-        loaded = u.Cli.config_load(manifest_path, expand_env=False)
-        if loaded.failure:
-            error = loaded.error
-            if error is None:
-                msg = "workspace manifest load failed without an error"
-                raise RuntimeError(msg)
-            return r[
-                tuple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None]
-            ].fail(f"invalid workspace manifest ({manifest_path}): {error}")
-        validated: p.Result[m.Infra.WorkspaceManifestSpec] = u.validate_value(
-            m.Infra.WorkspaceManifestSpec, loaded.value.data
-        )
-        if validated.failure:
-            return r[
-                tuple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None]
-            ].fail_op(
-                f"workspace manifest model validation ({manifest_path})",
-                validated.error,
-            )
-        manifest = validated.value
+        manifest = loaded.value[0]
         declared = manifest.repository
         contradictions = cls._manifest_git_contradictions(declared, observed)
         if contradictions:

@@ -173,6 +173,7 @@ def _provision_detector_template(modules: t.StrSequence) -> None:
 _MAKE_UPGRADE_RECEIPT = c.Tests.MAKE_TEMPLATE_UPG_RECEIPT
 _MAKE_CI_SETUP_RECEIPT = c.Tests.MAKE_TEMPLATE_CI_RECEIPT
 _INFRA_SETUP_RECEIPT = "setup-receipt.json"
+_GIT_MIRRORS_RECEIPT = "mirrors-receipt.txt"
 # Every scenario that provisions the candidate's own environment before `gen`.
 _INFRA_CHECKOUT_SCENARIOS = (
     "builtin",
@@ -285,6 +286,25 @@ def _ensure_provisioned(
                 _provision_infra_checkout(key)
             case _:
                 _provision_detector_template(key)
+
+
+@pytest.fixture
+def hermetic_git_environment() -> t.StrMapping:
+    """Serve the fixture provider's Git sources from this run's local mirrors.
+
+    The mirrors are built once per run under the canonical filesystem lease
+    from objects this checkout already holds; the returned environment routes
+    the provider to them and makes any network transport fail.
+    """
+    parent = _run_scoped("git-mirrors", "provider")
+    parent.mkdir(parents=True, exist_ok=True)
+    receipt = parent / _GIT_MIRRORS_RECEIPT
+    mirrors = parent / "mirrors"
+    with u.Infra.codegen_transaction_lease(receipt):
+        if not receipt.is_file():
+            mirrored = u.Tests.build_git_mirrors(_PROJECT_ROOT, mirrors)
+            tm.ok(u.Cli.atomic_write_text_file(receipt, "\n".join(mirrored) + "\n"))
+    return u.Tests.hermetic_git_environment(mirrors)
 
 
 @pytest.fixture

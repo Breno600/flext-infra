@@ -223,6 +223,12 @@ class FlextInfraFlextBindingService:
                     c.Infra.UV,
                     "pip",
                     "install",
+                    # Why: the binding already translated the consumer's
+                    # [tool.uv] overrides/constraints into the files above;
+                    # uv would otherwise rediscover them from the cwd project
+                    # and re-apply an override to the bound editable, sending
+                    # its name to the registry instead of the worktree path.
+                    "--no-config",
                     "--python",
                     str(python),
                     *arguments,

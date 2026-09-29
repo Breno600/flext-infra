@@ -31,7 +31,7 @@ class TestsFlextInfraTestmonDbInspector:
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
 
-        with pytest.raises(ValueError, match="outside the checkout"):
+        with pytest.raises(ValueError, match="outside the repository checkout"):
             FlextInfraTestmonDbInspector(
                 repository_root=repository_root,
                 db_path=repository_root

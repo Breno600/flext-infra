@@ -45,6 +45,21 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
         return f"toolchain-{digest}"
 
+    def suite_stop_monotonic(self) -> float:
+        """Derive the graceful suite stop instant from the entrypoint deadline.
+
+        Selection and inventory consume the same clock, so the instant leaves
+        exactly the typed stop reserve before the process deadline: pytest
+        ends its own session there and testmon persists what ran, instead of
+        the deadline SIGTERM discarding every unflushed result.
+        """
+        pytest = config.Infra.tooling.tools.pytest
+        return (
+            self.started_at_monotonic
+            + pytest.run_timeout_seconds
+            - pytest.suite_stop_reserve_seconds
+        )
+
     def ci_excluded_markers(
         self,
         *,
@@ -82,6 +97,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         self,
         *,
         report_log: Path,
+        manifest_path: Path,
         complete: bool = False,
         execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
@@ -116,6 +132,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             str(self.target),
             *testmon,
             "--collect-only",
+            f"{c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION}={manifest_path}",
             f"--report-log={report_log}",
             "-q",
             *self._plugin_policy_args(execution_mode=execution_mode),
@@ -136,13 +153,21 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         report_dir: Path,
         selected_node_ids: t.StrSequence | None = None,
         *,
+        manifest_path: Path | None = None,
         serialize: bool = False,
         whole_target: bool = False,
         execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
-        """Build the testmon suite argv (never the cov plugin)."""
+        """Build the testmon suite argv (never the cov plugin).
+
+        A nonempty selection is enforced from its manifest, so it requires
+        ``manifest_path``.
+        """
         pytest = config.Infra.tooling.tools.pytest
         selection = selected_node_ids or None
+        if selection and manifest_path is None:
+            msg = "a runner selection requires its collection manifest path"
+            raise ValueError(msg)
         # An empty selection needs no workers, and a selection smaller than the
         # worker budget never needs more workers than items: every extra worker
         # only pays startup cost for an empty queue. Explicit serial execution
@@ -169,7 +194,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     (
                         "-p",
                         FlextInfraPytestCollection.__module__,
-                        c.Infra.PYTEST_SELECTED_COLLECTION_OPTION,
+                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={manifest_path}",
                     )
                     if selection
                     else ()
@@ -225,6 +250,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *pytest.progress_args,
             *pytest.report_args,
             f"--timeout={pytest.case_timeout_seconds}",
+            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic()!r}",
             f"--maxfail={pytest.max_failures}",
             f"--junitxml={report_dir / 'junit.xml'}",
             f"--report-log={report_dir / 'events.jsonl'}",

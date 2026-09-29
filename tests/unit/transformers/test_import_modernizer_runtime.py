@@ -265,12 +265,9 @@ print(RuntimeRow.model_validate_json('{"value": "runtime"}').value)
             with pytest.raises(ValueError, match="capture ancestral binding"):
                 transformer.transform(project, resource)
         tm.that(path.read_text(encoding="utf-8"), eq=source)
-        # The ancestor's BaseModel identity, not its relationship to pydantic,
-        # is this repository's contract: the dependency owns that hierarchy.
-        probe = (
-            f"from {c.Infra.PKG_CORE_UNDERSCORE} import m\n"
-            "from ancestral_consumer import build\n"
-            "print(build() is m.BaseModel)\n"
-        )
+        # The untouched source still runs: ``build`` compares the ancestor's
+        # ``m.BaseModel`` (the FLEXT preset, a subclass of the upstream class)
+        # with pydantic's, so it reports ``False`` for both access forms.
+        probe = "from ancestral_consumer import build\nprint(build())\n"
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
-        tm.that(outcome.stdout.strip(), eq="True")
+        tm.that(outcome.stdout.strip(), eq="False")
