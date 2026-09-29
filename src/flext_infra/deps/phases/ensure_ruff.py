@@ -151,20 +151,15 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
-        # Dev/tooling source roots are config-declared, but a repository that
-        # retired a tree (e.g. scripts/) must not keep analyzer entries naming
-        # it: ruff fails hard on src roots whose directories do not exist, and
-        # the namespace-packages contract only holds for roots on disk. The
-        # declared lists stay the SSOT; existence filters the projection, with
-        # roots the active plan is materializing accepted as present.
-
-        def _present(directory: str) -> bool:
-            return (path.parent / directory).is_dir() or (
-                directory in self._generated_roots
-            )
-
-        existing_root = tuple(d for d in ruff_cfg.src if _present(d))
-        excluded_roots = self._excluded_root_set(path.parent)
+        # Dev/tooling source roots are config-declared, but a workspace that
+        # retired a tree (e.g. scripts/, declared in the workspace SSOT as an
+        # analysis exclusion) must not keep analyzer entries naming it: a
+        # retired root keeps documenting scope that no longer exists, and the
+        # namespace-packages contract only holds for live roots. The exclusion
+        # SSOT filters the projection — order-independent across the deps pass
+        # and the root-materializing gen pass.
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(path.parent)
+        existing_root = tuple(d for d in ruff_cfg.src if d not in excluded_roots)
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )

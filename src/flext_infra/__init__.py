@@ -265,7 +265,6 @@ if TYPE_CHECKING:
         FlextInfraWorkspaceEnvironmentProvenance,
     )
     from .workspace.flext_binding import FlextInfraFlextBindingService
-    from .workspace.orchestrator import FlextInfraOrchestratorService
     from .workspace.propagation import FlextInfraWorkspacePropagation
     from .workspace.rope import FlextInfraRopeWorkspace
     from .worktree import FlextInfraWorktreeService
@@ -388,7 +387,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraNamespaceRules",
     "FlextInfraNamespaceSourceDetector",
     "FlextInfraNamespaceValidator",
-    "FlextInfraOrchestratorService",
     "FlextInfraPrivateImportBypassDetector",
     "FlextInfraProjectClassifier",
     "FlextInfraProjectSelectionServiceBase",
@@ -784,7 +782,6 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraWorkspaceEnvironmentProvenance",
             ),
             ".workspace.flext_binding": ("FlextInfraFlextBindingService",),
-            ".workspace.orchestrator": ("FlextInfraOrchestratorService",),
             ".workspace.propagation": ("FlextInfraWorkspacePropagation",),
             ".workspace.rope": ("FlextInfraRopeWorkspace",),
             ".worktree": ("FlextInfraWorktreeService",),
