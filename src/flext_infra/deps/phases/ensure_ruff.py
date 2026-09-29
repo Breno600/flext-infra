@@ -156,8 +156,8 @@ class FlextInfraEnsureRuffConfigPhase:
             ))
         # Dev/tooling source roots are config-declared, but a workspace that
         # retired a tree (e.g. scripts/, declared in the workspace SSOT as an
-        # analysis exclusion) must not keep analyzer entries naming it: ruff
-        # fails hard on src roots whose directories do not exist, and the
+        # analysis exclusion) must not keep analyzer entries naming it: a
+        # retired root keeps documenting scope that no longer exists, and the
         # namespace-packages contract only holds for live roots. The exclusion
         # SSOT filters the projection — order-independent across the deps pass
         # and the root-materializing gen pass.
