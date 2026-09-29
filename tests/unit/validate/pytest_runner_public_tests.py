@@ -183,8 +183,10 @@ class TestsFlextInfraPytestRunner:
         command = tm.ok(
             u.Cli.files_read_text(reports_root / latest_name / "command.txt")
         )
-        for node_id in (line for line in selection.splitlines() if line):
-            tm.that(command, has=node_id)
+        # A complete selection runs the whole target; the collection plugin
+        # enforces exactly the selected node ids in the recorded order.
+        tm.that(selection.splitlines(), has="tests/test_runtime.py::test_runtime")
+        tm.that(command, has=c.Infra.PYTEST_SELECTED_COLLECTION_OPTION)
         tm.that(command, has="--no-cov")
         tm.that(command, has="--testmon --testmon-noselect")
         tm.that((reports_root / latest_name / "coverage.xml").is_file(), eq=False)
@@ -311,7 +313,12 @@ class TestsFlextInfraPytestRunner:
         tm.that(outcome.raw_return_code, eq=exit_code)
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
-        tm.that(self._summary(reports_root), has=["failed=1", "exit=1"])
+        # The declared max-failures stop interrupts the xdist session, which
+        # pytest reports as INTERRUPTED; the summary carries that raw code.
+        tm.that(
+            self._summary(reports_root),
+            has=["failed=1", f"exit={pytest.ExitCode.INTERRUPTED.value}"],
+        )
         events = tm.ok(u.Cli.files_read_text(report_path.parent / "events.jsonl"))
         tm.that(events, has="first failure evidence", lacks="second failure evidence")
 
@@ -616,9 +623,7 @@ class TestsFlextInfraPytestRunner:
     ) -> None:
         """No-cov-on-fail omits coverage without hiding the failed test evidence."""
         runner = self._runner_for(cached_runner_project)
-        (
-            cached_runner_project / runner.target / "test_coverage_failure.py"
-        ).write_text(
+        (cached_runner_project / runner.target / "test_coverage_failure.py").write_text(
             "def test_coverage_failure() -> None:\n"
             "    assert False, 'original coverage suite failure'\n",
             encoding="utf-8",

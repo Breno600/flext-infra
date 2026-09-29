@@ -86,8 +86,11 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
                 u.Cli.run_raw(
                     (
                         c.Infra.CLI_DIRENV,
+                        # Enter the directory as a shell does: direnv 2.37
+                        # authorizes the physical .envrc, and an explicit
+                        # symlinked path argument is checked unresolved.
                         "exec",
-                        str(entry),
+                        ".",
                         "printenv",
                         "OBSERVED_VENV_DIR",
                     ),

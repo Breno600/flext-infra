@@ -228,6 +228,8 @@ class TestsFlextInfraDepsModernizerMainExtra:
             ),
         )
         u.Tests.write_project_beads_config(workspace, "flext")
+        # The governed tree above the workspace carries the committed Taplo pin.
+        u.Tests.seed_locked_taplo(tmp_path)
         external = tmp_path / "gruponos-data"
         (external / "src" / "gruponos_data").mkdir(parents=True)
         external_pyproject = external / c.PYPROJECT_FILENAME

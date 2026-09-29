@@ -337,7 +337,11 @@ class TestsFlextInfraCodegenConform:
             root, Path("scripts/hatch_build.py")
         )
         root.mkdir(parents=True, exist_ok=True)
-        (root / c.PYPROJECT_FILENAME).write_bytes(tm.not_none(first.desired_content))
+        # Publish exactly what the plan declares: bytes and permission bits, so
+        # the fixed point never depends on the process umask.
+        published = root / c.PYPROJECT_FILENAME
+        published.write_bytes(tm.not_none(first.desired_content))
+        published.chmod(tm.not_none(first.desired_mode))
 
         second_plan = tm.ok(service.plan(request))
         second = next(
@@ -427,11 +431,12 @@ class TestsFlextInfraCodegenConform:
         """A config-declared collision is rejected, never silently dropped."""
         canonical = config.Infra.codegen.make.verbs[0].name
 
-        applied = self._conform_with_rendered_makefile(
-            infra_git_repo, canonical, verb=canonical
-        )
-
-        tm.fail(applied, has="must never shadow canonical make.verbs builtins")
+        with pytest.raises(
+            ValueError, match=r"must never shadow canonical make\.verbs builtins"
+        ):
+            self._conform_with_rendered_makefile(
+                infra_git_repo, canonical, verb=canonical
+            )
 
     @pytest.mark.slow
     def test_apply_recovers_declared_managed_pyproject_conflict(
@@ -486,6 +491,8 @@ class TestsFlextInfraCodegenConform:
         # a scaffold that must come out complete declares that kind; the two
         # rows prove the result does not depend on the distribution name.
         root = tmp_path / name
+        # The governed tree above the scaffold carries the committed Taplo pin.
+        u.Tests.seed_locked_taplo(tmp_path)
         service = FlextInfraCodegenProjectNew(
             flext_source=u.Tests.flext_source(),
             name=name,

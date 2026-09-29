@@ -810,7 +810,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
             "\t+@set -eu;",
             # Runtime tool identity is exercised through the public status
             # regression, including an invalid ambient Mise configuration.
-            'mise_exec project "$$latest_mise" -C "$$project_root" install --yes',
+            'mise_exec project "$$pinned_mise" -C "$$project_root" install --yes',
             "SETUP_DIRENV=$$direnv_executable",
             '$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"',
             '$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"',
@@ -856,7 +856,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
             tm.that(
                 self._recipe_targets_containing(makefile, needle), eq={"_upg_lifecycle"}
             )
-        tm.that(makefile, has="_run_for_all_projects,--check")
+        tm.that(
+            self._recipe_targets_containing(
+                makefile, '$(UV) lock --check --project "$(PROJECT_ROOT)"'
+            ),
+            eq={"_upg_converge"},
+        )
         tm.that(makefile, lacks="--constraint-policy")
 
     def test_workspace_without_local_members_retains_external_flext_sources(

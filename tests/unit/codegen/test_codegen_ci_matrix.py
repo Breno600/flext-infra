@@ -44,6 +44,9 @@ class TestsFlextInfraCodegenCiMatrix:
     @staticmethod
     def render_project(root: Path) -> Path:
         """Render one fresh internal_flext project into root and return it."""
+        # The governed tree carries the committed Taplo pin generation formats
+        # through; a fresh scaffold never resolves a moving selector.
+        u.Tests.seed_locked_taplo(root)
         service = FlextInfraCodegenProjectNew(
             flext_source=u.Tests.flext_source(),
             name="flext-demo",
