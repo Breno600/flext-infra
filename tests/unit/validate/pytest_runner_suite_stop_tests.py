@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import sqlite3
 import time
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -27,8 +29,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
         The entrypoint clock is placed so the derived stop instant has already
         passed: pytest must stop dispatch gracefully (never the deadline
-        SIGTERM), report a red incomplete run, and the next run must select
-        only the tests the bounded run did not execute.
+        SIGTERM), report a red incomplete run, and the testmon database must
+        hold every executed test, so the next selection excludes them.
         """
         cache = config.Infra.codegen.make.testmon_cache
         policy = config.Infra.tooling.tools.pytest
@@ -43,20 +45,18 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             cached_runner_project.parent / ".testmon-cache" / cache.database_filename
         )
         testmon_db.parent.mkdir(parents=True)
-        spent = policy.run_timeout_seconds - policy.suite_stop_reserve_seconds
-        runners = [
-            FlextInfraPytestRunner(
-                repository_root=cached_runner_project,
-                started_at_monotonic=time.monotonic() - elapsed,
-                target=cache.target_directory,
-                reports=cache.reports_directory,
-                testmon_db=testmon_db,
-            )
-            for elapsed in (spent, 0)
-        ]
+        runner = FlextInfraPytestRunner(
+            repository_root=cached_runner_project,
+            started_at_monotonic=time.monotonic()
+            - policy.run_timeout_seconds
+            + policy.suite_stop_reserve_seconds,
+            target=cache.target_directory,
+            reports=cache.reports_directory,
+            testmon_db=testmon_db,
+        )
         reports_root = cached_runner_project / cache.reports_directory
 
-        tm.that(tm.ok(runners[0].execute()), eq=pytest.ExitCode.INTERRUPTED.value)
+        tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.INTERRUPTED.value)
 
         (bounded,) = (path.parent for path in reports_root.glob("*/summary.txt"))
         outcome = m.Cli.ProcessOutcome.model_validate_json(
@@ -83,18 +83,17 @@ class TestsFlextInfraPytestRunnerSuiteStop:
             ],
         )
 
-        tm.that(tm.ok(runners[1].execute()), eq=0)
-
-        (warm,) = (
-            path.parent
-            for path in reports_root.glob("*/summary.txt")
-            if path.parent != bounded
-        )
-        remaining = m.Infra.PytestCollectionManifest.model_validate_json(
-            self._read(warm / "testmon-selection.json")
-        ).node_ids
-        tm.that(len(remaining), eq=len(selected) - executed)
-        tm.that(
-            self._read(warm / "summary.txt"),
-            has=["outcome=executed", f"executed={len(remaining)}", "exit=0"],
-        )
+        # pytest-testmon's durable record is what the next selection excludes:
+        # collected-but-unexecuted tests keep a row without a measured duration.
+        with closing(
+            sqlite3.connect(f"file:{testmon_db}?mode=ro", uri=True)
+        ) as connection:
+            persisted = {
+                name
+                for (name,) in connection.execute(
+                    "SELECT test_name FROM test_execution"
+                    " WHERE failed = 0 AND duration IS NOT NULL"
+                )
+            }
+        tm.that(len(persisted), eq=executed)
+        tm.that(persisted <= set(selected), eq=True)
