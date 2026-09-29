@@ -291,7 +291,22 @@ class FlextInfraPytestRunnerExecution(
         ))
         accepted_cache_hit = cache_hit and not rejected
         final_exit = 0 if accepted_cache_hit else raw_return_code or int(rejected)
-        if final_exit:
+        selected_count = (
+            None
+            if accounting.inventory_count is None
+            else accounting.inventory_count - accounting.deselected_count
+        )
+        # A graceful stop at the suite stop instant publishes the executed
+        # prefix and remains red: the unexecuted remainder is the next run's
+        # testmon selection.
+        incomplete = (
+            selected_count is not None
+            and accounting.executed_count < selected_count
+            and not (diagnostics.failed_count or diagnostics.error_count)
+        )
+        if final_exit and incomplete:
+            result = "incomplete"
+        elif final_exit:
             result = "failed"
         elif accepted_cache_hit:
             result = "cache_hit"
@@ -311,6 +326,7 @@ class FlextInfraPytestRunnerExecution(
         )
         summary = (
             f"outcome={result}\n"
+            f"selected={selected_count}\n"
             f"executed={accounting.executed_count}\n"
             f"reported={accounting.reported_count}\n"
             f"accounting_complete={accounting_complete}\n"

@@ -386,8 +386,7 @@ class TestsFlextInfraCodegenCiMatrix:
             # Every reference to a catalog repository, or to one of its
             # sub-actions (``actions/cache/restore``), pins the catalog version.
             references = re.findall(
-                rf"uses: ({re.escape(action.repository)}(?:/[\w.-]+)*)@(\S+)",
-                workflow,
+                rf"uses: ({re.escape(action.repository)}(?:/[\w.-]+)*)@(\S+)", workflow
             )
             for _reference, version in references:
                 tm.that(version, eq=action.version)

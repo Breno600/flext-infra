@@ -315,6 +315,16 @@ class FlextInfraModelsDepsToolConfig(
             """Derive the outer wall without creating a second config field."""
             return self.run_timeout_seconds + (self.termination_grace_seconds * 2)
 
+        @property
+        def suite_stop_reserve_seconds(self) -> int:
+            """Derive the budget kept after the graceful suite stop instant.
+
+            One in-flight item may still run to the slow per-item ceiling, and
+            the session then needs the termination grace to publish testmon
+            and report evidence before the invocation deadline.
+            """
+            return self.slow_timeout_seconds + self.termination_grace_seconds
+
         @u.model_validator(mode="after")
         def _validate_execution_limits(self) -> Self:
             """Keep item and termination budgets inside the hard invocation cap."""

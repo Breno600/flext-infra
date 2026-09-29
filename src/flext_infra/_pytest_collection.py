@@ -9,11 +9,13 @@ records warning identities before report-log reduces their categories to names.
 
 from __future__ import annotations
 
+import time
 from collections.abc import Generator
 from pathlib import Path
 from warnings import WarningMessage
 
 import pytest
+from xdist.dsession import DSession
 
 from ._constants.check import FlextInfraConstantsCheck
 
@@ -29,6 +31,12 @@ class FlextInfraPytestCollection:
             action="store_true",
             help="Enforce the runner's ordered node-ID selection in every worker.",
         )
+        parser.addoption(
+            FlextInfraConstantsCheck.PYTEST_SUITE_STOP_OPTION,
+            type=float,
+            default=None,
+            help="Monotonic instant after which the session stops gracefully.",
+        )
 
     @staticmethod
     def pytest_configure(config: pytest.Config) -> None:
@@ -40,6 +48,11 @@ class FlextInfraPytestCollection:
                     Path(report_log),
                     enforcement_strict=config.getoption("--flext-enforce-strict"),
                 )
+            )
+        stop_at = config.getoption(FlextInfraConstantsCheck.PYTEST_SUITE_STOP_OPTION)
+        if stop_at is not None and not hasattr(config, "workerinput"):
+            config.pluginmanager.register(
+                FlextInfraPytestCollection.SuiteStop(stop_at_monotonic=stop_at)
             )
 
     @staticmethod
@@ -93,6 +106,40 @@ class FlextInfraPytestCollection:
         u.Cli.atomic_write_text_file(
             Path(target), manifest.model_dump_json() + "\n"
         ).unwrap()
+
+    class SuiteStop:
+        """End the session gracefully at the runner's derived stop instant.
+
+        The controller stops dispatch through the same path as max-failures:
+        xdist queues the shutdown marker, so each worker's final item runs
+        with no successor and pytest-testmon flushes every batched result.
+        A process-deadline SIGTERM instead discards the unflushed batches.
+        """
+
+        def __init__(self, *, stop_at_monotonic: float) -> None:
+            self.stop_at_monotonic = stop_at_monotonic
+            self.session: pytest.Session | None = None
+
+        def pytest_sessionstart(self, session: pytest.Session) -> None:
+            """Bind the controller session that owns the stop decision."""
+            self.session = session
+
+        def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
+            """Request the stop once a completed item crosses the instant."""
+            session = self.session
+            if (
+                session is None
+                or report.when != "teardown"
+                or time.monotonic() < self.stop_at_monotonic
+            ):
+                return
+            reason = f"suite stop instant {self.stop_at_monotonic:.3f} reached"
+            controller = session.config.pluginmanager.getplugin("dsession")
+            if isinstance(controller, DSession):
+                if not controller.shouldstop:
+                    controller.shouldstop = reason
+            elif not session.shouldstop:
+                session.shouldstop = reason
 
     class WarningAccounting:
         """Preserve real class identity and the existing enforcement strict mode."""
