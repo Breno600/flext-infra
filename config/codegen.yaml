@@ -4,8 +4,11 @@ Infra:
     version: 1
     # Projections no template renders any more; generation removes the
     # generated copy from every consumer (renamed: install-git-hooks.sh ->
-    # validate-git-hook.sh).
-    retired_projections: [.github/scripts/install-git-hooks.sh]
+    # validate-git-hook.sh; flext-law-loop.sh validated the whole workspace
+    # from its root and retired with the root fan-out, operator 2026-09-29).
+    retired_projections:
+      - .github/scripts/install-git-hooks.sh
+      - .github/scripts/flext-law-loop.sh
 
     # Fresh import probes are independent subprocesses within one validation.
     fresh_import_workers: 3
@@ -987,10 +990,6 @@ Infra:
         owner: codegen
         policy: full
         mode: 493 # 0o755
-      - path: .github/scripts/flext-law-loop.sh
-        owner: codegen
-        policy: full
-        mode: 493 # 0o755
       - path: tests/fixtures/ci/docker/alpine.Dockerfile
         owner: codegen
         policy: full
@@ -1943,11 +1942,6 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: false
-        - source: base/.github/scripts/flext-law-loop.sh.j2
-          destination: .github/scripts/flext-law-loop.sh
-          profiles: [workspace]
-          delegate: render
-          overwrite: false
       # Multi-environment CI base: reusable ci-matrix workflow + per-distro
       # clean-machine images validating bootstrap and make verbs everywhere.
         - source: base/.github/workflows/ci-matrix.yml.j2
@@ -2105,7 +2099,7 @@ Infra:
         - source: base/Makefile.j2
           destination: Makefile
         # The generic conform engine is the single Makefile owner for every
-        # profile; workspace fan-out is selected inside this template.
+        # profile; every profile renders the same local verb bodies.
         # Fully generated (overwrite: true): a project never owns a verb.
         # `overwrite: false` froze every existing Makefile at the shape it
         # had when first written, so new builtin verbs never reached the

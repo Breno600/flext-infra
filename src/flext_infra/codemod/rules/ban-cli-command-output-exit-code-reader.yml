@@ -7,7 +7,6 @@ files:
   - "flext-cli/src/flext_cli/_utilities/_runtime_commands.py"
   - "flext-cli/src/flext_cli/_utilities/_runtime_run_to_file.py"
   - "flext-cli/src/flext_cli/_utilities/_toml_parts/flextcliutilitiestoml_part_06.py"
-  - "flext-infra/src/flext_infra/workspace/_orchestrator_execution.py"
   - "flext-infra/src/flext_infra/gates/smells.py"
   - "flext-infra/src/flext_infra/gates/mypy.py"
   - "flext-infra/src/flext_infra/gates/duplication.py"

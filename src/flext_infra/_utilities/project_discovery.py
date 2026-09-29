@@ -231,17 +231,14 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @classmethod
     def governed_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:
-        """Return the workspace root and each declared repository exactly once."""
-        resolved_root = repository_root.resolve()
-        return tuple(
-            dict.fromkeys((
-                resolved_root,
-                *(
-                    project.resolve()
-                    for project in cls.discover_project_roots(resolved_root)
-                ),
-            ))
-        )
+        """Return the repositories a verb run at ``repository_root`` governs.
+
+        Every repository evaluates and rewrites only itself (operator ruling
+        2026-09-29): a workspace root consumes its declared members as
+        installed libraries and never scans, checks, or rewrites them; each
+        member runs its own verbs in its own repository.
+        """
+        return (repository_root.resolve(),)
 
     @staticmethod
     def runtime_environment_dir(

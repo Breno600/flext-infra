@@ -46,7 +46,7 @@ class FlextInfraConstantsMake:
         r"^(?:else\b|endif\b|ifeq\b|ifneq\b|ifdef\b|ifndef\b)"
     )
     MAKE_REPOSITORY_ROOT: ClassVar[str] = "REPOSITORY_ROOT"
-    "Make variable the workspace orchestrator passes to attached members."
+    "Make variable holding the repository root the generated Makefile resolves."
 
     VERB_CHECK: ClassVar[str] = "check"
     VERB_TEST: ClassVar[str] = "test"
@@ -116,20 +116,6 @@ class FlextInfraConstantsMake:
     # markdown-format is deliberately absent: prettier is a formatter, so the
     # gate's mutating side is owned by `make fmt` (check = `prettier --check`),
     # never by `make fix` — one operation per tool per verb, never repeated.
-    ORCHESTRATED_VERBS: ClassVar[t.StrSequence] = (
-        "build",
-        "check",
-        "clean",
-        "docs",
-        "fmt",
-        "fix",
-        "fix-enforcement",
-        "fix-namespace",
-        "fix-accessors",
-        "sonarcloud-sync",
-        "test",
-        "test-full",
-    )
     ORCHESTRATOR_REMOVE_ENV_KEYS: ClassVar[t.StrSequence] = (
         "GNUMAKEFLAGS",
         "MAKEFLAGS",
@@ -156,8 +142,6 @@ class FlextInfraConstantsMake:
     ORCHESTRATOR_ENV_PATH: ClassVar[str] = "PATH"
     ORCHESTRATOR_ENV_PYTHONPATH: ClassVar[str] = "PYTHONPATH"
     ORCHESTRATOR_ENV_PATH_SEPARATOR: ClassVar[str] = ":"
-    ORCHESTRATOR_ENV_MISE_SHIMS: ClassVar[str] = "MISE_SHIMS"
-    ORCHESTRATOR_ENV_WORKSPACE_MISE_SHIMS: ClassVar[str] = "WORKSPACE_MISE_SHIMS"
 
     PYTEST_ENV_REPORTS: ClassVar[str] = "FLEXT_PYTEST_REPORTS_RAW"
     PYTEST_ENV_TARGET: ClassVar[str] = "FLEXT_PYTEST_TARGET_RAW"

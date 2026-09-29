@@ -48,14 +48,6 @@ class FlextInfraSettingsModels:
                 description="Prefer HTTPS repository URLs during dependency sync.",
             ),
         ]
-        github_actions: Annotated[
-            bool,
-            m.Field(
-                default=False,
-                validation_alias="GITHUB_ACTIONS",
-                description="Whether the process runs in GitHub Actions.",
-            ),
-        ]
         github_head_ref: Annotated[
             str | None,
             m.Field(

@@ -688,21 +688,6 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
-    class Orchestrator(Protocol):
-        """Contract for multi-project orchestration services."""
-
-        def orchestrate(
-            self,
-            projects: t.StrSequence,
-            verb: str,
-            *,
-            fail_fast: bool = False,
-            make_args: t.StrSequence = (),
-        ) -> p.Result[t.SequenceOf[p.Cli.CommandOutput]]:
-            """Execute one make verb across multiple projects."""
-            ...
-
-    @runtime_checkable
     class CodegenFixer(Protocol):
         """Protocol for codegen namespace fixer services."""
 

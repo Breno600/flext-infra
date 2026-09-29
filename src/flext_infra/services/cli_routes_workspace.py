@@ -13,7 +13,6 @@ from flext_infra.workspace.environment_provenance import (
     FlextInfraWorkspaceEnvironmentProvenance,
 )
 from flext_infra.workspace.flext_binding import FlextInfraFlextBindingService
-from flext_infra.workspace.orchestrator import FlextInfraOrchestratorService
 from flext_infra.workspace.propagation import FlextInfraWorkspacePropagation
 
 from .cli_route_base import FlextInfraCliRouteBase
@@ -99,14 +98,6 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                         FlextInfraWorkspaceDetector,
                         FlextInfraCliRouteBase.result_handler(
                             FlextInfraWorkspaceDetector.execute_command
-                        ),
-                    ),
-                    (
-                        "orchestrate",
-                        "Run make verb across projects",
-                        FlextInfraOrchestratorService,
-                        FlextInfraCliRouteBase.result_handler(
-                            FlextInfraOrchestratorService.execute_command
                         ),
                     ),
                     (
