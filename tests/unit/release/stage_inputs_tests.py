@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra.release._release_project import FlextInfraReleaseProjectMixin
+from flext_infra.release import FlextInfraReleaseProjectMixin
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -33,7 +33,7 @@ class TestsFlextInfraReleaseStageInputs:
         )
         stage.mkdir()
 
-        mirrored = FlextInfraReleaseProjectMixin._mirror_release_inputs(project, stage)
+        mirrored = FlextInfraReleaseProjectMixin.mirror_release_inputs(project, stage)
 
         tm.that(mirrored, has={"success": True})
         staged = stage / "dist"
@@ -53,7 +53,7 @@ class TestsFlextInfraReleaseStageInputs:
         project.mkdir()
         stage.mkdir()
 
-        mirrored = FlextInfraReleaseProjectMixin._mirror_release_inputs(project, stage)
+        mirrored = FlextInfraReleaseProjectMixin.mirror_release_inputs(project, stage)
 
         tm.that(mirrored, has={"success": True})
         tm.that((stage / "dist").exists(), eq=False)
@@ -66,7 +66,7 @@ class TestsFlextInfraReleaseStageInputs:
         nested.mkdir(parents=True)
         stage.mkdir()
 
-        mirrored = FlextInfraReleaseProjectMixin._mirror_release_inputs(project, stage)
+        mirrored = FlextInfraReleaseProjectMixin.mirror_release_inputs(project, stage)
 
         tm.that(mirrored, has={"success": False})
         tm.that(

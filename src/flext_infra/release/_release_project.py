@@ -42,7 +42,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
         return written.map(lambda _: self._record(target, log, exit_code=1))
 
     @classmethod
-    def _mirror_release_inputs(
+    def mirror_release_inputs(
         cls, project_path: Path, stage_path: Path
     ) -> p.Result[bool]:
         """Carry the project's prepared release inputs into the staged source.
@@ -107,7 +107,7 @@ class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):
             return self._write_release_text(
                 log, f"release metadata staged and validated: {name}\n"
             ).map(lambda _: self._record(target, log, exit_code=0, source=staged.value))
-        mirrored = self._mirror_release_inputs(path, stage)
+        mirrored = self.mirror_release_inputs(path, stage)
         if mirrored.failure:
             return r[m.Infra.BuildRecord].from_failure(mirrored)
         dist = temporary / "dist"
