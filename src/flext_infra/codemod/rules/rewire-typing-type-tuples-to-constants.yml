@@ -1,0 +1,14 @@
+id: rewire-typing-type-tuples-to-constants
+language: Python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  pattern: t.$NAME
+constraints:
+  NAME:
+    regex: "^(?:PRIMITIVES_TYPES|NUMERIC_TYPES|SEQUENCE_PAIR_TYPES|STR_BYTES_TYPES|STR_BINARY_TYPES|SCALAR_TYPES|CONTAINER_TYPES|CONTAINER_AND_COLLECTION_TYPES)$"
+fix: c.$NAME
+message: >-
+  The isinstance type tuples are runtime constants owned by FlextConstantsGuards
+  (ENFORCE-079); read them as c.<NAME>, never through the typings facade.

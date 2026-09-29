@@ -287,8 +287,9 @@ class FlextInfraModelsCore:
         mutable state.
         """
 
-        reported_node_ids: t.MutableSequenceOf[str] = m.Field(
-            default_factory=list, description="Node IDs from each real TestReport"
+        reported_phases: t.MutableMappingKV[str, t.MutableStrMapping] = m.Field(
+            default_factory=dict,
+            description="Runtest phase outcomes keyed by TestReport node ID",
         )
         collection_failed_cases: t.MutableSequenceOf[str] = m.Field(
             default_factory=list, description="Node IDs with failed collection reports"

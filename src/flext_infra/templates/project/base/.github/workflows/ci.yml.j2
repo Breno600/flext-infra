@@ -82,6 +82,9 @@ jobs:
       # Pyrefly and Ruff analysis. The caches below are content-addressed by the
       # committed dependency locks, so a warm cache is always valid for the same
       # lock and can never hide a finding; it only removes the cold recompute.
+      # Why (flext-gd3m1): the same pair keeps the locked Mise tool storage, so
+      # a cold runner never re-downloads the pinned tarballs, where a network
+      # blip failed setup.
 {%- include "_fragments/toolchain_cache_restore.j2" %}
 {%- if custom_steps %}
 

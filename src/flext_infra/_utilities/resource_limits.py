@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
 import platform
 import shutil
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, m, t
+from flext_infra import c, config, m, t
 
 from .process import FlextInfraUtilitiesProcess
 from .project_discovery import FlextInfraUtilitiesProjectDiscovery
@@ -118,6 +121,27 @@ class FlextInfraUtilitiesResourceLimits:
             c.Infra.MYPY,
             *FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation),
         )
+
+    @staticmethod
+    def mypy_cache_directory(repository_root: Path) -> Path:
+        """Resolve the shared, lock-keyed Mypy cache every checkout reuses.
+
+        The cache is content-addressed by module hash, so checkouts on the same
+        dependency lock share one analysis and a different lock yields a
+        different directory with a correct cold recompute (flext-7jnr0).
+        """
+        spec = config.Infra.codegen.make.mypy_cache
+        home = os.environ.get(str(spec.data_home_environment_variable)) or str(
+            Path(os.environ[str(spec.user_home_environment_variable)])
+            / spec.home_cache_directory
+        )
+        digest = hashlib.sha256()
+        for lock in spec.lock_files:
+            digest.update(lock.encode())
+            lock_path = repository_root / lock
+            if lock_path.is_file():
+                digest.update(lock_path.read_bytes())
+        return Path(home) / spec.external_storage_directory / digest.hexdigest()[:16]
 
     @staticmethod
     def mypy_limited_command(

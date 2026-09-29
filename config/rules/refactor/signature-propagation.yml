@@ -11,9 +11,9 @@
 #     target_qualified_names:            # either of the two target lists
 #       - flext_infra.workspace.migrator.FlextInfraProjectMigrator.migrate
 #     target_simple_names: [migrate]     # matched on the call's simple name
-#     keyword_renames: {old: new}        # optional
-#     remove_keywords: [legacy_flag]     # optional
-#     add_keywords: {strict: "True"}     # optional
+#     keyword_renames: {old: new}        # required mapping; {} when unused
+#     remove_keywords: [legacy_flag]     # optional, default []
+#     add_keywords: {strict: "True"}     # required mapping; {} when unused
 #
 # The catalogue starts empty: a migration is declared for one cutover, applied,
 # and removed in the same change. A permanently declared migration would be

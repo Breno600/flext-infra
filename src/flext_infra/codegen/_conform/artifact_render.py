@@ -256,27 +256,20 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             # repository's own integration branch is the only branch this layer
             # can name from resolved data; a fleet-wide list hardcoded here would
             # make every repository trigger on branches it does not have.
-            branch = u.Infra.resolve_integration_branch(
-                repository_root,
-                preference=codegen.branch_policy.integration_branch_preference,
-                declared=(
-                    workspace.integration.branch
-                    if workspace.integration is not None
-                    else None
-                ),
-            )
-            if branch.failure:
-                return r[p.Model].from_failure(branch)
+            resolved_branch = self.render_integration_branch(render_inputs)
+            if resolved_branch.failure:
+                return r[p.Model].from_failure(resolved_branch)
+            branch = resolved_branch.value
             return r[p.Model].ok(
                 m.Infra.GithubWorkflowRenderSpec(
                     dist=dist,
                     make_profile=target.make_profile,
                     gascity_enabled=target.gascity_enabled,
-                    repository_branch=branch.value,
+                    repository_branch=branch,
                     ci_trigger_branches=tuple(
                         dict.fromkeys((
                             *codegen.branch_policy.ci_trigger_branches,
-                            branch.value,
+                            branch,
                         ))
                     ),
                     python_version=codegen.toolchain.python_version,

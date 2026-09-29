@@ -93,15 +93,15 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             f"  stage=tooling-context repository={repository.name} "
             f"elapsed={time.monotonic() - stage_started:.2f}s"
         )
+        render_inputs = self.resolve_render_inputs(
+            target=target,
+            workspace=workspace,
+            codegen=codegen,
+            tooling_runtime=tooling_context.value,
+            managed_artifacts=managed_artifacts.value,
+        )
         managed_result = self._plan_existing_templates(
-            render_inputs=m.Infra.CodegenRenderInputs(
-                target=target,
-                workspace=workspace,
-                codegen=codegen,
-                tooling_runtime=tooling_context.value,
-                managed_artifacts=managed_artifacts.value,
-            ),
-            contract=contract,
+            render_inputs=render_inputs, contract=contract
         )
         if managed_result.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(managed_result)

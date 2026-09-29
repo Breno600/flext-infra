@@ -10,6 +10,7 @@ importing them. No class name is ever inferred from a package name.
 from __future__ import annotations
 
 import ast
+from functools import lru_cache
 from importlib.util import resolve_name
 from typing import TYPE_CHECKING
 
@@ -104,9 +105,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         target: t.Pair[str, str] | None = None
         declared = False
         lazy: dict[str, str] = {}
-        for node in cls._facade_ordered_statements(
-            ast.parse(source, filename=module).body
-        ):
+        for node in cls._facade_module_statements(source, module):
             if isinstance(node, ast.AnnAssign) and node.value is None:
                 # An annotation without a value does not rebind an existing name.
                 continue
@@ -175,6 +174,24 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         if target is None or ".".join(target) in modules:
             return None
         return cls._facade_declared_class(modules, *target, visiting | {identity})
+
+    @staticmethod
+    @lru_cache(maxsize=256)
+    def _facade_module_statements(
+        source: str, module: str
+    ) -> t.VariadicTuple[ast.stmt]:
+        """Parse one module source once per content; resolution only reads it.
+
+        Every facade letter re-resolves its bindings through the same modules,
+        and each conform plan derives the facades twice (plan and fixed-point
+        replan), so the key is the exact source text: an edited module is a new
+        key, never a stale tree.
+        """
+        return tuple(
+            FlextInfraUtilitiesSemanticCutoverFacadeOwners._facade_ordered_statements(
+                ast.parse(source, filename=module).body
+            )
+        )
 
     @classmethod
     def _facade_ordered_statements(

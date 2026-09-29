@@ -516,6 +516,17 @@ class FlextInfraConfigModelsArtifact:
             FlextInfraModelsDepsToolConfigProjectArtifacts.ProjectManagedArtifactsSnapshot,
             m.Field(description="Project managed-artifact catalog overlaid on renders"),
         ]
+        integration_branch: Annotated[
+            str | None,
+            m.Field(
+                description=(
+                    "Integration branch the repository integrates on, resolved "
+                    "once per plan for the project context and every workflow; "
+                    "None when Git publishes none, so a render that needs it "
+                    "fails with the resolver's own cause"
+                ),
+            ),
+        ]
 
     class CodegenFilePlan(FlextInfraConfigModelsContract.ConfigContract):
         """Exact before state and desired state for one managed file."""

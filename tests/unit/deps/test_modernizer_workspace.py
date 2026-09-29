@@ -213,6 +213,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         self, tmp_path: Path, description: str, sort_first: t.StrSequence | None
     ) -> None:
         """Keep project scalars explicit for arbitrary valid top-level orders."""
+        u.Tests.seed_locked_taplo(tmp_path)
         pyproject = tmp_path / c.PYPROJECT_FILENAME
         package_init = tmp_path / "src" / "flext_example" / "__init__.py"
         package_init.parent.mkdir(parents=True)
@@ -298,6 +299,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
     ) -> None:
         """Resolve a configured member through its canonical project name."""
         workspace = tmp_path / "workspace"
+        u.Tests.seed_locked_taplo(tmp_path)
         member = workspace / "member-dir"
         member.mkdir(parents=True)
         (workspace / c.PYPROJECT_FILENAME).write_text(
@@ -333,6 +335,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
     ) -> None:
         """Do not require root project metadata for member-only modernization."""
         workspace = tmp_path / "workspace"
+        u.Tests.seed_locked_taplo(tmp_path)
         member = workspace / "member"
         member.mkdir(parents=True)
         (workspace / c.PYPROJECT_FILENAME).write_text(
@@ -363,6 +366,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
     ) -> None:
         """Fail loud when one canonical project name selects multiple members."""
         workspace = tmp_path / "workspace"
+        u.Tests.seed_locked_taplo(tmp_path)
         (workspace / "first-dir").mkdir(parents=True)
         (workspace / "second-dir").mkdir()
         (workspace / c.PYPROJECT_FILENAME).write_text(
