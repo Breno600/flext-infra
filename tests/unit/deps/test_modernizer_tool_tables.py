@@ -337,8 +337,12 @@ class TestsFlextInfraDepsModernizerToolTables:
             payload, path=project_dir / "pyproject.toml"
         )
         table = self._table(payload, "vulture")
-        tm.that("scripts" not in table["paths"], eq=True)
-        tm.that("src" in table["paths"], eq=True)
+        paths_value = table["paths"]
+        paths: list[t.JsonValue] = (
+            list(paths_value) if isinstance(paths_value, list) else []
+        )
+        tm.that("scripts" not in paths, eq=True)
+        tm.that("src" in paths, eq=True)
 
     def test_ruff_root_lists_filter_excluded_roots(self, tmp_path: Path) -> None:
         """Ruff root projections drop workspace-excluded trees.
@@ -357,9 +361,22 @@ class TestsFlextInfraDepsModernizerToolTables:
             payload, path=project_dir / "pyproject.toml"
         )
         table = self._table(payload, "ruff")
-        tm.that("scripts" not in table["src"], eq=True)
+        src_value = table["src"]
+        src: list[t.JsonValue] = list(src_value) if isinstance(src_value, list) else []
+        tm.that("scripts" not in src, eq=True)
+        # An empty filtered namespace-packages list is omitted entirely (the
+        # ListOp drops no-op writes) rather than rendered as [].
         if "namespace-packages" in table:
-            tm.that("scripts" not in table["namespace-packages"], eq=True)
-        tm.that("src" in table["src"], eq=True)
-        per_file = u.Tests.toml_mapping(table["lint"]["per-file-ignores"])
+            ns_value = table["namespace-packages"]
+            ns: list[t.JsonValue] = list(ns_value) if isinstance(ns_value, list) else []
+            tm.that("scripts" not in ns, eq=True)
+        tm.that("src" in src, eq=True)
+        lint_value = table["lint"]
+        lint: dict[str, t.JsonValue] = (
+            dict(lint_value) if isinstance(lint_value, dict) else {}
+        )
+        per_file_value = lint.get("per-file-ignores")
+        per_file: dict[str, t.JsonValue] = (
+            dict(per_file_value) if isinstance(per_file_value, dict) else {}
+        )
         tm.that(not any(p.startswith("scripts/") for p in per_file), eq=True)
