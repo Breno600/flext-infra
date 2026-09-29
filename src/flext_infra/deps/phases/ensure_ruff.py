@@ -62,6 +62,31 @@ class FlextInfraEnsureRuffConfigPhase:
         return sorted(path.as_posix() for path in paths.value)
 
     @staticmethod
+    def _excluded_root_set(project_dir: Path) -> t.Infra.StrSet:
+        """First segments of the workspace SSOT's declared analysis exclusions.
+
+        Unlike a disk probe (which oscillates between the deps pass and the
+        root-materializing gen pass), the workspace SSOT is order-independent:
+        a repository declares a retired tree here once and every root-scoped
+        projection converges.
+        """
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return frozenset()
+        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
+        if paths.failure:
+            return frozenset()
+        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
+
+    @staticmethod
+    def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
+        """Return the workspace-declared analysis exclusion paths (SSOT-driven)."""
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return ()
+        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
+        if paths.failure:
+            return ()
+        return tuple(path.as_posix() for path in paths.value)
+
     def compose_per_file_ignores(
         project_dir: Path,
         *,
