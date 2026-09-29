@@ -82,6 +82,7 @@ if TYPE_CHECKING:
     from .codemod.sed_apply import FlextInfraCodemodSedApply
     from .codemod.semantic_apply import FlextInfraCodemodSemanticApply
     from .codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
+    from .codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
     from .codemod.text_gates import FlextInfraModTextGateEngine
     from .constants import FlextInfraConstants, FlextInfraConstants as c
     from .deps.detection import FlextInfraDependencyDetectionService
@@ -312,6 +313,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodemodSedApply",
     "FlextInfraCodemodSemanticApply",
     "FlextInfraCodemodSnapshotReconciler",
+    "FlextInfraCodemodSnapshotRefresh",
     "FlextInfraCompatibilityAliasDetector",
     "FlextInfraConfig",
     "FlextInfraConfigFixer",
@@ -559,6 +561,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".codemod.sed_apply": ("FlextInfraCodemodSedApply",),
             ".codemod.semantic_apply": ("FlextInfraCodemodSemanticApply",),
             ".codemod.snapshot_reconciler": ("FlextInfraCodemodSnapshotReconciler",),
+            ".codemod.snapshot_refresh": ("FlextInfraCodemodSnapshotRefresh",),
             ".codemod.text_gates": ("FlextInfraModTextGateEngine",),
             ".constants": ("FlextInfraConstants", "c"),
             ".deps": ("deps",),

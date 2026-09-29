@@ -10,6 +10,7 @@ from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
 from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
 from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
 from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
+from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
 from flext_infra.refactor.accessor_migration import (
     FlextInfraAccessorMigrationOrchestrator,
 )
@@ -123,6 +124,15 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             ),
             model_cls=FlextInfraCodemodBatchApply,
             handler=FlextInfraCodemodBatchApply.execute_command,
+        ),
+        m.Cli.ResultCommandRoute(
+            name="mod-snapshots",
+            help_text=(
+                "Regenerate the owned ast-grep rule-test snapshots from their "
+                "tests; dry-run fails while any snapshot differs"
+            ),
+            model_cls=FlextInfraCodemodSnapshotRefresh,
+            handler=FlextInfraCodemodSnapshotRefresh.execute_command,
         ),
         m.Cli.ResultCommandRoute(
             name="ast",

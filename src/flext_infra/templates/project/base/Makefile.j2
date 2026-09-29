@@ -836,6 +836,11 @@ _builtin_gen_all:
 _builtin_mod_apply: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) refactor mod --apply
 
+# `mod` verifies committed rule-test snapshots and never rewrites them; this is
+# the one explicit regeneration, whose diff is reviewed and committed.
+_builtin_mod_snapshots: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor mod-snapshots --apply
+
 # Namespace and accessor migration are the same selector-free refactor surface
 # as `mod`: each public verb owns one fixed rewrite of every resolved consumer.
 _builtin_fix_namespace: _builtin_require_environment
@@ -873,6 +878,7 @@ _builtin-publication: _builtin_release_publish
 _builtin-gen: _builtin_gen_all
 _builtin-initialize: _builtin_gen_init
 _builtin-mod: _builtin_mod_apply
+_builtin-mod-snapshots: _builtin_mod_snapshots
 _builtin-waza:
 	@cd "$(PROJECT_ROOT)" && $(PROJECT_TOOL_EXEC) waza check --no-update-check
 _builtin-duplication:

@@ -203,6 +203,28 @@ Infra:
         lint:
           select:
             - ALL
+          # make fix never deletes information (flext-itpd1.5). The lint
+          # repair applies safe fixes only (make.ruff.lint_fix rejects
+          # --unsafe-fixes), and these rules are never auto-fixed at all,
+          # because their fixes delete a diagnostic print, an assignment, a
+          # redefinition, a duplicated key/value/test case or a version block
+          # (T201 once deleted print(..., file=sys.stderr) from a consumer
+          # script and turned its failures silent). Ruff keeps reporting them;
+          # the author decides. Also guards direct and IDE Ruff runs.
+          unfixable:
+            - duplicate-value
+            - multi-value-repeated-key-literal
+            - multi-value-repeated-key-variable
+            - outdated-version-block
+            - p-print
+            - print
+            - pytest-duplicate-parametrize-test-cases
+            - redefined-while-unused
+            - unused-variable
+          # The only channel that promotes an unsafe Ruff fix into make fix:
+          # a rule enters here with evidence that its fix preserves code,
+          # comments and diagnostics. None does today.
+          extend-safe-fixes: []
           # flext-j47u (codex): banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."

@@ -351,11 +351,16 @@ Infra:
       # for remaining findings. Reporting never normalizes a red gate.
       # lint_fix is the lint gate's apply mode and the ONLY lint repair: make
       # fmt runs format only (single-pass verb law), so no lint_apply exists.
+      # make fix never deletes information (flext-itpd1.5): lint_fix applies
+      # Ruff's safe fixes only. Unsafe fixes deleted diagnostics (T201 removed
+      # print(..., file=sys.stderr) from a consumer script, turning a failure
+      # silent), so MakeRuffSpec rejects --unsafe-fixes here, and the rules
+      # whose fixes delete code are declared unfixable in tooling.yaml.
       ruff:
         format_check: [--preview, --check]
         format_apply: [--preview]
         lint_check: [--preview, --no-fix]
-        lint_fix: [--preview, --fix, --unsafe-fixes]
+        lint_fix: [--preview, --fix]
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
@@ -540,9 +545,9 @@ Infra:
         - name: test-full
           description: Run incremental then all tests, including external and CI-excluded markers, through the same persistent testmon cache.
         - name: fmt
-          description: Apply ruff format --preview and ruff check --fix --unsafe-fixes --preview. Ruff is the rule; change code, never ruff.
+          description: Apply ruff format --preview and every declared formatter gate. Ruff is the rule; change code, never ruff.
         - name: fix
-          description: Apply ruff check --fix --unsafe-fixes --preview plus every other configured safe correction. Ruff is the rule; change code, never ruff.
+          description: Apply the safe fixes of ruff check --fix --preview plus every other configured safe correction; never deletes information. Ruff is the rule; change code, never ruff.
         - name: fix-enforcement
           description: Apply the safe fix actions declared by the enforcement catalog.
         - name: fix-namespace
@@ -573,7 +578,11 @@ Infra:
         - name: initialize
           description: Materialize the declared package initializer graph.
         - name: mod
-          description: Apply the declared structural codemods.
+          description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
+        # The explicit snapshot regeneration (flext-itpd1.7): `mod` only verifies
+        # snapshots, so a changed rule output lands as a reviewed commit.
+        - name: mod-snapshots
+          description: Regenerate the owned ast-grep rule-test snapshots from their tests for a reviewed commit.
         - name: waza
           description: Validate provider-neutral governance semantics with Waza.
         - name: duplication
