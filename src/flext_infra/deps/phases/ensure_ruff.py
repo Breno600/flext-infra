@@ -17,10 +17,18 @@ class FlextInfraEnsureRuffConfigPhase:
         self,
         tool_config: m.Infra.ToolConfigDocument,
         managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
+        generated_roots: t.StrSequence = (),
     ) -> None:
-        """Store tool configuration used to build canonical Ruff settings."""
+        """Store tool configuration used to build canonical Ruff settings.
+
+        ``generated_roots`` carries the roots the active codegen plan is
+        about to materialize: the existence filter accepts them exactly like
+        the search-path owner does, or a first render that runs before the
+        plan writes the tree would drop roots the projection must keep.
+        """
         self._tool_config = tool_config
         self._managed_artifacts = managed_artifacts
+        self._generated_roots = frozenset(generated_roots)
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
@@ -62,7 +70,7 @@ class FlextInfraEnsureRuffConfigPhase:
         return sorted(path.as_posix() for path in paths.value)
 
     @staticmethod
-    def _excluded_root_set(project_dir: Path) -> t.Infra.StrSet:
+    def _excluded_root_set(project_dir: Path) -> frozenset[str]:
         """First segments of the workspace SSOT's declared analysis exclusions.
 
         Unlike a disk probe (which oscillates between the deps pass and the
@@ -74,7 +82,7 @@ class FlextInfraEnsureRuffConfigPhase:
             return frozenset()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
-            return frozenset()
+            raise ValueError(paths.error or "workspace analysis scope is unavailable")
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
     @staticmethod
@@ -84,9 +92,10 @@ class FlextInfraEnsureRuffConfigPhase:
             return ()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
-            return ()
+            raise ValueError(paths.error or "workspace analysis scope is unavailable")
         return tuple(path.as_posix() for path in paths.value)
 
+    @staticmethod
     def compose_per_file_ignores(
         project_dir: Path,
         *,
