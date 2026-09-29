@@ -8,6 +8,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
+from flext_infra import config
 from tests import c, u
 
 
@@ -35,54 +36,87 @@ class TestsFlextInfraReleaseDag:
         """Hashed build-toolchain policy behavior."""
 
         @staticmethod
+        def policy_snapshot(workspace: Path, name: str) -> bytes:
+            """Read one immutable policy file a build phase snapshotted."""
+            return (
+                u.Tests.release_report_dir(workspace, c.Tests.RELEASE_VERSION_BASE)
+                / "policy"
+                / name
+            ).read_bytes()
+
+        @staticmethod
         def test_complete_hashed_constraints_build_and_are_attested(
             tmp_path: Path,
         ) -> None:
-            """Build only with the complete hashed toolchain and attest its digest."""
+            """Build only with the complete hashed toolchain and attest its digests."""
             project_name = "flext-a"
             workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
 
             result = u.Tests.run_release_build(workspace, project_name)
 
             report = u.Tests.release_build_report(workspace)
-            expected_digest = hashlib.sha256(
-                u.Tests.release_build_constraints_text().encode("utf-8")
-            ).hexdigest()
+            snapshot = TestsFlextInfraReleaseDag.TestsBuildConstraints.policy_snapshot
             gitleaks_path = workspace / c.Infra.RELEASE_GITLEAKS_CONFIG_PATH
-            expected_gitleaks_digest = hashlib.sha256(
-                gitleaks_path.read_bytes()
-            ).hexdigest()
             tm.that(result, eq=0)
-            tm.that(report.build_constraints_sha256, eq=expected_digest)
-            tm.that(report.gitleaks_policy_sha256, eq=expected_gitleaks_digest)
+            tm.that(
+                report.build_constraints_sha256,
+                eq=hashlib.sha256(
+                    snapshot(workspace, "build-constraints.txt")
+                ).hexdigest(),
+            )
+            tm.that(
+                report.gitleaks_policy_sha256,
+                eq=hashlib.sha256(gitleaks_path.read_bytes()).hexdigest(),
+            )
             tm.that(report.records[0].exit_code, eq=0)
 
         @staticmethod
-        def test_policy_snapshot_carries_the_rendered_constraints(
-            tmp_path: Path,
-        ) -> None:
-            """The policy snapshot bytes equal the config-rendered policy.
+        def test_policy_snapshot_pins_every_configured_backend(tmp_path: Path) -> None:
+            """The snapshot carries each configured pin with exactly its digests.
 
-            The snapshot is rendered from ``config.Infra.release.build_constraints``
-            (flext-gufl8) — repositories carry no constraints file the protocol
-            could read, so the attested digest can only come from the SSOT
-            render.
+            ``uv build --require-hashes`` then accepts precisely the declared
+            backend; the typed config is the only owner of those bytes, and a
+            second build renders them identically.
             """
             project_name = "flext-a"
             workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
+            snapshot = TestsFlextInfraReleaseDag.TestsBuildConstraints.policy_snapshot
 
-            result = u.Tests.run_release_build(workspace, project_name, dry_run=True)
+            first = u.Tests.run_release_build(workspace, project_name, dry_run=True)
+            rendered = snapshot(workspace, "build-constraints.txt").decode("utf-8")
+            second = u.Tests.run_release_build(workspace, project_name, dry_run=True)
 
-            policy_bytes = (
-                u.Tests.release_report_dir(workspace, c.Tests.RELEASE_VERSION_BASE)
-                / "policy"
-                / "build-constraints.txt"
-            ).read_bytes()
-            tm.that(result, eq=0)
+            pins = config.Infra.release.build_constraints
+            tm.that((first, second), eq=(0, 0))
+            for pin in pins:
+                tm.that(rendered, has=f"{pin.name}=={pin.version} \\")
+                for digest in pin.hashes:
+                    tm.that(rendered, has=f"--hash=sha256:{digest}")
             tm.that(
-                policy_bytes.decode("utf-8"),
-                eq=u.Tests.release_build_constraints_text(),
+                rendered.count("--hash=sha256:"),
+                eq=sum(len(pin.hashes) for pin in pins),
             )
+            tm.that(rendered, lacks="\\\n\n")
+            tm.that(
+                snapshot(workspace, "build-constraints.txt").decode("utf-8"),
+                eq=rendered,
+            )
+
+        @staticmethod
+        def test_only_the_gitleaks_policy_is_projected_into_repositories() -> None:
+            """Codegen owns the Gitleaks policy everywhere and no constraints file.
+
+            Build constraints render from the typed config at release time; a
+            repository ``config/build-constraints.txt`` would be a second owner.
+            """
+            entries = {
+                entry.destination: entry
+                for entry in config.Infra.codegen.templates.entries
+            }
+            gitleaks = entries[c.Infra.RELEASE_GITLEAKS_CONFIG_PATH]
+            tm.that("config/build-constraints.txt" in entries, eq=False)
+            tm.that(set(gitleaks.profiles), eq=set(c.Infra.MakeProfile))
+            tm.that(gitleaks.overwrite, eq=True)
 
     class TestsArchiveBoundary:
         """Publishable archive content policy."""

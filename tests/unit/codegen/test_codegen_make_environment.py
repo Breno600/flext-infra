@@ -5,13 +5,13 @@ from __future__ import annotations
 import os
 import re
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from flext_infra.codegen import FlextInfraCodegenConform
 from tests import c, m, t, u
 
 pytestmark = pytest.mark.slow
@@ -20,253 +20,37 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
-    @pytest.mark.parametrize("attached", [False, True])
-    def test_direnv_resolves_the_physical_environment_owner(
-        self, tmp_path: Path, *, attached: bool
+    @pytest.mark.parametrize("github_actions", ["true", "false"])
+    def test_workspace_status_reports_repository_owned_ci_scope(
+        self, tmp_path: Path, github_actions: str
     ) -> None:
-        """Standalone roles share their physical superproject's environment path."""
-        parent = tmp_path / "workspace"
-        u.Tests.WorktreeFixture.initialize_governed_project(
-            parent,
-            "fixture-workspace",
-            workspace="fixture-workspace",
-            database="fixture_workspace",
-            issue_prefix="fixture-workspace",
+        """GitHub checks this repository; local Make retains the fleet cycle."""
+        project_root, _ = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.WORKSPACE, local_infra=True
         )
-        project, _ = self._render_makefile(
-            parent if attached else tmp_path / "independent",
-            c.Infra.MakeProfile.STANDALONE,
-        )
-        if attached:
-            u.Tests.WorktreeFixture.attach_submodule(
-                parent,
-                project,
-                distribution="fixture-project",
-                relative_path=project.relative_to(parent).as_posix(),
-            )
-        (project / ".envrc.local").write_text(
-            'export OBSERVED_VENV_DIR="${VENV_DIR}"\n', encoding="utf-8"
-        )
-        tm.ok(
-            u.Cli.run_checked((c.Infra.CLI_DIRENV, "allow", str(project)), cwd=project)
-        )
-        try:
-            result = tm.ok(
-                u.Cli.run_raw(
-                    (
-                        c.Infra.CLI_DIRENV,
-                        "exec",
-                        str(project),
-                        "printenv",
-                        "OBSERVED_VENV_DIR",
-                    ),
-                    cwd=project,
-                    remove_env_keys=(
-                        m.Infra.BeadsWorkspaceEnvironmentSpec().identity_var,
-                    ),
-                )
-            )
-        finally:
-            tm.ok(
-                u.Cli.run_checked(
-                    (c.Infra.CLI_DIRENV, "deny", str(project)), cwd=project
-                )
-            )
-        tm.that(result.outcome.raw_return_code, eq=0, msg=result.stderr)
-        tm.that(
-            result.stdout.strip(), eq=str((parent if attached else project) / ".venv")
-        )
-
-    @staticmethod
-    def _render_makefile(
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
-        *,
-        local_infra: bool = False,
-        bootstrap: bool = False,
-        extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
-        script_dispatch: m.Infra.ScriptDispatchSpec | None = None,
-    ) -> t.Pair[Path, Path]:
-        role = c.Infra.MakeProfile(profile.value)
-        repository = u.Tests.repository_ref("fixture-project", role=role).model_copy(
-            update={
-                "editable": True,
-                "extra_verbs": extra_verbs,
-                "script_dispatch": script_dispatch,
-            }
-        )
-        project_root = tmp_path / profile.value / "fixture-project"
-        u.Tests.WorktreeFixture.write_python_project(
-            project_root, repository.distribution
-        )
-        # The generated Makefile consumes the tracked Mise launcher for every
-        # orchestrated verb (setup/check/fix/...), not only at bootstrap: the
-        # fixture must carry the governed toolchain seeds exactly as a managed
-        # repository does, or the very first mise exec dies with exit 127.
-        u.Tests.copy_tracked_mise_seeds(project_root)
-        if bootstrap:
-            tm.ok(
-                u.Cli.atomic_write_text_file(
-                    project_root / config.Infra.codegen.scaffold.project.readme,
-                    "# Bootstrap environment contract\n",
-                )
-            )
-        beads = u.Tests.beads_project(repository.distribution)
-        u.Tests.write_beads_project(
-            project_root,
-            workspace=beads.workspace,
-            database=beads.database,
-            issue_prefix=beads.issue_prefix,
-        )
-        u.Tests.initialize_git_repo(project_root, origin_url=repository.url)
-        u.Tests.provider(repository.provider)
-        baseline = tm.ok(u.Cli.capture(["git", "rev-parse", "HEAD"], cwd=project_root))
-        tm.ok(
-            u.Cli.run_checked(
-                ["git", "config", "remote.origin.skipDefaultUpdate", "true"],
+        tm.ok(u.Tests.create_python_environment(project_root))
+        process = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "status"],
                 cwd=project_root,
+                env={"GITHUB_ACTIONS": github_actions},
             )
         )
-        tm.ok(
-            u.Cli.run_checked(
-                [
-                    "git",
-                    "update-ref",
-                    f"refs/remotes/origin/{u.Tests.provider_branch()}",
-                    baseline,
-                ],
-                cwd=project_root,
-            )
-        )
-        repository_root = project_root
-        infra_repositories = (u.Tests.repository_ref(config.Infra.name),)
-        local_subprojects = (
-            (infra_repositories[0].model_copy(update={"path": Path("infra-engine")}),)
-            if local_infra
-            else ()
-        )
-        workspace = u.Tests.workspace_spec(
-            repository,
-            project=u.Tests.project_spec("fixture-project"),
-            subprojects=local_subprojects,
-        )
-        request = u.Tests.conform_request(
-            project_root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-        plan = tm.ok(
-            FlextInfraCodegenConform(
-                repository_root=repository_root,
-                request=request,
-                initial_workspace=workspace,
-            ).plan(request)
-        )
-        makefile = next(
-            file for file in plan.files if file.path.name == c.Infra.MAKEFILE_FILENAME
-        )
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                project_root / "Makefile", u.Tests.codegen_file_text(makefile)
-            )
-        )
-        # The generated project environment is owned by two projections, not
-        # one: the Makefile owns the runtime binding of every verb, and .envrc
-        # owns the interactive shell's view of the same state roots. Writing
-        # only the Makefile made an environment guarantee untestable the moment
-        # it moved between the two owners.
-        envrc = next(file for file in plan.files if file.path.name == ".envrc")
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                project_root / ".envrc", u.Tests.codegen_file_text(envrc)
-            )
-        )
-        # The generated .envrc owns a fail-loud Gas City activation contract:
-        # when the host exports the city identity, direnv reads the managed
-        # Beads marker (`.beads/metadata.json`) before any verb runs. A fixture
-        # that materializes .envrc without the plan's own Beads artifacts
-        # asserts host-dependent behavior — green on machines without the city
-        # environment, red on the operator's. Materialize every planned file
-        # under `.beads/` so the fixture carries the full managed contract the
-        # generated environment actually consumes.
-        for artifact in (
-            file
-            for file in plan.files
-            if c.Infra.BEADS_DIRNAME in file.path.parts
-            and project_root in file.path.parents
-            and file.desired_content is not None
-        ):
-            tm.ok(
-                u.Cli.atomic_write_text_file(
-                    artifact.path, u.Tests.codegen_file_text(artifact)
-                )
-            )
-        if bootstrap:
-            for relative in (c.Infra.PYPROJECT_FILENAME, c.Infra.MISE_TOML_FILENAME):
-                artifact = next(
-                    file for file in plan.files if file.path == project_root / relative
-                )
-                tm.ok(
-                    u.Cli.atomic_write_text_file(
-                        artifact.path, u.Tests.codegen_file_text(artifact)
-                    )
-                )
-            # Exercise the documented custom-handler/hook boundary with real
-            # Python and installed metadata, never a substitute tool executable.
-            tm.ok(
-                u.Cli.atomic_write_text_file(
-                    project_root / "custom.mk",
-                    ".PHONY: pre-setup post-setup _custom-status\n"
-                    "pre-setup:\n"
-                    '\t@test ! -L "$(RUNTIME_VENV)"\n'
-                    "post-setup:\n"
-                    '\t@test "$$MAKE_ACTIVATION_PROOF" = "$(PROJECT_ROOT)"\n'
-                    '\t@test -x "$(MAKE_COMMAND)"\n'
-                    '\t@test "$(MAKE_COMMAND)" = "$(SELF_MAKE_EXECUTABLE)"\n'
-                    "\t@$(UV_RUN) python -c 'import importlib.metadata, sys; "
-                    "from pathlib import Path; import tomllib; "
-                    'project = tomllib.loads(Path("pyproject.toml").read_text())'
-                    '["project"]; '
-                    'assert Path(sys.prefix) == Path("$(RUNTIME_VENV)"); '
-                    'assert importlib.metadata.version(project["name"]) == '
-                    'project["version"]; print("installed-runtime-verified")'
-                    "'\n"
-                    "_custom-status:\n"
-                    "\t@printf '%s\\n' "
-                    "'FLEXT_INFRA_PYTHON=$(FLEXT_INFRA_PYTHON)' "
-                    "'UV_PROJECT_ENVIRONMENT=$(UV_PROJECT_ENVIRONMENT)' "
-                    "'VIRTUAL_ENV=$(VIRTUAL_ENV)' 'PATH=$(PATH)'\n"
-                    "\t@command -v python\n"
-                    "\t@$(UV_RUN) python -c 'import os, sys; "
-                    'print(sys.prefix); print(os.environ["UV_PROJECT_ENVIRONMENT"])'
-                    "'\n",
-                )
-            )
-            (project_root / ".envrc.local").write_text(
-                'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n', encoding="utf-8"
-            )
-        else:
-            tm.ok(
-                u.Cli.run_checked(
-                    ["direnv", "allow", str(project_root)], cwd=project_root
-                )
-            )
-        return project_root, repository_root
+        tm.that(u.Cli.process_succeeded(process.outcome), eq=True, msg=process.stderr)
+        selected = "." if github_actions == "true" else "infra-engine ."
+        tm.that(process.stdout, has=f"selected_projects={selected}\n")
+        scope = "self" if github_actions == "true" else "all"
+        tm.that(process.stdout, has=f"codegen_scope={scope}\n")
 
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
         self, tmp_path: Path, *, failure_return: int | None
     ) -> None:
         """Real direnv evaluates before dispatch and stops an invalid environment."""
-        project_root, _ = self._render_makefile(
+        project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
-        tm.ok(
-            u.Cli.run_checked(
-                ["uv", "venv", "--python", sys.executable, str(project_root / ".venv")],
-                cwd=project_root,
-            )
-        )
+        tm.ok(u.Tests.create_python_environment(project_root))
         tm.that((project_root / ".venv").is_symlink(), eq=False)
         tm.that((project_root / ".venv" / "bin" / "python").is_symlink(), eq=True)
         (project_root / ".envrc.local").write_text(
@@ -321,7 +105,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         self, tmp_path: Path, verb: str, environment_part: str, *, broken: bool
     ) -> None:
         """A borrowed environment is preserved and rejected before activation."""
-        project_root, _ = self._render_makefile(
+        project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         foreign = tmp_path / "foreign" / ".venv"
@@ -352,7 +136,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         self, tmp_path: Path, *, command_line: bool
     ) -> None:
         """Even explicit variable overrides cannot select a different checkout."""
-        project_root, _ = self._render_makefile(
+        project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         foreign = tmp_path / "foreign"
@@ -404,16 +188,22 @@ class TestsFlextInfraCodegenMakeEnvironment:
     )
     @pytest.mark.parametrize("provisioned", [False, True])
     # Why: `make setup` provisions a real environment from the remote
-    # index and GitHub sources (an external gate); it never runs inside
-    # the offline unit gate and is selected only by direct invocation.
+    # index and GitHub sources (an external gate); `make test-full` selects
+    # it after the incremental test phase.
     @pytest.mark.remote
     def test_generated_make_uses_profile_runtime_venv_under_hostile_env(
-        self, tmp_path: Path, profile: c.Infra.MakeProfile, *, provisioned: bool
+        self,
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+        profile: c.Infra.MakeProfile,
+        *,
+        provisioned: bool,
     ) -> None:
         """Every generated shell receives the profile-resolved runtime venv."""
-        project_root, runtime_root = self._render_makefile(
-            tmp_path, profile, bootstrap=True
+        project_root = u.Tests.resolved_make_checkout(
+            resolved_make_templates[profile], tmp_path, profile
         )
+        runtime_root = project_root
         source_marker = project_root / "source-marker"
         source_marker.write_text("preserve project source", encoding="utf-8")
         previous_environment_marker = runtime_root / ".venv" / "old-environment"
@@ -519,81 +309,83 @@ class TestsFlextInfraCodegenMakeEnvironment:
     )
     # Why: `make setup` provisions a real environment from the remote
     # index and GitHub sources (an external gate); it never runs inside
-    # the offline unit gate and is selected only by direct invocation.
+    # the offline unit gate; make test-full includes this remote boundary.
     @pytest.mark.remote
     def test_setup_provisions_environment_before_project_runtime(
-        self, tmp_path: Path, profile: c.Infra.MakeProfile
+        self,
+        tmp_path: Path,
+        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
+        profile: c.Infra.MakeProfile,
     ) -> None:
         """Setup creates the venv and syncs dependencies before any runtime use."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, profile, bootstrap=True
         )
-        hostile_venv = tmp_path / "hostile" / ".venv"
-        hostile_bin = hostile_venv / "bin"
-        hostile_bin.mkdir(parents=True)
-        hostile_uv = hostile_bin / "uv"
-        sentinel = hostile_venv / "sentinel"
-        sentinel.write_text("untouched\n", encoding="utf-8")
-        active_env = {
-            "PATH": f"{hostile_bin}:{os.environ['PATH']}",
-            "UV": str(hostile_uv),
-            "UV_BIN": str(hostile_uv),
-            "UV_PROJECT": str(hostile_venv.parent),
-            "UV_PROJECT_ENVIRONMENT": str(hostile_venv),
-            "FLEXT_INFRA_PYTHON": str(hostile_bin / "python"),
-            "VIRTUAL_ENV": str(hostile_venv),
-        }
+        hostile_venv = tmp_path / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
+        (hostile_venv / "bin").mkdir(parents=True)
+        active_env = u.Tests.hostile_uv_environment(hostile_venv)
         tm.that((project_root / ".venv").exists(), eq=False)
-        process = tm.ok(
+        # Without a committed lock, setup never resolves: uv refuses loudly.
+        unlocked = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "setup"], cwd=project_root, env=active_env
             )
         )
-        tm.that(
-            u.Cli.process_succeeded(process.outcome),
-            eq=True,
-            msg=process.stdout + process.stderr,
-        )
-        tm.that(process.stdout, has="installed-runtime-verified")
-        tm.that((project_root / ".venv" / "pyvenv.cfg").is_file(), eq=True)
-        tm.that((project_root / "uv.lock").exists(), eq=False)
-        tm.that(sentinel.read_text(encoding="utf-8"), eq="untouched\n")
-        tm.that(tuple(hostile_bin.iterdir()), eq=())
-        tm.that((hostile_venv / "pyvenv.cfg").exists(), eq=False)
-        tm.that((hostile_venv.parent / "uv.lock").exists(), eq=False)
+        tm.that(u.Cli.process_succeeded(unlocked.outcome), eq=False)
+        tm.that((project_root / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
 
-        # A current lock is accepted in CI; a new runtime declaration must fail
-        # before post-setup without a persisted dependency lock.
-        make = config.Infra.codegen.make
-        tm.ok(
-            u.Cli.atomic_write_text_file(
-                project_root / "custom.mk",
-                ".PHONY: post-setup\npost-setup:\n"
-                '\t@test -x "$(MAKE_COMMAND)"\n'
-                '\t@test "$(MAKE_COMMAND)" = "$(SELF_MAKE_EXECUTABLE)"\n'
-                f'\t@test "$({make.ci.variable})" = "{make.ci.value}"\n'
-                "\t@printf '%s\\n' 'ci-runtime-provisioned'\n",
-            )
+        # `upg` is the only resolver: the run's template was upgraded under the
+        # same foreign environment with a declared post-upg hook. It wrote both
+        # locks, provisioned the environment frozen from them, and ran the
+        # hook inside the activated environment, exactly as setup runs post-setup.
+        template = resolved_make_templates[profile]
+        receipts = template.parent.parent
+        upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
+        tm.that(upgraded.stdout, has="upg-hook-ran")
+        for lock in (c.Infra.UV_LOCK_FILENAME, c.Infra.MISE_LOCK_FILENAME):
+            tm.that((template / lock).is_file(), eq=True)
+        tm.that((template / ".venv" / "pyvenv.cfg").is_file(), eq=True)
+        template_hostile = receipts / c.Tests.MAKE_TEMPLATE_HOSTILE_VENV
+        tm.that(
+            (template_hostile / "sentinel").read_text(encoding="utf-8"),
+            eq="untouched\n",
         )
-        ci_env = {**active_env, make.ci.variable: make.ci.value}
-        locked = tm.ok(
-            u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup"], cwd=project_root, env=ci_env
-            )
-        )
+        tm.that(tuple((template_hostile / "bin").iterdir()), eq=())
+        tm.that((template_hostile / "pyvenv.cfg").exists(), eq=False)
+        tm.that((template_hostile.parent / c.Infra.UV_LOCK_FILENAME).exists(), eq=False)
+
+        # A cold CI storage must install every tool without auto-locking. A warm
+        # storage would skip installation and conceal an absent locked-mode guard.
+        bootstrap = u.Infra.mise_bootstrap_environment()
+        cold_storage = receipts / c.Tests.COLD_MISE_STORAGE
+        locked = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_CI_RECEIPT)
         tm.that(
             u.Cli.process_succeeded(locked.outcome),
             eq=True,
             msg=locked.stdout + locked.stderr,
         )
         tm.that(locked.stdout, has="ci-runtime-provisioned")
-        lock_path = project_root / "uv.lock"
-        tm.that(lock_path.exists(), eq=False)
+        tm.that(locked.stdout, has=f"storage={cold_storage}")
+        install_root = cold_storage / next(
+            relative
+            for name, relative in bootstrap.persistent_environment
+            if name == "MISE_INSTALLS_DIR"
+        )
+        tm.that(any(install_root.iterdir()), eq=True)
+        resolved_locks = self._locks(template)
+        ci_checkout = (
+            receipts / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT / profile.value / template.name
+        )
+        tm.that(self._locks(ci_checkout), eq=resolved_locks)
+
+        # A new dependency declaration makes the committed lock stale: setup
+        # fails instead of re-resolving, and the lock stays untouched.
+        checkout = u.Tests.resolved_make_checkout(template, tmp_path / "stale", profile)
         dependency_root = tmp_path / "external-runtime"
         u.Tests.WorktreeFixture.write_python_project(
             dependency_root, "external-runtime"
         )
-        pyproject_path = project_root / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = checkout / c.PYPROJECT_FILENAME
         document = u.Tests.toml_doc(pyproject_path.read_text(encoding="utf-8"))
         project = tm.not_none(u.Cli.toml_table_child(document, "project"))
         project["dependencies"] = [
@@ -601,24 +393,38 @@ class TestsFlextInfraCodegenMakeEnvironment:
             f"external-runtime @ {dependency_root.as_uri()}",
         ]
         tm.ok(u.Cli.atomic_write_text_file(pyproject_path, u.Cli.toml_dumps(document)))
+        make = config.Infra.codegen.make
         stale = tm.ok(
             u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup"], cwd=project_root, env=ci_env
+                ["--no-print-directory", "setup"],
+                cwd=checkout,
+                env={
+                    **active_env,
+                    make.ci.variable: make.ci.value,
+                    bootstrap.storage_root_variable: str(cold_storage),
+                },
             )
         )
-        tm.that(
-            u.Cli.process_succeeded(stale.outcome),
-            eq=True,
-            msg=stale.stdout + stale.stderr,
+        tm.that(u.Cli.process_succeeded(stale.outcome), eq=False)
+        tm.that(self._locks(checkout), eq=resolved_locks)
+
+    @staticmethod
+    def _locks(root: Path) -> t.MappingKV[str, bytes]:
+        """Return every lock artifact ``make upg`` owns, keyed by relative path."""
+        sidecars = root / ".mise" / "locks"
+        paths = (
+            root / c.Infra.UV_LOCK_FILENAME,
+            root / c.Infra.MISE_LOCK_FILENAME,
+            root / c.Infra.MISE_VERSION_PIN_FILENAME,
+            *(path for path in sidecars.rglob("*") if path.is_file()),
         )
-        tm.that(stale.stdout, has="ci-runtime-provisioned")
-        tm.that(lock_path.exists(), eq=False)
+        return {path.relative_to(root).as_posix(): path.read_bytes() for path in paths}
 
     def test_setup_fails_when_the_tracked_mise_launcher_is_missing(
         self, tmp_path: Path
     ) -> None:
         """Never substitute a system Mise for the generated launcher owner."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         # The fixture carries the governed toolchain seeds; this contract
@@ -661,7 +467,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         exercised through the Makefile projection itself, which is
         the owner's canonical view of the dispatch chain.
         """
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
@@ -678,7 +484,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
 
     def test_generated_operations_bind_uv_to_runtime_root(self, tmp_path: Path) -> None:
         """All generated uv operations use the profile-owned environment."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         makefile = (project_root / "Makefile").read_text()
@@ -691,35 +497,19 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that("UV ?= uv" in makefile, eq=False)
         # UV_RUN's environment binding is exercised by the real runtime test
         # above, including a parent uv workspace with a different default venv.
-        toolchain = config.Infra.codegen.toolchain
-        # The state root is a SIBLING of the checkout, never a directory inside
-        # it: derived from the Makefile's own PROJECT_ROOT so a verb invoked
-        # from a foreign CWD still writes beside the tree that owns the verb.
-        tm.that(
-            (
-                "PROJECT_STATE_ROOT := $(abspath $(PROJECT_ROOT)/../"
-                f"{toolchain.state_directory_name}/$(notdir $(PROJECT_ROOT)))"
-            )
-            in makefile,
-            eq=True,
-        )
-        # Root cause: storage law forbids scratch inside the versioned tree —
-        # PROJECT_SCRATCH_ROOT is HOME-rooted, mirroring the checkout identity
-        # (absolute path with VCS directory segments renamed) under it, never
-        # nested under PROJECT_STATE_ROOT.
-        tm.that(makefile, has="PROJECT_SCRATCH_IDENTITY := $(abspath $(PROJECT_ROOT))/")
-        for segment, alias in c.Infra.SCRATCH_IDENTITY_SEGMENT_ALIASES:
-            tm.that(makefile, has=f"$(subst /{segment}/,/{alias}/,")
+        # Make does not inject a caller-selected database path. The canonical
+        # pytest runner binds TESTMON_DATAFILE to its external persistent cache.
         tm.that(
             makefile,
-            has=(
-                f"PROJECT_SCRATCH_ROOT := $(HOME)/{toolchain.scratch_home_relative}/"
-                f"{toolchain.state_directory_name}"
-                "$(patsubst %/,%,$(PROJECT_SCRATCH_IDENTITY))/"
-                f"{toolchain.scratch_namespace}"
-            ),
+            has=f"override RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}",
         )
-        tm.that('TMPDIR="$$test_tmp" GOTMPDIR="$$test_tmp"' in makefile, eq=True)
+        for forced in (
+            "PROJECT_STATE_ROOT",
+            "PROJECT_SCRATCH",
+            'TMPDIR="$$test_tmp"',
+            "TESTMON_DATAFILE",
+        ):
+            tm.that(makefile, lacks=forced)
         # Every gate the typed owner schedules by default reaches the runtime
         # in ONE `check run --gates` invocation. The Make layer no longer
         # publishes a per-gate selector, so the gate list itself is the
@@ -732,20 +522,57 @@ class TestsFlextInfraCodegenMakeEnvironment:
             eq=True,
         )
         tm.that("$(UV_RUN) actionlint" in makefile, eq=False)
-        tm.that('$(UV) sync --project "$(PROJECT_ROOT)"' in makefile, eq=True)
+        tm.that('$(UV) sync --project "$(UV_PROJECT)"' in makefile, eq=True)
         tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
-        # Bytecode still lands in the project state root and never inside the
-        # checkout. The Makefile stopped exporting it because the shell owns
-        # the interactive environment now, so the guarantee is proved at .envrc
-        # — its current owner — instead of being dropped with the old export.
         envrc = (project_root / ".envrc").read_text(encoding="utf-8")
-        tm.that(
-            envrc,
-            has=(
-                "export PYTHONPYCACHEPREFIX="
-                f'"${{PROJECT_STATE_ROOT}}/{toolchain.pycache_namespace}"'
-            ),
+        for forced in ("PYTHONPYCACHEPREFIX", "export TMPDIR", "PROJECT_STATE_ROOT"):
+            tm.that(envrc, lacks=forced)
+
+    @pytest.mark.parametrize(
+        "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
+    )
+    def test_build_verb_renders_uv_build_for_packaged_repositories(
+        self, tmp_path: Path, profile: c.Infra.MakeProfile
+    ) -> None:
+        """A repository that publishes a package keeps the real build recipe.
+
+        The `package` flag is an input of the fixture, not a frozen constant:
+        both branches of the flag are exercised (the false branch lives in the
+        twin test) so the contract holds for any valid manifest value.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, profile, package=True
         )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+        tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=True)
+        tm.that(makefile, lacks="package=false (content-only root)")
+
+    @pytest.mark.parametrize(
+        "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
+    )
+    def test_build_verb_renders_typed_noop_for_package_false_roots(
+        self, tmp_path: Path, profile: c.Infra.MakeProfile
+    ) -> None:
+        """A content-only root (package=false) builds nothing and says so.
+
+        `uv build` on a package:false root cannot produce a wheel (no content
+        to ship) and fails the wheel step after wasting an sdist — the invest
+        root proof (92MB sdist, wheel failure, exit 2). The generated verb
+        must instead emit a typed receipt and exit zero. The `package` flag is
+        the fixture input; both branches are exercised across the twins.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, profile, package=False
+        )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+        tm.that('$(UV) build --project "$(PROJECT_ROOT)"' in makefile, eq=False)
+        tm.that(makefile, has="package=false (content-only root)")
+        # The noop verb itself must still exist in both profiles.
+        if profile is c.Infra.MakeProfile.WORKSPACE:
+            tm.that(makefile, has="_builtin-self-build:")
+        else:
+            tm.that(makefile, has="_builtin-self-build: _builtin_build_artifacts")
+            tm.that(makefile, has="_builtin_build_artifacts:")
 
     @pytest.mark.parametrize(
         "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE]
@@ -764,7 +591,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
         `check run` owner, so a gate the owner declares cannot be left
         unscheduled by the projection.
         """
-        project_root, _repository_root = self._render_makefile(tmp_path, profile)
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, profile
+        )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
         phony_declarations = tuple(
             line.removeprefix(".PHONY:").strip()
@@ -806,7 +635,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         self, tmp_path: Path
     ) -> None:
         """Standalone check runs exactly the owner-declared default gate set."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         invocation_log = tmp_path / "check-invocation.log"
@@ -821,11 +650,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
         # override rides the environment rather than the command line because
         # UV is not a declared Make variable.
         process = tm.ok(
-            u.Cli.run_raw(
-                [c.Infra.MAKE, "--no-print-directory", "check"],
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "check"],
                 cwd=project_root,
                 env={"UV": str(uv), "PATH": f"{uv.parent}:{os.environ['PATH']}"},
-                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
             )
         )
 
@@ -840,59 +668,118 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(invocation, has=f"--gates {gates} --projects .")
         tm.that(invocation, lacks="--apply")
 
-    def test_dependency_upgrade_scopes_to_declared_project_locks(
-        self, tmp_path: Path
-    ) -> None:
-        """Upgrade exactly the declared project locks through the deps verb."""
-        project_root, _repository_root = self._render_makefile(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
-        )
-        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
-        # The deps dispatch chain is validated behaviorally:
-        # the generated Makefile routes `make deps` through
-        # _builtin_deps_upgrade which locks every declared project
-        # with --upgrade --refresh (branch-tracked git sources re-read
-        # their metadata per operator 2026-09-14), modernizes via
-        # the typed owner, then verifies with --check.
-        tm.that(makefile, has="_builtin-deps: _builtin_deps_upgrade")
-        tm.that(makefile, has="--upgrade --refresh")
-        tm.that(makefile, has="--refresh")
-        tm.that(makefile, has="--check")
-        tm.that(makefile, has="--rewrite-constraints")
-        tm.that(makefile, lacks="--constraint-policy")
-        tm.that(makefile, has="_run_for_all_projects,--check")
+    @staticmethod
+    def _recipe_targets_containing(makefile: str, needle: str) -> set[str]:
+        """Return every rule target whose recipe (not comments) carries *needle*."""
+        targets: set[str] = set()
+        current: str | None = None
+        continued = False
+        for line in makefile.splitlines():
+            if line.startswith("\t") or continued:
+                if (
+                    current is not None
+                    and not line.lstrip().startswith("#")
+                    and needle in line
+                ):
+                    targets.add(current)
+                continued = line.endswith("\\")
+                continue
+            continued = False
+            header = re.match(r"^([A-Za-z0-9_.$()%-]+)\s*:(?![=:])", line)
+            current = header.group(1) if header else None
+        return targets
 
-    def test_dependency_upgrade_runs_with_unrelated_environment_input(
-        self, tmp_path: Path
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_upg_is_the_only_resolver_and_setup_installs_frozen(
+        self, tmp_path: Path, profile: c.Infra.MakeProfile
     ) -> None:
-        """Unrelated ambient input cannot divert the declared dependency operation."""
-        project_root, _repository_root = self._render_makefile(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+        """Operator law 2026-09-24: only `upg` resolves and writes the locks.
+
+        The generated Makefile confines every uv upgrade to the `upg`
+        lifecycle and every `mise lock --bump` to the shared bootstrap gated by
+        a switch that only `upg` sets; `setup` syncs `--locked`, and the
+        generated `.mise.toml` makes mise install exactly what the lock pins.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, profile, bootstrap=True
         )
-        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
-        # Unrelated `NAME=value` on the make command line is inert
-        # (operator law 2026-09-14: the Makefile validates no input).
-        # The deps verb still routes to its declared implementation
-        # and runs the full declaration-driven upgrade scope.
-        tm.that(makefile, has="_builtin-deps: _builtin_deps_upgrade")
-        tm.that(makefile, has="--upgrade --refresh")
-        tm.that(makefile, has="--check")
-        tm.that(makefile, has="--rewrite-constraints")
-        tm.that(makefile, lacks="--constraint-policy")
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8"
+        )
+
+        tm.that(
+            self._recipe_targets_containing(makefile, "--upgrade"),
+            eq={"_upg_lifecycle"},
+        )
+        tm.that(
+            self._recipe_targets_containing(makefile, "lock --bump"),
+            eq={"_bootstrap_setup_tools"},
+        )
+        toolchain = config.Infra.codegen.toolchain
+        lock_invocations = re.findall(r"lock --bump([^;]*);", makefile)
+        tm.that(tuple(arguments.strip() for arguments in lock_invocations), eq=("",))
+        platform_matrix = ",".join(toolchain.mise_lockfile_platforms)
+        tm.that(makefile, has=f'mise_lockfile_platforms="{platform_matrix}";')
+        tm.that(
+            makefile,
+            has='$${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"}',
+        )
+        tm.that(makefile, has='if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then')
+        resolve_assignments = re.findall(
+            r"^(?:([\w-]+): )?TOOL_BOOTSTRAP_RESOLVE :=[ ]?(.*)$",
+            makefile,
+            flags=re.MULTILINE,
+        )
+        tm.that(sorted(resolve_assignments), eq=[("", ""), ("upg", "1")])
+        tm.that(makefile, has="upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle")
+        sync_flags = re.search(r"^UV_SYNC_FLAGS := (.*)$", makefile, re.MULTILINE)
+        assert sync_flags is not None
+        tm.that(sync_flags.group(1), has="--locked")
+        tm.that(sync_flags.group(1), lacks="--upgrade")
+
+        mise_toml = u.Cli.toml_mapping_from_text(
+            (project_root / c.Infra.MISE_TOML_FILENAME).read_text(encoding="utf-8")
+        )
+        assert mise_toml is not None
+        settings = mise_toml.get("settings")
+        tool_config = mise_toml.get("tool_config")
+        assert isinstance(settings, Mapping)
+        assert isinstance(tool_config, Mapping)
+        tm.that(settings.get("lockfile"), eq=toolchain.mise_lockfile)
+        tm.that(settings.get("locked"), eq=toolchain.mise_locked)
+        tm.that(tool_config.get("locked"), eq=toolchain.mise_locked)
+        tm.that(
+            settings.get("lockfile_platforms"),
+            eq=list(toolchain.mise_lockfile_platforms),
+        )
+        tools = mise_toml.get("tools")
+        assert isinstance(tools, Mapping)
+        jscpd = tools.get(toolchain.jscpd_selector)
+        waza = tools.get(toolchain.waza_selector)
+        assert isinstance(jscpd, Mapping)
+        assert isinstance(waza, Mapping)
+        tm.that(jscpd.get("version"), eq=toolchain.jscpd_version)
+        tm.that(
+            jscpd.get("platforms"),
+            eq={
+                platform: {"asset_pattern": pattern}
+                for platform, pattern in toolchain.jscpd_asset_patterns.items()
+            },
+        )
+        tm.that(waza.get("version"), eq=toolchain.waza_version)
+        tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
 
     def test_public_gate_fails_closed_before_managed_environment_exists(
         self, tmp_path: Path
     ) -> None:
         """A public gate preserves the canonical setup-required diagnostic."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
 
         process = tm.ok(
-            u.Cli.run_raw(
-                [c.Infra.MAKE, "--no-print-directory", "test"],
-                cwd=project_root,
-                remove_env_keys=c.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "test"], cwd=project_root
             )
         )
 
@@ -903,7 +790,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
 
     def test_generated_setup_is_self_contained(self, tmp_path: Path) -> None:
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
@@ -915,16 +802,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
             # The bootstrap shell delegates to recursive make through mise exec.
             # The `+` prefix is required to preserve GNU Make's jobserver FDs.
             "\t+@set -eu;",
-            # Managed tools reach the setup lifecycle by RUNNING it inside the
-            # bootstrapped Mise, not by the old inline PATH computation: the
-            # toolchain is installed at its latest release and the lifecycle
-            # is executed through `mise exec`, so nothing needs an ambient mise
-            # and nothing hand-assembles a managed PATH any more.
+            # Runtime tool identity is exercised through the public status
+            # regression, including an invalid ambient Mise configuration.
             'mise_exec project "$$latest_mise" -C "$$project_root" install --yes',
-            "upgrade --no-prune python",
-            '"$$latest_mise" -C "$$project_root" exec -- env',
             "SETUP_DIRENV=$$direnv_executable",
-            'desired_python=$$("$(SETUP_MISE)" -C "$(PROJECT_ROOT)" which python)',
             '$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"',
             '$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"',
             '$(UV) sync --project "$(PROJECT_ROOT)"',
@@ -955,22 +836,28 @@ class TestsFlextInfraCodegenMakeEnvironment:
     def test_generated_dependency_upgrade_projects_lock_floors(
         self, tmp_path: Path
     ) -> None:
-        """Make owns lock upgrade, open-floor projection, and final resolution."""
-        project_root, _repository_root = self._render_makefile(
+        """`upg` owns lock upgrade, open-floor projection, and final resolution."""
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
-        tm.that(makefile, has="deps modernize")
-        tm.that(makefile, has="--rewrite-constraints")
-        tm.that(makefile, has="--upgrade --refresh")
+        for needle in (
+            "deps modernize",
+            "--rewrite-constraints",
+            "--upgrade --refresh",
+        ):
+            tm.that(
+                self._recipe_targets_containing(makefile, needle), eq={"_upg_lifecycle"}
+            )
+        tm.that(makefile, has="_run_for_all_projects,--check")
         tm.that(makefile, lacks="--constraint-policy")
 
     def test_workspace_without_local_members_retains_external_flext_sources(
         self, tmp_path: Path
     ) -> None:
         """Workspace role alone cannot turn external dependencies into members."""
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.WORKSPACE, bootstrap=True
         )
         rendered = (project_root / "pyproject.toml").read_text(encoding="utf-8")
@@ -995,7 +882,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
             'Print checkout\'s "$HOME", $(shell touch make-effect), '
             "and `touch shell-effect`."
         )
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
             profile,
             extra_verbs=(
@@ -1029,7 +916,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         Makefile validates no input at all — so an unrelated MAKEFLAGS entry
         is simply ignored and `help` still succeeds.
         """
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
 
@@ -1069,7 +956,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         script_dispatch = m.Infra.ScriptDispatchSpec(
             dispatcher="scripts/dispatch.py", roots=("scripts",)
         )
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
             extra_verbs=extra_verbs,
@@ -1093,7 +980,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         (S1, operator law 2026-09-14): passing any undeclared `NAME=value`
         is inert.
         """
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
 
@@ -1120,18 +1007,22 @@ class TestsFlextInfraCodegenMakeEnvironment:
         entirely: there is no longer a check-mode sibling recipe for any
         verb, so the public mapping is a single fixed target per verb.
         """
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         makefile = (project_root / "Makefile").read_text(encoding="utf-8")
 
-        tm.that(makefile, has="_builtin-deps: _builtin_deps_upgrade")
+        tm.that(
+            makefile, has="upg: _builtin_require_runtime_root _bootstrap_setup_tools"
+        )
         tm.that(makefile, has="_builtin-fmt: _builtin_fmt_all")
         tm.that(makefile, has="_builtin-fix: _builtin_fix_all")
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
-        tm.that(
-            makefile, has="_builtin-self-fix-enforcement: _builtin_require_environment"
-        )
+        tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
+        tm.that(makefile, has="_builtin-self-fix-enforcement: _builtin_fix_enforcement")
+        tm.that(makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
             makefile,
@@ -1147,6 +1038,21 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-gen: _builtin_gen_all")
         tm.that(makefile, has="_builtin-mod: _builtin_mod_apply")
         tm.that(makefile, has="mode=--apply ;;")
+        profile = c.Infra.MakeProfile.STANDALONE
+        for verb in config.Infra.codegen.make.verbs:
+            if profile not in verb.profiles:
+                continue
+            rendered = re.search(
+                rf"^_builtin-{re.escape(verb.name)}:(\s|$)"
+                rf"|^{re.escape(verb.name)}:(\s|$)",
+                makefile,
+                re.MULTILINE,
+            )
+            tm.that(
+                rendered is not None,
+                eq=True,
+                msg=f"declared verb {verb.name!r} renders no Make target",
+            )
         for forbidden in (
             "CHECK_ONLY",
             "APPLY",
@@ -1156,5 +1062,42 @@ class TestsFlextInfraCodegenMakeEnvironment:
         ):
             tm.that(makefile, lacks=forbidden)
 
+    def test_every_declared_verb_renders_implementation_target(
+        self, tmp_path: Path
+    ) -> None:
+        """Every codegen.yaml-declared verb renders a reachable implementation.
 
-__all__: list[str] = ["TestsFlextInfraCodegenMakeEnvironment"]
+        Derived from the typed SSOT (``config.Infra.codegen.make.verbs``), never
+        a hand list: a verb declared in config without a rendered body in the
+        template — the silent ``Nothing to be done`` exit-0 class reported on
+        ``fix-accessors`` — fails here for the profile it declares.
+        """
+        declared = tuple(config.Infra.codegen.make.verbs)
+        # Template-declared shapes without a _builtin twin: setup/upg carry
+        # their own bootstrap recipes; help/clean render short bodies.
+        body_free = frozenset({"setup", "upg", "help", "clean"})
+        for profile in c.Infra.MakeProfile:
+            project_root, _repository_root = u.Tests.render_make_environment(
+                tmp_path / profile.value, profile
+            )
+            makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+            lines = makefile.splitlines()
+            public_tokens = next(
+                line[len("PUBLIC_VERBS :=") :].split()
+                for line in lines
+                if line.startswith("PUBLIC_VERBS :=")
+            )
+            builtin_tokens = next(
+                line[len("BUILTIN_VERBS :=") :].split()
+                for line in lines
+                if line.startswith("BUILTIN_VERBS :=")
+            )
+            public_padded = f" {' '.join(public_tokens)} "
+            builtin_padded = f" {' '.join(builtin_tokens)} "
+            for verb in declared:
+                if profile not in verb.profiles:
+                    continue
+                tm.that(public_padded, has=f" {verb.name} ")
+                tm.that(builtin_padded, has=f" {verb.name} ")
+                if verb.name not in body_free:
+                    tm.that(makefile, has=f"_builtin-{verb.name}:")

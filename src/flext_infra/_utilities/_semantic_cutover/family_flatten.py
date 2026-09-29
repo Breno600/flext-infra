@@ -127,6 +127,14 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         if not body:
             msg = f"inline namespace wrapper cannot be flattened safely: {path}"
             raise ValueError(msg)
+        wrapper_docstring = (
+            (body[0].line, body[0].end_line)
+            if sources[path]
+            .splitlines()[body[0].line - 1]
+            .lstrip()
+            .startswith(('"""', "'''", '"', "'"))
+            else None
+        )
         if any(
             item.enclosing_name == wrapper_name
             and item.category
@@ -150,29 +158,30 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             msg = f"family owner inheritance is unresolved: {path}:{owner_name}"
             raise ValueError(msg)
         occupied = set(owner_scope.pyobject.get_attributes()) - {wrapper_name}
-        renamed = {
-            name: f"{wrapper_name}{name}" if name in occupied else name
-            for name in names
-        }
+        # Prefix merging is the public identity of a flattened domain. Keeping
+        # an unprefixed child merely because it does not collide in this file
+        # can still overwrite a peer mixed into the composed facade (for
+        # example Promoted.WorkspaceSpec versus Base.WorkspaceSpec).
+        renamed = {name: f"{wrapper_name}{name}" for name in names}
         if any(name in occupied for name in renamed.values()) or len(
             set(renamed.values())
         ) != len(renamed):
             msg = f"family wrapper prefix collision is ambiguous: {path}:{wrapper_name}"
             raise ValueError(msg)
-        wrapper = owner_scope.get_defined_names()[wrapper_name]
+        flatten = m.Infra.FamilyWrapperFlatten(
+            project=project,
+            owner_name=owner_name,
+            wrapper_name=wrapper_name,
+            wrapper=owner_scope.get_defined_names()[wrapper_name],
+            names=renamed,
+        )
         candidate_rewrites: dict[Path, list[m.Infra.SourceRewrite]] = {}
         for consumer, source in sources.items():
             if source.startswith(c.Infra.AUTOGEN_HEADERS):
                 continue
             resource = project.get_resource(consumer.relative_to(root).as_posix())
             blocked, changes = cls._family_consumer_rewrites(
-                project,
-                resource,
-                source,
-                owner_name=owner_name,
-                wrapper_name=wrapper_name,
-                wrapper=wrapper,
-                names=renamed,
+                resource, source, flatten=flatten
             )
             if blocked:
                 # A consumer treats the wrapper as a real entity; preserve the
@@ -187,6 +196,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
                 header_end=header.end_line,
                 body_end=child.get_end(),
                 indentation=body[0].indent - header.indent,
+                docstring_span=wrapper_docstring,
             )
         )
         for consumer, changes in candidate_rewrites.items():

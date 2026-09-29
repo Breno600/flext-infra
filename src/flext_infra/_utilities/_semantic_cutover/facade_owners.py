@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 
     from flext_infra import t
 
+#: The generated lazy publication binding, owned by the flext-core lazy engine
+#: (``install_lazy_exports`` writes it; ``_resolve`` reads it back).
+_LAZY_IMPORTS_TARGET = "_LAZY_IMPORTS"
+
 
 class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
     """Resolve facade letters to the class their declaring module names."""
@@ -99,9 +103,13 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         package = module if is_package else module.rpartition(".")[0]
         target: t.Pair[str, str] | None = None
         declared = False
+        lazy: dict[str, str] = {}
         for node in cls._facade_ordered_statements(
             ast.parse(source, filename=module).body
         ):
+            if isinstance(node, ast.AnnAssign) and node.value is None:
+                # An annotation without a value does not rebind an existing name.
+                continue
             if isinstance(node, ast.ClassDef) and node.name == name:
                 target, declared = None, True
             elif isinstance(node, ast.Assign | ast.AnnAssign) and any(
@@ -127,8 +135,42 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                             else node.module or ""
                         )
                         target, declared = (source_module, imported.name), False
+            elif (
+                isinstance(node, ast.Assign | ast.AnnAssign)
+                and node.value is not None
+                and any(
+                    isinstance(bound, ast.Name) and bound.id == _LAZY_IMPORTS_TARGET
+                    for bound in (
+                        node.targets if isinstance(node, ast.Assign) else (node.target,)
+                    )
+                )
+            ):
+                # The generated lazy publication IS a binding statement: every
+                # name it lists resolves through its submodule entry, exactly
+                # as install_lazy_exports resolves it at runtime.
+                for dict_node in (
+                    d for d in ast.walk(node.value) if isinstance(d, ast.Dict)
+                ):
+                    for key, value in zip(
+                        dict_node.keys, dict_node.values, strict=False
+                    ):
+                        if (
+                            isinstance(key, ast.Constant)
+                            and isinstance(key.value, str)
+                            and isinstance(value, ast.Tuple | ast.List)
+                        ):
+                            for element in value.elts:
+                                if isinstance(element, ast.Constant) and isinstance(
+                                    element.value, str
+                                ):
+                                    lazy.setdefault(element.value, key.value)
         if declared:
             return module, name
+        if target is None and name in lazy:
+            # A lazy entry binds the name through its submodule; resolution
+            # continues where the submodule defines it.
+            sub = lazy[name]
+            target = (f"{module}{sub}" if sub.startswith(".") else sub, name)
         # A submodule import binds a module, never a facade class.
         if target is None or ".".join(target) in modules:
             return None

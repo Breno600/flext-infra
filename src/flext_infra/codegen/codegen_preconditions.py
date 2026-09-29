@@ -49,7 +49,7 @@ class FlextInfraCodegenPreconditions:
     @staticmethod
     def prepublication_barriers(
         plan: m.Infra.MiseToolchainWorkspacePlan,
-        sources: tuple[m.Cli.AtomicFileState, ...],
+        sources: t.VariadicTuple[m.Cli.AtomicFileState],
         destinations: t.VariadicTuple[m.Cli.AtomicFileState],
     ) -> p.Result[bool]:
         """Require unchanged source and destination identities before writing."""

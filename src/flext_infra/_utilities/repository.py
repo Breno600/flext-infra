@@ -8,7 +8,6 @@ is detected from live Git or declared explicitly by a caller.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -24,29 +23,16 @@ _GIT_URL_SCHEME_PREFIX = "git+"
 class FlextInfraUtilitiesRepository:
     """Resolve detected identity and branch policy for one governed repository."""
 
-    @classmethod
-    def declared_dependency_sources(
-        cls, sources: t.StrMapping
-    ) -> p.Result[Mapping[str, t.Pair[str, str]]]:
-        """Validate explicit dependency overrides through the Git source owner."""
-        parsed_sources: dict[str, t.Pair[str, str]] = {}
-        for name, requirement in sources.items():
-            if (
-                FlextInfraUtilitiesDependencies.dep_name(name) != name
-                or FlextInfraUtilitiesDependencies.dep_name(requirement) != name
-            ):
-                return r[Mapping[str, t.Pair[str, str]]].fail(
-                    f"dependency source must match its distribution key: {name}"
-                )
-            parsed = cls.declared_git_source(requirement)
-            if parsed.failure:
-                return r[Mapping[str, t.Pair[str, str]]].from_failure(parsed)
-            url, ref = parsed.value
-            canonical = cls.validate_git_remote_url(url)
-            if canonical.failure:
-                return r[Mapping[str, t.Pair[str, str]]].from_failure(canonical)
-            parsed_sources[name] = canonical.value, ref
-        return r[Mapping[str, t.Pair[str, str]]].ok(parsed_sources)
+    @staticmethod
+    def ref_is_commit(ref: str) -> bool:
+        """Whether one Git ref names a commit rather than an integration line.
+
+        uv.lock, written only by ``make upg``, owns every resolved commit. In a
+        generated pyproject a commit ref is projection residue that generation
+        re-renders on the family line; in a hand-authored source it is a pin
+        beside the lock and fails loudly.
+        """
+        return c.Infra.GIT_COMMIT_OID_RE.fullmatch(ref) is not None
 
     @staticmethod
     def declared_git_source(requirement: str) -> p.Result[t.Pair[str, str]]:
@@ -58,7 +44,9 @@ class FlextInfraUtilitiesRepository:
         dependency's canonical URL and branch: canonicalization normalizes the
         transport scheme (``ssh://``, SCP-style, ``http``) to ``https`` and
         never invents an organization, host, or ref. A declared source that is
-        not a Git URL, or a Git URL without a ref, fails loudly.
+        not a Git URL, or a Git URL without a ref, fails loudly. Whether a
+        commit ref is projection residue or a hand-authored pin is the
+        caller's decision (``ref_is_commit``).
         """
         requirement_part, _, _ = requirement.partition(";")
         head_match = c.Infra.PEP621_REQUIREMENT_HEAD_RE.match(requirement_part.strip())
@@ -168,7 +156,7 @@ class FlextInfraUtilitiesRepository:
         distribution = source.distribution
         preference = codegen.branch_policy.integration_branch_preference
         if bootstrap_source is not None:
-            if (repository_root / c.Infra.PYPROJECT_FILENAME).exists():
+            if (repository_root / c.PYPROJECT_FILENAME).exists():
                 return r[m.Infra.WorkspaceIntegrationSpec].fail(
                     "bootstrap provenance cannot replace existing project sources"
                 )
@@ -209,24 +197,38 @@ class FlextInfraUtilitiesRepository:
         )
 
     @classmethod
+    def flext_integration_line_for_checkout(
+        cls,
+        *,
+        codegen: m.Infra.CodegenConfigSpec,
+        repository_root: Path,
+        workspace: m.Infra.WorkspaceSpec,
+    ) -> p.Result[m.Infra.WorkspaceIntegrationSpec]:
+        """Resolve the FLEXT line for one workspace checkout.
+
+        The single owner of the bootstrap provenance decision every line
+        consumer shares: a declared ``flext_source`` applies only while the
+        checkout has no project file of its own (there would be nothing to
+        bootstrap); an existing project file means the line is detected from
+        the checkout itself.
+        """
+        return cls.flext_integration_line(
+            codegen=codegen,
+            repository_root=repository_root,
+            bootstrap_source=(
+                workspace.flext_source
+                if not (repository_root / c.PYPROJECT_FILENAME).exists()
+                else None
+            ),
+        )
+
+    @classmethod
     def _detected_infra_source(
         cls, *, repository_root: Path, distribution: str, preference: t.StrSequence
     ) -> p.Result[t.Pair[str, str]]:
         """Detect the infrastructure distribution's canonical URL and ref."""
         from flext_infra import u
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
-        manifests = FlextInfraWorkspaceDetector.load_workspace_manifest(repository_root)
-        if manifests.failure:
-            return r[t.Pair[str, str]].from_failure(manifests)
-        if manifests.value and manifests.value[0].project is not None:
-            overrides = cls.declared_dependency_sources(
-                manifests.value[0].project.dependency_sources
-            )
-            if overrides.failure:
-                return r[t.Pair[str, str]].from_failure(overrides)
-            if distribution in overrides.value:
-                return r[t.Pair[str, str]].ok(overrides.value[distribution])
         metadata = u.Infra.read_project_metadata_result(repository_root)
         if metadata.success and metadata.value.project.name == distribution:
             origin = u.Infra.git_remote_url(
@@ -248,7 +250,7 @@ class FlextInfraUtilitiesRepository:
             if canonical.failure:
                 return r[t.Pair[str, str]].from_failure(canonical)
             return r[t.Pair[str, str]].ok((canonical.value, branch.value))
-        pyproject_path = repository_root / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = repository_root / c.PYPROJECT_FILENAME
         if pyproject_path.is_file():
             declared = cls._declared_dependency_source(
                 pyproject_path=pyproject_path,
@@ -271,10 +273,41 @@ class FlextInfraUtilitiesRepository:
             if branch.failure:
                 return r[t.Pair[str, str]].from_failure(branch)
             return r[t.Pair[str, str]].ok((manifest.value, branch.value))
+        declared_line = cls._manifest_flext_source(repository_root)
+        if declared_line.failure or declared_line.value[0]:
+            return declared_line
         return r[t.Pair[str, str]].fail(
             f"infrastructure repository {distribution} is undeclared by this "
-            f"checkout: no project identity, no direct git dependency source, "
-            f"and no workspace manifest entry: {repository_root}"
+            f"checkout: no project identity, no direct git dependency line, "
+            f"no workspace manifest entry, and no manifest flext_source: "
+            f"{repository_root}"
+        )
+
+    @classmethod
+    def _manifest_flext_source(
+        cls, repository_root: Path
+    ) -> p.Result[t.Pair[str, str]]:
+        """Return the manifest's hand-authored ``project.flext_source`` line.
+
+        It declares the family line when the generated pyproject carries none
+        (every internal requirement is commit residue of a retired pin). Being
+        hand-authored, a commit ref there is a pin beside uv.lock and fails.
+        """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
+        loaded = FlextInfraWorkspaceDetector.load_workspace_manifest(repository_root)
+        if loaded.failure:
+            return r[t.Pair[str, str]].from_failure(loaded)
+        project = loaded.value[0].project if loaded.value else None
+        if project is None or project.flext_source is None:
+            # Absence is an EMPTY payload, never None (flext-core result law).
+            return r[t.Pair[str, str]].ok(("", ""))
+        parsed = cls.declared_git_source(project.flext_source)
+        if parsed.failure or not cls.ref_is_commit(parsed.value[1]):
+            return parsed
+        return r[t.Pair[str, str]].fail(
+            "project.flext_source declares an integration line, never a commit "
+            f"(uv.lock records it and only `make upg` moves it): {project.flext_source}"
         )
 
     @classmethod
@@ -317,13 +350,12 @@ class FlextInfraUtilitiesRepository:
     ) -> p.Result[t.Pair[str, str]]:
         """Return the family line the pyproject declares, as a source for one member.
 
-        Every declared direct Git source of an internal ``{prefix}*``
-        dependency names the same line: one provider base URL and one ref. A
-        plain (source-less) requirement names a workspace dependency whose URL
-        the workspace manifest owns, so it is not a failure here. Members
-        declared from different lines in one document are a loud failure —
-        the family renders from one source — and the detected line is
-        returned as the source of ``distribution``.
+        Internal dependencies name one provider base URL and one integration
+        line; uv.lock alone records the commit each line resolves to, so a
+        commit ref left in the projection declares no line. A plain
+        (source-less) requirement names a workspace dependency whose URL the
+        workspace manifest owns. The line supplies the source of
+        ``distribution``.
         """
         from flext_infra import u
 
@@ -377,6 +409,9 @@ class FlextInfraUtilitiesRepository:
                     f"internal dependency source must be the {name} repository: "
                     f"{requirement}"
                 )
+            if cls.ref_is_commit(ref):
+                # Projection residue of a retired pin: it names no line.
+                continue
             lines.setdefault((url.removesuffix(suffix), ref), requirement)
         if len(lines) > 1:
             declared = "; ".join(sorted(lines.values()))

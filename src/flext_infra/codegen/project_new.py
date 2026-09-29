@@ -112,6 +112,13 @@ class FlextInfraCodegenProjectNew(
         str, m.Field(min_length=3, description="Author/maintainer email.")
     ]
     upstream: Annotated[str, m.Field(description="Upstream facade module (flext_cli).")]
+    flext_source: Annotated[
+        str,
+        m.Field(
+            min_length=1,
+            description="Direct Git infrastructure requirement used by the new project",
+        ),
+    ]
     year: Annotated[int, m.Field(ge=2025, description="Deterministic copyright year.")]
 
     @override
@@ -208,6 +215,7 @@ class FlextInfraCodegenProjectNew(
                 author_name=self.author_name,
                 author_email=self.author_email,
                 upstream=self.upstream,
+                flext_source=self.flext_source,
                 homepage=repository_page,
                 documentation=repository_page,
                 repository_root_rel=".",

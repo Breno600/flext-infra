@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from enum import StrEnum, unique
 from types import MappingProxyType
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -13,6 +13,13 @@ if TYPE_CHECKING:
 
 class FlextInfraConstantsCheck:
     """Check infrastructure constants."""
+
+    CHECK_FAIL_FAST_DEFAULT: ClassVar[bool] = False
+    """Run every independent quality gate unless fail-fast is requested."""
+    SERVICE_FAIL_FAST: ClassVar[bool] = True
+    """Stop mutating service workflows at the first failed project or rule."""
+
+    PYTEST_SELECTED_COLLECTION_OPTION: ClassVar[str] = "--flext-selected-collection"
 
     @unique
     class SarifSchema(StrEnum):
@@ -43,83 +50,54 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SILENT_FAILURE: ClassVar[str] = "silent-failure"
-    GATE_METADATA: ClassVar[
-        t.MappingKV[str, tuple[str, str, Literal["external", "policy"]]]
-    ] = MappingProxyType({
-        "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/", "external"),
-        "format": (
-            "Ruff Formatter",
-            "https://docs.astral.sh/ruff/formatter/",
-            "external",
-        ),
-        "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly", "external"),
-        "mypy": ("Mypy", "https://mypy.readthedocs.io/", "external"),
-        "pyright": ("Pyright", "https://github.com/microsoft/pyright", "external"),
+    SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
+        "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
+        "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
+        "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
+        "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
+        "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
         "silent-failure": (
             "Flext Silent Failure Detector",
             "internal://flext-infra/silent-failure",
-            "policy",
         ),
         "deferred-self-reference": (
             "Flext Deferred Self Reference Detector",
             "internal://flext-infra/deferred-self-reference",
-            "policy",
         ),
-        "security": ("Bandit", "https://bandit.readthedocs.io/", "external"),
-        "markdown": ("rumdl", "https://rumdl.dev/", "external"),
-        "markdown-format": ("Prettier", "https://prettier.io/", "external"),
-        "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/", "external"),
-        "loc-cap": ("scc", "https://github.com/boyter/scc", "policy"),
+        "security": ("Bandit", "https://bandit.readthedocs.io/"),
+        "markdown": ("rumdl", "https://rumdl.dev/"),
+        "markdown-format": ("Prettier", "https://prettier.io/"),
+        "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
+        "loc-cap": ("scc", "https://github.com/boyter/scc"),
         "boundary": (
             "Flext Abstraction Boundary Auditor",
             "internal://flext-infra/abstraction-boundary",
-            "policy",
         ),
         "runtime-census": (
             "Flext Runtime Enforcement Census",
             "internal://flext-infra/runtime-census",
-            "policy",
         ),
-        "namespace": (
-            "Flext Namespace Rule Gate",
-            "internal://flext-infra/namespace",
-            "policy",
-        ),
+        "namespace": ("Flext Namespace Rule Gate", "internal://flext-infra/namespace"),
         "tier-whitelist": (
             "Flext Tier Whitelist Gate",
             "internal://flext-infra/tier-whitelist",
-            "policy",
         ),
         "index-declarations": (
             "Flext Index Declarations Gate",
             "internal://flext-infra/index-declarations",
-            "policy",
         ),
-        "smells": (
-            "Flext Code Smell Detector",
-            "internal://flext-infra/smells",
-            "policy",
-        ),
-        "codemod": ("ast-grep", AST_GREP_DOCS_URL, "policy"),
-        "layout": (
-            "Flext Project Layout Gate",
-            "internal://flext-infra/layout",
-            "policy",
-        ),
+        "smells": ("Flext Code Smell Detector", "internal://flext-infra/smells"),
+        "codemod": ("ast-grep", AST_GREP_DOCS_URL),
+        "layout": ("Flext Project Layout Gate", "internal://flext-infra/layout"),
         "canonical-alias": (
             "Flext Canonical Alias Detector",
             "internal://flext-infra/canonical-alias",
-            "policy",
         ),
         "direnv": (
             "Flext Direnv Environment Contract Gate",
             "internal://flext-infra/direnv",
-            "policy",
         ),
-        "duplication": ("jscpd", "https://github.com/kucherenko/jscpd", "policy"),
-    })
-    SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
-        gate: (metadata[0], metadata[1]) for gate, metadata in GATE_METADATA.items()
+        "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
     })
     ALLOWED_GATES: ClassVar[frozenset[str]] = frozenset(SARIF_TOOL_INFO)
     "Gate identifiers — derived from SARIF_TOOL_INFO keys (single SSOT)."
@@ -147,6 +125,8 @@ class FlextInfraConstantsCheck:
     "Canonical fenced-Python-block extractor; the flext-tests markdown validator consumes the same pattern."
     MARKDOWN_CODE_SOURCE_FORMAT: ClassVar[str] = "{}_b{}.py"
     "Temp-file name for one extracted block: sanitized doc path plus block index."
+    MARKDOWN_CODE_SKIP_MARKER: ClassVar[str] = "notest"
+    "Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
     MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+"
     )
@@ -229,26 +209,17 @@ class FlextInfraConstantsCheck:
             ),
             "imports subprocess — use cli.run / cli.capture",
         ),
-        (
-            re.compile(r"^\s*print\(", re.MULTILINE),
-            "uses u.Cli.print() — use cli.print",
-        ),
-        (
-            re.compile(r"^\s*sys\.exit\(", re.MULTILINE),
-            "uses sys.exit() — use cli.exit()",
-        ),
     )
+    BOUNDARY_CALL_RULES: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
+        "print": "uses u.Cli.print() — use cli.print",
+        "sys.exit": "uses sys.exit() — use cli.exit()",
+    })
     # The boundary gate's own rule-definition source files legitimately contain the
     # forbidden-pattern strings as DETECTION RULES (not as usage); exempt them from
     # self-scanning so the detector does not flag its own catalog.
     BOUNDARY_SELF_FILES: ClassVar[frozenset[str]] = frozenset({
         "flext_infra/_constants/check.py",
         "flext_infra/gates/abstraction_boundary.py",
-        # Why: the Darwin supervisor is a std-lib-only bootstrap executable that
-        # must own its process group BEFORE the fleet stack (and its CLI
-        # facade) is importable; subprocess with constant argv is its core
-        # mechanism, not an untrusted-input boundary.
-        "flext_infra/_utilities/_mypy_supervisor.py",
     })
     BOUNDARY_JSON_ATTRS: ClassVar[frozenset[str]] = frozenset({
         "dump",
@@ -303,9 +274,10 @@ class FlextInfraConstantsCheck:
     QLTY_BINARY: ClassVar[str] = "qlty"
     QLTY_CONFIG_DIRNAME: ClassVar[str] = ".qlty"
     QLTY_CONFIG_FILENAME: ClassVar[str] = "qlty.toml"
+    SMELLS_QLTY_ALL_ARG: ClassVar[str] = "--all"
     SMELLS_QLTY_ARGS: ClassVar[t.StrSequence] = (
         "smells",
-        "--all",
+        SMELLS_QLTY_ALL_ARG,
         "--sarif",
         "--include-tests",
         "--no-snippets",
@@ -452,41 +424,6 @@ class FlextInfraConstantsCheck:
         "yagni",
         "simplify",
     })
-
-    # Canonical .pre-commit-config.yaml (SSOT; was templates/pre_commit_config.yaml.j2).
-    # Static — no Jinja vars; hooks route through the workspace uv environment.
-    PRE_COMMIT_CONFIG: ClassVar[str] = """\
-# @generated by flext_infra — DO NOT EDIT. Run `make gen` / `make sync` to regenerate.
-#
-# Every hook routes through the canonical `uv run --all-packages python -m flext_infra`
-# workspace monopoly; no standalone scripts and no bare tool invocations
-# (AGENTS.md `Build & Test`).
-# Enable locally with `pre-commit install` from the repository root.
-repos:
-  - repo: local
-    hooks:
-      - id: flext-abstraction-boundary
-        name: Abstraction boundary (§2.7) — CLI-domain libs + concrete FlextCli imports
-        entry: uv run --all-packages python scripts/hooks/check_changed_projects.py boundary
-        language: system
-        pass_filenames: true
-        always_run: false
-        types: [python]
-      - id: flext-loc-cap
-        name: MODULE-LOC SUPREME LAW (§3.1) — module cap via scc
-        entry: uv run --all-packages python scripts/hooks/check_changed_projects.py loc-cap
-        language: system
-        pass_filenames: true
-        always_run: false
-        types: [python]
-      - id: flext-manual-command
-        name: Manual-command blocker (§5) — no bare tool calls in automation
-        entry: uv run --all-packages python -m flext_infra validate --what manual-cmd
-        language: system
-        pass_filenames: false
-        always_run: true
-        types: [python]
-"""
 
 
 __all__: list[str] = ["FlextInfraConstantsCheck"]

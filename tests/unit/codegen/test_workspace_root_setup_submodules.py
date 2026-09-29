@@ -184,7 +184,9 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         # is that the submodule is initialized before environment provisioning.
         if process.outcome.raw_return_code != 0:
             start = rendered.index("_builtin_setup_environment:")
-            excerpt = rendered[start : rendered.index("_builtin_deps_lock:", start)]
+            excerpt = rendered[
+                start : rendered.index("# End SECTION: setup environment", start)
+            ]
             pytest.fail(f"{process.stdout}{process.stderr}\n{excerpt}")
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(process.stdout + process.stderr, has="Submodule path 'flext-core'")
@@ -237,6 +239,3 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         tm.that(process.outcome.raw_return_code, eq=2)
         tm.that(process.stderr, has="injected git failure")
         tm.that(process.stderr, has="Error 42")
-
-
-__all__: list[str] = ["TestsFlextInfraWorkspaceRootSetupSubmodules"]

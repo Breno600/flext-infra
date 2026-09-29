@@ -221,6 +221,3 @@ class TestsFlextInfraRootArtifactOwnership:
                     request
                 )
             )
-
-
-__all__: list[str] = ["TestsFlextInfraRootArtifactOwnership"]

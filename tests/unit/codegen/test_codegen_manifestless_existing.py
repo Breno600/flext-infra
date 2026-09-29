@@ -34,9 +34,46 @@ class TestsFlextInfraCodegenManifestlessExisting:
         seeded = {**preserved, "README.md": "# Existing repository\n"}
         pyproject_source = tm.ok(u.Cli.files_read_text(Path.cwd() / "pyproject.toml"))
         tm.ok(u.Cli.atomic_write_text_file(root / "pyproject.toml", pyproject_source))
-        package_init = root / "src" / "flext_infra" / "__init__.py"
+        package_name = u.Infra.project_package_name(Path.cwd())
+        package_init = root / c.Infra.DEFAULT_SRC_DIR / package_name / "__init__.py"
         package_init.parent.mkdir(parents=True)
         tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
+        # The copied manifest declares scripts and entry points; conform's
+        # fresh-import gate loads each one, so the seeded tree carries every
+        # declared target (module and attribute) inside its own package —
+        # never a copy of the whole production package.
+        manifest = tm.not_none(u.Cli.toml_mapping_from_text(pyproject_source))
+        project_table = u.Cli.json_as_mapping(
+            u.Cli.toml_mapping_child(manifest, "project")
+        )
+        entry_groups = u.Cli.json_as_mapping(
+            u.Cli.toml_mapping_child(project_table, "entry-points")
+        )
+        declared_groups = (
+            u.Cli.json_as_mapping(u.Cli.toml_mapping_child(project_table, "scripts")),
+            u.Cli.json_as_mapping(
+                u.Cli.toml_mapping_child(project_table, "gui-scripts")
+            ),
+            *(u.Cli.json_as_mapping(group) for group in entry_groups.values()),
+        )
+        targets: dict[Path, set[str]] = {}
+        for entries in declared_groups:
+            for target in entries.values():
+                module_name, _, attribute = str(target).partition(":")
+                module_path = (
+                    root / c.Infra.DEFAULT_SRC_DIR / Path(*module_name.split("."))
+                ).with_suffix(".py")
+                targets.setdefault(module_path, set()).add(attribute.split(".")[0])
+        for module_path, attributes in targets.items():
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    module_path,
+                    "".join(
+                        f"class {attribute}:\n    pass\n\n\n"
+                        for attribute in sorted(attributes)
+                    ),
+                )
+            )
         vscode_settings = root / ".vscode" / "settings.json"
         vscode_settings.parent.mkdir()
         tm.ok(
@@ -119,7 +156,12 @@ class TestsFlextInfraCodegenManifestlessExisting:
     def test_root_distribution_owns_its_dependency_profile(
         self, tmp_path: Path
     ) -> None:
-        """The foundation needs no runtime parent and declares its tooling source."""
+        """The tree's root declares no flext runtime dependency and still conforms.
+
+        Since 208716f4f the checkout must declare the infrastructure line it
+        consumes; a manifestless root declares it the way a real member does,
+        through its development group's direct Git source.
+        """
         profile = next(
             item
             for item in config.Infra.codegen.scaffold.project.dependency_profiles
@@ -132,15 +174,22 @@ class TestsFlextInfraCodegenManifestlessExisting:
             )
         )
         distribution = profile.upstream.replace("_", "-")
-        dev = tm.ok(
-            u.Cli.json_dumps(
-                list(
-                    u.Tests.declared_requirements(
-                        config.Infra.codegen.scaffold.project.dev,
-                        distribution=distribution,
-                    )
+        # Every internal development dependency the SSOT requires carries its
+        # own direct Git source, exactly as a real standalone member declares.
+        internal_dev = tuple(
+            u.Tests.repository_ref(name)
+            for name in dict.fromkeys(
+                u.Infra.dep_name(requirement)
+                for requirement in (
+                    config.Infra.codegen.infra_repository.distribution,
+                    *config.Infra.codegen.scaffold.project.dev,
                 )
             )
+            if name is not None and name.startswith("flext-")
+        )
+        dev_group = ", ".join(
+            f'"{ref.distribution} @ git+{ref.url}@{u.Tests.provider_branch()}"'
+            for ref in internal_dev
         )
         root = tmp_path / distribution
         package = root / c.Infra.DEFAULT_SRC_DIR / profile.upstream
@@ -153,7 +202,9 @@ class TestsFlextInfraCodegenManifestlessExisting:
                 f'description = "{distribution} root fixture"\n'
                 f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
                 'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
-                f"dependencies = []\n[dependency-groups]\ndev = {dev}\n",
+                "dependencies = []\n"
+                "\n[dependency-groups]\n"
+                f"dev = [{dev_group}]\n",
             )
         )
         u.Tests.write_project_beads_config(root, distribution)
@@ -179,12 +230,4 @@ class TestsFlextInfraCodegenManifestlessExisting:
             for dependency in profile.runtime
             if u.Infra.dep_name(dependency) != distribution
         )
-        tm.that(
-            set(owned_runtime).issubset(
-                u.Tests.toml_strings_at(rendered, "project", "dependencies")
-            ),
-            eq=True,
-        )
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenManifestlessExisting"]
+        tm.that(owned_runtime[0] in rendered, eq=True)

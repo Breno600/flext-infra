@@ -99,6 +99,3 @@ class TestsFlextInfraConfigFixer:
         result = fixer.process_file(pyproject, dry_run=True)
         tm.ok(result)
         tm.that(pyproject.read_text(), eq=original_content)
-
-
-__all__: list[str] = ["TestsFlextInfraConfigFixer"]

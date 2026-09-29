@@ -14,6 +14,3 @@ class TestsFlextInfraWorkspaceCheckModule:
     def test_workspace_check_main_returns_error_without_projects(self) -> None:
         exit_code = main(["check", "run"])
         tm.that(exit_code, eq=1)
-
-
-__all__: list[str] = ["TestsFlextInfraWorkspaceCheckModule"]

@@ -283,6 +283,3 @@ class TestsFlextInfraDeferredSelfReferenceDetector:
 
         with pytest.raises(ValueError, match="ambiguous self-qualified annotation"):
             u.Infra.normalize_deferred_self_references(source)
-
-
-__all__: list[str] = ["TestsFlextInfraDeferredSelfReferenceDetector"]

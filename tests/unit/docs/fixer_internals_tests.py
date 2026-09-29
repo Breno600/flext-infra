@@ -77,6 +77,3 @@ class TestsFlextInfraFixerInternals:
 
         tm.ok(result)
         tm.that((workspace / "docs/README.md").read_text(), has="guides/setup.md")
-
-
-__all__: list[str] = ["TestsFlextInfraFixerInternals"]

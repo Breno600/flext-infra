@@ -30,7 +30,7 @@ class FlextInfraUtilitiesProjectDiscoveryShapeMixin:
         """Return whether one path matches the canonical governed project shape."""
         if not path.is_dir():
             return False
-        pyproject_path = path / c.Infra.PYPROJECT_FILENAME
+        pyproject_path = path / c.PYPROJECT_FILENAME
         if pyproject_path.exists() and (
             path.name in configured_project_set
             or (path / c.Infra.MAKEFILE_FILENAME).exists()

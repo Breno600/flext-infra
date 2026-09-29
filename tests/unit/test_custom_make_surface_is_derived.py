@@ -80,6 +80,3 @@ class TestsFlextInfraCustomMakeSurfaceIsDerived:
         )
 
         tm.that(offenders, eq=[])
-
-
-__all__: list[str] = ["TestsFlextInfraCustomMakeSurfaceIsDerived"]

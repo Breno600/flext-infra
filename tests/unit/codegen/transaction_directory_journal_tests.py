@@ -72,19 +72,17 @@ class TestsFlextInfraTransactionDirectoryJournal:
             content = tm.not_none(before.content)
             if change:
                 content += b"\n# transaction fixture update\n"
-            plan = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    artifacts.config,
-                    required=True,
-                    desired_content=content,
-                    desired_mode=before.mode,
-                    owner="mise",
-                )
+            plan = m.Infra.CodegenFilePlan(
+                project=root,
+                path=artifacts.config,
+                before=before,
+                desired_content=content,
+                desired_mode=before.mode,
+                owner="mise",
             )
             session = tm.ok(owner.begin_locked(scope_root, (plan,), (plan,)))
             return owner.commit_locked(
-                session, lambda: mise_owner.validate_artifacts(root)
+                session, lambda: mise_owner.validate_artifacts(root, scope_root)
             )
 
         tm.ok(owner.run_locked(prepare=True, operation=publish))
@@ -149,15 +147,13 @@ class TestsFlextInfraTransactionDirectoryJournal:
             before = tm.ok(
                 u.Cli.atomic_read_binary_file_state(config_path, required=True)
             )
-            config_plan = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    config_path,
-                    required=True,
-                    desired_content=before.content,
-                    desired_mode=before.mode,
-                    owner="mise",
-                )
+            config_plan = m.Infra.CodegenFilePlan(
+                project=root,
+                path=config_path,
+                before=before,
+                desired_content=before.content,
+                desired_mode=before.mode,
+                owner="mise",
             )
             session = tm.ok(
                 owner.begin_locked(scope_root, (config_plan,), (config_plan,))
@@ -167,28 +163,28 @@ class TestsFlextInfraTransactionDirectoryJournal:
             session = tm.ok(
                 owner.append_directories_locked(session, "docs", (target.parent,))
             )
-            first = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    target,
-                    required=False,
-                    desired_content=b"first phase\n",
-                    desired_mode=before.mode,
-                    owner="conform",
-                )
+            first = m.Infra.CodegenFilePlan(
+                project=root,
+                path=target,
+                before=tm.ok(
+                    u.Cli.atomic_read_binary_file_state(target, required=False)
+                ),
+                desired_content=b"first phase\n",
+                desired_mode=before.mode,
+                owner="conform",
             )
             session = tm.ok(owner.append_phase_locked(session, "conform", (first,)))
             if foreign_change:
                 target.write_bytes(b"foreign content\n")
-            duplicate = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    target,
-                    required=True,
-                    desired_content=b"docs phase\n",
-                    desired_mode=before.mode,
-                    owner="docs",
-                )
+            duplicate = m.Infra.CodegenFilePlan(
+                project=root,
+                path=target,
+                before=tm.ok(
+                    u.Cli.atomic_read_binary_file_state(target, required=True)
+                ),
+                desired_content=b"docs phase\n",
+                desired_mode=before.mode,
+                owner="docs",
             )
             return owner.append_phase_locked(session, "docs", (duplicate,))
 
@@ -239,25 +235,23 @@ class TestsFlextInfraTransactionDirectoryJournal:
             before = tm.ok(
                 u.Cli.atomic_read_binary_file_state(config_path, required=True)
             )
-            config_plan = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    config_path,
-                    required=True,
-                    desired_content=before.content,
-                    desired_mode=before.mode,
-                    owner="mise",
-                )
+            config_plan = m.Infra.CodegenFilePlan(
+                project=root,
+                path=config_path,
+                before=before,
+                desired_content=before.content,
+                desired_mode=before.mode,
+                owner="mise",
             )
-            generated = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    target,
-                    required=False,
-                    desired_content=b"prepared phase\n",
-                    desired_mode=before.mode,
-                    owner="conform",
-                )
+            generated = m.Infra.CodegenFilePlan(
+                project=root,
+                path=target,
+                before=tm.ok(
+                    u.Cli.atomic_read_binary_file_state(target, required=False)
+                ),
+                desired_content=b"prepared phase\n",
+                desired_mode=before.mode,
+                owner="conform",
             )
             session = tm.ok(
                 owner.begin_locked(scope_root, (config_plan,), (config_plan, generated))
@@ -299,28 +293,26 @@ class TestsFlextInfraTransactionDirectoryJournal:
             before = tm.ok(
                 u.Cli.atomic_read_binary_file_state(config_path, required=True)
             )
-            config_plan = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    config_path,
-                    required=True,
-                    desired_content=before.content,
-                    desired_mode=before.mode,
-                    owner="mise",
-                )
+            config_plan = m.Infra.CodegenFilePlan(
+                project=root,
+                path=config_path,
+                before=before,
+                desired_content=before.content,
+                desired_mode=before.mode,
+                owner="mise",
             )
             session = tm.ok(
                 owner.begin_locked(scope_root, (config_plan,), (config_plan,))
             )
-            planned = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    target,
-                    required=False,
-                    desired_content=b"owned content\n",
-                    desired_mode=before.mode,
-                    owner="docs",
-                )
+            planned = m.Infra.CodegenFilePlan(
+                project=root,
+                path=target,
+                before=tm.ok(
+                    u.Cli.atomic_read_binary_file_state(target, required=False)
+                ),
+                desired_content=b"owned content\n",
+                desired_mode=before.mode,
+                owner="docs",
             )
             session = tm.ok(
                 owner.append_directories_locked(session, "docs", (target.parent,))
@@ -346,15 +338,13 @@ class TestsFlextInfraTransactionDirectoryJournal:
         owner = transaction.FlextInfraCodegenTransaction(mise_owner)
         config_path = root / ".mise.toml"
         before = tm.ok(u.Cli.atomic_read_binary_file_state(config_path, required=True))
-        config_plan = tm.ok(
-            u.Infra.planned_file(
-                root,
-                config_path,
-                required=True,
-                desired_content=before.content,
-                desired_mode=before.mode,
-                owner="mise",
-            )
+        config_plan = m.Infra.CodegenFilePlan(
+            project=root,
+            path=config_path,
+            before=before,
+            desired_content=before.content,
+            desired_mode=before.mode,
+            owner="mise",
         )
         layout = tm.ok(
             FlextInfraMiseWorkspacePlanner(mise_owner).layout_from_selectors(
@@ -431,15 +421,15 @@ class TestsFlextInfraTransactionDirectoryJournal:
             if with_foreign_file:
                 (phase_root / "foreign.bin").write_bytes(b"preserve")
             identity = phase_root.stat()
-            planned = tm.ok(
-                u.Infra.planned_file(
-                    root,
-                    target,
-                    required=False,
-                    desired_content=b"generated\n",
-                    desired_mode=session.journal_state.mode,
-                    owner="docs",
-                )
+            planned = m.Infra.CodegenFilePlan(
+                project=root,
+                path=target,
+                before=tm.ok(
+                    u.Cli.atomic_read_binary_file_state(target, required=False)
+                ),
+                desired_content=b"generated\n",
+                desired_mode=session.journal_state.mode,
+                owner="docs",
             )
             failed = owner.append_phase_locked(session, "docs", (planned,))
             tm.fail(failed)
@@ -475,15 +465,15 @@ class TestsFlextInfraTransactionDirectoryJournal:
                 u.Cli.atomic_read_binary_file_state(journal, required=True)
             )
             if operation == "append":
-                planned = tm.ok(
-                    u.Infra.planned_file(
-                        root,
-                        target,
-                        required=False,
-                        desired_content=b"generated\n",
-                        desired_mode=session.journal_state.mode,
-                        owner="docs",
-                    )
+                planned = m.Infra.CodegenFilePlan(
+                    project=root,
+                    path=target,
+                    before=tm.ok(
+                        u.Cli.atomic_read_binary_file_state(target, required=False)
+                    ),
+                    desired_content=b"generated\n",
+                    desired_mode=session.journal_state.mode,
+                    owner="docs",
                 )
                 tm.fail(
                     owner.publish_prepared_locked(
@@ -731,6 +721,3 @@ class TestsFlextInfraTransactionDirectoryJournal:
 
         tm.fail(cleaned, has="not journaled")
         tm.that(marker.read_bytes(), eq=b"preserve")
-
-
-__all__: list[str] = ["TestsFlextInfraTransactionDirectoryJournal"]

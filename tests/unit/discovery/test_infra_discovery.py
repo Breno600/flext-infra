@@ -222,6 +222,3 @@ class TestsFlextInfraDiscoveryInfraDiscovery:
         tm.that(result.value[0].path, eq=tmp_path.resolve())
         tm.that(result.value[0].name, eq="demo-project")
         tm.that(result.value[0].package_name, eq="demo_pkg")
-
-
-__all__: t.StrSequence = []

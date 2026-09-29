@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from time import perf_counter
 from typing import TYPE_CHECKING
 
 from flext_core import r
@@ -11,8 +12,8 @@ from flext_infra import c, m, t, u
 if TYPE_CHECKING:
     from flext_infra import p
 
-type _DocsScopeArtifacts = tuple[
-    m.Infra.DocScope, tuple[t.Triple[Path, Path, str | None], ...]
+type _DocsScopeArtifacts = t.Pair[
+    m.Infra.DocScope, t.VariadicTuple[t.Triple[Path, Path, str | None]]
 ]
 
 
@@ -58,6 +59,7 @@ class FlextInfraDocGeneratorBundleMixin:
         Source-state race verification is owned by ``docs_file_plans``, the
         single pre-publication barrier of the docs cycle.
         """
+        started_at = perf_counter()
         roots = u.Infra.docs_repository_roots(request.repository_root)
         if roots.failure:
             return r[m.Infra.DocsGenerationBundle].from_failure(roots)
@@ -77,9 +79,17 @@ class FlextInfraDocGeneratorBundleMixin:
         source_paths = u.Infra.docs_source_paths(repository_root, tuple(selected_roots))
         if source_paths.failure:
             return r[m.Infra.DocsGenerationBundle].from_failure(source_paths)
+        u.Cli.info(
+            f"docs: discovered {len(source_paths.value)} source paths in "
+            f"{perf_counter() - started_at:.2f}s"
+        )
         sources = u.Infra.required_file_states(source_paths.value)
         if sources.failure:
             return r[m.Infra.DocsGenerationBundle].from_failure(sources)
+        u.Cli.info(
+            f"docs: authenticated {len(sources.value)} source paths in "
+            f"{perf_counter() - started_at:.2f}s"
+        )
         selected = u.Infra.build_scopes(
             repository_root,
             request.projects,
@@ -110,6 +120,7 @@ class FlextInfraDocGeneratorBundleMixin:
         )
         rendered: list[_DocsScopeArtifacts] = []
         for scope in selected.value:
+            scope_started_at = perf_counter()
             if cls._is_collocated_workspace_project(scope, root_scope=root_scope):
                 rendered.append((scope, ()))
                 continue
@@ -122,6 +133,10 @@ class FlextInfraDocGeneratorBundleMixin:
             if artifacts.failure:
                 return r[m.Infra.DocsGenerationBundle].from_failure(artifacts)
             rendered.append((scope, artifacts.value))
+            u.Cli.info(
+                f"docs: rendered {scope.name} artifacts={len(artifacts.value)} "
+                f"elapsed={perf_counter() - scope_started_at:.2f}s"
+            )
         normalized = u.Infra.docs_normalize_artifacts(
             tuple(artifact for _scope, artifacts in rendered for artifact in artifacts)
         )

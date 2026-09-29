@@ -92,7 +92,9 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         # flext-j47u (codex): MutableLazyAliasMap values are always StrPair.
         winner = self._pick_preferred_target(name, existing, target)
         if self._is_intentional_reexport(existing, target):
-            index[name] = winner
+            index[name] = self._published_reexport_target(
+                existing, target, score_winner=winner
+            )
             return
         self._collision_count += 1
         u.Cli.error(
@@ -100,6 +102,43 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
             f"candidate selected for complete inventory: {winner}"
         )
         index[name] = winner
+
+    def _published_reexport_target(
+        self, a: t.StrPair, b: t.StrPair, *, score_winner: t.StrPair
+    ) -> t.StrPair:
+        """Elect the published facade path of one re-export pair (flext-6qy4m).
+
+        An intentional re-export pair is one symbol surfacing through two
+        module paths — a public facade and a deeper private implementation
+        module. Both resolve to the same object, but the root's
+        declared-root publication filter drops any path that carries a
+        private segment, so electing the deeper private path removes the
+        name from the facade entirely even though the member's own
+        ``__all__`` declares it. The path with fewer private segments is
+        the published surface and must win; a shallower path outranks a
+        nested one on a privacy tie, because the member's canonical
+        surface is the one closest to its root. Package initializers are
+        never elected here — their re-export decision stays with the
+        implementation score, which penalizes self-pointing alias groups
+        to keep lazy resolution from importing the package through itself.
+        """
+        a_parts = self._module_parts(a[0])
+        b_parts = self._module_parts(b[0])
+        a_file = self._module_file(a[0])
+        b_file = self._module_file(b[0])
+        if (
+            a_file is None
+            or b_file is None
+            or c.Infra.INIT_PY in {a_file.name, b_file.name}
+        ):
+            return score_winner
+        a_private = len(self._private_segments(a_parts))
+        b_private = len(self._private_segments(b_parts))
+        if a_private != b_private:
+            return a if a_private < b_private else b
+        if len(a_parts) != len(b_parts):
+            return a if len(a_parts) < len(b_parts) else b
+        return score_winner
 
     def _is_intentional_reexport(self, a: t.StrPair, b: t.StrPair) -> bool:
         """Return whether one module is a root-namespace stub re-exporting from the other."""

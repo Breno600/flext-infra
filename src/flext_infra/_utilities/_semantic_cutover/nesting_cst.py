@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING
 
 import libcst as cst
 
@@ -84,10 +84,9 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             # An empty separator line carries no indentation: libcst's default
             # emits the block's indent on a blank line, which is W293 on every
             # class this mover nests.
-            cls._reindented(
-                extras[name].with_changes(leading_lines=(cst.EmptyLine(indent=False),)),
-                module.default_indent,
-            )
+            # CST indentation moves code without changing the values of data
+            # literals or docstrings carried by the original declaration.
+            extras[name].with_changes(leading_lines=(cst.EmptyLine(indent=False),))
             for name in definitions
         )
         if isinstance(owner.body, cst.IndentedBlock):
@@ -137,40 +136,6 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
                 )
             )
         ).code
-
-    @classmethod
-    def _reindented(cls, node: cst.ClassDef, indent: str) -> cst.ClassDef:
-        """Re-indent every multi-line string literal the moved class carries.
-
-        Moving a class one level deeper changes the indentation of its code but
-        not the bytes of its string literals: a multi-line docstring keeps its
-        continuation lines and closing quotes at the old depth, which is D207
-        on every class this mover nests. The literal is the only thing that has
-        to be rewritten, and only after its first line.
-        """
-        return cst.ensure_type(node.visit(cls._StringReindenter(indent)), cst.ClassDef)
-
-    class _StringReindenter(cst.CSTTransformer):
-        """Add one indentation level to the continuation lines of a literal."""
-
-        def __init__(self, indent: str) -> None:
-            """Record the indentation unit the enclosing module declares."""
-            super().__init__()
-            self._indent = indent
-
-        @override
-        def leave_SimpleString(
-            self, original_node: cst.SimpleString, updated_node: cst.SimpleString
-        ) -> cst.SimpleString:
-            """Deepen every line of a multi-line literal but the first."""
-            if "\n" not in updated_node.value:
-                return updated_node
-            head, _, tail = updated_node.value.partition("\n")
-            deepened = "\n".join(
-                f"{self._indent}{line}" if line.strip() else line
-                for line in tail.split("\n")
-            )
-            return updated_node.with_changes(value=f"{head}\n{deepened}")
 
     @staticmethod
     def _declares_exports(node: cst.BaseStatement) -> bool:

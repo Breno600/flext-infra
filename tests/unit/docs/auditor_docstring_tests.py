@@ -246,6 +246,3 @@ __all__ = ["documented_fn", "undocumented_fn"]
             repository_root=project, checks="docstrings", docstring_min=100.0
         ).execute()
         tm.ok(result)
-
-
-__all__: list[str] = ["TestsFlextInfraAuditorDocstring"]

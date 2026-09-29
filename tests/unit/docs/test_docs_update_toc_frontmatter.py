@@ -60,6 +60,3 @@ class TestsFlextInfraDocsUpdateTocFrontmatter:
         tm.that(changed, eq=1)
         tm.that(updated.startswith("# Documentation\n"), eq=True)
         tm.that("<!-- TOC START -->" in updated, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraDocsUpdateTocFrontmatter"]

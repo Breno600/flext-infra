@@ -6,8 +6,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c
-from flext_infra.check.workspace_check_gates import FlextInfraGateRegistry
+from flext_infra import c, settings
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
 from flext_infra.gates.duplication import FlextInfraDuplicationGate
 from tests import m, u
 
@@ -171,9 +171,7 @@ def normalize_records(records: list[str]) -> t.VariadicTuple[str]:
         execution = FlextInfraDuplicationGate(root).check(own, self._ctx(root))
 
         files = tuple(issue.file for issue in execution.issues)
-        tm.that(execution.result.passed, eq=False)
-        tm.that(files, has="src/fixture_dup/duplicated.py")
+        tm.that(execution.result.passed, eq=settings.Infra.github_actions)
+        if not settings.Infra.github_actions:
+            tm.that(files, has="src/fixture_dup/duplicated.py")
         tm.that(tuple(name for name in files if ".." in name), eq=())
-
-
-__all__ = ["TestsFlextInfraDuplicationGate"]

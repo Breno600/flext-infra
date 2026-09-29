@@ -98,7 +98,7 @@ class TestsFlextInfraDepsModernizerHelpers:
         [("test", "test"), (None, None), ({"key": "value"}, {"key": "value"})],
     )
     def test_unwrap_item(
-        self, value: t.Cli.TomlMappingSource | None, expected: t.Infra.InfraValue
+        self, value: t.Cli.TomlMappingSource | None, expected: t.JsonValue
     ) -> None:
         """Verify unwrap item."""
         actual = None if value is None else u.Cli.toml_unwrap_item(value)
@@ -249,6 +249,3 @@ class TestsFlextInfraDepsModernizerHelpers:
             ),
             eq=f"httpx[socks]>={locked_version}; python_version < '3.14'",
         )
-
-
-__all__: list[str] = ["TestsFlextInfraDepsModernizerHelpers"]

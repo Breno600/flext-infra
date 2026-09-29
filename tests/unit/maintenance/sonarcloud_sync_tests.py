@@ -32,40 +32,54 @@ class TestsFlextInfraSonarcloudSettingsSync:
     _REPOSITORY = "example-repo"
 
     @staticmethod
-    def _plan(project_key: str) -> m.Infra.SonarcloudSettingsPlan:
-        """Build the plan the SSOT declares for one project key."""
-        return tm.ok(
-            FlextInfraSonarcloudSettingsSync.settings_plan(
-                config.Infra.codegen.sonarcloud, project_key
-            )
-        )
+    def _spec(count: int | None = None) -> m.Infra.SonarcloudSpec:
+        """Use the current SSOT or validate a different exclusion cardinality."""
+        spec = config.Infra.codegen.sonarcloud
+        if count is None:
+            return spec
+        return m.Infra.SonarcloudSpec.model_validate({
+            **spec.model_dump(),
+            "issue_exclusions": tuple(
+                m.Infra.SonarcloudIssueExclusionSpec(
+                    rule_key=f"text:S{1000 + index}",
+                    resource_key=f"inputs/{index}.toml",
+                    reason=f"Contract scenario {index}",
+                )
+                for index in range(count)
+            ),
+        })
 
     @staticmethod
-    def _server_payload(pairs: tuple[tuple[str, str], ...]) -> str:
+    def _server_payload(
+        pairs: t.VariadicTuple[t.Pair[str, str]],
+        *,
+        inherited: bool = False,
+        include_setting: bool = True,
+    ) -> str:
         """Render an ``api/settings/values`` body in the measured shape."""
         settings: list[t.JsonValue] = []
-        if pairs:
+        if include_setting:
             field_values: list[t.JsonValue] = [
                 {"resourceKey": resource, "ruleKey": rule} for rule, resource in pairs
             ]
             settings.append({
                 "key": c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY,
                 "fieldValues": field_values,
-                "inherited": False,
+                "inherited": inherited,
             })
         return tm.ok(u.Cli.json_dumps({"settings": settings}))
 
     @staticmethod
-    def _ssot_pairs() -> tuple[tuple[str, str], ...]:
-        """Return the SSOT exclusions as ``(rule_key, resource_key)`` pairs."""
+    def _pairs(spec: m.Infra.SonarcloudSpec) -> t.VariadicTuple[t.Pair[str, str]]:
+        """Read expectations from the exact typed config the service receives."""
         return tuple(
             (exclusion.rule_key, exclusion.resource_key)
-            for exclusion in config.Infra.codegen.sonarcloud.issue_exclusions
+            for exclusion in spec.issue_exclusions
         )
 
     def _cli(
         self, repository_root: Path, env: t.StrMapping | None = None
-    ) -> tuple[int, str]:
+    ) -> t.Pair[int, str]:
         """Run the public CLI route in a child process without SONAR_TOKEN."""
         result = tm.ok(
             u.Cli.run_raw(
@@ -105,60 +119,85 @@ class TestsFlextInfraSonarcloudSettingsSync:
             f"{self._REPOSITORY}",
         )
 
-    def test_plan_sends_one_field_value_per_ssot_exclusion(self) -> None:
-        """The set request carries the project, the key, and every SSOT entry."""
-        plan = self._plan("org_repo")
-        form = plan.form_fields()
+    @pytest.mark.parametrize("count", [None, 0, 1, 3])
+    def test_plan_selects_reset_or_the_complete_property_set(
+        self, count: int | None
+    ) -> None:
+        """The request honors both the current SSOT and arbitrary valid configs."""
+        spec = self._spec(count)
+        plan = tm.ok(FlextInfraSonarcloudSettingsSync.settings_plan(spec, "org_repo"))
+        request = FlextInfraSonarcloudSettingsSync.settings_write_request(plan)
+        form = request.form
 
         tm.that(form[0], eq=("component", "org_repo"))
-        tm.that(form[1], eq=("key", c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY))
+        if spec.issue_exclusions:
+            tm.that(request.api_path, eq=c.Infra.SONARCLOUD_API_SETTINGS_SET_PATH)
+            tm.that(form[1], eq=("key", c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY))
+        else:
+            tm.that(request.api_path, eq=c.Infra.SONARCLOUD_API_SETTINGS_RESET_PATH)
+            tm.that(form[1], eq=("keys", c.Infra.SONARCLOUD_ISSUE_IGNORE_KEY))
         sent = tuple(
             (entry.rule_key, entry.resource_key)
             for name, value in form[2:]
             if name == "fieldValues"
             for entry in (m.Infra.SonarcloudIssueFieldValue.model_validate_json(value),)
         )
-        tm.that(form[2][1], has='"ruleKey"')
-        tm.that(form[2][1], has='"resourceKey"')
+        for name, value in form[2:]:
+            tm.that(name, eq="fieldValues")
+            tm.that(value, has='"ruleKey"')
+            tm.that(value, has='"resourceKey"')
         tm.that(len(form), eq=2 + len(sent))
-        tm.that(sent, eq=self._ssot_pairs())
-        tm.that(plan.api_url, eq=config.Infra.codegen.sonarcloud.api_url)
+        tm.that(sent, eq=self._pairs(spec))
+        tm.that(plan.api_url, eq=spec.api_url)
+        tm.that(plan.timeout_seconds, eq=spec.api_timeout_seconds)
 
-    def test_plan_is_in_sync_only_when_server_holds_the_ssot(self) -> None:
-        """The write is skipped exactly when the server already equals the SSOT."""
-        plan = self._plan("org_repo")
-        pairs = self._ssot_pairs()
+    @pytest.mark.parametrize("count", [0, 1, 3])
+    @pytest.mark.parametrize("inherited", [False, True])
+    def test_plan_matches_effective_server_values(
+        self, count: int, *, inherited: bool
+    ) -> None:
+        """Inherited entries affect convergence exactly like project entries."""
+        spec = self._spec(count)
+        plan = tm.ok(FlextInfraSonarcloudSettingsSync.settings_plan(spec, "org_repo"))
+        pairs = self._pairs(spec)
         values = m.Infra.SonarcloudSettingsValues.model_validate_json
 
-        tm.that(plan.in_sync_with(values(self._server_payload(pairs))), eq=True)
-        tm.that(
-            plan.in_sync_with(values(self._server_payload(tuple(reversed(pairs))))),
-            eq=True,
-        )
-        tm.that(plan.in_sync_with(values(self._server_payload(()))), eq=False)
-        tm.that(
-            plan.in_sync_with(
-                values(self._server_payload((*pairs, ("text:S0000", "x.toml"))))
-            ),
-            eq=False,
-        )
-
-    def test_plan_refuses_empty_and_repeated_exclusions(self) -> None:
-        """An SSOT that cannot be written as one property set fails before effects."""
-        spec = config.Infra.codegen.sonarcloud
-        empty = spec.model_copy(update={"issue_exclusions": ()})
-        repeated = spec.model_copy(
-            update={"issue_exclusions": (*spec.issue_exclusions,) * 2}
-        )
-
-        for invalid, reason in (
-            (empty, "declares no exclusion"),
-            (repeated, "repeats"),
-        ):
-            tm.fail(
-                FlextInfraSonarcloudSettingsSync.settings_plan(invalid, "org_repo"),
-                has=reason,
+        for ordered in (pairs, tuple(reversed(pairs))):
+            current = values(self._server_payload(ordered, inherited=inherited))
+            tm.that(
+                FlextInfraSonarcloudSettingsSync.in_sync_with(plan, current), eq=True
             )
+        absent = values(self._server_payload((), include_setting=False))
+        tm.that(
+            FlextInfraSonarcloudSettingsSync.in_sync_with(plan, absent),
+            eq=not spec.issue_exclusions,
+        )
+        extra = values(
+            self._server_payload(
+                (*pairs, ("text:S0000", "extra.toml")), inherited=inherited
+            )
+        )
+        tm.that(FlextInfraSonarcloudSettingsSync.in_sync_with(plan, extra), eq=False)
+
+    @pytest.mark.parametrize("count", [1, 3])
+    def test_repeated_config_entries_fail_and_server_duplicates_require_a_write(
+        self, count: int
+    ) -> None:
+        """Config and readback must contain every declared pair exactly once."""
+        spec = self._spec(count)
+        repeated = m.Infra.SonarcloudSpec.model_validate({
+            **spec.model_dump(),
+            "issue_exclusions": spec.issue_exclusions * 2,
+        })
+        tm.fail(
+            FlextInfraSonarcloudSettingsSync.settings_plan(repeated, "org_repo"),
+            has="repeats",
+        )
+        plan = tm.ok(FlextInfraSonarcloudSettingsSync.settings_plan(spec, "org_repo"))
+        current = m.Infra.SonarcloudSettingsValues.model_validate_json(
+            self._server_payload(self._pairs(spec) * 2)
+        )
+        tm.that(FlextInfraSonarcloudSettingsSync.in_sync_with(plan, current), eq=False)
 
     def test_workspace_root_fans_the_verb_out(self) -> None:
         """The workspace orchestrator accepts the verb so the root reaches members."""
@@ -181,6 +220,3 @@ class TestsFlextInfraSonarcloudSettingsSync:
 
         tm.that(code, ne=0)
         tm.that(output, has="SONAR_TOKEN is required")
-
-
-__all__: list[str] = ["TestsFlextInfraSonarcloudSettingsSync"]

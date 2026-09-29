@@ -130,6 +130,3 @@ class TestsFlextInfraScanner:
             tm.that(result.failure, eq=True)
         finally:
             f.chmod(0o644)
-
-
-__all__: list[str] = ["TestsFlextInfraScanner"]

@@ -20,11 +20,14 @@ class FlextInfraModelsCheck:
 
         Inherits canonical ``repository_root`` (``--repository-root``),
         ``gates`` (parsed to ``t.StrSequence``), ``apply``/``dry_run``,
-        ``projects``, ``fail_fast``, ``verbose`` from ``WriteMixin``; the scope
+        ``projects`` and ``verbose`` from ``WriteMixin``; the scope
         root has exactly one owner so an unmapped option can never fall back
         to the current directory.
         """
 
+        fail_fast: Annotated[
+            bool, m.Field(description="Stop check gates after the first failure")
+        ] = c.Infra.CHECK_FAIL_FAST_DEFAULT
         reports_dir: Annotated[
             str,
             m.Field(
@@ -77,13 +80,6 @@ class FlextInfraModelsCheck:
         name: Annotated[str, m.Field(description="Display/project name")]
         path: Annotated[Path, m.Field(description="Resolved project root path")]
 
-        @classmethod
-        def from_workspace_name(
-            cls, repository_root: Path, project_name: str
-        ) -> FlextInfraModelsCheck.CheckProjectTarget:
-            """Build a target from the public run_projects name contract."""
-            return cls(name=project_name, path=repository_root / project_name)
-
     class MypyResourceLimit(m.ContractModel):
         """Validated memory and wall-time limits for every Mypy process."""
 
@@ -112,11 +108,37 @@ class FlextInfraModelsCheck:
             """Validated memory limit converted to bytes for the platform owner."""
             return self.memory_limit_mb * 1024 * 1024
 
+    class MypyInvocation(m.ContractModel):
+        """Checker inputs; callers cannot select an executable or Python program."""
+
+        targets: Annotated[
+            t.VariadicTuple[Path],
+            m.Field(min_length=1, description="Files or directories to check"),
+        ]
+        workspace: Annotated[
+            Path | None, m.Field(description="Workspace owning the checker environment")
+        ] = None
+        config_file: Annotated[
+            Path | None, m.Field(description="Owned Mypy configuration")
+        ] = None
+        report_json: Annotated[
+            bool, m.Field(description="Emit native JSON diagnostics")
+        ] = False
+        verbose: Annotated[bool, m.Field(description="Emit Mypy progress")] = False
+        profile_output: Annotated[
+            Path | None, m.Field(description="Optional cProfile output destination")
+        ] = None
+
     class FixPyreflyConfigCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
 
     class FixEnforcementCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-enforcement``."""
+
+        @property
+        def fail_fast(self) -> bool:
+            """Share the service's fail-fast invariant with gate adapters."""
+            return c.Infra.SERVICE_FAIL_FAST
 
         rules: Annotated[
             t.StrSequence,
@@ -177,7 +199,11 @@ class FlextInfraModelsCheck:
             description="Gate result model"
         )
         issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
-            default_factory=tuple, description="Detected issues"
+            default_factory=tuple, description="Blocking gate diagnostics"
+        )
+        observational_issues: t.VariadicTuple[FlextInfraModelsCheck.Issue] = m.Field(
+            default_factory=tuple,
+            description="Explicitly observational findings, separate from failures",
         )
         raw_output: str = m.Field(
             "", description="Raw tool output", validate_default=True
@@ -191,13 +217,11 @@ class FlextInfraModelsCheck:
                 1 for issue in self.issues if issue.severity.lower() == c.Infra.ERROR
             )
 
-    class GateSuspension(mm.ProjectNameMixin, m.ContractModel):
-        """Authorized policy non-execution, never a successful gate result."""
-
-        gate: str = m.Field(description="Registered policy gate that was not executed")
-        reason: t.NonEmptyStr = m.Field(
-            description="Operator authorization explaining the policy suspension"
-        )
+        @m.computed_field
+        @property
+        def observational_count(self) -> int:
+            """Number of reported findings outside the blocking verdict."""
+            return len(self.observational_issues)
 
     class ProjectResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
         """Aggregated gate results for a single project.
@@ -210,43 +234,24 @@ class FlextInfraModelsCheck:
         gates: MutableMapping[str, FlextInfraModelsCheck.GateExecution] = m.Field(
             default_factory=dict, description="Gate name to execution mapping"
         )
-        suspended: t.VariadicTuple[FlextInfraModelsCheck.GateSuspension] = m.Field(
-            default_factory=tuple, description="Policy checks explicitly not executed"
-        )
 
         @m.computed_field
         @property
         def passed(self) -> bool:
-            """Whether the complete requested scope executed and passed."""
-            return bool(self.gates) and not self.suspended and self.accepted
-
-        @m.computed_field
-        @property
-        def accepted(self) -> bool:
-            """Whether active checks passed, accounting for authorized suspensions."""
-            return bool(self.gates or self.suspended) and all(
-                execution.result.passed for execution in self.gates.values()
-            )
-
-        @m.computed_field
-        @property
-        def status(self) -> str:
-            """Distinguish active acceptance from a fully executed passing scope."""
-            if not self.accepted:
-                return "FAIL"
-            if self.suspended:
-                return (
-                    "ACTIVE CHECKS PASS / SUSPENDED"
-                    if self.gates
-                    else "SUSPENDED / NOT RUN"
-                )
-            return "PASS"
+            """Whether every gate passed."""
+            return all(v.result.passed for v in self.gates.values())
 
         @m.computed_field
         @property
         def total_errors(self) -> int:
             """Total error-severity diagnostic count across all gates."""
             return sum(v.error_count for v in self.gates.values())
+
+        @m.computed_field
+        @property
+        def total_observations(self) -> int:
+            """Total observational finding count across all gates."""
+            return sum(v.observational_count for v in self.gates.values())
 
     class LoopOutcome(m.ArbitraryTypesModel):
         """Bundled results from the project-checking loop."""
@@ -370,7 +375,7 @@ class FlextInfraModelsCheck:
         rule_id: Annotated[
             str, m.Field(validation_alias="ruleId", description="Rule identifier")
         ]
-        level: Annotated[str, m.Field(description="Result level (error/warning)")]
+        level: Annotated[str, m.Field(description="Result level (error/warning/note)")]
         message: Annotated[
             str,
             m.Field(
@@ -420,16 +425,11 @@ class FlextInfraModelsCheck:
         results: t.VariadicTuple[FlextInfraModelsCheck.SarifResult] = m.Field(
             default_factory=tuple, description="Run results"
         )
-        suspended: t.VariadicTuple[FlextInfraModelsCheck.GateSuspension] = m.Field(
-            default_factory=tuple,
-            validation_alias=m.AliasPath("properties", "suspendedChecks"),
-            description="Authorized checks not executed in this run",
-        )
 
         @u.model_serializer
         def _serialize(self) -> t.JsonMapping:
             """Serialize."""
-            payload: t.MutableJsonMapping = {
+            return {
                 "tool": {
                     "driver": {
                         "name": self.tool_name,
@@ -443,13 +443,6 @@ class FlextInfraModelsCheck:
                     result.model_dump(by_alias=True) for result in self.results
                 ],
             }
-            if self.suspended:
-                payload["properties"] = {
-                    "suspendedChecks": [
-                        item.model_dump(mode="json") for item in self.suspended
-                    ]
-                }
-            return payload
 
     class SarifReport(m.ArbitraryTypesModel):
         """Complete SARIF 2.1.0 report; serializes and validates the same JSON."""

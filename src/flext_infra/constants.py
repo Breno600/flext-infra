@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from flext_cli import FlextCliConstants
 
-from flext_infra import t
-
 from ._constants.base import FlextInfraConstantsBase
 from ._constants.census import FlextInfraConstantsCensus
 from ._constants.check import FlextInfraConstantsCheck
@@ -58,4 +56,4 @@ class FlextInfraConstants(FlextCliConstants):
 
 c = FlextInfraConstants
 
-__all__: t.VariadicTuple[str] = ("FlextInfraConstants", "c")
+__all__: tuple[str, ...] = ("FlextInfraConstants", "c")

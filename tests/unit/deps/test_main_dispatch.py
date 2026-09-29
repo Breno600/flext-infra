@@ -16,6 +16,3 @@ class TestsFlextInfraDepsMainDispatch:
         """Verify subcommand help is available."""
         for subcommand in ("detect", "extra-paths", "modernize"):
             tm.that(infra_main(["deps", subcommand, "--help"]), eq=0)
-
-
-__all__: list[str] = ["TestsFlextInfraDepsMainDispatch"]

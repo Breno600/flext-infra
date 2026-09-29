@@ -251,6 +251,3 @@ class TestsFlextInfraUtilityFacadeProjection:
         tm.that(facade.read_text(), eq=original)
         self._write(facade, updated)
         tm.that(u.Infra.render_utility_facade(package, family="p"), eq=updated)
-
-
-__all__: list[str] = ["TestsFlextInfraUtilityFacadeProjection"]

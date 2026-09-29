@@ -22,18 +22,17 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
     def _plan_existing_repository(
         self,
         *,
-        root: Path,
-        repository_root: Path,
-        repository: m.Infra.RepositoryRef,
         target: m.Infra.RepositoryConformTarget,
         workspace: m.Infra.WorkspaceSpec,
         codegen: m.Infra.CodegenConfigSpec,
         contract: m.Infra.CodegenConformSurfaceContract,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
         """Conform every declared managed surface in an existing repository."""
+        root = target.root
+        repository = target.repository
         stage_started = time.monotonic()
         u.Cli.info(f"  stage=pyproject repository={repository.name}")
-        pyproject = root / c.Infra.PYPROJECT_FILENAME
+        pyproject = root / c.PYPROJECT_FILENAME
         if not pyproject.is_file():
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                 f"existing repository has no pyproject.toml: {root}; "
@@ -59,7 +58,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         )
         stage_started = time.monotonic()
         modernizer = FlextInfraPyprojectModernizer(
-            repository_root=repository_root,
+            repository_root=root,
             skip_check=True,
             managed_artifacts=managed_artifacts.value.resolution,
         )
@@ -67,17 +66,23 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             project_name=repository.distribution,
             package_name=metadata.value.package_name,
             path=pyproject,
-            root_modules=(
-                target.project.root_modules if target.project is not None else ()
-            ),
-            root_packages=(
-                target.project.root_packages if target.project is not None else ()
-            ),
-            declared_python_dirs=self._scaffold_python_dirs(
-                codegen.templates.entries, target.make_profile
-            ),
-            analysis_exclusions=tuple(
-                path.as_posix() for path in target.external_dependency_paths
+            topology=m.Infra.PyprojectDeclaredTopology(
+                root_modules=(
+                    target.project.root_modules if target.project is not None else ()
+                ),
+                root_packages=(
+                    target.project.root_packages if target.project is not None else ()
+                ),
+                declared_python_dirs=tuple(
+                    self._scaffold_python_dirs(
+                        codegen.templates.entries,
+                        target.make_profile,
+                        package=repository.package,
+                    )
+                ),
+                analysis_exclusions=tuple(
+                    path.as_posix() for path in target.external_dependency_paths
+                ),
             ),
         )
         if tooling_context.failure:
@@ -89,14 +94,14 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             f"elapsed={time.monotonic() - stage_started:.2f}s"
         )
         managed_result = self._plan_existing_templates(
-            root=root,
-            repository=repository,
-            target=target,
-            workspace=workspace,
-            codegen=codegen,
-            tooling_runtime=tooling_context.value,
+            render_inputs=m.Infra.CodegenRenderInputs(
+                target=target,
+                workspace=workspace,
+                codegen=codegen,
+                tooling_runtime=tooling_context.value,
+                managed_artifacts=managed_artifacts.value,
+            ),
             contract=contract,
-            managed_artifacts=managed_artifacts.value,
         )
         if managed_result.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(managed_result)
@@ -115,21 +120,20 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
     def _plan_existing_templates(
         self,
         *,
-        root: Path,
-        repository: m.Infra.RepositoryRef,
-        target: m.Infra.RepositoryConformTarget,
-        workspace: m.Infra.WorkspaceSpec,
-        codegen: m.Infra.CodegenConfigSpec,
-        tooling_runtime: m.Infra.ToolingRuntimeContext,
+        render_inputs: m.Infra.CodegenRenderInputs,
         contract: m.Infra.CodegenConformSurfaceContract,
-        managed_artifacts: m.Infra.ProjectManagedArtifactsSnapshot,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
         """Render configured overwrite-owned templates for an existing tree."""
-        u.Cli.info(f"  stage=templates repository={repository.name}")
+        target = render_inputs.target
+        workspace = render_inputs.workspace
+        codegen = render_inputs.codegen
+        root = target.root
+        u.Cli.info(f"  stage=templates repository={target.repository.name}")
         profile = target.make_profile
-        templates_root = u.Infra.codegen_templates_root(codegen)
         planned: list[m.Infra.CodegenFilePlan] = []
         for managed in codegen.managed_files:
+            if target.beads is None and managed.path.parts[:1] == (".beads",):
+                continue
             if not target.ci_enabled and managed.path.parts[:2] == (
                 ".github",
                 "workflows",
@@ -140,7 +144,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 and managed.path.as_posix() not in contract.destinations
             ):
                 continue
-            pyproject_skipped = managed.path == Path(c.Infra.PYPROJECT_FILENAME) and (
+            pyproject_skipped = managed.path == Path(c.PYPROJECT_FILENAME) and (
                 not contract.pyproject
                 or (
                     workspace.project is None
@@ -153,7 +157,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 entry
                 for entry in codegen.templates.entries
                 if entry.destination == managed.path.as_posix()
-                and entry.delegate == "render"
+                and entry.delegate == c.Infra.TemplateDelegate.RENDER
             )
             if not entries:
                 continue
@@ -162,22 +166,18 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     f"managed file requires exactly one render template: {managed.path}"
                 )
             entry = entries[0]
+            if entry.source is None:
+                return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
+                    f"managed render entry has no template source: {managed.path}"
+                )
+            if entry.requires_beads and workspace.beads is None:
+                continue
             relative = Path(entry.destination)
             if relative.is_absolute() or ".." in relative.parts:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                     f"managed destination escapes repository root: {entry.destination}"
                 )
             path = (root / relative).resolve()
-            # Why (flext-l2296): the ledger metadata is minted by Beads at
-            # first use, so a fresh clone legitimately lacks it. Planning an
-            # absent runtime artifact made the gen check gate fail on every
-            # clean checkout. When the file exists, the identity-preserving
-            # refresh below still applies.
-            if (
-                entry.destination == c.Infra.BEADS_METADATA_RELPATH
-                and not path.is_file()
-            ):
-                continue
             try:
                 path.relative_to(root.resolve())
             except ValueError:
@@ -219,32 +219,16 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     )
                 continue
             rendered = self._rendered_artifact_source(
-                templates_root=templates_root,
+                render_inputs,
                 template_relpath=entry.source,
-                failure_prefix="",
-                dist=repository.distribution,
-                repository=repository,
-                repository_root=root,
-                target=target,
-                workspace=workspace,
-                codegen=codegen,
                 destination=entry.destination,
-                tooling_runtime=tooling_runtime,
+                failure_prefix="",
                 project_context=None,
-                managed_artifacts=managed_artifacts.resolution,
             )
             if rendered.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(rendered)
-            rendered_content = rendered.value
             composed = self.compose_project_artifact(
-                root,
-                entry.destination,
-                rendered_content,
-                managed_artifacts=managed_artifacts,
-                workspace=workspace,
-                codegen=codegen,
-                repository=repository,
-                target=target,
+                root, entry.destination, rendered.value, render_inputs=render_inputs
             )
             if composed.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(composed)
@@ -320,12 +304,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
     @classmethod
     def _complete_governed_plans(
         cls,
-        root: Path,
+        target: m.Infra.RepositoryConformTarget,
         planned: t.SequenceOf[m.Infra.CodegenFilePlan],
         codegen: m.Infra.CodegenConfigSpec,
         contract: m.Infra.CodegenConformSurfaceContract,
-        *,
-        profile: c.Infra.MakeProfile,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
         """Attach ownership metadata and represent every governed root artifact.
 
@@ -333,7 +315,13 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         pyproject-scoped surfaces (``DEPENDENCIES``/``PYPROJECT``) keep the plan
         restricted to what their own planners already produced.
         """
-        governed_by_path = {item.path: item for item in codegen.managed_files}
+        root = target.root
+        profile = target.make_profile
+        governed_by_path = {
+            item.path: item
+            for item in codegen.managed_files
+            if target.beads is not None or item.path.parts[:1] != (".beads",)
+        }
         completed: list[m.Infra.CodegenFilePlan] = []
         represented: set[Path] = set()
         represented_indexes: MutableMapping[Path, int] = {}

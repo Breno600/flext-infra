@@ -15,6 +15,3 @@ class TestsFlextInfraToolchainGoBackend:
         toolchain = config.Infra.codegen.toolchain
 
         tm.that(toolchain.go_version, eq="latest")
-
-
-__all__: list[str] = ["TestsFlextInfraToolchainGoBackend"]

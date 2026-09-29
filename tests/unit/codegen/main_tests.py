@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import CliRouteService, c, config, main as infra_main
-from tests import t, u
+from flext_infra import FlextInfraCliRouteService, c, config, main as infra_main
+from tests import m, t, u
 
 
 class TestsFlextInfraCodegenMain:
@@ -83,17 +83,11 @@ class TestsFlextInfraCodegenMain:
 
     @staticmethod
     def _mise_transaction_state(root: Path) -> t.Pair[Path, Path]:
-        """Return the public workspace journal and root-project staging paths."""
-        toolchain = config.Infra.codegen.toolchain
-        state_root = (
-            root.parent
-            / toolchain.state_directory_name
-            / root.name
-            / toolchain.mise_namespace
-        )
+        """Return the workspace journal and the Mise transaction state root."""
+        identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=root)).unwrap()
         return (
-            state_root / "journal.json",
-            state_root / "projects" / "root" / "transaction",
+            identity.git_dir / c.Infra.JOURNAL_NAME,
+            root / c.Infra.MISE_ARTIFACTS_STATE_DIRECTORY,
         )
 
     @staticmethod
@@ -120,7 +114,6 @@ class TestsFlextInfraCodegenMain:
             result = infra_main([
                 "codegen",
                 "init",
-                "--apply",
                 "--repository-root",
                 str(TestsFlextInfraCodegenMain._with_pep621_identity(real_git_repo)),
             ])
@@ -129,7 +122,7 @@ class TestsFlextInfraCodegenMain:
         def test_check_mode(self, real_git_repo: Path) -> None:
             """Init check reports managed drift without mutating the repository."""
             repository = TestsFlextInfraCodegenMain._with_pep621_identity(real_git_repo)
-            pyproject = repository / c.Infra.PYPROJECT_FILENAME
+            pyproject = repository / c.PYPROJECT_FILENAME
             before = pyproject.read_bytes()
             makefile = repository / c.Infra.MAKEFILE_FILENAME
             result = infra_main([
@@ -148,7 +141,6 @@ class TestsFlextInfraCodegenMain:
             result = infra_main([
                 "codegen",
                 "init",
-                "--apply",
                 "--repository-root",
                 str(TestsFlextInfraCodegenMain._with_pep621_identity(real_git_repo)),
             ])
@@ -162,7 +154,6 @@ class TestsFlextInfraCodegenMain:
             result = infra_main([
                 "codegen",
                 "init",
-                "--apply",
                 "--repository-root",
                 str(TestsFlextInfraCodegenMain._with_pep621_identity(real_git_repo)),
             ])
@@ -187,7 +178,6 @@ class TestsFlextInfraCodegenMain:
             result = infra_main([
                 "codegen",
                 "init",
-                "--apply",
                 "--repository-root",
                 str(TestsFlextInfraCodegenMain._with_pep621_identity(custom_root)),
             ])
@@ -205,7 +195,6 @@ class TestsFlextInfraCodegenMain:
             result = infra_main([
                 "codegen",
                 "init",
-                "--apply",
                 "--repository-root",
                 str(TestsFlextInfraCodegenMain._with_pep621_identity(real_git_repo)),
             ])
@@ -215,7 +204,9 @@ class TestsFlextInfraCodegenMain:
             """The root process entrypoint serves the route owner's declared help."""
             route = next(
                 item
-                for item in CliRouteService.route_table_for(c.Infra.CLI_GROUP_CODEGEN)
+                for item in FlextInfraCliRouteService.route_table_for(
+                    c.Infra.CLI_GROUP_CODEGEN
+                )
                 if item.name == "init"
             )
             result = u.Cli.run_raw([
@@ -361,6 +352,3 @@ class TestsFlextInfraCodegenMain:
                 result.value.stdout + result.value.stderr,
                 contains="No such command 'unknown-command'",
             )
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenMain"]

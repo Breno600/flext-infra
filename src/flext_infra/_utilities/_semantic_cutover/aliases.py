@@ -124,11 +124,13 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
             )
             rewritten = cls._rewrite_compatibility_alias_source(
                 source,
-                local_aliases=local_aliases,
-                import_aliases=import_aliases,
-                attribute_aliases=attribute_aliases,
-                qualified_aliases=qualified_aliases,
-                target_bindings=cls._bound_names(tree),
+                m.Infra.CompatibilityAliasRewritePlan(
+                    local_aliases=local_aliases,
+                    import_aliases=import_aliases,
+                    attribute_aliases=attribute_aliases,
+                    qualified_aliases=qualified_aliases,
+                    target_bindings=cls._bound_names(tree),
+                ),
             )
             FlextInfraUtilitiesCompatibilityAliasValidation.require_zero_compatibility_alias_residue(
                 rewritten,

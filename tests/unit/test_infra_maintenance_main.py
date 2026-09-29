@@ -154,6 +154,3 @@ class TestsFlextInfraInfraMaintenanceMain:
     def test_enforcer_creates_instance(self) -> None:
         enforcer = FlextInfraPythonVersionEnforcer()
         tm.that(type(enforcer).__name__, eq="FlextInfraPythonVersionEnforcer")
-
-
-__all__: list[str] = ["TestsFlextInfraInfraMaintenanceMain"]

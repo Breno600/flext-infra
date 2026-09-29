@@ -118,7 +118,7 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
             "    _ = t.Core.Tests.Testobject\n",
             encoding="utf-8",
         )
-        u.Tests.initialize_git_repo(workspace)
+        u.Tests.provision_checkout(workspace)
 
         result = infra_main([
             "refactor",
@@ -132,6 +132,3 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         tm.that(updated, has="from tests import t")
         tm.that(updated, has="t.Tests.Testobject")
         tm.that(updated, lacks="Core.Tests")
-
-
-__all__: list[str] = ["TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow"]

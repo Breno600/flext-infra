@@ -6,13 +6,11 @@ import importlib
 import sys
 from collections.abc import Iterator
 from pathlib import Path
-from types import ModuleType
 
 import pytest
 from flext_tests import tm
 
-import flext_infra as infra_pkg
-from flext_infra import config
+from flext_infra import config, infra, p
 from tests import c, t, u
 
 # NOTE(flext-p68a.9.4, agent codex): the installed flext-tests pytest11 plugin is
@@ -24,6 +22,31 @@ _TRACKED_CODEGEN_CONFIG_PATH = (
     / c.Infra.CODEGEN_CONFIG_DIR
     / c.Infra.CODEGEN_CONFIG_FILENAME
 )
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register the slow-timeout ini option consumed by the test suite.
+
+    Why (root cause, rc0 plugin gap): the pyproject ``[tool.pytest.ini_options]``
+    declares ``flext_slow_timeout_seconds`` (consumed by ``flext_tests``) and
+    ``tests/unit/deps/test_modernizer_pytest`` reads it back through
+    ``config.getini``. The installed ``flext-tests 0.12.0rc0`` entry-point does
+    not register the option, so pytest aborts collection with
+    ``Unknown config option`` before any test runs. This conftest owns its ini
+    surface and declares the option here; a real plugin re-registering the same
+    name is a no-op merge.
+    """
+    parser.addini(
+        "flext_slow_timeout_seconds",
+        help="Seconds after which a test is flagged slow (flext-tests option)",
+    )
+
+
+@pytest.fixture
+def rope_workspace(tmp_path: Path) -> Iterator[p.Infra.RopeWorkspaceDsl]:
+    """Provide one real Rope workspace through the public composition root."""
+    with infra.rope_workspace(tmp_path) as workspace:
+        yield workspace
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -64,50 +87,6 @@ def installed_dependency_path(tmp_path: Path) -> Iterator[Path]:
     finally:
         sys.path.remove(str(location))
         importlib.invalidate_caches()
-
-
-@pytest.fixture
-def infra_public_root() -> Iterator[ModuleType]:
-    """Reload the root public package after clearing lazy-export caches.
-
-    Why (root cause, reload isolation): ``importlib.reload(flext_infra)``
-    re-executes the package ``__init__``, which re-imports ``pathlib`` and
-    binds a NEW ``Path`` class. Any ``Path`` instance created before the
-    reload keeps the OLD class, whose private slots (``_str``/``_drv``) no
-    longer match, so every later ``path.exists()`` on a pre-reload instance
-    raises ``AttributeError`` — corrupting every test that runs after this
-    fixture. The purge also drops the lazy-export registry the ``tests``
-    package shares, so ``tests.u`` resolved to the infra facade without
-    ``Tests``. Both module snapshots are restored after the fixture so the
-    process-global interpreter state is left exactly as found.
-    """
-    stdlib_snapshots = {
-        name: module
-        for name, module in sys.modules.items()
-        if name == "pathlib" or name.startswith("pathlib.")
-    }
-    wrapper_snapshots = {
-        name: sys.modules[name]
-        for name in c.Tests.INFRA_PUBLIC_WRAPPER_MODULES
-        if name in sys.modules
-    }
-    for name in c.Tests.INFRA_PUBLIC_WRAPPER_MODULES:
-        _ = sys.modules.pop(name, None)
-    try:
-        for export_name in c.Tests.INFRA_PUBLIC_ROOT_EXPORTS:
-            _ = infra_pkg.__dict__.pop(export_name, None)
-        yield importlib.reload(infra_pkg)
-    finally:
-        for name, module in stdlib_snapshots.items():
-            sys.modules[name] = module
-        # Why (review #355): a wrapper the reload imported but that was absent
-        # before the fixture must be dropped, not kept — leaving it would leak
-        # the reloaded module identity into later tests.
-        for name in c.Tests.INFRA_PUBLIC_WRAPPER_MODULES:
-            if name in wrapper_snapshots:
-                sys.modules[name] = wrapper_snapshots[name]
-            else:
-                _ = sys.modules.pop(name, None)
 
 
 def _is_collectable_test_module(collection_path: Path) -> bool:

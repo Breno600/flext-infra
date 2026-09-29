@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from flext_tests import tm
 
-from tests import t, u
+from tests import u
 
 
 class TestsFlextInfraGitRemoteIdentity:
@@ -28,6 +28,3 @@ class TestsFlextInfraGitRemoteIdentity:
             u.Infra.git_remote_identity(left) == u.Infra.git_remote_identity(right),
             eq=False,
         )
-
-
-__all__: t.VariadicTuple[str] = ()

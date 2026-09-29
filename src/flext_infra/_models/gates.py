@@ -50,7 +50,7 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             ),
         ]
         files: Annotated[
-            tuple[FlextInfraModelsGates.SccFile, ...],
+            t.VariadicTuple[FlextInfraModelsGates.SccFile],
             m.Field(alias="Files", description="Every scanned file in this language"),
         ]
 
@@ -60,7 +60,9 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
     class GateContext(m.ContractModel):
         """Quality gate execution context and configuration."""
 
-        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = True
+        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = (
+            c.Infra.CHECK_FAIL_FAST_DEFAULT
+        )
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
             extra="forbid", arbitrary_types_allowed=True, populate_by_name=True
         )
@@ -103,21 +105,6 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             Literal["error", "note"], m.Field(description="Mypy diagnostic severity")
         ]
 
-    class MypyCoverageReport(m.ContractModel):
-        """Native linecoverage report, including files with no covered lines."""
-
-        lines: Annotated[
-            t.MappingKV[str, t.SequenceOf[t.PositiveInt]],
-            m.Field(min_length=1, description="Covered lines by absolute source path"),
-        ]
-
-        @u.model_validator(mode="after")
-        def _validate_sources(self) -> Self:
-            if any(not Path(path).is_absolute() for path in self.lines):
-                msg = "Mypy coverage must identify absolute source paths"
-                raise ValueError(msg)
-            return self
-
     class PyrightPosition(m.ContractModel):
         """Zero-based native diagnostic position."""
 
@@ -156,10 +143,16 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
         ] = None
 
     class PyrightSummary(m.ContractModel):
-        """Native completed-analysis counters; zero collection is not success."""
+        """Native completed-analysis counters.
+
+        ``filesAnalyzed=0`` is a legitimate outcome for content-only project
+        topologies (package:false roots whose discovery yields no python): the
+        tool ran, analyzed nothing, and reported zero diagnostics. The gate
+        layer — not the model — turns that shape into a typed receipt.
+        """
 
         files_analyzed: Annotated[
-            t.PositiveInt,
+            t.NonNegativeInt,
             m.Field(alias="filesAnalyzed", description="Number of analyzed files"),
         ]
         error_count: Annotated[
@@ -308,7 +301,7 @@ class FlextInfraModelsGates(FlextInfraModelsDuplication):
             t.StrSequence, m.Field(min_length=1, description="Exactly covered gates")
         ]
         commands: Annotated[
-            tuple[FlextInfraModelsGates.GateCommandEvidence, ...],
+            t.VariadicTuple[FlextInfraModelsGates.GateCommandEvidence],
             m.Field(min_length=1, description="Successful canonical invocations"),
         ]
 

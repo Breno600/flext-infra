@@ -8,7 +8,7 @@ import pytest
 from defusedxml import ElementTree as DefusedET
 from flext_tests import tm
 
-from flext_infra import FlextInfraPytestDiagExtractor
+from flext_infra import FlextInfraPytestDiagExtractor, c
 from tests import m
 
 if TYPE_CHECKING:
@@ -26,15 +26,47 @@ class TestsFlextInfraPytestDiag:
         warnings: Path | None = None,
         slowest: Path | None = None,
         skips: Path | None = None,
+        events: str = '{"$report_type":"SessionStart"}\n'
+        '{"$report_type":"SessionFinish","exitstatus":0}\n',
+        identities: str = "",
     ) -> FlextInfraPytestDiagExtractor:
+        report_log = log.with_suffix(".jsonl")
+        report_log.write_text(events, encoding="utf-8")
+        report_log.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX).write_text(
+            identities, encoding="utf-8"
+        )
         return FlextInfraPytestDiagExtractor(
             junit=junit,
             log_path=log,
+            report_log=report_log,
             failed=failed,
             errors=errors,
             warnings=warnings,
             slowest=slowest,
             skips=skips,
+        )
+
+    @staticmethod
+    def _identity(
+        category: str,
+        message: str,
+        *,
+        strict: bool = False,
+        suspended: bool = False,
+        module: str = "consumer",
+    ) -> str:
+        return (
+            m.Infra.PytestWarningEvent(
+                category=category,
+                category_module=module,
+                category_qualname=category,
+                filename="test_case.py",
+                lineno=10,
+                message=message,
+                enforcement_strict=strict,
+                suspended=suspended,
+            ).model_dump_json()
+            + "\n"
         )
 
     def test_extract_valid_junit_xml(self, tmp_path: Path) -> None:
@@ -47,7 +79,9 @@ class TestsFlextInfraPytestDiag:
         log.write_text("")
 
         report: m.Infra.PytestDiagnostics = tm.ok(
-            self._extractor(junit, log).extract(junit, log)
+            self._extractor(junit, log).extract(
+                junit, log, report_log=log.with_suffix(".jsonl")
+            )
         )
 
         tm.that(report, is_=m.Infra.PytestDiagnostics)
@@ -60,7 +94,9 @@ class TestsFlextInfraPytestDiag:
         missing_xml = tmp_path / "missing.xml"
 
         with pytest.raises(FileNotFoundError):
-            self._extractor(missing_xml, log).extract(missing_xml, log)
+            self._extractor(missing_xml, log).extract(
+                missing_xml, log, report_log=log.with_suffix(".jsonl")
+            )
 
     def test_extract_invalid_xml_preserves_parser_error(self, tmp_path: Path) -> None:
         log = tmp_path / "log.txt"
@@ -70,7 +106,9 @@ class TestsFlextInfraPytestDiag:
         bad_xml.write_text("invalid xml content")
 
         with pytest.raises(DefusedET.ParseError):
-            self._extractor(bad_xml, log).extract(bad_xml, log)
+            self._extractor(bad_xml, log).extract(
+                bad_xml, log, report_log=log.with_suffix(".jsonl")
+            )
 
     def test_extract_failed_and_error_tests_from_xml(self, tmp_path: Path) -> None:
         log = tmp_path / "log.txt"
@@ -84,7 +122,9 @@ class TestsFlextInfraPytestDiag:
         )
 
         fail_report: m.Infra.PytestDiagnostics = tm.ok(
-            self._extractor(fail_xml, log).extract(fail_xml, log)
+            self._extractor(fail_xml, log).extract(
+                fail_xml, log, report_log=log.with_suffix(".jsonl")
+            )
         )
         tm.that(fail_report.failed_count, eq=1)
         tm.that(fail_report.error_count, eq=0)
@@ -99,7 +139,9 @@ class TestsFlextInfraPytestDiag:
         )
 
         err_report: m.Infra.PytestDiagnostics = tm.ok(
-            self._extractor(err_xml, log).extract(err_xml, log)
+            self._extractor(err_xml, log).extract(
+                err_xml, log, report_log=log.with_suffix(".jsonl")
+            )
         )
         tm.that(err_report.error_count, eq=1)
 
@@ -115,7 +157,9 @@ class TestsFlextInfraPytestDiag:
         )
 
         skip_report: m.Infra.PytestDiagnostics = tm.ok(
-            self._extractor(skip_xml, log).extract(skip_xml, log)
+            self._extractor(skip_xml, log).extract(
+                skip_xml, log, report_log=log.with_suffix(".jsonl")
+            )
         )
         tm.that(skip_report.skipped_count, eq=1)
 
@@ -127,7 +171,9 @@ class TestsFlextInfraPytestDiag:
         )
 
         slow_report: m.Infra.PytestDiagnostics = tm.ok(
-            self._extractor(slow_xml, log).extract(slow_xml, log)
+            self._extractor(slow_xml, log).extract(
+                slow_xml, log, report_log=log.with_suffix(".jsonl")
+            )
         )
         tm.that(slow_report.slow_entries, length_gt=0)
 
@@ -140,7 +186,7 @@ class TestsFlextInfraPytestDiag:
 
         with pytest.raises(FileNotFoundError):
             self._extractor(junit, tmp_path / "missing.txt").extract(
-                junit, tmp_path / "missing.txt"
+                junit, tmp_path / "missing.txt", report_log=tmp_path / "missing.jsonl"
             )
 
     def test_extract_unreadable_log_surfaces_failure(self, tmp_path: Path) -> None:
@@ -153,9 +199,11 @@ class TestsFlextInfraPytestDiag:
         log_is_dir.mkdir()
 
         with pytest.raises(IsADirectoryError):
-            self._extractor(junit, log_is_dir).extract(junit, log_is_dir)
+            self._extractor(junit, log_is_dir).extract(
+                junit, log_is_dir, report_log=log_is_dir.with_suffix(".jsonl")
+            )
 
-    def test_extract_warnings_from_log(self, tmp_path: Path) -> None:
+    def test_extract_warnings_from_report_log(self, tmp_path: Path) -> None:
         junit = tmp_path / "junit.xml"
         junit.write_text(
             '<?xml version="1.0"?><testsuites>'
@@ -173,27 +221,49 @@ class TestsFlextInfraPytestDiag:
         )
 
         report: m.Infra.PytestDiagnostics = tm.ok(
-            self._extractor(junit, log).extract(junit, log)
+            self._extractor(
+                junit,
+                log,
+                events='{"$report_type":"WarningMessage",'
+                '"category":"DeprecationWarning","filename":"test_case.py",'
+                '"lineno":10,"message":"test warning","when":"runtest"}\n',
+                identities=self._identity("DeprecationWarning", "test warning"),
+            ).extract(junit, log, report_log=log.with_suffix(".jsonl"))
         )
 
         tm.that(report.error_count, eq=0)
         tm.that(report.warning_lines, length_gt=0)
         tm.that(report.warning_count, eq=1)
+        tm.that(report.blocking_warning_count, eq=1)
+        tm.that(report.suspended_warning_count, eq=0)
 
-    def test_extract_inline_warning_without_summary(self, tmp_path: Path) -> None:
+    def test_count_each_custom_warning_without_a_terminal_summary(
+        self, tmp_path: Path
+    ) -> None:
         junit = tmp_path / "junit.xml"
         junit.write_text(
             '<?xml version="1.0"?><testsuites>'
             '<testsuite name="t" tests="0"/></testsuites>'
         )
         log = tmp_path / "log.txt"
-        log.write_text("test_case.py:10: DeprecationWarning: test warning")
-
-        report: m.Infra.PytestDiagnostics = tm.ok(
-            self._extractor(junit, log).extract(junit, log)
+        log.write_text("2 passed")
+        event = (
+            '{"$report_type":"WarningMessage","category":"DomainNotice",'
+            '"filename":"test_case.py","lineno":10,"message":"first\\nsecond"}\n'
         )
 
-        tm.that(report.warning_lines, length_gt=0)
+        report: m.Infra.PytestDiagnostics = tm.ok(
+            self._extractor(
+                junit,
+                log,
+                events=event * 2,
+                identities=self._identity("DomainNotice", "first\nsecond") * 2,
+            ).extract(junit, log, report_log=log.with_suffix(".jsonl"))
+        )
+
+        tm.that(report.warning_count, eq=2)
+        tm.that(report.blocking_warning_count, eq=2)
+        tm.that(report.warning_lines[0], contains="first\nsecond")
 
     def test_extract_invalid_duration_preserves_value_error(
         self, tmp_path: Path
@@ -208,7 +278,9 @@ class TestsFlextInfraPytestDiag:
         log.write_text("")
 
         with pytest.raises(ValueError, match="not-a-number"):
-            self._extractor(junit, log).extract(junit, log)
+            self._extractor(junit, log).extract(
+                junit, log, report_log=log.with_suffix(".jsonl")
+            )
 
     def test_execute_writes_selected_output_files(self, tmp_path: Path) -> None:
         junit = tmp_path / "junit.xml"
@@ -233,6 +305,10 @@ class TestsFlextInfraPytestDiag:
             warnings=tmp_path / "warnings.txt",
             slowest=tmp_path / "slow.txt",
             skips=tmp_path / "skips.txt",
+            events='{"$report_type":"WarningMessage",'
+            '"category":"DeprecationWarning","filename":"test_case.py",'
+            '"lineno":10,"message":"test warning"}\n',
+            identities=self._identity("DeprecationWarning", "test warning"),
         )
 
         tm.ok(extractor.execute())
@@ -243,5 +319,81 @@ class TestsFlextInfraPytestDiag:
         tm.that((tmp_path / "slow.txt").read_text(), contains="TC::test_fail")
         tm.that((tmp_path / "skips.txt").read_text(), contains="TC::test_skip")
 
+    @pytest.mark.parametrize("strict", [False, True])
+    def test_recorded_warning_decision_retains_the_occurrence(
+        self, tmp_path: Path, *, strict: bool
+    ) -> None:
+        """The configured visible category remains counted without blocking."""
+        junit = tmp_path / "junit.xml"
+        junit.write_text('<testsuites><testsuite name="t"/></testsuites>')
+        log = tmp_path / "pytest.log"
+        log.write_text("1 warning")
+        category = c.FlextSmellViolation.__name__
+        extractor = self._extractor(
+            junit,
+            log,
+            events='{"$report_type":"WarningMessage",'
+            f'"category":"{category}","filename":"test_case.py",'
+            '"lineno":10,"message":"suspended policy evidence"}\n',
+            identities=self._identity(
+                category,
+                "suspended policy evidence",
+                strict=strict,
+                suspended=not strict,
+                module=c.FlextSmellViolation.__module__,
+            ),
+        )
+        report = tm.ok(extractor.extract(junit, log, report_log=extractor.report_log))
+        tm.that(report.warning_count, eq=1)
+        tm.that(report.suspended_warning_count, eq=int(not strict))
+        tm.that(report.blocking_warning_count, eq=int(strict))
 
-__all__: list[str] = ["TestsFlextInfraPytestDiag"]
+    @pytest.mark.parametrize(
+        "events",
+        [
+            "",
+            "not JSON\n",
+            '{"$report_type":"WarningMessage","category":"DomainNotice"}\n',
+            (
+                '{"$report_type":"WarningMessage","category":"DomainNotice",'
+                '"filename":"consumer.py","lineno":"invalid","message":"evidence"}\n'
+            ),
+        ],
+        ids=["empty", "malformed", "incomplete", "invalid-line"],
+    )
+    def test_invalid_report_log_preserves_the_first_error(
+        self, tmp_path: Path, events: str
+    ) -> None:
+        """Missing warning evidence cannot become a zero-warning result."""
+        junit = tmp_path / "junit.xml"
+        junit.write_text('<testsuites><testsuite name="t"/></testsuites>')
+        log = tmp_path / "pytest.log"
+        log.write_text("consumer output")
+        extractor = self._extractor(junit, log, events=events)
+        with pytest.raises(ValueError, match=r"contains no events|validation error"):
+            extractor.extract(junit, log, report_log=extractor.report_log)
+
+    def test_missing_report_log_preserves_file_error(self, tmp_path: Path) -> None:
+        junit = tmp_path / "junit.xml"
+        junit.write_text('<testsuites><testsuite name="t"/></testsuites>')
+        log = tmp_path / "pytest.log"
+        log.write_text("consumer output")
+        extractor = self._extractor(junit, log)
+        with pytest.raises(FileNotFoundError):
+            extractor.extract(junit, log, report_log=tmp_path / "missing.jsonl")
+
+    def test_warning_without_identity_is_not_counted_as_green(
+        self, tmp_path: Path
+    ) -> None:
+        junit = tmp_path / "junit.xml"
+        junit.write_text('<testsuites><testsuite name="t"/></testsuites>')
+        log = tmp_path / "pytest.log"
+        log.write_text("consumer output")
+        extractor = self._extractor(
+            junit,
+            log,
+            events='{"$report_type":"WarningMessage","category":"DomainNotice",'
+            '"filename":"test_case.py","lineno":10,"message":"evidence"}\n',
+        )
+        with pytest.raises(ValueError, match="zip"):
+            extractor.extract(junit, log, report_log=extractor.report_log)

@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra import main as infra_main
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -33,5 +34,38 @@ class TestsFlextInfraValidateCli:
     def test_stub_validate_help_returns_zero(self) -> None:
         tm.that(infra_main(["validate", "stub-validate", "--help"]), eq=0)
 
+    def test_namespace_validate_runs_with_facade_composed_rope(
+        self, tmp_path: Path
+    ) -> None:
+        project = u.Tests.namespace_project(
+            tmp_path,
+            module_source=u.Tests.namespace_fixture("rule0_valid.py"),
+            module_name="models.py",
+        )
 
-__all__: list[str] = ["TestsFlextInfraValidateCli"]
+        exit_code = infra_main([
+            "validate",
+            "namespace",
+            "--repository-root",
+            str(project),
+        ])
+
+        tm.that(exit_code, eq=0)
+
+    def test_namespace_validate_exits_nonzero_for_real_violations(
+        self, tmp_path: Path
+    ) -> None:
+        project = u.Tests.namespace_project(
+            tmp_path,
+            module_source=u.Tests.namespace_fixture("rule0_no_class.py"),
+            module_name="models.py",
+        )
+
+        exit_code = infra_main([
+            "validate",
+            "namespace",
+            "--repository-root",
+            str(project),
+        ])
+
+        tm.that(exit_code, eq=1)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import venv
 from pathlib import Path
 
 from flext_cli import cli as cli_facade
@@ -225,6 +226,19 @@ class TestsFlextInfraUtilitiesGitMixin:
         root.mkdir(parents=True)
         TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(root)
         return root
+
+    @staticmethod
+    def provision_runtime_environment(runtime_root: Path) -> Path:
+        """Create a declared runtime root's environment as real fixture state.
+
+        A stdlib venv built from the base interpreter with nothing installed,
+        at the path the production owner resolves for that declared root: an
+        environment independent of the runner's. Returns its interpreter.
+        """
+        venv.EnvBuilder(with_pip=False, symlinks=True).create(
+            u.Infra.runtime_environment_dir(runtime_root, runtime_root=runtime_root)
+        )
+        return u.Infra.runtime_python(runtime_root)
 
     @staticmethod
     def _read_origin_url(repo_root: Path, remote: str) -> str:

@@ -149,6 +149,10 @@ class FlextInfraModelsRefactor(
             MutableMapping[Path, str],
             m.Field(description="Pending file content updates keyed by path"),
         ] = m.Field(default_factory=dict)
+        expected_sources: Annotated[
+            MutableMapping[Path, str],
+            m.Field(description="Original content keyed by every pending update path"),
+        ] = m.Field(default_factory=dict)
         wrapper_candidates: Annotated[
             MutableSequence[Path],
             m.Field(description="Files that carry wrapper import candidates"),

@@ -23,6 +23,32 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
     """Typed project identity, spec, and manifest-seed fixture helpers."""
 
     @staticmethod
+    def create_project_info(
+        project_root: Path,
+        *,
+        name: str = "test-project",
+        stack: str = "python",
+        has_tests: bool = False,
+        has_src: bool = True,
+        project_class: str = "FlextTestProject",
+        package_name: str = "test_project",
+        make_profile: c.Infra.MakeProfile = c.Infra.MakeProfile.STANDALONE,
+        declared_subproject: bool = False,
+    ) -> m.Infra.ProjectInfo:
+        """Provide the typed test helper `create_project_info`."""
+        return m.Infra.ProjectInfo(
+            name=name,
+            path=project_root,
+            stack=stack,
+            has_tests=has_tests,
+            has_src=has_src,
+            project_class=project_class,
+            package_name=package_name,
+            make_profile=make_profile,
+            declared_subproject=declared_subproject,
+        )
+
+    @staticmethod
     def provider(name: str = FIXTURE_PROVIDER_NAME) -> m.Infra.ProviderIdentitySpec:
         """Return the declared fixture provider identity for one provider key."""
         return m.Infra.ProviderIdentitySpec(
@@ -35,6 +61,21 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
     def provider_branch() -> str:
         """Return the declared fixture integration branch."""
         return FIXTURE_PROVIDER_BRANCH
+
+    @staticmethod
+    def flext_source(distribution: str | None = None) -> str:
+        """Declare one internal distribution's direct Git source for a fixture.
+
+        Defaults to the infrastructure distribution; every internal flext
+        requirement a governed checkout declares carries its own source.
+        """
+        fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
+        if distribution is None:
+            distribution = config.Infra.codegen.infra_repository.distribution
+        return (
+            f"{distribution} @ git+{fixture.provider().base_url.rstrip('/')}/"
+            f"{distribution}.git@{fixture.provider_branch()}"
+        )
 
     @staticmethod
     def integration() -> m.Infra.WorkspaceIntegrationSpec:
@@ -99,7 +140,6 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             name=name,
             distribution=name,
             url=f"{provider.base_url.rstrip('/')}/{name}.git",
-            branch=TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch(),
             path=resolved_path,
             role=resolved_role,
             provider=provider.name,
@@ -130,6 +170,7 @@ class TestsFlextInfraUtilitiesProjectFixtureMixin:
             f"{name}"
         )
         return m.Infra.ProjectSpec(
+            flext_source=TestsFlextInfraUtilitiesProjectFixtureMixin.flext_source(),
             package_name=package_name,
             class_stem=class_stem,
             namespace=class_stem.removeprefix("Flext") or class_stem,

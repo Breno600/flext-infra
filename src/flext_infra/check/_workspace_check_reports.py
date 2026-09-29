@@ -33,34 +33,38 @@ class FlextInfraWorkspaceCheckReportsMixin:
             "",
             "## Summary",
             "",
-            "| Project | Status | Errors |",
-            "|---|---:|---:|",
+            "| Project | Status | Errors | Observations |",
+            "|---|---:|---:|---:|",
         ]
         for project in results:
-            status = project.status
-            lines.append(f"| {project.project} | {status} | {project.total_errors} |")
+            status = "PASS" if project.passed else "FAIL"
+            lines.append(
+                f"| {project.project} | {status} | {project.total_errors} | "
+                f"{project.total_observations} |"
+            )
         lines.extend(["", "## Details", ""])
         for project in results:
             lines.append(f"### {project.project}")
-            lines.extend(
-                f"- {suspension.gate}: SUSPENDED / NOT RUN — {suspension.reason}"
-                for suspension in project.suspended
-            )
             for gate in gates:
                 execution = project.gates.get(gate)
                 if execution is None:
                     continue
                 gate_status = "PASS" if execution.result.passed else "FAIL"
                 lines.append(
-                    f"- {gate}: {gate_status} ({len(execution.issues)} issues)"
+                    f"- {gate}: {gate_status} ({len(execution.issues)} issues, "
+                    f"{execution.observational_count} observations)"
                 )
                 lines.extend(f"  - {issue.formatted}" for issue in execution.issues)
+                lines.extend(
+                    f"  - Observational [{issue.severity}]: {issue.formatted}"
+                    for issue in execution.observational_issues
+                )
             lines.append("")
         return "\n".join(lines)
 
-    @staticmethod
+    @classmethod
     def _generate_sarif(
-        results: t.SequenceOf[m.Infra.ProjectResult], gates: t.StrSequence
+        cls, results: t.SequenceOf[m.Infra.ProjectResult], gates: t.StrSequence
     ) -> m.Infra.SarifReport:
         """Build the SARIF 2.1.0 report model from workspace gate results."""
         rules_by_id: MutableMapping[str, m.Infra.SarifRule] = {}
@@ -71,7 +75,10 @@ class FlextInfraWorkspaceCheckReportsMixin:
                 if execution is None:
                     continue
                 tool_name, tool_url = c.Infra.SARIF_TOOL_INFO[gate]
-                for issue in execution.issues:
+                for issue, observational in (
+                    *((issue, False) for issue in execution.issues),
+                    *((issue, True) for issue in execution.observational_issues),
+                ):
                     rule_id = issue.code or gate
                     rules_by_id.setdefault(
                         rule_id,
@@ -82,20 +89,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
                         ),
                     )
                     sarif_results.append(
-                        m.Infra.SarifResult(
-                            ruleId=rule_id,
-                            level="warning"
-                            if issue.severity.lower() == c.Infra.SeverityLevel.WARNING
-                            else "error",
-                            message=issue.message,
-                            locations=[
-                                m.Infra.SarifLocation(
-                                    uri=issue.file,
-                                    start_line=issue.line,
-                                    start_column=issue.column,
-                                )
-                            ],
-                        )
+                        cls._sarif_issue(issue, rule_id, observational=observational)
                     )
         return m.Infra.SarifReport(
             runs=(
@@ -104,11 +98,34 @@ class FlextInfraWorkspaceCheckReportsMixin:
                     information_uri=FlextInfraVersion.__url__,
                     rules=tuple(rules_by_id.values()),
                     results=tuple(sarif_results),
-                    suspended=tuple(
-                        item for project in results for item in project.suspended
-                    ),
                 ),
             )
+        )
+
+    @staticmethod
+    def _sarif_issue(
+        issue: m.Infra.Issue, rule_id: str, *, observational: bool
+    ) -> m.Infra.SarifResult:
+        """Render one occurrence while retaining its native diagnostic severity."""
+        if observational:
+            level = "note"
+            message = f"Observational [{issue.severity}]: {issue.message}"
+        else:
+            level = (
+                "warning"
+                if issue.severity.lower() == c.Infra.SeverityLevel.WARNING
+                else "error"
+            )
+            message = issue.message
+        return m.Infra.SarifResult(
+            ruleId=rule_id,
+            level=level,
+            message=message,
+            locations=[
+                m.Infra.SarifLocation(
+                    uri=issue.file, start_line=issue.line, start_column=issue.column
+                )
+            ],
         )
 
     @classmethod
@@ -139,8 +156,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
                 f"failed to write sarif report: {exc}", exception=exc
             )
         total_errors = sum(project.total_errors for project in results)
-        success = sum(project.passed for project in results)
-        suspended_projects = sum(bool(project.suspended) for project in results)
+        success = len(results) - outcome.failed
         u.Cli.summary(
             m.Infra.SummaryStats(
                 verb=c.Infra.VERB_CHECK,
@@ -151,11 +167,6 @@ class FlextInfraWorkspaceCheckReportsMixin:
                 elapsed=outcome.total_elapsed,
             )
         )
-        if suspended_projects:
-            u.Cli.info(
-                f"{suspended_projects} project(s) contain SUSPENDED / NOT RUN policy checks; "
-                "active-check acceptance is not full-scope validation."
-            )
         u.Cli.info(f"Reports: {md_path}")
         u.Cli.info(f"         {sarif_path}")
         if total_errors > 0:
@@ -173,6 +184,11 @@ class FlextInfraWorkspaceCheckReportsMixin:
                 u.Cli.info(
                     f"{project.project:30s} {project.total_errors:6d}  ({breakdown})"
                 )
+        if any(project.total_observations for project in results):
+            u.Cli.info("Observational findings by project (not gate failures):")
+            for project in results:
+                if project.total_observations:
+                    u.Cli.info(f"{project.project:30s} {project.total_observations:6d}")
         return r[t.SequenceOf[m.Infra.ProjectResult]].ok(results)
 
 

@@ -84,6 +84,3 @@ class TestsFlextInfraWorkflowCommentSpacing:
             },
             eq={key: [] for key in workflows},
         )
-
-
-__all__: list[str] = ["TestsFlextInfraWorkflowCommentSpacing"]

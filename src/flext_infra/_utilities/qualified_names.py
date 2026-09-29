@@ -5,14 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, override
 
 import libcst as cst
-from libcst.metadata import (
-    CodePosition,
-    CodeRange,
-    MetadataWrapper,
-    PositionProvider,
-    QualifiedNameProvider,
-    QualifiedNameSource,
-)
+from libcst.metadata import MetadataWrapper, QualifiedNameProvider
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -37,39 +30,6 @@ class FlextInfraUtilitiesQualifiedNames:
             )
             return True
 
-    class _CallableCollector(cst.CSTVisitor):
-        METADATA_DEPENDENCIES = (PositionProvider, QualifiedNameProvider)
-
-        def __init__(self, source: str) -> None:
-            self.lines = source.splitlines()
-            self.names: t.MutableMappingKV[t.Pair[int, int], frozenset[str]] = {}
-
-        def _collect(self, node: cst.BaseExpression) -> None:
-            if not isinstance(node, (cst.Name, cst.Attribute)):
-                return
-            location = self.get_metadata(
-                PositionProvider,
-                node,
-                CodeRange(CodePosition(0, 0), CodePosition(0, 0)),
-            )
-            position = location.start
-            # Python AST columns count UTF-8 bytes; LibCST columns count characters.
-            column = len(self.lines[position.line - 1][: position.column].encode())
-            self.names[position.line, column] = frozenset(
-                name.name
-                for name in self.get_metadata(QualifiedNameProvider, node, ())
-                if name.source is QualifiedNameSource.IMPORT
-            )
-
-        @override
-        def visit_Call(self, node: cst.Call) -> None:
-            self._collect(node.func)
-
-        @override
-        def visit_Decorator(self, node: cst.Decorator) -> None:
-            if not isinstance(node.decorator, cst.Call):
-                self._collect(node.decorator)
-
     @staticmethod
     def dotted_name(node: cst.BaseExpression | None) -> str | None:
         """Return a static dotted name, or ``None`` for a dynamic expression."""
@@ -79,6 +39,15 @@ class FlextInfraUtilitiesQualifiedNames:
             parent = FlextInfraUtilitiesQualifiedNames.dotted_name(node.value)
             return f"{parent}.{node.attr.value}" if parent else None
         return None
+
+    @staticmethod
+    def module_expression(module: str) -> cst.Attribute | cst.Name:
+        """Build a typed LibCST expression for a dotted module name."""
+        parts = module.split(".")
+        expression: cst.Attribute | cst.Name = cst.Name(parts[0])
+        for part in parts[1:]:
+            expression = cst.Attribute(value=expression, attr=cst.Name(part))
+        return expression
 
     @staticmethod
     def without_exports(
@@ -157,15 +126,6 @@ class FlextInfraUtilitiesQualifiedNames:
         collector = cls._ResidueCollector(candidates)
         MetadataWrapper(cst.parse_module(source)).visit(collector)
         return frozenset(collector.residue)
-
-    @classmethod
-    def imported_callable_names(
-        cls, source: str
-    ) -> t.MappingKV[t.Pair[int, int], frozenset[str]]:
-        """Resolve call/decorator import provenance at Python AST source positions."""
-        collector = cls._CallableCollector(source)
-        MetadataWrapper(cst.parse_module(source)).visit(collector)
-        return collector.names
 
 
 __all__: list[str] = ["FlextInfraUtilitiesQualifiedNames"]

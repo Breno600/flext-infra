@@ -66,6 +66,3 @@ class TestsFlextInfraWorkflowOrphanGuard:
             p.value if hasattr(p, "value") else str(p) for p in entries[0].profiles
         }
         tm.that(profiles, eq={"workspace", "standalone"})
-
-
-__all__: list[str] = ["TestsFlextInfraWorkflowOrphanGuard"]

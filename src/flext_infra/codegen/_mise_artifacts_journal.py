@@ -21,8 +21,8 @@ class FlextInfraMiseArtifactsJournal:
         plan: m.Infra.MiseToolchainWorkspacePlan | m.Infra.CodegenFileSessionPlan,
         *,
         transaction_id: str,
-        sources: tuple[tuple[str, m.Cli.AtomicFileState], ...] = (),
-        directories: tuple[m.Infra.CodegenJournalDirectory, ...] = (),
+        sources: t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]] = (),
+        directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory] = (),
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Build staging authority before any disposable transaction root exists."""
         physical_scope = files.physical_directory_identity(plan.layout.scope_root)
@@ -73,7 +73,7 @@ class FlextInfraMiseArtifactsJournal:
         journal: m.Infra.CodegenTransactionJournal,
         publications: t.VariadicTuple[m.Infra.CodegenStagedFile],
         *,
-        sources: tuple[tuple[str, m.Cli.AtomicFileState], ...] = (),
+        sources: t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]] = (),
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Back up one complete phase and return its extended prepared authority."""
         if journal.state not in {"staging", "prepared"}:
@@ -129,7 +129,7 @@ class FlextInfraMiseArtifactsJournal:
     def append_directories(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        directories: tuple[m.Infra.CodegenJournalDirectory, ...],
+        directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory],
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Extend durable directory authority before materializing any new path."""
         if journal.state not in {"staging", "prepared"}:
@@ -186,7 +186,7 @@ class FlextInfraMiseArtifactsJournal:
     def record_directories(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        directories: tuple[m.Infra.CodegenJournalDirectory, ...],
+        directories: t.VariadicTuple[m.Infra.CodegenJournalDirectory],
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Advance physical directory evidence without changing its durable intent."""
         result_type = r[m.Infra.CodegenTransactionJournal]
@@ -276,7 +276,7 @@ class FlextInfraMiseArtifactsJournal:
     def begin_recovery(
         cls,
         journal: m.Infra.CodegenTransactionJournal,
-        candidates: tuple[m.Infra.CodegenStagedFile | None, ...],
+        candidates: t.VariadicTuple[m.Infra.CodegenStagedFile | None],
     ) -> p.Result[m.Infra.CodegenTransactionJournal]:
         """Persist every rollback replacement identity before the first restore."""
         if journal.state != "prepared" or len(candidates) != len(journal.entries):
@@ -720,7 +720,7 @@ class FlextInfraMiseArtifactsJournal:
     def _merge_sources(
         cls,
         existing: t.VariadicTuple[m.Infra.CodegenJournalSource],
-        sources: tuple[tuple[str, m.Cli.AtomicFileState], ...],
+        sources: t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenJournalSource]]:
         result_type = r[tuple[m.Infra.CodegenJournalSource, ...]]
         by_key = {(source.phase, source.path): source for source in existing}

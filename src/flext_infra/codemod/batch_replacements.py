@@ -8,10 +8,11 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, u
+from flext_infra.gates.ruff_format import FlextInfraRuffFormatGate
 from flext_infra.transformers import publish_semantic_file_plans
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import p, t
 
 
 class FlextInfraModReplacements:
@@ -49,7 +50,7 @@ class FlextInfraModReplacements:
                 return r[bool].fail(
                     f"actionable finding lacks authenticated state: {path}"
                 )
-            replacements: list[tuple[int, int, bytes]] = []
+            replacements: list[t.Triple[int, int, bytes]] = []
             for finding in findings:
                 if finding.source_state != before or finding.replacement is None:
                     return r[bool].fail(
@@ -102,6 +103,13 @@ class FlextInfraModReplacements:
         published = publish_semantic_file_plans(plans, repository_root=root)
         if published.failure:
             return r[bool].from_failure(published)
+        # A node-exact replacement (an emptied statement fix) leaves the
+        # surrounding blank-line skeleton of the source line behind, so the
+        # published bytes must be normalized before the mod circuit's own
+        # first-pass format check reads them.
+        formatted = FlextInfraRuffFormatGate.format_files(root, tuple(sorted(grouped)))
+        if formatted.failure:
+            return r[bool].from_failure(formatted)
         return r[bool].ok(True)
 
 

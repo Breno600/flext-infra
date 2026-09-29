@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from collections.abc import MutableMapping, Sequence
 from enum import StrEnum, unique
 from pathlib import Path
 from types import MappingProxyType
@@ -15,28 +14,6 @@ from .base import FlextInfraConstantsBase as cb
 
 if TYPE_CHECKING:
     from flext_infra import t
-
-
-def _build_namespace_file_to_family(
-    mapping: Sequence[t.Pair[str, Sequence[str]]],
-) -> t.StrMapping:
-    """Build file name → family alias mapping from (alias, file_names) pairs."""
-    result: MutableMapping[str, str] = {}
-    for alias, file_names in mapping:
-        for file_name in file_names:
-            result[file_name] = alias
-    return MappingProxyType(result)
-
-
-def _build_namespace_family_expected_alias(
-    mapping: Sequence[t.Pair[str, Sequence[str]]], suffixes: t.StrMapping
-) -> t.MappingKV[str, t.StrPair]:
-    """Build file name → (alias, suffix) mapping from family specs."""
-    result: MutableMapping[str, t.StrPair] = {}
-    for alias, file_names in mapping:
-        for file_name in file_names:
-            result[file_name] = (alias, suffixes[alias])
-    return MappingProxyType(result)
 
 
 class FlextInfraConstantsRefactor:
@@ -165,132 +142,22 @@ class FlextInfraConstantsRefactor:
     """Allowed keys under the ``refactor`` config scope."""
 
     TYPING_DEFINITION_FILES: ClassVar[frozenset[str]] = frozenset({
+        "constants.py",
+        "_constants",
         "typings.py",
         "_typings",
         "protocols.py",
         "_protocols",
     })
+    """Declaration layers where a runtime ``t`` dependency would invert layering."""
     TYPING_INLINE_UNION_CANONICAL_MAP: ClassVar[t.MappingKV[frozenset[str], str]] = (
         MappingProxyType({
             frozenset({"str", "int", "float", "bool"}): "t.Primitives",
             frozenset({"int", "float"}): "t.Numeric",
             frozenset({"str", "int", "float", "bool", "datetime"}): "t.Scalar",
-            frozenset({
-                "str",
-                "int",
-                "float",
-                "bool",
-                "datetime",
-                "Path",
-            }): "t.JsonValue",
         })
     )
 
-    @unique
-    class RefactorRuleKind(StrEnum):
-        """Canonical executable text-rule kinds."""
-
-        FUTURE_ANNOTATIONS = "future_annotations"
-        LEGACY_REMOVAL = "legacy_removal"
-        IMPORT_MODERNIZER = "import_modernizer"
-        CLASS_RECONSTRUCTOR = "class_reconstructor"
-        PATTERN_CORRECTIONS = "pattern_corrections"
-        TYPING_UNIFICATION = "typing_unification"
-        TYPING_ANNOTATION_FIX = "typing_annotation_fix"
-        SYMBOL_PROPAGATION = "symbol_propagation"
-        SIGNATURE_PROPAGATION = "signature_propagation"
-
-    RULE_MATCHERS_BY_KIND: ClassVar[
-        t.MappingKV[
-            RefactorRuleKind,
-            t.VariadicTuple[
-                t.Quad[frozenset[str], frozenset[str], frozenset[str], frozenset[str]]
-            ],
-        ]
-    ] = MappingProxyType({
-        RefactorRuleKind.FUTURE_ANNOTATIONS: (
-            (
-                frozenset({"ensure_future_annotations"}),
-                frozenset({"missing_future_import"}),
-                frozenset(),
-                frozenset(),
-            ),
-        ),
-        RefactorRuleKind.LEGACY_REMOVAL: (
-            (
-                frozenset({
-                    "remove",
-                    "inline_and_remove",
-                    "remove_and_update_refs",
-                    "keep_try_only",
-                }),
-                frozenset(),
-                frozenset(),
-                frozenset(),
-            ),
-        ),
-        RefactorRuleKind.IMPORT_MODERNIZER: (
-            (
-                frozenset({"replace_with_alias", "hoist_to_module_top"}),
-                frozenset(),
-                frozenset(),
-                frozenset(),
-            ),
-        ),
-        RefactorRuleKind.CLASS_RECONSTRUCTOR: (
-            (frozenset({"reorder_methods"}), frozenset(), frozenset(), frozenset()),
-        ),
-        RefactorRuleKind.PATTERN_CORRECTIONS: (
-            (
-                frozenset({
-                    "convert_dict_to_mapping_annotations",
-                    "fix_silent_failure_sentinels",
-                }),
-                frozenset(),
-                frozenset(),
-                frozenset(),
-            ),
-            (
-                frozenset({"remove_redundant_casts"}),
-                frozenset(),
-                frozenset(),
-                frozenset({RK_REDUNDANT_TYPE_TARGETS}),
-            ),
-        ),
-        RefactorRuleKind.TYPING_UNIFICATION: (
-            (frozenset({"unify_typings"}), frozenset(), frozenset(), frozenset()),
-        ),
-        RefactorRuleKind.TYPING_ANNOTATION_FIX: (
-            (
-                frozenset({"replace_object_annotations", "remove_unused_models"}),
-                frozenset(),
-                frozenset(),
-                frozenset(),
-            ),
-        ),
-        RefactorRuleKind.SYMBOL_PROPAGATION: (
-            (
-                frozenset({"propagate_symbol_renames"}),
-                frozenset(),
-                frozenset({RK_IMPORT_SYMBOL_RENAMES}),
-                frozenset(),
-            ),
-            (
-                frozenset({"rename_imported_symbols"}),
-                frozenset(),
-                frozenset(),
-                frozenset(),
-            ),
-        ),
-        RefactorRuleKind.SIGNATURE_PROPAGATION: (
-            (
-                frozenset({"propagate_signature_migrations"}),
-                frozenset(),
-                frozenset(),
-                frozenset({RK_SIGNATURE_MIGRATIONS}),
-            ),
-        ),
-    })
     RULE_TABLE_HEADERS: ClassVar[t.StrSequence] = (
         cb.RK_ID,
         cb.NAME,
@@ -376,27 +243,14 @@ class FlextInfraConstantsRefactor:
         "u": "utilities",
     })
     "Facade family letter → public facade module suffix mapping."
-    NAMESPACE_FILE_TO_FAMILY: ClassVar[t.StrMapping] = _build_namespace_file_to_family((
-        ("c", tuple(FLEXT_CONSTANTS_FILE_NAMES)),
-        ("t", tuple(FLEXT_TYPINGS_FILE_NAMES)),
-        ("p", tuple(FLEXT_PROTOCOLS_FILE_NAMES)),
-        ("m", tuple(FLEXT_MODELS_FILE_NAMES)),
-        ("u", tuple(FLEXT_UTILITIES_FILE_NAMES)),
-    ))
-    "Canonical facade file name → family alias mapping."
-    NAMESPACE_FAMILY_EXPECTED_ALIAS: ClassVar[t.MappingKV[str, t.StrPair]] = (
-        _build_namespace_family_expected_alias(
-            (
-                ("c", tuple(FLEXT_CONSTANTS_FILE_NAMES)),
-                ("t", tuple(FLEXT_TYPINGS_FILE_NAMES)),
-                ("p", tuple(FLEXT_PROTOCOLS_FILE_NAMES)),
-                ("m", tuple(FLEXT_MODELS_FILE_NAMES)),
-                ("u", tuple(FLEXT_UTILITIES_FILE_NAMES)),
-            ),
-            FAMILY_SUFFIXES,
-        )
+    NAMESPACE_FILE_TO_FAMILY: ClassVar[t.StrMapping] = MappingProxyType(
+        dict.fromkeys(FLEXT_CONSTANTS_FILE_NAMES, "c")
+        | dict.fromkeys(FLEXT_TYPINGS_FILE_NAMES, "t")
+        | dict.fromkeys(FLEXT_PROTOCOLS_FILE_NAMES, "p")
+        | dict.fromkeys(FLEXT_MODELS_FILE_NAMES, "m")
+        | dict.fromkeys(FLEXT_UTILITIES_FILE_NAMES, "u")
     )
-    "Canonical facade file name → expected (alias, suffix) pair."
+    "Canonical facade file name → family alias mapping."
     FLEXT_FAMILIES: ClassVar[frozenset[str]] = frozenset({"c", "t", "p", "m", "u"})
     "All FLEXT families."
     DOMAIN_PACKAGES: ClassVar[frozenset[str]] = frozenset({

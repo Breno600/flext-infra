@@ -322,6 +322,3 @@ class TestsFlextInfraGitFacet:
 
         tm.fail(result, has="locked worktree")
         assert lane.is_dir()
-
-
-__all__: list[str] = ["TestsFlextInfraGitFacet"]

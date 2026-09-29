@@ -13,6 +13,10 @@ Full notes: `docs/releases/v0.12.0.md`
 - Canonical cycle not green on the observed tip; `_lazy_analysis` scope mismatch and
   god-module cutover unresolved. Recovery: Gas City tasks `flext-itpd1.2` and
   `flext-5fxu6.4`, plus `docs/roadmap/namespace-automation-handoff-2026-09-14.md`.
+- `deps modernize` and every other consumer of the workspace project enumeration now
+  skip `.gitmodules` members that set `flext-managed` to anything other than `true`, the
+  same opt-out the workspace detector already honors; a governed member with a missing
+  or unreadable `pyproject.toml` still fails loud.
 
 # Documentation
 

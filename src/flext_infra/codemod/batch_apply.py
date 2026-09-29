@@ -9,7 +9,7 @@ from flext_cli import cli
 
 from flext_core import r
 
-from .. import FlextInfraConfig, FlextInfraServiceBase, m, p, t, u
+from .. import FlextInfraConfig, FlextInfraServiceBase, infra, m, p, t, u
 from . import (
     FlextInfraApplyRenames,
     FlextInfraCodemodSemanticApply,
@@ -69,6 +69,16 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         """Converge AST, semantic, and text phases over the same source state."""
         cli.display_text("mod: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(root, rules).unwrap()
+        with infra.rope_workspace(root) as rope_workspace:
+            return FlextInfraCodemodBatchApply._execute_apply_cycle(
+                root, rope_workspace
+            )
+
+    @staticmethod
+    def _execute_apply_cycle(
+        root: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+    ) -> p.Result[t.Cli.ResultValue]:
+        """Converge every mod phase through one shared Rope workspace."""
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
         fingerprint = FlextInfraCodemodSemanticApply.source_fingerprint
         seen: dict[t.VariadicTuple[t.Pair[str, str]], int] = {}
@@ -89,18 +99,21 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 f"{current.actionable} actionable, "
                 f"{current.detection_only} detection-only"
             )
+            after_ast = current
             if current.actionable:
                 FlextInfraModGateEngine.scan(root, fix=True).unwrap()
-            after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
+                rope_workspace.refresh()
+                after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
             FlextInfraCodemodBatchApply.validate_fix_match(current, after_ast)
             phase_states = [fingerprint(root, after_ast)]
             transaction_paths = FlextInfraCodemodSemanticApply.plan_transaction_paths(
-                root, after_ast
+                root, after_ast, rope_workspace
             )
             if transaction_paths:
                 FlextInfraCodemodSemanticApply.apply_transaction_paths(
                     root, transaction_paths
                 )
+                rope_workspace.refresh()
                 after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
             phase_states.append(fingerprint(root, after_ast))
             owned = FlextInfraModReplacements.require_authored(after_ast)
@@ -108,7 +121,9 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 return r[t.Cli.ResultValue].from_failure(owned)
             # Detection-only findings and configured import alignment select
             # semantic work even when no AST rule has a textual replacement.
-            semantic = FlextInfraCodemodSemanticApply.apply(root, after_ast)
+            semantic = FlextInfraCodemodSemanticApply.apply(
+                root, after_ast, rope_workspace
+            )
             if semantic.failure:
                 return r[t.Cli.ResultValue].from_failure(semantic)
             phase_states.append(fingerprint(root, after_ast))
@@ -153,14 +168,13 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             validated = FlextInfraModGateEngine.validate(root)
             if validated.failure:
                 return r[t.Cli.ResultValue].from_failure(validated)
-            current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
-            current_text = FlextInfraModTextGateEngine.scan(root, fix=False).unwrap()
-            if (
-                fingerprint(root, current) != after
-                or current.actionable
-                or current_text.actionable
-            ):
-                continue
+            # Validation is read-only. Authenticate the source identity once;
+            # repeating two complete scanner passes cannot strengthen that
+            # contract and makes a no-change mod run exceed its deadline.
+            if fingerprint(root, current) != after:
+                return r[t.Cli.ResultValue].fail(
+                    "mod validation changed source after the fixed-point scan"
+                )
             # Repair reports non-rewritable defects; check owns their verdict.
             if current.detection_only or current.non_actionable_with_fix:
                 detection_rules = sorted({
@@ -191,16 +205,23 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
     ) -> t.SequenceOf[m.Infra.ApplyRenamesInput]:
         """Resolve configured rename campaigns into engine inputs anchored at root.
 
-        Campaign paths are declared repository-root-relative so the config SSOT
-        stays independent of the caller's working directory.
+        The rename list is resolved against the config directory that declares
+        it, which ships inside the package: every consumer repository applies
+        the same list without carrying a copy. Scan roots stay
+        repository-root-relative because they select the tree being rewritten.
         """
         campaigns = (
             FlextInfraConfig.fetch_global().Infra.refactor_csv_campaigns.campaigns
         )
+        config_dir = FlextInfraConfig.ssot_config_dir()
         inputs: list[m.Infra.ApplyRenamesInput] = []
         for campaign in campaigns:
             csv_declared = Path(campaign.csv)
-            csv = csv_declared if csv_declared.is_absolute() else root / csv_declared
+            csv = (
+                csv_declared
+                if csv_declared.is_absolute()
+                else config_dir / csv_declared
+            )
             roots = tuple(
                 str(path if path.is_absolute() else root / path)
                 for path in (Path(value) for value in campaign.roots)

@@ -60,10 +60,55 @@ class FlextInfraConstantsRelease:
     "The release commit as Git carries it: GitHub appends ` (#N)` when merging."
     RELEASE_PLAN_FILENAME: ClassVar[str] = "plan.json"
     RELEASE_NOTES_FILENAME: ClassVar[str] = "RELEASE_NOTES.md"
+    RELEASE_NOTES_LINE_LENGTH: ClassVar[int] = 88
+    "Markdown line ceiling the notes satisfy (MD013 / prettier printWidth)."
+    RELEASE_NOTES_CONTINUATION_INDENT: ClassVar[str] = "  "
+    "Continuation indent aligning a wrapped bullet's text under its marker."
+    MARKDOWN_INLINE_ESCAPE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"([\\`*_\[\]<>~|])"
+    )
+    "Inline markdown punctuation escaped so an untrusted subject renders literally."
     RELEASE_REPORT_FILENAME: ClassVar[str] = "build-report.json"
     PYPI_UPLOAD_URL: ClassVar[str] = "https://upload.pypi.org/legacy/"
     "Canonical verified-artifact upload endpoint."
     GH: ClassVar[str] = "gh"
+    RELEASE_LICENSE_NAMES: ClassVar[frozenset[str]] = frozenset({
+        "copying",
+        "copying.md",
+        "copying.txt",
+        "license",
+        "license.md",
+        "license.txt",
+    })
+    "Casefolded basenames a release accepts as the project's single license."
+    RELEASE_OPERATIONAL_ROOTS: ClassVar[frozenset[str]] = frozenset({
+        ".git",
+        ".github",
+        ".reports",
+    })
+    "Repository-operational trees rejected at an archive's content root."
+    RELEASE_SENSITIVE_PARTS: ClassVar[frozenset[str]] = frozenset({
+        ".env",
+        ".secrets.baseline",
+        "__pycache__",
+    })
+    RELEASE_SENSITIVE_PREFIXES: ClassVar[tuple[str, ...]] = (".env.", ".gitleaks")
+    RELEASE_SENSITIVE_SUFFIXES: ClassVar[tuple[str, ...]] = (
+        ".jks",
+        ".key",
+        ".keystore",
+        ".p12",
+        ".pem",
+        ".pfx",
+    )
+    "Path parts that never ship, at any depth, unless codegen owns the file."
+    RELEASE_SDIST_ROOT_DIRS: ClassVar[frozenset[str]] = frozenset({"config", "src"})
+    RELEASE_SDIST_ROOT_FILES: ClassVar[frozenset[str]] = frozenset({
+        ".gitignore",
+        "pkg-info",
+        "pyproject.toml",
+    })
+    "The public sdist boundary besides the license and README files."
 
 
 __all__: list[str] = ["FlextInfraConstantsRelease"]

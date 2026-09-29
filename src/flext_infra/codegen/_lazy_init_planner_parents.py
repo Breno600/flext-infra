@@ -19,6 +19,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
     if TYPE_CHECKING:
         rope_workspace: p.Infra.RopeWorkspaceDsl
         _source_exports_cache: MutableMapping[str, frozenset[str]]
+        _parent_package_cache: MutableMapping[str, t.StrSequence]
 
         def _module_file(self, module_path: str) -> Path | None: ...
 
@@ -39,7 +40,7 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         if resource is None:
             msg = f"parent declaration source unavailable: {module_path}"
             raise ValueError(msg)
-        imports = u.Infra.get_declared_module_imports(
+        imports = u.Infra.resolve_declared_module_imports(
             self.rope_workspace.rope_project, resource
         )
         classes = u.Infra.class_info_from_source(resource.read())
@@ -80,6 +81,41 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
             ):
                 parents.append(package_name)
         return tuple(parents)
+
+    def _letter_import_parent_packages(self, pkg_dir: Path) -> t.StrSequence:
+        """Return packages whose governed facade letters the facade imports.
+
+        ``from owner_parent import r`` in ``constants.py`` declares a letter
+        consumption: an undeclared letter propagates from its nearest actual
+        owner even when no class base names that owner. Only governed letters
+        (``c.Infra.ALIAS_NAMES``) qualify, so plain helper imports never become
+        facade ancestors — the workspace-dependent leak that once forced
+        parents down to class bases. A target resolving to no package
+        contributes nothing: only a resolvable package can own a letter, and
+        the declared-base path stays the loud check for broken ancestors.
+        """
+        cache_key = f"letter-imports:{pkg_dir.resolve()}"
+        cached = self._parent_package_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        constants_path = (pkg_dir / c.Infra.CONSTANTS_PY).resolve()
+        resource = self.rope_workspace.resource(constants_path)
+        if resource is None:
+            self._parent_package_cache[cache_key] = ()
+            return ()
+        imports = u.Infra.resolve_declared_module_imports(
+            self.rope_workspace.rope_project, resource
+        )
+        parents: list[str] = []
+        for name in sorted(imports):
+            if name not in c.Infra.ALIAS_NAMES:
+                continue
+            package_name = self._package_name_from_target(imports[name])
+            if package_name and package_name not in parents:
+                parents.append(package_name)
+        resolved = tuple(parents)
+        self._parent_package_cache[cache_key] = resolved
+        return resolved
 
     def _declared_parent_package(self, target: str) -> str:
         """Return the package a class base declares as facade parent.
@@ -129,6 +165,17 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         candidate_packages: t.StrSequence = tuple(
             name for name in package_names if name and name != current_pkg
         )
+        # ADR-018 p.1: the owner of a letter is the package whose own module
+        # DECLARES it in its explicit __all__ (flext_core/result.py owns `r`).
+        # Every generated initializer re-exports the letters it inherits, so
+        # "the nearest parent whose init lists the name" would elect whichever
+        # dependency sorts first — a tooling package re-exporting `r` made a
+        # test package import it through flext_infra and cycle at runtime.
+        for package_name in candidate_packages:
+            if package_name == current_pkg:
+                continue
+            if alias_name in self._declared_alias_names_for_package(package_name):
+                return f"{package_name}"
         for package_name in candidate_packages:
             if self._serves_facade_letter(package_name, alias_name, visited=set()):
                 return f"{package_name}"
@@ -188,13 +235,19 @@ class FlextInfraCodegenLazyInitPlannerParentsMixin:
         # A parent outside the scan scope is read from the one package the
         # active environment declares (R32), so a standalone plan and a
         # workspace plan elect the same owner.
-        package_dir = self.rope_workspace.workspace_index.package_dir_by_name.get(
+        indexed_dir = self.rope_workspace.workspace_index.package_dir_by_name.get(
             package_name
-        ) or u.Infra.declared_package_dir(package_name)
+        )
+        package_dir = indexed_dir or u.Infra.declared_package_dir(package_name)
         declared: set[str] = set()
         if package_dir is not None:
             for module_path in sorted(package_dir.glob("*.py")):
-                if module_path.name == c.Infra.INIT_PY:
+                # The generated initializer of this run is an output, never a
+                # declaration owner. An external package's published
+                # initializer IS its own root namespace: the letters it binds
+                # directly to a class are that package's declared letters,
+                # read by path, never imported.
+                if module_path.name == c.Infra.INIT_PY and indexed_dir is not None:
                     continue
                 declared.update(
                     u.Infra.facade_letter_names_source(

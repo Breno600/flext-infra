@@ -19,8 +19,17 @@ from ._lazy_init_planner_public_root import (
 )
 
 
-class FlextInfraCodegenLazyInitPlannerBase(m.ArbitraryTypesModel):
-    """Pydantic state base for lazy-init planning."""
+class FlextInfraCodegenLazyInitPlanner(
+    m.ArbitraryTypesModel,
+    FlextInfraCodegenLazyInitPlannerAliasesMixin,
+    FlextInfraCodegenLazyInitPlannerExportsMixin,
+    FlextInfraCodegenLazyInitPlannerChildrenMixin,
+    FlextInfraCodegenLazyInitPlannerCollisionMixin,
+    FlextInfraCodegenLazyInitPlannerParentsMixin,
+    FlextInfraCodegenLazyInitPlannerCacheMixin,
+    FlextInfraCodegenLazyInitPlannerPublicRootMixin,
+):
+    """Resolve lazy-init plans using one shared Rope workspace index."""
 
     rope_workspace: Annotated[
         p.Infra.RopeWorkspaceDsl,
@@ -47,6 +56,9 @@ class FlextInfraCodegenLazyInitPlannerBase(m.ArbitraryTypesModel):
     _module_file_by_name: MutableMapping[str, Path] = u.PrivateAttr(
         default_factory=dict
     )
+    _project_layout_cache: MutableMapping[Path, m.Infra.RopeProjectLayout] = (
+        u.PrivateAttr(default_factory=dict)
+    )
     _version_module_name: str = u.PrivateAttr(
         default_factory=lambda: f"{c.Infra.DUNDER_VERSION}.py"
     )
@@ -56,19 +68,6 @@ class FlextInfraCodegenLazyInitPlannerBase(m.ArbitraryTypesModel):
     def collision_count(self) -> int:
         """Number of unresolved export collisions found so far."""
         return self._collision_count
-
-
-class FlextInfraCodegenLazyInitPlanner(
-    FlextInfraCodegenLazyInitPlannerBase,
-    FlextInfraCodegenLazyInitPlannerAliasesMixin,
-    FlextInfraCodegenLazyInitPlannerExportsMixin,
-    FlextInfraCodegenLazyInitPlannerChildrenMixin,
-    FlextInfraCodegenLazyInitPlannerCollisionMixin,
-    FlextInfraCodegenLazyInitPlannerParentsMixin,
-    FlextInfraCodegenLazyInitPlannerCacheMixin,
-    FlextInfraCodegenLazyInitPlannerPublicRootMixin,
-):
-    """Resolve lazy-init plans using one shared Rope workspace index."""
 
     @override
     def build_plan(
@@ -89,7 +88,14 @@ class FlextInfraCodegenLazyInitPlanner(
                 else c.Infra.LazyInitAction.SKIP
             )
             return self._publish_plan(
-                m.Infra.LazyInitPlan(context=context, action=residue_action)
+                m.Infra.LazyInitPlan(
+                    context=context,
+                    action=residue_action,
+                    lazy_map={},
+                    type_checking_map={},
+                    eager_dunders={},
+                    inline_constants={},
+                )
             )
         is_test_child_package = (
             context.surface == c.Infra.DIR_TESTS
@@ -131,7 +137,14 @@ class FlextInfraCodegenLazyInitPlanner(
             eager_dunders.pop(name, None)
         if not lazy_map and not eager_dunders:
             return self._publish_plan(
-                m.Infra.LazyInitPlan(context=context, action=empty_action)
+                m.Infra.LazyInitPlan(
+                    context=context,
+                    action=empty_action,
+                    lazy_map={},
+                    type_checking_map={},
+                    eager_dunders={},
+                    inline_constants={},
+                )
             )
         excluded_lazy_names: t.StrSequence = ()
         is_facade_root = self._is_facade_root(context)
@@ -196,7 +209,9 @@ class FlextInfraCodegenLazyInitPlanner(
         for entry in declared_entries:
             module_path = entry.file_path
             policy = u.Infra.publication_policy(
-                module_path, rope_project=self.rope_workspace.rope_project
+                module_path,
+                rope_project=self.rope_workspace.rope_project,
+                project_layout=self._project_layout_for(context.pkg_dir),
             )
             alias = policy.expected_alias
             family = policy.expected_family
@@ -225,6 +240,7 @@ class FlextInfraCodegenLazyInitPlanner(
             lazy_map=dict(lazy_map),
             type_checking_map=type_checking_map,
             eager_dunders=eager_dunders,
+            inline_constants={},
             wildcard_runtime_modules=(),
             child_packages_for_lazy=child_lazy,
             excluded_lazy_names=excluded_lazy_names,

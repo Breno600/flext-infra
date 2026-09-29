@@ -72,7 +72,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             return [
                 path
                 for path in files
-                if not FlextInfraUtilitiesDocsScope.is_excluded_doc_path(
+                if not FlextInfraUtilitiesDocsScope.excluded_doc_path(
                     scope_root,
                     path.relative_to(scope_root / c.Infra.DIR_DOCS)
                     if path.is_relative_to(scope_root / c.Infra.DIR_DOCS)
@@ -85,7 +85,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             for path in files
             if not (
                 path.is_relative_to(docs_root)
-                and FlextInfraUtilitiesDocsScope.is_excluded_doc_path(
+                and FlextInfraUtilitiesDocsScope.excluded_doc_path(
                     scope_root, path.relative_to(docs_root)
                 )
             )
@@ -108,38 +108,39 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
         scope: m.Infra.DocScope,
         *,
         phase: str,
-        heading: str,
-        columns: t.StrSequence,
-        rows: t.SequenceOf[t.StrSequence],
-        items: t.SequenceOf[m.Infra.DocsPhaseItemModel],
+        table: m.Cli.TableRenderRequest,
         apply: bool,
     ) -> None:
-        """Persist one phase summary and markdown report from owned rows."""
+        """Persist one phase summary and markdown report from its titled table.
+
+        Every table row is one changed file, so the row count is the changed
+        file count both reports publish.
+        """
         summary_payload = t.Cli.JSON_MAPPING_ADAPTER.validate_python({
             c.Infra.RK_SUMMARY: {
                 c.Infra.RK_SCOPE: scope.name,
-                "changed_files": len(items),
+                "changed_files": len(table.rows),
                 "apply": apply,
             },
-            "changes": [list(row) for row in rows],
+            "changes": [list(row) for row in table.rows],
         })
         _ = u.Cli.json_write(
             scope.report_dir / f"{phase}-summary.json", summary_payload
         )
-        header = "| " + " | ".join(columns) + " |"
-        divider = "|---|" + "---:|" * (len(columns) - 1)
+        header = "| " + " | ".join(table.columns) + " |"
+        divider = "|---|" + "---:|" * (len(table.columns) - 1)
         _ = FlextInfraUtilitiesDocs.write_markdown(
             scope.report_dir / f"{phase}-report.md",
             [
-                f"# {heading}",
+                f"# {table.title}",
                 "",
                 f"Scope: {scope.name}",
                 f"Apply: {int(apply)}",
-                f"Changed files: {len(items)}",
+                f"Changed files: {len(table.rows)}",
                 "",
                 header,
                 divider,
-                *(" | ".join(row) + " |" for row in rows),
+                *(" | ".join(row) + " |" for row in table.rows),
             ],
         )
 
@@ -154,10 +155,11 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
         FlextInfraUtilitiesDocs.docs_write_phase_reports(
             scope,
             phase="fmt",
-            heading="Docs Format Report",
-            columns=("file",),
-            rows=[(item.file,) for item in items],
-            items=items,
+            table=m.Cli.TableRenderRequest(
+                title="Docs Format Report",
+                columns=("file",),
+                rows=tuple((item.file,) for item in items),
+            ),
             apply=apply,
         )
 

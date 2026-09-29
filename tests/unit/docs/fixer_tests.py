@@ -140,6 +140,3 @@ class TestsFlextInfraDocsFixer:
         content = document.read_text(encoding="utf-8")
         tm.that("```{.python .notest}" in content, eq=True)
         tm.that("```python notest" in content, eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraDocsFixer"]

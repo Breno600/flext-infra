@@ -35,22 +35,22 @@ class FlextInfraRefactorCensusProjectMixin:
             selected_rules: frozenset[str] | None = None,
         ) -> bool: ...
         @staticmethod
-        def _is_unused(item: m.Infra.Census.Object) -> bool: ...
+        def _is_unused(item: m.Infra.Object) -> bool: ...
         @staticmethod
-        def _object_key(item: m.Infra.Census.Object) -> str: ...
+        def _object_key(item: m.Infra.Object) -> str: ...
         @staticmethod
         def _violation(
-            item: m.Infra.Census.Object,
+            item: m.Infra.Object,
             *,
             kind: str,
             description: str,
             fixable: bool = False,
             fix_action: str = "",
-        ) -> m.Infra.Census.Violation: ...
+        ) -> m.Infra.Violation: ...
         @classmethod
         def _removal_candidate(
-            cls, item: m.Infra.Census.Object, *, include_unused: bool
-        ) -> m.Infra.Census.RemovalCandidate | None: ...
+            cls, item: m.Infra.Object, *, include_unused: bool
+        ) -> m.Infra.RemovalCandidate | None: ...
 
     def _handle_rope_stage_failure(
         self, *, file_path: Path, stage: str, exc: BaseException
@@ -71,17 +71,16 @@ class FlextInfraRefactorCensusProjectMixin:
         self,
         project: str,
         *,
-        objects: t.VariadicTuple[m.Infra.Census.Object],
-        seed_violations: t.VariadicTuple[m.Infra.Census.Violation],
-        fixes: t.VariadicTuple[m.Infra.Census.Fix],
+        findings: m.Infra.ScanFindings,
         duplicate_keys: frozenset[str],
-        rule_names: t.StrSequence | None,
-        selected_rules: frozenset[str] | None = None,
-    ) -> m.Infra.Census.ProjectReport:
+        scan_config: m.Infra.ScanConfig,
+    ) -> m.Infra.ProjectReport:
         """Project report."""
-        violations = list(seed_violations)
-        if selected_rules is None and rule_names:
-            selected_rules = frozenset(rule_names)
+        objects = tuple(findings.project_objects.get(project, ()))
+        violations = list(findings.project_violations.get(project, ()))
+        fixes = tuple(findings.project_fixes.get(project, ()))
+        rule_names = scan_config.rule_names
+        selected_rules = scan_config.selected_rules
         include_unused = self._include_rule(
             "unused", rule_names=rule_names, selected_rules=selected_rules
         )
@@ -92,7 +91,7 @@ class FlextInfraRefactorCensusProjectMixin:
             "wrong_tier", rule_names=rule_names, selected_rules=selected_rules
         )
         unused_count = 0
-        removal_candidates: list[m.Infra.Census.RemovalCandidate] = []
+        removal_candidates: list[m.Infra.RemovalCandidate] = []
         for item in objects:
             is_unused = self._is_unused(item)
             if include_duplicate and self._object_key(item) in duplicate_keys:
@@ -128,7 +127,7 @@ class FlextInfraRefactorCensusProjectMixin:
             candidate = self._removal_candidate(item, include_unused=include_unused)
             if candidate is not None:
                 removal_candidates.append(candidate)
-        return m.Infra.Census.ProjectReport(
+        return m.Infra.ProjectReport(
             project=project,
             objects=objects,
             objects_total=len(objects),

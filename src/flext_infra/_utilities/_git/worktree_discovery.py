@@ -170,12 +170,12 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
             normalized = raw_line.strip()
             if not normalized:
                 continue
-            try:
-                _status_and_sha, relative_path_text, *_description = normalized.split(
-                    maxsplit=2
-                )
-            except ValueError:
-                continue
+            _status_and_sha, separator, remainder = normalized.partition(" ")
+            path_fields = remainder.split(maxsplit=1)
+            if not separator or not path_fields:
+                msg = f"malformed git submodule status line: {raw_line!r}"
+                raise ValueError(msg)
+            relative_path_text = path_fields[0]
             relative_path = Path(relative_path_text)
             if (repository_root / relative_path / ".git").exists():
                 paths.append(relative_path)

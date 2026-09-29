@@ -107,6 +107,3 @@ class TestsFlextInfraIntegrationDocsServeE2e:
             finally:
                 if stopped:
                     process.close()
-
-
-__all__: list[str] = ["TestsFlextInfraIntegrationDocsServeE2e"]

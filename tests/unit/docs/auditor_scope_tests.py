@@ -252,6 +252,3 @@ class TestsFlextInfraAuditorScope:
         )
         issues = auditor.machine_path_issues(scope)
         tm.that([issue.file for issue in issues], eq=["docs/live.md"])
-
-
-__all__: list[str] = ["TestsFlextInfraAuditorScope"]

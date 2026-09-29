@@ -178,6 +178,27 @@ class TestsFlextInfraReleaseProtocol:
         tm.that(plan.previous_tag, eq="v0.1.0rc0")
         tm.that(plan.releasable, eq=True)
 
+    def test_plan_ignores_higher_tag_outside_integration_history(
+        self, tmp_path: Path
+    ) -> None:
+        """A release on an unrelated branch cannot select this lane's baseline."""
+        workspace = self._released_workspace(tmp_path)
+        tm.ok(
+            cli.run_checked(
+                [c.Infra.GIT, "switch", "-c", "unrelated-release"], cwd=workspace
+            )
+        )
+        self._commit_merge_subject(workspace, "chore(release): v9.0.0")
+        self._tag(workspace, "v9.0.0")
+        u.Tests.checkout_integration(workspace)
+        u.Tests.merge_pull_request(workspace, "fix: repair the integrated runtime")
+
+        plan = self._planned_release(workspace)
+
+        tm.that(plan.previous_tag, eq="v0.1.0")
+        tm.that(plan.next, eq="0.1.1")
+        tm.that(plan.releasable, eq=True)
+
     def test_final_version_is_ahead_of_its_own_prerelease_tag(
         self, tmp_path: Path
     ) -> None:
@@ -353,14 +374,15 @@ class TestsFlextInfraReleaseProtocol:
             tm.that(head, eq=c.Infra.RELEASE_COMMIT_SUBJECT.format(version="0.1.0"))
             # The docs projections render the version; the release commit
             # carries them regenerated, so the lane is a `gen check` fixed point.
+            # The committed uv.lock records the stamped version, so it rides
+            # in the same commit (operator 2026-09-24: locks are committed).
             committed = tm.ok(
                 cli.capture(
                     [c.Infra.GIT, "show", "--name-only", "--format=", c.Infra.GIT_HEAD],
                     cwd=workspace,
                 )
             )
-            tm.that(committed, has=["pyproject.toml", "docs/index.md"])
-            tm.that(committed, lacks="uv.lock")
+            tm.that(committed, has=["pyproject.toml", "docs/index.md", "uv.lock"])
             tm.that(
                 (workspace / "uv.lock").read_text(encoding="utf-8"),
                 has=f'version = "{c.Tests.RELEASE_VERSION_BASE}"',
@@ -526,6 +548,3 @@ class TestsFlextInfraReleaseProtocol:
         u.Tests.merge_pull_request(workspace, "feat: not a release commit")
 
         tm.that(u.Tests.run_release_main(workspace, "--phase", "tag", "--apply"), ne=0)
-
-
-__all__: list[str] = ["TestsFlextInfraReleaseProtocol"]

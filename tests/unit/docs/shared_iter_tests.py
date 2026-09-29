@@ -143,6 +143,3 @@ class TestsFlextInfraDocsSharedIter:
 
         tm.that(current in files, eq=True)
         tm.that(incoming in files, eq=False)
-
-
-__all__: list[str] = ["TestsFlextInfraDocsSharedIter"]

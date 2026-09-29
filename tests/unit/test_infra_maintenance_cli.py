@@ -23,6 +23,3 @@ class TestsFlextInfraInfraMaintenanceCli:
 
     def test_maintenance_rejects_apply_flag(self) -> None:
         tm.that(self._run_maintenance(["--apply"]), eq=2)
-
-
-__all__: list[str] = ["TestsFlextInfraInfraMaintenanceCli"]

@@ -5,7 +5,6 @@ from __future__ import annotations
 import platform
 import shutil
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
@@ -13,6 +12,7 @@ from flext_cli import u
 from flext_infra import c, m, t
 
 from .process import FlextInfraUtilitiesProcess
+from .project_discovery import FlextInfraUtilitiesProjectDiscovery
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -66,21 +66,79 @@ class FlextInfraUtilitiesResourceLimits:
         )
 
     @staticmethod
+    def mypy_arguments(invocation: m.Infra.MypyInvocation) -> t.StrSequence:
+        """Build checker options shared by the CLI and public profiling API."""
+        return (
+            *(
+                ("--config-file", str(invocation.config_file.resolve()))
+                if invocation.config_file is not None
+                else ()
+            ),
+            "--no-error-summary",
+            "--no-color-output",
+            *(("--output", c.Infra.OUTPUT_JSON) if invocation.report_json else ()),
+            *(("--verbose",) if invocation.verbose else ()),
+            "--",
+            *(str(target.resolve()) for target in invocation.targets),
+        )
+
+    @staticmethod
+    def mypy_command(invocation: m.Infra.MypyInvocation) -> t.StrSequence:
+        """Construct the owned checker entrypoint from typed data, never command text."""
+        interpreter = sys.executable
+        if invocation.workspace is not None:
+            managed_python = FlextInfraUtilitiesProjectDiscovery.runtime_python(
+                invocation.workspace
+            )
+            if not managed_python.is_file():
+                msg = f"managed workspace interpreter is missing: {managed_python}"
+                raise FileNotFoundError(msg)
+            interpreter = str(managed_python)
+            if invocation.profile_output is None:
+                managed_mypy = managed_python.with_name(
+                    f"{c.Infra.MYPY}.exe" if sys.platform == "win32" else c.Infra.MYPY
+                )
+                if not managed_mypy.is_file():
+                    msg = f"managed workspace checker is missing: {managed_mypy}"
+                    raise FileNotFoundError(msg)
+                return (
+                    str(managed_mypy),
+                    *FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation),
+                )
+        if invocation.profile_output is not None:
+            return (
+                interpreter,
+                "-m",
+                f"{__package__}._mypy_profile",
+                invocation.model_dump_json(),
+            )
+        return (
+            interpreter,
+            "-m",
+            c.Infra.MYPY,
+            *FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation),
+        )
+
+    @staticmethod
     def mypy_limited_command(
-        command: t.StrSequence, limit: m.Infra.MypyResourceLimit | None = None
+        invocation: m.Infra.MypyInvocation,
+        limit: m.Infra.MypyResourceLimit | None = None,
+        *,
+        host_system: str | None = None,
     ) -> t.StrSequence:
-        """Prefix one Mypy command with validated memory and wall-time limits."""
+        """Bound the canonical checker; no caller-provided executable can run."""
         validated_limit = (
             limit or FlextInfraUtilitiesResourceLimits.mypy_resource_limit()
         )
-        if platform.system() == "Darwin":
+        if (host_system or platform.system()) == "Darwin":
             return (
                 sys.executable,
-                str(Path(__file__).with_name("_mypy_supervisor.py")),
+                "-m",
+                f"{__package__}._mypy_supervisor",
                 str(validated_limit.memory_limit_bytes),
                 str(validated_limit.timeout_seconds),
                 str(c.Infra.TIMEOUT_KILL_AFTER_SECONDS),
-                *command,
+                invocation.model_dump_json(),
             )
         prlimit_executable = FlextInfraUtilitiesResourceLimits._required_executable(
             c.Infra.PRLIMIT_COMMAND
@@ -100,7 +158,7 @@ class FlextInfraUtilitiesResourceLimits:
                 f"{validated_limit.memory_limit_bytes}"
             ),
             "--",
-            *command,
+            *FlextInfraUtilitiesResourceLimits.mypy_command(invocation),
         )
 
     @staticmethod

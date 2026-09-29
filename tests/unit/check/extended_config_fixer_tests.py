@@ -253,6 +253,3 @@ class TestsFlextInfraExtendedConfigFixer:
             arr = u.Cli.toml_array(items)
             tm.that(len(arr), eq=3)
             tm.that(list(arr), has="a")
-
-
-__all__: t.StrSequence = ["TestsFlextInfraExtendedConfigFixer"]

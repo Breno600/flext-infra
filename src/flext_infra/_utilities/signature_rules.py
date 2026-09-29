@@ -67,7 +67,9 @@ class FlextInfraUtilitiesSignatureRules:
         return r[tuple[m.Infra.SignatureMigration, ...]].ok(tuple(migrations))
 
     @staticmethod
-    def _build(raw: object, source: Path) -> p.Result[m.Infra.SignatureMigration]:
+    def _build(
+        raw: p.AttributeProbe, source: Path
+    ) -> p.Result[m.Infra.SignatureMigration]:
         """Validate one declared migration into its typed owner."""
         if not isinstance(raw, Mapping):
             return r[m.Infra.SignatureMigration].fail(

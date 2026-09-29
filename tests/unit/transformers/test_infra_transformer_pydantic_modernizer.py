@@ -95,6 +95,3 @@ class TestsFlextInfraTransformersPydanticModernizer:
         code = self._transform(source)
         tm.that(code, has="class Config:")
         tm.that(code, lacks="ConfigDict")
-
-
-__all__: list[str] = ["TestsFlextInfraTransformersPydanticModernizer"]

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import MutableMapping
 from configparser import Error as ConfigParserError
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from git import GitCommandError, GitConfigParser
@@ -90,6 +91,34 @@ class FlextInfraUtilitiesGitSemanticSubmoduleMixin(
                 )
             sections[declared] = section
         return r[t.StrMapping].ok(sections)
+
+    @classmethod
+    def git_unmanaged_submodule_paths(
+        cls, request: m.Infra.GitRepoRequest
+    ) -> p.Result[t.SequenceOf[Path]]:
+        """Return declared submodule paths that opt out of workspace governance.
+
+        An absent ``flext-managed`` key keeps the member governed. Any explicit
+        value other than ``true`` declares a vendored or non-Python checkout
+        that no governed stage may treat as a workspace project.
+        """
+        sections = cls.git_submodule_sections(request)
+        if sections.failure:
+            return r[t.SequenceOf[Path]].from_failure(sections)
+        unmanaged: t.MutableSequenceOf[Path] = []
+        for declared, section in sections.value.items():
+            flag = cls.git_submodule_config_value(
+                m.Infra.GitSubmoduleConfigRequest(
+                    repo_root=request.repo_root,
+                    section=section,
+                    key=c.Infra.GITMODULE_MANAGED_KEY,
+                )
+            )
+            if flag.failure:
+                return r[t.SequenceOf[Path]].from_failure(flag)
+            if flag.value.text and flag.value.text.lower() != "true":
+                unmanaged.append(Path(declared))
+        return r[t.SequenceOf[Path]].ok(tuple(unmanaged))
 
 
 __all__: list[str] = ["FlextInfraUtilitiesGitSemanticSubmoduleMixin"]

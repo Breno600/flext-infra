@@ -30,6 +30,32 @@ class TestsFlextInfraFreshImport:
         """Shared validator instance."""
         return FlextInfraValidateFreshImport()
 
+    def test_probes_run_in_the_declared_target_environment(
+        self, tmp_path: Path
+    ) -> None:
+        """The declared target interpreter runs the probes, not the tool's.
+
+        The tool's environment imports flext_core; the declared target's fresh
+        stdlib environment does not, so the probe must fail there.
+        """
+        u.Tests.provision_runtime_environment(tmp_path)
+        validator = FlextInfraValidateFreshImport(
+            repository_root=tmp_path, runtime_root=tmp_path
+        )
+        report = tm.ok(validator.build_report(packages=("flext_core",)))
+        tm.that(report.passed, eq=False)
+        tm.that(report.violations[0], has="No module named 'flext_core'")
+
+    def test_declared_target_without_interpreter_fails_loudly(
+        self, tmp_path: Path
+    ) -> None:
+        """A declared target lacking its interpreter fails, never falls back."""
+        validator = FlextInfraValidateFreshImport(
+            repository_root=tmp_path, runtime_root=tmp_path
+        )
+        result = validator.build_report(packages=("sys",))
+        tm.fail(result, has="fresh-import target interpreter is missing")
+
     def test_empty_package_list_passes(self, v: FlextInfraValidateFreshImport) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=()))
         tm.that(report, is_=m.Infra.ValidationReport)
@@ -138,18 +164,23 @@ class TestsFlextInfraFreshImport:
 
         tm.fail(result, has=f"missing public export contract for {package.name}")
 
-    def test_declared_script_follows_configured_posture(self, tmp_path: Path) -> None:
-        """A declared script whose target lacks main warns or blocks per SSOT."""
-        from flext_infra import config
-
+    @pytest.mark.parametrize("script_group", ["scripts", "gui-scripts"])
+    @pytest.mark.parametrize("target_exists", [False, True])
+    def test_declared_script_failure_blocks_publication(
+        self, tmp_path: Path, script_group: str, *, target_exists: bool
+    ) -> None:
+        """A missing declared module or callable fails with its original traceback."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_probe_script"
         package.mkdir(parents=True)
         initializer = package / c.Infra.INIT_PY
         initializer.write_text("__all__ = ()\n", encoding=c.Cli.ENCODING_DEFAULT)
-        (package / "cli.py").write_text("VALUE = 1\n", encoding=c.Cli.ENCODING_DEFAULT)
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        if target_exists:
+            (package / "cli.py").write_text(
+                "VALUE = 1\n", encoding=c.Cli.ENCODING_DEFAULT
+            )
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-probe-script"\nversion = "1.0"\n\n'
-            f'[project.scripts]\nprobe = "{package.name}.cli:main"\n',
+            f'[project.{script_group}]\nprobe = "{package.name}.cli:main"\n',
             encoding="utf-8",
         )
         publication = m.Infra.LazyInitPlan(
@@ -162,23 +193,29 @@ class TestsFlextInfraFreshImport:
                 generated_init=True,
             ),
             action=c.Infra.LazyInitAction.WRITE,
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
                 publications=(publication,), repository_roots=(tmp_path,)
             )
         )
-        warns = config.Infra.codegen.fresh_import_entry_points_warn_only
-        tm.that(report.passed, eq=warns)
-        tm.that(report.violations[0], has="console_scripts/probe=")
-        tm.that(report.violations[0], has="has no attribute 'main'")
+        tm.that(report.passed, eq=False)
+        tm.that(report.violations, length=1)
+        tm.that(report.violations[0], has="scripts/probe=")
+        tm.that(report.violations[0], has="Traceback")
+        tm.that(
+            report.violations[0],
+            has="has no attribute 'main'" if target_exists else "ModuleNotFoundError",
+        )
 
     def test_declared_script_contract_violation_stays_blocking(
         self, tmp_path: Path
     ) -> None:
-        """A missing export surfacing through a loadable script is never warn."""
-        from flext_infra import config
-
+        """A missing export surfacing through a loadable script fails the report."""
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_probe_script"
         package.mkdir(parents=True)
         initializer = package / c.Infra.INIT_PY
@@ -186,7 +223,7 @@ class TestsFlextInfraFreshImport:
         (package / "cli.py").write_text(
             "from flext_probe_script import gone\n", encoding=c.Cli.ENCODING_DEFAULT
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-probe-script"\nversion = "1.0"\n\n'
             f'[project.scripts]\nprobe = "{package.name}.cli:main"\n',
             encoding="utf-8",
@@ -201,13 +238,16 @@ class TestsFlextInfraFreshImport:
                 generated_init=True,
             ),
             action=c.Infra.LazyInitAction.WRITE,
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
                 publications=(publication,), repository_roots=(tmp_path,)
             )
         )
-        _ = config.Infra.codegen.fresh_import_entry_points_warn_only
         tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="ImportError")
 
@@ -242,7 +282,7 @@ class TestsFlextInfraFreshImport:
             "def main():\n    raise RuntimeError('entrypoint must not execute')\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-import-probe"\nversion = "1.0"\n'
             f'[project.scripts]\nprobe = "{package.name}.consumer:main"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
@@ -257,6 +297,10 @@ class TestsFlextInfraFreshImport:
                 generated_init=True,
             ),
             action=c.Infra.LazyInitAction.WRITE,
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
@@ -268,6 +312,45 @@ class TestsFlextInfraFreshImport:
             tm.that(report.violations[0], has="required")
             tm.that(report.violations[0], has="consumer.py")
             tm.that(report.violations[0], has="Traceback")
+
+    def test_probe_larger_than_one_process_argument_still_runs(
+        self, tmp_path: Path
+    ) -> None:
+        package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
+        package.mkdir(parents=True)
+        exports = tuple(f"export_{index:05d}_published_name" for index in range(6000))
+        initializer = package / c.Infra.INIT_PY
+        initializer.write_text(
+            "".join(f"{name} = {index}\n" for index, name in enumerate(exports))
+            + f"__all__ = {exports!r}\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
+            '[project]\nname = "flext-import-probe"\nversion = "1.0"\n',
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        publication = m.Infra.LazyInitPlan(
+            context=m.Infra.LazyInitPackageContext(
+                pkg_dir=package,
+                init_path=initializer,
+                current_pkg=package.name,
+                surface=package.name,
+                importable=True,
+                generated_init=True,
+            ),
+            action=c.Infra.LazyInitAction.WRITE,
+            exports=exports,
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
+        )
+        report = tm.ok(
+            FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
+                publications=(publication,), repository_roots=(tmp_path,)
+            )
+        )
+        tm.that(report.passed, eq=True, msg=str(report.violations))
 
     def test_rejects_owned_module_imported_from_another_directory(
         self, tmp_path: Path
@@ -285,7 +368,7 @@ class TestsFlextInfraFreshImport:
             "from .dependency import value\n__all__ = ('value',)\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-import-probe"\nversion = "1.0"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
@@ -300,6 +383,10 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             exports=("value",),
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
@@ -333,7 +420,7 @@ class TestsFlextInfraFreshImport:
             "__all__ = ('value', 'phantom_export')\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-import-probe"\nversion = "1.0"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
@@ -348,6 +435,10 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             exports=("value",),
+            lazy_map={},
+            type_checking_map={},
+            eager_dunders={},
+            inline_constants={},
         )
         report = tm.ok(
             FlextInfraValidateFreshImport(repository_root=tmp_path).build_report(
@@ -380,7 +471,7 @@ class TestsFlextInfraFreshImport:
         (subpackage / c.Infra.INIT_PY).write_text(
             "leaf = 1\n__all__ = ('leaf',)\n", encoding=c.Cli.ENCODING_DEFAULT
         )
-        (tmp_path / c.Infra.PYPROJECT_FILENAME).write_text(
+        (tmp_path / c.PYPROJECT_FILENAME).write_text(
             '[project]\nname = "flext-import-probe"\nversion = "1.0"\n',
             encoding=c.Cli.ENCODING_DEFAULT,
         )
@@ -396,6 +487,10 @@ class TestsFlextInfraFreshImport:
                 ),
                 action=c.Infra.LazyInitAction.WRITE,
                 exports=exports,
+                lazy_map={},
+                type_checking_map={},
+                eager_dunders={},
+                inline_constants={},
             )
             for pkg_dir, current_pkg, exports in (
                 (subpackage, f"{package.name}.sub", ("leaf",)),
@@ -422,6 +517,3 @@ class TestsFlextInfraFreshImport:
             v.build_report(packages=("flext_infra",))
         )
         tm.that(report.passed, eq=True, msg=report.summary)
-
-
-__all__: list[str] = ["TestsFlextInfraFreshImport"]

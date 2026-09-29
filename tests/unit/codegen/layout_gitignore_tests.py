@@ -10,6 +10,7 @@ from flext_tests import tm
 from flext_infra import c, config
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.layout import FlextInfraCodegenLayout
+from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
 from tests import u
 from tests.unit.codegen.layout_fixture import (
     archive_root,
@@ -74,16 +75,21 @@ class TestsFlextInfraCodegenLayoutGitignore:
         tm.that(rendered.value, has=f"{archive_root()}/")
 
     @pytest.mark.slow
-    def test_conform_materializes_layout_gitignore_additions(
-        self, tmp_path: Path
+    @pytest.mark.parametrize("directory_suffix", ["", "-lane"])
+    def test_rendered_gitignore_satisfies_layout_additions(
+        self, tmp_path: Path, directory_suffix: str
     ) -> None:
-        """``codegen conform`` renders the layout override additions into ``.gitignore``.
+        """The public gitignore renderer satisfies the layout consumer.
 
         The planner used to render ``base/gitignore.j2`` from its own section list
         without the layout override, so ``make gen`` never satisfied the layout gate
         and a governed member ended up hand-editing the projection. One owner now
         derives the sections for every renderer: after conform, the layout engine
         finds no missing gitignore pattern for a project declared in the SSOT.
+
+        The override is keyed by the declared ``[project].name``, never by the
+        checkout directory: a linked worktree named after its lane renders the same
+        additions (conform used ``repository_root.name`` and dropped them there).
         """
         owner, override = next(
             (name, item)
@@ -92,25 +98,32 @@ class TestsFlextInfraCodegenLayoutGitignore:
             )
             if item.gitignore_additions
         )
-        root = tmp_path / owner
-        u.Tests.WorktreeFixture.initialize_governed_project(
-            root,
-            owner,
-            workspace="fixture-workspace",
-            database="fixture-database",
-            issue_prefix="fixture-prefix",
-        )
-        u.Tests.commit_git_changes(root, "Declare project identity")
+        root = tmp_path / f"{owner}{directory_suffix}"
+        repository = u.Tests.repository_ref(owner)
+        project = u.Tests.project_spec(owner)
         tm.ok(
-            FlextInfraCodegenConform.execute_request(
-                u.Tests.conform_request(
-                    root,
-                    scope=c.Infra.CodegenConformScope.SELF,
-                    mode=c.Infra.CodegenConformMode.APPLY,
-                )
-            )
+            FlextInfraCodegenProjectNew(
+                flext_source=u.Tests.flext_source(),
+                name=owner,
+                kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
+                output_root=root,
+                provider=repository.provider,
+                repository_url=repository.url,
+                repository_branch=u.Tests.provider_branch(),
+                flext_repository_url=u.Tests.repository_ref(config.Infra.name).url,
+                flext_repository_ref=u.Tests.provider_branch(),
+                license=project.license,
+                author_name=project.author_name,
+                author_email=project.author_email,
+                upstream=project.upstream,
+                year=project.year,
+                apply_changes=True,
+            ).execute()
         )
-
+        tm.that(
+            (root / c.CONFIG_DIR_NAME / c.Infra.WORKSPACE_MANIFEST_FILENAME).is_file(),
+            eq=True,
+        )
         entries = (root / c.Infra.GITIGNORE).read_text(encoding="utf-8").splitlines()
         missing = tuple(
             pattern
@@ -151,6 +164,3 @@ class TestsFlextInfraCodegenLayoutGitignore:
         paths = {finding.path for finding in report.findings}
         tm.that(local.name in paths, eq=False)
         tm.that(tracked.name in paths, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenLayoutGitignore"]

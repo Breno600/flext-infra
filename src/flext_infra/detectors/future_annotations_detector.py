@@ -32,7 +32,7 @@ class FlextInfraFutureAnnotationsDetector:
         if not source.strip():
             return []
         try:
-            pymodule = u.Infra.get_pymodule(ctx.rope_project, resource)
+            pymodule = u.Infra.resolve_pymodule(ctx.rope_project, resource)
             is_docstring_only = bool(pymodule.get_doc()) and not bool(
                 pymodule.get_attributes()
             )

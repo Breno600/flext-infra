@@ -5,7 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, ClassVar
 
-from flext_core import m
+from flext_cli import m
+
 from flext_infra import c, t
 
 
@@ -60,7 +61,6 @@ class FlextInfraModelsMixins:
                 )
             ),
         ] = None
-        fail_fast: Annotated[bool, m.Field(description="Stop on first failure")] = True
         verbose: Annotated[bool, m.Field(description="Verbose output")] = False
 
         @property
@@ -126,7 +126,7 @@ class FlextInfraModelsMixins:
             default=(),
             description=(
                 "Gate names for post-transform validation; empty selects the SSOT"
-                " snapshot gates (make.ci.check_gates)."
+                " snapshot gates (make.check_gates_ci)."
             ),
         )
 

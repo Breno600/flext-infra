@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar, Literal
+from typing import Annotated, Self
 
-from flext_cli import m, t
+from flext_cli import m, u
 
 
 class FlextInfraModelsTestmon:
@@ -29,93 +29,49 @@ class FlextInfraModelsTestmon:
         ]
 
     class TestmonRunAccounting(m.Value):
-        """Complete selection and outcome accounting for one runner invocation."""
-
-        mode: Annotated[
-            Literal["incremental", "full", "coverage"],
-            m.Field(description="Requested test runner execution mode."),
-        ]
-        cache_hit: Annotated[
-            bool,
-            m.Field(
-                description="An integrity-checked incremental run selected no nodes."
-            ),
-        ] = False
-        inventory: Annotated[
-            tuple[str, ...],
-            m.Field(description="Complete eligible node IDs reported by collection."),
-        ] = ()
-        selected: Annotated[
-            tuple[str, ...],
-            m.Field(description="Collected node IDs selected for this execution."),
-        ] = ()
-        executed: Annotated[
-            tuple[str, ...],
-            m.Field(
-                description="Node IDs with complete reported execution lifecycles."
-            ),
-        ] = ()
-        deselected: Annotated[
-            tuple[str, ...],
-            m.Field(description="Eligible node IDs omitted by incremental selection."),
-        ] = ()
-        database: Annotated[
-            str, m.Field(description="Persistent external testmon database path.")
-        ]
+        """Typed proof for an executed suite or an integrity-checked cache hit."""
 
         executed_count: Annotated[
+            int, m.Field(ge=0, description="JUnit testcase count.")
+        ]
+        reported_count: Annotated[
             int,
-            m.Field(
-                ge=0, description="Unique nodes with complete reported lifecycles."
-            ),
+            m.Field(ge=0, description="Unique node IDs with real TestReport events."),
         ]
         deselected_count: Annotated[
             int,
             m.Field(
                 ge=0,
-                description="Deselections reported by pytest or proven by complete collection inventory.",
+                description="Complete inventory minus the canonical selected node IDs.",
+            ),
+        ]
+        inventory_count: Annotated[
+            int | None,
+            m.Field(
+                ge=1, description="Complete testmon inventory; absent for coverage."
             ),
         ]
         cache_restored: Annotated[
             bool, m.Field(description="Input database passed SQLite integrity checks.")
         ]
 
-    class PytestReportEvent(m.Value):
-        """Native reportlog event fields needed for execution accounting."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
-        report_type: str = m.Field(
-            alias="$report_type", description="Native pytest reportlog event type."
-        )
-        nodeid: Annotated[
-            str, m.Field(description="Pytest node ID associated with the event.")
-        ] = ""
-        when: Annotated[
-            str | None,
-            m.Field(description="Execution phase reported by pytest, when applicable."),
-        ] = None
-        outcome: Annotated[
-            Literal["passed", "failed", "skipped"] | None,
-            m.Field(description="Native collection or execution outcome."),
-        ] = None
-        category: Annotated[
-            str | None, m.Field(description="Native warning category name, if present.")
-        ] = None
-        message: Annotated[
-            str, m.Field(description="Original warning message emitted by pytest.")
-        ] = ""
-        filename: Annotated[
-            str, m.Field(description="Source filename associated with a warning event.")
-        ] = ""
-        lineno: Annotated[
-            int, m.Field(description="Source line reported for a warning event.")
-        ] = 0
-        longrepr: Annotated[
-            t.JsonValue,
-            m.Field(
-                description="Original serialized failure or collection skip detail."
-            ),
-        ] = None
+        @u.model_validator(mode="after")
+        def require_execution_or_verified_deselection(self) -> Self:
+            """Zero execution requires positive accounting against a valid cache."""
+            if (
+                self.inventory_count is not None
+                and self.deselected_count > self.inventory_count
+            ):
+                msg = "deselections cannot exceed the complete collection inventory"
+                raise ValueError(msg)
+            if not self.executed_count and not (
+                self.cache_restored
+                and self.inventory_count is not None
+                and self.deselected_count == self.inventory_count
+            ):
+                msg = "zero execution requires a restored cache and complete deselection accounting"
+                raise ValueError(msg)
+            return self
 
 
 __all__: list[str] = ["FlextInfraModelsTestmon"]

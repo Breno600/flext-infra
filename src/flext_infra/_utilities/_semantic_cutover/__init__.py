@@ -18,9 +18,12 @@ if TYPE_CHECKING:
     from .facade_owners import FlextInfraUtilitiesSemanticCutoverFacadeOwners
     from .family_flatten import FlextInfraUtilitiesSemanticFamilyFlatten
     from .family_references import FlextInfraUtilitiesSemanticFamilyReferences
+    from .family_type_references import FlextInfraUtilitiesSemanticFamilyTypeReferences
+    from .helper_references import FlextInfraUtilitiesSemanticHelperReferences
     from .nesting import FlextInfraUtilitiesSemanticCutoverNesting
     from .nesting_cst import FlextInfraUtilitiesSemanticCutoverNestingCst
     from .nesting_references import FlextInfraUtilitiesSemanticCutoverNestingReferences
+    from .nesting_types import FlextInfraUtilitiesSemanticNestingTypes
     from .private_import_cst import FlextInfraUtilitiesSemanticCutoverPrivateImportCst
     from .private_imports import FlextInfraUtilitiesSemanticCutoverPrivateImports
 
@@ -40,6 +43,9 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesSemanticCutoverPrivateImports",
     "FlextInfraUtilitiesSemanticFamilyFlatten",
     "FlextInfraUtilitiesSemanticFamilyReferences",
+    "FlextInfraUtilitiesSemanticFamilyTypeReferences",
+    "FlextInfraUtilitiesSemanticHelperReferences",
+    "FlextInfraUtilitiesSemanticNestingTypes",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -54,11 +60,16 @@ _LAZY_IMPORTS = MappingProxyType(
             ".facade_owners": ("FlextInfraUtilitiesSemanticCutoverFacadeOwners",),
             ".family_flatten": ("FlextInfraUtilitiesSemanticFamilyFlatten",),
             ".family_references": ("FlextInfraUtilitiesSemanticFamilyReferences",),
+            ".family_type_references": (
+                "FlextInfraUtilitiesSemanticFamilyTypeReferences",
+            ),
+            ".helper_references": ("FlextInfraUtilitiesSemanticHelperReferences",),
             ".nesting": ("FlextInfraUtilitiesSemanticCutoverNesting",),
             ".nesting_cst": ("FlextInfraUtilitiesSemanticCutoverNestingCst",),
             ".nesting_references": (
                 "FlextInfraUtilitiesSemanticCutoverNestingReferences",
             ),
+            ".nesting_types": ("FlextInfraUtilitiesSemanticNestingTypes",),
             ".private_import_cst": (
                 "FlextInfraUtilitiesSemanticCutoverPrivateImportCst",
             ),

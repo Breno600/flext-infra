@@ -14,8 +14,8 @@ from flext_infra import (
     c,
     config,
 )
-from tests import t, u
-from tests.unit.deps import ExtraPathsTestSupport
+from tests import m, t, u
+from tests.unit.deps.extra_paths_support import ExtraPathsTestSupport
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -40,15 +40,17 @@ class TestsFlextInfraModernizerPyrefly:
             config.Infra.tooling
         ).apply_payload(
             payload,
-            is_root=is_root,
-            project_dir=project_dir,
+            context=m.Infra.PyprojectAnalyzerContext(
+                is_root=is_root,
+                project_dir=project_dir,
+                declared_python_dirs=tuple(declared_python_dirs or ()),
+                declared_python_dirs_are_complete=declared_python_dirs is not None,
+            ),
             paths_manager=(
                 None
                 if project_dir is None
                 else FlextInfraExtraPathsManager(repository_root=project_dir.parent)
             ),
-            declared_python_dirs=declared_python_dirs or (),
-            declared_python_dirs_are_complete=declared_python_dirs is not None,
         )
         pyrefly = u.Tests.toml_mapping(u.Tests.toml_mapping(payload["tool"])["pyrefly"])
         return payload, pyrefly, changes
@@ -57,8 +59,8 @@ class TestsFlextInfraModernizerPyrefly:
         self, tmp_path: Path
     ) -> None:
         """Keep shared analyzer config invariant across checkout topologies."""
-        rules = config.Infra.tooling.tools.pyright.path_rules
-        (tmp_path / rules.venv_name).mkdir()
+        tm.ok(u.Cli.run_raw(["git", "init"], cwd=tmp_path))
+        u.Infra.runtime_environment_dir(tmp_path).mkdir(parents=True)
         child_origin = tmp_path / "child-origin"
         child_origin.mkdir()
         tm.ok(u.Cli.run_raw(["git", "init"], cwd=child_origin))
@@ -108,7 +110,11 @@ class TestsFlextInfraModernizerPyrefly:
             rendered = tm.ok(
                 FlextInfraPyprojectModernizer(
                     repository_root=project_dir, skip_comments=True, skip_check=True
-                ).conform_source(pyproject.read_text(encoding="utf-8"), path=pyproject)
+                ).conform_source(
+                    pyproject.read_text(encoding="utf-8"),
+                    path=pyproject,
+                    topology=m.Infra.PyprojectDeclaredTopology(),
+                )
             )
             tm.that(
                 u.Tests.toml_table_at(rendered, "tool", "pyrefly"),
@@ -159,7 +165,7 @@ class TestsFlextInfraModernizerPyrefly:
         """A second Pyrefly run over the converged payload changes nothing."""
         payload, _, _ = self._applied()
         second = FlextInfraEnsurePyreflyConfigPhase(config.Infra.tooling).apply_payload(
-            payload, is_root=True
+            payload, context=m.Infra.PyprojectAnalyzerContext(is_root=True)
         )
         tm.that(second, empty=True)
 
@@ -241,9 +247,11 @@ class TestsFlextInfraModernizerPyrefly:
             ).resolve_tooling_context(
                 project_name="flext-consumer",
                 package_name="flext_consumer",
-                path=project_dir / c.Infra.PYPROJECT_FILENAME,
-                declared_python_dirs=(source_dir,),
-                declared_python_dirs_are_complete=True,
+                path=project_dir / c.PYPROJECT_FILENAME,
+                topology=m.Infra.PyprojectDeclaredTopology(
+                    declared_python_dirs=(source_dir,),
+                    declared_python_dirs_are_complete=True,
+                ),
             )
         )
 
@@ -259,7 +267,7 @@ class TestsFlextInfraModernizerPyrefly:
         for directory in ("src", "tests"):
             (project_dir / directory).mkdir(parents=True)
         (project_dir / "src" / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
-        (project_dir / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_dir / c.PYPROJECT_FILENAME).write_text(
             "[tool.pyright]\ninclude = ['src']\n", encoding="utf-8"
         )
 
@@ -283,7 +291,7 @@ class TestsFlextInfraModernizerPyrefly:
             "", encoding="utf-8"
         )
         (project_dir / "scripts" / "check.py").write_text("", encoding="utf-8")
-        (project_dir / c.Infra.PYPROJECT_FILENAME).write_text(
+        (project_dir / c.PYPROJECT_FILENAME).write_text(
             "[tool.pyright]\n"
             "include = ['src', 'tests/unit/**/*.py', 'scripts/check.py']\n",
             encoding="utf-8",
@@ -307,8 +315,9 @@ class TestsFlextInfraModernizerPyrefly:
 
         _ = FlextInfraEnsurePyreflyConfigPhase(config.Infra.tooling).apply_payload(
             payload,
-            is_root=True,
-            project_dir=tmp_path,
+            context=m.Infra.PyprojectAnalyzerContext(
+                is_root=True, project_dir=tmp_path
+            ),
             paths_manager=FlextInfraExtraPathsManager(repository_root=tmp_path),
         )
 
@@ -317,6 +326,3 @@ class TestsFlextInfraModernizerPyrefly:
             list(u.Tests.strings(pyrefly["search-path"])),
             eq=[rules.source_dir, rules.project_root],
         )
-
-
-__all__: list[str] = ["TestsFlextInfraModernizerPyrefly"]

@@ -1,6 +1,21 @@
 id: ban-test-doubles
 snapshots:
   ? |
+    def test_context() -> None:
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(Service, "run", lambda: True)
+  : labels:
+    - source: 'mp.setattr(Service, "run", lambda: True)'
+      style: primary
+      start: 81
+      end: 121
+    - source: |-
+        with pytest.MonkeyPatch.context() as mp:
+                mp.setattr(Service, "run", lambda: True)
+      style: secondary
+      start: 32
+      end: 121
+  ? |
     def test_internal(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(Service, "run", lambda: True)
   : labels:
@@ -8,15 +23,142 @@ snapshots:
       style: primary
       start: 64
       end: 113
+    - source: monkeypatch
+      style: secondary
+      start: 64
+      end: 75
+    - source: monkeypatch
+      style: secondary
+      start: 64
+      end: 75
+  ? |
+    def test_items(monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setitem(registry, "key", value)
+  : labels:
+    - source: monkeypatch.setitem(registry, "key", value)
+      style: primary
+      start: 61
+      end: 104
+    - source: monkeypatch
+      style: secondary
+      start: 61
+      end: 72
+    - source: monkeypatch
+      style: secondary
+      start: 61
+      end: 72
+  ? |
+    def test_runner(mocker) -> None:
+        run(mocker)
+  : labels:
+    - source: mocker
+      style: primary
+      start: 16
+      end: 22
+    - source: (mocker)
+      style: secondary
+      start: 15
+      end: 23
+  double = mock.create_autospec(Service):
+    labels:
+    - source: mock.create_autospec(Service)
+      style: primary
+      start: 9
+      end: 38
+    - source: mock.create_autospec
+      style: secondary
+      start: 9
+      end: 29
+  from mock import patch:
+    labels:
+    - source: from mock import patch
+      style: primary
+      start: 0
+      end: 22
+  from pytest_mock import MockerFixture:
+    labels:
+    - source: from pytest_mock import MockerFixture
+      style: primary
+      start: 0
+      end: 37
+  from unittest import TestCase, mock:
+    labels:
+    - source: from unittest import TestCase, mock
+      style: primary
+      start: 0
+      end: 35
+  from unittest import mock:
+    labels:
+    - source: from unittest import mock
+      style: primary
+      start: 0
+      end: 25
   from unittest.mock import MagicMock:
     labels:
     - source: from unittest.mock import MagicMock
       style: primary
       start: 0
       end: 35
-  service = MagicMock():
-    labels:
-    - source: MagicMock()
+  ? |
+    from unittest.mock import MagicMock
+    service = MagicMock()
+  : labels:
+    - source: from unittest.mock import MagicMock
       style: primary
-      start: 10
-      end: 21
+      start: 0
+      end: 35
+  ? |
+    from unittest.mock import patch
+    handle = patch.object(Service, "run")
+  : labels:
+    - source: from unittest.mock import patch
+      style: primary
+      start: 0
+      end: 31
+  ? |
+    from unittest.mock import patch
+    with patch("flext_core.runtime.run"):
+        pass
+  : labels:
+    - source: from unittest.mock import patch
+      style: primary
+      start: 0
+      end: 31
+  handle = mock.patch("flext_core.runtime.run"):
+    labels:
+    - source: mock.patch("flext_core.runtime.run")
+      style: primary
+      start: 9
+      end: 45
+    - source: mock.patch
+      style: secondary
+      start: 9
+      end: 19
+  handle = unittest.mock.patch.dict(os.environ, {}):
+    labels:
+    - source: unittest.mock.patch.dict(os.environ, {})
+      style: primary
+      start: 9
+      end: 49
+    - source: unittest.mock.patch.dict
+      style: secondary
+      start: 9
+      end: 33
+  import mock:
+    labels:
+    - source: import mock
+      style: primary
+      start: 0
+      end: 11
+  import pytest_mock:
+    labels:
+    - source: import pytest_mock
+      style: primary
+      start: 0
+      end: 18
+  import unittest.mock:
+    labels:
+    - source: import unittest.mock
+      style: primary
+      start: 0
+      end: 20

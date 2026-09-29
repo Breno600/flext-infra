@@ -116,16 +116,6 @@ class TestsFlextInfraTypeGates:
         assert repaired.result.passed, repaired
         assert not repaired.issues
 
-        if gate_class is FlextInfraMypyGate:
-            native_reports = tuple(reports.rglob("coverage.json"))
-            assert len(native_reports) == 1
-            inventory = m.Infra.MypyCoverageReport.model_validate_json(
-                native_reports[0].read_text(encoding="utf-8"), strict=True
-            )
-            assert set(inventory.lines) == {
-                str(path.resolve()) for path in (project / "src").rglob("*.py")
-            }
-
     @pytest.mark.slow
     @pytest.mark.parametrize(
         ("gate_class", "config_text"),
@@ -213,12 +203,16 @@ class TestsFlextInfraTypeGates:
             issue.file.endswith(unselected.name) for issue in full_project.issues
         )
 
-    @pytest.mark.parametrize(
-        "gate_class", [FlextInfraMypyGate, FlextInfraPyrightGate, FlextInfraPyreflyGate]
-    )
+    @pytest.mark.parametrize("gate_class", [FlextInfraMypyGate])
     def test_empty_source_is_not_passed(
         self, tmp_path: Path, gate_class: type[FlextInfraGate]
     ) -> None:
+        """Mypy keeps the loud default: no inputs never reads as a clean pass.
+
+        The python checkers (pyright/pyrefly) own a conditional-empty posture
+        instead — their targets depend on the project topology, so they pass
+        with the typed empty-analysis observation (see the twin test).
+        """
         result = gate_class(tmp_path).check(
             tmp_path,
             m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path),
@@ -227,6 +221,31 @@ class TestsFlextInfraTypeGates:
         # An empty source must never read as a clean pass: the skipped state
         # stays visible in the execution errors for every gate posture.
         assert result.result.errors
+
+    @pytest.mark.parametrize(
+        "gate_class", [FlextInfraPyrightGate, FlextInfraPyreflyGate]
+    )
+    def test_zero_python_topology_passes_with_typed_receipt(
+        self, tmp_path: Path, gate_class: type[FlextInfraGate]
+    ) -> None:
+        """The type gates own a conditional-empty posture: pass + observation.
+
+        Unlike the loud default above (a mypy gate with no inputs did not
+        establish acceptance), the python checkers' targets are conditional
+        on the project topology: a content-only project (package:false root
+        or empty configured include) has no python to analyze by declared
+        design, so the gates pass with the typed empty-analysis observation
+        instead of failing.
+        """
+        gate = gate_class(tmp_path)
+        result = gate.check(
+            tmp_path,
+            m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path),
+        )
+        assert result.result.passed is True
+        assert not result.issues
+        codes = [issue.code for issue in result.observational_issues]
+        assert codes == [f"{gate.gate_id}-empty-analysis"]
 
     @pytest.mark.parametrize("payload", ["", " ", "not JSON", "{}", "[]", "null"])
     @pytest.mark.parametrize(
@@ -268,20 +287,62 @@ class TestsFlextInfraTypeGates:
         assert report.summary.information_count == 1
 
     def test_pyright_zero_collection(self) -> None:
-        with pytest.raises(c.ValidationError):
-            m.Infra.PyrightReport.model_validate_json(
-                '{"version":"1.1.411","time":"1","generalDiagnostics":[], '
-                '"summary":{"filesAnalyzed":0,"errorCount":0,"warningCount":0,'
-                '"informationCount":0,"timeInSec":0.1}}',
-                strict=True,
-            )
+        """filesAnalyzed=0 is a valid report: content-only roots analyze nothing."""
+        report = m.Infra.PyrightReport.model_validate_json(
+            '{"version":"1.1.411","time":"1","generalDiagnostics":[], '
+            '"summary":{"filesAnalyzed":0,"errorCount":0,"warningCount":0,'
+            '"informationCount":0,"timeInSec":0.1}}',
+            strict=True,
+        )
+        assert report.summary.files_analyzed == 0
+        assert not report.general_diagnostics
 
-    @pytest.mark.parametrize(
-        "payload", ['{"lines":{}}', '{"lines":{"relative.py":[1]}}', "{}"]
-    )
-    def test_mypy_requires_native_source_evidence(self, payload: str) -> None:
-        with pytest.raises(c.ValidationError):
-            m.Infra.MypyCoverageReport.model_validate_json(payload, strict=True)
+    @pytest.mark.slow
+    def test_pyright_passes_with_receipt_on_zero_python_topology(
+        self, checker_context: m.Infra.GateContext
+    ) -> None:
+        """A content-only project (no python under the configured root) passes.
 
+        The gate emits one typed information receipt naming the condition
+        instead of failing on the native filesAnalyzed=0 report (invest
+        repro: pyright TOOL_ERROR 'filesAnalyzed Input should be greater
+        than 0' on a package:false root).
+        """
+        project = checker_context.repository_root
+        src_pkg = project / "src" / "test_pkg"
+        for module in src_pkg.glob("*.py"):
+            module.unlink()
 
-__all__: list[str] = ["TestsFlextInfraTypeGates"]
+        result = FlextInfraPyrightGate(project).check(project, checker_context)
+
+        tm.that(result.result.passed, eq=True)
+        receipts = [
+            i for i in result.observational_issues if i.code == "pyright-empty-analysis"
+        ]
+        tm.that(len(receipts), eq=1)
+        tm.that(receipts[0].severity.lower() == "information", eq=True)
+
+    @pytest.mark.slow
+    def test_pyrefly_passes_with_receipt_on_zero_python_topology(
+        self, checker_context: m.Infra.GateContext
+    ) -> None:
+        """Pyrefly's banner-only nonzero exit on an empty topology is a receipt.
+
+        Verified repro: with zero targets pyrefly exits 1 printing only its
+        'INFO Checking project...' banner lines with an empty errors JSON —
+        the gate turns that exact shape into the typed receipt and stays red
+        for any output carrying non-informational lines.
+        """
+        project = checker_context.repository_root
+        src_pkg = project / "src" / "test_pkg"
+        for module in src_pkg.glob("*.py"):
+            module.unlink()
+
+        result = FlextInfraPyreflyGate(project).check(project, checker_context)
+
+        tm.that(result.result.passed, eq=True)
+        receipts = [
+            i for i in result.observational_issues if i.code == "pyrefly-empty-analysis"
+        ]
+        tm.that(len(receipts), eq=1)
+        tm.that(receipts[0].severity.lower() == "information", eq=True)

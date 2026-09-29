@@ -15,7 +15,7 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @staticmethod
     def promoted_renders_verb_help(
-        registry: p.Infra.Promoted.Registry, verb: str, what: str
+        registry: p.Infra.PromotedRegistry, verb: str, what: str
     ) -> bool:
         """Return whether a selected WHAT renders the verb help.
 
@@ -29,7 +29,7 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @classmethod
     def promoted_render_help(
-        cls, registry: p.Infra.Promoted.Registry, selector: str
+        cls, registry: p.Infra.PromotedRegistry, selector: str
     ) -> str:
         """Render global help, ``<verb>`` help, or ``<verb>/<WHAT>`` help."""
         help_, join = c.Infra.PromotedHelp, c.Infra.PromotedJoin
@@ -90,7 +90,7 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @classmethod
     def _promoted_verb_help(
-        cls, registry: p.Infra.Promoted.Registry, requested_verb: str
+        cls, registry: p.Infra.PromotedRegistry, requested_verb: str
     ) -> str:
         """Render one verb, its actions, parameters, rules, and examples."""
         help_, join = c.Infra.PromotedHelp, c.Infra.PromotedJoin
@@ -149,7 +149,7 @@ class FlextInfraUtilitiesPromotedRendering:
         return join.LINES.join(lines)
 
     @staticmethod
-    def _promoted_alias_suffix(registry: p.Infra.Promoted.Registry, verb: str) -> str:
+    def _promoted_alias_suffix(registry: p.Infra.PromotedRegistry, verb: str) -> str:
         """Render the alias suffix of one canonical verb, empty without aliases."""
         aliases = registry.aliases_for(verb)
         if not aliases:
@@ -159,7 +159,7 @@ class FlextInfraUtilitiesPromotedRendering:
         )
 
     @staticmethod
-    def _promoted_param_details(param: p.Infra.Promoted.Param) -> t.Pair[str, str]:
+    def _promoted_param_details(param: p.Infra.PromotedParam) -> t.Pair[str, str]:
         """Render the ``default=`` and ``choices=`` details, empty when undeclared."""
         help_ = c.Infra.PromotedHelp
         choices = c.Infra.PromotedJoin.VALUES.join(param.choices)
@@ -178,9 +178,7 @@ class FlextInfraUtilitiesPromotedRendering:
         return ("", title, *(template.format(item=item) for item in items))
 
     @staticmethod
-    def _promoted_example(
-        command: p.Infra.Promoted.Command, requested_verb: str
-    ) -> str:
+    def _promoted_example(command: p.Infra.PromotedCommand, requested_verb: str) -> str:
         """Render a declared example through the requested alias when needed."""
         help_ = c.Infra.PromotedHelp
         canonical = help_.MAKE_VERB.format(verb=command.verb)

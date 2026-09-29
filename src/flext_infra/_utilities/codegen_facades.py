@@ -58,7 +58,7 @@ class FlextInfraUtilitiesCodegenFacades:
         reachable = cls._reachable_bases(
             tuple(cls._base_name(base) for base in namespace.bases), ancestors
         )
-        additions: list[tuple[str, str]] = []
+        additions: list[t.Pair[str, str]] = []
         for method in sorted(
             cls._required_methods(
                 pkg_dir,
@@ -140,7 +140,7 @@ class FlextInfraUtilitiesCodegenFacades:
                         resource = project.get_resource(
                             path.relative_to(pkg_dir.parent).as_posix()
                         )
-                        pymodule = FlextInfraUtilitiesRopeCore.get_pymodule(
+                        pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
                             project, resource
                         )
                     offset = sum(map(len, lines[: receiver.lineno - 1]))
@@ -172,7 +172,7 @@ class FlextInfraUtilitiesCodegenFacades:
         t.VariadicTuple[t.Triple[str, str, frozenset[str]]],
         t.MappingKV[str, frozenset[str]],
     ]:
-        owners: list[tuple[str, str, frozenset[str]]] = []
+        owners: list[t.Triple[str, str, frozenset[str]]] = []
         ancestors: MutableMapping[str, frozenset[str]] = {}
         for path in sorted(owners_dir.glob("*.py")):
             if path.name == c.Infra.INIT_PY:
@@ -254,7 +254,7 @@ class FlextInfraUtilitiesCodegenFacades:
     def _insert_imports(
         source: str,
         facade: ast.ClassDef,
-        additions: t.SequenceOf[tuple[str, str]],
+        additions: t.SequenceOf[t.Pair[str, str]],
         *,
         package: str,
         family: Literal["u", "p"],
@@ -273,7 +273,7 @@ class FlextInfraUtilitiesCodegenFacades:
 
     @staticmethod
     def _insert_bases(
-        source: str, namespace: ast.ClassDef, additions: t.SequenceOf[tuple[str, str]]
+        source: str, namespace: ast.ClassDef, additions: t.SequenceOf[t.Pair[str, str]]
     ) -> str:
         if not namespace.bases:
             message = "utility namespace has no canonical base chain"

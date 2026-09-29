@@ -113,6 +113,3 @@ class TestsFlextInfraValidateMain:
         """stub-validate subcommand routes correctly."""
         result = self._cli("stub-validate", "--repository-root", str(tmp_path))
         tm.that({0, 1}, has=result)
-
-
-__all__: list[str] = ["TestsFlextInfraValidateMain"]

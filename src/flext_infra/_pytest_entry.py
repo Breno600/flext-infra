@@ -5,8 +5,6 @@ from __future__ import annotations
 import sys
 import time
 
-from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
-
 
 class FlextInfraPytestEntry:
     """Facade for the pytest entrypoint with pre-import clock."""
@@ -17,9 +15,11 @@ class FlextInfraPytestEntry:
     def main(cls) -> int:
         """Parse the Make boundary and return the exact child process status.
 
-        ``coverage`` selects the coverage-only pass (never testmon); the default is
-        the persistent-testmon pass (never the cov plugin).
+        ``full`` runs incremental then complete testmon execution. ``coverage``
+        selects coverage alone; the default is the incremental operation.
         """
+        from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
+
         runner = FlextInfraPytestRunner.from_environment(
             started_at_monotonic=cls._STARTED_AT_MONOTONIC
         )
@@ -28,10 +28,10 @@ class FlextInfraPytestEntry:
             return runner.execute_coverage().unwrap()
         if mode == "full":
             return runner.execute_full().unwrap()
-        if mode:
-            msg = f"unknown pytest runner mode: {mode}"
-            raise ValueError(msg)
-        return runner.execute().unwrap()
+        if not mode:
+            return runner.execute().unwrap()
+        msg = f"unsupported pytest operation: {mode}"
+        raise ValueError(msg)
 
 
 if __name__ == "__main__":

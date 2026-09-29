@@ -8,6 +8,7 @@ primitive, never through hardcoded per-project logic.
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from flext_tests import tm
@@ -51,7 +52,7 @@ class TestsFlextInfraCodegenRepositoryRootFanout:
         for verb in (c.Infra.VERB_CHECK, c.Infra.VERB_TEST):
             execution = tm.ok(
                 test_u.Cli.run_raw(
-                    [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}", ""],
+                    [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}"],
                     cwd=repository_root,
                     remove_env_keys=("MAKEFLAGS",),
                 )
@@ -59,26 +60,120 @@ class TestsFlextInfraCodegenRepositoryRootFanout:
             tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
             tm.that(execution.stdout + execution.stderr, has=f"--verb {verb}")
 
-    def test_repository_root_deps_profiles_canonical_modernization(
-        self, tmp_path: Path
-    ) -> None:
-        """Generated deps renders the exact lock-upgrade and modernizer invocation."""
+    def test_repository_root_declares_member_propagation(self, tmp_path: Path) -> None:
+        """The workspace profile declares propagate through the workspace CLI."""
         repository_root = self._render_root_makefile(tmp_path)
-
         execution = tm.ok(
             test_u.Cli.run_raw(
-                [c.Infra.MAKE, "--dry-run", "_builtin-deps", ""],
+                [c.Infra.MAKE, "--dry-run", "_builtin-propagate"],
                 cwd=repository_root,
                 remove_env_keys=("MAKEFLAGS",),
             )
         )
-
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
+        tm.that(
+            execution.stdout + execution.stderr,
+            has=f"{c.Infra.CLI_GROUP_WORKSPACE} propagate",
+        )
+
+    def test_repository_root_upg_profiles_canonical_modernization(
+        self, tmp_path: Path
+    ) -> None:
+        """Generated upg renders the exact lock-upgrade and modernizer invocation.
+
+        ``upg`` bootstraps Mise (network) and then dispatches its lifecycle with
+        the Mise-resolved direnv handoff; the dry run enters that lifecycle with
+        the same handoff contract, so its recursive ``+`` activation still runs.
+        """
+        repository_root = self._render_root_makefile(tmp_path)
+
+        execution = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--dry-run", "_upg_lifecycle"],
+                cwd=repository_root,
+                env={
+                    "SETUP_DIRENV": tm.not_none(shutil.which("direnv")),
+                    "SETUP_DIRENV_XDG_DATA_HOME": str(tmp_path / "direnv-data"),
+                },
+            )
+        )
+
+        tm.that(
+            u.Cli.process_succeeded(execution.outcome),
+            eq=True,
+            msg=execution.stdout + execution.stderr,
+        )
         rendered = execution.stdout + execution.stderr
         tm.that(rendered, has="deps modernize")
-        tm.that(rendered, has="--apply --rewrite-constraints --skip-check")
-        tm.that(rendered, has="uv lock --project")
-        tm.that(rendered, has="--upgrade")
+        tm.that(rendered, has="--apply --rewrite-constraints")
+        tm.that(rendered, has="lock --project")
+        tm.that(rendered, has="--upgrade --refresh")
+
+    def test_repository_root_upg_locks_tools_from_the_rendered_manifest(
+        self, tmp_path: Path
+    ) -> None:
+        """One ``make upg`` converges: every final lock follows ``gen``.
+
+        ``gen`` renders the tool manifests of the upgraded generator, so the
+        first half ends at ``gen`` and hands off to a fresh make invocation of
+        the regenerated Makefile. That second half locks the tools again from
+        the rendered manifest (without re-resolving the Mise release), then
+        re-resolves, reprovisions and checks uv.lock before post-upg.
+        """
+        repository_root = self._render_root_makefile(tmp_path)
+        handoff = {
+            "SETUP_DIRENV": tm.not_none(shutil.which("direnv")),
+            "SETUP_DIRENV_XDG_DATA_HOME": str(tmp_path / "direnv-data"),
+        }
+        first, second, database = (
+            tm.ok(
+                u.Tests.run_isolated_make(arguments, cwd=repository_root, env=handoff)
+            )
+            for arguments in (
+                ["--dry-run", "_upg_lifecycle"],
+                ["--dry-run", "_upg_converge"],
+                ["--dry-run", "--print-data-base", "help"],
+            )
+        )
+        for execution in (first, second, database):
+            tm.that(
+                u.Cli.process_succeeded(execution.outcome),
+                eq=True,
+                msg=execution.stdout + execution.stderr,
+            )
+        steps = first.stdout.splitlines()
+        positions = [
+            next(i for i, step in enumerate(steps) if needle in step)
+            for needle in (
+                "--upgrade --refresh",
+                "deps modernize",
+                " gen",
+                "_upg_relock",
+            )
+        ]
+        tm.that(positions, eq=sorted(positions))
+        tm.that(steps[positions[-1] :], len=1)
+        tm.that(sum("lock --project" in step for step in steps), eq=1)
+        converge = second.stdout.splitlines()
+        final_lock = next(i for i, s in enumerate(converge) if "lock --project" in s)
+        lock_check = next(i for i, s in enumerate(converge) if "--check" in s)
+        tm.that(final_lock < lock_check, eq=True)
+        tm.that(second.stdout + second.stderr, has="_upg_activated")
+        variables = {
+            line
+            for line in database.stdout.splitlines()
+            if line.startswith(("upg: TOOL_BOOTSTRAP_", "_upg_relock: TOOL_BOOTSTRAP_"))
+        }
+        tm.that(
+            variables,
+            eq={
+                "upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle",
+                "upg: TOOL_BOOTSTRAP_RESOLVE := 1",
+                "upg: TOOL_BOOTSTRAP_LOCK := 1",
+                "_upg_relock: TOOL_BOOTSTRAP_LIFECYCLE := _upg_converge",
+                "_upg_relock: TOOL_BOOTSTRAP_LOCK := 1",
+            },
+        )
 
     def _render_root_makefile(self, tmp_path: Path) -> Path:
         """Render base/Makefile.j2 from a typed workspace fixture."""
@@ -86,10 +181,10 @@ class TestsFlextInfraCodegenRepositoryRootFanout:
         workspace = u.Tests.workspace_spec(
             repository, project=u.Tests.project_spec(repository.name)
         )
-        repository_root = tmp_path / "workspace"
-        # The bootstrap projection refreshes the dispatcher of an existing checkout:
-        # the root is present, even when it carries no metadata or topology yet.
-        repository_root.mkdir()
+        # The bootstrap projection refreshes the dispatcher of an existing
+        # checkout: the root is a Git repository (the workspace profile resolves
+        # itself through Git), even when it carries no topology yet.
+        repository_root = u.Tests.git_repository(tmp_path, "workspace")
         request = u.Tests.conform_request(
             repository_root,
             what=c.Infra.CodegenConformSurface.MAKEFILE,
@@ -114,6 +209,3 @@ class TestsFlextInfraCodegenRepositoryRootFanout:
             encoding=c.Infra.ENCODING_DEFAULT,
         )
         return repository_root
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenRepositoryRootFanout"]

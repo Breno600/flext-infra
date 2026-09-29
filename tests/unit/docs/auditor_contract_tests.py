@@ -41,6 +41,3 @@ class TestsFlextInfraAuditorContract:
             m.Infra.AuditScopeParams.model_validate({
                 "budgets": (None, {"test-project": 3})
             })
-
-
-__all__: list[str] = ["TestsFlextInfraAuditorContract"]

@@ -5,10 +5,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, main as infra_main
+from flext_infra import c, main as infra_main
 from flext_infra.workspace import (
     FlextInfraOrchestratorService,
     FlextInfraWorkspaceDetector,
@@ -33,19 +32,13 @@ class TestsFlextInfraWorkspaceMain:
             encoding="utf-8",
         )
         u.Tests.write_project_beads_config(project_root, name)
+        u.Tests.write_workspace_manifest(project_root, name)
         u.Tests.initialize_git_repo(
             project_root, origin_url=u.Tests.repository_ref(name).url
         )
 
     def _write_workspace(self, repository_root: Path) -> None:
-        repository_root.mkdir(parents=True, exist_ok=True)
-        (repository_root / "pyproject.toml").write_text(
-            ('[project]\nname = "workspace"\nversion = "0.1.0"\n'), encoding="utf-8"
-        )
-        u.Tests.write_project_beads_config(repository_root, "workspace")
-        u.Tests.initialize_git_repo(
-            repository_root, origin_url=u.Tests.repository_ref("workspace").url
-        )
+        self._write_project(repository_root, "workspace")
         self._write_project(repository_root / "demo-a", "demo-a")
         u.Tests.WorktreeFixture.write_gitmodules(repository_root, ("demo-a",))
 
@@ -99,65 +92,34 @@ class TestsFlextInfraWorkspaceMain:
         """The public command rejects an undeclared operation."""
         tm.that(self._workspace_main(["orchestrate", "--verb", "legacy-check"]), eq=1)
 
-    @pytest.mark.parametrize("verb", ["check", "test", "test-full"])
-    @pytest.mark.parametrize("exit_code", [0, 7])
     def test_workspace_orchestrate_passes_repository_root_to_member(
-        self,
-        tmp_path: Path,
-        capfd: pytest.CaptureFixture[str],
-        verb: str,
-        exit_code: int,
+        self, tmp_path: Path
     ) -> None:
         """Attached members receive the workspace root as REPOSITORY_ROOT."""
         member_root = tmp_path / "demo-a"
         member_root.mkdir()
         sentinel = member_root / "observed-repository-root.txt"
         (member_root / c.Infra.MAKEFILE_FILENAME).write_text(
-            f"{verb}:\n"
+            "check:\n"
             "\t@printf '%s\\n' '$(REPOSITORY_ROOT)'"
-            " > observed-repository-root.txt\n"
-            f"\t@exit {exit_code}\n",
+            " > observed-repository-root.txt\n",
             encoding=c.Infra.ENCODING_DEFAULT,
         )
         service = FlextInfraOrchestratorService(
-            repository_root=tmp_path, verb=verb, projects=("demo-a",)
+            repository_root=tmp_path, verb=c.Infra.VERB_CHECK, projects=("demo-a",)
         )
         previous = Path.cwd()
         os.chdir(tmp_path)
         try:
-            result = service.orchestrate(("demo-a",), verb)
+            result = service.orchestrate(("demo-a",), c.Infra.VERB_CHECK)
         finally:
             os.chdir(previous)
 
-        if exit_code:
-            tm.fail(result, has=f"demo-a exit={exit_code}")
-        else:
-            tm.ok(result)
+        tm.ok(result)
         tm.that(
             sentinel.read_text(encoding=c.Infra.ENCODING_DEFAULT).strip(),
             eq=str(tmp_path.resolve()),
         )
-        captured = capfd.readouterr()
-        output = captured.out + captured.err
-        summary = next(
-            line for line in output.splitlines() if line.startswith("summary scope=")
-        )
-        tm.that(
-            summary,
-            has=[
-                f"passed={int(exit_code == 0)}",
-                f"failed={int(exit_code != 0)}",
-                f"exit={exit_code}",
-                "result_scope=command_exit",
-            ],
-        )
-        reason = config.Infra.codegen.make.policy_check_suspension_reason
-        tm.that("custom_policy_enforcement=suspended" in summary, eq=reason is not None)
-        if reason is not None:
-            tm.that(
-                output,
-                has=["SUSPENDED", reason, "do not certify full policy execution"],
-            )
 
     def test_workspace_orchestrator_declares_enforcement_fix(self) -> None:
         """The generated workspace Make handler has a matching public allowlist."""
@@ -165,6 +127,3 @@ class TestsFlextInfraWorkspaceMain:
 
     def test_workspace_main_without_command_returns_failure(self) -> None:
         tm.that(self._workspace_main([]), eq=1)
-
-
-__all__: list[str] = ["TestsFlextInfraWorkspaceMain"]

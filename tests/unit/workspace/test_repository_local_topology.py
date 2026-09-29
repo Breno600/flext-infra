@@ -9,7 +9,6 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, m, t
-from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from tests import u
 
@@ -77,6 +76,63 @@ class TestsFlextInfraRepositoryLocalTopology:
 
         tm.that(workspace.repository.kind, eq=c.Infra.ProjectKind.THIRD_PARTY_FORK)
         tm.that(workspace.repository.uv_link_mode, eq="clone")
+
+    def test_declared_beads_free_repository_loads_without_ledger(
+        self, tmp_path: Path
+    ) -> None:
+        """An explicit standalone policy needs no Beads or Gas City identity."""
+        root = self._self_named_governed_root(tmp_path, "without-beads")
+        observed = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        manifest: t.MutableMappingKV[str, t.JsonValue] = {
+            "version": c.Infra.WORKSPACE_MANIFEST_VERSION,
+            "name": observed.name,
+            "repository": observed.repository.model_dump(mode="json"),
+            "repository_policy_overlays": [
+                {
+                    "project": observed.repository.distribution,
+                    "beads_enabled": False,
+                    "gascity_enabled": False,
+                }
+            ],
+        }
+        tm.ok(
+            u.Cli.yaml_dump(
+                root / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME, manifest
+            )
+        )
+        (root / "config" / c.Infra.BEADS_CONFIG_FILENAME).unlink()
+        ledger = root / c.Infra.BEADS_DIRNAME
+        if ledger.is_dir():
+            shutil.rmtree(ledger)
+        workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        tm.that(workspace.name, eq=observed.name)
+        tm.that(workspace.beads, none=True)
+        tm.that(workspace.gascity_enabled, eq=False)
+
+    def test_overlay_omitting_beads_policy_keeps_beads_enabled(
+        self, tmp_path: Path
+    ) -> None:
+        """An overlay that omits beads_enabled resolves like no overlay at all."""
+        root = self._self_named_governed_root(tmp_path, "overlay-default-beads")
+        observed = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        manifest: t.MutableMappingKV[str, t.JsonValue] = {
+            "version": c.Infra.WORKSPACE_MANIFEST_VERSION,
+            "name": observed.name,
+            "repository": observed.repository.model_dump(mode="json"),
+            "repository_policy_overlays": [
+                {"project": observed.repository.distribution, "ci_enabled": False}
+            ],
+        }
+        tm.ok(
+            u.Cli.yaml_dump(
+                root / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME, manifest
+            )
+        )
+
+        workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+
+        tm.that(workspace.beads, eq=observed.beads)
+        tm.that(workspace.gascity_enabled, eq=observed.gascity_enabled)
 
     def test_selected_workspace_manifest_rejects_git_contradiction(
         self, tmp_path: Path
@@ -230,7 +286,13 @@ class TestsFlextInfraRepositoryLocalTopology:
     ) -> None:
         """Ignore every parent input when deriving one child repository."""
         parent = tmp_path / "parent"
-        parent.mkdir()
+        u.Tests.WorktreeFixture.initialize_governed_project(
+            parent,
+            "parent",
+            workspace="parent-workspace",
+            database="parent-database",
+            issue_prefix="parent-prefix",
+        )
         u.Tests.WorktreeFixture.write_gitmodules(parent, ("child",))
         child = parent / "child"
         u.Tests.WorktreeFixture.initialize_governed_project(
@@ -290,52 +352,6 @@ class TestsFlextInfraRepositoryLocalTopology:
         )
         return member
 
-    def test_root_generation_preserves_declared_members_without_checkouts(
-        self, tmp_path: Path
-    ) -> None:
-        """Root-only CI planning preserves local topology without initializing members."""
-        member = self._attached_member(tmp_path)
-        root = member.parents[1]
-        before = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
-        (manifest,) = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(root))
-        declared = manifest.model_copy(update={"members": before.subprojects})
-        tm.ok(
-            u.Cli.yaml_dump(
-                root / "config" / c.Infra.WORKSPACE_MANIFEST_FILENAME,
-                declared.model_dump(mode="json"),
-            )
-        )
-        request = u.Tests.conform_request(
-            root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.CHECK,
-        )
-        first = tm.ok(
-            FlextInfraCodegenConform(repository_root=root, request=request).plan(
-                request
-            )
-        )
-        relative = member.relative_to(root).as_posix()
-        tm.ok(
-            u.Cli.run_checked(
-                (c.Infra.GIT, "submodule", "deinit", "-f", "--", relative), cwd=root
-            )
-        )
-
-        after = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
-        second = tm.ok(
-            FlextInfraCodegenConform(repository_root=root, request=request).plan(
-                request
-            )
-        )
-
-        assert after.subprojects == before.subprojects
-        assert not after.external_dependency_paths
-        assert second.repositories == first.repositories == (after.repository,)
-        assert second.files == first.files
-        assert not (member / c.Infra.PYPROJECT_FILENAME).exists()
-        assert not (member / c.Infra.GIT_DIR).exists()
-
     def test_composed_self_load_records_its_workspace_checkout(
         self, tmp_path: Path
     ) -> None:
@@ -349,7 +365,7 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.that(workspace.repository.path, eq=Path())
         tm.that(workspace.repository.role, eq=c.Infra.MakeProfile.STANDALONE)
         tm.that(workspace.repository.editable, eq=True)
-        tm.that(workspace.beads.workspace, eq="parent-workspace")
+        tm.that(tm.not_none(workspace.beads).workspace, eq="parent-workspace")
 
     def test_composed_self_load_accepts_a_self_coordinate_manifest(
         self, tmp_path: Path
@@ -654,9 +670,6 @@ class TestsFlextInfraRepositoryLocalTopology:
     ) -> None:
         """Honor the .gitmodules overlay: flext-managed=false is never governed."""
         root = u.Tests.WorktreeFixture.governed_workspace(tmp_path, "overlay-external")
-        _ = u.Tests.WorktreeFixture.override_repository_manifest(
-            root, {"role": c.Infra.MakeProfile.WORKSPACE}
-        )
         (root / "external-fork").mkdir()
         (root / c.Infra.GITMODULES).write_text(
             '[submodule "external-fork"]\n'
@@ -666,6 +679,10 @@ class TestsFlextInfraRepositoryLocalTopology:
             "\tflext-classification = external-fork\n"
             "\tflext-managed = false\n",
             encoding="utf-8",
+        )
+        # A root declaring submodules is a workspace; its manifest must agree.
+        _ = u.Tests.write_workspace_manifest(
+            root, "fixture-workspace", role=c.Infra.MakeProfile.WORKSPACE
         )
 
         workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
@@ -678,9 +695,6 @@ class TestsFlextInfraRepositoryLocalTopology:
     ) -> None:
         """Accept a governed checkout declared on the published integration line."""
         root = u.Tests.WorktreeFixture.governed_workspace(tmp_path, "integration-line")
-        _ = u.Tests.WorktreeFixture.override_repository_manifest(
-            root, {"role": c.Infra.MakeProfile.WORKSPACE}
-        )
         baseline = tm.ok(u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=root))
         tm.ok(
             u.Cli.run_checked(
@@ -706,6 +720,10 @@ class TestsFlextInfraRepositoryLocalTopology:
             f"\turl = {u.Tests.WorktreeFixture.governed_repository_url('fixture-child')}\n"
             "\tbranch = develop\n",
             encoding="utf-8",
+        )
+        # A root declaring submodules is a workspace; its manifest must agree.
+        _ = u.Tests.write_workspace_manifest(
+            root, "fixture-workspace", role=c.Infra.MakeProfile.WORKSPACE
         )
 
         workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
@@ -735,8 +753,9 @@ class TestsFlextInfraRepositoryLocalTopology:
     def test_gitmodule_rejects_unknown_provider_without_raw_url(
         self, tmp_path: Path
     ) -> None:
-        """Reject a foreign origin identity without exposing its private host."""
+        """Reject an unknown declared owner without leaking its raw URL."""
         root = u.Tests.WorktreeFixture.governed_workspace(tmp_path, "unknown-provider")
+        # The detector requires the governed checkout before comparing origins.
         _ = u.Tests.WorktreeFixture.attach_member_child(root)
         raw_host_marker = "private-submodule-host"
         (root / c.Infra.GITMODULES).write_text(
@@ -763,6 +782,3 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.that(first, eq=second)
         tm.that(first.name, eq=u.Tests.provider().name)
         tm.that(first.organization, eq=u.Tests.provider().organization)
-
-
-__all__: list[str] = ["TestsFlextInfraRepositoryLocalTopology"]

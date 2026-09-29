@@ -94,6 +94,3 @@ class TestsFlextInfraCodegenConformNoTransactionWorktrees:
         )
         tm.that(drifted.read_bytes(), eq=converged_bytes)
         tm.that(self._transaction_worktree_siblings(root), eq=before)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenConformNoTransactionWorktrees"]

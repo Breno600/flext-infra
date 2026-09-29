@@ -430,6 +430,3 @@ class TestsFlextInfraModCliRoute:
             eq=c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX,
         )
         tm.that(report.non_actionable_with_fix, gte=1)
-
-
-__all__: list[str] = ["TestsFlextInfraModCliRoute"]

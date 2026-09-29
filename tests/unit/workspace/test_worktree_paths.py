@@ -7,7 +7,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from flext_infra import FlextInfraWorktreeService, c, m
-from tests import t, u
+from tests import u
 
 
 class TestsFlextInfraWorktreePaths(u.Tests.WorktreeFixture):
@@ -147,6 +147,3 @@ class TestsFlextInfraWorktreePaths(u.Tests.WorktreeFixture):
         tm.that(first.name, eq=second.name)
         tm.that(first_lane != second_lane, where=bool)
         tm.that(first_lane.parent.parent != second_lane.parent.parent, where=bool)
-
-
-__all__: t.VariadicTuple[str] = ()
