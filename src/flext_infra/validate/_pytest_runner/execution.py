@@ -35,7 +35,7 @@ class FlextInfraPytestRunnerExecution(
         ).execute()
 
     def _selection_env(
-        self, manifest: Path, *, execution_mode: c.Infra.PytestExecutionMode
+        self, *, execution_mode: c.Infra.PytestExecutionMode
     ) -> MutableMapping[str, str]:
         """Return the child environment shared by every runner invocation.
 
@@ -51,16 +51,11 @@ class FlextInfraPytestRunnerExecution(
             c.Infra.ORCHESTRATOR_ENV_PYTHONPATH: str(
                 self.root / c.Infra.DEFAULT_SRC_DIR
             ),
-            c.Infra.PYTEST_ENV_COLLECTION_MANIFEST: str(manifest),
         }
         if not coverage:
             overrides.update(dict.fromkeys(testmon_keys, str(self.testmon_db)))
         remove_keys = (
-            *(
-                key
-                for key in c.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS
-                if key != c.Infra.PYTEST_ENV_COLLECTION_MANIFEST
-            ),
+            *c.Infra.PYTEST_INHERITED_ENV_REMOVE_KEYS,
             *(testmon_keys if coverage else ()),
         )
         return u.Cli.process_env(remove_keys=remove_keys, overrides=overrides)
@@ -79,13 +74,16 @@ class FlextInfraPytestRunnerExecution(
         manifest_path = report_dir / f"{artifact}.json"
         report_log = report_dir / f"{artifact}.events.jsonl"
         command = self.build_selection_command(
-            report_log=report_log, complete=complete, execution_mode=execution_mode
+            report_log=report_log,
+            manifest_path=manifest_path,
+            complete=complete,
+            execution_mode=execution_mode,
         )
         outcome = u.Cli.run_to_file(
             command,
             selection_log,
             cwd=self.root,
-            env=self._selection_env(manifest_path, execution_mode=execution_mode),
+            env=self._selection_env(execution_mode=execution_mode),
             deadline=self._process_deadline(),
         ).unwrap()
         self._record_process_outcome(
@@ -174,7 +172,6 @@ class FlextInfraPytestRunnerExecution(
         command: t.VariadicTuple[str],
         report_dir: Path,
         *,
-        manifest_path: Path,
         execution_mode: c.Infra.PytestExecutionMode,
     ) -> p.Cli.ProcessOutcome:
         """Execute one suite argv under the shared deadline and environment."""
@@ -185,7 +182,7 @@ class FlextInfraPytestRunnerExecution(
             command,
             report_dir / "pytest.log",
             cwd=self.root,
-            env=self._selection_env(manifest_path, execution_mode=execution_mode),
+            env=self._selection_env(execution_mode=execution_mode),
             live=True,
             deadline=self._process_deadline(),
         ).unwrap()
@@ -411,13 +408,13 @@ class FlextInfraPytestRunnerExecution(
         command = self.build_command(
             report_dir,
             selection,
+            manifest_path=selection_plan.manifest_path,
             whole_target=selection_plan.whole_target,
             execution_mode=execution_mode,
         )
         outcome = self._run_suite(
             command,
             report_dir,
-            manifest_path=selection_plan.manifest_path,
             execution_mode=execution_mode,
         )
         cache_hit = (
@@ -465,7 +462,8 @@ class FlextInfraPytestRunnerExecution(
                 deadline_monotonic=self._process_deadline().expires_at_monotonic,
             ),
         )
-        selection_plan = self._resolve_selection(
+        # The inventory pass enforces the same collection policy before coverage.
+        self._resolve_selection(
             report_dir,
             complete=True,
             execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
@@ -475,7 +473,6 @@ class FlextInfraPytestRunnerExecution(
         outcome = self._run_suite(
             command,
             report_dir,
-            manifest_path=selection_plan.manifest_path,
             execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
         )
         if self._completed_failure(outcome):

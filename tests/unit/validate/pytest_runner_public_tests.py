@@ -35,9 +35,14 @@ class TestsFlextInfraPytestRunner:
         )
         expressions = []
         for command in (
-            runner.build_selection_command(report_log=report / "selection.jsonl"),
             runner.build_selection_command(
-                report_log=report / "inventory.jsonl", complete=True
+                report_log=report / "selection.jsonl",
+                manifest_path=report / "selection.json",
+            ),
+            runner.build_selection_command(
+                report_log=report / "inventory.jsonl",
+                manifest_path=report / "inventory.json",
+                complete=True,
             ),
             runner.build_command(report),
             runner.build_coverage_command(report),
@@ -62,9 +67,14 @@ class TestsFlextInfraPytestRunner:
         suite_command = runner.build_command(report)
         names = []
         for command in (
-            runner.build_selection_command(report_log=report / "selection.jsonl"),
             runner.build_selection_command(
-                report_log=report / "inventory.jsonl", complete=True
+                report_log=report / "selection.jsonl",
+                manifest_path=report / "selection.json",
+            ),
+            runner.build_selection_command(
+                report_log=report / "inventory.jsonl",
+                manifest_path=report / "inventory.json",
+                complete=True,
             ),
             suite_command,
         ):
@@ -573,6 +583,7 @@ class TestsFlextInfraPytestRunner:
         for command in (
             runner.build_selection_command(
                 report_log=full / "testmon-inventory.events.jsonl",
+                manifest_path=full / "testmon-inventory.json",
                 complete=True,
                 execution_mode=c.Infra.PytestExecutionMode.FULL,
             ),
@@ -606,6 +617,7 @@ class TestsFlextInfraPytestRunner:
         tm.that("--testmon" in command, eq=False)
         inventory_command = runner.build_selection_command(
             report_log=reports_root / latest_name / "testmon-inventory.events.jsonl",
+            manifest_path=reports_root / latest_name / "testmon-inventory.json",
             complete=True,
             execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
         )
@@ -926,9 +938,8 @@ class TestsFlextInfraPytestRunner:
         runner = self._runner_for(cached_runner_project)
         target = cached_runner_project / runner.target
         (target / "test_stable.py").write_text(
-            "import os\nfrom pathlib import Path\nimport warnings\n\n"
-            f"if os.environ.get({c.Infra.PYTEST_ENV_COLLECTION_MANIFEST!r}) and "
-            "Path(__file__).with_name('emit-warning').exists():\n"
+            "from pathlib import Path\nimport warnings\n\n"
+            "if Path(__file__).with_name('emit-warning').exists():\n"
             "    warnings.warn('stable inventory finding', RuntimeWarning)\n\n"
             "def test_stable():\n    assert 17 == 17\n",
             encoding="utf-8",
@@ -1001,10 +1012,11 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path
     ) -> None:
         (cached_runner_project / "conftest.py").write_text(
-            "import os\nfrom pathlib import Path\nfrom flext_infra import m\n\n"
+            "from pathlib import Path\nfrom flext_infra import m\n\n"
             "def pytest_collection_modifyitems(config, items):\n"
             "    if config.getoption('collectonly'):\n"
-            f"        target = Path(os.environ[{c.Infra.PYTEST_ENV_COLLECTION_MANIFEST!r}])\n"
+            "        target = Path(config.getoption(\n"
+            f"            {c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION!r}))\n"
             "        context = m.Infra.PytestRunContext.model_validate_json(\n"
             "            (target.parent / 'run-context.json').read_text())\n"
             "        if context.execution_mode == 'full':\n            items.clear()\n",
@@ -1045,9 +1057,10 @@ class TestsFlextInfraPytestRunner:
         self, cached_runner_project: Path
     ) -> None:
         (cached_runner_project / "conftest.py").write_text(
-            "import os\nfrom pathlib import Path\n\n"
+            "from pathlib import Path\n\n"
             "def pytest_sessionfinish(session):\n"
-            f"    target = os.environ.get({c.Infra.PYTEST_ENV_COLLECTION_MANIFEST!r})\n"
+            "    target = session.config.getoption(\n"
+            f"        {c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION!r})\n"
             "    if target:\n        Path(target).unlink()\n",
             encoding="utf-8",
         )

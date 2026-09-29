@@ -28,8 +28,13 @@ class FlextInfraPytestCollection:
         """Require explicit activation by the canonical runner."""
         parser.addoption(
             FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION,
-            action="store_true",
-            help="Enforce the runner's ordered node-ID selection in every worker.",
+            default=None,
+            help="Manifest whose ordered node-ID selection every worker enforces.",
+        )
+        parser.addoption(
+            FlextInfraConstantsCheck.PYTEST_COLLECTION_MANIFEST_OPTION,
+            default=None,
+            help="Path where a collect-only session publishes its final items.",
         )
         parser.addoption(
             FlextInfraConstantsCheck.PYTEST_SUITE_STOP_OPTION,
@@ -58,18 +63,19 @@ class FlextInfraPytestCollection:
     @staticmethod
     @pytest.hookimpl(wrapper=True, tryfirst=True)
     def pytest_collection_finish(session: pytest.Session) -> Generator[None]:
-        """Validate before xdist publishes worker IDs, preserving raw failures."""
-        if session.config.getoption(
-            FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION
-        ):
-            from flext_infra import c, m, u
+        """Validate before xdist publishes worker IDs, preserving raw failures.
 
-            manifest_path = u.Infra.env_lookup(c.Infra.PYTEST_ENV_COLLECTION_MANIFEST)
-            if not manifest_path:
-                msg = "Runner collection requires its canonical selection manifest"
-                raise ValueError(msg)
+        Both manifest routes are runner-passed options: a session that names
+        neither never imports the model facade.
+        """
+        selected: str | None = session.config.getoption(
+            FlextInfraConstantsCheck.PYTEST_SELECTED_COLLECTION_OPTION
+        )
+        if selected is not None:
+            from flext_infra import m
+
             manifest = m.Infra.PytestCollectionManifest.model_validate_json(
-                Path(manifest_path).read_text(encoding="utf-8")
+                Path(selected).read_text(encoding="utf-8")
             )
             order = {node_id: index for index, node_id in enumerate(manifest.node_ids)}
             collected = [item.nodeid for item in session.items]
@@ -85,27 +91,21 @@ class FlextInfraPytestCollection:
                 raise ValueError(msg)
             session.items.sort(key=lambda item: order[item.nodeid])
         yield
-        FlextInfraPytestCollection._write_collection_manifest(session)
+        target: str | None = session.config.getoption(
+            FlextInfraConstantsCheck.PYTEST_COLLECTION_MANIFEST_OPTION
+        )
+        if target is not None and session.config.getoption("collectonly"):
+            FlextInfraPytestCollection._write_collection_manifest(session, Path(target))
 
     @staticmethod
-    def _write_collection_manifest(session: pytest.Session) -> None:
+    def _write_collection_manifest(session: pytest.Session, target: Path) -> None:
         """Publish final selected items after testmon and every collection hook."""
-        from flext_infra import c, m, u
+        from flext_infra import m, u
 
-        target = u.Infra.env_lookup(c.Infra.PYTEST_ENV_COLLECTION_MANIFEST)
-        if target is None:
-            return
-        if not target:
-            msg = "collection manifest requires a nonempty path"
-            raise ValueError(msg)
-        if not session.config.getoption("collectonly"):
-            return
         manifest = m.Infra.PytestCollectionManifest(
             node_ids=tuple(item.nodeid for item in session.items)
         )
-        u.Cli.atomic_write_text_file(
-            Path(target), manifest.model_dump_json() + "\n"
-        ).unwrap()
+        u.Cli.atomic_write_text_file(target, manifest.model_dump_json() + "\n").unwrap()
 
     class SuiteStop:
         """End the session gracefully at the runner's derived stop instant.
