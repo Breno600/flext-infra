@@ -266,12 +266,6 @@ class FlextInfraModelsCheck:
             int,
             m.Field(description="Number of projects that failed one or more gates."),
         ]
-        skipped: Annotated[
-            int,
-            m.Field(
-                description="Number of projects that were skipped during execution."
-            ),
-        ]
         total_elapsed: Annotated[
             float,
             m.Field(description="Total time elapsed in seconds for the entire loop."),

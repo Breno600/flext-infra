@@ -546,7 +546,7 @@ class FlextInfraConfigModelsMake:
 
         @u.model_validator(mode="after")
         def _validate_check_gate_suspensions(self) -> Self:
-            """Suspensions name unique gates in this project's complete vocabulary."""
+            """Suspensions name unique, suspendable gates in this project's vocabulary."""
             gates = tuple(item.gate for item in self.check_gate_suspensions)
             if len(gates) != len(set(gates)):
                 msg = "make check_gate_suspensions must name unique gates"
@@ -554,6 +554,15 @@ class FlextInfraConfigModelsMake:
             unknown = sorted(set(gates) - set(self.check_gates_allowed))
             if unknown:
                 msg = f"make check_gate_suspensions contains unknown gates: {', '.join(unknown)}"
+                raise ValueError(msg)
+            protected = sorted(
+                set(gates) & FlextInfraConstantsCheck.UNSUSPENDABLE_GATES
+            )
+            if protected:
+                msg = (
+                    "make check_gate_suspensions cannot suspend lint, format "
+                    f"or type-checker gates: {', '.join(protected)}"
+                )
                 raise ValueError(msg)
             families = [
                 family
