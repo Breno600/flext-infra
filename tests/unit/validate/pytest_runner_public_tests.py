@@ -904,17 +904,19 @@ class TestsFlextInfraPytestRunner:
         tm.that(identity.enforcement_strict, eq=strict)
         tm.that(identity.category_module, eq="runner_sample.notices")
         if not blocking:
+            # A cold cache has no stored selection to verify, so the serial
+            # selection pass is the only collection phase of this run.
             summary = self._summary(cached_runner_project / runner.reports).splitlines()
             for count in (
-                "warnings=2",
-                "suspended_warnings=2",
+                "warnings=1",
+                "suspended_warnings=1",
                 "selection_warnings=1",
-                "inventory_warnings=1",
                 "suite_warnings=0",
             ):
                 tm.that(count in summary, eq=True)
+            tm.that(any(line.startswith("inventory_") for line in summary), eq=False)
             evidence = (receipt.parent / "warnings.txt").read_text()
-            tm.that(evidence.count("serial policy evidence"), eq=2)
+            tm.that(evidence.count("serial policy evidence"), eq=1)
 
     @pytest.mark.slow
     def test_warm_inventory_captures_warnings_from_stable_modules(
