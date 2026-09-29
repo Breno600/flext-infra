@@ -213,6 +213,7 @@ class TestsFlextInfraDepsModernizerWorkspace:
         self, tmp_path: Path, description: str, sort_first: t.StrSequence | None
     ) -> None:
         """Keep project scalars explicit for arbitrary valid top-level orders."""
+        u.Tests.seed_locked_taplo(tmp_path)
         pyproject = tmp_path / c.PYPROJECT_FILENAME
         package_init = tmp_path / "src" / "flext_example" / "__init__.py"
         package_init.parent.mkdir(parents=True)

@@ -292,3 +292,75 @@ class TestsFlextInfraDepsModernizerToolTables:
                 u.Tests.toml_table_at(rendered, "tool", "coverage", "report"),
                 lacks="fail_under",
             )
+
+    @staticmethod
+    def _workspace_with_exclusion(tmp_path: Path, excluded: str) -> Path:
+        """Build a governed workspace root whose SSOT excludes one tree."""
+        project_dir = tmp_path / "flext-sample"
+        (project_dir / "src").mkdir(parents=True)
+        config_dir = project_dir / "config"
+        config_dir.mkdir()
+        (config_dir / "workspace.yaml").write_text(
+            "version: 3\n"
+            'name: "sample-workspace"\n'
+            "repository:\n"
+            '  name: "sample"\n'
+            '  distribution: "flext-sample"\n'
+            '  provider: "sample"\n'
+            '  url: "https://example.com/sample.git"\n'
+            '  path: "."\n'
+            '  role: "standalone"\n'
+            '  state: "active"\n'
+            '  checkout: "root"\n'
+            '  codegen: "conform"\n'
+            "  package: true\n"
+            "  editable: false\n"
+            "  read_only: false\n"
+            f"exclusions:\n  - path: {excluded}\n    reason: retired\n",
+            encoding="utf-8",
+        )
+        return project_dir
+
+    def test_vulture_paths_filter_excluded_roots(self, tmp_path: Path) -> None:
+        """A workspace-excluded production root leaves the dead-code scope.
+
+        The config list stays the SSOT; the projection filters on the
+        workspace's declared analysis exclusions — order-independent across
+        the deps pass and the root-materializing gen pass (invest repro:
+        scripts/ retired, dead-code scope kept scanning it — bead flext-x44z3).
+        """
+        project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
+        )
+        FlextInfraToolTablesPhase(config.Infra.tooling).apply_payload(
+            payload, path=project_dir / "pyproject.toml"
+        )
+        table = self._table(payload, "vulture")
+        tm.that("scripts" not in table["paths"], eq=True)
+        tm.that("src" in table["paths"], eq=True)
+
+    def test_ruff_root_lists_filter_excluded_roots(self, tmp_path: Path) -> None:
+        """Ruff root projections drop workspace-excluded trees.
+
+        ruff fails hard on a src entry whose directory is absent, and the
+        namespace-packages contract only holds for live roots; the workspace
+        SSOT's exclusions decide (bead flext-x44z3).
+        """
+        from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+
+        project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
+        )
+        FlextInfraEnsureRuffConfigPhase(config.Infra.tooling).apply_payload(
+            payload,
+            path=project_dir / "pyproject.toml",
+        )
+        table = self._table(payload, "ruff")
+        tm.that("scripts" not in table["src"], eq=True)
+        if "namespace-packages" in table:
+            tm.that("scripts" not in table["namespace-packages"], eq=True)
+        tm.that("src" in table["src"], eq=True)
+        per_file = u.Tests.toml_mapping(table["lint"]["per-file-ignores"])
+        tm.that(not any(p.startswith("scripts/") for p in per_file), eq=True)

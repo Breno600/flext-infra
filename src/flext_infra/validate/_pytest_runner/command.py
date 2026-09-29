@@ -91,21 +91,30 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         workers reading the database while a third writes it collect different
         sets, which xdist aborts with "Different tests were collected". This
         pass runs no test and records its collection and warning evidence.
+        The coverage inventory owns no testmon plugin, so it never reads or
+        writes the persistent database.
         """
+        testmon = (
+            ()
+            if execution_mode == c.Infra.PytestExecutionMode.COVERAGE
+            else (
+                "--testmon",
+                "--testmon-nocollect",
+                # Why: the external-gate deselection is a ``-m`` expression, and
+                # testmon deactivates its selection whenever ``-m`` is present;
+                # ``--testmon-forceselect`` is testmon's declared override for
+                # exactly that case (never combined with ``--testmon-noselect``).
+                *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
+                "--testmon-env",
+                f"'{self._toolchain_testmon_environment()}'",
+            )
+        )
         return (
             sys.executable,
             "-m",
             "pytest",
             str(self.target),
-            "--testmon",
-            "--testmon-nocollect",
-            # Why: the external-gate deselection is a ``-m`` expression, and
-            # testmon deactivates its selection whenever ``-m`` is present;
-            # ``--testmon-forceselect`` is testmon's declared override for
-            # exactly that case (never combined with ``--testmon-noselect``).
-            *(("--testmon-noselect",) if complete else ("--testmon-forceselect",)),
-            "--testmon-env",
-            f"'{self._toolchain_testmon_environment()}'",
+            *testmon,
             "--collect-only",
             f"--report-log={report_log}",
             "-q",

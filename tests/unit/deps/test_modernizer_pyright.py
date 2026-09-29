@@ -41,6 +41,7 @@ class TestsFlextInfraDepsModernizerPyright:
     @staticmethod
     def _sample_project(tmp_path: Path, source_dir_name: str) -> Path:
         """Create one governed flext-sample project with a src package and manifest."""
+        u.Tests.seed_locked_taplo(tmp_path)
         project_dir = tmp_path / "flext-sample"
         source_dir = project_dir / source_dir_name / "flext_sample"
         source_dir.mkdir(parents=True)

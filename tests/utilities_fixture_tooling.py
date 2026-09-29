@@ -48,7 +48,12 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
         source = root / "checked.py"
         source.write_text("value: int = 1\n", encoding=c.Cli.ENCODING_DEFAULT)
         config_file = root / "mypy.ini"
-        config_source = "[mypy]\n"
+        # The workload checks through the governed checker settings, so its
+        # crash reporting (show_traceback) matches every managed project.
+        config_source = "[mypy]\n" + "".join(
+            f"{key} = {value}\n"
+            for key, value in config.Infra.tooling.tools.mypy.boolean_settings.items()
+        )
         if plugin_body:
             plugin = root / "workload.py"
             plugin.write_text(

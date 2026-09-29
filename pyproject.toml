@@ -70,9 +70,6 @@ Repository = "https://github.com/flext-sh/flext-infra"
 [project.entry-points.pytest11]
 "flext_infra._pytest_collection" = "flext_infra._pytest_collection:FlextInfraPytestCollection"
 
-[project.optional-dependencies]
-typings = ["types-Markdown"]
-
 [dependency-groups]
 dev = [
   "actionlint-py>=1.7.12.24",
@@ -498,7 +495,7 @@ namespace-packages = ["tests", "examples", "scripts"]
 preview = true
 respect-gitignore = true
 show-fixes = true
-src = ["examples", "scripts", "src", "tests"]
+src = ["src", "tests"]
 target-version = "py313"
 
 [tool.ruff.format]

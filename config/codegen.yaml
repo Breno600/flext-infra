@@ -470,14 +470,9 @@ Infra:
           - flext-infra-codegen-transaction-journal.json.lock
         trace_globs:
           - "*.pstats"
-      # Branch shapes and PR state that let a push skip the pre-push gate, and
-      # the integration branches the merge lock protects. Read by
-      # ci.yml.j2 and .pre-commit-config.yaml.j2.
+      # Head commit subjects that mark work in progress, and the integration
+      # branches the CI merge guard locks against them. Read by ci.yml.j2.
       work_in_progress:
-        draft_pr: true
-        branch_patterns:
-          - "^wip/"
-          - WIP
         head_subject_patterns:
           - "^\\[WIP\\]"
           - "^WIP"

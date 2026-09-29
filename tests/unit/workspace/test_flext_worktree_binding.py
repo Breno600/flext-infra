@@ -121,6 +121,32 @@ class TestsFlextInfraWorktreeBinding:
         names = tm.ok(planned)
         tm.that(sorted(names), eq=["flext-cli", "flext-core"])
 
+    def test_standalone_supplier_satisfies_a_development_dependency(
+        self, tmp_path: Path
+    ) -> None:
+        """A root-only supplier checkout serves a consumer's declared dev group."""
+        distribution = config.Infra.codegen.infra_repository.distribution
+        supplier = tmp_path / "supplier"
+        u.Tests.WorktreeFixture.initialize_governed_project(
+            supplier,
+            distribution,
+            workspace=distribution,
+            database=distribution,
+            issue_prefix=distribution,
+        )
+        consumer = self._consumer(tmp_path)
+        declaration = consumer / c.PYPROJECT_FILENAME
+        with declaration.open("a", encoding=c.Cli.ENCODING_DEFAULT) as stream:
+            stream.write(f'[dependency-groups]\ndev = ["{distribution}"]\n')
+        before = declaration.read_bytes()
+
+        planned = FlextInfraFlextBindingService.plan_targets(
+            consumer_root=consumer, flext_root=supplier, python=self._python(consumer)
+        )
+
+        tm.that(tm.ok(planned), eq=(distribution,))
+        tm.that(declaration.read_bytes(), eq=before)
+
     def test_binding_rejects_a_path_that_is_not_a_flext_workspace(
         self, tmp_path: Path
     ) -> None:
