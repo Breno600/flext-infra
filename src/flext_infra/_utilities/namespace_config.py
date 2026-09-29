@@ -57,9 +57,16 @@ class FlextInfraUtilitiesNamespaceConfig:
                 return normalized
         tracked = FlextInfraUtilitiesGit.git_tracked_top_level_dir_names(project_root)
         if tracked is not None:
-            excluded = c.Infra.COMMON_EXCLUDED_DIRS | {
-                name for name in tracked if name.startswith(".")
-            }
+            declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(project_root)
+            if declared.failure:
+                raise ValueError(declared.error or "invalid .gitmodules")
+            # A declared submodule is another repository, consumed as an
+            # installed library and never scanned from here.
+            excluded = (
+                c.Infra.COMMON_EXCLUDED_DIRS
+                | {name for name in tracked if name.startswith(".")}
+                | {path.as_posix() for path in declared.value if len(path.parts) == 1}
+            )
             dynamic = frozenset(
                 name
                 for name in tracked
