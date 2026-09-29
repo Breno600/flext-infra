@@ -132,23 +132,8 @@ class FlextInfraConfigModelsContexts:
             t.NonEmptyStr,
             m.Field(description="CLI group used for workspace orchestration"),
         ]
-        mypy_memory_limit_mb: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy address-space limit in MiB")
-        ]
-        mypy_timeout_seconds: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy wall-time limit in seconds")
-        ]
         mypy_timeout_exit_code: Annotated[
             int, m.Field(gt=0, description="Wall-time limiter timeout exit code")
-        ]
-        mypy_signal_exit_offset: Annotated[
-            int, m.Field(gt=0, description="Shell signal exit-code offset")
-        ]
-        prlimit_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter executable")
-        ]
-        prlimit_address_space_option: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter option")
         ]
         timeout_command: Annotated[
             t.NonEmptyStr, m.Field(description="Wall-time limiter executable")
@@ -172,23 +157,8 @@ class FlextInfraConfigModelsContexts:
             FlextInfraConfigModelsMake.MakeSpec,
             m.Field(description="Generated Make command contract"),
         ]
-        mypy_memory_limit_mb: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy address-space limit in MiB")
-        ]
-        mypy_timeout_seconds: Annotated[
-            int, m.Field(gt=0, description="Generated Mypy wall-time limit in seconds")
-        ]
         mypy_timeout_exit_code: Annotated[
             int, m.Field(gt=0, description="Wall-time limiter timeout exit code")
-        ]
-        mypy_signal_exit_offset: Annotated[
-            int, m.Field(gt=0, description="Shell signal exit-code offset")
-        ]
-        prlimit_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter executable")
-        ]
-        prlimit_address_space_option: Annotated[
-            t.NonEmptyStr, m.Field(description="Address-space limiter option")
         ]
         timeout_command: Annotated[
             t.NonEmptyStr, m.Field(description="Wall-time limiter executable")

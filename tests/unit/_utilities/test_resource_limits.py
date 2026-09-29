@@ -254,7 +254,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         original_memory = os.environ.get(c.Infra.MYPY_MEMORY_LIMIT_MB_ENV)
         original_timeout = os.environ.get(c.Infra.MYPY_TIMEOUT_SECONDS_ENV)
         os.environ[c.Infra.MYPY_MEMORY_LIMIT_MB_ENV] = invalid_value
-        os.environ[c.Infra.MYPY_TIMEOUT_SECONDS_ENV] = "120"
+        os.environ[c.Infra.MYPY_TIMEOUT_SECONDS_ENV] = str(
+            c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT
+        )
         try:
             with pytest.raises(
                 ValueError, match=f"{c.Infra.MYPY_MEMORY_LIMIT_MB_ENV} must be"
