@@ -97,7 +97,6 @@ class FlextInfraEnsureRuffConfigPhase:
 
     @staticmethod
     def compose_per_file_ignores(
-        self,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
@@ -199,6 +198,7 @@ class FlextInfraEnsureRuffConfigPhase:
             )
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
+        excluded_roots = self._excluded_root_set(path.parent)
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )
