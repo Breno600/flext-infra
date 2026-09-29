@@ -17,10 +17,12 @@ class FlextInfraEnsureRuffConfigPhase:
         self,
         tool_config: m.Infra.ToolConfigDocument,
         managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
+        generated_roots: t.StrSequence = (),
     ) -> None:
         """Store tool configuration used to build canonical Ruff settings."""
         self._tool_config = tool_config
         self._managed_artifacts = managed_artifacts
+        self._generated_roots = tuple(generated_roots)
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
@@ -71,11 +73,9 @@ class FlextInfraEnsureRuffConfigPhase:
         projection converges.
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return frozenset()
+            return set()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            return frozenset()
-        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
+        return {p.parts[0] for p in paths.unwrap() if Path(p).parts}
 
     @staticmethod
     def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
@@ -83,10 +83,9 @@ class FlextInfraEnsureRuffConfigPhase:
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            return ()
-        return tuple(path.as_posix() for path in paths.value)
+        return tuple(path.as_posix() for path in paths.unwrap())
 
+    @staticmethod
     def compose_per_file_ignores(
         project_dir: Path,
         *,

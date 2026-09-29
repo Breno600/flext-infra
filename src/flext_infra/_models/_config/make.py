@@ -18,6 +18,16 @@ from ..._constants import (
 from .contract import FlextInfraConfigModelsContract
 
 
+def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
+    """Build the declared default shared Mypy analysis cache policy.
+
+    Declared here (module scope) so the field default is one shared policy that
+    a member may override, instead of forcing every hand-owned ``codegen.yaml``
+    to repeat the same block just to satisfy a required field.
+    """
+    return FlextInfraConfigModelsMake.MypyCacheSpec()
+
+
 class FlextInfraConfigModelsMake:
     """Make workflow, verb, CI, and cache specification models."""
 
@@ -375,21 +385,38 @@ class FlextInfraConfigModelsMake:
 
         cache_environment_variable: Annotated[
             FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(description="Mypy's cache-directory environment variable"),
+            m.Field(
+                default=FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                description="Mypy's cache-directory environment variable",
+            ),
         ]
         data_home_environment_variable: Annotated[
             FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(description="XDG persistent cache-home variable"),
+            m.Field(
+                default=FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                description="XDG persistent cache-home variable",
+            ),
         ]
         user_home_environment_variable: Annotated[
             FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(description="User home variable for the XDG default"),
+            m.Field(
+                default=FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                description="User home variable for the XDG default",
+            ),
         ]
         home_cache_directory: Annotated[
-            Path, m.Field(description="Standard cache directory below the user home")
+            Path,
+            m.Field(
+                default=Path(".cache"),
+                description="Standard cache directory below the user home",
+            ),
         ]
         external_storage_directory: Annotated[
-            Path, m.Field(description="FLEXT-owned directory below the cache home")
+            Path,
+            m.Field(
+                default=Path("flext/infra/mypy"),
+                description="FLEXT-owned directory below the cache home",
+            ),
         ]
 
         @u.model_validator(mode="after")
@@ -561,7 +588,10 @@ class FlextInfraConfigModelsMake:
         ]
         mypy_cache: Annotated[
             FlextInfraConfigModelsMake.MypyCacheSpec,
-            m.Field(description="Project-keyed shared Mypy analysis cache policy"),
+            m.Field(
+                default_factory=_shared_mypy_cache_spec,
+                description="Project-keyed shared Mypy analysis cache policy",
+            ),
         ]
         verbs: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.MakeVerbSpec],

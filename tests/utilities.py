@@ -161,6 +161,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             workspace = u.Tests.workspace_spec(
                 repository,
                 project=u.Tests.project_spec("fixture-project"),
+                subprojects=infra_repositories,
             )
             request = u.Tests.conform_request(
                 project_root,
