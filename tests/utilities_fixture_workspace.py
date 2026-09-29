@@ -113,6 +113,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
         gascity_enabled: bool | None = None,
         role: c.Infra.MakeProfile = c.Infra.MakeProfile.STANDALONE,
+        cli_module: bool | None = None,
     ) -> Path:
         """Write the declared ``config/workspace.yaml`` of one standalone repository.
 
@@ -124,6 +125,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         ``extra_verbs`` declares the repository-owned public Make verbs the
         managed Makefile renders into its help block, so a caller controls
         real rendered content through the declaration the loader validates.
+
+        ``cli_module`` declares whether an existing package ships its cli entry
+        module; ``None`` keeps the project model's own default.
 
         ``gascity_enabled`` declares the Gas City participation of a repository
         that participates in Beads; ``None`` writes no overlay at all (the fleet
@@ -142,6 +146,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             project = project.model_copy(
                 update={"inherited_facets": tuple(inherited_facets)}
             )
+        if cli_module is not None:
+            project = project.model_copy(update={"cli_module": cli_module})
         if root_modules or root_packages:
             project = project.model_copy(
                 update={
@@ -174,19 +180,38 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         return manifest_path
 
     @staticmethod
+    def declared_requirements(distribution: str) -> t.StrSequence:
+        """Declare the governed tooling suppliers a fixture project depends on.
+
+        The set derives from the scaffold dev group and the declared infra
+        repository, each pinned to its fixture provider URL and line; the
+        project itself is never its own supplier.
+        """
+        fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
+        names = {
+            config.Infra.codegen.infra_repository.distribution,
+            *(
+                name
+                for requirement in config.Infra.codegen.scaffold.project.dev
+                if (name := u.Infra.dep_name(requirement)) is not None
+                and name.startswith("flext-")
+            ),
+        } - {distribution}
+        return tuple(
+            f"{name} @ git+{fixture.repository_ref(name).url}@"
+            f"{fixture.provider_branch()}"
+            for name in sorted(names)
+        )
+
+    @staticmethod
     def standalone_workspace(
         project_dir: Path, name: str = "flext-demo"
     ) -> m.Infra.WorkspaceSpec:
         """Materialize and load the canonical minimal standalone fixture."""
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
-        infra = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
-            config.Infra.name
-        )
-        branch = TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()
-        tests_ref = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
-            "flext-tests"
-        )
+        fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
+        dev = ", ".join(f'"{item}"' for item in fixture.declared_requirements(name))
         package_root = project_dir / "src" / name.replace("-", "_")
         package_root.mkdir(parents=True, exist_ok=True)
         (package_root / "__init__.py").write_text("", encoding="utf-8")
@@ -197,8 +222,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
             "dependencies = []\n"
             "[dependency-groups]\n"
-            f'dev = ["{infra.distribution} @ git+{infra.url}@{branch}", '
-            f'"{tests_ref.distribution} @ git+{tests_ref.url}@{branch}"]\n',
+            f"dev = [{dev}]\n",
             encoding="utf-8",
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
@@ -270,7 +294,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         project.mkdir()
         (project / "Makefile").touch()
         (project / "pyproject.toml").write_text(
-            (f"[project]\nname='{name}'\ndependencies=['flext-core>=0.1.0']\n"),
+            (
+                f"[project]\nname='{name}'\nversion='0.1.0'\n"
+                "dependencies=['flext-core>=0.1.0']\n"
+            ),
             encoding="utf-8",
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
@@ -470,20 +497,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 f"git+{provider.base_url.rstrip('/')}/flext-core.git@"
                 f"{TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()}"
             )
-            infra = config.Infra.codegen.infra_repository.distribution
-            tooling_names = {
-                infra,
-                *(
-                    name
-                    for requirement in config.Infra.codegen.scaffold.project.dev
-                    if (name := u.Infra.dep_name(requirement)) is not None
-                    and name.startswith("flext-")
-                ),
-            } - {distribution}
+            workspace_fixture = TestsFlextInfraUtilitiesWorkspaceFixtureMixin
             tooling_requirements = ", ".join(
-                f'"{name} @ git+{cls.governed_repository_url(name)}@'
-                f'{TestsFlextInfraUtilitiesProjectFixtureMixin.provider_branch()}"'
-                for name in sorted(tooling_names)
+                f'"{item}"'
+                for item in workspace_fixture.declared_requirements(distribution)
             )
             tooling = f"\n[dependency-groups]\ndev = [{tooling_requirements}]\n"
             # A governed project always declares its description: the derived

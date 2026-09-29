@@ -47,7 +47,7 @@ class FlextInfraPyprojectModernizerRun:
             canonical_dev: t.StrSequence,
             dry_run: bool,
             skip_comments: bool,
-        ) -> t.StrSequence: ...
+        ) -> p.Result[t.StrSequence]: ...
 
     def _selected_project_paths(self) -> p.Result[t.SequenceOf[Path]]:
         """Resolve selected names by path, directory basename, or declared name."""
@@ -161,12 +161,16 @@ class FlextInfraPyprojectModernizerRun:
                 invalid_paths.append(file_path)
                 changes: t.StrSequence = ["invalid TOML"]
             else:
-                changes = self._process_document_state(
+                processed = self._process_document_state(
                     state.value,
                     canonical_dev=canonical_dev,
                     dry_run=dry_run,
                     skip_comments=self.skip_comments,
                 )
+                if processed.failure:
+                    u.Cli.error(f"{file_path}: {processed.error}")
+                    return 2
+                changes = processed.value
                 if changes and not drift_reported:
                     drift_reported = True
                     diff_lines = u.Infra.unified_diff_lines(

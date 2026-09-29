@@ -121,6 +121,9 @@ Infra:
       # Mise self-provisioning: pin the mise bootstrap binary so it never
       # resolves 'latest' at runtime. Override to pin a specific release.
       mise_version: "2026.9.15"
+      # Mise is not a registry tool name; it is provisioned from the aqua
+      # backend, so the generated [tools] key must be the aqua selector.
+      mise_namespace: "aqua:jdx/mise"
       beads:
         # Beads ledger projection (.beads/config.yaml, .beads/metadata.yaml).
         # The bd and gc binaries are host tools owned by ai-hub's global mise
@@ -146,6 +149,11 @@ Infra:
           - spec
           - convergence
           - step
+          # The Gas City runtime mints startup-health-episode beads and writes
+          # the type into every governed ledger's generated `.beads/config.yaml`
+          # (observed in mcb, gmn and gc). Declaring it here keeps the frozen
+          # projection owned by this SSOT instead of hand-adopted per rig.
+          - startup-health-episode
         # Ledger scalars rendered into .beads/config.yaml. Change them here.
         # Per-repo override of Gas City participation is workspace.yaml
         # `gascity_enabled` (flips dolt.auto-start and omits gc.*). Never edit
@@ -381,6 +389,17 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
+      # One lock-keyed Mypy analysis shared by every checkout on the same
+      # dependency lock. Mypy's cache is content-addressed by module hash, so a
+      # warm cache only removes the cold whole-fleet recompute and can never
+      # mask a finding (flext-7jnr0).
+      mypy_cache:
+        cache_environment_variable: MYPY_CACHE_DIR
+        data_home_environment_variable: XDG_CACHE_HOME
+        user_home_environment_variable: HOME
+        home_cache_directory: .cache
+        external_storage_directory: flext/infra/mypy
+        lock_files: [uv.lock, mise.lock]
       # Public verbs execute their declared operation without mode selectors.
       ci:
         variable: CI
@@ -451,14 +470,9 @@ Infra:
           - flext-infra-codegen-transaction-journal.json.lock
         trace_globs:
           - "*.pstats"
-      # Branch shapes and PR state that let a push skip the pre-push gate, and
-      # the integration branches the merge lock protects. Read by
-      # ci.yml.j2 and .pre-commit-config.yaml.j2.
+      # Head commit subjects that mark work in progress, and the integration
+      # branches the CI merge guard locks against them. Read by ci.yml.j2.
       work_in_progress:
-        draft_pr: true
-        branch_patterns:
-          - "^wip/"
-          - WIP
         head_subject_patterns:
           - "^\\[WIP\\]"
           - "^WIP"

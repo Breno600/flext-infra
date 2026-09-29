@@ -15,6 +15,7 @@ from flext_infra import (
     c,
     config,
     m,
+    t,
     u,
 )
 
@@ -187,6 +188,16 @@ class TestsFlextInfraPytestRunner:
         tm.that(command, has="--no-cov")
         tm.that(command, has="--testmon --testmon-noselect")
         tm.that((reports_root / latest_name / "coverage.xml").is_file(), eq=False)
+        # A cold run has no database to inspect before pytest; its only cache
+        # receipt is the post-run seed decision.
+        tm.that((reports_root / latest_name / "cache-before.json").exists(), eq=False)
+        seeded = m.Infra.TestmonCacheState.model_validate_json(
+            tm.ok(
+                u.Cli.files_read_text(reports_root / latest_name / "cache-after.json")
+            )
+        )
+        tm.that(seeded.seed_needed, eq=True)
+        tm.that(seeded.saveable, eq=True)
 
         second_exit = tm.ok(self._runner_for(cached_runner_project).execute())
         tm.that(second_exit, eq=0)
@@ -195,6 +206,13 @@ class TestsFlextInfraPytestRunner:
             second_summary,
             has=["executed=0", "deselected=1", "cache_restored=True", "exit=0"],
         )
+        warm_name = tm.ok(u.Cli.files_read_text(reports_root / "latest.txt")).strip()
+        for receipt in ("cache-before.json", "cache-after.json"):
+            warm_state = m.Infra.TestmonCacheState.model_validate_json(
+                tm.ok(u.Cli.files_read_text(reports_root / warm_name / receipt))
+            )
+            tm.that(warm_state.restored_accepted, eq=True)
+            tm.that(warm_state.seed_needed, eq=False)
 
         (cached_runner_project / "tests" / "test_added.py").write_text(
             "def test_added_after_cache_seed():\n    assert True\n", encoding="utf-8"
@@ -384,6 +402,66 @@ class TestsFlextInfraPytestRunner:
         tm.that(suspended_evidence.count("repeated runtime evidence"), eq=suspended)
 
     @pytest.mark.slow
+    def test_setup_failure_is_accounted_without_a_call_phase(
+        self, cached_runner_project: Path
+    ) -> None:
+        """A failed fixture is one complete lifecycle: setup and teardown, no call."""
+        runner = self._runner_for(cached_runner_project)
+        (cached_runner_project / runner.target / "test_setup.py").write_text(
+            "import pytest\n\n@pytest.fixture\ndef broken():\n"
+            "    raise RuntimeError('setup failure evidence')\n\n"
+            "def test_setup(broken):\n    assert broken\n",
+            encoding="utf-8",
+        )
+
+        tm.that(tm.ok(runner.execute()), ne=0)
+
+        reports_root = cached_runner_project / runner.reports
+        latest_name = tm.ok(u.Cli.files_read_text(reports_root / "latest.txt")).strip()
+        tm.that(
+            tm.ok(u.Cli.files_read_text(reports_root / latest_name / "errors.txt")),
+            has="setup failure evidence",
+        )
+        tm.that(
+            self._summary(reports_root),
+            has=["executed=2", "errors=1", "accounting_complete=True"],
+        )
+
+    @pytest.mark.parametrize(
+        ("phases", "expected"),
+        [
+            (("setup", "teardown"), "incomplete pytest lifecycle"),
+            (("setup", "call"), "incomplete pytest lifecycle"),
+            (("setup", "setup", "call", "teardown"), "duplicate pytest phase"),
+        ],
+        ids=["missing-call", "missing-teardown", "duplicate-setup"],
+    )
+    def test_report_log_rejects_incomplete_or_repeated_lifecycles(
+        self, tmp_path: Path, phases: t.StrTuple, expected: str
+    ) -> None:
+        """Every reported node needs exactly one setup, call and teardown."""
+        report_log = tmp_path / "suite.events.jsonl"
+        report_log.write_text(
+            "".join(
+                m.Infra.PytestReportEvent.model_validate({
+                    "$report_type": "TestReport",
+                    "nodeid": "tests/test_lifecycle.py::test_case",
+                    "when": phase,
+                    "outcome": "passed",
+                }).model_dump_json(by_alias=True, exclude_none=True)
+                + "\n"
+                for phase in phases
+            ),
+            encoding="utf-8",
+        )
+        report_log.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX).write_text(
+            "", encoding="utf-8"
+        )
+
+        with pytest.raises(ValueError, match=expected):
+            FlextInfraPytestDiagExtractor.extract_report_log(report_log)
+
+    @pytest.mark.slow
     def test_external_gate_markers_are_not_executed_offline(
         self, cached_runner_project: Path
     ) -> None:
@@ -519,6 +597,61 @@ class TestsFlextInfraPytestRunner:
         )
         tm.that(command, has="--cov")
         tm.that("--testmon" in command, eq=False)
+        inventory_command = runner.build_selection_command(
+            report_log=reports_root / latest_name / "testmon-inventory.events.jsonl",
+            complete=True,
+            execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
+        )
+        tm.that(
+            [arg for arg in inventory_command if arg.startswith("--testmon")], eq=[]
+        )
+        tm.that(
+            (reports_root / latest_name / "testmon-inventory.json").is_file(), eq=True
+        )
+        tm.that(runner.testmon_db.exists(), eq=False)
+
+    @pytest.mark.slow
+    def test_failed_coverage_suite_preserves_original_failure_and_accounting(
+        self, cached_runner_project: Path
+    ) -> None:
+        """No-cov-on-fail omits coverage without hiding the failed test evidence."""
+        runner = self._runner_for(cached_runner_project)
+        (
+            cached_runner_project / runner.target / "test_coverage_failure.py"
+        ).write_text(
+            "def test_coverage_failure() -> None:\n"
+            "    assert False, 'original coverage suite failure'\n",
+            encoding="utf-8",
+        )
+
+        exit_code = tm.ok(runner.execute_coverage())
+
+        tm.that(exit_code, ne=0)
+        reports_root = cached_runner_project / runner.reports
+        latest_name = tm.ok(u.Cli.files_read_text(reports_root / "latest.txt")).strip()
+        report_dir = reports_root / latest_name
+        outcome = m.Cli.ProcessOutcome.model_validate_json(
+            tm.ok(u.Cli.files_read_text(report_dir / "suite-outcome.json"))
+        )
+        tm.that(outcome.raw_return_code, eq=exit_code)
+        tm.that(outcome.timed_out, eq=False)
+        tm.that(outcome.forwarded_signal, none=True)
+        accounting = m.Infra.TestmonRunAccounting.model_validate_json(
+            tm.ok(u.Cli.files_read_text(report_dir / "run-accounting.json"))
+        )
+        tm.that(accounting.executed_count, eq=accounting.reported_count)
+        tm.that(accounting.executed_count > 0, eq=True)
+        tm.that(accounting.inventory_count, none=True)
+        tm.that((report_dir / "coverage.xml").exists(), eq=False)
+        tm.that(
+            tm.ok(u.Cli.files_read_text(report_dir / "failed-tests.txt")),
+            has="original coverage suite failure",
+        )
+        tm.that(
+            self._summary(reports_root),
+            has=["failed=1", "accounting_complete=True", f"exit={exit_code}"],
+        )
+        tm.that(runner.testmon_db.exists(), eq=False)
 
     @pytest.mark.slow
     def test_collection_policy_error_fails_loud_and_names_the_offender(
@@ -596,6 +729,11 @@ class TestsFlextInfraPytestRunner:
                 (report_dir / "run-accounting.json").read_text()
             )
             tm.that(accounting.cache_restored, eq=True)
+            for receipt in ("cache-before.json", "cache-after.json"):
+                state = m.Infra.TestmonCacheState.model_validate_json(
+                    (report_dir / receipt).read_text()
+                )
+                tm.that(state.restored_accepted, eq=True)
             manifests = [report_dir / "testmon-inventory.json"]
             if report_dir == incremental:
                 manifests.append(report_dir / "testmon-selection.json")
@@ -908,9 +1046,10 @@ class TestsFlextInfraPytestRunner:
     def test_coverage_pass_fails_loud_on_collection_policy_error(
         self, policy_violation_project: Path
     ) -> None:
-        """The coverage pass also exits non-zero on the same policy violation."""
+        """The coverage inventory rejects the same collection policy violation."""
         runner = self._runner_for(policy_violation_project)
 
-        exit_code = tm.ok(runner.execute_coverage())
+        with pytest.raises(RuntimeError) as raised:
+            runner.execute_coverage()
 
-        tm.that(exit_code, ne=0)
+        tm.that(str(raised.value), has=["FLEXT slow timeout policy", "test_policy.py"])

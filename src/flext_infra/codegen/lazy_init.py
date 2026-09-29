@@ -11,18 +11,18 @@ from __future__ import annotations
 
 from pathlib import Path
 from time import perf_counter
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
 
-from .. import c, config, m, u
+from .. import c, config, m, t, u
 from ..workspace.rope import FlextInfraRopeWorkspace
 from ._execution import FlextInfraCodegenExecutionBase
 from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
 from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
 if TYPE_CHECKING:
-    from .. import p, t
+    from .. import p
 
 
 class FlextInfraCodegenLazyInit(
@@ -36,9 +36,15 @@ class FlextInfraCodegenLazyInit(
     """
 
     _modified_files: t.Infra.StrSet = u.PrivateAttr(default_factory=set)
-    project_scope_root: Path | None = m.Field(
-        default=None, description="Project root selected by self-scoped conformance"
-    )
+    project_scope_roots: Annotated[
+        t.VariadicTuple[Path] | None,
+        m.Field(
+            description=(
+                "Repository roots selected by conformance; None plans every "
+                "package of the workspace"
+            )
+        ),
+    ] = None
 
     @property
     def modified_files(self) -> t.StrSequence:
@@ -76,6 +82,16 @@ class FlextInfraCodegenLazyInit(
             return r[m.Infra.CodegenPhaseAnalysis].fail(
                 f"lazy-init workspace is not a directory: {self.repository_root}"
             )
+        resolved_repository_root = self.repository_root.resolve()
+        for scope_root in self.project_scope_roots or ():
+            resolved_scope_root = scope_root.resolve()
+            if not resolved_scope_root.is_dir() or not (
+                resolved_scope_root.is_relative_to(resolved_repository_root)
+            ):
+                return r[m.Infra.CodegenPhaseAnalysis].fail(
+                    "lazy-init repository scope is missing or outside "
+                    f"{resolved_repository_root}: {scope_root}"
+                )
         started_at = perf_counter()
         u.Cli.info(
             f"lazy-init: planning read-only artifacts for {self.repository_root}"
@@ -113,29 +129,34 @@ class FlextInfraCodegenLazyInit(
         """Build immutable plans from one stable Rope workspace snapshot."""
         workspace_index = rope.workspace_index
         resolved_repository_root = self.repository_root.resolve()
-        selected_project_root = (
-            self.project_scope_root.resolve()
-            if self.project_scope_root is not None
-            else None
+        candidate_entries = tuple(
+            workspace_index.packages_by_dir[str(package_dir)]
+            for package_dir in workspace_index.package_dirs
+            if package_dir.is_relative_to(resolved_repository_root)
+            and not frozenset(package_dir.relative_to(resolved_repository_root).parts)
+            & c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES
         )
+        if self.project_scope_roots is not None:
+            unowned = tuple(
+                entry.package_dir
+                for entry in candidate_entries
+                if entry.project_root is None
+            )
+            if unowned:
+                return r[m.Infra.CodegenPhaseAnalysis].fail(
+                    f"lazy-init package has no repository owner: {unowned[0]}"
+                )
+            selected_roots = frozenset(
+                scope_root.resolve() for scope_root in self.project_scope_roots
+            )
+            candidate_entries = tuple(
+                entry
+                for entry in candidate_entries
+                if entry.project_root in selected_roots
+            )
         indexed_package_dirs = tuple(
             sorted(
-                (
-                    package_dir.resolve()
-                    for package_dir in workspace_index.package_dirs
-                    if package_dir.is_relative_to(resolved_repository_root)
-                    and (
-                        selected_project_root is None
-                        or workspace_index.packages_by_dir[
-                            str(package_dir)
-                        ].project_root
-                        == selected_project_root
-                    )
-                    and not frozenset(
-                        package_dir.relative_to(resolved_repository_root).parts
-                    )
-                    & c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES
-                ),
+                (entry.package_dir.resolve() for entry in candidate_entries),
                 key=u.Infra.path_depth,
                 reverse=True,
             )
