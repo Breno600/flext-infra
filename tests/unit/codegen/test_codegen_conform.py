@@ -943,7 +943,10 @@ class TestsFlextInfraCodegenConform:
     def test_project_root_inherits_declared_upstream_facets(
         self, tmp_path: Path
     ) -> None:
-        repository = u.Tests.repository_ref("consumer")
+        # A lone consumer tree composes no members, so Git derives standalone.
+        repository = u.Tests.repository_ref(
+            "consumer", role=c.Infra.MakeProfile.STANDALONE
+        )
         project = u.Tests.project_spec("consumer").model_copy(
             update={"upstream": "flext_cli"}
         )
