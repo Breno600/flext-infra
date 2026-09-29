@@ -58,13 +58,20 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
     def build_git_mirrors(project_root: Path, mirrors: Path) -> t.StrSequence:
         """Mirror each locked source's exact commit under its host and path.
 
-        Objects come from this checkout or from the Git databases ``uv`` has
-        already fetched for it; no source is fetched from its remote. A commit
-        found nowhere locally fails loudly: ``make setup`` provisions it.
+        Objects come from this checkout or from the Git databases ``make setup``
+        and ``make upg`` fetched into the persistent uv cache of the typed Mise
+        storage contract — not the ambient ``uv cache dir``, which the activated
+        environment leaves to the caller. No source is fetched from its remote;
+        a commit found nowhere locally fails loudly: ``make setup`` provisions it.
+        Each mirror borrows the origin database through ``objects/info/alternates``
+        and pins only the branch ref: full history at zero copy cost (git
+        refuses to update shallow roots, so a shallow mirror cannot serve a
+        client whose uv cache lacks the history).
         """
-        cache = Path(
-            tm.ok(u.Cli.capture([c.Infra.UV, "cache", "dir"], cwd=project_root)).strip()
-        )
+        storage_root = Path(os.environ[c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE])
+        cache = storage_root / dict(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT)[
+            "UV_CACHE_DIR"
+        ]
         databases = (project_root, *sorted(cache.glob("git-v*/db/*")))
         mirrored: list[str] = []
         for url, rev, sha in TestsFlextInfraUtilitiesHermeticGitMixin.locked_git_sources(
@@ -91,18 +98,26 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
             parts = urlsplit(url)
             mirror = mirrors / parts.netloc / parts.path.lstrip("/")
             tm.ok(u.Cli.run_checked([c.Infra.GIT, "init", "--quiet", "--bare", str(mirror)]))
-            tm.ok(
-                u.Cli.run_checked(
+            common = tm.ok(
+                u.Cli.capture(
                     [
                         c.Infra.GIT,
-                        "fetch",
-                        "--quiet",
-                        "--depth",
-                        "1",
-                        origin.as_uri(),
-                        f"{sha}:refs/heads/{rev}",
+                        "rev-parse",
+                        "--path-format=absolute",
+                        "--git-common-dir",
                     ],
-                    cwd=mirror,
+                    cwd=origin,
+                )
+            ).strip()
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    mirror / "objects" / "info" / "alternates",
+                    f"{Path(common) / 'objects'}\n",
+                )
+            )
+            tm.ok(
+                u.Cli.run_checked(
+                    [c.Infra.GIT, "update-ref", f"refs/heads/{rev}", sha], cwd=mirror
                 )
             )
             mirrored.append(f"{url}@{rev}#{sha}")

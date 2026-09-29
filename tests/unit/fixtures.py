@@ -8,6 +8,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import hashlib
 import os
 import tempfile
 from pathlib import Path
@@ -292,11 +293,18 @@ def _ensure_provisioned(
 def hermetic_git_environment() -> t.StrMapping:
     """Serve the fixture provider's Git sources from this run's local mirrors.
 
-    The mirrors are built once per run under the canonical filesystem lease
-    from objects this checkout already holds; the returned environment routes
-    the provider to them and makes any network transport fail.
+    The mirrors are built once per locked-source set under the canonical
+    filesystem lease from objects this checkout already holds; the directory is
+    keyed by that set, so a relock never reuses mirrors of superseded commits.
+    The returned environment routes the provider to them and makes any network
+    transport fail.
     """
-    parent = _run_scoped("git-mirrors", "provider")
+    sources = "\n".join(
+        "@".join(source) for source in u.Tests.locked_git_sources(_PROJECT_ROOT)
+    )
+    parent = _run_scoped(
+        "git-mirrors", hashlib.sha256(sources.encode()).hexdigest()[:16]
+    )
     parent.mkdir(parents=True, exist_ok=True)
     receipt = parent / _GIT_MIRRORS_RECEIPT
     mirrors = parent / "mirrors"
