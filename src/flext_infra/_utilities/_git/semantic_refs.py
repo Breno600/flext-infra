@@ -148,15 +148,20 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
 
     @classmethod
     def git_is_ancestor(
-        cls, request: m.Infra.GitCommitishRequest
+        cls, request: m.Infra.GitAncestryRequest
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """Return whether ``commitish`` is an ancestor of HEAD."""
+        """Return whether ``ancestor`` is an ancestor of ``descendant``.
+
+        One owner proves ancestry for any pair. ``descendant`` defaults to
+        ``HEAD``, so the HEAD-bound proof existing consumers relied on is a
+        use of this verb, not a separate one.
+        """
         try:
             repo = cls._repo(request.repo_root)
-            ancestor = repo.commit(request.commitish)
-            head = repo.commit(c.Infra.GIT_HEAD)
-            result = repo.is_ancestor(ancestor, head)
-        except GitCommandError as exc:
+            result = repo.is_ancestor(
+                repo.commit(request.ancestor), repo.commit(request.descendant)
+            )
+        except (BadName, GitCommandError) as exc:
             return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(

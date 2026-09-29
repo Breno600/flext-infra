@@ -78,7 +78,7 @@ class FlextInfraPyprojectModernizerTooling:
         )
         if canonical_dev.failure:
             return r[str].fail_op("pyproject model validation", canonical_dev.error)
-        changes = self._render_document_state(
+        rendered = self._render_document_state(
             state.value,
             self._apply_document_phases(
                 state.value, canonical_dev=canonical_dev.value, topology=topology
@@ -87,10 +87,8 @@ class FlextInfraPyprojectModernizerTooling:
             skip_comments=False,
             format_source=format_source,
         )
-        if not state.value.rendered:
-            return r[str].fail(
-                changes[0] if changes else f"pyproject tooling render failed: {path}"
-            )
+        if rendered.failure:
+            return r[str].from_failure(rendered)
         return r[str].ok(state.value.rendered)
 
     def resolve_tooling_context(

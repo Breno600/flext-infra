@@ -9,7 +9,7 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import m, p, u
+from flext_infra import c, m, p, u
 from flext_infra.codegen import codegen_transaction as transaction
 from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
@@ -137,9 +137,12 @@ class TestsFlextInfraTransactionDirectoryJournal:
         )
         artifacts = layout.projects[0].artifacts
         if missing_launcher_parent:
+            # A cold runtime root lacks the whole triple; a partial one is a
+            # loud failure that names make upg, never a transaction to repair.
             artifacts.unix_launcher.unlink()
             artifacts.windows_launcher.unlink()
             artifacts.unix_launcher.parent.rmdir()
+            (root / c.Infra.MISE_VERSION_PIN_FILENAME).unlink()
         target = root / "docs/generated/readme.md"
 
         def conflict(scope_root: Path) -> p.Result[m.Infra.CodegenTransactionSession]:

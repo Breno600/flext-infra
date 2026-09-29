@@ -54,7 +54,13 @@ class FlextInfraFlextBindingService:
             )
         )
         expected = scripts / c.Infra.PromotedSelector.VENV_PYTHON
-        for path in (environment, scripts):
+        # A composed member's own environment path must not borrow another
+        # checkout's environment either, even when the workspace owns the runtime.
+        for path in (
+            environment,
+            scripts,
+            consumer_root / c.Infra.ENVIRONMENT_DIRECTORY,
+        ):
             if path.is_symlink():
                 return r[Path].fail(
                     f"binding requires a physical consumer environment: {path}"

@@ -247,9 +247,14 @@ class TestsFlextInfraCodegenPyprojectConform:
         )
 
     def test_standalone_requires_declared_git_source(self) -> None:
-        """A source-less internal dependency outside the workspace overlay fails."""
+        """A source-less internal dependency outside the workspace overlay fails.
+
+        The workspace attaches only flext-core, whose declaration supplies the
+        source; the infrastructure distribution is internal and unattached.
+        """
+        unattached = config.Infra.codegen.infra_repository.distribution
         result = u.Infra.pyproject_conform(
-            '[project]\nname = "external-consumer"\ndependencies = ["flext-core"]\n',
+            f'[project]\nname = "external-consumer"\ndependencies = ["{unattached}"]\n',
             workspace=self._workspace(),
             required_dev_dependencies=(),
             uv_resolution=self._uv_resolution(config.Infra.codegen.toolchain),

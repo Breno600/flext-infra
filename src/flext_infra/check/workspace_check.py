@@ -189,6 +189,21 @@ class FlextInfraWorkspaceChecker(
                 resolved_gates_result
             )
         resolved_gates = resolved_gates_result.value
+        targets = self._project_targets(projects)
+        if not targets:
+            return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
+                "quality check selected no projects"
+            )
+        unrunnable = [
+            str(target.path / c.PYPROJECT_FILENAME)
+            for target in targets
+            if not (target.path / c.PYPROJECT_FILENAME).is_file()
+        ]
+        if unrunnable:
+            return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
+                "quality check selected projects without a pyproject: "
+                + ", ".join(unrunnable)
+            )
         report_base = reports_dir or self._default_reports_dir
         dir_ensure = u.Cli.ensure_dir(report_base)
         if dir_ensure.failure:
@@ -202,7 +217,6 @@ class FlextInfraWorkspaceChecker(
             return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
                 "gate context fail_fast disagrees with the requested project policy"
             )
-        targets = self._project_targets(projects)
         rope_outcomes_result = self._run_rope_gate_cycle(targets, resolved_gates)
         if rope_outcomes_result.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(

@@ -29,6 +29,13 @@ class FlextInfraConstantsMake:
         USER_HOME = "HOME"
         DATABASE_FILE = "TESTMON_DATAFILE"
 
+    class MypyCacheEnvironment(StrEnum):
+        """Mypy cache and XDG environment keys in the shared analysis cache."""
+
+        CACHE_DIR = "MYPY_CACHE_DIR"
+        DATA_HOME = "XDG_CACHE_HOME"
+        USER_HOME = "HOME"
+
     MAKE_ASSIGNMENT_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^[A-Za-z_][A-Za-z0-9_]*\s*(?::?:|\?|\+)?="
     )

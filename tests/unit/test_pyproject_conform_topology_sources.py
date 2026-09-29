@@ -237,3 +237,25 @@ class TestsFlextInfraPyprojectConformTopologySources:
 
         tm.that(group, eq=(self._inline_requirement(core),))
         tm.that(not uv_sources, eq=True)
+
+    def test_member_requirement_with_a_foreign_url_fails_provenance(self) -> None:
+        """A member dependency cannot point at a URL its manifest does not own."""
+        workspace = self._workspace(self._member_ref("flext-core", "flext-core"))
+        core = workspace.subprojects[0]
+        host = test_u.Tests.provider().base_url.rstrip("/").rpartition("/")[0]
+        foreign = (
+            f"{core.distribution} @ git+{host}/foreign-owner/{core.distribution}.git@"
+            f"{test_u.Tests.provider_branch()}"
+        )
+
+        result = u.Infra.pyproject_conform(
+            (
+                '[project]\nname = "acme-platform"\nversion = "0.1.0"\n'
+                f'dependencies = ["{foreign}"]\n'
+            ),
+            workspace=workspace,
+            required_dev_dependencies=(),
+            uv_resolution=self._toolchain_resolution(),
+        )
+
+        tm.fail(result, has="internal dependency Git URL differs from manifest")

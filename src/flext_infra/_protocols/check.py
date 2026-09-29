@@ -27,7 +27,6 @@ class FlextInfraProtocolsCheck(Protocol):
 
         results: tuple[m.Infra.ProjectResult, ...]
         failed: int
-        skipped: int
         total_elapsed: float
 
     @runtime_checkable

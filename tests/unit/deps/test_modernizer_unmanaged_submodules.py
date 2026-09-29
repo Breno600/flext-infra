@@ -73,7 +73,10 @@ class TestsFlextInfraDepsModernizerUnmanagedSubmodules:
     def test_modernize_fails_for_governed_member_without_pyproject(
         self, modernizer_workspace: Path
     ) -> None:
-        """A governed member whose pyproject is missing still fails loud."""
+        """A governed member whose pyproject is missing still fails loud.
+
+        The public CLI maps every failed modernization service to exit 1.
+        """
         workspace = self._workspace(modernizer_workspace, managed_has_pyproject=False)
 
-        tm.that(self._modernize(workspace), eq=2)
+        tm.that(self._modernize(workspace), eq=1)
