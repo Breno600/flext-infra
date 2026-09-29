@@ -66,9 +66,15 @@ class FlextInfraModGateEngine:
                 )
                 tested = cls._run_tool(temp_root, (c.Infra.SG, c.Infra.TEST))
                 if tested.failure:
-                    return r[bool].fail(
-                        f"{tested.error}\n{c.Infra.CODEMOD_SNAPSHOT_REFRESH_HINT}"
+                    remedy = (
+                        c.Infra.CODEMOD_SNAPSHOT_REFRESH_HINT
+                        if owner_is_governed
+                        else (
+                            f"inherited rule provider {config_root} ships these "
+                            "fixtures; repair them in its owner repository"
+                        )
                     )
+                    return r[bool].fail(f"{tested.error}\n{remedy}")
         return r.ok(True)
 
     @classmethod
