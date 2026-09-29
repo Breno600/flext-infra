@@ -962,8 +962,15 @@ class TestsFlextInfraPytestRunner:
             encoding="utf-8",
         )
 
-        tm.that(tm.ok(runner.execute_full()), eq=1)
+        exit_code = tm.ok(runner.execute_full())
 
+        # Items run in randomized order: a failure that leaves items behind
+        # stops xdist through max-failures (INTERRUPTED); a last-item failure
+        # completes the suite (TESTS_FAILED). Both are the incremental red.
+        tm.that(
+            (pytest.ExitCode.TESTS_FAILED.value, pytest.ExitCode.INTERRUPTED.value),
+            has=exit_code,
+        )
         (context_path,) = (cached_runner_project / runner.reports).glob(
             "*/run-context.json"
         )
@@ -972,7 +979,7 @@ class TestsFlextInfraPytestRunner:
         outcome = m.Cli.ProcessOutcome.model_validate_json(
             (context_path.parent / "suite-outcome.json").read_text()
         )
-        tm.that(outcome.raw_return_code, eq=1)
+        tm.that(outcome.raw_return_code, eq=exit_code)
 
     def test_full_preserves_corrupt_database_failure_before_execution(
         self, cached_runner_project: Path
