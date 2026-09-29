@@ -111,20 +111,10 @@ class FlextInfraWorktreeService(s[str]):
         )
         if listed.failure:
             return r[t.VariadicTuple[t.Pair[Path, str]]].from_failure(listed)
-        entries: list[t.Pair[Path, str]] = []
-        current: Path | None = None
-        branch = ""
-        for line in (*listed.value.text.splitlines(), ""):
-            if line.startswith("worktree "):
-                current = Path(line.removeprefix("worktree ").strip()).resolve()
-                branch = ""
-            elif line.startswith("branch refs/heads/"):
-                branch = line.removeprefix("branch refs/heads/").strip()
-            elif not line and current is not None:
-                entries.append((current, branch))
-                current = None
-                branch = ""
-        return r[t.VariadicTuple[t.Pair[Path, str]]].ok(tuple(entries))
+        entries = tuple(
+            (entry.path, entry.branch or "") for entry in listed.value.entries
+        )
+        return r[t.VariadicTuple[t.Pair[Path, str]]].ok(entries)
 
     @classmethod
     def registered_lanes(
@@ -336,7 +326,7 @@ class FlextInfraWorktreeService(s[str]):
             )
             if listed.failure:
                 return r[str].from_failure(listed)
-            return r[str].ok(listed.value.text)
+            return r[str].ok(listed.value.porcelain)
         branch = self._validated_branch()
         if branch.failure:
             return r[str].from_failure(branch)
