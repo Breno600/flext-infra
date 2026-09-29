@@ -131,7 +131,12 @@ class FlextInfraWorkspaceChecker(
     def _resolve_project_targets(
         params: m.Infra.RunCommand,
     ) -> p.Result[t.SequenceOf[m.Infra.CheckProjectTarget]]:
-        """Resolve explicit projects or discover the workspace project set."""
+        """Resolve the selected projects; an omitted selection is this repository.
+
+        Every repository evaluates only itself (operator ruling 2026-09-29): an
+        omitted ``--projects`` never widens to the declared members, and a root
+        that is not a project fails loud through the topology owner.
+        """
         requested = params.project_names
         if requested:
             return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
@@ -142,18 +147,15 @@ class FlextInfraWorkspaceChecker(
                     for project_name in requested
                 )
             )
-        discovered = u.Infra.resolve_projects(params.repository_root, ())
-        if discovered.failure:
-            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(discovered)
-        project_targets = tuple(
-            m.Infra.CheckProjectTarget(name=project.name, path=project.path)
-            for project in discovered.value
-        )
-        if not project_targets:
-            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].fail(
-                "no projects discovered"
+        resolved = u.Infra.resolve_projects(params.repository_root, (".",))
+        if resolved.failure:
+            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(resolved)
+        return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
+            tuple(
+                m.Infra.CheckProjectTarget(name=project.name, path=project.path)
+                for project in resolved.value
             )
-        return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(project_targets)
+        )
 
     def format(self, project_dir: Path) -> p.Result[m.Infra.GateResult]:
         """Run format checks for one project."""
@@ -189,6 +191,21 @@ class FlextInfraWorkspaceChecker(
                 resolved_gates_result
             )
         resolved_gates = resolved_gates_result.value
+        targets = self._project_targets(projects)
+        if not targets:
+            return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
+                "quality check selected no projects"
+            )
+        unrunnable = [
+            str(target.path / c.PYPROJECT_FILENAME)
+            for target in targets
+            if not (target.path / c.PYPROJECT_FILENAME).is_file()
+        ]
+        if unrunnable:
+            return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
+                "quality check selected projects without a pyproject: "
+                + ", ".join(unrunnable)
+            )
         report_base = reports_dir or self._default_reports_dir
         dir_ensure = u.Cli.ensure_dir(report_base)
         if dir_ensure.failure:
@@ -202,7 +219,6 @@ class FlextInfraWorkspaceChecker(
             return r[t.SequenceOf[m.Infra.ProjectResult]].fail(
                 "gate context fail_fast disagrees with the requested project policy"
             )
-        targets = self._project_targets(projects)
         rope_outcomes_result = self._run_rope_gate_cycle(targets, resolved_gates)
         if rope_outcomes_result.failure:
             return r[t.SequenceOf[m.Infra.ProjectResult]].from_failure(

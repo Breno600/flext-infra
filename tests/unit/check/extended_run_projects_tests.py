@@ -45,15 +45,27 @@ class TestsFlextInfraRunProjects:
 
         tm.fail(result)
 
-    def test_missing_projects_are_skipped(
+    def test_project_without_pyproject_fails_loudly(
+        self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
+    ) -> None:
+        u.Tests.mk_project(tmp_path, "p1", with_src=True)
+        result = FlextInfraWorkspaceChecker(
+            repository_root=tmp_path, rope=rope_workspace
+        ).run_projects(
+            ["p1", "nonexistent"], ["lint"], reports_dir=tmp_path / "reports"
+        )
+
+        tm.fail(result, has=str(tmp_path / "nonexistent" / c.PYPROJECT_FILENAME))
+        tm.that((tmp_path / "reports" / "p1").exists(), eq=False)
+
+    def test_empty_project_selection_fails_loudly(
         self, tmp_path: Path, rope_workspace: p.Infra.RopeWorkspaceDsl
     ) -> None:
         result = FlextInfraWorkspaceChecker(
             repository_root=tmp_path, rope=rope_workspace
-        ).run_projects(["nonexistent"], ["lint"], reports_dir=tmp_path / "reports")
+        ).run_projects([], ["lint"], reports_dir=tmp_path / "reports")
 
-        tm.ok(result)
-        tm.that(result.value, eq=())
+        tm.fail(result, has="selected no projects")
 
     @pytest.mark.parametrize(
         "report_name",

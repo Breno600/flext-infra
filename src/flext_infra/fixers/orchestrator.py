@@ -125,33 +125,15 @@ class FlextInfraEnforcementFixerOrchestrator(
             return False
         return self._adapter_for(fix_action) is not None
 
-    def _resolve_projects(self) -> p.Result[t.SequenceOf[p.Infra.ProjectInfo]]:
-        """Resolve the project list from CLI selection or workspace discovery."""
-        projects_result = u.Infra.projects(self.repository_root)
-        if projects_result.failure:
-            return r[t.SequenceOf[p.Infra.ProjectInfo]].from_failure(projects_result)
-        discovered = tuple(projects_result.unwrap())
-        selected_projects: t.StrSequence = (
-            self.project_names if self.project_names is not None else ()
+    def _resolve_projects(self) -> p.Result[t.SequenceOf[m.Infra.ProjectInfo]]:
+        """Resolve the selected projects through the one topology owner.
+
+        ``.`` names this repository itself; an unknown name fails loud.
+        """
+        return u.Infra.resolve_projects(
+            self.repository_root,
+            self.project_names if self.project_names is not None else (),
         )
-        scope: frozenset[str] = frozenset(selected_projects)
-        available_names = {
-            name
-            for project in discovered
-            for name in (project.name, project.path.name)
-            if name
-        }
-        missing = scope - available_names
-        if missing:
-            return r[t.SequenceOf[p.Infra.ProjectInfo]].fail(
-                f"Requested projects were not discovered: {', '.join(sorted(missing))}"
-            )
-        selected = (
-            tuple(p for p in discovered if p.name in scope or p.path.name in scope)
-            if scope
-            else discovered
-        )
-        return r[t.SequenceOf[p.Infra.ProjectInfo]].ok(selected)
 
     def _fix_project(
         self, project: p.Infra.ProjectInfo, rules: t.SequenceOf[m.EnforcementRuleSpec]

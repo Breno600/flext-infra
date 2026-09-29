@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraPyprojectModernizer, FlextInfraToolTablesPhase, config
-from tests import m, t, u
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from tests import c, m, t, u
 
 
 class TestsFlextInfraDepsModernizerToolTables:
@@ -248,6 +245,7 @@ class TestsFlextInfraDepsModernizerToolTables:
         self, tmp_path: Path
     ) -> None:
         """Roots and members converge once and never project a coverage floor."""
+        u.Tests.seed_locked_taplo(tmp_path)
         modernizer = FlextInfraPyprojectModernizer(
             repository_root=tmp_path, skip_check=True
         )
@@ -292,3 +290,70 @@ class TestsFlextInfraDepsModernizerToolTables:
                 u.Tests.toml_table_at(rendered, "tool", "coverage", "report"),
                 lacks="fail_under",
             )
+
+    @staticmethod
+    def _workspace_with_exclusion(tmp_path: Path, excluded: str) -> Path:
+        """Build a governed workspace root whose manifest excludes one tree.
+
+        The canonical standalone fixture provides the repository identity and
+        its manifest declares the one retired tree.
+        """
+        project_dir = tmp_path / "flext-sample"
+        workspace = u.Tests.standalone_workspace(project_dir, project_dir.name)
+        manifest = m.Infra.WorkspaceManifestSpec(
+            version=c.Infra.WORKSPACE_MANIFEST_VERSION,
+            name=workspace.repository.name,
+            repository=workspace.repository,
+            exclusions=(
+                m.Infra.WorkspaceExclusionSpec(path=Path(excluded), reason="retired"),
+            ),
+        )
+        tm.ok(
+            u.Cli.yaml_dump(
+                u.Infra.workspace_manifest_path(project_dir),
+                manifest.model_dump(mode="json"),
+            )
+        )
+        return project_dir
+
+    def test_vulture_paths_filter_excluded_roots(self, tmp_path: Path) -> None:
+        """A workspace-excluded production root leaves the dead-code scope.
+
+        The config list stays the SSOT; the projection filters on the
+        workspace's declared analysis exclusions — order-independent across
+        the deps pass and the root-materializing gen pass (invest repro:
+        scripts/ retired, dead-code scope kept scanning it — bead flext-x44z3).
+        """
+        project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
+        )
+        FlextInfraToolTablesPhase(config.Infra.tooling).apply_payload(
+            payload, path=project_dir / "pyproject.toml"
+        )
+        paths = u.Tests.toml_strings(self._table(payload, "vulture")["paths"])
+        tm.that(paths, lacks="scripts", has="src")
+
+    def test_ruff_root_lists_filter_excluded_roots(self, tmp_path: Path) -> None:
+        """Ruff root projections drop workspace-excluded trees.
+
+        ruff fails hard on a src entry whose directory is absent, and the
+        namespace-packages contract only holds for live roots; the workspace
+        SSOT's exclusions decide (bead flext-x44z3).
+        """
+        from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+
+        project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
+        payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
+            u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
+        )
+        FlextInfraEnsureRuffConfigPhase(config.Infra.tooling).apply_payload(
+            payload, path=project_dir / "pyproject.toml"
+        )
+        table = self._table(payload, "ruff")
+        src_roots = u.Tests.toml_strings(table["src"])
+        namespace_packages = u.Tests.toml_strings(table.get("namespace-packages", []))
+        tm.that(src_roots, lacks="scripts", has="src")
+        tm.that(namespace_packages, lacks="scripts")
+        per_file = self._table(payload, "ruff", "lint", "per-file-ignores")
+        tm.that(not any(p.startswith("scripts/") for p in per_file), eq=True)

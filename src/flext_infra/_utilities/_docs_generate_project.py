@@ -113,8 +113,16 @@ class FlextInfraUtilitiesDocsGenerateProjectMixin(
             ),
             (
                 scope.path / "mkdocs.yml",
-                FlextInfraUtilitiesDocsRender.docs_project_mkdocs(
-                    scope, contract, module_names
+                (
+                    # A standalone repository publishes its root MkDocs site
+                    # under the canonical repository identity: the per-project
+                    # " Documentation" suffix belongs to member sites, never to
+                    # the repository root (root title contract, c6db82fb2).
+                    FlextInfraUtilitiesDocsRender.docs_root_mkdocs(contract, ("src",))
+                    if scope.path == repository_root
+                    else FlextInfraUtilitiesDocsRender.docs_project_mkdocs(
+                        scope, contract, module_names
+                    )
                 ),
             ),
             (

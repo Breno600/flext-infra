@@ -15,6 +15,70 @@ from .pyproject_policy import FlextInfraCodegenConformPyprojectPolicy
 class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPolicy):
     """Typed Make and project render context projection."""
 
+    @staticmethod
+    def resolve_render_inputs(
+        *,
+        target: m.Infra.RepositoryConformTarget,
+        workspace: m.Infra.WorkspaceSpec,
+        codegen: m.Infra.CodegenConfigSpec,
+        tooling_runtime: m.Infra.ToolingRuntimeContext,
+        managed_artifacts: m.Infra.ProjectManagedArtifactsSnapshot,
+    ) -> m.Infra.CodegenRenderInputs:
+        """Resolve every input shared by one repository's renders exactly once.
+
+        The integration branch probes the manifest and, undeclared, the
+        published Git line; the project context and every workflow template
+        read this one resolution instead of repeating the probe per render.
+        An unresolved branch stays absent here: only a render that consumes it
+        fails, through ``render_integration_branch``, exactly as before.
+        """
+        branch = FlextInfraCodegenConformContextRender._resolve_integration_branch(
+            target=target, workspace=workspace, codegen=codegen
+        )
+        return m.Infra.CodegenRenderInputs(
+            target=target,
+            workspace=workspace,
+            codegen=codegen,
+            tooling_runtime=tooling_runtime,
+            managed_artifacts=managed_artifacts,
+            integration_branch=branch.value if branch.success else None,
+        )
+
+    @staticmethod
+    def render_integration_branch(
+        render_inputs: m.Infra.CodegenRenderInputs,
+    ) -> p.Result[str]:
+        """Return the plan's integration branch, or the resolver's own failure."""
+        if render_inputs.integration_branch is not None:
+            return r[str].ok(render_inputs.integration_branch)
+        return FlextInfraCodegenConformContextRender._resolve_integration_branch(
+            target=render_inputs.target,
+            workspace=render_inputs.workspace,
+            codegen=render_inputs.codegen,
+        )
+
+    @staticmethod
+    def _resolve_integration_branch(
+        *,
+        target: m.Infra.RepositoryConformTarget,
+        workspace: m.Infra.WorkspaceSpec,
+        codegen: m.Infra.CodegenConfigSpec,
+    ) -> p.Result[str]:
+        """Resolve the repository's integration branch from its declarations.
+
+        The repository's declaration wins; otherwise the published baseline.
+        A checkout's HEAD is never consulted (ADR-018 p.10).
+        """
+        return u.Infra.resolve_integration_branch(
+            target.root,
+            preference=codegen.branch_policy.integration_branch_preference,
+            declared=(
+                workspace.integration.branch
+                if workspace.integration is not None
+                else None
+            ),
+        )
+
     def make_render_context(
         self, render_inputs: m.Infra.CodegenRenderInputs
     ) -> p.Result[m.Infra.MakeRenderContext]:
@@ -49,12 +113,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 pytest=config.Infra.tooling.tools.pytest,
                 mise_bootstrap=u.Infra.mise_bootstrap_environment(),
                 make=codegen.make,
-                mypy_memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-                mypy_timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
                 mypy_timeout_exit_code=c.Infra.PROCESS_TIMEOUT_EXIT_CODE,
-                mypy_signal_exit_offset=c.Infra.PROCESS_SIGNAL_EXIT_OFFSET,
-                prlimit_command=c.Infra.PRLIMIT_COMMAND,
-                prlimit_address_space_option=c.Infra.PRLIMIT_ADDRESS_SPACE_OPTION,
                 timeout_command=c.Infra.TIMEOUT_COMMAND,
                 timeout_kill_after_seconds=c.Infra.TIMEOUT_KILL_AFTER_SECONDS,
                 tooling_runtime=render_inputs.tooling_runtime,
@@ -224,17 +283,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         repository_provider = u.Infra.repository_provider(repository)
         if repository_provider.failure:
             return r[m.Infra.ProjectRenderContext].from_failure(repository_provider)
-        # The repository's declaration wins; otherwise the published baseline.
-        # A checkout's HEAD is never consulted (ADR-018 p.10).
-        integration_branch = u.Infra.resolve_integration_branch(
-            repository_root,
-            preference=codegen.branch_policy.integration_branch_preference,
-            declared=(
-                workspace.integration.branch
-                if workspace.integration is not None
-                else None
-            ),
-        )
+        integration_branch = self.render_integration_branch(render_inputs)
         if integration_branch.failure:
             return r[m.Infra.ProjectRenderContext].from_failure(integration_branch)
         # Internal flext-* floors render from the FLEXT line the checkout
@@ -320,7 +369,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 # effective map and concurrent worktree WIP cannot change a
                 # projection.
                 ruff_per_file_ignores=(
-                    FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
+                    FlextInfraEnsureRuffConfigPhase(
+                        config.Infra.tooling
+                    ).compose_per_file_ignores(
                         repository_root, managed_artifacts=catalog_artifacts
                     )
                 ),

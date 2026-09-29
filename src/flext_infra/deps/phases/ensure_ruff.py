@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 from .tool_tables import FlextInfraToolTablesPhase
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class FlextInfraEnsureRuffConfigPhase:
@@ -96,9 +93,26 @@ class FlextInfraEnsureRuffConfigPhase:
             if loaded.failure:
                 raise ValueError(loaded.error or "project artifact load failed")
             local_ignores = loaded.value.artifacts.Ruff.per_file_ignores
+        # An exemption glob rooted on a first-class directory that the
+        # workspace retired (e.g. scripts/**, declared as an analysis
+        # exclusion in its workspace SSOT) must not survive the render: it
+        # documents scope that no longer exists and re-created stale entries
+        # on every conformance pass. Declared exclusions are order-independent
+        # — a disk probe oscillated between the deps pass and the
+        # root-materializing gen pass.
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
+        scoped_global = {
+            pattern: rules
+            for pattern, rules in effective_global.items()
+            if (
+                (root := pattern.split("/")[0]).endswith("**")
+                or not root.isidentifier()
+                or root not in excluded_roots
+            )
+        }
         return {
-            pattern: tuple(sorted({*effective_global.get(pattern, ()), *rules}))
-            for pattern, rules in {**effective_global, **local_ignores}.items()
+            pattern: tuple(sorted({*scoped_global.get(pattern, ()), *rules}))
+            for pattern, rules in {**scoped_global, **local_ignores}.items()
         }
 
     def _phase(
@@ -137,6 +151,23 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
+        # Dev/tooling source roots are config-declared, but a repository that
+        # retired a tree (e.g. scripts/) must not keep analyzer entries naming
+        # it: ruff fails hard on src roots whose directories do not exist, and
+        # the namespace-packages contract only holds for roots on disk. The
+        # declared lists stay the SSOT; existence filters the projection, with
+        # roots the active plan is materializing accepted as present.
+
+        def _present(directory: str) -> bool:
+            return (path.parent / directory).is_dir() or (
+                directory in self._generated_roots
+            )
+
+        existing_root = tuple(d for d in ruff_cfg.src if _present(d))
+        excluded_roots = self._excluded_root_set(path.parent)
+        existing_namespace_packages = tuple(
+            d for d in ruff_cfg.namespace_packages if d not in excluded_roots
+        )
         toml = m.Infra.DepsToml
         return toml.PhaseConfig(
             name="ruff",
@@ -148,7 +179,7 @@ class FlextInfraEnsureRuffConfigPhase:
                     values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
                 ),
                 toml.ListOp(
-                    key="namespace-packages", values=sorted(ruff_cfg.namespace_packages)
+                    key="namespace-packages", values=sorted(existing_namespace_packages)
                 ),
                 toml.SetOp(key="fix", value=ruff_cfg.fix),
                 toml.SetOp(key="line-length", value=ruff_cfg.line_length),
@@ -156,7 +187,7 @@ class FlextInfraEnsureRuffConfigPhase:
                 toml.SetOp(key="respect-gitignore", value=ruff_cfg.respect_gitignore),
                 toml.SetOp(key="show-fixes", value=ruff_cfg.show_fixes),
                 toml.SetOp(key="target-version", value=ruff_cfg.target_version),
-                toml.ListOp(key="src", values=sorted(ruff_cfg.src)),
+                toml.ListOp(key="src", values=sorted(existing_root)),
             ),
             nested_tables=(
                 toml.PhaseConfig(
@@ -194,6 +225,20 @@ class FlextInfraEnsureRuffConfigPhase:
                         toml.SetOp(
                             key=c.Infra.IGNORE,
                             value=u.normalize_to_json_value(effective_ignore),
+                        ),
+                        # make fix never deletes information: the fix-safety
+                        # policy comes from the same SSOT the template renders.
+                        toml.SetOp(
+                            key="unfixable",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.unfixable)
+                            ),
+                        ),
+                        toml.SetOp(
+                            key="extend-safe-fixes",
+                            value=u.normalize_to_json_value(
+                                sorted(ruff_cfg.lint.extend_safe_fixes)
+                            ),
                         ),
                     ),
                 ),

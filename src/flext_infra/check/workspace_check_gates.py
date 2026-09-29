@@ -76,16 +76,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
         results: t.MutableSequenceOf[m.Infra.ProjectResult] = []
         total = len(projects)
         failed = 0
-        skipped = 0
         loop_start = time.monotonic()
         for index, target in enumerate(projects, 1):
-            if (
-                not target.path.is_dir()
-                or not (target.path / c.PYPROJECT_FILENAME).exists()
-            ):
-                u.Cli.progress(index, total, target.name, c.Infra.SeverityLevel.SKIP)
-                skipped += 1
-                continue
             u.Cli.progress(index, total, target.name, c.Infra.VERB_CHECK)
             project_result = self._run_single_project(
                 target, resolved_gates, ctx, rope_outcomes
@@ -99,7 +91,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
         return m.Infra.LoopOutcome(
             results=tuple(results),
             failed=failed,
-            skipped=skipped,
             total_elapsed=time.monotonic() - loop_start,
         )
 
@@ -158,7 +149,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
         for gate_id in gates:
             gate_instance = self._registry.create(gate_id, self._repository_root)
             if gate_instance is None:
-                continue
+                msg = f"{gate_id} gate not registered"
+                raise ValueError(msg)
             stages.append(
                 m.Cli.PipelineStageSpec(
                     stage_id=gate_id,
@@ -173,9 +165,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 )
             )
             previous_gate_id = gate_id
-
-        if not stages:
-            return result
 
         cli.pipeline(
             stages,

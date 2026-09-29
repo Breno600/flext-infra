@@ -68,11 +68,20 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         rel = filepath.relative_to(project_root)
         violations: t.MutableSequenceOf[str] = []
         if filepath == self._first_eligible_file:
-            violations.extend(
-                self._layout_violations(
-                    layout.package_dir if layout is not None else None
+            if layout is None and self._declared_content_only(project_root):
+                # A workspace manifest declaring repository.package=false
+                # defines a content-only root (a workspace shell whose
+                # analyzable surface lives in examples/tests): the facade
+                # layout contract scopes projects that publish packages, so
+                # the undiscovered layout is the declared receipt, not a
+                # defect (invest-6n6u family).
+                pass
+            else:
+                violations.extend(
+                    self._layout_violations(
+                        layout.package_dir if layout is not None else None
+                    )
                 )
-            )
         violations.extend(self.check_module(visit, rel))
         return r[m.Infra.RopeCallbackOutcome].ok(
             m.Infra.RopeCallbackOutcome(
@@ -82,6 +91,27 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
                 violations=tuple(violations),
             )
         )
+
+    @staticmethod
+    def _declared_content_only(project_root: Path) -> bool:
+        """Return whether the local manifest declares repository.package=false.
+
+        The workspace manifest is the SSOT for the publish contract: a
+        content-only declaration means the analyzable surface lives in
+        examples/tests and the facade layout contract does not apply.
+        Undeclared or load-failing roots stay loud (the layout error is the
+        correct signal when a package was expected).
+        """
+        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+
+        resolved = project_root.expanduser().resolve()
+        if not u.Infra.workspace_manifest_path(resolved).is_file():
+            return False
+        declared = FlextInfraWorkspaceDetector.load_workspace_manifest(resolved)
+        if declared.failure or not declared.value:
+            return False
+        manifest = declared.value[0]
+        return manifest.repository.package is False
 
     def _eligible_project_files(
         self, workspace: p.Infra.RopeWorkspaceDsl

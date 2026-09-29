@@ -37,7 +37,7 @@ class TestsFlextInfraPytestDiag:
         )
         return FlextInfraPytestDiagExtractor(
             junit=junit,
-            log_path=log,
+            log=log,
             report_log=report_log,
             failed=failed,
             errors=errors,

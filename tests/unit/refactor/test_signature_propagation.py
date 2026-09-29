@@ -35,6 +35,7 @@ class TestsFlextInfraRefactorSignaturePropagation:
                 "    target_simple_names: [publish]\n"
                 "    keyword_renames:\n"
                 "      session_value: session\n"
+                "    add_keywords: {}\n"
             ),
         )
         # The orchestrator scans a project's declared source root, which is
@@ -84,7 +85,10 @@ class TestsFlextInfraRefactorSignaturePropagation:
         """A declaration that targets callables but rewrites nothing is a defect."""
         self._declare(
             mod_workspace,
-            "migrations:\n  - id: empty-rewrite\n    target_simple_names: [publish]\n",
+            (
+                "migrations:\n  - id: empty-rewrite\n    target_simple_names: [publish]\n"
+                "    keyword_renames: {}\n    add_keywords: {}\n"
+            ),
         )
 
         exit_code = infra_main([

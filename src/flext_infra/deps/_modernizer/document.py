@@ -172,7 +172,7 @@ class FlextInfraPyprojectModernizerDocument:
         canonical_dev: t.StrSequence,
         dry_run: bool,
         skip_comments: bool,
-    ) -> t.StrSequence:
+    ) -> p.Result[t.StrSequence]:
         """Run every phase over one discovered state; write unless ``dry_run``."""
         return self._render_document_state(
             state,
@@ -270,8 +270,11 @@ class FlextInfraPyprojectModernizerDocument:
         dry_run: bool,
         skip_comments: bool,
         format_source: bool = True,
-    ) -> t.StrSequence:
-        """Order, annotate, and format one payload; write unless ``dry_run``."""
+    ) -> p.Result[t.StrSequence]:
+        """Order, annotate, and format one payload; write unless ``dry_run``.
+
+        A formatter failure is the result's failure, never a reported change.
+        """
         path = state.pyproject_path
         doc = u.Cli.toml_document_from_mapping(state.payload)
         self._reorder_document(doc, preferred_first=self.tomlsort_sort_first)
@@ -290,14 +293,14 @@ class FlextInfraPyprojectModernizerDocument:
                 ),
             )
             if formatted.failure:
-                return [formatted.error or "taplo format failed"]
+                return r[t.StrSequence].from_failure(formatted)
             rendered = formatted.value
         state.rendered = rendered.rstrip() + "\n"
         if state.rendered == state.original_rendered.rstrip() + "\n":
-            return ()
+            return r[t.StrSequence].ok(())
         if not dry_run:
             u.write_file(path, state.rendered, encoding=c.Cli.ENCODING_DEFAULT)
-        return [*changes, *comment_changes]
+        return r[t.StrSequence].ok((*changes, *comment_changes))
 
 
 __all__: list[str] = ["FlextInfraPyprojectModernizerDocument"]
