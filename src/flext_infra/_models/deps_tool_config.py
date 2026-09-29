@@ -77,6 +77,51 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
 
+    class PytestWorkerCeiling(m.ArbitraryTypesModel):
+        """Tagged per-project pytest worker ceiling: absolute or CPU fraction.
+
+        Exactly one of ``workers`` (absolute count) or ``cpu_fraction``
+        (``"numerator/denominator"`` of the process CPU count) must be set.
+        A bare integer (legacy YAML form) coerces to ``workers``.
+        """
+
+        workers: Annotated[
+            int | None,
+            m.Field(
+                gt=0,
+                le=64,
+                description="Absolute xdist worker ceiling for the project.",
+            ),
+        ] = None
+        cpu_fraction: Annotated[
+            str | None,
+            m.Field(
+                pattern=r"^[1-9][0-9]*/[1-9][0-9]*$",
+                description=(
+                    "CPU-fraction worker ceiling (numerator/denominator of "
+                    'the process CPU count), e.g. "1/4".'
+                ),
+            ),
+        ] = None
+
+        @m.model_validator(mode="before")
+        @classmethod
+        def _coerce_legacy_int(cls, data: object) -> object:
+            """Accept the legacy bare-integer form as an absolute ceiling."""
+            if isinstance(data, int) and not isinstance(data, bool):
+                return {"workers": data}
+            return data
+
+        @m.model_validator(mode="after")
+        def _require_exactly_one_form(
+            self,
+        ) -> FlextInfraModelsDepsToolConfig.PytestWorkerCeiling:
+            """Reject ambiguous (both or neither) ceiling forms."""
+            if (self.workers is None) == (self.cpu_fraction is None):
+                msg = "PytestWorkerCeiling requires exactly one of workers or cpu_fraction"
+                raise ValueError(msg)
+            return self
+
     class PytestConfig(m.ArbitraryTypesModel):
         """Pytest baseline settings loaded from YAML."""
 
@@ -203,15 +248,17 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         parallel_worker_overrides: Annotated[
-            Mapping[str, int],
+            Mapping[str, FlextInfraModelsDepsToolConfig.PytestWorkerCeiling],
             m.Field(
                 alias="parallel-worker-overrides",
                 description=(
                     "Per declared-project worker ceilings (``[project].name`` "
-                    "→ workers) resolved by the runner over the fleet-wide "
-                    "``parallel-workers`` default: a consumer whose measured "
-                    "suite cannot fit the single-worker process boundary "
-                    "declares its ceiling here, inside the fleet cycle."
+                    "→ absolute ``workers`` or CPU ``cpu_fraction``) resolved "
+                    "by the runner over the fleet-wide ``parallel-workers`` "
+                    "default: a consumer whose measured suite cannot fit the "
+                    "single-worker process boundary declares its ceiling "
+                    "here, inside the fleet cycle. The legacy bare-integer "
+                    "form still reads as an absolute ``workers`` ceiling."
                 ),
             ),
         ] = {}
