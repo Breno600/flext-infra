@@ -75,7 +75,9 @@ class FlextInfraEnsureRuffConfigPhase:
             return frozenset()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
-            return frozenset()
+            raise ValueError(
+                paths.error or "workspace analysis exclusions are unavailable"
+            )
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
     @staticmethod
@@ -85,7 +87,9 @@ class FlextInfraEnsureRuffConfigPhase:
             return ()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
-            return ()
+            raise ValueError(
+                paths.error or "workspace analysis exclusions are unavailable"
+            )
         return tuple(path.as_posix() for path in paths.value)
 
     def compose_per_file_ignores(
