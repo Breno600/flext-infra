@@ -1,0 +1,12 @@
+id: ban-infra-ai-hub-crg-dynamic-library-import
+# `valid` MUST NOT match: dynamic loading of other modules or of a name that is
+# not a literal.
+valid:
+  - importlib.import_module("flext_infra")
+  - __import__("crgs")
+  - importlib.import_module(name)
+# `invalid` MUST match: dynamic loading of the AI Hub or CRG libraries.
+invalid:
+  - importlib.import_module("ai_hub")
+  - __import__("crg.graph")
+  - importlib.import_module('code_relationship_graph')

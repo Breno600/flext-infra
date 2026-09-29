@@ -28,7 +28,103 @@ class FlextInfraModGateEngine:
     def validate_rule_fixtures(
         cls, root: Path, rules: t.SequenceOf[Path]
     ) -> p.Result[bool]:
-        """Validate inherited fixtures and update only rule owners in scope."""
+        """Verify every fixture against its committed snapshots; never rewrite them.
+
+        A drifted or missing snapshot fails ``ast-grep test``; a snapshot of a
+        removed rule or deleted test case fails the owned-inventory check. The
+        change they record is made explicit by ``make mod-snapshots`` and lands
+        as a reviewed commit, so ``make mod`` cannot accept rewritten output.
+        """
+        for config_root, owner_rules, owner_is_governed in cls._fixture_owners(
+            root, rules
+        ):
+            if owner_is_governed:
+                active_rule_ids: set[str] = set()
+                for rule in owner_rules:
+                    rule_ids, _fixable_ids = u.Infra.ast_grep_rule_contract(rule)
+                    active_rule_ids.update(rule_ids)
+                stale = FlextInfraCodemodSnapshotReconciler.stale_snapshots(
+                    config_root, frozenset(active_rule_ids)
+                )
+                if stale:
+                    return r[bool].fail(
+                        "ast-grep snapshots record no current rule test:\n"
+                        + "\n".join(stale)
+                        + f"\n{c.Infra.CODEMOD_SNAPSHOT_REFRESH_HINT}"
+                    )
+            with tempfile.TemporaryDirectory(
+                prefix="mod-rule-fixtures-", dir=settings.work_dir
+            ) as temp_dir:
+                temp_root = Path(temp_dir) / config_root.name
+                cls.stage_rule_fixture_root(
+                    config_root=config_root, temp_root=temp_root
+                )
+                cls._materialize_split_rule_files(
+                    config_root=config_root,
+                    temp_root=temp_root,
+                    owner_rules=owner_rules,
+                )
+                tested = cls._run_tool(temp_root, (c.Infra.SG, c.Infra.TEST))
+                if tested.failure:
+                    remedy = (
+                        c.Infra.CODEMOD_SNAPSHOT_REFRESH_HINT
+                        if owner_is_governed
+                        else (
+                            f"inherited rule provider {config_root} ships these "
+                            "fixtures; repair them in its owner repository"
+                        )
+                    )
+                    return r[bool].fail(f"{tested.error}\n{remedy}")
+        return r.ok(True)
+
+    @classmethod
+    def refresh_rule_snapshots(
+        cls, root: Path, rules: t.SequenceOf[Path], *, apply: bool
+    ) -> p.Result[t.StrSequence]:
+        """Regenerate every governed owner's snapshots from its rule tests.
+
+        The explicit counterpart of the verifying ``validate_rule_fixtures``:
+        snapshots are projections of the declared test cases, rebuilt from
+        scratch so removed rules and deleted cases leave no residue. The
+        returned changes are the reviewed diff; inherited providers keep the
+        snapshots their owner ships.
+        """
+        changes: list[str] = []
+        for config_root, owner_rules, owner_is_governed in cls._fixture_owners(
+            root, rules
+        ):
+            if not owner_is_governed:
+                continue
+            with tempfile.TemporaryDirectory(
+                prefix="mod-rule-snapshots-", dir=settings.work_dir
+            ) as temp_dir:
+                temp_root = Path(temp_dir) / config_root.name
+                cls.stage_rule_fixture_root(
+                    config_root=config_root,
+                    temp_root=temp_root,
+                    regenerate_snapshots=True,
+                )
+                cls._materialize_split_rule_files(
+                    config_root=config_root,
+                    temp_root=temp_root,
+                    owner_rules=owner_rules,
+                )
+                cls._run_tool(
+                    temp_root, (c.Infra.SG, c.Infra.TEST, c.Infra.SG_UPDATE_ALL)
+                ).unwrap()
+                cls._run_tool(temp_root, (c.Infra.SG, c.Infra.TEST)).unwrap()
+                changes.extend(
+                    cls._publish_regenerated_snapshots(
+                        config_root=config_root, temp_root=temp_root, apply=apply
+                    )
+                )
+        return r[t.StrSequence].ok(tuple(changes))
+
+    @staticmethod
+    def _fixture_owners(
+        root: Path, rules: t.SequenceOf[Path]
+    ) -> t.SequenceOf[t.Triple[Path, t.SequenceOf[Path], bool]]:
+        """Group rules by fixture owner and mark the owners this root governs."""
         governed_roots = frozenset(
             project.resolve() for project in u.Infra.governed_project_roots(root)
         )
@@ -37,53 +133,22 @@ class FlextInfraModGateEngine:
             owner = FlextInfraCodemodSnapshotReconciler.config_root(rule)
             rules_by_owner.setdefault(owner, []).append(rule)
         if not rules_by_owner:
-            return r[bool].fail("discovered ast-grep rules have no fixture owner")
+            msg = "discovered ast-grep rules have no fixture owner"
+            raise ValueError(msg)
+        scratch = settings.work_dir
+        owners: list[t.Triple[Path, t.SequenceOf[Path], bool]] = []
         for config_root, owner_rules in sorted(rules_by_owner.items()):
-            owner_root = u.Infra.project_root(config_root)
-            owner_is_governed = (
-                owner_root is not None and owner_root.resolve() in governed_roots
-            )
-            active_rule_ids: set[str] = set()
-            for rule in owner_rules:
-                rule_ids, _fixable_ids = u.Infra.ast_grep_rule_contract(rule)
-                active_rule_ids.update(rule_ids)
-            scratch = settings.work_dir
             if scratch.resolve().is_relative_to(config_root.resolve()):
-                return r[bool].fail(
-                    "rule fixture scratch must be outside its source root"
-                )
-            scratch.mkdir(parents=True, exist_ok=True)
-            with tempfile.TemporaryDirectory(
-                prefix="mod-rule-fixtures-", dir=scratch
-            ) as temp_dir:
-                temp_root = Path(temp_dir) / config_root.name
-                cls.stage_rule_fixture_root(
-                    config_root=config_root,
-                    temp_root=temp_root,
-                    regenerate_snapshots=owner_is_governed,
-                )
-                if owner_is_governed:
-                    for fixture_root in (config_root, temp_root):
-                        FlextInfraCodemodSnapshotReconciler.reconcile(
-                            fixture_root, frozenset(active_rule_ids)
-                        )
-                split_rules = cls._materialize_split_rule_files(
-                    config_root=config_root,
-                    temp_root=temp_root,
-                    owner_rules=owner_rules,
-                )
-                if owner_is_governed:
-                    cls._run_tool(
-                        temp_root, (c.Infra.SG, c.Infra.TEST, c.Infra.SG_UPDATE_ALL)
-                    ).unwrap()
-                cls._run_tool(temp_root, (c.Infra.SG, c.Infra.TEST)).unwrap()
-                if owner_is_governed:
-                    cls._sync_rule_fixture_root(
-                        config_root=config_root,
-                        temp_root=temp_root,
-                        split_rules=split_rules,
-                    )
-        return r.ok(True)
+                msg = "rule fixture scratch must be outside its source root"
+                raise ValueError(msg)
+            owner_root = u.Infra.project_root(config_root)
+            owners.append((
+                config_root,
+                tuple(owner_rules),
+                owner_root is not None and owner_root.resolve() in governed_roots,
+            ))
+        scratch.mkdir(parents=True, exist_ok=True)
+        return tuple(owners)
 
     @staticmethod
     def stage_rule_fixture_root(
@@ -154,9 +219,8 @@ class FlextInfraModGateEngine:
     @classmethod
     def _materialize_split_rule_files(
         cls, *, config_root: Path, temp_root: Path, owner_rules: t.SequenceOf[Path]
-    ) -> MutableMapping[Path, t.VariadicTuple[Path]]:
+    ) -> None:
         """Replace multi-document rule files with single-document temp copies."""
-        split_rules: MutableMapping[Path, t.VariadicTuple[Path]] = {}
         source_rules = set(owner_rules)
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
             config_root
@@ -169,7 +233,6 @@ class FlextInfraModGateEngine:
                 continue
             temp_rule = temp_root / rule.relative_to(config_root)
             temp_rule.unlink()
-            split_paths: list[Path] = []
             for document in documents:
                 parsed = u.Cli.yaml_parse(document)
                 if parsed.failure:
@@ -178,46 +241,49 @@ class FlextInfraModGateEngine:
                 if not isinstance(rule_id, str) or not rule_id:
                     msg = f"ast-grep rule document missing required id: {rule}"
                     raise RuntimeError(msg)
-                split_path = temp_rule.with_name(f"{rule_id}.yml")
-                split_path.write_text(document, encoding="utf-8")
-                split_paths.append(split_path)
-            split_rules[rule] = tuple(split_paths)
-        return split_rules
+                temp_rule.with_name(f"{rule_id}.yml").write_text(
+                    document, encoding="utf-8"
+                )
 
     @staticmethod
-    def _sync_rule_fixture_root(
-        *,
-        config_root: Path,
-        temp_root: Path,
-        split_rules: MutableMapping[Path, t.VariadicTuple[Path]],
-    ) -> None:
-        """Mirror validated fixture updates from the temp copy back to source."""
-        split_temp_paths = {
-            path.relative_to(temp_root)
-            for paths in split_rules.values()
-            for path in paths
-        }
-        for temp_path in temp_root.rglob("*"):
-            if not temp_path.is_file():
-                continue
-            relative = temp_path.relative_to(temp_root)
-            if relative in split_temp_paths:
-                continue
-            source_path = config_root / relative
-            if source_path.is_file():
-                if source_path.read_bytes() == temp_path.read_bytes():
+    def _publish_regenerated_snapshots(
+        *, config_root: Path, temp_root: Path, apply: bool
+    ) -> t.StrSequence:
+        """Mirror only regenerated snapshot files back to source; report each change.
+
+        Rules, utilities and tests are inputs of the regeneration and are never
+        written back. A committed snapshot the regeneration did not produce
+        belongs to a removed rule or test and is removed with the rest.
+        """
+        pattern = f"*{c.Infra.CODEMOD_SNAPSHOT_SUFFIX}"
+        changes: list[str] = []
+        for test_dir in FlextInfraCodemodSnapshotReconciler.fixture_directories(
+            config_root
+        ).test_dirs:
+            source_dir = test_dir / c.Infra.CODEMOD_SNAPSHOT_DIRNAME
+            regenerated_dir = temp_root / source_dir.relative_to(config_root)
+            regenerated = {path.name: path for path in regenerated_dir.glob(pattern)}
+            committed = {path.name: path for path in source_dir.glob(pattern)}
+            for name in sorted(regenerated.keys() | committed.keys()):
+                target = source_dir / name
+                produced = regenerated.get(name)
+                if produced is None:
+                    changes.append(f"removed {target}")
+                    if apply:
+                        target.unlink()
                     continue
-            else:
-                source_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(temp_path, source_path)
-        for source_rule, split_paths in split_rules.items():
-            reconstructed = "\n---\n".join(
-                split_path.read_text(encoding="utf-8").rstrip("\n")
-                for split_path in split_paths
-            )
-            if reconstructed and not reconstructed.endswith("\n"):
-                reconstructed += "\n"
-            source_rule.write_text(reconstructed, encoding="utf-8")
+                content = produced.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+                current = committed.get(name)
+                if current is not None and (
+                    current.read_text(encoding=c.Cli.ENCODING_DEFAULT) == content
+                ):
+                    continue
+                changes.append(
+                    f"{'created' if current is None else 'updated'} {target}"
+                )
+                if apply:
+                    u.Cli.atomic_write_text_file(target, content).unwrap()
+        return tuple(changes)
 
     @staticmethod
     def _run_tool(

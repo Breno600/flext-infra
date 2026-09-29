@@ -57,6 +57,19 @@ phase, fix, or changed-only selector may be attached to a standard verb.
 `docs`, `audit`, `status`, `waza`, `duplication`, and the release verbs retain their own
 single operation and are invoked only when their scope applies.
 
+## Codemod rule fixtures
+
+Every ast-grep rule has a test (`<rule-id>-test.yml` with `valid` and `invalid` cases)
+and, for each invalid case, a committed snapshot of what the rule reports and rewrites.
+`make mod` verifies them with `ast-grep test` and never rewrites a snapshot: a changed
+fix output, a missing snapshot, or a snapshot of a removed rule or deleted test case
+fails the verb instead of being accepted as the new expectation.
+
+`make mod-snapshots` is the one explicit regeneration. It rebuilds the snapshots of the
+rules this repository owns from their tests, prints every created, updated or removed
+snapshot, and leaves the diff for review in the same commit as the rule change.
+Inherited rule providers keep the snapshots their owner ships.
+
 ## Verb single-pass contract
 
 Each mutating verb owns exactly one operation per tool, and `make check` is strictly
