@@ -10,6 +10,10 @@ language: python
 rule:
   kind: import_from_statement
   all:
+    # Module scope only: a function-local or TYPE_CHECKING import binds ``m``
+    # nowhere else, so a rewrite in another function would raise NameError.
+    - inside:
+        kind: module
     - has:
         pattern: m
         stopBy: end

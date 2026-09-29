@@ -32,7 +32,6 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
-        tm.that(result.value.outcome.raw_return_code, eq=0)
 
     def test_mypy_profile_records_the_real_checker(self, tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
@@ -254,7 +253,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         original_memory = os.environ.get(c.Infra.MYPY_MEMORY_LIMIT_MB_ENV)
         original_timeout = os.environ.get(c.Infra.MYPY_TIMEOUT_SECONDS_ENV)
         os.environ[c.Infra.MYPY_MEMORY_LIMIT_MB_ENV] = invalid_value
-        os.environ[c.Infra.MYPY_TIMEOUT_SECONDS_ENV] = "120"
+        os.environ[c.Infra.MYPY_TIMEOUT_SECONDS_ENV] = str(
+            c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT
+        )
         try:
             with pytest.raises(
                 ValueError, match=f"{c.Infra.MYPY_MEMORY_LIMIT_MB_ENV} must be"

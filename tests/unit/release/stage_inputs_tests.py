@@ -35,7 +35,7 @@ class TestsFlextInfraReleaseStageInputs:
 
         mirrored = FlextInfraReleaseProjectMixin.mirror_release_inputs(project, stage)
 
-        tm.that(mirrored, has={"success": True})
+        tm.ok(mirrored)
         staged = stage / "dist"
         tm.that(
             sorted(path.name for path in staged.iterdir()),
@@ -55,7 +55,7 @@ class TestsFlextInfraReleaseStageInputs:
 
         mirrored = FlextInfraReleaseProjectMixin.mirror_release_inputs(project, stage)
 
-        tm.that(mirrored, has={"success": True})
+        tm.ok(mirrored)
         tm.that((stage / "dist").exists(), eq=False)
 
     def test_non_regular_dist_entry_fails_loud(self, tmp_path: Path) -> None:
@@ -68,8 +68,7 @@ class TestsFlextInfraReleaseStageInputs:
 
         mirrored = FlextInfraReleaseProjectMixin.mirror_release_inputs(project, stage)
 
-        tm.that(mirrored, has={"success": False})
         tm.that(
-            mirrored.error or "",
+            tm.fail(mirrored),
             eq="project dist must contain only regular files: " + str(nested),
         )
