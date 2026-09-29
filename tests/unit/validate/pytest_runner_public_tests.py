@@ -616,9 +616,7 @@ class TestsFlextInfraPytestRunner:
     ) -> None:
         """No-cov-on-fail omits coverage without hiding the failed test evidence."""
         runner = self._runner_for(cached_runner_project)
-        (
-            cached_runner_project / runner.target / "test_coverage_failure.py"
-        ).write_text(
+        (cached_runner_project / runner.target / "test_coverage_failure.py").write_text(
             "def test_coverage_failure() -> None:\n"
             "    assert False, 'original coverage suite failure'\n",
             encoding="utf-8",
