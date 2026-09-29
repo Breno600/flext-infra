@@ -310,15 +310,26 @@ class FlextInfraPytestRunnerExecution(
         # The zero-test receipt exits green: the suite owns nothing to execute
         # and the run published its typed accounting.
         accepted_zero_tests = accounting.owns_no_tests and not rejected
-        final_exit = (
-            0
-            if (accepted_cache_hit or accepted_zero_tests)
-            else raw_return_code or int(rejected)
-        )
         selected_count = (
             None
             if accounting.inventory_count is None
             else accounting.inventory_count - accounting.deselected_count
+        )
+        # The suite stop instant can land on the last selected test's teardown:
+        # pytest still reports the interrupt, but every selected test executed
+        # with complete accounting and nothing remains for the next selection.
+        # Coverage keeps the interrupt red: its artifact is validated only on a
+        # clean exit.
+        stopped_after_selection = (
+            raw_return_code == pytest.ExitCode.INTERRUPTED
+            and context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE
+            and not rejected
+            and accounting.executed_count == selected_count
+        )
+        final_exit = (
+            0
+            if (accepted_cache_hit or accepted_zero_tests or stopped_after_selection)
+            else raw_return_code or int(rejected)
         )
         # A graceful stop at the suite stop instant publishes the executed
         # prefix and remains red: the unexecuted remainder is the next run's

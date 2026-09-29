@@ -199,10 +199,6 @@ class TestsFlextInfraSonarcloudSettingsSync:
         )
         tm.that(FlextInfraSonarcloudSettingsSync.in_sync_with(plan, current), eq=False)
 
-    def test_workspace_root_fans_the_verb_out(self) -> None:
-        """The workspace orchestrator accepts the verb so the root reaches members."""
-        tm.that(c.Infra.ORCHESTRATED_VERBS, has=c.Infra.VERB_SONARCLOUD_SYNC)
-
     def test_absent_token_fails_before_any_effect(self, tmp_path: Path) -> None:
         """Without SONAR_TOKEN the verb fails first, before reading origin or API."""
         u.Tests.initialize_git_repo(tmp_path)

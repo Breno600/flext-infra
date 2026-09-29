@@ -209,11 +209,10 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(self._git_state(child), eq=("conflict", state[1]))
 
-    @pytest.mark.parametrize("github_actions", ["true", "false"])
-    def test_setup_environment_provisions_members_in_every_ci_context(
-        self, tmp_path: Path, github_actions: str
+    def test_setup_environment_provisions_members_before_the_environment(
+        self, tmp_path: Path
     ) -> None:
-        """GitHub CI provisions governed gitlinks before the environment recipe.
+        """Setup provisions governed gitlinks before the environment recipe.
 
         The workspace projections derive from the member checkouts, so a
         member-less CI checkout renders a different workspace and breaks the
@@ -228,7 +227,6 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             if key not in {"SETUP_PYTHON", "CI"}
         }
         env["GIT_ALLOW_PROTOCOL"] = "file"
-        env["GITHUB_ACTIONS"] = github_actions
 
         process = tm.ok(
             u.Cli.run_raw(

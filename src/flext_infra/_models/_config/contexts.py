@@ -130,7 +130,7 @@ class FlextInfraConfigModelsContexts:
         ]
         workspace_cli_group: Annotated[
             t.NonEmptyStr,
-            m.Field(description="CLI group used for workspace orchestration"),
+            m.Field(description="CLI group that owns the workspace propagate route"),
         ]
         mypy_timeout_exit_code: Annotated[
             int, m.Field(gt=0, description="Wall-time limiter timeout exit code")
@@ -227,7 +227,7 @@ class FlextInfraConfigModelsContexts:
             str,
             m.Field(
                 description=(
-                    "CLI group name for the flext-infra workspace orchestrate route"
+                    "CLI group name for the flext-infra workspace propagate route"
                 )
             ),
         ] = ""
