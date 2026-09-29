@@ -73,32 +73,6 @@ class FlextInfraEnsureRuffConfigPhase:
         return sorted(path.as_posix() for path in paths.value)
 
     @staticmethod
-    def _excluded_root_set(project_dir: Path) -> t.Infra.StrSet:
-        """First segments of the workspace SSOT's declared analysis exclusions.
-
-        Unlike a disk probe (which oscillates between the deps pass and the
-        root-materializing gen pass), the workspace SSOT is order-independent:
-        a repository declares a retired tree here once and every root-scoped
-        projection converges.
-        """
-        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return frozenset()
-        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            return frozenset()
-        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
-
-    @staticmethod
-    def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
-        """Return the workspace-declared analysis exclusion paths (SSOT-driven)."""
-        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return ()
-        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            return ()
-        return tuple(path.as_posix() for path in paths.value)
-
-    @staticmethod
     def compose_per_file_ignores(
         project_dir: Path,
         *,
@@ -137,9 +111,7 @@ class FlextInfraEnsureRuffConfigPhase:
         # on every conformance pass. Declared exclusions are order-independent
         # — a disk probe oscillated between the deps pass and the
         # root-materializing gen pass.
-        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(
-            project_dir
-        )
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
         scoped_global = {
             pattern: rules
             for pattern, rules in effective_global.items()
@@ -197,9 +169,7 @@ class FlextInfraEnsureRuffConfigPhase:
         # namespace-packages contract only holds for live roots. The exclusion
         # SSOT filters the projection — order-independent across the deps pass
         # and the root-materializing gen pass.
-        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(
-            path.parent
-        )
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(path.parent)
         existing_root = tuple(d for d in ruff_cfg.src if d not in excluded_roots)
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
@@ -215,8 +185,7 @@ class FlextInfraEnsureRuffConfigPhase:
                     values=sorted({*ruff_cfg.exclude, *workspace_exclusions}),
                 ),
                 toml.ListOp(
-                    key="namespace-packages",
-                    values=sorted(existing_namespace_packages),
+                    key="namespace-packages", values=sorted(existing_namespace_packages)
                 ),
                 toml.SetOp(key="fix", value=ruff_cfg.fix),
                 toml.SetOp(key="line-length", value=ruff_cfg.line_length),

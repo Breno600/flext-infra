@@ -51,7 +51,7 @@ class FlextInfraPyprojectModernizerTooling:
             dry_run: bool,
             skip_comments: bool,
             format_source: bool = True,
-        ) -> t.StrSequence: ...
+        ) -> p.Result[t.StrSequence]: ...
 
     def conform_source(
         self,

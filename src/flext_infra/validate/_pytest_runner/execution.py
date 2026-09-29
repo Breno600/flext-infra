@@ -114,7 +114,7 @@ class FlextInfraPytestRunnerExecution(
         if outcome.raw_return_code == pytest.ExitCode.NO_TESTS_COLLECTED and node_ids:
             msg = "pytest reported no collection with a nonempty manifest"
             raise RuntimeError(msg)
-        owns_no_tests = bool(complete and not node_ids) and self._owns_no_tests()
+        owns_no_tests = complete and not node_ids and self._owns_no_tests()
         if complete and not node_ids and not owns_no_tests:
             msg = "complete pytest inventory must contain at least one test"
             raise RuntimeError(msg)
