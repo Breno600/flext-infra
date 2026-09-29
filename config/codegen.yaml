@@ -618,6 +618,9 @@ Infra:
       - {name: .doltcfg}
       - {name: .hypothesis}
       - {name: .git, gitignore: false, source_scan_ignore: true}
+    # mro-operator-20260918: mimosa agent tool state (hook-state/hook-status)
+    # is machine-local cache, never production input.
+      - {name: .mimosa, source_scan_ignore: true}
       - {name: .mypy_cache, source_scan_ignore: true}
       - {name: .omo}
       - {name: .pylance_cache, vscode_exclude: false}
