@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 from .tool_tables import FlextInfraToolTablesPhase
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class FlextInfraEnsureRuffConfigPhase:
@@ -72,6 +69,33 @@ class FlextInfraEnsureRuffConfigPhase:
             raise ValueError(paths.error or "workspace analysis scope is unavailable")
         return sorted(path.as_posix() for path in paths.value)
 
+    @staticmethod
+    def _excluded_root_set(project_dir: Path) -> t.Infra.StrSet:
+        """First segments of the workspace SSOT's declared analysis exclusions.
+
+        Unlike a disk probe (which oscillates between the deps pass and the
+        root-materializing gen pass), the workspace SSOT is order-independent:
+        a repository declares a retired tree here once and every root-scoped
+        projection converges.
+        """
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return frozenset()
+        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
+        if paths.failure:
+            return frozenset()
+        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
+
+    @staticmethod
+    def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
+        """Return the workspace-declared analysis exclusion paths (SSOT-driven)."""
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return ()
+        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
+        if paths.failure:
+            return ()
+        return tuple(path.as_posix() for path in paths.value)
+
+    @staticmethod
     def compose_per_file_ignores(
         self,
         project_dir: Path,
@@ -105,18 +129,20 @@ class FlextInfraEnsureRuffConfigPhase:
                 raise ValueError(loaded.error or "project artifact load failed")
             local_ignores = loaded.value.artifacts.Ruff.per_file_ignores
         # An exemption glob rooted on a first-class directory that the
-        # repository retired (e.g. scripts/**) must not survive the render:
-        # it documents scope that no longer exists and re-created stale
-        # entries on every conformance pass. Directory-rooted patterns whose
-        # root is absent from disk are dropped; glob-only patterns pass.
+        # workspace retired (e.g. scripts/**, declared as an analysis
+        # exclusion in its workspace SSOT) must not survive the render: it
+        # documents scope that no longer exists and re-created stale entries
+        # on every conformance pass. Declared exclusions are order-independent
+        # — a disk probe oscillated between the deps pass and the
+        # root-materializing gen pass.
+        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(project_dir)
         scoped_global = {
             pattern: rules
             for pattern, rules in effective_global.items()
             if (
                 (root := pattern.split("/")[0]).endswith("**")
                 or not root.isidentifier()
-                or (project_dir / root).is_dir()
-                or root in self._generated_roots
+                or root not in excluded_roots
             )
         }
         return {
@@ -174,7 +200,7 @@ class FlextInfraEnsureRuffConfigPhase:
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
         existing_namespace_packages = tuple(
-            d for d in ruff_cfg.namespace_packages if _present(d)
+            d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )
         toml = m.Infra.DepsToml
         return toml.PhaseConfig(

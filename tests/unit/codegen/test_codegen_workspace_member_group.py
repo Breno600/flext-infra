@@ -40,6 +40,11 @@ class TestsFlextInfraCodegenWorkspaceMemberGroup:
         u.Tests.WorktreeFixture.attach_submodule(
             root, member, distribution="sample-member", relative_path="sample-member"
         )
+        # A governed workspace root declares its own project, exactly as the
+        # real composed root does; conform renders no root pyproject without it.
+        u.Tests.write_standalone_workspace_manifest(
+            root, "sample-workspace", role=c.Infra.MakeProfile.WORKSPACE
+        )
         request = u.Tests.conform_request(
             root,
             what=c.Infra.CodegenConformSurface.PYPROJECT,

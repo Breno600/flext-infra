@@ -13,6 +13,7 @@ from flext_infra.codegen.consolidator import FlextInfraCodegenConsolidator
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from tests import c, m, p, t
 from tests.utilities_fixture_project import TestsFlextInfraUtilitiesProjectFixtureMixin
+from tests.utilities_fixture_tooling import TestsFlextInfraUtilitiesToolingFixtureMixin
 from tests.utilities_git import TestsFlextInfraUtilitiesGitMixin
 
 
@@ -94,6 +95,9 @@ class TestsFlextInfraUtilitiesCodegenMixin:
         are observed exactly as the public codegen owner renders them.
         """
         fixture = TestsFlextInfraUtilitiesProjectFixtureMixin
+        # A governed repository carries its committed Mise lock; generation
+        # formats through the release it pins and never resolves a selector.
+        TestsFlextInfraUtilitiesToolingFixtureMixin.copy_tracked_mise_seeds(root)
         repository = fixture.repository_ref(
             "fixture-project",
             role=(

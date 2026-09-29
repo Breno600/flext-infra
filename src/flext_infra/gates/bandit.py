@@ -109,7 +109,12 @@ class FlextInfraBanditGate(FlextInfraGate):
     def _bandit_issues(
         bandit_data: t.MappingKV[str, t.JsonValue],
     ) -> t.SequenceOf[m.Infra.Issue]:
-        """Build typed gate issues from parsed Bandit result entries."""
+        """Build typed gate issues from parsed Bandit result entries.
+
+        Bandit fails its run on every reported result, so each one is a
+        blocking gate finding; Bandit's own LOW/MEDIUM/HIGH rating is not the
+        gate severity vocabulary and stays in the raw report.
+        """
         return tuple(
             m.Infra.Issue(
                 file=u.Cli.json_pick_str(raw_item, "filename", "?"),
@@ -117,9 +122,7 @@ class FlextInfraBanditGate(FlextInfraGate):
                 column=0,
                 code=u.Cli.json_pick_str(raw_item, "test_id"),
                 message=u.Cli.json_pick_str(raw_item, "issue_text"),
-                severity=u.Cli.json_pick_str(
-                    raw_item, "issue_severity", "MEDIUM"
-                ).lower(),
+                severity=c.Infra.GateSeverity.ERROR.value,
             )
             for raw_item in u.Cli.json_as_mapping_list(
                 bandit_data.get(c.Infra.BANDIT_RESULTS_KEY, [])

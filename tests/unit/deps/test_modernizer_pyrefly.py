@@ -60,6 +60,7 @@ class TestsFlextInfraModernizerPyrefly:
     ) -> None:
         """Keep shared analyzer config invariant across checkout topologies."""
         tm.ok(u.Cli.run_raw(["git", "init"], cwd=tmp_path))
+        u.Tests.seed_locked_taplo(tmp_path)
         u.Infra.runtime_environment_dir(tmp_path).mkdir(parents=True)
         child_origin = tmp_path / "child-origin"
         child_origin.mkdir()

@@ -431,6 +431,9 @@ class FlextInfraWorkspaceDetector(
         result_type = r[tuple[tuple[m.Infra.RepositoryRef, ...], t.VariadicTuple[Path]]]
         if declared.failure:
             return result_type.from_failure(declared)
+        members = cls._declared_members(repository_root)
+        if members.failure:
+            return result_type.from_failure(members)
         subprojects: list[m.Infra.RepositoryRef] = []
         external: list[Path] = []
         seen: set[Path] = set()
@@ -455,6 +458,7 @@ class FlextInfraWorkspaceDetector(
                 path,
                 integration_branch=integration_branch,
                 workspace_beads=workspace_beads,
+                declared_member=members.value.get(path),
             )
             if loaded.failure:
                 return result_type.from_failure(loaded)
@@ -465,6 +469,20 @@ class FlextInfraWorkspaceDetector(
         return result_type.ok((tuple(subprojects), tuple(external)))
 
     @classmethod
+    def _declared_members(
+        cls, repository_root: Path
+    ) -> p.Result[t.MappingKV[Path, m.Infra.RepositoryRef]]:
+        """Index the manifest's declared member contracts by composed path."""
+        loaded = cls.load_workspace_manifest(repository_root)
+        if loaded.failure:
+            return r[t.MappingKV[Path, m.Infra.RepositoryRef]].from_failure(loaded)
+        return r[t.MappingKV[Path, m.Infra.RepositoryRef]].ok({
+            member.path: member
+            for manifest in loaded.value
+            for member in manifest.members
+        })
+
+    @classmethod
     def _load_subproject(
         cls,
         repository_root: Path,
@@ -472,6 +490,7 @@ class FlextInfraWorkspaceDetector(
         *,
         integration_branch: str | None = None,
         workspace_beads: m.Infra.BeadsProjectSpec | None,
+        declared_member: m.Infra.RepositoryRef | None,
     ) -> p.Result[m.Infra.RepositoryRef | Path]:
         """Load one governed entry, or its declared path for external entries.
 
@@ -510,6 +529,26 @@ class FlextInfraWorkspaceDetector(
             return result_type.fail(
                 f"subproject escapes workspace root: {path.as_posix()}"
             )
+        if declared_member is not None:
+            if u.Infra.git_remote_identity(
+                declared_member.url
+            ) != u.Infra.git_remote_identity(declared_url):
+                return result_type.fail(
+                    "declared workspace member URL differs from its .gitmodules "
+                    f"URL: {path.as_posix()}"
+                )
+            if (
+                declared_member.package
+                and not (subproject_root / c.PYPROJECT_FILENAME).is_file()
+            ):
+                if (subproject_root / c.Infra.GIT_DIR).exists():
+                    return result_type.fail(
+                        "declared Python member checkout has no "
+                        f"{c.PYPROJECT_FILENAME}: {path.as_posix()}"
+                    )
+                # The manifest owns a declared member's identity, so topology
+                # stays identical when CI deliberately omits member checkouts.
+                return result_type.ok(declared_member)
         if not subproject_root.is_dir():
             # An indexed gitlink whose checkout was never initialized is an
             # intentionally absent working tree: Git already records the
@@ -651,11 +690,15 @@ class FlextInfraWorkspaceDetector(
                     config.Infra.codegen.branch_policy.integration_branch_preference
                 ),
             )
+            superproject_members = cls._declared_members(superproject_root)
+            if superproject_members.failure:
+                return r[m.Infra.WorkspaceSpec].from_failure(superproject_members)
             loaded_member = cls._load_subproject(
                 superproject_root,
                 member_path,
                 integration_branch=baseline.value if baseline.success else None,
                 workspace_beads=inherited_beads.value,
+                declared_member=superproject_members.value.get(member_path),
             )
             if loaded_member.failure or isinstance(loaded_member.value, Path):
                 return r[m.Infra.WorkspaceSpec].fail(

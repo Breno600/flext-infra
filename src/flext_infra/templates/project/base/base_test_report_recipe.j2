@@ -1,6 +1,6 @@
 {% macro test_report_recipe(
 	runner,
 	command_prefix="@"
-) %}
-	{{ command_prefix }}{{ runner }}
+) -%}
+{{ "\t" }}{{ command_prefix }}{{ runner }}
 {%- endmacro %}

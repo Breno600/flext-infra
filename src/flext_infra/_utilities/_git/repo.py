@@ -22,14 +22,60 @@ from git import (
 )
 
 from flext_core import r
-from flext_infra import c
+from flext_infra import c, m
 
 if TYPE_CHECKING:
-    from flext_infra import p
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesGitRepo:
     """Git repository opener with GitPython native OO API."""
+
+    @staticmethod
+    def _registered_worktree_entries(
+        porcelain: str,
+    ) -> t.VariadicTuple[m.Infra.GitWorktreeEntry]:
+        """Parse one ``worktree list --porcelain`` document into typed entries."""
+        entries: list[m.Infra.GitWorktreeEntry] = []
+        path: Path | None = None
+        head: str | None = None
+        branch: str | None = None
+        detached = False
+        bare = False
+        locked = False
+        for line in (*porcelain.splitlines(), ""):
+            if line.startswith("worktree "):
+                path = (
+                    Path(line.removeprefix("worktree ").strip()).expanduser().resolve()
+                )
+            elif line.startswith("HEAD "):
+                head = line.removeprefix("HEAD ").strip() or None
+            elif line.startswith("branch refs/heads/"):
+                branch = line.removeprefix("branch refs/heads/").strip() or None
+            elif line == "detached":
+                detached = True
+            elif line == "bare":
+                bare = True
+            elif line.startswith("locked"):
+                locked = True
+            elif not line and path is not None:
+                entries.append(
+                    m.Infra.GitWorktreeEntry(
+                        path=path,
+                        head=head,
+                        branch=branch,
+                        detached=detached,
+                        bare=bare,
+                        locked=locked,
+                    )
+                )
+                path = None
+                head = None
+                branch = None
+                detached = False
+                bare = False
+                locked = False
+        return tuple(entries)
 
     @classmethod
     def refresh_binary(cls) -> p.Result[bool]:
@@ -124,9 +170,10 @@ class FlextInfraUtilitiesGitRepo:
                 ).resolve()
             else:
                 registered = tuple(
-                    Path(line.removeprefix("worktree ").strip()).resolve()
-                    for line in repo.git.worktree("list", "--porcelain").splitlines()
-                    if line.startswith("worktree ")
+                    entry.path
+                    for entry in cls._registered_worktree_entries(
+                        repo.git.worktree("list", "--porcelain")
+                    )
                 )
                 if not registered:
                     return r[Path].fail(

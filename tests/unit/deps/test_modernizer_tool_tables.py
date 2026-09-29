@@ -293,15 +293,43 @@ class TestsFlextInfraDepsModernizerToolTables:
                 lacks="fail_under",
             )
 
-    def test_vulture_paths_filter_retired_roots(self, tmp_path: Path) -> None:
-        """A retired production root leaves the dead-code scan scope.
-
-        The config list stays the SSOT; the projection keeps only roots that
-        exist under the project (invest repro: scripts/ removed while the
-        dead-code scope kept scanning the dead path — bead flext-x44z3).
-        """
+    @staticmethod
+    def _workspace_with_exclusion(tmp_path: Path, excluded: str) -> Path:
+        """Build a governed workspace root whose SSOT excludes one tree."""
         project_dir = tmp_path / "flext-sample"
         (project_dir / "src").mkdir(parents=True)
+        config_dir = project_dir / "config"
+        config_dir.mkdir()
+        (config_dir / "workspace.yaml").write_text(
+            "version: 3\n"
+            'name: "sample-workspace"\n'
+            "repository:\n"
+            '  name: "sample"\n'
+            '  distribution: "flext-sample"\n'
+            '  provider: "sample"\n'
+            '  url: "https://example.com/sample.git"\n'
+            '  path: "."\n'
+            '  role: "standalone"\n'
+            '  state: "active"\n'
+            '  checkout: "root"\n'
+            '  codegen: "conform"\n'
+            "  package: true\n"
+            "  editable: false\n"
+            "  read_only: false\n"
+            f"exclusions:\n  - path: {excluded}\n    reason: retired\n",
+            encoding="utf-8",
+        )
+        return project_dir
+
+    def test_vulture_paths_filter_excluded_roots(self, tmp_path: Path) -> None:
+        """A workspace-excluded production root leaves the dead-code scope.
+
+        The config list stays the SSOT; the projection filters on the
+        workspace's declared analysis exclusions — order-independent across
+        the deps pass and the root-materializing gen pass (invest repro:
+        scripts/ retired, dead-code scope kept scanning it — bead flext-x44z3).
+        """
+        project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
         )
@@ -316,17 +344,16 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that("scripts" not in paths, eq=True)
         tm.that("src" in paths, eq=True)
 
-    def test_ruff_root_lists_filter_retired_roots(self, tmp_path: Path) -> None:
-        """Ruff src/namespace-packages projections keep only existing roots.
+    def test_ruff_root_lists_filter_excluded_roots(self, tmp_path: Path) -> None:
+        """Ruff root projections drop workspace-excluded trees.
 
         ruff fails hard on a src entry whose directory is absent, and the
-        namespace-packages contract only holds for roots on disk (bead
-        flext-x44z3).
+        namespace-packages contract only holds for live roots; the workspace
+        SSOT's exclusions decide (bead flext-x44z3).
         """
         from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
 
-        project_dir = tmp_path / "flext-sample"
-        (project_dir / "src").mkdir(parents=True)
+        project_dir = self._workspace_with_exclusion(tmp_path, "scripts")
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
             u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
         )

@@ -96,7 +96,7 @@ class TestsFlextInfraConformSupport:
 
     @staticmethod
     def seed_infra_package_tree(root: Path) -> None:
-        """Seed the minimal flext-infra tree (pyproject, src package, tests package).
+        """Seed the minimal flext-infra tree (pyproject, src, tests, Mise seeds).
 
         The conform templates materialize tests/fixtures/ci/docker/*, and the
         existing-tree tooling render discovers python roots from directories that
@@ -120,6 +120,10 @@ class TestsFlextInfraConformSupport:
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
+        # The seed publishes its own config and Mise sources on first apply;
+        # only the committed Taplo pin must precede it so TOML formatting
+        # authenticates the locked release instead of resolving a selector.
+        u.Tests.seed_locked_taplo(root)
 
     @staticmethod
     def self_check_conform_service(

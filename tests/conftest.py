@@ -215,6 +215,8 @@ def infra_git_repo(infra_test_workspace: Path) -> Path:
     """
     repo = infra_test_workspace / "repo"
     repo.mkdir(parents=True, exist_ok=True)
+    # The governed tree above the clone carries the committed Taplo pin.
+    u.Tests.seed_locked_taplo(infra_test_workspace.parent)
     baseline_file = repo / ".infra-baseline"
     baseline_file.write_text("baseline\n", encoding="utf-8")
     u.Tests.write_project_beads_config(repo, config.Infra.name)
