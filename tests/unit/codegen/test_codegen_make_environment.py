@@ -497,18 +497,24 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that("UV ?= uv" in makefile, eq=False)
         # UV_RUN's environment binding is exercised by the real runtime test
         # above, including a parent uv workspace with a different default venv.
-        # Make does not inject a caller-selected database path. The canonical
-        # pytest runner binds TESTMON_DATAFILE to its external persistent cache.
+        # Make never accepts a caller-selected database path: it derives the
+        # external persistent testmon cache from the typed SSOT and hands it
+        # to the runner, which reads it exclusively from that Make input.
         tm.that(
             makefile,
             has=f"override RUNTIME_VENV := $(RUNTIME_ROOT)/{c.Infra.ENVIRONMENT_DIRECTORY}",
         )
-        for forced in (
-            "PROJECT_STATE_ROOT",
-            "PROJECT_SCRATCH",
-            'TMPDIR="$$test_tmp"',
-            "TESTMON_DATAFILE",
-        ):
+        testmon = config.Infra.codegen.make.testmon_cache
+        project_key = "$(subst /,_,$(PROJECT_ROOT))"
+        database = (
+            f"{testmon.external_storage_directory}/{project_key}/"
+            f"{testmon.database_filename}"
+        )
+        tm.that(
+            makefile,
+            has=[database, f'{testmon.database_environment_variable}="$$database"'],
+        )
+        for forced in ("PROJECT_STATE_ROOT", "PROJECT_SCRATCH", 'TMPDIR="$$test_tmp"'):
             tm.that(makefile, lacks=forced)
         # Every gate the typed owner schedules by default reaches the runtime
         # in ONE `check run --gates` invocation. The Make layer no longer
@@ -804,11 +810,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
             "\t+@set -eu;",
             # Runtime tool identity is exercised through the public status
             # regression, including an invalid ambient Mise configuration.
-            'mise_exec project "$$latest_mise" -C "$$project_root" install --yes',
+            'mise_exec project "$$pinned_mise" -C "$$project_root" install --yes',
             "SETUP_DIRENV=$$direnv_executable",
             '$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"',
             '$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"',
-            '$(UV) sync --project "$(PROJECT_ROOT)"',
+            # uv syncs the runtime root's project (UV_PROJECT := RUNTIME_ROOT).
+            '$(UV) sync --project "$(UV_PROJECT)"',
             '--link-mode "$(UV_LINK_MODE)"',
             'git -C "$$superproject" submodule update --init -- "$$child_path"',
             'git -C "$$child_root" branch --show-current',
@@ -850,7 +857,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
             tm.that(
                 self._recipe_targets_containing(makefile, needle), eq={"_upg_lifecycle"}
             )
-        tm.that(makefile, has="_run_for_all_projects,--check")
+        tm.that(
+            self._recipe_targets_containing(
+                makefile, '$(UV) lock --check --project "$(PROJECT_ROOT)"'
+            ),
+            eq={"_upg_converge"},
+        )
         tm.that(makefile, lacks="--constraint-policy")
 
     def test_workspace_without_local_members_retains_external_flext_sources(

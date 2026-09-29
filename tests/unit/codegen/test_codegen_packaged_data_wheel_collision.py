@@ -61,7 +61,11 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             f'dependencies = ["{declared_source}"]\n',
             encoding="utf-8",
         )
-        _ = u.Tests.write_standalone_workspace_manifest(root, FIXTURE_DISTRIBUTION)
+        # The existing fixture package ships no cli module, so its manifest
+        # declares none and conform renders no console script to load.
+        _ = u.Tests.write_standalone_workspace_manifest(
+            root, FIXTURE_DISTRIBUTION, cli_module=False
+        )
         u.Tests.git_bootstrap(
             root,
             (

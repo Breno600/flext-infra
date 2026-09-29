@@ -20,18 +20,10 @@ class FlextInfraEnsureRuffConfigPhase:
         self,
         tool_config: m.Infra.ToolConfigDocument,
         managed_artifacts: m.Infra.ProjectManagedArtifactsResolution | None = None,
-        generated_roots: t.StrSequence = (),
     ) -> None:
-        """Store tool configuration used to build canonical Ruff settings.
-
-        ``generated_roots`` carries the roots the active codegen plan is
-        about to materialize: the existence filter must accept them exactly
-        like the search-path owner does, or a first render that runs before
-        the plan writes the tree would drop roots the projection must keep.
-        """
+        """Store tool configuration used to build canonical Ruff settings."""
         self._tool_config = tool_config
         self._managed_artifacts = managed_artifacts
-        self._generated_roots = frozenset(generated_roots)
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
@@ -72,8 +64,8 @@ class FlextInfraEnsureRuffConfigPhase:
             raise ValueError(paths.error or "workspace analysis scope is unavailable")
         return sorted(path.as_posix() for path in paths.value)
 
+    @staticmethod
     def compose_per_file_ignores(
-        self,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
@@ -105,18 +97,20 @@ class FlextInfraEnsureRuffConfigPhase:
                 raise ValueError(loaded.error or "project artifact load failed")
             local_ignores = loaded.value.artifacts.Ruff.per_file_ignores
         # An exemption glob rooted on a first-class directory that the
-        # repository retired (e.g. scripts/**) must not survive the render:
-        # it documents scope that no longer exists and re-created stale
-        # entries on every conformance pass. Directory-rooted patterns whose
-        # root is absent from disk are dropped; glob-only patterns pass.
+        # workspace retired (e.g. scripts/**, declared as an analysis
+        # exclusion in its workspace SSOT) must not survive the render: it
+        # documents scope that no longer exists and re-created stale entries
+        # on every conformance pass. Declared exclusions are order-independent
+        # — a disk probe oscillated between the deps pass and the
+        # root-materializing gen pass.
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(project_dir)
         scoped_global = {
             pattern: rules
             for pattern, rules in effective_global.items()
             if (
                 (root := pattern.split("/")[0]).endswith("**")
                 or not root.isidentifier()
-                or (project_dir / root).is_dir()
-                or root in self._generated_roots
+                or root not in excluded_roots
             )
         }
         return {
@@ -160,21 +154,17 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
-        # Dev/tooling source roots are config-declared, but a repository that
-        # retired a tree (e.g. scripts/) must not keep analyzer entries naming
-        # it: ruff fails hard on src roots whose directories do not exist, and
-        # the namespace-packages contract only holds for roots on disk. The
-        # declared lists stay the SSOT; existence filters the projection, with
-        # roots the active plan is materializing accepted as present.
-
-        def _present(directory: str) -> bool:
-            return (path.parent / directory).is_dir() or (
-                directory in self._generated_roots
-            )
-
-        existing_root = tuple(d for d in ruff_cfg.src if _present(d))
+        # Dev/tooling source roots are config-declared, but a workspace that
+        # retired a tree (e.g. scripts/, declared in the workspace SSOT as an
+        # analysis exclusion) must not keep analyzer entries naming it: ruff
+        # fails hard on src roots whose directories do not exist, and the
+        # namespace-packages contract only holds for live roots. The exclusion
+        # SSOT filters the projection — order-independent across the deps pass
+        # and the root-materializing gen pass.
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(path.parent)
+        existing_root = tuple(d for d in ruff_cfg.src if d not in excluded_roots)
         existing_namespace_packages = tuple(
-            d for d in ruff_cfg.namespace_packages if _present(d)
+            d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )
         toml = m.Infra.DepsToml
         return toml.PhaseConfig(

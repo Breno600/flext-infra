@@ -1,8 +1,4 @@
-      # Why (flext-gd3m1): a cold runner re-downloaded every locked Mise tool
-      # (go included) on every run, and a network blip failed setup. The cache
-      # is content-addressed by the committed locks, so a warm cache is always
-      # valid for the same lock and can never hide a finding; it only removes
-      # the cold download of the pinned tarballs.
+
       - name: Restore tool caches
         id: tool-cache
         uses: {{ github_actions["cache"].repository }}/restore@{{ github_actions["cache"].version }}

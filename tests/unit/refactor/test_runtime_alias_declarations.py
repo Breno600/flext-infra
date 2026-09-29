@@ -144,13 +144,14 @@ class TestsFlextInfraRuntimeAliasDeclarations:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         # Ambiguity is only declared on a facade surface where the letter
-        # must publish (ADR-018 tiering); off-facade modules derive nothing.
+        # must publish (ADR-018: the module's own __all__ declares it); here
+        # both inherited letters are declared and neither is bound locally.
         source = package / "facets.py"
         source.write_text(
             "from flext_declarations.owner import Parent\n"
             "from flext_declarations.other import Other\n"
             "class Local(Parent, Other):\n    pass\n"
-            "__all__ = ['Local']\n",
+            "__all__ = ['Local', 'another', 'capability']\n",
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         with (

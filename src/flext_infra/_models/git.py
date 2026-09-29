@@ -92,6 +92,46 @@ class FlextInfraModelsGit(
 
         value: Annotated[bool, m.Field(description="Predicate result")]
 
+    class GitWorktreeEntry(m.ContractModel):
+        """One registered worktree checkout from Git's canonical registry."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        path: Annotated[Path, m.Field(description="Registered worktree root")]
+        head: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(description="Checked-out commit oid; absent for a bare worktree"),
+        ] = None
+        branch: Annotated[
+            t.NonEmptyStr | None,
+            m.Field(description="Checked-out branch short name; absent when detached"),
+        ] = None
+        detached: Annotated[bool, m.Field(description="Whether HEAD is detached")] = (
+            False
+        )
+        bare: Annotated[
+            bool, m.Field(description="Whether this is the bare main worktree")
+        ] = False
+        locked: Annotated[
+            bool, m.Field(description="Whether the worktree is locked")
+        ] = False
+
+    class GitWorktreeListReport(m.ContractModel):
+        """Git's worktree registry, parsed once, plus its raw porcelain contract."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        root: Annotated[
+            Path, m.Field(description="Repository the registry was read for")
+        ]
+        entries: Annotated[
+            t.VariadicTuple[FlextInfraModelsGit.GitWorktreeEntry],
+            m.Field(description="Every registered worktree, primary first"),
+        ]
+        porcelain: Annotated[
+            str, m.Field(description="Raw git worktree list --porcelain output")
+        ]
+
     class GitBranchRequest(m.ContractModel):
         """Repository plus branch name for branch-scoped operations."""
 
@@ -126,6 +166,22 @@ class FlextInfraModelsGit(
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         commitish: Annotated[t.NonEmptyStr, m.Field(description="Commit-ish")]
+
+    class GitAncestryRequest(m.ContractModel):
+        """Repository plus the ancestor and descendant an ancestry proof relates.
+
+        ``descendant`` defaults to ``HEAD``, so the HEAD-bound proof every
+        existing consumer relied on is the same single owner generalized to an
+        arbitrary pair; there is no separate pair verb.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+
+        repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
+        ancestor: Annotated[t.NonEmptyStr, m.Field(description="Candidate ancestor")]
+        descendant: Annotated[
+            t.NonEmptyStr, m.Field(default="HEAD", description="Candidate descendant")
+        ] = "HEAD"
 
     class GitPathPairRequest(m.ContractModel):
         """Repository plus source/target relative paths."""

@@ -161,8 +161,11 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 )
             )
         # The probes execute the target checkout's code, so they run in the
-        # target's own environment, never the one hosting this tool.
-        interpreter = u.Infra.runtime_python(self.repository_root)
+        # declared runtime root's environment (the generated Makefile's
+        # RUNTIME_ROOT), or the target's own, never the one hosting this tool.
+        interpreter = u.Infra.runtime_python(
+            self.repository_root, runtime_root=self.runtime_root
+        )
         if not interpreter.is_file():
             return r[m.Infra.ValidationReport].fail(
                 f"fresh-import target interpreter is missing: {interpreter}; "
@@ -174,9 +177,11 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
 
         # Each source travels on stdin because the workspace export probe may
         # exceed the kernel's single-argument limit. map preserves report order.
+        # ``-B``: a validator never writes into the checkout it validates, so
+        # the probed sources leave no bytecode cache behind.
         def run_probe(probe: m.Infra.FreshImportProbe) -> p.Result[p.Cli.CommandOutput]:
             return u.Cli.run_raw(
-                [str(interpreter), "-W", "error", "-"],
+                [str(interpreter), "-B", "-W", "error", "-"],
                 cwd=self.repository_root,
                 timeout=c.Infra.TIMEOUT_SHORT,
                 env=env,
