@@ -89,7 +89,8 @@ distribution, its canonical HTTPS Git URL, and the full commit OID. This is a tr
 reviewable candidate input, separate from the untracked local codegen override above.
 The generator applies a candidate only to that distribution's direct Git requirement;
 other dependencies stay on their declared integration lines. It rejects a URL that
-disagrees with the member manifest or an existing direct requirement. An omitted
+disagrees with the member manifest or an existing direct requirement, and it cannot
+introduce a Git source where neither declaration exists. An omitted
 `candidate_dependencies` list leaves normal release projections unchanged.
 
 Run `make gen` to project the candidate requirements, `make upg` to resolve the exact

@@ -175,6 +175,11 @@ class FlextInfraUtilitiesPyprojectRequirements:
                 url, declared_ref = declared_url, line
         candidate = candidate_sources.get(dependency_name)
         if candidate is not None:
+            if not url:
+                return r[str].fail(
+                    "candidate dependency has no declared Git provenance: "
+                    f"{dependency_name}"
+                )
             selected = FlextInfraUtilitiesRepository.declared_git_source(
                 f"{head} @ {candidate}"
             )

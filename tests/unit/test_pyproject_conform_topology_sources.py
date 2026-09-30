@@ -193,6 +193,33 @@ class TestsFlextInfraPyprojectConformTopologySources:
         tm.that(result.failure, eq=True)
         tm.that(result.error or "", contains="candidate dependency Git URL differs")
 
+    def test_candidate_cannot_invent_a_missing_dependency_origin(self) -> None:
+        """A candidate pins an owned source; it cannot create provenance."""
+        cli = self._member_ref("flext-cli", "flext-cli")
+        workspace = self._workspace().model_copy(
+            update={
+                "candidate_dependencies": (
+                    m.Infra.CandidateDependencySourceSpec(
+                        distribution=cli.distribution,
+                        url=cli.url,
+                        commit="c" * 40,
+                    ),
+                )
+            }
+        )
+        result = u.Infra.pyproject_conform(
+            (
+                '[project]\nname = "workspace"\nversion = "0.1.0"\n'
+                'dependencies = ["flext-cli"]\n'
+            ),
+            workspace=workspace,
+            required_dev_dependencies=(),
+            uv_resolution=self._toolchain_resolution(),
+            family_line=test_u.Tests.provider_branch(),
+        )
+        tm.that(result.failure, eq=True)
+        tm.that(result.error or "", contains="no declared Git provenance")
+
     def _assert_direct_source(self, rendered: str, ref: m.Infra.RepositoryRef) -> None:
         """Assert the canonical standalone output: one direct Git requirement."""
         dependencies = tu.Tests.toml_strings_at(rendered, "project", "dependencies")
