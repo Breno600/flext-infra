@@ -11,10 +11,13 @@ from flext_infra import t
 
 from ._git.identity import FlextInfraModelsGitIdentity
 from ._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+from ._git.worktree_state import FlextInfraModelsGitWorktreeState
 
 
 class FlextInfraModelsGit(
-    FlextInfraModelsGitIdentity, FlextInfraModelsGitWorktreeFacts
+    FlextInfraModelsGitIdentity,
+    FlextInfraModelsGitWorktreeFacts,
+    FlextInfraModelsGitWorktreeState,
 ):
     """Declaration-only models for Git facade and FlextInfraGitService.
 

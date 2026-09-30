@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from ._config.workspace import FlextInfraConfigModelsWorkspace
     from ._git.identity import FlextInfraModelsGitIdentity
     from ._git.worktree_facts import FlextInfraModelsGitWorktreeFacts
+    from ._git.worktree_state import FlextInfraModelsGitWorktreeState
     from .base import FlextInfraModelsBase
     from .census import FlextInfraModelsCensus
     from .check import FlextInfraModelsCheck
@@ -132,6 +133,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraModelsGit",
     "FlextInfraModelsGitIdentity",
     "FlextInfraModelsGitWorktreeFacts",
+    "FlextInfraModelsGitWorktreeState",
     "FlextInfraModelsLayout",
     "FlextInfraModelsMiseToolchain",
     "FlextInfraModelsMiseToolchainBase",
@@ -185,6 +187,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._git": ("_git",),
             "._git.identity": ("FlextInfraModelsGitIdentity",),
             "._git.worktree_facts": ("FlextInfraModelsGitWorktreeFacts",),
+            "._git.worktree_state": ("FlextInfraModelsGitWorktreeState",),
             ".base": ("FlextInfraModelsBase",),
             ".census": ("FlextInfraModelsCensus",),
             ".check": ("FlextInfraModelsCheck",),
