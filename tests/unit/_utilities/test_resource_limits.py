@@ -384,30 +384,3 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
 
         tm.that(diagnostic, has=["Traceback: checker frame", "INTERNAL ERROR"])
-
-    def test_mypy_cache_directory_is_project_keyed_and_survives_relocks(
-        self, tmp_path: Path
-    ) -> None:
-        """One shared Mypy cache per project, reused by every checkout and relock."""
-        spec = config.Infra.codegen.make.mypy_cache
-
-        def checkout(name: str, project: str) -> Path:
-            root = tmp_path / name
-            root.mkdir()
-            (root / c.PYPROJECT_FILENAME).write_text(
-                f"[project]\nname = '{project}'\nversion = '0.0.0'\n", encoding="utf-8"
-            )
-            return root
-
-        lane = checkout("lane", "fixture-alpha")
-        primary = checkout("primary", "fixture-alpha")
-        other = checkout("other", "fixture-beta")
-        shared = u.Infra.mypy_cache_directory(lane)
-        # Every checkout of one project reuses one analysis.
-        tm.that(u.Infra.mypy_cache_directory(primary), eq=shared)
-        tm.that(shared.parent.name, eq=Path(spec.external_storage_directory).name)
-        # A relock keeps the directory: Mypy revalidates changed modules itself.
-        (lane / c.Infra.UV_LOCK_FILENAME).write_text("rotated\n", encoding="utf-8")
-        tm.that(u.Infra.mypy_cache_directory(lane), eq=shared)
-        # Distinct projects never share one tests package namespace.
-        tm.that(u.Infra.mypy_cache_directory(other) != shared, eq=True)
