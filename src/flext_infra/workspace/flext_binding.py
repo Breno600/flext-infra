@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import os
 import sysconfig
+from collections.abc import MutableMapping
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING
@@ -127,7 +128,7 @@ class FlextInfraFlextBindingService:
                 f"FLEXT is not a flext workspace: {flext_root}: "
                 f"{workspace.error or 'manifest unreadable'}"
             )
-        available: dict[str, Path] = {}
+        available: MutableMapping[str, Path] = {}
         for repository in (workspace.value.repository, *workspace.value.subprojects):
             if not repository.package:
                 continue

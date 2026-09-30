@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import c, m
@@ -80,21 +81,21 @@ class TestsFlextInfraDirenvGate:
             )
             tm.that(violations, eq=())
 
+        @pytest.mark.parametrize("prefix", ["${HOME}", "$HOME", "~"])
         def test_home_targets_validated_only_when_resolving(
-            self, tmp_path: Path
+            self, tmp_path: Path, prefix: str
         ) -> None:
-            """resolve_home=False skips $HOME targets (generation-time lint)."""
-            violations = (
-                FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
-                    'source_env "$HOME/.config/environment.d/projects/absent.envrc"\n',
-                    root=tmp_path,
-                    resolve_home=False,
-                )
+            """resolve_home=False skips ${HOME} targets (generation-time lint)."""
+            violations = FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
+                f'source_env "{prefix}/.config/environment.d/projects/absent.envrc"\n',
+                root=tmp_path,
+                resolve_home=False,
             )
             tm.that(violations, eq=())
 
+        @pytest.mark.parametrize("prefix", ["${HOME}", "$HOME", "~"])
         def test_home_targets_resolve_against_the_real_home(
-            self, tmp_path: Path
+            self, tmp_path: Path, prefix: str
         ) -> None:
             """resolve_home=True substitutes the real home for the prefix.
 
@@ -103,8 +104,8 @@ class TestsFlextInfraDirenvGate:
             """
             violations = (
                 FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
-                    'source_env "$HOME"\n'
-                    'watch_file "$HOME/.flext-infra-contract-absent-marker"\n',
+                    f'source_env "{prefix}"\n'
+                    f'watch_file "{prefix}/.flext-infra-contract-absent-marker"\n',
                     root=tmp_path,
                 )
             )

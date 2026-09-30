@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import stat
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING, get_args
 
@@ -44,7 +45,7 @@ def stage_file_plans(
             tuple[Path, bytes, int] | None,
         ]
     ] = []
-    phase_roots: dict[Path, m.Cli.AtomicDirectoryState] = {}
+    phase_roots: MutableMapping[Path, m.Cli.AtomicDirectoryState] = {}
     for file_plan in changed:
         project = next(
             (
