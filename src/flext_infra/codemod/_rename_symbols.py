@@ -7,7 +7,8 @@ from difflib import SequenceMatcher
 from pathlib import Path
 
 from flext_infra import m, p, t
-from flext_infra._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+
+from .._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 
 
 class FlextInfraRenameSymbols:

@@ -67,7 +67,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
                     child.poll(), eq=None, msg="upgrade exited before FIFO observation"
                 )
                 observed = tm.ok(
-                    u.Cli.run_checked(
+                    u.Cli.run(
                         ["ps", "--sid", str(child.pid), "-L", "-o", "comm=,wchan:64="],
                         timeout=self.INTERRUPT_AFTER_SECONDS,
                     )
