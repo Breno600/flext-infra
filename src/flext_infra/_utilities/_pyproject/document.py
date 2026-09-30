@@ -9,6 +9,7 @@ from flext_cli import r, u
 
 from flext_infra import c, m, t
 
+from ..dependencies import FlextInfraUtilitiesDependencies
 from .uv_sources import FlextInfraUtilitiesPyprojectUvSources
 
 if TYPE_CHECKING:
@@ -87,6 +88,15 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             item.distribution: f"git+{item.url}@{item.commit}"
             for item in workspace.candidate_dependencies
         }
+        unused_candidates = sorted(
+            candidate_sources.keys()
+            - set(FlextInfraUtilitiesDependencies.declared_dependency_names(source))
+        )
+        if unused_candidates:
+            return r[str].fail(
+                "candidate dependencies are not declared requirements: "
+                + ", ".join(unused_candidates)
+            )
         normalized = cls._normalize_requirements(
             source,
             declared_sources=declared_sources,
