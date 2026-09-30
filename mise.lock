@@ -605,7 +605,7 @@ url = "https://nodejs.org/dist/v26.10.0/node-v26.10.0-win-x64.zip"
 version = "0.45.3"
 aube = { path = ".mise/locks/npm-ast-grep-cli/0.45.3~7a027ead", digest = "sha256:e59172c3ac91ac960cc8cae85e3f4106f868ad3010777268d01e944064bad306" }
 backend = "npm:@ast-grep/cli"
-specifiers = ["latest"]
+specifiers = ["0.45.3"]
 
 [tools."npm:@ast-grep/cli".options]
 allow_builds = '["@ast-grep/cli"]'
