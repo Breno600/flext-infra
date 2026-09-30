@@ -708,10 +708,28 @@ caller_mise_version=; \
 	# configured tool in one pass so removed selectors cannot survive beside \
 	# their replacement in mise.lock. \
 	if [ "$(TOOL_BOOTSTRAP_LOCK)" = "1" ]; then \
+		lock_snapshot() { \
+			for lock in mise.lock uv.lock; do \
+				if [ -f "$$project_root/$$lock" ]; then cp "$$project_root/$$lock" "$$project_root/$$lock.bak"; fi; \
+				done; \
+		}; \
+		lock_restore() { \
+			for lock in mise.lock uv.lock; do \
+				if [ -f "$$project_root/$$lock.bak" ]; then mv "$$project_root/$$lock.bak" "$$project_root/$$lock"; fi; \
+				done; \
+		}; \
+		# Recover a lock orphaned by an interrupted previous run, then snapshot and \
+		# restore on any failure so a killed lock never leaves a truncated lock. \
+		for lock in mise.lock uv.lock; do \
+			if [ -f "$$project_root/$$lock.bak" ] && [ ! -f "$$project_root/$$lock" ]; then mv "$$project_root/$$lock.bak" "$$project_root/$$lock"; fi; \
+			done; \
+		lock_snapshot; \
+		trap 'lock_restore' EXIT; \
 		mise_checked "$$scratch/lock.log" mise_exec project "$$pinned_mise" -C "$$project_root" lock --bump; \
 	fi; \
 	# ``locked`` mode installs exactly what the committed mise.lock pins. \
 	mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
+	if [ "$(TOOL_BOOTSTRAP_LOCK)" = "1" ]; then trap - EXIT; rm -f "$$project_root/mise.lock.bak" "$$project_root/uv.lock.bak"; fi; \
 	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_exec project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
 	if [ -s "$$scratch/ast-grep-version.stderr" ]; then \
 		printf 'ERROR: ast-grep emitted diagnostics after installation\n' >&2; exit 2; \
