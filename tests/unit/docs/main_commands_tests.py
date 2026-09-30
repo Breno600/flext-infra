@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
-from flext_infra import config
 from flext_infra.docs.auditor import FlextInfraDocAuditor
 from flext_infra.docs.builder import FlextInfraDocBuilder
 from flext_infra.docs.fixer import FlextInfraDocFixer
@@ -21,9 +20,7 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsMainCommands:
     """Public service execution tests for docs commands."""
 
-    def test_auditor_execute_verdict_follows_configured_posture(
-        self, tmp_path: Path
-    ) -> None:
+    def test_auditor_execute_fails_on_finding(self, tmp_path: Path) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path)
         (workspace / "docs/README.md").write_text(
             "# Docs\n\n[Broken](missing.md)\n", encoding="utf-8"
@@ -31,10 +28,7 @@ class TestsFlextInfraDocsMainCommands:
 
         result = FlextInfraDocAuditor(repository_root=workspace).execute()
 
-        if "audit" in config.Infra.codegen.make.docs.warning_actions:
-            tm.ok(result)
-        else:
-            tm.fail(result)
+        tm.fail(result)
 
     def test_fixer_execute_applies_link_and_toc_updates(self, tmp_path: Path) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
