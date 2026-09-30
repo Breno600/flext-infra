@@ -413,8 +413,7 @@ class FlextInfraMiseArtifactsState:
 
     @classmethod
     def reclaim_transaction_residue(
-        cls,
-        residue: t.VariadicTuple[Path],
+        cls, residue: t.VariadicTuple[Path]
     ) -> p.Result[bool]:
         """Remove transaction residue abandoned by an interrupted invocation.
 
@@ -432,9 +431,7 @@ class FlextInfraMiseArtifactsState:
                 else:
                     shutil.rmtree(path)
             except OSError as exc:
-                return r[bool].fail(
-                    f"cannot reclaim transaction residue {path}: {exc}"
-                )
+                return r[bool].fail(f"cannot reclaim transaction residue {path}: {exc}")
         return r[bool].ok(True)
 
     @classmethod
