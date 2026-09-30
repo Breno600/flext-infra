@@ -134,16 +134,46 @@ class FlextInfraUtilitiesSemanticCutoverPrivateImports(
         findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> t.Infra.PrivateImportReferences:
         """Resolve every reported private import to its relative or public owner."""
-        discovery_sources = FlextInfraUtilitiesPrivateImportFacades.source_modules(
-            sources, tuple(finding.text for finding in findings)
-        )
-        facades = FlextInfraUtilitiesPrivateImportFacades.discover(discovery_sources)
-        export_bindings, declared_exports = (
-            FlextInfraUtilitiesPrivateImportFacades.declared_exports(discovery_sources)
-        )
-        class_bases = FlextInfraUtilitiesPrivateImportAncestry.class_bases(
-            discovery_sources
-        )
+        cross_owner_statements: list[str] = []
+        for finding in findings:
+            statement = cls._finding_statement(finding)
+            if not isinstance(statement, ast.ImportFrom) or statement.level:
+                continue
+            private_module = statement.module or ""
+            package = FlextInfraUtilitiesPrivateImportFacades.private_owner(
+                private_module
+            )
+            if package is None:
+                continue
+            file_path = (root / finding.file).resolve()
+            if (
+                cls._same_owner_relative_module(
+                    file_path, package=package, private_module=private_module
+                )
+                is None
+            ):
+                cross_owner_statements.append(finding.text)
+        facades: t.MappingKV[
+            str, t.VariadicTuple[t.Quad[ast.Module, str, str, str]]
+        ] = {}
+        export_bindings: t.MappingKV[str, set[str]] = {}
+        declared_exports: t.MappingKV[str, set[str]] = {}
+        class_bases: t.MappingKV[str, t.VariadicTuple[str]] = {}
+        if cross_owner_statements:
+            discovery_sources = FlextInfraUtilitiesPrivateImportFacades.source_modules(
+                sources, tuple(cross_owner_statements)
+            )
+            facades = FlextInfraUtilitiesPrivateImportFacades.discover(
+                discovery_sources
+            )
+            export_bindings, declared_exports = (
+                FlextInfraUtilitiesPrivateImportFacades.declared_exports(
+                    discovery_sources
+                )
+            )
+            class_bases = FlextInfraUtilitiesPrivateImportAncestry.class_bases(
+                discovery_sources
+            )
         direct_specs: MutableMapping[Path, MutableMapping[str, t.Pair[str, str]]] = {}
         specs: MutableMapping[Path, list[t.Infra.PrivateImportSpec]] = {}
         for finding in findings:
