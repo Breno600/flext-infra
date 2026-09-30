@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import secrets
-from collections.abc import Callable
+from collections.abc import Callable, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -36,7 +36,7 @@ class FlextInfraCodegenTransaction(FlextInfraCodegenFileLeases):
         self._planner = FlextInfraMiseWorkspacePlanner(owner)
         self._recovery = FlextInfraMiseRecovery()
         self._mise_staging = FlextInfraMiseStaging()
-        self._journal_receipts: dict[Path, m.Cli.AtomicFileState] = {}
+        self._journal_receipts: MutableMapping[Path, m.Cli.AtomicFileState] = {}
 
     def run_files_locked[T](
         self, roots: t.MappingKV[str, Path], operation: Callable[[Path], p.Result[T]]

@@ -257,7 +257,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         """
         suspensions = config.Infra.codegen.make.check_gate_suspensions
         kept: list[str] = []
-        family_counts: dict[t.Pair[str, str], int] = {}
+        family_counts: MutableMapping[t.Pair[str, str], int] = {}
         gate_counts: dict[str, int] = {}
         for violation in violations:
             token = cls._violation_rule_token(violation)
