@@ -122,7 +122,8 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
         root = str(project_root.resolve())
         tm.that(values["RUNTIME_ROOT"], eq=root)
         tm.that(
-            values["RUNTIME_VENV"], eq=str(u.Infra.runtime_environment_dir(project_root))
+            values["RUNTIME_VENV"],
+            eq=str(u.Infra.runtime_environment_dir(project_root)),
         )
 
     def test_submodule_member_resolves_the_workspace_runtime(
