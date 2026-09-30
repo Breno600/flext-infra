@@ -13,6 +13,39 @@ from flext_infra import c, infra, m, p, t, u
 class TestsFlextInfraPrivateImportCutover:
     """Exercise private-import automation only through ``u.Infra``."""
 
+    def test_unrelated_installed_module_cannot_block_a_public_cutover(
+        self, tmp_path: Path, installed_dependency_path: Path
+    ) -> None:
+        """Discover only modules that can expose the requested private symbol."""
+        consumer, statement, facade_sources = self._facade_case(
+            tmp_path, "constants", "profile", "Profile", "c"
+        )
+        package = installed_dependency_path / "flext_sample"
+        package.mkdir()
+        (package / "__init__.py").write_text("", encoding="utf-8")
+        (package / "constants.py").write_text(
+            next(iter(facade_sources.values())), encoding="utf-8"
+        )
+        private = package / "_constants/profile.py"
+        private.parent.mkdir()
+        private.write_text(
+            "class FlextSampleConstantsProfile:\n    Value = str\n", encoding="utf-8"
+        )
+        unrelated = package / "unrelated.py"
+        unrelated.write_text("from ..outside import Invalid\n", encoding="utf-8")
+        sources = {
+            consumer: f"{statement}\nprofile = FlextSampleConstantsProfile.Value\n"
+        }
+
+        edits = self._edits(tmp_path, sources, consumer, statement)
+
+        tm.that(tuple(edit.file_path for edit in edits), eq=(consumer,))
+        tm.that(edits[0].updated_source, has="from flext_sample import c")
+        tm.that(edits[0].updated_source, has="profile = c.Profile.Value")
+        tm.that(
+            unrelated.read_text(encoding="utf-8"), eq="from ..outside import Invalid\n"
+        )
+
     @pytest.mark.parametrize("case", ["unique", "ambiguous", "shadowed"])
     @pytest.mark.parametrize("depth", [0, 2])
     def test_installed_facades_are_read_only_discovery_inputs(
