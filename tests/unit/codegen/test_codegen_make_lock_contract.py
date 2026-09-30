@@ -283,7 +283,9 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(process.stderr, lacks=str(pin))
         if verb == "upg":
             tm.that(process.outcome.raw_return_code, ne=0)
-            tm.that(process.stderr, has="GitHub credential is absent for network bootstrap")
+            tm.that(
+                process.stderr, has="GitHub credential is absent for network bootstrap"
+            )
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(pin.exists(), eq=False)
