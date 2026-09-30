@@ -83,10 +83,13 @@ Infra:
         - windows-x64
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
-      # Pinned to the last provenance-attested release: 0.644.0 shipped
-      # without github attestations and mise's supply-chain guard rejects
-      # it, breaking `make setup` fleet-wide (bead in flext tracker,
-      # reported by algar-oud-mig 2026-09-18).
+      # Pinned to 0.642.0. The earlier claim that 0.644.0 shipped without
+      # github attestations is FALSE: a by-digest check on 2026-09-22 shows
+      # v0.644.0 carries one attestation bundle per asset for all seven
+      # binaries, same as 0.642.0. The 2026-09-18 fleet-wide setup fire was a
+      # probe false positive (mise treats an unavailable probe as missing).
+      # Bump to 0.644.0 only through an explicit `make upg` reactivation
+      # (bead flext-38odd), never by editing this pin in isolation.
       qlty_version: 0.642.0
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
@@ -523,7 +526,7 @@ Infra:
         - name: setup
           description: Provision the declared environment and hooks.
         - name: upg
-          description: Resolve the newest declared releases and write the uv and mise locks.
+          description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.
         # Workspace-only (topology owns applicability): a standalone Makefile
         # never declares it. Never merges; a rerun continues the same lanes.
         - name: propagate
