@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
+from flext_core import c as core_c
 from flext_infra import m
 from flext_infra.refactor.declarative_enforcement import (
     FlextInfraRefactorDeclarativeEnforcement,
 )
-from tests import c, u
+from tests import u
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -70,7 +71,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         rule = m.EnforcementRuleSpec(
             id="ENFORCE-999",
             description="Synthetic stub-file rule",
-            severity=c.EnforcementRuleSeverity.HIGH,
+            severity=core_c.EnforcementRuleSeverity.HIGH,
             source=m.EnforcementInfraDetectorSource(
                 violation_field="stub_file_violations"
             ),
@@ -185,7 +186,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         rule = m.EnforcementRuleSpec(
             id="ENFORCE-999",
             description="Unsupported declarative source",
-            severity=c.EnforcementRuleSeverity.HIGH,
+            severity=core_c.EnforcementRuleSeverity.HIGH,
             source=m.EnforcementRuntimeWarningSource(category="UserWarning"),
         )
         source = tmp_path / "consumer.py"
