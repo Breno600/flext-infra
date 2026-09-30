@@ -37,6 +37,24 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         # root-scoped modernizer pipeline, so first generation is a fixed point.
         # A declared subproject consumes the workspace root
         # tooling profile even before the atomic scaffold creates files on disk.
+        scaffold_entries = tuple(
+            (
+                entry,
+                entry.destination.format(
+                    package_name=project.package_name, ns=project.namespace
+                ),
+            )
+            for entry in codegen.templates.entries
+            if profile in entry.profiles
+            and (entry.destination != c.PYPROJECT_FILENAME or contract.pyproject)
+            and (contract.delegates or entry.destination == c.PYPROJECT_FILENAME)
+            and (not entry.requires_release_protocol or target.publishes_release)
+            and (not entry.requires_beads or workspace.beads is not None)
+            and (
+                contract.destinations is None
+                or entry.destination in contract.destinations
+            )
+        )
         modernizer = FlextInfraPyprojectModernizer(
             repository_root=root,
             skip_check=True,
@@ -59,6 +77,8 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=project.root_modules,
                 root_packages=project.root_packages,
+                packaged_data_paths=project.packaged_data_paths,
+                planned_data_files=tuple(destination for _, destination in scaffold_entries),
                 declared_python_dirs=tuple(
                     self._scaffold_python_dirs(codegen.templates.entries, profile)
                 ),
@@ -77,7 +97,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             tooling_runtime=tooling_result.value,
             managed_artifacts=managed_artifacts,
         )
-        context_result = self._project_render_context(render_inputs)
+        context_result = self._project_render_context(render_inputs, planned_data_files=tuple(destination for _, destination in scaffold_entries))
         if context_result.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(context_result)
         context = context_result.value
@@ -85,22 +105,6 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         templates_root = u.Infra.codegen_templates_root(codegen)
         seen_destinations: set[str] = set()
         # One selection and one formatted path govern validation and planning.
-        scaffold_entries = tuple(
-            (
-                entry,
-                entry.destination.format(
-                    package_name=context.package_name, ns=context.ns
-                ),
-            )
-            for entry in codegen.templates.entries
-            if profile in entry.profiles
-            and (not entry.requires_release_protocol or target.publishes_release)
-            and (not entry.requires_beads or workspace.beads is not None)
-            and (
-                contract.destinations is None
-                or entry.destination in contract.destinations
-            )
-        )
         for entry, destination in scaffold_entries:
             if entry.delegate == c.Infra.TemplateDelegate.RENDER:
                 if entry.source is None:
@@ -135,10 +139,6 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                         f"template destination parent is not a directory: {parent}"
                     )
         for entry, destination in scaffold_entries:
-            if destination == c.PYPROJECT_FILENAME and not contract.pyproject:
-                continue
-            if not contract.delegates and destination != c.PYPROJECT_FILENAME:
-                continue
             if entry.delegate == c.Infra.TemplateDelegate.MANIFEST:
                 manifest_path = (
                     Path(c.CONFIG_DIR_NAME) / c.Infra.WORKSPACE_MANIFEST_FILENAME

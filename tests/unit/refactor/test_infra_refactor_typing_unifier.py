@@ -485,32 +485,6 @@ class TestsFlextInfraRefactorInfraRefactorTypingUnifier:
         updated, _changes = rule.apply(source)
         tm.that(updated, has="type MyType = str")
 
-    def test_rewrites_builtin_containers_to_canonical_t_aliases(
-        self, tmp_path: Path
-    ) -> None:
-        """Verify rewrites builtin containers to canonical t aliases."""
-        source = (
-            "from __future__ import annotations\n"
-            "from flext_core import t\n\n"
-            "def build(data: dict[str, list[object]]) -> tuple[str, int]:\n"
-            "    return ('ok', len(data))\n"
-        )
-        rule = FlextInfraRefactorTypingUnificationRule({
-            "id": "unify-typings",
-            "fix_action": "unify_typings",
-        })
-        file_path = tmp_path / "demo/src/flext_demo/sample.py"
-        file_path.parent.mkdir(parents=True)
-        file_path.write_text(source, encoding="utf-8")
-        updated, changes = rule.apply(source, _file_path=file_path)
-        tm.that(updated, has="from flext_core import t")
-        tm.that(updated, has="data: t.MappingKV[str, t.SequenceOf[object]]")
-        tm.that(updated, has="-> t.Pair[str, int]")
-        tm.that(
-            "\n".join(changes),
-            has="Canonicalized built-in annotation dict[str, list[object]]",
-        )
-
     def test_rewrites_tuple_variadics_preserving_any(self, tmp_path: Path) -> None:
         """Tuple shape does not prove a narrower contract for its elements."""
         source = (

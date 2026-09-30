@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+from collections.abc import MutableMapping
 
 from flext_infra import c, t
 
@@ -229,7 +230,7 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         ``if TYPE_CHECKING:`` made ``_SmellData.model_validate_json`` raise
         ``PydanticUserError`` during package import (flext-dk13k).
         """
-        parents: dict[int, ast.AST] = {}
+        parents: MutableMapping[int, ast.AST] = {}
         for parent in ast.walk(module):
             for child in ast.iter_child_nodes(parent):
                 parents[id(child)] = parent

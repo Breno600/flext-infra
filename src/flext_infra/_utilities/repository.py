@@ -8,6 +8,7 @@ is detected from live Git or declared explicitly by a caller.
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -387,7 +388,7 @@ class FlextInfraUtilitiesRepository:
                 requirements.extend(
                     FlextInfraUtilitiesPyprojectConform.raw_requirement_values(group)
                 )
-        lines: dict[t.Pair[str, str], str] = {}
+        lines: MutableMapping[t.Pair[str, str], str] = {}
         for requirement in requirements:
             name = FlextInfraUtilitiesDependencies.dep_name(requirement)
             if name is None or not name.startswith(prefix):

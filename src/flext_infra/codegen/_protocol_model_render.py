@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from inspect import getattr_static
 from types import FunctionType
 
@@ -28,10 +29,10 @@ class FlextInfraCodegenProtocolModelRender:
         cls, models: t.SequenceOf[type[m.BaseModel]], target: Target
     ) -> t.MappingKV[str, str]:
         """Render every generated module (path -> content) for a member."""
-        grouped: dict[str, list[type[m.BaseModel]]] = {}
+        grouped: MutableMapping[str, list[type[m.BaseModel]]] = {}
         for model in sorted(models, key=cls._model_sort_key):
             grouped.setdefault(cls._owner_name(model), []).append(model)
-        modules: dict[str, str] = {}
+        modules: MutableMapping[str, str] = {}
         part_names: list[str] = []
         for owner, owner_models in sorted(grouped.items()):
             for index, chunk in enumerate(cls._chunks(owner_models, target), 1):

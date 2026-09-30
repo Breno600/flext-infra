@@ -132,12 +132,12 @@ class FlextInfraWorkspaceCheckGatesMixin:
         ctx: m.Infra.GateContext,
         rope_outcomes: t.VariadicTuple[m.Infra.RopeCallbackOutcome],
     ) -> m.Infra.ProjectResult:
-        """Run gates for one project and surface the first failure in gate order.
+        """Run gates for one project and retain every executed gate in order.
 
         Fixers mutate shared files, so an ``--apply`` run chains every gate on
         the previous one. Read-only gates share no mutable state and run as one
-        parallel wave; the verdict still reads them in declared order and stops
-        at the first failing gate, so exactly one defect is reported.
+        parallel wave; reporting retains the complete wave, including failures
+        after the first one. Serialized fail-fast runs stop at their failed gate.
         """
         project_name = project_dir.name
         result = m.Infra.ProjectResult(project=project_name)
@@ -189,7 +189,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
                     or any(issue.code == "TOOL_ERROR" for issue in execution.issues)
                 ):
                     u.Cli.info(execution.raw_output)
-                break
+                if ctx.fail_fast or mutating:
+                    break
         return result
 
     # ------------------------------------------------------------------

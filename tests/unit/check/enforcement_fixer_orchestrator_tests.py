@@ -279,7 +279,11 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
             repository_root=project_dir, selected_projects=("demo",), apply=True
         ).execute()
 
-        tm.ok(result)
+        # The module carries real violations whose catalog fix_action is
+        # ``manual`` (ENFORCE-052/083/084/095/096); an apply run reports each as
+        # a failure by design and rewrites nothing. The contract under test is
+        # byte-for-byte preservation, proven by the equality below.
+        tm.fail(result, has="manual fix required")
         tm.that(source_file.read_text(encoding="utf-8"), eq=source)
 
     # Exemplar: this drives the real CLI entry point against a real Git

@@ -80,6 +80,57 @@ class FlextInfraUtilitiesPrivateImportFacades:
         return modules
 
     @staticmethod
+    def reachable_sources(
+        sources: t.MappingKV[str, t.Pair[str, bool]], statements: t.SequenceOf[str]
+    ) -> t.MappingKV[str, t.Pair[str, bool]]:
+        """Keep the importers that can expose a requested private module.
+
+        An installed distribution can contain unrelated modules with invalid
+        imports. Their declarations have no bearing on a cutover whose target
+        is reachable through a different public facade.
+        """
+        reverse: MutableMapping[str, set[str]] = {}
+        for module, (source, is_package) in sources.items():
+            package = module if is_package else module.rpartition(".")[0]
+            for node in ast.walk(ast.parse(source, filename=module)):
+                imported_modules: set[str] = set()
+                if isinstance(node, ast.Import):
+                    imported_modules.update(alias.name for alias in node.names)
+                elif isinstance(node, ast.ImportFrom):
+                    if node.level > len(package.split(".")):
+                        # This import has no absolute module identity. It cannot
+                        # connect the module to any requested private owner.
+                        continue
+                    imported = (
+                        resolve_name("." * node.level + (node.module or ""), package)
+                        if node.level
+                        else node.module or ""
+                    )
+                    imported_modules.add(imported)
+                    imported_modules.update(
+                        f"{imported}.{alias.name}"
+                        for alias in node.names
+                        if f"{imported}.{alias.name}" in sources
+                    )
+                for imported in imported_modules:
+                    reverse.setdefault(imported, set()).add(module)
+        reachable = {
+            node.module
+            for statement in statements
+            for node in ast.walk(ast.parse(statement))
+            if isinstance(node, ast.ImportFrom) and not node.level and node.module
+        }
+        pending = list(reachable)
+        while pending:
+            for importer in reverse.get(pending.pop(), set()):
+                if importer not in reachable:
+                    reachable.add(importer)
+                    pending.append(importer)
+        return {
+            module: source for module, source in sources.items() if module in reachable
+        }
+
+    @staticmethod
     def declared_exports(
         sources: t.MappingKV[str, t.Pair[str, bool]],
     ) -> t.Pair[MutableMapping[str, set[str]], MutableMapping[str, set[str]]]:

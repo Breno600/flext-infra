@@ -6,6 +6,7 @@
 - [Registrar antes de ampliar o trabalho](#registrar-antes-de-ampliar-o-trabalho)
 - [Reconciliar decisões com seus responsáveis](#reconciliar-decisoes-com-seus-responsaveis)
 - [Diferenciar checkpoint de conclusão](#diferenciar-checkpoint-de-conclusao)
+- [Bounded Mypy failure status](#bounded-mypy-failure-status)
 - [Abstraction-boundary project identity](#abstraction-boundary-project-identity)
 - [Codemod scanner contract](#codemod-scanner-contract)
 
@@ -175,14 +176,14 @@ declarados antes de resolver os locks Python. Os demais verbos que dependem do r
 recusam um pin ausente ou não resolvido antes da ativação; `help` e `clean` continuam
 sendo operações locais sem essa dependência.
 
-A credencial segue a precedência oficial do GitHub CLI: `GH_TOKEN`, `GITHUB_TOKEN` e,
-para o bootstrap de rede, a credencial armazenada pelo `gh`. Um token explícito funciona
-antes de instalar o `gh`. Operações locais já provisionadas não exigem login ou uma
-consulta de autenticação na rede. A fonte selecionada mantém seu erro nativo; um token
-inválido nunca provoca nova tentativa anônima ou troca de fonte. O Mise lê o mesmo
-`GITHUB_TOKEN`; o Make remove do ambiente dos recipes qualquer `MISE_GITHUB_TOKEN`
-herdado, porque um alias da mesma credencial teria precedência sobre ela. Jobs de CI que
-invocam Make recebem `GITHUB_TOKEN`; containers recebem a variável ou o secret do
+O bootstrap de rede exige credencial explícita no ambiente do processo: `GH_TOKEN` tem
+precedência sobre `GITHUB_TOKEN`. O Make não consulta `gh` nem o keyring. Sem ambas,
+`make setup` e `make upg` falham antes da instalação; operações locais já provisionadas
+não exigem autenticação. Um token inválido preserva o erro nativo do backend, sem nova
+tentativa anônima ou troca de fonte. O Mise lê o mesmo `GITHUB_TOKEN`; o Make remove do
+ambiente dos recipes qualquer `MISE_GITHUB_TOKEN` herdado, porque um alias da mesma
+credencial teria precedência sobre ela. O launcher de credenciais ou job de CI deve
+injetar `GITHUB_TOKEN` no processo; containers recebem a variável ou o secret do
 BuildKit explicitamente.
 
 ## Registrar antes de ampliar o trabalho
@@ -237,6 +238,18 @@ findings residuais.
 O handoff final relaciona PRs, commits de merge e prova após integração aos Beads. Se
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
 declarar fechamento funcional.
+
+## Bounded Mypy failure status
+
+The Linux Mypy command applies `prlimit` before launching the checker. In the observed
+Mypy 2.3.1 run, an exhausted plugin allocation produced `INTERNAL ERROR` and exit status
+2;
+[the tagged Mypy source](https://github.com/python/mypy/blob/v2.3.1/mypy/main.py#L167-L174)
+assigns status 2 to blocking internal errors. This is version-specific behavior, not a
+fixed expectation for later Mypy releases. The resource test requires the workload to
+start, then a nonzero raw status and a diagnostic without a timeout; it never rewrites
+the result into a synthetic `MemoryError` or success. The Darwin supervisor can instead
+terminate a process whose resident memory exceeds its limit.
 
 ## Abstraction-boundary project identity
 
