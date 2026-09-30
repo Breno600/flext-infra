@@ -11,11 +11,13 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from .identity import FlextInfraModelsGitIdentity
     from .worktree_facts import FlextInfraModelsGitWorktreeFacts
+    from .worktree_state import FlextInfraModelsGitWorktreeState
 
 
 __all__: tuple[str, ...] = (
     "FlextInfraModelsGitIdentity",
     "FlextInfraModelsGitWorktreeFacts",
+    "FlextInfraModelsGitWorktreeState",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
@@ -23,6 +25,7 @@ _LAZY_IMPORTS = MappingProxyType(
         MappingProxyType({
             ".identity": ("FlextInfraModelsGitIdentity",),
             ".worktree_facts": ("FlextInfraModelsGitWorktreeFacts",),
+            ".worktree_state": ("FlextInfraModelsGitWorktreeState",),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
