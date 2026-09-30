@@ -28,11 +28,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
         project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
+        runtime_environment = u.Infra.runtime_environment_dir(project_root)
         tm.ok(u.Tests.create_python_environment(project_root))
-        environment = u.Infra.runtime_environment_dir(project_root)
-        tm.that(environment.is_dir(), eq=True)
-        tm.that(environment.is_symlink(), eq=False)
-        tm.that(u.Infra.runtime_python(project_root).is_symlink(), eq=True)
+        tm.that(runtime_environment.is_symlink(), eq=False)
+        tm.that((runtime_environment / "bin" / "python").is_symlink(), eq=True)
         (project_root / ".envrc.local").write_text(
             "printf 'activated\\n' >> activation.log\n"
             'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n'
@@ -74,12 +73,15 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 eq=["pre-status", "_custom-status", "post-status"],
             )
             tm.that(
-                (project_root / "runtime.log").read_text().strip(), eq=str(environment)
+                (project_root / "runtime.log").read_text().strip(),
+                eq=str(runtime_environment),
             )
 
     @pytest.mark.parametrize("verb", ["setup", "check", "gen", "status"])
     @pytest.mark.parametrize("broken", [False, True])
-    @pytest.mark.parametrize("environment_part", ["environment", "bin"])
+    @pytest.mark.parametrize(
+        "environment_part", ["runtime", "runtime-bin", ".venv", ".venv/bin"]
+    )
     def test_foreign_environment_is_rejected_before_effects(
         self, tmp_path: Path, verb: str, environment_part: str, *, broken: bool
     ) -> None:
@@ -92,10 +94,11 @@ class TestsFlextInfraCodegenMakeEnvironment:
         if not broken:
             foreign.mkdir(parents=True)
             marker.write_text("foreign workspace", encoding="utf-8")
-        environment = u.Infra.runtime_environment_dir(project_root)
-        borrowed = (
-            environment if environment_part == "environment" else environment / "bin"
-        )
+        runtime_environment = u.Infra.runtime_environment_dir(project_root)
+        borrowed = {
+            "runtime": runtime_environment,
+            "runtime-bin": runtime_environment / "bin",
+        }.get(environment_part, project_root / environment_part)
         borrowed.parent.mkdir(parents=True, exist_ok=True)
         borrowed.symlink_to(foreign, target_is_directory=True)
         effect = project_root / "activation-effect"
@@ -189,13 +192,16 @@ class TestsFlextInfraCodegenMakeEnvironment:
             resolved_make_templates[profile], tmp_path, profile
         )
         runtime_root = project_root
+        runtime_environment = u.Infra.runtime_environment_dir(
+            project_root, runtime_root=runtime_root
+        )
         source_marker = project_root / "source-marker"
         source_marker.write_text("preserve project source", encoding="utf-8")
-        runtime_environment = u.Infra.runtime_environment_dir(runtime_root)
         previous_environment_marker = runtime_environment / "old-environment"
         if provisioned:
             # A copied real interpreter exercises replacement when its physical
             # location differs from the managed interpreter selected by Mise.
+            runtime_environment.parent.mkdir(parents=True, exist_ok=True)
             tm.ok(
                 u.Cli.run_checked(
                     [
@@ -495,6 +501,20 @@ class TestsFlextInfraCodegenMakeEnvironment:
         # Make never accepts a caller-selected database path: it derives the
         # external persistent testmon cache from the typed SSOT and hands it
         # to the runner, which reads it exclusively from that Make input.
+        (project_root / "custom.mk").write_text(
+            "post-help:\n\t@printf '%s\\n' 'RUNTIME_VENV=$(RUNTIME_VENV)'\n",
+            encoding="utf-8",
+        )
+        environment = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "help"], cwd=project_root
+            )
+        )
+        tm.that(u.Cli.process_succeeded(environment.outcome), eq=True)
+        tm.that(
+            environment.stdout,
+            has=f"RUNTIME_VENV={u.Infra.runtime_environment_dir(project_root)}",
+        )
         testmon = config.Infra.codegen.make.testmon_cache
         project_key = "$(subst /,_,$(PROJECT_ROOT))"
         database = (

@@ -73,7 +73,7 @@ class TestsFlextInfraWorkspaceChecker:
         tm.that(exit_code, eq=1)
 
     def test_cli_requires_explicit_member_selection(self, tmp_path: Path) -> None:
-        """A workspace root checks a declared member only when selected."""
+        """An omitted selection checks only the repository root."""
         project_dir = test_u.Tests.mk_project(
             tmp_path,
             "flext-core",
@@ -106,7 +106,6 @@ class TestsFlextInfraWorkspaceChecker:
             "--gates",
             "lint",
         ])
-
         tm.that(implicit_exit_code, eq=1)
         selected_exit_code = main([
             "check",

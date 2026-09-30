@@ -69,7 +69,7 @@ class TestsFlextInfraCodegenSetupSubmodules:
             ignore=shutil.ignore_patterns("__pycache__"),
         )
         test_u.Tests.initialize_git_repo(root)
-        tm.that((root / ".venv").exists(), eq=False)
+        tm.that(u.Infra.runtime_environment_dir(root).exists(), eq=False)
 
     @staticmethod
     def _setup(root: Path) -> p.Cli.CommandOutput:
@@ -91,8 +91,9 @@ class TestsFlextInfraCodegenSetupSubmodules:
             eq=True,
             msg=process.stdout + process.stderr,
         )
-        tm.that((root / ".venv" / "pyvenv.cfg").is_file(), eq=True)
-        tm.that((root / ".venv").is_symlink(), eq=False)
+        environment = u.Infra.runtime_environment_dir(root)
+        tm.that((environment / "pyvenv.cfg").is_file(), eq=True)
+        tm.that(environment.is_symlink(), eq=False)
         tm.that(process.stdout, has="installed-runtime-verified")
         return process
 
