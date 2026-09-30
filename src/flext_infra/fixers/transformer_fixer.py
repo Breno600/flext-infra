@@ -26,7 +26,6 @@ from flext_infra.transformers.import_modernizer import (
 )
 from flext_infra.transformers.mro_remover import FlextInfraRefactorMroRemover
 from flext_infra.transformers.open_encoding import FlextInfraRefactorOpenEncoding
-from flext_infra.transformers.typing_unifier import FlextInfraRefactorTypingUnifier
 
 from .base import FlextInfraFixerAdapter
 
@@ -64,7 +63,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
         "open_encoding": FlextInfraRefactorOpenEncoding,
         "project_alias_migrator": FlextInfraRefactorProjectAliasMigrator,
         "rewrite_foreign_canonical_alias": FlextInfraRefactorProjectAliasMigrator,
-        "typing_unifier": FlextInfraRefactorTypingUnifier,
     }
 
     # Why: targets whose rewriting mechanism is deactivated inside flext-infra,
@@ -105,6 +103,16 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
             "structurally by the ast-grep rule typing-dict-to-mapping-kv, whose "
             "import-unsafe cases are reported by typing-dict-missing-t-import. "
             "The violation is still reported; only the automatic rewrite is off."
+        ),
+        "typing_unifier": (
+            "fix deactivated: typing unification is owned by the rated rope phase "
+            "of `make mod` (the approved rewriting surface), not by the "
+            "enforcement fix run. Its rewrite must prove runtime availability of "
+            "the owning package facade before introducing a self import, which "
+            "the whole-file fix path cannot establish; refusing there is correct "
+            "for `make mod` but must never turn the enforcement run into an "
+            "unhandled failure. The violation is still reported; only the "
+            "automatic rewrite is off."
         ),
     }
 
@@ -383,19 +391,6 @@ class FlextInfraTransformerFixerAdapter(FlextInfraFixerAdapter):
     ) -> FlextInfraRopeTransformer:
         """Instantiate a transformer with params declared in the catalog."""
         params = dict(fix_action.params)
-        if transformer_cls is FlextInfraRefactorTypingUnifier:
-            targets_value = params.get("targets", [])
-            targets: t.StrSequence = (
-                tuple(item for item in targets_value if isinstance(item, str))
-                if isinstance(targets_value, (list, tuple))
-                else ()
-            )
-            canonical_map: t.MutableMappingKV[frozenset[str], str] = {}
-            if "dict" in targets:
-                canonical_map[frozenset({"MutableMapping[K, V]"})] = "t.MappingKV[K, V]"
-            return FlextInfraRefactorTypingUnifier(
-                canonical_map=canonical_map, file_path=file_path
-            )
         if transformer_cls is FlextInfraRefactorProjectAliasMigrator:
             return FlextInfraRefactorProjectAliasMigrator(file_path=file_path)
         if transformer_cls is FlextInfraRefactorImportModernizer:
