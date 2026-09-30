@@ -38,18 +38,12 @@ export GEN_INIT_ONLY
 endif
 endif
 
-# GitHub CLI's documented source precedence also applies before gh is installed:
-# GH_TOKEN, GITHUB_TOKEN, then its stored credential for network bootstrap.
+# An explicit process credential is required for network bootstrap. GH_TOKEN
+# takes precedence over GITHUB_TOKEN, and no host credential store is read.
 # Local provisioned operations need no authentication preflight or network call.
 # Keep the selected value in the environment, never in a rendered recipe.
-override GITHUB_CREDENTIAL_READ_STATUS := 0
 ifneq ($(strip $(GH_TOKEN)),)
 override GITHUB_TOKEN := $(GH_TOKEN)
-else ifeq ($(strip $(GITHUB_TOKEN)),)
-ifneq ($(strip $(filter setup upg,$(MAKECMDGOALS))),)
-override GITHUB_TOKEN := $(shell if command -v gh >/dev/null 2>&1; then gh auth token --hostname "$${GH_HOST:-github.com}"; else printf 'ERROR: GitHub credential source unavailable: set GH_TOKEN/GITHUB_TOKEN or provision gh\n' >&2; exit 127; fi)
-override GITHUB_CREDENTIAL_READ_STATUS := $(.SHELLSTATUS)
-endif
 endif
 export GITHUB_TOKEN
 override export GH_TOKEN := $(GITHUB_TOKEN)
@@ -1344,7 +1338,11 @@ _builtin_setup_submodules:
 		[ -e "$$root/$$path/.git" ] || absent="$$absent $$path"; \
 	done; \
 	if [ -n "$$absent" ]; then \
-		git -C "$$root" submodule update --init --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
+		credential_helper='!f() { if [ "$$1" = get ]; then printf "username=x-access-token\npassword=%s\n" "$$GITHUB_TOKEN"; fi; }; f'; \
+		GIT_TERMINAL_PROMPT=0 timeout --signal=TERM --kill-after=5s "120s" \
+			git -C "$$root" -c credential.helper= \
+			-c "credential.https://$${GH_HOST:-github.com}.helper=$$credential_helper" \
+			submodule update --init --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
 	fi; \
 	validate_submodule() { \
 		superproject="$$1"; \
@@ -1405,7 +1403,8 @@ _builtin_setup_submodules:
 		fi; \
 		gitlink="$$2"; \
 		if [ ! -e "$$child_root/.git" ]; then \
-			git -C "$$superproject" submodule update --init -- "$$child_path"; \
+			printf 'ERROR: governed gitlink is not materialized: %s\n' "$$child_path" >&2; \
+			exit 2; \
 		fi; \
 		current=$$(git -C "$$child_root" branch --show-current); \
 		head=$$(git -C "$$child_root" rev-parse HEAD); \
@@ -1435,10 +1434,6 @@ _builtin_setup_submodules:
 .NOTPARALLEL: _bootstrap_setup_tools
 _bootstrap_setup_tools: _builtin_require_github_auth $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
 _builtin_require_github_auth:
-	@if [ "$(GITHUB_CREDENTIAL_READ_STATUS)" != "0" ]; then \
-		printf 'ERROR: gh credential source failed with exit %s\n' "$(GITHUB_CREDENTIAL_READ_STATUS)" >&2; \
-		exit "$(GITHUB_CREDENTIAL_READ_STATUS)"; \
-	fi
 	@if [ -z "$${GITHUB_TOKEN:-}" ]; then \
 		printf 'ERROR: GitHub credential is absent for network bootstrap\n' >&2; \
 		exit 1; \
