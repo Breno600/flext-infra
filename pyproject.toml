@@ -170,8 +170,10 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/flext_infra"]
+only-include = ["src/flext_infra", "config"]
 
-[tool.hatch.build.targets.wheel.force-include]
+[tool.hatch.build.targets.wheel.sources]
+"src/flext_infra" = "flext_infra"
 config = "flext_infra/config"
 
 [tool.hatch.build.targets.sdist]

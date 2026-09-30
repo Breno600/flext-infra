@@ -28,6 +28,13 @@ def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
     return FlextInfraConfigModelsMake.MypyCacheSpec()
 
 
+def _default_testmon_cache_policy() -> (
+    FlextInfraConfigModelsMake.TestmonCachePolicySpec
+):
+    """Build the declared default testmon cache policy (#1001 delta)."""
+    return FlextInfraConfigModelsMake.TestmonCachePolicySpec()
+
+
 class FlextInfraConfigModelsMake:
     """Make workflow, verb, CI, and cache specification models."""
 
@@ -371,6 +378,62 @@ class FlextInfraConfigModelsMake:
                 raise ValueError(msg)
             return self
 
+    class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
+        """Declarative Actions-cache policy for the shared testmon database.
+
+        Implements the preserved #1001 delta (bead flext-j0u23): two-phase
+        generations with per-mode caps, a per-repository byte budget with a
+        three-stage quota ladder, a save-ref allowlist (never save from PRs)
+        and a cache-key namespace.
+        """
+
+        mode: Annotated[
+            Literal["bootstrap", "stable"],
+            m.Field(description="Cache phase: bootstrap seeds, stable saves"),
+        ] = "stable"
+        save_enabled: Annotated[
+            bool, m.Field(description="Master switch for cache publishes")
+        ] = False
+        max_bootstrap_generations: Annotated[
+            int, m.Field(gt=0, description="Retention cap for bootstrap generations")
+        ] = 3
+        max_stable_generations: Annotated[
+            int, m.Field(gt=0, description="Retention cap for stable generations")
+        ] = 3
+        per_repo_budget_bytes: Annotated[
+            int, m.Field(gt=0, description="Per-repository byte budget")
+        ] = 52_428_800
+        warning_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder warning stage")
+        ] = 80
+        maintenance_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage")
+        ] = 90
+        block_threshold_percent: Annotated[
+            int, m.Field(ge=0, le=100, description="Quota-ladder block stage")
+        ] = 95
+        allowed_save_refs: Annotated[
+            tuple[t.NonEmptyStr, ...],
+            m.Field(description="Refs whose pushes may publish cache generations"),
+        ] = ("main", "0.12.0-dev")
+        key_prefix: Annotated[
+            t.NonEmptyStr, m.Field(description="Actions cache key namespace")
+        ] = "flext-testmon"
+
+        @u.model_validator(mode="after")
+        def require_ascending_quota_ladder(self) -> Self:
+            """Keep the quota ladder strictly ascending within the percent scale."""
+            full_scale = 100
+            if not (
+                self.warning_threshold_percent
+                < self.maintenance_threshold_percent
+                < self.block_threshold_percent
+                <= full_scale
+            ):
+                msg = "testmon cache quota ladder must ascend warning < maintenance < block <= 100"
+                raise ValueError(msg)
+            return self
+
     class MypyCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
@@ -585,6 +648,13 @@ class FlextInfraConfigModelsMake:
         testmon_cache: Annotated[
             FlextInfraConfigModelsMake.TestmonCacheSpec,
             m.Field(description="Adaptive testmon Actions cache policy"),
+        ]
+        testmon_cache_policy: Annotated[
+            FlextInfraConfigModelsMake.TestmonCachePolicySpec,
+            m.Field(
+                default_factory=_default_testmon_cache_policy,
+                description="Declarative save/budget/quota policy for the shared testmon cache (#1001 delta)",
+            ),
         ]
         mypy_cache: Annotated[
             FlextInfraConfigModelsMake.MypyCacheSpec,

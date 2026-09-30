@@ -283,6 +283,28 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
+    class WorkspaceEnvironmentContracts(Protocol):
+        """Structural contract the direnv gate consumes for static lint.
+
+        Declared here so the gate depends on the typed boundary rather than on
+        the concrete workspace class; one implementor owns the behavior today.
+        """
+
+        @classmethod
+        def envrc_contract_violations(
+            cls, content: str, *, root: Path, resolve_home: bool = True
+        ) -> t.VariadicTuple[m.Infra.EnvironmentContractViolation]:
+            """Return one typed violation per direnv contract issue."""
+            ...
+
+        @classmethod
+        def envrc_local_contract_violations(
+            cls, content: str
+        ) -> t.VariadicTuple[m.Infra.EnvironmentContractViolation]:
+            """Return one typed violation per activation residue in overrides."""
+            ...
+
+    @runtime_checkable
     class CodegenConform(Protocol):
         """Complete state and collaboration contract for conform partials."""
 

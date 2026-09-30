@@ -213,3 +213,70 @@ class TestsFlextInfraGitStateCheckpoint:
             )
         )
         tm.that(rejected.failure, eq=True)
+
+    def _diverge_remote(self, checkpoint: m.Infra.GitWorktreeStateCheckpoint) -> str:
+        """Force-move the published remote ref to an unrelated capture."""
+        source = checkpoint.snapshot.repo_root
+        tree = test_u.Tests.git_capture(
+            source, "rev-parse", f"{checkpoint.worktree_commit}^{{tree}}"
+        ).strip()
+        divergent = test_u.Tests.git_capture(
+            source,
+            "commit-tree",
+            tree,
+            "-p",
+            checkpoint.snapshot.head,
+            "-m",
+            "unrelated capture",
+        ).strip()
+        test_u.Tests.git_run(
+            source,
+            "push",
+            "--force",
+            "checkpoint-remote",
+            f"{divergent}:{checkpoint.checkpoint_ref}",
+        )
+        return divergent
+
+    def _remote_advertisement(
+        self, checkpoint: m.Infra.GitWorktreeStateCheckpoint
+    ) -> str:
+        return test_u.Tests.git_capture(
+            checkpoint.snapshot.repo_root,
+            "ls-remote",
+            "--refs",
+            "checkpoint-remote",
+            checkpoint.checkpoint_ref,
+        ).strip()
+
+    def test_publish_refuses_a_remote_ref_owned_by_another_capture(
+        self, tmp_path: Path
+    ) -> None:
+        """A remote checkpoint ref is never overwritten by a foreign capture."""
+        checkpoint = self._capture(tmp_path)
+        self._publish(tmp_path, checkpoint)
+        divergent = self._diverge_remote(checkpoint)
+
+        republished = u.Infra.git_publish_worktree_checkpoint(
+            checkpoint, "checkpoint-remote"
+        )
+
+        tm.that(republished.failure, eq=True)
+        tm.that(
+            self._remote_advertisement(checkpoint),
+            eq=f"{divergent}\t{checkpoint.checkpoint_ref}",
+        )
+
+    def test_verify_fails_once_the_remote_stops_advertising_the_checkpoint(
+        self, tmp_path: Path
+    ) -> None:
+        """A remote ref moved off the checkpoint proves nothing and fails closed."""
+        checkpoint = self._capture(tmp_path)
+        publication = self._publish(tmp_path, checkpoint)
+        self._diverge_remote(checkpoint)
+
+        verified = u.Infra.git_verify_worktree_checkpoint_publication(
+            checkpoint, publication
+        )
+
+        tm.that(verified.failure, eq=True)
