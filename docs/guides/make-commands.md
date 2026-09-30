@@ -50,7 +50,9 @@ make test
 make build
 ```
 
-The consecutive generation passes prove the fixed point after structural rewrites.
+The consecutive generation passes prove the fixed point after structural rewrites. The
+first pass derives Ruff source roots from the declared template outputs, including test
+directories it will create, so the verification pass sees the same topology.
 `make build` packages the validated candidate; it does not replace runtime verification.
 Each verb executes its declared operation directly. No project, file, pattern, action,
 phase, fix, or changed-only selector may be attached to a standard verb. When
