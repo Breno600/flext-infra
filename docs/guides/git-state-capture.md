@@ -1,5 +1,11 @@
 # Durable Git state capture
 
+<!-- TOC START -->
+
+- No sections found
+
+<!-- TOC END -->
+
 `u.Infra` owns scoped WIP capture. Callers select literal repository-relative paths in
 `m.Infra.GitWorktreeStateRequest`; directories include their tracked and nonignored
 untracked descendants. An empty path tuple captures nothing. Nested repositories retain

@@ -176,10 +176,11 @@ declarados antes de resolver os locks Python. Os demais verbos que dependem do r
 recusam um pin ausente ou não resolvido antes da ativação; `help` e `clean` continuam
 sendo operações locais sem essa dependência.
 
-O bootstrap de rede exige credencial explícita no ambiente do processo: `GH_TOKEN` tem
+O bootstrap de rede recebe credencial explícita no ambiente do processo: `GH_TOKEN` tem
 precedência sobre `GITHUB_TOKEN`. O Make não consulta `gh` nem o keyring. Sem ambas,
-`make setup` e `make upg` falham antes da instalação; operações locais já provisionadas
-não exigem autenticação. Um token inválido preserva o erro nativo do backend, sem nova
+`make setup` pode reutilizar ferramentas e dependências já provisionadas; a operação
+que precisar da rede falha no backend responsável. Um token inválido preserva o erro
+nativo do backend, sem nova
 tentativa anônima ou troca de fonte. O Mise lê o mesmo `GITHUB_TOKEN`; o Make remove do
 ambiente dos recipes qualquer `MISE_GITHUB_TOKEN` herdado, porque um alias da mesma
 credencial teria precedência sobre ela. O launcher de credenciais ou job de CI deve

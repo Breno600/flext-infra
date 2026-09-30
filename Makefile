@@ -1430,18 +1430,10 @@ _builtin_setup_submodules:
 		validate_submodule "$$root" "$$child_path"; \
 	done
 
-.PHONY: _builtin_require_github_auth
-# The credential check precedes the Mise pin check even under -j. `make setup`
-# first runs on the host's make before Mise installs the declared one, so the
-# ordering uses .NOTPARALLEL (every GNU Make; 4.4+ serializes only this target's
-# prerequisites) instead of .WAIT, which older releases read as a missing target.
-.NOTPARALLEL: _bootstrap_setup_tools
-_bootstrap_setup_tools: _builtin_require_github_auth $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
-_builtin_require_github_auth:
-	@if [ -z "$${GITHUB_TOKEN:-}" ]; then \
-		printf 'ERROR: GitHub credential is absent for network bootstrap\n' >&2; \
-		exit 1; \
-	fi
+# A provisioned local setup needs no GitHub credential. Mise and Git receive
+# only the explicit process credential above; an operation that actually needs
+# network access reports its own failure without a preflight or fallback.
+_bootstrap_setup_tools: $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
 
 .PHONY: _builtin_require_mise_pin
 _builtin_require_mise_pin:
