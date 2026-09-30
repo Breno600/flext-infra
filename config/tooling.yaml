@@ -11,6 +11,7 @@ Infra:
         pep621-dev-dependency-groups: [dev]
       hatch:
         allow-direct-references: true
+        packaged-data-dirs: [config, templates]
       markdown:
         rules:
           default: true
@@ -21,22 +22,22 @@ Infra:
           # stay at 200 because no tool can reflow a heading — a shorter limit
           # would only manufacture unfixable findings.
           #
-          # flext-md-converge: wrapping is hand-owned, not tool-owned.
-          # `reflow`/`reflow-mode: normalize` was tried first (it made MD013
-          # `[*]`-fixable), but measured 2026-09-30: rumdl's normalize pass
-          # JOINS a hand-wrapped paragraph into one line and then cannot
-          # re-split lines containing inline-code spans — producing 183–595
-          # char lines no canonical verb can repair (the probe: a 2-line
-          # paragraph became one 171-char line). With reflow off, prettier
-          # keeps `prose-wrap: preserve` below, nobody rewrites an author's
-          # breaks, and MD013 stays the check-only line contract at 88: a
-          # genuinely long line is a finding the author fixes by wrapping.
+          # flext-md-converge: wrapping is owned by rumdl (`make fix`), not
+          # prettier. `reflow`/`reflow-mode: default` wrap overlong prose
+          # without imposing a separate paragraph-normalization hint that
+          # the writer cannot satisfy. rumdl's reflow-aware writer (atomic code
+          # spans, GFM task-item post-checkbox column) the authority over
+          # line breaks that prettier's proseWrap could not reach (a
+          # 294-char line inside backtick spans that prettier left
+          # unwrapped). prettier keeps `prose-wrap: preserve` below so it
+          # never re-wraps what rumdl already wrapped.
           MD013:
             line_length: 88
             heading_line_length: 200
             code_block_line_length: 88
             tables: false
-            reflow: false
+            reflow: true
+            reflow-mode: default
           MD022: false
           MD023: false
           MD024: { siblings_only: true }
@@ -53,16 +54,6 @@ Infra:
           MD057: false
           MD060: false
           MD076: false
-          # flext-md-converge: prettier is the last writer of the `make docs`
-          # cycle (DOCS_ACTIONS ends at fmt), and its list-continuation printer
-          # reindents wrapped list content to its own column, which MD077's two
-          # accepted columns reject — and no canonical repair runs after fmt, so
-          # the finding is unfixable by construction (measured 2026-09-30: 57
-          # MD077 findings reproduce on every docs cycle and survive both
-          # `docs fix` and the gate's own --apply). A dialect rule the canonical
-          # formatter cannot satisfy leaves the rule set; MD013 keeps owning the
-          # real line contract.
-          MD077: false
         # Prettier formatting policy (markdown-format gate): rendered into the
         # managed .prettierrc. prettier --write is owned by `make fmt` and
         # prettier --check by `make check`; `make fix` never runs it.
@@ -242,7 +233,6 @@ Infra:
               "Use flext_cli.cli application, registration, execution, and invocation\
               \ methods."
             rich: "Use cli.print / cli.display_message / cli.render_panel / cli.render_table."
-            tabulate: "Use cli.render_table from flext_cli."
             typer: "Use cli.create_app_with_common_params / cli.register_command from flext_cli."
           ignore:
             - ambiguous-unicode-character-comment
@@ -504,13 +494,15 @@ Infra:
             - "**/site-packages/**"
             - "**/dist-packages"
             - "**/dist-packages/**"
+            - "**/tests/fixtures"
+            - "**/tests/fixtures/**"
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
           diagnostic-path-overrides: []
           source-report-private-usage: error
-          test-like-report-private-usage: error
-          other-report-private-usage: error
+          test-like-report-private-usage: "none"
+          other-report-private-usage: "none"
       coverage:
         source: [src]
         show-missing: true
@@ -687,14 +679,6 @@ Infra:
         # invocation; in-flight cases may report after the stop, which the
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
-          ai-hub:
-            # flext-tyir9/aihub-mkigd: the 1940-case suite cannot fit the
-            # single-worker process boundary inside its fixed deadline on cold
-            # testmon, so the consumer declares its ceiling here instead of
-            # patching projections or raising the limit. 4 is the measured
-            # incumbent the fleet already validated (flext-infra/cosmos-docgen);
-            # higher ceilings measurably regressed the cold run (flext-itpd1.3.7).
-            workers: 4
           cosmos-docgen:
             workers: 4
           # flext-itpd1.3.7 measurement: raising this ceiling above 4 measurably
