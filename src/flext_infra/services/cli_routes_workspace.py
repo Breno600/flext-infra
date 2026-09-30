@@ -6,6 +6,7 @@ from collections.abc import MutableMapping
 from typing import ClassVar
 
 from flext_infra import c, m, p, t, u
+from flext_infra.git import FlextInfraGitService
 from flext_infra.release.orchestrator import FlextInfraReleaseOrchestrator
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
@@ -67,6 +68,15 @@ class FlextInfraWorkspaceRoutes(FlextInfraRefactorRoutes):
                 model_cls=m.Infra.GitRepoRequest,
                 handler=FlextInfraCliRouteBase.result_handler(u.Infra.git_identity),
                 success_message="workspace Git identity resolved",
+            ),
+            m.Cli.ResultCommandRoute(
+                name="verify-clean",
+                help_text="Fail if a Git worktree has staged, unstaged, or untracked changes",
+                model_cls=m.Infra.GitStatusRequest,
+                handler=FlextInfraCliRouteBase.result_handler(
+                    FlextInfraGitService.verify_clean
+                ),
+                success_message="workspace Git worktree is clean",
             ),
             m.Cli.ResultCommandRoute(
                 name="verify-environment",
