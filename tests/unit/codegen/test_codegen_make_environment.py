@@ -29,8 +29,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
         tm.ok(u.Tests.create_python_environment(project_root))
-        tm.that((project_root / ".venv").is_symlink(), eq=False)
-        tm.that((project_root / ".venv" / "bin" / "python").is_symlink(), eq=True)
+        environment = u.Infra.runtime_environment_dir(project_root)
+        tm.that(environment.is_dir(), eq=True)
+        tm.that(environment.is_symlink(), eq=False)
+        tm.that(u.Infra.runtime_python(project_root).is_symlink(), eq=True)
         (project_root / ".envrc.local").write_text(
             "printf 'activated\\n' >> activation.log\n"
             'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n'
@@ -73,7 +75,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
             )
             tm.that(
                 (project_root / "runtime.log").read_text().strip(),
-                eq=str(project_root / ".venv"),
+                eq=str(environment),
             )
 
     @pytest.mark.parametrize("verb", ["setup", "check", "gen", "status"])
