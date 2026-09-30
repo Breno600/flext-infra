@@ -11,6 +11,7 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from . import _codegen
     from ._codegen.vscode import FlextInfraCodegenVscodeMixin
+    from .candidate_bootstrap import FlextInfraCandidateBootstrapService
     from .cli_dispatch import FlextInfraCliDispatchService
     from .cli_route_base import FlextInfraCliRouteBase
     from .cli_routes import FlextInfraCliRouteService
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 
 
 __all__: tuple[str, ...] = (
+    "FlextInfraCandidateBootstrapService",
     "FlextInfraCliDispatchService",
     "FlextInfraCliRouteBase",
     "FlextInfraCliRouteService",
@@ -41,6 +43,7 @@ _LAZY_IMPORTS = MappingProxyType(
         MappingProxyType({
             "._codegen": ("_codegen",),
             "._codegen.vscode": ("FlextInfraCodegenVscodeMixin",),
+            ".candidate_bootstrap": ("FlextInfraCandidateBootstrapService",),
             ".cli_dispatch": ("FlextInfraCliDispatchService",),
             ".cli_route_base": ("FlextInfraCliRouteBase",),
             ".cli_routes": ("FlextInfraCliRouteService",),
