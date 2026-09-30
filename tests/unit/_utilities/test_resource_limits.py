@@ -88,10 +88,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
             # Real interpreter startup and controlled group cleanup use the
             # existing integration-harness budget, not the default case budget.
             pytest.param("deadline", 124, marks=pytest.mark.slow),
-            # Darwin's supervisor stops the process on RSS (137). On Linux,
-            # Mypy reports the bounded allocation failure with a diagnostic;
-            # its exact exit status depends on the installed Mypy version.
-            ("memory", 137 if sys.platform == "darwin" else None),
+            # The checker may use different nonzero exit codes while reporting
+            # the same bounded allocation failure through its public output.
+            ("memory", None),
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
@@ -113,28 +112,25 @@ class TestsFlextInfraUtilitiesResourceLimits:
             if scenario == "memory":
                 source += f"allocation = bytearray({limit.memory_limit_bytes * 2}); "
             source += f"time.sleep({limit.timeout_seconds + 1})"
-        result = u.Cli.run_raw(
-            u.Infra.mypy_limited_command(
-                test_u.Tests.mypy_workload(tmp_path, source), limit
-            ),
-            timeout=u.Infra.mypy_runner_timeout(limit),
+        command = u.Infra.mypy_limited_command(
+            test_u.Tests.mypy_workload(tmp_path, source), limit
         )
+        result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
         tm.ok(result)
         tm.that(result.value.stdout, has="workload-ready")
-        if expected is None:
-            tm.that(result.value.outcome.raw_return_code, ne=0, msg=result.value.stderr)
-            tm.that(result.value.outcome.timed_out, eq=False)
-        else:
-            tm.that(
-                result.value.outcome.raw_return_code,
-                eq=expected,
-                msg=result.value.stderr,
-            )
         if scenario == "memory":
+            tm.that(
+                any(str(limit.memory_limit_bytes) in part for part in command[:-1]),
+                eq=True,
+            )
+            tm.that(u.Cli.process_succeeded(result.value.outcome), eq=False)
+            tm.that(result.value.outcome.raw_return_code, ne=0)
+            tm.that(result.value.outcome.timed_out, eq=False)
+            tm.that(result.value.stderr, empty=False)
             if sys.platform == "darwin":
                 tm.that(result.value.stderr, has="RSS limit reached")
-            else:
-                tm.that(result.value.stderr, empty=False)
+        else:
+            tm.that(result.value.outcome.raw_return_code, eq=expected)
 
     @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])

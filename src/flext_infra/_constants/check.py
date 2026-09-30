@@ -128,6 +128,12 @@ class FlextInfraConstantsCheck:
     MARKDOWN_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$"
     )
+    MARKDOWN_NORMALIZATION_HINT_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"could be normalized to use line length"
+    )
+    """rumdl formatter-mode paragraph hint: an ``[*]`` "repair" its linter reports but its OWN
+    formatter (``rumdl fmt``) never performs, so no canonical verb can clear it. Findings are
+    kept only when the message signals a real violation (``Line length N exceeds M``)."""
     MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^\[warn\]\s+(?P<file>\S+\.md)\s*$", re.MULTILINE
     )
