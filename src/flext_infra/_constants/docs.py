@@ -61,8 +61,16 @@ class FlextInfraConstantsDocs:
         "ANN204",
         "ANN205",
         "PLC0415",
+        "D106",
+        "B018",
     )
-    """Rules ignored for executable docs snippets that are not full modules/tests."""
+    """Rules ignored for executable docs snippets that are not full modules/tests.
+
+    ``D106`` and ``B018`` join the set because the docs are teaching material:
+    a nested example class needs no docstring, and a bare attribute access
+    (``c.Settings.y``) is the idiom being demonstrated, not a useless
+    expression (measured 2026-09-30: 61 findings across the root's docs were
+    exactly these two rules)."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)"
     )
@@ -152,6 +160,10 @@ class FlextInfraConstantsDocs:
     """Match internal anchor links, capturing text and anchor."""
     INLINE_CODE_RE: ClassVar[t.RegexPattern] = re.compile(r"`[^`]*`")
     """Match inline code spans for stripping before analysis."""
+    DOCS_INLINE_COMMAND_DIRECTIVE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"\b(?:run|execute|invoke|try|use)(?:\s+the\s+command)?\s*$", re.IGNORECASE
+    )
+    """Recognize an instruction preceding a shell command in inline code."""
     STRING_LITERAL_RE: ClassVar[t.RegexPattern] = re.compile(
         r"""["']([a-zA-Z0-9_\.]+)["']"""
     )

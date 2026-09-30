@@ -112,7 +112,9 @@ class TestsFlextInfraCodegenUpgWorkspace:
             ),
             has=member.distribution,
         )
-        tm.that((root / ".venv" / "pyvenv.cfg").is_file(), eq=True)
+        tm.that(
+            (u.Infra.runtime_environment_dir(root) / "pyvenv.cfg").is_file(), eq=True
+        )
         tm.that((checkout / ".venv").exists(), eq=False)
         pin = tm.ok(
             u.Infra.mise_pinned_release(

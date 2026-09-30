@@ -27,7 +27,10 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         workspace = self.initial_workspace
         if workspace is None:
             workspace_result = FlextInfraWorkspaceDetector.load_workspace_spec(
-                repository_root
+                repository_root,
+                allow_unprovisioned_members=(
+                    request.what == c.Infra.CodegenConformSurface.MAKEFILE
+                ),
             )
             if workspace_result.failure:
                 return r[m.Infra.CodegenPlan].from_failure(workspace_result)
@@ -126,6 +129,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                         repository=local_repository,
                         project=declared_member.value.project,
                         namespace_scan_dirs=(declared_member.value.namespace_scan_dirs),
+                        candidate_dependencies=workspace.candidate_dependencies,
                     )
                 else:
                     local_workspace_result = (
