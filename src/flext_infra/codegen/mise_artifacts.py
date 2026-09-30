@@ -87,9 +87,7 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         return r[bool].ok(True)
 
     @staticmethod
-    def _validate_selector_integrity(
-        configured_tools: t.StrMapping,
-    ) -> p.Result[bool]:
+    def _validate_selector_integrity(configured_tools: t.StrMapping) -> p.Result[bool]:
         """Reject a lockfile annotation leaking into a ``.mise.toml`` selector.
 
         A generated selector is the declared release; the ``~<hash>`` fragment
