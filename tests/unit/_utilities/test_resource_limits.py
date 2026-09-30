@@ -120,7 +120,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         )
         tm.ok(result)
         tm.that(result.value.stdout, has="workload-ready")
-        tm.that(result.value.outcome.raw_return_code, eq=expected)
+        tm.that(
+            result.value.outcome.raw_return_code, eq=expected, msg=result.value.stderr
+        )
         if scenario == "memory":
             tm.that(
                 result.value.stderr,

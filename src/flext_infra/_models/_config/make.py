@@ -544,8 +544,7 @@ class FlextInfraConfigModelsMake:
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),
         ]
         submodule_timeout_seconds: Annotated[
-            int,
-            m.Field(gt=0, le=600, description="Governed submodule setup deadline"),
+            int, m.Field(gt=0, le=600, description="Governed submodule setup deadline")
         ]
         ruff: Annotated[
             FlextInfraConfigModelsMake.MakeRuffSpec,

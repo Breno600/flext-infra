@@ -11,6 +11,8 @@ from ._execution import FlextInfraCodegenExecutionBase
 from .conform import FlextInfraCodegenConform
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from .. import p
 
 
@@ -32,10 +34,24 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
             if self.effective_dry_run
             else c.Infra.CodegenConformMode.APPLY
         )
+        return self.conform_target(
+            self.repository_root,
+            surface=c.Infra.CodegenConformSurface.MAKEFILE,
+            mode=mode,
+        )
+
+    @staticmethod
+    def conform_target(
+        root: Path,
+        *,
+        surface: c.Infra.CodegenConformSurface,
+        mode: c.Infra.CodegenConformMode,
+    ) -> p.Result[bool]:
+        """Run the owned conform transaction for a checked bootstrap target."""
         conformed = FlextInfraCodegenConform.execute_request(
             m.Infra.CodegenConformRequest(
-                root=self.repository_root,
-                what=c.Infra.CodegenConformSurface.MAKEFILE,
+                root=root,
+                what=surface,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=mode,
             )
