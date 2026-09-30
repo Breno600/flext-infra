@@ -15,6 +15,7 @@ from __future__ import annotations
 import functools
 import re
 from bisect import bisect_right
+from collections.abc import MutableMapping
 from fnmatch import fnmatch
 from pathlib import Path
 
@@ -288,7 +289,7 @@ class FlextInfraModTextGateEngine:
         A positive expected count is a one-invocation precondition, not an
         idempotence promise after that migration has consumed its matches.
         """
-        counts: dict[str, int] = {}
+        counts: MutableMapping[str, int] = {}
         for entry in report.entries:
             counts[entry.rule_id] = counts.get(entry.rule_id, 0) + 1
         for rule in rules:
