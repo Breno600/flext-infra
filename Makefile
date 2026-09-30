@@ -141,8 +141,8 @@ endif
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary. A verb exists
 # only in the profiles it declares (make.verbs[].profiles).
-PUBLIC_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
-BUILTIN_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
+PUBLIC_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen bootstrap-candidate initialize mod mod-snapshots waza duplication sonarcloud-sync
+BUILTIN_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen bootstrap-candidate initialize mod mod-snapshots waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -1106,6 +1106,17 @@ _activated-gen: _builtin_require_environment
 
 
 
+bootstrap-candidate: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-bootstrap-candidate
+
+.PHONY: _activated-bootstrap-candidate
+_activated-bootstrap-candidate: _builtin_require_environment
+
+	$(call RUN_PUBLIC,bootstrap-candidate)
+
+
+
+
 initialize: _builtin_require_workspace
 	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-initialize
 
@@ -1255,6 +1266,8 @@ _builtin-help:
 	@printf '  %-16s %s\n' 'publication' 'Publish only receipt-attested release artifacts.';
 
 	@printf '  %-16s %s\n' 'gen' 'Regenerate every managed projection atomically.';
+
+	@printf '  %-16s %s\n' 'bootstrap-candidate' 'Conform the sibling candidate worktree declared in this repository manifest.';
 
 	@printf '  %-16s %s\n' 'initialize' 'Materialize the declared package initializer graph.';
 
@@ -1772,6 +1785,9 @@ _builtin_gen_init:
 
 _builtin_gen_all:
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode apply
+
+_builtin-bootstrap-candidate: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) codegen candidate-bootstrap --repository-root "$(PROJECT_ROOT)"
 
 # Structural rewrites have one selector-free public Make surface. The current
 # directory defines scope; callers never address ast-grep, Rope, or LSP directly.

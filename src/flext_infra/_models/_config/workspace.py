@@ -18,6 +18,22 @@ from .contract import FlextInfraConfigModelsContract
 class FlextInfraConfigModelsWorkspace:
     """Workspace manifest, integration, and policy models."""
 
+    class CandidateBootstrapTargetSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One declared worktree and canonical conform surface."""
+
+        path: Annotated[Path, m.Field(description="Relative candidate worktree path")]
+        what: Annotated[
+            FlextInfraConstantsCodegenProject.CodegenConformSurface,
+            m.Field(description="Canonical generator surface for this target"),
+        ]
+
+        @u.model_validator(mode="after")
+        def _validate_path(self) -> Self:
+            if self.path.is_absolute() or not self.path.parts:
+                msg = "candidate bootstrap path must be relative"
+                raise ValueError(msg)
+            return self
+
     class CandidateDependencySourceSpec(FlextInfraConfigModelsContract.ConfigContract):
         """One explicitly staged Git commit for a candidate dependency."""
 
@@ -188,6 +204,12 @@ class FlextInfraConfigModelsWorkspace:
             ],
             m.Field(description="Candidate-only exact dependency Git sources"),
         ] = ()
+        candidate_bootstrap_targets: Annotated[
+            t.VariadicTuple[
+                FlextInfraConfigModelsWorkspace.CandidateBootstrapTargetSpec
+            ],
+            m.Field(description="Declared candidate worktrees conformed by Infra"),
+        ] = ()
         repository_policy_overlays: Annotated[
             t.VariadicTuple[
                 FlextInfraConfigModelsWorkspace.RepositoryPolicyOverlaySpec
@@ -239,6 +261,10 @@ class FlextInfraConfigModelsWorkspace:
             )
             if len(set(candidate_names)) != len(candidate_names):
                 msg = "candidate dependency distributions must be unique"
+                raise ValueError(msg)
+            targets = self.candidate_bootstrap_targets
+            if len({target.path for target in targets}) != len(targets):
+                msg = "candidate bootstrap targets must be unique"
                 raise ValueError(msg)
             return self
 
@@ -307,6 +333,12 @@ class FlextInfraConfigModelsWorkspace:
                 FlextInfraConfigModelsWorkspace.CandidateDependencySourceSpec
             ],
             m.Field(description="Candidate-only exact dependency Git sources"),
+        ] = ()
+        candidate_bootstrap_targets: Annotated[
+            t.VariadicTuple[
+                FlextInfraConfigModelsWorkspace.CandidateBootstrapTargetSpec
+            ],
+            m.Field(description="Declared candidate worktrees for bootstrap"),
         ] = ()
         subprojects: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],

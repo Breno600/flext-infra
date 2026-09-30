@@ -83,6 +83,17 @@ that explicit contract, avoiding host-interpreter marker evaluation.
 
 ## Candidate dependency commits
 
+An Infra integration lane can bootstrap declared candidate worktrees with
+`make bootstrap-candidate`. Its handwritten `config/workspace.yaml` lists
+`candidate_bootstrap_targets`, each with a relative `path` and a typed `what` from the
+conform surface catalog. Use `what: makefile` when the consumer still needs `make setup`
+to provision its environment or Git submodules; use `what: all` only when those inputs
+are already present. The verb uses the current branch-matched Infra generator, validates
+that every target is an exact Git worktree root, and runs the ordinary atomic conform
+transaction for each declared surface. A missing target or a failed conform stops the
+invocation. After Makefile bootstrap, run `make setup` and `make gen` in that consumer's
+worktree. The generated target Makefile and other projections are never edited directly.
+
 A dedicated integration worktree may stage exact supplier commits in its handwritten
 `config/workspace.yaml` under `candidate_dependencies`. Each entry declares the
 distribution, its canonical HTTPS Git URL, and the full commit OID. This is a tracked,
@@ -90,12 +101,27 @@ reviewable candidate input, separate from the untracked local codegen override a
 The generator applies a candidate only to that distribution's direct Git requirement;
 other dependencies stay on their declared integration lines. It rejects a URL that
 disagrees with the member manifest or an existing direct requirement, and it cannot
-introduce a Git source where neither declaration exists. An omitted
+introduce a Git source where neither declaration exists. An entry without a
+corresponding direct requirement fails instead of being silently ignored. An omitted
 `candidate_dependencies` list leaves normal release projections unchanged.
 
-Run the ordinary `make setup` bootstrap, then `make gen` to project the candidate
-requirements, `make upg` to resolve the exact commits into `uv.lock`, and `make setup`
-again to install that lock in the same worktree. Run the ordinary native gates there.
-Repeat `make gen` to prove the generated metadata has reached a fixed point. Remove the
-candidate declaration through the same manifest owner before promoting the normal
-integration line; the generated pyprojects must then return to branch sources.
+Candidate selection must include the published dependency closure. A direct pin in one
+project cannot rewrite the metadata of another Git dependency: if `flext-tests` still
+declares `flext-cli` on the integration branch, pinning `flext-cli` to a different
+commit only in `flext-infra` makes `make upg` fail with conflicting Git URLs. Publish
+candidate metadata from the supplier outward: generate and publish the `flext-cli`
+commit first; generate, validate, and publish a `flext-tests` commit that declares that
+exact CLI commit; then declare both immutable commits in the Infra consumer manifest.
+Every dependent repository in a longer chain needs the same treatment before a later
+consumer can resolve it. A candidate entry does not substitute for publishing the
+intermediate repository's own generated metadata.
+
+For each repository in that dependency order, use its dedicated worktree and physical
+external environment. Run its canonical `make setup`, `make gen`, and `make upg`, then
+`make setup` again to install the resolved lock. Run its native gates and repeat
+`make gen` to prove a fixed point before publishing its candidate commit. If the
+currently published Makefile cannot bootstrap that external environment, repair and
+publish its canonical generator owner before this sequence; do not edit the generated
+Makefile or create an internal environment. Remove candidate declarations through the
+same manifest owner before promoting the normal integration line, and confirm `make gen`
+returns the generated pyprojects to branch sources.

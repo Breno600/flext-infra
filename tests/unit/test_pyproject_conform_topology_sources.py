@@ -216,6 +216,28 @@ class TestsFlextInfraPyprojectConformTopologySources:
         tm.that(result.failure, eq=True)
         tm.that(result.error or "", contains="no declared Git provenance")
 
+    def test_candidate_must_be_a_declared_requirement(self) -> None:
+        """A stale candidate entry cannot silently leave the resolver unchanged."""
+        cli = self._member_ref("flext-cli", "flext-cli")
+        workspace = self._workspace().model_copy(
+            update={
+                "candidate_dependencies": (
+                    m.Infra.CandidateDependencySourceSpec(
+                        distribution=cli.distribution, url=cli.url, commit="d" * 40
+                    ),
+                )
+            }
+        )
+        result = u.Infra.pyproject_conform(
+            '[project]\nname = "workspace"\nversion = "0.1.0"\n',
+            workspace=workspace,
+            required_dev_dependencies=(),
+            uv_resolution=self._toolchain_resolution(),
+            family_line=test_u.Tests.provider_branch(),
+        )
+        tm.that(result.failure, eq=True)
+        tm.that(result.error or "", contains="not declared requirements: flext-cli")
+
     def _assert_direct_source(self, rendered: str, ref: m.Infra.RepositoryRef) -> None:
         """Assert the canonical standalone output: one direct Git requirement."""
         dependencies = tu.Tests.toml_strings_at(rendered, "project", "dependencies")

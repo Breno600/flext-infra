@@ -846,6 +846,9 @@ _builtin_gen_init:
 _builtin_gen_all:
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode apply
 
+_builtin-bootstrap-candidate: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) codegen candidate-bootstrap --repository-root "$(PROJECT_ROOT)"
+
 # Structural rewrites have one selector-free public Make surface. The current
 # directory defines scope; callers never address ast-grep, Rope, or LSP directly.
 _builtin_mod_apply: _builtin_require_environment
