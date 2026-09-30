@@ -88,11 +88,11 @@ read-only — no verb repeats another verb's work across the canonical sequence
 | `canonical-alias`                 | read-only scan                     | —                       | declared import rewrite                    |
 | `smells` — qlty                   | read-only scan                     | —                       | —                                          |
 
-`make fmt` never runs a lint pass and `make fix` never runs the format-only gates:
-each operation runs once per verb. `rumdl check --fix` repairs fixable findings and
-returns a failing status for residual findings. A mutation that cannot complete its
-declared repair stays red before `make check`; on a green tree, repeated `make fix`
-and `make fmt` are no-ops.
+`make fmt` never runs a lint pass and `make fix` never runs the format-only gates: each
+operation runs once per verb. `rumdl check --fix` repairs fixable findings and returns a
+failing status for residual findings. A mutation that cannot complete its declared
+repair stays red before `make check`; on a green tree, repeated `make fix` and
+`make fmt` are no-ops.
 
 ## Information-preserving repair
 
