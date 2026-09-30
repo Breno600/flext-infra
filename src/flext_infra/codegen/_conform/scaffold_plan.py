@@ -59,7 +59,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             topology=m.Infra.PyprojectDeclaredTopology(
                 root_modules=project.root_modules,
                 root_packages=project.root_packages,
-                packaged_data_dirs=project.packaged_data_dirs,
+                packaged_data_paths=project.packaged_data_paths,
                 declared_python_dirs=tuple(
                     self._scaffold_python_dirs(codegen.templates.entries, profile)
                 ),

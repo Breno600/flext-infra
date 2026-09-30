@@ -8,6 +8,13 @@ Full notes: `docs/releases/v0.12.0.md`
 
 ## 0.12.0-dev (unreleased)
 
+- Distribution data is declared by `project.packaged_data_paths` in
+  `config/workspace.yaml`. Entries are repository-relative files or directories;
+  for example, `config/deployment.yaml` ships that catalog without its governance
+  siblings. Both wheel and sdist consume the same validated declaration. Missing,
+  escaping, overlapping or package-colliding inputs fail before publication.
+  Undeclared root directories are never included implicitly.
+
 - Integration tip `a2bd0a7262a0eab84bd7e4c27f8bdd10de0d247a`; superproject gitlink
   `676ae7aa3c7511ce3b133fdd31e43cfc49e7564f`.
 - Canonical cycle not green on the observed tip; `_lazy_analysis` scope mismatch and

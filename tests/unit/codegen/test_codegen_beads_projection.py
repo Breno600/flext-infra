@@ -8,6 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, config
+from flext_infra.codegen import FlextInfraCodegenConformBeadsRoutes
 from tests import u
 
 
@@ -287,3 +288,32 @@ class TestsFlextInfraCodegenBeadsProjection:
         _ = u.Tests.governed_project_plan(root)
 
         tm.that(identity.read_bytes(), eq=before)
+
+    def test_beads_gate_lock_is_tolerated_runtime_state(
+        self, tmp_path: Path
+    ) -> None:
+        """The bd gate serialization marker never fails composed verification.
+
+        The bd client writes ``dolt.gate.lock`` beside the ledger on every gate
+        transaction — the same projection class as ``.exclusive-lock`` and
+        ``.sync.lock``. A composed project whose member holds one (live or left
+        by a dead holder) must still verify; an actual stranger file must not.
+        """
+        route = tmp_path / c.Infra.BEADS_DIRNAME
+        route.mkdir(mode=0o700)
+        (route / Path(c.Infra.BEADS_CONFIG_RELPATH).name).write_text(
+            "{}\n", encoding="utf-8"
+        )
+        (route / "dolt.gate.lock").write_text("", encoding="utf-8")
+
+        state = FlextInfraCodegenConformBeadsRoutes.beads_route_state(tmp_path)
+
+        tm.that(state.failure, eq=False)
+        tm.that(state.value, eq=True)
+
+        (route / "stranger.txt").write_text("unexpected\n", encoding="utf-8")
+
+        broken = FlextInfraCodegenConformBeadsRoutes.beads_route_state(tmp_path)
+
+        tm.that(broken.failure, eq=True)
+        tm.that(broken.error is not None and "stranger.txt" in broken.error, eq=True)

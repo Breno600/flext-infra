@@ -8,7 +8,7 @@ from pathlib import Path
 from flext_core import r
 
 from ... import c, config, m, p, t, u
-from ...deps import FlextInfraEnsureRuffConfigPhase
+from ...deps import FlextInfraEnsurePackagingPhase, FlextInfraEnsureRuffConfigPhase
 from .pyproject_policy import FlextInfraCodegenConformPyprojectPolicy
 
 
@@ -300,18 +300,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             return r[m.Infra.ProjectRenderContext].fail(
                 "detected FLEXT line carries no provider base URL"
             )
-        # A data dir already shipped inside the package (``src/<pkg>/<dir>``)
-        # must not also be force-included from the repo root: both map to the
-        # same wheel path and hatchling rejects the duplicate archive entry.
-        # Force-include stays reserved for root data that the package does not
-        # already carry (mirrors the ensure-packaging phase rule).
-        package_root = repository_root / c.Infra.DEFAULT_SRC_DIR / project.package_name
-        packaged_data_dirs = (
-            tuple(
-                data_dir
-                for data_dir in dict.fromkeys(project.packaged_data_dirs)
-                if (repository_root / data_dir).is_dir()
-                and not (package_root / data_dir).is_dir()
+        packaged_data_paths = (
+            FlextInfraEnsurePackagingPhase.resolve_data_paths(
+                repository_root, project.package_name, project.packaged_data_paths
             )
             if profile is not c.Infra.MakeProfile.WORKSPACE
             else ()
@@ -369,7 +360,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 canonical_project_name=target.canonical_project_name,
                 const_name=project.constant_name,
                 package_name=project.package_name,
-                packaged_data_dirs=packaged_data_dirs,
+                packaged_data_paths=packaged_data_paths,
                 namespace_scan_dirs=project.namespace_scan_dirs,
                 workspace_integration=workspace.integration,
                 # NOTE (multi-agent, flext-get3j): carry only the validated

@@ -193,9 +193,9 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.StrTuple,
             m.Field(description="Top-level packages shipped beyond the primary one"),
         ] = ()
-        packaged_data_dirs: Annotated[
+        packaged_data_paths: Annotated[
             t.StrTuple,
-            m.Field(description="Repository-declared root data directories to ship"),
+            m.Field(description="Repository-declared relative data paths to ship"),
         ] = ()
         declared_python_dirs: Annotated[
             t.StrTuple, m.Field(description="Python roots declared for the project")

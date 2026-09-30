@@ -349,9 +349,9 @@ class FlextInfraConfigModelsContexts:
         package_name: Annotated[
             t.NonEmptyStr, m.Field(description="Python import package name")
         ]
-        packaged_data_dirs: Annotated[
+        packaged_data_paths: Annotated[
             t.StrSequence,
-            m.Field(description="Generated root data directories shipped in wheels"),
+            m.Field(description="Validated relative data paths shipped in distributions"),
         ]
         class_stem: Annotated[
             t.NonEmptyStr, m.Field(description="Public facade class stem")
@@ -627,11 +627,11 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
-        packaged_data_dirs: Annotated[
+        packaged_data_paths: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
                 default=(),
-                description="Repository-owned root directories shipped with the package",
+                description="Repository-relative data files and directories shipped with the package",
             ),
         ] = ()
         cli_module: Annotated[

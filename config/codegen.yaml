@@ -337,6 +337,7 @@ Infra:
 
     make:
       examples_timeout_seconds: 120
+      submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -503,7 +504,6 @@ Infra:
             - utilities
             - worktree
         mutable_actions: [fix, fmt]
-        warning_actions: [audit]
         reports_dir: .reports/docs
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:
@@ -575,6 +575,9 @@ Infra:
         - name: gen
           description: Regenerate every managed projection atomically.
           produces_activation: true
+        - name: bootstrap-candidate
+          description: Conform the sibling candidate worktree declared in this repository manifest.
+          profiles: [standalone]
         - name: initialize
           description: Materialize the declared package initializer graph.
         - name: mod

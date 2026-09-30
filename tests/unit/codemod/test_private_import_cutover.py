@@ -698,6 +698,30 @@ class TestsFlextInfraPrivateImportCutover:
         tm.that(updated, lacks=private_import)
         tm.that(updated, lacks="from flext_sample import m")
 
+    def test_same_owner_import_ignores_unrelated_installed_package(
+        self, tmp_path: Path, installed_dependency_path: Path
+    ) -> None:
+        """A local sibling import must not inspect an ambient namesake package."""
+        package_name = "local_imports"
+        installed = installed_dependency_path / package_name
+        installed.mkdir()
+        (installed / "__init__.py").write_text(
+            "from ..outside import Invalid\n", encoding="utf-8"
+        )
+        consumer_path = tmp_path / package_name / "utilities.py"
+        private_import = (
+            f"from {package_name}._utilities.base import LocalUtilitiesBase"
+        )
+        updated = self._updated_source(
+            tmp_path,
+            {consumer_path: f"{private_import}\n\nvalue = LocalUtilitiesBase\n"},
+            consumer_path,
+            private_import,
+        )
+
+        tm.that(updated, has="from ._utilities.base import LocalUtilitiesBase")
+        tm.that(updated, lacks=private_import)
+
     def test_relativizes_handwritten_package_initializer(self, tmp_path: Path) -> None:
         """Apply the same owner rule to handwritten ``__init__.py`` modules."""
         consumer_path = tmp_path / "flext-sample/src/flext_sample/_models/__init__.py"

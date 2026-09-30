@@ -142,10 +142,10 @@ packages = [
   {{ ("src/" ~ package) | tojson }},
 {% endfor %}
 ]
-{% if packaged_data_dirs or root_modules %}
+{% if packaged_data_paths or root_modules %}
 
 [tool.hatch.build.targets.wheel.force-include]
-{% for data_dir in packaged_data_dirs %}
+{% for data_dir in packaged_data_paths %}
 {{ data_dir | tojson }} = {{ (package_name ~ "/" ~ data_dir) | tojson }}
 {% endfor %}
 {% for module in root_modules %}
@@ -162,7 +162,7 @@ only-include = [
 {% for module in root_modules %}
   {{ ("src/" ~ module ~ ".py") | tojson }},
 {% endfor %}
-{% for data_dir in packaged_data_dirs %}
+{% for data_dir in packaged_data_paths %}
   {{ data_dir | tojson }},
 {% endfor %}
 ]

@@ -34,7 +34,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
 
     @staticmethod
     def _prepare_project(
-        root: Path, *, package_config: bool, packaged_data_dirs: tuple[str, ...] = ()
+        root: Path, *, package_config: bool, packaged_data_paths: tuple[str, ...] = ()
     ) -> None:
         """Materialize one governed project, optionally shipping in-package data."""
         _ = u.Tests.standalone_workspace(root, FIXTURE_DISTRIBUTION)
@@ -69,7 +69,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             root,
             FIXTURE_DISTRIBUTION,
             cli_module=False,
-            packaged_data_dirs=packaged_data_dirs,
+            packaged_data_paths=packaged_data_paths,
         )
         u.Tests.git_bootstrap(
             root,
@@ -131,7 +131,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         self._prepare_project(
             infra_git_repo,
             package_config=False,
-            packaged_data_dirs=(FIXTURE_DISTRIBUTION_DATA_DIR,),
+            packaged_data_paths=(FIXTURE_DISTRIBUTION_DATA_DIR,),
         )
 
         applied = self._conform_self(infra_git_repo)
@@ -170,7 +170,7 @@ class TestsFlextInfraCodegenPackagedDataWheel:
     ) -> None:
         """A project-owned IaC directory ships without a generator template row."""
         self._prepare_project(
-            infra_git_repo, package_config=False, packaged_data_dirs=("infra",)
+            infra_git_repo, package_config=False, packaged_data_paths=("infra",)
         )
         infrastructure = infra_git_repo / "infra" / "ansible" / "site.yml"
         tm.ok(u.Cli.atomic_write_text_file(infrastructure, "---\n- hosts: all\n"))
@@ -228,3 +228,55 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             in u.Tests.toml_list(wheel["packages"]),
             eq=True,
         )
+
+    @pytest.mark.slow
+    def test_declared_file_keeps_sibling_governance_out(
+        self, infra_git_repo: Path
+    ) -> None:
+        """One catalog file ships without its governance siblings."""
+        catalog = "config/deployment.yaml"
+        self._prepare_project(
+            infra_git_repo, package_config=False, packaged_data_paths=(catalog,)
+        )
+        tm.ok(u.Cli.atomic_write_text_file(infra_git_repo / catalog, "profiles: {}\n"))
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+        package_name = u.Tests.project_spec(FIXTURE_DISTRIBUTION).package_name
+        tm.that(self._wheel_force_include(infra_git_repo), eq={catalog: f"{package_name}/{catalog}"})
+        tm.that(catalog in self._sdist_only_include(infra_git_repo), eq=True)
+        tm.that("config" in self._sdist_only_include(infra_git_repo), eq=False)
+
+    @pytest.mark.slow
+    @pytest.mark.parametrize("declarations", [("../outside",), ("/absolute",), ("config", "config"), ("config", "config/workspace.yaml")])
+    def test_invalid_declaration_fails_before_effects(
+        self, infra_git_repo: Path, declarations: tuple[str, ...]
+    ) -> None:
+        """Escaping and overlapping archive inputs cannot mutate the manifest."""
+        self._prepare_project(
+            infra_git_repo, package_config=False, packaged_data_paths=declarations
+        )
+        before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
+        with pytest.raises(ValueError, match="packaged data"):
+            self._conform_self(infra_git_repo)
+        tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
+
+    @pytest.mark.slow
+    def test_missing_data_fails_before_effects(self, infra_git_repo: Path) -> None:
+        """A missing declared file cannot silently disappear from distributions."""
+        self._prepare_project(
+            infra_git_repo, package_config=False, packaged_data_paths=("absent/catalog.yaml",)
+        )
+        before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
+        with pytest.raises(FileNotFoundError, match="packaged data"):
+            self._conform_self(infra_git_repo)
+        tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
+
+    @pytest.mark.slow
+    def test_declared_collision_fails_before_effects(self, infra_git_repo: Path) -> None:
+        """Distinct roots cannot claim the same wheel destination."""
+        self._prepare_project(
+            infra_git_repo, package_config=True, packaged_data_paths=("config",)
+        )
+        before = (infra_git_repo / c.PYPROJECT_FILENAME).read_bytes()
+        with pytest.raises(ValueError, match="collides"):
+            self._conform_self(infra_git_repo)
+        tm.that((infra_git_repo / c.PYPROJECT_FILENAME).read_bytes(), eq=before)
