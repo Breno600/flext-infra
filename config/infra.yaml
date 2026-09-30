@@ -202,3 +202,13 @@ Infra:
   refactor_csv_campaigns:
     campaigns:
       - csv: rules/mod/renames/infra-dedup.csv
+        bindings:
+          t: [flext_infra.t]
+          c: [flext_infra.c]
+        python_documentation: true
+        text_globs:
+          - "**/*.md"
+          - "config/**/*.yaml"
+          - "config/**/*.yml"
+          - "src/**/*.j2"
+        exclude_globs: []

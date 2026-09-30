@@ -206,7 +206,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         )
 
     def _project_render_context(
-        self, render_inputs: m.Infra.CodegenRenderInputs, *, planned_data_files: t.StrSequence = ()
+        self,
+        render_inputs: m.Infra.CodegenRenderInputs,
+        *,
+        planned_data_files: t.StrSequence = (),
     ) -> p.Result[m.Infra.ProjectRenderContext]:
         """Build the complete typed context consumed by project templates."""
         target = render_inputs.target
@@ -302,7 +305,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             )
         packaged_data_paths = (
             FlextInfraEnsurePackagingPhase.resolve_data_paths(
-                repository_root, project.package_name, project.packaged_data_paths, planned_data_files
+                repository_root,
+                project.package_name,
+                project.packaged_data_paths,
+                planned_data_files,
             )
             if profile is not c.Infra.MakeProfile.WORKSPACE
             else m.Infra.PackagedDataSelection()
@@ -360,7 +366,10 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 canonical_project_name=target.canonical_project_name,
                 const_name=project.constant_name,
                 package_name=project.package_name,
-                packaged_data_paths=(*packaged_data_paths.files, *packaged_data_paths.directories),
+                packaged_data_paths=(
+                    *packaged_data_paths.files,
+                    *packaged_data_paths.directories,
+                ),
                 packaged_data_files=packaged_data_paths.files,
                 namespace_scan_dirs=project.namespace_scan_dirs,
                 workspace_integration=workspace.integration,
