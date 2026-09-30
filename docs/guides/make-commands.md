@@ -72,6 +72,12 @@ rules this repository owns from their tests, prints every created, updated or re
 snapshot, and leaves the diff for review in the same commit as the rule change.
 Inherited rule providers keep the snapshots their owner ships.
 
+For private imports, `make mod` first resolves whether the importing file and
+target module share an owner. Same-owner imports become relative imports without
+inspecting an installed package with the same top-level name. Only cross-owner
+imports require installed public-facade discovery; invalid relative imports in
+that dependency remain errors.
+
 ## Verb single-pass contract
 
 Each mutating verb owns exactly one operation per tool, and `make check` is strictly
