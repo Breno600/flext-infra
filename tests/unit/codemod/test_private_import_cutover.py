@@ -13,18 +13,26 @@ from flext_infra import c, infra, m, p, t, u
 class TestsFlextInfraPrivateImportCutover:
     """Exercise private-import automation only through ``u.Infra``."""
 
-    def test_unrelated_installed_module_cannot_block_a_public_cutover(
-        self, tmp_path: Path, installed_dependency_path: Path
+    @pytest.mark.parametrize("bad_source_reachable", [False, True])
+    def test_installed_import_validation_follows_public_reachability(
+        self,
+        tmp_path: Path,
+        installed_dependency_path: Path,
+        *,
+        bad_source_reachable: bool,
     ) -> None:
-        """Discover only modules that can expose the requested private symbol."""
+        """An invalid import blocks only a cutover that reaches its module."""
         consumer, statement, facade_sources = self._facade_case(
             tmp_path, "constants", "profile", "Profile", "c"
         )
         package = installed_dependency_path / "flext_sample"
         package.mkdir()
         (package / "__init__.py").write_text("", encoding="utf-8")
+        invalid_import = "from ..outside import Invalid\n"
+        facade_source = next(iter(facade_sources.values()))
         (package / "constants.py").write_text(
-            next(iter(facade_sources.values())), encoding="utf-8"
+            facade_source + (invalid_import if bad_source_reachable else ""),
+            encoding="utf-8",
         )
         private = package / "_constants/profile.py"
         private.parent.mkdir()
@@ -32,19 +40,23 @@ class TestsFlextInfraPrivateImportCutover:
             "class FlextSampleConstantsProfile:\n    Value = str\n", encoding="utf-8"
         )
         unrelated = package / "unrelated.py"
-        unrelated.write_text("from ..outside import Invalid\n", encoding="utf-8")
+        unrelated.write_text(invalid_import, encoding="utf-8")
         sources = {
             consumer: f"{statement}\nprofile = FlextSampleConstantsProfile.Value\n"
         }
 
+        if bad_source_reachable:
+            tm.fail(
+                self._plan(tmp_path, sources, consumer, statement),
+                has="attempted relative import beyond top-level package",
+            )
+            return
         edits = self._edits(tmp_path, sources, consumer, statement)
 
         tm.that(tuple(edit.file_path for edit in edits), eq=(consumer,))
         tm.that(edits[0].updated_source, has="from flext_sample import c")
         tm.that(edits[0].updated_source, has="profile = c.Profile.Value")
-        tm.that(
-            unrelated.read_text(encoding="utf-8"), eq="from ..outside import Invalid\n"
-        )
+        tm.that(unrelated.read_text(encoding="utf-8"), eq=invalid_import)
 
     @pytest.mark.parametrize("case", ["unique", "ambiguous", "shadowed"])
     @pytest.mark.parametrize("depth", [0, 2])
