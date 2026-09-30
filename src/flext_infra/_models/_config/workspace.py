@@ -57,10 +57,8 @@ class FlextInfraConfigModelsWorkspace:
                 raise ValueError(msg)
             return self
 
-    CandidateBootstrapTargets = t.VariadicTuple[
-        "FlextInfraConfigModelsWorkspace.CandidateBootstrapTargetSpec"
-    ]
-    "Shared declaration type for repeated candidate worktree target fields."
+    type CandidateBootstrapTargets = t.VariadicTuple[CandidateBootstrapTargetSpec]
+    """Shared declaration type for repeated candidate worktree target fields."""
 
     class WorkspaceBeadsServerSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Optional Dolt connection declared by a versioned workspace manifest."""
