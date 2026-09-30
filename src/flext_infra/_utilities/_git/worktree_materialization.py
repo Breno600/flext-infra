@@ -108,11 +108,7 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
 
     @classmethod
     def _apply_captured_patch(
-        cls,
-        worktree_repo: Repo,
-        patch: bytes,
-        *,
-        index: bool,
+        cls, worktree_repo: Repo, patch: bytes, *, index: bool
     ) -> None:
         """Apply one captured patch; staged state lands in the index.
 
@@ -145,9 +141,9 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             staged_bytes = repo.git.diff(
                 "--binary", "--cached", "--", ".", *pathspecs
             ).encode(c.Cli.ENCODING_DEFAULT)
-            unstaged_bytes = repo.git.diff(
-                "--binary", "--", ".", *pathspecs
-            ).encode(c.Cli.ENCODING_DEFAULT)
+            unstaged_bytes = repo.git.diff("--binary", "--", ".", *pathspecs).encode(
+                c.Cli.ENCODING_DEFAULT
+            )
         except GitCommandError as exc:
             return r[bool].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:

@@ -28,9 +28,7 @@ class TestsFlextInfraGitCopyWorktreeState:
         # The real use case copies into a linked worktree of the same
         # repository, so the target shares the source baseline (HEAD).
         target = tmp_path / "target"
-        git_ui.git_bootstrap(
-            source, ("worktree", "add", "-b", "target", str(target))
-        )
+        git_ui.git_bootstrap(source, ("worktree", "add", "-b", "target", str(target)))
         tm.ok(u.Infra.git_copy_worktree_state(source, target))
 
         source_status = git_ui.git_capture(source, "status", "--porcelain")
