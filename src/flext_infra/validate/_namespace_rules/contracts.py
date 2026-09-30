@@ -93,7 +93,7 @@ class FlextInfraNamespaceRulesContracts(FlextInfraNamespaceRulesBase):
         cls, node: p.AttributeProbe, filepath: Path
     ) -> t.StrSequence:
         """Reject broad and legacy annotation vocabulary."""
-        annotations: list[object] = []
+        annotations: list[p.AttributeProbe] = []
         if cls.kind(node) == "AnnAssign" or cls.kind(node) == "arg":
             annotations.append(getattr(node, "annotation", None))
         else:
