@@ -25,13 +25,16 @@ class FlextInfraEnsurePyrightConfigPhase:
         *,
         rules: m.Infra.PyrightConfig.PathRulesConfig | None = None,
     ) -> str:
-        """Only ``source_dir`` (src/) is strict; all auto-discovered dirs relax."""
+        """Apply the configured privacy policy for each declared root category."""
         effective_rules = rules or self._tool_config.tools.pyright.path_rules
         if env_dir == effective_rules.source_dir:
             source_report: str = effective_rules.source_report_private_usage
             return source_report
-        test_report: str = effective_rules.test_like_report_private_usage
-        return test_report
+        if env_dir in effective_rules.test_like_dirs:
+            test_report: str = effective_rules.test_like_report_private_usage
+            return test_report
+        other_report: str = effective_rules.other_report_private_usage
+        return other_report
 
     def _env_entry(
         self,

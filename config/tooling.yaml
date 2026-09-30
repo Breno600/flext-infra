@@ -232,6 +232,7 @@ Infra:
               "Use flext_cli.cli application, registration, execution, and invocation\
               \ methods."
             rich: "Use cli.print / cli.display_message / cli.render_panel / cli.render_table."
+            tabulate: "Use cli.render_table from flext_cli."
             typer: "Use cli.create_app_with_common_params / cli.register_command from flext_cli."
           ignore:
             - ambiguous-unicode-character-comment
@@ -493,15 +494,13 @@ Infra:
             - "**/site-packages/**"
             - "**/dist-packages"
             - "**/dist-packages/**"
-            - "**/tests/fixtures"
-            - "**/tests/fixtures/**"
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
           diagnostic-path-overrides: []
           source-report-private-usage: error
-          test-like-report-private-usage: "none"
-          other-report-private-usage: "none"
+          test-like-report-private-usage: error
+          other-report-private-usage: error
       coverage:
         source: [src]
         show-missing: true

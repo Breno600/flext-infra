@@ -89,8 +89,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
             # existing integration-harness budget, not the default case budget.
             pytest.param("deadline", 124, marks=pytest.mark.slow),
             # Darwin's supervisor samples group RSS and stops it (137); Linux
-            # prlimit makes the allocation fail inside the process (exit 1).
-            ("memory", (137 if sys.platform == "darwin" else 1)),
+            # prlimit makes the plugin allocation raise MemoryError; Mypy's
+            # console_entry reports that fatal checker error with exit 2.
+            ("memory", (137 if sys.platform == "darwin" else 2)),
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
@@ -110,7 +111,13 @@ class TestsFlextInfraUtilitiesResourceLimits:
             source += "sys.exit(7)"
         else:
             if scenario == "memory":
-                source += f"allocation = bytearray({limit.memory_limit_bytes * 2}); "
+                source += (
+                    "\ntry:\n"
+                    f"    allocation = bytearray({limit.memory_limit_bytes * 2})\n"
+                    "except MemoryError:\n"
+                    "    print('allocation-denied: MemoryError', file=sys.stderr, flush=True)\n"
+                    "    raise\n"
+                )
             source += f"time.sleep({limit.timeout_seconds + 1})"
         result = u.Cli.run_raw(
             u.Infra.mypy_limited_command(
@@ -124,7 +131,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         if scenario == "memory":
             tm.that(
                 result.value.stderr,
-                has="RSS limit reached" if sys.platform == "darwin" else "MemoryError",
+                has="RSS limit reached"
+                if sys.platform == "darwin"
+                else "allocation-denied: MemoryError",
             )
 
     @pytest.mark.slow
