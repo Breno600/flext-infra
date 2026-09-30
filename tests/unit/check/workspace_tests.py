@@ -65,12 +65,23 @@ class TestsFlextInfraWorkspaceChecker:
         tm.that(result.error, is_=str)
         tm.that(result.error, has="Use execute_command() directly")
 
-    def test_cli_returns_error_without_discovered_projects(
-        self, tmp_path: Path
+    @pytest.mark.parametrize("declared_member", [False, True])
+    def test_cli_rejects_nonproject_root_without_selecting_members(
+        self,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+        *,
+        declared_member: bool,
     ) -> None:
-        """Test that check run fails when a workspace has no projects."""
+        """An invalid current root never widens an omitted selection to members."""
+        if declared_member:
+            member, _package = test_u.Tests.demo_project(tmp_path, name="member")
+            test_u.Tests.declare_workspace_projects(tmp_path, (member.name,))
+        test_u.Tests.initialize_git_repo(tmp_path)
         exit_code = main(["check", "run", "--repository-root", str(tmp_path)])
         tm.that(exit_code, eq=1)
+        captured = capsys.readouterr()
+        assert "unknown projects: ." in captured.out + captured.err
 
     def test_cli_requires_explicit_member_selection(self, tmp_path: Path) -> None:
         """An omitted selection checks only the repository root."""
@@ -93,10 +104,7 @@ class TestsFlextInfraWorkspaceChecker:
             '"""Fixture module."""\n\nvalue = 1\n', encoding="utf-8"
         )
         test_u.Tests.declare_workspace_projects(tmp_path, (project_dir.name,))
-        init_result = cli_u.Cli.run_raw(["git", "init"], cwd=tmp_path)
-        add_result = cli_u.Cli.run_raw(["git", "add", "flext-core"], cwd=tmp_path)
-        tm.ok(init_result)
-        tm.ok(add_result)
+        test_u.Tests.initialize_git_repo(tmp_path)
 
         implicit_exit_code = main([
             "check",
