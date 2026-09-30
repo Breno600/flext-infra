@@ -7,6 +7,7 @@ from pathlib import Path
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
+from ..extra_paths import FlextInfraExtraPathsManager
 from .tool_tables import FlextInfraToolTablesPhase
 
 
@@ -22,7 +23,9 @@ class FlextInfraEnsureRuffConfigPhase:
         """Store tool configuration used to build canonical Ruff settings."""
         self._tool_config = tool_config
         self._managed_artifacts = managed_artifacts
-        self._generated_roots = tuple(generated_roots)
+        # Source roots the active generation plan is materializing but that
+        # are not on disk yet; empty means on-disk truth only.
+        self._generated_roots = frozenset(generated_roots)
 
     @staticmethod
     def _workspace_project_namespaces(project_dir: Path) -> t.StrSequence:
@@ -64,7 +67,7 @@ class FlextInfraEnsureRuffConfigPhase:
         return sorted(path.as_posix() for path in paths.value)
 
     @staticmethod
-    def _excluded_root_set(project_dir: Path) -> t.Infra.StrSet:
+    def _excluded_root_set(project_dir: Path) -> frozenset[str]:
         """First segments of the workspace SSOT's declared analysis exclusions.
 
         Unlike a disk probe (which oscillates between the deps pass and the
@@ -73,9 +76,13 @@ class FlextInfraEnsureRuffConfigPhase:
         projection converges.
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return set()
+            return frozenset()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        return {p.parts[0] for p in paths.unwrap() if Path(p).parts}
+        if paths.failure:
+            raise ValueError(
+                paths.error or "workspace analysis exclusions are unavailable"
+            )
+        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
     @staticmethod
     def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
@@ -83,7 +90,11 @@ class FlextInfraEnsureRuffConfigPhase:
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
             return ()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        return tuple(path.as_posix() for path in paths.unwrap())
+        if paths.failure:
+            raise ValueError(
+                paths.error or "workspace analysis exclusions are unavailable"
+            )
+        return tuple(path.as_posix() for path in paths.value)
 
     @staticmethod
     def compose_per_file_ignores(
@@ -180,12 +191,14 @@ class FlextInfraEnsureRuffConfigPhase:
         # it: ruff fails hard on src roots whose directories do not exist, and
         # the namespace-packages contract only holds for roots on disk. The
         # declared lists stay the SSOT; existence filters the projection, with
-        # roots the active plan is materializing accepted as present.
+        # roots the active plan is materializing accepted as present (the
+        # extra-paths manager owns that set; empty in the deps pass).
+        generated_roots = FlextInfraExtraPathsManager(
+            repository_root=path.parent
+        ).generated_python_roots
 
         def _present(directory: str) -> bool:
-            return (path.parent / directory).is_dir() or (
-                directory in self._generated_roots
-            )
+            return (path.parent / directory).is_dir() or (directory in generated_roots)
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
         excluded_roots = self._excluded_root_set(path.parent)

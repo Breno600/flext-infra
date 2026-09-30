@@ -343,6 +343,10 @@ Infra:
               - unused-import
 
       mypy:
+        # Project wall-time budget for the bounded Mypy execution (SSOT;
+        # MYPY_TIMEOUT_SECONDS env overrides at the ingress boundary). The
+        # infra's own whole-program cold run fits the default.
+        timeout_seconds: 120
         # The returns plugin types p.Result: without it every Result.value /
         # .map boundary resolves to Any and consumers flood with
         # no-any-return (proven by assert_type on 2026-09-23); its removal
@@ -674,12 +678,17 @@ Infra:
         # invocation; in-flight cases may report after the stop, which the
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
-          cosmos-docgen: 4
+          cosmos-docgen:
+            workers: 4
           # flext-itpd1.3.7 measurement: raising this ceiling above 4 measurably
           # regressed the cold run (16 workers lost one to an early death and
           # executed fewer tests before the fixed deadline than 4), so the
           # declared ceiling stays at the measured incumbent.
-          flext-infra: 4
+          flext-infra:
+            workers: 4
+          # CPU-fraction ceilings (cpu_fraction: "n/d", e.g. algar-oud-mig: 1/4)
+          # resolve at runtime against the process CPU count; consumers declare
+          # them here when their suite budget is a share of the host.
         # Reserve physical memory for each xdist worker and its child process
         # tree; this bound may reduce the tested ceiling on smaller hosts.
         parallel-worker-memory-gb: 2

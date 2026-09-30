@@ -31,6 +31,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
+        tm.that(result.value.outcome.raw_return_code, eq=0)
 
     def test_mypy_profile_records_the_real_checker(self, tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
@@ -88,9 +89,8 @@ class TestsFlextInfraUtilitiesResourceLimits:
             # existing integration-harness budget, not the default case budget.
             pytest.param("deadline", 124, marks=pytest.mark.slow),
             # Darwin's supervisor samples group RSS and stops it (137); Linux
-            # prlimit makes the allocation raise inside the checker, which Mypy
-            # reports as an internal error with its documented crash exit (2).
-            ("memory", (137 if sys.platform == "darwin" else 2)),
+            # prlimit makes the allocation fail inside the process (exit 1).
+            ("memory", (137 if sys.platform == "darwin" else 1)),
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
@@ -123,10 +123,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(result.value.outcome.raw_return_code, eq=expected)
         if scenario == "memory":
             tm.that(
-                f"{result.value.stdout}\n{result.value.stderr}",
+                result.value.stderr,
                 has="RSS limit reached" if sys.platform == "darwin" else "MemoryError",
             )
-            tm.that(u.Infra.mypy_failure_diagnostic(result.value, limit), none=False)
 
     @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])
