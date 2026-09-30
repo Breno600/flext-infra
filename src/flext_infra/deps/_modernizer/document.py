@@ -257,6 +257,7 @@ class FlextInfraPyprojectModernizerDocument:
                 root_modules=topology.root_modules,
                 root_packages=topology.root_packages,
                 packaged_data_paths=topology.packaged_data_paths,
+                planned_data_files=topology.planned_data_files,
             ),
         ]
         if paths_manager is not None:
