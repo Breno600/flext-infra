@@ -57,6 +57,11 @@ class FlextInfraConfigModelsWorkspace:
                 raise ValueError(msg)
             return self
 
+    CandidateBootstrapTargets = t.VariadicTuple[
+        "FlextInfraConfigModelsWorkspace.CandidateBootstrapTargetSpec"
+    ]
+    "Shared declaration type for repeated candidate worktree target fields."
+
     class WorkspaceBeadsServerSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Optional Dolt connection declared by a versioned workspace manifest."""
 
@@ -205,9 +210,7 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Candidate-only exact dependency Git sources"),
         ] = ()
         candidate_bootstrap_targets: Annotated[
-            t.VariadicTuple[
-                FlextInfraConfigModelsWorkspace.CandidateBootstrapTargetSpec
-            ],
+            FlextInfraConfigModelsWorkspace.CandidateBootstrapTargets,
             m.Field(description="Declared candidate worktrees conformed by Infra"),
         ] = ()
         repository_policy_overlays: Annotated[
@@ -335,9 +338,7 @@ class FlextInfraConfigModelsWorkspace:
             m.Field(description="Candidate-only exact dependency Git sources"),
         ] = ()
         candidate_bootstrap_targets: Annotated[
-            t.VariadicTuple[
-                FlextInfraConfigModelsWorkspace.CandidateBootstrapTargetSpec
-            ],
+            FlextInfraConfigModelsWorkspace.CandidateBootstrapTargets,
             m.Field(description="Declared candidate worktrees for bootstrap"),
         ] = ()
         subprojects: Annotated[
