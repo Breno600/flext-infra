@@ -6,6 +6,7 @@
 - [Registrar antes de ampliar o trabalho](#registrar-antes-de-ampliar-o-trabalho)
 - [Reconciliar decisões com seus responsáveis](#reconciliar-decisoes-com-seus-responsaveis)
 - [Diferenciar checkpoint de conclusão](#diferenciar-checkpoint-de-conclusao)
+- [Bounded Mypy failure status](#bounded-mypy-failure-status)
 - [Abstraction-boundary project identity](#abstraction-boundary-project-identity)
 - [Codemod scanner contract](#codemod-scanner-contract)
 
@@ -240,13 +241,15 @@ declarar fechamento funcional.
 
 ## Bounded Mypy failure status
 
-The Linux Mypy command applies `prlimit` before launching the checker. If a plugin
-exhausts the address-space limit, Mypy may catch the allocation failure and report an
-`INTERNAL ERROR` with exit status 2. Status 1 denotes type-checking findings, so the
-resource test must preserve the raw status and stderr instead of rewriting them into a
-synthetic `MemoryError` or treating the run as a successful check. The Darwin supervisor
-can instead terminate a process whose resident memory exceeds its limit. See the
-[Mypy exit-status contract](https://github.com/python/mypy/issues/14615).
+The Linux Mypy command applies `prlimit` before launching the checker. In the observed
+Mypy 2.3.1 run, an exhausted plugin allocation produced `INTERNAL ERROR` and exit status
+2;
+[the tagged Mypy source](https://github.com/python/mypy/blob/v2.3.1/mypy/main.py#L167-L174)
+assigns status 2 to blocking internal errors. This is version-specific behavior, not a
+fixed expectation for later Mypy releases. The resource test requires the workload to
+start, then a nonzero raw status and a diagnostic without a timeout; it never rewrites
+the result into a synthetic `MemoryError` or success. The Darwin supervisor can instead
+terminate a process whose resident memory exceeds its limit.
 
 ## Abstraction-boundary project identity
 
