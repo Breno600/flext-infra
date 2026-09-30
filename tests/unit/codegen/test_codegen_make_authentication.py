@@ -39,7 +39,11 @@ class TestsFlextInfraCodegenMakeAuthentication:
             '"$(EXPECTED_CREDENTIAL)"\n',
             encoding="utf-8",
         )
-        selected = "fixture-gh-token" if credential_source == "GH_TOKEN" else "fixture-github-token"
+        selected = (
+            "fixture-gh-token"
+            if credential_source == "GH_TOKEN"
+            else "fixture-github-token"
+        )
         process = tm.ok(
             u.Tests.run_isolated_make(
                 ["--no-print-directory", "status"],
@@ -47,7 +51,8 @@ class TestsFlextInfraCodegenMakeAuthentication:
                 env={
                     "GH_TOKEN": selected if credential_source == "GH_TOKEN" else "",
                     "GITHUB_TOKEN": "invalid-lower-precedence-token"
-                    if credential_source == "GH_TOKEN" else selected,
+                    if credential_source == "GH_TOKEN"
+                    else selected,
                     "EXPECTED_CREDENTIAL": selected,
                     "MISE_GITHUB_TOKEN": "stale-token-must-not-reach-mise",
                 },
@@ -88,12 +93,16 @@ class TestsFlextInfraCodegenMakeAuthentication:
         )
         if verb in {"setup", "upg"}:
             tm.that(process.outcome.raw_return_code, ne=0)
-            tm.that(process.stderr, has="GitHub credential is absent for network bootstrap")
+            tm.that(
+                process.stderr, has="GitHub credential is absent for network bootstrap"
+            )
             tm.that(process.stderr, lacks="missing or empty")
             tm.that(process.stderr, lacks="mise.version")
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
-        tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=verb == "status")
+        tm.that(
+            u.Infra.runtime_environment_dir(project_root).exists(), eq=verb == "status"
+        )
 
     @pytest.mark.remote
     def test_invalid_explicit_token_fails_at_the_native_mise_backend(
