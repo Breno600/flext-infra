@@ -765,6 +765,11 @@ class FlextInfraWorkspaceDetector(
                     if declared_manifest.value
                     else ()
                 ),
+                candidate_bootstrap_targets=(
+                    declared_manifest.value[0].candidate_bootstrap_targets
+                    if declared_manifest.value
+                    else ()
+                ),
                 subprojects=subprojects,
                 external_dependency_paths=external,
             )

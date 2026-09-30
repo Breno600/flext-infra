@@ -83,6 +83,17 @@ that explicit contract, avoiding host-interpreter marker evaluation.
 
 ## Candidate dependency commits
 
+An Infra integration lane can bootstrap declared candidate worktrees with
+`make bootstrap-candidate`. Its handwritten `config/workspace.yaml` lists
+`candidate_bootstrap_targets`, each with a relative `path` and a typed `what` from the
+conform surface catalog. Use `what: makefile` when the consumer still needs `make setup`
+to provision its environment or Git submodules; use `what: all` only when those inputs
+are already present. The verb uses the current branch-matched Infra generator, validates
+that every target is an exact Git worktree root, and runs the ordinary atomic conform
+transaction for each declared surface. A missing target or a failed conform stops the
+invocation. After Makefile bootstrap, run `make setup` and `make gen` in that consumer's
+worktree. The generated target Makefile and other projections are never edited directly.
+
 A dedicated integration worktree may stage exact supplier commits in its handwritten
 `config/workspace.yaml` under `candidate_dependencies`. Each entry declares the
 distribution, its canonical HTTPS Git URL, and the full commit OID. This is a tracked,
