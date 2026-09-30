@@ -24,3 +24,23 @@ repository:
   editable: true
   read_only: false
 members: []
+
+project:
+  package_name: flext_infra
+  class_stem: FlextInfra
+  namespace: Infra
+  constant_name: flext-infra
+  namespace_attribute: infra
+  alias: infra
+  environment_prefix: FLEXT_INFRA_
+  description: FLEXT Infrastructure Tooling - Build automation, code generation, and workspace management
+  license: MIT
+  author_name: FLEXT Team
+  author_email: team@flext.sh
+  upstream: flext_cli
+  homepage: https://github.com/flext-sh/flext-infra
+  documentation: https://github.com/flext-sh/flext-infra/blob/main/README.md
+  repository_root_rel: .
+  year: 2026
+  packaged_data_paths:
+    - config
