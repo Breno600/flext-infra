@@ -176,6 +176,12 @@ class FlextInfraRopeFixerAdapter(FlextInfraFixerAdapter):
         first_part = relative_parts[0]
         if first_part == "_constants":
             return ""
+        if file_path.name in c.Infra.PLACEMENT_CANONICAL_CONSTANTS_FILES:
+            # A canonical constants.py facade relocates into the package-root
+            # _constants module — the same target the census route derives
+            # (_census_apply._derive_constants_module); a domain-scoped
+            # pkg._constants.constants module does not exist.
+            return f"{package_name}._constants"
         if first_part.startswith("_"):
             if (
                 len(relative_parts)

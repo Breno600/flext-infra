@@ -50,10 +50,18 @@ make test
 make build
 ```
 
-The consecutive generation passes prove the fixed point after structural rewrites.
+The consecutive generation passes prove the fixed point after structural rewrites. The
+first pass derives Ruff source roots from the declared template outputs, including test
+directories it will create, so the verification pass sees the same topology.
 `make build` packages the validated candidate; it does not replace runtime verification.
 Each verb executes its declared operation directly. No project, file, pattern, action,
-phase, fix, or changed-only selector may be attached to a standard verb.
+phase, fix, or changed-only selector may be attached to a standard verb. When
+`make setup` initializes an absent governed submodule, it uses the explicit GitHub
+credential selected by the root Make contract in a Git credential helper scoped to that
+invocation. The token stays in the process environment, outside command arguments and
+logs. `make.submodule_timeout_seconds` in `config/codegen.yaml` bounds the clone; a
+timed-out or incomplete checkout fails the verb. Existing submodule worktrees are
+validated without fetching or rewriting them.
 
 `make help` is the complete live inventory. Additional declared verbs such as `upg`,
 `docs`, `audit`, `status`, `waza`, `duplication`, and the release verbs retain their own
@@ -74,6 +82,12 @@ fails the verb instead of being accepted as the new expectation.
 rules this repository owns from their tests, prints every created, updated or removed
 snapshot, and leaves the diff for review in the same commit as the rule change.
 Inherited rule providers keep the snapshots their owner ships.
+
+For private imports, `make mod` first resolves whether the importing file and target
+module share an owner. Same-owner imports become relative imports without inspecting an
+installed package with the same top-level name. Only cross-owner imports require
+installed public-facade discovery; invalid relative imports in that dependency remain
+errors.
 
 ## Verb single-pass contract
 
@@ -160,6 +174,10 @@ reported as tests passed. The full phase must execute its complete nonempty inve
 The root dispatcher resolves workspace scope from its typed topology. Generated Make
 surfaces and documentation are changed at their template or configuration owner, then
 regenerated with `make gen`.
+
+When conformance selects multiple repositories, lazy initializer planning opens each
+repository in its own Rope workspace. Conformance combines their authenticated file
+plans into one transaction receipt and verifies the selected publications together.
 
 ## Related guides
 

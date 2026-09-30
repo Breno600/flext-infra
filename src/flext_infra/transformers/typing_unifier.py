@@ -3,11 +3,13 @@
 Only concrete-syntax type positions participate. Imported aliases and builtin names
 are resolved in their lexical scope; Literal values and Annotated metadata are data.
 Broad Any/object annotations retain their original consumer contract and findings.
+Container parameters widen only when every lexical use is a supported read or a
+proven direct alias. Escapes, destructuring, concrete methods and unknown uses retain
+their declared contract. Container element types never inherit the outer proof.
 """
 
 from __future__ import annotations
 
-import ast
 from typing import TYPE_CHECKING, override
 
 import libcst as cst
@@ -23,6 +25,7 @@ from flext_infra import c, t, u
 
 from ._canonical_t_import import FlextInfraEnsureCanonicalTImportMixin
 from ._import_facades import FlextInfraRefactorImportFacades
+from ._typing_mutation import FlextInfraTypingMutation
 from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
 from .rope_transformer import FlextInfraRopeTransformer
 
@@ -45,10 +48,10 @@ class FlextInfraRefactorTypingUnifier(
         def __init__(
             self,
             canonical_map: t.MappingKV[frozenset[str], str],
-            mutated: frozenset[str],
+            readonly: frozenset[str],
         ) -> None:
             self.canonical_map = canonical_map
-            self.mutated = mutated
+            self.readonly = readonly
             self.changes: list[str] = []
             self.requires_t = False
             self.facades = FlextInfraRefactorImportFacades()
@@ -83,9 +86,16 @@ class FlextInfraRefactorTypingUnifier(
             self, original_node: cst.Annotation, updated_node: cst.Annotation
         ) -> cst.Annotation:
             parent = self.get_metadata(ParentNodeProvider, original_node)
-            widen = (
-                isinstance(parent, cst.Param) and parent.name.value not in self.mutated
-            )
+            widen = False
+            if isinstance(parent, cst.Param):
+                scope = self.get_metadata(ScopeProvider, parent.name)
+                if not isinstance(scope, Scope):
+                    msg = "parameter annotation has no lexical scope"
+                    raise TypeError(msg)
+                bindings = frozenset(
+                    name.name for name in scope.get_qualified_names_for(parent.name)
+                )
+                widen = bool(bindings) and bindings.issubset(self.readonly)
             return updated_node.with_changes(
                 annotation=self._expression(original_node.annotation, widen=widen)
             )
@@ -143,9 +153,11 @@ class FlextInfraRefactorTypingUnifier(
         self.changes.clear()
         if self._is_definition_file:
             return source, list(self.changes)
-        module = ast.parse(source)
-        visitor = self._Annotations(self._canonical_map, self._mutated_names(module))
-        updated = MetadataWrapper(cst.parse_module(source)).visit(visitor).code
+        wrapper = MetadataWrapper(cst.parse_module(source))
+        mutations = FlextInfraTypingMutation()
+        wrapper.visit(mutations)
+        visitor = self._Annotations(self._canonical_map, mutations.readonly_bindings())
+        updated = wrapper.visit(visitor).code
         changes = list(visitor.changes)
         if visitor.requires_t:
             module_name = self.canonical_import_module(self._file_path)
@@ -168,56 +180,6 @@ class FlextInfraRefactorTypingUnifier(
         for change in changes:
             self._record_change(change)
         return updated, list(self.changes)
-
-    @staticmethod
-    def _mutated_names(module: ast.Module) -> frozenset[str]:
-        """Keep concrete container capabilities for parameters mutated in place."""
-        mutating_methods = frozenset({
-            "append",
-            "extend",
-            "insert",
-            "pop",
-            "popitem",
-            "remove",
-            "setdefault",
-            "sort",
-            "update",
-            "clear",
-        })
-        names: set[str] = set()
-        for node in ast.walk(module):
-            if isinstance(node, ast.Assign):
-                for target in node.targets:
-                    if isinstance(target, ast.Subscript):
-                        names.update(
-                            FlextInfraRefactorTypingUnifier._mutated_root(target.value)
-                        )
-            elif isinstance(node, ast.AugAssign):
-                names.update(FlextInfraRefactorTypingUnifier._mutated_root(node.target))
-            elif isinstance(node, ast.Delete):
-                for target in node.targets:
-                    if isinstance(target, ast.Subscript):
-                        names.update(
-                            FlextInfraRefactorTypingUnifier._mutated_root(target.value)
-                        )
-            elif (
-                isinstance(node, ast.Call)
-                and isinstance(node.func, ast.Attribute)
-                and node.func.attr in mutating_methods
-            ):
-                names.update(
-                    FlextInfraRefactorTypingUnifier._mutated_root(node.func.value)
-                )
-        return frozenset(names)
-
-    @staticmethod
-    def _mutated_root(node: ast.expr) -> frozenset[str]:
-        """Resolve the declared name reached by a direct mutation target."""
-        if isinstance(node, ast.Name):
-            return frozenset({node.id})
-        if isinstance(node, ast.Attribute):
-            return frozenset({node.attr})
-        return frozenset()
 
     @staticmethod
     def _is_typing_definition_file(file_path: Path | None) -> bool:

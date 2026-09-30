@@ -280,7 +280,7 @@ class TestsFlextInfraModTextGateEngine:
         tm.ok(u.Cli.ensure_dir(package_dir))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                package_dir / "frozen.py", "LEGACY_PIN = '2026.8.14'\n"
+                package_dir / "frozen.py", "LEGACY_PIN = '2026.9.17'\n"
             )
         )
         tm.ok(

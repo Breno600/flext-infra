@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import override
 
@@ -58,7 +59,7 @@ class FlextInfraUtilitiesSemanticTestHelpers(
         if not candidates:
             return ()
         working = dict(sources)
-        changes: dict[Path, list[str]] = {}
+        changes: MutableMapping[Path, list[str]] = {}
         for path in candidates:
             while True:
                 project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
