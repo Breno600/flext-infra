@@ -6,6 +6,7 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import override
 
+from flext_core import c as core_c
 from flext_core import r
 from flext_infra import c, m, p, t, u
 
@@ -61,7 +62,7 @@ class FlextInfraDependencyDetectionService(FlextInfraDependencyDetectionAnalysis
                 if raw_value is None:
                     normalized_item[key] = ""
                     continue
-                if isinstance(raw_value, c.PRIMITIVES_TYPES):
+                if isinstance(raw_value, core_c.PRIMITIVES_TYPES):
                     normalized_item[key] = raw_value
             error_obj = item.get(c.Infra.ERROR)
             if not isinstance(error_obj, Mapping):
