@@ -19,11 +19,9 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
 
     gate_id: ClassVar[str] = c.Infra.MARKDOWN
     gate_name: ClassVar[str] = "Markdown"
-    # flext-38p39: the linter flags MD009/MD012 and friends with its own `[*]`
-    # auto-fixable marker, so `make check` blocked on findings that no canonical
-    # verb could repair -- `make fmt` covers Python only and `make fix
-    # ` skipped this gate, both exiting 0. The tool supports `--fix`, so
-    # the gate offers it and the canonical sequence can reach green.
+    # Fixable findings are repaired by the native linter. Its exit status also
+    # reports findings that remain after repair, so the mutating verb cannot
+    # report success while the read-only gate would still fail.
     can_fix: ClassVar[bool] = True
 
     def _resolve_config_args(self, project_dir: Path) -> t.StrSequence:
@@ -73,23 +71,18 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
     def _build_fix_command(
         self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
     ) -> t.StrSequence:
-        """Build the fix command from the tool's FORMATTER, not its linter.
-
-        ``rumdl check --fix`` is a linter: it exits non-zero whenever a finding
-        has no autofix, so a run that repaired every fixable file still failed
-        the verb and `make fix` could never reach green. ``rumdl fmt``
-        applies the same fixes with formatter-style exit codes, which is the
-        contract the mutating verb promises. It accepts neither
-        ``--output-format`` nor ``--deny-config-warnings`` (both are check-only
-        reporting flags), so the fix surface carries only what it defines.
-        """
+        """Repair fixable findings and return the linter's residual verdict."""
         _ = ctx
         args: t.SequenceOf[str] = [
             c.Infra.RUMDL,
-            "fmt",
+            "check",
+            "--fix",
             "--no-cache",
             "--color",
             "never",
+            "--output-format",
+            "text",
+            "--deny-config-warnings",
             *self._resolve_config_args(project_dir),
             *self._resolve_exclude_args(project_dir),
             *list(targets),
