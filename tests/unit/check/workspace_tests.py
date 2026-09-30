@@ -72,8 +72,8 @@ class TestsFlextInfraWorkspaceChecker:
         exit_code = main(["check", "run", "--repository-root", str(tmp_path)])
         tm.that(exit_code, eq=1)
 
-    def test_cli_auto_discovers_projects(self, tmp_path: Path) -> None:
-        """Test that check run discovers workspace projects by default."""
+    def test_cli_requires_explicit_member_selection(self, tmp_path: Path) -> None:
+        """An omitted selection checks only the repository root."""
         project_dir = test_u.Tests.mk_project(
             tmp_path,
             "flext-core",
@@ -98,7 +98,7 @@ class TestsFlextInfraWorkspaceChecker:
         tm.ok(init_result)
         tm.ok(add_result)
 
-        exit_code = main([
+        implicit_exit_code = main([
             "check",
             "run",
             "--repository-root",
@@ -106,8 +106,18 @@ class TestsFlextInfraWorkspaceChecker:
             "--gates",
             "lint",
         ])
-
-        tm.that(exit_code, eq=0)
+        tm.that(implicit_exit_code, eq=1)
+        selected_exit_code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(tmp_path),
+            "--projects",
+            project_dir.name,
+            "--gates",
+            "lint",
+        ])
+        tm.that(selected_exit_code, eq=0)
 
     def test_resolve_gates_with_valid_gates(self) -> None:
         """Test that resolve_gates normalizes valid gate names."""
