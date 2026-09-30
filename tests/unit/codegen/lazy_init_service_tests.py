@@ -48,18 +48,18 @@ class TestsFlextInfraCodegenLazyInitService:
         self, tmp_path: Path
     ) -> None:
         """Apply writes one initializer for exactly the selected package root."""
-        _, selected_root = u.Tests.create_lazy_init_workspace(
+        selected_repository, selected_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-test-selected",
             package_name="flext_test_selected",
         )
-        _, unrelated_root = u.Tests.create_lazy_init_workspace(
+        unrelated_repository, unrelated_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-test-unrelated",
             package_name="flext_test_unrelated",
         )
-        # A multi-project root is a workspace that declares its members; an
-        # undeclared nested Git checkout is foreign and is never indexed.
+        # Declaring topology does not grant an implicit cross-repository scan;
+        # publication receives its selected owners explicitly.
         u.Tests.declare_workspace_projects(
             tmp_path, ("flext-test-selected", "flext-test-unrelated")
         )
@@ -78,10 +78,12 @@ class TestsFlextInfraCodegenLazyInitService:
         service = u.Tests.create_lazy_init_service(tmp_path)
         service.target_module = "flext_test_selected"
         service.apply_changes = True
+        tm.fail(service.plan_files(), has="lazy-init target module not found")
+        service.project_scope_roots = (selected_repository, unrelated_repository)
 
         result = u.Tests.materialize_lazy_init(service)
 
-        tm.that(result.success, eq=True)
+        tm.ok(result)
         tm.that((selected_root / c.Infra.INIT_PY).read_bytes(), ne=b"")
         tm.that((selected_root / "__unit__.py").exists(), eq=False)
         tm.that(unrelated_init.read_bytes(), eq=unrelated_before)

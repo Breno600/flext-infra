@@ -234,7 +234,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
     def test_mypy_resource_limit_parses_environment_at_boundary(self) -> None:
         """Convert valid process text once before strict model validation."""
         memory_limit = c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 2
-        timeout_limit = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 2
+        timeout_limit = c.Infra.MYPY_TIMEOUT_SECONDS_MAX
         with tm.scope(
             env={
                 c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: str(memory_limit),
@@ -290,12 +290,27 @@ class TestsFlextInfraUtilitiesResourceLimits:
         """Reject a wall-time configuration above the canonical ceiling."""
         with pytest.raises(
             ValueError,
-            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT}",
+            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_MAX}",
         ):
             m.Infra.MypyResourceLimit(
                 memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT + 1,
+                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_MAX + 1,
             )
+
+        with (
+            tm.scope(
+                env={
+                    c.Infra.MYPY_TIMEOUT_SECONDS_ENV: str(
+                        c.Infra.MYPY_TIMEOUT_SECONDS_MAX + 1
+                    )
+                }
+            ),
+            pytest.raises(
+                ValueError,
+                match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_MAX}",
+            ),
+        ):
+            u.Infra.mypy_resource_limit()
 
     def test_mypy_timeout_has_controlled_exit_and_signal_diagnostic(self) -> None:
         """Expose the configured ceilings and process status on timeout."""

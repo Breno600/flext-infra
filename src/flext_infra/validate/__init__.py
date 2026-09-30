@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from ._pytest_runner.base import FlextInfraPytestRunnerBase
     from ._pytest_runner.command import FlextInfraPytestRunnerCommand
     from ._pytest_runner.execution import FlextInfraPytestRunnerExecution
+    from ._pytest_runner.inputs import FlextInfraPytestInputs
     from ._pytest_runner.reports import FlextInfraPytestRunnerReports
     from ._rope_import_boundary import FlextInfraRopeImportBoundaryBase
     from ._skill_rule_runner import FlextInfraSkillRuleRunnerMixin
@@ -65,6 +66,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraNamespaceValidator",
     "FlextInfraPytestDiagExtractor",
     "FlextInfraPytestDiagXmlMixin",
+    "FlextInfraPytestInputs",
     "FlextInfraPytestRunner",
     "FlextInfraPytestRunnerBase",
     "FlextInfraPytestRunnerCommand",
@@ -100,6 +102,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._pytest_runner.base": ("FlextInfraPytestRunnerBase",),
             "._pytest_runner.command": ("FlextInfraPytestRunnerCommand",),
             "._pytest_runner.execution": ("FlextInfraPytestRunnerExecution",),
+            "._pytest_runner.inputs": ("FlextInfraPytestInputs",),
             "._pytest_runner.reports": ("FlextInfraPytestRunnerReports",),
             "._rope_import_boundary": ("FlextInfraRopeImportBoundaryBase",),
             "._skill_rule_runner": ("FlextInfraSkillRuleRunnerMixin",),

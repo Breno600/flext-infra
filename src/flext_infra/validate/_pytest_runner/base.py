@@ -29,6 +29,9 @@ class FlextInfraPytestRunnerBase(s[int]):
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
     ] = False
+    profile_enabled: Annotated[
+        bool, m.Field(description="Capture child process cProfile evidence.")
+    ] = False
 
     @staticmethod
     def _environment_value(name: str) -> str:
@@ -36,12 +39,15 @@ class FlextInfraPytestRunnerBase(s[int]):
         return u.Cli.env_read(name, dict(os.environ)).unwrap().strip()
 
     @classmethod
-    def from_environment(cls, *, started_at_monotonic: float) -> Self:
+    def from_environment(
+        cls, *, started_at_monotonic: float, profile_enabled: bool = False
+    ) -> Self:
         """Create the runner exclusively from generated Make inputs."""
         ci = config.Infra.codegen.make.ci
         return cls(
             repository_root=Path.cwd(),
             started_at_monotonic=started_at_monotonic,
+            profile_enabled=profile_enabled,
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),

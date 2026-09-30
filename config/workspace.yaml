@@ -23,3 +23,21 @@ repository:
   editable: true
   read_only: false
 members: []
+
+test_inputs:
+  templates:
+    - src/flext_infra/templates
+  resources:
+    - src/flext_infra/codemod/rules
+    - src/flext_infra/codemod/tests
+  environment:
+    - FLEXT_STANDALONE
+    - FLEXT_REPOSITORY_ROOT
+    - FLEXT_USE_HTTPS
+    - GITHUB_HEAD_REF
+    - GITHUB_REF_NAME
+    - UV
+    - RUNTIME_ROOT
+    - VIRTUAL_ENV
+    - PATH
+    - MISE_GITHUB_CREDENTIAL_COMMAND

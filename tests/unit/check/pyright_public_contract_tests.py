@@ -17,31 +17,40 @@ class TestsPyrightPublicContract:
     """Exercise the configured semantic owner with real source and type stubs."""
 
     @pytest.mark.slow
+    @pytest.mark.parametrize("distinct_categories", [False, True])
     @pytest.mark.parametrize(
         ("consumer", "private"),
         [
             (
-                "import os as operating_system\n"
-                "def exit_child() -> None:\n"
-                "    operating_system._exit(0)\n",
+                (
+                    "import os as operating_system\n"
+                    "def exit_child() -> None:\n"
+                    "    operating_system._exit(0)\n"
+                ),
                 False,
             ),
             (
-                "from owner import Owner\n"
-                "def observe(value: Owner) -> int:\n"
-                "    return value._secret\n",
+                (
+                    "from owner import Owner\n"
+                    "def observe(value: Owner) -> int:\n"
+                    "    return value._secret\n"
+                ),
                 True,
             ),
             (
-                "from owner import Owner\n"
-                "def exit_child(os: Owner) -> None:\n"
-                "    os._exit(0)\n",
+                (
+                    "from owner import Owner\n"
+                    "def exit_child(os: Owner) -> None:\n"
+                    "    os._exit(0)\n"
+                ),
                 True,
             ),
             (
-                "from owner import _public\n"
-                "def observe() -> int:\n"
-                "    return _public()\n",
+                (
+                    "from owner import _public\n"
+                    "def observe() -> int:\n"
+                    "    return _public()\n"
+                ),
                 False,
             ),
         ],
@@ -53,16 +62,41 @@ class TestsPyrightPublicContract:
         consumer: str,
         *,
         private: bool,
+        distinct_categories: bool,
     ) -> None:
         """Aliases and explicit exports stay public; shadowed receivers do not."""
         rules = tool_config_document.tools.pyright.path_rules
-        roots = tuple(dict.fromkeys((*rules.env_dirs, rules.project_root)))
+        if distinct_categories:
+            rules = rules.model_copy(
+                update={
+                    "source_report_private_usage": "none",
+                    "test_like_report_private_usage": "warning",
+                    "other_report_private_usage": "error",
+                }
+            )
+            pyright = tool_config_document.tools.pyright.model_copy(
+                update={"path_rules": rules}
+            )
+            tools = tool_config_document.tools.model_copy(update={"pyright": pyright})
+            tool_config_document = tool_config_document.model_copy(
+                update={"tools": tools}
+            )
+        roots = tuple(
+            dict.fromkeys((
+                rules.source_dir,
+                *rules.env_dirs,
+                *rules.test_like_dirs,
+                rules.project_root,
+            ))
+        )
+        consumers: list[Path] = []
         for index, root in enumerate(roots):
             directory = tmp_path / root / "fixtures"
             directory.mkdir(parents=True, exist_ok=True)
-            (directory / f"consumer_{index}.py").write_text(
-                consumer, encoding="utf-8"
-            )
+            consumer_path = directory / f"consumer_{index}.py"
+            consumer_path.write_text(consumer, encoding="utf-8")
+            consumers.append(consumer_path)
+        (tmp_path / rules.source_dir).mkdir(parents=True, exist_ok=True)
         (tmp_path / rules.source_dir / "owner.py").write_text(
             '__all__ = ["Owner", "_public"]\n'
             "class Owner:\n"
@@ -95,7 +129,35 @@ class TestsPyrightPublicContract:
         private_issues = tuple(
             issue for issue in result.issues if issue.code == "reportPrivateUsage"
         )
-        assert bool(private_issues) is private
-        assert result.result.passed is not private, result.raw_output
-        if private:
-            assert len(private_issues) == len(roots), result.raw_output
+        policies = [
+            (tmp_path / override.root, override.report_private_usage)
+            for override in rules.diagnostic_path_overrides
+            if (tmp_path / override.root).is_dir()
+        ]
+        policies.extend(
+            (
+                tmp_path / root,
+                rules.source_report_private_usage
+                if root == rules.source_dir
+                else rules.test_like_report_private_usage
+                if root in rules.test_like_dirs
+                else rules.other_report_private_usage,
+            )
+            for root in roots
+        )
+        expected = {
+            str(path): severity
+            for path in consumers
+            if private
+            and (
+                severity := next(
+                    level for root, level in policies if path.is_relative_to(root)
+                )
+            )
+            != "none"
+        }
+        observed = {issue.file: issue.severity for issue in private_issues}
+        assert observed == expected, result.raw_output
+        assert len(private_issues) == len(expected), result.raw_output
+        blocking = any(level in {"warning", "error"} for level in expected.values())
+        assert result.result.passed is not blocking, result.raw_output
