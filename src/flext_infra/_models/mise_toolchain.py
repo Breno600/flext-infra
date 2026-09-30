@@ -428,7 +428,9 @@ class FlextInfraModelsMiseToolchain:
         release_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
-                pattern=r"^[a-z]+:[A-Za-z0-9._/-]+$",
+                # "@version" suffix pins the selector to a known-good
+                # release when upstream ships a broken one.
+                pattern=r"^[a-z]+:[A-Za-z0-9._/@-]+$",
                 description="Tool selector `make upg` resolves for the Mise release",
             ),
         ]

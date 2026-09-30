@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import c, config, m, p, t
@@ -40,7 +41,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
             workspace.rope_project, sources
         )
-        rewrites: dict[Path, list[m.Infra.SourceRewrite]] = {}
+        rewrites: MutableMapping[Path, list[m.Infra.SourceRewrite]] = {}
         wrappers = 0
         try:
             for path in candidates:
@@ -77,7 +78,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         project: p.Infra.RopeProject,
         path: Path,
         sources: t.MappingKV[Path, str],
-        rewrites: dict[Path, list[m.Infra.SourceRewrite]],
+        rewrites: MutableMapping[Path, list[m.Infra.SourceRewrite]],
     ) -> int:
         root = Path(project.root.real_path)
         module = project.get_pymodule(
@@ -175,7 +176,7 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             wrapper=owner_scope.get_defined_names()[wrapper_name],
             names=renamed,
         )
-        candidate_rewrites: dict[Path, list[m.Infra.SourceRewrite]] = {}
+        candidate_rewrites: MutableMapping[Path, list[m.Infra.SourceRewrite]] = {}
         for consumer, source in sources.items():
             if source.startswith(c.Infra.AUTOGEN_HEADERS):
                 continue
