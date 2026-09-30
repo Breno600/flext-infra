@@ -83,10 +83,13 @@ Infra:
         - windows-x64
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
-      # Pinned to the last provenance-attested release: 0.644.0 shipped
-      # without github attestations and mise's supply-chain guard rejects
-      # it, breaking `make setup` fleet-wide (bead in flext tracker,
-      # reported by algar-oud-mig 2026-09-18).
+      # Pinned to 0.642.0. The earlier claim that 0.644.0 shipped without
+      # github attestations is FALSE: a by-digest check on 2026-09-22 shows
+      # v0.644.0 carries one attestation bundle per asset for all seven
+      # binaries, same as 0.642.0. The 2026-09-18 fleet-wide setup fire was a
+      # probe false positive (mise treats an unavailable probe as missing).
+      # Bump to 0.644.0 only through an explicit `make upg` reactivation
+      # (bead flext-38odd), never by editing this pin in isolation.
       qlty_version: 0.642.0
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
@@ -373,6 +376,7 @@ Infra:
           census_rule_families: [smell_, no_accessor_methods, utility_not_static]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
+      runtime_environment_directory: .flext-venvs
       testmon_cache:
         database_filename: .testmondata
         database_environment_variable: TESTMON_DATAFILE

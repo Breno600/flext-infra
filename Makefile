@@ -187,7 +187,7 @@ endif
 endif
 # End SECTION: profile routing
 
-override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
+override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../.flext-venvs/$(subst :,/,$(patsubst /%,%,$(RUNTIME_ROOT))))
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
@@ -791,6 +791,7 @@ fi; \
 SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	$(REQUIRE_WORKSPACE_ENVIRONMENT); \
 	desired_python="$${SETUP_PYTHON:?missing Mise-resolved Python executable}"; \
+	mkdir -p "$(dir $(RUNTIME_VENV))"; \
 	if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
 		$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"; \
 	else \
@@ -1517,6 +1518,11 @@ _upg_relock: TOOL_BOOTSTRAP_LIFECYCLE := _upg_converge
 _upg_relock: TOOL_BOOTSTRAP_LOCK := 1
 _upg_relock: _bootstrap_setup_tools
 
+# An upgrade publishes only after the cycle it changed still passes: the
+# generation fixed point is proven above, and every active gate must be
+# green on the upgraded tree, so a package update that breaks types, lint
+# or consistency fails the upgrade itself instead of surfacing later as
+# red tests or red CI.
 .PHONY: _upg_converge
 _upg_converge:
 	$(call _lock_project,)
@@ -1532,6 +1538,7 @@ _upg_converge:
 	fi
 	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated
+	@$(SELF_MAKE) check
 
 .PHONY: _upg_activated
 _upg_activated:
