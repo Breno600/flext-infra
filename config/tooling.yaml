@@ -53,6 +53,16 @@ Infra:
           MD057: false
           MD060: false
           MD076: false
+          # flext-md-converge: prettier is the last writer of the `make docs`
+          # cycle (DOCS_ACTIONS ends at fmt), and its list-continuation printer
+          # reindents wrapped list content to its own column, which MD077's two
+          # accepted columns reject — and no canonical repair runs after fmt, so
+          # the finding is unfixable by construction (measured 2026-09-30: 57
+          # MD077 findings reproduce on every docs cycle and survive both
+          # `docs fix` and the gate's own --apply). A dialect rule the canonical
+          # formatter cannot satisfy leaves the rule set; MD013 keeps owning the
+          # real line contract.
+          MD077: false
         # Prettier formatting policy (markdown-format gate): rendered into the
         # managed .prettierrc. prettier --write is owned by `make fmt` and
         # prettier --check by `make check`; `make fix` never runs it.
@@ -232,6 +242,7 @@ Infra:
               "Use flext_cli.cli application, registration, execution, and invocation\
               \ methods."
             rich: "Use cli.print / cli.display_message / cli.render_panel / cli.render_table."
+            tabulate: "Use cli.render_table from flext_cli."
             typer: "Use cli.create_app_with_common_params / cli.register_command from flext_cli."
           ignore:
             - ambiguous-unicode-character-comment
@@ -493,15 +504,13 @@ Infra:
             - "**/site-packages/**"
             - "**/dist-packages"
             - "**/dist-packages/**"
-            - "**/tests/fixtures"
-            - "**/tests/fixtures/**"
           root-typings-paths: []
           project-typings-paths: []
           ignored-diagnostic-globs: []
           diagnostic-path-overrides: []
           source-report-private-usage: error
-          test-like-report-private-usage: "none"
-          other-report-private-usage: "none"
+          test-like-report-private-usage: error
+          other-report-private-usage: error
       coverage:
         source: [src]
         show-missing: true
