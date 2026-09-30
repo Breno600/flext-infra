@@ -155,7 +155,9 @@ class TestsFlextInfraCodegenMakeAuthentication:
             tm.that(process.stderr, lacks="mise.version")
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
-        tm.that((project_root / ".venv").exists(), eq=verb == "status")
+        tm.that(
+            u.Infra.runtime_environment_dir(project_root).exists(), eq=verb == "status"
+        )
 
     @pytest.mark.remote
     def test_invalid_explicit_token_fails_at_the_native_mise_backend(
