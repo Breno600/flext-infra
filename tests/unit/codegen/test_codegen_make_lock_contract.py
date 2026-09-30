@@ -263,7 +263,7 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(process.stderr, has=str(pin))
         tm.that(process.stderr, lacks="missing generated mise launcher")
         tm.that(activation.exists(), eq=False)
-        tm.that((project_root / ".venv").exists(), eq=False)
+        tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=False)
 
     @pytest.mark.parametrize("verb", ["help", "clean", "upg"])
     def test_bootstrap_and_shell_verbs_do_not_require_the_pin(
@@ -283,7 +283,7 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(process.stderr, lacks=str(pin))
         if verb == "upg":
             tm.that(process.outcome.raw_return_code, ne=0)
-            tm.that(process.stderr, has="missing generated mise launcher")
+            tm.that(process.stderr, has="GitHub credential is absent for network bootstrap")
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(pin.exists(), eq=False)

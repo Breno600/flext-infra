@@ -112,7 +112,7 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
     def test_checkout_without_superproject_owns_its_runtime(
         self, tmp_path: Path
     ) -> None:
-        """A standalone clone resolves its own checkout and its own .venv."""
+        """A standalone clone resolves its own checkout and external environment."""
         project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
@@ -121,7 +121,9 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
 
         root = str(project_root.resolve())
         tm.that(values["RUNTIME_ROOT"], eq=root)
-        tm.that(values["RUNTIME_VENV"], eq=f"{root}/.venv")
+        tm.that(
+            values["RUNTIME_VENV"], eq=str(u.Infra.runtime_environment_dir(project_root))
+        )
 
     def test_submodule_member_resolves_the_workspace_runtime(
         self, tmp_path: Path
@@ -139,14 +141,14 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
         for name in ("REPOSITORY_ROOT", "RUNTIME_ROOT", "UV_PROJECT"):
             tm.that(values[name], eq=str(workspace))
         for name in ("RUNTIME_VENV", "UV_PROJECT_ENVIRONMENT"):
-            tm.that(values[name], eq=f"{workspace}/.venv")
+            tm.that(values[name], eq=str(u.Infra.runtime_environment_dir(workspace)))
 
     @pytest.mark.parametrize("linked", [False, True])
     @pytest.mark.parametrize("attached", [False, True])
     def test_direnv_resolves_the_make_runtime_environment(
         self, tmp_path: Path, *, attached: bool, linked: bool
     ) -> None:
-        """Direnv names the same physical ``.venv`` as the generated Makefile.
+        """Direnv names the same physical environment as generated Make.
 
         An attached member activates its superproject's environment; an
         unattached checkout activates its own. Entering through a symlinked
@@ -171,5 +173,5 @@ class TestsFlextInfraCodegenMakeMemberRuntime:
         values = self._runtime_values(entry)
         observed = self._direnv_venv(entry)
 
-        tm.that(values["RUNTIME_VENV"], eq=f"{owner}/.venv")
+        tm.that(values["RUNTIME_VENV"], eq=str(u.Infra.runtime_environment_dir(owner)))
         tm.that(observed, eq=values["RUNTIME_VENV"])
