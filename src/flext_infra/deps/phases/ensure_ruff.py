@@ -201,7 +201,7 @@ class FlextInfraEnsureRuffConfigPhase:
             return (path.parent / directory).is_dir() or (directory in generated_roots)
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
-        excluded_roots = self._excluded_root_set(path.parent)
+        excluded_roots = FlextInfraEnsureRuffConfigPhase._excluded_root_set(path.parent)
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )
