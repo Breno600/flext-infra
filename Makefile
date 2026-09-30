@@ -1216,7 +1216,7 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'setup' 'Provision the declared environment and hooks.';
 
-	@printf '  %-16s %s\n' 'upg' 'Resolve the newest declared releases and write the uv and mise locks.';
+	@printf '  %-16s %s\n' 'upg' 'Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.';
 
 	@printf '  %-16s %s\n' 'build' 'Build the project distribution artifacts.';
 
@@ -1536,9 +1536,21 @@ _upg_converge:
 		printf 'ERROR: make upg did not converge; `make gen` still rewrites:\n%s\n' "$$after" >&2; \
 		exit 2; \
 	fi
+	@$(SELF_MAKE) _lock_mise_verify
 	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated
 	@$(SELF_MAKE) check
+
+# `uv.lock` is staged, validated with `lock --check` and renamed atomically by
+# `_lock_project`. Mise has no such writer: it resolves `mise.lock` in place and
+# appends one resolution per platform set, so repeated `make upg` runs can leave
+# duplicated `[[tools...]]`, `.options` or `.platforms.*` sections. The result
+# parses as TOML only by accident and breaks `make gen` far from its cause, as a
+# red `gen fixed point` in CI. Fail loud here instead: the committed lock must
+# parse and must not repeat a section, or the resolved set is not publishable.
+.PHONY: _lock_mise_verify
+_lock_mise_verify:
+	@$(RUNTIME_PYTHON) -c 'import collections, re, sys, tomllib; path = sys.argv[1]; text = open(path, encoding="utf-8").read(); tomllib.loads(text); keys = re.findall(r"(?m)^\[([^\]]+)\]\s*$$", text); duplicated = sorted(k for k, n in collections.Counter(keys).items() if n > 1); sys.exit(f"mise.lock repeats TOML section(s), the Mise resolver appended instead of replacing: {duplicated}") if duplicated else None' "$(PROJECT_ROOT)/mise.lock"
 
 .PHONY: _upg_activated
 _upg_activated:
