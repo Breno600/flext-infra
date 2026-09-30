@@ -14,5 +14,5 @@ class TestsFlextInfraDepsMainDispatch:
         # NOTE (multi-agent, flext-wkii.17.9): deps exposes no conformance alias;
         # pyproject normalization is consumed only by the codegen owner.
         """Verify subcommand help is available."""
-        for subcommand in ("detect", "extra-paths", "modernize"):
+        for subcommand in ("detect", "extra-paths", "modernize", "verify-locks"):
             tm.that(infra_main(["deps", subcommand, "--help"]), eq=0)
