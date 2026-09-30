@@ -22,7 +22,9 @@ class FlextInfraTypingMutation(cst.CSTVisitor):
     """
 
     METADATA_DEPENDENCIES = (
-        ScopeProvider, ParentNodeProvider, ExpressionContextProvider,
+        ScopeProvider,
+        ParentNodeProvider,
+        ExpressionContextProvider,
     )
 
     def __init__(self) -> None:
@@ -75,13 +77,17 @@ class FlextInfraTypingMutation(cst.CSTVisitor):
     @override
     def visit_Subscript(self, node: cst.Subscript) -> None:
         if self.get_metadata(ExpressionContextProvider, node, None) in {
-            ExpressionContext.STORE, ExpressionContext.DEL,
+            ExpressionContext.STORE,
+            ExpressionContext.DEL,
         }:
             self.mutated.update(self._names(node))
 
     @override
     def visit_Name(self, node: cst.Name) -> None:
-        if self.get_metadata(ExpressionContextProvider, node, None) != ExpressionContext.LOAD:
+        if (
+            self.get_metadata(ExpressionContextProvider, node, None)
+            != ExpressionContext.LOAD
+        ):
             return
         if self.get_metadata(ScopeProvider, node, None) is None:
             return
@@ -92,15 +98,21 @@ class FlextInfraTypingMutation(cst.CSTVisitor):
         parent = self.get_metadata(ParentNodeProvider, node)
         proven = False
         if isinstance(parent, cst.Subscript) and parent.value is node:
-            proven = all(isinstance(element.slice, cst.Index) for element in parent.slice)
+            proven = all(
+                isinstance(element.slice, cst.Index) for element in parent.slice
+            )
         elif isinstance(parent, (cst.For, cst.CompFor)):
             proven = parent.iter is node
         elif isinstance(parent, cst.ComparisonTarget):
-            proven = parent.comparator is node and isinstance(parent.operator, (cst.In, cst.NotIn))
+            proven = parent.comparator is node and isinstance(
+                parent.operator, (cst.In, cst.NotIn)
+            )
         elif isinstance(parent, cst.UnaryOperation):
             proven = isinstance(parent.operator, cst.Not)
         elif isinstance(parent, cst.Assign) and parent.value is node:
-            proven = all(isinstance(target.target, cst.Name) for target in parent.targets)
+            proven = all(
+                isinstance(target.target, cst.Name) for target in parent.targets
+            )
         elif isinstance(parent, cst.AnnAssign) and parent.value is node:
             proven = isinstance(parent.target, cst.Name)
         elif isinstance(parent, cst.Arg):
