@@ -201,7 +201,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
             return r[str].fail(
                 f"internal dependency declares no direct git source: {dependency_name}"
             )
-        if candidate is None and FlextInfraUtilitiesRepository.ref_is_commit(declared_ref):
+        if candidate is None and FlextInfraUtilitiesRepository.ref_is_commit(
+            declared_ref
+        ):
             if line is None:
                 return r[str].fail(
                     f"internal dependency {dependency_name} pins commit "

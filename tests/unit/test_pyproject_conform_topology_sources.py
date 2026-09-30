@@ -172,9 +172,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             update={
                 "candidate_dependencies": (
                     m.Infra.CandidateDependencySourceSpec(
-                        distribution=cli.distribution,
-                        url=foreign.url,
-                        commit="b" * 40,
+                        distribution=cli.distribution, url=foreign.url, commit="b" * 40
                     ),
                 )
             }
@@ -200,9 +198,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
             update={
                 "candidate_dependencies": (
                     m.Infra.CandidateDependencySourceSpec(
-                        distribution=cli.distribution,
-                        url=cli.url,
-                        commit="c" * 40,
+                        distribution=cli.distribution, url=cli.url, commit="c" * 40
                     ),
                 )
             }
