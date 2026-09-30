@@ -830,6 +830,20 @@ class TestsFlextInfraCodegenMakeEnvironment:
         )
         tm.that(makefile, lacks="--constraint-policy")
 
+    def test_upg_converge_verifies_the_cycle_it_upgraded(self, tmp_path: Path) -> None:
+        """An upgrade publishes only after gen converges and every gate passes."""
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path, c.Infra.MakeProfile.WORKSPACE, bootstrap=True
+        )
+        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
+
+        tm.that(makefile, has="make upg did not converge")
+        tm.that(
+            "_upg_converge"
+            in self._recipe_targets_containing(makefile, "$(SELF_MAKE) check"),
+            eq=True,
+        )
+
     def test_workspace_without_local_members_retains_external_flext_sources(
         self, tmp_path: Path
     ) -> None:
