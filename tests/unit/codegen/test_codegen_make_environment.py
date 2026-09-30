@@ -74,8 +74,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
                 eq=["pre-status", "_custom-status", "post-status"],
             )
             tm.that(
-                (project_root / "runtime.log").read_text().strip(),
-                eq=str(environment),
+                (project_root / "runtime.log").read_text().strip(), eq=str(environment)
             )
 
     @pytest.mark.parametrize("verb", ["setup", "check", "gen", "status"])
@@ -94,7 +93,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
             foreign.mkdir(parents=True)
             marker.write_text("foreign workspace", encoding="utf-8")
         environment = u.Infra.runtime_environment_dir(project_root)
-        borrowed = environment if environment_part == "environment" else environment / "bin"
+        borrowed = (
+            environment if environment_part == "environment" else environment / "bin"
+        )
         borrowed.parent.mkdir(parents=True, exist_ok=True)
         borrowed.symlink_to(foreign, target_is_directory=True)
         effect = project_root / "activation-effect"
