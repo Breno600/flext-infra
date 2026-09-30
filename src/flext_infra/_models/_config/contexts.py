@@ -353,6 +353,7 @@ class FlextInfraConfigModelsContexts:
             t.StrSequence,
             m.Field(description="Validated relative data paths shipped in distributions"),
         ]
+        packaged_data_files: Annotated[t.StrSequence, m.Field(description="Validated individually declared data files")]
         class_stem: Annotated[
             t.NonEmptyStr, m.Field(description="Public facade class stem")
         ]
