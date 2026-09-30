@@ -90,6 +90,7 @@ class FlextInfraProtocolsBase(Protocol):
             """Validate one project's Mise declaration, pin, and launchers."""
             ...
 
+    @runtime_checkable
     class CandidateBootstrapPlanner(Protocol):
         """Conform plan boundary consumed by the candidate campaign."""
 
@@ -99,6 +100,7 @@ class FlextInfraProtocolsBase(Protocol):
             """Plan one declared target without publishing it."""
             ...
 
+    @runtime_checkable
     class CandidateBootstrapTransaction(Protocol):
         """Atomic multi-root file publisher consumed by the campaign."""
 

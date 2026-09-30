@@ -34,8 +34,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             for root in (first, second)
         )
         manifest.write_text(
-            manifest.read_text(encoding="utf-8") + "\n" + declaration,
-            encoding="utf-8",
+            manifest.read_text(encoding="utf-8") + "\n" + declaration, encoding="utf-8"
         )
         return source, first, second
 
@@ -44,7 +43,9 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         project_root, _ = tests_u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
-        manifest = tests_u.Tests.write_workspace_manifest(project_root, "fixture-project")
+        manifest = tests_u.Tests.write_workspace_manifest(
+            project_root, "fixture-project"
+        )
         manifest.write_text(
             manifest.read_text(encoding="utf-8")
             + "\ncandidate_bootstrap_targets: []\n",
@@ -65,7 +66,9 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         source, first, second = self._campaign(tmp_path)
         first_makefile = first / c.Infra.MAKEFILE_FILENAME
         first_makefile.write_text("stale candidate Makefile\n", encoding="utf-8")
-        before = tm.ok(u.Cli.atomic_read_binary_file_state(first_makefile, required=True))
+        before = tm.ok(
+            u.Cli.atomic_read_binary_file_state(first_makefile, required=True)
+        )
         second_manifest = second / "config" / "workspace.yaml"
         second_manifest.write_text("invalid: [\n", encoding="utf-8")
 
@@ -123,12 +126,12 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         source, first, _ = self._campaign(tmp_path)
         first_makefile = first / c.Infra.MAKEFILE_FILENAME
         first_makefile.write_text("stale candidate Makefile\n", encoding="utf-8")
-        before = tm.ok(u.Cli.atomic_read_binary_file_state(first_makefile, required=True))
+        before = tm.ok(
+            u.Cli.atomic_read_binary_file_state(first_makefile, required=True)
+        )
 
         result = infra.bootstrap_candidate(
-            m.Infra.CandidateBootstrapCommand(
-                repository_root=source, check_only=True
-            )
+            m.Infra.CandidateBootstrapCommand(repository_root=source, check_only=True)
         )
 
         tm.that(result.failure, eq=True)

@@ -41,8 +41,12 @@ class FlextInfraModelsCodegenPipelineModels:
         repository_root: Annotated[
             Path, m.Field(description="Repository with the candidate declarations")
         ]
-        dry_run: Annotated[bool, m.Field(description="Validate without writing")] = False
-        check_only: Annotated[bool, m.Field(description="Validate without writing")] = False
+        dry_run: Annotated[bool, m.Field(description="Validate without writing")] = (
+            False
+        )
+        check_only: Annotated[bool, m.Field(description="Validate without writing")] = (
+            False
+        )
         apply_changes: Annotated[
             bool, m.Field(description="Apply the complete candidate campaign")
         ] = True

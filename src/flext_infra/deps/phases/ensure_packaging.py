@@ -21,7 +21,9 @@ class FlextInfraEnsurePackagingPhase:
     """Ensure bounded Hatch wheel and source-distribution targets."""
 
     @staticmethod
-    def _validate_data_tree(root: Path, source: Path, ancestors: frozenset[Path]) -> None:
+    def _validate_data_tree(
+        root: Path, source: Path, ancestors: frozenset[Path]
+    ) -> None:
         """Follow every link Hatch follows while rejecting cycles and escape."""
         resolved = source.resolve(strict=True)
         if not resolved.is_relative_to(root):
@@ -67,21 +69,29 @@ class FlextInfraEnsurePackagingPhase:
                 msg = f"packaged data path escapes repository: {declaration}"
                 raise ValueError(msg)
             if source.exists() or source.is_symlink():
-                FlextInfraEnsurePackagingPhase._validate_data_tree(root, source, frozenset())
-            elif not any(Path(planned).is_relative_to(relative) for planned in planned_files):
+                FlextInfraEnsurePackagingPhase._validate_data_tree(
+                    root, source, frozenset()
+                )
+            elif not any(
+                Path(planned).is_relative_to(relative) for planned in planned_files
+            ):
                 msg = f"declared packaged data path is missing: {declaration}"
                 raise FileNotFoundError(msg)
             destination = package_root / relative
-            if destination.exists() or any(
-                parent.is_file() for parent in destination.parents if parent != root
-            ) or any(
-                (root / planned).is_relative_to(destination) for planned in planned_files
+            if (
+                destination.exists()
+                or any(
+                    parent.is_file() for parent in destination.parents if parent != root
+                )
+                or any(
+                    (root / planned).is_relative_to(destination)
+                    for planned in planned_files
+                )
             ):
                 msg = f"packaged data path collides with package source: {declaration}"
                 raise ValueError(msg)
             if any(
-                relative.is_relative_to(previous)
-                or previous.is_relative_to(relative)
+                relative.is_relative_to(previous) or previous.is_relative_to(relative)
                 for previous in paths
             ):
                 msg = f"packaged data declarations overlap: {declaration}"
@@ -91,7 +101,9 @@ class FlextInfraEnsurePackagingPhase:
                 files.append(declaration)
             else:
                 directories.append(declaration)
-        return m.Infra.PackagedDataSelection(files=tuple(files), directories=tuple(directories))
+        return m.Infra.PackagedDataSelection(
+            files=tuple(files), directories=tuple(directories)
+        )
 
     def _phase(
         self,
@@ -127,11 +139,26 @@ class FlextInfraEnsurePackagingPhase:
                     table_path=("wheel",),
                     operations=(
                         toml.ListOp(key="packages", values=package_paths),
-                        toml.ListOp(key="only-include", values=(*package_paths, *data.directories)),
-                        toml.SetOp(key="sources", value={
-                            **dict(zip(package_paths, (package_name, *root_packages), strict=True)),
-                            **{directory: f"{package_name}/{directory}" for directory in data.directories},
-                        }),
+                        toml.ListOp(
+                            key="only-include",
+                            values=(*package_paths, *data.directories),
+                        ),
+                        toml.SetOp(
+                            key="sources",
+                            value={
+                                **dict(
+                                    zip(
+                                        package_paths,
+                                        (package_name, *root_packages),
+                                        strict=True,
+                                    )
+                                ),
+                                **{
+                                    directory: f"{package_name}/{directory}"
+                                    for directory in data.directories
+                                },
+                            },
+                        ),
                         toml.RemoveOp(key="force-include"),
                     ),
                 ),
@@ -142,7 +169,12 @@ class FlextInfraEnsurePackagingPhase:
                     operations=(
                         toml.ListOp(
                             key="only-include",
-                            values=(*package_paths, *module_paths, *data.files, *data.directories),
+                            values=(
+                                *package_paths,
+                                *module_paths,
+                                *data.files,
+                                *data.directories,
+                            ),
                         ),
                     ),
                 ),
