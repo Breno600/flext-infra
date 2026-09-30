@@ -206,18 +206,19 @@ class FlextInfraCanonicalAliasGate(FlextInfraGate):
         # protected_source_writes rolls the workspace back in its finally
         # block when the write phase fails; a residual OSError/RuntimeError
         # escapes loudly instead of being normalized into a fix result.
-        write_ok, write_reports = u.Infra.protected_source_writes(
-            updates,
-            request=m.Infra.ProtectedSourceWritesRequest(
-                workspace=project_dir,
-                expected_sources={
-                    edit.file_path: edit.original_source for edit in edits
-                },
-                gates=("lint",),
-                post_write=lambda: self._format_files(changed_files),
-                skip_pytest=True,
-            ),
-        )
+        with self._mutation_lease(project_dir):
+            write_ok, write_reports = u.Infra.protected_source_writes(
+                updates,
+                request=m.Infra.ProtectedSourceWritesRequest(
+                    workspace=project_dir,
+                    expected_sources={
+                        edit.file_path: edit.original_source for edit in edits
+                    },
+                    gates=("lint",),
+                    post_write=lambda: self._format_files(changed_files),
+                    skip_pytest=True,
+                ),
+            )
         if not write_ok:
             return self._fix_failure_result(
                 project_dir=project_dir,

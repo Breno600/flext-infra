@@ -14,7 +14,7 @@ from git import (
 )
 
 from flext_core import r
-from flext_infra import m
+from flext_infra import c, m
 
 from ..._utilities._git.remote import FlextInfraUtilitiesGitRemote
 from ..._utilities._git.repo import FlextInfraUtilitiesGitRepo
@@ -42,9 +42,10 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         """
         try:
             repo = cls._repo(request.repo_root)
-            if not repo.head.is_valid():
+            if cls._git_head_is_unborn(repo):
                 return r[m.Infra.GitIdentityReport].fail(
-                    f"Git repository has no committed HEAD: {request.repo_root.resolve()}"
+                    f"Git repository has no committed HEAD: {request.repo_root.resolve()}",
+                    error_code=c.Infra.GIT_UNBORN_HEAD_ERROR_CODE,
                 )
             primary = cls._git_primary_worktree_root_path(request.repo_root)
             if primary.failure:
@@ -59,6 +60,26 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
                 f"failed to resolve Git identity: {exc}", exception=exc
             )
         return r[m.Infra.GitIdentityReport].ok(report)
+
+    @staticmethod
+    def _git_head_is_unborn(repo: Repo) -> bool:
+        """Distinguish an absent symbolic branch from broken refs or objects."""
+        if repo.head.is_valid():
+            return False
+        branch_ref = repo.git.symbolic_ref("--quiet", "HEAD")
+        status, stdout, stderr = repo.git.show_ref(
+            "--exists", branch_ref, with_extended_output=True, with_exceptions=False
+        )
+        if status == c.Infra.GIT_REF_MISSING_EXIT_CODE:
+            return branch_ref.startswith(c.Infra.GIT_REFS_HEADS)
+        if status:
+            raise GitCommandError(
+                ["git", "show-ref", "--exists", branch_ref],
+                status,
+                stderr=stderr,
+                stdout=stdout,
+            )
+        return False
 
     @classmethod
     def exact_worktree_root(
