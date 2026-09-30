@@ -9,7 +9,9 @@
 
 - [Discover commands](#discover-commands)
 - [Canonical workflow](#canonical-workflow)
+- [Codemod rule fixtures](#codemod-rule-fixtures)
 - [Verb single-pass contract](#verb-single-pass-contract)
+- [Information-preserving repair](#information-preserving-repair)
 - [Markdown quality pipeline](#markdown-quality-pipeline)
 - [Test contract](#test-contract)
 - [Failure contract](#failure-contract)
