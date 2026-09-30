@@ -88,9 +88,10 @@ class TestsFlextInfraUtilitiesResourceLimits:
             # Real interpreter startup and controlled group cleanup use the
             # existing integration-harness budget, not the default case budget.
             pytest.param("deadline", 124, marks=pytest.mark.slow),
-            # Darwin's supervisor samples group RSS and stops it (137); Linux
-            # prlimit makes the allocation fail inside the process (exit 1).
-            ("memory", (137 if sys.platform == "darwin" else 1)),
+            # Darwin's supervisor stops the process on RSS (137). Linux
+            # prlimit exhausts the Mypy plugin allocation; Mypy reports that
+            # plugin crash as its documented internal-error status (2).
+            ("memory", (137 if sys.platform == "darwin" else 2)),
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
@@ -126,7 +127,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         if scenario == "memory":
             tm.that(
                 result.value.stderr,
-                has="RSS limit reached" if sys.platform == "darwin" else "MemoryError",
+                has="RSS limit reached"
+                if sys.platform == "darwin"
+                else "INTERNAL ERROR",
             )
 
     @pytest.mark.slow
