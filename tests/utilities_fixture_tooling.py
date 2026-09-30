@@ -70,8 +70,10 @@ class TestsFlextInfraUtilitiesToolingFixtureMixin:
     @staticmethod
     def create_python_environment(root: Path) -> p.Result[bool]:
         """Provision a physical fixture environment with the current interpreter."""
+        environment = u.Infra.runtime_environment_dir(root)
+        environment.parent.mkdir(parents=True, exist_ok=True)
         return u.Cli.run_checked(
-            ["uv", "venv", "--python", sys.executable, str(root / ".venv")], cwd=root
+            ["uv", "venv", "--python", sys.executable, str(environment)], cwd=root
         )
 
     @staticmethod
