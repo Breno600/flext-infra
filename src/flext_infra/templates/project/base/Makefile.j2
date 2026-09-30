@@ -502,7 +502,7 @@ _builtin-help:
 # reconciler validates every initialized checkout before mutation, initializes
 # only missing modules, and preserves declared branches that fix forward beyond
 # the recorded gitlink.
-{{ submodule_setup_recipe("_builtin_setup_submodules", "$(PROJECT_ROOT)") }}
+{{ submodule_setup_recipe("_builtin_setup_submodules", "$(PROJECT_ROOT)", timeout_command, timeout_kill_after_seconds, make.submodule_timeout_seconds) }}
 
 .PHONY: _builtin_require_github_auth
 # The credential check precedes the Mise pin check even under -j. `make setup`

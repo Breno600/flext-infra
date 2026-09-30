@@ -91,8 +91,11 @@ to provision its environment or Git submodules; use `what: all` only when those 
 are already present. The verb uses the current branch-matched Infra generator, validates
 that every target is an exact Git worktree root, and runs the ordinary atomic conform
 transaction for each declared surface. A missing target or a failed conform stops the
-invocation. After Makefile bootstrap, run `make setup` and `make gen` in that consumer's
-worktree. The generated target Makefile and other projections are never edited directly.
+invocation. The integration manifest keeps this list empty; a candidate campaign adds
+exact paths only in its worktree lane and removes them before landing. An empty list
+fails loud when the verb runs, rather than claiming a completed bootstrap. After
+Makefile bootstrap, run `make setup` and `make gen` in that consumer's worktree. The
+generated target Makefile and other projections are never edited directly.
 
 A dedicated integration worktree may stage exact supplier commits in its handwritten
 `config/workspace.yaml` under `candidate_dependencies`. Each entry declares the
