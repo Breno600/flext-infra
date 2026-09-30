@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_cli import u
-from git import GitCommandError
+from git import GitCommandError, Repo
 
 from flext_core import r
 from flext_infra import c, t
@@ -107,6 +107,27 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
         return r[bool].ok(True)
 
     @classmethod
+    def _apply_captured_patch(
+        cls,
+        worktree_repo: Repo,
+        patch: bytes,
+        *,
+        index: bool,
+    ) -> None:
+        """Apply one captured patch; staged state lands in the index.
+
+        ``git apply`` rejects a patch whose final line lacks the terminating
+        newline ("corrupt patch"); ``git diff --binary`` can emit exactly that,
+        so the required newline is restored before applying.
+        """
+        if not patch:
+            return
+        payload = patch if patch.endswith(b"\n") else patch + b"\n"
+        flags = ("--binary", "--index", "-") if index else ("--binary", "-")
+        with FlextInfraUtilitiesGitWorktreeIO.git_stdin(payload) as istream:
+            worktree_repo.git.apply(*flags, istream=istream)
+
+    @classmethod
     def git_copy_worktree_state(
         cls,
         source_root: Path,
@@ -118,27 +139,27 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
         pathspecs = tuple(f":(exclude){path.as_posix()}" for path in excluded)
         try:
             repo = cls._repo(source_root)
-            patch_bytes = repo.git.diff(
-                "--binary", c.Infra.GIT_HEAD, "--", ".", *pathspecs
+            # Capture the staged (index vs HEAD) and unstaged (worktree vs
+            # index) states separately, so the copy preserves the index/worktree
+            # distinction instead of collapsing both into a single dirty patch.
+            staged_bytes = repo.git.diff(
+                "--binary", "--cached", "--", ".", *pathspecs
+            ).encode(c.Cli.ENCODING_DEFAULT)
+            unstaged_bytes = repo.git.diff(
+                "--binary", "--", ".", *pathspecs
             ).encode(c.Cli.ENCODING_DEFAULT)
         except GitCommandError as exc:
             return r[bool].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[bool].fail(f"failed to capture dirty patch: {exc}", exception=exc)
-        if patch_bytes:
-            # git apply rejects a patch whose final line lacks the terminating
-            # newline ("corrupt patch"); `git diff --binary` can emit exactly
-            # that, so restore the single trailing newline the format requires.
-            if not patch_bytes.endswith(b"\n"):
-                patch_bytes += b"\n"
-            try:
-                worktree_repo = cls._repo(worktree_root)
-                with FlextInfraUtilitiesGitWorktreeIO.git_stdin(patch_bytes) as istream:
-                    worktree_repo.git.apply("--binary", "-", istream=istream)
-            except GitCommandError as exc:
-                return r[bool].fail(str(exc), exception=exc)
-            except (OSError, ValueError) as exc:
-                return r[bool].fail(f"dirty patch did not apply: {exc}", exception=exc)
+        try:
+            worktree_repo = cls._repo(worktree_root)
+            cls._apply_captured_patch(worktree_repo, staged_bytes, index=True)
+            cls._apply_captured_patch(worktree_repo, unstaged_bytes, index=False)
+        except GitCommandError as exc:
+            return r[bool].fail(str(exc), exception=exc)
+        except (OSError, ValueError) as exc:
+            return r[bool].fail(f"dirty patch did not apply: {exc}", exception=exc)
         return cls._git_copy_untracked(source_root, worktree_root, tuple(excluded))
 
 
