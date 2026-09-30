@@ -355,7 +355,7 @@ class FlextInfraModGateEngine:
         cascade simply rewrites more or less than its author proved. Rules
         that declare no receipt are unconstrained.
         """
-        counts: dict[str, int] = {}
+        counts: MutableMapping[str, int] = {}
         for entry in report.entries:
             counts[entry.rule_id] = counts.get(entry.rule_id, 0) + 1
         for rule in rules:
