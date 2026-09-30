@@ -6,7 +6,7 @@ fail() {
   exit 1
 }
 
-repo_root="$(git rev-parse --show-toplevel)"
+repo_root="$(git rev-parse --show-toplevel || true)"
 cd "${repo_root}"
 
 role_json="$(bd config get beads.role --json)"

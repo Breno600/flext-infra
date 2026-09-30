@@ -114,7 +114,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         ``mise.version`` records. A binary planted at that release under the
         declared data dir proves resolution without any download, for both an
         absolute and a ``~``-relative data dir (an unquoted ``~/*)`` pattern
-        once doubled ``$HOME``).
+        once doubled ``${HOME}``).
         """
         packaged = files("flext_infra").joinpath(c.Infra.MISE_COLD_START_DIRECTORY)
         release = tm.ok(
