@@ -97,6 +97,9 @@ class FlextInfraUtilitiesRopeRuntimeTypes(FlextInfraUtilitiesRopeRuntimeBase):
         return (
             cls._exception_type("rope.base.exceptions", "RefactoringError"),
             cls._exception_type("rope.base.exceptions", "ResourceNotFoundError"),
+            # Module probing (longest-prefix module/class split) treats a
+            # missing module as "keep splitting", never as a hard failure.
+            cls._exception_type("rope.base.exceptions", "ModuleNotFoundError"),
             AttributeError,
         )
 

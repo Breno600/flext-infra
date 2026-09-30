@@ -19,7 +19,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
-        manifest = project_root / "config" / "workspace.yaml"
+        manifest = u.Tests.write_workspace_manifest(project_root, "fixture-project")
         manifest.write_text(
             manifest.read_text(encoding="utf-8")
             + "\ncandidate_bootstrap_targets: []\n",

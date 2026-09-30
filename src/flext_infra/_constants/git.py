@@ -17,6 +17,11 @@ from typing import ClassVar
 class FlextInfraConstantsGit:
     """Git-specific constants for the GitPython-backed facet."""
 
+    GIT_UNBORN_HEAD_ERROR_CODE: ClassVar[str] = "GIT_UNBORN_HEAD"
+    "Identity is unavailable because HEAD names a branch that has no ref yet."
+    GIT_REF_MISSING_EXIT_CODE: ClassVar[int] = 2
+    "The documented git show-ref --exists result for an absent reference."
+
     @unique
     class GateAttestationSchema(StrEnum):
         """Supported signed gate-attestation schema identities."""

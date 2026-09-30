@@ -6,6 +6,7 @@
 - [Registrar antes de ampliar o trabalho](#registrar-antes-de-ampliar-o-trabalho)
 - [Reconciliar decisões com seus responsáveis](#reconciliar-decisoes-com-seus-responsaveis)
 - [Diferenciar checkpoint de conclusão](#diferenciar-checkpoint-de-conclusao)
+- [Bounded Mypy failure status](#bounded-mypy-failure-status)
 - [Abstraction-boundary project identity](#abstraction-boundary-project-identity)
 - [Codemod scanner contract](#codemod-scanner-contract)
 
@@ -237,6 +238,18 @@ findings residuais.
 O handoff final relaciona PRs, commits de merge e prova após integração aos Beads. Se
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
 declarar fechamento funcional.
+
+## Bounded Mypy failure status
+
+The Linux Mypy command applies `prlimit` before launching the checker. In the observed
+Mypy 2.3.1 run, an exhausted plugin allocation produced `INTERNAL ERROR` and exit status
+2;
+[the tagged Mypy source](https://github.com/python/mypy/blob/v2.3.1/mypy/main.py#L167-L174)
+assigns status 2 to blocking internal errors. This is version-specific behavior, not a
+fixed expectation for later Mypy releases. The resource test requires the workload to
+start, then a nonzero raw status and a diagnostic without a timeout; it never rewrites
+the result into a synthetic `MemoryError` or success. The Darwin supervisor can instead
+terminate a process whose resident memory exceeds its limit.
 
 ## Abstraction-boundary project identity
 

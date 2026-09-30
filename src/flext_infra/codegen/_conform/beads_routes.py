@@ -50,13 +50,13 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         if owner.is_dir():
             owner.chmod(c.Infra.BEADS_DIRECTORY_MODE)
         for repository in workspace.subprojects:
-            state = self._beads_route_state((root / repository.path).resolve())
+            state = self.beads_route_state((root / repository.path).resolve())
             if state.failure:
                 return state
         return r[bool].ok(True)
 
     @staticmethod
-    def _beads_route_state(root: Path) -> p.Result[bool]:
+    def beads_route_state(root: Path) -> p.Result[bool]:
         """Prove one repository reaches the ledger through its own directory.
 
         The route used to be a symlink into the workspace, so the directory

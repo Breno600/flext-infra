@@ -54,33 +54,41 @@ class FlextInfraClassPlacementDetector:
 
         # 2. Class-level constants outside _constants → classvar_relocation action.
         #    Covers explicit ClassVar annotations AND implicit UPPER_CASE
-        #    constant-like assignments (no ClassVar annotation).
-        if not FlextInfraClassPlacementDetector._in_canonical_location(
-            "c", parts, file_path.name
-        ):
+        #    constant-like assignments (no ClassVar annotation). Scans every
+        #    public class, including classes nested inside a canonical
+        #    constants.py facade — those declarations are exactly the
+        #    ENFORCE-079 population the relocation owns (flext-xwag0). Files
+        #    inside a _constants/ directory are already at their owner and
+        #    stay exempt; the constants.py FILENAME alone no longer suppresses
+        #    the scan.
+        if not ({"_constants"} & set(parts)):
+            tree = u.Infra.resolve_pymodule(ctx.rope_project, res).get_ast()
             classvar_violations: list[m.Infra.ClassPlacementViolation] = []
-            for ci in FlextInfraClassPlacementDetector._public_classes(
-                ctx.rope_project, res
-            ):
+            for (
+                class_path,
+                class_node,
+            ) in FlextInfraClassPlacementDetector._class_constant_items(tree):
                 classvar_violations.extend(
                     m.Infra.ClassPlacementViolation(
                         file=str(file_path),
                         line=constant.line,
                         name=constant.name,
-                        base_class=ci.name,
+                        base_class=class_path,
                         suggestion=(
                             f"Move constant {constant.name} "
-                            f"from {ci.name} to _constants"
+                            f"from {class_path} to _constants"
                         ),
                         action="classvar_relocation",
                         fixable=True,
-                        target_facade=FlextInfraClassPlacementDetector._target_facade(
-                            ctx, "c"
+                        target_facade=(
+                            FlextInfraClassPlacementDetector._target_facade(ctx, "c")
                         ),
                         family="c",
                     )
-                    for constant in FlextInfraClassPlacementDetector._class_constants(
-                        ctx.rope_project, res, class_name=ci.name
+                    for constant in (
+                        FlextInfraClassPlacementDetector._class_node_constants(
+                            class_node
+                        )
                     )
                 )
             violations.extend(classvar_violations)
@@ -210,49 +218,46 @@ class FlextInfraClassPlacementDetector:
         return tuple(classes)
 
     @staticmethod
-    def _class_body_nodes(
-        tree: t.Infra.RopeAstNode, *, class_name: str
-    ) -> t.SequenceOf[t.Infra.RopeAstNode]:
-        """Return direct body nodes for the top-level class named ``class_name``."""
-        module_body = getattr(tree, "body", None) or ()
-        if not isinstance(module_body, (list, tuple)):
-            return ()
-        for node in module_body:
-            if u.Infra.node_kind(u.Infra.ensure_ast_node(node)) != "ClassDef":
-                continue
-            if getattr(node, "name", "") == class_name:
-                class_body = getattr(node, "body", None) or ()
-                if not isinstance(class_body, (list, tuple)):
-                    return ()
-                return tuple(
-                    body_node for body_node in class_body if u.Infra.ast_node(body_node)
-                )
-        return ()
+    def _class_constant_items(
+        tree: t.Infra.RopeAstNode,
+    ) -> list[tuple[str, t.Infra.RopeAstNode]]:
+        """Return ``(dotted_qualname, class_node)`` for every public class.
 
-    @staticmethod
-    def _class_constants(
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
-        *,
-        class_name: str,
-    ) -> t.SequenceOf[m.Infra.ConstantInfo]:
-        """Return class-level constants declared in ``class_name``'s body.
-
-        Includes explicit ``ClassVar[...]`` annotations and implicit
-        UPPER_CASE assignments whose value looks like a canonical constant.
+        Recursion covers classes nested inside other classes: the ENFORCE-079
+        population lives exactly there when a facade composes domain classes
+        (flext-xwag0). Private classes are skipped.
         """
-        pymodule = u.Infra.resolve_pymodule(rope_project, resource)
-        tree = pymodule.get_ast()
-        body = FlextInfraClassPlacementDetector._class_body_nodes(
-            tree, class_name=class_name
-        )
+        items: list[tuple[str, t.Infra.RopeAstNode]] = []
+
+        def walk(node: t.Infra.RopeAstNode, prefix: str) -> None:
+            for child in getattr(node, "body", ()) or ():
+                if u.Infra.node_kind(u.Infra.ensure_ast_node(child)) != "ClassDef":
+                    continue
+                name = getattr(child, "name", "")
+                if not isinstance(name, str) or not name or name.startswith("_"):
+                    continue
+                dotted = f"{prefix}.{name}" if prefix else name
+                items.append((dotted, child))
+                walk(child, dotted)
+
+        walk(tree, "")
+        return items
+
+    @classmethod
+    def _class_node_constants(
+        cls, class_node: t.Infra.RopeAstNode
+    ) -> t.SequenceOf[m.Infra.ConstantInfo]:
+        """Return the constants declared directly in ``class_node``'s body."""
+        body = getattr(class_node, "body", None) or ()
         constants: list[m.Infra.ConstantInfo] = []
         for node in body:
+            if not u.Infra.ast_node(node):
+                continue
             node_kind = u.Infra.node_kind(u.Infra.ensure_ast_node(node))
             if node_kind == "AnnAssign":
-                constant = FlextInfraClassPlacementDetector._annassign_constant(node)
+                constant = cls._annassign_constant(node)
             elif node_kind == "Assign":
-                constant = FlextInfraClassPlacementDetector._assign_constant(node)
+                constant = cls._assign_constant(node)
             else:
                 continue
             if constant is not None:

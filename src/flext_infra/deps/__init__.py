@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from .detector_runtime import FlextInfraDependencyDetectorRuntime
     from .extra_paths import FlextInfraExtraPathsManager
     from .fix_pyrefly_config import FlextInfraConfigFixer
+    from .lock_integrity import FlextInfraLockIntegrityVerifier
     from .modernizer import FlextInfraPyprojectModernizer
     from .phases.consolidate_groups import FlextInfraConsolidateGroupsPhase
     from .phases.ensure_packaging import FlextInfraEnsurePackagingPhase
@@ -52,6 +53,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraExtraPathsManager",
     "FlextInfraExtraPathsSyncMixin",
     "FlextInfraInjectCommentsPhase",
+    "FlextInfraLockIntegrityVerifier",
     "FlextInfraPyprojectModernizer",
     "FlextInfraPyprojectModernizerBase",
     "FlextInfraPyprojectModernizerDocument",
@@ -82,6 +84,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".detector_runtime": ("FlextInfraDependencyDetectorRuntime",),
             ".extra_paths": ("FlextInfraExtraPathsManager",),
             ".fix_pyrefly_config": ("FlextInfraConfigFixer",),
+            ".lock_integrity": ("FlextInfraLockIntegrityVerifier",),
             ".modernizer": ("FlextInfraPyprojectModernizer",),
             ".phases": ("phases",),
             ".phases.consolidate_groups": ("FlextInfraConsolidateGroupsPhase",),

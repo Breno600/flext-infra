@@ -35,14 +35,10 @@ class TestsFlextInfraMakeDocsActionsConfig:
         docs = config.Infra.codegen.make.docs
         tm.that(set(docs.actions) <= c.Infra.DOCS_ACTION_IDS, eq=True)
         tm.that(set(docs.mutable_actions) <= set(docs.actions), eq=True)
-        tm.that(set(docs.warning_actions) <= set(docs.actions), eq=True)
 
     def test_synthetic_lifecycle_validates(self) -> None:
-        spec = m.Infra.MakeDocsSpec.model_validate(
-            _spec_payload(warning_actions=["validate"])
-        )
+        spec = m.Infra.MakeDocsSpec.model_validate(_spec_payload())
         tm.that(spec.actions, eq=("generate", "fix", "validate"))
-        tm.that(spec.warning_actions, eq=("validate",))
 
     def test_unknown_action_is_rejected(self) -> None:
         with pytest.raises(c.ValidationError, match="not a registered CLI action"):
@@ -60,8 +56,8 @@ class TestsFlextInfraMakeDocsActionsConfig:
         with pytest.raises(c.ValidationError, match="not part of the docs lifecycle"):
             m.Infra.MakeDocsSpec.model_validate(_spec_payload(mutable_actions=["fmt"]))
 
-    def test_warning_action_outside_lifecycle_is_rejected(self) -> None:
-        with pytest.raises(c.ValidationError, match="not part of the docs lifecycle"):
+    def test_warning_posture_is_not_a_docs_option(self) -> None:
+        with pytest.raises(c.ValidationError):
             m.Infra.MakeDocsSpec.model_validate(
                 _spec_payload(warning_actions=["audit"])
             )
