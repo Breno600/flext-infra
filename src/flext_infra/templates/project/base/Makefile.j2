@@ -134,7 +134,7 @@ PYTEST_PROCESS_TIMEOUT_SECONDS := {{ pytest_process_timeout_seconds }}
 PYTEST_BOUNDED = {{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := {{ make.testmon_cache.reports_directory }}
 PYTEST_CACHE_HOME = $(if $(strip $({{ make.testmon_cache.data_home_environment_variable }})),$({{ make.testmon_cache.data_home_environment_variable }}),$(if $(strip $({{ make.testmon_cache.user_home_environment_variable }})),$({{ make.testmon_cache.user_home_environment_variable }})/{{ make.testmon_cache.home_cache_directory }},))
-override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/{{ make.testmon_cache.external_storage_directory }}/$(subst /,_,$(PROJECT_ROOT))/{{ make.testmon_cache.database_filename }})
+override export FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/{{ make.testmon_cache.external_storage_directory }}/$(subst /,_,$(PROJECT_ROOT))/{{ make.testmon_cache.database_filename }})
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := {{ pytest.case_timeout_seconds }}

@@ -83,7 +83,7 @@ PYTEST_PROCESS_TIMEOUT_SECONDS := 124
 PYTEST_BOUNDED = timeout --signal=TERM --kill-after=5s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := .reports/tests
 PYTEST_CACHE_HOME = $(if $(strip $(XDG_CACHE_HOME)),$(XDG_CACHE_HOME),$(if $(strip $(HOME)),$(HOME)/.cache,))
-override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/flext/infra/testmon/$(subst /,_,$(PROJECT_ROOT))/.testmondata)
+override export FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/flext/infra/testmon/$(subst /,_,$(PROJECT_ROOT))/.testmondata)
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := 10
