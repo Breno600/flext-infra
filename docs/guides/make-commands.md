@@ -158,6 +158,10 @@ The root dispatcher resolves workspace scope from its typed topology. Generated 
 surfaces and documentation are changed at their template or configuration owner, then
 regenerated with `make gen`.
 
+When conformance selects multiple repositories, lazy initializer planning opens each
+repository in its own Rope workspace. Conformance combines their authenticated file
+plans into one transaction receipt and verifies the selected publications together.
+
 ## Related guides
 
 - Development
