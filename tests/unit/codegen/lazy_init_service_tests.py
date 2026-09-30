@@ -81,7 +81,7 @@ class TestsFlextInfraCodegenLazyInitService:
 
         result = u.Tests.materialize_lazy_init(service)
 
-        tm.that(result.success, eq=True)
+        tm.ok(result)
         tm.that((selected_root / c.Infra.INIT_PY).read_bytes(), ne=b"")
         tm.that((selected_root / "__unit__.py").exists(), eq=False)
         tm.that(unrelated_init.read_bytes(), eq=unrelated_before)
