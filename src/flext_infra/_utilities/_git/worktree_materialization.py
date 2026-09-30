@@ -183,8 +183,9 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             ).encode(c.Cli.ENCODING_DEFAULT, errors="surrogateescape")
             for layer in ((), ("--cached",))
         )
-        deleted = set(
-            repo.git.diff(
+        deleted = {
+            Path(name)
+            for name in repo.git.diff(
                 "--name-only",
                 "--diff-filter=D",
                 "-z",
@@ -193,7 +194,8 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
                 ".",
                 *pathspecs,
             ).split("\0")
-        )
+            if name
+        }
         for raw_path in repo.git.ls_files("--others", "--exclude-standard", "-z").split(
             "\0"
         ):
@@ -208,11 +210,11 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
             destination = worktree_root / relative
             if (
                 destination.exists() or destination.is_symlink()
-            ) and raw_path not in deleted:
+            ) and relative not in deleted:
                 return r[bool].fail(f"untracked destination already exists: {relative}")
             for parent in relative.parents:
                 candidate = worktree_root / parent
-                if parent.as_posix() not in deleted and (
+                if parent not in deleted and (
                     candidate.is_symlink()
                     or (candidate.exists() and not candidate.is_dir())
                 ):
@@ -229,9 +231,9 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
                     )
         # Git records only executable bits; apply creates files through the
         # process umask. Preserve the physical source permissions separately.
-        for raw_path in repo.git.ls_files(
-            "-z", strip_newline_in_stdout=False
-        ).split("\0"):
+        for raw_path in repo.git.ls_files("-z", strip_newline_in_stdout=False).split(
+            "\0"
+        ):
             relative = Path(raw_path)
             if not raw_path or cls._git_path_is_excluded(relative, excluded):
                 continue

@@ -77,13 +77,14 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
         original: m.Infra.GitWorktreeFileState | None,
         baseline: m.Infra.GitWorktreeFileState | None,
     ) -> t.VariadicTuple[m.Infra.GitWorktreeFileState | None]:
+        allowed: list[m.Infra.GitWorktreeFileState | None] = [original, baseline]
         if (
             original is not None
             and baseline is not None
             and (original.mode == "120000") != (baseline.mode == "120000")
         ):
-            return original, baseline, None
-        return original, baseline
+            allowed.append(None)
+        return tuple(allowed)
 
     @classmethod
     def _state_preflight_transition(
@@ -128,8 +129,7 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
             target = root / path
             obstruction = cls._state_obstruction(root, path)
             if obstruction is not None and (
-                obstruction not in paths
-                or (obstruction in desired and path in desired)
+                obstruction not in paths or (obstruction in desired and path in desired)
             ):
                 msg = f"unowned ancestor obstructs state transition: {path}"
                 raise ValueError(msg)
