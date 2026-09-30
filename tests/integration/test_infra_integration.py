@@ -16,8 +16,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import m
-from flext_infra.gates.markdown import FlextInfraMarkdownGate
+from flext_infra import FlextInfraMarkdownGate, m
 from tests import TestsFlextInfraUtilities as tu, u
 
 if TYPE_CHECKING:
@@ -30,19 +29,8 @@ class TestsFlextInfraIntegrationInfraIntegration:
     """Integration tests for the public FlextInfra surface."""
 
     @pytest.mark.integration
-    def test_markdown_fix_formats_instead_of_linting(self, tmp_path: Path) -> None:
-        """The mutating verb must format Markdown, never lint it.
-
-        ``rumdl check --fix`` is a linter: it exits non-zero whenever a finding
-        has no autofix, so a run that repaired every fixable file still failed
-        the verb. ``rumdl fmt`` carries formatter-style exit codes, which is
-        the contract the mutating verb promises.
-
-        The gate pipeline owns this contract. The document below
-        carries an unfixable finding (MD041: no top-level heading) next to a
-        fixable one (MD009: trailing whitespace): the linter fails on it, the
-        formatter repairs what it can and still succeeds.
-        """
+    def test_markdown_fix_reports_residual_after_repair(self, tmp_path: Path) -> None:
+        """A fixable finding is repaired while an unfixable one stays red."""
         project_dir = tu.Tests.mk_project(tmp_path, "markdown-fmt-contract")
         document = project_dir / "README.md"
         document.write_text("not a heading   \n", encoding="utf-8")
@@ -53,8 +41,42 @@ class TestsFlextInfraIntegrationInfraIntegration:
 
         execution = FlextInfraMarkdownGate(tmp_path).fix(project_dir, context)
 
-        tm.that(execution.result.passed, eq=True)
+        tm.that(execution.result.passed, eq=False)
         tm.that(document.read_text(encoding="utf-8"), eq="not a heading\n")
+        tm.that(execution.issues[0].code, eq="MD041")
+
+    @pytest.mark.integration
+    def test_markdown_check_retains_normalization_finding(self, tmp_path: Path) -> None:
+        """A native MD013 normalization diagnostic remains visible to callers."""
+        project_dir = tu.Tests.mk_project(tmp_path, "markdown-normalization")
+        (project_dir / ".markdownlint.json").write_text(
+            tm.ok(
+                u.Cli.json_dumps({
+                    "default": False,
+                    "MD013": {
+                        "line_length": 60,
+                        "reflow": True,
+                        "reflow-mode": "normalize",
+                    },
+                })
+            ),
+            encoding="utf-8",
+        )
+        (project_dir / "README.md").write_text(
+            "# Title\n\nThis paragraph has\n"
+            "several short lines that could be joined without\n"
+            "changing the meaning of its content.\n",
+            encoding="utf-8",
+        )
+        tu.Tests.initialize_git_repo(project_dir)
+
+        execution = FlextInfraMarkdownGate(tmp_path).check(
+            project_dir,
+            m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path),
+        )
+
+        tm.that(execution.result.passed, eq=False)
+        tm.that(execution.issues[0].code, eq="MD013")
 
     @pytest.mark.integration
     def test_cli_capture_git_current_branch_in_real_repo(self, tmp_path: Path) -> None:
