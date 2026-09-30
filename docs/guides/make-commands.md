@@ -125,7 +125,9 @@ The markdown standard lives once in `flext-infra/config/tooling.yaml`
 - `rumdl` is the linter (markdownlint-compatible `MD*` rules through the generated
   `.markdownlint.json` / `.markdownlintignore`); syntax findings inside embedded code
   belong to the flext-tests markdown validator, not to a second linter. Its fix pass
-  keeps unfixable findings visible and makes `make fix` fail when they remain.
+  keeps unfixable findings visible and makes `make fix` fail when they remain. MD013
+  uses standard reflow to wrap overlong prose; paragraph-normalization mode is not
+  selected because its separate hint cannot be resolved by the native writer.
 - `prettier` (pinned 3.5.x — newer releases dropped prose reflow) is the formatter:
   `prettier --check` in `make check`, `prettier --write` in `make fmt`.
 - `markdown-code` holds parseable embedded Python and doctest examples to the

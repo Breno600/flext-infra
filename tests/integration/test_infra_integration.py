@@ -46,6 +46,39 @@ class TestsFlextInfraIntegrationInfraIntegration:
         tm.that(execution.issues[0].code, eq="MD041")
 
     @pytest.mark.integration
+    def test_markdown_check_retains_normalization_finding(self, tmp_path: Path) -> None:
+        """A native MD013 normalization diagnostic remains visible to callers."""
+        project_dir = tu.Tests.mk_project(tmp_path, "markdown-normalization")
+        (project_dir / ".markdownlint.json").write_text(
+            tm.ok(
+                u.Cli.json_dumps({
+                    "default": False,
+                    "MD013": {
+                        "line_length": 60,
+                        "reflow": True,
+                        "reflow-mode": "normalize",
+                    },
+                })
+            ),
+            encoding="utf-8",
+        )
+        (project_dir / "README.md").write_text(
+            "# Title\n\nThis paragraph has\n"
+            "several short lines that could be joined without\n"
+            "changing the meaning of its content.\n",
+            encoding="utf-8",
+        )
+        tu.Tests.initialize_git_repo(project_dir)
+
+        execution = FlextInfraMarkdownGate(tmp_path).check(
+            project_dir,
+            m.Infra.GateContext(repository_root=tmp_path, reports_dir=tmp_path),
+        )
+
+        tm.that(execution.result.passed, eq=False)
+        tm.that(execution.issues[0].code, eq="MD013")
+
+    @pytest.mark.integration
     def test_cli_capture_git_current_branch_in_real_repo(self, tmp_path: Path) -> None:
         """Test git branch detection through the canonical CLI runtime surface."""
         repo_root = tmp_path / "repo"

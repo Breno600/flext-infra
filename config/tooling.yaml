@@ -23,8 +23,9 @@ Infra:
           # would only manufacture unfixable findings.
           #
           # flext-md-converge: wrapping is owned by rumdl (`make fix`), not
-          # prettier. `reflow`/`reflow-mode: normalize` make MD013 fixable
-          # (`[*]`) and give rumdl's own reflow-aware writer (atomic code
+          # prettier. `reflow`/`reflow-mode: default` wrap overlong prose
+          # without imposing a separate paragraph-normalization hint that
+          # the writer cannot satisfy. rumdl's reflow-aware writer (atomic code
           # spans, GFM task-item post-checkbox column) the authority over
           # line breaks that prettier's proseWrap could not reach (a
           # 294-char line inside backtick spans that prettier left
@@ -36,7 +37,7 @@ Infra:
             code_block_line_length: 88
             tables: false
             reflow: true
-            reflow-mode: normalize
+            reflow-mode: default
           MD022: false
           MD023: false
           MD024: { siblings_only: true }

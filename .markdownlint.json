@@ -5,7 +5,7 @@
     "heading_line_length": 200,
     "line_length": 88,
     "reflow": true,
-    "reflow-mode": "normalize",
+    "reflow-mode": "default",
     "tables": false
   },
   "MD022": false,
