@@ -112,7 +112,7 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
         desired = base if cleanup else expected
         for entry in desired.values():
             if entry.mode == "120000":
-                payload = cls._repo(root).odb.stream(bytes.fromhex(entry.oid)).read()
+                payload = cls._state_blob_payload(root, entry.oid)
                 os.fsdecode(payload).encode(c.Cli.ENCODING_DEFAULT, errors="strict")
         for path in paths:
             current_entry = current_index.get(path)

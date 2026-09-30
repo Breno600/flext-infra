@@ -230,6 +230,9 @@ class TestsFlextInfraGitStateBoundaries:
 
     def test_remote_drift_refuses_source_cleanup(self, tmp_path: Path) -> None:
         source = test_u.Tests.git_repository(tmp_path)
+        (source / "README.md").write_text("baseline\n", encoding="utf-8")
+        test_u.Tests.git_run(source, "add", "README.md")
+        test_u.Tests.git_run(source, "commit", "-m", "baseline")
         (source / "README.md").write_text("owned change\n", encoding="utf-8")
         snapshot = tm.ok(
             u.Infra.git_snapshot_worktree_state(
