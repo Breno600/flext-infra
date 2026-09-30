@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -226,23 +227,19 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         tm.that((result.error or ""), lacks="no registered fixer adapter")
 
     @pytest.mark.slow
-    def test_fix_enforcement_never_rewrites_text_or_typing_list(
+    def test_failed_full_enforcement_preserves_runtime_text_and_typed_behavior(
         self, tmp_path: Path
     ) -> None:
-        """The applied fix run leaves a module that quotes its own defects intact.
-
-        Retired whole-file regex fixes rewrote the docstrings, comments and
-        strings documenting bare ``except:``, ``breakpoint()`` and ``List[``,
-        and turned ``typing.List[`` into ``typing.t.SequenceOf[``. Those
-        rewrites belong to the ast-grep rules of ``make mod``; the enforcement
-        fix run keeps every byte of the module, real violations included.
-        """
+        """Full-catalog failures stay visible while safe repairs preserve behavior."""
         project_dir = u.Tests.mk_project(
             tmp_path, "demo", pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n'
         )
         u.Tests.declare_workspace_projects(tmp_path, ("demo",))
         source_file = project_dir / "src" / "demo" / "documented.py"
         source_file.parent.mkdir(parents=True)
+        (source_file.parent / "__init__.py").write_text(
+            f"from {c.Infra.PKG_CORE_UNDERSCORE} import t as t\n", encoding="utf-8"
+        )
         source = (
             '"""Document the defects this module still carries.\n'
             "\n"
@@ -256,8 +253,10 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
             "\n"
             "import typing\n"
             "from typing import List\n"
+            "from demo import t\n"
             "\n"
             'HINT = "rewrite except: and drop breakpoint() and List[str]"\n'
+            "TYPE_SPEC = typing.List[int]\n"
             "\n"
             "\n"
             "def first(values: List[str]) -> str:\n"
@@ -274,13 +273,30 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         )
         source_file.write_text(source, encoding="utf-8")
         u.Tests.initialize_git_repo(project_dir)
+        probe = (
+            "import json, typing; from demo import documented; "
+            "typing.get_type_hints(documented.first); "
+            "typing.get_type_hints(documented.total); "
+            "assert documented.TYPE_SPEC == typing.List[int]; "
+            "print(json.dumps((documented.__doc__, documented.HINT, "
+            "documented.first(['retained']))))"
+        )
+        before = tm.ok(
+            u.Cli.run_raw((sys.executable, "-c", probe), cwd=source_file.parent.parent)
+        )
+        assert u.Cli.process_succeeded(before.outcome), before.stderr
 
         result = FlextInfraEnforcementFixerOrchestrator(
             repository_root=project_dir, selected_projects=("demo",), apply=True
         ).execute()
 
-        tm.ok(result)
-        tm.that(source_file.read_text(encoding="utf-8"), eq=source)
+        tm.fail(result, has="manual fix required")
+        after = tm.ok(
+            u.Cli.run_raw((sys.executable, "-c", probe), cwd=source_file.parent.parent)
+        )
+        assert u.Cli.process_succeeded(after.outcome), after.stderr
+        tm.that(after.stdout, eq=before.stdout)
+        tm.that(after.stderr, eq=before.stderr)
 
     # Exemplar: this drives the real CLI entry point against a real Git
     # repository, so its cost is the runtime's import chain plus several git

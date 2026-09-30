@@ -31,7 +31,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
 
         tm.ok(result)
         tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
-        tm.that(result.value.outcome.raw_return_code, eq=0)
+        tm.that(u.Cli.process_succeeded(result.value.outcome), eq=True)
 
     def test_mypy_profile_records_the_real_checker(self, tmp_path: Path) -> None:
         """Keep the public profiling contract while removing executable selection."""
@@ -89,8 +89,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
             # existing integration-harness budget, not the default case budget.
             pytest.param("deadline", 124, marks=pytest.mark.slow),
             # Darwin's supervisor samples group RSS and stops it (137); Linux
-            # prlimit makes the allocation fail inside the process (exit 1).
-            ("memory", (137 if sys.platform == "darwin" else 1)),
+            # prlimit makes the plugin allocation raise MemoryError; Mypy's
+            # console_entry reports that fatal checker error with exit 2.
+            ("memory", (137 if sys.platform == "darwin" else 2)),
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
@@ -110,7 +111,13 @@ class TestsFlextInfraUtilitiesResourceLimits:
             source += "sys.exit(7)"
         else:
             if scenario == "memory":
-                source += f"allocation = bytearray({limit.memory_limit_bytes * 2}); "
+                source += (
+                    "\ntry:\n"
+                    f"    allocation = bytearray({limit.memory_limit_bytes * 2})\n"
+                    "except MemoryError:\n"
+                    "    print('allocation-denied: MemoryError', file=sys.stderr, flush=True)\n"
+                    "    raise\n"
+                )
             source += f"time.sleep({limit.timeout_seconds + 1})"
         result = u.Cli.run_raw(
             u.Infra.mypy_limited_command(
@@ -124,7 +131,9 @@ class TestsFlextInfraUtilitiesResourceLimits:
         if scenario == "memory":
             tm.that(
                 result.value.stderr,
-                has="RSS limit reached" if sys.platform == "darwin" else "MemoryError",
+                has="RSS limit reached"
+                if sys.platform == "darwin"
+                else "allocation-denied: MemoryError",
             )
 
     @pytest.mark.slow
@@ -225,7 +234,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
     def test_mypy_resource_limit_parses_environment_at_boundary(self) -> None:
         """Convert valid process text once before strict model validation."""
         memory_limit = c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 2
-        timeout_limit = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT // 2
+        timeout_limit = c.Infra.MYPY_TIMEOUT_SECONDS_MAX
         with tm.scope(
             env={
                 c.Infra.MYPY_MEMORY_LIMIT_MB_ENV: str(memory_limit),
@@ -281,12 +290,27 @@ class TestsFlextInfraUtilitiesResourceLimits:
         """Reject a wall-time configuration above the canonical ceiling."""
         with pytest.raises(
             ValueError,
-            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT}",
+            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_MAX}",
         ):
             m.Infra.MypyResourceLimit(
                 memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT + 1,
+                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_MAX + 1,
             )
+
+        with (
+            tm.scope(
+                env={
+                    c.Infra.MYPY_TIMEOUT_SECONDS_ENV: str(
+                        c.Infra.MYPY_TIMEOUT_SECONDS_MAX + 1
+                    )
+                }
+            ),
+            pytest.raises(
+                ValueError,
+                match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_MAX}",
+            ),
+        ):
+            u.Infra.mypy_resource_limit()
 
     def test_mypy_timeout_has_controlled_exit_and_signal_diagnostic(self) -> None:
         """Expose the configured ceilings and process status on timeout."""

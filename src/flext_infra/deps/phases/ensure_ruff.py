@@ -7,7 +7,6 @@ from pathlib import Path
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
-from ..extra_paths import FlextInfraExtraPathsManager
 from .tool_tables import FlextInfraToolTablesPhase
 
 
@@ -65,24 +64,6 @@ class FlextInfraEnsureRuffConfigPhase:
         if paths.failure:
             raise ValueError(paths.error or "workspace analysis scope is unavailable")
         return sorted(path.as_posix() for path in paths.value)
-
-    @staticmethod
-    def _excluded_root_set(project_dir: Path) -> frozenset[str]:
-        """First segments of the workspace SSOT's declared analysis exclusions.
-
-        Unlike a disk probe (which oscillates between the deps pass and the
-        root-materializing gen pass), the workspace SSOT is order-independent:
-        a repository declares a retired tree here once and every root-scoped
-        projection converges.
-        """
-        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return frozenset()
-        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            raise ValueError(
-                paths.error or "workspace analysis exclusions are unavailable"
-            )
-        return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
     @staticmethod
     def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
@@ -186,22 +167,10 @@ class FlextInfraEnsureRuffConfigPhase:
                 c.Infra.KNOWN_FIRST_PARTY_HYPHEN,
                 u.normalize_to_json_value(detected_packages),
             ))
-        # Dev/tooling source roots are config-declared, but a repository that
-        # retired a tree (e.g. scripts/) must not keep analyzer entries naming
-        # it: ruff fails hard on src roots whose directories do not exist, and
-        # the namespace-packages contract only holds for roots on disk. The
-        # declared lists stay the SSOT; existence filters the projection, with
-        # roots the active plan is materializing accepted as present (the
-        # extra-paths manager owns that set; empty in the deps pass).
-        generated_roots = FlextInfraExtraPathsManager(
-            repository_root=path.parent
-        ).generated_python_roots
-
-        def _present(directory: str) -> bool:
-            return (path.parent / directory).is_dir() or (directory in generated_roots)
-
-        existing_root = tuple(d for d in ruff_cfg.src if _present(d))
-        excluded_roots = self._excluded_root_set(path.parent)
+        # Conformance plans source roots before generation materializes them.
+        # Only declared exclusions remove roots from the configured projection.
+        excluded_roots = FlextInfraToolTablesPhase.excluded_roots(path.parent)
+        existing_root = tuple(d for d in ruff_cfg.src if d not in excluded_roots)
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )

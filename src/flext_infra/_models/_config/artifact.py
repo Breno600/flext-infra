@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, Literal, Self
 
 from flext_cli import m, u
@@ -701,6 +702,34 @@ class FlextInfraConfigModelsArtifact:
                 ),
             ),
         ] = ()
+        bindings: Annotated[
+            t.MappingKV[str, t.StrSequence],
+            m.Field(
+                default_factory=lambda: MappingProxyType[str, t.StrSequence]({}),
+                description="CSV expression prefixes mapped to current public Rope owner identities",
+            ),
+        ]
+        text_globs: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description="Explicit root-relative non-Python documentation and configuration text surfaces",
+            ),
+        ]
+        python_documentation: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description="Rename comments and actual Python docstrings without changing executable strings",
+            ),
+        ]
+        exclude_globs: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description="Generated projections excluded from campaign targets",
+            ),
+        ]
 
     class RefactorCsvCampaignsSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Declared CSV-driven rename campaigns for the mod verb's rename phase."""
