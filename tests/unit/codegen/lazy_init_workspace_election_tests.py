@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from tests import c, u
@@ -13,11 +14,9 @@ class TestsFlextInfraLazyInitWorkspaceElection:
     """A letter's source never depends on how many projects share the scan.
 
     A child project inherits ``r`` through a middle project that re-exports it
-    from the declaring owner project. Planned from the workspace root, every
-    project is indexed, so the owner is reachable through the middle project's
-    facade chain; the election must still name the nearest re-exporting parent
-    (the middle project), exactly as a standalone checkout of the child does
-    (operator ruling 2026-09-23).
+    from the declaring owner project. Each Git checkout publishes its own
+    initializer. The next project's real import path reads that published ABI,
+    so the child must elect the nearest re-exporting parent.
     """
 
     @staticmethod
@@ -33,25 +32,18 @@ class TestsFlextInfraLazyInitWorkspaceElection:
         )
 
     def test_workspace_plan_elects_nearest_reexporting_parent(
-        self, tmp_path: Path
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """The child's ``r`` comes from the middle project, never the owner."""
         workspace = tmp_path / "workspace"
-        _owner_repo, owner = u.Tests.create_lazy_init_workspace(
+        owner_repo, owner = u.Tests.create_lazy_init_workspace(
             workspace, project_name="flext-ws-owner", package_name="flext_ws_owner"
         )
-        _middle_repo, middle = u.Tests.create_lazy_init_workspace(
+        middle_repo, middle = u.Tests.create_lazy_init_workspace(
             workspace, project_name="flext-ws-middle", package_name="flext_ws_middle"
         )
-        _child_repo, child = u.Tests.create_lazy_init_workspace(
+        child_repo, child = u.Tests.create_lazy_init_workspace(
             workspace, project_name="flext-ws-child", package_name="flext_ws_child"
-        )
-        workspace.joinpath(c.Infra.GITMODULES).write_text(
-            "".join(
-                f'[submodule "{name}"]\n\tpath = {name}\n'
-                for name in ("flext-ws-owner", "flext-ws-middle", "flext-ws-child")
-            ),
-            encoding=c.Infra.ENCODING_DEFAULT,
         )
         u.Tests.write_lazy_init_namespace_module(
             owner / c.Infra.CONSTANTS_PY, class_name="FlextWsOwnerConstants", alias="c"
@@ -66,8 +58,11 @@ class TestsFlextInfraLazyInitWorkspaceElection:
             child, parent="flext_ws_middle", class_name="FlextWsChildConstants"
         )
 
-        tm.that(u.Tests.run_lazy_init(workspace), eq=0)
-        tm.that(u.Tests.run_lazy_init(workspace), eq=0)
+        for repository in (owner_repo, middle_repo, child_repo):
+            monkeypatch.syspath_prepend(str(repository / c.Infra.DEFAULT_SRC_DIR))
+        for repository in (owner_repo, middle_repo, child_repo):
+            tm.that(u.Tests.run_lazy_init(repository), eq=0)
+            tm.that(u.Tests.run_lazy_init(repository, check_only=True), eq=0)
         generated = child.joinpath(c.Infra.INIT_PY).read_text(
             encoding=c.Cli.ENCODING_DEFAULT
         )
@@ -78,4 +73,4 @@ class TestsFlextInfraLazyInitWorkspaceElection:
 
         tm.that(sources.get("flext_ws_middle", ()), has="r")
         tm.that(sources, lacks="flext_ws_owner")
-        tm.that(u.Tests.run_lazy_init(workspace, check_only=True), eq=0)
+        tm.that(u.Tests.run_lazy_init(child_repo, check_only=True), eq=0)

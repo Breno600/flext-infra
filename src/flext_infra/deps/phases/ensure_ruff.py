@@ -7,7 +7,6 @@ from pathlib import Path
 from flext_infra import c, config, m, t, u
 from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
-from ..extra_paths import FlextInfraExtraPathsManager
 from .tool_tables import FlextInfraToolTablesPhase
 
 
@@ -150,6 +149,7 @@ class FlextInfraEnsureRuffConfigPhase:
         stale_patterns: t.StrSequence,
         per_file_ignores: t.MappingKV[str, t.StrSequence],
         analysis_exclusions: t.StrSequence | None,
+        generated_python_roots: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build the canonical Ruff phase for one project path."""
         ruff_cfg = self._tool_config.tools.ruff
@@ -183,14 +183,12 @@ class FlextInfraEnsureRuffConfigPhase:
         # it: ruff fails hard on src roots whose directories do not exist, and
         # the namespace-packages contract only holds for roots on disk. The
         # declared lists stay the SSOT; existence filters the projection, with
-        # roots the active plan is materializing accepted as present (the
-        # extra-paths manager owns that set; empty in the deps pass).
-        generated_roots = FlextInfraExtraPathsManager(
-            repository_root=path.parent
-        ).generated_python_roots
+        # roots the active plan is materializing accepted as present.
 
         def _present(directory: str) -> bool:
-            return (path.parent / directory).is_dir() or (directory in generated_roots)
+            return (path.parent / directory).is_dir() or (
+                directory in generated_python_roots
+            )
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
         excluded_roots = self._analysis_exclusion_root_set(path.parent)
@@ -318,6 +316,7 @@ class FlextInfraEnsureRuffConfigPhase:
         *,
         path: Path,
         analysis_exclusions: t.StrSequence | None = None,
+        generated_python_roots: t.StrSequence = (),
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload."""
         effective_ignores = self.compose_per_file_ignores(
@@ -344,6 +343,7 @@ class FlextInfraEnsureRuffConfigPhase:
                     ],
                     per_file_ignores=effective_ignores,
                     analysis_exclusions=analysis_exclusions,
+                    generated_python_roots=generated_python_roots,
                 ),
             )
         )

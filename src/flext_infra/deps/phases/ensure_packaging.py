@@ -3,9 +3,7 @@
 Every project's wheel gets an explicit ``[tool.hatch.build.targets.wheel]``
 with the primary ``src/<pkg>`` plus every project-declared additional package.
 Project-declared standalone modules under ``src/<module>.py`` and root data
-directories declared in
-``config.Infra.tooling.tools.hatch.packaged_data_dirs`` (e.g. ``config``,
-``templates``) are force-included into the wheel when they exist at the
+directories declared by the project are force-included into the wheel when they exist at the
 project root, so they survive ``pip install`` (``<pkg>/<dir>``). The source
 distribution is bounded to the package source and those validated data roots,
 preventing caches and ignored workspace state from entering release artifacts.
@@ -20,10 +18,6 @@ from flext_infra import c, m, t, u
 
 class FlextInfraEnsurePackagingPhase:
     """Ensure bounded Hatch wheel and source-distribution targets."""
-
-    def __init__(self, tool_config: m.Infra.ToolConfigDocument) -> None:
-        """Store tool configuration providing the packaged data-dir policy."""
-        self._tool_config = tool_config
 
     def _phase(
         self,
@@ -157,10 +151,7 @@ class FlextInfraEnsurePackagingPhase:
                 raise FileNotFoundError(msg)
         present_dirs = tuple(
             data_dir
-            for data_dir in dict.fromkeys((
-                *self._tool_config.tools.hatch.packaged_data_dirs,
-                *packaged_data_dirs,
-            ))
+            for data_dir in dict.fromkeys(packaged_data_dirs)
             # Force-include a root data dir only when it exists at the project
             # root AND is not already shipped from inside the package (which
             # would collide on the same wheel path).

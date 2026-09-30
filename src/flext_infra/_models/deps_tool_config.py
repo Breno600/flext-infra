@@ -65,18 +65,6 @@ class FlextInfraModelsDepsToolConfig(
                 description="Allow direct references in project metadata.",
             ),
         ]
-        packaged_data_dirs: Annotated[
-            t.StrSequence,
-            m.Field(
-                alias="packaged-data-dirs",
-                default_factory=tuple,
-                description=(
-                    "Root data directories force-included into the wheel when "
-                    "present (e.g. config, templates), so they survive install."
-                ),
-            ),
-        ]
-
     class PytestWorkerCeiling(m.ArbitraryTypesModel):
         """Tagged per-project pytest worker ceiling: absolute or CPU fraction.
 

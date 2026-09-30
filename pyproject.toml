@@ -171,11 +171,8 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 packages = ["src/flext_infra"]
 
-[tool.hatch.build.targets.wheel.force-include]
-config = "flext_infra/config"
-
 [tool.hatch.build.targets.sdist]
-only-include = ["src/flext_infra", "config"]
+only-include = ["src/flext_infra"]
 
 [tool.mypy]
 disable_error_code = [

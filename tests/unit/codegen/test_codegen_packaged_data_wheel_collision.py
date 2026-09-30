@@ -124,11 +124,15 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         return u.Tests.toml_list(sdist["only-include"])
 
     @pytest.mark.slow
-    def test_root_only_data_dir_stays_force_included(
+    def test_declared_root_data_dir_stays_force_included(
         self, infra_git_repo: Path
     ) -> None:
         """A root data dir the package does not carry still reaches the wheel."""
-        self._prepare_project(infra_git_repo, package_config=False)
+        self._prepare_project(
+            infra_git_repo,
+            package_config=False,
+            packaged_data_dirs=(FIXTURE_DISTRIBUTION_DATA_DIR,),
+        )
 
         applied = self._conform_self(infra_git_repo)
 
@@ -138,6 +142,26 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         tm.that(
             force_include.get(FIXTURE_DISTRIBUTION_DATA_DIR),
             eq=f"{package_name}/{FIXTURE_DISTRIBUTION_DATA_DIR}",
+        )
+
+    @pytest.mark.slow
+    def test_undeclared_governance_config_stays_out_of_archives(
+        self, infra_git_repo: Path
+    ) -> None:
+        """A governance config directory is not implicitly package data."""
+        self._prepare_project(infra_git_repo, package_config=False)
+
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+
+        tm.that(
+            FIXTURE_DISTRIBUTION_DATA_DIR
+            in self._wheel_force_include(infra_git_repo),
+            eq=False,
+        )
+        tm.that(
+            FIXTURE_DISTRIBUTION_DATA_DIR
+            in self._sdist_only_include(infra_git_repo),
+            eq=False,
         )
 
     @pytest.mark.slow
