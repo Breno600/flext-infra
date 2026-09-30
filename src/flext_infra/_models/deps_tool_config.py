@@ -806,7 +806,7 @@ class FlextInfraModelsDepsToolConfig(
                 validation_alias=m.AliasPath("ruff", "src"),
                 description="Conformed Ruff source roots",
             ),
-        ]
+        ] = m.Field(default_factory=tuple)
         ruff_exclude: Annotated[
             t.StrTuple,
             m.Field(
