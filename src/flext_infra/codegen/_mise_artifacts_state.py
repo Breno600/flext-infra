@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import stat
 from collections.abc import MutableMapping
 from pathlib import Path
@@ -409,6 +410,29 @@ class FlextInfraMiseArtifactsState:
                 if child.name.startswith(c.Infra.TRANSACTION_DIR_PREFIX)
             )
         return tuple(sorted(set(residue)))
+
+    @classmethod
+    def reclaim_transaction_residue(
+        cls, residue: t.VariadicTuple[Path]
+    ) -> p.Result[bool]:
+        """Remove transaction residue abandoned by an interrupted invocation.
+
+        A generation that was interrupted (SIGTERM, crash, timeout) leaves its
+        temporary tree behind with no journal authority to recover it. That
+        residue is not live state: without reclaim every later generation fails
+        closed forever. Reclaim it so the next invocation starts clean.
+        """
+        for path in residue:
+            if not path.exists() and not path.is_symlink():
+                continue
+            try:
+                if path.is_symlink() or not path.is_dir():
+                    path.unlink()
+                else:
+                    shutil.rmtree(path)
+            except OSError as exc:
+                return r[bool].fail(f"cannot reclaim transaction residue {path}: {exc}")
+        return r[bool].ok(True)
 
     @classmethod
     def cleanup_journaled_directories(

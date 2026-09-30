@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import pstats
 import sys
 from pathlib import Path
@@ -99,7 +98,7 @@ class TestsFlextInfraUtilitiesResourceLimits:
     ) -> None:
         """Exercise a real exit, deadline and resident allocation through the owner."""
         limit = m.Infra.MypyResourceLimit(
-            memory_limit_mb=max(1, c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 8)
+            memory_limit_mb=max(1, c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 2)
             if scenario == "memory"
             else c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
             timeout_seconds=test_u.Tests.mypy_deadline_limit().timeout_seconds
@@ -282,11 +281,11 @@ class TestsFlextInfraUtilitiesResourceLimits:
         """Reject a wall-time configuration above the canonical ceiling."""
         with pytest.raises(
             ValueError,
-            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT}",
+            match=f"less than or equal to {c.Infra.MYPY_TIMEOUT_SECONDS_MAX}",
         ):
             m.Infra.MypyResourceLimit(
                 memory_limit_mb=c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
-                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT + 1,
+                timeout_seconds=c.Infra.MYPY_TIMEOUT_SECONDS_MAX + 1,
             )
 
     def test_mypy_timeout_has_controlled_exit_and_signal_diagnostic(self) -> None:

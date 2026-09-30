@@ -68,17 +68,20 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
         ``.beads/config.yaml`` and ``.beads/metadata.json`` are rendered into
         it by generation, never copied and never linked.
         """
-        allowed_entries = frozenset({
-            Path(c.Infra.BEADS_CONFIG_RELPATH).name,
-            Path(c.Infra.BEADS_METADATA_RELPATH).name,
-            c.Infra.BEADS_LOCAL_VERSION_FILENAME,
-            c.Infra.BEADS_LAST_TOUCHED_FILENAME,
-            # Passive bd runtime exports: the bd client rewrites these from
-            # the rig's Dolt ledger on every interaction, so they are
-            # regenerable projections of ledger truth, never composed output.
-            "issues.jsonl",
-            "interactions.jsonl",
-        })
+        allowed_entries = (
+            frozenset({
+                Path(c.Infra.BEADS_CONFIG_RELPATH).name,
+                Path(c.Infra.BEADS_METADATA_RELPATH).name,
+                c.Infra.BEADS_LOCAL_VERSION_FILENAME,
+                c.Infra.BEADS_LAST_TOUCHED_FILENAME,
+                # Passive bd runtime exports: the bd client rewrites these from
+                # the rig's Dolt ledger on every interaction, so they are
+                # regenerable projections of ledger truth, never composed output.
+                "issues.jsonl",
+                "interactions.jsonl",
+            })
+            | c.Infra.BEADS_RUNTIME_ENTRY_NAMES
+        )
         route = root / c.Infra.BEADS_DIRNAME
         if route.is_symlink():
             return r[bool].fail(

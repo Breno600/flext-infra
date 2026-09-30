@@ -111,3 +111,10 @@
 "/tests/unit/validate/__init__.py" -merge linguist-generated
 "/tests/unit/validate/_fixtures/__init__.py" -merge linguist-generated
 "/tests/unit/workspace/__init__.py" -merge linguist-generated
+
+# Generated dependency locks are tool output, never merge results. A textual
+# three-way merge has no valid semantics for resolved version and platform
+# blocks - it silently duplicated the jscpd platform key once already - so a
+# merge that touches one must conflict and force the canonical re-lock.
+mise.lock -merge
+uv.lock -merge
