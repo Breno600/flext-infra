@@ -13,6 +13,37 @@ from tests import u as test_u
 class TestsFlextInfraGitFacet:
     """Exercise the public Git facade against a real repository worktree."""
 
+    def test_identity_marks_only_a_missing_symbolic_branch_as_unborn(
+        self, tmp_path: Path
+    ) -> None:
+        repository = tmp_path / "unborn"
+        repository.mkdir()
+        test_u.Tests.git_run(repository, "init", "--initial-branch=initial")
+        request = m.Infra.GitRepoRequest(repo_root=repository)
+
+        unborn = u.Infra.git_identity(request)
+
+        tm.fail(unborn)
+        tm.that(unborn.error_code, eq=c.Infra.GIT_UNBORN_HEAD_ERROR_CODE)
+        branch_ref = repository / ".git" / "refs" / "heads" / "initial"
+        branch_ref.write_text("invalid object identifier\n", encoding="utf-8")
+
+        corrupted = u.Infra.git_identity(request)
+
+        tm.fail(corrupted)
+        tm.that(corrupted.error_code == c.Infra.GIT_UNBORN_HEAD_ERROR_CODE, eq=False)
+        tm.not_none(corrupted.exception)
+
+    def test_identity_index_failure_is_not_unborn(self, tmp_path: Path) -> None:
+        repository = test_u.Tests.git_repository(tmp_path)
+        (repository / ".git" / "index").write_bytes(b"invalid index")
+
+        result = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=repository))
+
+        tm.fail(result)
+        tm.that(result.error_code == c.Infra.GIT_UNBORN_HEAD_ERROR_CODE, eq=False)
+        tm.not_none(result.exception)
+
     def _add_submodule(self, repository: Path, source: Path, name: str) -> None:
         """Add and commit ``source`` as a file-protocol submodule named ``name``."""
         _ = test_u.Tests.git_run(

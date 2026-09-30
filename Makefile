@@ -865,24 +865,26 @@ endef
 # of the manifests uv itself reports (`uv workspace dir|list`), must pass
 # `uv lock --check` against that mirror (every declared member present), and
 # only then replaces the committed lock by one rename inside its directory. An
-# interrupted run never touches the committed lock.
+# interrupted run never touches the committed lock. A full upgrade resolves
+# from declared manifests without prior lock preferences, including during
+# conflict repair; the final non-upgrade relock retains the resolved lock.
 define _lock_project
 	@set -eu; \
 	workspace=$$($(UV) workspace dir --project "$(PROJECT_ROOT)"); \
 	stage=$$(mktemp -d); candidate="$$workspace/.uv.lock.$$$$"; \
-	trap 'find "$$stage" -depth -delete; rm -f "$$candidate"' EXIT; \
+	trap 'find "$${stage}" -depth -delete; rm -f "$$candidate"' EXIT; \
 	trap 'exit 129' HUP; trap 'exit 130' INT; trap 'exit 143' TERM; \
-	$(UV) workspace list --paths --project "$$workspace" > "$$stage/.members"; \
+	$(UV) workspace list --paths --project "$$workspace" > "$${stage}/.members"; \
 	while IFS= read -r member; do \
 		relative=$${member#"$$workspace"}; \
-		mkdir -p "$$stage/mirror$$relative"; \
-		cp "$$member/pyproject.toml" "$$stage/mirror$$relative/pyproject.toml"; \
-	done < "$$stage/.members"; \
-	if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$$stage/mirror/uv.lock"; fi; \
-	$(UV) lock --project "$$stage/mirror" $(1); \
-	$(UV) lock --check --project "$$stage/mirror"; \
+		mkdir -p "$${stage}/mirror$$relative"; \
+		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
+	done < "$${stage}/.members"; \
+	if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
+	$(UV) lock --project "$${stage}/mirror" $(1); \
+	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
-	cp "$$stage/mirror/uv.lock" "$$candidate"; \
+	cp "$${stage}/mirror/uv.lock" "$$candidate"; \
 	mv -f "$$candidate" "$$workspace/uv.lock"
 endef
 
@@ -1615,7 +1617,6 @@ TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra.
 # breaks the verb; a formatter's residual findings stay reportable and are
 # enforced by `make check`.
 _builtin_fmt_all: _builtin_require_environment
-	@$(UV_RUN) ruff format --preview $(RUFF_PATHS)
 	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "markdown-format" --apply
 
 _builtin_fix_all: _builtin_require_environment
