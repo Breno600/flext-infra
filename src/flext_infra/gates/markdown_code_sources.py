@@ -9,6 +9,7 @@ temporary file maps back through the returned origin dictionary.
 from __future__ import annotations
 
 import ast
+from collections.abc import MutableMapping
 from doctest import DocTestParser
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -37,7 +38,7 @@ def source_name(relative_posix: str, index: int) -> str:
 
 def write_fenced_block_sources(
     project_dir: Path, markdown_files: t.SequenceOf[Path], target_dir: Path
-) -> dict[str, t.Pair[str, int]]:
+) -> MutableMapping[str, t.Pair[str, int]]:
     """Write one temp source per parseable fenced ``python`` block.
 
     Blocks carrying the ``notest`` fence marker and unparseable fragments are

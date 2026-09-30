@@ -103,6 +103,7 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
         """Parse rumdl output, discarding lines marking already-applied fixes."""
         _ = ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
+        hint_only = False
         for line in (result.stdout + "\n" + result.stderr).splitlines():
             match = c.Infra.MARKDOWN_RE.match(line.strip())
             if not match:
@@ -117,6 +118,7 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
                 # canonical verb can clear must not block `make check` (the same
                 # class this file already fixed at flext-38p39). The real
                 # violation variant ("Line length N exceeds M") still blocks.
+                hint_only = True
                 continue
             issues.append(
                 m.Infra.Issue(
@@ -128,6 +130,14 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
                 )
             )
         if not u.Cli.process_succeeded(result.outcome) and not issues:
+            if hint_only:
+                # rumdl counts the dropped hint in its exit code, so a run whose
+                # only findings were unrepairable hints still exits non-zero with
+                # an empty issue list. Reporting that as a tool error would
+                # reinstate the very finding this filter removes, and no
+                # canonical verb could clear it. The hints were the whole
+                # failure, so the run is green.
+                return True, ()
             issues.append(
                 self._command_error_issue(
                     result, tool=c.Infra.RUMDL, file=str(project_dir), line=1, column=1
