@@ -93,8 +93,9 @@ disagrees with the member manifest or an existing direct requirement, and it can
 introduce a Git source where neither declaration exists. An omitted
 `candidate_dependencies` list leaves normal release projections unchanged.
 
-Run `make gen` to project the candidate requirements, `make upg` to resolve the exact
-commits into `uv.lock`, then `make setup` and the ordinary native gates in that same
-worktree. Repeat `make gen` to prove the generated metadata has reached a fixed point.
+Run the ordinary `make setup` bootstrap, then `make gen` to project the candidate
+requirements, `make upg` to resolve the exact commits into `uv.lock`, and `make setup`
+again to install that lock in the same worktree. Run the ordinary native gates there.
+Repeat `make gen` to prove the generated metadata has reached a fixed point.
 Remove the candidate declaration through the same manifest owner before promoting the
 normal integration line; the generated pyprojects must then return to branch sources.
