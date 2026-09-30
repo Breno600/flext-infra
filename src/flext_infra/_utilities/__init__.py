@@ -25,6 +25,7 @@ if TYPE_CHECKING:
     from ._docs_scope_selection import FlextInfraUtilitiesDocsScopeSelectionMixin
     from ._docs_scope_state import FlextInfraUtilitiesDocsScopeStateMixin
     from ._git.attestation import FlextInfraUtilitiesGitAttestationMixin
+    from ._git.mutation_scope import FlextInfraUtilitiesGitMutationScopeMixin
     from ._git.remote import FlextInfraUtilitiesGitRemote
     from ._git.repo import FlextInfraUtilitiesGitRepo
     from ._git.scope import FlextInfraUtilitiesGitScopeMixin
@@ -36,6 +37,13 @@ if TYPE_CHECKING:
     from ._git.semantic_refs import FlextInfraUtilitiesGitSemanticRefsMixin
     from ._git.semantic_submodule import FlextInfraUtilitiesGitSemanticSubmoduleMixin
     from ._git.semantic_worktree import FlextInfraUtilitiesGitSemanticWorktreeMixin
+    from ._git.state_capture import FlextInfraUtilitiesGitStateCaptureMixin
+    from ._git.state_checkpoint import FlextInfraUtilitiesGitStateCheckpointMixin
+    from ._git.state_files import FlextInfraUtilitiesGitStateFilesMixin
+    from ._git.state_publication import FlextInfraUtilitiesGitStatePublicationMixin
+    from ._git.state_snapshot import FlextInfraUtilitiesGitStateSnapshotMixin
+    from ._git.state_transition import FlextInfraUtilitiesGitStateTransitionMixin
+    from ._git.state_trees import FlextInfraUtilitiesGitStateTreesMixin
     from ._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
     from ._git.worktree_checkpoint import FlextInfraUtilitiesGitWorktreeCheckpointMixin
     from ._git.worktree_discovery import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
@@ -260,6 +268,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesDocsValidate",
     "FlextInfraUtilitiesGit",
     "FlextInfraUtilitiesGitAttestationMixin",
+    "FlextInfraUtilitiesGitMutationScopeMixin",
     "FlextInfraUtilitiesGitRemote",
     "FlextInfraUtilitiesGitRepo",
     "FlextInfraUtilitiesGitScopeMixin",
@@ -271,6 +280,13 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesGitSemanticRefsMixin",
     "FlextInfraUtilitiesGitSemanticSubmoduleMixin",
     "FlextInfraUtilitiesGitSemanticWorktreeMixin",
+    "FlextInfraUtilitiesGitStateCaptureMixin",
+    "FlextInfraUtilitiesGitStateCheckpointMixin",
+    "FlextInfraUtilitiesGitStateFilesMixin",
+    "FlextInfraUtilitiesGitStatePublicationMixin",
+    "FlextInfraUtilitiesGitStateSnapshotMixin",
+    "FlextInfraUtilitiesGitStateTransitionMixin",
+    "FlextInfraUtilitiesGitStateTreesMixin",
     "FlextInfraUtilitiesGitWorktreeCheckpointMixin",
     "FlextInfraUtilitiesGitWorktreeDiscoveryMixin",
     "FlextInfraUtilitiesGitWorktreeFactsMixin",
@@ -412,6 +428,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._docs_scope_state": ("FlextInfraUtilitiesDocsScopeStateMixin",),
             "._git": ("_git",),
             "._git.attestation": ("FlextInfraUtilitiesGitAttestationMixin",),
+            "._git.mutation_scope": ("FlextInfraUtilitiesGitMutationScopeMixin",),
             "._git.remote": ("FlextInfraUtilitiesGitRemote",),
             "._git.repo": ("FlextInfraUtilitiesGitRepo",),
             "._git.scope": ("FlextInfraUtilitiesGitScopeMixin",),
@@ -425,6 +442,13 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraUtilitiesGitSemanticSubmoduleMixin",
             ),
             "._git.semantic_worktree": ("FlextInfraUtilitiesGitSemanticWorktreeMixin",),
+            "._git.state_capture": ("FlextInfraUtilitiesGitStateCaptureMixin",),
+            "._git.state_checkpoint": ("FlextInfraUtilitiesGitStateCheckpointMixin",),
+            "._git.state_files": ("FlextInfraUtilitiesGitStateFilesMixin",),
+            "._git.state_publication": ("FlextInfraUtilitiesGitStatePublicationMixin",),
+            "._git.state_snapshot": ("FlextInfraUtilitiesGitStateSnapshotMixin",),
+            "._git.state_transition": ("FlextInfraUtilitiesGitStateTransitionMixin",),
+            "._git.state_trees": ("FlextInfraUtilitiesGitStateTreesMixin",),
             "._git.worktree": ("FlextInfraUtilitiesGitWorktreeMixin",),
             "._git.worktree_checkpoint": (
                 "FlextInfraUtilitiesGitWorktreeCheckpointMixin",
