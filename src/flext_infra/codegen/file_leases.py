@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Generator, MutableMapping
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
@@ -50,7 +50,7 @@ class FlextInfraCodegenFileLeases:
 
     def __init__(self) -> None:
         """Start without borrowed destination capabilities."""
-        self._file_leases: dict[Path, m.Infra.CodegenFileParticipant] = {}
+        self._file_leases: MutableMapping[Path, m.Infra.CodegenFileParticipant] = {}
 
     @contextmanager
     def _lease_file_participants(

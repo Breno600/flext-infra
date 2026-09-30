@@ -15,6 +15,7 @@ import fnmatch
 import re
 import tempfile
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
@@ -90,7 +91,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
 
     def _origin_issue(
         self,
-        origin: dict[str, t.Pair[str, int]],
+        origin: Mapping[str, t.Pair[str, int]],
         source: str,
         *,
         code: str,
@@ -112,7 +113,7 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         self,
         project_dir: Path,
         result: p.Cli.CommandOutput,
-        origin: dict[str, t.Pair[str, int]],
+        origin: Mapping[str, t.Pair[str, int]],
         *,
         default_message: str,
         file_pattern: re.Pattern[str],

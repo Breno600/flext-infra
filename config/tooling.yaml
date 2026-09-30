@@ -53,6 +53,16 @@ Infra:
           MD057: false
           MD060: false
           MD076: false
+          # flext-md-converge: prettier is the last writer of the `make docs`
+          # cycle (DOCS_ACTIONS ends at fmt), and its list-continuation printer
+          # reindents wrapped list content to its own column, which MD077's two
+          # accepted columns reject — and no canonical repair runs after fmt, so
+          # the finding is unfixable by construction (measured 2026-09-30: 57
+          # MD077 findings reproduce on every docs cycle and survive both
+          # `docs fix` and the gate's own --apply). A dialect rule the canonical
+          # formatter cannot satisfy leaves the rule set; MD013 keeps owning the
+          # real line contract.
+          MD077: false
         # Prettier formatting policy (markdown-format gate): rendered into the
         # managed .prettierrc. prettier --write is owned by `make fmt` and
         # prettier --check by `make check`; `make fix` never runs it.
@@ -677,6 +687,14 @@ Infra:
         # invocation; in-flight cases may report after the stop, which the
         # declaring consumer accepts by declaring.
         parallel-worker-overrides:
+          ai-hub:
+            # flext-tyir9/aihub-mkigd: the 1940-case suite cannot fit the
+            # single-worker process boundary inside its fixed deadline on cold
+            # testmon, so the consumer declares its ceiling here instead of
+            # patching projections or raising the limit. 4 is the measured
+            # incumbent the fleet already validated (flext-infra/cosmos-docgen);
+            # higher ceilings measurably regressed the cold run (flext-itpd1.3.7).
+            workers: 4
           cosmos-docgen:
             workers: 4
           # flext-itpd1.3.7 measurement: raising this ceiling above 4 measurably

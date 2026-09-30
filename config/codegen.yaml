@@ -83,10 +83,13 @@ Infra:
         - windows-x64
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
-      # Pinned to the last provenance-attested release: 0.644.0 shipped
-      # without github attestations and mise's supply-chain guard rejects
-      # it, breaking `make setup` fleet-wide (bead in flext tracker,
-      # reported by algar-oud-mig 2026-09-18).
+      # Pinned to 0.642.0. The earlier claim that 0.644.0 shipped without
+      # github attestations is FALSE: a by-digest check on 2026-09-22 shows
+      # v0.644.0 carries one attestation bundle per asset for all seven
+      # binaries, same as 0.642.0. The 2026-09-18 fleet-wide setup fire was a
+      # probe false positive (mise treats an unavailable probe as missing).
+      # Bump to 0.644.0 only through an explicit `make upg` reactivation
+      # (bead flext-38odd), never by editing this pin in isolation.
       qlty_version: 0.642.0
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
@@ -137,10 +140,10 @@ Infra:
           - spec
           - convergence
           - step
-        # The Gas City runtime mints startup-health-episode beads and writes
-        # the type into every governed ledger's generated `.beads/config.yaml`
-        # (observed in mcb, gmn and gc). Declaring it here keeps the frozen
-        # projection owned by this SSOT instead of hand-adopted per rig.
+          # The Gas City runtime mints startup-health-episode beads and writes
+          # the type into every governed ledger's generated `.beads/config.yaml`
+          # (observed in mcb, gmn and gc). Declaring it here keeps the frozen
+          # projection owned by this SSOT instead of hand-adopted per rig.
           - startup-health-episode
         # Ledger scalars rendered into .beads/config.yaml. Change them here.
         # Per-repo override of Gas City participation is workspace.yaml
@@ -298,8 +301,8 @@ Infra:
         - "**/*.egg-info/**"
         - "**/.pytest_cache/**"
         - "**/.reports/**"
-      # Mise v2 dependency sidecars are generated, digest-attested package-manager
-      # inputs. They stay committed for frozen replay but are not project source.
+        # Mise v2 dependency sidecars are generated, digest-attested package-manager
+        # inputs. They stay committed for frozen replay but are not project source.
         - "**/.mise/locks/**"
         - "**/node_modules/**"
         - "**/.scannerwork/**"
@@ -360,16 +363,16 @@ Infra:
         - gate: namespace
           authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
           reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
-        # Census consistency (gc-wisp-d7mnad): the runtime census honors the
-        # SAME suspension for the rule families this gate owns — ENFORCE ids
-        # match a census rule id exactly, tag families by prefix. Unmapped
-        # families (e.g. ENFORCE-079) stay fully blocking.
+          # Census consistency (gc-wisp-d7mnad): the runtime census honors the
+          # SAME suspension for the rule families this gate owns — ENFORCE ids
+          # match a census rule id exactly, tag families by prefix. Unmapped
+          # families (e.g. ENFORCE-079) stay fully blocking.
           census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
         - gate: smells
           authority: "operator ruling 2026-09-27 (smells/infra-codegen/slow-tests non-blocking for merge until further notice, coordination gc-wisp-bm2jtn); flext-w41u6"
           reason: "Pre-existing qlty smell backlog (751 in flext-infra, already red on a9af10130) is burned down under flext-w41u6; the gate returns when the ruling is lifted."
-        # Census consistency (gc-wisp-d7mnad): same ruling, same families in
-        # the runtime census; suppressed findings still surface as INFO.
+          # Census consistency (gc-wisp-d7mnad): same ruling, same families in
+          # the runtime census; suppressed findings still surface as INFO.
           census_rule_families: [smell_, no_accessor_methods, utility_not_static]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
@@ -523,9 +526,9 @@ Infra:
         - name: setup
           description: Provision the declared environment and hooks.
         - name: upg
-          description: Resolve the newest declared releases and write the uv and mise locks.
-      # Workspace-only (topology owns applicability): a standalone Makefile
-      # never declares it. Never merges; a rerun continues the same lanes.
+          description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.
+        # Workspace-only (topology owns applicability): a standalone Makefile
+        # never declares it. Never merges; a rerun continues the same lanes.
         - name: propagate
           description: Apply this workspace's flext-infra to every declared member (conform, then lock) and publish one pull-request lane per member whose projections or lock change; unchanged members publish nothing.
           profiles: [workspace]
@@ -575,8 +578,8 @@ Infra:
           description: Materialize the declared package initializer graph.
         - name: mod
           description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
-      # The explicit snapshot regeneration (flext-itpd1.7): `mod` only verifies
-      # snapshots, so a changed rule output lands as a reviewed commit.
+        # The explicit snapshot regeneration (flext-itpd1.7): `mod` only verifies
+        # snapshots, so a changed rule output lands as a reviewed commit.
         - name: mod-snapshots
           description: Regenerate the owned ast-grep rule-test snapshots from their tests for a reviewed commit.
         - name: waza
@@ -1180,10 +1183,10 @@ Infra:
           - mkdocs-section-index>=0.3.12
           - mkdocstrings>=1.0.6
           - mkdocstrings-python>=2.0.8
-        # uv installs this as a side effect of the editable root install
-        # (hatchling editable-detection backend) but a later sync prunes it,
-        # breaking editable wheel builds (release/wheel tests) after any
-        # re-sync; declared here so every projected project keeps it.
+          # uv installs this as a side effect of the editable root install
+          # (hatchling editable-detection backend) but a later sync prunes it,
+          # breaking editable wheel builds (release/wheel tests) after any
+          # re-sync; declared here so every projected project keeps it.
           - editables>=0.6
           - mypy>=2.3.1
           - pymdown-extensions
@@ -1456,8 +1459,8 @@ Infra:
             - "!mise.version"
             - "!.mise.lock"
             - "!.python-version"
-      # Native graphs referenced by mise.lock are required by locked installs.
-      # Local lockfiles and their graphs remain per-machine state.
+        # Native graphs referenced by mise.lock are required by locked installs.
+        # Local lockfiles and their graphs remain per-machine state.
         - name: "mise native dependency graphs"
           profiles: [workspace, standalone]
           patterns:
@@ -1586,11 +1589,11 @@ Infra:
       # machine-written settings/hooks surface and its digest sidecar is
       # blocked by name. No profiles key: this holds for every role.
         - name: "Agent hooks and operator config (runtime state, never source)"
-        # settings.json projections are portable governance and stay
-        # trackable; settings.local.json and the digest sidecars wire
-        # machine-absolute paths, so they are named here. This block follows
-        # the provider-tree whitelists and the last matching gitignore rule
-        # wins.
+          # settings.json projections are portable governance and stay
+          # trackable; settings.local.json and the digest sidecars wire
+          # machine-absolute paths, so they are named here. This block follows
+          # the provider-tree whitelists and the last matching gitignore rule
+          # wins.
           patterns:
             - ".github/hooks/"
             - "*/.hooks.json.agents-governance.json"
