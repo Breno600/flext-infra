@@ -88,18 +88,12 @@ export GEN_INIT_ONLY
 endif
 endif
 
-# GitHub CLI's documented source precedence also applies before gh is installed:
-# GH_TOKEN, GITHUB_TOKEN, then its stored credential for network bootstrap.
+# An explicit process credential is required for network bootstrap. GH_TOKEN
+# takes precedence over GITHUB_TOKEN, and no host credential store is read.
 # Local provisioned operations need no authentication preflight or network call.
 # Keep the selected value in the environment, never in a rendered recipe.
-override GITHUB_CREDENTIAL_READ_STATUS := 0
 ifneq ($(strip $(GH_TOKEN)),)
 override GITHUB_TOKEN := $(GH_TOKEN)
-else ifeq ($(strip $(GITHUB_TOKEN)),)
-ifneq ($(strip $(filter setup upg,$(MAKECMDGOALS))),)
-override GITHUB_TOKEN := $(shell if command -v gh >/dev/null 2>&1; then gh auth token --hostname "$${GH_HOST:-github.com}"; else printf 'ERROR: GitHub credential source unavailable: set GH_TOKEN/GITHUB_TOKEN or provision gh\n' >&2; exit 127; fi)
-override GITHUB_CREDENTIAL_READ_STATUS := $(.SHELLSTATUS)
-endif
 endif
 export GITHUB_TOKEN
 override export GH_TOKEN := $(GITHUB_TOKEN)
@@ -509,7 +503,7 @@ _builtin-help:
 # reconciler validates every initialized checkout before mutation, initializes
 # only missing modules, and preserves declared branches that fix forward beyond
 # the recorded gitlink.
-{{ submodule_setup_recipe("_builtin_setup_submodules", "$(PROJECT_ROOT)") }}
+{{ submodule_setup_recipe("_builtin_setup_submodules", "$(PROJECT_ROOT)", timeout_command, timeout_kill_after_seconds, make.submodule_timeout_seconds) }}
 
 .PHONY: _builtin_require_github_auth
 # The credential check precedes the Mise pin check even under -j. `make setup`
@@ -519,10 +513,6 @@ _builtin-help:
 .NOTPARALLEL: _bootstrap_setup_tools
 _bootstrap_setup_tools: _builtin_require_github_auth $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
 _builtin_require_github_auth:
-	@if [ "$(GITHUB_CREDENTIAL_READ_STATUS)" != "0" ]; then \
-		printf 'ERROR: gh credential source failed with exit %s\n' "$(GITHUB_CREDENTIAL_READ_STATUS)" >&2; \
-		exit "$(GITHUB_CREDENTIAL_READ_STATUS)"; \
-	fi
 	@if [ -z "$${GITHUB_TOKEN:-}" ]; then \
 		printf 'ERROR: GitHub credential is absent for network bootstrap\n' >&2; \
 		exit 1; \
@@ -858,6 +848,9 @@ _builtin_gen_init:
 
 _builtin_gen_all:
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode apply
+
+_builtin-bootstrap-candidate: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) codegen candidate-bootstrap --repository-root "$(PROJECT_ROOT)"
 
 # Structural rewrites have one selector-free public Make surface. The current
 # directory defines scope; callers never address ast-grep, Rope, or LSP directly.
