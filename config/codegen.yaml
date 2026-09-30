@@ -373,6 +373,7 @@ Infra:
         census_rule_families: [ smell_, no_accessor_methods, utility_not_static ]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
+      runtime_environment_directory: .flext-venvs
       testmon_cache:
         database_filename: .testmondata
         database_environment_variable: TESTMON_DATAFILE
