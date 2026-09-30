@@ -78,7 +78,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
             # regenerable projections of ledger truth, never composed output.
             "issues.jsonl",
             "interactions.jsonl",
-        })
+        }) | c.Infra.BEADS_RUNTIME_ENTRY_NAMES
         route = root / c.Infra.BEADS_DIRNAME
         if route.is_symlink():
             return r[bool].fail(
