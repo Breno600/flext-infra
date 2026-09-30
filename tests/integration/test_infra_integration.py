@@ -16,8 +16,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import m
-from flext_infra.gates.markdown import FlextInfraMarkdownGate
+from flext_infra import FlextInfraMarkdownGate, m
 from tests import TestsFlextInfraUtilities as tu, u
 
 if TYPE_CHECKING:
