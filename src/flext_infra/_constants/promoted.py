@@ -10,12 +10,21 @@ from enum import StrEnum, unique
 from typing import ClassVar
 
 from flext_core import e
+from flext_core._constants.guards import FlextConstantsGuards
 
 from .validate import FlextInfraConstantsSharedInfra
 
 
 class FlextInfraConstantsPromoted:
     """``scripts/<verb>/<WHAT>`` command framework vocabulary for ``c.Infra``."""
+
+    PRIMITIVES_TYPES: ClassVar[
+        tuple[type[str], type[int], type[float], type[bool]]
+    ] = FlextConstantsGuards.PRIMITIVES_TYPES
+    """Re-export of the flext-core primitives owner (ENFORCE-079)."""
+
+    EnforcementRuleSeverity: ClassVar[type[StrEnum]] = FlextConstantsGuards.EnforcementRuleSeverity
+    """Re-export of the flext-core enforcement severity owner."""
 
     class PromotedRegistryError(e.ValidationError):
         """Raised when promoted command metadata or invocation is invalid."""
