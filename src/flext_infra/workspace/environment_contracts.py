@@ -62,7 +62,7 @@ class FlextInfraWorkspaceEnvironmentContracts:
         home_match = _HOME_PREFIX.match(raw)
         candidate = home_match.group(1) if home_match is not None else raw
         if candidate.startswith("~"):
-            candidate = f"$HOME{candidate[1:]}"
+            candidate = f"${HOME}{candidate[1:]}"
             home_match = _HOME_PREFIX.match(candidate)
             candidate = home_match.group(1) if home_match is not None else candidate
         if "$" in candidate:
