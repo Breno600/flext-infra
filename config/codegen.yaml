@@ -577,6 +577,8 @@ Infra:
           description: Inspect ownership, dependency, and generated-state health.
         - name: status
           description: Report the resolved runtime and repository state.
+        - name: verify-clean
+          description: Fail when this repository has staged, unstaged, or untracked changes.
         - name: docs
           description: Generate, fix, format, and check documentation.
         - name: clean
