@@ -527,7 +527,7 @@ Infra:
         - name: setup
           description: Provision the declared environment and hooks.
         - name: upg
-          description: Resolve the newest declared releases and write the uv and mise locks.
+          description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.
         # Workspace-only (topology owns applicability): a standalone Makefile
         # never declares it. Never merges; a rerun continues the same lanes.
         - name: propagate
@@ -1277,7 +1277,7 @@ Infra:
             runtime: ["click>=8.3.3,<8.4", typer>=0.27.2, jinja2>=3.1.6, jsonschema>=4.26.0, tomlkit>=0.15.1, ruamel.yaml>=0.19.1, defusedxml>=0.7.1, openpyxl>=3.1.5, python-docx>=1.2.0, python-pptx>=1.0.2]
           - upstream: flext_cli
             project: flext-infra
-            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.1.62, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
+            runtime: [flext-cli, defusedxml>=0.7.1, GitPython>=3.2.0, jinja2>=3.1.6, libcst>=1.9.0, Markdown>=3.11, "rope @ git+https://github.com/marlon-costa-dc/rope.git@1.14.0+dc.3", pytest>=9.1.1, mkdocs>=1.6.1]
           - upstream: flext_cli
             project: flext-tests
             runtime: [flext-cli, flext-infra, pytest>=9.1.1, pytest-timeout>=2.4.0, docker>=7.2.0, python-on-whales>=0.81.0]
