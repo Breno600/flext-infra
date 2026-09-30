@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 # Declaration-only protocol types stay
 # behind one guard so structural contracts add no reverse runtime dependency.
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Mapping
+    from collections.abc import Callable, Iterator, Mapping
     from pathlib import Path
 
     from flext_infra import c, m, p, t
@@ -88,6 +88,37 @@ class FlextInfraProtocolsBase(Protocol):
             self, project_root: Path, runtime_root: Path
         ) -> p.Result[bool]:
             """Validate one project's Mise declaration, pin, and launchers."""
+            ...
+
+    class CandidateBootstrapPlanner(Protocol):
+        """Conform plan boundary consumed by the candidate campaign."""
+
+        def plan(
+            self, request: m.Infra.CodegenConformRequest
+        ) -> p.Result[m.Infra.CodegenPlan]:
+            """Plan one declared target without publishing it."""
+            ...
+
+    class CandidateBootstrapTransaction(Protocol):
+        """Atomic multi-root file publisher consumed by the campaign."""
+
+        def run_files_locked[T](
+            self,
+            roots: t.MappingKV[str, Path],
+            operation: Callable[[Path], p.Result[T]],
+        ) -> p.Result[T]:
+            """Hold destination leases while the campaign plans and publishes."""
+            ...
+
+        def publish_file_phase_locked(
+            self,
+            scope_root: Path,
+            roots: t.MappingKV[str, Path],
+            analysis: m.Infra.CodegenPhaseAnalysis,
+            directories: t.VariadicTuple[Path],
+            validator: Callable[[], p.Result[bool]],
+        ) -> p.Result[t.VariadicTuple[Path]]:
+            """Publish one recoverable multi-root phase and verify before commit."""
             ...
 
     # These declaration-only
