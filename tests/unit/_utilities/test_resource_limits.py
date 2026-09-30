@@ -173,9 +173,15 @@ class TestsFlextInfraUtilitiesResourceLimits:
                 eq=True,
             )
             tm.that(u.Cli.process_succeeded(result.value.outcome), eq=False)
-            tm.that(result.value.outcome.raw_return_code, ne=0)
             tm.that(result.value.outcome.timed_out, eq=False)
-            tm.that(result.value.stderr, empty=False)
+            # The configured bound itself must cause the stop: only a
+            # resource-exhaustion outcome (memory marker or signal) yields the
+            # public diagnostic, so an unrelated checker failure after the
+            # workload start can no longer satisfy this scenario.
+            diagnostic = tm.not_none(
+                u.Infra.mypy_failure_diagnostic(result.value, limit)
+            )
+            tm.that(diagnostic, has=f"memory_limit={limit.memory_limit_mb} MiB")
             if sys.platform == "darwin":
                 tm.that(result.value.stderr, has="RSS limit reached")
         else:
