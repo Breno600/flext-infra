@@ -279,7 +279,8 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
             repository_root=project_dir, selected_projects=("demo",), apply=True
         ).execute()
 
-        tm.ok(result)
+        tm.that(result.failure, eq=True)
+        tm.that(result.error, has="manual fix required")
         tm.that(source_file.read_text(encoding="utf-8"), eq=source)
 
     # Exemplar: this drives the real CLI entry point against a real Git
