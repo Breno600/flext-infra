@@ -28,6 +28,21 @@ class FlextInfraModelsWorkspace:
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
+    class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
+        """One static ``.envrc``/``.envrc.local`` contract violation.
+
+        The line is carried as a typed field; the consuming gate renders the
+        canonical ``line N: <message>`` text, so the textual projection stays at
+        the reporting boundary and never in the declaration layer.
+        """
+
+        message: Annotated[
+            str, m.Field(description="Violation description without the line prefix")
+        ]
+        token: Annotated[
+            str, m.Field(description="Offending token when the contract is token-based")
+        ] = ""
+
     class WorkspaceProjectContext(m.ContractModel):
         """Canonical context derived from one runtime working directory."""
 
