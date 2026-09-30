@@ -359,7 +359,11 @@ Infra:
       # Gates whose mutating side `make fmt` drives (formatters). Their
       # read-only side runs in `make check`; `make fix` never repeats them
       # (single-pass verb law: one operation per tool per verb).
-      fmt_gates: [markdown-format]
+      # `format` (ruff) is a mutating gate owned by `make fmt` per the gate
+      # registry contract (flext-38p39): check never mutates, fix never
+      # formats — without it the ruff-format surface has no verb home and
+      # drift survives a green check until `make mod` validates.
+      fmt_gates: [format, markdown-format]
       check_gate_suspensions:
         - gate: namespace
           authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
@@ -387,6 +391,21 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
+      # Declarative Actions-cache policy for the shared testmon database
+      # (preserved #1001 delta, bead flext-j0u23): two-phase generations with
+      # per-mode caps, per-repo byte budget with a three-stage quota ladder,
+      # save-ref allowlist (never save from PRs) and the cache-key namespace.
+      testmon_cache_policy:
+        mode: stable
+        save_enabled: true
+        max_bootstrap_generations: 3
+        max_stable_generations: 3
+        per_repo_budget_bytes: 52428800
+        warning_threshold_percent: 80
+        maintenance_threshold_percent: 90
+        block_threshold_percent: 95
+        allowed_save_refs: ["main", "0.12.0-dev"]
+        key_prefix: flext-testmon
       # One lock-keyed Mypy analysis shared by every checkout on the same
       # dependency lock. Mypy's cache is content-addressed by module hash, so a
       # warm cache only removes the cold whole-fleet recompute and can never
