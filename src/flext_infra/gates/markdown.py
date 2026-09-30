@@ -102,6 +102,15 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
                 continue
             if match.group("msg").strip().endswith("[fixed]"):
                 continue
+            if c.Infra.MARKDOWN_NORMALIZATION_HINT_RE.search(match.group("msg")):
+                # rumdl's linter flags a paragraph it "could normalize" with its
+                # own [*] marker, but its formatter (rumdl fmt, the gate's fix
+                # verb) rejoins paragraphs instead of normalizing them -- proven
+                # `Fixed: 0/7` on the root flext#305 headings. A finding no
+                # canonical verb can clear must not block `make check` (the same
+                # class this file already fixed at flext-38p39). The real
+                # violation variant ("Line length N exceeds M") still blocks.
+                continue
             issues.append(
                 m.Infra.Issue(
                     file=match.group("file"),
