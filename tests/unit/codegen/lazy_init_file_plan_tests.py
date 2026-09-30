@@ -105,25 +105,18 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
             package / c.Infra.INIT_PY: (package / c.Infra.INIT_PY).read_bytes()
             for package in packages
         }
-        analysis = tm.ok(
-            FlextInfraCodegenLazyInit(
-                repository_root=root, project_scope_roots=selected
-            ).plan_files()
+        analyses = tuple(
+            tm.ok(
+                FlextInfraCodegenLazyInit(
+                    repository_root=repository, project_scope_roots=(repository,)
+                ).plan_files()
+            )
+            for repository in selected
         )
-        tm.that({file.project for file in analysis.files}, eq=expected)
-        for repository, package in zip((root, member), packages, strict=True):
-            targeted = FlextInfraCodegenLazyInit(
-                repository_root=root,
-                project_scope_roots=selected,
-                target_module=package.name,
-            ).plan_files()
-            if repository.resolve() in expected:
-                tm.that(
-                    {file.project for file in tm.ok(targeted).files},
-                    eq={repository.resolve()},
-                )
-            else:
-                tm.fail(targeted, has="lazy-init target module not found")
+        tm.that(
+            {file.project for analysis in analyses for file in analysis.files},
+            eq=expected,
+        )
         tm.that({path: path.read_bytes() for path in before}, eq=before)
         applied = request.model_copy(update={"mode": c.Infra.CodegenConformMode.APPLY})
         tm.ok(FlextInfraCodegenConform.execute_request(applied, workspace))

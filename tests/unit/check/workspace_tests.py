@@ -82,10 +82,8 @@ class TestsFlextInfraWorkspaceChecker:
         captured = capsys.readouterr()
         assert "unknown projects: ." in captured.out + captured.err
 
-    def test_cli_checks_current_repository_without_project_selection(
-        self, tmp_path: Path
-    ) -> None:
-        """An omitted project selection checks the declared current repository."""
+    def test_cli_requires_explicit_member_selection(self, tmp_path: Path) -> None:
+        """An omitted selection checks only the repository root."""
         project_dir = test_u.Tests.mk_project(
             tmp_path,
             "flext-core",
@@ -104,18 +102,29 @@ class TestsFlextInfraWorkspaceChecker:
         (package_dir / "module.py").write_text(
             '"""Fixture module."""\n\nvalue = 1\n', encoding="utf-8"
         )
-        test_u.Tests.initialize_git_repo(project_dir)
+        test_u.Tests.declare_workspace_projects(tmp_path, (project_dir.name,))
+        test_u.Tests.initialize_git_repo(tmp_path)
 
-        exit_code = main([
+        implicit_exit_code = main([
             "check",
             "run",
             "--repository-root",
-            str(project_dir),
+            str(tmp_path),
             "--gates",
             "lint",
         ])
-
-        tm.that(exit_code, eq=0)
+        tm.that(implicit_exit_code, eq=1)
+        selected_exit_code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(tmp_path),
+            "--projects",
+            project_dir.name,
+            "--gates",
+            "lint",
+        ])
+        tm.that(selected_exit_code, eq=0)
 
     def test_resolve_gates_with_valid_gates(self) -> None:
         """Test that resolve_gates normalizes valid gate names."""

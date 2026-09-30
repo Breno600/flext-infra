@@ -137,6 +137,45 @@ class FlextInfraConstantsCodegenProject:
     BEADS_DIRECTORY_MODE: ClassVar[int] = 0o700
     BEADS_LOCAL_VERSION_FILENAME: ClassVar[str] = ".local_version"
     BEADS_LAST_TOUCHED_FILENAME: ClassVar[str] = "last-touched"
+    BEADS_RUNTIME_ENTRY_NAMES: ClassVar[frozenset[str]] = frozenset({
+        # Provenance: bd's own `.beads/.gitignore`. These are the live Dolt
+        # server and daemon runtime entries bd writes beside the ledger: they
+        # are projections of ledger truth, never composed output, so the
+        # composed-project verify must tolerate them exactly as it tolerates
+        # the passive `issues.jsonl`/`interactions.jsonl` exports.
+        "dolt",
+        "embeddeddolt",
+        "proxieddb",
+        "bd.sock",
+        "bd.sock.startlock",
+        "sync-state.json",
+        "push-state.json",
+        "daemon.lock",
+        "daemon.log",
+        "daemon.pid",
+        "ephemeral.sqlite3",
+        "ephemeral.sqlite3-journal",
+        "ephemeral.sqlite3-shm",
+        "ephemeral.sqlite3-wal",
+        "dolt-server.activity",
+        "dolt-server-config.yaml",
+        "dolt-server.lock",
+        "dolt-server.log",
+        "dolt-server.pid",
+        "dolt-server.port",
+        "dolt-pprof",
+        "proxied_server_client_info.json",
+        ".env",
+        ".exclusive-lock",
+        ".sync.lock",
+        # The bd client serializes every gate transaction through this marker
+        # beside the ledger (measured: a members' gen failed composition on a
+        # hours-stale zero-byte `dolt.gate.lock` whose holder had died). Same
+        # class as `.exclusive-lock`/`.sync.lock`: a projection of ledger
+        # operation, never composed output.
+        "dolt.gate.lock",
+    })
+    "bd-owned Dolt/daemon runtime entries the composed-project verify tolerates."
     BEADS_CONFIG_VERSION: ClassVar[Literal[1]] = 1
     CONFORM_NAMESPACE_TABLE: ClassVar[t.VariadicTuple[str]] = (
         "tool",
@@ -176,6 +215,8 @@ class FlextInfraConstantsCodegenProject:
     WORKSPACE_MANIFEST_VERSION: ClassVar[int] = 3
     UV_LOCK_FILENAME: ClassVar[str] = "uv.lock"
     MISE_LOCK_FILENAME: ClassVar[str] = "mise.lock"
+    MISE_LOCK_ANNOTATION: ClassVar[str] = "~"
+    "Lockfile cache-key fragment (``<version>~<hash>``); never a selector."
     MISE_MOVING_SELECTOR: ClassVar[str] = "latest"
     "Selector resolved only by ``make upg`` into the committed ``mise.lock``."
     GIT_URL_SUFFIX: ClassVar[str] = ".git"

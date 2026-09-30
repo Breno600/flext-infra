@@ -297,6 +297,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         assert u.Cli.process_succeeded(after.outcome), after.stderr
         tm.that(after.stdout, eq=before.stdout)
         tm.that(after.stderr, eq=before.stderr)
+        tm.that(source_file.read_text(encoding="utf-8"), eq=source)
 
     # Exemplar: this drives the real CLI entry point against a real Git
     # repository, so its cost is the runtime's import chain plus several git

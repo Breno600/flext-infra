@@ -96,9 +96,9 @@ class TestsFlextInfraCodegenConstantsQualityGate:
             pkg_name="duplicate_consumer",
             files={"first.py": constant_source, "second.py": constant_source},
         )
-        # A repository scans its own sources; declared submodules are installed
-        # dependencies. Keep both real definitions inside this census boundary.
-        # Module-level exports stay empty so lazy-init has no ambiguous reexport.
+        u.Tests.provision_checkout(project)
+        # A repository scans its own sources; installed siblings are dependencies.
+        # Empty exports avoid an unrelated lazy-init reexport ambiguity.
         tm.that(u.Tests.run_lazy_init(project), eq=0)
         gate = FlextInfraCodegenQualityGate(repository_root=project)
         report_result = gate.build_report()

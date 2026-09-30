@@ -97,8 +97,9 @@ class TestsFlextInfraUpgLockAtomicPublication:
         tm.that(lock.read_bytes(), eq=committed)
         tm.that(sorted(path.name for path in root.glob(".uv.lock.*")), eq=[])
 
+    @pytest.mark.parametrize("conflicted", [False, True])
     def test_upg_replaces_lock_without_rewriting_the_committed_file(
-        self, tmp_path: Path
+        self, tmp_path: Path, *, conflicted: bool
     ) -> None:
         """Publication swaps a complete lock in; a reader keeps the old one whole.
 
@@ -107,6 +108,15 @@ class TestsFlextInfraUpgLockAtomicPublication:
         publishing the lock.
         """
         root, lock, committed = self._committed_project(tmp_path, python=">=3.13")
+        if conflicted:
+            committed = (
+                b"<<<<<<< HEAD\n"
+                + committed
+                + b"=======\n"
+                + committed
+                + b">>>>>>> integration\n"
+            )
+            lock.write_bytes(committed)
         self._write_wheel(self._wheel_path(tmp_path))
         with lock.open("rb") as reader:
             execution = tm.ok(

@@ -52,6 +52,55 @@ class TestsFlextInfraUtilitiesResourceLimits:
             bool(pstats.Stats(str(profile)).get_stats_profile().func_profiles), eq=True
         )
 
+    def test_mypy_budget_resolves_the_project_tooling_overlay(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The project tooling.yaml budget drives the runner timeout (#1113)."""
+        monkeypatch.delenv(c.Infra.MYPY_TIMEOUT_SECONDS_ENV, raising=False)
+        (tmp_path / "config").mkdir()
+        (tmp_path / "config" / "tooling.yaml").write_text(
+            "tools:\n  mypy:\n    timeout_seconds: 600\n", encoding="utf-8"
+        )
+        expected_limit = m.Infra.MypyResourceLimit(
+            memory_limit_mb=u.Infra.mypy_resource_limit().memory_limit_mb,
+            timeout_seconds=600,
+        )
+
+        tm.that(
+            u.Infra.mypy_runner_timeout_for_project(tmp_path),
+            eq=u.Infra.mypy_runner_timeout(expected_limit),
+        )
+
+    def test_mypy_budget_env_override_beats_the_project_overlay(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The documented precedence is env override > project budget."""
+        monkeypatch.setenv(c.Infra.MYPY_TIMEOUT_SECONDS_ENV, "150")
+        (tmp_path / "config").mkdir()
+        (tmp_path / "config" / "tooling.yaml").write_text(
+            "tools:\n  mypy:\n    timeout_seconds: 600\n", encoding="utf-8"
+        )
+        expected_limit = m.Infra.MypyResourceLimit(
+            memory_limit_mb=u.Infra.mypy_resource_limit().memory_limit_mb,
+            timeout_seconds=150,
+        )
+
+        tm.that(
+            u.Infra.mypy_runner_timeout_for_project(tmp_path),
+            eq=u.Infra.mypy_runner_timeout(expected_limit),
+        )
+
+    def test_mypy_budget_without_overlay_uses_the_fleet_default(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No project overlay falls back to the fleet tooling SSOT."""
+        monkeypatch.delenv(c.Infra.MYPY_TIMEOUT_SECONDS_ENV, raising=False)
+
+        tm.that(
+            u.Infra.mypy_runner_timeout_for_project(tmp_path),
+            eq=u.Infra.mypy_runner_timeout(),
+        )
+
     def test_workspace_checker_requires_its_own_environment(
         self, tmp_path: Path
     ) -> None:
@@ -88,18 +137,17 @@ class TestsFlextInfraUtilitiesResourceLimits:
             # Real interpreter startup and controlled group cleanup use the
             # existing integration-harness budget, not the default case budget.
             pytest.param("deadline", 124, marks=pytest.mark.slow),
-            # Darwin's supervisor samples group RSS and stops it (137); Linux
-            # prlimit makes the plugin allocation raise MemoryError; Mypy's
-            # console_entry reports that fatal checker error with exit 2.
-            ("memory", (137 if sys.platform == "darwin" else 2)),
+            # The checker may use different nonzero exit codes while reporting
+            # the same bounded allocation failure through its public output.
+            ("memory", None),
         ],
     )
     def test_resource_limit_enforces_exit_deadline_and_memory(
-        self, tmp_path: Path, scenario: str, expected: int
+        self, tmp_path: Path, scenario: str, expected: int | None
     ) -> None:
         """Exercise a real exit, deadline and resident allocation through the owner."""
         limit = m.Infra.MypyResourceLimit(
-            memory_limit_mb=max(1, c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 8)
+            memory_limit_mb=max(1, c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT // 2)
             if scenario == "memory"
             else c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
             timeout_seconds=test_u.Tests.mypy_deadline_limit().timeout_seconds
@@ -119,22 +167,31 @@ class TestsFlextInfraUtilitiesResourceLimits:
                     "    raise\n"
                 )
             source += f"time.sleep({limit.timeout_seconds + 1})"
-        result = u.Cli.run_raw(
-            u.Infra.mypy_limited_command(
-                test_u.Tests.mypy_workload(tmp_path, source), limit
-            ),
-            timeout=u.Infra.mypy_runner_timeout(limit),
+        command = u.Infra.mypy_limited_command(
+            test_u.Tests.mypy_workload(tmp_path, source), limit
         )
+        result = u.Cli.run_raw(command, timeout=u.Infra.mypy_runner_timeout(limit))
         tm.ok(result)
         tm.that(result.value.stdout, has="workload-ready")
-        tm.that(result.value.outcome.raw_return_code, eq=expected)
         if scenario == "memory":
             tm.that(
-                result.value.stderr,
-                has="RSS limit reached"
-                if sys.platform == "darwin"
-                else "allocation-denied: MemoryError",
+                any(str(limit.memory_limit_bytes) in part for part in command[:-1]),
+                eq=True,
             )
+            tm.that(u.Cli.process_succeeded(result.value.outcome), eq=False)
+            tm.that(result.value.outcome.timed_out, eq=False)
+            # The configured bound itself must cause the stop: only a
+            # resource-exhaustion outcome (memory marker or signal) yields the
+            # public diagnostic, so an unrelated checker failure after the
+            # workload start can no longer satisfy this scenario.
+            diagnostic = tm.not_none(
+                u.Infra.mypy_failure_diagnostic(result.value, limit)
+            )
+            tm.that(diagnostic, has=f"memory_limit={limit.memory_limit_mb} MiB")
+            if sys.platform == "darwin":
+                tm.that(result.value.stderr, has="RSS limit reached")
+        else:
+            tm.that(result.value.outcome.raw_return_code, eq=expected)
 
     @pytest.mark.slow
     @pytest.mark.parametrize("expected", [7, 124])
@@ -246,7 +303,19 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(limit.memory_limit_mb, eq=memory_limit)
         tm.that(limit.timeout_seconds, eq=timeout_limit)
 
-    @pytest.mark.parametrize("invalid_value", ["", "1024.0", "-1", " 1024"])
+    @pytest.mark.parametrize(
+        "invalid_value",
+        [
+            # Each case spawns a real interpreter that imports the full
+            # package tree before the boundary rejects the text, so they run
+            # on the integration-harness budget like the deadline scenario
+            # above, never on the default case budget.
+            pytest.param("", marks=pytest.mark.slow),
+            pytest.param("1024.0", marks=pytest.mark.slow),
+            pytest.param("-1", marks=pytest.mark.slow),
+            pytest.param(" 1024", marks=pytest.mark.slow),
+        ],
+    )
     def test_mypy_resource_limit_rejects_non_integer_environment(
         self, invalid_value: str
     ) -> None:

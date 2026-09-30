@@ -86,6 +86,27 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
             )
         return r[bool].ok(True)
 
+    @staticmethod
+    def _validate_selector_integrity(configured_tools: t.StrMapping) -> p.Result[bool]:
+        """Reject a lockfile annotation leaking into a ``.mise.toml`` selector.
+
+        A generated selector is the declared release; the ``~<hash>`` fragment
+        belongs to the lockfile's cache key (``aube.path``). Copied into the
+        selector it makes ``mise install`` fail with "not in the lockfile" and
+        aborts the fleet's ``make setup`` before any verb can run.
+        """
+        annotated = tuple(
+            f"{selector}={version}"
+            for selector, version in sorted(configured_tools.items())
+            if c.Infra.MISE_LOCK_ANNOTATION in version
+        )
+        if annotated:
+            return r[bool].fail(
+                "Mise payload carries a lockfile annotation in the selector: "
+                f"{', '.join(annotated)}"
+            )
+        return r[bool].ok(True)
+
     @classmethod
     def _validate_config(cls, project_root: Path) -> p.Result[bool]:
         """Validate the generated ``.mise.toml`` declaration offline."""
@@ -95,6 +116,9 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         tools_result = cls._tool_specifiers(config_result.value)
         if tools_result.failure:
             return r[bool].from_failure(tools_result)
+        integrity = cls._validate_selector_integrity(tools_result.value)
+        if integrity.failure:
+            return integrity
         return cls._validate_suspended_selectors(tools_result.value)
 
     def validate_artifacts(
