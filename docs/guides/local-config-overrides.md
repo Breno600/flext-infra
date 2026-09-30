@@ -96,6 +96,10 @@ exact paths only in its worktree lane and removes them before landing. An empty 
 fails loud when the verb runs, rather than claiming a completed bootstrap. After
 Makefile bootstrap, run `make setup` and `make gen` in that consumer's worktree. The
 generated target Makefile and other projections are never edited directly.
+The `makefile` surface reads declared member identity from the workspace manifest
+even when a member checkout has been initialized only partially and still lacks its
+`pyproject.toml`; that is the state the new Make setup must repair. All other conform
+surfaces continue to reject that incomplete member.
 
 A dedicated integration worktree may stage exact supplier commits in its handwritten
 `config/workspace.yaml` under `candidate_dependencies`. Each entry declares the
