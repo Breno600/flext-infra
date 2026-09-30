@@ -41,7 +41,7 @@ helm = "latest"
 kind = "latest"
 direnv = "latest"
 taplo = "latest"
-"npm:@ast-grep/cli" = { version = "latest", allow_builds = ["@ast-grep/cli"] }
+"npm:@ast-grep/cli" = { version = "0.45.3~7a027ead", allow_builds = ["@ast-grep/cli"] }
 gitleaks = "latest"
 "aqua:boyter/scc" = "latest"
 kubeconform = "latest"
