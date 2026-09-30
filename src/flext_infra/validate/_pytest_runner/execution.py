@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pstats
 import shlex
 import sys
 from collections.abc import MutableMapping
@@ -201,6 +202,14 @@ class FlextInfraPytestRunnerExecution(
             deadline=self._process_deadline(),
         ).unwrap()
         self._record_process_outcome(report_dir, "suite", outcome)
+        if self.profile_enabled:
+            profiles = tuple(sorted((report_dir / "profiles").glob("*.pstats")))
+            if not profiles:
+                msg = f"pytest produced no child profiles: {report_dir}"
+                raise FileNotFoundError(msg)
+            pstats.Stats(*(str(path) for path in profiles)).dump_stats(
+                str(report_dir / "pytest.pstats")
+            )
         return outcome
 
     @staticmethod
@@ -315,20 +324,9 @@ class FlextInfraPytestRunnerExecution(
             if accounting.inventory_count is None
             else accounting.inventory_count - accounting.deselected_count
         )
-        # The suite stop instant can land on the last selected test's teardown:
-        # pytest still reports the interrupt, but every selected test executed
-        # with complete accounting and nothing remains for the next selection.
-        # Coverage keeps the interrupt red: its artifact is validated only on a
-        # clean exit.
-        stopped_after_selection = (
-            raw_return_code == pytest.ExitCode.INTERRUPTED
-            and context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE
-            and not rejected
-            and accounting.executed_count == selected_count
-        )
         final_exit = (
             0
-            if (accepted_cache_hit or accepted_zero_tests or stopped_after_selection)
+            if (accepted_cache_hit or accepted_zero_tests)
             else raw_return_code or int(rejected)
         )
         # A graceful stop at the suite stop instant publishes the executed

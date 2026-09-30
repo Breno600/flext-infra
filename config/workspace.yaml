@@ -25,6 +25,14 @@ repository:
   read_only: false
 members: []
 
+candidate_dependencies:
+  - distribution: flext-cli
+    url: https://github.com/flext-sh/flext-cli.git
+    commit: 8b2aea801805b2e5efa0fce6424e97fc45635260
+  - distribution: flext-tests
+    url: https://github.com/flext-sh/flext-tests.git
+    commit: 575a431d8b72a29b8db6e0eeca7d7764f62f4340
+
 project:
   package_name: flext_infra
   class_stem: FlextInfra
@@ -44,36 +52,3 @@ project:
   year: 2026
   packaged_data_paths:
     - config
-# Handwritten topology SSOT consumed by `flext-infra codegen conform`.
-# conform never overwrites this input. Declare members/exclusions here, then
-# run the project's canonical generation surface (`make gen`).
-version: 3
-name: flext-infra
-candidate_bootstrap_targets: []
-# Why (green mandate, cosmos-3flk9 decision A): production sources are the
-# namespace validator's declared scope — tests host pytest conventions and
-# scripts/examples are thin command and documentation surfaces. Lint, type,
-# constant, and magic-value rules stay fleet-tree-wide.
-namespace_scan_dirs:
-  - src
-repository:
-  name: flext-infra
-  distribution: flext-infra
-  provider: flext-sh
-  url: https://github.com/flext-sh/flext-infra.git
-  path: .
-  role: standalone
-  state: active
-  kind: internal_flext
-  codegen: conform
-  package: true
-  editable: true
-  read_only: false
-members: []
-candidate_dependencies:
-  - distribution: flext-cli
-    url: https://github.com/flext-sh/flext-cli.git
-    commit: 8b2aea801805b2e5efa0fce6424e97fc45635260
-  - distribution: flext-tests
-    url: https://github.com/flext-sh/flext-tests.git
-    commit: 575a431d8b72a29b8db6e0eeca7d7764f62f4340

@@ -114,29 +114,29 @@ class TestsFlextInfraPytestRunnerSuiteStop:
         tm.that(persisted <= set(selected), eq=True)
 
     @pytest.mark.slow
-    def test_stop_instant_after_the_last_selected_test_completes_the_run(
+    def test_stop_after_the_last_selected_test_preserves_the_raw_interrupt(
         self, cached_runner_project: Path
     ) -> None:
-        """A stop requested on the last selected test's teardown ends nothing.
+        """Complete item accounting never normalizes an interrupted session.
 
         The fixture project owns one test, so the stop request lands after the
-        whole selection executed and passed: the accounting is complete and the
-        run is green although pytest still reports its interrupt.
+        whole selection executed and passed. The accounting is complete, but
+        pytest's interrupted lifecycle remains a failing process outcome.
         """
         runner = self._spent_runner(cached_runner_project)
 
-        tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.OK.value)
+        tm.that(tm.ok(runner.execute()), eq=pytest.ExitCode.INTERRUPTED.value)
 
         bounded, selected, executed = self._interrupted_run(cached_runner_project)
         tm.that(executed, eq=len(selected))
         tm.that(
             self._read(bounded / "summary.txt"),
             has=[
-                "outcome=executed",
+                "outcome=failed",
                 f"selected={len(selected)}",
                 f"executed={executed}",
                 "accounting_complete=True",
                 "failed=0",
-                "exit=0",
+                f"exit={pytest.ExitCode.INTERRUPTED.value}",
             ],
         )
