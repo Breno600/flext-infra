@@ -127,9 +127,7 @@ class FlextInfraRefactorTypingUnifierRewriteMixin:
                     )
             return node
 
-        def _subscript(
-            self, node: cst.Subscript, *, widen: bool
-        ) -> cst.BaseExpression:
+        def _subscript(self, node: cst.Subscript, *, widen: bool) -> cst.BaseExpression:
             name = self.qualified_name(node.value)
             if name in {"typing.Literal", "typing_extensions.Literal"}:
                 return node
