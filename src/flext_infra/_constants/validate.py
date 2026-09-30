@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import re
-from enum import IntEnum, StrEnum, unique
+from enum import IntEnum, unique
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
-
-from flext_core._constants.guards import FlextConstantsGuards
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -15,14 +13,6 @@ if TYPE_CHECKING:
 
 class FlextInfraConstantsSharedInfra:
     """Shared infrastructure constants consumed by flext_infra.constants."""
-
-    PRIMITIVES_TYPES: ClassVar[
-        tuple[type[str], type[int], type[float], type[bool]]
-    ] = FlextConstantsGuards.PRIMITIVES_TYPES
-    """Re-export of the flext-core primitives owner (ENFORCE-079)."""
-
-    EnforcementRuleSeverity: ClassVar[type[StrEnum]] = FlextConstantsGuards.EnforcementRuleSeverity
-    """Re-export of the flext-core enforcement severity owner."""
 
     @unique
     class ScriptExitCode(IntEnum):
