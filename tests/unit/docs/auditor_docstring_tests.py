@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
 from flext_infra.docs.auditor import FlextInfraDocAuditor
 from tests import m, u
 
@@ -28,17 +27,9 @@ class TestsFlextInfraAuditorDocstring:
     _FULL_COVERAGE_PERCENT = 100.0
     _PARTIAL_COVERAGE_THRESHOLD = 80.0
 
-    @staticmethod
-    def _audit_warns() -> bool:
-        """Read the audit posture from the same typed SSOT production reads."""
-        return "audit" in config.Infra.codegen.make.docs.warning_actions
-
     def _assert_verdict(self, result: p.Result[bool]) -> None:
-        """The execute verdict follows the configured audit posture."""
-        if self._audit_warns():
-            tm.ok(result)
-        else:
-            tm.fail(result)
+        """A docstring finding fails the public execute boundary."""
+        tm.fail(result)
 
     _PACKAGE_INIT = '''"""Demo package."""
 
@@ -118,8 +109,7 @@ __all__ = ["documented_fn", "undocumented_fn"]
         report = FlextInfraDocAuditor().audit_scope(
             scope, params=m.Infra.AuditScopeParams(check="docstrings")
         )
-        warns = "audit" in config.Infra.codegen.make.docs.warning_actions
-        tm.that(report.passed, eq=warns)
+        tm.that(report.passed, eq=False)
         tm.that(report.items, empty=False)
 
         markdown = (report_dir / "audit-report.md").read_text(encoding="utf-8")
@@ -202,8 +192,7 @@ __all__ = ["documented_fn", "undocumented_fn"]
         ).execute()
 
         self._assert_verdict(result)
-        if not self._audit_warns():
-            tm.that(result.error, has="issues:")
+        tm.that(result.error, has="issues:")
 
     def test_no_threshold_still_reports_missing_docstrings(
         self, tmp_path: Path
@@ -215,8 +204,7 @@ __all__ = ["documented_fn", "undocumented_fn"]
         ).execute()
 
         self._assert_verdict(result)
-        if not self._audit_warns():
-            tm.that(result.error, has="issues:")
+        tm.that(result.error, has="issues:")
 
     def test_coverage_floor_applies_with_other_selected_checks(
         self, tmp_path: Path
@@ -227,8 +215,7 @@ __all__ = ["documented_fn", "undocumented_fn"]
             repository_root=project, checks="links", docstring_min=80.0
         ).execute()
         self._assert_verdict(result)
-        if not self._audit_warns():
-            tm.that(result.error, has="below minimum")
+        tm.that(result.error, has="below minimum")
 
     def test_fully_documented_package_passes(self, tmp_path: Path) -> None:
         """Repairing the finding, rather than lowering a floor, makes it pass."""

@@ -503,7 +503,6 @@ Infra:
             - utilities
             - worktree
         mutable_actions: [fix, fmt]
-        warning_actions: [audit]
         reports_dir: .reports/docs
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
         stale_github_organizations:

@@ -57,7 +57,10 @@ phase, fix, or changed-only selector may be attached to a standard verb.
 
 `make help` is the complete live inventory. Additional declared verbs such as `upg`,
 `docs`, `audit`, `status`, `waza`, `duplication`, and the release verbs retain their own
-single operation and are invoked only when their scope applies.
+single operation and are invoked only when their scope applies. The `docs` lifecycle
+ends with an audit: any finding fails the verb and remains in
+`.reports/docs/audit-report.md`. Command guidance is checked in executable shell blocks
+and inline instructions; descriptions of internal tools are not shell guidance.
 
 ## Codemod rule fixtures
 
