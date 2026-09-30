@@ -107,6 +107,9 @@ jobs:
             apps/*/.reports/**/validate-summary.json
             apps/*/.reports/**/validate-report.md
           if-no-files-found: error
+          # The allowlisted reports live under hidden .reports directories.
+          # upload-artifact excludes hidden paths unless this is explicit.
+          include-hidden-files: true
           retention-days: 7
 
   build:

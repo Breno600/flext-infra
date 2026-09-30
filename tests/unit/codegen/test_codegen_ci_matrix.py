@@ -11,6 +11,7 @@ import shutil
 from pathlib import Path
 
 import pytest
+import yaml
 from flext_tests import tm
 
 from flext_infra import c, config, t
@@ -648,6 +649,37 @@ class TestsFlextInfraCodegenCiMatrix:
 
         for branch in config.Infra.codegen.branch_policy.ci_trigger_branches:
             tm.that(content, has=f"      - {branch}")
+
+    def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
+        self, rendered_project: Path
+    ) -> None:
+        """A generated Docs job fails on audit findings and retains safe reports."""
+        workflow = yaml.safe_load(
+            (rendered_project / ".github/workflows/docs.yml").read_text(
+                encoding="utf-8"
+            )
+        )
+        steps = workflow["jobs"]["docs-quality"]["steps"]
+        docs_step = next(step for step in steps if step["name"] == "Docs lifecycle (blocking)")
+        upload = next(
+            step for step in steps if step["name"] == "Upload docs reports on failure"
+        )
+        tm.that(docs_step["run"], eq="make docs")
+        tm.that(docs_step.get("continue-on-error"), eq=None)
+        tm.that(upload["if"], eq="failure()")
+        tm.that(upload["with"]["include-hidden-files"], eq=True)
+        tm.that(upload["with"]["if-no-files-found"], eq="error")
+        report_paths = upload["with"]["path"].splitlines()
+        tm.that(report_paths, empty=False)
+        permitted_names = {
+            "audit-summary.json",
+            "audit-report.md",
+            "validate-summary.json",
+            "validate-report.md",
+        }
+        tm.that({Path(path).name for path in report_paths}, eq=permitted_names)
+        for path in report_paths:
+            tm.that(".reports" in Path(path).parts, eq=True)
 
     def test_docs_workflow_jobs_authenticate_toolchain_resolution(
         self, rendered_project: Path
