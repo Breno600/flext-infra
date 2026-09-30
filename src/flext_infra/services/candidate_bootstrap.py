@@ -43,6 +43,8 @@ class FlextInfraCandidateBootstrapService:
             return r[bool].fail(
                 "candidate bootstrap targets resolve to duplicate worktrees"
             )
+        if command.dry_run or command.check_only or not command.apply_changes:
+            return self._verify(roots, targets, manifest_state)
 
         def publish(scope_root: Path) -> p.Result[bool]:
             planned = self._plan(roots, targets, manifest_state)
@@ -54,13 +56,6 @@ class FlextInfraCandidateBootstrapService:
                 for plan in analysis.files
                 if u.Infra.codegen_file_requires_effect(plan)
             )
-            if command.dry_run or command.check_only or not command.apply_changes:
-                if changed:
-                    return r[bool].fail(
-                        "candidate bootstrap drift detected: "
-                        + ", ".join(str(plan.path) for plan in changed)
-                    )
-                return self._verify(roots, targets, manifest_state)
             if not changed:
                 return self._verify(roots, targets, manifest_state)
             committed = self._transaction.publish_file_phase_locked(

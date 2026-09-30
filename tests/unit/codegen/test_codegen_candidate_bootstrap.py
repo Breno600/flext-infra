@@ -117,3 +117,22 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             all(state.content != b"stale candidate Makefile\n" for state in committed),
             eq=True,
         )
+
+    def test_check_only_reports_drift_without_publication(self, tmp_path: Path) -> None:
+        """A check does not enter the recoverable writer or change a target."""
+        source, first, _ = self._campaign(tmp_path)
+        first_makefile = first / c.Infra.MAKEFILE_FILENAME
+        first_makefile.write_text("stale candidate Makefile\n", encoding="utf-8")
+        before = tm.ok(u.Cli.atomic_read_binary_file_state(first_makefile, required=True))
+
+        result = infra.bootstrap_candidate(
+            m.Infra.CandidateBootstrapCommand(
+                repository_root=source, check_only=True
+            )
+        )
+
+        tm.that(result.failure, eq=True)
+        tm.that(
+            tm.ok(u.Cli.atomic_read_binary_file_state(first_makefile, required=True)),
+            eq=before,
+        )
