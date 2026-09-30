@@ -107,16 +107,17 @@ ou do `upg` e regenere pelo `make gen`; instalações manuais não substituem o 
 
 O código de um checkout executa no ambiente do seu `RUNTIME_ROOT`. O Makefile gerado
 exporta esse `RUNTIME_ROOT` e o `flext-infra` o lê como declaração tipada: a validação
-`fresh-import` roda as sondas com `<RUNTIME_ROOT>/.venv/bin/python`, nunca com o
-interpretador que hospeda a ferramenta. Sem declaração, o dono deriva a raiz Git do
-checkout; uma declaração sem interpretador falha.
+`fresh-import` roda as sondas com o Python do ambiente físico externo declarado pelo
+Makefile, nunca com o interpretador que hospeda a ferramenta. Sem declaração, o dono
+deriva a raiz Git do checkout; uma declaração sem interpretador falha.
 
-O `.venv` pertence ao `RUNTIME_ROOT` (D-VENV, `flext-x8gn6`). Um membro anexado como
-submódulo usa o `.venv` do superprojeto Git que o contém; um checkout standalone ou uma
-worktree vinculada tem o seu próprio. O Makefile gerado, o `.envrc` gerado e
-`runtime_environment_dir` resolvem essa raiz pelo mesmo caminho físico: entrar no
-checkout por um symlink não muda o ambiente selecionado. Nenhum ambiente vive fora do
-checkout que o possui, nem é emprestado de outro checkout por symlink.
+O ambiente pertence ao `RUNTIME_ROOT` (D-VENV, `flext-x8gn6`). Um membro anexado como
+submódulo usa o ambiente do superprojeto Git que o contém; um checkout standalone ou uma
+worktree vinculada tem o seu próprio. A pasta física fica no diretório irmão configurado
+por `make.runtime_environment_directory`, com o caminho absoluto do checkout como
+identidade. O Makefile gerado, o `.envrc` gerado e `runtime_environment_dir` resolvem
+essa localização pelo mesmo caminho físico: entrar no checkout por um symlink não muda o
+ambiente selecionado. Nenhum ambiente é emprestado de outro checkout por symlink.
 
 Uma raiz de workspace declara cada membro anexado, de qualquer família (`flext-*` ou
 não), como fonte Git inline na linha de integração do próprio workspace, a mesma que o
@@ -174,14 +175,14 @@ declarados antes de resolver os locks Python. Os demais verbos que dependem do r
 recusam um pin ausente ou não resolvido antes da ativação; `help` e `clean` continuam
 sendo operações locais sem essa dependência.
 
-A credencial segue a precedência oficial do GitHub CLI: `GH_TOKEN`, `GITHUB_TOKEN` e,
-para o bootstrap de rede, a credencial armazenada pelo `gh`. Um token explícito funciona
-antes de instalar o `gh`. Operações locais já provisionadas não exigem login ou uma
-consulta de autenticação na rede. A fonte selecionada mantém seu erro nativo; um token
-inválido nunca provoca nova tentativa anônima ou troca de fonte. O Mise lê o mesmo
-`GITHUB_TOKEN`; o Make remove do ambiente dos recipes qualquer `MISE_GITHUB_TOKEN`
-herdado, porque um alias da mesma credencial teria precedência sobre ela. Jobs de CI que
-invocam Make recebem `GITHUB_TOKEN`; containers recebem a variável ou o secret do
+O bootstrap de rede exige credencial explícita no ambiente do processo: `GH_TOKEN` tem
+precedência sobre `GITHUB_TOKEN`. O Make não consulta `gh` nem o keyring. Sem ambas,
+`make setup` e `make upg` falham antes da instalação; operações locais já provisionadas
+não exigem autenticação. Um token inválido preserva o erro nativo do backend, sem nova
+tentativa anônima ou troca de fonte. O Mise lê o mesmo `GITHUB_TOKEN`; o Make remove do
+ambiente dos recipes qualquer `MISE_GITHUB_TOKEN` herdado, porque um alias da mesma
+credencial teria precedência sobre ela. O launcher de credenciais ou job de CI deve
+injetar `GITHUB_TOKEN` no processo; containers recebem a variável ou o secret do
 BuildKit explicitamente.
 
 ## Registrar antes de ampliar o trabalho
@@ -236,6 +237,16 @@ findings residuais.
 O handoff final relaciona PRs, commits de merge e prova após integração aos Beads. Se
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
 declarar fechamento funcional.
+
+## Bounded Mypy failure status
+
+The Linux Mypy command applies `prlimit` before launching the checker. If a plugin
+exhausts the address-space limit, Mypy may catch the allocation failure and report an
+`INTERNAL ERROR` with exit status 2. Status 1 denotes type-checking findings, so the
+resource test must preserve the raw status and stderr instead of rewriting them into a
+synthetic `MemoryError` or treating the run as a successful check. The Darwin supervisor
+can instead terminate a process whose resident memory exceeds its limit. See the
+[Mypy exit-status contract](https://github.com/python/mypy/issues/14615).
 
 ## Abstraction-boundary project identity
 

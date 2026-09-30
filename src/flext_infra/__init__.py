@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from .check.workspace_check import FlextInfraWorkspaceChecker
     from .check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
     from .cli import FlextInfraCli, docs_main, main
+    from .codegen.candidate_bootstrap import FlextInfraCodegenCandidateBootstrap
     from .codegen.census import FlextInfraCodegenCensus
     from .codegen.codegen_generation import FlextInfraCodegenGeneration
     from .codegen.codegen_transaction import FlextInfraCodegenTransaction
@@ -285,6 +286,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCliRouteBase",
     "FlextInfraCliRouteService",
     "FlextInfraCodegen",
+    "FlextInfraCodegenCandidateBootstrap",
     "FlextInfraCodegenCensus",
     "FlextInfraCodegenConform",
     "FlextInfraCodegenConsolidator",
@@ -524,6 +526,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".check.workspace_check_gates": ("FlextInfraWorkspaceCheckGatesMixin",),
             ".cli": ("FlextInfraCli", "docs_main", "main"),
             ".codegen": ("codegen",),
+            ".codegen.candidate_bootstrap": ("FlextInfraCodegenCandidateBootstrap",),
             ".codegen.census": ("FlextInfraCodegenCensus",),
             ".codegen.codegen_generation": ("FlextInfraCodegenGeneration",),
             ".codegen.codegen_transaction": ("FlextInfraCodegenTransaction",),
