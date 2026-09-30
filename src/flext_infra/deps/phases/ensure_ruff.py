@@ -67,16 +67,20 @@ class FlextInfraEnsureRuffConfigPhase:
         return sorted(path.as_posix() for path in paths.value)
 
     @staticmethod
-    def _excluded_root_set(project_dir: Path) -> frozenset[str]:
-        """First segments of the workspace SSOT's declared analysis exclusions.
+    def _analysis_exclusion_root_set(project_dir: Path) -> frozenset[str]:
+        """First segments of the detector's declared analysis exclusions.
 
-        Unlike a disk probe (which oscillates between the deps pass and the
-        root-materializing gen pass), the workspace SSOT is order-independent:
-        a repository declares a retired tree here once and every root-scoped
-        projection converges.
+        Deliberately a DIFFERENT authority from
+        ``FlextInfraToolTablesPhase.excluded_roots`` (the manifest
+        non-participant set used by the per-file-ignores projection): this
+        set drives the namespace-packages projection and follows the
+        workspace detector's analysis-exclusion paths (gitmodules-driven).
+        Like the manifest authority it is order-independent: a repository
+        declares a retired tree once and every root-scoped projection
+        converges.
         """
         if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return set()
+            return frozenset()
         paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
         if paths.failure:
             raise ValueError(
@@ -85,20 +89,7 @@ class FlextInfraEnsureRuffConfigPhase:
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
     @staticmethod
-    def _workspace_exclusion_roots(project_dir: Path) -> t.StrSequence:
-        """Return the workspace-declared analysis exclusion paths (SSOT-driven)."""
-        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
-            return ()
-        paths = FlextInfraWorkspaceDetector.analysis_exclusion_paths(project_dir)
-        if paths.failure:
-            raise ValueError(
-                paths.error or "workspace analysis exclusions are unavailable"
-            )
-        return tuple(path.as_posix() for path in paths.value)
-
-    @classmethod
     def compose_per_file_ignores(
-        self,
         project_dir: Path,
         *,
         global_ignores: t.MappingKV[str, t.StrSequence] | None = None,
@@ -202,7 +193,7 @@ class FlextInfraEnsureRuffConfigPhase:
             return (path.parent / directory).is_dir() or (directory in generated_roots)
 
         existing_root = tuple(d for d in ruff_cfg.src if _present(d))
-        excluded_roots = self._excluded_root_set(path.parent)
+        excluded_roots = self._analysis_exclusion_root_set(path.parent)
         existing_namespace_packages = tuple(
             d for d in ruff_cfg.namespace_packages if d not in excluded_roots
         )

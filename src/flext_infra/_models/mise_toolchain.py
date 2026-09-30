@@ -338,6 +338,32 @@ class FlextInfraModelsMiseToolchain:
             """Mise/pyenv-style selector for the configured Python minor line."""
             return self.python_version
 
+        @u.model_validator(mode="after")
+        def _validate_version_selectors(self) -> Self:
+            """Reject build-identity selectors mise/aube cannot resolve.
+
+            A value like ``0.45.3~7a027ead`` is an aube lock build-identity
+            directory name, not a published package version; aube rejects it
+            ("no version ... matches range") and the whole toolchain lifecycle
+            (make upg/gen/setup, and therefore CI) breaks. Only real selectors
+            (``latest``, a major.minor line, or a released version) may reach
+            the lock.
+            """
+            offenders = sorted(
+                field
+                for field, value in self
+                if field.endswith("_version")
+                and isinstance(value, str)
+                and "~" in value
+            )
+            if offenders:
+                msg = (
+                    "toolchain version selectors must be resolvable package "
+                    "versions, not build identities: " + ", ".join(offenders)
+                )
+                raise ValueError(msg)
+            return self
+
     class BeadsEndpointSpec(_ConfigContract):
         """Static network endpoint projected into Beads configuration."""
 
@@ -402,7 +428,9 @@ class FlextInfraModelsMiseToolchain:
         release_selector: Annotated[
             t.NonEmptyStr,
             m.Field(
-                pattern=r"^[a-z]+:[A-Za-z0-9._/-]+$",
+                # "@version" suffix pins the selector to a known-good
+                # release when upstream ships a broken one.
+                pattern=r"^[a-z]+:[A-Za-z0-9._/@-]+$",
                 description="Tool selector `make upg` resolves for the Mise release",
             ),
         ]
