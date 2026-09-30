@@ -12,8 +12,6 @@ from flext_core import r
 from flext_infra import c, m, p, t, u
 from flext_infra.transformers import publish_semantic_file_plans
 
-from .._utilities.rope_core import FlextInfraUtilitiesRopeCore
-from .._utilities.rope_runtime_refactors import FlextInfraUtilitiesRopeRuntimeRefactors
 from ._rename_sources import FlextInfraRenameSources
 from ._rename_symbols import FlextInfraRenameSymbols
 
@@ -42,7 +40,7 @@ class FlextInfraApplyRenames:
         root = Path(commonpath(roots))
         plans: t.MutableSequenceOf[m.Infra.SemanticFilePlan] = []
         occurrences = 0
-        with FlextInfraUtilitiesRopeCore.open_project(
+        with u.FlextInfraUtilitiesRopeCore.open_project(
             root, project_roots=roots
         ) as project:
             symbols = FlextInfraRenameSymbols.plan(
@@ -61,7 +59,7 @@ class FlextInfraApplyRenames:
                 desired = inventory[path].content
                 if edits:
                     resource = project.get_resource(path.relative_to(root).as_posix())
-                    changed = FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
+                    changed = u.FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
                         resource, source, edits
                     )
                     if path in python:

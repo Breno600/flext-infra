@@ -6,9 +6,7 @@ import ast
 from difflib import SequenceMatcher
 from pathlib import Path
 
-from flext_infra import m, p, t
-
-from .._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
+from flext_infra import m, p, t, u
 
 
 class FlextInfraRenameSymbols:
@@ -39,7 +37,7 @@ class FlextInfraRenameSymbols:
         rewrites: t.SequenceOf[m.Infra.SourceRewrite],
     ) -> t.VariadicTuple[t.Triple[int, int, bool]]:
         """Retain effective-member identity after Rope's receiver/MRO match."""
-        runtime = FlextInfraUtilitiesRopeRuntime
+        runtime = u.FlextInfraUtilitiesRopeRuntime
         module = project.get_pymodule(change.resource)
         owner, old, new = symbols
         expected = cls.resolve_member(project, owner, old)
@@ -142,7 +140,7 @@ class FlextInfraRenameSymbols:
                     if cls.resolve_member(project, owner, new_suffix) is None:
                         continue
                     accepted = True
-                    changes = FlextInfraUtilitiesRopeRuntime.restructure_changes(
+                    changes = u.FlextInfraUtilitiesRopeRuntime.restructure_changes(
                         project,
                         f"${{owner}}.{old_suffix}",
                         f"${{owner}}.{new_suffix}",

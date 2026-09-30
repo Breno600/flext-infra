@@ -278,11 +278,7 @@ class FlextInfraModTextGateEngine:
                 / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
                 root / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
             }
-            expected = {
-                state.path
-                for state in inputs
-                if state.path not in catalogues
-            }
+            expected = {state.path for state in inputs if state.path not in catalogues}
             observed: set[Path] = set()
             for target in u.Infra.ast_grep_scan_targets(root):
                 candidate = root / target
