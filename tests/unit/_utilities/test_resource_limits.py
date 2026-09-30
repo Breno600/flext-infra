@@ -291,7 +291,19 @@ class TestsFlextInfraUtilitiesResourceLimits:
         tm.that(limit.memory_limit_mb, eq=memory_limit)
         tm.that(limit.timeout_seconds, eq=timeout_limit)
 
-    @pytest.mark.parametrize("invalid_value", ["", "1024.0", "-1", " 1024"])
+    @pytest.mark.parametrize(
+        "invalid_value",
+        [
+            # Each case spawns a real interpreter that imports the full
+            # package tree before the boundary rejects the text, so they run
+            # on the integration-harness budget like the deadline scenario
+            # above, never on the default case budget.
+            pytest.param("", marks=pytest.mark.slow),
+            pytest.param("1024.0", marks=pytest.mark.slow),
+            pytest.param("-1", marks=pytest.mark.slow),
+            pytest.param(" 1024", marks=pytest.mark.slow),
+        ],
+    )
     def test_mypy_resource_limit_rejects_non_integer_environment(
         self, invalid_value: str
     ) -> None:
