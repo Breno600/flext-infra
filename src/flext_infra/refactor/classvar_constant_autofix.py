@@ -55,20 +55,38 @@ class FlextInfraRefactorClassvarConstantAutofix:
         constant_name: str,
         constants_module: str,
     ) -> m.Infra.ClassvarConstantAutofixPlan:
-        class_module, class_name = class_full_name.rsplit(".", maxsplit=1)
-        source_mod = project.get_module(class_module, project.root)
+        segments = class_full_name.split(".")
+        runtime_errors = u.Infra.rope_runtime_errors()
+        module_end = len(segments) - 1
+        source_mod = None
+        class_module = ""
+        while module_end > 0:
+            class_module = ".".join(segments[:module_end])
+            try:
+                source_mod = project.get_module(class_module, project.root)
+            except runtime_errors:
+                module_end -= 1
+                continue
+            break
+        if source_mod is None:
+            msg = f"{class_full_name} did not resolve to a module and class"
+            raise TypeError(msg)
+        class_path = tuple(segments[module_end:])
         source_resource = source_mod.get_resource()
         if not u.Infra.file_resource(source_resource):
             msg = f"{class_module} did not resolve to a file resource"
             raise TypeError(msg)
-        pyclass = source_mod.get_attribute(class_name).get_object()
+        pyclass = source_mod.get_attribute(class_path[0]).get_object()
+        for segment in class_path[1:]:
+            pyclass = pyclass.get_attribute(segment).get_object()
         if not u.Infra.runtime_pyclass(pyclass):
             msg = f"{class_full_name} did not resolve to a class"
             raise TypeError(msg)
+        class_name = ".".join(class_path)
         source_text = source_resource.read()
-        class_lineno = cls._class_start_lineno(source_text, class_name)
+        class_lineno = cls._class_start_lineno(source_text, class_path)
         declaration_line = cls._extract_declaration_line(
-            source_text, class_name, constant_name, class_lineno
+            source_text, class_path, constant_name
         )
         target_resource = cls._target_resource_for_module(
             project,
@@ -117,14 +135,11 @@ class FlextInfraRefactorClassvarConstantAutofix:
         target_text = plan.target_resource.read()
         touched: set[str] = {plan.source_resource.path, plan.target_resource.path}
         constants_alias = plan.constants_module.split(".")[-1]
+        class_path = tuple(plan.class_name.split("."))
 
         # 1. Remove the ClassVar declaration from the class body.
         new_source = cls._remove_declaration_line(
-            source_text,
-            plan.declaration_line,
-            plan.class_lineno,
-            plan.class_name,
-            plan.constant_name,
+            source_text, plan.declaration_line, class_path, plan.constant_name
         )
 
         # 2. Append the constant to the target _constants module, unless the
@@ -144,10 +159,12 @@ class FlextInfraRefactorClassvarConstantAutofix:
                 target_text, plan.declaration_line, plan.constants_module
             )
 
-        # 3. Rewrite internal references from ClassName.NAME / cls.NAME /
+        # 3. Rewrite internal references from Owner.NAME / cls.NAME /
         # self.__class__.NAME to the canonical constants module access.
         class_module_obj = project.get_module(plan.class_module, project.root)
-        pyclass = class_module_obj.get_attribute(plan.class_name).get_object()
+        pyclass = class_module_obj.get_attribute(class_path[0]).get_object()
+        for segment in class_path[1:]:
+            pyclass = pyclass.get_attribute(segment).get_object()
         pyname = pyclass.get_attribute(plan.constant_name)
         finder = u.Infra.create_occurrence_finder(
             project, plan.constant_name, pyname, imports=True, in_hierarchy=False
@@ -215,15 +232,34 @@ class FlextInfraRefactorClassvarConstantAutofix:
             touched_files=tuple(sorted(touched)), constant_module=plan.constants_module
         )
 
+    @staticmethod
+    def _class_node_for_path(
+        tree: ast.Module, class_path: tuple[str, ...]
+    ) -> ast.ClassDef | None:
+        """Follow ``class_path`` through nested ClassDefs from the module body."""
+        node: ast.stmt | None = None
+        container: ast.stmt | ast.Module = tree
+        for segment in class_path:
+            candidates = (
+                child
+                for child in getattr(container, "body", ()) or ()
+                if isinstance(child, ast.ClassDef) and child.name == segment
+            )
+            node = next(candidates, None)
+            if node is None:
+                return None
+            container = node
+        return node if isinstance(node, ast.ClassDef) else None
+
     @classmethod
-    def _class_start_lineno(cls, source: str, class_name: str) -> int:
-        """Return the 1-based line where ``class class_name`` starts."""
-        for lineno, line in enumerate(source.splitlines(), start=1):
-            stripped = line.lstrip()
-            if stripped.startswith("class ") and class_name in stripped:
-                return lineno
-        msg = f"Could not locate class {class_name}"
-        raise ValueError(msg)
+    def _class_start_lineno(cls, source: str, class_path: tuple[str, ...]) -> int:
+        """Return the 1-based line where the final class of ``class_path`` starts."""
+        tree = ast.parse(source)
+        node = cls._class_node_for_path(tree, class_path)
+        if node is None:
+            msg = f"Could not locate class {'.'.join(class_path)}"
+            raise ValueError(msg)
+        return node.lineno
 
     @classmethod
     def _target_resource_for_module(
@@ -278,27 +314,23 @@ class FlextInfraRefactorClassvarConstantAutofix:
 
     @classmethod
     def _extract_declaration_line(
-        cls, source: str, class_name: str, constant_name: str, class_lineno: int
+        cls, source: str, class_path: tuple[str, ...], constant_name: str
     ) -> str:
         """Return the exact source line that declares the class-level constant."""
-        try:
-            tree = ast.parse(source)
-        except SyntaxError:
-            tree = None
-        if tree is not None:
-            for node in tree.body:
-                if not isinstance(node, ast.ClassDef) or node.name != class_name:
+        tree = ast.parse(source)
+        owner = cls._class_node_for_path(tree, class_path)
+        if owner is not None:
+            for statement in owner.body:
+                if not cls._statement_declares_name(statement, constant_name):
                     continue
-                for statement in node.body:
-                    if not cls._statement_declares_name(statement, constant_name):
-                        continue
-                    segment = ast.get_source_segment(source, statement)
-                    if segment is not None:
-                        return cls._normalize_declaration_source(segment)
-                    return cls._normalize_declaration_source(
-                        cls._statement_source_by_lines(source, statement)
-                    )
-                break
+                segment = ast.get_source_segment(source, statement)
+                if segment is not None:
+                    return cls._normalize_declaration_source(segment)
+                return cls._normalize_declaration_source(
+                    cls._statement_source_by_lines(source, statement)
+                )
+        class_lineno = cls._class_start_lineno(source, class_path)
+        class_name = class_path[-1]
         lines = source.splitlines()
         for idx in range(class_lineno, len(lines)):
             line = lines[idx]
@@ -394,17 +426,17 @@ class FlextInfraRefactorClassvarConstantAutofix:
         cls,
         source: str,
         declaration_line: str,
-        class_lineno: int,
-        class_name: str,
+        class_path: tuple[str, ...],
         constant_name: str,
     ) -> str:
         """Remove the constant declaration from the class body, preserving layout."""
         lines = source.splitlines(keepends=True)
         ast_removed = cls._remove_declaration_by_ast(
-            source, lines, class_name, constant_name
+            source, lines, class_path, constant_name
         )
         if ast_removed is not None:
             return ast_removed
+        class_lineno = cls._class_start_lineno(source, class_path)
         for idx in range(class_lineno - 1, len(lines)):
             if cls._declaration_block_matches(lines, declaration_line, idx):
                 # Also remove the blank line that typically precedes it, if any.
@@ -418,25 +450,29 @@ class FlextInfraRefactorClassvarConstantAutofix:
 
     @classmethod
     def _remove_declaration_by_ast(
-        cls, source: str, lines: list[str], class_name: str, constant_name: str
+        cls,
+        source: str,
+        lines: list[str],
+        class_path: tuple[str, ...],
+        constant_name: str,
     ) -> str | None:
         """Remove a class-body declaration using AST line metadata."""
         tree = ast.parse(source)
-        for node in tree.body:
-            if not isinstance(node, ast.ClassDef) or node.name != class_name:
+        owner = cls._class_node_for_path(tree, class_path)
+        if owner is None:
+            return None
+        for statement in owner.body:
+            if not cls._statement_declares_name(statement, constant_name):
                 continue
-            for statement in node.body:
-                if not cls._statement_declares_name(statement, constant_name):
-                    continue
-                start = max(statement.lineno - 1, 0)
-                end = max(
-                    getattr(statement, "end_lineno", statement.lineno), statement.lineno
-                )
-                delete_start = (
-                    start - 1 if start > 0 and not lines[start - 1].strip() else start
-                )
-                del lines[delete_start:end]
-                return "".join(lines)
+            start = max(statement.lineno - 1, 0)
+            end = max(
+                getattr(statement, "end_lineno", statement.lineno), statement.lineno
+            )
+            delete_start = (
+                start - 1 if start > 0 and not lines[start - 1].strip() else start
+            )
+            del lines[delete_start:end]
+            return "".join(lines)
         return None
 
     @classmethod
