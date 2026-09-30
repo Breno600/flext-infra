@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
+from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -36,6 +38,9 @@ class FlextInfraMiseArtifactsDerivation:
             )
             if launcher.failure:
                 return launcher
+        sidecars = cls._validate_aube_sidecars(project_root)
+        if sidecars.failure:
+            return sidecars
         if project_root.resolve() == runtime_root.resolve():
             return r[bool].ok(True)
         for relative, _mode in c.Infra.ARTIFACT_SPECS:
@@ -63,6 +68,77 @@ class FlextInfraMiseArtifactsDerivation:
         if release.failure:
             return r[str].fail(f"{path}: {release.error}; run make upg")
         return release
+
+    @classmethod
+    def _validate_aube_sidecars(cls, project_root: Path) -> p.Result[bool]:
+        """Require every aube sidecar ``mise.lock`` references to exist and match.
+
+        ``make upg``'s ``mise lock`` writes the npm sidecar directories beside
+        ``mise.lock``. A lock committed without its sidecar (or with a drifted
+        one) fails only in a distant ``mise install`` with "dependency sidecar
+        ... No such file or directory"; this check rejects both defects
+        offline, while the repair is still a local ``make upg``.
+        """
+        source = cls._read(project_root / c.Infra.MISE_LOCK_FILENAME)
+        if source.failure:
+            return r[bool].from_failure(source)
+        payload = u.Cli.toml_mapping_from_text(source.value)
+        if payload is None:
+            return r[bool].fail(f"invalid TOML in {c.Infra.MISE_LOCK_FILENAME}")
+        raw_tools = payload.get("tools")
+        if not isinstance(raw_tools, Mapping):
+            return r[bool].fail(
+                f"{c.Infra.MISE_LOCK_FILENAME} must declare a [tools] section"
+            )
+        for selector, raw_tool in sorted(raw_tools.items()):
+            entries = raw_tool if isinstance(raw_tool, list) else (raw_tool,)
+            for raw_entry in entries:
+                if not isinstance(raw_entry, Mapping):
+                    continue
+                sidecar = raw_entry.get("aube")
+                if not isinstance(sidecar, Mapping):
+                    continue
+                annotated = cls._sidecar_annotation(selector, sidecar)
+                if annotated.failure:
+                    return r[bool].from_failure(annotated)
+                relative, digest = annotated.value
+                lockfile = project_root / relative / "aube-lock.yaml"
+                mismatch = cls._sidecar_digest(lockfile, digest)
+                if mismatch.failure:
+                    return r[bool].fail(
+                        f"{c.Infra.MISE_LOCK_FILENAME} tool {selector} references "
+                        f"the aube sidecar {relative}: {mismatch.error}; run make upg"
+                    )
+        return r[bool].ok(True)
+
+    @staticmethod
+    def _sidecar_annotation(
+        selector: str, sidecar: Mapping[str, object]
+    ) -> p.Result[tuple[str, str]]:
+        """Return one tool's ``(sidecar path, digest)`` from its aube table."""
+        relative = sidecar.get("path")
+        digest = sidecar.get("digest")
+        if not isinstance(relative, str) or not relative.strip():
+            return r[tuple[str, str]].fail(
+                f"tool {selector} carries an aube annotation without a path"
+            )
+        if not isinstance(digest, str) or not digest.startswith("sha256:"):
+            return r[tuple[str, str]].fail(
+                f"tool {selector} carries an aube annotation without a sha256 digest"
+            )
+        return r[tuple[str, str]].ok((relative, digest.removeprefix("sha256:")))
+
+    @staticmethod
+    def _sidecar_digest(lockfile: Path, digest: str) -> p.Result[bool]:
+        """Verify one sidecar's ``aube-lock.yaml`` digest against the lock."""
+        if not lockfile.is_file():
+            return r[bool].fail(f"{lockfile} is absent")
+        actual = sha256(lockfile.read_bytes()).hexdigest()
+        if actual != digest:
+            return r[bool].fail(
+                f"{lockfile} digest {actual} differs from the locked {digest}"
+            )
+        return r[bool].ok(True)
 
     @staticmethod
     def resolves_at_run_time(artifacts: m.Infra.MiseToolchainArtifactSet) -> bool:
