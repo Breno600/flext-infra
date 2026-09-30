@@ -528,7 +528,7 @@ Infra:
         - name: setup
           description: Provision the declared environment and hooks.
         - name: upg
-          description: Resolve the newest declared releases and write the uv and mise locks.
+          description: Resolve the newest declared releases, write the uv and mise locks, then prove the upgraded tree still converges and passes every active check gate.
         # Workspace-only (topology owns applicability): a standalone Makefile
         # never declares it. Never merges; a rerun continues the same lanes.
         - name: propagate

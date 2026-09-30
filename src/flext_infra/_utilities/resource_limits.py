@@ -205,6 +205,47 @@ class FlextInfraUtilitiesResourceLimits:
         )
         return timeout_seconds
 
+    @classmethod
+    def mypy_runner_timeout_for_project(cls, project_dir: Path) -> int:
+        """Runner timeout honoring the project ``config/tooling.yaml`` budget.
+
+        #1113 made the wall-time budget a project SSOT; the standalone check
+        path must resolve that overlay here, with the documented precedence
+        env override > project budget > fleet default. An out-of-bounds or
+        unreadable project budget fails loud through the limit validation.
+        """
+        limit = cls.mypy_resource_limit()
+        if c.Infra.MYPY_TIMEOUT_SECONDS_ENV not in u.Cli.process_env():
+            budget = cls._project_mypy_budget(project_dir)
+            if budget is not None:
+                limit = m.Infra.MypyResourceLimit(
+                    memory_limit_mb=limit.memory_limit_mb, timeout_seconds=budget
+                )
+        return cls.mypy_runner_timeout(limit)
+
+    @staticmethod
+    def _project_mypy_budget(project_dir: Path) -> int | None:
+        """Read ``tools.mypy.timeout_seconds`` from the project overlay."""
+        tooling = project_dir / "config" / "tooling.yaml"
+        if not tooling.is_file():
+            return None
+        parsed = u.Cli.yaml_safe_load(tooling)
+        if parsed.failure:
+            msg = f"project tooling.yaml unreadable: {parsed.error}"
+            raise ValueError(msg)
+        payload = parsed.value or {}
+        tools = payload.get("tools") if isinstance(payload, dict) else None
+        mypy_block = tools.get("mypy") if isinstance(tools, dict) else None
+        raw_budget = (
+            mypy_block.get("timeout_seconds") if isinstance(mypy_block, dict) else None
+        )
+        if raw_budget is None:
+            return None
+        if not isinstance(raw_budget, int) or isinstance(raw_budget, bool):
+            msg = f"project mypy budget must be a plain integer: {raw_budget!r}"
+            raise TypeError(msg)
+        return raw_budget
+
     @staticmethod
     def _bounded_mypy_diagnostic(
         limit: m.Infra.MypyResourceLimit,
