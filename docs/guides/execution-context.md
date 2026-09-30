@@ -238,6 +238,16 @@ O handoff final relaciona PRs, commits de merge e prova após integração aos B
 algo permanece pendente, o texto deve nomeá-lo e oferecer a próxima ação executável, sem
 declarar fechamento funcional.
 
+## Bounded Mypy failure status
+
+The Linux Mypy command applies `prlimit` before launching the checker. If a plugin
+exhausts the address-space limit, Mypy may catch the allocation failure and report an
+`INTERNAL ERROR` with exit status 2. Status 1 denotes type-checking findings, so the
+resource test must preserve the raw status and stderr instead of rewriting them into a
+synthetic `MemoryError` or treating the run as a successful check. The Darwin supervisor
+can instead terminate a process whose resident memory exceeds its limit. See the
+[Mypy exit-status contract](https://github.com/python/mypy/issues/14615).
+
 ## Abstraction-boundary project identity
 
 The boundary gate reads the declared project identity through
