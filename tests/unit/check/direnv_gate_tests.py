@@ -83,13 +83,11 @@ class TestsFlextInfraDirenvGate:
         def test_home_targets_validated_only_when_resolving(
             self, tmp_path: Path
         ) -> None:
-            """resolve_home=False skips $HOME targets (generation-time lint)."""
-            violations = (
-                FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
-                    'source_env "$HOME/.config/environment.d/projects/absent.envrc"\n',
-                    root=tmp_path,
-                    resolve_home=False,
-                )
+            """resolve_home=False skips ${HOME} targets (generation-time lint)."""
+            violations = FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
+                'source_env "${HOME}/.config/environment.d/projects/absent.envrc"\n',
+                root=tmp_path,
+                resolve_home=False,
             )
             tm.that(violations, eq=())
 
@@ -103,8 +101,8 @@ class TestsFlextInfraDirenvGate:
             """
             violations = (
                 FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
-                    'source_env "$HOME"\n'
-                    'watch_file "$HOME/.flext-infra-contract-absent-marker"\n',
+                    'source_env "${HOME}"\n'
+                    'watch_file "${HOME}/.flext-infra-contract-absent-marker"\n',
                     root=tmp_path,
                 )
             )
