@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -39,7 +39,7 @@ class FlextInfraModReplacements:
         allowed = cls.require_authored(report)
         if allowed.failure:
             return allowed
-        grouped: dict[Path, list[m.Infra.ModScanFinding]] = {}
+        grouped: MutableMapping[Path, list[m.Infra.ModScanFinding]] = {}
         for finding in report.entries:
             if finding.actionable:
                 grouped.setdefault(root / finding.file, []).append(finding)

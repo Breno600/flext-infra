@@ -10,6 +10,7 @@ importing them. No class name is ever inferred from a package name.
 from __future__ import annotations
 
 import ast
+from collections.abc import MutableMapping
 from functools import lru_cache
 from importlib.util import resolve_name
 from typing import TYPE_CHECKING
@@ -40,7 +41,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         if indexed is None:
             msg = f"facade package is not importable for derivation: {package}"
             raise ValueError(msg)
-        classes: dict[str, str] = {}
+        classes: MutableMapping[str, str] = {}
         for name in FlextInfraUtilitiesRopeAnalysis.public_export_names_source(
             indexed[0]
         ):

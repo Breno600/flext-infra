@@ -368,17 +368,11 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 # A repository may carry an operator-authorized exemption in its
                 # committed ``config/*.yaml`` ManagedArtifacts catalog, and
                 # ensure_ruff composes the two when it edits a pyproject in
-                # place. The template rendered only the fleet map, so a full
-                # render silently dropped the local overlay -- flext-infra's
-                # own _rope exemption disappeared on every conform and returned
-                # 12 SLF001 findings the operator had already ruled on. Compose
-                # from the commit catalog so both paths produce the same
-                # effective map and concurrent worktree WIP cannot change a
-                # projection.
+                # place. Composed through the static contract directly (no
+                # phase instance, so the historic constructor-binding defect
+                # cannot resurface); both call sites share this single owner.
                 ruff_per_file_ignores=(
-                    FlextInfraEnsureRuffConfigPhase(
-                        config.Infra.tooling
-                    ).compose_per_file_ignores(
+                    FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
                         repository_root, managed_artifacts=catalog_artifacts
                     )
                 ),
