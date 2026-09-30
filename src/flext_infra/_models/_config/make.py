@@ -226,16 +226,6 @@ class FlextInfraConfigModelsMake:
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Docs actions that mutate"),
         ]
-        warning_actions: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=(),
-                description=(
-                    "Docs actions whose findings are reported as warnings "
-                    "instead of failing the phase"
-                ),
-            ),
-        ] = ()
         reports_dir: Annotated[
             Path, m.Field(description="Repository-relative docs reports directory")
         ]
@@ -300,16 +290,17 @@ class FlextInfraConfigModelsMake:
             if unknown is not None:
                 msg = f"docs action is not a registered CLI action: {unknown}"
                 raise ValueError(msg)
-            for label, selected in (
-                ("mutable_actions", self.mutable_actions),
-                ("warning_actions", self.warning_actions),
-            ):
-                outside = next(
-                    (action for action in selected if action not in self.actions), None
-                )
-                if outside is not None:
-                    msg = f"{label} entry is not part of the docs lifecycle: {outside}"
-                    raise ValueError(msg)
+            outside = next(
+                (
+                    action
+                    for action in self.mutable_actions
+                    if action not in self.actions
+                ),
+                None,
+            )
+            if outside is not None:
+                msg = f"mutable_actions entry is not part of the docs lifecycle: {outside}"
+                raise ValueError(msg)
             return self
 
     class TestmonCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -533,9 +524,18 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Sibling directory for physical workspace environments"
+            ),
+        ]
         examples_timeout_seconds: Annotated[
             int,
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),
+        ]
+        submodule_timeout_seconds: Annotated[
+            int, m.Field(gt=0, le=600, description="Governed submodule setup deadline")
         ]
         ruff: Annotated[
             FlextInfraConfigModelsMake.MakeRuffSpec,

@@ -168,6 +168,12 @@ class FlextInfraConstantsCodegenProject:
         ".env",
         ".exclusive-lock",
         ".sync.lock",
+        # The bd client serializes every gate transaction through this marker
+        # beside the ledger (measured: a members' gen failed composition on a
+        # hours-stale zero-byte `dolt.gate.lock` whose holder had died). Same
+        # class as `.exclusive-lock`/`.sync.lock`: a projection of ledger
+        # operation, never composed output.
+        "dolt.gate.lock",
     })
     "bd-owned Dolt/daemon runtime entries the composed-project verify tolerates."
     BEADS_CONFIG_VERSION: ClassVar[Literal[1]] = 1
