@@ -10,11 +10,11 @@ from flext_infra import m, t, u
 from .base import s
 from .check.workspace_check import FlextInfraWorkspaceChecker
 from .codegen.census import FlextInfraCodegenCensus
-from .codegen.fixer import FlextInfraCodegenFixer
-from .codegen.pipeline import FlextInfraCodegenPipeline
 from .codegen.codegen_transaction import FlextInfraCodegenTransaction
 from .codegen.conform import FlextInfraCodegenConform
+from .codegen.fixer import FlextInfraCodegenFixer
 from .codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from .codegen.pipeline import FlextInfraCodegenPipeline
 from .services.candidate_bootstrap import FlextInfraCandidateBootstrapService
 from .validate.namespace_validator import FlextInfraNamespaceValidator
 from .workspace.detector import FlextInfraWorkspaceDetector

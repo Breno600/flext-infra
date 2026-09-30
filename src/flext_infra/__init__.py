@@ -48,7 +48,6 @@ if TYPE_CHECKING:
     from .check.workspace_check import FlextInfraWorkspaceChecker
     from .check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
     from .cli import FlextInfraCli, docs_main, main
-    from .codegen.candidate_bootstrap import FlextInfraCodegenCandidateBootstrap
     from .codegen.census import FlextInfraCodegenCensus
     from .codegen.codegen_generation import FlextInfraCodegenGeneration
     from .codegen.codegen_transaction import FlextInfraCodegenTransaction
@@ -207,6 +206,7 @@ if TYPE_CHECKING:
     from .refactor.signature_propagation import FlextInfraRefactorSignaturePropagation
     from .refactor.wrapper_root_namespace import FlextInfraWrapperRootNamespaceRefactor
     from .release.orchestrator import FlextInfraReleaseOrchestrator
+    from .services.candidate_bootstrap import FlextInfraCandidateBootstrapService
     from .services.cli_dispatch import FlextInfraCliDispatchService
     from .services.cli_route_base import FlextInfraCliRouteBase
     from .services.cli_routes import FlextInfraCliRouteService
@@ -279,6 +279,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraApplyRenames",
     "FlextInfraBanditGate",
     "FlextInfraCProfileReport",
+    "FlextInfraCandidateBootstrapService",
     "FlextInfraCanonicalAliasGate",
     "FlextInfraClassPlacementDetector",
     "FlextInfraCleanService",
@@ -287,7 +288,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraCliRouteBase",
     "FlextInfraCliRouteService",
     "FlextInfraCodegen",
-    "FlextInfraCodegenCandidateBootstrap",
     "FlextInfraCodegenCensus",
     "FlextInfraCodegenConform",
     "FlextInfraCodegenConsolidator",
@@ -528,7 +528,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".check.workspace_check_gates": ("FlextInfraWorkspaceCheckGatesMixin",),
             ".cli": ("FlextInfraCli", "docs_main", "main"),
             ".codegen": ("codegen",),
-            ".codegen.candidate_bootstrap": ("FlextInfraCodegenCandidateBootstrap",),
             ".codegen.census": ("FlextInfraCodegenCensus",),
             ".codegen.codegen_generation": ("FlextInfraCodegenGeneration",),
             ".codegen.codegen_transaction": ("FlextInfraCodegenTransaction",),
@@ -709,6 +708,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".release": ("release",),
             ".release.orchestrator": ("FlextInfraReleaseOrchestrator",),
             ".services": ("services",),
+            ".services.candidate_bootstrap": ("FlextInfraCandidateBootstrapService",),
             ".services.cli_dispatch": ("FlextInfraCliDispatchService",),
             ".services.cli_route_base": ("FlextInfraCliRouteBase",),
             ".services.cli_routes": ("FlextInfraCliRouteService",),
