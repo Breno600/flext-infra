@@ -15,6 +15,7 @@ if TYPE_CHECKING:
         publish_semantic_file_plan,
         publish_semantic_file_plans,
     )
+    from ._typing_mutation import FlextInfraTypingMutation
     from ._typing_rewrite import FlextInfraRefactorTypingUnifierRewriteMixin
     from .class_reconstructor import FlextInfraRefactorClassReconstructor
     from .compatibility_alias import FlextInfraRefactorCompatibilityAlias
@@ -54,6 +55,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorTypingUnifier",
     "FlextInfraRefactorTypingUnifierRewriteMixin",
     "FlextInfraRopeTransformer",
+    "FlextInfraTypingMutation",
     "publish_semantic_file_plan",
     "publish_semantic_file_plans",
 )
@@ -67,6 +69,7 @@ _LAZY_IMPORTS = MappingProxyType(
                 "publish_semantic_file_plan",
                 "publish_semantic_file_plans",
             ),
+            "._typing_mutation": ("FlextInfraTypingMutation",),
             "._typing_rewrite": ("FlextInfraRefactorTypingUnifierRewriteMixin",),
             ".class_reconstructor": ("FlextInfraRefactorClassReconstructor",),
             ".compatibility_alias": ("FlextInfraRefactorCompatibilityAlias",),
