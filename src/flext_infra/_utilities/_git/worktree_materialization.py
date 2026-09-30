@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from stat import S_IMODE
 from typing import TYPE_CHECKING
 
 from flext_cli import u
@@ -226,6 +227,17 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
                     worktree_repo.git.apply(
                         *layer, *(("--check",) if check else ()), "-", istream=istream
                     )
+        # Git records only executable bits; apply creates files through the
+        # process umask. Preserve the physical source permissions separately.
+        for raw_path in repo.git.ls_files(
+            "-z", strip_newline_in_stdout=False
+        ).split("\0"):
+            relative = Path(raw_path)
+            if not raw_path or cls._git_path_is_excluded(relative, excluded):
+                continue
+            source_path = source_root / relative
+            if source_path.is_file() and not source_path.is_symlink():
+                (worktree_root / relative).chmod(S_IMODE(source_path.stat().st_mode))
         return cls._git_copy_untracked(source_root, worktree_root, tuple(excluded))
 
 

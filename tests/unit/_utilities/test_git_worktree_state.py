@@ -54,8 +54,9 @@ class TestsFlextInfraGitWorktreeState:
         test_u.Tests.git_run(source, "rm", "recreated.txt")
         recreated.write_text("untracked replacement\n", encoding="utf-8")
         partial.write_text("unstaged without final newline", encoding="utf-8")
-        partial.chmod(partial.stat().st_mode | 0o111)
+        partial.chmod(0o751)
         binary.write_bytes(b"\x00unstaged\xfe")
+        binary.chmod(0o600)
         added = source / "added.txt"
         added.write_text("index content\n", encoding="utf-8")
         test_u.Tests.git_run(source, "add", "added.txt")

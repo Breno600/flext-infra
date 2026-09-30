@@ -97,6 +97,9 @@ class TestsFlextInfraGitStateBoundaries:
 
     def test_index_flags_fail_without_clearing_them(self, tmp_path: Path) -> None:
         source = test_u.Tests.git_repository(tmp_path)
+        (source / "README.md").write_text("tracked baseline\n", encoding="utf-8")
+        test_u.Tests.git_run(source, "add", "README.md")
+        test_u.Tests.git_run(source, "commit", "-m", "track index flag fixture")
         request = m.Infra.GitWorktreeStateRequest(
             repo_root=source, paths=(Path("README.md"),)
         )
@@ -154,6 +157,13 @@ class TestsFlextInfraGitStateBoundaries:
             )
         )
         tm.that(path.read_bytes(), eq=b"original file\n")
+        tm.ok(
+            u.Infra.git_cleanup_worktree_state(
+                checkpoint, lane, saved, publication=publication
+            )
+        )
+        tm.that(path.read_bytes(), eq=b"original file\n")
+        tm.that(test_u.Tests.git_capture(source, "status", "--porcelain=v1"), eq="")
 
     def test_gitlink_staging_is_retained_and_unreconciled_child_refuses_apply(
         self, tmp_path: Path
@@ -175,6 +185,7 @@ class TestsFlextInfraGitStateBoundaries:
         nested = source / "member"
         test_u.Tests.configure_git_identity(nested)
         (nested / "README.md").write_text("staged child\n", encoding="utf-8")
+        test_u.Tests.git_run(nested, "add", "README.md")
         test_u.Tests.git_run(nested, "commit", "-am", "staged child")
         indexed = test_u.Tests.git_capture(nested, "rev-parse", "HEAD").strip()
         test_u.Tests.git_run(source, "add", "member")
@@ -258,6 +269,3 @@ class TestsFlextInfraGitStateBoundaries:
             ).failure,
             eq=True,
         )
-
-
-__all__: list[str] = ["TestsFlextInfraGitStateBoundaries"]

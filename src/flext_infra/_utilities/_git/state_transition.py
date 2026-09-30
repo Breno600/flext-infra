@@ -128,7 +128,8 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
             target = root / path
             obstruction = cls._state_obstruction(root, path)
             if obstruction is not None and (
-                obstruction not in paths or obstruction in desired
+                obstruction not in paths
+                or (obstruction in desired and path in desired)
             ):
                 msg = f"unowned ancestor obstructs state transition: {path}"
                 raise ValueError(msg)

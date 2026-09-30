@@ -32,6 +32,9 @@ class TestsFlextInfraGitStateCheckpoint:
     def _capture(self, parent: Path) -> m.Infra.GitWorktreeStateCheckpoint:
         source = test_u.Tests.git_repository(parent)
         tracked = source / "README.md"
+        tracked.write_text("baseline\n", encoding="utf-8")
+        test_u.Tests.git_run(source, "add", "README.md")
+        test_u.Tests.git_run(source, "commit", "-m", "tracked checkpoint baseline")
         tracked.write_bytes(b"staged\n")
         test_u.Tests.git_run(source, "add", "README.md")
         tracked.write_bytes(b"working\x00\xff")
@@ -210,6 +213,3 @@ class TestsFlextInfraGitStateCheckpoint:
             )
         )
         tm.that(rejected.failure, eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraGitStateCheckpoint"]

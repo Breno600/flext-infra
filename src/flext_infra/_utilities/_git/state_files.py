@@ -34,12 +34,22 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     def _state_require_payload(
         cls,
         root: Path,
-        path: Path,
-        content: bytes | None,
-        mode: str,
-        permissions: int,
+        before: m.Cli.AtomicFileState | m.Cli.AtomicSymlinkState,
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
+        path = before.path.relative_to(root)
+        if isinstance(before, m.Cli.AtomicFileState):
+            content = before.content
+            permissions = before.mode if before.mode is not None else 0
+            mode = "100755" if permissions & stat.S_IXUSR else "100644"
+        else:
+            identity = before.identity
+            if identity is None or before.target is None:
+                msg = f"symlink disappeared before guarded effect: {path}"
+                raise ValueError(msg)
+            content = os.fsencode(before.target)
+            permissions = identity.mode
+            mode = "120000"
         if content is None and None in allowed:
             return
         if content is not None:
@@ -66,18 +76,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             before_link = u.Cli.atomic_read_symlink_state(
                 destination, required=True
             ).unwrap()
-            identity = before_link.identity
-            if identity is None or before_link.target is None:
-                msg = f"symlink disappeared before guarded effect: {path}"
-                raise ValueError(msg)
-            cls._state_require_payload(
-                root,
-                path,
-                os.fsencode(before_link.target),
-                "120000",
-                identity.mode,
-                allowed,
-            )
+            cls._state_require_payload(root, before_link, allowed)
             if desired is not None and desired.mode == "120000":
                 payload = cls._repo(root).odb.stream(bytes.fromhex(desired.oid)).read()
                 u.Cli.atomic_write_symlink_guarded(
@@ -89,11 +88,7 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             before_file = u.Cli.atomic_read_binary_file_state(
                 destination, required=False
             ).unwrap()
-            permissions = before_file.mode if before_file.mode is not None else 0
-            mode = "100755" if permissions & stat.S_IXUSR else "100644"
-            cls._state_require_payload(
-                root, path, before_file.content, mode, permissions, allowed
-            )
+            cls._state_require_payload(root, before_file, allowed)
             if desired is not None and desired.mode != "120000":
                 payload = cls._repo(root).odb.stream(bytes.fromhex(desired.oid)).read()
                 u.Cli.atomic_write_binary_file_guarded(
