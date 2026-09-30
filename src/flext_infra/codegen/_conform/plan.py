@@ -126,6 +126,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                         repository=local_repository,
                         project=declared_member.value.project,
                         namespace_scan_dirs=(declared_member.value.namespace_scan_dirs),
+                        candidate_dependencies=workspace.candidate_dependencies,
                     )
                 else:
                     local_workspace_result = (
