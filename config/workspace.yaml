@@ -23,3 +23,7 @@ repository:
   editable: true
   read_only: false
 members: []
+candidate_dependencies:
+  - distribution: flext-cli
+    url: https://github.com/flext-sh/flext-cli.git
+    commit: 8b2aea801805b2e5efa0fce6424e97fc45635260
