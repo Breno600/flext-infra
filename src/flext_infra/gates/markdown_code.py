@@ -298,11 +298,12 @@ class FlextInfraMarkdownCodeGate(FlextInfraGate):
         if ctx.check_only or not ctx.apply_fixes:
             return self._check_only_fix_result(project_dir)
         started = time.monotonic()
-        ran, passed, issues = self._run_extracted(
-            project_dir,
-            _ignore_filtered(project_dir, collect_markdown_files(project_dir)),
-            fix=True,
-        )
+        with self._mutation_lease(project_dir):
+            ran, passed, issues = self._run_extracted(
+                project_dir,
+                _ignore_filtered(project_dir, collect_markdown_files(project_dir)),
+                fix=True,
+            )
         if not ran:
             return self._neutral_skip_result(
                 project_dir,

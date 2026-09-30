@@ -320,6 +320,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
         receipts = template.parent.parent
         upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
         tm.that(upgraded.stdout, has="upg-hook-ran")
+        tool_receipts = re.findall(
+            r"uv setup selector=\S+ receipt=(\S+) selected=(\S+)", upgraded.stdout
+        )
+        tm.that(len(tool_receipts), gte=2)
+        for reported, selected in tool_receipts:
+            tm.that(reported, eq=selected)
         for lock in (c.Infra.UV_LOCK_FILENAME, c.Infra.MISE_LOCK_FILENAME):
             tm.that((template / lock).is_file(), eq=True)
         tm.that((template / ".venv" / "pyvenv.cfg").is_file(), eq=True)
@@ -736,13 +742,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
         assert isinstance(jscpd, Mapping)
         assert isinstance(waza, Mapping)
         tm.that(jscpd.get("version"), eq=toolchain.jscpd_version)
-        tm.that(
-            jscpd.get("platforms"),
-            eq={
-                platform: {"asset_pattern": pattern}
-                for platform, pattern in toolchain.jscpd_asset_patterns.items()
-            },
-        )
+        tm.that(jscpd.get("platforms"), eq=None)
         tm.that(waza.get("version"), eq=toolchain.waza_version)
         tm.that(waza.get("version_prefix"), eq=toolchain.waza_version_prefix)
 
@@ -1003,6 +1003,9 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="_builtin-fix-enforcement: _builtin_fix_enforcement")
         tm.that(makefile, has="_builtin-fix-namespace: _builtin_fix_namespace")
         tm.that(makefile, has="_builtin-fix-accessors: _builtin_fix_accessors")
+        tm.that(makefile, has="_builtin-self-fix-enforcement: _builtin_fix_enforcement")
+        tm.that(makefile, has="_builtin-self-fix-namespace: _builtin_fix_namespace")
+        tm.that(makefile, has="_builtin-self-fix-accessors: _builtin_fix_accessors")
         tm.that(makefile, has="_builtin-sonarcloud-sync: _builtin_sonarcloud_sync_all")
         tm.that(
             makefile, has="_builtin_sonarcloud_sync_all: _builtin_require_environment"

@@ -53,8 +53,14 @@ class FlextInfraUtilitiesResourceLimits:
 
     @staticmethod
     def mypy_resource_limit() -> m.Infra.MypyResourceLimit:
-        """Validate the external Mypy memory and time settings exactly once."""
+        """Validate the external Mypy memory and time settings exactly once.
+
+        The wall-time budget resolves project-first: the ``tooling.yaml``
+        ``tools.mypy.timeout_seconds`` SSOT is the default, the
+        ``MYPY_TIMEOUT_SECONDS`` env overrides it at the ingress boundary.
+        """
         process_env = u.Cli.process_env()
+        project_budget = config.Infra.tooling.tools.mypy.timeout_seconds
         return m.Infra.MypyResourceLimit(
             memory_limit_mb=FlextInfraUtilitiesResourceLimits._environment_integer(
                 process_env,
@@ -62,9 +68,7 @@ class FlextInfraUtilitiesResourceLimits:
                 c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
             ),
             timeout_seconds=FlextInfraUtilitiesResourceLimits._environment_integer(
-                process_env,
-                c.Infra.MYPY_TIMEOUT_SECONDS_ENV,
-                c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+                process_env, c.Infra.MYPY_TIMEOUT_SECONDS_ENV, project_budget
             ),
         )
 

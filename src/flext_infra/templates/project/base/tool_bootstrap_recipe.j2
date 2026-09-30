@@ -240,11 +240,25 @@
 	fi; \
 	# ``locked`` mode installs exactly what the committed mise.lock pins. \
 	mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
-	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_exec project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
+	# Bind provisioned executables through Mise's toolset, independent of \
+	# inherited PATH precedence in a nested bootstrap. \
+	mise_checked "$$scratch/ast-grep-path.log" mise_exec project "$$pinned_mise" -C "$$project_root" which ast-grep; \
+	ast_grep_executable=$$(cat "$$scratch/ast-grep-path.log"); \
+	if [ ! -x "$$ast_grep_executable" ]; then \
+		printf 'ERROR: Mise resolved a non-executable ast-grep path: %s\n' "$$ast_grep_executable" >&2; exit 2; \
+	fi; \
+	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_exec project "$$ast_grep_executable" --version; \
 	if [ -s "$$scratch/ast-grep-version.stderr" ]; then \
 		printf 'ERROR: ast-grep emitted diagnostics after installation\n' >&2; exit 2; \
 	fi; \
-	mise_checked "$$scratch/uv-version.log" mise_exec project "$$pinned_mise" -C "$$project_root" exec -- uv --version; \
+	mise_checked "$$scratch/uv-path.log" mise_exec project "$$pinned_mise" -C "$$project_root" which uv; \
+	uv_executable=$$(cat "$$scratch/uv-path.log"); \
+	if [ ! -x "$$uv_executable" ]; then \
+		printf 'ERROR: Mise resolved a non-executable uv path: %s\n' "$$uv_executable" >&2; exit 2; \
+	fi; \
+	mise_checked "$$scratch/uv-selected-version.log" mise_exec project "$$pinned_mise" -C "$$project_root" which uv --version; \
+	uv_selected=$$(cat "$$scratch/uv-selected-version.log"); \
+	mise_checked "$$scratch/uv-version.log" mise_exec project "$$uv_executable" --version; \
 	uv_output=$$(cat "$$scratch/uv-version.log"); \
 	case "$$uv_output" in \
 		'uv '*) uv_actual=$${uv_output#uv }; uv_actual=$${uv_actual%% *} ;; \
@@ -257,7 +271,10 @@
 	if [ "$$#" -ne 3 ]; then \
 		printf 'ERROR: uv --version returned an invalid release: %s\n' "$$uv_actual" >&2; exit 2; \
 	fi; \
-	printf 'uv setup selector=%s receipt=%s\n' "$$uv_selector" "$$uv_actual"; \
+	if [ "$$uv_actual" != "$$uv_selected" ]; then \
+		printf 'ERROR: Mise selected uv %s but its executable reports %s\n' "$$uv_selected" "$$uv_actual" >&2; exit 2; \
+	fi; \
+	printf 'uv setup selector=%s receipt=%s selected=%s\n' "$$uv_selector" "$$uv_actual" "$$uv_selected"; \
 	mise_checked "$$scratch/direnv-path.log" mise_exec project "$$pinned_mise" -C "$$project_root" which direnv; \
 	direnv_executable=$$(cat "$$scratch/direnv-path.log"); \
 	if [ ! -x "$$direnv_executable" ]; then \
