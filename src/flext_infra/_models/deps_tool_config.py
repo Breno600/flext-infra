@@ -65,6 +65,7 @@ class FlextInfraModelsDepsToolConfig(
                 description="Allow direct references in project metadata.",
             ),
         ]
+
     class PytestWorkerCeiling(m.ArbitraryTypesModel):
         """Tagged per-project pytest worker ceiling: absolute or CPU fraction.
 

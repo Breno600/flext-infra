@@ -66,7 +66,9 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                 name="candidate-bootstrap",
                 help_text="Atomically conform all declared candidate Makefiles",
                 model_cls=m.Infra.CandidateBootstrapCommand,
-                handler=FlextInfraCliRouteBase.result_handler(infra.bootstrap_candidate),
+                handler=FlextInfraCliRouteBase.result_handler(
+                    infra.bootstrap_candidate
+                ),
                 success_message="candidate bootstrap complete",
             ),
             m.Cli.ResultCommandRoute(

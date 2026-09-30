@@ -181,8 +181,13 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
     class PackagedDataSelection(m.ContractModel):
         """Validated data inputs separated by Hatch selection semantics."""
 
-        files: Annotated[t.StrTuple, m.Field(description="Explicit data files included individually")] = ()
-        directories: Annotated[t.StrTuple, m.Field(description="Data directories selected with VCS filters")] = ()
+        files: Annotated[
+            t.StrTuple, m.Field(description="Explicit data files included individually")
+        ] = ()
+        directories: Annotated[
+            t.StrTuple,
+            m.Field(description="Data directories selected with VCS filters"),
+        ] = ()
 
     class PyprojectDeclaredTopology(m.ContractModel):
         """Project topology a caller declares instead of discovering it on disk.
@@ -203,7 +208,12 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             t.StrTuple,
             m.Field(description="Repository-declared relative data paths to ship"),
         ] = ()
-        planned_data_files: Annotated[t.StrTuple, m.Field(description="Exact scaffold file destinations planned before publication")] = ()
+        planned_data_files: Annotated[
+            t.StrTuple,
+            m.Field(
+                description="Exact scaffold file destinations planned before publication"
+            ),
+        ] = ()
         declared_python_dirs: Annotated[
             t.StrTuple, m.Field(description="Python roots declared for the project")
         ] = ()
