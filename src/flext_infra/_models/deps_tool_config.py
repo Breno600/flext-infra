@@ -94,7 +94,7 @@ class FlextInfraModelsDepsToolConfig(
 
         @m.model_validator(mode="before")
         @classmethod
-        def _coerce_legacy_int(cls, data: object) -> object:
+        def _coerce_legacy_int(cls, data: t.JsonValue) -> t.JsonValue:
             """Accept the legacy bare-integer form as an absolute ceiling."""
             if isinstance(data, int) and not isinstance(data, bool):
                 return {"workers": data}

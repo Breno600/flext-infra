@@ -11,13 +11,7 @@ from tests import c, u
 
 
 class TestsFlextInfraLazyInitWorkspaceElection:
-    """A letter's source never depends on how many projects share the scan.
-
-    A child project inherits ``r`` through a middle project that re-exports it
-    from the declaring owner project. Each Git checkout publishes its own
-    initializer. The next project's real import path reads that published ABI,
-    so the child must elect the nearest re-exporting parent.
-    """
+    """A repository-local planner never borrows a sibling checkout's facade."""
 
     @staticmethod
     def _write_constants(package_root: Path, *, parent: str, class_name: str) -> None:
@@ -31,15 +25,15 @@ class TestsFlextInfraLazyInitWorkspaceElection:
             encoding=c.Infra.ENCODING_DEFAULT,
         )
 
-    def test_workspace_plan_elects_nearest_reexporting_parent(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    def test_workspace_plan_does_not_resolve_an_uninstalled_sibling_parent(
+        self, tmp_path: Path
     ) -> None:
-        """The child's ``r`` comes from the middle project, never the owner."""
+        """A child needs its declared parent installed in its own environment."""
         workspace = tmp_path / "workspace"
-        owner_repo, owner = u.Tests.create_lazy_init_workspace(
+        _owner_repo, owner = u.Tests.create_lazy_init_workspace(
             workspace, project_name="flext-ws-owner", package_name="flext_ws_owner"
         )
-        middle_repo, middle = u.Tests.create_lazy_init_workspace(
+        _middle_repo, middle = u.Tests.create_lazy_init_workspace(
             workspace, project_name="flext-ws-middle", package_name="flext_ws_middle"
         )
         child_repo, child = u.Tests.create_lazy_init_workspace(
@@ -58,19 +52,12 @@ class TestsFlextInfraLazyInitWorkspaceElection:
             child, parent="flext_ws_middle", class_name="FlextWsChildConstants"
         )
 
-        for repository in (owner_repo, middle_repo, child_repo):
-            monkeypatch.syspath_prepend(str(repository / c.Infra.DEFAULT_SRC_DIR))
-        for repository in (owner_repo, middle_repo, child_repo):
-            tm.that(u.Tests.run_lazy_init(repository), eq=0)
-            tm.that(u.Tests.run_lazy_init(repository, check_only=True), eq=0)
-        generated = child.joinpath(c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
-        )
-        entries, _refs = u.Infra.module_mapping_assignment_source(
-            generated, u.Infra.lazy_imports_name_source(generated)
-        )
-        sources = dict(entries)
-
-        tm.that(sources.get("flext_ws_middle", ()), has="r")
-        tm.that(sources, lacks="flext_ws_owner")
-        tm.that(u.Tests.run_lazy_init(child_repo, check_only=True), eq=0)
+        child_init = child / c.Infra.INIT_PY
+        before = child_init.read_bytes()
+        tm.that(tm.ok(u.Tests.plan_lazy_init(workspace)).files, eq=())
+        with pytest.raises(
+            ValueError,
+            match="declared facade parent 'flext_ws_middle' resolves nowhere",
+        ):
+            u.Tests.plan_lazy_init(child_repo)
+        tm.that(child_init.read_bytes(), eq=before)

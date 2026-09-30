@@ -48,7 +48,7 @@ class TestsFlextInfraCodegenLazyInitService:
         self, tmp_path: Path
     ) -> None:
         """Apply writes one initializer for exactly the selected package root."""
-        selected_repository, selected_root = u.Tests.create_lazy_init_workspace(
+        selected_repo, selected_root = u.Tests.create_lazy_init_workspace(
             tmp_path,
             project_name="flext-test-selected",
             package_name="flext_test_selected",
@@ -72,13 +72,13 @@ class TestsFlextInfraCodegenLazyInitService:
         )
         unrelated_init = unrelated_root / c.Infra.INIT_PY
         unrelated_before = unrelated_init.read_bytes()
-        service = u.Tests.create_lazy_init_service(selected_repository)
+        service = u.Tests.create_lazy_init_service(selected_repo)
         service.target_module = "flext_test_selected"
         service.apply_changes = True
 
         result = u.Tests.materialize_lazy_init(service)
 
-        tm.that(result.success, eq=True)
+        tm.ok(result)
         tm.that((selected_root / c.Infra.INIT_PY).read_bytes(), ne=b"")
         tm.that((selected_root / "__unit__.py").exists(), eq=False)
         tm.that(unrelated_init.read_bytes(), eq=unrelated_before)

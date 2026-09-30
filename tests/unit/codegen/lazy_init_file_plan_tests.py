@@ -105,8 +105,6 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
             package / c.Infra.INIT_PY: (package / c.Infra.INIT_PY).read_bytes()
             for package in packages
         }
-        # Each selected Git repository has its own Rope workspace. A parent
-        # Rope project deliberately excludes its submodules from indexing.
         analyses = tuple(
             tm.ok(
                 FlextInfraCodegenLazyInit(

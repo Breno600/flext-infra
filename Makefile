@@ -187,7 +187,7 @@ endif
 endif
 # End SECTION: profile routing
 
-override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
+override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../.flext-venvs/$(subst :,/,$(patsubst /%,%,$(RUNTIME_ROOT))))
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
@@ -354,6 +354,7 @@ mise_exec() { \
 'MISE_EXEC_AUTO_INSTALL=false' \
 'MISE_TASK_RUN_AUTO_INSTALL=false' \
 'MISE_AUTO_UPDATE=false' \
+'MISE_MINIMUM_RELEASE_AGE=0s' \
 'MISE_HTTP_RETRIES=0' \
 'MISE_NETRC=false' \
 'MISE_NOT_FOUND_AUTO_INSTALL=false' \
@@ -580,6 +581,7 @@ mise_exec() { \
 'MISE_EXEC_AUTO_INSTALL=false' \
 'MISE_TASK_RUN_AUTO_INSTALL=false' \
 'MISE_AUTO_UPDATE=false' \
+'MISE_MINIMUM_RELEASE_AGE=0s' \
 'MISE_HTTP_RETRIES=0' \
 'MISE_NETRC=false' \
 'MISE_NOT_FOUND_AUTO_INSTALL=false' \
@@ -791,6 +793,7 @@ fi; \
 SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	$(REQUIRE_WORKSPACE_ENVIRONMENT); \
 	desired_python="$${SETUP_PYTHON:?missing Mise-resolved Python executable}"; \
+	mkdir -p "$(dir $(RUNTIME_VENV))"; \
 	if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
 		$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"; \
 	else \
@@ -865,24 +868,26 @@ endef
 # of the manifests uv itself reports (`uv workspace dir|list`), must pass
 # `uv lock --check` against that mirror (every declared member present), and
 # only then replaces the committed lock by one rename inside its directory. An
-# interrupted run never touches the committed lock.
+# interrupted run never touches the committed lock. A full upgrade resolves
+# from declared manifests without prior lock preferences, including during
+# conflict repair; the final non-upgrade relock retains the resolved lock.
 define _lock_project
 	@set -eu; \
 	workspace=$$($(UV) workspace dir --project "$(PROJECT_ROOT)"); \
 	stage=$$(mktemp -d); candidate="$$workspace/.uv.lock.$$$$"; \
-	trap 'find "$$stage" -depth -delete; rm -f "$$candidate"' EXIT; \
+	trap 'find "$${stage}" -depth -delete; rm -f "$$candidate"' EXIT; \
 	trap 'exit 129' HUP; trap 'exit 130' INT; trap 'exit 143' TERM; \
-	$(UV) workspace list --paths --project "$$workspace" > "$$stage/.members"; \
+	$(UV) workspace list --paths --project "$$workspace" > "$${stage}/.members"; \
 	while IFS= read -r member; do \
 		relative=$${member#"$$workspace"}; \
-		mkdir -p "$$stage/mirror$$relative"; \
-		cp "$$member/pyproject.toml" "$$stage/mirror$$relative/pyproject.toml"; \
-	done < "$$stage/.members"; \
-	if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$$stage/mirror/uv.lock"; fi; \
-	$(UV) lock --project "$$stage/mirror" $(1); \
-	$(UV) lock --check --project "$$stage/mirror"; \
+		mkdir -p "$${stage}/mirror$$relative"; \
+		cp "$$member/pyproject.toml" "$${stage}/mirror$$relative/pyproject.toml"; \
+	done < "$${stage}/.members"; \
+	if [ -f "$$workspace/uv.lock" ]; then cp "$$workspace/uv.lock" "$${stage}/mirror/uv.lock"; fi; \
+	$(UV) lock --project "$${stage}/mirror" $(1); \
+	$(UV) lock --check --project "$${stage}/mirror"; \
 	if [ -e "$$candidate" ]; then printf 'ERROR: lock staging path already exists: %s\n' "$$candidate" >&2; exit 2; fi; \
-	cp "$$stage/mirror/uv.lock" "$$candidate"; \
+	cp "$${stage}/mirror/uv.lock" "$$candidate"; \
 	mv -f "$$candidate" "$$workspace/uv.lock"
 endef
 
@@ -1615,7 +1620,6 @@ TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra.
 # breaks the verb; a formatter's residual findings stay reportable and are
 # enforced by `make check`.
 _builtin_fmt_all: _builtin_require_environment
-	@$(UV_RUN) ruff format --preview $(RUFF_PATHS)
 	@$(PROJECT_FLEXT_INFRA) check run --repository-root "$(PROJECT_ROOT)" --gates "markdown-format" --apply
 
 _builtin_fix_all: _builtin_require_environment
