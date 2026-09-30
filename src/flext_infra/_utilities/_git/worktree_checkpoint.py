@@ -63,13 +63,22 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
     def _git_state_checkpoint_commit(cls, snapshot: m.Infra.GitIdentityReport) -> str:
         """Write the synthetic state commit behind a temporary index copy."""
         repo = cls._repo(snapshot.repo_root)
-        with tempfile.TemporaryDirectory(prefix="flext-checkpoint-") as scratch:
+        # The scratch index lives inside the repository's own git dir: the
+        # destination filesystem owns staging state, and this placement keeps
+        # the scratch out of every worktree scan the capture performs.
+        with tempfile.TemporaryDirectory(
+            prefix="flext-checkpoint-", dir=Path(snapshot.git_dir)
+        ) as scratch:
             temp_index = Path(scratch) / "index"
             live_index = Path(snapshot.git_dir) / "index"
             if live_index.is_file():
                 shutil.copyfile(live_index, temp_index)
             with repo.git.custom_environment(GIT_INDEX_FILE=str(temp_index)):
-                repo.git.add("-A", "-f", "--", ".")
+                # No force flag: ignore rules bound the capture, so ignored
+                # untracked material (secret-bearing or not) never enters the
+                # checkpoint, while tracked paths — including tracked-ignored
+                # ones — remain part of the protected state.
+                repo.git.add("-A", "--", ".")
                 tree = repo.git.write_tree().strip()
             return str(
                 repo.git.execute([
@@ -111,6 +120,11 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
             return r[m.Infra.GitWorktreeCheckpointPublication].fail(
                 "checkpoint ref is absent on the remote after the push"
             )
+        if published_commit != checkpoint.checkpoint_commit:
+            return r[m.Infra.GitWorktreeCheckpointPublication].fail(
+                f"remote tip {published_commit} does not match the checkpoint "
+                f"commit {checkpoint.checkpoint_commit}"
+            )
         return r[m.Infra.GitWorktreeCheckpointPublication].ok(
             m.Infra.GitWorktreeCheckpointPublication(
                 checkpoint_ref=checkpoint.checkpoint_ref,
@@ -126,7 +140,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
         checkpoint: m.Infra.GitWorktreeStateCheckpoint,
         publication: m.Infra.GitWorktreeCheckpointPublication,
     ) -> p.Result[bool]:
-        """Return whether the published checkpoint is still retained remotely."""
+        """Return whether the remote still holds the checkpoint's own commit."""
         try:
             repo = cls._repo(checkpoint.snapshot.repo_root)
             listed = str(
@@ -140,7 +154,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
                 f"failed to verify checkpoint publication: {exc}", exception=exc
             )
         return r[bool].ok(
-            bool(remote_commit) and remote_commit == publication.published_commit
+            bool(remote_commit) and remote_commit == checkpoint.checkpoint_commit
         )
 
     @classmethod
