@@ -172,6 +172,23 @@ ruff check src
         tm.that(issues[0].message, has="bypasses the root Make dispatcher")
 
     @staticmethod
+    def test_inline_command_requires_an_execution_directive() -> None:
+        """Describe a tool invocation without treating it as user guidance."""
+        content = (
+            "The fix pass runs `ruff check --fix` internally.\n"
+            "Run `ruff check --fix` to invoke the tool directly.\n"
+        )
+
+        issues = u.Infra.docs_command_contract_content_issues(
+            content,
+            relative_path="docs/guides/commands.md",
+            effective_verbs=config.Infra.codegen.make.verbs,
+        )
+
+        tm.that(len(issues), eq=1)
+        tm.that(issues[0].message, has="line 2: direct tool command")
+
+    @staticmethod
     def test_scans_recursive_live_docs_from_typed_scope(
         command_contract_scope: m.Infra.DocScope,
     ) -> None:

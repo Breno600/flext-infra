@@ -38,18 +38,12 @@ export GEN_INIT_ONLY
 endif
 endif
 
-# GitHub CLI's documented source precedence also applies before gh is installed:
-# GH_TOKEN, GITHUB_TOKEN, then its stored credential for network bootstrap.
+# An explicit process credential is required for network bootstrap. GH_TOKEN
+# takes precedence over GITHUB_TOKEN, and no host credential store is read.
 # Local provisioned operations need no authentication preflight or network call.
 # Keep the selected value in the environment, never in a rendered recipe.
-override GITHUB_CREDENTIAL_READ_STATUS := 0
 ifneq ($(strip $(GH_TOKEN)),)
 override GITHUB_TOKEN := $(GH_TOKEN)
-else ifeq ($(strip $(GITHUB_TOKEN)),)
-ifneq ($(strip $(filter setup upg,$(MAKECMDGOALS))),)
-override GITHUB_TOKEN := $(shell if command -v gh >/dev/null 2>&1; then gh auth token --hostname "$${GH_HOST:-github.com}"; else printf 'ERROR: GitHub credential source unavailable: set GH_TOKEN/GITHUB_TOKEN or provision gh\n' >&2; exit 127; fi)
-override GITHUB_CREDENTIAL_READ_STATUS := $(.SHELLSTATUS)
-endif
 endif
 export GITHUB_TOKEN
 override export GH_TOKEN := $(GITHUB_TOKEN)
@@ -141,8 +135,8 @@ endif
 # === SECTION: verb dispatch (managed) ===
 # Source: config:make.verbs and the canonical gate vocabulary. A verb exists
 # only in the profiles it declares (make.verbs[].profiles).
-PUBLIC_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
-BUILTIN_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen initialize mod mod-snapshots waza duplication sonarcloud-sync
+PUBLIC_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen bootstrap-candidate initialize mod mod-snapshots waza duplication sonarcloud-sync
+BUILTIN_VERBS := help setup upg build check test test-full fmt fix fix-enforcement fix-namespace fix-accessors audit status docs clean release-plan release-version release-tag release-build publication gen bootstrap-candidate initialize mod mod-snapshots waza duplication sonarcloud-sync
 SCRIPT_VERBS :=
 
 CUSTOM_MAKEFILE := $(MAKEFILE_ROOT)/custom.mk
@@ -187,7 +181,7 @@ endif
 endif
 # End SECTION: profile routing
 
-override RUNTIME_VENV := $(RUNTIME_ROOT)/.venv
+override RUNTIME_VENV := $(abspath $(RUNTIME_ROOT)/../.flext-venvs/$(subst :,/,$(patsubst /%,%,$(RUNTIME_ROOT))))
 ifeq ($(OS),Windows_NT)
 override RUNTIME_BIN := $(RUNTIME_VENV)/Scripts
 override RUNTIME_PYTHON := $(RUNTIME_BIN)/python.exe
@@ -354,6 +348,7 @@ mise_exec() { \
 'MISE_EXEC_AUTO_INSTALL=false' \
 'MISE_TASK_RUN_AUTO_INSTALL=false' \
 'MISE_AUTO_UPDATE=false' \
+'MISE_MINIMUM_RELEASE_AGE=0s' \
 'MISE_HTTP_RETRIES=0' \
 'MISE_NETRC=false' \
 'MISE_NOT_FOUND_AUTO_INSTALL=false' \
@@ -580,6 +575,7 @@ mise_exec() { \
 'MISE_EXEC_AUTO_INSTALL=false' \
 'MISE_TASK_RUN_AUTO_INSTALL=false' \
 'MISE_AUTO_UPDATE=false' \
+'MISE_MINIMUM_RELEASE_AGE=0s' \
 'MISE_HTTP_RETRIES=0' \
 'MISE_NETRC=false' \
 'MISE_NOT_FOUND_AUTO_INSTALL=false' \
@@ -791,6 +787,7 @@ fi; \
 SETUP_ENVIRONMENT_RECIPE = set -eu; \
 	$(REQUIRE_WORKSPACE_ENVIRONMENT); \
 	desired_python="$${SETUP_PYTHON:?missing Mise-resolved Python executable}"; \
+	mkdir -p "$(dir $(RUNTIME_VENV))"; \
 	if [ ! -x "$(RUNTIME_PYTHON)" ]; then \
 		$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"; \
 	else \
@@ -1107,6 +1104,17 @@ _activated-gen: _builtin_require_environment
 
 
 
+bootstrap-candidate: _builtin_require_workspace
+	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-bootstrap-candidate
+
+.PHONY: _activated-bootstrap-candidate
+_activated-bootstrap-candidate: _builtin_require_environment
+
+	$(call RUN_PUBLIC,bootstrap-candidate)
+
+
+
+
 initialize: _builtin_require_workspace
 	+@direnv exec "$(PROJECT_ROOT)" $(SELF_MAKE) _activated-initialize
 
@@ -1257,6 +1265,8 @@ _builtin-help:
 
 	@printf '  %-16s %s\n' 'gen' 'Regenerate every managed projection atomically.';
 
+	@printf '  %-16s %s\n' 'bootstrap-candidate' 'Conform the sibling candidate worktree declared in this repository manifest.';
+
 	@printf '  %-16s %s\n' 'initialize' 'Materialize the declared package initializer graph.';
 
 	@printf '  %-16s %s\n' 'mod' 'Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.';
@@ -1332,7 +1342,11 @@ _builtin_setup_submodules:
 		[ -e "$$root/$$path/.git" ] || absent="$$absent $$path"; \
 	done; \
 	if [ -n "$$absent" ]; then \
-		git -C "$$root" submodule update --init --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
+		credential_helper='!f() { if [ "$$1" = get ]; then printf "username=x-access-token\npassword=%s\n" "$$GITHUB_TOKEN"; fi; }; f'; \
+		GIT_TERMINAL_PROMPT=0 timeout --signal=TERM --kill-after=5s "120s" \
+			git -C "$$root" -c credential.helper= \
+			-c "credential.https://$${GH_HOST:-github.com}.helper=$$credential_helper" \
+			submodule update --init --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
 	fi; \
 	validate_submodule() { \
 		superproject="$$1"; \
@@ -1393,7 +1407,8 @@ _builtin_setup_submodules:
 		fi; \
 		gitlink="$$2"; \
 		if [ ! -e "$$child_root/.git" ]; then \
-			git -C "$$superproject" submodule update --init -- "$$child_path"; \
+			printf 'ERROR: governed gitlink is not materialized: %s\n' "$$child_path" >&2; \
+			exit 2; \
 		fi; \
 		current=$$(git -C "$$child_root" branch --show-current); \
 		head=$$(git -C "$$child_root" rev-parse HEAD); \
@@ -1423,10 +1438,6 @@ _builtin_setup_submodules:
 .NOTPARALLEL: _bootstrap_setup_tools
 _bootstrap_setup_tools: _builtin_require_github_auth $(if $(filter upg,$(MAKECMDGOALS)),,_builtin_require_mise_pin)
 _builtin_require_github_auth:
-	@if [ "$(GITHUB_CREDENTIAL_READ_STATUS)" != "0" ]; then \
-		printf 'ERROR: gh credential source failed with exit %s\n' "$(GITHUB_CREDENTIAL_READ_STATUS)" >&2; \
-		exit "$(GITHUB_CREDENTIAL_READ_STATUS)"; \
-	fi
 	@if [ -z "$${GITHUB_TOKEN:-}" ]; then \
 		printf 'ERROR: GitHub credential is absent for network bootstrap\n' >&2; \
 		exit 1; \
@@ -1505,6 +1516,14 @@ _upg_lifecycle: _builtin_setup_submodules
 		--apply --rewrite-constraints --projects .
 	@$(SELF_MAKE) gen
 	@$(SELF_MAKE) _upg_relock
+	@set -eu; \
+	if [ -d .mise/locks ]; then \
+		if git add -- .mise/locks; then \
+			printf 'INFO: staged the .mise/locks sidecars written by mise lock (declared tracked by the generated .gitignore; commit them with the relock)\n'; \
+		else \
+			printf 'WARN: .mise/locks exist but could not be staged (not a git worktree?); commit them manually\n'; \
+		fi; \
+	fi
 
 # The second half belongs to the Makefile `gen` just rendered, so it runs as a
 # fresh make invocation rather than as lines of the recipe already expanded
@@ -1537,21 +1556,10 @@ _upg_converge:
 		printf 'ERROR: make upg did not converge; `make gen` still rewrites:\n%s\n' "$$after" >&2; \
 		exit 2; \
 	fi
-	@$(SELF_MAKE) _lock_mise_verify
+	@$(PROJECT_FLEXT_INFRA) deps verify-locks --repository-root "$(PROJECT_ROOT)"
 	+@XDG_DATA_HOME="$${SETUP_DIRENV_XDG_DATA_HOME:?missing persistent direnv data home}" \
 		"$${SETUP_DIRENV:?missing Mise-resolved direnv executable}" exec "$(PROJECT_ROOT)" $(SELF_MAKE) _upg_activated
 	@$(SELF_MAKE) check
-
-# `uv.lock` is staged, validated with `lock --check` and renamed atomically by
-# `_lock_project`. Mise has no such writer: it resolves `mise.lock` in place and
-# appends one resolution per platform set, so repeated `make upg` runs can leave
-# duplicated `[[tools...]]`, `.options` or `.platforms.*` sections. The result
-# parses as TOML only by accident and breaks `make gen` far from its cause, as a
-# red `gen fixed point` in CI. Fail loud here instead: the committed lock must
-# parse and must not repeat a section, or the resolved set is not publishable.
-.PHONY: _lock_mise_verify
-_lock_mise_verify:
-	@$(RUNTIME_PYTHON) -c 'import collections, re, sys, tomllib; path = sys.argv[1]; text = open(path, encoding="utf-8").read(); tomllib.loads(text); keys = re.findall(r"(?m)^\[([^\]]+)\]\s*$$", text); duplicated = sorted(k for k, n in collections.Counter(keys).items() if n > 1); sys.exit(f"mise.lock repeats TOML section(s), the Mise resolver appended instead of replacing: {duplicated}") if duplicated else None' "$(PROJECT_ROOT)/mise.lock"
 
 .PHONY: _upg_activated
 _upg_activated:
@@ -1784,6 +1792,9 @@ _builtin_gen_init:
 
 _builtin_gen_all:
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode apply
+
+_builtin-bootstrap-candidate: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) codegen candidate-bootstrap --repository-root "$(PROJECT_ROOT)"
 
 # Structural rewrites have one selector-free public Make surface. The current
 # directory defines scope; callers never address ast-grep, Rope, or LSP directly.
