@@ -701,6 +701,11 @@ Infra:
           # regressed the cold run (16 workers lost one to an early death and
           # executed fewer tests before the fixed deadline than 4), so the
           # declared ceiling stays at the measured incumbent.
+          # Re-measured 2026-09-30 on the 20-CPU host (candidate bootstrap
+          # adoption, flext-hi3le): 12 workers regressed the same way
+          # (24 cases in 40.9s vs 197 in 32.4s at 4) — the 4-case-per-window
+          # dispatch overhead dominates on this suite too; the incumbent 4
+          # stands and the suite-wall defect is filed separately.
           flext-infra:
             workers: 4
           # CPU-fraction ceilings (cpu_fraction: "n/d", e.g. algar-oud-mig: 1/4)
