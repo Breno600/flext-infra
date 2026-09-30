@@ -152,6 +152,10 @@ class FlextInfraConstantsDocs:
     """Match internal anchor links, capturing text and anchor."""
     INLINE_CODE_RE: ClassVar[t.RegexPattern] = re.compile(r"`[^`]*`")
     """Match inline code spans for stripping before analysis."""
+    DOCS_INLINE_COMMAND_DIRECTIVE_RE: ClassVar[t.RegexPattern] = re.compile(
+        r"\b(?:run|execute|invoke|try|use)(?:\s+the\s+command)?\s*$", re.IGNORECASE
+    )
+    """Recognize an instruction preceding a shell command in inline code."""
     STRING_LITERAL_RE: ClassVar[t.RegexPattern] = re.compile(
         r"""["']([a-zA-Z0-9_\.]+)["']"""
     )

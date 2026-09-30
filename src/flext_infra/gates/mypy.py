@@ -164,8 +164,8 @@ class FlextInfraMypyGate(FlextInfraGate):
     @override
     def _check_timeout(self, project_dir: Path, ctx: m.Infra.GateContext) -> int:
         """Keep the outer runner alive through the controlled Mypy deadline."""
-        _ = project_dir, ctx
-        return u.Infra.mypy_runner_timeout()
+        _ = ctx
+        return u.Infra.mypy_runner_timeout_for_project(project_dir)
 
     @override
     def _check_env(

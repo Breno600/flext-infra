@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
@@ -97,7 +98,7 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         canonical_plans = {
             canonical / revision.canonical_path for revision in manifest.revisions
         }
-        invalid_owned: dict[Path, str] = {}
+        invalid_owned: MutableMapping[Path, str] = {}
         for artifact in manifest.artifacts:
             path = canonical / artifact.relative_path
             content = states[path].content

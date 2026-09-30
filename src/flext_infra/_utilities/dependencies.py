@@ -312,7 +312,7 @@ class FlextInfraUtilitiesDependencies:
     @classmethod
     def resolved_dependency_versions(cls) -> t.MappingKV[str, str]:
         """Read registry versions from the provisioned runtime, never release provenance."""
-        versions: dict[str, str] = {}
+        versions: MutableMapping[str, str] = {}
         for distribution in distributions():
             if distribution.read_text("direct_url.json") is not None:
                 continue

@@ -121,7 +121,7 @@ class FlextInfraCodemodSnapshotReconciler:
     @staticmethod
     def _invalid_cases(test_dir: Path) -> t.MappingKV[str, frozenset[str]]:
         """Map every rule test in one test directory to its invalid cases."""
-        cases: dict[str, frozenset[str]] = {}
+        cases: MutableMapping[str, frozenset[str]] = {}
         for test_file in sorted(test_dir.glob(f"*{c.Infra.CODEMOD_RULE_SUFFIX}")):
             payload = u.Cli.yaml_safe_load(test_file).unwrap()
             rule_id = payload.get(c.Infra.CODEMOD_RULE_TEST_ID_KEY)
