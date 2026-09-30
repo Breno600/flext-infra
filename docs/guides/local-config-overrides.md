@@ -6,6 +6,7 @@
 - [List-typed registries](#list-typed-registries)
 - [Example](#example)
 - [Local dependency binding](#local-dependency-binding)
+- [Candidate dependency commits](#candidate-dependency-commits)
 
 <!-- TOC END -->
 
@@ -79,3 +80,20 @@ the configured CI variable and value.
 The public service's `plan_targets` method also requires the consumer `python` path;
 planning must use the same interpreter as installation. Its in-repository callers use
 that explicit contract, avoiding host-interpreter marker evaluation.
+
+## Candidate dependency commits
+
+A dedicated integration worktree may stage exact supplier commits in its handwritten
+`config/workspace.yaml` under `candidate_dependencies`. Each entry declares the
+distribution, its canonical HTTPS Git URL, and the full commit OID. This is a tracked,
+reviewable candidate input, separate from the untracked local codegen override above.
+The generator applies a candidate only to that distribution's direct Git requirement;
+other dependencies stay on their declared integration lines. It rejects a URL that
+disagrees with the member manifest or an existing direct requirement. An omitted
+`candidate_dependencies` list leaves normal release projections unchanged.
+
+Run `make gen` to project the candidate requirements, `make upg` to resolve the exact
+commits into `uv.lock`, then `make setup` and the ordinary native gates in that same
+worktree. Repeat `make gen` to prove the generated metadata has reached a fixed point.
+Remove the candidate declaration through the same manifest owner before promoting the
+normal integration line; the generated pyprojects must then return to branch sources.

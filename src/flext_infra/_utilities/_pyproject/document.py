@@ -83,8 +83,15 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
             if workspace.integration is not None
             else {}
         )
+        candidate_sources = {
+            item.distribution: f"git+{item.url}@{item.commit}"
+            for item in workspace.candidate_dependencies
+        }
         normalized = cls._normalize_requirements(
-            source, declared_sources=declared_sources, family_line=family_line
+            source,
+            declared_sources=declared_sources,
+            candidate_sources=candidate_sources,
+            family_line=family_line,
         )
         if normalized.failure:
             return r[str].from_failure(normalized)

@@ -9,6 +9,7 @@ from flext_cli import m, u
 
 from ... import t
 from ..._constants import FlextInfraConstantsCodegenProject
+from ..._constants.deps import FlextInfraConstantsDeps
 from .beads import FlextInfraConfigModelsBeads
 from .contexts import FlextInfraConfigModelsContexts
 from .contract import FlextInfraConfigModelsContract
@@ -16,6 +17,32 @@ from .contract import FlextInfraConfigModelsContract
 
 class FlextInfraConfigModelsWorkspace:
     """Workspace manifest, integration, and policy models."""
+
+    class CandidateDependencySourceSpec(FlextInfraConfigModelsContract.ConfigContract):
+        """One explicitly staged Git commit for a candidate dependency."""
+
+        distribution: Annotated[
+            t.NonEmptyStr, m.Field(description="Exact dependency distribution name")
+        ]
+        url: Annotated[
+            t.NonEmptyStr, m.Field(description="Canonical HTTPS Git repository URL")
+        ]
+        commit: Annotated[
+            t.NonEmptyStr, m.Field(description="Full immutable Git commit OID")
+        ]
+
+        @u.model_validator(mode="after")
+        def _validate_source(self) -> Self:
+            if not self.url.startswith("https://") or not self.url.endswith(".git"):
+                raise ValueError("candidate dependency URL must be canonical HTTPS Git")
+            if (
+                FlextInfraConstantsDeps.GIT_COMMIT_OID_RE.fullmatch(
+                    self.commit
+                )
+                is None
+            ):
+                raise ValueError("candidate dependency commit must be a full Git OID")
+            return self
 
     class WorkspaceBeadsServerSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Optional Dolt connection declared by a versioned workspace manifest."""
@@ -158,6 +185,10 @@ class FlextInfraConfigModelsWorkspace:
             FlextInfraConfigModelsContexts.WorkspaceIntegrationSpec | None,
             m.Field(description="Optional integration provider overlay"),
         ] = None
+        candidate_dependencies: Annotated[
+            t.VariadicTuple[FlextInfraConfigModelsWorkspace.CandidateDependencySourceSpec],
+            m.Field(description="Candidate-only exact dependency Git sources"),
+        ] = ()
         repository_policy_overlays: Annotated[
             t.VariadicTuple[
                 FlextInfraConfigModelsWorkspace.RepositoryPolicyOverlaySpec
@@ -204,6 +235,9 @@ class FlextInfraConfigModelsWorkspace:
                     + ", ".join(sorted(unknown_projects))
                 )
                 raise ValueError(msg)
+            candidate_names = tuple(item.distribution for item in self.candidate_dependencies)
+            if len(set(candidate_names)) != len(candidate_names):
+                raise ValueError("candidate dependency distributions must be unique")
             return self
 
     class CodegenBootstrapSource(FlextInfraConfigModelsContract.ConfigContract):
@@ -266,6 +300,10 @@ class FlextInfraConfigModelsWorkspace:
                 )
             ),
         ] = None
+        candidate_dependencies: Annotated[
+            t.VariadicTuple[FlextInfraConfigModelsWorkspace.CandidateDependencySourceSpec],
+            m.Field(description="Candidate-only exact dependency Git sources"),
+        ] = ()
         subprojects: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsContexts.RepositoryRef],
             m.Field(description="Direct governed repositories from local .gitmodules"),
