@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 import re
+from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import m, p, t
@@ -47,7 +48,7 @@ class FlextInfraUtilitiesSemanticHelperReferences(
             msg = "shared helper declaration has no complete source range"
             raise ValueError(msg)
         prepared = dict(sources)
-        quoted_imports: dict[Path, str] = {}
+        quoted_imports: MutableMapping[Path, str] = {}
         for path, source in sources.items():
             resource = project.get_resource(path.relative_to(root).as_posix())
             module = project.get_pymodule(resource)

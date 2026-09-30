@@ -31,6 +31,8 @@ class FlextInfraUtilitiesDocsCommandContractMixin:
             match.group(0)[1:-1]
             for match in c.Infra.INLINE_CODE_RE.finditer(line)
             if len(match.group(0)[1:-1].split()) > 1
+            and c.Infra.DOCS_INLINE_COMMAND_DIRECTIVE_RE.search(line[: match.start()])
+            is not None
         )
 
     @staticmethod

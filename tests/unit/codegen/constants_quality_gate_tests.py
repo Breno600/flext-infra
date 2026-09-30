@@ -100,7 +100,6 @@ class TestsFlextInfraCodegenConstantsQualityGate:
             },
         )
         u.Tests.provision_checkout(project)
-        # Why: the gate requires conformant initializers before its census.
         tm.that(u.Tests.run_lazy_init(project), eq=0)
         gate = FlextInfraCodegenQualityGate(repository_root=project)
         report_result = gate.build_report()

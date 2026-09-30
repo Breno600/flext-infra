@@ -209,6 +209,36 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(self._git_state(child), eq=("conflict", state[1]))
 
+    def test_missing_submodule_origin_fails_without_materializing_checkout(
+        self, tmp_path: Path
+    ) -> None:
+        """A failed real Git clone stays red and leaves its gitlink uninitialized."""
+        rendered = self._render_repository_root_makefile(tmp_path)
+        workspace = self._create_uninitialized_workspace(tmp_path, rendered)
+        missing_origin = tmp_path / "missing-member-origin"
+        tm.ok(
+            u.Cli.run_checked(
+                [
+                    c.Infra.GIT,
+                    "config",
+                    "-f",
+                    ".gitmodules",
+                    "submodule.flext-core.url",
+                    str(missing_origin),
+                ],
+                cwd=workspace,
+            )
+        )
+        credential = "test-submodule-credential-never-log"
+        env = {**os.environ, "GIT_ALLOW_PROTOCOL": "file", "GITHUB_TOKEN": credential}
+
+        process = self._run_setup(workspace, env)
+
+        tm.that(process.outcome.raw_return_code, eq=2)
+        tm.that(process.stderr, has=str(missing_origin))
+        tm.that(process.stdout + process.stderr, lacks=credential)
+        tm.that((workspace / "flext-core" / ".git").exists(), eq=False)
+
     def test_setup_environment_provisions_members_before_the_environment(
         self, tmp_path: Path
     ) -> None:

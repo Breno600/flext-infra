@@ -140,9 +140,9 @@ class TestsFlextInfraCodegenMakeContracts:
                 "post-check:\n\t@echo HOOK_POST\n",
             )
         )
-        # The generated dispatch validates the checkout-owned interpreter
-        # before invoking a custom handler.
-        tm.ok(u.Tests.create_python_environment(root))
+        # `check` requires a provisioned interpreter, which `make setup` would
+        # build. Stub it so this test stays about hook ordering.
+        u.Tests.write_executable(u.Infra.runtime_python(root), "#!/bin/sh\nexit 0\n")
         # `check` also requires the Mise pin (db516968e).
         u.Tests.copy_tracked_mise_seeds(root)
         outcome = u.Cli.run_raw(["make", "-C", str(root), "check", ""])

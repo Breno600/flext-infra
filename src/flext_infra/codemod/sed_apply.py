@@ -7,6 +7,7 @@ across the repository scope with dry-run, fixed-point, and gate validation.
 from __future__ import annotations
 
 import re
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import override
 
@@ -64,7 +65,7 @@ class FlextInfraCodemodSedApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         self._validate_patterns()
 
         cli.display_text("sed: preflight scan")
-        seen: dict[t.VariadicTuple[t.Quad[str, str, str, str]], int] = {}
+        seen: MutableMapping[t.VariadicTuple[t.Quad[str, str, str, str]], int] = {}
         iteration = 0
 
         while True:
