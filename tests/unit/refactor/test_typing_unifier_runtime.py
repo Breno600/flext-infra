@@ -71,7 +71,18 @@ print(count_nested(MappingProxyType({{"items": [1]}})))
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
         tm.that(
             outcome.stdout.splitlines(),
-            eq=["True", "True", "True", "True", "True", "3 3", "4 4", "5 1", "12 6 6", "1"],
+            eq=[
+                "True",
+                "True",
+                "True",
+                "True",
+                "True",
+                "3 3",
+                "4 4",
+                "5 1",
+                "12 6 6",
+                "1",
+            ],
         )
         stable, repeat_changes = transformer.apply_to_source(updated)
         tm.that(stable, eq=updated)
@@ -133,7 +144,17 @@ print(aliases(first, second), first["count"], second["count"])
         outcome = tm.ok(u.Cli.run([sys.executable, "-c", probe], cwd=tmp_path))
         tm.that(
             outcome.stdout.splitlines(),
-            eq=["True", "True", "True", "True", "True", "True", "2 2", "2 3 3", "7 2 5"],
+            eq=[
+                "True",
+                "True",
+                "True",
+                "True",
+                "True",
+                "True",
+                "2 2",
+                "2 3 3",
+                "7 2 5",
+            ],
         )
         stable, repeat_changes = transformer.apply_to_source(updated)
         tm.that(stable, eq=updated)
