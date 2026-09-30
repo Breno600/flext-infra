@@ -349,10 +349,11 @@ class FlextInfraConfigModelsContexts:
         package_name: Annotated[
             t.NonEmptyStr, m.Field(description="Python import package name")
         ]
-        packaged_data_dirs: Annotated[
+        packaged_data_paths: Annotated[
             t.StrSequence,
-            m.Field(description="Generated root data directories shipped in wheels"),
+            m.Field(description="Validated relative data paths shipped in distributions"),
         ]
+        packaged_data_files: Annotated[t.StrSequence, m.Field(description="Validated individually declared data files")]
         class_stem: Annotated[
             t.NonEmptyStr, m.Field(description="Public facade class stem")
         ]
@@ -625,6 +626,13 @@ class FlextInfraConfigModelsContexts:
                     "shipped alongside the packages; see the root_packages "
                     "namesake for why the declaration is per repository."
                 ),
+            ),
+        ] = ()
+        packaged_data_paths: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description="Repository-relative data files and directories shipped with the package",
             ),
         ] = ()
         cli_module: Annotated[

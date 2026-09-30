@@ -1,0 +1,45 @@
+# Namespace contract: `dict` annotations are banned vocabulary (NS-CONTRACT-001).
+#
+# The lettered namespace layout contracts the public surface: read-only views
+# use Mapping, mutated accumulators use MutableMapping, and module-typed
+# vocabulary comes from the t namespace (t.MappingKV / t.StrMapping). A `dict`
+# annotation pins the concrete runtime type into the surface and blocks a
+# covariant protocol satisfaction (evidence: XmlElementLike.attrib required a
+# Mapping for callers passing MappingView implementations).
+#
+# Scope: DIRECT dict[...] annotations only — AnnAssign (assignment with type),
+# typed parameters, and return annotations. Nested containers
+# (list[dict[...]]) are the gate's per-site judgment, not this rule's.
+#
+# Detection-only: whether the site is a mutated accumulator (MutableMapping)
+# or a read-only view (Mapping) is a semantic decision the rule cannot guess,
+# so an automatic rewrite would guess. The namespace gate (NS-CONTRACT-001)
+# is the paired detector on the validation side.
+id: ns-contract-banned-dict-annotation
+language: python
+severity: warning
+files:
+  - "src/**/*.py"
+rule:
+  any:
+    # Annotated assignment — `attrib: dict[str, str] = ...` (and the bare
+    # PEP 526 form `attrib: dict[str, str]`, same `assignment` node).
+    - kind: assignment
+      has:
+        field: type
+        regex: "^dict\\["
+    # Typed parameter — `def compose(overrides: dict[str, str]) -> ...`
+    - kind: typed_parameter
+      has:
+        field: type
+        regex: "^dict\\["
+    # Return annotation — `def gather() -> dict[str, int]: ...`
+    - kind: function_definition
+      has:
+        field: return_type
+        regex: "^dict\\["
+message: >-
+  [NS-CONTRACT-001] Banned annotation vocabulary: `dict` — use Mapping for
+  read-only views, MutableMapping for mutated accumulators, or the typed
+  aliases from the module's t namespace (t.MappingKV / t.StrMapping) · ref:
+  uno8m campaign, NS-CONTRACT-001
