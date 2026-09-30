@@ -6,8 +6,7 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 from typing import override
 
-from flext_core import c as core_c
-from flext_core import r
+from flext_core import c as core_c, r
 from flext_infra import c, config, m, p, t, u
 
 from ._detection_runners import FlextInfraDependencyDetectionRunnersMixin
