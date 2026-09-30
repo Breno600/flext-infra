@@ -73,6 +73,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 root_packages=(
                     target.project.root_packages if target.project is not None else ()
                 ),
+                packaged_data_dirs=(
+                    target.project.packaged_data_dirs
+                    if target.project is not None
+                    else ()
+                ),
                 declared_python_dirs=tuple(
                     self._scaffold_python_dirs(
                         codegen.templates.entries,

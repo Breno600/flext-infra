@@ -627,6 +627,13 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = ()
+        packaged_data_dirs: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                default=(),
+                description="Repository-owned root directories shipped with the package",
+            ),
+        ] = ()
         cli_module: Annotated[
             bool,
             m.Field(

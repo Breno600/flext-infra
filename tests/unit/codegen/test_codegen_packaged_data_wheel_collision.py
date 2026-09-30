@@ -33,7 +33,9 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         )
 
     @staticmethod
-    def _prepare_project(root: Path, *, package_config: bool) -> None:
+    def _prepare_project(
+        root: Path, *, package_config: bool, packaged_data_dirs: tuple[str, ...] = ()
+    ) -> None:
         """Materialize one governed project, optionally shipping in-package data."""
         _ = u.Tests.standalone_workspace(root, FIXTURE_DISTRIBUTION)
         if package_config:
@@ -64,7 +66,10 @@ class TestsFlextInfraCodegenPackagedDataWheel:
         # The existing fixture package ships no cli module, so its manifest
         # declares none and conform renders no console script to load.
         _ = u.Tests.write_standalone_workspace_manifest(
-            root, FIXTURE_DISTRIBUTION, cli_module=False
+            root,
+            FIXTURE_DISTRIBUTION,
+            cli_module=False,
+            packaged_data_dirs=packaged_data_dirs,
         )
         u.Tests.git_bootstrap(
             root,
@@ -134,6 +139,40 @@ class TestsFlextInfraCodegenPackagedDataWheel:
             force_include.get(FIXTURE_DISTRIBUTION_DATA_DIR),
             eq=f"{package_name}/{FIXTURE_DISTRIBUTION_DATA_DIR}",
         )
+
+    @pytest.mark.slow
+    def test_existing_infrastructure_dir_reaches_both_archives(
+        self, infra_git_repo: Path
+    ) -> None:
+        """A project-owned IaC directory ships without a generator template row."""
+        self._prepare_project(
+            infra_git_repo, package_config=False, packaged_data_dirs=("infra",)
+        )
+        infrastructure = infra_git_repo / "infra" / "ansible" / "site.yml"
+        tm.ok(u.Cli.atomic_write_text_file(infrastructure, "---\n- hosts: all\n"))
+
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+
+        package_name = u.Tests.project_spec(FIXTURE_DISTRIBUTION).package_name
+        tm.that(
+            self._wheel_force_include(infra_git_repo).get("infra"),
+            eq=f"{package_name}/infra",
+        )
+        tm.that("infra" in self._sdist_only_include(infra_git_repo), eq=True)
+
+    @pytest.mark.slow
+    def test_undeclared_infrastructure_dir_stays_out_of_archives(
+        self, infra_git_repo: Path
+    ) -> None:
+        """An unrelated root directory cannot enter a package by discovery."""
+        self._prepare_project(infra_git_repo, package_config=False)
+        infrastructure = infra_git_repo / "infra" / "ansible" / "site.yml"
+        tm.ok(u.Cli.atomic_write_text_file(infrastructure, "---\n- hosts: all\n"))
+
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+
+        tm.that("infra" in self._wheel_force_include(infra_git_repo), eq=False)
+        tm.that("infra" in self._sdist_only_include(infra_git_repo), eq=False)
 
     @pytest.mark.slow
     def test_in_package_data_dir_is_never_force_included(

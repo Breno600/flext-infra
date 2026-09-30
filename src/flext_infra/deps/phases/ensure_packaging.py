@@ -13,12 +13,9 @@ preventing caches and ignored workspace state from entering release artifacts.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from flext_infra import c, m, t, u
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class FlextInfraEnsurePackagingPhase:
@@ -101,6 +98,7 @@ class FlextInfraEnsurePackagingPhase:
         path: Path,
         root_modules: t.StrSequence = (),
         root_packages: t.StrSequence = (),
+        packaged_data_dirs: t.StrSequence = (),
     ) -> t.StrSequence:
         """Emit bounded build targets for a distributable project.
 
@@ -150,9 +148,19 @@ class FlextInfraEnsurePackagingPhase:
             )
             raise FileNotFoundError(msg)
         package_root = project_dir / c.Infra.DEFAULT_SRC_DIR / package_name
+        for data_dir in packaged_data_dirs:
+            if Path(data_dir).parts != (data_dir,):
+                msg = f"packaged data directory must be a root directory: {data_dir}"
+                raise ValueError(msg)
+            if not (project_dir / data_dir).is_dir():
+                msg = f"declared packaged data directory is missing: {data_dir}"
+                raise FileNotFoundError(msg)
         present_dirs = tuple(
             data_dir
-            for data_dir in self._tool_config.tools.hatch.packaged_data_dirs
+            for data_dir in dict.fromkeys((
+                *self._tool_config.tools.hatch.packaged_data_dirs,
+                *packaged_data_dirs,
+            ))
             # Force-include a root data dir only when it exists at the project
             # root AND is not already shipped from inside the package (which
             # would collide on the same wheel path).

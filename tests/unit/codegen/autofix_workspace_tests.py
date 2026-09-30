@@ -95,6 +95,8 @@ class TestsFlextInfraCodegenAutofixWorkspace:
                 "constants.py": "class TestProjConstants:\n    pass\n",
             },
         )
+        u.Tests.declare_workspace_projects(tmp_path, (project.name,))
+        u.Tests.provision_checkout(project)
         fixer = FlextInfraCodegenFixer(repository_root=tmp_path, rope=rope_workspace)
         [result] = fixer.fix_workspace(projects=[self._project_info(project)])
         modified_paths = tuple(Path(path) for path in result.files_modified)

@@ -309,13 +309,20 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         packaged_data_dirs = (
             tuple(
                 data_dir
-                for data_dir in config.Infra.tooling.tools.hatch.packaged_data_dirs
-                if any(
-                    profile in entry.profiles
-                    and Path(entry.destination).parts
-                    and Path(entry.destination).parts[0] == data_dir
-                    for entry in codegen.templates.entries
+                for data_dir in dict.fromkeys((
+                    *config.Infra.tooling.tools.hatch.packaged_data_dirs,
+                    *project.packaged_data_dirs,
+                ))
+                if (
+                    data_dir in project.packaged_data_dirs
+                    or any(
+                        profile in entry.profiles
+                        and Path(entry.destination).parts
+                        and Path(entry.destination).parts[0] == data_dir
+                        for entry in codegen.templates.entries
+                    )
                 )
+                and (repository_root / data_dir).is_dir()
                 and not (package_root / data_dir).is_dir()
             )
             if profile is not c.Infra.MakeProfile.WORKSPACE

@@ -110,6 +110,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         inherited_facets: t.StrSequence = (),
         root_modules: t.StrSequence = (),
         root_packages: t.StrSequence = (),
+        packaged_data_dirs: t.StrSequence = (),
         extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
         gascity_enabled: bool | None = None,
         role: c.Infra.MakeProfile = c.Infra.MakeProfile.STANDALONE,
@@ -154,6 +155,10 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                     "root_modules": tuple(root_modules),
                     "root_packages": tuple(root_packages),
                 }
+            )
+        if packaged_data_dirs:
+            project = project.model_copy(
+                update={"packaged_data_dirs": tuple(packaged_data_dirs)}
             )
         manifest = m.Infra.WorkspaceManifestSpec(
             version=c.Infra.WORKSPACE_MANIFEST_VERSION,
