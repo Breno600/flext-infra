@@ -158,6 +158,7 @@ class FlextInfraEnsureRuffConfigPhase:
         stale_patterns: t.StrSequence,
         per_file_ignores: t.MappingKV[str, t.StrSequence],
         analysis_exclusions: t.StrSequence | None,
+        generated_python_roots: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build the canonical Ruff phase for one project path."""
         ruff_cfg = self._tool_config.tools.ruff
@@ -192,9 +193,9 @@ class FlextInfraEnsureRuffConfigPhase:
         # the namespace-packages contract only holds for roots on disk. The
         # declared lists stay the SSOT; existence filters the projection, with
         # roots the active plan is materializing accepted as present (the
-        # extra-paths manager owns that set; empty in the deps pass).
+        # extra-paths manager owns that declared set).
         generated_roots = FlextInfraExtraPathsManager(
-            repository_root=path.parent
+            repository_root=path.parent, generated_python_roots=generated_python_roots
         ).generated_python_roots
 
         def _present(directory: str) -> bool:
@@ -326,6 +327,7 @@ class FlextInfraEnsureRuffConfigPhase:
         *,
         path: Path,
         analysis_exclusions: t.StrSequence | None = None,
+        generated_python_roots: t.StrSequence = (),
     ) -> t.StrSequence:
         """Apply canonical Ruff settings directly to one normalized payload."""
         effective_ignores = self.compose_per_file_ignores(
@@ -352,6 +354,7 @@ class FlextInfraEnsureRuffConfigPhase:
                     ],
                     per_file_ignores=effective_ignores,
                     analysis_exclusions=analysis_exclusions,
+                    generated_python_roots=generated_python_roots,
                 ),
             )
         )
