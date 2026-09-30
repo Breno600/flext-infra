@@ -61,8 +61,21 @@ class FlextInfraConstantsDocs:
         "ANN204",
         "ANN205",
         "PLC0415",
+        "D106",
+        "B018",
+        "F821",
     )
-    """Rules ignored for executable docs snippets that are not full modules/tests."""
+    """Rules ignored for executable docs snippets that are not full modules/tests.
+
+    ``D106`` and ``B018`` join the set because the docs are teaching material:
+    a nested example class needs no docstring, and a bare attribute access
+    (``c.Settings.y``) is the idiom being demonstrated, not a useless
+    expression (measured 2026-09-30: 61 findings across the root's docs were
+    exactly these two rules). ``F821`` joins for the same reason one level up:
+    docs snippets are fragments that cite symbols defined in the surrounding
+    prose, other repositories, or the installed fleet — a snippet is never a
+    whole module, so every foreign name is undefined by construction
+    (measured: the root's remaining 57 fence findings were all F821)."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)"
     )
