@@ -19,11 +19,9 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
 
     gate_id: ClassVar[str] = c.Infra.MARKDOWN
     gate_name: ClassVar[str] = "Markdown"
-    # flext-38p39: the linter flags MD009/MD012 and friends with its own `[*]`
-    # auto-fixable marker, so `make check` blocked on findings that no canonical
-    # verb could repair -- `make fmt` covers Python only and `make fix
-    # ` skipped this gate, both exiting 0. The tool supports `--fix`, so
-    # the gate offers it and the canonical sequence can reach green.
+    # Fixable findings are repaired by the native linter. Its exit status also
+    # reports findings that remain after repair, so the mutating verb cannot
+    # report success while the read-only gate would still fail.
     can_fix: ClassVar[bool] = True
 
     def _resolve_config_args(self, project_dir: Path) -> t.StrSequence:
@@ -73,23 +71,18 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
     def _build_fix_command(
         self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
     ) -> t.StrSequence:
-        """Build the fix command from the tool's FORMATTER, not its linter.
-
-        ``rumdl check --fix`` is a linter: it exits non-zero whenever a finding
-        has no autofix, so a run that repaired every fixable file still failed
-        the verb and `make fix` could never reach green. ``rumdl fmt``
-        applies the same fixes with formatter-style exit codes, which is the
-        contract the mutating verb promises. It accepts neither
-        ``--output-format`` nor ``--deny-config-warnings`` (both are check-only
-        reporting flags), so the fix surface carries only what it defines.
-        """
+        """Repair fixable findings and return the linter's residual verdict."""
         _ = ctx
         args: t.SequenceOf[str] = [
             c.Infra.RUMDL,
-            "fmt",
+            "check",
+            "--fix",
             "--no-cache",
             "--color",
             "never",
+            "--output-format",
+            "text",
+            "--deny-config-warnings",
             *self._resolve_config_args(project_dir),
             *self._resolve_exclude_args(project_dir),
             *list(targets),
@@ -103,22 +96,11 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
         """Parse rumdl output, discarding lines marking already-applied fixes."""
         _ = ctx
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
-        hint_only = False
         for line in (result.stdout + "\n" + result.stderr).splitlines():
             match = c.Infra.MARKDOWN_RE.match(line.strip())
             if not match:
                 continue
             if match.group("msg").strip().endswith("[fixed]"):
-                continue
-            if c.Infra.MARKDOWN_NORMALIZATION_HINT_RE.search(match.group("msg")):
-                # rumdl's linter flags a paragraph it "could normalize" with its
-                # own [*] marker, but its formatter (rumdl fmt, the gate's fix
-                # verb) rejoins paragraphs instead of normalizing them -- proven
-                # `Fixed: 0/7` on the root flext#305 headings. A finding no
-                # canonical verb can clear must not block `make check` (the same
-                # class this file already fixed at flext-38p39). The real
-                # violation variant ("Line length N exceeds M") still blocks.
-                hint_only = True
                 continue
             issues.append(
                 m.Infra.Issue(
@@ -130,14 +112,6 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
                 )
             )
         if not u.Cli.process_succeeded(result.outcome) and not issues:
-            if hint_only:
-                # rumdl counts the dropped hint in its exit code, so a run whose
-                # only findings were unrepairable hints still exits non-zero with
-                # an empty issue list. Reporting that as a tool error would
-                # reinstate the very finding this filter removes, and no
-                # canonical verb could clear it. The hints were the whole
-                # failure, so the run is green.
-                return True, ()
             issues.append(
                 self._command_error_issue(
                     result, tool=c.Infra.RUMDL, file=str(project_dir), line=1, column=1
