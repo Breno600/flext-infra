@@ -77,9 +77,14 @@ class FlextInfraMiseArtifactsDerivation:
         ``mise.lock``. A lock committed without its sidecar (or with a drifted
         one) fails only in a distant ``mise install`` with "dependency sidecar
         ... No such file or directory"; this check rejects both defects
-        offline, while the repair is still a local ``make upg``.
+        offline, while the repair is still a local ``make upg``. A root without
+        ``mise.lock`` (a transaction stage carries only the declaration and
+        launchers) has no sidecar contract to prove, so it passes.
         """
-        source = cls._read(project_root / c.Infra.MISE_LOCK_FILENAME)
+        lock_path = project_root / c.Infra.MISE_LOCK_FILENAME
+        if not lock_path.is_file():
+            return r[bool].ok(True)
+        source = cls._read(lock_path)
         if source.failure:
             return r[bool].from_failure(source)
         payload = u.Cli.toml_mapping_from_text(source.value)
