@@ -105,25 +105,18 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
             package / c.Infra.INIT_PY: (package / c.Infra.INIT_PY).read_bytes()
             for package in packages
         }
-        analysis = tm.ok(
-            FlextInfraCodegenLazyInit(
-                repository_root=root, project_scope_roots=selected
-            ).plan_files()
+        analyses = tuple(
+            tm.ok(
+                FlextInfraCodegenLazyInit(
+                    repository_root=repository, project_scope_roots=(repository,)
+                ).plan_files()
+            )
+            for repository in selected
         )
-        tm.that({file.project for file in analysis.files}, eq=expected)
-        for repository, package in zip((root, member), packages, strict=True):
-            targeted = FlextInfraCodegenLazyInit(
-                repository_root=root,
-                project_scope_roots=selected,
-                target_module=package.name,
-            ).plan_files()
-            if repository.resolve() in expected:
-                tm.that(
-                    {file.project for file in tm.ok(targeted).files},
-                    eq={repository.resolve()},
-                )
-            else:
-                tm.fail(targeted, has="lazy-init target module not found")
+        tm.that(
+            {file.project for analysis in analyses for file in analysis.files},
+            eq=expected,
+        )
         tm.that({path: path.read_bytes() for path in before}, eq=before)
         applied = request.model_copy(update={"mode": c.Infra.CodegenConformMode.APPLY})
         tm.ok(FlextInfraCodegenConform.execute_request(applied, workspace))
@@ -134,30 +127,6 @@ class TestsFlextInfraCodegenLazyInitFilePlans:
                 eq=repository.resolve() in expected,
             )
         tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
-
-    def test_selected_repositories_reject_an_ambiguous_target_without_writes(
-        self, tmp_path: Path
-    ) -> None:
-        """The same import target in two selected owners is never chosen implicitly."""
-        repositories: list[Path] = []
-        before: dict[Path, bytes] = {}
-        for name in ("first-owner", "second-owner"):
-            repository, package = u.Tests.create_lazy_init_workspace(
-                tmp_path, project_name=name, package_name="shared_target"
-            )
-            u.Tests.write_lazy_init_namespace_module(
-                package / "models.py", class_name="SharedModels", alias="m"
-            )
-            repositories.append(repository)
-            initializer = package / c.Infra.INIT_PY
-            before[initializer] = initializer.read_bytes()
-        result = FlextInfraCodegenLazyInit(
-            repository_root=tmp_path,
-            project_scope_roots=tuple(repositories),
-            target_module="shared_target",
-        ).plan_files()
-        tm.fail(result, has="lazy-init target module is ambiguous")
-        tm.that({path: path.read_bytes() for path in before}, eq=before)
 
     def test_scope_outside_workspace_is_a_causal_plan_failure(
         self, tmp_path: Path

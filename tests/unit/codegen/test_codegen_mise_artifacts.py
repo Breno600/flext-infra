@@ -114,7 +114,7 @@ class TestsFlextInfraCodegenMiseArtifacts:
         ``mise.version`` records. A binary planted at that release under the
         declared data dir proves resolution without any download, for both an
         absolute and a ``~``-relative data dir (an unquoted ``~/*)`` pattern
-        once doubled ``$HOME``).
+        once doubled ``${HOME}``).
         """
         packaged = files("flext_infra").joinpath(c.Infra.MISE_COLD_START_DIRECTORY)
         release = tm.ok(
@@ -289,6 +289,22 @@ class TestsFlextInfraCodegenMiseArtifacts:
         }).execute()
 
         tm.fail(result, has="[tools]")
+
+    def test_lock_annotation_in_a_selector_is_rejected(self, tmp_path: Path) -> None:
+        """A ``<version>~<hash>`` lock cache key never becomes a selector."""
+        root = tmp_path / "project"
+        root.mkdir()
+        (root / ".mise.toml").write_text(
+            '[tools]\n"npm:@ast-grep/cli" = { version = "0.45.3~7a027ead" }\n',
+            encoding="utf-8",
+        )
+
+        result = FlextInfraCodegenMiseArtifacts.model_validate({
+            "repository_root": root,
+            "config_only": True,
+        }).execute()
+
+        tm.fail(result, has="lockfile annotation")
 
     def test_apply_validates_the_same_offline_contract(self, tmp_path: Path) -> None:
         """Apply mode owns no tool effect: it validates declarations and launchers."""

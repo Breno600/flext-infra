@@ -10,6 +10,7 @@ from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 import pytest
+from flext_cli import u as cli_u
 from flext_tests import tm
 
 from flext_core import r
@@ -64,28 +65,15 @@ class TestsFlextInfraWorkspaceChecker:
         tm.that(result.error, is_=str)
         tm.that(result.error, has="Use execute_command() directly")
 
-    @pytest.mark.parametrize("declared_member", [False, True])
-    def test_cli_rejects_nonproject_root_without_selecting_members(
-        self,
-        tmp_path: Path,
-        capsys: pytest.CaptureFixture[str],
-        *,
-        declared_member: bool,
-    ) -> None:
-        """An invalid current root never widens an omitted selection to members."""
-        if declared_member:
-            member, _package = test_u.Tests.demo_project(tmp_path, name="member")
-            test_u.Tests.declare_workspace_projects(tmp_path, (member.name,))
-        test_u.Tests.initialize_git_repo(tmp_path)
-        exit_code = main(["check", "run", "--repository-root", str(tmp_path)])
-        tm.that(exit_code, eq=1)
-        captured = capsys.readouterr()
-        assert "unknown projects: ." in captured.out + captured.err
-
-    def test_cli_checks_current_repository_without_project_selection(
+    def test_cli_returns_error_without_discovered_projects(
         self, tmp_path: Path
     ) -> None:
-        """An omitted project selection checks the declared current repository."""
+        """Test that check run fails when a workspace has no projects."""
+        exit_code = main(["check", "run", "--repository-root", str(tmp_path)])
+        tm.that(exit_code, eq=1)
+
+    def test_cli_requires_explicit_member_selection(self, tmp_path: Path) -> None:
+        """An omitted selection checks only the repository root."""
         project_dir = test_u.Tests.mk_project(
             tmp_path,
             "flext-core",
@@ -104,18 +92,32 @@ class TestsFlextInfraWorkspaceChecker:
         (package_dir / "module.py").write_text(
             '"""Fixture module."""\n\nvalue = 1\n', encoding="utf-8"
         )
-        test_u.Tests.initialize_git_repo(project_dir)
+        test_u.Tests.declare_workspace_projects(tmp_path, (project_dir.name,))
+        init_result = cli_u.Cli.run_raw(["git", "init"], cwd=tmp_path)
+        add_result = cli_u.Cli.run_raw(["git", "add", "flext-core"], cwd=tmp_path)
+        tm.ok(init_result)
+        tm.ok(add_result)
 
-        exit_code = main([
+        implicit_exit_code = main([
             "check",
             "run",
             "--repository-root",
-            str(project_dir),
+            str(tmp_path),
             "--gates",
             "lint",
         ])
-
-        tm.that(exit_code, eq=0)
+        tm.that(implicit_exit_code, eq=1)
+        selected_exit_code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(tmp_path),
+            "--projects",
+            project_dir.name,
+            "--gates",
+            "lint",
+        ])
+        tm.that(selected_exit_code, eq=0)
 
     def test_resolve_gates_with_valid_gates(self) -> None:
         """Test that resolve_gates normalizes valid gate names."""

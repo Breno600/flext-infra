@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 # Declaration-only protocol types stay
 # behind one guard so structural contracts add no reverse runtime dependency.
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
     from pathlib import Path
 
     from flext_infra import c, m, p, t
@@ -761,9 +761,16 @@ class FlextInfraProtocolsBase(Protocol):
 
     @runtime_checkable
     class XmlElementLike(Protocol):
-        """Typed subset of the safe XML element API returned by defusedxml."""
+        """Typed read-only subset of the safe XML element API from defusedxml.
 
-        attrib: dict[str, str]
+        ``attrib`` is a read-only property so concrete elements (whose real
+        ``attrib`` is a mutable ``dict``) satisfy the protocol covariantly —
+        consumers only read it.
+        """
+
+        @property
+        def attrib(self) -> Mapping[str, str]: ...
+
         text: str | None
 
         def find(self, path: str) -> FlextInfraProtocolsBase.XmlElementLike | None:

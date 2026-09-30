@@ -125,7 +125,13 @@ class FlextInfraConstantsCodegen(
     "Owner-private mode required for the generation lock."
     MISE_COLD_START_DIRECTORY: ClassVar[str] = "templates/bootstrap"
     "Package-local byte copy of flext-infra's own upg-written triple (cold start)."
-    MISE_RELEASE_SELECTOR: ClassVar[str] = "github:jdx/mise"
+
+    # 2026.9.17 crashes during the launcher generation (unwrap-on-None in its
+    # script builder); the fleet bootstrap stays on the last known good
+    # release until upstream ships a fixed one. Revert to the bare selector
+    # ("github:jdx/mise") when that release lands.
+    MISE_KNOWN_GOOD_RELEASE: ClassVar[str] = "2026.9.16"
+    MISE_RELEASE_SELECTOR: ClassVar[str] = f"github:jdx/mise@{MISE_KNOWN_GOOD_RELEASE}"
     "Tool selector `make upg` resolves through the pinned mise (`mise latest`)."
     MISE_LATEST_RESOLUTION_MARKER: ClassVar[str] = "releases/latest"
     "Live-resolution endpoint a pinned, offline launcher must never contain."
@@ -169,6 +175,7 @@ class FlextInfraConstantsCodegen(
         ("MISE_EXEC_AUTO_INSTALL", "false"),
         ("MISE_TASK_RUN_AUTO_INSTALL", "false"),
         ("MISE_AUTO_UPDATE", "false"),
+        ("MISE_MINIMUM_RELEASE_AGE", "0s"),
         ("MISE_HTTP_RETRIES", "0"),
         ("MISE_NETRC", "false"),
         ("MISE_NOT_FOUND_AUTO_INSTALL", "false"),

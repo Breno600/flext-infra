@@ -5,10 +5,14 @@ from __future__ import annotations
 import shutil
 import sys
 import time
+from collections.abc import Generator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import c, m, u
+
+from ..codegen.file_leases import FlextInfraCodegenFileLeases
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -438,6 +442,13 @@ class FlextInfraGate:
     # Template method: fix
     # ------------------------------------------------------------------
 
+    @staticmethod
+    @contextmanager
+    def _mutation_lease(project_dir: Path) -> Generator[None]:
+        """Serialize direct fixer effects with generation and WIP capture."""
+        with FlextInfraCodegenFileLeases.mutation_lease(project_dir):
+            yield
+
     def fix(self, project_dir: Path, ctx: m.Infra.GateContext) -> m.Infra.GateExecution:
         """Template method: timing + targets + skip + run fix + result."""
         if ctx.check_only or not ctx.apply_fixes:
@@ -455,7 +466,8 @@ class FlextInfraGate:
         if not targets:
             return self._skip_result(project_dir, started)
         cmd = self._build_fix_command(project_dir, ctx, targets)
-        result = self._run(cmd, project_dir)
+        with self._mutation_lease(project_dir):
+            result = self._run(cmd, project_dir)
         # A fixer repairs what it can and succeeds on its own exit status;
         # what remains is reported here and enforced by ``check``.
         _, issues = self._parse_check_output(result, project_dir, ctx)
