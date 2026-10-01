@@ -6,7 +6,6 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 from flext_infra import c, p, t
-from flext_infra.gates.abstraction_boundary import FlextInfraAbstractionBoundaryGate
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.base_gate import FlextInfraGate
 from flext_infra.gates.canonical_alias import FlextInfraCanonicalAliasGate
@@ -81,7 +80,6 @@ class FlextInfraGateRegistry:
             FlextInfraMarkdownFormatGate,
             FlextInfraMarkdownCodeGate,
             FlextInfraLocCapGate,
-            FlextInfraAbstractionBoundaryGate,
             FlextInfraCanonicalAliasGate,
             FlextInfraRuntimeCensusGate,
             FlextInfraNamespaceGate,

@@ -64,7 +64,7 @@ class FlextInfraUtilitiesCodemodRules:
         local_config = root / c.Infra.CODEMOD_CONFIG_RELPATH
         if local_config.is_file():
             providers.append((f"{root_name}:local", local_config))
-        return cls._compose(tuple(providers), root_name)
+        return cls._compose(tuple(providers), root_name, runtime_closure)
 
     @staticmethod
     def codemod_rule_filter(rule_ids: t.StrSequence) -> str:
@@ -253,13 +253,20 @@ class FlextInfraUtilitiesCodemodRules:
 
     @classmethod
     def _compose(
-        cls, providers: t.SequenceOf[t.Pair[str, Path]], root_name: str
+        cls,
+        providers: t.SequenceOf[t.Pair[str, Path]],
+        root_name: str,
+        runtime_closure: frozenset[str],
     ) -> p.Result[m.Infra.CodemodRulePlan]:
-        """Elect every provider rule once; a rule owned by ``root_name`` is dropped.
+        """Elect every provider rule once, honouring each rule's declared scope.
 
         A rule that bans a library outside its owning project declares the
         owner's distribution under ``metadata.owner``: the owner's own plan
-        never elects it, every other project's plan does.
+        never elects it, every other project's plan does. A rule that binds
+        only the consumers of a facade declares that distribution under
+        ``metadata.consumers_of``: a plan elects it only when the facade is in
+        the project's runtime closure, so the facade itself and the projects
+        below it never do.
         """
         selected: MutableMapping[str, m.Infra.CodemodRule] = {}
         rulesets: list[m.Infra.CodemodRuleset] = []
@@ -277,6 +284,11 @@ class FlextInfraUtilitiesCodemodRules:
             fixable: list[str] = []
             for rule in parsed.value:
                 if rule.owner is not None and canonicalize_name(rule.owner) == root_name:
+                    continue
+                if (
+                    rule.consumers_of is not None
+                    and canonicalize_name(rule.consumers_of) not in runtime_closure
+                ):
                     continue
                 previous = selected.get(rule.id)
                 if previous is not None:
@@ -394,6 +406,9 @@ class FlextInfraUtilitiesCodemodRules:
                             "expected": declared.value[0] if declared.value else None,
                             "owner": declared_metadata.get(
                                 c.Infra.CODEMOD_RULE_OWNER_KEY
+                            ),
+                            "consumers_of": declared_metadata.get(
+                                c.Infra.CODEMOD_RULE_CONSUMERS_OF_KEY
                             ),
                             "relocation": declared_metadata.get(
                                 c.Infra.CODEMOD_RULE_RELOCATION_KEY

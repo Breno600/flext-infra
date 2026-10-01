@@ -147,6 +147,10 @@ class FlextInfraConstantsRefactor:
     # A rule scoped to everything but its owning project names that project's
     # distribution under `metadata.owner`; the plan of the owner drops it.
     CODEMOD_RULE_OWNER_KEY: ClassVar[str] = "owner"
+    # A rule that binds only the consumers of a facade distribution names it
+    # under `metadata.consumers_of`; a plan whose runtime closure lacks that
+    # distribution (the owner itself and its own dependencies) drops it.
+    CODEMOD_RULE_CONSUMERS_OF_KEY: ClassVar[str] = "consumers_of"
     # A detection-only rule names the rope relocation that repairs it under
     # `metadata.relocation` and captures the relocated symbol as `$NAME`.
     CODEMOD_RULE_RELOCATION_KEY: ClassVar[str] = "relocation"
