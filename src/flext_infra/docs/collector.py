@@ -1,4 +1,8 @@
-"""Fixed-effect plan collection through the shared generation transaction."""
+"""Fixed-effect plan collection through the shared generation transaction.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,30 +23,38 @@ class FlextInfraDocCollector:
 
     @staticmethod
     def collect(request: m.Infra.DocsCollectRequest) -> p.Result[bool]:
-        """Authenticate configuration, collect sources, and commit one file phase."""
+        """Authenticate configuration, collect sources, and commit one file phase.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         root = request.repository_root
         if not root.is_absolute() or ".." in root.parts or root.resolve() != root:
             return r[bool].fail(
-                f"plan collection repository root is not a physical absolute path: {root}"
+                f"plan collection repository root is not a physical absolute path: {root}",
             )
         configuration_path = request.configuration
         if not configuration_path.is_absolute():
             configuration_path = root / configuration_path
         captured = u.Cli.atomic_read_binary_file_state(
-            configuration_path, required=True
+            configuration_path,
+            required=True,
         )
         if captured.failure:
             return r[bool].from_failure(captured)
         snapshot = captured.value
         if snapshot.content is None:
             return r[bool].fail(
-                f"plan collection configuration is absent: {configuration_path}"
+                f"plan collection configuration is absent: {configuration_path}",
             )
         parsed = u.Cli.yaml_parse(snapshot.content.decode("utf-8"))
         if parsed.failure:
             return r[bool].from_failure(parsed)
         validated: p.Result[m.Infra.PlanCollectionConfig] = u.validate_value(
-            m.Infra.PlanCollectionConfig, parsed.value, strict=False
+            m.Infra.PlanCollectionConfig,
+            parsed.value,
+            strict=False,
         )
         if validated.failure:
             return r[bool].from_failure(validated)
@@ -51,18 +63,19 @@ class FlextInfraDocCollector:
         if configuration.projection_root is not None:
             roots["@projection"] = configuration.projection_root.expanduser()
         transaction = FlextInfraCodegenTransaction(
-            FlextInfraCodegenMiseArtifacts(repository_root=root)
+            FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
 
         def publish(scope_root: Path) -> p.Result[bool]:
             current = u.Cli.atomic_read_binary_file_state(
-                configuration_path, required=True
+                configuration_path,
+                required=True,
             )
             if current.failure:
                 return r[bool].from_failure(current)
             if current.value != snapshot:
                 return r[bool].fail(
-                    "plan collection configuration changed before collection"
+                    "plan collection configuration changed before collection",
                 )
             bundle = u.Infra.docs_collect_plan_files(scope_root, configuration)
             incomplete = tuple(
@@ -74,26 +87,31 @@ class FlextInfraDocCollector:
                     for item in incomplete
                 )
                 return r[bool].fail(
-                    f"plan source extraction is incomplete; private inventories are not extracted plans: {pending}"
+                    f"plan source extraction is incomplete; private inventories are not extracted plans: {pending}",
                 )
             u.Infra.verify_plan_collection_sources(scope_root, configuration, bundle)
             inputs = (snapshot, *bundle.source_states)
             analysis = m.Infra.CodegenPhaseAnalysis(
-                phase="docs", files=bundle.files, inputs=inputs
+                phase="docs",
+                files=bundle.files,
+                inputs=inputs,
             )
 
             def validate() -> p.Result[bool]:
                 final_configuration = u.Cli.atomic_read_binary_file_state(
-                    configuration_path, required=True
+                    configuration_path,
+                    required=True,
                 )
                 if final_configuration.failure:
                     return r[bool].from_failure(final_configuration)
                 if final_configuration.value != snapshot:
                     return r[bool].fail(
-                        "plan collection configuration changed during publication"
+                        "plan collection configuration changed during publication",
                     )
                 u.Infra.verify_plan_collection_publication(
-                    scope_root, configuration, bundle
+                    scope_root,
+                    configuration,
+                    bundle,
                 )
                 return r[bool].ok(True)
 
@@ -112,7 +130,8 @@ class FlextInfraDocCollector:
                 return r[bool].from_failure(published)
             for directory in bundle.prunable_directories:
                 observed = u.Cli.atomic_read_empty_directory_state(
-                    directory, required=False
+                    directory,
+                    required=False,
                 )
                 if observed.failure:
                     return r[bool].from_failure(observed)

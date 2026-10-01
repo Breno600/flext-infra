@@ -1,0 +1,132 @@
+# A data contract is a Pydantic model, never a dataclass. A frozen dataclass
+# whose fields are JSON-serializable primitives and that has no custom
+# construction is exactly an m.FrozenModel: it is rewritten to one when the
+# module binds the `m` facade (the rewrite must not emit an unbound name), and
+# reported otherwise. Field bodies are kept byte-for-byte, so defaults survive.
+# Mutable dataclasses, non-serializable fields, semantic keywords and custom
+# construction need a manual model-base choice and are out of this rule.
+id: fix-frozen-dataclass-to-model
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  kind: decorated_definition
+  all:
+    - has:
+        matches: convertible-dataclass-decorator
+    - not:
+        has:
+          kind: decorator
+          not:
+            matches: convertible-dataclass-decorator
+    - has:
+        field: definition
+        kind: class_definition
+        all:
+          - has:
+              field: name
+              pattern: $NAME
+          - not:
+              has:
+                field: superclasses
+                pattern: $_
+          - has:
+              field: body
+              matches: serializable-value-class-body
+              pattern: $BODY
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          matches: m-imported-from-flext
+fix: |-
+  class $NAME(m.FrozenModel):
+      $BODY
+message: >-
+  A frozen, serializable dataclass is a data contract: declare it as an
+  m.FrozenModel.
+---
+id: fix-frozen-dataclass-with-bases-to-model
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  kind: decorated_definition
+  all:
+    - has:
+        matches: convertible-dataclass-decorator
+    - not:
+        has:
+          kind: decorator
+          not:
+            matches: convertible-dataclass-decorator
+    - has:
+        field: definition
+        kind: class_definition
+        all:
+          - has:
+              field: name
+              pattern: $NAME
+          - has:
+              field: superclasses
+              pattern: $BASES
+          - has:
+              field: body
+              matches: serializable-value-class-body
+              pattern: $BODY
+    - inside:
+        kind: module
+        stopBy: end
+        has:
+          stopBy: end
+          matches: m-imported-from-flext
+transform:
+  MODEL_BASES:
+    replace:
+      source: $BASES
+      replace: "\\)$"
+      by: ", m.FrozenModel)"
+fix: |-
+  class $NAME$MODEL_BASES:
+      $BODY
+message: >-
+  A frozen, serializable dataclass is a data contract: declare it as an
+  m.FrozenModel.
+---
+id: ban-frozen-dataclass-contract
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  kind: decorated_definition
+  all:
+    - has:
+        matches: convertible-dataclass-decorator
+    - has:
+        field: definition
+        kind: class_definition
+        has:
+          field: body
+          matches: serializable-value-class-body
+    # The rewritable shape is reported (and fixed) by the fix documents.
+    - not:
+        all:
+          - not:
+              has:
+                kind: decorator
+                not:
+                  matches: convertible-dataclass-decorator
+          - inside:
+              kind: module
+              stopBy: end
+              has:
+                stopBy: end
+                matches: m-imported-from-flext
+message: >-
+  A frozen, serializable dataclass is a data contract: declare it as an
+  m.FrozenModel (bind the m facade, or drop the other decorators, so the
+  rewrite can apply).

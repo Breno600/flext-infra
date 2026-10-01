@@ -1,4 +1,8 @@
-"""Test modernizer helpers behavior."""
+"""Test modernizer helpers behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -26,7 +30,12 @@ class TestsFlextInfraDepsModernizerHelpers:
 
     @pytest.fixture
     def doc(self) -> t.Cli.TomlDocument:
-        """Provide a mutable TOML document fixture."""
+        """Provide a mutable TOML document fixture.
+
+        Returns:
+            The resulting ``t.Cli.TomlDocument``.
+
+        """
         return u.Cli.toml_document()
 
     @staticmethod
@@ -98,13 +107,16 @@ class TestsFlextInfraDepsModernizerHelpers:
         [("test", "test"), (None, None), ({"key": "value"}, {"key": "value"})],
     )
     def test_unwrap_item(
-        self, value: t.Cli.TomlMappingSource | None, expected: t.JsonValue
+        self,
+        value: t.Cli.TomlMappingSource | None,
+        expected: t.JsonValue,
     ) -> None:
         """Verify unwrap item."""
         actual = None if value is None else u.Cli.toml_unwrap_item(value)
         tm.that(actual, eq=expected)
 
-    def test_unwrap_item_toml_item(self, doc: t.Cli.TomlDocument) -> None:
+    @staticmethod
+    def test_unwrap_item_toml_item(doc: t.Cli.TomlDocument) -> None:
         """Verify unwrap item toml item."""
         doc["key"] = "value"
         tm.that(u.Cli.toml_unwrap_item(doc["key"]), eq="value")
@@ -120,7 +132,9 @@ class TestsFlextInfraDepsModernizerHelpers:
         ],
     )
     def test_as_string_list(
-        self, value: t.Cli.TomlItem | None, expected: t.StrSequence
+        self,
+        value: t.Cli.TomlItem | None,
+        expected: t.StrSequence,
     ) -> None:
         """Verify as string list."""
         actual: t.StrSequence = (
@@ -128,7 +142,8 @@ class TestsFlextInfraDepsModernizerHelpers:
         )
         tm.that(list(actual), eq=list(expected))
 
-    def test_as_string_list_toml_item(self, doc: t.Cli.TomlDocument) -> None:
+    @staticmethod
+    def test_as_string_list_toml_item(doc: t.Cli.TomlDocument) -> None:
         """Verify as string list toml item."""
         doc["items"] = ["a", "b"]
         items_array = u.Cli.toml_item_from_json_value(["a", "b"])
@@ -138,7 +153,8 @@ class TestsFlextInfraDepsModernizerHelpers:
         tm.that(u.Cli.toml_as_string_list(int_val), eq=[])
 
     @pytest.mark.parametrize(
-        ("items", "expected"), [(["a", "b", "c"], 3), ([], 0), (["single"], 1)]
+        ("items", "expected"),
+        [(["a", "b", "c"], 3), ([], 0), (["single"], 1)],
     )
     def test_array(self, items: t.StrSequence, expected: int) -> None:
         """Verify TOML array construction preserves item count."""
@@ -181,7 +197,8 @@ class TestsFlextInfraDepsModernizerHelpers:
         tm.that(list(groups.get("dev", [])), eq=list(expected_dev))
         tm.that(list(groups.get("docs", [])), eq=list(expected_docs))
 
-    def test_project_dev_groups_missing_sections(self, doc: t.Cli.TomlDocument) -> None:
+    @staticmethod
+    def test_project_dev_groups_missing_sections(doc: t.Cli.TomlDocument) -> None:
         """Verify project dev groups missing sections."""
         tm.that(u.Infra.project_dev_groups(doc), eq={})
         doc["project"] = {"name": "test"}
@@ -204,13 +221,14 @@ class TestsFlextInfraDepsModernizerHelpers:
     ) -> None:
         """Verify canonical dev dependencies."""
         result = u.Infra.canonical_dev_dependencies(
-            self._doc_with_optional_deps(optional_deps)
+            self._doc_with_optional_deps(optional_deps),
         )
         tm.that(result, length=expected_length)
         if expect_pytest:
             tm.that(any("pytest" in item for item in result), eq=True)
 
-    def test_declared_dependency_names_collects_all_supported_groups(self) -> None:
+    @staticmethod
+    def test_declared_dependency_names_collects_all_supported_groups() -> None:
         """Verify declared dependency names collects all supported groups."""
         doc = u.Cli.toml_document()
         doc["project"] = {
@@ -223,8 +241,8 @@ class TestsFlextInfraDepsModernizerHelpers:
         doc["dependency-groups"] = {"test": ["flext-tests", "coverage>=7.0"]}
         doc["tool"] = {
             "poetry": {
-                "dependencies": {"python": ">=3.13,<3.14", "flext-api": "^0.1.0"}
-            }
+                "dependencies": {"python": ">=3.13,<3.14", "flext-api": "^0.1.0"},
+            },
         }
 
         result = u.Infra.declared_dependency_names(doc)
@@ -233,13 +251,15 @@ class TestsFlextInfraDepsModernizerHelpers:
         tm.that(result, has="flext-infra")
         tm.that(result, has="flext-tests")
 
-    def test_resolved_dependency_versions_excludes_editable_distribution(self) -> None:
+    @staticmethod
+    def test_resolved_dependency_versions_excludes_editable_distribution() -> None:
         """Registry versions exclude editable source distributions."""
         versions = u.Infra.resolved_dependency_versions()
         tm.that(bool(versions), eq=True)
         tm.that("flext-infra" in versions, eq=False)
 
-    def test_rewrite_requirement_constraint_preserves_extras_and_markers(self) -> None:
+    @staticmethod
+    def test_rewrite_requirement_constraint_preserves_extras_and_markers() -> None:
         """Verify rewrite requirement constraint preserves extras and markers."""
         locked_version = c.Tests.RELEASE_VERSION_TARGET
         tm.that(

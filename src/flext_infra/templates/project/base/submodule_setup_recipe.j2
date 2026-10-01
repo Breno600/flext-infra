@@ -1,4 +1,4 @@
-{% macro submodule_setup_recipe(target, project_root) -%}
+{% macro submodule_setup_recipe(target, project_root, timeout_command, timeout_kill_after_seconds, submodule_timeout_seconds) -%}
 .PHONY: {{ target }}
 
 # === SECTION: submodule setup (managed) ===
@@ -16,7 +16,7 @@
 #       Nested gitlinks belong to their own setup.
 # Free: no
 # End SECTION: submodule setup
-# Why (flext-mphw1): runners expose umask 002 and `submodule update --init`
+# Why: runners expose umask 002 and `submodule update --init`
 # materializes tracked files as 0664; canonical Mise artifact gates demand
 # exact modes, so provisioning normalizes the umask before checkout.
 {{ target }}:
@@ -57,7 +57,11 @@
 		[ -e "$$root/$$path/.git" ] || absent="$$absent $$path"; \
 	done; \
 	if [ -n "$$absent" ]; then \
-		git -C "$$root" submodule update --init --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
+		credential_helper='!f() { if [ "$$1" = get ]; then printf "username=x-access-token\npassword=%s\n" "$$GITHUB_TOKEN"; fi; }; f'; \
+		GIT_TERMINAL_PROMPT=0 {{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "{{ submodule_timeout_seconds }}s" \
+			git -C "$$root" -c credential.helper= \
+			-c "credential.https://$${GH_HOST:-github.com}.helper=$$credential_helper" \
+			submodule update --init --jobs "$${FLEXT_SUBMODULE_JOBS:-8}" -- $$absent; \
 	fi; \
 	validate_submodule() { \
 		superproject="$$1"; \
@@ -118,7 +122,8 @@
 		fi; \
 		gitlink="$$2"; \
 		if [ ! -e "$$child_root/.git" ]; then \
-			git -C "$$superproject" submodule update --init -- "$$child_path"; \
+			printf 'ERROR: governed gitlink is not materialized: %s\n' "$$child_path" >&2; \
+			exit 2; \
 		fi; \
 		current=$$(git -C "$$child_root" branch --show-current); \
 		head=$$(git -C "$$child_root" rev-parse HEAD); \

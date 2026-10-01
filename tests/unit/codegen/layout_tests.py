@@ -1,4 +1,8 @@
-"""Tests for the declarative project-layout engine (flext-0wuz, epic flext-hzox)."""
+"""Tests for the declarative project-layout engine (flext-0wuz, epic flext-hzox).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,12 @@ class TestsFlextInfraCodegenLayout:
 
     @staticmethod
     def _fresh_layout_report(project: Path) -> m.Infra.LayoutProjectReport:
-        """Load consumer-owned configuration in a new public-service process."""
+        """Load consumer-owned configuration in a new public-service process.
+
+        Returns:
+            The resulting ``m.Infra.LayoutProjectReport``.
+
+        """
         process = tm.ok(
             u.Cli.run_raw(
                 [
@@ -40,7 +49,7 @@ class TestsFlextInfraCodegenLayout:
                 ],
                 cwd=project,
                 env={"FLEXT_INFRA_CONFIG_DIR": str(FlextInfraConfig.ssot_config_dir())},
-            )
+            ),
         )
         tm.that(
             u.Cli.process_succeeded(process.outcome),
@@ -51,7 +60,12 @@ class TestsFlextInfraCodegenLayout:
 
     @classmethod
     def _assert_keep_override(
-        cls, tmp_path: Path, *, distribution: str, checkout_name: str, keep_count: int
+        cls,
+        tmp_path: Path,
+        *,
+        distribution: str,
+        checkout_name: str,
+        keep_count: int,
     ) -> None:
         """Prove declared files change classification without changing defaults."""
         project = build_loose_project(tmp_path, name=distribution)
@@ -70,7 +84,7 @@ class TestsFlextInfraCodegenLayout:
         baseline_paths = {finding.path for finding in baseline.findings}
         tm.that(set(candidates) <= baseline_paths, eq=True)
         override = m.Infra.LayoutProjectOverrideSpec(
-            keep_root_files=candidates[:keep_count]
+            keep_root_files=candidates[:keep_count],
         )
         # The org overlay is a partial delta file; the real config loader
         # deep-merges it and validates the merged result against the strict
@@ -82,11 +96,11 @@ class TestsFlextInfraCodegenLayout:
                     "ci_private_submodules": {},
                     "layout": {
                         "project_overrides": {
-                            distribution: override.model_dump(mode="json")
-                        }
+                            distribution: override.model_dump(mode="json"),
+                        },
                     },
-                }
-            }
+                },
+            },
         }
         org_overlay = (
             project
@@ -102,15 +116,18 @@ class TestsFlextInfraCodegenLayout:
         tm.that(report.project, eq=distribution)
         paths = {finding.path for finding in report.findings}
         tm.that(
-            paths & set(candidates), eq=set(candidates) - set(override.keep_root_files)
+            paths & set(candidates),
+            eq=set(candidates) - set(override.keep_root_files),
         )
         for filename in candidates:
             tm.that(
-                (project / filename).read_text(encoding="utf-8"), eq=f"{filename}\n"
+                (project / filename).read_text(encoding="utf-8"),
+                eq=f"{filename}\n",
             )
 
+    @staticmethod
     def test_check_reports_move_archive_review_and_gitignore(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Check mode classifies every loose root entry without writing."""
         project = build_loose_project(tmp_path)
@@ -134,20 +151,21 @@ class TestsFlextInfraCodegenLayout:
         tm.that(bool(gitignore), eq=True)
         tm.that(gitignore[0].target, eq=f"{archive_root()}/")
 
-    def test_check_execute_passes_while_severity_is_warning(
-        self, tmp_path: Path
+    @staticmethod
+    def test_check_execute_fails_on_layout_findings(
+        tmp_path: Path,
     ) -> None:
-        """CLI check posture is report-only while the SSOT severity is warning."""
+        """A layout finding blocks the check at every severity."""
         build_loose_project(tmp_path)
         engine = layout_engine(tmp_path)
 
         result = engine.execute()
 
-        tm.ok(result)
-        tm.that(result.value, has="move guides -> docs/guides")
+        tm.fail(result, has="move guides -> docs/guides")
 
+    @staticmethod
     def test_apply_moves_archives_and_converges_idempotently(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Apply reorganizes once; a second apply performs zero operations."""
         project = build_loose_project(tmp_path)
@@ -171,8 +189,9 @@ class TestsFlextInfraCodegenLayout:
         tm.that(len(residual.actionable), eq=0)
         tm.that([finding.rule for finding in residual.findings], eq=["review"])
 
+    @staticmethod
     def test_apply_docs_collision_keeps_target_and_archives_source(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Different-content collisions preserve both sides (archive-not-delete)."""
         project = build_loose_project(tmp_path)
@@ -190,8 +209,9 @@ class TestsFlextInfraCodegenLayout:
         tm.that(archived.read_text(encoding="utf-8"), eq="intro\n")
         tm.that((project / "guides").exists(), eq=False)
 
+    @staticmethod
     def test_apply_override_move_then_archives_emptied_dir(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Override moves run before the emptied directory is archived."""
         project = tmp_path / "flext-dbt-ldif"
@@ -201,7 +221,8 @@ class TestsFlextInfraCodegenLayout:
         (package_dir / "__init__.py").write_text("", encoding="utf-8")
         profiles.mkdir(parents=True)
         (project / "pyproject.toml").write_text(
-            "[project]\nname='flext-dbt-ldif'\nversion='0.1.0'\n", encoding="utf-8"
+            "[project]\nname='flext-dbt-ldif'\nversion='0.1.0'\n",
+            encoding="utf-8",
         )
         (profiles / "profiles.yml").write_text("profile: 1\n", encoding="utf-8")
         u.Tests.declare_workspace_projects(tmp_path, (project.name,))
@@ -213,15 +234,18 @@ class TestsFlextInfraCodegenLayout:
         tm.that((project / "profiles.yml").is_file(), eq=True)
         tm.that((project / "profiles").exists(), eq=False)
         tm.that(
-            (project / archive_root() / project.name / "profiles").is_dir(), eq=True
+            (project / archive_root() / project.name / "profiles").is_dir(),
+            eq=True,
         )
 
-    def test_gate_reports_violations_and_fails_on_warning(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_gate_reports_violations_and_fails_on_warning(tmp_path: Path) -> None:
         """The shared gate contract rejects warnings without hiding their severity."""
         project = build_loose_project(tmp_path)
         gate = FlextInfraLayoutGate(tmp_path)
         ctx = m.Infra.GateContext(
-            repository_root=tmp_path, reports_dir=tmp_path / ".reports"
+            repository_root=tmp_path,
+            reports_dir=tmp_path / ".reports",
         )
 
         execution = gate.check(project, ctx)
@@ -242,7 +266,9 @@ class TestsFlextInfraCodegenLayout:
 
     @pytest.mark.parametrize("keep_count", [0, 1, 3])
     def test_override_resolves_by_declared_name_not_checkout_directory(
-        self, tmp_path: Path, keep_count: int
+        self,
+        tmp_path: Path,
+        keep_count: int,
     ) -> None:
         """Renamed checkouts still consume the PEP 621 distribution's keep-list."""
         self._assert_keep_override(
@@ -252,7 +278,8 @@ class TestsFlextInfraCodegenLayout:
             keep_count=keep_count,
         )
 
-    def test_special_and_reference_root_dirs_skipped(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_special_and_reference_root_dirs_skipped(tmp_path: Path) -> None:
         """data/ is skipped; external-docs/ is allowed as reference corpus."""
         project = build_loose_project(tmp_path)
         (project / "data").mkdir()
@@ -267,7 +294,8 @@ class TestsFlextInfraCodegenLayout:
         tm.that("data" in paths, eq=False)
         tm.that("external-docs" in paths, eq=False)
 
-    def test_infrastructure_root_is_canonical(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_infrastructure_root_is_canonical(tmp_path: Path) -> None:
         """Pulumi and Ansible share the canonical root infrastructure directory."""
         project = build_loose_project(tmp_path)
         infrastructure = project / "infra"
@@ -280,8 +308,9 @@ class TestsFlextInfraCodegenLayout:
         paths = {finding.path for finding in report.findings}
         tm.that("infra" in paths, eq=False)
 
+    @staticmethod
     def test_declared_repositories_are_canonical_root_entries(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A workspace root accepts only repository directories declared by topology."""
         declared_name = "flext-declared"
@@ -303,8 +332,9 @@ class TestsFlextInfraCodegenLayout:
         tm.that(declared_name in findings, eq=False)
         tm.that(findings[undeclared_name].rule, eq="review")
 
+    @staticmethod
     def test_duplicate_root_md_archives_when_docs_copy_exists(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Root move_docs_files collide with docs/ -> archive root, keep docs."""
         project = build_loose_project(tmp_path)

@@ -1,9 +1,13 @@
 """Darwin Mypy supervisor: sampled process-group RSS and wall-clock deadline.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 This supervisor validates the owned checker request before launching Mypy.
 Darwin's initial VM mappings
 can already exceed the configured memory budget; RLIMIT_AS cannot represent a
-usable allocation ceiling there. RSS is sampled every 100 ms instead. It is a
+usable allocation ceiling there. RSS is sampled every
+``c.Infra.MYPY_SUPERVISOR_POLL_SECONDS`` instead. It is a
 termination threshold, not a kernel allocation barrier: transient overshoot is
 possible. Linux retains its kernel-enforced address-space limit.
 """
@@ -16,7 +20,7 @@ import sys
 import time
 from types import FrameType
 
-from flext_infra import m, t, u
+from flext_infra import c, m, t
 
 
 class FlextInfraMypyDarwinSupervisor:
@@ -32,6 +36,12 @@ class FlextInfraMypyDarwinSupervisor:
         Raises ProcessGroupAbsent when a native accounting proof shows no live
         member (Darwin may retain an unsignalable zombie-only group): the
         absence is raised, never returned as a silent sentinel.
+
+        Raises:
+            PermissionError: If ``cls._usage(pid)[1]``.
+            ProcessGroupAbsentError: If a ``ProcessLookupError`` is caught; or if a
+                ``PermissionError`` is caught.
+
         """
         try:
             os.killpg(pid, signum)
@@ -46,8 +56,11 @@ class FlextInfraMypyDarwinSupervisor:
 
     @staticmethod
     def _usage(pid: int) -> t.Pair[int, bool]:
+        from flext_infra import u
+
         snapshot = u.Cli.run(
-            ("/bin/ps", "-axo", "pgid=,rss=,stat="), timeout=1
+            ("/bin/ps", "-axo", "pgid=,rss=,stat="),
+            timeout=c.Infra.MYPY_SUPERVISOR_PS_TIMEOUT,
         ).unwrap()
         total_kib = 0
         alive = False
@@ -56,7 +69,7 @@ class FlextInfraMypyDarwinSupervisor:
             if int(group) == pid and not state.startswith("Z"):
                 total_kib += int(rss)
                 alive = True
-        return total_kib * 1024, alive
+        return total_kib * c.Infra.BYTES_PER_KIB, alive
 
     @classmethod
     def run(
@@ -66,7 +79,17 @@ class FlextInfraMypyDarwinSupervisor:
         timeout: int,
         kill_after: int,
     ) -> int:
-        """Run the owned checker with inherited streams and bounded group lifetime."""
+        """Run the owned checker with inherited streams and bounded group lifetime.
+
+        Returns:
+            The resulting ``int``.
+
+        Raises:
+            ValueError: If positive memory, timeout and kill-after are required.
+
+        """
+        from flext_infra import u
+
         if min(memory_bytes, timeout, kill_after) <= 0:
             msg = "positive memory, timeout and kill-after are required"
             raise ValueError(msg)
@@ -74,7 +97,9 @@ class FlextInfraMypyDarwinSupervisor:
         cls._usage(os.getpgrp())
         deadline = time.monotonic() + timeout
         child = u.Cli.process_start(
-            u.Infra.mypy_command(invocation), capture=False, start_new_session=True
+            u.Infra.mypy_command(invocation),
+            capture=False,
+            start_new_session=True,
         ).unwrap()
         received_signal: int = 0
 
@@ -96,7 +121,7 @@ class FlextInfraMypyDarwinSupervisor:
                 if cls._usage(child.pid)[0] > memory_bytes:
                     sys.stderr.write("Mypy out of memory: RSS limit reached\n")
                     return 137
-                time.sleep(0.1)
+                time.sleep(c.Infra.MYPY_SUPERVISOR_POLL_SECONDS)
             return exit_code if exit_code >= 0 else 128 - exit_code
         finally:
             # Always clean descendants, even when their leader already exited.
@@ -111,7 +136,7 @@ class FlextInfraMypyDarwinSupervisor:
                     child.poll()
                     if not cls._usage(child.pid)[1]:
                         break
-                    time.sleep(0.05)
+                    time.sleep(c.Infra.MYPY_SUPERVISOR_SHUTDOWN_POLL_SECONDS)
             finally:
                 try:
                     if cls._usage(child.pid)[1]:
@@ -130,5 +155,5 @@ if __name__ == "__main__":
             int(memory),
             int(timeout),
             int(kill_after),
-        )
+        ),
     )

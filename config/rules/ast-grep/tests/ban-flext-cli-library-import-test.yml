@@ -1,0 +1,9 @@
+id: ban-flext-cli-library-import
+valid:
+  - from flext_cli import FlextCli
+  - import richtext
+invalid:
+  - import rich
+  - from rich.console import Console
+  - import orjson
+  - import click

@@ -1,4 +1,8 @@
-"""Rule planning distinguishes repeated search paths from duplicate installs."""
+"""Rule planning distinguishes repeated search paths from duplicate installs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -14,6 +18,7 @@ class TestsFlextInfraDistributionIdentity:
 
     @staticmethod
     def project(root: Path) -> None:
+        """Provide ``project``."""
         (root / "pyproject.toml").write_text(
             '[project]\nname = "metadata-consumer"\ndependencies = []\n',
             encoding="utf-8",
@@ -21,6 +26,7 @@ class TestsFlextInfraDistributionIdentity:
 
     @staticmethod
     def distribution(root: Path) -> None:
+        """Provide ``distribution``."""
         metadata = root / "rule_identity_fixture-1.0.dist-info"
         metadata.mkdir(parents=True)
         (metadata / "METADATA").write_text(
@@ -29,8 +35,11 @@ class TestsFlextInfraDistributionIdentity:
         )
 
     def test_repeated_directory_is_one_installation(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Test repeated directory is one installation."""
         self.project(tmp_path)
         site = tmp_path / "site"
         self.distribution(site)
@@ -40,8 +49,11 @@ class TestsFlextInfraDistributionIdentity:
         assert planned.success, planned.error
 
     def test_distinct_duplicate_installations_are_rejected(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Test distinct duplicate installations are rejected."""
         self.project(tmp_path)
         for name in ("first", "second"):
             site = tmp_path / name

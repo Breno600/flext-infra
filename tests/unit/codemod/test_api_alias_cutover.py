@@ -1,4 +1,8 @@
-"""Public utility evidence for semantic API-alias cutovers."""
+"""Public utility evidence for semantic API-alias cutovers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -12,7 +16,8 @@ from flext_infra import c, infra, m, u
 class TestsFlextInfraApiAliasCutover:
     """Exercise owner-first alias removal only through ``u.Infra``."""
 
-    def test_rewires_consumer_before_removing_owner(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_rewires_consumer_before_removing_owner(tmp_path: Path) -> None:
         """Plan the complete owner/export/import/reference cutover together."""
         owner = tmp_path / "flext-sample/src/flext_sample/api.py"
         consumer = tmp_path / "flext-sample/tests/test_api.py"

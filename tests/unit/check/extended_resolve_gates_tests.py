@@ -9,20 +9,27 @@ from __future__ import annotations
 from flext_tests import tm
 
 from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
+from tests import c
 
 
 class TestsFlextInfraWorkspaceCheckerResolveGates:
     """Test FlextInfraWorkspaceChecker.resolve_gates."""
 
-    def test_resolve_gates_type_is_rejected(self) -> None:
+    @staticmethod
+    def test_resolve_gates_type_is_rejected() -> None:
+        """Test resolve gates type is rejected."""
         result = FlextInfraWorkspaceChecker.resolve_gates(["type"])
         tm.fail(result, has="unknown gate")
 
-    def test_resolve_gates_rejects_empty_strings(self) -> None:
+    @staticmethod
+    def test_resolve_gates_rejects_empty_strings() -> None:
+        """Test resolve gates rejects empty strings."""
         result = FlextInfraWorkspaceChecker.resolve_gates(["lint", "", "format"])
         tm.fail(result, has="invalid gate name")
 
-    def test_resolve_gates_rejects_duplicate_entries(self) -> None:
+    @staticmethod
+    def test_resolve_gates_rejects_duplicate_entries() -> None:
+        """Test resolve gates rejects duplicate entries."""
         result = FlextInfraWorkspaceChecker.resolve_gates([
             "lint",
             "lint",
@@ -31,26 +38,16 @@ class TestsFlextInfraWorkspaceCheckerResolveGates:
         ])
         tm.fail(result, has="duplicate gate")
 
-    def test_resolve_gates_invalid_gate_fails(self) -> None:
+    @staticmethod
+    def test_resolve_gates_invalid_gate_fails() -> None:
+        """Test resolve gates invalid gate fails."""
         result = FlextInfraWorkspaceChecker.resolve_gates(["invalid"])
         tm.fail(result, has="unknown gate")
 
-    def test_resolve_gates_all_valid_types(self) -> None:
-        gates = [
-            "lint",
-            "format",
-            "pyrefly",
-            "mypy",
-            "pyright",
-            "silent-failure",
-            "security",
-            "markdown",
-        ]
+    @staticmethod
+    def test_resolve_gates_accepts_every_declared_gate() -> None:
+        """Test resolve gates accepts every declared gate."""
+        gates = sorted(c.Infra.ALLOWED_GATES)
         result = FlextInfraWorkspaceChecker.resolve_gates(gates)
         tm.ok(result)
-        tm.that(len(result.value) > 0, eq=True)
-
-    def test_resolve_gates_accepts_silent_failure(self) -> None:
-        result = FlextInfraWorkspaceChecker.resolve_gates(["silent-failure"])
-        tm.ok(result)
-        tm.that(result.value, eq=["silent-failure"])
+        tm.that(sorted(result.value), eq=gates)

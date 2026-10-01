@@ -1,4 +1,8 @@
-"""Canonical Git responsibility mixin for ``u.Infra``."""
+"""Canonical Git responsibility mixin for ``u.Infra``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,23 +12,30 @@ from git import GitCommandError
 
 from flext_core import r
 from flext_infra import c, m
-
-from .semantic_refs import FlextInfraUtilitiesGitSemanticRefsMixin
+from flext_infra._utilities._git.semantic_refs import (
+    FlextInfraUtilitiesGitSemanticRefsMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p
 
 
 class FlextInfraUtilitiesGitSemanticPublishMixin(
-    FlextInfraUtilitiesGitSemanticRefsMixin
+    FlextInfraUtilitiesGitSemanticRefsMixin,
 ):
     """Own semantic publish operations."""
 
     @classmethod
     def git_merge_no_edit(
-        cls, request: m.Infra.GitCommitishRequest
+        cls,
+        request: m.Infra.GitCommitishRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Merge ``commitish`` into HEAD with an explicit merge commit."""
+        """Merge ``commitish`` into HEAD with an explicit merge commit.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             text = repo.git.merge("--no-ff", "--no-edit", request.commitish)
@@ -32,15 +43,22 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
             return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitTextReport].fail(
-                f"merge failed for {request.commitish}: {exc}", exception=exc
+                f"merge failed for {request.commitish}: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text))
 
     @classmethod
     def git_delete_ref(
-        cls, request: m.Infra.GitDeleteRefRequest
+        cls,
+        request: m.Infra.GitDeleteRefRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """CAS-delete a ref when it still points at ``expected_oid``."""
+        """CAS-delete a ref when it still points at ``expected_oid``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitBoolReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             repo.git.update_ref("-d", request.reference, request.expected_oid)
@@ -48,15 +66,22 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
             return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to delete ref {request.reference}: {exc}", exception=exc
+                f"failed to delete ref {request.reference}: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
     @classmethod
     def git_fetch_origin(
-        cls, request: m.Infra.GitRepoRequest
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
-        """Fetch from origin."""
+        """Fetch from origin.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitBoolReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             repo.remotes[c.Infra.GIT_DEFAULT_REMOTE].fetch()
@@ -64,33 +89,49 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
             return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
         except (OSError, ValueError, AssertionError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to fetch origin: {exc}", exception=exc
+                f"failed to fetch origin: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
     @classmethod
     def git_push_upstream(
-        cls, request: m.Infra.GitPushRequest
+        cls,
+        request: m.Infra.GitPushRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Push HEAD to ``remote`` as ``refs/heads/<branch>`` with ``-u``."""
+        """Push HEAD to ``remote`` as ``refs/heads/<branch>`` with ``-u``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             text = repo.git.push(
-                "-u", request.remote, f"HEAD:refs/heads/{request.branch}"
+                "-u",
+                request.remote,
+                f"HEAD:refs/heads/{request.branch}",
             )
         except GitCommandError as exc:
             return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitTextReport].fail(
-                f"failed to push {request.branch}: {exc}", exception=exc
+                f"failed to push {request.branch}: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=text))
 
     @classmethod
     def git_remote_url(
-        cls, request: m.Infra.GitRemoteUrlRequest
+        cls,
+        request: m.Infra.GitRemoteUrlRequest,
     ) -> p.Result[m.Infra.GitTextReport]:
-        """Resolve ``remote get-url <remote>`` as a text report."""
+        """Resolve ``remote get-url <remote>`` as a text report.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.GitTextReport]``.
+
+        """
         try:
             repo = cls._repo(request.repo_root)
             url = repo.remotes[request.remote].url
@@ -98,7 +139,8 @@ class FlextInfraUtilitiesGitSemanticPublishMixin(
             return r[m.Infra.GitTextReport].fail(str(exc), exception=exc)
         except (OSError, ValueError, IndexError, AssertionError) as exc:
             return r[m.Infra.GitTextReport].fail(
-                f"failed to resolve remote URL: {exc}", exception=exc
+                f"failed to resolve remote URL: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitTextReport].ok(m.Infra.GitTextReport(text=url))
 

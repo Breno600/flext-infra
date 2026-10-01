@@ -1,5 +1,8 @@
 """Generated search paths never leave the project that owns them.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 A search-path entry is written into a project's own ``pyproject.toml``, so it
 describes that project forever. ``../<sibling>/src`` describes the *host* the
 generator happened to run on: it is wrong in any clone whose siblings sit
@@ -23,8 +26,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraExtraPathsArePure:
     """No emitted entry may address another project on the filesystem."""
 
+    @staticmethod
     def test_workspace_project_source_roots_are_not_emitted_at_the_root(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A UV workspace project is a distribution, not a search path."""
         _ = ExtraPathsTestSupport.workspace_with_dependency(tmp_path)
@@ -34,8 +38,9 @@ class TestsFlextInfraExtraPathsArePure:
 
         tm.that(result, eq=("src", "."))
 
+    @staticmethod
     def test_sibling_source_roots_are_not_emitted_for_a_member(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """A member never reaches out of its own root to find a dependency."""
         consumer = ExtraPathsTestSupport.project(tmp_path, "flext-ldap", "flext_ldap")
@@ -61,7 +66,8 @@ class TestsFlextInfraExtraPathsArePure:
             )
         tm.that(search_paths, eq=("src", "."))
 
-    def test_search_paths_survive_a_project_only_worktree(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_search_paths_survive_a_project_only_worktree(tmp_path: Path) -> None:
         """The same project alone on disk yields the same entries.
 
         A `make work` lane materializes one project without its siblings. Entries
@@ -69,13 +75,19 @@ class TestsFlextInfraExtraPathsArePure:
         would rewrite what the primary just generated.
         """
         with_siblings = ExtraPathsTestSupport.project(
-            tmp_path / "workspace", "flext-ldap", "flext_ldap"
+            tmp_path / "workspace",
+            "flext-ldap",
+            "flext_ldap",
         )
         _ = ExtraPathsTestSupport.project(
-            tmp_path / "workspace", "flext-core", "flext_core"
+            tmp_path / "workspace",
+            "flext-core",
+            "flext_core",
         )
         alone = ExtraPathsTestSupport.project(
-            tmp_path / "lane", "flext-ldap", "flext_ldap"
+            tmp_path / "lane",
+            "flext-ldap",
+            "flext_ldap",
         )
 
         workspace_manager = ExtraPathsTestSupport.manager(tmp_path / "workspace")
@@ -83,7 +95,8 @@ class TestsFlextInfraExtraPathsArePure:
 
         tm.that(
             workspace_manager.pyrefly_search_paths(
-                project_dir=with_siblings, is_root=False
+                project_dir=with_siblings,
+                is_root=False,
             ),
             eq=lane_manager.pyrefly_search_paths(project_dir=alone, is_root=False),
         )
