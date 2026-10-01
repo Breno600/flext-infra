@@ -1,0 +1,9 @@
+id: ban-runtime-protocols-in-settings
+valid:
+  - |
+    if TYPE_CHECKING:
+        from pkg import p
+  - from pkg import m
+invalid:
+  - from pkg import p
+  - from pkg import m, p

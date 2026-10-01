@@ -17,13 +17,17 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
-    FlextInfraUtilitiesGitWorktreeMaterializationMixin
+    FlextInfraUtilitiesGitWorktreeMaterializationMixin,
 ):
     """Own worktree checkpoint operations."""
 
     @classmethod
     def git_checkpoint_worktree(
-        cls, worktree_root: Path, *, message: str, excluded: t.SequenceOf[Path] = ()
+        cls,
+        worktree_root: Path,
+        *,
+        message: str,
+        excluded: t.SequenceOf[Path] = (),
     ) -> p.Result[str]:
         """Commit the complete isolated state as a synthetic checkpoint."""
         # `make setup` fast-forwards every declared submodule to its branch tip by
@@ -38,13 +42,31 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
         )
         try:
             commit_sha = cls._git_create_checkpoint_commit(
-                worktree_root, gitlink_exclusions, excluded, message
+                worktree_root,
+                gitlink_exclusions,
+                excluded,
+                message,
             )
         except GitCommandError as exc:
             return r[str].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[str].fail(f"failed to create checkpoint: {exc}", exception=exc)
         return r[str].ok(commit_sha)
+
+    @staticmethod
+    def _git_text(output: bytes | str | tuple[int, bytes, str]) -> str:
+        """Normalize one GitPython command result to text at its typed boundary.
+
+        GitPython types every command result as ``bytes | str |`` the
+        extended-output tuple; the tuple shape only exists behind
+        ``with_extended_output``, which the checkpoint commands never request.
+        """
+        if isinstance(output, bytes):
+            return output.decode(c.Cli.ENCODING_DEFAULT)
+        if isinstance(output, str):
+            return output
+        msg = "git command returned extended output without its contract"
+        raise TypeError(msg)
 
     @classmethod
     def _git_create_checkpoint_commit(
@@ -79,7 +101,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
             raise OSError(parent_result.error or "failed to resolve checkpoint parent")
         parent = parent_result.value
         identity_output = repo.git.show("-s", "--format=%an%x00%ae", parent).rstrip(
-            "\n"
+            "\n",
         )
         identity = identity_output.split("\0")
         match identity:
@@ -90,7 +112,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
             case _:
                 detail = "checkpoint parent has invalid author identity"
                 raise OSError(detail)
-        commit_sha = str(
+        commit_sha = cls._git_text(
             repo.git.execute([
                 c.Infra.GIT,
                 "-c",
@@ -103,7 +125,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
                 parent,
                 "-m",
                 message,
-            ])
+            ]),
         ).strip()
         repo.git.update_ref(c.Infra.GIT_HEAD, commit_sha)
         return commit_sha
@@ -129,7 +151,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
             return r[m.Infra.RepositoryDelta].fail(
                 head_result.error
                 if head_result.failure
-                else "isolated command moved repository HEAD"
+                else "isolated command moved repository HEAD",
             )
         exclusions = cls._transaction_exclusion_pathspecs()
         try:
@@ -139,7 +161,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
                 repo.git.update_index(
                     "--add",
                     "--cacheinfo",
-                    c.Infra.GIT_CACHEINFO_GITLINK,
+                    c.Infra.GIT_GITLINK_MODE_TEXT,
                     source_head,
                     path,
                 )
@@ -168,7 +190,8 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
             return r[m.Infra.RepositoryDelta].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.RepositoryDelta].fail(
-                f"failed to capture operation patch: {exc}", exception=exc
+                f"failed to capture operation patch: {exc}",
+                exception=exc,
             )
         # git apply rejects a patch whose final line has no terminating newline
         # ("corrupt patch"). `git diff --binary` can emit exactly that when the
@@ -184,7 +207,7 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
                 checkpoint_sha=repository.checkpoint_sha,
                 changed_files=tuple(name for name in names_output.split("\0") if name),
                 patch=patch_bytes,
-            )
+            ),
         )
 
 

@@ -25,7 +25,8 @@ class FlextInfraCodegenConsolidatorStepsMixin:
 
     @classmethod
     def _build_value_map_from_constants_file(
-        cls, constants_file: Path
+        cls,
+        constants_file: Path,
     ) -> p.Result[t.StrMapping]:
         """Build value map from a constants file.
 
@@ -39,7 +40,7 @@ class FlextInfraCodegenConsolidatorStepsMixin:
             return r[t.StrMapping].from_failure(read)
         value_map: t.MutableStrMapping = {}
         for name, _, raw, class_path, _ in u.Infra.parse_final_constant_definitions(
-            read.value.splitlines()
+            read.value.splitlines(),
         ):
             if not raw:
                 continue
@@ -74,20 +75,22 @@ class FlextInfraCodegenConsolidatorStepsMixin:
         if not matches:
             return None
         return m.Infra.ConsolidatorScannedFile(
-            resource=resource, source=source, matches=matches
+            resource=resource,
+            source=source,
+            matches=matches,
         )
 
     @staticmethod
     def _match_assignments(
         symbols: t.SequenceOf[m.Infra.SymbolInfo],
-        # flext-j47u (codex): use the canonical scalar sequence alias directly.
+        # Use the canonical scalar sequence alias directly.
         source_lines: t.StrSequence,
         value_to_ref: t.StrMapping,
     ) -> t.SequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]]:
         """Match assignments."""
         matches: t.MutableSequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]] = []
         for symbol in symbols:
-            # flext-j47u (codex): widen the validated constrained int for indexing.
+            # Widen the validated constrained int for indexing.
             line_number: int = symbol.line
             if line_number < 1 or line_number > len(source_lines):
                 continue
@@ -118,8 +121,8 @@ class FlextInfraCodegenConsolidatorStepsMixin:
     ) -> t.Infra.EditResultWithDescs:
         """Apply and validate."""
         resource = scanned.resource
-        backup = scanned.source
-        src_lines = backup.splitlines(keepends=True)
+        original_source = scanned.source
+        src_lines = original_source.splitlines(keepends=True)
         rel = py_file.relative_to(workspace)
         edits: t.MutableSequenceOf[t.Triple[int, int, str]] = []
         descs: t.MutableSequenceOf[str] = []
@@ -145,18 +148,24 @@ class FlextInfraCodegenConsolidatorStepsMixin:
             py_file,
             request=m.Infra.ProtectedFileEditRequest(
                 workspace=workspace,
-                before_source=backup,
+                before_source=original_source,
                 edit_fn=lambda: (
                     u.Infra.rewrite_source_at_offsets(
-                        rope_project, resource, edits, apply=True
+                        rope_project,
+                        resource,
+                        edits,
+                        apply=True,
                     ),
                     u.Infra.add_import(
-                        rope_project, resource, pkg_name, ["c"], apply=True
+                        rope_project,
+                        resource,
+                        pkg_name,
+                        ["c"],
+                        apply=True,
                     ),
                     None,
                 )[-1],
-                restore_fn=lambda: resource.write(backup),
-                keep_backup=True,
+                restore_fn=lambda: resource.write(original_source),
                 gates=cls._ALL_LINT_GATES,
             ),
         )

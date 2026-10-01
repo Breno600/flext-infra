@@ -4,8 +4,7 @@
 version: 3
 name: flext-infra
 candidate_bootstrap_targets: []
-# Why (green mandate, cosmos-3flk9 decision A): production sources are the
-# namespace validator's declared scope — tests host pytest conventions and
+# Production sources are the namespace validator's declared scope — tests host pytest conventions and
 # scripts/examples are thin command and documentation surfaces. Lint, type,
 # constant, and magic-value rules stay fleet-tree-wide.
 namespace_scan_dirs:
@@ -24,3 +23,23 @@ repository:
   editable: true
   read_only: false
 members: []
+
+project:
+  package_name: flext_infra
+  class_stem: FlextInfra
+  namespace: Infra
+  constant_name: flext-infra
+  namespace_attribute: infra
+  alias: infra
+  environment_prefix: FLEXT_INFRA_
+  description: FLEXT Infrastructure Tooling - Build automation, code generation, and workspace management
+  license: MIT
+  author_name: FLEXT Team
+  author_email: team@flext.sh
+  upstream: flext_cli
+  homepage: https://github.com/flext-sh/flext-infra
+  documentation: https://github.com/flext-sh/flext-infra/blob/main/README.md
+  repository_root_rel: .
+  year: 2026
+  packaged_data_paths:
+    - config

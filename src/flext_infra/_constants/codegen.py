@@ -106,6 +106,12 @@ class FlextInfraConstantsCodegen(
         r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)"
     )
     "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
+    PROTOCOL_MODEL_LINE_BUDGET: ClassVar[int] = 170
+    "Line budget of one generated structural-protocol module chunk."
+    PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
+    "Header lines of a generated protocol class; at or below it the body is empty."
+    LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"
+    "Module binding the flext-core lazy engine writes and resolves exports from."
     MISE_RELEASE_COMPONENT_COUNT: ClassVar[int] = 3
     "Number of numeric components in a generated Mise release version."
     MISE_RELEASE_PATTERN: ClassVar[str] = (
@@ -125,7 +131,13 @@ class FlextInfraConstantsCodegen(
     "Owner-private mode required for the generation lock."
     MISE_COLD_START_DIRECTORY: ClassVar[str] = "templates/bootstrap"
     "Package-local byte copy of flext-infra's own upg-written triple (cold start)."
-    MISE_RELEASE_SELECTOR: ClassVar[str] = "github:jdx/mise"
+
+    # 2026.9.17 crashes during the launcher generation (unwrap-on-None in its
+    # script builder); the fleet bootstrap stays on the last known good
+    # release until upstream ships a fixed one. Revert to the bare selector
+    # ("github:jdx/mise") when that release lands.
+    MISE_KNOWN_GOOD_RELEASE: ClassVar[str] = "2026.9.16"
+    MISE_RELEASE_SELECTOR: ClassVar[str] = f"github:jdx/mise@{MISE_KNOWN_GOOD_RELEASE}"
     "Tool selector `make upg` resolves through the pinned mise (`mise latest`)."
     MISE_LATEST_RESOLUTION_MARKER: ClassVar[str] = "releases/latest"
     "Live-resolution endpoint a pinned, offline launcher must never contain."
@@ -290,6 +302,11 @@ class FlextInfraConstantsCodegen(
     QG_CHECK_DUPLICATION_REDUCTION: ClassVar[str] = "duplication_reduction"
     QG_CHECK_TYPE_SAFETY: ClassVar[str] = "type_safety"
     QG_CHECK_LINT_CLEAN: ClassVar[str] = "lint_clean"
+
+    # Lazy-init projection manifest (.agents/projections.lock.json, v1): the
+    # projected OUTPUT lock owned by the generator alone.
+    PROJECTIONS_LOCK_API_VERSION: ClassVar[str] = "flext-infra/projections-lock/v1"
+    PROJECTIONS_LOCK_FILENAME: ClassVar[str] = "projections.lock.json"
 
 
 __all__: list[str] = ["FlextInfraConstantsCodegen"]

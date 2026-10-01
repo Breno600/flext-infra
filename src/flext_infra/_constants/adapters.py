@@ -18,7 +18,7 @@ from flext_core import m
 class FlextInfraConstantsAdapters:
     """SSOT TypeAdapter singletons for infrastructure validation."""
 
-    # NOTE (multi-agent): flext-i6nq.10 removes the constants-to-typings cycle.
+    # This alias removes the constants-to-typings cycle.
     INFRA_MAPPING_ADAPTER: ClassVar[m.TypeAdapter[t.JsonMapping]] = (
         t.Cli.JSON_MAPPING_ADAPTER
     )
@@ -30,7 +30,7 @@ class FlextInfraConstantsAdapters:
     "Validates MutableMapping[str, InfraValue] for in-place mutation."
 
     STR_MAPPING_ADAPTER: ClassVar[m.TypeAdapter[t.StrMapping]] = m.TypeAdapter(
-        t.StrMapping
+        t.StrMapping,
     )
     "Validates t.StrMapping."
 
@@ -48,7 +48,7 @@ class FlextInfraConstantsAdapters:
     "Validates t.SequenceOf[ContainerDict]."
 
     STR_SEQ_ADAPTER: ClassVar[m.TypeAdapter[t.StrSequence]] = m.TypeAdapter(
-        t.StrSequence
+        t.StrSequence,
     )
     "Validates t.StrSequence."
 

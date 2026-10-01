@@ -62,12 +62,13 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
                 config.Infra.codegen,
                 profile=c.Infra.MakeProfile.STANDALONE,
                 project_name="probe-project",
-            )
+            ),
         )
 
         tm.that(
             test_u.Tests.is_tracked_under(
-                rendered, "src/probe_project/vendor/docx/document.py"
+                rendered,
+                "src/probe_project/vendor/docx/document.py",
             ),
             eq=True,
         )
@@ -101,7 +102,7 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
                 profile=c.Infra.MakeProfile.WORKSPACE,
                 project_name="probe-root",
                 workspace=workspace,
-            )
+            ),
         )
 
         blocked = tuple(

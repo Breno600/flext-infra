@@ -28,7 +28,8 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
         workspace = root / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            workspace, "workspace"
+            workspace,
+            "workspace",
         )
 
         def _write(path: Path, content: str) -> None:
@@ -49,16 +50,15 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
         _write(workspace / "docs/guides/README.md", "# Guides\n")
         _write(workspace / "docs/projects/README.md", "# Projects\n")
         _write(workspace / "docs/api-reference/README.md", "# API Reference\n")
-        # The audited root is a project like any other: its command contract
-        # is read from its own metadata, so the root always carries one.
-        members = ", ".join(f'"{name}"' for name in project_names)
-        workspace_table = (
-            f"\n[tool.uv.workspace]\nmembers = [{members}]\n" if project_names else ""
-        )
-        _write(
-            workspace / "pyproject.toml",
-            f'[project]\nname = "workspace"\nversion = "0.1.0"\n{workspace_table}',
-        )
+        if project_names:
+            members = ", ".join(f'"{name}"' for name in project_names)
+            _write(
+                workspace / "pyproject.toml",
+                (
+                    '[project]\nname = "workspace"\nversion = "0.1.0"\n\n'
+                    f"[tool.uv.workspace]\nmembers = [{members}]\n"
+                ),
+            )
 
         for name in project_names:
             project = workspace / name
@@ -80,12 +80,14 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
             _write(project / "docs/dev.md", "# Development\n")
             _write(project / "docs/api.md", "# API\n")
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-                project, name
+                project,
+                name,
             )
 
         if project_names:
             TestsFlextInfraUtilitiesProjectFixtureMixin.declare_workspace_projects(
-                workspace, project_names
+                workspace,
+                project_names,
             )
         # Why: the doc generator and audits resolve a Git identity from the
         # workspace; a bare temp directory is not an auditable/generated
@@ -99,13 +101,13 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
             TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(
                 workspace / name,
                 origin_url=TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
-                    name
+                    name,
                 ).url,
             )
         TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(
             workspace,
             origin_url=TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
-                "workspace"
+                "workspace",
             ).url,
         )
 
@@ -122,7 +124,8 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
         workspace = root / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            workspace, "workspace"
+            workspace,
+            "workspace",
         )
         workflow_dir = workspace / ".github/workflows"
         workflow_dir.mkdir(parents=True, exist_ok=True)
@@ -143,11 +146,13 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
             src_dir.mkdir(parents=True, exist_ok=True)
             (src_dir / "__init__.py").write_text("", encoding="utf-8")
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-                project, name
+                project,
+                name,
             )
         if project_names:
             TestsFlextInfraUtilitiesProjectFixtureMixin.declare_workspace_projects(
-                workspace, project_names
+                workspace,
+                project_names,
             )
         return workspace
 
@@ -160,10 +165,12 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
     ) -> t.Pair[Path, FlextInfraDocGenerator]:
         """Create one docs workspace plus the generator scoped to its selection."""
         workspace = TestsFlextInfraUtilitiesDocsFixtureMixin.create_docs_workspace(
-            root, project_names=project_names
+            root,
+            project_names=project_names,
         )
         generator = FlextInfraDocGenerator(
-            repository_root=workspace, selected_projects=selected_projects
+            repository_root=workspace,
+            selected_projects=selected_projects,
         )
         return workspace, generator
 
@@ -197,7 +204,7 @@ class TestsFlextInfraUtilitiesDocsFixtureMixin:
         """Publish one planned docs bundle through the test transaction adapter."""
         plans = TestsFlextInfraUtilitiesDocsFixtureMixin.plan_docs_bundle(generator)
         published = TestsFlextInfraUtilitiesCodegenMixin.materialize_codegen_plans(
-            r[tuple[m.Infra.CodegenFilePlan, ...]].ok(plans)
+            r[tuple[m.Infra.CodegenFilePlan, ...]].ok(plans),
         )
         tm.ok(published)
         return plans

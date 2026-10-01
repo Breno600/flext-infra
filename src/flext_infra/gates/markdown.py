@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m, u
 
-from .markdown_support import FlextInfraMarkdownGateBase, read_ignore_patterns
+from .markdown_support import FlextInfraMarkdownGateBase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -19,11 +19,9 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
 
     gate_id: ClassVar[str] = c.Infra.MARKDOWN
     gate_name: ClassVar[str] = "Markdown"
-    # flext-38p39: the linter flags MD009/MD012 and friends with its own `[*]`
-    # auto-fixable marker, so `make check` blocked on findings that no canonical
-    # verb could repair -- `make fmt` covers Python only and `make fix
-    # ` skipped this gate, both exiting 0. The tool supports `--fix`, so
-    # the gate offers it and the canonical sequence can reach green.
+    # Fixable findings are repaired by the native linter. Its exit status also
+    # reports findings that remain after repair, so the mutating verb cannot
+    # report success while the read-only gate would still fail.
     can_fix: ClassVar[bool] = True
 
     def _resolve_config_args(self, project_dir: Path) -> t.StrSequence:
@@ -42,8 +40,9 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
         once and its patterns are forwarded via ``--exclude`` to replicate
         standard tool behavior.
         """
-        patterns = read_ignore_patterns(
-            project_dir, c.Infra.MARKDOWNLINT_IGNORE_FILENAME
+        patterns = self.read_ignore_patterns(
+            project_dir,
+            c.Infra.MARKDOWNLINT_IGNORE_FILENAME,
         )
         if not patterns:
             return ()
@@ -51,7 +50,10 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build check command."""
         _ = ctx
@@ -71,25 +73,23 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
 
     @override
     def _build_fix_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, targets: t.StrSequence
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        targets: t.StrSequence,
     ) -> t.StrSequence:
-        """Build the fix command from the tool's FORMATTER, not its linter.
-
-        ``rumdl check --fix`` is a linter: it exits non-zero whenever a finding
-        has no autofix, so a run that repaired every fixable file still failed
-        the verb and `make fix` could never reach green. ``rumdl fmt``
-        applies the same fixes with formatter-style exit codes, which is the
-        contract the mutating verb promises. It accepts neither
-        ``--output-format`` nor ``--deny-config-warnings`` (both are check-only
-        reporting flags), so the fix surface carries only what it defines.
-        """
+        """Repair fixable findings and return the linter's residual verdict."""
         _ = ctx
         args: t.SequenceOf[str] = [
             c.Infra.RUMDL,
-            "fmt",
+            "check",
+            "--fix",
             "--no-cache",
             "--color",
             "never",
+            "--output-format",
+            "text",
+            "--deny-config-warnings",
             *self._resolve_config_args(project_dir),
             *self._resolve_exclude_args(project_dir),
             *list(targets),
@@ -98,7 +98,10 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse rumdl output, discarding lines marking already-applied fixes."""
         _ = ctx
@@ -109,15 +112,6 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
                 continue
             if match.group("msg").strip().endswith("[fixed]"):
                 continue
-            if c.Infra.MARKDOWN_NORMALIZATION_HINT_RE.search(match.group("msg")):
-                # rumdl's linter flags a paragraph it "could normalize" with its
-                # own [*] marker, but its formatter (rumdl fmt, the gate's fix
-                # verb) rejoins paragraphs instead of normalizing them -- proven
-                # `Fixed: 0/7` on the root flext#305 headings. A finding no
-                # canonical verb can clear must not block `make check` (the same
-                # class this file already fixed at flext-38p39). The real
-                # violation variant ("Line length N exceeds M") still blocks.
-                continue
             issues.append(
                 m.Infra.Issue(
                     file=match.group("file"),
@@ -125,13 +119,17 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
                     column=int(match.group("col") or 1),
                     code=match.group("code"),
                     message=match.group("msg"),
-                )
+                ),
             )
         if not u.Cli.process_succeeded(result.outcome) and not issues:
             issues.append(
                 self._command_error_issue(
-                    result, tool=c.Infra.RUMDL, file=str(project_dir), line=1, column=1
-                )
+                    result,
+                    tool=c.Infra.RUMDL,
+                    file=str(project_dir),
+                    line=1,
+                    column=1,
+                ),
             )
         return u.Cli.process_succeeded(result.outcome), issues
 

@@ -10,7 +10,6 @@ from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 import pytest
-from flext_cli import u as cli_u
 from flext_tests import tm
 
 from flext_core import r
@@ -73,7 +72,7 @@ class TestsFlextInfraWorkspaceChecker:
         tm.that(exit_code, eq=1)
 
     def test_cli_requires_explicit_member_selection(self, tmp_path: Path) -> None:
-        """A workspace root checks a declared member only when selected."""
+        """An omitted selection checks only the repository root."""
         project_dir = test_u.Tests.mk_project(
             tmp_path,
             "flext-core",
@@ -93,8 +92,8 @@ class TestsFlextInfraWorkspaceChecker:
             '"""Fixture module."""\n\nvalue = 1\n', encoding="utf-8"
         )
         test_u.Tests.declare_workspace_projects(tmp_path, (project_dir.name,))
-        init_result = cli_u.Cli.run_raw(["git", "init"], cwd=tmp_path)
-        add_result = cli_u.Cli.run_raw(["git", "add", "flext-core"], cwd=tmp_path)
+        init_result = test_u.Cli.run_raw(["git", "init"], cwd=tmp_path)
+        add_result = test_u.Cli.run_raw(["git", "add", "flext-core"], cwd=tmp_path)
         tm.ok(init_result)
         tm.ok(add_result)
 
@@ -106,7 +105,6 @@ class TestsFlextInfraWorkspaceChecker:
             "--gates",
             "lint",
         ])
-
         tm.that(implicit_exit_code, eq=1)
         selected_exit_code = main([
             "check",

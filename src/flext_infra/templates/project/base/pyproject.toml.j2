@@ -130,22 +130,47 @@ allow-direct-references = {{ tooling.tools.hatch.allow_direct_references | lower
 {% if make_profile != "workspace" %}
 {% if hatch_build_hook_path %}
 
-{# NOTE (multi-agent, flext-get3j): emit only the project-owned declaration. #}
+{# NOTE: emit only the project-owned declaration. #}
 [tool.hatch.build.hooks.custom]
 path = {{ hatch_build_hook_path | tojson }}
 {% endif %}
 
 [tool.hatch.build.targets.wheel]
-packages = [
-  "src/{{ package_name }}",
-{% for package in root_packages %}
-  {{ ("src/" ~ package) | tojson }},
+{% if packaged_data_excludes %}
+exclude = [
+{% for data_path in packaged_data_excludes %}
+  {{ ("/" ~ data_path) | tojson }},
 {% endfor %}
 ]
-{% if packaged_data_dirs or root_modules %}
+{% endif %}
+include = [
+  "/src/{{ package_name }}/**",
+{% for package in root_packages %}
+  {{ ("/src/" ~ package ~ "/**") | tojson }},
+{% endfor %}
+{% for data_path in packaged_data_paths if data_path not in packaged_data_files %}
+  {{ ("/" ~ data_path ~ "/**") | tojson }},
+{% endfor %}
+{% for namespace in repository_namespace_packages %}
+  {{ ("/" ~ namespace ~ "/**") | tojson }},
+{% endfor %}
+]
+
+[tool.hatch.build.targets.wheel.sources]
+{{ ("src/" ~ package_name) | tojson }} = {{ package_name | tojson }}
+{% for package in root_packages %}
+{{ ("src/" ~ package) | tojson }} = {{ package | tojson }}
+{% endfor %}
+{% for data_path in packaged_data_paths if data_path not in packaged_data_files %}
+{{ data_path | tojson }} = {{ (package_name ~ "/" ~ data_path) | tojson }}
+{% endfor %}
+{% for namespace in repository_namespace_packages %}
+{{ namespace | tojson }} = {{ namespace | tojson }}
+{% endfor %}
+{% if packaged_data_files or root_modules %}
 
 [tool.hatch.build.targets.wheel.force-include]
-{% for data_dir in packaged_data_dirs %}
+{% for data_dir in packaged_data_files %}
 {{ data_dir | tojson }} = {{ (package_name ~ "/" ~ data_dir) | tojson }}
 {% endfor %}
 {% for module in root_modules %}
@@ -154,31 +179,38 @@ packages = [
 {% endif %}
 
 [tool.hatch.build.targets.sdist]
-only-include = [
-  "src/{{ package_name }}",
-{% for package in root_packages %}
-  {{ ("src/" ~ package) | tojson }},
-{% endfor %}
-{% for module in root_modules %}
-  {{ ("src/" ~ module ~ ".py") | tojson }},
-{% endfor %}
-{% for data_dir in packaged_data_dirs %}
-  {{ data_dir | tojson }},
+{% if packaged_data_excludes %}
+exclude = [
+{% for data_path in packaged_data_excludes %}
+  {{ ("/" ~ data_path) | tojson }},
 {% endfor %}
 ]
 {% endif %}
-
-[tool.mypy]
-# FLEXT mypy suppression rationale (validated at the composition boundary):
-{% for code, rationale in tooling.tools.mypy.disabled_error_codes | dictsort %}
-# FLEXT mypy[{{ code }}]: {{ rationale }}
+include = [
+  "/src/{{ package_name }}/**",
+{% for package in root_packages %}
+  {{ ("/src/" ~ package ~ "/**") | tojson }},
 {% endfor %}
-disable_error_code = [
-{% for code, rationale in tooling.tools.mypy.disabled_error_codes | dictsort %}
-  {{ code | tojson }},
+{% for data_dir in packaged_data_paths if data_dir not in packaged_data_files %}
+  {{ ("/" ~ data_dir ~ "/**") | tojson }},
+{% endfor %}
+{% for namespace in repository_namespace_packages %}
+  {{ ("/" ~ namespace ~ "/**") | tojson }},
 {% endfor %}
 ]
-exclude = {{ tooling.tools.mypy.exclude | tojson }}
+{% if packaged_data_files or root_modules %}
+
+[tool.hatch.build.targets.sdist.force-include]
+{% for data_file in packaged_data_files %}
+{{ data_file | tojson }} = {{ data_file | tojson }}
+{% endfor %}
+{% for module in root_modules %}
+{{ ("src/" ~ module ~ ".py") | tojson }} = {{ ("src/" ~ module ~ ".py") | tojson }}
+{% endfor %}
+{% endif %}
+{% endif %}
+
+[tool.mypy]
 mypy_path = [
 {% for item in tooling_runtime.mypy_path %}
   {{ item | tojson }},
@@ -201,11 +233,6 @@ python_version = {{ python_version | tojson }}
 [[tool.mypy.overrides]]
 module = [
 {% for item in override.modules %}
-  {{ item | tojson }},
-{% endfor %}
-]
-disable_error_code = [
-{% for item in override.disable_error_codes %}
   {{ item | tojson }},
 {% endfor %}
 ]
@@ -239,10 +266,6 @@ use-ignore-files = {{ tooling.tools.pyrefly.use_ignore_files | lower }}
 {% endfor %}
 
 [tool.pyright]
-# FLEXT Pyright suppression rationale (validated at the composition boundary):
-{% for code, rationale in tooling.tools.pyright.global_suppression_rationales | dictsort %}
-# FLEXT pyright[{{ code }}]: {{ rationale }}
-{% endfor %}
 exclude = [
 {% for item in tooling_runtime.pyright_exclude %}
   {{ item | tojson }},
@@ -332,8 +355,8 @@ testpaths = [
 ]
 
 [tool.ruff]
-exclude = [
-{% for item in tooling_runtime.ruff_exclude %}
+extend-exclude = [
+{% for item in tooling_runtime.ruff_extend_exclude %}
   {{ item | tojson }},
 {% endfor %}
 ]
@@ -362,17 +385,8 @@ quote-style = {{ tooling.tools.ruff.format.quote_style | tojson }}
 skip-magic-trailing-comma = {{ tooling.tools.ruff.format.skip_magic_trailing_comma | lower }}
 
 [tool.ruff.lint]
-# FLEXT Ruff suppression rationale (validated against semantic facet order):
-{% for code, rationale in tooling.tools.ruff.lint.ignored_rule_rationales | dictsort %}
-# FLEXT ruff[{{ code }}]: {{ rationale }}
-{% endfor %}
 extend-safe-fixes = [
 {% for item in tooling.tools.ruff.lint.extend_safe_fixes | sort %}
-  {{ item | tojson }},
-{% endfor %}
-]
-ignore = [
-{% for item in tooling_runtime.ruff_ignore | sort %}
   {{ item | tojson }},
 {% endfor %}
 ]
@@ -386,6 +400,12 @@ unfixable = [
   {{ item | tojson }},
 {% endfor %}
 ]
+
+[tool.ruff.lint.flake8-copyright]
+notice-rgx = {{ tooling.tools.ruff.lint.copyright_notice_rgx | tojson }}
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = {{ tooling.tools.ruff.lint.ban_relative_imports | tojson }}
 {% for name, message in tooling.tools.ruff.lint.banned_api | dictsort %}
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api.{{ name }}]
@@ -402,9 +422,8 @@ known-first-party = [
 ]
 split-on-trailing-comma = {{ tooling.tools.ruff.lint.isort.split_on_trailing_comma | lower }}
 
-{# ruff_per_file_ignores is the COMPOSED map: fleet policy plus this
-   repository's own ManagedArtifacts overlay. Rendering the fleet map alone
-   dropped operator-authorized local exemptions on every full render. #}
+{# ruff_per_file_ignores is the fleet exemption map declared at the tooling
+   owner, scoped to this project; repositories declare no exemption. #}
 [tool.ruff.lint.per-file-ignores]
 {% for pattern, rules in ruff_per_file_ignores | dictsort %}
 {{ pattern | tojson }} = [
@@ -452,8 +471,8 @@ link-mode = "{{ uv_link_mode }}"
 # [MANAGED] tool.flext.namespace
 {% if namespace_scan_dirs %}
 [tool.flext.namespace]
-# Production source roots the namespace validator enforces (cosmos-3flk9
-# decision A): tests host pytest conventions and scripts are thin command
-# surfaces, so projects declare their production scope here.
+# Production source roots the namespace validator enforces: tests host pytest
+# conventions and scripts are thin command surfaces, so projects declare their
+# production scope here.
 scan_dirs = [{% for item in namespace_scan_dirs %}{{ item | tojson }}{{ ", " if not loop.last }}{% endfor %}]
 {% endif %}

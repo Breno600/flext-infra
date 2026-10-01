@@ -1,0 +1,28 @@
+id: ban-frozen-dataclass-contract
+valid:
+  - |
+    from flext_core import m
+
+    @dataclass(frozen=True)
+    class Point:
+        x: int
+  - |
+    @dataclass
+    class Point:
+        x: int
+  - |
+    @dataclass(frozen=True)
+    class Handle:
+        fd: os.stat_result
+invalid:
+  - |
+    @dataclass(frozen=True)
+    class Point:
+        x: int
+  - |
+    from flext_core import m
+
+    @final
+    @dataclass(frozen=True)
+    class Point:
+        x: int

@@ -6,6 +6,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import MutableMapping
 from pathlib import Path
@@ -15,6 +16,9 @@ from flext_cli import u as cli_u
 from flext_infra import c, t
 
 from .._settings import FlextInfraSettings
+
+if os.name != "nt":
+    import pwd
 
 
 class FlextInfraUtilitiesBase:
@@ -66,6 +70,19 @@ class FlextInfraUtilitiesBase:
         if target.is_file():
             target = target.parent
         return target.resolve()
+
+    @staticmethod
+    def real_account_home() -> Path:
+        """Return the real account home directory, never the ambient ``HOME``.
+
+        A workspace contract target written as ``${HOME}/...`` describes machine
+        state, so it probes the account's own home directory: check pipelines run
+        under redirected homes where the referenced files legitimately live only
+        in the real account. On Windows the process home is authoritative.
+        """
+        return (
+            Path.home() if os.name == "nt" else Path(pwd.getpwuid(os.getuid()).pw_dir)
+        )
 
     @staticmethod
     def normalize_optional_path(value: str | Path | None) -> Path | None:
@@ -154,7 +171,7 @@ class FlextInfraUtilitiesBase:
             tuple(rule_ids)
             if rule_ids
             else tuple(
-                sorted(FlextInfraUtilitiesBase.ast_grep_rule_contract(rule_path)[0])
+                sorted(FlextInfraUtilitiesBase.ast_grep_rule_contract(rule_path)[0]),
             )
         )
         if any(not rule_id or "|" in rule_id for rule_id in selected_rule_ids):
@@ -183,7 +200,7 @@ class FlextInfraUtilitiesBase:
         rule_ids: set[str] = set()
         fixable_ids: set[str] = set()
         for raw_document in rule_path.read_text(encoding=c.Cli.ENCODING_DEFAULT).split(
-            "\n---"
+            "\n---",
         ):
             if not any(
                 line.strip() and not line.lstrip().startswith("#")

@@ -32,7 +32,9 @@ class TestsFlextInfraLazyMapFreshness:
         return FlextInfraValidateLazyMapFreshness()
 
     def test_empty_workspace_yields_passing_report(
-        self, tmp_path: Path, v: FlextInfraValidateLazyMapFreshness
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report, is_=m.Infra.ValidationReport)
@@ -40,13 +42,17 @@ class TestsFlextInfraLazyMapFreshness:
         tm.that(report.violations, length=0)
 
     def test_passing_summary_mentions_lazy_maps(
-        self, tmp_path: Path, v: FlextInfraValidateLazyMapFreshness
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.summary, has="lazy")
 
     def test_report_is_validation_report(
-        self, tmp_path: Path, v: FlextInfraValidateLazyMapFreshness
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report, is_=m.Infra.ValidationReport)
@@ -55,12 +61,16 @@ class TestsFlextInfraLazyMapFreshness:
     # beyond the default case timeout while the lazy-init harness publishes files.
     @pytest.mark.slow
     def test_stale_generated_lazy_map_fails_report(
-        self, tmp_path: Path, v: FlextInfraValidateLazyMapFreshness
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateLazyMapFreshness,
     ) -> None:
         """Freshness validation fails when generated lazy maps drift."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m"
+            package_root / "models.py",
+            class_name="FlextTestsModels",
+            alias="m",
         )
         tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
         init_path = package_root / "__init__.py"

@@ -16,6 +16,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraCliRouteService, c, config, main as infra_main
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import m, t, u
 
 
@@ -54,32 +55,59 @@ class TestsFlextInfraCodegenMain:
         The public CLI conform pipeline needs an importable ``src/flext_infra``
         package (for namespace/ruff discovery) and the real ``config/`` +
         tracked Mise seeds (``codegen conform`` validates the tracked,
-        checksum-verified launchers rather than minting them). It does not need
-        the full real package tree copied byte-for-byte: the minimal seed used by
+        checksum-verified launchers rather than minting them). The copied
+        config declares the governed project, whose ``cli_module`` fact renders
+        the default console script, and conform loads every declared entry
+        point in its fresh-import stage, so the seed also carries the minimal
+        ``cli`` module that declaration names. It does not need the full real
+        package tree copied byte-for-byte: the minimal seed used by
         ``tests/unit/codegen/test_codegen_conform.py::_seed_infra_package_tree``
         already satisfies the same public conform contract at a fraction of the
         scan cost, so this fixture reuses that pattern instead of copying
         hundreds of real modules per test run.
         """
         project_root = Path(__file__).resolve().parents[3]
-        package_init = root / "src" / "flext_infra" / "__init__.py"
+        package_dir = root / "src" / "flext_infra"
+        package_init = package_dir / "__init__.py"
         package_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(package_init, ""))
+        cli_module = package_dir / "cli.py"
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                cli_module,
+                "def main(args: list[str] | None = None) -> int:\n"
+                '    """Resolve the declared console script entry point."""\n'
+                "    return 0\n",
+            )
+        )
         tests_init = root / "tests" / "__init__.py"
         tests_init.parent.mkdir(parents=True, exist_ok=True)
         tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
         tm.ok(
             u.Cli.files_copy_directory(
-                project_root / "config", root / "config", dirs_exist_ok=True
-            )
+                project_root / "config",
+                root / "config",
+                dirs_exist_ok=True,
+            ),
         )
         u.Tests.copy_tracked_mise_seeds(root)
         tm.ok(
             u.Cli.files_copy(
                 project_root / c.Infra.MISE_TOML_FILENAME,
                 root / c.Infra.MISE_TOML_FILENAME,
-            )
+            ),
         )
+        # The copied manifest declares the project; conform loads every entry
+        # point it declares, so the seed ships the cli module it declares.
+        (manifest,) = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(root))
+        project = tm.not_none(manifest.project)
+        if project.cli_module:
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    package_init.parent / c.Infra.CODEGEN_CLI_MODULE_FILENAME,
+                    "def main() -> int:\n    return 0\n",
+                )
+            )
 
     @staticmethod
     def _mise_transaction_state(root: Path) -> t.Pair[Path, Path]:
@@ -170,7 +198,8 @@ class TestsFlextInfraCodegenMain:
             tm.that(result, ne=0)
 
         def test_init_rejects_nested_non_worktree_root(
-            self, real_git_repo: Path
+            self,
+            real_git_repo: Path,
         ) -> None:
             """Initialization accepts only the exact Git worktree root."""
             custom_root = real_git_repo / "custom"
@@ -205,7 +234,7 @@ class TestsFlextInfraCodegenMain:
             route = next(
                 item
                 for item in FlextInfraCliRouteService.route_table_for(
-                    c.Infra.CLI_GROUP_CODEGEN
+                    c.Infra.CLI_GROUP_CODEGEN,
                 )
                 if item.name == "init"
             )
@@ -225,8 +254,10 @@ class TestsFlextInfraCodegenMain:
             )
             tm.that(" ".join(result.value.stdout.split()), contains=route.help_text)
 
+        @pytest.mark.slow
         def test_managed_conflict_is_planned_and_published_atomically(
-            self, infra_git_repo: Path
+            self,
+            infra_git_repo: Path,
         ) -> None:
             """Keep live bytes unchanged until the public transaction commits."""
             root = infra_git_repo
@@ -248,7 +279,7 @@ class TestsFlextInfraCodegenMain:
             pyproject = root / "pyproject.toml"
             before = pyproject.read_bytes()
             journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
-                root
+                root,
             )
             command = TestsFlextInfraCodegenMain._public_conform_command(root)
             checked = u.Cli.run_raw([*command, "check"], cwd=root)
@@ -268,7 +299,10 @@ class TestsFlextInfraCodegenMain:
             rendered = pyproject.read_text(encoding="utf-8")
             tm.that(rendered, lacks="<<<<<<<")
             ini_options = u.Tests.toml_table_at(
-                rendered, "tool", "pytest", "ini_options"
+                rendered,
+                "tool",
+                "pytest",
+                "ini_options",
             )
             tm.that(
                 ini_options["addopts"],
@@ -292,14 +326,15 @@ class TestsFlextInfraCodegenMain:
             tm.that(transaction.exists(), eq=False)
 
         def test_present_invalid_mise_artifact_never_enters_external_resolution(
-            self, infra_git_repo: Path
+            self,
+            infra_git_repo: Path,
         ) -> None:
             """Reject a present invalid artifact before credential/network work."""
             root = infra_git_repo
             TestsFlextInfraCodegenMain._seed_public_conform_checkout(root)
             launcher = root / "bin" / "mise"
             launcher_state = tm.ok(
-                u.Cli.atomic_read_binary_file_state(launcher, required=True)
+                u.Cli.atomic_read_binary_file_state(launcher, required=True),
             )
             launcher_mode = launcher_state.mode
             tm.that(launcher_mode is None, eq=False)
@@ -312,11 +347,13 @@ class TestsFlextInfraCodegenMain:
             corrupted = launcher_state.content + b"\nchecksum_linux_x86_64=invalid\n"
             tm.ok(
                 u.Cli.atomic_write_binary_file_guarded(
-                    launcher_state, corrupted, permission_mode=launcher_mode
-                )
+                    launcher_state,
+                    corrupted,
+                    permission_mode=launcher_mode,
+                ),
             )
             journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
-                root
+                root,
             )
 
             applied = u.Cli.run_raw(

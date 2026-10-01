@@ -36,31 +36,32 @@ class FlextInfraCodegenLazyInitPlanner(
         m.Field(description="Shared Rope workspace DSL reused by the planner"),
     ]
     lazy_init: m.Infra.LazyInitConfig = m.Field(
-        description="Validated lazy-init policy document"
+        description="Validated lazy-init policy document",
     )
     _module_exports_cache: MutableMapping[
-        tuple[str, bool, bool, bool, bool, bool], t.LazyAliasMap
+        tuple[str, bool, bool, bool, bool, bool],
+        t.LazyAliasMap,
     ] = u.PrivateAttr(default_factory=dict)
     _package_exports_cache: MutableMapping[str, frozenset[str]] = u.PrivateAttr(
-        default_factory=dict
+        default_factory=dict,
     )
     _source_exports_cache: MutableMapping[str, frozenset[str]] = u.PrivateAttr(
-        default_factory=dict
+        default_factory=dict,
     )
     _source_plan_cache: MutableMapping[str, m.Infra.LazyInitPlan] = u.PrivateAttr(
-        default_factory=dict
+        default_factory=dict,
     )
     _parent_package_cache: MutableMapping[str, t.StrSequence] = u.PrivateAttr(
-        default_factory=dict
+        default_factory=dict,
     )
     _module_file_by_name: MutableMapping[str, Path] = u.PrivateAttr(
-        default_factory=dict
+        default_factory=dict,
     )
     _project_layout_cache: MutableMapping[Path, m.Infra.RopeProjectLayout] = (
         u.PrivateAttr(default_factory=dict)
     )
     _version_module_name: str = u.PrivateAttr(
-        default_factory=lambda: f"{c.Infra.DUNDER_VERSION}.py"
+        default_factory=lambda: f"{c.Infra.DUNDER_VERSION}.py",
     )
     _collision_count: int = u.PrivateAttr(default_factory=int)
 
@@ -71,12 +72,15 @@ class FlextInfraCodegenLazyInitPlanner(
 
     @override
     def build_plan(
-        self, pkg_dir: Path, *, dir_exports: t.MappingKV[str, t.LazyAliasMap]
+        self,
+        pkg_dir: Path,
+        *,
+        dir_exports: t.MappingKV[str, t.LazyAliasMap],
     ) -> m.Infra.LazyInitPlan:
         """Build the lazy-init render plan for one package directory."""
         context = self.context(pkg_dir)
         if not context.importable or self._shadows_stdlib_module(pkg_dir):
-            # flext-mh7g4: no generated content can repair a package name that
+            # No generated content can repair a package name that
             # shadows a stdlib module, so the plan removes generator-owned
             # residue and otherwise skips the directory. The ALL_SCAN_PATTERNS
             # contract is unchanged: every surface is still scanned; only
@@ -95,7 +99,7 @@ class FlextInfraCodegenLazyInitPlanner(
                     type_checking_map={},
                     eager_dunders={},
                     inline_constants={},
-                )
+                ),
             )
         is_test_child_package = (
             context.surface == c.Infra.DIR_TESTS
@@ -144,13 +148,13 @@ class FlextInfraCodegenLazyInitPlanner(
                     type_checking_map={},
                     eager_dunders={},
                     inline_constants={},
-                )
+                ),
             )
         excluded_lazy_names: t.StrSequence = ()
         is_facade_root = self._is_facade_root(context)
         export_names = {*lazy_map, *eager_dunders}
         if not is_facade_root:
-            # flext-udpm5: a nested package's own modules commonly consume
+            # A nested package's own modules commonly consume
             # the project root's already-published facade aliases directly
             # (``from <root> import c, m, p, ...``) without defining any
             # local class of their own under that alias. _resolve_aliases
@@ -176,7 +180,7 @@ class FlextInfraCodegenLazyInitPlanner(
                     or lazy_map.get(name) != (root_pkg_name, name)
                 }
         if is_facade_root:
-            # flext-pulj (codex) + ulw follow-up: __all__ is the one public
+            # __all__ is the one public
             # contract (dir()/star-import/docs already respect it). Do NOT
             # narrow lazy_map/_LAZY_MODULES to match -- internal fragments across
             # the package rely on lazy __getattr__ resolving the root facade
@@ -223,7 +227,8 @@ class FlextInfraCodegenLazyInitPlanner(
                 in self.rope_workspace.exports(
                     module_path,
                     export_options=m.Infra.ExportOptions(
-                        allow_assignments=True, require_explicit_all=True
+                        allow_assignments=True,
+                        require_explicit_all=True,
                     ),
                 )
             ):
@@ -263,8 +268,8 @@ class FlextInfraCodegenLazyInitPlanner(
     def _publish_plan(self, plan: m.Infra.LazyInitPlan) -> m.Infra.LazyInitPlan:
         """Publish one bottom-up plan so parents follow it in the same pass.
 
-        flext-pulj (codex): later alias resolution never rebuilds a package
-        without its children. flext-mh7g4: every plan, including REMOVE and
+        Later alias resolution never rebuilds a package
+        without its children. Every plan, including REMOVE and
         SKIP decided before rendering, is published so the parent inventory in
         ``_merge_children`` sees the child's action instead of the on-disk
         initializer.

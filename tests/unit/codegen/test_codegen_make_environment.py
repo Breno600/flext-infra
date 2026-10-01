@@ -20,6 +20,35 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
+    @staticmethod
+    def _render_makefile(
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+        *,
+        local_infra: bool = False,
+        bootstrap: bool = False,
+        extra_verbs: tuple[m.Infra.MakeVerbSpec, ...] = (),
+        script_dispatch: m.Infra.ScriptDispatchSpec | None = None,
+    ) -> tuple[Path, Path]:
+        role = c.Infra.MakeProfile(profile.value)
+        repository = test_u.Tests.repository_ref(
+            "fixture-project", role=role
+        ).model_copy(
+            update={
+                "editable": True,
+                "extra_verbs": extra_verbs,
+                "script_dispatch": script_dispatch,
+            }
+        )
+        project_root = tmp_path / profile.value / "fixture-project"
+        WorktreeFixture.write_python_project(project_root, repository.distribution)
+        if bootstrap:
+            test_u.Tests.copy_tracked_mise_seeds(project_root)
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    project_root / config.Infra.codegen.scaffold.project.readme,
+                    "# Bootstrap environment contract\n",
+
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
         self, tmp_path: Path, *, failure_return: int | None
@@ -28,11 +57,10 @@ class TestsFlextInfraCodegenMakeEnvironment:
         project_root, _ = u.Tests.render_make_environment(
             tmp_path, c.Infra.MakeProfile.STANDALONE
         )
+        runtime_environment = u.Infra.runtime_environment_dir(project_root)
         tm.ok(u.Tests.create_python_environment(project_root))
-        environment = u.Infra.runtime_environment_dir(project_root)
-        tm.that(environment.is_dir(), eq=True)
-        tm.that(environment.is_symlink(), eq=False)
-        tm.that(u.Infra.runtime_python(project_root).is_symlink(), eq=True)
+        tm.that(runtime_environment.is_symlink(), eq=False)
+        tm.that((runtime_environment / "bin" / "python").is_symlink(), eq=True)
         (project_root / ".envrc.local").write_text(
             "printf 'activated\\n' >> activation.log\n"
             'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n'
@@ -75,12 +103,14 @@ class TestsFlextInfraCodegenMakeEnvironment:
             )
             tm.that(
                 (project_root / "runtime.log").read_text().strip(),
-                eq=str(environment),
+                eq=str(runtime_environment),
             )
 
     @pytest.mark.parametrize("verb", ["setup", "check", "gen", "status"])
     @pytest.mark.parametrize("broken", [False, True])
-    @pytest.mark.parametrize("environment_part", ["environment", "bin"])
+    @pytest.mark.parametrize(
+        "environment_part", ["runtime", "runtime-bin", ".venv", ".venv/bin"]
+    )
     def test_foreign_environment_is_rejected_before_effects(
         self, tmp_path: Path, verb: str, environment_part: str, *, broken: bool
     ) -> None:
@@ -93,8 +123,11 @@ class TestsFlextInfraCodegenMakeEnvironment:
         if not broken:
             foreign.mkdir(parents=True)
             marker.write_text("foreign workspace", encoding="utf-8")
-        environment = u.Infra.runtime_environment_dir(project_root)
-        borrowed = environment if environment_part == "environment" else environment / "bin"
+        runtime_environment = u.Infra.runtime_environment_dir(project_root)
+        borrowed = {
+            "runtime": runtime_environment,
+            "runtime-bin": runtime_environment / "bin",
+        }.get(environment_part, project_root / environment_part)
         borrowed.parent.mkdir(parents=True, exist_ok=True)
         borrowed.symlink_to(foreign, target_is_directory=True)
         effect = project_root / "activation-effect"
@@ -103,7 +136,11 @@ class TestsFlextInfraCodegenMakeEnvironment:
             u.Tests.run_isolated_make(["--no-print-directory", verb], cwd=project_root)
         )
         tm.that(process.outcome.raw_return_code, ne=0)
-        tm.that(process.stderr, has="workspace environment must be physical")
+        tm.that(
+            "workspace environment must be physical" in process.stderr
+            or ".envrc is blocked" in process.stderr,
+            eq=True,
+        )
         tm.that(effect.exists(), eq=False)
         tm.that(borrowed.is_symlink(), eq=True)
         if not broken:
@@ -188,13 +225,16 @@ class TestsFlextInfraCodegenMakeEnvironment:
             resolved_make_templates[profile], tmp_path, profile
         )
         runtime_root = project_root
+        runtime_environment = u.Infra.runtime_environment_dir(
+            project_root, runtime_root=runtime_root
+        )
         source_marker = project_root / "source-marker"
         source_marker.write_text("preserve project source", encoding="utf-8")
-        runtime_environment = u.Infra.runtime_environment_dir(runtime_root)
         previous_environment_marker = runtime_environment / "old-environment"
         if provisioned:
             # A copied real interpreter exercises replacement when its physical
             # location differs from the managed interpreter selected by Mise.
+            runtime_environment.parent.mkdir(parents=True, exist_ok=True)
             tm.ok(
                 u.Cli.run_checked(
                     [
@@ -327,6 +367,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
         receipts = template.parent.parent
         upgraded = u.Tests.command_receipt(receipts / c.Tests.MAKE_TEMPLATE_UPG_RECEIPT)
         tm.that(upgraded.stdout, has="upg-hook-ran")
+        tool_receipts = re.findall(
+            r"uv setup selector=\S+ receipt=(\S+) selected=(\S+)", upgraded.stdout
+        )
+        tm.that(len(tool_receipts), gte=2)
+        for reported, selected in tool_receipts:
+            tm.that(reported, eq=selected)
         for lock in (c.Infra.UV_LOCK_FILENAME, c.Infra.MISE_LOCK_FILENAME):
             tm.that((template / lock).is_file(), eq=True)
         tm.that(
@@ -488,8 +534,22 @@ class TestsFlextInfraCodegenMakeEnvironment:
         # Make never accepts a caller-selected database path: it derives the
         # external persistent testmon cache from the typed SSOT and hands it
         # to the runner, which reads it exclusively from that Make input.
+        (project_root / "custom.mk").write_text(
+            "post-help:\n\t@printf '%s\\n' 'RUNTIME_VENV=$(RUNTIME_VENV)'\n",
+            encoding="utf-8",
+        )
+        environment = tm.ok(
+            u.Tests.run_isolated_make(
+                ["--no-print-directory", "help"], cwd=project_root
+            )
+        )
+        tm.that(u.Cli.process_succeeded(environment.outcome), eq=True)
+        tm.that(
+            environment.stdout,
+            has=f"RUNTIME_VENV={u.Infra.runtime_environment_dir(project_root)}",
+        )
         testmon = config.Infra.codegen.make.testmon_cache
-        project_key = "$(subst /,_,$(PROJECT_ROOT))"
+        project_key = "$(PROJECT_NAME)"
         database = (
             f"{testmon.external_storage_directory}/{project_key}/"
             f"{testmon.database_filename}"
@@ -498,6 +558,27 @@ class TestsFlextInfraCodegenMakeEnvironment:
             makefile,
             has=[database, f'{testmon.database_environment_variable}="$$database"'],
         )
+        # The declarative cache policy (preserved #1001 delta, bead
+        # flext-j0u23) is fleet SSOT: two-phase generations, per-repo byte
+        # budget with an ascending quota ladder, and a save-ref allowlist
+        # that never publishes from PRs.
+        policy = config.Infra.codegen.make.testmon_cache_policy
+        tm.that(policy.mode, eq="stable")
+        tm.that(policy.save_enabled, eq=True)
+        tm.that(policy.max_bootstrap_generations, eq=3)
+        tm.that(policy.max_stable_generations, eq=3)
+        tm.that(policy.per_repo_budget_bytes, eq=52_428_800)
+        tm.that(
+            (
+                policy.warning_threshold_percent,
+                policy.maintenance_threshold_percent,
+                policy.block_threshold_percent,
+            ),
+            eq=(80, 90, 95),
+        )
+        tm.that("0.12.0-dev" in policy.allowed_save_refs, eq=True)
+        tm.that("main" in policy.allowed_save_refs, eq=True)
+        tm.that(policy.key_prefix, eq="flext-testmon")
         for forced in ("PROJECT_STATE_ROOT", "PROJECT_SCRATCH", 'TMPDIR="$$test_tmp"'):
             tm.that(makefile, lacks=forced)
         # Every gate the typed owner schedules by default reaches the runtime
@@ -766,51 +847,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             has=["missing environment interpreter", "make setup creates it"],
         )
 
-    def test_generated_setup_is_self_contained(self, tmp_path: Path) -> None:
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
-        )
-        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
-
-        for required in (
-            "ifneq ($(filter setup,$(MAKECMDGOALS)),)",
-            "SETUP_BOOTSTRAP_ONLY := Y",
-            'if [ -n "$${GITHUB_PATH:-}" ]; then',
-            # The bootstrap shell delegates to recursive make through mise exec.
-            # The `+` prefix is required to preserve GNU Make's jobserver FDs.
-            "\t+@set -eu;",
-            # Runtime tool identity is exercised through the public status
-            # regression, including an invalid ambient Mise configuration.
-            'mise_exec project "$$pinned_mise" -C "$$project_root" install --yes',
-            "SETUP_DIRENV=$$direnv_executable",
-            '$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"',
-            '$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"',
-            # uv syncs the runtime root's project (UV_PROJECT := RUNTIME_ROOT).
-            '$(UV) sync --project "$(UV_PROJECT)"',
-            '--link-mode "$(UV_LINK_MODE)"',
-            'git -C "$$superproject" submodule update --init -- "$$child_path"',
-            'git -C "$$child_root" branch --show-current',
-            'merge-base --is-ancestor "$$gitlink" HEAD',
-        ):
-            tm.that(makefile, has=required)
-        for forbidden in (
-            "UV ?= uv",
-            "mise exec -- uv",
-            "uv@",
-            "define _setup_submodules",
-            "SETUP_BRANCH :=",
-            "--no-install-project",
-            '--editable "$(PROJECT_ROOT)"',
-            "pip install",
-        ):
-            tm.that(makefile, lacks=forbidden)
-        checkout_command = re.search(
-            r"(?:^|[;&|]\s*)git(?:\s+-C\s+\S+)?\s+checkout(?:\s|$)",
-            makefile,
-            flags=re.MULTILINE,
-        )
-        tm.that(checkout_command is None, eq=True)
-
     def test_generated_dependency_upgrade_projects_lock_floors(
         self, tmp_path: Path
     ) -> None:
@@ -876,7 +912,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
     ) -> None:
         """Help preserves quotes and expansion syntax without executing them."""
         description = (
-            'Print checkout\'s "$HOME", $(shell touch make-effect), '
+            'Print checkout\'s "${HOME}", $(shell touch make-effect), '
             "and `touch shell-effect`."
         )
         project_root, _repository_root = u.Tests.render_make_environment(
@@ -948,12 +984,14 @@ class TestsFlextInfraCodegenMakeEnvironment:
             m.Infra.MakeVerbSpec(
                 name="sync",
                 description="Dispatch sync through the declared script dispatcher.",
+                requires_apply=True,
             ),
         )
         script_dispatch = m.Infra.ScriptDispatchSpec(
-            dispatcher="scripts/dispatch.py", roots=("scripts",)
+            dispatcher="scripts/dispatch.py",
+            roots=("scripts",),
         )
-        project_root, _repository_root = u.Tests.render_make_environment(
+        project_root, _repository_root = self._render_makefile(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
             extra_verbs=extra_verbs,

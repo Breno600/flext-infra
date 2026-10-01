@@ -1,5 +1,9 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra. Promoted package."""
+"""Flext Infra. Promoted package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,10 +13,10 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from .base import FlextInfraPromotedBase
-    from .discovery import FlextInfraPromotedDiscovery
-    from .dispatch import FlextInfraPromotedDispatch
-    from .registry import FlextInfraPromotedRegistry
+    from flext_infra._promoted.base import FlextInfraPromotedBase
+    from flext_infra._promoted.discovery import FlextInfraPromotedDiscovery
+    from flext_infra._promoted.dispatch import FlextInfraPromotedDispatch
+    from flext_infra._promoted.registry import FlextInfraPromotedRegistry
 
 
 __all__: tuple[str, ...] = (
@@ -32,7 +36,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

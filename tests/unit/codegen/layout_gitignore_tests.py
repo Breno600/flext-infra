@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config
+from flext_infra import c, config, infra
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.layout import FlextInfraCodegenLayout
 from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
@@ -59,7 +59,8 @@ class TestsFlextInfraCodegenLayoutGitignore:
         tm.that("docs/guides/intro.md" in tracked_names, eq=True)
         tm.that("guides/intro.md" in tracked_names, eq=False)
         tm.that(
-            f"{archive_root()}/{project.name}/output.log" in tracked_names, eq=False
+            f"{archive_root()}/{project.name}/output.log" in tracked_names,
+            eq=False,
         )
 
     def test_managed_gitignore_render_includes_layout_additions(self) -> None:
@@ -74,10 +75,34 @@ class TestsFlextInfraCodegenLayoutGitignore:
         tm.that(rendered.value, has="settings.json")
         tm.that(rendered.value, has=f"{archive_root()}/")
 
+    def test_rendered_gitignore_keeps_backup_named_python_sources(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A backup module is source code even when its name contains backup."""
+        rendered = FlextInfraCodegenConform.render_project_gitignore(
+            config.Infra.codegen,
+            profile=c.Infra.MakeProfile.STANDALONE,
+            project_name="flext-cli",
+        )
+        tm.ok(rendered)
+        (tmp_path / ".gitignore").write_text(rendered.value, encoding="utf-8")
+        tm.ok(u.Cli.capture([c.Infra.GIT, "init"], cwd=tmp_path))
+        source = tmp_path / "src" / "dc_backup" / "workspace_backup_request.py"
+        source.parent.mkdir(parents=True)
+        source.write_text("pass\n", encoding="utf-8")
+        tracked = u.Cli.capture(
+            [c.Infra.GIT, "check-ignore", str(source.relative_to(tmp_path))],
+            cwd=tmp_path,
+        )
+        tm.that(tracked.failure, eq=True)
+
     @pytest.mark.slow
     @pytest.mark.parametrize("directory_suffix", ["", "-lane"])
     def test_rendered_gitignore_satisfies_layout_additions(
-        self, tmp_path: Path, directory_suffix: str
+        self,
+        tmp_path: Path,
+        directory_suffix: str,
     ) -> None:
         """The public gitignore renderer satisfies the layout consumer.
 
@@ -94,7 +119,7 @@ class TestsFlextInfraCodegenLayoutGitignore:
         owner, override = next(
             (name, item)
             for name, item in sorted(
-                config.Infra.codegen.layout.project_overrides.items()
+                config.Infra.codegen.layout.project_overrides.items(),
             )
             if item.gitignore_additions
         )
@@ -105,23 +130,21 @@ class TestsFlextInfraCodegenLayoutGitignore:
         repository = u.Tests.repository_ref(owner)
         project = u.Tests.project_spec(owner)
         tm.ok(
-            FlextInfraCodegenProjectNew(
-                flext_source=u.Tests.flext_source(),
-                name=owner,
-                kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
-                output_root=root,
-                provider=repository.provider,
-                repository_url=repository.url,
-                repository_branch=u.Tests.provider_branch(),
-                flext_repository_url=u.Tests.repository_ref(config.Infra.name).url,
-                flext_repository_ref=u.Tests.provider_branch(),
-                license=project.license,
-                author_name=project.author_name,
-                author_email=project.author_email,
-                upstream=project.upstream,
-                year=project.year,
-                apply_changes=True,
-            ).execute()
+            infra.codegen_new(FlextInfraCodegenProjectNew(flext_source=u.Tests.flext_source(),
+            name=owner,
+            kind=c.Infra.ProjectKind.INTERNAL_FLEXT,
+            output_root=root,
+            provider=repository.provider,
+            repository_url=repository.url,
+            repository_branch=u.Tests.provider_branch(),
+            flext_repository_url=u.Tests.repository_ref(config.Infra.name).url,
+            flext_repository_ref=u.Tests.provider_branch(),
+            license=project.license,
+            author_name=project.author_name,
+            author_email=project.author_email,
+            upstream=project.upstream,
+            year=project.year,
+            apply_changes=True,)),
         )
         tm.that(
             (root / c.CONFIG_DIR_NAME / c.Infra.WORKSPACE_MANIFEST_FILENAME).is_file(),
@@ -143,7 +166,8 @@ class TestsFlextInfraCodegenLayoutGitignore:
         )
 
     def test_layout_preserves_tracked_ignored_files_and_ignores_local_artifacts(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Local ignored files are not layout inputs; tracked files remain reviewable."""
         project = build_loose_project(tmp_path)
@@ -154,12 +178,14 @@ class TestsFlextInfraCodegenLayoutGitignore:
         ignore = project / c.Infra.GITIGNORE
         content = ignore.read_text(encoding="utf-8") if ignore.exists() else ""
         ignore.write_text(
-            f"{content}\n{local.name}\n{tracked.name}\n", encoding="utf-8"
+            f"{content}\n{local.name}\n{tracked.name}\n",
+            encoding="utf-8",
         )
         tm.ok(
             u.Cli.capture(
-                [c.Infra.GIT, "add", "--force", "--", tracked.name], cwd=project
-            )
+                [c.Infra.GIT, "add", "--force", "--", tracked.name],
+                cwd=project,
+            ),
         )
 
         report = layout_engine(tmp_path, apply_changes=False).plan_project(project)

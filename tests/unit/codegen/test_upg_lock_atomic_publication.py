@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import errno
 import os
-import threading
+import sys
 import time
 import zipfile
 from pathlib import Path
@@ -42,7 +42,8 @@ class TestsFlextInfraUpgLockAtomicPublication:
     )
 
     def test_interrupted_upg_leaves_committed_lock_untouched(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A run killed while uv resolves leaves the lock and checkout intact."""
         root, lock, committed = self._committed_project(tmp_path, python=">=3.13")
@@ -52,32 +53,82 @@ class TestsFlextInfraUpgLockAtomicPublication:
         # would release it: uv seeks the zip, which a FIFO cannot serve.
         wheel = self._wheel_path(tmp_path)
         os.mkfifo(wheel)
-        blocked: list[int] = []
-        stop = threading.Event()
-        watcher = threading.Thread(
-            target=self._await_blocked_reader, args=(blocked, stop)
+        child = tm.ok(
+            u.Cli.process_start(
+                [c.Infra.MAKE, "_upg_lifecycle"],
+                cwd=root,
+                remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                start_new_session=True,
+            ),
         )
-        watcher.start()
         try:
-            execution = tm.ok(
-                u.Cli.run_raw(
-                    [c.Infra.MAKE, "_upg_lifecycle"],
-                    cwd=root,
-                    timeout=self.INTERRUPT_AFTER_SECONDS,
-                    remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+            deadline = time.monotonic() + self.INTERRUPT_AFTER_SECONDS
+            last_observed = ""
+            while time.monotonic() < deadline:
+                tm.that(
+                    child.poll(),
+                    eq=None,
+                    msg="upgrade exited before FIFO observation",
                 )
-            )
+                # uv opens the wheel on a tokio worker thread, whose thread
+                # name is not "uv": identify the owned uv by its command line
+                # and require that one of its threads waits on the FIFO.
+                observed = tm.ok(
+                    u.Cli.run(
+                        ["ps", "--sid", str(child.pid), "-L", "-o", "comm=,wchan:64="],
+                        timeout=self.INTERRUPT_AFTER_SECONDS,
+                    ),
+                )
+                # uv resolves on a tokio worker pool: the blocking wheel open
+                # parks a thread whose comm is a runtime-internal name, never
+                # the main ``uv`` thread. The owned uv process is identified by
+                # its main-thread comm (execve names it), and the dependency
+                # observation is any of its threads in wait_for_partner.
+                rows = tuple(
+                    row.split(maxsplit=2) for row in observed.stdout.splitlines()
+                )
+                # uv resolves on a tokio worker pool: the blocking wheel open
+                # parks a thread whose comm is a runtime-internal name, never
+                # the main ``uv`` thread. The owned uv process is identified by
+                # its main-thread comm (execve names it), and the dependency
+                # observation is any of its threads in wait_for_partner.
+                if any(
+                    len(row) > 2
+                    and row[0] in owned
+                    and row[2].split() == ["wait_for_partner"]
+                    for row in rows
+                ):
+                    break
+                time.sleep(0.02)
+            else:
+                pytest.fail(
+                    "owned uv never opened the dependency for resolution; "
+                    f"last session processes: {last_observed!r}"
+                )
         finally:
-            stop.set()
-            watcher.join()
-            self._release_fifo(wheel)
-        tm.that(blocked, len=1, msg="uv never opened the dependency for resolution")
-        tm.that(execution.outcome.timed_out, eq=True, msg=execution.stderr)
+            primary = sys.exception()
+            try:
+                tm.ok(child.terminate())
+                status = tm.ok(child.wait(timeout=self.INTERRUPT_AFTER_SECONDS))
+                self._release_fifo(wheel)
+            except BaseException as cleanup_error:
+                if primary is not None:
+                    message = "upgrade observation and owned-session cleanup failed"
+                    raise BaseExceptionGroup(
+                        message,
+                        [primary, cleanup_error],
+                    ) from primary
+                raise
+        tm.that(status != 0, eq=True, msg=child.stderr)
         tm.that(lock.read_bytes(), eq=committed)
         tm.that(sorted(path.name for path in root.glob(".uv.lock.*")), eq=[])
 
+    @pytest.mark.parametrize("conflicted", [False, True])
     def test_upg_replaces_lock_without_rewriting_the_committed_file(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
+        *,
+        conflicted: bool,
     ) -> None:
         """Publication swaps a complete lock in; a reader keeps the old one whole.
 
@@ -86,6 +137,15 @@ class TestsFlextInfraUpgLockAtomicPublication:
         publishing the lock.
         """
         root, lock, committed = self._committed_project(tmp_path, python=">=3.13")
+        if conflicted:
+            committed = (
+                b"<<<<<<< HEAD\n"
+                + committed
+                + b"=======\n"
+                + committed
+                + b">>>>>>> integration\n"
+            )
+            lock.write_bytes(committed)
         self._write_wheel(self._wheel_path(tmp_path))
         with lock.open("rb") as reader:
             execution = tm.ok(
@@ -95,7 +155,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
                     env={"UV_PYTHON_DOWNLOADS": "never"},
                     timeout=self.INTERRUPT_AFTER_SECONDS,
                     remove_env_keys=(*c.Tests.MAKE_ISOLATION_ENV_KEYS, "SETUP_PYTHON"),
-                )
+                ),
             )
             tm.that(reader.read(), eq=committed)
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=False)
@@ -104,11 +164,16 @@ class TestsFlextInfraUpgLockAtomicPublication:
         tm.ok(u.Cli.run_checked([c.Infra.UV, "lock", "--check", "--offline"], cwd=root))
 
     def _committed_project(
-        self, tmp_path: Path, *, python: str
+        self,
+        tmp_path: Path,
+        *,
+        python: str,
     ) -> tuple[Path, Path, bytes]:
         """Render a real project whose committed lock predates one new dependency."""
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE, bootstrap=True
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
+            bootstrap=True,
         )
         links = self._wheel_path(tmp_path).parent
         links.mkdir()
@@ -118,29 +183,16 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 u.Cli.atomic_write_text_file(
                     manifest,
                     self.MANIFEST.format(
-                        python=python, dependencies=dependencies, links=links.as_posix()
+                        python=python,
+                        dependencies=dependencies,
+                        links=links.as_posix(),
                     ),
-                )
+                ),
             )
             if not dependencies:
                 tm.ok(u.Cli.run_checked([c.Infra.UV, "lock", "--offline"], cwd=root))
         lock = root / c.Infra.UV_LOCK_FILENAME
         return root, lock, lock.read_bytes()
-
-    @staticmethod
-    def _await_blocked_reader(blocked: list[int], stop: threading.Event) -> None:
-        """Record the uv process whose thread waits to open the FIFO."""
-        while not stop.is_set():
-            for task in Path("/proc").glob("[0-9]*/task/[0-9]*"):
-                try:
-                    command = (task.parents[1] / "comm").read_text(encoding="utf-8")
-                    waiting = (task / "wchan").read_text(encoding="utf-8")
-                except (FileNotFoundError, ProcessLookupError):
-                    continue
-                if command.strip() == "uv" and waiting == "wait_for_partner":
-                    blocked.append(int(task.parents[1].name))
-                    return
-            time.sleep(0.02)
 
     @staticmethod
     def _release_fifo(fifo: Path) -> None:

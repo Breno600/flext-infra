@@ -54,7 +54,10 @@ class FlextInfraCodegenMakeBootstrap(FlextInfraCodegenExecutionBase[bool]):
                 what=surface,
                 scope=c.Infra.CodegenConformScope.SELF,
                 mode=mode,
-            )
+            ),
+            # The bootstrap surface publishes one file and never crosses into
+            # the docs or fresh-import families.
+            ports=None,
         )
         if conformed.failure:
             return r[bool].from_failure(conformed)
