@@ -113,8 +113,10 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 return
             # This branch only reaches a 120000-mode destination: a governed
             # symlink, so plain unlink is the entire removal (no tree cases).
-            if destination.is_symlink() or destination.exists():
-                destination.unlink()
+            if not destination.is_symlink():
+                msg = f"symlink changed kind before guarded effect: {path}"
+                raise ValueError(msg)
+            destination.unlink()
         else:
             before_file = u.Cli.atomic_read_binary_file_state(
                 destination, required=False

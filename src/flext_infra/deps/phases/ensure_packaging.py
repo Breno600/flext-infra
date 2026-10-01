@@ -12,6 +12,7 @@ preventing caches and ignored workspace state from entering release artifacts.
 
 from __future__ import annotations
 
+import keyword
 from pathlib import Path
 
 from flext_infra import c, m, t, u
@@ -274,7 +275,11 @@ class FlextInfraEnsurePackagingPhase:
         for namespace in topology.repository_namespace_packages:
             relative = Path(namespace)
             source = project_dir / relative
-            if len(relative.parts) != 1 or not namespace.isidentifier():
+            if (
+                len(relative.parts) != 1
+                or not namespace.isidentifier()
+                or keyword.iskeyword(namespace)
+            ):
                 msg = f"repository namespace must be one Python identifier: {namespace}"
                 raise ValueError(msg)
             if not source.is_dir() or source.is_symlink():

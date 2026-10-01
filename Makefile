@@ -1721,7 +1721,7 @@ TESTMON_DATAFILE="$$database" $(PYTEST_BOUNDED) $(UV_RUN) python -m flext_infra.
 
 .PHONY: profile-test-report
 profile-test-report: _builtin_require_environment
-	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._cprofile_entry \
+	@cd "$(PROJECT_ROOT)" && $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._cprofile_entry \
 		"$(PROFILE_REPORTS_DIR)/pytest.pstats" "$(PYTEST_REPORTS_DIR)"
 
 _builtin_status_diagnostics: _builtin_require_environment

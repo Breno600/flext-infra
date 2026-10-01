@@ -23,7 +23,9 @@ class TestsFlextInfraGitFacet:
         scope = repository / "literal names"
         scope.mkdir()
         tracked = scope / ' tracked "name"\n.csv '
-        raw_name = scope / os.fsdecode(b"tracked-\xff.csv")
+        raw_name = scope / (
+            os.fsdecode(b"tracked-\xff.csv") if os.name != "nt" else "tracked-byte.csv"
+        )
         removed = scope / "removed.csv"
         renamed = scope / "rename -> source.csv"
         for path in (tracked, raw_name, removed, renamed):

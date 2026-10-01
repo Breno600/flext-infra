@@ -179,9 +179,11 @@ class FlextInfraMypyGate(FlextInfraGate):
         """
         spec = config.Infra.codegen.make.mypy_cache
         process_env = u.Cli.process_env()
+        user_home = process_env.get(str(spec.user_home_environment_variable))
         home = process_env.get(str(spec.data_home_environment_variable)) or str(
-            Path(process_env[str(spec.user_home_environment_variable)])
-            / spec.home_cache_directory
+            Path(user_home) / spec.home_cache_directory
+            if user_home is not None
+            else Path.home() / spec.home_cache_directory
         )
         metadata = u.Infra.read_project_metadata_result(project_dir)
         if metadata.failure:

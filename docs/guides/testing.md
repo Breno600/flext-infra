@@ -53,7 +53,7 @@ remain distinct. Directory creation, removal, and content changes invalidate the
 selection conservatively while preserving the same external database. Each downstream
 workspace owns its own declarations; the infrastructure template catalog does not stand
 in for downstream inputs. Declared directories use the existing authenticated physical
-inventory contract: symbolic links and multiply linked files fail explicitly. This is
+inventory contract: symbolic links fail explicitly. This is
 not an unrestricted filesystem dependency scanner; declare physical source inputs and
 repair the inventory owner if a legitimate native consumer requires another shape.
 

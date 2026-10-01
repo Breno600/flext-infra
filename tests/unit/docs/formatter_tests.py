@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from html import unescape
 from typing import TYPE_CHECKING
 
 from flext_tests import tm
@@ -86,6 +87,12 @@ class TestsFlextInfraDocsFormatter:
         first_format = formatter.format(workspace, apply=True)
         tm.ok(first_format)
         formatted = document.read_text(encoding="utf-8")
+        toc = formatted.split(c.Infra.TOC_START, 1)[1].split(c.Infra.TOC_END, 1)[0]
+        labels = unescape(toc.replace("\\", ""))
+        tm.that(
+            labels,
+            has=["<project>/_config.py", "*_dir", "pkg.__all__", "m.*", "flext-*"],
+        )
 
         second_fix = fixer.fix(workspace, apply=True)
         tm.ok(second_fix)

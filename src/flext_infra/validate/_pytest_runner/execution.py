@@ -202,7 +202,11 @@ class FlextInfraPytestRunnerExecution(
             deadline=self._process_deadline(),
         ).unwrap()
         self._record_process_outcome(report_dir, "suite", outcome)
-        if self.profile_enabled:
+        if (
+            self.profile_enabled
+            and not outcome.timed_out
+            and outcome.forwarded_signal is None
+        ):
             profiles = tuple(sorted((report_dir / "profiles").glob("*.pstats")))
             if not profiles and u.Cli.process_succeeded(outcome):
                 msg = f"pytest produced no child profiles: {report_dir}"
