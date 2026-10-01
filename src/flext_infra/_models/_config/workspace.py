@@ -32,10 +32,7 @@ class FlextInfraConfigModelsWorkspace:
             if self.path.is_absolute() or not self.path.parts:
                 msg = "candidate bootstrap path must be relative"
                 raise ValueError(msg)
-            if (
-                self.what
-                is not FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE
-            ):
+            if self.what != FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE:
                 msg = "candidate bootstrap owns only the Makefile surface"
                 raise ValueError(msg)
             return self

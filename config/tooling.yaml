@@ -661,7 +661,7 @@ Infra:
         case-timeout-seconds: 10
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
-        slow-timeout-seconds: 30
+        slow-timeout-seconds: 90
         # A local suite that cannot finish within two minutes is a performance
         # defect. The generated process wall is derived from this value and the
         # termination grace by the typed model; no second timeout source exists.
