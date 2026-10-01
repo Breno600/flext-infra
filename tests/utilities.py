@@ -9,12 +9,11 @@ from __future__ import annotations
 import os
 import shutil
 from pathlib import Path
-from typing import ClassVar
 
 from flext_tests import FlextTestsUtilities, tm
 
 from flext_core import r
-from flext_infra import FlextInfraUtilities, c, config, m, t
+from flext_infra import FlextInfraUtilities, config
 from flext_infra.codegen import FlextInfraCodegenConform
 from tests import c, m, p, t
 from tests.utilities_codegen import TestsFlextInfraUtilitiesCodegenMixin
@@ -43,30 +42,14 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
         class Ci:
             """Construct GitHub workflow render contracts from canonical config."""
 
-            # Why: ci_trigger_branches is no longer config-owned (flext-jwpyy.1
-            # relocated it from BranchPolicySpec to a per-render derivation in
-            # FlextInfraCodegenConform._artifact_render_context). Mirror the exact
-            # literal baseline conform.py renders so tests stay in lockstep with
-            # production without reading a retired config field.
-            CI_TRIGGER_BASELINE_BRANCHES: ClassVar[t.VariadicTuple[str]] = (
-                "dev",
-                "develop",
-                "0.12.0-dev",
-                "main",
-            )
-
-            @classmethod
-            def ci_trigger_branches(
-                cls,
-                repository_branch: str,
-            ) -> t.VariadicTuple[str]:
-                """Reproduce conform.py's deduplicated per-render trigger set."""
+            @staticmethod
+            def ci_trigger_branches(repository_branch: str) -> t.VariadicTuple[str]:
+                """Derive the repository trigger set from the configured policy."""
                 return tuple(
                     dict.fromkeys((
-                        *cls.CI_TRIGGER_BASELINE_BRANCHES[:-1],
+                        *config.Infra.codegen.branch_policy.ci_trigger_branches,
                         repository_branch,
-                        cls.CI_TRIGGER_BASELINE_BRANCHES[-1],
-                    )),
+                    ))
                 )
 
             @staticmethod

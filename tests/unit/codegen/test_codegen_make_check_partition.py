@@ -8,7 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import config
-from tests import c, m, t, u, utilities
+from tests import c, m, t, u
 from tests.unit.codegen.test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,
 )
@@ -72,7 +72,7 @@ class TestsFlextInfraCodegenMakeCheckPartition:
     def test_ci_workflow_runs_only_the_fast_partition() -> None:
         """The rendered CI job never runs the local check partition."""
         make = config.Infra.codegen.make
-        steps = utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_job_steps(
+        steps = u.CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
                 repository_branch="0.12.0-dev",
             ),
