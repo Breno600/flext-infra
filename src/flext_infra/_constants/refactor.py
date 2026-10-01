@@ -69,6 +69,8 @@ class FlextInfraConstantsRefactor:
           module import block;
         - ``module-end``: move the matched top-level statement after the
           module's last statement;
+        - ``docstring-notice-last``: move the module docstring's copyright
+          notice paragraph after the rest of the docstring text;
         - ``package-root-import``: rebind ``$NAME`` from ``$MODULE`` to that
           module's top-level package;
         - ``own-package-import``: rebind ``$NAME`` from ``$MODULE`` to the
@@ -82,6 +84,7 @@ class FlextInfraConstantsRefactor:
         FUTURE_ANNOTATIONS = "future-annotations"
         MODULE_IMPORT = "module-import"
         MODULE_END = "module-end"
+        DOCSTRING_NOTICE_LAST = "docstring-notice-last"
         PACKAGE_ROOT_IMPORT = "package-root-import"
         OWN_PACKAGE_IMPORT = "own-package-import"
         FACADE_CLASS = "facade-class"

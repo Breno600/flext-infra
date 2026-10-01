@@ -11,6 +11,8 @@ import textwrap
 from operator import itemgetter
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_infra import c, t
 from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
 
@@ -204,7 +206,10 @@ class FlextInfraUtilitiesRopeSource:
         separator = "\n\n\n" if closes_definition else "\n\n"
         updated = f"{kept}{separator}{moved}" if kept else moved
         ast.parse(updated, filename=str(file_path))
-        file_path.write_text(updated, encoding=c.Cli.ENCODING_DEFAULT)
+        written = u.Cli.files_write_text(file_path, updated)
+        if written.failure:
+            msg = written.error or f"failed to rewrite {file_path}"
+            raise RuntimeError(msg)
         return True
 
     @staticmethod

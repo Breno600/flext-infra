@@ -20,6 +20,8 @@ import textwrap
 from collections.abc import MutableMapping
 from pathlib import Path
 
+from flext_cli import u
+
 from flext_infra import c, config, m, t
 from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
@@ -565,6 +567,59 @@ class FlextInfraUtilitiesLintRecipes:
         if appended:
             inner = f"{inner}\n\n" + "\n\n".join(appended)
         return f'{prefix}"""{inner}\n{indent}"""'
+
+    @classmethod
+    def move_notice_last(cls, file_path: Path) -> bool:
+        """Move the module docstring's notice paragraph after the rest of its text.
+
+        The notice paragraph starts at the line the declared notice pattern
+        (``tools.ruff.lint.copyright-notice-rgx``) matches and runs to the
+        next blank line; the other paragraphs keep their order. A docstring
+        the notice already closes is left as it is.
+
+        Returns:
+            True when the module was rewritten.
+
+        Raises:
+            ValueError: If the module has no docstring or its docstring
+                carries no notice.
+            RuntimeError: If the rewritten module cannot be written.
+
+        """
+        source = file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        docstring = cls._docstring_expr(ast.parse(source, filename=str(file_path)))
+        if docstring is None:
+            msg = f"{file_path}: module has no docstring carrying a notice"
+            raise ValueError(msg)
+        start, end, raw = cls._literal(
+            source.splitlines(keepends=True),
+            docstring,
+            file_path,
+        )
+        prefix, inner = cls._split_literal(raw)
+        found = re.search(
+            config.Infra.tooling.tools.ruff.lint.copyright_notice_rgx,
+            inner,
+        )
+        if found is None:
+            msg = f"{file_path}: module docstring carries no copyright notice"
+            raise ValueError(msg)
+        first = inner.rfind("\n", 0, found.start()) + 1
+        blank = inner.find("\n\n", found.end())
+        last = len(inner) if blank < 0 else blank
+        after = inner[last:].strip("\n")
+        if not after.strip():
+            return False
+        before = inner[:first].rstrip("\n")
+        text = f"{before}\n\n{after}" if before.strip() else after
+        updated = cls._with_notice(f'{prefix}"""{text}"""', inner[first:last].strip())
+        rewritten = f"{source[:start]}{updated}{source[end:]}"
+        ast.parse(rewritten, filename=str(file_path))
+        written = u.Cli.files_write_text(file_path, rewritten)
+        if written.failure:
+            msg = written.error or f"failed to rewrite {file_path}"
+            raise RuntimeError(msg)
+        return True
 
     @classmethod
     def _with_notice(cls, raw: str, notice: str) -> str:
