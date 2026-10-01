@@ -219,11 +219,10 @@ passando pelo `make mod`.
 Um WIP publicado preserva o trabalho e permite revisão. Conclusão exige os critérios do
 Bead ativo, integração e runtime medido no SHA integrado. Exceções registradas em
 handoffs históricos, incluindo aceite temporário com gates customizados vermelhos, não
-transferem para uma revisão ou Bead posterior. A configuração atual mantém uma
-suspensão explícita do gate `namespace`; o responsável tipado valida sua autoridade
-e seu escopo. Os gates de lint, format e type-checkers
-(`pyrefly`, `mypy`, `pyright`) nunca são suspensíveis: o modelo rejeita essa
-suspensão ao carregar a configuração. `make check` falha quando a seleção não
+transferem para uma revisão ou Bead posterior. Nenhum gate é suspenso e nenhum achado
+é observacional: todo achado de todo gate selecionado bloqueia. Um gate que analisa
+fontes Python (`pyrefly`, `pyright`) só é selecionado para um projeto cujo conteúdo
+detectado possui alvos Python. `make check` falha quando a seleção não
 contém projetos ou quando um projeto selecionado não tem `pyproject.toml`; nenhum
 projeto é pulado em silêncio. Local, CI e hooks derivam seus gates do mesmo conjunto
 ativo, preservando a partição de tipagem já declarada: `CI=N make check` executa a
@@ -265,10 +264,9 @@ diagnostic; directory names are never identity fallbacks.
 
 ## Codemod scanner contract
 
-The operator's 2026-09-24 decision, retained by `flext-1pquc`, makes codemod policy
-findings observational. This exception applies to those findings only. It does not
-accept failed rule discovery, failed scanner execution, incomplete output, or invalid
-diagnostic payloads, and it does not close the associated migration work.
+Every codemod rule finding blocks the gate, whatever its native severity, and so does
+every failed rule discovery, failed scanner execution, incomplete output, or invalid
+diagnostic payload.
 
 The gate consumes the complete native `ast-grep scan --json=compact` array. The
 [documented scan contract](https://ast-grep.github.io/reference/cli/scan.html) and
@@ -286,11 +284,10 @@ Timeouts, forwarded signals, other exit codes, malformed JSON, and disagreement 
 exit code and diagnostic severities remain failures, even when stdout exists. Both
 whole-project checks and `check_files` scan every elected provider rule.
 
-`GateExecution.observational_issues` retains original file, position, rule, message, and
-severity separately from blocking issues and error counts. Workspace reports display
-observation counts separately. SARIF uses explicit observational notes and retains the
-native severity in each note; raw scanner output remains available on the execution. A
-passing gate therefore proves the scanner contract, not zero migration findings.
+`GateExecution.issues` retains each finding's original file, position, rule, message,
+and severity. SARIF reports each finding at its native level; raw scanner output remains
+available on the execution. A passing gate therefore proves both the scanner contract
+and zero rule findings.
 
 The same repair validates projected Ruff first-party namespaces strictly: a malformed
 value cannot be replaced with discovered namespaces. A declared empty list remains

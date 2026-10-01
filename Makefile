@@ -1588,16 +1588,15 @@ _builtin_build_artifacts:
 # An absent CI token runs every active default gate.
 _builtin_check_all: _builtin_require_environment
 	@set -eu; \
-printf '%s\n' 'INFO: SUSPENDED check gate namespace; authority=flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913; reason=Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix.'; \
-gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
+		gates="lint,pyrefly,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
 		if [ "$(strip $(CI))" = "Y" ]; then \
-			gates="lint,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
-			printf 'INFO: CI=Y runs check gates: lint mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
+			gates="lint,mypy,pyright,silent-failure,deferred-self-reference,security,markdown,loc-cap,boundary,runtime-census,namespace,tier-whitelist,index-declarations,codemod,layout,canonical-alias,direnv,duplication"; \
+			printf 'INFO: CI=Y runs check gates: lint mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census namespace tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
 		elif [ "$(strip $(CI))" = "N" ]; then \
 			gates="pyrefly"; \
 			printf 'INFO: CI=N runs check gates: pyrefly\n'; \
 		else \
-			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
+			printf 'INFO: default context runs check gates: lint pyrefly mypy pyright silent-failure deferred-self-reference security markdown loc-cap boundary runtime-census namespace tier-whitelist index-declarations codemod layout canonical-alias direnv duplication\n'; \
 		fi; \
 		if [ -z "$$gates" ]; then \
 			printf 'ERROR: no active check gates remain in the selected context\n' >&2; \
