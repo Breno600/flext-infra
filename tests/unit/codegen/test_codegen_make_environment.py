@@ -20,35 +20,6 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
-    @staticmethod
-    def _render_makefile(
-        tmp_path: Path,
-        profile: c.Infra.MakeProfile,
-        *,
-        local_infra: bool = False,
-        bootstrap: bool = False,
-        extra_verbs: tuple[m.Infra.MakeVerbSpec, ...] = (),
-        script_dispatch: m.Infra.ScriptDispatchSpec | None = None,
-    ) -> tuple[Path, Path]:
-        role = c.Infra.MakeProfile(profile.value)
-        repository = test_u.Tests.repository_ref(
-            "fixture-project", role=role
-        ).model_copy(
-            update={
-                "editable": True,
-                "extra_verbs": extra_verbs,
-                "script_dispatch": script_dispatch,
-            }
-        )
-        project_root = tmp_path / profile.value / "fixture-project"
-        WorktreeFixture.write_python_project(project_root, repository.distribution)
-        if bootstrap:
-            test_u.Tests.copy_tracked_mise_seeds(project_root)
-            tm.ok(
-                u.Cli.atomic_write_text_file(
-                    project_root / config.Infra.codegen.scaffold.project.readme,
-                    "# Bootstrap environment contract\n",
-
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
         self, tmp_path: Path, *, failure_return: int | None
@@ -984,14 +955,12 @@ class TestsFlextInfraCodegenMakeEnvironment:
             m.Infra.MakeVerbSpec(
                 name="sync",
                 description="Dispatch sync through the declared script dispatcher.",
-                requires_apply=True,
             ),
         )
         script_dispatch = m.Infra.ScriptDispatchSpec(
-            dispatcher="scripts/dispatch.py",
-            roots=("scripts",),
+            dispatcher="scripts/dispatch.py", roots=("scripts",)
         )
-        project_root, _repository_root = self._render_makefile(
+        project_root, _repository_root = u.Tests.render_make_environment(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
             extra_verbs=extra_verbs,

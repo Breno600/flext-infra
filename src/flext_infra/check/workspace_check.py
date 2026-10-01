@@ -73,8 +73,7 @@ class FlextInfraWorkspaceChecker(
 
     def execute_payload(self, params: m.Infra.RunCommand) -> p.Result[bool]:
         """Execute quality gates from the canonical check command payload."""
-        checker = cls(repository_root=params.repository_root)
-        project_targets_result = cls._resolve_project_targets(params)
+        project_targets_result = self._resolve_project_targets(params)
         if project_targets_result.failure:
             return r[bool].from_failure(project_targets_result)
         project_targets = project_targets_result.value
@@ -134,18 +133,21 @@ class FlextInfraWorkspaceChecker(
         if requested:
             return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
                 tuple(
-                    m.Infra.CheckProjectTarget.from_workspace_name(
-                        params.repository_root, project_name
+                    m.Infra.CheckProjectTarget(
+                        name=project_name,
+                        path=params.repository_root / project_name,
                     )
                     for project_name in requested
                 ),
             )
-        discovered = u.Infra.resolve_projects(params.repository_root, ())
-        if discovered.failure:
-            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(discovered)
-        project_targets = tuple(
-            m.Infra.CheckProjectTarget(name=project.name, path=project.path)
-            for project in discovered.value
+        resolved = u.Infra.resolve_projects(params.repository_root, (".",))
+        if resolved.failure:
+            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(resolved)
+        return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
+            tuple(
+                m.Infra.CheckProjectTarget(name=project.name, path=project.path)
+                for project in resolved.value
+            ),
         )
 
     def format(self, project_dir: Path) -> p.Result[m.Infra.GateResult]:
