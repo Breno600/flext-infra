@@ -71,52 +71,10 @@ class FlextInfraConstantsSharedInfra:
     })
     SKILLS_DIR: ClassVar[Path] = Path(".agents/skills")
     BASELINE_DEFAULT: ClassVar[str] = ".agents/skills/{skill}/baseline.json"
-    SCRIPT_EXIT_CODE_VALUES: ClassVar[frozenset[int]] = frozenset(
-        int(item) for item in ScriptExitCode
-    )
-    SCRIPT_HEADER_MAX_LINES: ClassVar[int] = 10
-    SCRIPT_MIN_CODE_LINES: ClassVar[int] = 20
     CPROFILE_RECEIPT_ARGUMENT_COUNT: ClassVar[int] = 3
     "``argv`` length when an explicit run receipt accompanies the profile path."
-    SKILL_REPORT_VALIDATED_TOP_DIRS: ClassVar[frozenset[str]] = frozenset({"."})
-    SKILL_REPORT_SKIPPED_TOP_DIRS: ClassVar[frozenset[str]] = frozenset({
-        "evidence",
-        "plans",
-        "drafts",
-        "validation",
-        "dependencies",
-    })
-    SKILL_REPORT_SKIPPED_FILES: ClassVar[frozenset[str]] = frozenset({".gitkeep"})
     PYTHON_IMPORT_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$"
-    )
-    SKILL_OWNER_MARKER_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^# Owner-Skill:\s+(.agents/skills/([a-z0-9][-a-z0-9]*)/SKILL\.md)\s*$"
-    )
-    SKILL_REPORT_ARTIFACT_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[a-z][-a-z0-9]*--[a-z]+--[a-z][-a-z0-9]*\.[a-z]+$"
-    )
-    SKILL_REPORT_ARTIFACT_SKILL_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[a-z][-a-z0-9]*$"
-    )
-    SKILL_REPORT_ARTIFACT_SLUG_INVALID_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"[^a-z0-9-]+"
-    )
-    SKILL_REPORT_ARTIFACT_MULTI_DASH_RE: ClassVar[t.RegexPattern] = re.compile(r"-+")
-    SKILL_REPORTS_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\.reports/([^\s\"']+)"
-    )
-    SKILL_BASH_EXIT_RE: ClassVar[t.RegexPattern] = re.compile(r"^\s*exit\s+(\d+)")
-    SKILL_INTERACTIVE_PY_RE: ClassVar[t.RegexPattern] = re.compile(r"\binput\s*\(")
-    SKILL_INTERACTIVE_SH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\bread\s+-p\b|\bselect\s+\w+\s+in\b|\bdialog\b|\bwhiptail\b"
-    )
-    SKILL_INTERACTIVE_GATE_RE: ClassVar[t.RegexPattern] = re.compile(r"--interactive")
-    SKILL_VALIDATOR_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(enforce|check|validate|test|verify|audit|lint|scan)[-_]"
-    )
-    SKILL_FIXER_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(fix|autofix|repair|correct|reorder|refactor|standardize)[-_]"
     )
     MISSING_IMPORT_RE: ClassVar[t.RegexPattern] = re.compile(
         r"Cannot find module `([^`]+)` \[missing-import\]"
