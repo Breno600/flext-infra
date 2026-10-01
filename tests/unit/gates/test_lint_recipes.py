@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 from flext_tests import tm
@@ -95,6 +96,34 @@ class TestsFlextInfraLintRecipes:
                 "        raise ValueError(msg)\n"
                 "    return path\n"
             ),
+        )
+
+    def test_raises_condition_with_quotes_keeps_the_literal_intact(self) -> None:
+        """A derived condition holding triple quotes stays inside the docstring."""
+        source = (
+            "def literal(body: str) -> str:\n"
+            '    """Return the literal."""\n'
+            "    if not body.startswith('\"\"\"'):\n"
+            '        msg = f"{body} is not a literal"\n'
+            "        raise ValueError(msg)\n"
+            "    return body\n"
+        )
+
+        repaired = self._apply(
+            source,
+            ("docstring-missing-returns", 2, "`return` is not documented"),
+            (
+                "docstring-missing-exception",
+                5,
+                "Raised exception `ValueError` missing from docstring",
+            ),
+        )
+
+        function = ast.parse(repaired).body[0]
+        tm.that(function, is_=ast.FunctionDef)
+        tm.that(
+            ast.get_docstring(function) or "",
+            has="ValueError: If ``not body.startswith('\"\"\"')``.",
         )
 
     def test_summary_docstring_derives_from_the_name(self) -> None:

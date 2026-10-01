@@ -288,19 +288,15 @@ class FlextInfraUtilitiesLintRecipes:
         docstring: ast.Expr,
         path: Path,
     ) -> t.Triple[int, int, str]:
-        (
-            """Return the span and text of one triple-double-quoted docstring.
+        """Return the span and text of one triple-double-quoted docstring.
 
         Returns:
             The span and text of one triple-double-quoted docstring.
 
         Raises:
-            ValueError: If ``not (body.startswith('"""
-            ") and body.endswith("
-            """') and
-                (len(body) >= 6))``.
+            ValueError: If the docstring is not a triple-double-quoted literal.
+
         """
-        )
         value = docstring.value
         start = cls._offset(lines, value.lineno, value.col_offset)
         end = cls._offset(
@@ -543,7 +539,7 @@ class FlextInfraUtilitiesLintRecipes:
                 wrapped
                 for entry in dict.fromkeys(entries)
                 for wrapped in textwrap.wrap(
-                    entry,
+                    cls._literal_safe(entry, prefix),
                     width=width,
                     initial_indent=f"{indent}    ",
                     subsequent_indent=f"{indent}        ",
@@ -570,18 +566,31 @@ class FlextInfraUtilitiesLintRecipes:
 
     @classmethod
     def _with_notice(cls, raw: str, notice: str) -> str:
-        """Return the module docstring with the notice after its summary.
+        """Return the module docstring with the notice as its last lines.
 
         Returns:
-            The module docstring with the notice after its summary.
+            The module docstring with the notice as its last lines.
 
         """
         prefix, inner = cls._split_literal(raw)
-        summary, _, rest = inner.partition("\n")
-        remainder = rest.strip("\n")
-        if remainder.strip():
-            return f'{prefix}"""{summary}\n\n{notice}\n\n{remainder}\n"""'
-        return f'{prefix}"""{summary.rstrip()}\n\n{notice}\n"""'
+        return f'{prefix}"""{inner.strip()}\n\n{notice}\n"""'
+
+    @staticmethod
+    def _literal_safe(text: str, prefix: str) -> str:
+        r"""Return ``text`` escaped for a ``\"\"\"`` literal with ``prefix``.
+
+        A raw literal keeps backslashes verbatim, so only a run of three
+        double quotes is rewritten; a plain literal escapes its backslashes
+        and quote runs. Derived text then cannot end or alter the literal it
+        is written into.
+
+        Returns:
+            ``text`` as it can be written inside the literal.
+
+        """
+        if "r" in prefix.lower():
+            return text.replace('"""', "'''")
+        return text.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
 
 
 __all__: list[str] = ["FlextInfraUtilitiesLintRecipes"]
