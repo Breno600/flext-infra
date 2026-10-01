@@ -102,7 +102,12 @@ class TestsFlextInfraProjectGitignorePatterns:
 
     @staticmethod
     def _external_project(root: Path) -> Path:
-        """Declare marker ownership without copying external destinations."""
+        """Declare marker ownership without copying external destinations.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return TestsFlextInfraProjectGitignorePatterns._project(
             root,
             {
@@ -229,8 +234,7 @@ class TestsFlextInfraProjectGitignorePatterns:
             },
         )
         (root / ".gitignore").write_text(
-            "# BEGIN outer\n# BEGIN inner\n/owned\n"
-            "# END inner\n# END outer\n",
+            "# BEGIN outer\n# BEGIN inner\n/owned\n# END inner\n# END outer\n",
             encoding="utf-8",
         )
 
