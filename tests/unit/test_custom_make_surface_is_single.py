@@ -37,10 +37,9 @@ class TestsFlextInfraCustomMakeSurfaceIsSingle:
         tm.that(custom_surfaces, eq=[])
 
         scaffolded = {
-            entry.destination: entry for entry in config.Infra.codegen.templates.entries
+            entry.destination for entry in config.Infra.codegen.templates.entries
         }
         tm.that("custom.mk" in scaffolded, eq=True)
-        tm.that(scaffolded["custom.mk"].overwrite, eq=False)
 
     def test_no_template_emits_a_second_custom_surface(self) -> None:
         """No shipped template references a custom surface other than custom.mk."""

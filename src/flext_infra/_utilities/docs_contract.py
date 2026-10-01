@@ -253,7 +253,6 @@ class FlextInfraUtilitiesDocsContract:
         content: str,
         *,
         apply: bool,
-        overwrite: bool = True,
     ) -> m.Infra.GeneratedFile:
         """Write generated content only when needed and allowed.
 
@@ -262,12 +261,6 @@ class FlextInfraUtilitiesDocsContract:
         enclosing codegen transaction.
         """
         exists = path.exists()
-        if exists and not overwrite:
-            return m.Infra.GeneratedFile(
-                path=path.as_posix(),
-                changed=False,
-                written=False,
-            )
         current = path.read_text(encoding=c.Cli.ENCODING_DEFAULT) if exists else ""
         normalized = (
             FlextInfraUtilitiesDocsContract.docs_contract_update_toc(content)[0]
