@@ -76,6 +76,9 @@ class FlextInfraConstantsMake:
     MYPY_TIMEOUT_SECONDS_ENV: ClassVar[str] = "MYPY_TIMEOUT_SECONDS"
     MYPY_TIMEOUT_SECONDS_DEFAULT: ClassVar[int] = 600
     MYPY_PROFILE_OUTPUT_ENV: ClassVar[str] = "FLEXT_MYPY_PROFILE_OUTPUT"
+    # The import-time model bound: neither a project budget nor the env
+    # override may exceed the fleet ceiling. The configured budget value
+    # itself stays SSOT-owned (config/tooling.yaml mypy timeout_seconds).
     MYPY_TIMEOUT_SECONDS_MAX: ClassVar[int] = 600
     MYPY_TIMEOUT_GRACE_SECONDS: ClassVar[int] = 10
     MYPY_SUPERVISOR_PS_TIMEOUT: ClassVar[int] = 1

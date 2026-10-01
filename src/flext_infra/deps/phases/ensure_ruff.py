@@ -325,7 +325,7 @@ class FlextInfraEnsureRuffConfigPhase:
                             if pattern not in effective_ignores
                         ],
                         per_file_ignores=effective_ignores,
-                        analysis_exclusions=analysis_exclusions,
+                        analysis_exclusions=None,
                         generated_python_roots=generated_python_roots,
                     ),
                 ),

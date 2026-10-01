@@ -399,13 +399,13 @@ class FlextInfraWorkspaceDetector(
         result_type = r[tuple[tuple[m.Infra.RepositoryRef, ...], t.VariadicTuple[Path]]]
         if declared.failure:
             return result_type.from_failure(declared)
-        governance = cls._superproject_governance(
+        baseline = u.Infra.repository_baseline_branch(
             repository_root,
-            beads=workspace_beads,
-            allow_unprovisioned_members=allow_unprovisioned_members,
+            preference=(
+                config.Infra.codegen.branch_policy.integration_branch_preference
+            ),
         )
-        if governance.failure:
-            return result_type.from_failure(governance)
+        integration_branch = baseline.value if baseline.success else None
         subprojects: list[m.Infra.RepositoryRef] = []
         external: list[Path] = []
         seen: set[Path] = set()
@@ -654,13 +654,6 @@ class FlextInfraWorkspaceDetector(
                     f"Git submodule escapes its superproject: {member_root}",
                 )
             member_path = member_root.relative_to(superproject_root)
-            # Same owner as the parent load, so a composed member validates
-            # against exactly the facts its superproject governs with.
-            governance = cls._superproject_governance(
-                superproject_root, beads=inherited_beads.value
-            )
-            if governance.failure:
-                return r[m.Infra.WorkspaceSpec].from_failure(governance)
             loaded_member = cls._load_subproject(
                 superproject_root,
                 member_path,
