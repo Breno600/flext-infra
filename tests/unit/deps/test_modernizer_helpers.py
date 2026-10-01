@@ -98,7 +98,9 @@ class TestsFlextInfraDepsModernizerHelpers:
         [("test", "test"), (None, None), ({"key": "value"}, {"key": "value"})],
     )
     def test_unwrap_item(
-        self, value: t.Cli.TomlMappingSource | None, expected: t.JsonValue,
+        self,
+        value: t.Cli.TomlMappingSource | None,
+        expected: t.JsonValue,
     ) -> None:
         """Verify unwrap item."""
         actual = None if value is None else u.Cli.toml_unwrap_item(value)
@@ -120,7 +122,9 @@ class TestsFlextInfraDepsModernizerHelpers:
         ],
     )
     def test_as_string_list(
-        self, value: t.Cli.TomlItem | None, expected: t.StrSequence,
+        self,
+        value: t.Cli.TomlItem | None,
+        expected: t.StrSequence,
     ) -> None:
         """Verify as string list."""
         actual: t.StrSequence = (
@@ -138,7 +142,8 @@ class TestsFlextInfraDepsModernizerHelpers:
         tm.that(u.Cli.toml_as_string_list(int_val), eq=[])
 
     @pytest.mark.parametrize(
-        ("items", "expected"), [(["a", "b", "c"], 3), ([], 0), (["single"], 1)],
+        ("items", "expected"),
+        [(["a", "b", "c"], 3), ([], 0), (["single"], 1)],
     )
     def test_array(self, items: t.StrSequence, expected: int) -> None:
         """Verify TOML array construction preserves item count."""

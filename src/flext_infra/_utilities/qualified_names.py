@@ -27,7 +27,8 @@ class FlextInfraUtilitiesQualifiedNames:
 
     @staticmethod
     def without_exports(
-        value: cst.BaseExpression, names: t.Infra.Container[str],
+        value: cst.BaseExpression,
+        names: t.Infra.Container[str],
     ) -> cst.BaseExpression:
         """Drop ``names`` from a literal ``__all__`` list or tuple expression."""
         import libcst as cst
@@ -46,7 +47,8 @@ class FlextInfraUtilitiesQualifiedNames:
 
     @staticmethod
     def filter_exports[N: (cst.Assign, cst.AnnAssign)](
-        node: N, names: t.Infra.Container[str],
+        node: N,
+        names: t.Infra.Container[str],
     ) -> N:
         """Drop ``names`` from an ``__all__`` assignment; other assignments pass."""
         import libcst as cst
@@ -69,7 +71,9 @@ class FlextInfraUtilitiesQualifiedNames:
 
     @staticmethod
     def normalized_import_aliases(
-        aliases: t.SequenceOf[cst.ImportAlias], *, parenthesized: bool,
+        aliases: t.SequenceOf[cst.ImportAlias],
+        *,
+        parenthesized: bool,
     ) -> t.VariadicTuple[cst.ImportAlias]:
         """Repair separators after import aliases were dropped or rewritten."""
         import libcst as cst
@@ -104,7 +108,9 @@ class FlextInfraUtilitiesQualifiedNames:
 
     @classmethod
     def qualified_name_residue(
-        cls, source: str, candidates: t.Infra.Container[str],
+        cls,
+        source: str,
+        candidates: t.Infra.Container[str],
     ) -> frozenset[str]:
         """Return candidate qualified names referenced by Python source."""
         import libcst as cst
@@ -122,7 +128,9 @@ class FlextInfraUtilitiesQualifiedNames:
                 self.residue.update(
                     qualified_name.name
                     for qualified_name in self.get_metadata(
-                        QualifiedNameProvider, node, (),
+                        QualifiedNameProvider,
+                        node,
+                        (),
                     )
                     if qualified_name.name in self.candidates
                 )

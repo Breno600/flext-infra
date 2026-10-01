@@ -26,7 +26,9 @@ class FlextInfraModGateEngine:
 
     @classmethod
     def validate_rule_fixtures(
-        cls, root: Path, rules: t.SequenceOf[Path],
+        cls,
+        root: Path,
+        rules: t.SequenceOf[Path],
     ) -> p.Result[bool]:
         """Verify every fixture against its committed snapshots; never rewrite them.
 
@@ -36,7 +38,8 @@ class FlextInfraModGateEngine:
         as a reviewed commit, so ``make mod`` cannot accept rewritten output.
         """
         for config_root, owner_rules, owner_is_governed in cls._fixture_owners(
-            root, rules,
+            root,
+            rules,
         ):
             if owner_is_governed:
                 active_rule_ids: set[str] = set()
@@ -44,7 +47,8 @@ class FlextInfraModGateEngine:
                     rule_ids, _fixable_ids = u.Infra.ast_grep_rule_contract(rule)
                     active_rule_ids.update(rule_ids)
                 stale = FlextInfraCodemodSnapshotReconciler.stale_snapshots(
-                    config_root, frozenset(active_rule_ids),
+                    config_root,
+                    frozenset(active_rule_ids),
                 )
                 if stale:
                     return r[bool].fail(
@@ -53,11 +57,13 @@ class FlextInfraModGateEngine:
                         + f"\n{c.Infra.CODEMOD_SNAPSHOT_REFRESH_HINT}",
                     )
             with tempfile.TemporaryDirectory(
-                prefix="mod-rule-fixtures-", dir=settings.work_dir,
+                prefix="mod-rule-fixtures-",
+                dir=settings.work_dir,
             ) as temp_dir:
                 temp_root = Path(temp_dir) / config_root.name
                 cls.stage_rule_fixture_root(
-                    config_root=config_root, temp_root=temp_root,
+                    config_root=config_root,
+                    temp_root=temp_root,
                 )
                 cls._materialize_split_rule_files(
                     config_root=config_root,
@@ -79,7 +85,11 @@ class FlextInfraModGateEngine:
 
     @classmethod
     def refresh_rule_snapshots(
-        cls, root: Path, rules: t.SequenceOf[Path], *, apply: bool,
+        cls,
+        root: Path,
+        rules: t.SequenceOf[Path],
+        *,
+        apply: bool,
     ) -> p.Result[t.StrSequence]:
         """Regenerate every governed owner's snapshots from its rule tests.
 
@@ -91,12 +101,14 @@ class FlextInfraModGateEngine:
         """
         changes: list[str] = []
         for config_root, owner_rules, owner_is_governed in cls._fixture_owners(
-            root, rules,
+            root,
+            rules,
         ):
             if not owner_is_governed:
                 continue
             with tempfile.TemporaryDirectory(
-                prefix="mod-rule-snapshots-", dir=settings.work_dir,
+                prefix="mod-rule-snapshots-",
+                dir=settings.work_dir,
             ) as temp_dir:
                 temp_root = Path(temp_dir) / config_root.name
                 cls.stage_rule_fixture_root(
@@ -110,19 +122,23 @@ class FlextInfraModGateEngine:
                     owner_rules=owner_rules,
                 )
                 cls._run_tool(
-                    temp_root, (c.Infra.SG, c.Infra.TEST, c.Infra.SG_UPDATE_ALL),
+                    temp_root,
+                    (c.Infra.SG, c.Infra.TEST, c.Infra.SG_UPDATE_ALL),
                 ).unwrap()
                 cls._run_tool(temp_root, (c.Infra.SG, c.Infra.TEST)).unwrap()
                 changes.extend(
                     cls._publish_regenerated_snapshots(
-                        config_root=config_root, temp_root=temp_root, apply=apply,
+                        config_root=config_root,
+                        temp_root=temp_root,
+                        apply=apply,
                     ),
                 )
         return r[t.StrSequence].ok(tuple(changes))
 
     @staticmethod
     def _fixture_owners(
-        root: Path, rules: t.SequenceOf[Path],
+        root: Path,
+        rules: t.SequenceOf[Path],
     ) -> t.SequenceOf[t.Triple[Path, t.SequenceOf[Path], bool]]:
         """Group rules by fixture owner and mark the owners this root governs."""
         governed_roots = frozenset(
@@ -152,7 +168,10 @@ class FlextInfraModGateEngine:
 
     @staticmethod
     def stage_rule_fixture_root(
-        *, config_root: Path, temp_root: Path, regenerate_snapshots: bool = False,
+        *,
+        config_root: Path,
+        temp_root: Path,
+        regenerate_snapshots: bool = False,
     ) -> None:
         """Copy declared ast-grep inputs only, rejecting links and special files."""
         directories = FlextInfraCodemodSnapshotReconciler.fixture_directories(
@@ -186,7 +205,8 @@ class FlextInfraModGateEngine:
         temp_root.mkdir()
         for directory in sorted(folders):
             (temp_root / directory.relative_to(config_root)).mkdir(
-                parents=True, exist_ok=True,
+                parents=True,
+                exist_ok=True,
             )
         for source in sorted(files):
             if (
@@ -218,7 +238,11 @@ class FlextInfraModGateEngine:
 
     @classmethod
     def _materialize_split_rule_files(
-        cls, *, config_root: Path, temp_root: Path, owner_rules: t.SequenceOf[Path],
+        cls,
+        *,
+        config_root: Path,
+        temp_root: Path,
+        owner_rules: t.SequenceOf[Path],
     ) -> None:
         """Replace multi-document rule files with single-document temp copies."""
         source_rules = set(owner_rules)
@@ -242,12 +266,16 @@ class FlextInfraModGateEngine:
                     msg = f"ast-grep rule document missing required id: {rule}"
                     raise RuntimeError(msg)
                 temp_rule.with_name(f"{rule_id}.yml").write_text(
-                    document, encoding="utf-8",
+                    document,
+                    encoding="utf-8",
                 )
 
     @staticmethod
     def _publish_regenerated_snapshots(
-        *, config_root: Path, temp_root: Path, apply: bool,
+        *,
+        config_root: Path,
+        temp_root: Path,
+        apply: bool,
     ) -> t.StrSequence:
         """Mirror only regenerated snapshot files back to source; report each change.
 
@@ -287,7 +315,10 @@ class FlextInfraModGateEngine:
 
     @staticmethod
     def _run_tool(
-        root: Path, command: t.StrSequence, *, finding_exit_code: int | None = None,
+        root: Path,
+        command: t.StrSequence,
+        *,
+        finding_exit_code: int | None = None,
     ) -> p.Result[p.Cli.CommandOutput]:
         """Run one AST tool and preserve its documented finding status."""
         sys.stderr.write(
@@ -393,7 +424,8 @@ class FlextInfraModGateEngine:
 
     @staticmethod
     def _validate_expected_receipts(
-        rules: t.SequenceOf[m.Infra.CodemodRule], report: m.Infra.ModScanReport,
+        rules: t.SequenceOf[m.Infra.CodemodRule],
+        report: m.Infra.ModScanReport,
     ) -> p.Result[bool]:
         """Require every declared finding-count receipt to match exactly.
 
@@ -638,7 +670,8 @@ class FlextInfraModGateEngine:
                     source_paths.add(path)
             source_states = {
                 path.resolve(): u.Cli.atomic_read_binary_file_state(
-                    path, required=True,
+                    path,
+                    required=True,
                 ).unwrap()
                 for path in sorted(source_paths)
             }

@@ -46,7 +46,8 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
             )
             compact_mod = (
                 FlextInfraCodegenGenerationLazyEntriesMixin._compact_lazy_module_path(
-                    current_pkg, mod,
+                    current_pkg,
+                    mod,
                 )
             )
             if mod in child_aliases and not attr and not child_package_module:
@@ -78,7 +79,8 @@ class FlextInfraCodegenGenerationLazyEntriesMixin(
 
     @staticmethod
     def _build_published_exports(
-        exports: t.StrSequence, lazy_filtered: t.LazyAliasMap,
+        exports: t.StrSequence,
+        lazy_filtered: t.LazyAliasMap,
     ) -> t.StrSequence:
         """Build root public exports in Ruff's canonical isort-style order."""
         # The planner is the sole ABI filter; rendering

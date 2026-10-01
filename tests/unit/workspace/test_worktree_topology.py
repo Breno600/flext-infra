@@ -14,7 +14,8 @@ class TestsFlextInfraWorktreeTopology(u.Tests.WorktreeFixture):
     """Group cohesive worktree behavior."""
 
     def test_update_merges_the_requested_base_with_an_explicit_merge_commit(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Update preserves lane ancestry through the canonical no-ff merge."""
         repository = self._repository(tmp_path)
@@ -58,7 +59,8 @@ class TestsFlextInfraWorktreeTopology(u.Tests.WorktreeFixture):
         tm.that(updated_head == base, eq=False)
         parents = tm.ok(
             u.Cli.capture(
-                [c.Infra.GIT, "rev-list", "--parents", "-n", "1", "HEAD"], cwd=lane,
+                [c.Infra.GIT, "rev-list", "--parents", "-n", "1", "HEAD"],
+                cwd=lane,
             ),
         ).split()
         tm.that(parents, length=3)
@@ -88,7 +90,9 @@ class TestsFlextInfraWorktreeTopology(u.Tests.WorktreeFixture):
         tm.that(Path(child_path).is_relative_to(container), where=bool)
         tm.that(
             tm.ok(
-                u.Infra.git_list_worktrees(m.Infra.GitRepoRequest(repo_root=repository)),
+                u.Infra.git_list_worktrees(
+                    m.Infra.GitRepoRequest(repo_root=repository)
+                ),
             ).porcelain,
             has=f"worktree {child_path}",
         )

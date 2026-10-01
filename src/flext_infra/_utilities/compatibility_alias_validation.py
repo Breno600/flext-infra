@@ -37,7 +37,9 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
 
     @staticmethod
     def require_static_compatibility_alias_exports(
-        tree: ast.Module, file_path: Path, aliases: frozenset[str],
+        tree: ast.Module,
+        file_path: Path,
+        aliases: frozenset[str],
     ) -> None:
         """Reject dynamic export ownership before changing an alias owner."""
         if not aliases:
@@ -78,7 +80,8 @@ class FlextInfraUtilitiesCompatibilityAliasValidation:
                 raise ValueError(msg)
         residue = sorted(
             FlextInfraUtilitiesQualifiedNames.qualified_name_residue(
-                source, qualified_aliases,
+                source,
+                qualified_aliases,
             ),
         )
         if residue:

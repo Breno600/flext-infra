@@ -36,12 +36,14 @@ class FlextInfraMarkdownCodeSources:
     def source_name(relative_posix: str, index: int) -> str:
         """Encode one block's documentation location into a temp source filename."""
         return c.Infra.MARKDOWN_CODE_SOURCE_FORMAT.format(
-            relative_posix.replace("/", "__").replace(".", "_"), index,
+            relative_posix.replace("/", "__").replace(".", "_"),
+            index,
         )
 
     @staticmethod
     def fenced_block_sources(
-        project_dir: Path, markdown_files: t.SequenceOf[Path],
+        project_dir: Path,
+        markdown_files: t.SequenceOf[Path],
     ) -> t.VariadicTuple[t.Triple[str, str, t.Pair[str, int]]]:
         """Collect one named source per parseable fenced ``python`` block.
 
@@ -105,7 +107,8 @@ class FlextInfraMarkdownCodeSources:
                     compile(source_text, str(py_path), "exec")
                     collected.append((
                         FlextInfraMarkdownCodeSources.source_name(
-                            relative_posix, index,
+                            relative_posix,
+                            index,
                         ),
                         source_text,
                         (relative_posix, body_start + example.lineno),

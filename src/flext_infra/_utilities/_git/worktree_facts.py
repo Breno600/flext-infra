@@ -26,7 +26,8 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
 
     @classmethod
     def git_registered_worktrees_fs(
-        cls, repository_root: Path,
+        cls,
+        repository_root: Path,
     ) -> t.VariadicTuple[t.Pair[Path, str]]:
         """Resolve registered worktrees from ``.git/worktrees`` without Git.
 
@@ -56,9 +57,11 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
 
     @classmethod
     def collect_worktree_facts(
-        cls, query: m.Infra.WorktreeFactsQuery,
+        cls,
+        query: m.Infra.WorktreeFactsQuery,
     ) -> t.Pair[
-        t.VariadicTuple[m.Infra.WorktreeFact], t.VariadicTuple[m.Infra.PruneAction],
+        t.VariadicTuple[m.Infra.WorktreeFact],
+        t.VariadicTuple[m.Infra.PruneAction],
     ]:
         """Measure every registered worktree and plan stale-deps pruning.
 
@@ -78,7 +81,9 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
                 facts.append(
                     cls._worktree_fact(
                         m.Infra.WorktreeCandidate(
-                            path=worktree_root, repo=repo_root, branch=branch,
+                            path=worktree_root,
+                            repo=repo_root,
+                            branch=branch,
                         ),
                         query,
                         actions,
@@ -174,7 +179,8 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
 
     @staticmethod
     def _worktree_kind(
-        worktree_root: Path, policy: m.Infra.WorktreeFactsPolicy,
+        worktree_root: Path,
+        policy: m.Infra.WorktreeFactsPolicy,
     ) -> Literal["sibling", "tool_internal"]:
         """Classify a worktree as tool-internal or sibling from policy patterns."""
         text = f"{worktree_root}/"
@@ -186,7 +192,8 @@ class FlextInfraUtilitiesGitWorktreeFactsMixin(
 
     @classmethod
     def _worktree_bead_index(
-        cls, rows: t.VariadicTuple[t.JsonMapping],
+        cls,
+        rows: t.VariadicTuple[t.JsonMapping],
     ) -> t.MappingKV[str, t.MappingKV[str, t.JsonMapping]]:
         """Index optional bead rows by work dir and branch for correlation."""
         by_dir: MutableMapping[str, t.JsonMapping] = {}

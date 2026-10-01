@@ -64,7 +64,8 @@ class TestsFlextInfraPlanCollection:
 
     def test_disabled_configuration_has_no_publication_sources(self) -> None:
         config = m.Infra.PlanCollectionConfig(
-            enabled=False, canonical_dir=Path("docs/plans"),
+            enabled=False,
+            canonical_dir=Path("docs/plans"),
         )
 
         tm.that(config.sources, eq=())
@@ -83,7 +84,8 @@ class TestsFlextInfraPlanCollection:
             })
 
     def test_plan_and_companion_are_snapshotted_without_writing(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         self._write(tmp_path / "input" / "design.md", "# Design\n")
         self._write(tmp_path / "input" / "design" / "research.md", "# Research\n")
@@ -101,7 +103,8 @@ class TestsFlextInfraPlanCollection:
         tm.that(repeated.revisions[0].digest, eq=bundle.revisions[0].digest)
 
     def test_changed_attachment_creates_revision_without_overwriting_curated_plan(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         self._write(tmp_path / "input" / "design.md", "# Source\n")
         attachment = tmp_path / "input" / "design" / "research.md"
@@ -122,7 +125,8 @@ class TestsFlextInfraPlanCollection:
         tm.that(canonical.read_text(), eq=curated)
 
     def test_modified_generated_revision_is_repaired_from_unchanged_source(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         source = tmp_path / "input" / "design.md"
         self._write(source, "# Source\n")
@@ -149,7 +153,8 @@ class TestsFlextInfraPlanCollection:
         tm.that(u.Infra.codegen_file_requires_effect(plan), eq=True)
 
     def test_disabled_collection_plans_manifest_owned_pruning(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         self._write(tmp_path / "input" / "design.md", "# Private source\n")
         published = u.Infra.docs_collect_plan_files(tmp_path, self._config())
@@ -157,7 +162,8 @@ class TestsFlextInfraPlanCollection:
             assert plan.desired_content is not None
             self._write(plan.path, plan.desired_content.decode())
         disabled = m.Infra.PlanCollectionConfig(
-            enabled=False, canonical_dir=Path("docs/plans"),
+            enabled=False,
+            canonical_dir=Path("docs/plans"),
         )
 
         pruning = u.Infra.docs_collect_plan_files(tmp_path, disabled)
@@ -172,7 +178,8 @@ class TestsFlextInfraPlanCollection:
             tm.that(plan.path.is_relative_to(tmp_path / "docs" / "plans"), eq=True)
 
     def test_private_inventory_never_publishes_session_contents(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         private_session_text = "Private session text must stay at its source."
         session = tmp_path / "sessions" / "session.jsonl"
@@ -211,7 +218,8 @@ class TestsFlextInfraPlanCollection:
             u.Infra.docs_collect_plan_files(tmp_path, self._config())
 
     def test_projection_is_explicit_and_carries_its_own_owner(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         self._write(tmp_path / "input" / "design.md", "# Design\n")
         projection = tmp_path / "home-docs" / "plans"
@@ -226,7 +234,8 @@ class TestsFlextInfraPlanCollection:
         tm.that(projection.exists(), eq=False)
 
     def test_second_collection_ignores_unchanged_projection_but_detects_home_edit(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         projection = tmp_path / "home" / "plans"
         self._write(projection / "design.md", "# Original home plan\n")
@@ -285,7 +294,8 @@ class TestsFlextInfraPlanCollection:
             tm.that(u.Infra.codegen_file_requires_effect(plan), eq=False)
 
     def test_source_topology_change_fails_publication_preflight(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         self._write(tmp_path / "input" / "design.md", "# Design\n")
         config = self._config()
@@ -307,7 +317,12 @@ class TestsFlextInfraPlanCollection:
     @pytest.mark.parametrize("newline", ["\n", "\r\n"])
     @pytest.mark.parametrize("prefix", ["", "\ufeff"])
     def test_native_yaml_timestamp_preserves_precision(
-        self, tmp_path: Path, value: str, expected: str, newline: str, prefix: str,
+        self,
+        tmp_path: Path,
+        value: str,
+        expected: str,
+        newline: str,
+        prefix: str,
     ) -> None:
         self._write(
             tmp_path / "input" / "design.md",
@@ -338,7 +353,8 @@ class TestsFlextInfraPlanCollection:
             u.Infra.verify_plan_collection_sources(tmp_path, config, bundle)
 
     def test_projected_attachment_edit_is_collected_when_plan_is_unchanged(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         projection = tmp_path / "home" / "plans"
         self._write(projection / "design.md", "# Original\n")
@@ -407,7 +423,8 @@ class TestsFlextInfraPlanCollection:
             u.Infra.verify_plan_collection_sources(tmp_path, config, pending)
 
     def test_corpus_relocation_preserves_identity_and_exact_receipts(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         first_root, next_root = tmp_path / "first", tmp_path / "next"
         config = self._config()
@@ -430,5 +447,6 @@ class TestsFlextInfraPlanCollection:
         for plan in relocated.files:
             tm.that(u.Infra.codegen_file_requires_effect(plan), eq=False)
             tm.that(
-                str(first_root).encode() not in (plan.desired_content or b""), eq=True,
+                str(first_root).encode() not in (plan.desired_content or b""),
+                eq=True,
             )

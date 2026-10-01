@@ -13,7 +13,8 @@ class FlextInfraCodegenConformDocsOwnership(FlextInfraCodegenConformGitignore):
 
     @staticmethod
     def _member_repository_roots(
-        request: m.Infra.CodegenConformRequest, plan: m.Infra.CodegenPlan,
+        request: m.Infra.CodegenConformRequest,
+        plan: m.Infra.CodegenPlan,
     ) -> t.VariadicTuple[Path]:
         """Return the physical roots of the declared member repositories."""
         return tuple(

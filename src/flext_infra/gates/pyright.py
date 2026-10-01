@@ -25,7 +25,9 @@ class FlextInfraPyrightGate(FlextInfraGate):
 
     @override
     def _get_check_dirs(
-        self, project_dir: Path, ctx: m.Infra.GateContext,
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.StrSequence:
         """Use the project pyright config as SSOT when it exists."""
         _ = ctx
@@ -35,7 +37,10 @@ class FlextInfraPyrightGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence,
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """Build check command."""
         _ = project_dir
@@ -69,7 +74,10 @@ class FlextInfraPyrightGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext,
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse check output."""
         _ = ctx
@@ -84,12 +92,17 @@ class FlextInfraPyrightGate(FlextInfraGate):
                 ),
             )
         validated: p.Result[m.Infra.PyrightReport] = u.validate_value(
-            m.Infra.PyrightReport, result.stdout, from_json=True, strict=True,
+            m.Infra.PyrightReport,
+            result.stdout,
+            from_json=True,
+            strict=True,
         )
         if validated.failure:
             return False, (
                 self._malformed_report_issue(
-                    str(validated.error), tool=c.Infra.PYRIGHT, file=str(project_dir),
+                    str(validated.error),
+                    tool=c.Infra.PYRIGHT,
+                    file=str(project_dir),
                 ),
             )
         report = validated.value

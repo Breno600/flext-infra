@@ -52,7 +52,9 @@ class TestsFlextInfraTestmonDbInspector:
 
         with pytest.raises(sqlite3.DatabaseError):
             FlextInfraTestmonDbInspector(
-                repository_root=repository_root, db_path=db, pre_run_digest=None,
+                repository_root=repository_root,
+                db_path=db,
+                pre_run_digest=None,
             ).execute()
 
     def test_healthy_new_db_is_saveable_seed(self, tmp_path: Path) -> None:
@@ -71,7 +73,9 @@ class TestsFlextInfraTestmonDbInspector:
         connection.close()
         state: m.Infra.TestmonCacheState = tm.ok(
             FlextInfraTestmonDbInspector(
-                repository_root=repository_root, db_path=db, pre_run_digest=None,
+                repository_root=repository_root,
+                db_path=db,
+                pre_run_digest=None,
             ).execute(),
         )
         tm.that(state.seed_needed, eq=True)
@@ -94,7 +98,9 @@ class TestsFlextInfraTestmonDbInspector:
         digest = FlextInfraTestmonDbInspector.digest_file(db)
         state: m.Infra.TestmonCacheState = tm.ok(
             FlextInfraTestmonDbInspector(
-                repository_root=repository_root, db_path=db, pre_run_digest=digest,
+                repository_root=repository_root,
+                db_path=db,
+                pre_run_digest=digest,
             ).execute(),
         )
         tm.that(state.changed, eq=False)

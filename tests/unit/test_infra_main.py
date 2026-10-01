@@ -29,7 +29,8 @@ class TestsFlextInfraInfraMain:
         tm.that(main(["unknown"]), eq=1)
 
     def test_main_help_lists_core_groups(
-        self, capsys: pytest.CaptureFixture[str],
+        self,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         tm.that(main(["--help"]), eq=0)
         out = capsys.readouterr().out

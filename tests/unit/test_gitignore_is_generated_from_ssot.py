@@ -67,7 +67,8 @@ class TestsFlextInfraGitignoreIsGeneratedFromSsot:
 
         tm.that(
             test_u.Tests.is_tracked_under(
-                rendered, "src/probe_project/vendor/docx/document.py",
+                rendered,
+                "src/probe_project/vendor/docx/document.py",
             ),
             eq=True,
         )

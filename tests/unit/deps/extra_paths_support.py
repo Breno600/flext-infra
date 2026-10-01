@@ -30,13 +30,17 @@ class ExtraPathsTestSupport:
             (project / ".git").mkdir()
         (project / "Makefile").write_text("", encoding="utf-8")
         (project / "pyproject.toml").write_text(
-            f"[project]\nname = '{name}'\n", encoding="utf-8",
+            f"[project]\nname = '{name}'\n",
+            encoding="utf-8",
         )
         return project
 
     @classmethod
     def workspace_with_dependency(
-        cls, root: Path, *, uv_workspace: bool = True,
+        cls,
+        root: Path,
+        *,
+        uv_workspace: bool = True,
     ) -> t.Pair[Path, Path]:
         """Write one governed root and its ``flext-core`` dependency checkout."""
         (root / ".git").mkdir()

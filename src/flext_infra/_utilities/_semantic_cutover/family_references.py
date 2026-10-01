@@ -26,7 +26,11 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
         project, wrapper, names = flatten.project, flatten.wrapper, flatten.names
         wrapper_name = flatten.wrapper_name
         finder = runtime.create_occurrence_finder(
-            project, wrapper_name, wrapper, imports=True, in_hierarchy=False,
+            project,
+            wrapper_name,
+            wrapper,
+            imports=True,
+            in_hierarchy=False,
         )
         for occurrence in finder.find_occurrences(resource=resource):
             if occurrence.is_defined():
@@ -55,12 +59,17 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
         for name, replacement in names.items():
             member = wrapper.get_object().get_attribute(name)
             members = runtime.create_occurrence_finder(
-                project, name, member, imports=True, in_hierarchy=False,
+                project,
+                name,
+                member,
+                imports=True,
+                in_hierarchy=False,
             )
             for occurrence in members.find_occurrences(resource=resource):
                 start, end = occurrence.get_word_range()
                 primary_start, primary_end = runtime.word_primary_range(
-                    source, occurrence.offset,
+                    source,
+                    occurrence.offset,
                 )
                 primary = source[primary_start:primary_end]
                 qualifier, dot, _member = primary.rpartition(".")
@@ -77,7 +86,9 @@ class FlextInfraUtilitiesSemanticFamilyReferences(
                     text = f"{parent}.{replacement}" if parent else replacement
                     edits.append(
                         m.Infra.SourceRewrite(
-                            start=primary_start, end=primary_end, text=text,
+                            start=primary_start,
+                            end=primary_end,
+                            text=text,
                         ),
                     )
                 elif name != replacement:

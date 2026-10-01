@@ -94,7 +94,8 @@ class TestsFlextInfraAuditorStaleSymbols:
         )
 
     def test_generated_api_reference_accepts_live_public_symbol(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         scope = self._stale_symbol_scope(tmp_path)
         self._write(
@@ -107,7 +108,8 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(issues, eq=[])
 
     def test_generated_api_reference_reports_missing_public_symbol(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         scope = self._stale_symbol_scope(tmp_path)
         self._write(
@@ -135,7 +137,8 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(issues[0].message, eq="contains `LiveSymbol`")
 
     def test_public_contract_resolves_local_tuple_public_exports(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Generated ABI ``__all__ = tuple(_PUBLIC_EXPORTS)`` must yield a contract."""
         package_root = tmp_path / "src" / "demo_pkg"
@@ -186,7 +189,8 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(bool(exports), eq=True)
 
     def test_public_contract_resolves_imported_lazy_public_exports(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         package_root = tmp_path / "src" / "demo_pkg"
         self._write_demo_pyproject(tmp_path)
@@ -237,7 +241,8 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(issues, eq=[])
 
     def test_public_contract_resolves_imported_lazy_import_map(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         package_root = tmp_path / "src" / "demo_pkg"
         self._write_demo_pyproject(tmp_path)
@@ -282,7 +287,8 @@ class TestsFlextInfraAuditorStaleSymbols:
         tm.that(u.Infra.docstring_issues(tmp_path, contract), eq=[])
 
     def test_docstring_issues_accepts_direct_part_flext_docstring(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         package_root = tmp_path / "src" / "demo_pkg"
         self._write_demo_pyproject(tmp_path)

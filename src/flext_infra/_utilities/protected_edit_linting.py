@@ -26,7 +26,12 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @staticmethod
     def unified_diff_lines(
-        before: str, after: str, *, fromfile: str, tofile: str, max_lines: int,
+        before: str,
+        after: str,
+        *,
+        fromfile: str,
+        tofile: str,
+        max_lines: int,
     ) -> t.StrSequence:
         """Return a bounded unified diff without materializing omitted lines."""
         if max_lines < 1:
@@ -70,7 +75,8 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
         normalized_line: str = c.Infra.LINE_COL_RE.sub("", line)
         normalized_without_unused_imports: str = c.Infra.UNUSED_IMPORT_RE.sub(
-            normalize_unused_import, normalized_line,
+            normalize_unused_import,
+            normalized_line,
         )
         if c.Infra.LINT_SUMMARY_RE.match(normalized_without_unused_imports):
             return ""
@@ -123,7 +129,8 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @classmethod
     def selected_lint_tool_names(
-        cls, gates: t.StrSequence | None = None,
+        cls,
+        gates: t.StrSequence | None = None,
     ) -> t.StrSequence:
         """Return the canonical lint tool names selected for a gate set."""
         return tuple(entry[0] for entry in cls._selected_lint_tools(gates))
@@ -209,7 +216,8 @@ class FlextInfraUtilitiesProtectedEditLinting:
         if tool_name == c.Infra.MYPY:
             return FlextInfraUtilitiesResourceLimits.mypy_limited_command(
                 m.Infra.MypyInvocation(
-                    targets=(py_file.resolve(),), workspace=workspace,
+                    targets=(py_file.resolve(),),
+                    workspace=workspace,
                 ),
             )
         command: t.StrSequence = (
@@ -225,7 +233,11 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @classmethod
     def lint_commands(
-        cls, py_file: Path, workspace: Path, *, gates: t.StrSequence | None = None,
+        cls,
+        py_file: Path,
+        workspace: Path,
+        *,
+        gates: t.StrSequence | None = None,
     ) -> t.StrSequencePairTuple:
         """Return the exact public command plan used by protected linting."""
         command_cwd = cls._command_cwd(py_file, workspace)
@@ -245,12 +257,17 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @classmethod
     def _new_file_lint_baseline(
-        cls, py_file: Path, workspace: Path, *, gates: t.StrSequence | None = None,
+        cls,
+        py_file: Path,
+        workspace: Path,
+        *,
+        gates: t.StrSequence | None = None,
     ) -> t.Infra.LintSnapshot:
         """Compute the lint baseline for a new file."""
         py_file.parent.mkdir(parents=True, exist_ok=True)
         py_file.write_text(
-            f"{c.Infra.FUTURE_ANNOTATIONS}\n", encoding=c.Cli.ENCODING_DEFAULT,
+            f"{c.Infra.FUTURE_ANNOTATIONS}\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         try:
             return cls.lint_snapshot(py_file, workspace, gates=gates)
@@ -269,7 +286,8 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @staticmethod
     def _lint_snapshot_cache_key(
-        py_file: Path, gate_key: t.StrSequence,
+        py_file: Path,
+        gate_key: t.StrSequence,
     ) -> t.Triple[str, str, t.StrSequence] | None:
         """Lint snapshot cache key."""
         raw_bytes = py_file.read_bytes()
@@ -277,7 +295,10 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @classmethod
     def _execute_selected_lint_tools(
-        cls, py_file: Path, workspace: Path, selected_tools: t.StrSequencePairTuple,
+        cls,
+        py_file: Path,
+        workspace: Path,
+        selected_tools: t.StrSequencePairTuple,
     ) -> t.Infra.LintSnapshot:
         """Execute selected lint tools."""
         command_cwd = cls._command_cwd(py_file, workspace)
@@ -313,7 +334,8 @@ class FlextInfraUtilitiesProtectedEditLinting:
         }
         try:
             done, not_done = concurrent.futures.wait(
-                tuple(futures_by_tool), timeout=timeout_budget,
+                tuple(futures_by_tool),
+                timeout=timeout_budget,
             )
             results.extend(future.result() for future in done)
             for future in not_done:
@@ -408,7 +430,11 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @classmethod
     def lint_snapshot(
-        cls, py_file: Path, workspace: Path, *, gates: t.StrSequence | None = None,
+        cls,
+        py_file: Path,
+        workspace: Path,
+        *,
+        gates: t.StrSequence | None = None,
     ) -> t.Infra.LintSnapshot:
         """Run selected lint tools on *py_file*, concurrent and content-cached."""
         selected_tools = cls._selected_lint_tools(gates)
@@ -424,7 +450,9 @@ class FlextInfraUtilitiesProtectedEditLinting:
             return cached
 
         result = cls._execute_selected_lint_tools(
-            py_file=py_file, workspace=workspace, selected_tools=selected_tools,
+            py_file=py_file,
+            workspace=workspace,
+            selected_tools=selected_tools,
         )
         if cache_key is not None:
             cls._snapshot_cache[cache_key] = dict(result)
@@ -461,7 +489,8 @@ class FlextInfraUtilitiesProtectedEditLinting:
 
     @staticmethod
     def lint_new_errors(
-        before: t.Infra.LintSnapshot, after: t.Infra.LintSnapshot,
+        before: t.Infra.LintSnapshot,
+        after: t.Infra.LintSnapshot,
     ) -> t.Infra.LintSnapshot:
         """Return only lint errors introduced relative to *before*."""
         return {
@@ -502,14 +531,18 @@ class FlextInfraUtilitiesProtectedEditLinting:
         """Preview lint output for ``updated_source`` while restoring the file."""
         original_source = py_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         before = FlextInfraUtilitiesProtectedEditLinting.lint_snapshot(
-            py_file, workspace, gates=gates,
+            py_file,
+            workspace,
+            gates=gates,
         )
         if updated_source == original_source:
             return before, before
         py_file.write_text(updated_source, encoding=c.Cli.ENCODING_DEFAULT)
         try:
             after = FlextInfraUtilitiesProtectedEditLinting.lint_snapshot(
-                py_file, workspace, gates=gates,
+                py_file,
+                workspace,
+                gates=gates,
             )
         finally:
             py_file.write_text(original_source, encoding=c.Cli.ENCODING_DEFAULT)

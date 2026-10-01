@@ -28,7 +28,8 @@ class FlextInfraUtilitiesRopeClassMove:
         move_completed = False
         if created_target:
             u.Cli.atomic_write_text_file(
-                target_file, f"{c.Infra.FUTURE_ANNOTATIONS}\n",
+                target_file,
+                f"{c.Infra.FUTURE_ANNOTATIONS}\n",
             ).unwrap()
         try:
             request.rope_project.validate()
@@ -43,7 +44,10 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @classmethod
     def plan_class_move(
-        cls, request: m.Infra.ClassMoveRequest, *, sources: t.MappingKV[Path, str],
+        cls,
+        request: m.Infra.ClassMoveRequest,
+        *,
+        sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Preview one identity-preserving move inside a closed source inventory."""
         if request.apply:
@@ -63,7 +67,8 @@ class FlextInfraUtilitiesRopeClassMove:
                 msg = f"class move source differs from its planning snapshot: {path}"
                 raise ValueError(msg)
         changes = mover.get_changes(
-            cls._resource(request.rope_project, root, target_file), resources=resources,
+            cls._resource(request.rope_project, root, target_file),
+            resources=resources,
         )
         edits: list[m.Infra.SemanticMigrationEdit] = []
         for change in changes.changes:
@@ -87,7 +92,8 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @classmethod
     def _class_mover(
-        cls, request: m.Infra.ClassMoveRequest,
+        cls,
+        request: m.Infra.ClassMoveRequest,
     ) -> t.Pair[Path, p.Infra.RopeMoveGlobal]:
         """Resolve both execution and planning from the exact original declaration."""
         root = Path(request.rope_project.root.real_path).resolve()
@@ -114,7 +120,9 @@ class FlextInfraUtilitiesRopeClassMove:
             msg = f"class {request.class_name} was not found at line {request.line}"
             raise ValueError(msg)
         mover = FlextInfraUtilitiesRopeRuntime.create_move(
-            request.rope_project, source_resource, offset,
+            request.rope_project,
+            source_resource,
+            offset,
         )
         return target_file, mover
 
@@ -125,7 +133,12 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @classmethod
     def class_target_file(
-        cls, *, package_dir: Path, source_file: Path, class_name: str, family: str,
+        cls,
+        *,
+        package_dir: Path,
+        source_file: Path,
+        class_name: str,
+        family: str,
     ) -> Path:
         """Derive a canonical destination without a project-owned registry."""
         module_stem = cls.class_module_stem(class_name)
@@ -146,7 +159,9 @@ class FlextInfraUtilitiesRopeClassMove:
 
     @staticmethod
     def _resource(
-        rope_project: t.Infra.RopeProject, root: Path, file_path: Path,
+        rope_project: t.Infra.RopeProject,
+        root: Path,
+        file_path: Path,
     ) -> t.Infra.RopeResource:
         relative_path = file_path.relative_to(root).as_posix()
         return rope_project.get_resource(relative_path)

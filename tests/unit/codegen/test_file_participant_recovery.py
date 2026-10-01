@@ -23,7 +23,9 @@ class TestsFlextInfraFileParticipantRecovery:
 
     @pytest.mark.parametrize("invalid_later_plan", ["participant", "destination"])
     def test_later_invalid_plan_leaves_no_partial_staging(
-        self, tmp_path: Path, invalid_later_plan: str,
+        self,
+        tmp_path: Path,
+        invalid_later_plan: str,
     ) -> None:
         """A rejected phase cannot strand earlier replacements outside its journal."""
         root = test_u.Tests.git_repository(tmp_path)
@@ -43,7 +45,9 @@ class TestsFlextInfraFileParticipantRecovery:
                     project=project,
                     path=destination,
                     before=tm.ok(
-                        u.Cli.atomic_read_binary_file_state(destination, required=False),
+                        u.Cli.atomic_read_binary_file_state(
+                            destination, required=False
+                        ),
                     ),
                     desired_content=b"generated replacement\n",
                     desired_mode=session.journal_state.mode,
@@ -76,7 +80,8 @@ class TestsFlextInfraFileParticipantRecovery:
         tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
 
     def test_fresh_import_failure_restores_published_initializer(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         root = test_u.Tests.git_repository(tmp_path)
         package = root / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
@@ -97,7 +102,8 @@ class TestsFlextInfraFileParticipantRecovery:
             owner="lazy-init",
         )
         validator = FlextInfraValidateFreshImport(
-            repository_root=root, packages=(package.name,),
+            repository_root=root,
+            packages=(package.name,),
         )
 
         def publish(scope: Path) -> p.Result[t.VariadicTuple[Path]]:
@@ -133,13 +139,16 @@ class TestsFlextInfraFileParticipantRecovery:
         prepared = transaction.run_files_locked(
             roots,
             lambda scope_root: transaction.begin_files_locked(
-                scope_root, roots, (source,),
+                scope_root,
+                roots,
+                (source,),
             ),
         )
         tm.ok(prepared)
 
         recovered = transaction.run_files_locked(
-            roots, lambda _scope_root: r[bool].ok(True),
+            roots,
+            lambda _scope_root: r[bool].ok(True),
         )
 
         tm.ok(recovered)
@@ -147,7 +156,9 @@ class TestsFlextInfraFileParticipantRecovery:
 
     @pytest.mark.parametrize("foreign_change", ["none", "extra", "replaced"])
     def test_prepared_publication_recovery_requires_original_tree(
-        self, tmp_path: Path, foreign_change: str,
+        self,
+        tmp_path: Path,
+        foreign_change: str,
     ) -> None:
         """Recover owned publications, but retain foreign trees and their evidence."""
         root = test_u.Tests.git_repository(tmp_path)
@@ -196,7 +207,11 @@ class TestsFlextInfraFileParticipantRecovery:
     @pytest.mark.parametrize("with_foreign_file", [False, True])
     @pytest.mark.parametrize("journal_state", ["staging", "prepared"])
     def test_unmanifested_created_directory_owns_no_descendants(
-        self, tmp_path: Path, journal_state: str, *, with_foreign_file: bool,
+        self,
+        tmp_path: Path,
+        journal_state: str,
+        *,
+        with_foreign_file: bool,
     ) -> None:
         """A pre-manifest crash receipt permits only exact empty-directory cleanup."""
         root = test_u.Tests.git_repository(tmp_path)
@@ -206,7 +221,8 @@ class TestsFlextInfraFileParticipantRecovery:
         roots = {"@docs-0": root}
         session = tm.ok(
             owner.run_files_locked(
-                roots, lambda scope: owner.begin_files_locked(scope, roots, ()),
+                roots,
+                lambda scope: owner.begin_files_locked(scope, roots, ()),
             ),
         )
         staging = session.plan.layout.file_participants[0].transaction_root
@@ -242,7 +258,10 @@ class TestsFlextInfraFileParticipantRecovery:
     @pytest.mark.parametrize("journal_change", ["unchanged", "replaced", "missing"])
     @pytest.mark.parametrize("failure_kind", ["validator", "exception", "abort"])
     def test_session_failure_never_recovers_changed_journal(
-        self, tmp_path: Path, failure_kind: str, journal_change: str,
+        self,
+        tmp_path: Path,
+        failure_kind: str,
+        journal_change: str,
     ) -> None:
         """Retain the causal failure and publications when journal authority changes."""
         root = test_u.Tests.git_repository(tmp_path)

@@ -101,7 +101,8 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         ],
     )
     def test_public_normalizer_accepts_declared_owner_aliases(
-        self, declaration: str,
+        self,
+        declaration: str,
     ) -> None:
         """An existing qualified alias must not block unrelated sibling repairs."""
         source = (
@@ -120,7 +121,8 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         tm.that(
             normalized,
             eq=source.replace(
-                "dependency: Dependency", "dependency: Models.Dependency",
+                "dependency: Dependency",
+                "dependency: Models.Dependency",
             ),
         )
         tm.that(u.Infra.normalize_deferred_self_references(normalized), eq=normalized)
@@ -138,10 +140,12 @@ class TestsFlextInfraDeferredSelfReferenceNormalizer:
         tm.that(u.Infra.normalize_deferred_self_references(source), eq=source)
 
     @pytest.mark.parametrize(
-        "declaration", ["_Kind: object", "class Other:\n        _Kind = str"],
+        "declaration",
+        ["_Kind: object", "class Other:\n        _Kind = str"],
     )
     def test_public_normalizer_rejects_unbound_or_foreign_owner_members(
-        self, declaration: str,
+        self,
+        declaration: str,
     ) -> None:
         """An annotation-only slot or another class's member is not an owner binding."""
         source = (

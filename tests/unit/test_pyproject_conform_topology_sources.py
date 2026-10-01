@@ -25,13 +25,16 @@ class TestsFlextInfraPyprojectConformTopologySources:
     def _member_ref(self, distribution: str, path: str) -> m.Infra.RepositoryRef:
         """Declare one standalone-capable member through the provider contract."""
         return test_u.Tests.repository_ref(
-            distribution, role=self._ROLE.STANDALONE, path=Path(path),
+            distribution,
+            role=self._ROLE.STANDALONE,
+            path=Path(path),
         )
 
     def _workspace(self, *members: m.Infra.RepositoryRef) -> m.Infra.WorkspaceSpec:
         """Compose one workspace fixture from its declared member references."""
         return test_u.Tests.workspace_spec(
-            test_u.Tests.repository_ref("workspace"), subprojects=tuple(members),
+            test_u.Tests.repository_ref("workspace"),
+            subprojects=tuple(members),
         )
 
     def _inline_requirement(self, ref: m.Infra.RepositoryRef) -> str:
@@ -63,7 +66,8 @@ class TestsFlextInfraPyprojectConformTopologySources:
         workspace = self._workspace(flext_member, other_member).model_copy(
             update={
                 "integration": m.Infra.WorkspaceIntegrationSpec(
-                    provider=test_u.Tests.integration().provider, branch=workspace_line,
+                    provider=test_u.Tests.integration().provider,
+                    branch=workspace_line,
                 ),
             },
         )
@@ -92,7 +96,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
             eq=expected,
         )
         workspace_group = tu.Tests.toml_strings_at(
-            rendered, "dependency-groups", "workspace",
+            rendered,
+            "dependency-groups",
+            "workspace",
         )
         tm.that(
             set(workspace_group),
@@ -176,7 +182,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
             update={
                 "candidate_dependencies": (
                     m.Infra.CandidateDependencySourceSpec(
-                        distribution=cli.distribution, url=foreign.url, commit="b" * 40,
+                        distribution=cli.distribution,
+                        url=foreign.url,
+                        commit="b" * 40,
                     ),
                 ),
             },
@@ -202,7 +210,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
             update={
                 "candidate_dependencies": (
                     m.Infra.CandidateDependencySourceSpec(
-                        distribution=cli.distribution, url=cli.url, commit="c" * 40,
+                        distribution=cli.distribution,
+                        url=cli.url,
+                        commit="c" * 40,
                     ),
                 ),
             },
@@ -227,7 +237,9 @@ class TestsFlextInfraPyprojectConformTopologySources:
             update={
                 "candidate_dependencies": (
                     m.Infra.CandidateDependencySourceSpec(
-                        distribution=cli.distribution, url=cli.url, commit="d" * 40,
+                        distribution=cli.distribution,
+                        url=cli.url,
+                        commit="d" * 40,
                     ),
                 ),
             },

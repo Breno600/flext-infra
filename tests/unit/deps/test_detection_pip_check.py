@@ -26,14 +26,16 @@ class TestsFlextInfraDepsDetectionPipCheck:
         venv_bin = self._venv_bin(tmp_path, None)
 
         result = FlextInfraDependencyDetectionService().run_pip_check(
-            tmp_path, venv_bin,
+            tmp_path,
+            venv_bin,
         )
 
         tm.that(tm.ok(result), eq=([], 0))
 
     def test_conflicts_and_exit_code_are_reported(self, tmp_path: Path) -> None:
         venv_bin = self._venv_bin(
-            tmp_path, "printf 'pkg1 has requirement\\npkg2 conflict\\n'\nexit 1",
+            tmp_path,
+            "printf 'pkg1 has requirement\\npkg2 conflict\\n'\nexit 1",
         )
 
         lines, exit_code = tm.ok(
@@ -47,7 +49,8 @@ class TestsFlextInfraDepsDetectionPipCheck:
         venv_bin = self._venv_bin(tmp_path, "exit 0")
 
         result = FlextInfraDependencyDetectionService().run_pip_check(
-            tmp_path, venv_bin,
+            tmp_path,
+            venv_bin,
         )
 
         tm.that(tm.ok(result), eq=([], 0))

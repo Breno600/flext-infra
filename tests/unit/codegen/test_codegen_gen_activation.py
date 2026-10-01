@@ -36,7 +36,8 @@ class TestsFlextInfraCodegenGenActivation:
         tm.that(envrc.read_text(encoding="utf-8"), eq=broken_activation)
 
     def test_gen_recovers_activation_and_orders_hooks(
-        self, provisioned_infra_checkout: t.Pair[str, Path],
+        self,
+        provisioned_infra_checkout: t.Pair[str, Path],
     ) -> None:
         """Native failures stop post hooks; a valid producer activates only once."""
         scenario, root = provisioned_infra_checkout

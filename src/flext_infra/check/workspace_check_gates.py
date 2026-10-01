@@ -25,7 +25,9 @@ class FlextInfraWorkspaceCheckGatesMixin:
     _gate_logger: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     def _isolate_context(
-        self, ctx: m.Infra.GateContext, target: m.Infra.CheckProjectTarget,
+        self,
+        ctx: m.Infra.GateContext,
+        target: m.Infra.CheckProjectTarget,
     ) -> m.Infra.GateContext:
         """Create a fresh GateContext scoped to a single project."""
         return m.Infra.GateContext(
@@ -50,7 +52,9 @@ class FlextInfraWorkspaceCheckGatesMixin:
         _ = u.Cli.ensure_dir(project_ctx.reports_dir)
         start = time.monotonic()
         project_result = self._check_project_with_ctx(
-            project_dir, resolved_gates, project_ctx,
+            project_dir,
+            resolved_gates,
+            project_ctx,
         )
         elapsed = time.monotonic() - start
         u.Cli.status(
@@ -121,7 +125,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
         return gate.check(project_dir, ctx or self._gate_ctx(reports_dir))
 
     def _check_project_with_ctx(
-        self, project_dir: Path, gates: t.StrSequence, ctx: m.Infra.GateContext,
+        self,
+        project_dir: Path,
+        gates: t.StrSequence,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.ProjectResult:
         """Run gates for one project and retain every executed gate in order.
 
@@ -153,7 +160,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
                         else frozenset()
                     ),
                     handler=self._make_gate_handler(
-                        gate_instance, project_dir, ctx, executions,
+                        gate_instance,
+                        project_dir,
+                        ctx,
+                        executions,
                     ),
                 ),
             )
@@ -206,7 +216,8 @@ class FlextInfraWorkspaceCheckGatesMixin:
         project_name = project_dir.name
 
         def _handler(
-            _pipeline_ctx: p.Cli.PipelineStageContext, /,
+            _pipeline_ctx: p.Cli.PipelineStageContext,
+            /,
         ) -> p.Result[m.Cli.PipelineStageResult]:
             """Run the gate and record its execution in the sink."""
             gate_ctx = m.Infra.GateContext(
@@ -243,7 +254,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
         return _handler
 
     def _execute_gate(
-        self, gate_instance: FlextInfraGate, project_dir: Path, ctx: m.Infra.GateContext,
+        self,
+        gate_instance: FlextInfraGate,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run fix-only under ``--apply``; check-only otherwise.
 

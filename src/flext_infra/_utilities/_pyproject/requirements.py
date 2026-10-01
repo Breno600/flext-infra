@@ -23,7 +23,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @staticmethod
     def requirement_group_fields(
-        document: t.Cli.TomlDocument, project: t.Cli.TomlTable,
+        document: t.Cli.TomlDocument,
+        project: t.Cli.TomlTable,
     ) -> Iterator[t.Pair[t.Cli.TomlTable, str]]:
         """Yield ``(section, group_name)`` for every declared requirement group.
 
@@ -89,11 +90,14 @@ class FlextInfraUtilitiesPyprojectRequirements:
             return r[bool].ok(True)
         raw_items = u.Cli.json_as_sequence(raw_value)
         validated_items: p.Result[t.StrSequence] = u.validate_value(
-            t.Infra.STR_SEQ_ADAPTER, raw_items, strict=True,
+            t.Infra.STR_SEQ_ADAPTER,
+            raw_items,
+            strict=True,
         )
         if validated_items.failure:
             return r[bool].fail_op(
-                f"validate dependency group {key}", validated_items.error,
+                f"validate dependency group {key}",
+                validated_items.error,
             )
         items = validated_items.value
         normalized_items: t.MutableSequenceOf[str] = []
@@ -255,7 +259,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
             for requirement in required_dev_dependencies
             if FlextInfraUtilitiesDependencies.dep_name(requirement) != project_name
             and not cls._floor_yields_to_declared_source(
-                requirement, sourced_live_names,
+                requirement,
+                sourced_live_names,
             )
         )
         dev = [*required_dev, *live_dev, *optional_dev]
@@ -291,7 +296,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @staticmethod
     def _floor_yields_to_declared_source(
-        requirement: str, sourced_live_names: frozenset[str] | set[str],
+        requirement: str,
+        sourced_live_names: frozenset[str] | set[str],
     ) -> bool:
         """Whether a bare internal floor name must yield to a declared source."""
         name = FlextInfraUtilitiesDependencies.dep_name(requirement)
@@ -306,7 +312,8 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @staticmethod
     def _sync_workspace_dependency_group(
-        document: t.Cli.TomlDocument, workspace_members: t.StrSequence,
+        document: t.Cli.TomlDocument,
+        workspace_members: t.StrSequence,
     ) -> None:
         """Declare the attached members in the workspace root's own group.
 
@@ -320,7 +327,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
         if workspace_members:
             groups = u.Cli.toml_ensure_table(document, c.Infra.DEPENDENCY_GROUPS)
             u.Cli.toml_sync_string_list(
-                groups, "workspace", tuple(sorted(workspace_members)),
+                groups,
+                "workspace",
+                tuple(sorted(workspace_members)),
             )
             return
         groups = u.Cli.toml_table_child(document, c.Infra.DEPENDENCY_GROUPS)
@@ -329,7 +338,9 @@ class FlextInfraUtilitiesPyprojectRequirements:
 
     @staticmethod
     def _validate_dependency_provenance(
-        document: t.Cli.TomlDocument, *, workspace: p.Infra.WorkspaceSpec,
+        document: t.Cli.TomlDocument,
+        *,
+        workspace: p.Infra.WorkspaceSpec,
     ) -> p.Result[bool]:
         """Require one internal dependency provenance for the active topology."""
         payload = u.Cli.toml_as_mapping(document)

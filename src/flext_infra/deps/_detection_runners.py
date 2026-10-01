@@ -21,7 +21,8 @@ class FlextInfraDependencyDetectionRunnersMixin:
         # Conversion helper provided by the concrete analyzer; declared for static
         # resolution only (runtime impl lives on the concrete via FLEXT).
         def _to_toml_config(
-            self, payload: t.MappingKV[str, t.JsonValue],
+            self,
+            payload: t.MappingKV[str, t.JsonValue],
         ) -> t.JsonMapping: ...
 
     def run_deptry(
@@ -74,7 +75,8 @@ class FlextInfraDependencyDetectionRunnersMixin:
                         typed_item = t.Infra.INFRA_MAPPING_ADAPTER.validate_python(item)
                     except c.ValidationError as exc:
                         return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail_op(
-                            "validate deptry issue", exc,
+                            "validate deptry issue",
+                            exc,
                         )
                     converted_issue = self._to_toml_config(typed_item)
                     if len(converted_issue) == len(typed_item):
@@ -85,7 +87,8 @@ class FlextInfraDependencyDetectionRunnersMixin:
                     out_file.unlink()
                 except OSError as exc:
                     return r[t.Pair[t.SequenceOf[t.JsonMapping], int]].fail(
-                        f"failed to cleanup deptry temp output: {exc}", exception=exc,
+                        f"failed to cleanup deptry temp output: {exc}",
+                        exception=exc,
                     )
             if validation_failure is not None:
                 return validation_failure
@@ -96,7 +99,8 @@ class FlextInfraDependencyDetectionRunnersMixin:
         ))
 
     def run_mypy_stub_hints(
-        self, project_path: Path,
+        self,
+        project_path: Path,
     ) -> p.Result[t.Pair[t.StrSequence, t.StrSequence]]:
         """Run mypy via the command runner to detect missing stubs and hint packages."""
         # Why: current mypy emits ANSI color codes around quoted module/package
@@ -112,7 +116,9 @@ class FlextInfraDependencyDetectionRunnersMixin:
             ),
         )
         result = u.Cli.run_raw(
-            cmd, cwd=project_path, timeout=u.Infra.mypy_runner_timeout(),
+            cmd,
+            cwd=project_path,
+            timeout=u.Infra.mypy_runner_timeout(),
         )
         if result.failure:
             return r[t.Pair[t.StrSequence, t.StrSequence]].fail(
@@ -140,7 +146,9 @@ class FlextInfraDependencyDetectionRunnersMixin:
         ))
 
     def run_pip_check(
-        self, repository_root: Path, venv_bin: Path,
+        self,
+        repository_root: Path,
+        venv_bin: Path,
     ) -> p.Result[t.Pair[t.StrSequence, int]]:
         """Run pip check to detect dependency conflicts in workspace."""
         pip = venv_bin / "pip"

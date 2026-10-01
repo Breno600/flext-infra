@@ -26,7 +26,10 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.parametrize("ci_context", [True, False])
     def test_marker_selection_is_shared_by_collection_execution_and_coverage(
-        self, cached_runner_project: Path, *, ci_context: bool,
+        self,
+        cached_runner_project: Path,
+        *,
+        ci_context: bool,
     ) -> None:
         """CI/pre-commit omit slow cases; local/pre-push keep them selectable."""
         runner = runner_for(cached_runner_project, ci_context=ci_context)
@@ -41,7 +44,8 @@ class TestsFlextInfraPytestRunner:
 
         def deselected(expression: str) -> frozenset[str]:
             tm.that(
-                expression.startswith("not (") and expression.endswith(")"), eq=True,
+                expression.startswith("not (") and expression.endswith(")"),
+                eq=True,
             )
             return frozenset(expression.removeprefix("not (")[:-1].split(" or "))
 
@@ -76,7 +80,8 @@ class TestsFlextInfraPytestRunner:
         )
 
     def test_testmon_commands_name_the_toolchain_environment(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """Every testmon argv names one stable toolchain-fingerprinted env."""
         runner = runner_for(cached_runner_project)
@@ -103,7 +108,8 @@ class TestsFlextInfraPytestRunner:
         assert len(set(names)) == 1
         (name,) = {name.strip("'") for name in names}
         tm.that(
-            name, eq=runner.testmon_environment(c.Infra.PytestExecutionMode.INCREMENTAL),
+            name,
+            eq=runner.testmon_environment(c.Infra.PytestExecutionMode.INCREMENTAL),
         )
         # Each marker scope owns its environment: the slow phase never shares
         # the budgeted phase's records.
@@ -123,7 +129,8 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     def test_config_only_changes_invalidate_the_persistent_cache(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A governed YAML change executes again using the same Testmon database."""
         config_root = cached_runner_project / c.CONFIG_DIR_NAME
@@ -170,13 +177,15 @@ class TestsFlextInfraPytestRunner:
         )
 
     def test_declared_project_uses_its_configured_run_wall(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """The suite argv and process policy share one declared project budget."""
         policy = config.Infra.tooling.tools.pytest
         declared_name = next(iter(policy.run_timeout_overrides), config.Infra.name)
         expected = policy.run_timeout_overrides.get(
-            declared_name, policy.run_timeout_seconds,
+            declared_name,
+            policy.run_timeout_seconds,
         )
         pyproject = cached_runner_project / "pyproject.toml"
         pyproject.write_text(
@@ -217,14 +226,18 @@ class TestsFlextInfraPytestRunner:
     @pytest.mark.slow
     @pytest.mark.parametrize("profile_collection", [False, True])
     def test_warm_cache_deselects_the_unchanged_suite(
-        self, cached_runner_project: Path, *, profile_collection: bool,
+        self,
+        cached_runner_project: Path,
+        *,
+        profile_collection: bool,
     ) -> None:
         """A second run restores the seeded cache and executes nothing."""
         reports_root = self._seed_cache(cached_runner_project)
 
         second_exit = tm.ok(
             runner_for(
-                cached_runner_project, profile_collection=profile_collection,
+                cached_runner_project,
+                profile_collection=profile_collection,
             ).execute(),
         )
         tm.that(second_exit, eq=0)
@@ -248,22 +261,26 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     def test_seeded_cache_executes_only_an_added_test(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A test added after the seed is the only one the next run executes."""
         reports_root = self._seed_cache(cached_runner_project)
         (cached_runner_project / "tests" / "test_added.py").write_text(
-            "def test_added_after_cache_seed():\n    assert True\n", encoding="utf-8",
+            "def test_added_after_cache_seed():\n    assert True\n",
+            encoding="utf-8",
         )
         added_exit = tm.ok(runner_for(cached_runner_project).execute())
         tm.that(added_exit, eq=0)
         tm.that(
-            summary(reports_root), has=["executed=1", "failed=0", "errors=0", "exit=0"],
+            summary(reports_root),
+            has=["executed=1", "failed=0", "errors=0", "exit=0"],
         )
 
     @pytest.mark.slow
     def test_failed_slow_item_stays_red_across_budgeted_runs(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A budgeted xdist run never erases the slow phase's failure.
 
@@ -294,19 +311,24 @@ class TestsFlextInfraPytestRunner:
 
         tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
         tm.that(
-            tm.ok(runner_for(cached_runner_project, slow_phase=True).execute()), ne=0,
+            tm.ok(runner_for(cached_runner_project, slow_phase=True).execute()),
+            ne=0,
         )
         source.write_text("def answer() -> int:\n    return 41 + 1\n", encoding="utf-8")
         tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
 
         tm.that(
-            tm.ok(runner_for(cached_runner_project, slow_phase=True).execute()), ne=0,
+            tm.ok(runner_for(cached_runner_project, slow_phase=True).execute()),
+            ne=0,
         )
 
     @pytest.mark.slow
     @pytest.mark.parametrize("omit_case", [False, True], ids=["order", "membership"])
     def test_warm_workers_follow_the_central_selection_order(
-        self, cached_runner_project: Path, *, omit_case: bool,
+        self,
+        cached_runner_project: Path,
+        *,
+        omit_case: bool,
     ) -> None:
         """Real dispatch detects membership drift and restores ordering."""
         cache = config.Infra.codegen.make.testmon_cache
@@ -333,7 +355,8 @@ class TestsFlextInfraPytestRunner:
             encoding="utf-8",
         )
         (cached_runner_project / "src" / "runner_sample" / "__init__.py").write_text(
-            "def answer() -> int:\n    return sum((40, 2))\n", encoding="utf-8",
+            "def answer() -> int:\n    return sum((40, 2))\n",
+            encoding="utf-8",
         )
 
         exit_code = tm.ok(runner_for(cached_runner_project).execute())
@@ -353,7 +376,8 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     def test_first_failure_stops_remaining_cases(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """Expose the first failure and do not execute later failing cases."""
         declare_parallel_project(cached_runner_project)
@@ -404,10 +428,13 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     @pytest.mark.parametrize(
-        "finding", ["skip", "warning", "mro-warning", "homonymous-warning"],
+        "finding",
+        ["skip", "warning", "mro-warning", "homonymous-warning"],
     )
     def test_runtime_findings_keep_complete_accounting(
-        self, cached_runner_project: Path, finding: str,
+        self,
+        cached_runner_project: Path,
+        finding: str,
     ) -> None:
         """Real zero-exit pytest runs still reject every skip and every warning."""
         cache = config.Infra.codegen.make.testmon_cache
@@ -470,7 +497,8 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     def test_setup_failure_is_accounted_without_a_call_phase(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A failed fixture is one complete lifecycle: setup and teardown, no call."""
         runner = runner_for(cached_runner_project)
@@ -496,7 +524,8 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     def test_external_gate_markers_are_not_executed_offline(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """An external-token gate is deselected, never a KeyError, and reported.
 
@@ -549,7 +578,10 @@ class TestsFlextInfraPytestRunner:
     @pytest.mark.slow
     @pytest.mark.parametrize("ci_context", [False, True])
     def test_full_includes_external_and_ci_markers_after_incremental_scope(
-        self, cached_runner_project: Path, *, ci_context: bool,
+        self,
+        cached_runner_project: Path,
+        *,
+        ci_context: bool,
     ) -> None:
         """The real full phase executes harmless consumers of every excluded marker."""
         policy = config.Infra.tooling.tools.pytest
@@ -571,7 +603,8 @@ class TestsFlextInfraPytestRunner:
                 f"def test_marked_{index}():\n    assert answer() == 42\n\n"
             )
         (cached_runner_project / runner.target / "test_marked.py").write_text(
-            source, encoding="utf-8",
+            source,
+            encoding="utf-8",
         )
 
         tm.that(tm.ok(runner.execute_full()), eq=0)
@@ -618,7 +651,8 @@ class TestsFlextInfraPytestRunner:
                 eq=f"not ({config.Infra.tooling.tools.pytest.slow_marker})",
             )
         slow_full = runner_for(cached_runner_project, slow_phase=True).build_command(
-            full, execution_mode=c.Infra.PytestExecutionMode.FULL,
+            full,
+            execution_mode=c.Infra.PytestExecutionMode.FULL,
         )
         tm.that(
             slow_full[slow_full.index("-m", 3) + 1],
@@ -627,7 +661,8 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     def test_full_runs_after_warm_cache_and_ignores_node_like_diagnostics(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """Cold, warm, and full collection use final items and one physical DB."""
         (cached_runner_project / "conftest.py").write_text(
@@ -653,12 +688,14 @@ class TestsFlextInfraPytestRunner:
             for path in contexts
         ]
         tm.that(
-            [context.execution_mode for context in parsed], eq=["incremental", "full"],
+            [context.execution_mode for context in parsed],
+            eq=["incremental", "full"],
         )
         tm.that({context.testmon_db for context in parsed}, eq={runner.testmon_db})
         tm.that(runner.testmon_db.is_absolute(), eq=True)
         tm.that(
-            runner.testmon_db.is_relative_to(cached_runner_project.resolve()), eq=False,
+            runner.testmon_db.is_relative_to(cached_runner_project.resolve()),
+            eq=False,
         )
         tm.that(runner.testmon_db.is_file(), eq=True)
         tm.that(
@@ -712,12 +749,14 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     def test_warm_partial_selection_accounts_for_every_stable_test(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """A changed dependency executes its consumer and accounts for stable IDs."""
         runner = runner_for(cached_runner_project)
         (cached_runner_project / runner.target / "test_stable.py").write_text(
-            "def test_stable():\n    assert 17 == 17\n", encoding="utf-8",
+            "def test_stable():\n    assert 17 == 17\n",
+            encoding="utf-8",
         )
         tm.that(tm.ok(runner.execute()), eq=0)
         (
@@ -726,7 +765,8 @@ class TestsFlextInfraPytestRunner:
             / "runner_sample"
             / "__init__.py"
         ).write_text(
-            "def answer() -> int:\n    return sum((40, 2))\n", encoding="utf-8",
+            "def answer() -> int:\n    return sum((40, 2))\n",
+            encoding="utf-8",
         )
 
         tm.that(tm.ok(runner_for(cached_runner_project).execute()), eq=0)
@@ -759,7 +799,8 @@ class TestsFlextInfraPytestRunner:
 
     @pytest.mark.slow
     def test_full_stops_at_the_first_incremental_failure(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         runner = runner_for(cached_runner_project)
         (cached_runner_project / runner.target / "test_failure.py").write_text(
@@ -787,7 +828,8 @@ class TestsFlextInfraPytestRunner:
         tm.that(outcome.raw_return_code, eq=exit_code)
 
     def test_full_preserves_corrupt_database_failure_before_execution(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         runner = runner_for(cached_runner_project)
         runner.testmon_db.write_bytes(b"not a SQLite database")
@@ -796,12 +838,14 @@ class TestsFlextInfraPytestRunner:
             runner.execute_full()
 
         tm.that(
-            list((cached_runner_project / runner.reports).glob("*/command.txt")), eq=[],
+            list((cached_runner_project / runner.reports).glob("*/command.txt")),
+            eq=[],
         )
 
     @pytest.mark.slow
     def test_full_rejects_an_empty_complete_collection(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         (cached_runner_project / "conftest.py").write_text(
             "from pathlib import Path\nfrom flext_infra import m\n\n"

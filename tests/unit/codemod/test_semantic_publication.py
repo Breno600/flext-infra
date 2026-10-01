@@ -41,7 +41,10 @@ class TestsSemanticPublication:
 
     @pytest.mark.parametrize("raises", [False, True])
     def test_rejected_semantic_acceptance_rolls_back_every_file(
-        self, mod_workspace: Path, *, raises: bool,
+        self,
+        mod_workspace: Path,
+        *,
+        raises: bool,
     ) -> None:
         plans = self._plans(mod_workspace)
         failure = RuntimeError("semantic acceptance rejected")
@@ -56,13 +59,17 @@ class TestsSemanticPublication:
         if raises:
             with pytest.raises(RuntimeError) as raised:
                 FlextInfraSemanticPublication.publish_semantic_file_plans(
-                    plans, repository_root=mod_workspace, validator=reject,
+                    plans,
+                    repository_root=mod_workspace,
+                    validator=reject,
                 )
             tm.that(raised.value is failure, eq=True)
         else:
             tm.fail(
                 FlextInfraSemanticPublication.publish_semantic_file_plans(
-                    plans, repository_root=mod_workspace, validator=reject,
+                    plans,
+                    repository_root=mod_workspace,
+                    validator=reject,
                 ),
                 has=str(failure),
             )
@@ -73,7 +80,8 @@ class TestsSemanticPublication:
             plan.model_copy(
                 update={
                     "before": u.Cli.atomic_read_binary_file_state(
-                        plan.path, required=True,
+                        plan.path,
+                        required=True,
                     ).unwrap(),
                 },
             )
@@ -81,13 +89,17 @@ class TestsSemanticPublication:
         )
         tm.ok(
             FlextInfraSemanticPublication.publish_semantic_file_plans(
-                fresh, repository_root=mod_workspace,
+                fresh,
+                repository_root=mod_workspace,
             ),
         )
 
     @pytest.mark.parametrize("linked", [False, True])
     def test_changed_later_identity_prevents_earlier_publication(
-        self, mod_workspace: Path, *, linked: bool,
+        self,
+        mod_workspace: Path,
+        *,
+        linked: bool,
     ) -> None:
         first, second = self._plans(mod_workspace)
         if linked:
@@ -99,29 +111,34 @@ class TestsSemanticPublication:
         observed = second.path.read_bytes()
         tm.fail(
             FlextInfraSemanticPublication.publish_semantic_file_plans(
-                (first, second), repository_root=mod_workspace,
+                (first, second),
+                repository_root=mod_workspace,
             ),
         )
         tm.that(first.path.read_bytes(), eq=first.before.content)
         tm.that(second.path.read_bytes(), eq=observed)
 
     def test_generated_later_plan_rejects_authored_earlier_plan(
-        self, mod_workspace: Path,
+        self,
+        mod_workspace: Path,
     ) -> None:
         first, second = self._plans(mod_workspace)
         u.Cli.atomic_write_text_file(
-            second.path, f'{c.Infra.AUTOGEN_HEADERS[0]}\nvalue = "before"\n',
+            second.path,
+            f'{c.Infra.AUTOGEN_HEADERS[0]}\nvalue = "before"\n',
         ).unwrap()
         generated = second.model_copy(
             update={
                 "before": u.Cli.atomic_read_binary_file_state(
-                    second.path, required=True,
+                    second.path,
+                    required=True,
                 ).unwrap(),
             },
         )
         tm.fail(
             FlextInfraSemanticPublication.publish_semantic_file_plans(
-                (first, generated), repository_root=mod_workspace,
+                (first, generated),
+                repository_root=mod_workspace,
             ),
             has="canonical generator repair",
         )
@@ -133,7 +150,8 @@ class TestsSemanticPublication:
         tm.that(
             tm.ok(
                 FlextInfraSemanticPublication.publish_semantic_file_plans(
-                    (noop,), repository_root=mod_workspace,
+                    (noop,),
+                    repository_root=mod_workspace,
                 ),
             ),
             eq=(),
@@ -141,7 +159,8 @@ class TestsSemanticPublication:
         tm.that(first.path.read_bytes(), eq=first.before.content)
 
     def test_declared_template_input_is_not_its_generated_projection(
-        self, mod_workspace: Path,
+        self,
+        mod_workspace: Path,
     ) -> None:
         template_root = mod_workspace / "templates"
         template_root.mkdir()
@@ -181,7 +200,9 @@ class TestsSemanticPublication:
         for denied in plans[1:]:
             tm.fail(
                 FlextInfraSemanticPublication.publish_semantic_file_plans(
-                    (plans[0], denied), repository_root=mod_workspace, codegen=policy,
+                    (plans[0], denied),
+                    repository_root=mod_workspace,
+                    codegen=policy,
                 ),
                 has="canonical generator repair",
             )
@@ -189,7 +210,9 @@ class TestsSemanticPublication:
             tm.that(denied.path.read_text(), eq=content)
         tm.ok(
             FlextInfraSemanticPublication.publish_semantic_file_plans(
-                (plans[0],), repository_root=mod_workspace, codegen=policy,
+                (plans[0],),
+                repository_root=mod_workspace,
+                codegen=policy,
             ),
         )
         rendered = tm.ok(
@@ -200,7 +223,8 @@ class TestsSemanticPublication:
         tm.that(projection.read_text(), eq=content)
 
     def test_real_formatter_rejects_later_source_before_any_publication(
-        self, mod_workspace: Path,
+        self,
+        mod_workspace: Path,
     ) -> None:
         plans = self._plans(mod_workspace)
         edits = tuple(
@@ -218,7 +242,8 @@ class TestsSemanticPublication:
             tm.that(plan.path.read_bytes(), eq=plan.before.content)
 
     def test_real_semantic_caller_commits_normalized_source_idempotently(
-        self, mod_workspace: Path,
+        self,
+        mod_workspace: Path,
     ) -> None:
         first, _ = self._plans(mod_workspace)
         edit = m.Infra.SemanticMigrationEdit(
@@ -235,6 +260,7 @@ class TestsSemanticPublication:
             update={"original_source": published, "updated_source": published},
         )
         FlextInfraCodemodSemanticApply.apply_transaction_paths(
-            mod_workspace, (repeated,),
+            mod_workspace,
+            (repeated,),
         )
         tm.that(first.path.read_text(), eq=published)

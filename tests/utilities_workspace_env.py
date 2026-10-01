@@ -89,7 +89,8 @@ class TestsFlextInfraUtilitiesWorkspaceEnvMixin:
             # failed run is the success case for a tracked artifact.
             probe: p.Cli.CommandOutput = tm.ok(
                 u.Cli.run_raw(
-                    ["git", "check-ignore", "-q", relative_path], cwd=probe_root,
+                    ["git", "check-ignore", "-q", relative_path],
+                    cwd=probe_root,
                 ),
             )
         code = probe.outcome.raw_return_code

@@ -29,7 +29,8 @@ class FlextInfraExtraPathsSyncMixin:
         mypy_search_paths: Callable[..., t.StrSequence]
 
     def resolve_transitive_dependency_names(
-        self, direct_names: t.StrSequence,
+        self,
+        direct_names: t.StrSequence,
     ) -> t.StrSequence:
         """Return the transitive workspace path-dependency closure of direct_names."""
 
@@ -46,7 +47,11 @@ class FlextInfraExtraPathsSyncMixin:
         return u.Infra.dependency_order(direct_names, dependencies=dependencies)
 
     def sync_doc(
-        self, doc: t.Cli.TomlDocument, *, project_dir: Path, is_root: bool,
+        self,
+        doc: t.Cli.TomlDocument,
+        *,
+        project_dir: Path,
+        is_root: bool,
     ) -> t.StrSequence:
         """Apply computed extra paths to an in-memory TOMLDocument."""
         # Path producers and toml_as_string_list both yield immutable
@@ -76,7 +81,8 @@ class FlextInfraExtraPathsSyncMixin:
             # tolerates what mypy cannot. mypy gets source + shared config
             # paths only; the project root stays a pyrefly-only resolution aid.
             expected_mypy = self.mypy_search_paths(
-                project_dir=project_dir, is_root=is_root,
+                project_dir=project_dir,
+                is_root=is_root,
             )
             mypy_path_item = u.Cli.toml_item_child(mypy_table, "mypy_path")
             current_mypy = u.Cli.toml_as_string_list(
@@ -92,7 +98,11 @@ class FlextInfraExtraPathsSyncMixin:
         return changes
 
     def sync_payload(
-        self, payload: t.MutableJsonMapping, *, project_dir: Path, is_root: bool,
+        self,
+        payload: t.MutableJsonMapping,
+        *,
+        project_dir: Path,
+        is_root: bool,
     ) -> t.StrSequence:
         """Apply computed extra paths to one normalized TOML payload."""
         expected = self.pyright_extra_paths(project_dir=project_dir, is_root=is_root)
@@ -126,7 +136,11 @@ class FlextInfraExtraPathsSyncMixin:
         return changes
 
     def sync_one(
-        self, pyproject_path: Path, *, dry_run: bool = False, is_root: bool = False,
+        self,
+        pyproject_path: Path,
+        *,
+        dry_run: bool = False,
+        is_root: bool = False,
     ) -> p.Result[bool]:
         """Synchronize pyright and mypy paths for one pyproject.toml."""
         if not pyproject_path.exists():
@@ -135,7 +149,9 @@ class FlextInfraExtraPathsSyncMixin:
         if doc_result.failure:
             return r[bool].from_failure(doc_result)
         changes = self.sync_doc(
-            doc_result.value, project_dir=pyproject_path.parent, is_root=is_root,
+            doc_result.value,
+            project_dir=pyproject_path.parent,
+            is_root=is_root,
         )
         if changes and (not dry_run):
             write_result = u.Cli.toml_write_document(pyproject_path, doc_result.value)
@@ -144,7 +160,10 @@ class FlextInfraExtraPathsSyncMixin:
         return r[bool].ok(bool(changes))
 
     def sync_extra_paths(
-        self, *, dry_run: bool = False, project_dirs: t.SequenceOf[Path] | None = None,
+        self,
+        *,
+        dry_run: bool = False,
+        project_dirs: t.SequenceOf[Path] | None = None,
     ) -> p.Result[int]:
         """Synchronize extraPaths and mypy_path across projects."""
         if project_dirs:
@@ -158,7 +177,9 @@ class FlextInfraExtraPathsSyncMixin:
                 if not pyproject.exists():
                     continue
                 sync_result = self.sync_one(
-                    pyproject, dry_run=dry_run, is_root=project_dir == self.root,
+                    pyproject,
+                    dry_run=dry_run,
+                    is_root=project_dir == self.root,
                 )
                 if sync_result.failure:
                     return r[int].from_failure(sync_result)
@@ -183,7 +204,9 @@ class FlextInfraExtraPathsSyncMixin:
                     return r[int].fail(f"Missing {pyproject}")
                 continue
             sync_result = self.sync_one(
-                pyproject, dry_run=dry_run, is_root=target == self.root,
+                pyproject,
+                dry_run=dry_run,
+                is_root=target == self.root,
             )
             if sync_result.failure:
                 return r[int].from_failure(sync_result)

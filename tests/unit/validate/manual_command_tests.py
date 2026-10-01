@@ -68,5 +68,6 @@ class TestsFlextInfraManualCommand:
 
     def test_flext_infra_allowed(self) -> None:
         tm.that(
-            _V.command_blocked("python -m flext_infra check --what boundary"), eq=False,
+            _V.command_blocked("python -m flext_infra check --what boundary"),
+            eq=False,
         )

@@ -17,11 +17,13 @@ class TestsFlextInfraWorktreeAddIsUnprovisioned:
         repository = tmp_path / "repository"
         repository.mkdir()
         (repository / "pyproject.toml").write_text(
-            '[project]\nname = "fixture"\nversion = "0.1.0"\n', encoding="utf-8",
+            '[project]\nname = "fixture"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         marker = "setup-ran"
         (repository / "Makefile").write_text(
-            ".PHONY: setup\nsetup:\n\t@touch $(CURDIR)/setup-ran\n", encoding="utf-8",
+            ".PHONY: setup\nsetup:\n\t@touch $(CURDIR)/setup-ran\n",
+            encoding="utf-8",
         )
         u.Tests.initialize_git_repo(repository)
 

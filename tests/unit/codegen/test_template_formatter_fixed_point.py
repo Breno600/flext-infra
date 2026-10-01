@@ -58,11 +58,13 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
         )
 
     def test_standalone_pyproject_does_not_declare_empty_workspace(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Keep standalone projects eligible for a real parent uv workspace."""
         rendered = u.Tests.scaffold_text(
-            tmp_path / "fixture-project", c.PYPROJECT_FILENAME,
+            tmp_path / "fixture-project",
+            c.PYPROJECT_FILENAME,
         )
 
         tm.that(rendered, has="[project]")
@@ -80,7 +82,8 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             u.Cli.template_render(
                 self._TEMPLATES / ".github/dependabot.yml.j2",
                 self._workflow_spec(
-                    workspace_repositories=(repository,), has_devcontainer=False,
+                    workspace_repositories=(repository,),
+                    has_devcontainer=False,
                 ),
             ),
         )

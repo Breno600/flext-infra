@@ -27,7 +27,8 @@ class FlextInfraConfigModelsScaffold:
         """Dependencies selected by the declared upstream FLEXT facade."""
 
         upstream: Annotated[
-            t.NonEmptyStr, m.Field(description="Supported upstream facade package"),
+            t.NonEmptyStr,
+            m.Field(description="Supported upstream facade package"),
         ]
         project: Annotated[
             t.NonEmptyStr | None,
@@ -48,13 +49,16 @@ class FlextInfraConfigModelsScaffold:
         """One upstream config base a generated ``_config.py`` may compose."""
 
         distribution: Annotated[
-            t.NonEmptyStr, m.Field(description="Distribution owning the base"),
+            t.NonEmptyStr,
+            m.Field(description="Distribution owning the base"),
         ]
         module: Annotated[
-            t.NonEmptyStr, m.Field(description="Import module exposing the base"),
+            t.NonEmptyStr,
+            m.Field(description="Import module exposing the base"),
         ]
         class_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Config base class name"),
+            t.NonEmptyStr,
+            m.Field(description="Config base class name"),
         ]
 
     class ScaffoldProjectSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -112,20 +116,25 @@ class FlextInfraConfigModelsScaffold:
         """Values for the functional ping example created only by codegen new."""
 
         command_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Public CLI command"),
+            t.NonEmptyStr,
+            m.Field(description="Public CLI command"),
         ]
         help_text: Annotated[
-            t.NonEmptyStr, m.Field(description="Public CLI command help"),
+            t.NonEmptyStr,
+            m.Field(description="Public CLI command help"),
         ]
         success_message: Annotated[
-            t.NonEmptyStr, m.Field(description="CLI success message"),
+            t.NonEmptyStr,
+            m.Field(description="CLI success message"),
         ]
         enabled_default: Annotated[
-            bool, m.Field(description="Default runtime enablement"),
+            bool,
+            m.Field(description="Default runtime enablement"),
         ]
         reply: Annotated[t.NonEmptyStr, m.Field(description="Enabled ping response")]
         disabled_reply: Annotated[
-            t.NonEmptyStr, m.Field(description="Disabled ping response"),
+            t.NonEmptyStr,
+            m.Field(description="Disabled ping response"),
         ]
 
     class ScaffoldGitignoreSectionSpec(FlextInfraConfigModelsContract.ConfigContract):

@@ -63,7 +63,9 @@ class FlextInfraValidateLazyMapFreshness(FlextInfraProjectSelectionServiceBase[b
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=violations, summary=summary,
+                passed=passed,
+                violations=violations,
+                summary=summary,
             ),
         )
 

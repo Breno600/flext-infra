@@ -20,12 +20,15 @@ class TestsFlextInfraLazyInitTransforms:
     def test_private_subpackage_initializer_is_lazy(self, tmp_path: Path) -> None:
         """Private implementation packages retain a lazy FLEXT facade."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         utilities_dir = package_root / "_utilities"
         utilities_dir.mkdir()
         (utilities_dir / c.Infra.INIT_PY).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT,
+            "",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         (utilities_dir / "mapper.py").write_text(
             "from __future__ import annotations\n\n"
@@ -49,7 +52,9 @@ class TestsFlextInfraLazyInitTransforms:
     def test_source_packages_exclude_test_named_modules(self, tmp_path: Path) -> None:
         """Never publish test artifacts from an installable source package."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         models_dir = package_root / "_models"
         models_dir.mkdir()
@@ -86,11 +91,14 @@ class TestsFlextInfraLazyInitTransforms:
         tm.that(init_content, lacks="model_tests")
 
     def test_version_exports_are_explicit_runtime_reexports(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Publish version declarations explicitly from the package root."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         (package_root / "__version__.py").write_text(
             "from __future__ import annotations\n\n"

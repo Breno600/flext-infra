@@ -66,7 +66,8 @@ class FlextInfraLspDiagnosticsDetector:
 
         def receive() -> p.Result[t.JsonMapping]:
             header = process.stdout_read_until(
-                cls._HEADER_SEPARATOR, timeout=remaining(),
+                cls._HEADER_SEPARATOR,
+                timeout=remaining(),
             )
             if header.failure:
                 return r[t.JsonMapping].from_failure(header)
@@ -80,7 +81,8 @@ class FlextInfraLspDiagnosticsDetector:
             if len(fields) != 1:
                 return r[t.JsonMapping].fail("LSP response requires one Content-Length")
             body = process.stdout_read_exact(
-                int(fields[0].split(b":", maxsplit=1)[1]), timeout=remaining(),
+                int(fields[0].split(b":", maxsplit=1)[1]),
+                timeout=remaining(),
             )
             if body.failure:
                 return r[t.JsonMapping].from_failure(body)

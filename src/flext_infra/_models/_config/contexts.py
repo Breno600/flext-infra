@@ -44,7 +44,8 @@ class FlextInfraConfigModelsContexts:
         """Shared command identity required by every generated Make surface."""
 
         infra_cli: Annotated[
-            t.NonEmptyStr, m.Field(description="Installed infrastructure CLI command"),
+            t.NonEmptyStr,
+            m.Field(description="Installed infrastructure CLI command"),
         ]
         pytest: Annotated[
             FlextInfraModelsDepsToolConfig.PytestConfig,
@@ -69,10 +70,12 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Selected repository Make profile"),
         ]
         package: Annotated[
-            bool, m.Field(description="Repository publishes a Python package"),
+            bool,
+            m.Field(description="Repository publishes a Python package"),
         ]
         repository_root_rel: Annotated[
-            t.NonEmptyStr, m.Field(description="Relative workspace root path"),
+            t.NonEmptyStr,
+            m.Field(description="Relative workspace root path"),
         ]
         workspace_subprojects: Annotated[
             t.VariadicTuple[str],
@@ -87,7 +90,8 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Provider-resolved governed Git submodules"),
         ] = ()
         uv_link_mode: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured uv installation link mode"),
+            t.NonEmptyStr,
+            m.Field(description="Configured uv installation link mode"),
         ]
         uv_version: Annotated[
             t.NonEmptyStr,
@@ -98,25 +102,32 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Platforms carried by artifact-tool lock entries"),
         ]
         npm_package_manager: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured Mise installer for npm CLIs"),
+            t.NonEmptyStr,
+            m.Field(description="Configured Mise installer for npm CLIs"),
         ]
         qlty_selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured Mise selector for qlty"),
+            t.NonEmptyStr,
+            m.Field(description="Configured Mise selector for qlty"),
         ]
         jscpd_selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured Mise selector for jscpd"),
+            t.NonEmptyStr,
+            m.Field(description="Configured Mise selector for jscpd"),
         ]
         prettier_selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured Mise selector for Prettier"),
+            t.NonEmptyStr,
+            m.Field(description="Configured Mise selector for Prettier"),
         ]
         ast_grep_selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured Mise selector for ast-grep"),
+            t.NonEmptyStr,
+            m.Field(description="Configured Mise selector for ast-grep"),
         ]
         scc_selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured Mise selector for scc"),
+            t.NonEmptyStr,
+            m.Field(description="Configured Mise selector for scc"),
         ]
         waza_selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured Mise selector for Waza"),
+            t.NonEmptyStr,
+            m.Field(description="Configured Mise selector for Waza"),
         ]
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,
@@ -140,16 +151,20 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="CLI group that owns the workspace propagate route"),
         ]
         mypy_timeout_exit_code: Annotated[
-            int, m.Field(gt=0, description="Wall-time limiter timeout exit code"),
+            int,
+            m.Field(gt=0, description="Wall-time limiter timeout exit code"),
         ]
         timeout_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Wall-time limiter executable"),
+            t.NonEmptyStr,
+            m.Field(description="Wall-time limiter executable"),
         ]
         timeout_kill_after_seconds: Annotated[
-            int, m.Field(gt=0, description="Forced-termination grace period"),
+            int,
+            m.Field(gt=0, description="Forced-termination grace period"),
         ]
         pytest_process_timeout_seconds: Annotated[
-            int, m.Field(gt=0, description="Pytest process wall-time boundary"),
+            int,
+            m.Field(gt=0, description="Pytest process wall-time boundary"),
         ]
 
     class MakeRenderContext(MakeCommandContext):
@@ -165,13 +180,16 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Generated Make command contract"),
         ]
         mypy_timeout_exit_code: Annotated[
-            int, m.Field(gt=0, description="Wall-time limiter timeout exit code"),
+            int,
+            m.Field(gt=0, description="Wall-time limiter timeout exit code"),
         ]
         timeout_command: Annotated[
-            t.NonEmptyStr, m.Field(description="Wall-time limiter executable"),
+            t.NonEmptyStr,
+            m.Field(description="Wall-time limiter executable"),
         ]
         timeout_kill_after_seconds: Annotated[
-            int, m.Field(gt=0, description="Forced-termination grace period"),
+            int,
+            m.Field(gt=0, description="Forced-termination grace period"),
         ]
         tooling_runtime: Annotated[
             FlextInfraModelsDepsToolConfig.ToolingRuntimeContext,
@@ -181,10 +199,12 @@ class FlextInfraConfigModelsContexts:
         dist: Annotated[t.NonEmptyStr, m.Field(description="Distribution name")]
 
         python_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Python major.minor tool value"),
+            t.NonEmptyStr,
+            m.Field(description="Python major.minor tool value"),
         ]
         uv_link_mode: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured uv installation link mode"),
+            t.NonEmptyStr,
+            m.Field(description="Configured uv installation link mode"),
         ]
         ruff_per_file_ignores: Annotated[
             t.MappingKV[str, t.StrSequence],
@@ -360,13 +380,16 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Repository-local Beads identity when enabled"),
         ] = None
         canonical_project_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical PEP 621 project name"),
+            t.NonEmptyStr,
+            m.Field(description="Canonical PEP 621 project name"),
         ]
         const_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured constant project name"),
+            t.NonEmptyStr,
+            m.Field(description="Configured constant project name"),
         ]
         package_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Python import package name"),
+            t.NonEmptyStr,
+            m.Field(description="Python import package name"),
         ]
         packaged_data_paths: Annotated[
             t.StrSequence,
@@ -379,18 +402,22 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Validated individually declared data files"),
         ]
         class_stem: Annotated[
-            t.NonEmptyStr, m.Field(description="Public facade class stem"),
+            t.NonEmptyStr,
+            m.Field(description="Public facade class stem"),
         ]
         ns: Annotated[t.NonEmptyStr, m.Field(description="Public model namespace")]
         ns_attr: Annotated[
-            t.NonEmptyStr, m.Field(description="Private namespace module token"),
+            t.NonEmptyStr,
+            m.Field(description="Private namespace module token"),
         ]
         alias: Annotated[t.NonEmptyStr, m.Field(description="Public instance alias")]
         env_prefix: Annotated[
-            t.NonEmptyStr, m.Field(description="Settings environment prefix"),
+            t.NonEmptyStr,
+            m.Field(description="Settings environment prefix"),
         ]
         upstream: Annotated[
-            t.NonEmptyStr, m.Field(description="Upstream FLEXT facade module"),
+            t.NonEmptyStr,
+            m.Field(description="Upstream FLEXT facade module"),
         ]
         upstream_facades: Annotated[
             Mapping[t.NonEmptyStr, t.NonEmptyStr],
@@ -458,40 +485,49 @@ class FlextInfraConfigModelsContexts:
             ),
         ] = ()
         description: Annotated[
-            t.NonEmptyStr, m.Field(description="Project description"),
+            t.NonEmptyStr,
+            m.Field(description="Project description"),
         ]
         version: Annotated[t.NonEmptyStr, m.Field(description="Project version")]
         license: Annotated[t.NonEmptyStr, m.Field(description="SPDX license id")]
         python_required_version: Annotated[
-            t.NonEmptyStr, m.Field(description="PEP 440 project Python requirement"),
+            t.NonEmptyStr,
+            m.Field(description="PEP 440 project Python requirement"),
         ]
         dependency_cooldown_days: Annotated[
             int,
             m.Field(
-                ge=1, description="Supply-chain cooldown rendered as mise release age",
+                ge=1,
+                description="Supply-chain cooldown rendered as mise release age",
             ),
         ]
         kubectl_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact kubectl toolchain version"),
+            t.NonEmptyStr,
+            m.Field(description="Exact kubectl toolchain version"),
         ]
         helm_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Helm toolchain version"),
+            t.NonEmptyStr,
+            m.Field(description="Exact Helm toolchain version"),
         ]
         kind_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact kind toolchain version"),
+            t.NonEmptyStr,
+            m.Field(description="Exact kind toolchain version"),
         ]
         direnv_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible direnv major.minor line"),
+            t.NonEmptyStr,
+            m.Field(description="Compatible direnv major.minor line"),
         ]
         uv_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible uv major.minor line"),
+            t.NonEmptyStr,
+            m.Field(description="Compatible uv major.minor line"),
         ]
         qlty_version: Annotated[
             t.NonEmptyStr,
             m.Field(description="Moving qlty release selector, e.g. 'latest'"),
         ]
         node_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible Node.js major.minor line"),
+            t.NonEmptyStr,
+            m.Field(description="Compatible Node.js major.minor line"),
         ]
         jscpd_version: Annotated[
             t.NonEmptyStr,
@@ -511,53 +547,66 @@ class FlextInfraConfigModelsContexts:
             ),
         ]
         ast_grep_selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI"),
+            t.NonEmptyStr,
+            m.Field(description="Mise selector for the ast-grep CLI"),
         ]
         ast_grep_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact ast-grep analyzer version"),
+            t.NonEmptyStr,
+            m.Field(description="Exact ast-grep analyzer version"),
         ]
         gitleaks_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Gitleaks scanner version"),
+            t.NonEmptyStr,
+            m.Field(description="Exact Gitleaks scanner version"),
         ]
         scc_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact scc code-counter version"),
+            t.NonEmptyStr,
+            m.Field(description="Exact scc code-counter version"),
         ]
         kubeconform_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible kubeconform minor line"),
+            t.NonEmptyStr,
+            m.Field(description="Compatible kubeconform minor line"),
         ]
         go_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Go runtime version"),
+            t.NonEmptyStr,
+            m.Field(description="Exact Go runtime version"),
         ]
         make_version: Annotated[
             t.NonEmptyStr,
             m.Field(description="Moving Make release selector, e.g. 'latest'"),
         ]
         author_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Author display name"),
+            t.NonEmptyStr,
+            m.Field(description="Author display name"),
         ]
         author_email: Annotated[t.NonEmptyStr, m.Field(description="Author email")]
         repository: Annotated[
-            t.NonEmptyStr, m.Field(description="Project repository page URL"),
+            t.NonEmptyStr,
+            m.Field(description="Project repository page URL"),
         ]
         homepage: Annotated[t.NonEmptyStr, m.Field(description="Project homepage")]
         documentation: Annotated[
-            t.NonEmptyStr, m.Field(description="Project documentation URL"),
+            t.NonEmptyStr,
+            m.Field(description="Project documentation URL"),
         ]
         flext_git_base_url: Annotated[
-            t.NonEmptyStr, m.Field(description="FLEXT Git provider base URL"),
+            t.NonEmptyStr,
+            m.Field(description="FLEXT Git provider base URL"),
         ]
         flext_git_branch: Annotated[
-            t.NonEmptyStr, m.Field(description="FLEXT Git provider branch"),
+            t.NonEmptyStr,
+            m.Field(description="FLEXT Git provider branch"),
         ]
         repository_provider: Annotated[
             t.NonEmptyStr,
             m.Field(description="Provider key the repository declares for itself"),
         ]
         repository_git_url: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical repository Git clone URL"),
+            t.NonEmptyStr,
+            m.Field(description="Canonical repository Git clone URL"),
         ]
         repository_branch: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical repository Git branch"),
+            t.NonEmptyStr,
+            m.Field(description="Canonical repository Git branch"),
         ]
         year: Annotated[int, m.Field(description="Copyright year")]
 
@@ -585,37 +634,46 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Project-relative Hatch custom build hook module"),
         ] = None
         package_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Import package name"),
+            t.NonEmptyStr,
+            m.Field(description="Import package name"),
         ]
         class_stem: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical public facade class stem"),
+            t.NonEmptyStr,
+            m.Field(description="Canonical public facade class stem"),
         ]
         namespace: Annotated[
-            t.NonEmptyStr, m.Field(description="Nested c/t/p/m/u namespace"),
+            t.NonEmptyStr,
+            m.Field(description="Nested c/t/p/m/u namespace"),
         ]
         constant_name: Annotated[
             t.NonEmptyStr,
             m.Field(description="Configured project name exposed through constants"),
         ]
         namespace_attribute: Annotated[
-            t.NonEmptyStr, m.Field(description="Private module namespace token"),
+            t.NonEmptyStr,
+            m.Field(description="Private module namespace token"),
         ]
         alias: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical public instance alias"),
+            t.NonEmptyStr,
+            m.Field(description="Canonical public instance alias"),
         ]
         environment_prefix: Annotated[
-            t.NonEmptyStr, m.Field(description="Project settings environment prefix"),
+            t.NonEmptyStr,
+            m.Field(description="Project settings environment prefix"),
         ]
         description: Annotated[
-            t.NonEmptyStr, m.Field(description="Project description"),
+            t.NonEmptyStr,
+            m.Field(description="Project description"),
         ]
         license: Annotated[t.NonEmptyStr, m.Field(description="SPDX license id")]
         author_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Author display name"),
+            t.NonEmptyStr,
+            m.Field(description="Author display name"),
         ]
         author_email: Annotated[t.NonEmptyStr, m.Field(description="Author email")]
         upstream: Annotated[
-            t.NonEmptyStr, m.Field(description="Upstream FLEXT facade module"),
+            t.NonEmptyStr,
+            m.Field(description="Upstream FLEXT facade module"),
         ]
         namespace_scan_dirs: Annotated[
             t.StrSequence,
@@ -711,7 +769,8 @@ class FlextInfraConfigModelsContexts:
         ] = ()
         homepage: Annotated[t.NonEmptyStr, m.Field(description="Project homepage")]
         documentation: Annotated[
-            t.NonEmptyStr, m.Field(description="Project documentation URL"),
+            t.NonEmptyStr,
+            m.Field(description="Project documentation URL"),
         ]
         repository_root_rel: Annotated[
             t.NonEmptyStr,
@@ -730,10 +789,12 @@ class FlextInfraConfigModelsContexts:
         """Declared integration provider and branch of one repository."""
 
         provider: Annotated[
-            t.NonEmptyStr, m.Field(description="Configured provider key"),
+            t.NonEmptyStr,
+            m.Field(description="Configured provider key"),
         ]
         branch: Annotated[
-            t.NonEmptyStr, m.Field(description="Workspace integration branch"),
+            t.NonEmptyStr,
+            m.Field(description="Workspace integration branch"),
         ]
         organization: Annotated[
             t.NonEmptyStr | None,
@@ -751,14 +812,16 @@ class FlextInfraConfigModelsContexts:
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Catalog key")]
         distribution: Annotated[
-            t.NonEmptyStr, m.Field(description="Python distribution or repository name"),
+            t.NonEmptyStr,
+            m.Field(description="Python distribution or repository name"),
         ]
         url: Annotated[
             t.NonEmptyStr,
             m.Field(description="Canonical GitHub clone URL ending in .git"),
         ]
         path: Annotated[
-            Path, m.Field(description="POSIX path relative to its workspace root"),
+            Path,
+            m.Field(description="POSIX path relative to its workspace root"),
         ]
         role: Annotated[
             FlextInfraConstantsCodegenProject.MakeProfile,
@@ -805,7 +868,8 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Repository code-generation policy"),
         ]
         package: Annotated[
-            bool, m.Field(description="Repository publishes a Python package"),
+            bool,
+            m.Field(description="Repository publishes a Python package"),
         ]
         publishes_release: Annotated[
             bool,
@@ -818,10 +882,12 @@ class FlextInfraConfigModelsContexts:
             ),
         ] = False
         editable: Annotated[
-            bool, m.Field(description="Overlay repository as an editable dependency"),
+            bool,
+            m.Field(description="Overlay repository as an editable dependency"),
         ]
         read_only: Annotated[
-            bool, m.Field(description="Repository rejects generated mutations"),
+            bool,
+            m.Field(description="Repository rejects generated mutations"),
         ]
         uv_link_mode: Annotated[
             Literal["clone", "copy", "hardlink", "symlink"] | None,
@@ -897,7 +963,8 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Declared immutable repository identity"),
         ]
         root: Annotated[
-            Path, m.Field(description="Resolved repository root receiving conformance"),
+            Path,
+            m.Field(description="Resolved repository root receiving conformance"),
         ]
         make_profile: Annotated[
             FlextInfraConstantsCodegenProject.MakeProfile,
@@ -918,10 +985,12 @@ class FlextInfraConfigModelsContexts:
             ),
         ] = None
         canonical_project_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical PEP 621 project name"),
+            t.NonEmptyStr,
+            m.Field(description="Canonical PEP 621 project name"),
         ]
         ci_enabled: Annotated[
-            bool, m.Field(description="Whether conform owns the CI projection"),
+            bool,
+            m.Field(description="Whether conform owns the CI projection"),
         ]
         publishes_release: Annotated[
             bool,
@@ -1014,13 +1083,16 @@ class FlextInfraConfigModelsContexts:
             m.Field(description="Closed Make profile name"),
         ]
         environment_scope: Annotated[
-            t.NonEmptyStr, m.Field(description="uv environment ownership"),
+            t.NonEmptyStr,
+            m.Field(description="uv environment ownership"),
         ]
         setup_scope: Annotated[
-            t.NonEmptyStr, m.Field(description="setup orchestration scope"),
+            t.NonEmptyStr,
+            m.Field(description="setup orchestration scope"),
         ]
         execution_scope: Annotated[
-            t.NonEmptyStr, m.Field(description="check/test runtime scope"),
+            t.NonEmptyStr,
+            m.Field(description="check/test runtime scope"),
         ]
         discovery_scope: Annotated[
             Literal["gitmodules", "none"],

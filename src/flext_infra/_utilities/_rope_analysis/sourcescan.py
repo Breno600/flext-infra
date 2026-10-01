@@ -100,7 +100,8 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
     @staticmethod
     def module_mapping_assignment_source(
-        source: str, name: str,
+        source: str,
+        name: str,
     ) -> t.Pair[t.VariadicTuple[t.Pair[str, t.StrSequence]], t.StrSequence]:
         """Collect mapping entries and referenced names from an assignment."""
         scan = FlextInfraUtilitiesRopeAnalysisSourceScan
@@ -186,7 +187,11 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
     @staticmethod
     def relative_import_module_name(
-        *, current_module: str, imported_module: str, level: int, package_module: bool,
+        *,
+        current_module: str,
+        imported_module: str,
+        level: int,
+        package_module: bool,
     ) -> str:
         """Resolve a parsed ``from`` import module into an absolute module name."""
         if level == 0:
@@ -198,7 +203,11 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
     @staticmethod
     def imported_symbol_binding_source(
-        source: str, *, current_module: str, symbol_name: str, package_module: bool,
+        source: str,
+        *,
+        current_module: str,
+        symbol_name: str,
+        package_module: bool,
     ) -> t.Pair[str, str]:
         """Return ``(module, original_name)`` for one imported symbol binding."""
         imports = sorted(
@@ -234,7 +243,8 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
     def class_bases_source(source: str, class_name: str) -> t.StrSequence:
         """Return declared base names for one class in source."""
         node = FlextInfraUtilitiesRopeAnalysisSourceScan._top_level_class(
-            source, class_name,
+            source,
+            class_name,
         )
         if node is None:
             return ()
@@ -249,7 +259,8 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         """Return whether one class is declared at the top level of source."""
         return (
             FlextInfraUtilitiesRopeAnalysisSourceScan._top_level_class(
-                source, class_name,
+                source,
+                class_name,
             )
             is not None
         )
@@ -281,7 +292,8 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
         """Return lazy-loader public exports or the local symbol holding them."""
         scan = FlextInfraUtilitiesRopeAnalysisSourceScan
         public_exports = scan._keyword_value(
-            scan._first_call(source, "install_lazy_exports"), "public_exports",
+            scan._first_call(source, "install_lazy_exports"),
+            "public_exports",
         )
         if public_exports is None:
             return ((), "")
@@ -308,7 +320,9 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
 
     @staticmethod
     def export_target_modules_source(
-        source: str, package_name: str, exports: t.StrSequence,
+        source: str,
+        package_name: str,
+        exports: t.StrSequence,
     ) -> MutableMapping[str, str]:
         """Map exports → defining module via rope's parsed-source import table."""
         export_names = {name for name in exports if name}

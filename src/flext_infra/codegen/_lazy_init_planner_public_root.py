@@ -62,7 +62,8 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
         return public_export_names, filtered_lazy_map
 
     def _declared_root_contract(
-        self, context: m.Infra.LazyInitPackageContext,
+        self,
+        context: m.Infra.LazyInitPackageContext,
     ) -> frozenset[str] | None:
         if context.generated_init or not context.init_path.is_file():
             return None
@@ -75,7 +76,8 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
         resource = self.rope_workspace.resource(constants_path)
         if resource is not None:
             imports = u.Infra.resolve_declared_module_imports(
-                self.rope_workspace.rope_project, resource,
+                self.rope_workspace.rope_project,
+                resource,
             )
             if any(
                 name != "annotations" and not target.startswith("__future__")
@@ -112,7 +114,8 @@ class FlextInfraCodegenLazyInitPlannerPublicRootMixin:
         ):
             return True
         return not FlextInfraCodegenLazyInitPlannerPublicRootMixin._is_private_owner(
-            module_path, root_pkg=root_pkg,
+            module_path,
+            root_pkg=root_pkg,
         )
 
     @staticmethod

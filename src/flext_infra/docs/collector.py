@@ -29,7 +29,8 @@ class FlextInfraDocCollector:
         if not configuration_path.is_absolute():
             configuration_path = root / configuration_path
         captured = u.Cli.atomic_read_binary_file_state(
-            configuration_path, required=True,
+            configuration_path,
+            required=True,
         )
         if captured.failure:
             return r[bool].from_failure(captured)
@@ -42,7 +43,9 @@ class FlextInfraDocCollector:
         if parsed.failure:
             return r[bool].from_failure(parsed)
         validated: p.Result[m.Infra.PlanCollectionConfig] = u.validate_value(
-            m.Infra.PlanCollectionConfig, parsed.value, strict=False,
+            m.Infra.PlanCollectionConfig,
+            parsed.value,
+            strict=False,
         )
         if validated.failure:
             return r[bool].from_failure(validated)
@@ -56,7 +59,8 @@ class FlextInfraDocCollector:
 
         def publish(scope_root: Path) -> p.Result[bool]:
             current = u.Cli.atomic_read_binary_file_state(
-                configuration_path, required=True,
+                configuration_path,
+                required=True,
             )
             if current.failure:
                 return r[bool].from_failure(current)
@@ -79,12 +83,15 @@ class FlextInfraDocCollector:
             u.Infra.verify_plan_collection_sources(scope_root, configuration, bundle)
             inputs = (snapshot, *bundle.source_states)
             analysis = m.Infra.CodegenPhaseAnalysis(
-                phase="docs", files=bundle.files, inputs=inputs,
+                phase="docs",
+                files=bundle.files,
+                inputs=inputs,
             )
 
             def validate() -> p.Result[bool]:
                 final_configuration = u.Cli.atomic_read_binary_file_state(
-                    configuration_path, required=True,
+                    configuration_path,
+                    required=True,
                 )
                 if final_configuration.failure:
                     return r[bool].from_failure(final_configuration)
@@ -93,7 +100,9 @@ class FlextInfraDocCollector:
                         "plan collection configuration changed during publication",
                     )
                 u.Infra.verify_plan_collection_publication(
-                    scope_root, configuration, bundle,
+                    scope_root,
+                    configuration,
+                    bundle,
                 )
                 return r[bool].ok(True)
 
@@ -112,7 +121,8 @@ class FlextInfraDocCollector:
                 return r[bool].from_failure(published)
             for directory in bundle.prunable_directories:
                 observed = u.Cli.atomic_read_empty_directory_state(
-                    directory, required=False,
+                    directory,
+                    required=False,
                 )
                 if observed.failure:
                     return r[bool].from_failure(observed)

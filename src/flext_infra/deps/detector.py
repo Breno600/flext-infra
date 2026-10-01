@@ -19,17 +19,20 @@ class FlextInfraRuntimeDevDependencyDetector(
     """CLI tool for detecting runtime vs dev dependencies across workspace."""
 
     output_format: Annotated[
-        str, m.Field(alias="format", description="Output format for dependency report"),
+        str,
+        m.Field(alias="format", description="Output format for dependency report"),
     ] = "text"
     output: Annotated[str | None, m.Field(None, description="Optional output path")] = (
         None
     )
     quiet: Annotated[bool, m.Field(False, description="Reduce command output")] = False
     no_fail: Annotated[
-        bool, m.Field(alias="no-fail", description="Exit successfully even with issues"),
+        bool,
+        m.Field(alias="no-fail", description="Exit successfully even with issues"),
     ] = False
     typings: Annotated[
-        bool, m.Field(False, description="Detect required typing packages"),
+        bool,
+        m.Field(False, description="Detect required typing packages"),
     ] = False
     apply_typings: Annotated[
         bool,
@@ -39,10 +42,12 @@ class FlextInfraRuntimeDevDependencyDetector(
         ),
     ] = False
     no_pip_check: Annotated[
-        bool, m.Field(alias="no-pip-check", description="Skip workspace pip check"),
+        bool,
+        m.Field(alias="no-pip-check", description="Skip workspace pip check"),
     ] = False
     limits: Annotated[
-        str | None, m.Field(None, description="Dependency limits TOML"),
+        str | None,
+        m.Field(None, description="Dependency limits TOML"),
     ] = None
 
     @property
@@ -81,7 +86,8 @@ class FlextInfraRuntimeDevDependencyDetector(
         # This command is the CLI composition point of the detect route: it
         # wires the dependency-analysis port into the runtime it drives.
         runtime = FlextInfraDependencyDetectorRuntime(
-            detector=self, deps=FlextInfraDependencyDetectionService(),
+            detector=self,
+            deps=FlextInfraDependencyDetectionService(),
         )
         return runtime.run(params)
 

@@ -37,7 +37,9 @@ class FlextInfraDuplicationGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext,
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Run and validate jscpd, then expose every owned clone as an error."""
         _ = ctx
@@ -81,7 +83,9 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                 stdout="",
                 stderr=scope.error or "project scope resolution failed",
                 outcome=m.Cli.ProcessOutcome(
-                    raw_return_code=1, timed_out=False, forwarded_signal=None,
+                    raw_return_code=1,
+                    timed_out=False,
+                    forwarded_signal=None,
                 ),
             )
         if not scope.value:
@@ -89,7 +93,9 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                 stdout="",
                 stderr="jscpd scope resolved no source or test directories",
                 outcome=m.Cli.ProcessOutcome(
-                    raw_return_code=1, timed_out=False, forwarded_signal=None,
+                    raw_return_code=1,
+                    timed_out=False,
+                    forwarded_signal=None,
                 ),
             )
         rendered_config = self._render_config(project_dir)
@@ -98,7 +104,9 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                 stdout="",
                 stderr=rendered_config.error or "project duplication config invalid",
                 outcome=m.Cli.ProcessOutcome(
-                    raw_return_code=1, timed_out=False, forwarded_signal=None,
+                    raw_return_code=1,
+                    timed_out=False,
+                    forwarded_signal=None,
                 ),
             )
         config_path = rendered_config.value
@@ -160,7 +168,8 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         )
 
     def _read_project_config(
-        self, project_dir: Path,
+        self,
+        project_dir: Path,
     ) -> p.Result[m.Infra.ProjectDuplicationOverrides]:
         """Read ``[tool.flext.project.duplication]`` from pyproject.toml.
 
@@ -185,7 +194,8 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         project = u.Cli.json_as_mapping(flext).get("project", {})
         duplication = u.Cli.json_as_mapping(project).get("duplication", {})
         validated: p.Result[m.Infra.ProjectDuplicationOverrides] = u.validate_value(
-            m.Infra.ProjectDuplicationOverrides, u.Cli.json_as_mapping(duplication),
+            m.Infra.ProjectDuplicationOverrides,
+            u.Cli.json_as_mapping(duplication),
         )
         if validated.failure:
             return r[m.Infra.ProjectDuplicationOverrides].fail_op(
@@ -205,7 +215,8 @@ class FlextInfraDuplicationGate(FlextInfraGate):
                 f"invalid workspace manifest ({manifest_path}): {loaded.error}",
             )
         validated: p.Result[m.Infra.WorkspaceManifestSpec] = u.validate_value(
-            m.Infra.WorkspaceManifestSpec, loaded.value.data,
+            m.Infra.WorkspaceManifestSpec,
+            loaded.value.data,
         )
         if validated.failure:
             return r[t.StrSequence].fail_op(
@@ -254,7 +265,8 @@ class FlextInfraDuplicationGate(FlextInfraGate):
 
     @staticmethod
     def _load_report(
-        report_dir: Path, result: p.Cli.CommandOutput,
+        report_dir: Path,
+        result: p.Cli.CommandOutput,
     ) -> p.Cli.CommandOutput:
         """Load the JSON report jscpd writes to disk; stdout carries console noise only."""
         report_path = report_dir / c.Infra.JSCPD_REPORT_FILENAME
@@ -284,7 +296,9 @@ class FlextInfraDuplicationGate(FlextInfraGate):
 
     @classmethod
     def _issues_from_report(
-        cls, scan: p.Cli.CommandOutput, project_dir: Path,
+        cls,
+        scan: p.Cli.CommandOutput,
+        project_dir: Path,
     ) -> p.Result[t.VariadicTuple[m.Infra.Issue]]:
         """Extract one Issue per clone side that falls inside ``project_dir``."""
         if not scan.stdout.strip():
@@ -319,7 +333,11 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             ):
                 issues.append(
                     cls._issue_from_duplicate(
-                        duplicate, first, first_name, second_name, project_dir,
+                        duplicate,
+                        first,
+                        first_name,
+                        second_name,
+                        project_dir,
                     ),
                 )
             elif (
@@ -328,7 +346,11 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             ):
                 issues.append(
                     cls._issue_from_duplicate(
-                        duplicate, second, second_name, first_name, project_dir,
+                        duplicate,
+                        second,
+                        second_name,
+                        first_name,
+                        project_dir,
                     ),
                 )
         return r[tuple[m.Infra.Issue, ...]].ok(tuple(issues))
@@ -359,7 +381,10 @@ class FlextInfraDuplicationGate(FlextInfraGate):
 
     @classmethod
     def _is_semantic_clone(
-        cls, duplicate: t.JsonMapping, first: t.JsonMapping, second: t.JsonMapping,
+        cls,
+        duplicate: t.JsonMapping,
+        first: t.JsonMapping,
+        second: t.JsonMapping,
     ) -> bool:
         """Require executable Python behavior on both sides of a clone.
 
@@ -438,7 +463,8 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             ):
                 return True
             return isinstance(
-                node, (ast.Assign, ast.AnnAssign),
+                node,
+                (ast.Assign, ast.AnnAssign),
             ) and not inside_function(node)
 
         return tuple(

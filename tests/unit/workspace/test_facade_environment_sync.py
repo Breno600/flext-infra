@@ -23,7 +23,10 @@ class TestsFlextInfraFacadeEnvironmentSync:
 
     @staticmethod
     def _activated_value(
-        workspace: Path, home: Path, name: str, env: t.StrMapping,
+        workspace: Path,
+        home: Path,
+        name: str,
+        env: t.StrMapping,
     ) -> str:
         """Return one variable as the real direnv activation of ``workspace`` sees it.
 
@@ -56,7 +59,8 @@ class TestsFlextInfraFacadeEnvironmentSync:
         )
 
     def test_activation_leaves_the_temp_directory_to_the_caller(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Activation forces no scratch root: the caller's TMPDIR survives."""
         home = tmp_path / "home"
@@ -66,14 +70,18 @@ class TestsFlextInfraFacadeEnvironmentSync:
         tm.ok(
             infra.sync_environment_files(
                 m.Infra.WorkspaceEnvironmentSyncRequest(
-                    repository_root=workspace, allow_direnv=False,
+                    repository_root=workspace,
+                    allow_direnv=False,
                 ),
             ),
         )
         caller_tmp = tmp_path / "caller-tmp"
         caller_tmp.mkdir()
         activated = self._activated_value(
-            workspace, home, "TMPDIR", {"TMPDIR": str(caller_tmp)},
+            workspace,
+            home,
+            "TMPDIR",
+            {"TMPDIR": str(caller_tmp)},
         )
         tm.that(activated.strip(), eq=str(caller_tmp))
 
@@ -86,13 +94,17 @@ class TestsFlextInfraFacadeEnvironmentSync:
         tm.ok(
             infra.sync_environment_files(
                 m.Infra.WorkspaceEnvironmentSyncRequest(
-                    repository_root=workspace, allow_direnv=False,
+                    repository_root=workspace,
+                    allow_direnv=False,
                 ),
             ),
         )
         ledger = tmp_path / "main-checkout" / c.Infra.BEADS_DIRNAME
         routed = self._activated_value(
-            workspace, home, "BEADS_DIR", {"BEADS_DIR": str(ledger)},
+            workspace,
+            home,
+            "BEADS_DIR",
+            {"BEADS_DIR": str(ledger)},
         )
         tm.that(routed, eq=str(ledger))
 
@@ -120,7 +132,8 @@ class TestsFlextInfraFacadeEnvironmentSync:
         tm.that(custom.read_text(encoding="utf-8"), eq="PATH_add bin\n")
 
     def test_sync_force_converts_custom_envrc_to_generated(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = tmp_path / "workspace"
         self._write_pyproject(workspace)
@@ -128,7 +141,8 @@ class TestsFlextInfraFacadeEnvironmentSync:
         _ = custom.write_text("PATH_add bin\n", encoding="utf-8")
         result = infra.sync_environment_files(
             m.Infra.WorkspaceEnvironmentSyncRequest(
-                repository_root=workspace, force=True,
+                repository_root=workspace,
+                force=True,
             ),
         )
         tm.ok(result)
@@ -150,14 +164,16 @@ class TestsFlextInfraFacadeEnvironmentSync:
         _ = mise.write_text(custom, encoding="utf-8")
         result = infra.sync_environment_files(
             m.Infra.WorkspaceEnvironmentSyncRequest(
-                repository_root=workspace, force=True,
+                repository_root=workspace,
+                force=True,
             ),
         )
         tm.ok(result)
         tm.that(mise.read_text(encoding="utf-8"), eq=custom)
 
     def test_sync_removes_generated_envrc_without_pyproject(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = tmp_path / "workspace"
         self._write_pyproject(workspace)

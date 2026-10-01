@@ -19,10 +19,14 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
     """Behavior contract for test_infra_refactor_cli_models_workflow."""
 
     def test_namespace_enforce_cli_fails_on_manual_protocol_violation(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = u.Tests.mk_project(
-            tmp_path, "workspace", pyproject="[project]\nname='sample'\n", with_src=True,
+            tmp_path,
+            "workspace",
+            pyproject="[project]\nname='sample'\n",
+            with_src=True,
         )
         module_dir = workspace / "src" / "sample_pkg"
         module_dir.mkdir(parents=True)
@@ -48,7 +52,10 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
 
     def test_wrapper_root_namespace_cli_dry_run_succeeds(self, tmp_path: Path) -> None:
         workspace = u.Tests.mk_project(
-            tmp_path, "workspace", pyproject="[project]\nname='sample'\n", with_src=True,
+            tmp_path,
+            "workspace",
+            pyproject="[project]\nname='sample'\n",
+            with_src=True,
         )
         scripts_dir = workspace / "scripts"
         scripts_dir.mkdir(parents=True)
@@ -75,10 +82,14 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         tm.that(source_file.read_text(encoding="utf-8"), has="c.Core.Tests")
 
     def test_wrapper_root_namespace_cli_check_fails_when_changes_are_needed(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = u.Tests.mk_project(
-            tmp_path, "workspace", pyproject="[project]\nname='sample'\n", with_src=True,
+            tmp_path,
+            "workspace",
+            pyproject="[project]\nname='sample'\n",
+            with_src=True,
         )
         scripts_dir = workspace / "scripts"
         scripts_dir.mkdir(parents=True)
@@ -102,10 +113,14 @@ class TestsFlextInfraRefactorInfraRefactorCliModelsWorkflow:
         tm.that(result, ne=0)
 
     def test_wrapper_root_namespace_cli_apply_rewrites_file(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = u.Tests.mk_project(
-            tmp_path, "workspace", pyproject="[project]\nname='sample'\n", with_src=True,
+            tmp_path,
+            "workspace",
+            pyproject="[project]\nname='sample'\n",
+            with_src=True,
         )
         scripts_dir = workspace / "scripts"
         scripts_dir.mkdir(parents=True)

@@ -134,7 +134,8 @@ class TestsFlextInfraConformSupport:
             update={"path": Path()},
         )
         workspace = u.Tests.workspace_spec(
-            repository, project=u.Tests.project_spec(repository.name),
+            repository,
+            project=u.Tests.project_spec(repository.name),
         )
         (root / "pyproject.toml").write_text(
             f"[project]\nname = '{repository.distribution}'\nversion = '0.1.0'\n",
@@ -149,6 +150,8 @@ class TestsFlextInfraConformSupport:
             mode=c.Infra.CodegenConformMode.CHECK,
         )
         service = FlextInfraCodegenConform(
-            repository_root=root, request=request, initial_workspace=workspace,
+            repository_root=root,
+            request=request,
+            initial_workspace=workspace,
         )
         return service, request

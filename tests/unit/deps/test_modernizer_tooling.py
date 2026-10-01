@@ -36,7 +36,8 @@ class TestsFlextInfraDepsModernizerTooling:
         )
 
     def test_typecheck_policy_keeps_tracked_surfaces_visible(
-        self, tool_config_document: m.Infra.ToolConfigDocument,
+        self,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Keep every tracked Python surface visible to all four analyzers."""
         tools = tool_config_document.tools
@@ -55,20 +56,24 @@ class TestsFlextInfraDepsModernizerTooling:
         )
         tm.that(frozenset(tools.pyright.path_rules.env_dirs), eq=tracked_surfaces)
         tm.that(
-            hidden_globs.isdisjoint(tools.pyright.path_rules.default_excludes), eq=True,
+            hidden_globs.isdisjoint(tools.pyright.path_rules.default_excludes),
+            eq=True,
         )
         tm.that(frozenset(tools.pyrefly.path_rules.env_dirs), eq=tracked_surfaces)
         tm.that(hidden_globs.isdisjoint(tools.pyrefly.project_exclude_globs), eq=True)
 
     def test_ruff_phase_sets_expected_state(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument,
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Render Ruff policy, drop stale sections, and converge on second apply."""
         ruff_policy = tool_config_document.tools.ruff
         project_dir = tmp_path / "flext-sample"
         (project_dir / "src" / "flext_sample").mkdir(parents=True)
         (project_dir / "src" / "flext_sample" / "__init__.py").write_text(
-            "", encoding="utf-8",
+            "",
+            encoding="utf-8",
         )
         stale_pattern = "stale-pattern.py"
 
@@ -128,7 +133,8 @@ class TestsFlextInfraDepsModernizerTooling:
         )
 
     def test_project_cannot_declare_its_own_ruff_exemption(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Per-file exemptions live only at the tooling owner, never per project."""
         project_dir = tmp_path / "flext-sample"
@@ -146,7 +152,9 @@ class TestsFlextInfraDepsModernizerTooling:
             u.Infra.load_project_managed_artifacts(project_dir)
 
     def test_ruff_phase_skips_nonmember_workspace_namespaces(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument,
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Exclude nonmember consumer namespaces from FLEXT first-party names."""
         repository_root = tmp_path / "workspace"
@@ -170,7 +178,8 @@ class TestsFlextInfraDepsModernizerTooling:
             encoding="utf-8",
         )
         (internal_project / "pyproject.toml").write_text(
-            '[project]\nname = "flext-core"\nversion = "0.1.0"\n', encoding="utf-8",
+            '[project]\nname = "flext-core"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
 
         _, ruff = self._applied(

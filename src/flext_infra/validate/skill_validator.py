@@ -54,7 +54,8 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
     ) -> bool:
         """Compare counts against the baseline file and return pass/fail."""
         baseline_obj = u.Cli.json_deep_mapping(
-            rules, c.Infra.OperationMode.BASELINE.value,
+            rules,
+            c.Infra.OperationMode.BASELINE.value,
         )
         if not baseline_obj:
             return True
@@ -141,7 +142,8 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
         return r[t.JsonList].ok(t.Cli.JSON_LIST_ADAPTER.validate_python(rules_list_obj))
 
     def _evaluate_rules(
-        self, context: m.Infra.SkillRuleEvaluationContext,
+        self,
+        context: m.Infra.SkillRuleEvaluationContext,
     ) -> t.Pair[t.IntMapping, t.StrSequence]:
         """Evaluate skill validation rules and return counts plus violations."""
         counts: t.MutableIntMapping = {}
@@ -154,7 +156,8 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
         return counts, tuple(violations)
 
     def _skill_report_model(
-        self, context: m.Infra.SkillReportContext,
+        self,
+        context: m.Infra.SkillReportContext,
     ) -> m.Infra.ValidationReport:
         """Build the canonical skill validation report model."""
         total = sum(context.counts.values())
@@ -162,7 +165,11 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
             total == 0
             if context.mode == c.Infra.OperationMode.STRICT
             else self._apply_baseline_comparison(
-                context.rules, context.root, context.skill_name, context.counts, total,
+                context.rules,
+                context.root,
+                context.skill_name,
+                context.counts,
+                total,
             )
         )
         summary = (
@@ -170,11 +177,16 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
             f"{('PASS' if passed else 'FAIL')}"
         )
         return m.Infra.ValidationReport(
-            passed=passed, violations=context.violations, summary=summary,
+            passed=passed,
+            violations=context.violations,
+            summary=summary,
         )
 
     def _build_skill_report(
-        self, repository_root: Path, skill_name: str, mode: c.Infra.OperationMode,
+        self,
+        repository_root: Path,
+        skill_name: str,
+        mode: c.Infra.OperationMode,
     ) -> p.Result[m.Infra.ValidationReport]:
         """Build a skill validation report after path resolution."""
         root = repository_root.resolve()
@@ -222,7 +234,9 @@ class FlextInfraSkillValidator(s[bool], FlextInfraSkillRuleRunnerMixin):
     def execute(self) -> p.Result[bool]:
         """Execute the skill-validation CLI flow."""
         report_result = self.build_report(
-            self.repository_root, self.skill, mode=self.mode,
+            self.repository_root,
+            self.skill,
+            mode=self.mode,
         )
         if report_result.failure:
             return r[bool].from_failure(report_result)

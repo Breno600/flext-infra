@@ -105,7 +105,8 @@ class FlextInfraConstantsCodegenLazy:
     LAZY_BOOTSTRAP_ROOT_PACKAGE: ClassVar[str] = "flext_core"
 
     BARE_IMPORT_FROM_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^from\s+import\s", re.MULTILINE,
+        r"^from\s+import\s",
+        re.MULTILINE,
     )
     "Regex: malformed ``from import`` statement (missing module name)."
 

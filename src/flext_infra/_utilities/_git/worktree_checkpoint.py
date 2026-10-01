@@ -23,7 +23,11 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
 
     @classmethod
     def git_checkpoint_worktree(
-        cls, worktree_root: Path, *, message: str, excluded: t.SequenceOf[Path] = (),
+        cls,
+        worktree_root: Path,
+        *,
+        message: str,
+        excluded: t.SequenceOf[Path] = (),
     ) -> p.Result[str]:
         """Commit the complete isolated state as a synthetic checkpoint."""
         # `make setup` fast-forwards every declared submodule to its branch tip by
@@ -38,7 +42,10 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
         )
         try:
             commit_sha = cls._git_create_checkpoint_commit(
-                worktree_root, gitlink_exclusions, excluded, message,
+                worktree_root,
+                gitlink_exclusions,
+                excluded,
+                message,
             )
         except GitCommandError as exc:
             return r[str].fail(str(exc), exception=exc)
@@ -183,7 +190,8 @@ class FlextInfraUtilitiesGitWorktreeCheckpointMixin(
             return r[m.Infra.RepositoryDelta].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.RepositoryDelta].fail(
-                f"failed to capture operation patch: {exc}", exception=exc,
+                f"failed to capture operation patch: {exc}",
+                exception=exc,
             )
         # git apply rejects a patch whose final line has no terminating newline
         # ("corrupt patch"). `git diff --binary` can emit exactly that when the

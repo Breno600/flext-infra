@@ -174,7 +174,8 @@ class TestsFlextInfraReleaseHelpers:
             notes_path = workspace / "notes.md"
             notes_path.parent.mkdir(parents=True, exist_ok=True)
             notes_path.write_text(
-                c.Tests.RELEASE_NOTES_HEADING + "\n", encoding="utf-8",
+                c.Tests.RELEASE_NOTES_HEADING + "\n",
+                encoding="utf-8",
             )
             return notes_path
 
@@ -198,7 +199,8 @@ class TestsFlextInfraReleaseHelpers:
                 workspace,
             )
             result = TestsFlextInfraReleaseHelpers.TestsChangelog.update_changelog_at(
-                workspace, notes_path,
+                workspace,
+                notes_path,
             )
             tm.ok(result)
             return (docs_dir / "CHANGELOG.md").read_text(encoding="utf-8")
@@ -212,7 +214,8 @@ class TestsFlextInfraReleaseHelpers:
             )
 
             result = TestsFlextInfraReleaseHelpers.TestsChangelog.update_changelog_at(
-                workspace, notes_path,
+                workspace,
+                notes_path,
             )
 
             tm.ok(result)
@@ -282,7 +285,8 @@ class TestsFlextInfraReleaseHelpers:
             workspace = tmp_path / "workspace"
             changelog = (
                 TestsFlextInfraReleaseHelpers.TestsChangelog.update_changelog_from_seed(
-                    workspace, "Existing notes only\n",
+                    workspace,
+                    "Existing notes only\n",
                 )
             )
             tm.that(changelog, starts=c.Tests.RELEASE_CHANGELOG_HEADER)
@@ -400,7 +404,9 @@ class TestsFlextInfraReleaseHelpers:
             project_name = "flext-a"
             workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
             artifact_dir = u.Tests.release_artifact_dir(
-                workspace, c.Tests.RELEASE_VERSION_BASE, project_name,
+                workspace,
+                c.Tests.RELEASE_VERSION_BASE,
+                project_name,
             )
             first_result = u.Tests.run_release_build(workspace, project_name)
             original_artifacts = {
@@ -464,7 +470,9 @@ class TestsFlextInfraReleaseHelpers:
             tm.that(build_log, has="unexpected.txt")
             tm.that(
                 u.Tests.release_artifact_dir(
-                    workspace, c.Tests.RELEASE_VERSION_BASE, project_name,
+                    workspace,
+                    c.Tests.RELEASE_VERSION_BASE,
+                    project_name,
                 ).exists(),
                 eq=False,
             )
@@ -499,7 +507,8 @@ version = "6.0.0"
 source = { registry = "https://pypi.org/simple" }
 """
             TestsFlextInfraReleaseHelpers.TestsInternalLockedVersions.write_lock(
-                tmp_path, lock_body,
+                tmp_path,
+                lock_body,
             )
 
             result = FlextInfraReleaseBuildMixin.internal_locked_versions(tmp_path)
@@ -519,7 +528,8 @@ source = { registry = "https://pypi.org/simple" }
         def test_invalid_lock_fails_loud(tmp_path: Path) -> None:
             """A corrupt lock is a typed failure, never a silently empty map."""
             TestsFlextInfraReleaseHelpers.TestsInternalLockedVersions.write_lock(
-                tmp_path, "not [ valid toml",
+                tmp_path,
+                "not [ valid toml",
             )
 
             result = FlextInfraReleaseBuildMixin.internal_locked_versions(tmp_path)

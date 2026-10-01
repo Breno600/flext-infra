@@ -45,21 +45,25 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
 
     @staticmethod
     def docs_repository_roots(
-        repository_root: Path, extra_roots: t.SequenceOf[Path] = (),
+        repository_root: Path,
+        extra_roots: t.SequenceOf[Path] = (),
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Return existing physical roots from one stable workspace topology."""
         try:
             return FlextInfraUtilitiesDocsScopePathsMixin._docs_repository_roots(
-                repository_root, extra_roots,
+                repository_root,
+                extra_roots,
             )
         except (OSError, TypeError, ValueError) as exc:
             return r[t.VariadicTuple[Path]].fail(
-                f"docs workspace discovery failed: {exc}", exception=exc,
+                f"docs workspace discovery failed: {exc}",
+                exception=exc,
             )
 
     @staticmethod
     def _docs_repository_roots(
-        repository_root: Path, extra_roots: t.SequenceOf[Path],
+        repository_root: Path,
+        extra_roots: t.SequenceOf[Path],
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Discover roots while the public boundary owns exception conversion."""
         root = FlextInfraUtilitiesDocsScopePathsMixin.absolute_lexical(repository_root)
@@ -69,7 +73,8 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
             )
         manifest_path = root / c.Infra.GITMODULES
         manifest_before = u.Cli.atomic_read_binary_file_state(
-            manifest_path, required=False,
+            manifest_path,
+            required=False,
         )
         if manifest_before.failure:
             return r[t.VariadicTuple[Path]].from_failure(manifest_before)
@@ -77,7 +82,8 @@ class FlextInfraUtilitiesDocsScopePathsMixin:
         if declared.failure:
             return r[t.VariadicTuple[Path]].from_failure(declared)
         manifest_after = u.Cli.atomic_read_binary_file_state(
-            manifest_path, required=False,
+            manifest_path,
+            required=False,
         )
         if manifest_after.failure:
             return r[t.VariadicTuple[Path]].from_failure(manifest_after)

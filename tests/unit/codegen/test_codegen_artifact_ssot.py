@@ -57,7 +57,8 @@ class TestsFlextInfraCodegenArtifactSsot:
         tm.that(len(expected), eq=len(set(expected)))
 
     def test_gitignore_artifacts_are_exact_projection(
-        self, codegen: CodegenSpec,
+        self,
+        codegen: CodegenSpec,
     ) -> None:
         """Preserve configured order while rendering directory suffixes."""
         expected = tuple(
@@ -69,7 +70,8 @@ class TestsFlextInfraCodegenArtifactSsot:
         tm.that(len(expected), eq=len(set(expected)))
 
     def test_gitignore_sections_account_for_every_artifact(
-        self, codegen: CodegenSpec,
+        self,
+        codegen: CodegenSpec,
     ) -> None:
         """Require every derived pattern to be governed or appended."""
         emitted = {
@@ -90,15 +92,20 @@ class TestsFlextInfraCodegenArtifactSsot:
         tm.that(unaccounted, eq=())
 
     @pytest.mark.parametrize(
-        "profile", [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
+        "profile",
+        [c.Infra.MakeProfile.WORKSPACE, c.Infra.MakeProfile.STANDALONE],
     )
     def test_gitignore_tracks_governed_provider_projections(
-        self, codegen: CodegenSpec, profile: c.Infra.MakeProfile,
+        self,
+        codegen: CodegenSpec,
+        profile: c.Infra.MakeProfile,
     ) -> None:
         """Track portable governance and exclude machine-owned provider settings."""
         rendered = tm.ok(
             FlextInfraCodegenConform.render_project_gitignore(
-                codegen, profile=profile, project_name="fixture-project",
+                codegen,
+                profile=profile,
+                project_name="fixture-project",
             ),
         )
         tracked = (
@@ -127,13 +134,15 @@ class TestsFlextInfraCodegenArtifactSsot:
             )
         tm.that(
             u.Tests.is_tracked_under(
-                rendered, ".agents/skills/flext-development/report.json",
+                rendered,
+                ".agents/skills/flext-development/report.json",
             ),
             eq=False,
         )
 
     def test_makefile_has_one_owner_for_every_declared_profile(
-        self, codegen: CodegenSpec,
+        self,
+        codegen: CodegenSpec,
     ) -> None:
         """Cover repository profiles through one generic template entry."""
         entries = tuple(
@@ -149,7 +158,8 @@ class TestsFlextInfraCodegenArtifactSsot:
         tm.that(set(entries[0].profiles), eq=declared_profiles)
 
     def test_hook_workflow_contexts_partition_mutation_and_validation(
-        self, codegen: CodegenSpec,
+        self,
+        codegen: CodegenSpec,
     ) -> None:
         """Hook stages share validation but never repeat mutating steps."""
         workflow = codegen.make.workflow
@@ -181,11 +191,14 @@ class TestsFlextInfraCodegenArtifactSsot:
         )
         tm.that(bool(push_verbs - commit_verbs), eq=True)
         tm.that(
-            push_verbs.issubset({verb.name for verb in codegen.make.verbs}), eq=True,
+            push_verbs.issubset({verb.name for verb in codegen.make.verbs}),
+            eq=True,
         )
 
     def test_rendered_vscode_document_consumes_projection_maps(
-        self, tmp_path: Path, codegen: CodegenSpec,
+        self,
+        tmp_path: Path,
+        codegen: CodegenSpec,
     ) -> None:
         """Validate the public renderer output instead of private implementation."""
         project = u.Tests.mk_project(
@@ -196,7 +209,8 @@ class TestsFlextInfraCodegenArtifactSsot:
         )
         u.Tests.write_project_beads_config(project, "artifact-ssot")
         u.Tests.initialize_git_repo(
-            project, origin_url=u.Tests.repository_ref("artifact-ssot").url,
+            project,
+            origin_url=u.Tests.repository_ref("artifact-ssot").url,
         )
         rendered: str = tm.ok(FlextInfraCodegen.render_vscode_settings(project))
         parsed: t.JsonValue = tm.ok(u.Cli.json_parse(rendered))

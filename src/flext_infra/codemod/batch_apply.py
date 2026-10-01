@@ -21,16 +21,21 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
     """Apply every discovered AST rewrite without destructive rollback."""
 
     rename_runner: t.Port[p.Infra.RenameCampaignRunner] = m.Field(
-        exclude=True, description="Injected CSV campaign execution port",
+        exclude=True,
+        description="Injected CSV campaign execution port",
     )
     progress: t.Port[p.Infra.ModProgress] = m.Field(
-        exclude=True, description="Injected mod progress transport port",
+        exclude=True,
+        description="Injected mod progress transport port",
     )
     rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True, description="Injected Rope workspace port",
+        exclude=True,
+        description="Injected Rope workspace port",
     )
     rename_inputs: t.VariadicTuple[m.Infra.ApplyRenamesInput] = m.Field(
-        exclude=True, default=(), description="Typed declared CSV campaigns",
+        exclude=True,
+        default=(),
+        description="Typed declared CSV campaigns",
     )
 
     @override
@@ -43,11 +48,14 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         if self.effective_dry_run:
             self.progress.emit(f"mod: scan {len(rules)} discovered rule file(s)")
             pending = FlextInfraModGateEngine.scan(
-                self.repository_root, fix=False,
+                self.repository_root,
+                fix=False,
             ).unwrap()
             pending_count = pending.findings
             text_pending = FlextInfraModTextGateEngine.scan(
-                self.repository_root, fix=False, validate_receipts=True,
+                self.repository_root,
+                fix=False,
+                validate_receipts=True,
             ).unwrap()
             pending_count += text_pending.findings
             renames_pending = self._pending_renames()
@@ -75,7 +83,8 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         """Converge AST, semantic, and text phases over the same source state."""
         self.progress.emit("mod: validate ast-grep rule fixtures")
         FlextInfraModGateEngine.validate_rule_fixtures(
-            self.repository_root, rules,
+            self.repository_root,
+            rules,
         ).unwrap()
         return self._execute_apply_cycle()
 
@@ -111,11 +120,14 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             self.validate_fix_match(current, after_ast)
             phase_states = [fingerprint(root, after_ast)]
             transaction_paths = FlextInfraCodemodSemanticApply.plan_transaction_paths(
-                root, after_ast, rope_workspace,
+                root,
+                after_ast,
+                rope_workspace,
             )
             if transaction_paths:
                 FlextInfraCodemodSemanticApply.apply_transaction_paths(
-                    root, transaction_paths,
+                    root,
+                    transaction_paths,
                 )
                 rope_workspace.refresh()
                 after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
@@ -126,17 +138,23 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             # Detection-only findings and configured import alignment select
             # semantic work even when no AST rule has a textual replacement.
             semantic = FlextInfraCodemodSemanticApply.apply(
-                root, after_ast, rope_workspace,
+                root,
+                after_ast,
+                rope_workspace,
             )
             if semantic.failure:
                 return r[t.Cli.ResultValue].from_failure(semantic)
             phase_states.append(fingerprint(root, after_ast))
             current_text = FlextInfraModTextGateEngine.scan(
-                root, fix=False, validate_receipts=text_precondition_pending,
+                root,
+                fix=False,
+                validate_receipts=text_precondition_pending,
             ).unwrap()
             if current_text.actionable:
                 applied = FlextInfraModTextGateEngine.scan(
-                    root, fix=True, validate_receipts=text_precondition_pending,
+                    root,
+                    fix=True,
+                    validate_receipts=text_precondition_pending,
                 )
                 if applied.failure:
                     return r[t.Cli.ResultValue].from_failure(applied)
@@ -213,7 +231,8 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
 
     @staticmethod
     def validate_fix_match(
-        before: m.Infra.ModScanReport, after_apply: m.Infra.ModScanReport,
+        before: m.Infra.ModScanReport,
+        after_apply: m.Infra.ModScanReport,
     ) -> None:
         """Reject unresolved rewrites while preserving valid rule cascades."""
         # Check that actionable findings were actually resolved

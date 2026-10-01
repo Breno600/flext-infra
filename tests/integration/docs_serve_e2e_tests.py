@@ -66,10 +66,12 @@ class TestsFlextInfraIntegrationDocsServeE2e:
     def test_serve_scope_serves_site_over_http(self, tmp_path: Path) -> None:
         (tmp_path / "docs").mkdir()
         (tmp_path / "docs/index.md").write_text(
-            "# Demo\n\nHello from the real dev server.\n", encoding="utf-8",
+            "# Demo\n\nHello from the real dev server.\n",
+            encoding="utf-8",
         )
         (tmp_path / "mkdocs.yml").write_text(
-            "site_name: Flext Demo Docs\n", encoding="utf-8",
+            "site_name: Flext Demo Docs\n",
+            encoding="utf-8",
         )
         port = self._free_local_port()
         dev_addr = f"127.0.0.1:{port}"

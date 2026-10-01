@@ -24,10 +24,12 @@ class FlextInfraModelsCore:
 
         passed: Annotated[bool, m.Field(description="Validation status")]
         violations: Annotated[
-            t.StrSequence, m.Field(description="Collected validation violations"),
+            t.StrSequence,
+            m.Field(description="Collected validation violations"),
         ] = m.Field(default_factory=tuple)
         summary: Annotated[
-            str, m.Field(description="Human-readable validation summary"),
+            str,
+            m.Field(description="Human-readable validation summary"),
         ] = ""
 
     class FreshImportProbe(m.Value):
@@ -42,7 +44,8 @@ class FlextInfraModelsCore:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore")
 
         scripts: t.StrMapping | None = m.Field(
-            default=None, description="Declared console entrypoints when present",
+            default=None,
+            description="Declared console entrypoints when present",
         )
         gui_scripts: t.StrMapping | None = m.Field(
             default=None,
@@ -71,7 +74,8 @@ class FlextInfraModelsCore:
         skill_dir: Annotated[Path, m.Field(description="Skill directory path")]
         root: Annotated[Path, m.Field(description="Repository root path")]
         mode: Annotated[
-            c.Infra.OperationMode, m.Field(description="Skill validation mode"),
+            c.Infra.OperationMode,
+            m.Field(description="Skill validation mode"),
         ]
         include_globs: Annotated[t.StrSequence, m.Field(description="Include globs")]
         exclude_globs: Annotated[t.StrSequence, m.Field(description="Exclude globs")]
@@ -80,12 +84,14 @@ class FlextInfraModelsCore:
         """Resolved inputs for one skill validation report."""
 
         rules: Annotated[
-            t.MappingKV[str, t.JsonValue], m.Field(description="Rules payload"),
+            t.MappingKV[str, t.JsonValue],
+            m.Field(description="Rules payload"),
         ]
         root: Annotated[Path, m.Field(description="Repository root path")]
         skill_name: Annotated[str, m.Field(description="Skill folder name")]
         mode: Annotated[
-            c.Infra.OperationMode, m.Field(description="Skill validation mode"),
+            c.Infra.OperationMode,
+            m.Field(description="Skill validation mode"),
         ]
         counts: Annotated[t.IntMapping, m.Field(description="Violation counts")]
         violations: Annotated[t.StrSequence, m.Field(description="Violations")]
@@ -98,7 +104,8 @@ class FlextInfraModelsCore:
             m.Field(description="Install-package hints extracted from mypy output"),
         ] = m.Field(default_factory=list)
         internal_missing: Annotated[
-            t.MutableSequenceOf[str], m.Field(description="Missing internal imports"),
+            t.MutableSequenceOf[str],
+            m.Field(description="Missing internal imports"),
         ] = m.Field(default_factory=list)
         unresolved_missing: Annotated[
             t.MutableSequenceOf[str],
@@ -107,7 +114,8 @@ class FlextInfraModelsCore:
             ),
         ] = m.Field(default_factory=list)
         total_missing: Annotated[
-            t.NonNegativeInt, m.Field(description="Total missing imports"),
+            t.NonNegativeInt,
+            m.Field(description="Total missing imports"),
         ]
 
     class PytestCollectionManifest(m.Value):
@@ -154,10 +162,12 @@ class FlextInfraModelsCore:
             description="Collection manifest enforcing a nonempty selection",
         )
         serialize: bool = m.Field(
-            default=False, description="Run serially without xdist workers",
+            default=False,
+            description="Run serially without xdist workers",
         )
         whole_target: bool = m.Field(
-            default=False, description="Selection covers the complete test target",
+            default=False,
+            description="Selection covers the complete test target",
         )
         execution_mode: c.Infra.PytestExecutionMode = m.Field(
             default=c.Infra.PytestExecutionMode.INCREMENTAL,
@@ -174,7 +184,8 @@ class FlextInfraModelsCore:
             description="External pytest-testmon database; absent for coverage",
         )
         deadline_monotonic: float = m.Field(
-            gt=0, description="Shared absolute deadline across all execution phases",
+            gt=0,
+            description="Shared absolute deadline across all execution phases",
         )
         report_directory: Path | None = m.Field(
             default=None,
@@ -202,24 +213,30 @@ class FlextInfraModelsCore:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", strict=True)
 
         report_type: Annotated[
-            str, m.Field(alias="$report_type", description="Pytest event kind"),
+            str,
+            m.Field(alias="$report_type", description="Pytest event kind"),
         ]
         category: Annotated[
-            str | None, m.Field(description="Warning category name"),
+            str | None,
+            m.Field(description="Warning category name"),
         ] = None
         filename: Annotated[
-            str | None, m.Field(description="Warning source filename"),
+            str | None,
+            m.Field(description="Warning source filename"),
         ] = None
         lineno: Annotated[
-            int | None, m.Field(ge=0, description="Warning source line"),
+            int | None,
+            m.Field(ge=0, description="Warning source line"),
         ] = None
         message: Annotated[
-            str | None, m.Field(description="Complete warning message"),
+            str | None,
+            m.Field(description="Complete warning message"),
         ] = None
         nodeid: str | None = m.Field(default=None, description="TestReport node ID")
         when: str | None = m.Field(default=None, description="Pytest lifecycle phase")
         outcome: Literal["passed", "failed", "skipped"] | None = m.Field(
-            default=None, description="TestReport outcome",
+            default=None,
+            description="TestReport outcome",
         )
 
         @u.model_validator(mode="after")
@@ -261,16 +278,20 @@ class FlextInfraModelsCore:
         """Extracted diagnostics summary from JUnit XML and pytest report-log."""
 
         failed_count: Annotated[
-            t.NonNegativeInt, m.Field(description="Failed test case count"),
+            t.NonNegativeInt,
+            m.Field(description="Failed test case count"),
         ]
         error_count: Annotated[
-            t.NonNegativeInt, m.Field(description="Errored test case count"),
+            t.NonNegativeInt,
+            m.Field(description="Errored test case count"),
         ]
         warning_count: Annotated[
-            t.NonNegativeInt, m.Field(description="Recorded warning event count"),
+            t.NonNegativeInt,
+            m.Field(description="Recorded warning event count"),
         ]
         skipped_count: Annotated[
-            t.NonNegativeInt, m.Field(description="Skipped test case count"),
+            t.NonNegativeInt,
+            m.Field(description="Skipped test case count"),
         ]
         collection_failed_count: t.NonNegativeInt = m.Field(
             description="Failed collection reports, separate from JUnit cases",
@@ -279,7 +300,8 @@ class FlextInfraModelsCore:
             description="Skipped collection reports, separate from JUnit cases",
         )
         collection_failed_cases: t.StrTuple = m.Field(
-            default_factory=tuple, description="Node IDs with failed collection reports",
+            default_factory=tuple,
+            description="Node IDs with failed collection reports",
         )
         collection_skip_cases: t.StrTuple = m.Field(
             default_factory=tuple,
@@ -290,19 +312,24 @@ class FlextInfraModelsCore:
             description="Unique node IDs with real TestReport events",
         )
         failed_cases: Annotated[
-            t.StrSequence, m.Field(description="Failed test labels"),
+            t.StrSequence,
+            m.Field(description="Failed test labels"),
         ] = m.Field(default_factory=tuple)
         error_traces: Annotated[
-            t.StrSequence, m.Field(description="Collected error traces"),
+            t.StrSequence,
+            m.Field(description="Collected error traces"),
         ] = m.Field(default_factory=tuple)
         warning_lines: Annotated[
-            t.StrSequence, m.Field(description="Captured warning lines"),
+            t.StrSequence,
+            m.Field(description="Captured warning lines"),
         ] = m.Field(default_factory=tuple)
         skip_cases: Annotated[
-            t.StrSequence, m.Field(description="Skipped test labels"),
+            t.StrSequence,
+            m.Field(description="Skipped test labels"),
         ] = m.Field(default_factory=tuple)
         slow_entries: Annotated[
-            t.StrSequence, m.Field(description="Slow test entries"),
+            t.StrSequence,
+            m.Field(description="Slow test entries"),
         ] = m.Field(default_factory=tuple)
 
     class DiagResult(m.ArbitraryTypesModel):
@@ -317,10 +344,12 @@ class FlextInfraModelsCore:
             description="Runtest phase outcomes keyed by TestReport node ID",
         )
         collection_failed_cases: t.MutableSequenceOf[str] = m.Field(
-            default_factory=list, description="Node IDs with failed collection reports",
+            default_factory=list,
+            description="Node IDs with failed collection reports",
         )
         collection_skip_cases: t.MutableSequenceOf[str] = m.Field(
-            default_factory=list, description="Node IDs with skipped collection reports",
+            default_factory=list,
+            description="Node IDs with skipped collection reports",
         )
 
         failed_cases: Annotated[
@@ -340,20 +369,24 @@ class FlextInfraModelsCore:
             m.Field(description="Collected skipped test-case labels"),
         ] = m.Field(default_factory=list)
         warning_lines: Annotated[
-            t.MutableSequenceOf[str], m.Field(description="Collected warning lines"),
+            t.MutableSequenceOf[str],
+            m.Field(description="Collected warning lines"),
         ] = m.Field(default_factory=list)
         slow_entries: Annotated[
-            t.MutableSequenceOf[str], m.Field(description="Collected slow-test entries"),
+            t.MutableSequenceOf[str],
+            m.Field(description="Collected slow-test entries"),
         ] = m.Field(default_factory=list)
 
     class InventoryReport(m.ArbitraryTypesModel):
         """Summary of written inventory report artifacts."""
 
         total_scripts: Annotated[
-            t.NonNegativeInt, m.Field(description="Total discovered scripts"),
+            t.NonNegativeInt,
+            m.Field(description="Total discovered scripts"),
         ]
         reports_written: Annotated[
-            t.MutableSequenceOf[str], m.Field(description="Written report file paths"),
+            t.MutableSequenceOf[str],
+            m.Field(description="Written report file paths"),
         ] = m.Field(default_factory=list)
 
     class NamespaceValidateCommand(m.ContractModel):

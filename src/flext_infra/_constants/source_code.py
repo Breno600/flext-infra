@@ -150,15 +150,18 @@ class FlextInfraConstantsSourceCode:
     )
     "Regex: Python source encoding cookie on a header line."
     CLASS_WITH_BASES_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^class\s+(\w+)\s*\(([^)]*)\)\s*:", re.MULTILINE,
+        r"^class\s+(\w+)\s*\(([^)]*)\)\s*:",
+        re.MULTILINE,
     )
     "Regex: ``class <name>(<bases>):`` — requires parentheses, captures bases."
     FROM_IMPORT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*from\s+([\w.]+)\s+import\s+(.+?)(?:\s*#.*)?$", re.MULTILINE,
+        r"^\s*from\s+([\w.]+)\s+import\s+(.+?)(?:\s*#.*)?$",
+        re.MULTILINE,
     )
     "Regex: from-import with optional trailing comment."
     FROM_IMPORT_BLOCK_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*from\s+([\w.]+)\s+import\s*\((.*?)\)", re.MULTILINE | re.DOTALL,
+        r"^\s*from\s+([\w.]+)\s+import\s*\((.*?)\)",
+        re.MULTILINE | re.DOTALL,
     )
     "Regex: multiline from-import block."
     REQUIRES_PYTHON_RE: ClassVar[t.RegexPattern] = re.compile(
@@ -172,7 +175,8 @@ class FlextInfraConstantsSourceCode:
     "Centralized alias for ``re.error`` so consumers needn't import ``re``."
 
     TOC_BLOCK_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"<!-- TOC START -->.*?<!-- TOC END -->", re.DOTALL,
+        r"<!-- TOC START -->.*?<!-- TOC END -->",
+        re.DOTALL,
     )
     "Regex: TOC marker block (start..end), DOTALL."
     DUNDER_ALL_SINGLE_LINE_RE: ClassVar[t.RegexPattern] = re.compile(
@@ -188,7 +192,8 @@ class FlextInfraConstantsSourceCode:
     BLANK_LINE_RUN_RE: ClassVar[t.RegexPattern] = re.compile(r"\n{4,}")
     "Regex: 4+ consecutive newlines — collapsed to triple newline."
     LEGACY_TYPEALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(\w+)\s*:\s*TypeAlias\s*=\s*(.+)$", re.MULTILINE,
+        r"^(\w+)\s*:\s*TypeAlias\s*=\s*(.+)$",
+        re.MULTILINE,
     )
     "Regex: legacy ``X: TypeAlias = expr`` (rewritten to PEP 695 ``type X = ...``)."
 
@@ -221,7 +226,8 @@ class FlextInfraConstantsSourceCode:
     def compile_from_module_import_line(module_name: str) -> t.RegexPattern:
         """Compile ``^from <module_name> import .+$`` (MULTILINE) for whole-line replace."""
         return re.compile(
-            rf"^from\s+{re.escape(module_name)}\s+import\s+.+$", re.MULTILINE,
+            rf"^from\s+{re.escape(module_name)}\s+import\s+.+$",
+            re.MULTILINE,
         )
 
     GITHUB_REPO_URL: ClassVar[str] = "https://github.com/flext-sh/flext"

@@ -32,16 +32,22 @@ class FlextInfraAccessorMigrationReportMixin:
         def lint_tool_names(self) -> t.StrSequence: ...
 
         def _apply_automated_rewrites(
-            self, rope_project: t.Infra.RopeProject, py_file: Path, source: str,
+            self,
+            rope_project: t.Infra.RopeProject,
+            py_file: Path,
+            source: str,
         ) -> t.Pair[str, t.SequenceOf[m.Infra.AccessorMigrationChange]]: ...
 
         def _collect_manual_warnings(
-            self, py_file: Path, source: str,
+            self,
+            py_file: Path,
+            source: str,
         ) -> t.SequenceOf[m.Infra.AccessorMigrationChange]: ...
 
     @staticmethod
     def _accumulate_lint_totals(
-        totals: MutableMapping[str, int], snapshot: t.Infra.LintSnapshot,
+        totals: MutableMapping[str, int],
+        snapshot: t.Infra.LintSnapshot,
     ) -> None:
         """Accumulate lint totals."""
         for tool, lines in snapshot.items():
@@ -57,7 +63,9 @@ class FlextInfraAccessorMigrationReportMixin:
     ) -> m.Infra.AccessorMigrationFile:
         """Rewrite one file, collect its manual warnings and lint evidence."""
         updated_source, automated_changes = self._apply_automated_rewrites(
-            rope_project, py_file, source,
+            rope_project,
+            py_file,
+            source,
         )
         warnings = list(self._collect_manual_warnings(py_file, source))
         include_preview = bool(automated_changes or warnings) and preview_available
@@ -77,7 +85,9 @@ class FlextInfraAccessorMigrationReportMixin:
             elif not self.dry_run:
                 before = (
                     u.Infra.lint_snapshot(
-                        py_file, self.repository_root, gates=self.gate_names,
+                        py_file,
+                        self.repository_root,
+                        gates=self.gate_names,
                     )
                     if include_preview
                     else {}
@@ -103,7 +113,9 @@ class FlextInfraAccessorMigrationReportMixin:
                     )
                 after = (
                     u.Infra.lint_snapshot(
-                        py_file, self.repository_root, gates=self.gate_names,
+                        py_file,
+                        self.repository_root,
+                        gates=self.gate_names,
                     )
                     if include_preview
                     else {}
@@ -143,7 +155,11 @@ class FlextInfraAccessorMigrationReportMixin:
     def _diff(py_file: Path, before: str, after: str) -> str:
         """Diff."""
         diff_lines = u.Infra.unified_diff_lines(
-            before, after, fromfile=f"a/{py_file}", tofile=f"b/{py_file}", max_lines=80,
+            before,
+            after,
+            fromfile=f"a/{py_file}",
+            tofile=f"b/{py_file}",
+            max_lines=80,
         )
         return "".join(diff_lines)
 

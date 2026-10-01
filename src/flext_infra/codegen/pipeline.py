@@ -21,7 +21,8 @@ if TYPE_CHECKING:
 
 
 class FlextInfraCodegenPipeline(
-    FlextInfraCodegenPipelineStagesMixin, FlextInfraCodegenExecutionBase[str],
+    FlextInfraCodegenPipelineStagesMixin,
+    FlextInfraCodegenExecutionBase[str],
 ):
     """Run the full codegen pipeline directly from the validated CLI model."""
 
@@ -45,7 +46,8 @@ class FlextInfraCodegenPipeline(
             context=m.Cli.PipelineStageContext(
                 repository_root=self.repository_root,
                 settings={
-                    c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run or not self.apply_changes,
+                    c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run
+                    or not self.apply_changes,
                 },
             ),
             logger=self.logger,
@@ -80,7 +82,10 @@ class FlextInfraCodegenPipeline(
 
     @override
     def _run_stage[V](
-        self, stage_id: str, action: Callable[[], V], emit: Callable[[V], t.JsonMapping],
+        self,
+        stage_id: str,
+        action: Callable[[], V],
+        emit: Callable[[V], t.JsonMapping],
     ) -> p.Result[m.Cli.PipelineStageResult]:
         """Run one pipeline stage and preserve the first exception.
 

@@ -25,7 +25,12 @@ class TestsFlextInfraReleasePublish:
         (notes / "v0.1.0.md").write_text("# Release v0.1.0\n", encoding="utf-8")
         tm.that(
             u.Tests.run_release_main(
-                workspace, "--phase", "build", "--projects", project_name, "--apply",
+                workspace,
+                "--phase",
+                "build",
+                "--projects",
+                project_name,
+                "--apply",
             ),
             eq=0,
         )
@@ -57,7 +62,8 @@ class TestsFlextInfraReleasePublish:
         artifact.write_bytes(artifact.read_bytes() + b"\n")
 
         tm.that(
-            u.Tests.run_release_main(workspace, "--phase", "publish", "--apply"), ne=0,
+            u.Tests.run_release_main(workspace, "--phase", "publish", "--apply"),
+            ne=0,
         )
 
     def test_missing_receipt_is_refused(self, tmp_path: Path) -> None:
@@ -65,5 +71,6 @@ class TestsFlextInfraReleasePublish:
         workspace = u.Tests.create_release_workspace(tmp_path)
 
         tm.that(
-            u.Tests.run_release_main(workspace, "--phase", "publish", "--apply"), ne=0,
+            u.Tests.run_release_main(workspace, "--phase", "publish", "--apply"),
+            ne=0,
         )

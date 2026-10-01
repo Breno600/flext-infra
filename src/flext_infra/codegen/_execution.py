@@ -17,19 +17,23 @@ class FlextInfraCodegenExecutionBase[TResult: t.Cli.ResultValue](
     repository_root: Annotated[
         Path,
         m.Field(
-            default=Path(), description="Repository selected for codegen execution",
+            default=Path(),
+            description="Repository selected for codegen execution",
         ),
     ] = Path()
     dry_run: Annotated[
-        bool, m.Field(default=False, description="Whether the service may mutate files"),
+        bool,
+        m.Field(default=False, description="Whether the service may mutate files"),
     ] = False
     check_only: Annotated[
-        bool, m.Field(default=False, description="Whether the service validates only"),
+        bool,
+        m.Field(default=False, description="Whether the service validates only"),
     ] = False
     apply_changes: Annotated[
         bool,
         m.Field(
-            default=True, description="Whether the requested operation applies changes",
+            default=True,
+            description="Whether the requested operation applies changes",
         ),
     ] = True
     output_format: Annotated[

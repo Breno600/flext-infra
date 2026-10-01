@@ -39,7 +39,8 @@ class FlextInfraCodegenLazyInitPlanner(
         description="Validated lazy-init policy document",
     )
     _module_exports_cache: MutableMapping[
-        tuple[str, bool, bool, bool, bool, bool], t.LazyAliasMap,
+        tuple[str, bool, bool, bool, bool, bool],
+        t.LazyAliasMap,
     ] = u.PrivateAttr(default_factory=dict)
     _package_exports_cache: MutableMapping[str, frozenset[str]] = u.PrivateAttr(
         default_factory=dict,
@@ -71,7 +72,10 @@ class FlextInfraCodegenLazyInitPlanner(
 
     @override
     def build_plan(
-        self, pkg_dir: Path, *, dir_exports: t.MappingKV[str, t.LazyAliasMap],
+        self,
+        pkg_dir: Path,
+        *,
+        dir_exports: t.MappingKV[str, t.LazyAliasMap],
     ) -> m.Infra.LazyInitPlan:
         """Build the lazy-init render plan for one package directory."""
         context = self.context(pkg_dir)
@@ -223,7 +227,8 @@ class FlextInfraCodegenLazyInitPlanner(
                 in self.rope_workspace.exports(
                     module_path,
                     export_options=m.Infra.ExportOptions(
-                        allow_assignments=True, require_explicit_all=True,
+                        allow_assignments=True,
+                        require_explicit_all=True,
                     ),
                 )
             ):

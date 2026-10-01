@@ -142,7 +142,8 @@ class FlextInfraUtilitiesDocsScopePolicyMixin(FlextInfraUtilitiesDocsScopeStateM
         """Return whether a relative docs path is excluded by ``tool.flext.docs``."""
         candidate = relative_path.as_posix()
         for pattern in FlextInfraUtilitiesDocsScopePolicyMixin.docs_meta_list(
-            project_root, "exclude_docs",
+            project_root,
+            "exclude_docs",
         ):
             if fnmatch(candidate, pattern):
                 return True

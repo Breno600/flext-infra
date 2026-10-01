@@ -43,7 +43,8 @@ class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
     def print_help(self) -> None:
         """Display the canonical command groups."""
         self.display_message(
-            "Usage: flext-infra <group> [subcommand] [args...]", c.Cli.MessageTypes.INFO,
+            "Usage: flext-infra <group> [subcommand] [args...]",
+            c.Cli.MessageTypes.INFO,
         )
         self.display_message("Groups", c.Cli.MessageTypes.INFO)
         for group in sorted(c.Infra.CLI_GROUP_DESCRIPTIONS):
@@ -77,11 +78,15 @@ class FlextInfraCliDispatchService(FlextInfraCliRouteService, type(cli_facade)):
         normalized_args = self.normalize_group_args(args)
         if not normalized_args:
             _ = self.execute_app(
-                app, prog_name=f"{self.app_name} {group}", args=["--help"],
+                app,
+                prog_name=f"{self.app_name} {group}",
+                args=["--help"],
             )
             return 1
         result = self.execute_app(
-            app, prog_name=f"{self.app_name} {group}", args=normalized_args,
+            app,
+            prog_name=f"{self.app_name} {group}",
+            args=normalized_args,
         )
         if result.success:
             return c.Infra.PROCESS_SUCCESS_EXIT_CODE

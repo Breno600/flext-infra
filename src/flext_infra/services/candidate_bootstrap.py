@@ -122,7 +122,8 @@ class FlextInfraCandidateBootstrapService:
     ) -> p.Result[bool]:
         """Require unchanged declarations and a complete post-publication fixed point."""
         observed = u.Cli.atomic_read_binary_file_state(
-            manifest_state.path, required=True,
+            manifest_state.path,
+            required=True,
         )
         if observed.failure:
             return r[bool].from_failure(observed)

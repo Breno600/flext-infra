@@ -71,7 +71,8 @@ class FlextInfraFlextBindingService:
                 f"binding interpreter must belong to the consumer: expected={expected}, actual={python}",
             )
         if not (environment / c.Infra.ENVIRONMENT_METADATA).is_file() or not os.access(
-            expected, os.X_OK,
+            expected,
+            os.X_OK,
         ):
             return r[Path].fail(
                 f"binding requires the consumer's provisioned environment: {environment}; run make setup",
@@ -80,14 +81,18 @@ class FlextInfraFlextBindingService:
 
     @classmethod
     def consumer_marker_environment(
-        cls, *, consumer_root: Path, python: Path,
+        cls,
+        *,
+        consumer_root: Path,
+        python: Path,
     ) -> p.Result[t.StrMapping]:
         """Read PEP 508 facts from the authenticated consumer interpreter."""
         environment = cls._consumer_environment(consumer_root, python)
         if environment.failure:
             return r[t.StrMapping].from_failure(environment)
         outcome = u.Cli.run(
-            (str(python), "-I", "-c", c.Infra.BINDING_MARKER_SCRIPT), cwd=consumer_root,
+            (str(python), "-I", "-c", c.Infra.BINDING_MARKER_SCRIPT),
+            cwd=consumer_root,
         )
         if outcome.failure:
             return r[t.StrMapping].from_failure(outcome)
@@ -115,7 +120,9 @@ class FlextInfraFlextBindingService:
 
     @staticmethod
     def _binding_paths(
-        *, requirements: t.StrSequence, flext_root: Path,
+        *,
+        requirements: t.StrSequence,
+        flext_root: Path,
     ) -> p.Result[t.MappingKV[str, Path]]:
         """Return the distributions this worktree can supply to the consumer.
 
@@ -155,16 +162,22 @@ class FlextInfraFlextBindingService:
 
     @classmethod
     def plan_targets(
-        cls, *, consumer_root: Path, flext_root: Path, python: Path,
+        cls,
+        *,
+        consumer_root: Path,
+        flext_root: Path,
+        python: Path,
     ) -> p.Result[t.VariadicTuple[str]]:
         """Resolve targets with marker facts from the consumer's interpreter."""
         environment = cls.consumer_marker_environment(
-            consumer_root=consumer_root, python=python,
+            consumer_root=consumer_root,
+            python=python,
         )
         if environment.failure:
             return r[t.VariadicTuple[str]].from_failure(environment)
         requirements = u.Infra.active_session_requirements(
-            cls._document(consumer_root), environment=environment.value,
+            cls._document(consumer_root),
+            environment=environment.value,
         )
         return cls._binding_paths(requirements=requirements, flext_root=flext_root).map(
             tuple,
@@ -172,7 +185,11 @@ class FlextInfraFlextBindingService:
 
     @classmethod
     def apply(
-        cls, *, consumer_root: Path, flext_root: Path, python: Path,
+        cls,
+        *,
+        consumer_root: Path,
+        flext_root: Path,
+        python: Path,
     ) -> p.Result[int]:
         """Rebind the consumer environment onto the worktree for this session."""
         ci = config.Infra.codegen.make.ci
@@ -181,13 +198,15 @@ class FlextInfraFlextBindingService:
                 f"local editable binding is prohibited with {ci.variable}={ci.value}",
             )
         environment = cls.consumer_marker_environment(
-            consumer_root=consumer_root, python=python,
+            consumer_root=consumer_root,
+            python=python,
         )
         if environment.failure:
             return r[int].from_failure(environment)
         document = cls._document(consumer_root)
         requirements = u.Infra.active_session_requirements(
-            document, environment=environment.value,
+            document,
+            environment=environment.value,
         )
         planned = cls._binding_paths(requirements=requirements, flext_root=flext_root)
         if planned.failure:

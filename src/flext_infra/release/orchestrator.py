@@ -19,14 +19,16 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
     """
 
     phase: Annotated[
-        c.Infra.ReleasePhase, m.Field(description="Release phase to execute"),
+        c.Infra.ReleasePhase,
+        m.Field(description="Release phase to execute"),
     ] = c.Infra.ReleasePhase.PLAN
     index: Annotated[
         bool,
         m.Field(description="Publish receipt-verified artifacts to the package index"),
     ] = False
     pr_title: Annotated[
-        str, m.Field(description="Pull-request title to validate against the protocol"),
+        str,
+        m.Field(description="Pull-request title to validate against the protocol"),
     ] = ""
 
     @override
@@ -46,7 +48,9 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             pr_title=self.pr_title,
         )
         self.logger.info(
-            "release_phase_started", phase=str(ctx.phase), current=ctx.version,
+            "release_phase_started",
+            phase=str(ctx.phase),
+            current=ctx.version,
         )
         match ctx.phase:
             case c.Infra.ReleasePhase.PLAN:
@@ -95,7 +99,9 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
         return published
 
     def _stamp_release(
-        self, ctx: m.Infra.ReleasePhaseDispatchConfig, plan: m.Infra.ReleasePlan,
+        self,
+        ctx: m.Infra.ReleasePhaseDispatchConfig,
+        plan: m.Infra.ReleasePlan,
     ) -> p.Result[bool]:
         """Write the version SSOT, settle its projections, then the release notes.
 
@@ -118,7 +124,11 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             return r[bool].from_failure(projects)
         notes = self._release_dir(root, plan.tag) / c.Infra.RELEASE_NOTES_FILENAME
         generated = u.Infra.generate_notes(
-            plan.next, plan.tag, projects.value, "\n".join(plan.merges), notes,
+            plan.next,
+            plan.tag,
+            projects.value,
+            "\n".join(plan.merges),
+            notes,
         )
         if generated.failure:
             return generated
@@ -128,7 +138,8 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
         """Tag the merged release commit; idempotent when the tag already points here."""
         root = ctx.repository_root
         head = u.Cli.capture(
-            [c.Infra.GIT, "log", "-1", "--format=%s%n%H", c.Infra.GIT_HEAD], cwd=root,
+            [c.Infra.GIT, "log", "-1", "--format=%s%n%H", c.Infra.GIT_HEAD],
+            cwd=root,
         )
         if head.failure:
             return r[bool].from_failure(head)
@@ -142,7 +153,8 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
         if ctx.dry_run:
             return r[bool].ok(True)
         existing = u.Cli.capture(
-            [c.Infra.GIT, "rev-list", "-n", "1", ctx.tag], cwd=root,
+            [c.Infra.GIT, "rev-list", "-n", "1", ctx.tag],
+            cwd=root,
         )
         if existing.success and existing.value.strip():
             if existing.value.strip() != oid:
@@ -155,7 +167,8 @@ class FlextInfraReleaseOrchestrator(FlextInfraReleasePlanMixin):
             if created.failure:
                 return created
         return u.Cli.run_checked(
-            [c.Infra.GIT, "push", c.Infra.GIT_ORIGIN, ctx.tag], cwd=root,
+            [c.Infra.GIT, "push", c.Infra.GIT_ORIGIN, ctx.tag],
+            cwd=root,
         )
 
 

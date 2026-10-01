@@ -51,7 +51,8 @@ class FlextInfraUtilitiesPrivateImportValidation:
                 msg = f"public facade import {package}.{alias} missing in {file_path}"
                 raise ValueError(msg)
         residue = FlextInfraUtilitiesQualifiedNames.qualified_name_residue(
-            source, plan.replacements,
+            source,
+            plan.replacements,
         )
         if residue:
             msg = f"private binding residue {sorted(residue)} in {file_path}"

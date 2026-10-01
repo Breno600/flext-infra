@@ -52,12 +52,16 @@ class FlextInfraCodegenGenerationImportsMixin(FlextInfraCodegenGenerationPathsMi
 
     @staticmethod
     def _format_type_checking_module_alias_import(
-        indent: str, mod: str, export_name: str,
+        indent: str,
+        mod: str,
+        export_name: str,
     ) -> t.StrSequence:
         """Format one explicit static reexport."""
         return (
             FlextInfraCodegenGenerationImportsMixin._format_module_alias_import(
-                indent, mod, export_name,
+                indent,
+                mod,
+                export_name,
             ),
         )
 

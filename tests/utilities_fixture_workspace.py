@@ -42,7 +42,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         if with_git:
             (project_dir / ".git").mkdir(exist_ok=True)
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            project_dir, name,
+            project_dir,
+            name,
         )
         return project_dir
 
@@ -53,7 +54,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         package_dir = project / "src" / name.replace("-", "_")
         package_dir.mkdir(parents=True)
         (project / "pyproject.toml").write_text(
-            f"[project]\nname='{name}'\n", encoding="utf-8",
+            f"[project]\nname='{name}'\n",
+            encoding="utf-8",
         )
         (project / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
         (package_dir / "__init__.py").write_text("", encoding="utf-8")
@@ -91,12 +93,15 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         workspace = tmp_path / "workspace"
         project = workspace / project_name
         package = TestsFlextInfraUtilitiesWorkspaceFixtureMixin.src_package(
-            project, package_name, pyproject=pyproject,
+            project,
+            package_name,
+            pyproject=pyproject,
         )
         (project / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
         if declare:
             TestsFlextInfraUtilitiesProjectFixtureMixin.declare_workspace_projects(
-                workspace, (project_name,),
+                workspace,
+                (project_name,),
             )
         return workspace, project, package
 
@@ -137,7 +142,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         default is off, and Gas City requires Beads.
         """
         repository = TestsFlextInfraUtilitiesProjectFixtureMixin.repository_ref(
-            name, role=role,
+            name,
+            role=role,
         )
         if extra_verbs:
             repository = repository.model_copy(update={"extra_verbs": extra_verbs})
@@ -223,7 +229,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
     @staticmethod
     def standalone_workspace(
-        project_dir: Path, name: str = "flext-demo",
+        project_dir: Path,
+        name: str = "flext-demo",
     ) -> m.Infra.WorkspaceSpec:
         """Materialize and load the canonical minimal standalone fixture."""
         from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
@@ -244,7 +251,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             encoding="utf-8",
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            project_dir, name,
+            project_dir,
+            name,
         )
         # Provider identity is declared, never a checkout path: the governed
         # HTTPS URL is the origin the manifest carries, so the workspace the
@@ -260,12 +268,15 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         origin = tm.ok(
             u.Infra.git_remote_url(
                 m.Infra.GitRemoteUrlRequest(
-                    repo_root=project_dir, remote=c.Infra.GIT_ORIGIN,
+                    repo_root=project_dir,
+                    remote=c.Infra.GIT_ORIGIN,
                 ),
             ),
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(
-            project_dir, name, url=origin.text.strip(),
+            project_dir,
+            name,
+            url=origin.text.strip(),
         )
         workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(project_dir))
         return workspace.model_copy(
@@ -305,7 +316,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
     @staticmethod
     def create_codegen_project(
-        *, tmp_path: Path, name: str, pkg_name: str, files: t.StrMapping,
+        *,
+        tmp_path: Path,
+        name: str,
+        pkg_name: str,
+        files: t.StrMapping,
     ) -> Path:
         """Provide the typed test helper `create_codegen_project`."""
         project = tmp_path / name
@@ -319,7 +334,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             encoding="utf-8",
         )
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            project, name,
+            project,
+            name,
         )
         pkg = project / "src" / pkg_name
         pkg.mkdir(parents=True)
@@ -348,7 +364,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
     @staticmethod
     def create_scaffolder_test_project(
-        *, tmp_path: Path, with_all_modules: bool,
+        *,
+        tmp_path: Path,
+        with_all_modules: bool,
     ) -> Path:
         """Create a project fixture for scaffolder tests."""
         project = tmp_path / "test-project"
@@ -360,7 +378,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         )
         (project / ".git").mkdir()
         TestsFlextInfraUtilitiesProjectFixtureMixin.write_project_beads_config(
-            project, "test-project",
+            project,
+            "test-project",
         )
         pkg = project / "src" / "test_project"
         pkg.mkdir(parents=True)
@@ -391,7 +410,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
         @staticmethod
         def override_repository_manifest(
-            repository: Path, updates: Mapping[str, t.JsonValue],
+            repository: Path,
+            updates: Mapping[str, t.JsonValue],
         ) -> m.Infra.RepositoryRef:
             """Re-select the observed repository, apply overrides, rewrite its manifest."""
             observed = tm.ok(
@@ -465,12 +485,14 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
             """Commit one deliberate fixture mutation."""
             tm.ok(
                 u.Cli.run_checked(
-                    [c.Infra.GIT, "add", "Makefile", "pyproject.toml"], cwd=repository,
+                    [c.Infra.GIT, "add", "Makefile", "pyproject.toml"],
+                    cwd=repository,
                 ),
             )
             tm.ok(
                 u.Cli.run_checked(
-                    [c.Infra.GIT, "commit", "-m", message], cwd=repository,
+                    [c.Infra.GIT, "commit", "-m", message],
+                    cwd=repository,
                 ),
             )
 
@@ -486,7 +508,8 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 issue_prefix="fixture-prefix",
             )
             TestsFlextInfraUtilitiesGitMixin.commit_git_changes(
-                root, "Declare project identity",
+                root,
+                "Declare project identity",
             )
             tm.ok(
                 infra.codegen_conform(
@@ -594,7 +617,12 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
 
         @classmethod
         def attach_submodule(
-            cls, parent: Path, member: Path, *, distribution: str, relative_path: str,
+            cls,
+            parent: Path,
+            member: Path,
+            *,
+            distribution: str,
+            relative_path: str,
         ) -> None:
             """Declare and commit ``member`` as a real gitlink submodule of ``parent``."""
             _ = TestsFlextInfraUtilitiesProjectFixtureMixin.provider()
@@ -614,10 +642,14 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 role=c.Infra.MakeProfile.WORKSPACE,
             )
             member_head = TestsFlextInfraUtilitiesGitMixin.git_capture(
-                member, "rev-parse", c.Infra.GIT_HEAD,
+                member,
+                "rev-parse",
+                c.Infra.GIT_HEAD,
             )
             _ = TestsFlextInfraUtilitiesGitMixin.git_run(
-                parent, "add", c.Infra.GITMODULES,
+                parent,
+                "add",
+                c.Infra.GITMODULES,
             )
             _ = TestsFlextInfraUtilitiesGitMixin.git_run(
                 parent,
@@ -627,7 +659,11 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 f"160000,{member_head.strip()},{relative_path}",
             )
             _ = TestsFlextInfraUtilitiesGitMixin.git_run(
-                parent, "commit", "--quiet", "-m", "attach member",
+                parent,
+                "commit",
+                "--quiet",
+                "-m",
+                "attach member",
             )
 
         @classmethod
@@ -681,10 +717,12 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                     custom_issue_types=custom_issue_types,
                 )
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(
-                root, distribution,
+                root,
+                distribution,
             )
             TestsFlextInfraUtilitiesGitMixin.initialize_git_repo(
-                root, origin_url=cls.governed_repository_url(distribution),
+                root,
+                origin_url=cls.governed_repository_url(distribution),
             )
             baseline = tm.ok(
                 u.Cli.capture([c.Infra.GIT, "rev-parse", "HEAD"], cwd=root),
@@ -759,7 +797,9 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
                 else c.Infra.MakeProfile.STANDALONE
             )
             TestsFlextInfraUtilitiesProjectFixtureMixin.write_workspace_manifest(
-                root, declared, role=role,
+                root,
+                declared,
+                role=role,
             )
             return path
 

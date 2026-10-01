@@ -40,7 +40,10 @@ class FlextInfraApplyRenames:
         occurrences = 0
         with u.Infra.open_project(root, project_roots=roots) as project:
             symbols = FlextInfraRenameSymbols.plan(
-                project, python, pairs, params.bindings,
+                project,
+                python,
+                pairs,
+                params.bindings,
             )
             for path, source in sources.items():
                 edits = list(symbols.get(path, ()))
@@ -73,7 +76,8 @@ class FlextInfraApplyRenames:
 
     @classmethod
     def run(
-        cls, params: m.Infra.ApplyRenamesInput,
+        cls,
+        params: m.Infra.ApplyRenamesInput,
     ) -> p.Result[m.Infra.ApplyRenamesReport]:
         """Apply one declared campaign; check and verification share the planner."""
         roots = tuple(sorted({Path(value).resolve() for value in params.roots}))
@@ -106,7 +110,8 @@ class FlextInfraApplyRenames:
             def verify() -> p.Result[bool]:
                 nonlocal pending
                 current_driver = u.Cli.atomic_read_binary_file_state(
-                    csv_path, required=True,
+                    csv_path,
+                    required=True,
                 ).unwrap()
                 if current_driver != driver:
                     return r[bool].fail(

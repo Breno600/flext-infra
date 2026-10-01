@@ -30,7 +30,9 @@ class FlextInfraCodemodSnapshotRefresh(FlextInfraServiceBase[t.Cli.ResultValue])
             return r[t.Cli.ResultValue].from_failure(planned)
         rules = tuple(dict.fromkeys(rule.resource for rule in planned.value.rules))
         refreshed = FlextInfraModGateEngine.refresh_rule_snapshots(
-            self.repository_root, rules, apply=not self.effective_dry_run,
+            self.repository_root,
+            rules,
+            apply=not self.effective_dry_run,
         )
         if refreshed.failure:
             return r[t.Cli.ResultValue].from_failure(refreshed)

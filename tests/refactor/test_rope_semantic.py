@@ -111,7 +111,10 @@ class TestsFlextInfraRefactorRopeSemantic:
     ) -> None:
         proj, _ = semantic_rope_workspace
         methods = u.Infra.resolve_class_methods(
-            proj, models_resource, "Dog", include_private=True,
+            proj,
+            models_resource,
+            "Dog",
+            include_private=True,
         )
         tm.that(methods, has="_wag")
         tm.that(methods["_wag"], eq="method")

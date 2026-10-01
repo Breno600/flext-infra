@@ -18,7 +18,9 @@ class FlextInfraModelsCodegenRender:
         """Validated tooling-only context for Markdown lint projections."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, strict=True,
+            extra="forbid",
+            frozen=True,
+            strict=True,
         )
 
         tooling: Annotated[
@@ -31,7 +33,9 @@ class FlextInfraModelsCodegenRender:
         """Validated context for one generated module skeleton."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, str_strip_whitespace=False,
+            extra="forbid",
+            frozen=True,
+            str_strip_whitespace=False,
         )
 
         class_name: t.NonEmptyStr = m.Field(description="Generated class name.")
@@ -43,7 +47,9 @@ class FlextInfraModelsCodegenRender:
         """Validated context for one generated test facade skeleton."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, str_strip_whitespace=False,
+            extra="forbid",
+            frozen=True,
+            str_strip_whitespace=False,
         )
 
         class_name: t.NonEmptyStr = m.Field(description="Generated facade class name.")
@@ -67,7 +73,10 @@ class FlextInfraModelsCodegenRender:
         """Validated common context for a generated MkDocs configuration."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            extra="forbid", frozen=True, strict=True, str_strip_whitespace=False,
+            extra="forbid",
+            frozen=True,
+            strict=True,
+            str_strip_whitespace=False,
         )
 
         site_title: t.NonEmptyStr = m.Field(description="Rendered site title.")

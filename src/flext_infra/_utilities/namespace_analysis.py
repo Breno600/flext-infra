@@ -43,10 +43,12 @@ class FlextInfraUtilitiesRefactorNamespaceFlext(
             if not lines:
                 continue
             rewritten = FlextInfraUtilitiesRefactorNamespaceFlext.insert_import_lines(
-                lines=lines, imports=["", c.Infra.FUTURE_ANNOTATIONS, ""],
+                lines=lines,
+                imports=["", c.Infra.FUTURE_ANNOTATIONS, ""],
             )
             write_result = u.Cli.files_write_text(
-                resolved_file, "\n".join(rewritten).rstrip() + "\n",
+                resolved_file,
+                "\n".join(rewritten).rstrip() + "\n",
             )
             if write_result.failure:
                 msg = write_result.error or f"failed to rewrite {resolved_file}"

@@ -95,7 +95,8 @@ class FlextInfraUtilitiesCodemodRules:
             )
         raw_dependencies = project.get(c.Infra.DEPENDENCIES)
         if not isinstance(raw_dependencies, Sequence) or isinstance(
-            raw_dependencies, str,
+            raw_dependencies,
+            str,
         ):
             return r[t.Pair[str, t.StrSequence]].fail(
                 f"project.dependencies must be a sequence: {pyproject}",
@@ -133,7 +134,9 @@ class FlextInfraUtilitiesCodemodRules:
 
     @classmethod
     def codemod_runtime_closure(
-        cls, direct: t.StrSequence, indexed: t.MappingKV[str, Distribution],
+        cls,
+        direct: t.StrSequence,
+        indexed: t.MappingKV[str, Distribution],
     ) -> frozenset[str]:
         pending = list(direct)
         resolved: set[str] = set()
@@ -188,7 +191,9 @@ class FlextInfraUtilitiesCodemodRules:
 
     @classmethod
     def _provider_order(
-        cls, providers: t.MappingKV[str, Path], indexed: t.MappingKV[str, Distribution],
+        cls,
+        providers: t.MappingKV[str, Path],
+        indexed: t.MappingKV[str, Distribution],
     ) -> p.Result[t.StrSequence]:
         selected = frozenset(providers)
         edges = {
@@ -201,11 +206,13 @@ class FlextInfraUtilitiesCodemodRules:
         }
         try:
             ordered = FlextInfraUtilitiesDependencies.dependency_order(
-                tuple(selected), dependencies=lambda name: edges.get(name, ()),
+                tuple(selected),
+                dependencies=lambda name: edges.get(name, ()),
             )
         except ValueError as exc:
             return r[t.StrSequence].fail(
-                f"codemod provider cycle: {exc}", exception=exc,
+                f"codemod provider cycle: {exc}",
+                exception=exc,
             )
         return r[t.StrSequence].ok(ordered)
 
@@ -334,7 +341,9 @@ class FlextInfraUtilitiesCodemodRules:
 
     @classmethod
     def _rules(
-        cls, provider: str, config: Path,
+        cls,
+        provider: str,
+        config: Path,
     ) -> p.Result[t.SequenceOf[m.Infra.CodemodRule]]:
         parsed_config = u.Cli.yaml_parse(
             config.read_text(encoding=c.Cli.ENCODING_DEFAULT),
@@ -386,7 +395,8 @@ class FlextInfraUtilitiesCodemodRules:
                             f"ast-grep rule document missing id: {resource}",
                         )
                     canonical = u.Cli.json_dumps(
-                        dict(parsed_rule.value), sort_keys=True,
+                        dict(parsed_rule.value),
+                        sort_keys=True,
                     )
                     if canonical.failure:
                         return r[t.SequenceOf[m.Infra.CodemodRule]].from_failure(
@@ -450,7 +460,8 @@ class FlextInfraUtilitiesCodemodRules:
 
     @classmethod
     def _declared_context(
-        cls, raw: t.JsonValue | None,
+        cls,
+        raw: t.JsonValue | None,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodemodContextCondition]]:
         """Read ``metadata.context``: ``{VAR: {is|not: predicate[, of: VAR]}}``.
 
@@ -505,7 +516,9 @@ class FlextInfraUtilitiesCodemodRules:
 
     @staticmethod
     def _context_verdict(
-        variable: str, condition: t.JsonMapping, verdicts: t.StrSequence | set[str],
+        variable: str,
+        condition: t.JsonMapping,
+        verdicts: t.StrSequence | set[str],
     ) -> p.Result[str]:
         """Return the one verdict key (``is``/``not``) of a context condition."""
         keys = set(condition)

@@ -91,11 +91,13 @@ class FlextInfraAccessorMigrationOrchestrator(
                 ) < self.preview_limit:
                     previews.append(file_report)
                 self._accumulate_lint_totals(
-                    lint_before_totals, file_report.lint_before,
+                    lint_before_totals,
+                    file_report.lint_before,
                 )
                 self._accumulate_lint_totals(lint_after_totals, file_report.lint_after)
                 self._accumulate_lint_totals(
-                    new_lint_error_totals, file_report.new_lint_errors,
+                    new_lint_error_totals,
+                    file_report.new_lint_errors,
                 )
         return r[m.Infra.AccessorMigrationReport].ok(
             m.Infra.AccessorMigrationReport(
@@ -115,7 +117,8 @@ class FlextInfraAccessorMigrationOrchestrator(
 
     @classmethod
     def execute_payload(
-        cls, params: m.Infra.AccessorMigrationInput,
+        cls,
+        params: m.Infra.AccessorMigrationInput,
     ) -> p.Result[m.Infra.AccessorMigrationReport]:
         """Execute accessor migration from the validated command service."""
         result = cls(

@@ -43,7 +43,9 @@ class TestsFlextInfraLazyInitProcessing:
         """Report initializer drift while preserving every source byte."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m",
+            package_root / "models.py",
+            class_name="FlextTestsModels",
+            alias="m",
         )
         init_path = package_root / c.Infra.INIT_PY
         original = init_path.read_bytes()
@@ -56,7 +58,8 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(str(init_path) in service.modified_files, eq=True)
 
     def test_every_nested_level_is_lazy_formatted_and_idempotent(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Generate lazy facades at every importable package level."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -66,7 +69,8 @@ class TestsFlextInfraLazyInitProcessing:
         for package_dir in (level_two, level_three, level_four):
             package_dir.mkdir()
             package_dir.joinpath(c.Infra.INIT_PY).write_text(
-                "", encoding=c.Cli.ENCODING_DEFAULT,
+                "",
+                encoding=c.Cli.ENCODING_DEFAULT,
             )
         u.Tests.write_lazy_init_namespace_module(
             level_four / "worker.py",
@@ -119,7 +123,8 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(after, eq=before)
 
     def test_manual_private_initializer_exports_survive_adoption(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Adopt the private facade while retaining its declared public export."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -149,11 +154,14 @@ class TestsFlextInfraLazyInitProcessing:
         """Remove retired generated manifests while writing the initializer."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
-            package_root / "models.py", class_name="FlextTestsModels", alias="m",
+            package_root / "models.py",
+            class_name="FlextTestsModels",
+            alias="m",
         )
         unit_path = package_root / "__unit__.py"
         unit_path.write_text(
-            f"{c.Infra.AUTOGEN_HEADER}\n", encoding=c.Cli.ENCODING_DEFAULT,
+            f"{c.Infra.AUTOGEN_HEADER}\n",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
 
         result = u.Tests.run_lazy_init(repository_root)

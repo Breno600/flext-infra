@@ -84,10 +84,12 @@ class FlextInfraModelsMixins:
         """
 
         report: Annotated[
-            str | None, m.Field(description="Output report file path"),
+            str | None,
+            m.Field(description="Output report file path"),
         ] = None
         output_dir: Annotated[
-            str | None, m.Field(description="Output directory for reports"),
+            str | None,
+            m.Field(description="Output directory for reports"),
         ] = None
 
         @property
@@ -234,7 +236,8 @@ class FlextInfraModelsMixins:
         """Shared optional project-name collection."""
 
         project_names: Annotated[
-            t.StrSequence | None, m.Field(description="Project names"),
+            t.StrSequence | None,
+            m.Field(description="Project names"),
         ] = None
 
     class ProjectNamesListMixin:

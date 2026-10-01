@@ -25,7 +25,8 @@ from ._extra_paths_sync import FlextInfraExtraPathsSyncMixin
 
 
 class FlextInfraExtraPathsManager(
-    FlextInfraExtraPathsSyncMixin, FlextInfraProjectSelectionServiceBase[bool],
+    FlextInfraExtraPathsSyncMixin,
+    FlextInfraProjectSelectionServiceBase[bool],
 ):
     """Manager for synchronizing type-checker search paths from dependencies."""
 
@@ -72,7 +73,8 @@ class FlextInfraExtraPathsManager(
     def execute(self) -> p.Result[bool]:
         """Synchronize extra paths for the configured project slice."""
         result = self.sync_extra_paths(
-            dry_run=self.effective_dry_run, project_dirs=self.project_dirs,
+            dry_run=self.effective_dry_run,
+            project_dirs=self.project_dirs,
         )
         if result.failure:
             return r[bool].from_failure(result)
@@ -80,7 +82,10 @@ class FlextInfraExtraPathsManager(
 
     @staticmethod
     def _existing_typings_paths(
-        rules: p.Infra.TypeCheckerPathRules, *, project_dir: Path, is_root: bool,
+        rules: p.Infra.TypeCheckerPathRules,
+        *,
+        project_dir: Path,
+        is_root: bool,
     ) -> t.StrSequence:
         """Return the configured typings roots that exist under ``project_dir``."""
         configured_typings = (
@@ -117,7 +122,9 @@ class FlextInfraExtraPathsManager(
         ]
         paths: t.Infra.StrSet = {
             *self._existing_typings_paths(
-                rules, project_dir=project_dir, is_root=is_root,
+                rules,
+                project_dir=project_dir,
+                is_root=is_root,
             ),
             *shared_paths,
         }
@@ -131,7 +138,9 @@ class FlextInfraExtraPathsManager(
         rules = config.Infra.tooling.tools.pyright.path_rules
         source_root = rules.source_dir
         typings_paths = self._existing_typings_paths(
-            rules, project_dir=project_dir, is_root=is_root,
+            rules,
+            project_dir=project_dir,
+            is_root=is_root,
         )
         # Why: naive sorted({".", "src"}) puts "." first and diverges from the
         # declared scaffold roots and pyrefly search-path ordering, so conform
@@ -143,7 +152,10 @@ class FlextInfraExtraPathsManager(
 
     @override
     def pyrefly_search_paths(
-        self, *, project_dir: Path, is_root: bool,
+        self,
+        *,
+        project_dir: Path,
+        is_root: bool,
     ) -> t.StrSequence:
         """Compute pyrefly search paths for a project.
 
@@ -211,7 +223,10 @@ class FlextInfraExtraPathsManager(
         return tuple(sorted(paths))
 
     def pyrefly_project_includes(
-        self, *, project_dir: Path, is_root: bool,
+        self,
+        *,
+        project_dir: Path,
+        is_root: bool,
     ) -> t.StrSequence:
         """Build Pyrefly includes from configured productive directories."""
         rules = config.Infra.tooling.tools.pyrefly.path_rules
@@ -219,7 +234,8 @@ class FlextInfraExtraPathsManager(
         # in-memory payload is being conformed; include only real production roots.
         discovered_python_roots = set(
             u.Infra.discover_python_dirs(
-                project_dir, workspace_excluded_top_dirs=self.analysis_excluded_top_dirs,
+                project_dir,
+                workspace_excluded_top_dirs=self.analysis_excluded_top_dirs,
             ),
         )
         includes: t.Infra.StrSet = set(

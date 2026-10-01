@@ -98,12 +98,14 @@ def _provision_detector_template(run_root: Path, modules: t.StrSequence) -> None
     )
     infrastructure = tm.ok(
         u.Infra.configured_repository_ref(
-            codegen=config.Infra.codegen, repository_root=_PROJECT_ROOT,
+            codegen=config.Infra.codegen,
+            repository_root=_PROJECT_ROOT,
         ),
     )
     integration = tm.ok(
         u.Infra.flext_integration_line(
-            codegen=config.Infra.codegen, repository_root=_PROJECT_ROOT,
+            codegen=config.Infra.codegen,
+            repository_root=_PROJECT_ROOT,
         ),
     )
     root = u.Tests.mk_project(
@@ -133,18 +135,23 @@ def _provision_detector_template(run_root: Path, modules: t.StrSequence) -> None
     )
     u.Tests.copy_tracked_mise_seeds(root)
     repository = u.Tests.repository_ref(
-        root.name, role=c.Infra.MakeProfile.STANDALONE,
+        root.name,
+        role=c.Infra.MakeProfile.STANDALONE,
     ).model_copy(update={"editable": True})
     u.Tests.initialize_git_repo(root, origin_url=repository.url)
     workspace = u.Tests.workspace_spec(
-        repository, project=u.Tests.project_spec(root.name),
+        repository,
+        project=u.Tests.project_spec(root.name),
     )
     conform_request = u.Tests.conform_request(
-        root, what=c.Infra.CodegenConformSurface.MAKEFILE,
+        root,
+        what=c.Infra.CodegenConformSurface.MAKEFILE,
     )
     plan = tm.ok(
         FlextInfraCodegenConform(
-            repository_root=root, initial_workspace=workspace, request=conform_request,
+            repository_root=root,
+            initial_workspace=workspace,
+            request=conform_request,
         ).plan(conform_request),
     )
     makefile = next(
@@ -152,7 +159,8 @@ def _provision_detector_template(run_root: Path, modules: t.StrSequence) -> None
     )
     tm.ok(
         u.Cli.atomic_write_text_file(
-            root / c.Infra.MAKEFILE_FILENAME, u.Tests.codegen_file_text(makefile),
+            root / c.Infra.MAKEFILE_FILENAME,
+            u.Tests.codegen_file_text(makefile),
         ),
     )
     tm.ok(
@@ -200,7 +208,8 @@ def _write_receipt(path: Path, output: p.Cli.CommandOutput) -> None:
         u.Cli.atomic_write_text_file(
             path,
             m.Cli.CommandOutput.model_validate(
-                output, from_attributes=True,
+                output,
+                from_attributes=True,
             ).model_dump_json(),
         ),
     )
@@ -235,7 +244,9 @@ def _provision_make_template(run_root: Path, profile: c.Infra.MakeProfile) -> No
     if not u.Cli.process_succeeded(upgrade.outcome):
         return
     checkout = u.Tests.resolved_make_checkout(
-        root, parent / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT, profile,
+        root,
+        parent / c.Tests.MAKE_TEMPLATE_CI_CHECKOUT,
+        profile,
     )
     make = config.Infra.codegen.make
     (checkout / c.Infra.CUSTOM_MAKE_FILENAME).write_text(
@@ -311,7 +322,8 @@ def hermetic_git_environment(tmp_path_factory: pytest.TempPathFactory) -> t.StrM
         "@".join(source) for source in u.Tests.locked_git_sources(_PROJECT_ROOT)
     )
     parent = _run_scoped(
-        "git-mirrors", hashlib.sha256(sources.encode()).hexdigest()[:16],
+        "git-mirrors",
+        hashlib.sha256(sources.encode()).hexdigest()[:16],
     )
     parent.mkdir(parents=True, exist_ok=True)
     receipt = parent / _GIT_MIRRORS_RECEIPT
@@ -349,7 +361,8 @@ def resolved_make_templates(
 
 @pytest.fixture(params=_INFRA_CHECKOUT_SCENARIOS)
 def provisioned_infra_checkout(
-    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory,
+    request: pytest.FixtureRequest,
+    tmp_path_factory: pytest.TempPathFactory,
 ) -> t.Pair[str, Path]:
     """Return one scenario's candidate checkout, set up from committed locks."""
     scenario = str(request.param)
@@ -358,7 +371,9 @@ def provisioned_infra_checkout(
     _ensure_provisioned(run_root, parent, _INFRA_SETUP_RECEIPT, scenario)
     setup = u.Tests.command_receipt(parent / _INFRA_SETUP_RECEIPT)
     tm.that(
-        u.Cli.process_succeeded(setup.outcome), eq=True, msg=setup.stdout + setup.stderr,
+        u.Cli.process_succeeded(setup.outcome),
+        eq=True,
+        msg=setup.stdout + setup.stderr,
     )
     root = parent / config.Infra.name
     tm.that((u.Infra.runtime_environment_dir(root) / "pyvenv.cfg").is_file(), eq=True)
@@ -387,12 +402,14 @@ def real_detector_project(
     tm.that(u.Cli.process_succeeded(upgrade.outcome), eq=True, msg=upgrade.stderr)
     root = tmp_path / _DETECTOR_PROJECT_NAME
     u.Tests.git_bootstrap(
-        tmp_path, ("clone", "-q", str(parent / _DETECTOR_PROJECT_NAME), str(root)),
+        tmp_path,
+        ("clone", "-q", str(parent / _DETECTOR_PROJECT_NAME), str(root)),
     )
     u.Tests.initialize_git_repo(
         root,
         origin_url=u.Tests.repository_ref(
-            root.name, role=c.Infra.MakeProfile.STANDALONE,
+            root.name,
+            role=c.Infra.MakeProfile.STANDALONE,
         ).url,
     )
     setup = tm.ok(u.Tests.run_isolated_make(["setup"], cwd=root, capture=False))
@@ -403,7 +420,8 @@ def real_detector_project(
     tool_path = runtime / ("Scripts" if os.name == "nt" else "bin") / executable
     tm.that(tool_path.is_file(), eq=True)
     (root / "limits.toml").write_text(
-        "[typing_libraries]\nexclude = []\n", encoding="utf-8",
+        "[typing_libraries]\nexclude = []\n",
+        encoding="utf-8",
     )
     return root
 
@@ -498,7 +516,8 @@ def cached_runner_project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
         encoding="utf-8",
     )
     (package_root / "__init__.py").write_text(
-        "def answer() -> int:\n    return 42\n", encoding="utf-8",
+        "def answer() -> int:\n    return 42\n",
+        encoding="utf-8",
     )
     (tests_root / "test_runtime.py").write_text(
         "from flext_tests import tm\n"
@@ -647,10 +666,14 @@ def modernizer_workspace(tmp_path: Path) -> Path:
     # The governed tree above the workspace carries the committed Taplo pin.
     u.Tests.seed_locked_taplo(tmp_path)
     (workspace / c.PYPROJECT_FILENAME).write_text(
-        _modernizer_workspace_pyproject(), encoding="utf-8",
+        _modernizer_workspace_pyproject(),
+        encoding="utf-8",
     )
     u.Tests.write_beads_project(
-        workspace, workspace="workspace", database="workspace", issue_prefix="workspace",
+        workspace,
+        workspace="workspace",
+        database="workspace",
+        issue_prefix="workspace",
     )
     _write_modernizer_codegen_config(workspace)
     return workspace
@@ -659,13 +682,18 @@ def modernizer_workspace(tmp_path: Path) -> Path:
 @pytest.fixture
 def modernizer_workspace_with_projects(modernizer_workspace: Path) -> Path:
     (modernizer_workspace / c.PYPROJECT_FILENAME).write_text(
-        _modernizer_workspace_pyproject("selected", "ignored"), encoding="utf-8",
+        _modernizer_workspace_pyproject("selected", "ignored"),
+        encoding="utf-8",
     )
     selected = u.Tests.mk_project(
-        modernizer_workspace, "selected", pyproject=_modernizer_pyproject("selected"),
+        modernizer_workspace,
+        "selected",
+        pyproject=_modernizer_pyproject("selected"),
     )
     ignored = u.Tests.mk_project(
-        modernizer_workspace, "ignored", pyproject=_modernizer_pyproject("ignored"),
+        modernizer_workspace,
+        "ignored",
+        pyproject=_modernizer_pyproject("ignored"),
     )
     for project in (selected, ignored):
         u.Tests.write_beads_project(
@@ -744,7 +772,8 @@ def models_resource(
     """Return the Rope resource for the semantic models fixture module."""
     rope_project, repository_root = semantic_rope_workspace
     resource = u.Infra.resolve_resource_from_path(
-        rope_project, repository_root / "src" / "rope_demo" / "models.py",
+        rope_project,
+        repository_root / "src" / "rope_demo" / "models.py",
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
     return validated
@@ -757,7 +786,8 @@ def services_resource(
     """Return the Rope resource for the semantic services fixture module."""
     rope_project, repository_root = semantic_rope_workspace
     resource = u.Infra.resolve_resource_from_path(
-        rope_project, repository_root / "src" / "rope_demo" / "services.py",
+        rope_project,
+        repository_root / "src" / "rope_demo" / "services.py",
     )
     validated: t.Infra.RopeResource = tm.not_none(resource)
     return validated

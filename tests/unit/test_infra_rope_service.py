@@ -19,29 +19,42 @@ class TestsFlextInfraInfraRopeService:
     """Validate the public Rope workspace DSL through public methods only."""
 
     def _demo_module(
-        self, tmp_path: Path, module_name: str, source: str,
+        self,
+        tmp_path: Path,
+        module_name: str,
+        source: str,
     ) -> t.Pair[Path, Path]:
         """Create one flext-demo workspace and write ``source`` into its module."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / module_name
         module_path.write_text(source, encoding="utf-8")
         return repository_root, module_path
 
     def _paired_namespace_projects(
-        self, root: Path,
+        self,
+        root: Path,
     ) -> tuple[Path, Path, Path, Path, Path]:
         """Declare two sibling namespace projects and return their roots and modules."""
         project_root, package_root = u.Tests.create_lazy_init_workspace(
-            root, project_name="flext-infra", package_name="flext_infra",
+            root,
+            project_name="flext-infra",
+            package_name="flext_infra",
         )
         sibling_root, sibling_package_root = u.Tests.create_lazy_init_workspace(
-            root, project_name="flext-demo", package_name="flext_demo",
+            root,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "models.py"
         u.Tests.write_lazy_init_namespace_module(
-            module_path, class_name="FlextInfraModels", alias="m", docstring="Models.",
+            module_path,
+            class_name="FlextInfraModels",
+            alias="m",
+            docstring="Models.",
         )
         sibling_module_path = sibling_package_root / "models.py"
         u.Tests.write_lazy_init_namespace_module(
@@ -59,7 +72,10 @@ class TestsFlextInfraInfraRopeService:
         )
 
     def _module_exports(
-        self, repository_root: Path, module_path: Path, options: t.JsonMapping,
+        self,
+        repository_root: Path,
+        module_path: Path,
+        options: t.JsonMapping,
     ) -> t.VariadicTuple[str]:
         """Read one module's public export contract through the Rope workspace."""
         with flext_infra.infra.rope_workspace(repository_root) as rope:
@@ -71,7 +87,9 @@ class TestsFlextInfraInfraRopeService:
             )
 
     def _module_objects_by_name(
-        self, repository_root: Path, module_path: Path,
+        self,
+        repository_root: Path,
+        module_path: Path,
     ) -> t.MutableMappingKV[str, m.Infra.Object]:
         """Index one module's non-local objects by their declared name."""
         with flext_infra.infra.rope_workspace(repository_root) as rope:
@@ -89,7 +107,11 @@ class TestsFlextInfraInfraRopeService:
         ],
     )
     def test_source_docstrings_only_resolve_local_definitions(
-        self, source: str, symbol: str, *, documented: bool,
+        self,
+        source: str,
+        symbol: str,
+        *,
+        documented: bool,
     ) -> None:
         """Relative reexports require repository context, not source-only lookup."""
         tm.that(u.Infra.symbol_has_docstring_source(source, symbol), eq=documented)
@@ -99,7 +121,10 @@ class TestsFlextInfraInfraRopeService:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         module_path = package_root / "models.py"
         u.Tests.write_lazy_init_namespace_module(
-            module_path, class_name="FlextTestsModels", alias="m", docstring="Models.",
+            module_path,
+            class_name="FlextTestsModels",
+            alias="m",
+            docstring="Models.",
         )
 
         rope = FlextInfraRopeWorkspace.open_workspace(repository_root)
@@ -160,7 +185,8 @@ class TestsFlextInfraInfraRopeService:
         tm.that(exports, has=["LIMIT", "run"], lacks=["result", "msg"])
 
     def test_source_exports_preserve_explicit_public_contract(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Explicit ``__all__`` remains authoritative over implicit symbols."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -183,7 +209,8 @@ class TestsFlextInfraInfraRopeService:
         tm.that(exports, eq=("PUBLIC",))
 
     def test_source_exports_include_conditional_module_assignments(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Module-control-flow assignments remain visible outside script guards."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -198,20 +225,24 @@ class TestsFlextInfraInfraRopeService:
         )
 
         exports = self._module_exports(
-            repository_root, module_path, {"allow_assignments": True},
+            repository_root,
+            module_path,
+            {"allow_assignments": True},
         )
 
         tm.that(exports, eq=("MODE",))
 
     def test_open_workspace_indexes_declared_wrapper_packages(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Expose examples modules for explicitly targeted semantic codegen."""
         repository_root, _package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         examples_root = repository_root / c.Infra.DIR_EXAMPLES
         examples_root.mkdir()
         examples_root.joinpath(c.Infra.INIT_PY).write_text(
-            "", encoding=c.Cli.ENCODING_DEFAULT,
+            "",
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         module_path = examples_root / "demo.py"
         module_path.write_text(
@@ -225,7 +256,8 @@ class TestsFlextInfraInfraRopeService:
             module = rope.module(module_path)
             tm.that(module, none=False)
             tm.that(
-                module.module_name if module is not None else "", eq="examples.demo",
+                module.module_name if module is not None else "",
+                eq="examples.demo",
             )
 
     def test_public_facade_opens_rope_workspace(self, tmp_path: Path) -> None:
@@ -233,7 +265,10 @@ class TestsFlextInfraInfraRopeService:
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         module_path = package_root / "models.py"
         u.Tests.write_lazy_init_namespace_module(
-            module_path, class_name="FlextTestsModels", alias="m", docstring="Models.",
+            module_path,
+            class_name="FlextTestsModels",
+            alias="m",
+            docstring="Models.",
         )
 
         with flext_infra.infra.rope_workspace(repository_root) as rope:
@@ -248,7 +283,9 @@ class TestsFlextInfraInfraRopeService:
 
     @pytest.mark.parametrize("family_alias", sorted(u.Infra.facade_families()))
     def test_class_nesting_cutover_uses_declared_family_owner(
-        self, tmp_path: Path, family_alias: str,
+        self,
+        tmp_path: Path,
+        family_alias: str,
     ) -> None:
         """Plan every facade family from semantic objects and its declared owner."""
         module_name = u.Tests.family_public_module(family_alias)
@@ -278,11 +315,13 @@ class TestsFlextInfraInfraRopeService:
         tm.that(len(planned.value), eq=1)
         tm.that(planned.value[0].file_path, eq=module_path.resolve())
         tm.that(
-            planned.value[0].changes, eq=(f"nested {extra_class_name} under {owner}",),
+            planned.value[0].changes,
+            eq=(f"nested {extra_class_name} under {owner}",),
         )
 
     def test_open_workspace_keeps_the_requested_repository_boundary(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A workspace root treats declared submodules as external repositories."""
         monorepo_root = tmp_path / "repo"
@@ -330,16 +369,21 @@ class TestsFlextInfraInfraRopeService:
             tm.that(sibling_root in rope.rope_repository_root.parents, eq=False)
 
     def test_unrelated_ancestor_workspace_does_not_capture_project(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """An ancestor workspace owns only the projects it declares."""
         ancestor = tmp_path / "ancestor"
         ancestor.mkdir()
         declared_root, _ = u.Tests.create_lazy_init_workspace(
-            ancestor, project_name="declared", package_name="declared",
+            ancestor,
+            project_name="declared",
+            package_name="declared",
         )
         project_root, package_root = u.Tests.create_lazy_init_workspace(
-            ancestor / "scratch", project_name="standalone", package_name="standalone",
+            ancestor / "scratch",
+            project_name="standalone",
+            package_name="standalone",
         )
         u.Tests.declare_workspace_projects(ancestor, (declared_root.name,))
 
@@ -347,7 +391,8 @@ class TestsFlextInfraInfraRopeService:
             tm.that(rope.rope_repository_root, eq=project_root.resolve())
 
     def test_unowned_ancestor_src_does_not_expand_rope_scope(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Ignore an ancestor source directory that owns no repository."""
         unowned_parent = tmp_path / "unowned"
@@ -360,11 +405,14 @@ class TestsFlextInfraInfraRopeService:
             tm.that(rope.modules(), eq=())
 
     def test_workspace_exports_fixture_functions_when_requested(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Fixture modules can publish pytest fixtures through the Rope DSL."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         fixtures_dir = package_root / "_fixtures"
         fixtures_dir.mkdir()
@@ -390,15 +438,21 @@ class TestsFlextInfraInfraRopeService:
         tm.that(exports, has="settings_factory")
 
     def test_workspace_dsl_centralizes_project_and_module_conventions(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Public Rope DSL centralizes project discovery and module naming rules."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "models.py"
         u.Tests.write_lazy_init_namespace_module(
-            module_path, class_name="FlextDemoModels", alias="m", docstring="Models.",
+            module_path,
+            class_name="FlextDemoModels",
+            alias="m",
+            docstring="Models.",
         )
 
         with flext_infra.infra.rope_workspace(repository_root) as rope:
@@ -424,7 +478,8 @@ class TestsFlextInfraInfraRopeService:
             tm.that(project_layout.class_stem, eq="FlextDemo")
 
     def test_api_module_alias_comes_only_from_declared_exports(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A root ``api.py`` without a declared alias never gets a synthesized one."""
         repository_root, api_path = self._demo_module(
@@ -440,11 +495,14 @@ class TestsFlextInfraInfraRopeService:
         tm.that(layout.package_alias, ne=policy.expected_alias)
 
     def test_workspace_dsl_exposes_direct_modules_source_and_objects(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Public Rope DSL returns direct module inventory through census objects."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "models.py"
         module_path.write_text(
@@ -464,7 +522,8 @@ class TestsFlextInfraInfraRopeService:
         )
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             tm.that(
-                any(entry.file_path == module_path for entry in rope.modules()), eq=True,
+                any(entry.file_path == module_path for entry in rope.modules()),
+                eq=True,
             )
             tm.that(rope.source(module_path), has="class FlextDemoModels")
             objects = {
@@ -474,19 +533,24 @@ class TestsFlextInfraInfraRopeService:
             tm.that(objects.get(("FlextDemoModels", "class")), none=False)
             tm.that(objects.get(("FlextDemoModels.build", "method")), none=False)
             tm.that(
-                objects.get(("FlextDemoModels.build.payload", "parameter")), none=False,
+                objects.get(("FlextDemoModels.build.payload", "parameter")),
+                none=False,
             )
             tm.that(objects.get(("FlextDemoModels.build.local", "local")), none=False)
             tm.that(
-                objects.get(("FlextDemoModels.build.nested", "function")), none=False,
+                objects.get(("FlextDemoModels.build.nested", "function")),
+                none=False,
             )
 
     def test_workspace_dsl_reload_refreshes_cached_objects(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Reload drops Rope caches and reflects updated module objects."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "service.py"
         module_path.write_text(
@@ -516,11 +580,14 @@ class TestsFlextInfraInfraRopeService:
             )
 
     def test_workspace_refresh_invalidates_source_and_semantic_snapshots(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Refresh exposes file changes after preserving stable session snapshots."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "service.py"
         original_source = "class Original:\n    pass\n"
@@ -542,20 +609,25 @@ class TestsFlextInfraInfraRopeService:
                 eq=("Original",),
             )
             tm.that(
-                tuple(item.name for item in rope.objects(module_path)), eq=("Original",),
+                tuple(item.name for item in rope.objects(module_path)),
+                eq=("Original",),
             )
 
             rope.refresh()
             tm.that(
-                tuple(item.name for item in rope.objects(module_path)), eq=("Changed",),
+                tuple(item.name for item in rope.objects(module_path)),
+                eq=("Changed",),
             )
 
     def test_workspace_refresh_can_preserve_reverted_name_indexes(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Refresh can retain the text index after preview-style reverted writes."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "service.py"
         original_source = (
@@ -591,11 +663,14 @@ class TestsFlextInfraInfraRopeService:
             tm.that(rebuilt_index, has="second")
 
     def test_workspace_objects_raise_on_unparseable_module(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Unparseable module sources surface instead of an empty module."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "service.py"
         module_path.write_text("def first(:\n", encoding=c.Cli.ENCODING_DEFAULT)
@@ -609,11 +684,14 @@ class TestsFlextInfraInfraRopeService:
         tm.that(parse_error.value.filename, eq=str(module_path.resolve()))
 
     def test_workspace_name_index_raises_on_module_read_error(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Name index failures surface instead of dropping unreadable modules."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "service.py"
         module_path.write_text(
@@ -632,11 +710,14 @@ class TestsFlextInfraInfraRopeService:
                 rope.name_index()
 
     def test_workspace_objects_raise_on_indexed_resource_lookup_error(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Indexed reference lookup fails when a module resource vanishes."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         service_path = package_root / "service.py"
         service_path.write_text(
@@ -667,7 +748,9 @@ class TestsFlextInfraInfraRopeService:
     def test_workspace_dsl_ignores_test_references(self, tmp_path: Path) -> None:
         """Tests remain outside production reachability."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "service.py"
         module_path.write_text(
@@ -702,7 +785,8 @@ class TestsFlextInfraInfraRopeService:
         tm.that(candidate.script_references_count, eq=0)
 
     def test_workspace_dsl_does_not_classify_legacy_root_facade(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Legacy root facade declarations are ordinary objects."""
         repository_root, module_path = self._demo_module(
@@ -720,7 +804,8 @@ class TestsFlextInfraInfraRopeService:
         tm.that(objects["m"].is_facade_member, eq=False)
 
     def test_workspace_dsl_skips_reference_scan_for_private_names(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Private and dunder names expose zero production references."""
         repository_root, module_path = self._demo_module(
@@ -739,16 +824,20 @@ class TestsFlextInfraInfraRopeService:
         tm.that(objects, has="public")
 
     def test_workspace_dsl_ignores_example_importers_for_generic_names(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Examples remain outside production reachability."""
         repository_root, _package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         examples_dir = repository_root / c.Infra.DIR_EXAMPLES
         examples_dir.mkdir(parents=True, exist_ok=True)
         (examples_dir / c.Infra.INIT_PY).write_text(
-            "from __future__ import annotations\n", encoding="utf-8",
+            "from __future__ import annotations\n",
+            encoding="utf-8",
         )
         producer_path = examples_dir / "producer.py"
         consumer_path = examples_dir / "consumer.py"
@@ -777,20 +866,25 @@ class TestsFlextInfraInfraRopeService:
         tm.that(candidate.script_references_count, eq=0)
 
     def test_workspace_dsl_ignores_example_base_class_references(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Example inheritance remains outside production reachability."""
         repository_root, _package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         examples_dir = repository_root / c.Infra.DIR_EXAMPLES
         models_dir = examples_dir / "_models"
         models_dir.mkdir(parents=True, exist_ok=True)
         (examples_dir / c.Infra.INIT_PY).write_text(
-            "from __future__ import annotations\n", encoding="utf-8",
+            "from __future__ import annotations\n",
+            encoding="utf-8",
         )
         (models_dir / c.Infra.INIT_PY).write_text(
-            "from __future__ import annotations\n", encoding="utf-8",
+            "from __future__ import annotations\n",
+            encoding="utf-8",
         )
         shared_path = models_dir / "shared.py"
         shared_path.write_text(
@@ -827,7 +921,9 @@ class TestsFlextInfraInfraRopeService:
     def test_workspace_dsl_tracks_same_file_references(self, tmp_path: Path) -> None:
         """Same-file uses must block the unused fast-path shortcut."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "service.py"
         module_path.write_text(

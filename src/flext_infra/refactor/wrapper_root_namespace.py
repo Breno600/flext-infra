@@ -54,7 +54,8 @@ class FlextInfraWrapperRootNamespaceRefactor(
                 metadata_runtime_aliases=metadata_aliases,
             )
         write_failure = self._persist_updates(
-            accumulator.updates, expected_sources=accumulator.expected_sources,
+            accumulator.updates,
+            expected_sources=accumulator.expected_sources,
         )
         if write_failure is not None:
             return r[t.JsonPayload].fail(write_failure)
@@ -69,7 +70,9 @@ class FlextInfraWrapperRootNamespaceRefactor(
         self,
     ) -> p.Result[
         t.Triple[
-            t.SequenceOf[Path], MutableMapping[str, frozenset[str]], frozenset[str],
+            t.SequenceOf[Path],
+            MutableMapping[str, frozenset[str]],
+            frozenset[str],
         ]
     ]:
         """Resolve project paths and discover Python files + runtime alias map."""
@@ -105,7 +108,9 @@ class FlextInfraWrapperRootNamespaceRefactor(
         }
         return r[
             tuple[
-                t.SequenceOf[Path], MutableMapping[str, frozenset[str]], frozenset[str],
+                t.SequenceOf[Path],
+                MutableMapping[str, frozenset[str]],
+                frozenset[str],
             ]
         ].ok((
             iter_result.value,
@@ -114,7 +119,10 @@ class FlextInfraWrapperRootNamespaceRefactor(
         ))
 
     def _persist_updates(
-        self, updates: Mapping[Path, str], *, expected_sources: Mapping[Path, str],
+        self,
+        updates: Mapping[Path, str],
+        *,
+        expected_sources: Mapping[Path, str],
     ) -> str | None:
         """Write batched updates via the protected pipeline; ``None`` on success."""
         if not updates:
@@ -132,7 +140,9 @@ class FlextInfraWrapperRootNamespaceRefactor(
         return " ; ".join(report[:5]) or "protected write failed"
 
     def _build_report_payload(
-        self, files_scanned: int, accumulator: m.Infra.WrapperRewriteAccumulator,
+        self,
+        files_scanned: int,
+        accumulator: m.Infra.WrapperRewriteAccumulator,
     ) -> t.MutableJsonMapping:
         """Build the canonical JSON payload from the accumulated wrapper run state."""
         mode_value = (

@@ -40,7 +40,8 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @classmethod
     @lru_cache(maxsize=8)
     def project_import_graph(
-        cls, root: Path,
+        cls,
+        root: Path,
     ) -> t.Pair[t.MappingKV[str, frozenset[str]], t.MappingKV[Path, str]]:
         """Return the runtime import graph and the module name of each file.
 
@@ -54,7 +55,8 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         with FlextInfraUtilitiesRopeCore.open_project(root) as project:
             for resource in FlextInfraUtilitiesRopeCore.python_resources(project):
                 pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                    project, resource,
+                    project,
+                    resource,
                 )
                 name = pymodule.get_name()
                 if not name:
@@ -68,7 +70,8 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 raw[name] = set(
                     FlextInfraUtilitiesRopeImports.imported_module_paths(
                         FlextInfraUtilitiesRopeCore.resolve_module_imports(
-                            project, resource,
+                            project,
+                            resource,
                         ),
                         current_package=package,
                     ),
@@ -101,7 +104,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @classmethod
     def import_closes_cycle(
-        cls, root: Path, file_path: Path, imported: str, name: str | None,
+        cls,
+        root: Path,
+        file_path: Path,
+        imported: str,
+        name: str | None,
     ) -> bool:
         """Return whether one import of ``file_path`` is an edge of a cycle.
 
@@ -125,7 +132,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         level = len(imported) - len(imported.lstrip("."))
         absolute = (
             FlextInfraUtilitiesRopeAnalysisImportState.resolve_import_module(
-                current_package=package, module_name=imported.lstrip("."), level=level,
+                current_package=package,
+                module_name=imported.lstrip("."),
+                level=level,
             )
             if level
             else imported
@@ -244,7 +253,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @staticmethod
     def _captured_text(
-        rule: m.Infra.CodemodRule, variable: str, captures: t.JsonMapping, source: Path,
+        rule: m.Infra.CodemodRule,
+        variable: str,
+        captures: t.JsonMapping,
+        source: Path,
     ) -> str:
         capture = captures.get(variable)
         text = capture.get("text") if isinstance(capture, Mapping) else capture
@@ -320,6 +332,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 return cls._has_class_stem(root, file_path, value)
             case c.Infra.CodemodContextPredicate.PACKAGE_LAYERS:
                 return cls._package_has_layers(file_path.parent, condition.arg)
+            case c.Infra.CodemodContextPredicate.PACKAGE_ROOT_INIT:
+                layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
+                if layout is None:
+                    msg = f"project layout is unresolved: {root}"
+                    raise ValueError(msg)
+                return file_path.resolve() == layout.init_path.resolve()
             case c.Infra.CodemodContextPredicate.FAMILY_BASE:
                 return cls._family_package_has_base(file_path)
             case c.Infra.CodemodContextPredicate.IMPORT_CYCLE:
@@ -340,7 +358,8 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             root,
         ).unwrap()
         closure = FlextInfraUtilitiesCodemodRules.codemod_runtime_closure(
-            project[1], FlextInfraUtilitiesCodemodRules.codemod_distributions(),
+            project[1],
+            FlextInfraUtilitiesCodemodRules.codemod_distributions(),
         )
         return frozenset(
             module
@@ -523,7 +542,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @classmethod
     def parse_namespace_validation(
-        cls, validation: p.Result[m.Infra.ValidationReport], root: Path,
+        cls,
+        validation: p.Result[m.Infra.ValidationReport],
+        root: Path,
     ) -> p.Result[t.VariadicTuple[m.Infra.CensusViolation]]:
         """Convert the engine-backed namespace report into census violations.
 

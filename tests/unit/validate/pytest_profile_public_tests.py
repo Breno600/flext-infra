@@ -37,7 +37,10 @@ class TestsFlextInfraPytestProfile:
         ],
     )
     def test_profile_child_preserves_exit_status_and_arguments(
-        self, tmp_path: Path, arguments: t.StrTuple, expected_exit: int,
+        self,
+        tmp_path: Path,
+        arguments: t.StrTuple,
+        expected_exit: int,
     ) -> None:
         """The real pytest module exits natively and leaves a bound profile."""
         context = m.Infra.PytestRunContext(
@@ -67,7 +70,10 @@ class TestsFlextInfraPytestProfile:
     @pytest.mark.slow
     @pytest.mark.parametrize("expired", [False, True])
     def test_profile_child_rejects_invalid_run_receipt(
-        self, tmp_path: Path, *, expired: bool,
+        self,
+        tmp_path: Path,
+        *,
+        expired: bool,
     ) -> None:
         """A transported receipt cannot silently select another run's artifacts."""
         context = m.Infra.PytestRunContext(
@@ -85,7 +91,8 @@ class TestsFlextInfraPytestProfile:
         receipt.write_text(context.model_dump_json(), encoding="utf-8")
         profile = tmp_path / "collection.pstats"
         profile.with_suffix(".pstats.json").write_text(
-            context.model_dump_json(), encoding="utf-8",
+            context.model_dump_json(),
+            encoding="utf-8",
         )
         result = profile_collection(profile, receipt, ("--version",))
         assert result.outcome.raw_return_code != 0
@@ -121,7 +128,10 @@ class TestsFlextInfraPytestProfile:
 
     @pytest.mark.parametrize("complete", [False, True])
     def test_collection_profile_preserves_pytest_arguments(
-        self, cached_runner_project: Path, *, complete: bool,
+        self,
+        cached_runner_project: Path,
+        *,
+        complete: bool,
     ) -> None:
         """Only the interpreter prefix changes; suite execution is not profiled."""
         plain = runner_for(cached_runner_project)
@@ -149,12 +159,16 @@ class TestsFlextInfraPytestProfile:
     @pytest.mark.slow
     @pytest.mark.parametrize("profile_collection", [False, True])
     def test_complete_suite_persists_cache_and_zero_diagnostic_evidence(
-        self, cached_runner_project: Path, *, profile_collection: bool,
+        self,
+        cached_runner_project: Path,
+        *,
+        profile_collection: bool,
     ) -> None:
         """One public execution collects every test and publishes real evidence."""
         cache = config.Infra.codegen.make.testmon_cache
         runner = runner_for(
-            cached_runner_project, profile_collection=profile_collection,
+            cached_runner_project,
+            profile_collection=profile_collection,
         )
         testmon_db = runner.testmon_db
 

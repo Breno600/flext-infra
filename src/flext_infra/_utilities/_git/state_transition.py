@@ -34,7 +34,10 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
         ):
             permissions = original.permissions & ~0o111 | (int(entry.mode, 8) & 0o111)
         return m.Infra.GitWorktreeFileState(
-            path=entry.path, mode=entry.mode, permissions=permissions, oid=entry.oid,
+            path=entry.path,
+            mode=entry.mode,
+            permissions=permissions,
+            oid=entry.oid,
         )
 
     @classmethod
@@ -88,7 +91,11 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
 
     @classmethod
     def _state_preflight_transition(
-        cls, snapshot: m.Infra.GitWorktreeStateSnapshot, root: Path, *, cleanup: bool,
+        cls,
+        snapshot: m.Infra.GitWorktreeStateSnapshot,
+        root: Path,
+        *,
+        cleanup: bool,
     ) -> t.VariadicTuple[m.Infra.GitWorktreeIndexEntry]:
         actual = cls._state_snapshot(
             m.Infra.GitWorktreeStateRequest(repo_root=root, paths=snapshot.paths),
@@ -160,7 +167,10 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
         expected = {file.path: file for file in snapshot.files}
         base = {
             entry.path: cls._state_baseline_at(
-                root, entry, expected.get(entry.path), cleanup=cleanup,
+                root,
+                entry,
+                expected.get(entry.path),
+                cleanup=cleanup,
             )
             for entry in baseline
         }
@@ -171,7 +181,9 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
         # Remove leaves first. Physical directories are retained until every
         # owned descendant is removed and an exact empty-tree proof succeeds.
         for path in sorted(
-            paths - set(desired), key=lambda item: len(item.parts), reverse=True,
+            paths - set(desired),
+            key=lambda item: len(item.parts),
+            reverse=True,
         ):
             destination = root / path
             if cls._state_obstruction(root, path) is None and (
@@ -188,14 +200,17 @@ class FlextInfraUtilitiesGitStateTransitionMixin(FlextInfraUtilitiesGitStateFile
                 cls._state_remove_empty_tree(destination)
             plan = u.Cli.atomic_plan_directory_chain(destination.parent).unwrap()
             u.Cli.atomic_create_directory_chain_guarded(
-                plan, permission_mode=0o755,
+                plan,
+                permission_mode=0o755,
             ).unwrap()
             cls._state_effect_file(root, path, entry, allowed)
         # An index change made by another writer remains visible before the
         # one atomic index-info publication; no intermediate empty index.
         cls._state_preflight_transition(snapshot, root, cleanup=cleanup)
         cls._state_index_update(
-            root, tuple(paths), baseline if cleanup else snapshot.index_entries,
+            root,
+            tuple(paths),
+            baseline if cleanup else snapshot.index_entries,
         )
 
 

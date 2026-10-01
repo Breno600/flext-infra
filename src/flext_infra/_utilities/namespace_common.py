@@ -37,7 +37,9 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
 
     @staticmethod
     def insert_import_lines(
-        *, lines: t.StrSequence, imports: t.StrSequence,
+        *,
+        lines: t.StrSequence,
+        imports: t.StrSequence,
     ) -> t.StrSequence:
         """Insert import lines."""
         if not imports:
@@ -51,7 +53,10 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
 
     @staticmethod
     def canonical_target_file(
-        *, project_root: Path, source_file: Path, filename: str,
+        *,
+        project_root: Path,
+        source_file: Path,
+        filename: str,
     ) -> Path:
         """Canonical target file."""
         parts = source_file.parts
@@ -65,7 +70,9 @@ class FlextInfraUtilitiesRefactorNamespaceCommon:
 
     @staticmethod
     def find_top_level_block(
-        *, lines: t.StrSequence, header: str,
+        *,
+        lines: t.StrSequence,
+        header: str,
     ) -> t.Pair[int, int] | None:
         """Find top level block."""
         start_idx = -1

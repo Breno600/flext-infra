@@ -42,7 +42,10 @@ class TestsFlextInfraPytestRunnerZeroTest:
 
     @staticmethod
     def _runner(
-        project_root: Path, tmp_path: Path, *, slow_phase: bool = False,
+        project_root: Path,
+        tmp_path: Path,
+        *,
+        slow_phase: bool = False,
     ) -> FlextInfraPytestRunner:
         """Build the public runner exactly as the make verbs do."""
         cache = config.Infra.codegen.make.testmon_cache
@@ -59,7 +62,8 @@ class TestsFlextInfraPytestRunnerZeroTest:
         )
 
     def test_held_testmon_database_lease_refuses_a_concurrent_run(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A second run on one shared database fails loud before any effect."""
         project = self._zero_test_project(tmp_path)
@@ -78,7 +82,8 @@ class TestsFlextInfraPytestRunnerZeroTest:
 
     @pytest.mark.slow
     def test_slow_phase_without_slow_items_publishes_receipt(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A project whose suite has no slow-marked item closes its slow phase green.
 
@@ -112,7 +117,8 @@ class TestsFlextInfraPytestRunnerZeroTest:
 
     @pytest.mark.slow
     def test_incremental_run_publishes_receipt_for_zero_test_project(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Make test on a zero-test project exits 0 with typed accounting."""
         project = self._zero_test_project(tmp_path)
@@ -135,7 +141,8 @@ class TestsFlextInfraPytestRunnerZeroTest:
 
     @pytest.mark.slow
     def test_full_run_publishes_receipt_for_zero_test_project(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Make test-full on a zero-test project exits 0 with typed accounting."""
         project = self._zero_test_project(tmp_path)
@@ -165,6 +172,7 @@ class TestsFlextInfraPytestRunnerZeroTest:
     def _latest_summary(reports_root: Path) -> Path:
         """Return the newest bounded report directory's summary receipt."""
         summaries = sorted(
-            reports_root.glob("*/summary.txt"), key=lambda path: path.stat().st_mtime,
+            reports_root.glob("*/summary.txt"),
+            key=lambda path: path.stat().st_mtime,
         )
         return summaries[-1]

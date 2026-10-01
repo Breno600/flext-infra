@@ -35,7 +35,8 @@ class FlextInfraUtilitiesRefactor:
         if isinstance(value, str):
             return [value]
         validated: p.Result[t.StrSequence] = u.validate_value(
-            t.Infra.STR_SEQ_ADAPTER, value,
+            t.Infra.STR_SEQ_ADAPTER,
+            value,
         )
         if validated.failure:
             msg = f"expected list value: {validated.error}"
@@ -56,7 +57,8 @@ class FlextInfraUtilitiesRefactor:
 
     @staticmethod
     def write_impact_map(
-        results: t.SequenceOf[m.Infra.Result], output_path: Path,
+        results: t.SequenceOf[m.Infra.Result],
+        output_path: Path,
     ) -> p.Result[bool]:
         """Write refactor impact map JSON to disk."""
         payload = {
@@ -100,7 +102,8 @@ class FlextInfraUtilitiesRefactor:
         repository_totals: MutableMapping[str, int] = {}
         rule_totals: MutableMapping[str, int] = {}
         class_totals: MutableMapping[c.Infra.ModScanFindingClass, int] = dict.fromkeys(
-            c.Infra.ModScanFindingClass, 0,
+            c.Infra.ModScanFindingClass,
+            0,
         )
         for finding in report.entries:
             repository_totals[finding.repository] = (
@@ -145,7 +148,9 @@ class FlextInfraUtilitiesRefactor:
         if before.failure:
             return r[m.Infra.ModScanEvidenceReceipt].from_failure(before)
         written = u.Cli.atomic_write_binary_file_guarded(
-            before.value, content, permission_mode=c.Infra.MOD_SCAN_REPORT_MODE,
+            before.value,
+            content,
+            permission_mode=c.Infra.MOD_SCAN_REPORT_MODE,
         )
         if written.failure:
             return r[m.Infra.ModScanEvidenceReceipt].from_failure(written)
@@ -161,7 +166,9 @@ class FlextInfraUtilitiesRefactor:
             )
         return r[m.Infra.ModScanEvidenceReceipt].ok(
             m.Infra.ModScanEvidenceReceipt(
-                path=report_path, sha256=u.Cli.sha256_bytes(content), evidence=evidence,
+                path=report_path,
+                sha256=u.Cli.sha256_bytes(content),
+                evidence=evidence,
             ),
         )
 

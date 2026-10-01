@@ -17,7 +17,8 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 class TestsFlextInfraDepsDetectorMain:
     def test_run_without_typings_skips_typings_detection(
-        self, real_detector_project: Path,
+        self,
+        real_detector_project: Path,
     ) -> None:
         root = real_detector_project
         before = (root / "pyproject.toml").read_bytes()
@@ -58,7 +59,8 @@ class TestsFlextInfraDepsDetectorMain:
         indirect=True,
     )
     def test_apply_typings_follows_governed_policy_and_preserves_source(
-        self, real_detector_project: Path,
+        self,
+        real_detector_project: Path,
     ) -> None:
         root = real_detector_project
         followed = config.Infra.tooling.tools.mypy.boolean_settings.get(
@@ -76,7 +78,10 @@ class TestsFlextInfraDepsDetectorMain:
         tm.that(declared_dev & set(expected.values()), eq=set())
         outcome = tm.ok(
             u.Tests.run_real_detector(
-                root, "--apply-typings", "--apply", "--no-pip-check",
+                root,
+                "--apply-typings",
+                "--apply",
+                "--no-pip-check",
             ),
         )
         tm.that(
@@ -150,7 +155,10 @@ class TestsFlextInfraDepsDetectorMain:
         snapshot = (root / "pyproject.toml").read_bytes()
         repeated = tm.ok(
             u.Tests.run_real_detector(
-                root, "--apply-typings", "--apply", "--no-pip-check",
+                root,
+                "--apply-typings",
+                "--apply",
+                "--no-pip-check",
             ),
         )
         tm.that(
@@ -161,7 +169,8 @@ class TestsFlextInfraDepsDetectorMain:
         tm.that((root / "pyproject.toml").read_bytes(), eq=snapshot)
 
     def test_apply_typings_dry_run_preserves_source_and_lock(
-        self, real_detector_project: Path,
+        self,
+        real_detector_project: Path,
     ) -> None:
         root = real_detector_project
         paths = (root / "pyproject.toml", root / "uv.lock")
@@ -202,7 +211,8 @@ class TestsFlextInfraDepsDetectorMain:
     # binaries. This rewrites the retired "authoritative parent environment"
     # expectation to the current, intentional contract.
     def test_member_without_own_venv_fails_closed_not_parent_environment(
-        self, real_detector_project: Path,
+        self,
+        real_detector_project: Path,
     ) -> None:
         root = real_detector_project
         member = u.Tests.mk_project(
@@ -217,7 +227,8 @@ class TestsFlextInfraDepsDetectorMain:
             ),
         )
         (member / "src/member/__init__.py").write_text(
-            "import yaml\n", encoding="utf-8",
+            "import yaml\n",
+            encoding="utf-8",
         )
         u.Tests.initialize_git_repo(member)
         parent_before = (root / "pyproject.toml").read_bytes()

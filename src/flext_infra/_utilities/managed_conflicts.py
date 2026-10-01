@@ -60,7 +60,8 @@ class FlextInfraUtilitiesManagedConflicts:
         if owned is not None:
             return r[t.StrSequence].ok((f"# [MANAGED] {owned}",))
         if inner.startswith("tool.") and not cls.toml_section_is_owned(
-            inner, spec.conflict_sections,
+            inner,
+            spec.conflict_sections,
         ):
             tool_table = ".".join(inner.split(".")[:2])
             return r[t.StrSequence].ok((f"# [CUSTOM] {tool_table}",))
@@ -68,7 +69,9 @@ class FlextInfraUtilitiesManagedConflicts:
 
     @staticmethod
     def recover_managed_toml(
-        content: str, *, conflict_sections: t.StrSequence,
+        content: str,
+        *,
+        conflict_sections: t.StrSequence,
     ) -> p.Result[str]:
         """Choose current TOML bytes only inside explicitly owned sections."""
         if FlextInfraUtilitiesBase.first_merge_conflict_marker(content) is None:
@@ -92,7 +95,8 @@ class FlextInfraUtilitiesManagedConflicts:
             if control != "current":
                 return r[str].fail("orphan TOML merge-control marker")
             if not FlextInfraUtilitiesManagedConflicts.toml_section_is_owned(
-                section, conflict_sections,
+                section,
+                conflict_sections,
             ):
                 return r[str].fail(
                     "merge conflict is outside owner-declared TOML sections: "

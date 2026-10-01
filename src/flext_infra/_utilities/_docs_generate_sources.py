@@ -58,11 +58,13 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
 
     @staticmethod
     def docs_source_paths(
-        repository_root: Path, extra_roots: t.SequenceOf[Path] = (),
+        repository_root: Path,
+        extra_roots: t.SequenceOf[Path] = (),
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Discover every physical source consumed by one docs render."""
         roots = FlextInfraUtilitiesDocsScope.docs_repository_roots(
-            repository_root, extra_roots,
+            repository_root,
+            extra_roots,
         )
         if roots.failure:
             return r[t.VariadicTuple[Path]].from_failure(roots)
@@ -90,7 +92,8 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
             )
             for fixed_path in fixed_paths:
                 state = cli_u.Cli.atomic_read_binary_file_state(
-                    fixed_path, required=False,
+                    fixed_path,
+                    required=False,
                 )
                 if state.failure:
                     return r[t.VariadicTuple[Path]].from_failure(state)
@@ -143,7 +146,8 @@ class FlextInfraUtilitiesDocsGenerateSourcesMixin:
     ) -> p.Result[bool]:
         """Require exact source topology and physical states to remain unchanged."""
         discovered = FlextInfraUtilitiesDocsGenerateSourcesMixin.docs_source_paths(
-            repository_root, extra_roots,
+            repository_root,
+            extra_roots,
         )
         if discovered.failure:
             return r[bool].from_failure(discovered)

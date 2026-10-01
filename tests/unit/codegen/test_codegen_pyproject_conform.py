@@ -14,7 +14,11 @@ from tests import t, u as test_u
 
 class TestsFlextInfraCodegenPyprojectConform:
     def _repository(
-        self, distribution: str, *, role: c.Infra.MakeProfile, path: str,
+        self,
+        distribution: str,
+        *,
+        role: c.Infra.MakeProfile,
+        path: str,
     ) -> m.Infra.RepositoryRef:
         provider = test_u.Tests.provider()
         return m.Infra.RepositoryRef(
@@ -32,13 +36,17 @@ class TestsFlextInfraCodegenPyprojectConform:
         )
 
     def _workspace(
-        self, *, role: c.Infra.MakeProfile = c.Infra.MakeProfile.WORKSPACE,
+        self,
+        *,
+        role: c.Infra.MakeProfile = c.Infra.MakeProfile.WORKSPACE,
     ) -> m.Infra.WorkspaceSpec:
         return test_u.Tests.workspace_spec(
             self._repository("workspace", role=role, path="."),
             subprojects=(
                 self._repository(
-                    "flext-core", role=c.Infra.MakeProfile.STANDALONE, path="flext-core",
+                    "flext-core",
+                    role=c.Infra.MakeProfile.STANDALONE,
+                    path="flext-core",
                 ),
             ),
         )
@@ -79,7 +87,8 @@ class TestsFlextInfraCodegenPyprojectConform:
         )
 
     def test_leaf_conformance_preserves_parent_workspace_execution(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A generated leaf remains usable from its declared parent workspace."""
         parent = tmp_path / "parent"
@@ -125,7 +134,8 @@ class TestsFlextInfraCodegenPyprojectConform:
 
     @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
     def test_global_constraints_apply_without_direct_runtime_requirements(
-        self, profile: c.Infra.MakeProfile,
+        self,
+        profile: c.Infra.MakeProfile,
     ) -> None:
         """Every profile receives SSOT constraints even for indirect dependencies."""
         content = (
@@ -170,7 +180,10 @@ class TestsFlextInfraCodegenPyprojectConform:
 
         tm.that(
             test_u.Tests.toml_table_at(
-                overlaid, "project", "entry-points", "example.plugins",
+                overlaid,
+                "project",
+                "entry-points",
+                "example.plugins",
             )["sample"],
             eq="sample.plugin:main",
         )
@@ -206,7 +219,8 @@ class TestsFlextInfraCodegenPyprojectConform:
             u.Infra.overlay_preserved(rendered, live, managed_tool_tables=()),
         )
         tm.that(
-            test_u.Tests.toml_table_at(tool_override, "project")[project_key], eq="live",
+            test_u.Tests.toml_table_at(tool_override, "project")[project_key],
+            eq="live",
         )
         tm.that(
             test_u.Tests.toml_table_at(tool_override, "tool", tool_table)["value"],
@@ -467,7 +481,8 @@ dependencies = []
                 workspace=workspace,
                 required_dev_dependencies=self._detached_dev_floors(),
                 uv_resolution=self._uv_resolution(
-                    config.Infra.codegen.toolchain, (exclusion,),
+                    config.Infra.codegen.toolchain,
+                    (exclusion,),
                 ),
             ),
         )
@@ -480,13 +495,16 @@ dependencies = []
         tm.that("project" not in test_u.Tests.toml_mapping(excludes[0]), eq=True)
 
     def test_workspace_root_routes_only_exclusions_of_local_projects(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """An exclusion for an absent project would drop its only install edge."""
         configured = config.Infra.codegen.uv_exclude_dependencies
         member = configured[0].project
         rendered = test_u.Tests.scaffold_text(
-            tmp_path / "fixture-project", c.PYPROJECT_FILENAME, members=(member,),
+            tmp_path / "fixture-project",
+            c.PYPROJECT_FILENAME,
+            members=(member,),
         )
         uv = test_u.Tests.toml_table_at(rendered, "tool", "uv")
         local = {"fixture-project", member}
@@ -496,7 +514,8 @@ dependencies = []
                 {
                     key: value
                     for key, value in item.model_dump(
-                        mode="json", exclude_none=True,
+                        mode="json",
+                        exclude_none=True,
                     ).items()
                     if key != "project"
                 }
@@ -585,7 +604,9 @@ skips = ["B101"]
         # Membership alone hides a required-first / alphabetical oscillation.
         # Exercise both public owners; neither may reorder the other's output.
         canonical_dependencies = test_u.Tests.toml_strings_at(
-            conformed, "project", "dependencies",
+            conformed,
+            "project",
+            "dependencies",
         )
         tm.that(
             test_u.Tests.toml_strings_at(first, "project", "dependencies"),

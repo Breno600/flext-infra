@@ -48,7 +48,10 @@ class FlextInfraUtilitiesCodegenFacades:
 
     @classmethod
     def render_utility_facade(
-        cls, pkg_dir: Path, *, family: Literal["u", "p"] = "u",
+        cls,
+        pkg_dir: Path,
+        *,
+        family: Literal["u", "p"] = "u",
     ) -> str | None:
         """Render uniquely discovered utility or protocol owners without a registry.
 
@@ -80,11 +83,13 @@ class FlextInfraUtilitiesCodegenFacades:
         owners, ancestors = cls._utility_owners(owners_dir, family=family)
         source: str = facade_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
         facade, namespace = cls._facade_classes(
-            ast.parse(source, filename=str(facade_path)), facade_path,
+            ast.parse(source, filename=str(facade_path)),
+            facade_path,
         )
         nested_namespace = namespace is not facade
         reachable = cls._reachable_bases(
-            tuple(cls._base_name(base) for base in namespace.bases), ancestors,
+            tuple(cls._base_name(base) for base in namespace.bases),
+            ancestors,
         )
         additions: list[t.Pair[str, str]] = []
         for method in sorted(
@@ -117,10 +122,15 @@ class FlextInfraUtilitiesCodegenFacades:
         if not additions:
             return source
         updated = cls._insert_imports(
-            source, facade, additions, package=pkg_dir.name, family=family,
+            source,
+            facade,
+            additions,
+            package=pkg_dir.name,
+            family=family,
         )
         _, namespace = cls._facade_classes(
-            ast.parse(updated, filename=str(facade_path)), facade_path,
+            ast.parse(updated, filename=str(facade_path)),
+            facade_path,
         )
         return cls._insert_bases(updated, namespace, additions)
 
@@ -169,7 +179,8 @@ class FlextInfraUtilitiesCodegenFacades:
                             path.relative_to(pkg_dir.parent).as_posix(),
                         )
                         pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                            project, resource,
+                            project,
+                            resource,
                         )
                     offset = sum(map(len, lines[: receiver.lineno - 1]))
                     prefix = lines[receiver.lineno - 1].encode(c.Cli.ENCODING_DEFAULT)
@@ -177,12 +188,14 @@ class FlextInfraUtilitiesCodegenFacades:
                         prefix[: receiver.col_offset].decode(c.Cli.ENCODING_DEFAULT),
                     )
                     binding = FlextInfraUtilitiesRopeRuntime.imported_name_at(
-                        pymodule, offset,
+                        pymodule,
+                        offset,
                     )
                     if binding is None or binding.imported_name != family:
                         continue
                     declared = FlextInfraUtilitiesRopeRuntime.imported_module_path(
-                        project, binding,
+                        project,
+                        binding,
                     )
                     if declared not in {
                         pkg_dir,
@@ -195,7 +208,9 @@ class FlextInfraUtilitiesCodegenFacades:
 
     @staticmethod
     def _utility_owners(
-        owners_dir: Path, *, family: Literal["u", "p"],
+        owners_dir: Path,
+        *,
+        family: Literal["u", "p"],
     ) -> t.Pair[
         t.VariadicTuple[t.Triple[str, str, frozenset[str]]],
         t.MappingKV[str, frozenset[str]],
@@ -206,7 +221,8 @@ class FlextInfraUtilitiesCodegenFacades:
             if path.name == c.Infra.INIT_PY:
                 continue
             tree = ast.parse(
-                path.read_text(encoding=c.Cli.ENCODING_DEFAULT), filename=str(path),
+                path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
+                filename=str(path),
             )
             for node in tree.body:
                 if not isinstance(node, ast.ClassDef):
@@ -236,7 +252,8 @@ class FlextInfraUtilitiesCodegenFacades:
 
     @staticmethod
     def _facade_classes(
-        tree: ast.Module, path: Path,
+        tree: ast.Module,
+        path: Path,
     ) -> t.Pair[ast.ClassDef, ast.ClassDef]:
         facades = tuple(node for node in tree.body if isinstance(node, ast.ClassDef))
         if len(facades) != 1:
@@ -267,7 +284,8 @@ class FlextInfraUtilitiesCodegenFacades:
 
     @staticmethod
     def _reachable_bases(
-        roots: t.SequenceOf[str], ancestors: t.MappingKV[str, frozenset[str]],
+        roots: t.SequenceOf[str],
+        ancestors: t.MappingKV[str, frozenset[str]],
     ) -> set[str]:
         reachable = set(roots)
         pending = list(roots)
@@ -303,7 +321,9 @@ class FlextInfraUtilitiesCodegenFacades:
 
     @staticmethod
     def _insert_bases(
-        source: str, namespace: ast.ClassDef, additions: t.SequenceOf[t.Pair[str, str]],
+        source: str,
+        namespace: ast.ClassDef,
+        additions: t.SequenceOf[t.Pair[str, str]],
     ) -> str:
         if not namespace.bases:
             message = "utility namespace has no canonical base chain"

@@ -24,7 +24,8 @@ class FlextInfraUtilitiesRopeMethodOrderMixin:
 
     @staticmethod
     def matches_method_rule(
-        method: m.Infra.MethodInfo, rule: m.Infra.MethodOrderRule,
+        method: m.Infra.MethodInfo,
+        rule: m.Infra.MethodOrderRule,
     ) -> bool:
         """Check if a method matches an ordering rule."""
         decorators = set(method.decorators)
@@ -56,7 +57,8 @@ class FlextInfraUtilitiesRopeMethodOrderMixin:
 
     @staticmethod
     def build_method_sort_key(
-        method: m.Infra.MethodInfo, order_config: t.SequenceOf[m.Infra.MethodOrderRule],
+        method: m.Infra.MethodInfo,
+        order_config: t.SequenceOf[m.Infra.MethodOrderRule],
     ) -> t.Triple[int, int, str]:
         """Build a sort key tuple for method ordering."""
         cls = FlextInfraUtilitiesRopeMethodOrderMixin

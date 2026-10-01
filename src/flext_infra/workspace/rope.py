@@ -44,13 +44,15 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         u.PrivateAttr(default_factory=dict)
     )
     _module_policy_cache: MutableMapping[
-        t.Triple[str, str, str], m.Infra.NamespaceModulePolicy,
+        t.Triple[str, str, str],
+        m.Infra.NamespaceModulePolicy,
     ] = u.PrivateAttr(default_factory=dict)
     _module_convention_cache: MutableMapping[str, m.Infra.RopeModuleConvention] = (
         u.PrivateAttr(default_factory=dict)
     )
     _module_object_cache: MutableMapping[
-        t.Triple[str, bool, bool], t.VariadicTuple[m.Infra.Object],
+        t.Triple[str, bool, bool],
+        t.VariadicTuple[m.Infra.Object],
     ] = u.PrivateAttr(default_factory=dict)
     _resource_cache: MutableMapping[str, t.Infra.RopeResource | None] = u.PrivateAttr(
         default_factory=dict,
@@ -74,7 +76,10 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
 
     @classmethod
     def open_workspace(
-        cls, repository_root: Path, *, rope_repository_root: Path | None = None,
+        cls,
+        repository_root: Path,
+        *,
+        rope_repository_root: Path | None = None,
     ) -> Self:
         """Create one ready-to-use Rope workspace session."""
         # Scan policy is owned only by the
@@ -119,7 +124,8 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
                 f"rope: indexing python workspace at {self._rope_repository_root}",
             )
             workspace_index = u.Infra.index_rope_workspace(
-                self.rope_project, self._rope_repository_root,
+                self.rope_project,
+                self._rope_repository_root,
             )
             self._workspace_index = workspace_index
             u.Cli.info(
@@ -145,7 +151,10 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         )
 
     def refresh(
-        self, *, preserve_indexes: bool = False, validate_project: bool = True,
+        self,
+        *,
+        preserve_indexes: bool = False,
+        validate_project: bool = True,
     ) -> m.Infra.RopeWorkspaceSession:
         """Invalidate Rope caches without reopening the Rope project.
 
@@ -203,7 +212,9 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         return validated
 
     def modules(
-        self, *, project_names: t.StrSequence | None = None,
+        self,
+        *,
+        project_names: t.StrSequence | None = None,
     ) -> t.SequenceOf[m.Infra.RopeModuleIndexEntry]:
         """Return path-sorted module entries, optionally only the named projects'."""
         selected = frozenset(project_names or ())
@@ -375,7 +386,11 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         return context
 
     def policy(
-        self, file_path: Path, *, rel_path: Path | None = None, current_pkg: str = "",
+        self,
+        file_path: Path,
+        *,
+        rel_path: Path | None = None,
+        current_pkg: str = "",
     ) -> m.Infra.NamespaceModulePolicy:
         """Return the centralized naming policy for one module path."""
         resolved_file = file_path.resolve()
@@ -396,7 +411,10 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
         return policy
 
     def convention(
-        self, file_path: Path, *, rel_path: Path | None = None,
+        self,
+        file_path: Path,
+        *,
+        rel_path: Path | None = None,
     ) -> m.Infra.RopeModuleConvention:
         """Return one unified project/package/module convention contract."""
         resolved_file = file_path.resolve()
@@ -447,12 +465,16 @@ class FlextInfraRopeWorkspace(s[m.Infra.RopeWorkspaceSession]):
     def semantic(self, file_path: Path) -> m.Infra.ModuleSemanticState:
         """Return one cached semantic snapshot for a module path."""
         state: m.Infra.ModuleSemanticState = u.Infra.resolve_module_semantic_state(
-            self.rope_project, self._resource_for(file_path),
+            self.rope_project,
+            self._resource_for(file_path),
         )
         return state
 
     def exports(
-        self, file_path: Path, *, export_options: m.Infra.ExportOptions | None = None,
+        self,
+        file_path: Path,
+        *,
+        export_options: m.Infra.ExportOptions | None = None,
     ) -> t.StrSequence:
         """Return public export names for one module path."""
         resolved_export_options = export_options or m.Infra.ExportOptions()

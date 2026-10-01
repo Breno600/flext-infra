@@ -30,7 +30,8 @@ class FlextInfraInjectCommentsPhase:
 
     @classmethod
     def _strip_managed_lines(
-        cls, lines: t.StrSequence,
+        cls,
+        lines: t.StrSequence,
     ) -> t.Pair[t.StrSequence, t.StrSequence]:
         """Strip managed lines."""
         changes: t.MutableSequenceOf[str] = []

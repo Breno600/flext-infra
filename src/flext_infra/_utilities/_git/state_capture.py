@@ -34,7 +34,8 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
         with ExitStack() as stack:
             for journal in sorted(journals):
                 u.Cli.atomic_read_binary_file_state(
-                    journal.with_name(f"{journal.name}.lock"), required=False,
+                    journal.with_name(f"{journal.name}.lock"),
+                    required=False,
                 ).unwrap()
                 stack.enter_context(
                     FlextInfraUtilitiesCodegenFilePlan.codegen_transaction_lease(
@@ -45,7 +46,9 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
 
     @classmethod
     def _state_apply(
-        cls, checkpoint: m.Infra.GitWorktreeStateCheckpoint, destination_root: Path,
+        cls,
+        checkpoint: m.Infra.GitWorktreeStateCheckpoint,
+        destination_root: Path,
     ) -> None:
         snapshot = checkpoint.snapshot
         if destination_root.resolve() == snapshot.repo_root:
@@ -54,12 +57,15 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
         with cls._state_leases((snapshot.repo_root, destination_root)):
             cls._state_validate_checkpoint(checkpoint)
             baseline = cls._state_preflight_transition(
-                snapshot, destination_root, cleanup=False,
+                snapshot,
+                destination_root,
+                cleanup=False,
             )
             cls._state_materialize(snapshot, destination_root, baseline, cleanup=False)
             actual = cls._state_snapshot(
                 m.Infra.GitWorktreeStateRequest(
-                    repo_root=destination_root, paths=snapshot.paths,
+                    repo_root=destination_root,
+                    paths=snapshot.paths,
                 ),
             )
             if (
@@ -71,7 +77,9 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
 
     @classmethod
     def git_apply_worktree_checkpoint(
-        cls, checkpoint: m.Infra.GitWorktreeStateCheckpoint, destination_root: Path,
+        cls,
+        checkpoint: m.Infra.GitWorktreeStateCheckpoint,
+        destination_root: Path,
     ) -> p.Result[bool]:
         """Apply only retained bytes, resuming proven partial prior effects."""
         try:
@@ -96,17 +104,22 @@ class FlextInfraUtilitiesGitStateCaptureMixin(
             cls._state_verify_publication(checkpoint, publication)
             cls._state_verify_saved(checkpoint, destination_root, saved_commit)
             baseline = cls._state_preflight_transition(
-                snapshot, snapshot.repo_root, cleanup=True,
+                snapshot,
+                snapshot.repo_root,
+                cleanup=True,
             )
             cls._state_materialize(snapshot, snapshot.repo_root, baseline, cleanup=True)
             observed = cls._state_snapshot(
                 m.Infra.GitWorktreeStateRequest(
-                    repo_root=snapshot.repo_root, paths=snapshot.paths,
+                    repo_root=snapshot.repo_root,
+                    paths=snapshot.paths,
                 ),
             )
             files = tuple(
                 m.Infra.GitWorktreeIndexEntry(
-                    path=file.path, mode=file.mode, oid=file.oid,
+                    path=file.path,
+                    mode=file.mode,
+                    oid=file.oid,
                 )
                 for file in observed.files
             )

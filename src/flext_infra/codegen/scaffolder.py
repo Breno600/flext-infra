@@ -74,7 +74,10 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
         ]
 
     def _scaffold_project(
-        self, project: p.Infra.ProjectInfo, *, dry_run: bool = False,
+        self,
+        project: p.Infra.ProjectInfo,
+        *,
+        dry_run: bool = False,
     ) -> m.Infra.ScaffoldResult:
         """Scaffold missing base modules for a single project.
 
@@ -89,12 +92,16 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
         project_path = project.path
         if not (project_path / c.Infra.DEFAULT_SRC_DIR).is_dir():
             return m.Infra.ScaffoldResult(
-                project=project_path.name, files_created=[], files_skipped=[],
+                project=project_path.name,
+                files_created=[],
+                files_skipped=[],
             )
         project_layout = u.Infra.layout(project_path)
         if project_layout is None or not project_layout.class_stem:
             return m.Infra.ScaffoldResult(
-                project=project_path.name, files_created=[], files_skipped=[],
+                project=project_path.name,
+                files_created=[],
+                files_skipped=[],
             )
         files_created: t.MutableSequenceOf[str] = []
         files_skipped: t.MutableSequenceOf[str] = []
@@ -176,7 +183,8 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
         )
 
     def _scaffold_dir(
-        self, request: m.Infra.ScaffoldDirRequest,
+        self,
+        request: m.Infra.ScaffoldDirRequest,
     ) -> t.Pair[t.MutableSequenceOf[str], t.MutableSequenceOf[str]]:
         """Generate missing modules in a directory and return file lists."""
         files_created: t.MutableSequenceOf[str] = []
@@ -226,7 +234,8 @@ class FlextInfraCodegenScaffolder(FlextInfraCodegenExecutionBase[str]):
                 owner="codegen",
             )
             written = FlextInfraMisePublication.publish_file_plan(
-                planned, phase="scaffold",
+                planned,
+                phase="scaffold",
             )
             if written.failure:
                 message = f"writing scaffold {filepath}: {written.error}"

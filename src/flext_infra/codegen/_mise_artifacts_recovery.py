@@ -31,7 +31,13 @@ type _FileIdentity = tuple[
 ]
 
 type _FileOwnershipIdentity = tuple[
-    bool | None, int | None, int | None, str | None, int | None, int | None, int | None,
+    bool | None,
+    int | None,
+    int | None,
+    str | None,
+    int | None,
+    int | None,
+    int | None,
 ]
 
 
@@ -125,7 +131,9 @@ class FlextInfraMiseRecovery:
         actions: list[m.Infra.CodegenRecoveryAction] = []
         for entry in journal.entries:
             target = files.resolve_transaction(
-                layout, entry.path, purpose="generated destination",
+                layout,
+                entry.path,
+                purpose="generated destination",
             )
             if target.failure:
                 return result_type.from_failure(target)
@@ -173,20 +181,25 @@ class FlextInfraMiseRecovery:
                 operation = "noop"
             actions.append(
                 m.Infra.CodegenRecoveryAction(
-                    entry=entry, current=current.value, operation=operation,
+                    entry=entry,
+                    current=current.value,
+                    operation=operation,
                 ),
             )
         return result_type.ok(tuple(actions))
 
     @staticmethod
     def _staging_tree_is_absent(
-        layout: m.Infra.MiseToolchainWorkspaceLayout, entry: m.Infra.CodegenJournalEntry,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        entry: m.Infra.CodegenJournalEntry,
     ) -> bool:
         """Whether the entry's staged rollback tree is gone entirely."""
         if entry.original_backup is None:
             return False
         backup = files.resolve_transaction(
-            layout, entry.original_backup, purpose="generation recovery backup",
+            layout,
+            entry.original_backup,
+            purpose="generation recovery backup",
         )
         return backup.failure or not backup.value.parent.is_dir()
 
@@ -235,7 +248,9 @@ class FlextInfraMiseRecovery:
                 f"generation recovery tuple is incomplete: {entry.path}",
             )
         backup_path = files.resolve_transaction(
-            layout, entry.original_backup, purpose="generation recovery backup",
+            layout,
+            entry.original_backup,
+            purpose="generation recovery backup",
         )
         if backup_path.failure:
             return r[m.Infra.CodegenStagedFile].from_failure(backup_path)
@@ -257,7 +272,9 @@ class FlextInfraMiseRecovery:
             return r[m.Infra.CodegenStagedFile].from_failure(candidate)
         if candidate.value.content is None:
             created = process.write_new(
-                candidate_path, backup.value.content, entry.original_mode,
+                candidate_path,
+                backup.value.content,
+                entry.original_mode,
             )
             if created.failure:
                 return r[m.Infra.CodegenStagedFile].from_failure(created)
@@ -302,12 +319,15 @@ class FlextInfraMiseRecovery:
                     f"generation rollback backup is absent: {entry.path}",
                 )
             backup = files.resolve_transaction(
-                layout, entry.original_backup, purpose="generation recovery backup",
+                layout,
+                entry.original_backup,
+                purpose="generation recovery backup",
             )
             if backup.failure:
                 return result_type.from_failure(backup)
             candidate = files.read_state(
-                backup.value.with_suffix(".restore"), required=True,
+                backup.value.with_suffix(".restore"),
+                required=True,
             )
             if candidate.failure:
                 return result_type.from_failure(candidate)
@@ -361,7 +381,9 @@ class FlextInfraMiseRecovery:
         by_path = {action.entry.path: action for action in actions}
         for entry in journal.entries:
             target = files.resolve_transaction(
-                layout, entry.path, purpose="generated destination",
+                layout,
+                entry.path,
+                purpose="generated destination",
             )
             if target.failure:
                 return r[bool].from_failure(target)

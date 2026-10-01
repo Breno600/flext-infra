@@ -37,11 +37,14 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         if raw is None:
             return r[bool].ok(True)
         items: p.Result[t.StrSequence] = u.validate_value(
-            t.Infra.STR_SEQ_ADAPTER, u.Cli.json_as_sequence(raw), strict=True,
+            t.Infra.STR_SEQ_ADAPTER,
+            u.Cli.json_as_sequence(raw),
+            strict=True,
         )
         if items.failure:
             return r[bool].fail_op(
-                f"validate release dependency group {key}", items.error,
+                f"validate release dependency group {key}",
+                items.error,
             )
         rendered: t.MutableSequenceOf[str] = []
         for requirement in items.value:
@@ -68,7 +71,10 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
 
     @classmethod
     def _release_pyproject(
-        cls, source: str, version: str, versions: t.StrMapping,
+        cls,
+        source: str,
+        version: str,
+        versions: t.StrMapping,
     ) -> p.Result[str]:
         """Render a pyproject a public registry accepts: pinned, sourceless, bounded."""
         document = u.Cli.toml_parse_text(source)
@@ -147,7 +153,8 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         )
         if wheel_includes.failure:
             return r[t.StrSequence].fail_op(
-                "validate Hatch wheel include", wheel_includes.error,
+                "validate Hatch wheel include",
+                wheel_includes.error,
             )
         sdist_includes: p.Result[t.StrSequence] = u.validate_value(
             t.Infra.STR_SEQ_ADAPTER,
@@ -156,7 +163,8 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         )
         if sdist_includes.failure:
             return r[t.StrSequence].fail_op(
-                "validate Hatch sdist include", sdist_includes.error,
+                "validate Hatch sdist include",
+                sdist_includes.error,
             )
         if not wheel_includes.value or set(wheel_includes.value) != set(
             sdist_includes.value,

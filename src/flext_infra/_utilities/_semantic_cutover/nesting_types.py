@@ -42,11 +42,16 @@ class FlextInfraUtilitiesSemanticNestingTypes(
             scope = runtime.scope_at(module, start, declaration_line=declaration_line)
             for node in cls._type_nodes(annotation, project, scope):
                 if not isinstance(node, ast.Constant) or not isinstance(
-                    node.value, str,
+                    node.value,
+                    str,
                 ):
                     continue
                 updated = cls._quoted_replacement(
-                    project, resource, scope, node.value, replacement,
+                    project,
+                    resource,
+                    scope,
+                    node.value,
+                    replacement,
                 )
                 if updated != node.value:
                     start, end = cls._expression_range(source, node)
@@ -54,7 +59,9 @@ class FlextInfraUtilitiesSemanticNestingTypes(
                         m.Infra.SourceRewrite(start=start, end=end, text=repr(updated)),
                     )
         return FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
-            resource, source, edits,
+            resource,
+            source,
+            edits,
         ).new_contents
 
     @classmethod
@@ -68,7 +75,9 @@ class FlextInfraUtilitiesSemanticNestingTypes(
     ) -> str:
         edits: list[m.Infra.SourceRewrite] = []
         for node in cls._type_nodes(
-            ast.parse(source, mode="eval").body, project, scope,
+            ast.parse(source, mode="eval").body,
+            project,
+            scope,
         ):
             start, end = cls._expression_range(source, node)
             if any(edit.start <= start and end <= edit.end for edit in edits):
@@ -76,14 +85,20 @@ class FlextInfraUtilitiesSemanticNestingTypes(
             text = replacement(scope, node)
             if isinstance(node, ast.Constant) and isinstance(node.value, str):
                 updated = cls._quoted_replacement(
-                    project, resource, scope, node.value, replacement,
+                    project,
+                    resource,
+                    scope,
+                    node.value,
+                    replacement,
                 )
                 if updated != node.value:
                     text = repr(updated)
             if text is not None and text != source[start:end]:
                 edits.append(m.Infra.SourceRewrite(start=start, end=end, text=text))
         return FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
-            resource, source, edits,
+            resource,
+            source,
+            edits,
         ).new_contents
 
     @classmethod
@@ -120,7 +135,10 @@ class FlextInfraUtilitiesSemanticNestingTypes(
                         msg = "quoted type scope has no declaring module"
                         raise ValueError(msg)
                     _, destination = runtime.import_binding(
-                        project, module, module_name, owner,
+                        project,
+                        module,
+                        module_name,
+                        owner,
                     )
                     expression = f"{destination}.{name}"
                 else:
@@ -157,7 +175,8 @@ class FlextInfraUtilitiesSemanticNestingTypes(
                     self.bind(node.id)
 
             def _visit_scoped(
-                self, node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+                self,
+                node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
             ) -> None:
                 self.bind(node.name)
                 self.depth += 1
@@ -195,7 +214,10 @@ class FlextInfraUtilitiesSemanticNestingTypes(
 
     @staticmethod
     def _nested_type_expression(
-        node: ast.expr, actual: p.Infra.RopePyName | None, name: str, owner: str,
+        node: ast.expr,
+        actual: p.Infra.RopePyName | None,
+        name: str,
+        owner: str,
     ) -> str | None:
         if isinstance(node, ast.Attribute):
             return f"{ast.unparse(node.value)}.{owner}.{name}"

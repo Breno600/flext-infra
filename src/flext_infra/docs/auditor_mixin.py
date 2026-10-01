@@ -80,7 +80,8 @@ class FlextInfraDocAuditorMixin:
             "issues": issues_payload,
         }
         _ = u.Cli.json_write(
-            scope.report_dir / c.Infra.DOCS_AUDIT_SUMMARY_FILENAME, summary_payload,
+            scope.report_dir / c.Infra.DOCS_AUDIT_SUMMARY_FILENAME,
+            summary_payload,
         )
         _ = u.Infra.write_markdown(
             scope.report_dir / c.Infra.DOCS_AUDIT_REPORT_FILENAME,

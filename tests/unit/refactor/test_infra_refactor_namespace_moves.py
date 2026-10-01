@@ -45,13 +45,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         )
         cls._write_file(project_root / "Makefile", "check:\n\t@true\n")
         cls._write_file(
-            package_root / "__init__.py", "from __future__ import annotations\n",
+            package_root / "__init__.py",
+            "from __future__ import annotations\n",
         )
         u.Tests.provision_checkout(project_root)
         return (project_root, package_root)
 
     def test_rewrite_manual_protocol_violations_uses_public_runtime_api(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         project_root, package_root = self._build_project(tmp_path)
         protocols_file = package_root / "protocols.py"
@@ -89,7 +91,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         )
 
         tm.that(
-            source_file.read_text(encoding="utf-8"), lacks="class External(Protocol):",
+            source_file.read_text(encoding="utf-8"),
+            lacks="class External(Protocol):",
         )
         tm.that(
             consumer_file.read_text(encoding="utf-8"),
@@ -101,13 +104,15 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         tm.that(self._non_module_files(package_root), eq=())
 
     def test_rewrite_manual_typing_alias_violations_uses_public_runtime_api(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         project_root, package_root = self._build_project(tmp_path)
         typings_file = package_root / "typings.py"
         source_file = package_root / "service.py"
         self._write_file(
-            typings_file, "from __future__ import annotations\n\nTYPE_READY = True\n",
+            typings_file,
+            "from __future__ import annotations\n\nTYPE_READY = True\n",
         )
         self._write_file(
             source_file,
@@ -121,7 +126,8 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
         )
 
         u.Infra.rewrite_manual_typing_alias_violations(
-            project_root=project_root, names_by_file={source_file: {"PayloadMap"}},
+            project_root=project_root,
+            names_by_file={source_file: {"PayloadMap"}},
         )
 
         source_text = source_file.read_text(encoding="utf-8")

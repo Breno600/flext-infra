@@ -27,11 +27,17 @@ class FlextInfraPyprojectModernizerTooling:
         repository_root: Path
 
         def _project_kind(
-            self, path: Path, payload: t.JsonMapping, project_kind: str | None,
+            self,
+            path: Path,
+            payload: t.JsonMapping,
+            project_kind: str | None,
         ) -> str: ...
 
         def _read_document_state(
-            self, path: Path, *, source: str | None = None,
+            self,
+            path: Path,
+            *,
+            source: str | None = None,
         ) -> p.Result[m.Infra.PyprojectDocumentState]: ...
 
         def _apply_document_phases(
@@ -80,7 +86,9 @@ class FlextInfraPyprojectModernizerTooling:
         rendered = self._render_document_state(
             state.value,
             self._apply_document_phases(
-                state.value, canonical_dev=canonical_dev.value, topology=topology,
+                state.value,
+                canonical_dev=canonical_dev.value,
+                topology=topology,
             ),
             dry_run=True,
             skip_comments=False,
@@ -124,7 +132,8 @@ class FlextInfraPyprojectModernizerTooling:
         )
         if tools_result.failure:
             return result_type.fail_op(
-                f"tooling resolution for {path}", tools_result.error,
+                f"tooling resolution for {path}",
+                tools_result.error,
             )
         tools = tools_result.value
         project_dir = path.parent
@@ -178,7 +187,8 @@ class FlextInfraPyprojectModernizerTooling:
         # same files make it abort with source-file-found-twice; pyrefly
         # resolves first-match and needs the extra roots.
         derived_search_path = declared_roots or seed_manager.pyrefly_search_paths(
-            project_dir=project_dir, is_root=True,
+            project_dir=project_dir,
+            is_root=True,
         )
         derived_mypy_path = (
             tuple(root for root in declared_roots if root != ".")
@@ -225,7 +235,8 @@ class FlextInfraPyprojectModernizerTooling:
         # Canonicalize by root here so the first write already matches the
         # formatted file and generation reaches its fixed point.
         environments = sorted(
-            environments, key=lambda environment: environment.root or "",
+            environments,
+            key=lambda environment: environment.root or "",
         )
         # Absent analyzer-path keys fall back to the DERIVED value: they are
         # written by the analyzer-path sync, so a project that has not run it
@@ -235,7 +246,9 @@ class FlextInfraPyprojectModernizerTooling:
             m.Infra.ToolingRuntimeContext,
             {
                 "project_kind": self._project_kind(
-                    path, payload, topology.project_kind,
+                    path,
+                    payload,
+                    topology.project_kind,
                 ),
                 "first_party": tools.first_party,
                 "mypy_path": (
@@ -257,7 +270,8 @@ class FlextInfraPyprojectModernizerTooling:
                 "pyright_extra_paths": (
                     tools.pyright.get(c.Infra.EXTRA_PATHS)
                     or seed_manager.pyright_extra_paths(
-                        project_dir=project_dir, is_root=True,
+                        project_dir=project_dir,
+                        is_root=True,
                     )
                     or declared_roots
                 ),
@@ -273,7 +287,8 @@ class FlextInfraPyprojectModernizerTooling:
         )
         if validated.failure:
             return result_type.fail_op(
-                "tooling runtime context validation", validated.error,
+                "tooling runtime context validation",
+                validated.error,
             )
         return result_type.ok(validated.value)
 

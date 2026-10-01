@@ -106,7 +106,9 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
         return r[str].ok("\n".join(output_lines))
 
     def _project_python_files(
-        self, rope_workspace: p.Infra.RopeWorkspaceDsl, project_root: Path,
+        self,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        project_root: Path,
     ) -> p.Result[t.SequenceOf[Path]]:
         """Return indexed Python wrapper files for one consolidation pass."""
         resolved_root = project_root.resolve()
@@ -135,7 +137,8 @@ class FlextInfraCodegenConsolidator(s[str], FlextInfraCodegenConsolidatorStepsMi
         return r[t.SequenceOf[Path]].ok(tuple(sorted(indexed_files)))
 
     def _selected_projects(
-        self, rope_workspace: p.Infra.RopeWorkspaceDsl,
+        self,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[t.SequenceOf[p.Infra.ProjectInfo]]:
         """Return the selected projects."""
         _ = rope_workspace

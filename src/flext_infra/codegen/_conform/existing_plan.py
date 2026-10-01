@@ -55,7 +55,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         docs_config = (Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME).as_posix()
         if contract.destinations == frozenset({docs_config}):
             return self._plan_existing_docs_config(
-                target, workspace, codegen, docs_config,
+                target,
+                workspace,
+                codegen,
+                docs_config,
             )
         managed_artifacts = u.Infra.snapshot_committed_project_managed_artifacts(root)
         if managed_artifacts.failure:
@@ -121,14 +124,17 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             managed_artifacts=managed_artifacts.value,
         )
         managed_result = self._plan_existing_templates(
-            render_inputs=render_inputs, contract=contract,
+            render_inputs=render_inputs,
+            contract=contract,
         )
         if managed_result.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(managed_result)
         planned = list(managed_result.value)
         if contract.custom:
             custom_result = self._plan_existing_custom(
-                root, codegen, profile=target.make_profile.value,
+                root,
+                codegen,
+                profile=target.make_profile.value,
             )
             if custom_result.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
@@ -167,7 +173,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         if context.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(context)
         rendered = u.Cli.template_render(
-            u.Infra.codegen_templates_root(codegen) / entries[0].source, context.value,
+            u.Infra.codegen_templates_root(codegen) / entries[0].source,
+            context.value,
         )
         if rendered.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(rendered)
@@ -177,7 +184,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 f"rendered Makefile contains a merge conflict marker: {conflict_marker}",
             )
         plan = self.file_plan(
-            target.root, destination, rendered.value, mode=managed[0].mode,
+            target.root,
+            destination,
+            rendered.value,
+            mode=managed[0].mode,
         )
         if plan.failure:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(plan)
@@ -340,7 +350,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             if rendered.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(rendered)
             composed = self.compose_project_artifact(
-                root, entry.destination, rendered.value, render_inputs=render_inputs,
+                root,
+                entry.destination,
+                rendered.value,
+                render_inputs=render_inputs,
             )
             if composed.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(composed)
@@ -380,7 +393,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
         """Validate the handwritten Make surface against its profile contract."""
         policy = config.make.custom_handler_policies.get(
-            profile or "", config.make.custom_handler_policy,
+            profile or "",
+            config.make.custom_handler_policy,
         )
         path = root / policy.filename
         if path.exists() and not path.is_file():
@@ -404,7 +418,8 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             families: t.VariadicTuple[Literal["u", "p"]] = ("u", "p")
             for family in families:
                 rendered = u.Infra.render_utility_facade(
-                    layout.package_dir, family=family,
+                    layout.package_dir,
+                    family=family,
                 )
                 if rendered is None:
                     continue
@@ -504,7 +519,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(merged)
                 if merged.value != current:
                     merged_plan = cls.file_plan(
-                        root, relative.as_posix(), merged.value, mode=governed.mode,
+                        root,
+                        relative.as_posix(),
+                        merged.value,
+                        mode=governed.mode,
                     )
                     if merged_plan.failure:
                         return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
@@ -531,7 +549,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 )
                 if normalized == current:
                     current_plan = cls.file_plan(
-                        root, relative.as_posix(), current, mode=governed.mode,
+                        root,
+                        relative.as_posix(),
+                        current,
+                        mode=governed.mode,
                     )
                     if current_plan.failure:
                         return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
@@ -562,7 +583,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     )
                     continue
                 merged_plan = cls.file_plan(
-                    root, relative.as_posix(), normalized, mode=governed.mode,
+                    root,
+                    relative.as_posix(),
+                    normalized,
+                    mode=governed.mode,
                 )
                 if merged_plan.failure:
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
@@ -575,7 +599,10 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 )
                 continue
             current_plan = cls.file_plan(
-                root, relative.as_posix(), current, mode=governed.mode,
+                root,
+                relative.as_posix(),
+                current,
+                mode=governed.mode,
             )
             if current_plan.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(

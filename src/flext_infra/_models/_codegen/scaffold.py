@@ -32,7 +32,8 @@ class FlextInfraModelsCodegenScaffoldModels:
         ]
         total: Annotated[t.NonNegativeInt, m.Field(description="Total violation count")]
         fixable: Annotated[
-            t.NonNegativeInt, m.Field(description="Count of auto-fixable violations"),
+            t.NonNegativeInt,
+            m.Field(description="Count of auto-fixable violations"),
         ]
 
     class ScaffoldResult(mm.ProjectNameMixin, m.ArbitraryTypesModel):
@@ -43,17 +44,20 @@ class FlextInfraModelsCodegenScaffoldModels:
         """
 
         files_created: t.StrSequence = m.Field(
-            default_factory=tuple, description="Newly created file paths",
+            default_factory=tuple,
+            description="Newly created file paths",
         )
         files_skipped: t.StrSequence = m.Field(
-            default_factory=tuple, description="Skipped (already existing) file paths",
+            default_factory=tuple,
+            description="Skipped (already existing) file paths",
         )
 
     class ScaffoldDirRequest(m.ArbitraryTypesModel):
         """Directory-level scaffold request and accumulation state."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            arbitrary_types_allowed=True, revalidate_instances="never",
+            arbitrary_types_allowed=True,
+            revalidate_instances="never",
         )
 
         target_dir: Annotated[Path, m.Field(description="Directory to scaffold")]
@@ -76,11 +80,14 @@ class FlextInfraModelsCodegenScaffoldModels:
             m.Field(description="Whether this directory renders test module skeletons"),
         ]
         dry_run: Annotated[
-            bool, m.Field(description="Whether to report creations without writing"),
+            bool,
+            m.Field(description="Whether to report creations without writing"),
         ]
         files_created: Annotated[
-            t.MutableSequenceOf[str], m.Field(description="Created file accumulator"),
+            t.MutableSequenceOf[str],
+            m.Field(description="Created file accumulator"),
         ]
         files_skipped: Annotated[
-            t.MutableSequenceOf[str], m.Field(description="Skipped file accumulator"),
+            t.MutableSequenceOf[str],
+            m.Field(description="Skipped file accumulator"),
         ]

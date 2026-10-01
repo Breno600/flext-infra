@@ -36,7 +36,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
 
     @classmethod
     def _attestation_predicate(
-        cls, request: m.Infra.GateAttestationCreateRequest,
+        cls,
+        request: m.Infra.GateAttestationCreateRequest,
     ) -> p.Result[m.Infra.GateAttestationPredicate]:
         repo_root = Path(request.workspace).expanduser().resolve()
         identity = cls.git_identity(m.Infra.GitRepoRequest(repo_root=repo_root))
@@ -66,7 +67,9 @@ class FlextInfraUtilitiesGitAttestationMixin(
 
     @classmethod
     def _run_gate_evidence(
-        cls, repo_root: Path, gates: t.StrSequence,
+        cls,
+        repo_root: Path,
+        gates: t.StrSequence,
     ) -> p.Result[t.VariadicTuple[m.Infra.GateCommandEvidence]]:
         evidence: list[m.Infra.GateCommandEvidence] = []
         for gate in gates:
@@ -113,7 +116,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
 
     @classmethod
     def git_create_gate_attestation(
-        cls, request: m.Infra.GateAttestationCreateRequest,
+        cls,
+        request: m.Infra.GateAttestationCreateRequest,
     ) -> p.Result[m.Infra.GateAttestationReport]:
         """Create the exact signed tag for a validated HEAD predicate."""
         repo_root = Path(request.workspace).expanduser().resolve()
@@ -140,7 +144,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
 
     @classmethod
     def git_verify_gate_attestation(
-        cls, request: m.Infra.GateAttestationVerifyRequest,
+        cls,
+        request: m.Infra.GateAttestationVerifyRequest,
     ) -> p.Result[m.Infra.GateAttestationReport]:
         """Verify signature, signer, HEAD identity, and exact gate coverage."""
         repo_root = Path(request.workspace).expanduser().resolve()
@@ -171,7 +176,9 @@ class FlextInfraUtilitiesGitAttestationMixin(
             return r[m.Infra.GateAttestationReport].from_failure(predicate_result)
         predicate = predicate_result.value
         checked = cls._attestation_predicate_from_value(
-            repo_root, predicate, commit_sha,
+            repo_root,
+            predicate,
+            commit_sha,
         )
         if checked.failure:
             return r[m.Infra.GateAttestationReport].from_failure(checked)
@@ -191,12 +198,14 @@ class FlextInfraUtilitiesGitAttestationMixin(
             )
         if request.output is not None:
             serialized = u.Cli.json_dumps(
-                predicate.model_dump(mode="json"), sort_keys=True,
+                predicate.model_dump(mode="json"),
+                sort_keys=True,
             )
             if serialized.failure:
                 return r[m.Infra.GateAttestationReport].from_failure(serialized)
             Path(request.output).expanduser().resolve().write_text(
-                serialized.value, encoding="utf-8",
+                serialized.value,
+                encoding="utf-8",
             )
         return r[m.Infra.GateAttestationReport].ok(
             cls._attestation_report(tag, predicate),
@@ -204,7 +213,10 @@ class FlextInfraUtilitiesGitAttestationMixin(
 
     @classmethod
     def _predicate_from_tag(
-        cls, repo_root: Path, tag: str, commit_sha: str,
+        cls,
+        repo_root: Path,
+        tag: str,
+        commit_sha: str,
     ) -> p.Result[m.Infra.GateAttestationPredicate]:
         try:
             tag_ref = next(
@@ -267,7 +279,8 @@ class FlextInfraUtilitiesGitAttestationMixin(
 
     @staticmethod
     def _attestation_report(
-        tag: str, predicate: m.Infra.GateAttestationPredicate,
+        tag: str,
+        predicate: m.Infra.GateAttestationPredicate,
     ) -> m.Infra.GateAttestationReport:
         return m.Infra.GateAttestationReport(
             tag=tag,

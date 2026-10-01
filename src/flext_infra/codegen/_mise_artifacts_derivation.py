@@ -34,7 +34,10 @@ class FlextInfraMiseArtifactsDerivation:
             if relative == c.Infra.MISE_VERSION_PIN_FILENAME:
                 continue
             launcher = cls._validate_launcher(
-                directory / Path(relative).name, relative, mode, release.value,
+                directory / Path(relative).name,
+                relative,
+                mode,
+                release.value,
             )
             if launcher.failure:
                 return launcher
@@ -50,7 +53,10 @@ class FlextInfraMiseArtifactsDerivation:
             if relative == c.Infra.MISE_VERSION_PIN_FILENAME:
                 continue
             launcher = cls._validate_launcher(
-                project_root / relative, relative, mode, release.value,
+                project_root / relative,
+                relative,
+                mode,
+                release.value,
             )
             if launcher.failure:
                 return launcher
@@ -134,7 +140,8 @@ class FlextInfraMiseArtifactsDerivation:
 
     @staticmethod
     def _sidecar_annotation(
-        selector: str, sidecar: Mapping[str, t.JsonValue],
+        selector: str,
+        sidecar: Mapping[str, t.JsonValue],
     ) -> p.Result[tuple[str, str]]:
         """Return one tool's ``(sidecar path, digest)`` from its aube table."""
         relative = sidecar.get("path")
@@ -178,7 +185,11 @@ class FlextInfraMiseArtifactsDerivation:
 
     @classmethod
     def _validate_launcher(
-        cls, path: Path, relative: str, mode: int, release: str,
+        cls,
+        path: Path,
+        relative: str,
+        mode: int,
+        release: str,
     ) -> p.Result[bool]:
         """Require the generator's baked release, no live resolution, and mode."""
         content = cls._read(path)

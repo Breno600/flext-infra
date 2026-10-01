@@ -20,11 +20,13 @@ class FlextInfraModelsGitIdentity:
 
         repo_root: Annotated[Path, m.Field(description="Repository worktree root")]
         primary_root: Annotated[
-            Path, m.Field(description="Canonical primary worktree root"),
+            Path,
+            m.Field(description="Canonical primary worktree root"),
         ]
         head_oid: Annotated[t.NonEmptyStr, m.Field(description="HEAD commit hex SHA")]
         porcelain: Annotated[
-            str, m.Field(description="Raw git status --porcelain output"),
+            str,
+            m.Field(description="Raw git status --porcelain output"),
         ]
         dirty: Annotated[bool, m.Field(description="Whether the worktree is dirty")]
         git_dir: Annotated[Path, m.Field(description="Absolute .git directory")]
@@ -37,11 +39,13 @@ class FlextInfraModelsGitIdentity:
         branch: Annotated[
             t.NonEmptyStr | None,
             m.Field(
-                default=None, description="Active branch name, None if detached HEAD",
+                default=None,
+                description="Active branch name, None if detached HEAD",
             ),
         ]
         origin_remote: Annotated[
-            t.NonEmptyStr | None, m.Field(default=None, description="Origin remote URL"),
+            t.NonEmptyStr | None,
+            m.Field(default=None, description="Origin remote URL"),
         ]
         upstream_remote: Annotated[
             t.NonEmptyStr | None,
@@ -85,10 +89,12 @@ class FlextInfraModelsGitIdentity:
             ),
         ]
         has_submodules: Annotated[
-            bool, m.Field(description="Whether the repository declares any submodules"),
+            bool,
+            m.Field(description="Whether the repository declares any submodules"),
         ] = False
         is_inside_work_tree: Annotated[
-            bool, m.Field(description="Whether the path is inside a Git work tree"),
+            bool,
+            m.Field(description="Whether the path is inside a Git work tree"),
         ] = False
 
 

@@ -36,7 +36,9 @@ class FlextInfraValidateTestImportDag(FlextInfraProjectSelectionServiceBase[bool
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=not violations, violations=violations, summary=summary,
+                passed=not violations,
+                violations=violations,
+                summary=summary,
             ),
         )
 

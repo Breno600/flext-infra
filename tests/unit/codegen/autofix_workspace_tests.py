@@ -25,10 +25,15 @@ class TestsFlextInfraCodegenAutofixWorkspace:
     """Test suite for FlextInfraCodegenFixer workspace-level operations."""
 
     def _project_info(
-        self, project: Path, *, package_name: str = "test_proj",
+        self,
+        project: Path,
+        *,
+        package_name: str = "test_proj",
     ) -> m.Infra.ProjectInfo:
         return u.Tests.create_project_info(
-            project, name=project.name, package_name=package_name,
+            project,
+            name=project.name,
+            package_name=package_name,
         )
 
     @pytest.mark.slow

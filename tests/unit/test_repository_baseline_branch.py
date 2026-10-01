@@ -32,7 +32,8 @@ class TestsFlextInfraRepositoryBaselineBranch:
         )
 
     def test_baseline_follows_the_published_integration_branch(
-        self, infra_git_repo: Path,
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """The derived baseline is the integration branch the repository has."""
         # A repository that publishes ONLY `dev` must resolve to `dev`, proving
@@ -45,7 +46,8 @@ class TestsFlextInfraRepositoryBaselineBranch:
         for reference in seeded.value.split():
             tm.ok(
                 test_u.Cli.run_checked(
-                    ["git", "update-ref", "-d", reference], cwd=infra_git_repo,
+                    ["git", "update-ref", "-d", reference],
+                    cwd=infra_git_repo,
                 ),
             )
         self._seed_remote_branch(infra_git_repo, "dev")
@@ -56,7 +58,8 @@ class TestsFlextInfraRepositoryBaselineBranch:
         tm.that(resolved.value, eq="dev")
 
     def test_baseline_fails_closed_without_any_integration_branch(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A checkout without a published integration branch never guesses."""
         empty = tmp_path / "no-integration-branch"
@@ -83,7 +86,8 @@ class TestsFlextInfraRepositoryBaselineBranch:
         for reference in seeded.value.split():
             tm.ok(
                 test_u.Cli.run_checked(
-                    ["git", "update-ref", "-d", reference], cwd=infra_git_repo,
+                    ["git", "update-ref", "-d", reference],
+                    cwd=infra_git_repo,
                 ),
             )
         # Both are published, so only the declared order can decide between them.
@@ -91,7 +95,8 @@ class TestsFlextInfraRepositoryBaselineBranch:
         self._seed_remote_branch(infra_git_repo, "9.9.9-dev")
 
         declared = u.Infra.repository_baseline_branch(
-            infra_git_repo, preference=("9.9.9-dev", "develop", "dev"),
+            infra_git_repo,
+            preference=("9.9.9-dev", "develop", "dev"),
         )
 
         tm.ok(declared)

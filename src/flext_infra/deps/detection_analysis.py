@@ -74,7 +74,10 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         return mapping
 
     def read_current_typings_from_pyproject(
-        self, project_path: Path, *, include_dev: bool = True,
+        self,
+        project_path: Path,
+        *,
+        include_dev: bool = True,
     ) -> t.StrSequence:
         """Read CUSTOM typing requirements and the canonical development group."""
         pyproject = project_path / c.PYPROJECT_FILENAME
@@ -111,19 +114,22 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         return sorted(names)
 
     def _project_table(
-        self, project_path: Path,
+        self,
+        project_path: Path,
     ) -> p.Result[t.Pair[Path, t.JsonMapping]]:
         """Read one project's pyproject once, as a plain mapping, with its path."""
         pyproject = project_path / c.PYPROJECT_FILENAME
         read_result = self._read_plain(pyproject)
         if read_result.failure:
             return r[t.Pair[Path, t.JsonMapping]].fail_op(
-                f"read {pyproject}", read_result.error,
+                f"read {pyproject}",
+                read_result.error,
             )
         return r[t.Pair[Path, t.JsonMapping]].ok((pyproject, read_result.value))
 
     def governed_profile_dependencies(
-        self, project_path: Path,
+        self,
+        project_path: Path,
     ) -> p.Result[t.StrSequence]:
         """Return the runtime requirement names a declared dependency profile injects.
 
@@ -153,7 +159,9 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         }
         profiles = config.Infra.codegen.scaffold.project.dependency_profiles
         upstreams = u.Infra.dependency_profile_upstreams(
-            profiles, distribution=distribution, runtime_names=runtime_names,
+            profiles,
+            distribution=distribution,
+            runtime_names=runtime_names,
         )
         if len(upstreams) > 1:
             return r[t.StrSequence].fail(
@@ -162,7 +170,9 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
             )
         rows = (
             u.Infra.dependency_profile_rows(
-                profiles, upstream=upstreams[0], distribution=distribution,
+                profiles,
+                upstream=upstreams[0],
+                distribution=distribution,
             )
             if upstreams
             else ()
@@ -179,7 +189,9 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         )
 
     def govern_deptry_issues(
-        self, project_path: Path, issues: t.SequenceOf[t.JsonMapping],
+        self,
+        project_path: Path,
+        issues: t.SequenceOf[t.JsonMapping],
     ) -> p.Result[t.SequenceOf[t.JsonMapping]]:
         """Drop unused-dependency findings for profile-injected requirements.
 
@@ -212,7 +224,8 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         """
         key = c.Infra.MYPY_FOLLOW_UNTYPED_IMPORTS
         governed = config.Infra.tooling.tools.mypy.boolean_settings.get(
-            key, c.Infra.MYPY_FOLLOW_UNTYPED_IMPORTS_DEFAULT,
+            key,
+            c.Infra.MYPY_FOLLOW_UNTYPED_IMPORTS_DEFAULT,
         )
         table = self._project_table(project_path)
         if table.failure:
@@ -230,7 +243,9 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         return r[bool].ok(governed)
 
     def analyze_required_typings(
-        self, project_path: Path, limits_path: Path | None = None,
+        self,
+        project_path: Path,
+        limits_path: Path | None = None,
     ) -> p.Result[m.Infra.TypingsReport]:
         """Analyze project and generate typing stubs requirements report.
 
@@ -281,7 +296,8 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
                 else sorted(
                     set(
                         self.read_current_typings_from_pyproject(
-                            project_path, include_dev=False,
+                            project_path,
+                            include_dev=False,
                         ),
                     )
                     - required_set,
@@ -294,7 +310,8 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         return r[m.Infra.TypingsReport].ok(report)
 
     def load_dependency_limits(
-        self, limits_path: Path | None = None,
+        self,
+        limits_path: Path | None = None,
     ) -> t.MappingKV[str, t.JsonValue]:
         """Load dependency limits configuration from TOML file."""
         path = (
@@ -308,7 +325,9 @@ class FlextInfraDependencyDetectionAnalysis(FlextInfraDependencyDetectionRunners
         return result.value
 
     def module_to_types_package(
-        self, module_name: str, limits: t.MappingKV[str, t.JsonValue],
+        self,
+        module_name: str,
+        limits: t.MappingKV[str, t.JsonValue],
     ) -> str | None:
         """Map a module name to its corresponding types-* package."""
         root = module_name.split(".", 1)[0]

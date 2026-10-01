@@ -24,7 +24,8 @@ class FlextInfraMypyProfiler:
             raise ValueError(msg)
         profile = cProfile.Profile()
         stdout, stderr, status = profile.runcall(
-            api.run, list(u.Infra.mypy_arguments(invocation)),
+            api.run,
+            list(u.Infra.mypy_arguments(invocation)),
         )
         profile.dump_stats(str(destination.resolve()))
         sys.stdout.write(stdout)

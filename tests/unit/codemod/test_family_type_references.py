@@ -17,7 +17,8 @@ class TestsFlextInfraFamilyTypeReferences:
     """Exercise the real Rope graph for generic bases and deferred annotations."""
 
     def test_quoted_types_follow_symbols_without_rewriting_literal_homonyms(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         directory = u.Infra.facade_family_declared_by(c.Infra.MODELS_PY).directory

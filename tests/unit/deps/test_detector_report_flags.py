@@ -17,11 +17,15 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 class TestsFlextInfraDepsDetectorReportFlags:
     @pytest.mark.parametrize("no_fail", [False, True])
     def test_real_dependency_and_environment_issues_respect_no_fail(
-        self, real_detector_project: Path, *, no_fail: bool,
+        self,
+        real_detector_project: Path,
+        *,
+        no_fail: bool,
     ) -> None:
         root = real_detector_project
         (root / "src/detector_fixture/undeclared.py").write_text(
-            "import undeclared_detector_dependency\n", encoding="utf-8",
+            "import undeclared_detector_dependency\n",
+            encoding="utf-8",
         )
         tm.ok(
             u.Cli.run_checked(
@@ -39,7 +43,9 @@ class TestsFlextInfraDepsDetectorReportFlags:
         arguments = ("--no-fail",) if no_fail else ()
         outcome = tm.ok(u.Tests.run_real_detector(root, *arguments))
         tm.that(
-            u.Cli.process_succeeded(outcome.outcome), eq=no_fail, msg=outcome.stderr,
+            u.Cli.process_succeeded(outcome.outcome),
+            eq=no_fail,
+            msg=outcome.stderr,
         )
         report = u.Cli.json_as_mapping(
             tm.ok(
@@ -54,7 +60,8 @@ class TestsFlextInfraDepsDetectorReportFlags:
         )
         tm.that(
             u.Cli.json_pick_int(
-                u.Cli.json_as_mapping(project.get("deptry")), "raw_count",
+                u.Cli.json_as_mapping(project.get("deptry")),
+                "raw_count",
             ),
             gt=0,
         )
@@ -62,7 +69,10 @@ class TestsFlextInfraDepsDetectorReportFlags:
     def test_run_with_json_stdout_flag(self, real_detector_project: Path) -> None:
         outcome = tm.ok(
             u.Tests.run_real_detector(
-                real_detector_project, "--format", "json", "--no-pip-check",
+                real_detector_project,
+                "--format",
+                "json",
+                "--no-pip-check",
             ),
         )
         tm.that(u.Cli.process_succeeded(outcome.outcome), eq=True, msg=outcome.stderr)

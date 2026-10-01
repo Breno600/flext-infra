@@ -36,10 +36,13 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
         if self.apply_changes:
             return self._execute_apply(self.repository_root, rules)
         ast_report = FlextInfraModGateEngine.scan(
-            self.repository_root, fix=False,
+            self.repository_root,
+            fix=False,
         ).unwrap()
         text_report = FlextInfraModTextGateEngine.scan(
-            self.repository_root, fix=False, validate_receipts=True,
+            self.repository_root,
+            fix=False,
+            validate_receipts=True,
         ).unwrap()
         for entry in ast_report.entries:
             cli.display_text(
@@ -73,7 +76,9 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
 
     @classmethod
     def _execute_apply(
-        cls, root: Path, rules: t.SequenceOf[Path],
+        cls,
+        root: Path,
+        rules: t.SequenceOf[Path],
     ) -> p.Result[t.Cli.ResultValue]:
         """Drive both mechanical cascades to a fixed point, retaining failures."""
         cli.display_text("ast: validate ast-grep rule fixtures")
@@ -105,13 +110,17 @@ class FlextInfraCodemodAstScan(FlextInfraServiceBase[t.Cli.ResultValue]):
             FlextInfraModGateEngine.scan(root, fix=True).unwrap()
             current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
         text = FlextInfraModTextGateEngine.scan(
-            root, fix=False, validate_receipts=True,
+            root,
+            fix=False,
+            validate_receipts=True,
         ).unwrap()
         while text.actionable:
             cli.display_text("ast: apply sed-by-list cascade")
             FlextInfraModTextGateEngine.scan(root, fix=True).unwrap()
             text = FlextInfraModTextGateEngine.scan(
-                root, fix=False, validate_receipts=True,
+                root,
+                fix=False,
+                validate_receipts=True,
             ).unwrap()
         remaining_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
         if remaining_ast.actionable or text.findings:

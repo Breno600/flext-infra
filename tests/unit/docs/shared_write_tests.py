@@ -28,7 +28,12 @@ class TestsFlextInfraDocsSharedWrite:
     def test_json_write_accepts_pydantic_model(self, tmp_path: Path) -> None:
         json_file = tmp_path / "report.json"
         report = m.Infra.DocsPhaseReport(
-            phase="audit", scope="root", items=[], checks=[], strict=False, passed=True,
+            phase="audit",
+            scope="root",
+            items=[],
+            checks=[],
+            strict=False,
+            passed=True,
         )
 
         result = u.Cli.json_write(json_file, report)

@@ -123,7 +123,8 @@ class FlextInfraUtilitiesDiscovery(
         project_root_value = cls._discover_project_root_from_path(file_path)
         project_root = Path(project_root_value) if project_root_value else None
         normalized_parts = cls._normalized_python_parts(
-            resolved, cls._relative_path_parts(resolved, project_root),
+            resolved,
+            cls._relative_path_parts(resolved, project_root),
         )
         package_name = cls._package_name_from_wrapper_parts(normalized_parts)
         if package_name:
@@ -206,7 +207,10 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def discover_python_targets(
-        cls, project_dir: Path, *, workspace_excluded_top_dirs: frozenset[str],
+        cls,
+        project_dir: Path,
+        *,
+        workspace_excluded_top_dirs: frozenset[str],
     ) -> t.StrSequence:
         """Return every first-party Python target owned by one project root.
 
@@ -224,14 +228,16 @@ class FlextInfraUtilitiesDiscovery(
         ]
         return [
             *cls.discover_python_dirs(
-                project_dir, workspace_excluded_top_dirs=workspace_excluded_top_dirs,
+                project_dir,
+                workspace_excluded_top_dirs=workspace_excluded_top_dirs,
             ),
             *root_modules,
         ]
 
     @staticmethod
     def _walk_python_files(
-        directory: Path, skip_dirs: frozenset[str],
+        directory: Path,
+        skip_dirs: frozenset[str],
     ) -> Iterator[Path]:
         """Yield Python files under ``directory``, pruning skipped directories.
 
@@ -288,7 +294,8 @@ class FlextInfraUtilitiesDiscovery(
         too, and each is analyzed under its own local configuration.
         """
         discovered = cls.discover_python_dirs(
-            project_dir, workspace_excluded_top_dirs=workspace_excluded_top_dirs,
+            project_dir,
+            workspace_excluded_top_dirs=workspace_excluded_top_dirs,
         )
         return (
             *declared,

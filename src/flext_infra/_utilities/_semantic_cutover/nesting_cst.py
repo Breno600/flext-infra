@@ -153,7 +153,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
 
     @staticmethod
     def _rewritten_exports(
-        node: cst.BaseStatement, owner_name: str,
+        node: cst.BaseStatement,
+        owner_name: str,
     ) -> cst.BaseStatement:
         """Rewrite the export list to the owner, keeping the node's own shape.
 
@@ -167,7 +168,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
 
         rewritten = cst.parse_statement(f'__all__ = ["{owner_name}"]\n')
         if not isinstance(node, cst.SimpleStatementLine) or not isinstance(
-            rewritten, cst.SimpleStatementLine,
+            rewritten,
+            cst.SimpleStatementLine,
         ):
             return rewritten
         source = rewritten.body[0]
@@ -198,7 +200,8 @@ class FlextInfraUtilitiesSemanticCutoverNestingCst(
             and len(head.body) == 1
             and isinstance(head.body[0], cst.Expr)
             and isinstance(
-                head.body[0].value, cst.SimpleString | cst.ConcatenatedString,
+                head.body[0].value,
+                cst.SimpleString | cst.ConcatenatedString,
             )
         ):
             return ((head,), tuple(body[1:]))

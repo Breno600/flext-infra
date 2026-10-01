@@ -26,11 +26,14 @@ class TestsFlextInfraLazyInitFamilyAggregator:
     """A multi-name aggregator module never wins family/alias ownership."""
 
     def test_aggregator_sidecar_never_shadows_real_constants_owner(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """The real ``constants.py`` owner survives a re-export aggregator."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-test-agg", package_name="flext_test_agg",
+            tmp_path,
+            project_name="flext-test-agg",
+            package_name="flext_test_agg",
         )
         package_root.joinpath("base.py").write_text(
             "from __future__ import annotations\n\n"

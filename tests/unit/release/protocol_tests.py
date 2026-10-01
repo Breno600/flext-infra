@@ -58,7 +58,8 @@ class TestsFlextInfraReleaseProtocol:
     def _release_lane_workspace(self, tmp_path: Path) -> Path:
         """Return a pre-release workspace that can push to a local bare origin."""
         workspace = u.Tests.create_release_workspace(
-            tmp_path, version=c.Tests.RELEASE_VERSION_PRERELEASE,
+            tmp_path,
+            version=c.Tests.RELEASE_VERSION_PRERELEASE,
         )
         local_origin = tmp_path / "remote"
         bare_origin = u.Tests.configure_local_origin(workspace, local_origin)
@@ -99,7 +100,8 @@ class TestsFlextInfraReleaseProtocol:
         """Record one empty commit whose subject a merge left on the lane."""
         tm.ok(
             cli.run_checked(
-                [c.Infra.GIT, "commit", "--allow-empty", "-m", subject], cwd=workspace,
+                [c.Infra.GIT, "commit", "--allow-empty", "-m", subject],
+                cwd=workspace,
             ),
         )
 
@@ -125,16 +127,19 @@ class TestsFlextInfraReleaseProtocol:
     def _apply_release_version(self, workspace: Path, integration: str) -> None:
         """Stamp the release version once and return to the integration branch."""
         tm.that(
-            u.Tests.run_release_main(workspace, "--phase", "version", "--apply"), eq=0,
+            u.Tests.run_release_main(workspace, "--phase", "version", "--apply"),
+            eq=0,
         )
         tm.ok(cli.run_checked([c.Infra.GIT, "switch", integration], cwd=workspace))
 
     def test_first_release_finalizes_the_declared_prerelease(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Without any tag the declared pre-release ships as its base version."""
         workspace = u.Tests.create_release_workspace(
-            tmp_path, version=c.Tests.RELEASE_VERSION_PRERELEASE,
+            tmp_path,
+            version=c.Tests.RELEASE_VERSION_PRERELEASE,
         )
 
         result = u.Tests.run_release_main(workspace, "--phase", "plan")
@@ -146,7 +151,8 @@ class TestsFlextInfraReleaseProtocol:
         tm.that(plan.releasable, eq=True)
 
     def test_first_release_ships_a_final_version_unchanged(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A final version without a tag is released as declared, never bumped."""
         workspace = u.Tests.create_release_workspace(tmp_path)
@@ -160,11 +166,13 @@ class TestsFlextInfraReleaseProtocol:
         tm.that(plan.releasable, eq=True)
 
     def test_declared_prerelease_finalizes_without_consulting_titles(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A pre-release was decided when it was cut; history since then is not parsed."""
         workspace = u.Tests.create_release_workspace(
-            tmp_path, version=c.Tests.RELEASE_VERSION_PRERELEASE,
+            tmp_path,
+            version=c.Tests.RELEASE_VERSION_PRERELEASE,
         )
         u.Tests.checkout_integration(workspace)
         self._tag(workspace, "v0.1.0rc0")
@@ -179,13 +187,15 @@ class TestsFlextInfraReleaseProtocol:
         tm.that(plan.releasable, eq=True)
 
     def test_plan_ignores_higher_tag_outside_integration_history(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A release on an unrelated branch cannot select this lane's baseline."""
         workspace = self._released_workspace(tmp_path)
         tm.ok(
             cli.run_checked(
-                [c.Infra.GIT, "switch", "-c", "unrelated-release"], cwd=workspace,
+                [c.Infra.GIT, "switch", "-c", "unrelated-release"],
+                cwd=workspace,
             ),
         )
         self._commit_merge_subject(workspace, "chore(release): v9.0.0")
@@ -200,7 +210,8 @@ class TestsFlextInfraReleaseProtocol:
         tm.that(plan.releasable, eq=True)
 
     def test_final_version_is_ahead_of_its_own_prerelease_tag(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A final version whose last tag is one of its pre-releases ships as declared.
 
@@ -221,7 +232,8 @@ class TestsFlextInfraReleaseProtocol:
         tm.that(plan.releasable, eq=True)
 
     def test_declared_version_ahead_of_the_last_tag_is_the_next_release(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A version declared beyond the last tag was decided before the protocol.
 
@@ -233,7 +245,8 @@ class TestsFlextInfraReleaseProtocol:
         tm.ok(u.Infra.replace_project_version(workspace, "0.2.0"))
         tm.ok(
             cli.run_checked(
-                [c.Infra.GIT, "commit", "-am", "chore: baseline 0.2.0"], cwd=workspace,
+                [c.Infra.GIT, "commit", "-am", "chore: baseline 0.2.0"],
+                cwd=workspace,
             ),
         )
         # The fixture's origin is the repository itself: refresh the remote
@@ -291,10 +304,18 @@ class TestsFlextInfraReleaseProtocol:
         workspace = u.Tests.create_release_workspace(tmp_path)
 
         accepted = u.Tests.run_release_main(
-            workspace, "--phase", "plan", "--pr-title", "feat(core): accepted",
+            workspace,
+            "--phase",
+            "plan",
+            "--pr-title",
+            "feat(core): accepted",
         )
         rejected = u.Tests.run_release_main(
-            workspace, "--phase", "plan", "--pr-title", "Accepted without a type",
+            workspace,
+            "--phase",
+            "plan",
+            "--pr-title",
+            "Accepted without a type",
         )
 
         tm.that(accepted, eq=0)
@@ -306,7 +327,8 @@ class TestsFlextInfraReleaseProtocol:
         tm.ok(u.Infra.replace_project_version(workspace, "0.1.1"))
         tm.ok(
             cli.run_checked(
-                [c.Infra.GIT, "commit", "-am", "chore: bump"], cwd=workspace,
+                [c.Infra.GIT, "commit", "-am", "chore: bump"],
+                cwd=workspace,
             ),
         )
 
@@ -324,7 +346,8 @@ class TestsFlextInfraReleaseProtocol:
         tm.that(plan.releasable, eq=False)
 
     def test_merged_release_commit_awaits_its_tag_from_any_head(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """GitHub's merged form of the release commit, below HEAD, ends the plan.
 
@@ -340,7 +363,8 @@ class TestsFlextInfraReleaseProtocol:
         )
         tm.ok(
             cli.run_checked(
-                [c.Infra.GIT, "commit", "-am", merged_subject], cwd=workspace,
+                [c.Infra.GIT, "commit", "-am", merged_subject],
+                cwd=workspace,
             ),
         )
         self._commit_merge_subject(workspace, "Merge abc123 into def456")
@@ -359,7 +383,10 @@ class TestsFlextInfraReleaseProtocol:
             tm.ok(u.Infra.read_project_metadata_result(workspace))
 
             result = u.Tests.run_release_main(
-                workspace, "--phase", "version", "--apply",
+                workspace,
+                "--phase",
+                "version",
+                "--apply",
             )
 
             tm.that(result, eq=0)
@@ -401,7 +428,8 @@ class TestsFlextInfraReleaseProtocol:
             tm.that(
                 tm.ok(
                     cli.capture(
-                        [c.Infra.GIT, "branch", "--show-current"], cwd=workspace,
+                        [c.Infra.GIT, "branch", "--show-current"],
+                        cwd=workspace,
                     ),
                 ).strip(),
                 eq=c.Infra.RELEASE_BRANCH,
@@ -421,7 +449,8 @@ class TestsFlextInfraReleaseProtocol:
             tm.that(recorded, has="--title chore(release): v0.1.0")
 
     def test_rerun_continues_the_lane_without_a_second_commit(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A retry from the integration branch is idempotent on the open lane."""
         with self._lane_with_shim(tmp_path) as (workspace, _):
@@ -429,7 +458,10 @@ class TestsFlextInfraReleaseProtocol:
             self._apply_release_version(workspace, integration)
 
             result = u.Tests.run_release_main(
-                workspace, "--phase", "version", "--apply",
+                workspace,
+                "--phase",
+                "version",
+                "--apply",
             )
 
             tm.that(result, eq=0)
@@ -467,17 +499,20 @@ class TestsFlextInfraReleaseProtocol:
         (workspace / "stray.txt").write_text("wip\n", encoding="utf-8")
 
         tm.that(
-            u.Tests.run_release_main(workspace, "--phase", "version", "--apply"), ne=0,
+            u.Tests.run_release_main(workspace, "--phase", "version", "--apply"),
+            ne=0,
         )
 
     def test_non_integration_branch_is_refused(self, tmp_path: Path) -> None:
         """The release pull request is cut from the integration branch only."""
         workspace = u.Tests.create_release_workspace(
-            tmp_path, version=c.Tests.RELEASE_VERSION_PRERELEASE,
+            tmp_path,
+            version=c.Tests.RELEASE_VERSION_PRERELEASE,
         )
 
         tm.that(
-            u.Tests.run_release_main(workspace, "--phase", "version", "--apply"), ne=0,
+            u.Tests.run_release_main(workspace, "--phase", "version", "--apply"),
+            ne=0,
         )
 
     def test_nothing_to_release_is_a_clean_no_op(self, tmp_path: Path) -> None:
@@ -486,7 +521,8 @@ class TestsFlextInfraReleaseProtocol:
         u.Tests.merge_pull_request(workspace, "docs: nothing to ship")
 
         tm.that(
-            u.Tests.run_release_main(workspace, "--phase", "version", "--apply"), eq=0,
+            u.Tests.run_release_main(workspace, "--phase", "version", "--apply"),
+            eq=0,
         )
         tm.that(
             tm.ok(

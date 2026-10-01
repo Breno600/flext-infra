@@ -54,7 +54,10 @@ class FlextInfraUtilitiesRopeStructure:
                 ),
             )
             FlextInfraUtilitiesRopeStructure._push_encloser(
-                enclosers=enclosers, category=category, indent=indent, text=text,
+                enclosers=enclosers,
+                category=category,
+                indent=indent,
+                text=text,
             )
             # All detectors consume this single guard fact.
             if (

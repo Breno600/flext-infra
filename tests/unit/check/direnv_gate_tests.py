@@ -83,14 +83,17 @@ class TestsFlextInfraDirenvGate:
             """Runtime-derived targets cannot be validated statically."""
             violations = (
                 FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
-                    'watch_file "$some_var/relstate.json"\n', root=tmp_path,
+                    'watch_file "$some_var/relstate.json"\n',
+                    root=tmp_path,
                 )
             )
             tm.that(violations, eq=())
 
         @pytest.mark.parametrize("prefix", ["${HOME}", "$HOME", "~"])
         def test_home_targets_validated_only_when_resolving(
-            self, tmp_path: Path, prefix: str,
+            self,
+            tmp_path: Path,
+            prefix: str,
         ) -> None:
             """resolve_home=False skips ${HOME} targets (generation-time lint)."""
             violations = FlextInfraWorkspaceEnvironmentContracts.envrc_contract_violations(
@@ -102,7 +105,9 @@ class TestsFlextInfraDirenvGate:
 
         @pytest.mark.parametrize("prefix", ["${HOME}", "$HOME", "~"])
         def test_home_targets_resolve_against_the_real_home(
-            self, tmp_path: Path, prefix: str,
+            self,
+            tmp_path: Path,
+            prefix: str,
         ) -> None:
             """resolve_home=True substitutes the real home for the prefix.
 
@@ -118,7 +123,8 @@ class TestsFlextInfraDirenvGate:
             )
             tm.that(len(violations), eq=1)
             tm.that(
-                ".flext-infra-contract-absent-marker" in violations[0].message, eq=True,
+                ".flext-infra-contract-absent-marker" in violations[0].message,
+                eq=True,
             )
             tm.that("/./" not in violations[0].message, eq=True)
 
@@ -191,13 +197,16 @@ class TestsFlextInfraDirenvGate:
         def test_gate_fails_on_local_residue(self, tmp_path: Path) -> None:
             """The direnv gate fails a workspace whose overrides carry residue."""
             _ = (tmp_path / c.Infra.ENVRC_FILENAME).write_text(
-                "export OK=1\n", encoding="utf-8",
+                "export OK=1\n",
+                encoding="utf-8",
             )
             _ = (tmp_path / c.Infra.ENVRC_LOCAL_RELPATH).write_text(
-                self.stale_section, encoding="utf-8",
+                self.stale_section,
+                encoding="utf-8",
             )
             execution = FlextInfraDirenvGate(tmp_path).check(
-                tmp_path, u.Tests.gate_context(tmp_path),
+                tmp_path,
+                u.Tests.gate_context(tmp_path),
             )
             tm.that(execution.result.passed, eq=False)
             tm.that(
@@ -208,10 +217,12 @@ class TestsFlextInfraDirenvGate:
         def test_gate_passes_clean_local_overrides(self, tmp_path: Path) -> None:
             """Clean local overrides keep the gate green."""
             _ = (tmp_path / c.Infra.ENVRC_FILENAME).write_text(
-                "export OK=1\n", encoding="utf-8",
+                "export OK=1\n",
+                encoding="utf-8",
             )
             _ = (tmp_path / c.Infra.ENVRC_LOCAL_RELPATH).write_text(
-                "export CUSTOM_OVERRIDE=1\n", encoding="utf-8",
+                "export CUSTOM_OVERRIDE=1\n",
+                encoding="utf-8",
             )
             execution = TestsFlextInfraDirenvGate.allowed_check(tmp_path)
             tm.that(execution.result.passed, eq=True)
@@ -222,30 +233,36 @@ class TestsFlextInfraDirenvGate:
         def test_workspace_without_envrc_cannot_pass(self, tmp_path: Path) -> None:
             """A selected gate with no inputs cannot establish acceptance."""
             execution = FlextInfraDirenvGate(tmp_path).check(
-                tmp_path, u.Tests.gate_context(tmp_path),
+                tmp_path,
+                u.Tests.gate_context(tmp_path),
             )
             tm.that(execution.result.passed, eq=False)
             tm.that(
-                execution.result.errors, eq=["direnv: no check targets were collected"],
+                execution.result.errors,
+                eq=["direnv: no check targets were collected"],
             )
 
         def test_contract_violation_fails_before_smoke(self, tmp_path: Path) -> None:
             """The static lint fails the gate before the unapproved smoke runs."""
             _ = (tmp_path / c.Infra.ENVRC_FILENAME).write_text(
-                'checkout_root="${DIRENV_DIR#-}"\n', encoding="utf-8",
+                'checkout_root="${DIRENV_DIR#-}"\n',
+                encoding="utf-8",
             )
             execution = FlextInfraDirenvGate(tmp_path).check(
-                tmp_path, u.Tests.gate_context(tmp_path),
+                tmp_path,
+                u.Tests.gate_context(tmp_path),
             )
             tm.that(execution.result.passed, eq=False)
             tm.that(
-                TestsFlextInfraDirenvGate.issue_codes(execution), eq=["DIRENV_CONTRACT"],
+                TestsFlextInfraDirenvGate.issue_codes(execution),
+                eq=["DIRENV_CONTRACT"],
             )
 
         def test_activation_smoke_passes(self, tmp_path: Path) -> None:
             """An approved clean envrc passes through a real direnv exec."""
             _ = (tmp_path / c.Infra.ENVRC_FILENAME).write_text(
-                "export OK=1\n", encoding="utf-8",
+                "export OK=1\n",
+                encoding="utf-8",
             )
             execution = TestsFlextInfraDirenvGate.allowed_check(tmp_path)
             tm.that(execution.result.passed, eq=True)
@@ -254,13 +271,16 @@ class TestsFlextInfraDirenvGate:
         def test_activation_smoke_fails_loud(self, tmp_path: Path) -> None:
             """An unapproved envrc fails real activation with direnv's own error."""
             _ = (tmp_path / c.Infra.ENVRC_FILENAME).write_text(
-                "export OK=1\n", encoding="utf-8",
+                "export OK=1\n",
+                encoding="utf-8",
             )
             execution = FlextInfraDirenvGate(tmp_path).check(
-                tmp_path, u.Tests.gate_context(tmp_path),
+                tmp_path,
+                u.Tests.gate_context(tmp_path),
             )
             tm.that(execution.result.passed, eq=False)
             tm.that(
-                TestsFlextInfraDirenvGate.issue_codes(execution), eq=["DIRENV_ACTIVATE"],
+                TestsFlextInfraDirenvGate.issue_codes(execution),
+                eq=["DIRENV_ACTIVATE"],
             )
             tm.that(execution.issues[0].message, ne="")

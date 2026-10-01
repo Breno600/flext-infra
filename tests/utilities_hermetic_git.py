@@ -52,7 +52,8 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
         ).url
         head = tm.ok(
             u.Cli.capture(
-                [c.Infra.GIT, "rev-parse", c.Infra.GIT_HEAD], cwd=project_root,
+                [c.Infra.GIT, "rev-parse", c.Infra.GIT_HEAD],
+                cwd=project_root,
             ),
         ).strip()
         sources[infra] = (infra, fixture.provider_branch(), head)
@@ -132,7 +133,8 @@ class TestsFlextInfraUtilitiesHermeticGitMixin:
             )
             tm.ok(
                 u.Cli.run_checked(
-                    [c.Infra.GIT, "update-ref", f"refs/heads/{rev}", sha], cwd=mirror,
+                    [c.Infra.GIT, "update-ref", f"refs/heads/{rev}", sha],
+                    cwd=mirror,
                 ),
             )
             mirrored.append(f"{url}@{rev}#{sha}")

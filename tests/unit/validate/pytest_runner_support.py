@@ -111,7 +111,9 @@ def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
 
 
 def profile_collection(
-    output: Path, receipt: Path, arguments: t.StrTuple,
+    output: Path,
+    receipt: Path,
+    arguments: t.StrTuple,
 ) -> p.Cli.CommandOutput:
     """Use the real child transport invoked by the canonical profiling runner."""
     return tm.ok(

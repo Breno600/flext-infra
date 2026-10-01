@@ -150,7 +150,9 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
 
     @classmethod
     def _snapshot_policy(
-        cls, root: Path, policy_dir: Path,
+        cls,
+        root: Path,
+        policy_dir: Path,
     ) -> p.Result[m.Infra.BuildPolicy]:
         """Capture the immutable policy pair once, before the first project build.
 
@@ -175,7 +177,8 @@ class FlextInfraReleaseBuildMixin(FlextInfraReleaseProjectMixin):
                 destination.write_bytes(content)
         except OSError as exc:
             return r[m.Infra.BuildPolicy].fail_op(
-                f"snapshot release policy into {policy_dir}", exc,
+                f"snapshot release policy into {policy_dir}",
+                exc,
             )
         return r[m.Infra.BuildPolicy].ok(
             m.Infra.BuildPolicy(

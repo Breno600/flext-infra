@@ -28,7 +28,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
     scanner_binary: ClassVar[str] = c.Infra.QLTY_BINARY
 
     def _scanned_issues(
-        self, scan: p.Cli.CommandOutput, project_dir: Path,
+        self,
+        scan: p.Cli.CommandOutput,
+        project_dir: Path,
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Filter one scan to the blocking issues owned by ``project``.
 
@@ -58,7 +60,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext,
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """One qlty scan of ``project_dir``'s check directories."""
         _ = ctx
@@ -74,7 +78,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
         )
 
     def _owned_issues(
-        self, scan: p.Cli.CommandOutput, project_dir: Path,
+        self,
+        scan: p.Cli.CommandOutput,
+        project_dir: Path,
     ) -> t.VariadicTuple[m.Infra.Issue]:
         """Every smell this gate owns: the qlty scan and the census families.
 
@@ -94,7 +100,8 @@ class FlextInfraSmellsGate(FlextInfraGate):
         is a blocking issue, never a clean pass.
         """
         validator = FlextInfraRuntimeCensusValidator.for_project(
-            project_dir, census_gate=self.gate_id,
+            project_dir,
+            census_gate=self.gate_id,
         )
         if validator.failure:
             messages: t.StrSequence = (
@@ -121,7 +128,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @override
     def _build_check_command(
-        self, project_dir: Path, ctx: m.Infra.GateContext, check_dirs: t.StrSequence,
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
+        check_dirs: t.StrSequence,
     ) -> t.StrSequence:
         """The project's scan command (check() names its check dirs itself)."""
         _ = ctx, check_dirs
@@ -132,7 +142,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @override
     def _parse_check_output(
-        self, result: p.Cli.CommandOutput, project_dir: Path, ctx: m.Infra.GateContext,
+        self,
+        result: p.Cli.CommandOutput,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
         """Parse SARIF stdout into per-project issues (check_files path)."""
         _ = ctx
@@ -208,7 +221,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
         )
 
     def _drop_generated_projections(
-        self, issues: t.VariadicTuple[m.Infra.Issue], project_dir: Path,
+        self,
+        issues: t.VariadicTuple[m.Infra.Issue],
+        project_dir: Path,
     ) -> t.VariadicTuple[m.Infra.Issue]:
         """Drop findings in generated projections; their owner is the generator.
 
@@ -230,7 +245,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @classmethod
     def _issues_from_sarif(
-        cls, sarif_json: str, prefix: str,
+        cls,
+        sarif_json: str,
+        prefix: str,
     ) -> p.Result[t.VariadicTuple[m.Infra.Issue]]:
         """Extract one Issue per smell finding inside ``project_name``.
 
@@ -258,10 +275,12 @@ class FlextInfraSmellsGate(FlextInfraGate):
         rule_id = u.Cli.json_pick_str(result, "ruleId")
         code = rule_id.removeprefix(c.Infra.SMELLS_RULE_PREFIX)
         physical = u.Cli.json_deep_mapping(
-            cls._first_location(result), "physicalLocation",
+            cls._first_location(result),
+            "physicalLocation",
         )
         sarif_text = u.Cli.json_pick_str(
-            u.Cli.json_deep_mapping(result, "message"), "text",
+            u.Cli.json_deep_mapping(result, "message"),
+            "text",
         )
         return m.Infra.Issue(
             file=cls._result_uri(result).removeprefix(prefix),
@@ -277,7 +296,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
         """Workspace-relative URI of the finding's first location."""
         uri: str = u.Cli.json_pick_str(
             u.Cli.json_deep_mapping(
-                cls._first_location(result), "physicalLocation", "artifactLocation",
+                cls._first_location(result),
+                "physicalLocation",
+                "artifactLocation",
             ),
             "uri",
         )

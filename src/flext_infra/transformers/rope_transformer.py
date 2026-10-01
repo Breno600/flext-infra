@@ -30,7 +30,9 @@ class FlextInfraRopeTransformer:
         ...
 
     def transform(
-        self, rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource,
+        self,
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> t.Infra.TransformResult:
         """Read → apply_to_source → write if changed. Override for custom logic."""
         _ = rope_project

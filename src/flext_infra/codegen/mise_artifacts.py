@@ -102,7 +102,9 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         return cls._validate_selector_integrity(tools_result.value)
 
     def validate_artifacts(
-        self, project_root: Path, runtime_root: Path,
+        self,
+        project_root: Path,
+        runtime_root: Path,
     ) -> p.Result[bool]:
         """Validate one project's declaration, pin, and launchers offline.
 
@@ -125,7 +127,8 @@ class FlextInfraCodegenMiseArtifacts(FlextInfraCodegenExecutionBase[bool]):
         if runtime_root.failure:
             return r[bool].from_failure(runtime_root)
         return FlextInfraMiseArtifactsDerivation.validate(
-            self.repository_root, runtime_root.value,
+            self.repository_root,
+            runtime_root.value,
         )
 
 

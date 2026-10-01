@@ -92,7 +92,8 @@ class FlextInfraUtilitiesDocsAudit(
         if not scope.package_name:
             return set()
         contract = FlextInfraUtilitiesDocsApi.public_contract(
-            scope.path, scope.package_name,
+            scope.path,
+            scope.package_name,
         )
         names: set[str] = set()
         for key in ("exports", "public_symbols"):
@@ -111,7 +112,8 @@ class FlextInfraUtilitiesDocsAudit(
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             rel = md_file.relative_to(scope.path).as_posix()
             content = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE,
+                encoding=c.Cli.ENCODING_DEFAULT,
+                errors=c.Infra.IGNORE,
             )
             in_fenced_code = False
             for number, line in enumerate(content.splitlines(), start=1):
@@ -147,12 +149,16 @@ class FlextInfraUtilitiesDocsAudit(
                     if FlextInfraUtilitiesDocs.docs_is_external(target):
                         issues.extend(
                             FlextInfraUtilitiesDocsGithubLinks.docs_github_link_issues(
-                                file=rel, line_number=number, raw=raw, target=target,
+                                file=rel,
+                                line_number=number,
+                                raw=raw,
+                                target=target,
                             ),
                         )
                         continue
                     if FlextInfraUtilitiesDocsAudit.docs_should_skip_target(
-                        raw, target,
+                        raw,
+                        target,
                     ):
                         continue
                     if not (md_file.parent / target).resolve().exists():
@@ -188,7 +194,8 @@ class FlextInfraUtilitiesDocsAudit(
                 FlextInfraUtilitiesDocsAudit.docs_generated_api_reference_path(rel)
             )
             text = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE,
+                encoding=c.Cli.ENCODING_DEFAULT,
+                errors=c.Infra.IGNORE,
             )
             for token in tokens:
                 if token not in text:

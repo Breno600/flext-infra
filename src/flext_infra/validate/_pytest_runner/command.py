@@ -157,7 +157,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return f"not ({' or '.join(excluded)})" if excluded else ""
 
     def _plugin_policy_args(
-        self, *, execution_mode: c.Infra.PytestExecutionMode,
+        self,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
     ) -> t.VariadicTuple[str]:
         """Apply the same configured plugin contract to collection and execution."""
         pytest = config.Infra.tooling.tools.pytest
@@ -298,7 +300,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         )
 
     def build_coverage_command(
-        self, report_dir: Path, *, serialize: bool = False,
+        self,
+        report_dir: Path,
+        *,
+        serialize: bool = False,
     ) -> t.VariadicTuple[str]:
         """Build the whole-suite coverage argv (never the testmon plugin).
 

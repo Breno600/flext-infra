@@ -55,7 +55,8 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
 
     @classmethod
     def git_declared_submodule_paths(
-        cls, repository_root: Path,
+        cls,
+        repository_root: Path,
     ) -> p.Result[t.SequenceOf[Path]]:
         """Read every valid path declared by the repository's ``.gitmodules``.
 
@@ -80,7 +81,8 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
                 )
         except (ConfigParserError, OSError, TypeError, ValueError) as exc:
             return r[t.SequenceOf[Path]].fail(
-                f"failed to read Git submodule declarations: {exc}", exception=exc,
+                f"failed to read Git submodule declarations: {exc}",
+                exception=exc,
             )
         paths: t.MutableSequenceOf[Path] = []
         for raw_path in raw_paths:
@@ -98,7 +100,8 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
 
     @classmethod
     def gitmodule_contract(
-        cls, request: m.Infra.GitSubmoduleContractRequest,
+        cls,
+        request: m.Infra.GitSubmoduleContractRequest,
     ) -> p.Result[m.Infra.GitSubmoduleContractReport]:
         """Read the exact declared URL and branch for one submodule path.
 
@@ -110,7 +113,8 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
             url, branch = cls._read_gitmodule_contract(gitmodules, request.member_path)
         except (ConfigParserError, OSError, TypeError, ValueError) as exc:
             return r[m.Infra.GitSubmoduleContractReport].fail(
-                f"failed to read Git submodule paths: {exc}", exception=exc,
+                f"failed to read Git submodule paths: {exc}",
+                exception=exc,
             )
         if not url:
             return r[m.Infra.GitSubmoduleContractReport].fail(
@@ -126,7 +130,8 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
 
     @staticmethod
     def _read_gitmodule_contract(
-        gitmodules: Path, member_path: str,
+        gitmodules: Path,
+        member_path: str,
     ) -> t.Pair[str, str]:
         """Read URL and branch for one submodule from .gitmodules."""
         with GitConfigParser(file_or_files=gitmodules, read_only=True) as config:
@@ -163,7 +168,8 @@ class FlextInfraUtilitiesGitWorktreeDiscoveryMixin(
             return r[t.SequenceOf[Path]].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[t.SequenceOf[Path]].fail(
-                f"failed to discover Git submodules: {exc}", exception=exc,
+                f"failed to discover Git submodules: {exc}",
+                exception=exc,
             )
         paths: t.MutableSequenceOf[Path] = []
         for raw_line in status.splitlines():

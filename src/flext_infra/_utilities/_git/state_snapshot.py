@@ -55,12 +55,17 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         ) as stream:
             oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
         return m.Infra.GitWorktreeFileState(
-            path=relative, mode=git_mode, permissions=stat.S_IMODE(mode), oid=oid,
+            path=relative,
+            mode=git_mode,
+            permissions=stat.S_IMODE(mode),
+            oid=oid,
         )
 
     @classmethod
     def _state_snapshot_index(
-        cls, root: Path, paths: t.SequenceOf[Path],
+        cls,
+        root: Path,
+        paths: t.SequenceOf[Path],
     ) -> t.VariadicTuple[m.Infra.GitWorktreeIndexEntry]:
         repo = cls._repo(root)
         pathspecs = cls._state_pathspecs(paths)
@@ -91,7 +96,9 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def _state_head_entries(
-        cls, root: Path, paths: t.SequenceOf[Path],
+        cls,
+        root: Path,
+        paths: t.SequenceOf[Path],
     ) -> t.VariadicTuple[m.Infra.GitWorktreeIndexEntry]:
         rows = (
             cls._repo(root).git.ls_tree("-r", "--full-tree", "-z", "HEAD")
@@ -120,10 +127,19 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
         repo = cls._repo(root)
         pathspecs = cls._state_pathspecs(paths)
         raw_paths = repo.git.ls_files(
-            "--cached", "--others", "--exclude-standard", "-z", "--", *pathspecs,
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "-z",
+            "--",
+            *pathspecs,
         )
         head_paths = repo.git.ls_files(
-            "--cached", "--with-tree=HEAD", "-z", "--", *pathspecs,
+            "--cached",
+            "--with-tree=HEAD",
+            "-z",
+            "--",
+            *pathspecs,
         )
         candidates = sorted(
             {
@@ -178,7 +194,8 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def _state_snapshot(
-        cls, request: m.Infra.GitWorktreeStateRequest,
+        cls,
+        request: m.Infra.GitWorktreeStateRequest,
     ) -> m.Infra.GitWorktreeStateSnapshot:
         root = request.repo_root.resolve()
         repo = cls._repo(root)
@@ -212,7 +229,8 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def git_snapshot_worktree_state(
-        cls, request: m.Infra.GitWorktreeStateRequest,
+        cls,
+        request: m.Infra.GitWorktreeStateRequest,
     ) -> p.Result[m.Infra.GitWorktreeStateSnapshot]:
         """Measure owned index entries and raw files, without writing Git objects."""
         try:
@@ -223,12 +241,15 @@ class FlextInfraUtilitiesGitStateSnapshotMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def git_verify_worktree_state(
-        cls, snapshot: m.Infra.GitWorktreeStateSnapshot, destination_root: Path,
+        cls,
+        snapshot: m.Infra.GitWorktreeStateSnapshot,
+        destination_root: Path,
     ) -> p.Result[bool]:
         """Return false for layer differences, fail on foreign identity or read errors."""
         observed = cls.git_snapshot_worktree_state(
             m.Infra.GitWorktreeStateRequest(
-                repo_root=destination_root, paths=snapshot.paths,
+                repo_root=destination_root,
+                paths=snapshot.paths,
             ),
         )
         if observed.failure:

@@ -60,7 +60,8 @@ class FlextInfraUtilitiesPrivateImportAncestry:
                             reference(base)
                             for base in node.bases
                             if isinstance(
-                                base, ast.Name | ast.Attribute | ast.Subscript,
+                                base,
+                                ast.Name | ast.Attribute | ast.Subscript,
                             )
                         )
                         # Bases see the declaration scope; class bodies do not

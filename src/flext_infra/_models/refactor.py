@@ -17,7 +17,8 @@ from .refactor_namespace_enforcer import FlextInfraModelsNamespaceEnforcer
 
 
 class FlextInfraModelsRefactor(
-    FlextInfraModelsRefactorGrep, FlextInfraModelsNamespaceEnforcer,
+    FlextInfraModelsRefactorGrep,
+    FlextInfraModelsNamespaceEnforcer,
 ):
     """Models for refactor workflows and related tools.
 
@@ -49,13 +50,16 @@ class FlextInfraModelsRefactor(
         file_path: Annotated[Path, m.Field(description="Target file path")]
         success: Annotated[bool, m.Field(description="Whether the operation succeeded")]
         modified: Annotated[
-            bool, m.Field(description="Whether the file was actually modified"),
+            bool,
+            m.Field(description="Whether the file was actually modified"),
         ]
         error: Annotated[
-            str | None, m.Field(description="Error message on failure"),
+            str | None,
+            m.Field(description="Error message on failure"),
         ] = None
         changes: Annotated[
-            t.StrSequence, m.Field(description="Human-readable change descriptions"),
+            t.StrSequence,
+            m.Field(description="Human-readable change descriptions"),
         ] = m.Field(default_factory=tuple)
         refactored_code: Annotated[
             str | None,
@@ -85,10 +89,12 @@ class FlextInfraModelsRefactor(
         """
 
         imported_modules: Annotated[
-            MutableSet[str], m.Field(description="Imported module roots"),
+            MutableSet[str],
+            m.Field(description="Imported module roots"),
         ] = m.Field(default_factory=set)
         imported_symbols: Annotated[
-            MutableSet[str], m.Field(description="Imported symbol names"),
+            MutableSet[str],
+            m.Field(description="Imported symbol names"),
         ] = m.Field(default_factory=set)
 
     class MethodInfo(m.ArbitraryTypesModel):
@@ -99,11 +105,13 @@ class FlextInfraModelsRefactor(
         node: Annotated[
             t.Infra.RopePyObject | None,
             m.Field(
-                description="Node representation from Rope or PyObject", exclude=True,
+                description="Node representation from Rope or PyObject",
+                exclude=True,
             ),
         ]
         decorators: Annotated[
-            t.StrSequence, m.Field(description="Decorator names applied to this method"),
+            t.StrSequence,
+            m.Field(description="Decorator names applied to this method"),
         ] = m.Field(default_factory=tuple)
 
     class ProjectClassification(m.ArbitraryTypesModel):
@@ -144,13 +152,16 @@ class FlextInfraModelsRefactor(
             m.Field(description="String paths of files changed by the run"),
         ] = m.Field(default_factory=list)
         total_replacements: Annotated[
-            int, m.Field(description="Total replacements applied across the run"),
+            int,
+            m.Field(description="Total replacements applied across the run"),
         ] = 0
         total_core_replacements: Annotated[
-            int, m.Field(description="Total Core.Tests chain rewrites applied"),
+            int,
+            m.Field(description="Total Core.Tests chain rewrites applied"),
         ] = 0
         import_rewrite_candidates: Annotated[
-            int, m.Field(description="Count of wrapper import rewrite candidates"),
+            int,
+            m.Field(description="Count of wrapper import rewrite candidates"),
         ] = 0
         per_project_changes: Annotated[
             defaultdict[str, int],
@@ -168,14 +179,16 @@ class FlextInfraModelsRefactor(
 
         check: Annotated[bool, m.Field(description="Validate without writing")] = False
         dry_run_mode: Annotated[
-            bool, m.Field(alias="dry-run", description="Inspect without writing"),
+            bool,
+            m.Field(alias="dry-run", description="Inspect without writing"),
         ] = False
 
     class ApplyRenamesInput(mm.WriteMixin, m.ContractModel):
         """Validated CLI request for CSV-driven symbol renames."""
 
         csv: Annotated[
-            t.NonEmptyStr, m.Field(description="Path to the old,new rename-list CSV"),
+            t.NonEmptyStr,
+            m.Field(description="Path to the old,new rename-list CSV"),
         ]
         roots: Annotated[
             t.StrSequence,
@@ -217,7 +230,8 @@ class FlextInfraModelsRefactor(
 
         label: Annotated[t.NonEmptyStr, m.Field(description="Rename-list label")]
         files_scanned: Annotated[
-            t.NonNegativeInt, m.Field(description="Text files scanned"),
+            t.NonNegativeInt,
+            m.Field(description="Text files scanned"),
         ]
         occurrences: Annotated[
             t.NonNegativeInt,
@@ -226,7 +240,8 @@ class FlextInfraModelsRefactor(
             ),
         ] = 0
         files_changed: Annotated[
-            t.NonNegativeInt, m.Field(description="Files rewritten in apply mode"),
+            t.NonNegativeInt,
+            m.Field(description="Files rewritten in apply mode"),
         ] = 0
         applied: Annotated[bool, m.Field(description="Whether changes were applied")]
 

@@ -51,10 +51,12 @@ class FlextInfraConfigModelsRender:
             ),
         ] = True
         repository_branch: Annotated[
-            t.NonEmptyStr, m.Field(description="Repository integration branch"),
+            t.NonEmptyStr,
+            m.Field(description="Repository integration branch"),
         ]
         python_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Python major.minor line"),
+            t.NonEmptyStr,
+            m.Field(description="Python major.minor line"),
         ]
         github_actions: Annotated[
             Mapping[str, FlextInfraConfigModelsProvider.GithubActionPinSpec],
@@ -77,7 +79,8 @@ class FlextInfraConfigModelsRender:
         ci_trigger_branches: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                default=(), description="Ordered, deduplicated blocking CI branches",
+                default=(),
+                description="Ordered, deduplicated blocking CI branches",
             ),
         ] = ()
         has_devcontainer: Annotated[
@@ -197,10 +200,12 @@ class FlextInfraConfigModelsRender:
         """Typed input consumed by generated distro Dockerfiles."""
 
         package_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Python import package name"),
+            t.NonEmptyStr,
+            m.Field(description="Python import package name"),
         ]
         python_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Python major.minor line"),
+            t.NonEmptyStr,
+            m.Field(description="Python major.minor line"),
         ]
         make: Annotated[
             FlextInfraConfigModelsMake.MakeSpec,
@@ -241,13 +246,16 @@ class FlextInfraConfigModelsRender:
         """
 
         rule_key: Annotated[
-            t.NonEmptyStr, m.Field(description="Sonar rule key, e.g. 'text:S8565'"),
+            t.NonEmptyStr,
+            m.Field(description="Sonar rule key, e.g. 'text:S8565'"),
         ]
         resource_key: Annotated[
-            t.NonEmptyStr, m.Field(description="Project-relative resource pattern"),
+            t.NonEmptyStr,
+            m.Field(description="Project-relative resource pattern"),
         ]
         reason: Annotated[
-            t.NonEmptyStr, m.Field(description="Operator justification and bead"),
+            t.NonEmptyStr,
+            m.Field(description="Operator justification and bead"),
         ]
 
     class SonarcloudSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -275,7 +283,8 @@ class FlextInfraConfigModelsRender:
             ),
         ]
         api_timeout_seconds: Annotated[
-            t.PositiveInt, m.Field(description="Per-request SonarCloud web API timeout"),
+            t.PositiveInt,
+            m.Field(description="Per-request SonarCloud web API timeout"),
         ]
         issue_exclusions: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsRender.SonarcloudIssueExclusionSpec],

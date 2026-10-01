@@ -22,7 +22,9 @@ class FlextInfraUtilitiesDocsGuidesMixin:
 
     @staticmethod
     def docs_project_guide_content(
-        content: str, project_name: str, guide_name: str,
+        content: str,
+        project_name: str,
+        guide_name: str,
     ) -> str:
         """Render a member guide with explicit source and regeneration ownership."""
         lines = content.splitlines()
@@ -126,7 +128,9 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 owned.add(path)
                 continue
             ownership = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guide_content(
-                "", scope.name, path.name,
+                "",
+                scope.name,
+                path.name,
             ).partition("\n\n")[0]
             previous_ownership = ownership.replace("`<workspace-root>/", "`")
             legacy_ownership = (
@@ -164,14 +168,18 @@ class FlextInfraUtilitiesDocsGuidesMixin:
                 )
             relative_path = source_path.relative_to(repository_root).as_posix()
             issues = FlextInfraUtilitiesDocsCommandContractMixin.docs_command_contract_content_issues(
-                source, relative_path=relative_path, effective_verbs=effective_verbs,
+                source,
+                relative_path=relative_path,
+                effective_verbs=effective_verbs,
             )
             if issues:
                 first = issues[0]
                 msg = f"{first.file}: {first.message}"
                 raise ValueError(msg)
             rendered = FlextInfraUtilitiesDocsGuidesMixin.docs_project_guide_content(
-                source, scope.name, source_path.name,
+                source,
+                scope.name,
+                source_path.name,
             )
             artifacts.append((
                 scope.path,

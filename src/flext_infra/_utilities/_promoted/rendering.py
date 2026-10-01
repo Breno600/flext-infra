@@ -15,7 +15,9 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @staticmethod
     def promoted_renders_verb_help(
-        registry: p.Infra.PromotedRegistry, verb: str, what: str,
+        registry: p.Infra.PromotedRegistry,
+        verb: str,
+        what: str,
     ) -> bool:
         """Return whether a selected WHAT renders the verb help.
 
@@ -29,7 +31,9 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @classmethod
     def promoted_render_help(
-        cls, registry: p.Infra.PromotedRegistry, selector: str,
+        cls,
+        registry: p.Infra.PromotedRegistry,
+        selector: str,
     ) -> str:
         """Render global help, ``<verb>`` help, or ``<verb>/<WHAT>`` help."""
         help_, join = c.Infra.PromotedHelp, c.Infra.PromotedJoin
@@ -90,7 +94,9 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @classmethod
     def _promoted_verb_help(
-        cls, registry: p.Infra.PromotedRegistry, requested_verb: str,
+        cls,
+        registry: p.Infra.PromotedRegistry,
+        requested_verb: str,
     ) -> str:
         """Render one verb, its actions, parameters, rules, and examples."""
         help_, join = c.Infra.PromotedHelp, c.Infra.PromotedJoin
@@ -121,7 +127,8 @@ class FlextInfraUtilitiesPromotedRendering:
                 details = [item for item in cls._promoted_param_details(param) if item]
                 inline.append(
                     help_.INLINE_DETAIL.format(
-                        rendered=rendered, detail=join.DETAIL.join(details),
+                        rendered=rendered,
+                        detail=join.DETAIL.join(details),
                     )
                     if details
                     else rendered,
@@ -129,7 +136,8 @@ class FlextInfraUtilitiesPromotedRendering:
             if inline:
                 options.append(
                     help_.VERB_OPTION_LINE.format(
-                        what=what, params=join.LIST.join(inline),
+                        what=what,
+                        params=join.LIST.join(inline),
                     ),
                 )
         if options:
@@ -170,7 +178,9 @@ class FlextInfraUtilitiesPromotedRendering:
 
     @staticmethod
     def _promoted_section(
-        title: str, template: str, items: t.StrSequence,
+        title: str,
+        template: str,
+        items: t.StrSequence,
     ) -> t.StrSequence:
         """Render one titled help section, empty without items."""
         if not items:

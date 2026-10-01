@@ -18,7 +18,8 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
     """Conformance planning across scaffold and existing repositories."""
 
     def plan(
-        self, request: m.Infra.CodegenConformRequest,
+        self,
+        request: m.Infra.CodegenConformRequest,
     ) -> p.Result[m.Infra.CodegenPlan]:
         """Build and validate the complete selection without writing."""
         config_spec = config.Infra.codegen
@@ -44,7 +45,8 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         current_repository = workspace.repository
         if self.initial_workspace is None:
             current_target_result = FlextInfraWorkspaceDetector.conform_target(
-                root, workspace,
+                root,
+                workspace,
             )
             if current_target_result.failure:
                 return r[m.Infra.CodegenPlan].from_failure(current_target_result)
@@ -64,7 +66,9 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 external_dependency_paths=workspace.external_dependency_paths,
             )
         selected_result = self._select_repositories(
-            request, workspace, current_repository,
+            request,
+            workspace,
+            current_repository,
         )
         if selected_result.failure:
             return r[m.Infra.CodegenPlan].from_failure(selected_result)
@@ -77,7 +81,10 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
         for repository_index, repository in enumerate(selected, start=1):
             repository_started = time.monotonic()
             u.Cli.progress(
-                repository_index, total_repositories, repository.name, "conform",
+                repository_index,
+                total_repositories,
+                repository.name,
+                "conform",
             )
             u.Cli.info(
                 f"  stage=topology repository={repository.name} "
@@ -102,7 +109,9 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                 # previous iteration's member: resolving the second declared
                 # repository against the first produced <root>/alpha/beta.
                 repository_root_result = self._repository_root(
-                    root, workspace, repository,
+                    root,
+                    workspace,
+                    repository,
                 )
                 if repository_root_result.failure:
                     return r[m.Infra.CodegenPlan].from_failure(repository_root_result)
@@ -148,7 +157,8 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                         )
                     local_workspace = local_workspace_result.value
                 target_result = FlextInfraWorkspaceDetector.conform_target(
-                    repository_root, local_workspace,
+                    repository_root,
+                    local_workspace,
                 )
                 if target_result.failure:
                     return r[m.Infra.CodegenPlan].from_failure(target_result)
@@ -175,14 +185,18 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
             if repository_plan.failure:
                 return r[m.Infra.CodegenPlan].from_failure(repository_plan)
             governed = self._complete_governed_plans(
-                target, repository_plan.value, config_spec, contract,
+                target,
+                repository_plan.value,
+                config_spec,
+                contract,
             )
             if governed.failure:
                 return r[m.Infra.CodegenPlan].from_failure(governed)
             files.extend(governed.value)
             if contract.complete_governed:
                 retired = self.retired_projection_plans(
-                    repository_root, target.make_profile,
+                    repository_root,
+                    target.make_profile,
                 )
                 if retired.failure:
                     return r[m.Infra.CodegenPlan].from_failure(retired)
@@ -252,7 +266,9 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
 
     @staticmethod
     def _repository_root(
-        root: Path, workspace: p.Infra.WorkspaceSpec, repository: p.Infra.RepositoryRef,
+        root: Path,
+        workspace: p.Infra.WorkspaceSpec,
+        repository: p.Infra.RepositoryRef,
     ) -> p.Result[Path]:
         """Resolve one declared checkout without escaping its workspace owner."""
         if repository.name == workspace.repository.name:

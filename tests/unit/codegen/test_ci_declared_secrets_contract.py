@@ -77,7 +77,8 @@ class TestsFlextInfraCiDeclaredSecretsContract:
         return referenced
 
     def test_secret_accesses_are_declared_optional_workflow_call_inputs(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Every referenced secret resolves to an optional workflow_call input."""
         workflow_path = self.render_ci(tmp_path)

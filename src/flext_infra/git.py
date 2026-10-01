@@ -18,7 +18,8 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
     """Thin Git status and cleanliness use cases over ``u.Infra.git_status``."""
 
     repository: Annotated[
-        Path | None, m.Field(description="Repository path; defaults to repository_root"),
+        Path | None,
+        m.Field(description="Repository path; defaults to repository_root"),
     ] = None
 
     def _repo(self) -> Path:
@@ -32,7 +33,8 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
 
     @classmethod
     def verify_clean(
-        cls, request: m.Infra.GitStatusRequest,
+        cls,
+        request: m.Infra.GitStatusRequest,
     ) -> p.Result[m.Infra.GitStatusReport]:
         """Fail when the selected repository has staged, unstaged, or untracked work."""
         report = cls(repository_root=request.repo_root).execute()

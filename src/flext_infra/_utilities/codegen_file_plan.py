@@ -42,7 +42,9 @@ class FlextInfraUtilitiesCodegenFilePlan:
     @staticmethod
     @contextmanager
     def codegen_transaction_lease(
-        journal_path: Path, *, wait_seconds: float = c.Infra.JOURNAL_LEASE_WAIT_SECONDS,
+        journal_path: Path,
+        *,
+        wait_seconds: float = c.Infra.JOURNAL_LEASE_WAIT_SECONDS,
     ) -> Generator[None]:
         """Hold native ownership without unlinking the journal's lock identity.
 
@@ -154,7 +156,9 @@ class FlextInfraUtilitiesCodegenFilePlan:
 
     @staticmethod
     def codegen_file_drift_report(
-        plans: t.SequenceOf[m.Infra.CodegenFilePlan], *, limit: int = 40,
+        plans: t.SequenceOf[m.Infra.CodegenFilePlan],
+        *,
+        limit: int = 40,
     ) -> str:
         """Report a bounded byte-exact diff, including line endings and presence.
 

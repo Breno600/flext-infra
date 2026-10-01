@@ -43,7 +43,8 @@ class FlextInfraConfigModelsMake:
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Public Make verb")]
         description: Annotated[
-            t.NonEmptyStr, m.Field(description="Operator-facing help text"),
+            t.NonEmptyStr,
+            m.Field(description="Operator-facing help text"),
         ]
         produces_activation: Annotated[
             bool,
@@ -137,11 +138,13 @@ class FlextInfraConfigModelsMake:
 
         aliases: Annotated[int, m.Field(gt=0, description="Alias preview limit")]
         public_symbols: Annotated[
-            int, m.Field(gt=0, description="Public symbol preview limit"),
+            int,
+            m.Field(gt=0, description="Public symbol preview limit"),
         ]
         facades: Annotated[int, m.Field(gt=0, description="Facade preview limit")]
         module_exports: Annotated[
-            int, m.Field(gt=0, description="Module export preview limit"),
+            int,
+            m.Field(gt=0, description="Module export preview limit"),
         ]
         keywords: Annotated[int, m.Field(gt=0, description="Keyword preview limit")]
 
@@ -163,7 +166,8 @@ class FlextInfraConfigModelsMake:
             m.Field(min_length=1, description="Docs actions that mutate"),
         ]
         reports_dir: Annotated[
-            Path, m.Field(description="Repository-relative docs reports directory"),
+            Path,
+            m.Field(description="Repository-relative docs reports directory"),
         ]
         overview_preview_limits: Annotated[
             FlextInfraConfigModelsMake.DocsOverviewPreviewLimitsSpec,
@@ -314,33 +318,40 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="Cache phase: bootstrap seeds, stable saves"),
             ] = "stable"
             save_enabled: Annotated[
-                bool, m.Field(description="Master switch for cache publishes"),
+                bool,
+                m.Field(description="Master switch for cache publishes"),
             ] = False
             max_bootstrap_generations: Annotated[
                 int,
                 m.Field(gt=0, description="Retention cap for bootstrap generations"),
             ] = 3
             max_stable_generations: Annotated[
-                int, m.Field(gt=0, description="Retention cap for stable generations"),
+                int,
+                m.Field(gt=0, description="Retention cap for stable generations"),
             ] = 3
             per_repo_budget_bytes: Annotated[
-                int, m.Field(gt=0, description="Per-repository byte budget"),
+                int,
+                m.Field(gt=0, description="Per-repository byte budget"),
             ] = 52_428_800
             warning_threshold_percent: Annotated[
-                int, m.Field(ge=0, le=100, description="Quota-ladder warning stage"),
+                int,
+                m.Field(ge=0, le=100, description="Quota-ladder warning stage"),
             ] = 80
             maintenance_threshold_percent: Annotated[
-                int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage"),
+                int,
+                m.Field(ge=0, le=100, description="Quota-ladder maintenance stage"),
             ] = 90
             block_threshold_percent: Annotated[
-                int, m.Field(ge=0, le=100, description="Quota-ladder block stage"),
+                int,
+                m.Field(ge=0, le=100, description="Quota-ladder block stage"),
             ] = 95
             allowed_save_refs: Annotated[
                 tuple[t.NonEmptyStr, ...],
                 m.Field(description="Refs whose pushes may publish cache generations"),
             ] = ("main", "0.12.0-dev")
             key_prefix: Annotated[
-                t.NonEmptyStr, m.Field(description="Actions cache key namespace"),
+                t.NonEmptyStr,
+                m.Field(description="Actions cache key namespace"),
             ] = "flext-testmon"
 
             @u.model_validator(mode="after")
@@ -365,7 +376,8 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="Standard cache directory below the user home"),
             ]
             external_storage_directory: Annotated[
-                Path, m.Field(description="FLEXT-owned directory below the cache home"),
+                Path,
+                m.Field(description="FLEXT-owned directory below the cache home"),
             ]
 
             @u.model_validator(mode="after")
@@ -383,12 +395,14 @@ class FlextInfraConfigModelsMake:
                 return self
 
         class TestmonCacheSpec(
-            ExternalCacheDirectorySpec, FlextInfraConfigModelsContract.ConfigContract,
+            ExternalCacheDirectorySpec,
+            FlextInfraConfigModelsContract.ConfigContract,
         ):
             """Persistent pytest-testmon database and runner paths."""
 
             database_filename: Annotated[
-                t.NonEmptyStr, m.Field(description="pytest-testmon database filename"),
+                t.NonEmptyStr,
+                m.Field(description="pytest-testmon database filename"),
             ]
             database_environment_variable: Annotated[
                 FlextInfraConstantsMake.PytestCacheEnvironment,
@@ -405,10 +419,12 @@ class FlextInfraConfigModelsMake:
                 m.Field(description="User home variable for the XDG default"),
             ]
             target_directory: Annotated[
-                Path, m.Field(description="Repository-relative pytest target"),
+                Path,
+                m.Field(description="Repository-relative pytest target"),
             ]
             reports_directory: Annotated[
-                Path, m.Field(description="Repository-relative pytest reports root"),
+                Path,
+                m.Field(description="Repository-relative pytest reports root"),
             ]
 
             @u.model_validator(mode="after")
@@ -440,7 +456,8 @@ class FlextInfraConfigModelsMake:
                 return self
 
         class MypyCacheSpec(
-            ExternalCacheDirectorySpec, FlextInfraConfigModelsContract.ConfigContract,
+            ExternalCacheDirectorySpec,
+            FlextInfraConfigModelsContract.ConfigContract,
         ):
             """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
@@ -510,7 +527,8 @@ class FlextInfraConfigModelsMake:
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),
         ]
         submodule_timeout_seconds: Annotated[
-            int, m.Field(gt=0, le=600, description="Governed submodule setup deadline"),
+            int,
+            m.Field(gt=0, le=600, description="Governed submodule setup deadline"),
         ]
         ruff: Annotated[
             FlextInfraConfigModelsMake.MakeRuffSpec,
@@ -593,7 +611,8 @@ class FlextInfraConfigModelsMake:
         ]
         custom_handler_profile_overrides: Annotated[
             Mapping[
-                t.NonEmptyStr, FlextInfraConfigModelsMake.CustomHandlerPolicyOverride,
+                t.NonEmptyStr,
+                FlextInfraConfigModelsMake.CustomHandlerPolicyOverride,
             ],
             m.Field(description="Per-profile overrides of the custom handler policy"),
         ]
@@ -846,11 +865,13 @@ class FlextInfraConfigModelsMake:
         """One governed GitHub repository used for cross-repo doc links."""
 
         organization: Annotated[
-            t.NonEmptyStr, m.Field(description="GitHub organization"),
+            t.NonEmptyStr,
+            m.Field(description="GitHub organization"),
         ]
         repository: Annotated[t.NonEmptyStr, m.Field(description="GitHub repository")]
         branch: Annotated[
-            t.NonEmptyStr, m.Field(description="Working-line branch for doc links"),
+            t.NonEmptyStr,
+            m.Field(description="Working-line branch for doc links"),
         ]
         local_checkout: Annotated[
             str,
@@ -866,7 +887,8 @@ class FlextInfraConfigModelsMake:
         """Strict schema for the only handwritten Make extension file."""
 
         filename: Annotated[
-            t.NonEmptyStr, m.Field(description="Versioned custom handler filename"),
+            t.NonEmptyStr,
+            m.Field(description="Versioned custom handler filename"),
         ]
         target_pattern: Annotated[
             t.NonEmptyStr,
@@ -886,8 +908,10 @@ class FlextInfraConfigModelsMake:
         """
 
         allow_public_targets: bool | None = m.Field(
-            default=None, description="Permit public targets",
+            default=None,
+            description="Permit public targets",
         )
         allow_toolchain_declarations: bool | None = m.Field(
-            default=None, description="Permit toolchain declarations",
+            default=None,
+            description="Permit toolchain declarations",
         )

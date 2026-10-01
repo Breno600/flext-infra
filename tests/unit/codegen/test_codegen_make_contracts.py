@@ -24,7 +24,8 @@ class TestsFlextInfraCodegenMakeContracts:
     """Generated Make behavior and custom dispatch contracts."""
 
     def test_invalid_public_custom_make_fails_without_side_effects(
-        self, infra_git_repo: Path,
+        self,
+        infra_git_repo: Path,
     ) -> None:
         root = infra_git_repo
         custom = root / "custom.mk"
@@ -36,19 +37,23 @@ class TestsFlextInfraCodegenMakeContracts:
             ]
         )
         result = FlextInfraCodegenConform.validate_custom_make(
-            tm.ok(u.Cli.files_read_text(custom)), policy,
+            tm.ok(u.Cli.files_read_text(custom)),
+            policy,
         )
         tm.fail(result)
         rejection = Path(f"{custom}.rej")
         tm.that(
-            result.error or "", has="custom.mk line 1 is not a private custom handler",
+            result.error or "",
+            has="custom.mk line 1 is not a private custom handler",
         )
         tm.that(rejection.exists(), eq=False)
         tm.that(custom.read_text(encoding="utf-8"), eq=content)
 
     @pytest.mark.slow
     def test_valid_private_custom_make_has_no_rejection(
-        self, infra_git_repo: Path, capsys: pytest.CaptureFixture[str],
+        self,
+        infra_git_repo: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
@@ -87,20 +92,24 @@ class TestsFlextInfraCodegenMakeContracts:
         )
 
         result = FlextInfraCodegenConform.validate_custom_make(
-            ".PHONY: \\\n\t_custom_check_demo \\", policy,
+            ".PHONY: \\\n\t_custom_check_demo \\",
+            policy,
         )
 
         tm.fail(result, has="unterminated .PHONY continuation")
 
     @pytest.mark.slow
     def test_scaffold_make_help_documents_and_lists_custom_hooks(
-        self, infra_git_repo: Path,
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Scaffold help lists the selector-free interface; hooks stay lifecycle-only."""
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         TestsFlextInfraConformSupport.apply_conform_surface(
-            root, workspace, c.Infra.CodegenConformSurface.MAKEFILE,
+            root,
+            workspace,
+            c.Infra.CodegenConformSurface.MAKEFILE,
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -112,7 +121,8 @@ class TestsFlextInfraCodegenMakeContracts:
             ),
         )
         outcome = u.Cli.run_raw(
-            ["make", "-C", str(root), "help"], remove_env_keys=("MAKEFLAGS",),
+            ["make", "-C", str(root), "help"],
+            remove_env_keys=("MAKEFLAGS",),
         )
         output = tm.ok(outcome)
         tm.that(output.stderr, eq="")
@@ -123,13 +133,16 @@ class TestsFlextInfraCodegenMakeContracts:
 
     @pytest.mark.slow
     def test_scaffold_make_runs_pre_and_post_verb_hooks_in_order(
-        self, infra_git_repo: Path,
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Generated dispatch runs pre-<verb>, custom handler, post-<verb> in order."""
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         TestsFlextInfraConformSupport.apply_conform_surface(
-            root, workspace, c.Infra.CodegenConformSurface.MAKEFILE,
+            root,
+            workspace,
+            c.Infra.CodegenConformSurface.MAKEFILE,
         )
         tm.ok(
             u.Cli.atomic_write_text_file(
@@ -161,7 +174,9 @@ class TestsFlextInfraCodegenMakeContracts:
         tm.that(body_at < post_at, eq=True)
 
     def test_custom_make_accepts_pre_post_verb_hooks(
-        self, infra_git_repo: Path, capsys: pytest.CaptureFixture[str],
+        self,
+        infra_git_repo: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """custom.mk may append pre/post verb hooks (verb-wide and WHAT-scoped)."""
         root = infra_git_repo
@@ -195,7 +210,9 @@ class TestsFlextInfraCodegenMakeContracts:
         root = infra_git_repo
         workspace = TestsFlextInfraConformSupport.standalone_workspace(root)
         TestsFlextInfraConformSupport.apply_conform_surface(
-            root, workspace, c.Infra.CodegenConformSurface.MAKEFILE,
+            root,
+            workspace,
+            c.Infra.CodegenConformSurface.MAKEFILE,
         )
         tm.ok(u.Cli.files_delete(root / "custom.mk"))
         (root / "custom.mk").mkdir()

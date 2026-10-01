@@ -14,7 +14,8 @@ from .deps_tool_config_type_checkers import FlextInfraModelsDepsToolConfigTypeCh
 
 
 class FlextInfraModelsDepsToolConfig(
-    FlextInfraModelsDepsToolConfigLinters, FlextInfraModelsDepsToolConfigTypeCheckers,
+    FlextInfraModelsDepsToolConfigLinters,
+    FlextInfraModelsDepsToolConfigTypeCheckers,
 ):
     """Models for tool configuration loaded from YAML."""
 
@@ -331,7 +332,8 @@ class FlextInfraModelsDepsToolConfig(
         filter_warnings: Annotated[
             t.StrTuple,
             m.Field(
-                alias="filter-warnings", description="Canonical pytest warning filters.",
+                alias="filter-warnings",
+                description="Canonical pytest warning filters.",
             ),
         ]
 
@@ -438,7 +440,8 @@ class FlextInfraModelsDepsToolConfig(
             # suite. The single-bound checks above report first: they name the
             # field. Both phases' reserves bind every declared run budget.
             reserve = max(
-                self.suite_stop_reserve_seconds, self.slow_suite_stop_reserve_seconds,
+                self.suite_stop_reserve_seconds,
+                self.slow_suite_stop_reserve_seconds,
             )
             if any(
                 timeout <= reserve
@@ -523,7 +526,8 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         sort_first: Annotated[
-            t.StrSequence, m.Field(description="Top-level TOML sections ordered first."),
+            t.StrSequence,
+            m.Field(description="Top-level TOML sections ordered first."),
         ]
 
     class YamlfixConfig(m.ArbitraryTypesModel):
@@ -531,16 +535,20 @@ class FlextInfraModelsDepsToolConfig(
 
         line_length: Annotated[int, m.Field(description="Maximum YAML line length.")]
         preserve_quotes: Annotated[
-            bool, m.Field(description="Preserve quote style in YAML output."),
+            bool,
+            m.Field(description="Preserve quote style in YAML output."),
         ]
         whitelines: Annotated[
-            int, m.Field(description="Blank line count between YAML entries."),
+            int,
+            m.Field(description="Blank line count between YAML entries."),
         ]
         section_whitelines: Annotated[
-            int, m.Field(description="Blank line count between YAML sections."),
+            int,
+            m.Field(description="Blank line count between YAML sections."),
         ]
         explicit_start: Annotated[
-            bool, m.Field(description="Emit explicit YAML start marker."),
+            bool,
+            m.Field(description="Emit explicit YAML start marker."),
         ]
 
     class CoverageConfig(m.ArbitraryTypesModel):
@@ -565,7 +573,8 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ]
         precision: Annotated[
-            int, m.Field(description="Decimal precision for coverage percentages."),
+            int,
+            m.Field(description="Decimal precision for coverage percentages."),
         ]
         exclude_also: Annotated[
             t.StrSequence,
@@ -670,7 +679,8 @@ class FlextInfraModelsDepsToolConfig(
             description="Mypy settings",
         )
         pydantic_mypy: FlextInfraModelsDepsToolConfig.PydanticMypyConfig = m.Field(
-            alias="pydantic-mypy", description="Pydantic mypy plugin configuration.",
+            alias="pydantic-mypy",
+            description="Pydantic mypy plugin configuration.",
         )
         pyright: FlextInfraModelsDepsToolConfig.PyrightConfig = m.Field(
             description="Pyright settings",
@@ -745,7 +755,8 @@ class FlextInfraModelsDepsToolConfig(
             description="Tools",
         )
         lazy_init: FlextInfraModelsDepsToolConfig.LazyInitConfig = m.Field(
-            alias="lazy-init", description="Declarative lazy-init generation policy.",
+            alias="lazy-init",
+            description="Declarative lazy-init generation policy.",
         )
 
         mod: FlextInfraModelsDepsToolConfig.ModConfig = m.Field(
@@ -757,7 +768,8 @@ class FlextInfraModelsDepsToolConfig(
 
         name: Annotated[t.NonEmptyStr, m.Field(description="TOML setting name")]
         value: Annotated[
-            str, m.Field(description="Validated Pyright diagnostic severity"),
+            str,
+            m.Field(description="Validated Pyright diagnostic severity"),
         ]
 
     class ToolingPyrightEnvironment(m.ArbitraryTypesModel):
@@ -765,7 +777,8 @@ class FlextInfraModelsDepsToolConfig(
 
         root: Annotated[t.NonEmptyStr, m.Field(description="Environment root")]
         extra_paths: Annotated[
-            t.StrTuple, m.Field(description="Resolved environment import paths"),
+            t.StrTuple,
+            m.Field(description="Resolved environment import paths"),
         ]
         settings: Annotated[
             t.VariadicTuple[FlextInfraModelsDepsToolConfig.ToolingScalarSetting],
@@ -785,7 +798,8 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ] = ()
         pyrefly: Annotated[
-            t.JsonMapping, m.Field(description="Conformed pyrefly table"),
+            t.JsonMapping,
+            m.Field(description="Conformed pyrefly table"),
         ]
         pyrefly_search_path: Annotated[
             t.StrTuple,
@@ -795,13 +809,17 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ] = ()
         pyright: Annotated[
-            t.JsonMapping, m.Field(description="Conformed pyright table"),
+            t.JsonMapping,
+            m.Field(description="Conformed pyright table"),
         ]
         first_party: Annotated[
             t.StrTuple,
             m.Field(
                 validation_alias=m.AliasPath(
-                    "ruff", "lint", "isort", "known-first-party",
+                    "ruff",
+                    "lint",
+                    "isort",
+                    "known-first-party",
                 ),
                 description="Conformed first-party namespaces",
             ),
@@ -826,31 +844,40 @@ class FlextInfraModelsDepsToolConfig(
         """Resolved project/workspace values consumed by the complete template."""
 
         project_kind: Annotated[
-            t.NonEmptyStr, m.Field(description="Resolved project classification"),
+            t.NonEmptyStr,
+            m.Field(description="Resolved project classification"),
         ]
         first_party: Annotated[
-            t.StrTuple, m.Field(description="Resolved first-party namespaces"),
+            t.StrTuple,
+            m.Field(description="Resolved first-party namespaces"),
         ]
         mypy_path: Annotated[
-            t.StrTuple, m.Field(description="Resolved Mypy search paths"),
+            t.StrTuple,
+            m.Field(description="Resolved Mypy search paths"),
         ]
         pyrefly_search_path: Annotated[
-            t.StrTuple, m.Field(description="Resolved Pyrefly search paths"),
+            t.StrTuple,
+            m.Field(description="Resolved Pyrefly search paths"),
         ]
         pyrefly_project_includes: Annotated[
-            t.StrTuple, m.Field(description="Resolved Pyrefly production includes"),
+            t.StrTuple,
+            m.Field(description="Resolved Pyrefly production includes"),
         ]
         pyright_exclude: Annotated[
-            t.StrTuple, m.Field(description="Resolved Pyright exclusions"),
+            t.StrTuple,
+            m.Field(description="Resolved Pyright exclusions"),
         ]
         pyright_ignore: Annotated[
-            t.StrTuple, m.Field(description="Resolved Pyright ignored paths"),
+            t.StrTuple,
+            m.Field(description="Resolved Pyright ignored paths"),
         ] = ()
         pyright_include: Annotated[
-            t.StrTuple, m.Field(description="Resolved Pyright production roots"),
+            t.StrTuple,
+            m.Field(description="Resolved Pyright production roots"),
         ]
         pyright_extra_paths: Annotated[
-            t.StrTuple, m.Field(description="Resolved Pyright import paths"),
+            t.StrTuple,
+            m.Field(description="Resolved Pyright import paths"),
         ]
         pyright_settings: Annotated[
             t.VariadicTuple[FlextInfraModelsDepsToolConfig.ToolingScalarSetting],
@@ -861,7 +888,8 @@ class FlextInfraModelsDepsToolConfig(
             m.Field(description="Resolved Pyright environments"),
         ]
         ruff_src: Annotated[
-            t.StrTuple, m.Field(description="Resolved Ruff source roots"),
+            t.StrTuple,
+            m.Field(description="Resolved Ruff source roots"),
         ]
         ruff_extend_exclude: Annotated[
             t.StrTuple,

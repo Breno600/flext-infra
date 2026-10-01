@@ -25,7 +25,8 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
 
     @staticmethod
     def resolve_projects(
-        repository_root: Path, names: t.StrSequence,
+        repository_root: Path,
+        names: t.StrSequence,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectInfo]]:
         """Resolve project names through repository-local topology only."""
         owner = FlextInfraUtilitiesDocsScopeProjectsMixin
@@ -79,7 +80,9 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
 
     @staticmethod
     def project_info_for_entry(
-        entry: Path, *, workspace_declared_repositories: frozenset[Path],
+        entry: Path,
+        *,
+        workspace_declared_repositories: frozenset[Path],
     ) -> m.Infra.ProjectInfo | None:
         """Build one canonical project descriptor for one discovered project root."""
         entry = FlextInfraUtilitiesDocsScopeProjectsMixin.absolute_lexical(entry)
@@ -128,7 +131,8 @@ class FlextInfraUtilitiesDocsScopeProjectsMixin(
             has_src=has_src,
             project_class=(
                 FlextInfraUtilitiesDocsScopeProjectsMixin.classify_project_from_meta(
-                    project_state.project_name, project_state.docs_meta,
+                    project_state.project_name,
+                    project_state.docs_meta,
                 )
             ),
             package_name=project_state.package_name,

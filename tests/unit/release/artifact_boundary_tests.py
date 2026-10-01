@@ -107,7 +107,8 @@ class TestsFlextInfraReleaseArchiveBoundary:
         tm.that(result.error or "", has="unsafe archive member path")
 
     def test_materialize_tar_tree_leaves_no_partial_tree_on_rejection(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Reject a tar tree without leaving a half-written staging tree."""
         archive_path = tmp_path / "release.tar"

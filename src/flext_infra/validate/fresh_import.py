@@ -21,7 +21,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
     """Verify consumers and publication contracts without inherited import state."""
 
     packages: Annotated[
-        t.StrSequence, m.Field(description="Packages to validate in fresh subprocesses"),
+        t.StrSequence,
+        m.Field(description="Packages to validate in fresh subprocesses"),
     ] = (c.Infra.PKG_CORE_UNDERSCORE, "flext_infra", "flext_tests")
     runtime_root: Annotated[
         Path | None,
@@ -85,7 +86,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             for layout in layouts
         )
         origin_code = self._ORIGIN_CODE.replace(
-            self._ORIGINS_PLACEHOLDER, repr(origins),
+            self._ORIGINS_PLACEHOLDER,
+            repr(origins),
         )
         probes: t.MutableSequenceOf[m.Infra.FreshImportProbe] = []
         for layout in layouts:
@@ -161,7 +163,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
                 )
             probes.append(
                 m.Infra.FreshImportProbe(
-                    subject=layout.package_name, code=self._PRELUDE + body + origin_code,
+                    subject=layout.package_name,
+                    code=self._PRELUDE + body + origin_code,
                 ),
             )
         for package in packages:
@@ -181,7 +184,9 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         if not probes:
             return r[m.Infra.ValidationReport].ok(
                 m.Infra.ValidationReport(
-                    passed=True, violations=(), summary="0 fresh-import probe(s) passed",
+                    passed=True,
+                    violations=(),
+                    summary="0 fresh-import probe(s) passed",
                 ),
             )
         # The probes execute the target checkout's code, so they run in the
@@ -190,7 +195,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         # host's dependency set would grade the target against packages it
         # does not install.
         interpreter = u.Infra.runtime_python(
-            self.repository_root, runtime_root=self.runtime_root,
+            self.repository_root,
+            runtime_root=self.runtime_root,
         )
         if not interpreter.is_file():
             return r[m.Infra.ValidationReport].fail(
@@ -223,7 +229,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
             if u.Cli.process_succeeded(output.outcome):
                 continue
             outcome = m.Cli.ProcessOutcome.model_validate(
-                output.outcome, from_attributes=True,
+                output.outcome,
+                from_attributes=True,
             )
             detail = (
                 f"{probe.subject}: {outcome.model_dump_json()}\n"
@@ -242,7 +249,8 @@ class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):
         )
 
     def _workspace_import_env(
-        self, source_roots: t.SequenceOf[Path] = (),
+        self,
+        source_roots: t.SequenceOf[Path] = (),
     ) -> t.StrMapping:
         """Prefer the complete candidate fleet over inherited editable installs."""
         inherited_env = u.Cli.process_env()

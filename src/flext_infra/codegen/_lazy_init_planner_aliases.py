@@ -21,7 +21,8 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
         def _source_package_name(self, pkg_dir: Path, inherited_key: str) -> str: ...
 
         def _package_entry(
-            self, pkg_dir: Path,
+            self,
+            pkg_dir: Path,
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
         def _export_names_for_package(self, package_name: str) -> frozenset[str]: ...
@@ -29,11 +30,18 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
         def _package_name_from_target(self, target: str) -> str: ...
 
         def _parents_from_constants_module(
-            self, module_path: Path, current_pkg: str, visited: set[str] | None = None,
+            self,
+            module_path: Path,
+            current_pkg: str,
+            visited: set[str] | None = None,
         ) -> t.StrSequence: ...
 
         def _resolve_inherited_alias_source(
-            self, package_names: t.StrSequence, alias_name: str, *, current_pkg: str,
+            self,
+            package_names: t.StrSequence,
+            alias_name: str,
+            *,
+            current_pkg: str,
         ) -> str: ...
 
     def _resolve_aliases(
@@ -59,7 +67,8 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
             if module_path.name != c.Infra.INIT_PY and module_path.stem.isidentifier()
             if (
                 alias := u.Infra.publication_policy(
-                    module_path, rope_project=self.rope_workspace.rope_project,
+                    module_path,
+                    rope_project=self.rope_workspace.rope_project,
                 ).expected_alias
             )
             is not None
@@ -69,13 +78,15 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
             self._source_package_name(pkg_dir, surface),
         )
         inherited_packages = self._resolve_transitive_parent_packages(
-            direct_packages, within_project=None,
+            direct_packages,
+            within_project=None,
         )
         # Election reads only this project's own facade chain: a parent from
         # another project is a leaf served through its published re-exports,
         # exactly as a standalone checkout of this project sees it.
         election_packages = self._resolve_transitive_parent_packages(
-            direct_packages, within_project=project_root,
+            direct_packages,
+            within_project=project_root,
         )
         # Discovery reads only the facade parents, never the dependency closure:
         # a dev or codegen dependency is a consumer, never a facade ancestor.
@@ -99,7 +110,9 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
             if existing is not None and existing[0] != current_pkg:
                 continue
             package_name = self._resolve_inherited_alias_source(
-                election_packages, alias_name, current_pkg=current_pkg,
+                election_packages,
+                alias_name,
+                current_pkg=current_pkg,
             )
             if package_name and package_name != current_pkg:
                 lazy_map[alias_name] = (package_name, alias_name)
@@ -107,7 +120,10 @@ class FlextInfraCodegenLazyInitPlannerAliasesMixin:
                 del lazy_map[alias_name]
 
     def _resolve_transitive_parent_packages(
-        self, package_names: t.StrSequence, *, within_project: Path | None,
+        self,
+        package_names: t.StrSequence,
+        *,
+        within_project: Path | None,
     ) -> t.StrSequence:
         """Return package_names plus transitive parents, nearest-first.
 

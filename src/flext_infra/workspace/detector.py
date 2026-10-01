@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 
 
 class FlextInfraWorkspaceDetector(
-    FlextInfraWorkspaceGovernanceMixin, s[c.Infra.MakeProfile],
+    FlextInfraWorkspaceGovernanceMixin,
+    s[c.Infra.MakeProfile],
 ):
     """Classify a repository only from files and Git facts inside that checkout."""
 
@@ -43,7 +44,9 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def _composed_beads_identity_error(
-        cls, subproject_root: Path, workspace_beads: m.Infra.BeadsProjectSpec,
+        cls,
+        subproject_root: Path,
+        workspace_beads: m.Infra.BeadsProjectSpec,
     ) -> str | None:
         member_identity_path = (
             subproject_root / c.CONFIG_DIR_NAME / c.Infra.BEADS_CONFIG_FILENAME
@@ -82,7 +85,8 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def load_beads_spec(
-        cls, repository_root: Path,
+        cls,
+        repository_root: Path,
     ) -> p.Result[m.Infra.BeadsProjectSpec]:
         """Load and validate the required local ``config/beads.yaml``."""
         resolved_root = repository_root.expanduser().resolve()
@@ -98,11 +102,13 @@ class FlextInfraWorkspaceDetector(
                 f"{loaded.error or 'configuration load failed'}",
             )
         validated: p.Result[m.Infra.BeadsProjectSpec] = u.validate_value(
-            m.Infra.BeadsProjectSpec, loaded.value.data,
+            m.Infra.BeadsProjectSpec,
+            loaded.value.data,
         )
         if validated.failure:
             return r[m.Infra.BeadsProjectSpec].fail_op(
-                f"Beads configuration model validation ({beads_path})", validated.error,
+                f"Beads configuration model validation ({beads_path})",
+                validated.error,
             )
         return r[m.Infra.BeadsProjectSpec].ok(validated.value)
 
@@ -120,7 +126,10 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def _declared_provider_name(
-        cls, repository_root: Path, *, origin_url: str,
+        cls,
+        repository_root: Path,
+        *,
+        origin_url: str,
     ) -> p.Result[str]:
         """Detect the provider key the repository declares for itself.
 
@@ -166,7 +175,8 @@ class FlextInfraWorkspaceDetector(
 
     @staticmethod
     def _manifest_git_contradictions(
-        declared: m.Infra.RepositoryRef, observed: m.Infra.RepositoryRef,
+        declared: m.Infra.RepositoryRef,
+        observed: m.Infra.RepositoryRef,
     ) -> list[str]:
         """Describe every manifest identity or topology conflict with Git."""
         comparisons = (
@@ -292,12 +302,14 @@ class FlextInfraWorkspaceDetector(
 
     @staticmethod
     def _gitmodule_contract(
-        repository_root: Path, subproject_path: Path,
+        repository_root: Path,
+        subproject_path: Path,
     ) -> p.Result[t.Pair[str, str]]:
         """Read one exact URL/branch pair from the local ``.gitmodules``."""
         contract = u.Infra.gitmodule_contract(
             m.Infra.GitSubmoduleContractRequest(
-                repo_root=repository_root, member_path=subproject_path.as_posix(),
+                repo_root=repository_root,
+                member_path=subproject_path.as_posix(),
             ),
         )
         if contract.failure:
@@ -328,7 +340,8 @@ class FlextInfraWorkspaceDetector(
             )
         effective_url = declared_url or origin.value
         provider_result = cls._declared_provider_name(
-            repository_root, origin_url=origin.value,
+            repository_root,
+            origin_url=origin.value,
         )
         if provider_result.failure:
             return r[m.Infra.RepositoryRef].from_failure(provider_result)
@@ -464,7 +477,8 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def _declared_members(
-        cls, repository_root: Path,
+        cls,
+        repository_root: Path,
     ) -> p.Result[t.MappingKV[Path, m.Infra.RepositoryRef]]:
         """Index the manifest's declared member contracts by composed path."""
         loaded = u.Infra.load_workspace_manifest(repository_root)
@@ -543,7 +557,8 @@ class FlextInfraWorkspaceDetector(
         if path in unmanaged.value:
             return result_type.ok(path)
         if not u.Infra.gitmodule_branch_is_governed(
-            declared_branch, integration_branch=context.integration_branch,
+            declared_branch,
+            integration_branch=context.integration_branch,
         ):
             return result_type.fail(
                 "governed subproject branch differs from the workspace "
@@ -611,7 +626,10 @@ class FlextInfraWorkspaceDetector(
                 f"{route_error}",
             )
         repository = cls._local_repository_ref(
-            subproject_root, path=path, composed=True, declared_url=declared_url,
+            subproject_root,
+            path=path,
+            composed=True,
+            declared_url=declared_url,
         )
         if repository.failure:
             return result_type.from_failure(repository)
@@ -737,7 +755,8 @@ class FlextInfraWorkspaceDetector(
                     f"{resolved_root}",
                 )
             route_error = cls._composed_beads_identity_error(
-                resolved_root, inherited_beads.value,
+                resolved_root,
+                inherited_beads.value,
             )
             if route_error is not None:
                 return r[m.Infra.WorkspaceSpec].fail(
@@ -746,7 +765,8 @@ class FlextInfraWorkspaceDetector(
                 )
             beads = inherited_beads.value
         repository = cls._local_repository_ref(
-            resolved_root, composed=identity.value.is_attached_submodule,
+            resolved_root,
+            composed=identity.value.is_attached_submodule,
         )
         if repository.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(repository)
@@ -768,7 +788,9 @@ class FlextInfraWorkspaceDetector(
             },
         )
         declared_repository = cls._manifest_repository_ref(
-            resolved_root, observed=observed_repository, beads=beads,
+            resolved_root,
+            observed=observed_repository,
+            beads=beads,
         )
         if declared_repository.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(declared_repository)
@@ -875,7 +897,8 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def analysis_exclusion_paths(
-        cls, repository_root: Path,
+        cls,
+        repository_root: Path,
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Load exclusions for governed repositories; ignore ungoverned trees."""
         resolved_root = repository_root.expanduser().resolve()
@@ -911,7 +934,8 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def analysis_excluded_top_dirs(
-        cls, repository_root: Path,
+        cls,
+        repository_root: Path,
     ) -> p.Result[frozenset[str]]:
         """Return the first segments of the read-only external topology paths.
 

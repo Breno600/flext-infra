@@ -16,7 +16,10 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
 
     @classmethod
     def _state_tree_entries(
-        cls, root: Path, commit: str, paths: t.SequenceOf[Path],
+        cls,
+        root: Path,
+        commit: str,
+        paths: t.SequenceOf[Path],
     ) -> t.VariadicTuple[m.Infra.GitWorktreeIndexEntry]:
         if not paths:
             return ()
@@ -78,7 +81,9 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
                     tuple(
                         Path(path)
                         for path in repo.git.ls_files(
-                            "-z", "--", *cls._state_pathspecs(snapshot.paths),
+                            "-z",
+                            "--",
+                            *cls._state_pathspecs(snapshot.paths),
                         ).split("\0")
                         if path
                     )
@@ -86,13 +91,17 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
                     else ()
                 )
                 cls._state_index_update(
-                    snapshot.repo_root, removed, entries, index_file=Path(index_path),
+                    snapshot.repo_root,
+                    removed,
+                    entries,
+                    index_file=Path(index_path),
                 )
                 return repo.git.write_tree()
 
     @classmethod
     def _state_working_entries(
-        cls, snapshot: m.Infra.GitWorktreeStateSnapshot,
+        cls,
+        snapshot: m.Infra.GitWorktreeStateSnapshot,
     ) -> t.VariadicTuple[m.Infra.GitWorktreeIndexEntry]:
         return tuple(
             m.Infra.GitWorktreeIndexEntry(path=file.path, mode=file.mode, oid=file.oid)
@@ -101,7 +110,8 @@ class FlextInfraUtilitiesGitStateTreesMixin(FlextInfraUtilitiesGitStateSnapshotM
 
     @classmethod
     def _state_validate_checkpoint(
-        cls, checkpoint: m.Infra.GitWorktreeStateCheckpoint,
+        cls,
+        checkpoint: m.Infra.GitWorktreeStateCheckpoint,
     ) -> None:
         snapshot = checkpoint.snapshot
         repo = cls._repo(snapshot.repo_root)

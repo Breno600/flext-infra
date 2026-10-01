@@ -16,7 +16,9 @@ class FlextInfraRefactorCensusApplyFormattingMixin:
 
     @staticmethod
     def normalize_source(
-        repository_root: Path, path: Path, source: str,
+        repository_root: Path,
+        path: Path,
+        source: str,
     ) -> p.Result[str]:
         """Normalize staged source with the destination's real Ruff configuration."""
         checked = u.Cli.run(

@@ -70,7 +70,8 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
         return tuple(
             f"{surface.name}:{number}: {line.strip()}"
             for number, line in enumerate(
-                surface.read_text(encoding="utf-8").splitlines(), start=1,
+                surface.read_text(encoding="utf-8").splitlines(),
+                start=1,
             )
             if self._is_immediate_shell_assignment(line)
         )
@@ -80,7 +81,8 @@ class TestsFlextInfraMakeParseIsSideEffectFree:
         return tuple(
             f"{surface.name}:{number}: {line.strip()}"
             for number, line in enumerate(
-                surface.read_text(encoding="utf-8").splitlines(), start=1,
+                surface.read_text(encoding="utf-8").splitlines(),
+                start=1,
             )
             if line.startswith("\t") and "|| true" in line
         )

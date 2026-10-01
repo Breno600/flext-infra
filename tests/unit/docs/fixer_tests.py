@@ -17,10 +17,13 @@ class TestsFlextInfraDocsFixer:
     """Public fix-workflow tests for docs services."""
 
     def test_fix_returns_reports_for_root_and_selected_project(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(
-            tmp_path, project_names=("flext-a", "flext-b"), include_fixable_link=True,
+            tmp_path,
+            project_names=("flext-a", "flext-b"),
+            include_fixable_link=True,
         )
 
         result = FlextInfraDocFixer().fix(workspace, projects=["flext-a"], apply=False)
@@ -29,7 +32,8 @@ class TestsFlextInfraDocsFixer:
         tm.that([report.scope for report in result.value], eq=["root", "flext-a"])
 
     def test_fix_apply_updates_docs_file_and_writes_reports(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
 
@@ -73,7 +77,8 @@ class TestsFlextInfraDocsFixer:
         workspace = u.Tests.create_docs_workspace(tmp_path)
         document = workspace / "docs/welded.md"
         document.write_text(
-            "# Example\n\n```python\nvalue = 1```\n\n## Next\n", encoding="utf-8",
+            "# Example\n\n```python\nvalue = 1```\n\n## Next\n",
+            encoding="utf-8",
         )
 
         result = FlextInfraDocFixer().fix(workspace, apply=True)
@@ -82,7 +87,8 @@ class TestsFlextInfraDocsFixer:
         tm.that(document.read_text(encoding="utf-8"), has="value = 1\n```\n\n## Next")
 
     def test_fix_preserves_indented_closes_and_four_backtick_fences(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Only a welded code line is repaired, never a legitimate fence.
 
@@ -118,7 +124,8 @@ class TestsFlextInfraDocsFixer:
         tm.that("   \n```\n" in content, eq=False)
 
     def test_fix_rewrites_bare_notest_fences_for_the_mkdocs_build(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A bare ``notest`` qualifier is rewritten to the attr_list form.
 

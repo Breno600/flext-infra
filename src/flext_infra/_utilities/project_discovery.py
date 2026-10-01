@@ -90,7 +90,10 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @classmethod
     def _is_nonparticipant(
-        cls, candidate: Path, repository_root: Path, nonparticipants: frozenset[str],
+        cls,
+        candidate: Path,
+        repository_root: Path,
+        nonparticipants: frozenset[str],
     ) -> bool:
         """Return whether one candidate lies at or under a declared non-participant."""
         # "Is this candidate inside the root?" is a question, not a failure, so
@@ -112,7 +115,10 @@ class FlextInfraUtilitiesProjectDiscovery(
     @classmethod
     @override
     def discover_project_candidates(
-        cls, repository_root: Path, *, scan_dirs: frozenset[str] | None = None,
+        cls,
+        repository_root: Path,
+        *,
+        scan_dirs: frozenset[str] | None = None,
     ) -> t.SequenceOf[Path]:
         """Enumerate candidates, dropping every manifest-excluded directory.
 
@@ -125,7 +131,8 @@ class FlextInfraUtilitiesProjectDiscovery(
         has no transaction participant".
         """
         candidates = super().discover_project_candidates(
-            repository_root, scan_dirs=scan_dirs,
+            repository_root,
+            scan_dirs=scan_dirs,
         )
         nonparticipants = cls.manifest_nonparticipant_paths(repository_root)
         if not nonparticipants:
@@ -138,7 +145,10 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @classmethod
     def discover_project_roots(
-        cls, repository_root: Path, *, scan_dirs: frozenset[str] | None = None,
+        cls,
+        repository_root: Path,
+        *,
+        scan_dirs: frozenset[str] | None = None,
     ) -> t.SequenceOf[Path]:
         """Discover all project directories under repository root.
 
@@ -163,7 +173,8 @@ class FlextInfraUtilitiesProjectDiscovery(
             raise ValueError(declared_paths.error or "invalid .gitmodules")
         configured_projects = tuple(path.as_posix() for path in declared_paths.value)
         candidates = cls.discover_project_candidates(
-            repository_root, scan_dirs=scan_dirs,
+            repository_root,
+            scan_dirs=scan_dirs,
         )
         resolved_repository_root = repository_root.resolve()
         if not configured_projects:
@@ -174,11 +185,13 @@ class FlextInfraUtilitiesProjectDiscovery(
         def configured_key(candidate: Path) -> t.Pair[int, str]:
             relative = candidate.relative_to(resolved_repository_root).as_posix()
             return configured_order.get(
-                relative, len(configured_projects),
+                relative,
+                len(configured_projects),
             ), candidate.name
 
         non_root_candidates = sorted(
-            (c for c in candidates if c != resolved_repository_root), key=configured_key,
+            (c for c in candidates if c != resolved_repository_root),
+            key=configured_key,
         )
         ordered.extend(non_root_candidates)
         return ordered
@@ -282,7 +295,9 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @staticmethod
     def runtime_environment_dir(
-        project_root: Path, *, runtime_root: Path | None = None,
+        project_root: Path,
+        *,
+        runtime_root: Path | None = None,
     ) -> Path:
         """Resolve the checkout's Python environment.
 
@@ -308,7 +323,10 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @classmethod
     def runtime_python(
-        cls, project_root: Path, *, runtime_root: Path | None = None,
+        cls,
+        project_root: Path,
+        *,
+        runtime_root: Path | None = None,
     ) -> Path:
         """Resolve the fixed Python entrypoint inside the managed environment.
 

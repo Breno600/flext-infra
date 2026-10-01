@@ -59,7 +59,8 @@ class FlextInfraModReplacements:
                 raw_offsets = finding.payload.get("replacementOffsets")
                 raw_match = finding.range.get("byteOffset")
                 if not isinstance(raw_offsets, Mapping) or not isinstance(
-                    raw_match, Mapping,
+                    raw_match,
+                    Mapping,
                 ):
                     return r[bool].fail(
                         f"ast-grep finding lacks byte coordinates: {path}:{finding.rule_id}",
@@ -101,7 +102,8 @@ class FlextInfraModReplacements:
                 ),
             )
         published = FlextInfraSemanticPublication.publish_semantic_file_plans(
-            plans, repository_root=root,
+            plans,
+            repository_root=root,
         )
         if published.failure:
             return r[bool].from_failure(published)

@@ -33,11 +33,13 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def resource_cache_key(
-        rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource,
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> t.Triple[str, str, int]:
         """Resource cache key."""
         file_path = FlextInfraUtilitiesRopeCore.resource_file_path(
-            rope_project, resource,
+            rope_project,
+            resource,
         )
         mtime_ns = (
             file_path.stat().st_mtime_ns
@@ -130,7 +132,9 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
 
     @staticmethod
     def first_decorator_line(
-        pyfunction: t.Infra.RopePyObject, *, default_line: int,
+        pyfunction: t.Infra.RopePyObject,
+        *,
+        default_line: int,
     ) -> int:
         """Return the lowest line number among ``pyfunction``'s decorators."""
         decorators = getattr(pyfunction, "decorators", None) or ()

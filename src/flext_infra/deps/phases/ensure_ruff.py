@@ -111,7 +111,10 @@ class FlextInfraEnsureRuffConfigPhase:
         return scoped_global
 
     def _phase(
-        self, *, path: Path, facts: m.Infra.RuffProjectFacts,
+        self,
+        *,
+        path: Path,
+        facts: m.Infra.RuffProjectFacts,
     ) -> m.Infra.DepsToml.PhaseConfig:
         """Build the canonical Ruff phase for one project path."""
         ruff_cfg = self._tool_config.tools.ruff
@@ -162,7 +165,8 @@ class FlextInfraEnsureRuffConfigPhase:
                 toml.RemoveOp(key=c.Infra.EXTEND),
                 toml.ListOp(key="extend-exclude", values=sorted(workspace_exclusions)),
                 toml.ListOp(
-                    key="namespace-packages", values=sorted(existing_namespace_packages),
+                    key="namespace-packages",
+                    values=sorted(existing_namespace_packages),
                 ),
                 toml.SetOp(key="fix", value=ruff_cfg.fix),
                 toml.SetOp(key="line-length", value=ruff_cfg.line_length),
@@ -231,7 +235,8 @@ class FlextInfraEnsureRuffConfigPhase:
                     ),
                     operations=tuple(
                         toml.SetOp(
-                            key=name, value=u.normalize_to_json_value({"msg": message}),
+                            key=name,
+                            value=u.normalize_to_json_value({"msg": message}),
                         )
                         for name, message in ruff_cfg.lint.banned_api.items()
                     ),
@@ -293,7 +298,8 @@ class FlextInfraEnsureRuffConfigPhase:
                     path=path,
                     facts=m.Infra.RuffProjectFacts(
                         first_party=FlextInfraToolTablesPhase.first_party_namespaces(
-                            payload, path=path,
+                            payload,
+                            path=path,
                         ),
                         stale_patterns=[
                             pattern

@@ -36,7 +36,8 @@ class FlextInfraConfigModelsTemplates:
             m.Field(description="Canonical rendering delegate"),
         ]
         overwrite: Annotated[
-            bool, m.Field(description="Whether the template owns existing content"),
+            bool,
+            m.Field(description="Whether the template owns existing content"),
         ] = False
         requires_release_protocol: Annotated[
             bool,

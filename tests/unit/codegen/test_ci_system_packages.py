@@ -41,7 +41,8 @@ class TestsFlextInfraCiSystemPackages:
             has="apt-get install -y -qq --no-install-recommends engine-calc engine-fonts",
         )
         tm.that(
-            rendered.index(self.step_name) < rendered.index("setup (blocking)"), eq=True,
+            rendered.index(self.step_name) < rendered.index("setup (blocking)"),
+            eq=True,
         )
 
     def test_no_declaration_renders_no_install_step(self) -> None:

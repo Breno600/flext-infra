@@ -30,7 +30,9 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
     @classmethod
     def _base_edits(
-        cls, source: str, outer: ast.ClassDef,
+        cls,
+        source: str,
+        outer: ast.ClassDef,
     ) -> t.SequenceOf[t.Triple[int, int, str]]:
         """Make already-defined sibling bases executable inside the owner body."""
         siblings = tuple(node for node in outer.body if isinstance(node, ast.ClassDef))
@@ -75,7 +77,9 @@ class FlextInfraUtilitiesDeferredSelfReferenceRewrite:
 
     @classmethod
     def _annotation_edits(
-        cls, source: str, outer: ast.ClassDef,
+        cls,
+        source: str,
+        outer: ast.ClassDef,
     ) -> t.SequenceOf[t.Triple[int, int, str]]:
         """Plan owner-qualified sibling references inside deferred annotations."""
         siblings = tuple(node for node in outer.body if isinstance(node, ast.ClassDef))

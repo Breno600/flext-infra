@@ -138,16 +138,22 @@ class FlextInfraUtilitiesGitRepo:
         try:
             repo = cls._repo(repository_path)
             common_dir = Path(
-                repo.git.rev_parse("--path-format=absolute", "--git-common-dir").strip(),
+                repo.git.rev_parse(
+                    "--path-format=absolute", "--git-common-dir"
+                ).strip(),
             ).resolve()
             configured_output = repo.git.config(
-                "--path", "--get", "core.worktree", with_exceptions=False,
+                "--path",
+                "--get",
+                "core.worktree",
+                with_exceptions=False,
             ).strip()
         except GitCommandError as exc:
             return r[Path].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[Path].fail(
-                f"failed to resolve primary worktree: {exc}", exception=exc,
+                f"failed to resolve primary worktree: {exc}",
+                exception=exc,
             )
 
         if configured_output:
@@ -203,7 +209,8 @@ class FlextInfraUtilitiesGitRepo:
             ).resolve()
         except GitCommandError as exc:
             return r[Path].fail(
-                f"invalid primary worktree: {primary_root}: {exc}", exception=exc,
+                f"invalid primary worktree: {primary_root}: {exc}",
+                exception=exc,
             )
         if resolved_top != primary_root:
             return r[Path].fail(

@@ -14,7 +14,10 @@ class FlextInfraModelsMiseToolchain:
         """Private declarative base for schema-loaded codegen records."""
 
         model_config = m.ConfigDict(
-            strict=False, frozen=True, extra="forbid", str_strip_whitespace=False,
+            strict=False,
+            frozen=True,
+            extra="forbid",
+            str_strip_whitespace=False,
         )
 
     class BeadsToolSpec(_ConfigContract):
@@ -129,7 +132,8 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
         uv_link_mode: Annotated[
-            t.NonEmptyStr, m.Field(description="Portable uv installation link mode"),
+            t.NonEmptyStr,
+            m.Field(description="Portable uv installation link mode"),
         ]
         uv_environments: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
@@ -154,16 +158,20 @@ class FlextInfraModelsMiseToolchain:
             ),
         ] = ()
         kubectl_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact kubectl version, e.g. '1.32.0'"),
+            t.NonEmptyStr,
+            m.Field(description="Exact kubectl version, e.g. '1.32.0'"),
         ]
         helm_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Helm version, e.g. '3.19.4'"),
+            t.NonEmptyStr,
+            m.Field(description="Exact Helm version, e.g. '3.19.4'"),
         ]
         kind_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact kind version, e.g. '0.31.0'"),
+            t.NonEmptyStr,
+            m.Field(description="Exact kind version, e.g. '0.31.0'"),
         ]
         direnv_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible direnv major.minor line"),
+            t.NonEmptyStr,
+            m.Field(description="Compatible direnv major.minor line"),
         ]
         environment_path_prepends: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
@@ -178,7 +186,8 @@ class FlextInfraModelsMiseToolchain:
             ),
         ] = ()
         uv_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible uv major.minor line"),
+            t.NonEmptyStr,
+            m.Field(description="Compatible uv major.minor line"),
         ]
         mise_lockfile: Annotated[
             bool,
@@ -243,7 +252,8 @@ class FlextInfraModelsMiseToolchain:
             m.Field(description="Moving qlty release selector, e.g. 'latest'"),
         ]
         node_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible Node.js major.minor line"),
+            t.NonEmptyStr,
+            m.Field(description="Compatible Node.js major.minor line"),
         ]
         jscpd_selector: Annotated[
             t.NonEmptyStr,
@@ -304,13 +314,16 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
         ast_grep_selector: Annotated[
-            t.NonEmptyStr, m.Field(description="Mise selector for the ast-grep CLI"),
+            t.NonEmptyStr,
+            m.Field(description="Mise selector for the ast-grep CLI"),
         ]
         ast_grep_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact ast-grep analyzer version"),
+            t.NonEmptyStr,
+            m.Field(description="Exact ast-grep analyzer version"),
         ]
         gitleaks_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Exact Gitleaks scanner version"),
+            t.NonEmptyStr,
+            m.Field(description="Exact Gitleaks scanner version"),
         ]
         scc_selector: Annotated[
             t.NonEmptyStr,
@@ -322,10 +335,12 @@ class FlextInfraModelsMiseToolchain:
             ),
         ]
         scc_version: Annotated[
-            t.NonEmptyStr, m.Field(description="scc release selector (latest)"),
+            t.NonEmptyStr,
+            m.Field(description="scc release selector (latest)"),
         ]
         kubeconform_version: Annotated[
-            t.NonEmptyStr, m.Field(description="Compatible kubeconform minor line"),
+            t.NonEmptyStr,
+            m.Field(description="Compatible kubeconform minor line"),
         ]
         go_version: Annotated[
             t.NonEmptyStr,

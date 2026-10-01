@@ -48,7 +48,8 @@ class TestsFlextInfraCodegenProjectNewValidation:
         )
 
     def test_whitespace_flext_ref_is_rejected_without_effects(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A whitespace-only FLEXT ref fails before any directory exists."""
         result = infra.codegen_new(
@@ -58,19 +59,22 @@ class TestsFlextInfraCodegenProjectNewValidation:
         tm.that(not (tmp_path / "project").exists())
 
     def test_hostless_flext_url_is_rejected_without_effects(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A URL without a host fails before any directory exists."""
         result = infra.codegen_new(
             self._service(
-                tmp_path / "project", flext_repository_url="https:///flext-demo.git",
+                tmp_path / "project",
+                flext_repository_url="https:///flext-demo.git",
             ),
         )
         tm.fail(result, has="must name a host and repository path")
         tm.that(not (tmp_path / "project").exists())
 
     def test_unparseable_origin_is_rejected_without_effects(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A project origin that is not a Git URL fails before any effect."""
         result = infra.codegen_new(

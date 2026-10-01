@@ -72,7 +72,8 @@ class FlextInfraModelsDocsCollection:
             ),
         ] = ("source_updated_at",)
         companion_directory: bool = m.Field(
-            default=True, description="Collect the same-basename artifact directory",
+            default=True,
+            description="Collect the same-basename artifact directory",
         )
         publication: Literal["plan-artifacts", "private"] = m.Field(
             description="Authorized publication classification",
@@ -142,7 +143,8 @@ class FlextInfraModelsDocsCollection:
             description="Source update in UTC or original incomplete precision",
         )
         source_updated_at_original: str | None = m.Field(
-            default=None, description="Declared source timestamp before UTC conversion",
+            default=None,
+            description="Declared source timestamp before UTC conversion",
         )
         source_updated_at_utc: str | None = m.Field(
             default=None,
@@ -152,7 +154,8 @@ class FlextInfraModelsDocsCollection:
             description="First collection timestamp for this immutable revision",
         )
         attachments: t.VariadicTuple[str] = m.Field(
-            default=(), description="Companion-relative attachment identities",
+            default=(),
+            description="Companion-relative attachment identities",
         )
 
     class PlanCollectionSourceInventory(m.ContractModel):
@@ -177,12 +180,14 @@ class FlextInfraModelsDocsCollection:
         revisions: t.VariadicTuple[
             FlextInfraModelsDocsCollection.PlanCollectionRevision
         ] = m.Field(
-            default=(), description="Immutable observed source revision history",
+            default=(),
+            description="Immutable observed source revision history",
         )
         artifacts: t.VariadicTuple[
             FlextInfraModelsDocsCollection.PlanCollectionOwnedArtifact
         ] = m.Field(
-            default=(), description="Digest-attested generated artifact ownership",
+            default=(),
+            description="Digest-attested generated artifact ownership",
         )
 
     class PlanCollectionCoverage(m.ContractModel):
@@ -217,7 +222,8 @@ class FlextInfraModelsDocsCollection:
             description="Required destination parent chains",
         )
         prunable_directories: t.VariadicTuple[Path] = m.Field(
-            default=(), description="Owned empty directories removed after publication",
+            default=(),
+            description="Owned empty directories removed after publication",
         )
         revisions: t.VariadicTuple[
             FlextInfraModelsDocsCollection.PlanCollectionRevision

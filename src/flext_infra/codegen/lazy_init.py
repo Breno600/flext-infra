@@ -27,7 +27,8 @@ if TYPE_CHECKING:
 
 
 class FlextInfraCodegenLazyInit(
-    FlextInfraCodegenExecutionBase[bool], FlextInfraCodegenLazyInitGenerationMixin,
+    FlextInfraCodegenExecutionBase[bool],
+    FlextInfraCodegenLazyInitGenerationMixin,
 ):
     """Plan ``__init__.py`` artifacts with PEP 562 lazy imports.
 
@@ -129,7 +130,8 @@ class FlextInfraCodegenLazyInit(
         target_roots = 0
         for root in roots:
             with FlextInfraRopeWorkspace.open_workspace(
-                root, rope_repository_root=root,
+                root,
+                rope_repository_root=root,
             ) as rope:
                 if self.target_module:
                     targets = self._target_package_dirs(rope.workspace_index, root)
@@ -178,7 +180,9 @@ class FlextInfraCodegenLazyInit(
         )
 
     def _target_package_dirs(
-        self, index: m.Infra.RopeWorkspaceIndex, root: Path,
+        self,
+        index: m.Infra.RopeWorkspaceIndex,
+        root: Path,
     ) -> t.VariadicTuple[Path]:
         """Resolve the target through the current repository's authenticated index."""
         if self.target_module is None:
@@ -198,7 +202,8 @@ class FlextInfraCodegenLazyInit(
         return tuple(sorted(targets))
 
     def _plan_open_workspace(
-        self, rope: FlextInfraRopeWorkspace,
+        self,
+        rope: FlextInfraRopeWorkspace,
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Build immutable plans from one stable Rope workspace snapshot."""
         workspace_index = rope.workspace_index
@@ -235,7 +240,8 @@ class FlextInfraCodegenLazyInit(
         target_package_dir: Path | None = None
         if self.target_module:
             sorted_target_dirs = self._target_package_dirs(
-                workspace_index, rope.repository_root.resolve(),
+                workspace_index,
+                rope.repository_root.resolve(),
             )
             if not sorted_target_dirs:
                 return r[m.Infra.CodegenPhaseAnalysis].fail(
@@ -259,11 +265,14 @@ class FlextInfraCodegenLazyInit(
         if snapshots.failure:
             return r[m.Infra.CodegenPhaseAnalysis].from_failure(snapshots)
         planner = FlextInfraCodegenLazyInitPlanner(
-            rope_workspace=rope, lazy_init=config.Infra.tooling.lazy_init,
+            rope_workspace=rope,
+            lazy_init=config.Infra.tooling.lazy_init,
         )
         u.Cli.info(f"lazy-init: planning {len(package_dirs)} package dirs")
         package_plans = self._plan_all_inits(
-            package_dirs, planner=planner, target_package_dir=target_package_dir,
+            package_dirs,
+            planner=planner,
+            target_package_dir=target_package_dir,
         )
         if planner.collision_count:
             return r[m.Infra.CodegenPhaseAnalysis].fail(
@@ -271,7 +280,9 @@ class FlextInfraCodegenLazyInit(
                 f"{planner.collision_count} collision(s)",
             )
         file_plans = self._build_file_plans(
-            package_plans, index=workspace_index, snapshots=snapshots.value,
+            package_plans,
+            index=workspace_index,
+            snapshots=snapshots.value,
         )
         if file_plans.failure:
             return r[m.Infra.CodegenPhaseAnalysis].from_failure(file_plans)

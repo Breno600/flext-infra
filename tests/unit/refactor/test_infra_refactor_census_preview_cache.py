@@ -19,11 +19,14 @@ class TestsFlextInfraRefactorCensusPreview:
     """Validate removal planning only through public FLEXT facades."""
 
     def test_build_simple_removal_sources_collapse_excess_blank_lines(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Plan one class removal without leaving excess blank lines."""
         repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "service.py"
         module_path.write_text(
@@ -61,11 +64,14 @@ class TestsFlextInfraRefactorCensusPreview:
         tm.that(updated_source, lacks="\n\n\n\n")
 
     def test_build_simple_removal_sources_updates_multiline_consumers(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Plan removal of a base used by a multiline test facade."""
         repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         base_path = package_root / "base.py"
         base_path.write_text(
@@ -125,11 +131,14 @@ class TestsFlextInfraRefactorCensusPreview:
         tm.that(updated_consumer, has="Other,")
 
     def test_preview_simple_removal_candidate_does_not_write_source(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Validate a public preview while preserving the source artifact."""
         repository_root, package_root = test_u.Tests.create_lazy_init_workspace(
-            tmp_path, project_name="flext-demo", package_name="flext_demo",
+            tmp_path,
+            project_name="flext-demo",
+            package_name="flext_demo",
         )
         module_path = package_root / "dispatcher.py"
         original_source = (
@@ -156,7 +165,10 @@ class TestsFlextInfraRefactorCensusPreview:
 
         with flext_infra.infra.rope_workspace(repository_root) as rope:
             preview = infra_u.Infra.preview_simple_removal_candidate(
-                rope, repository_root, candidate, gates=("lint",),
+                rope,
+                repository_root,
+                candidate,
+                gates=("lint",),
             )
 
         tm.ok(preview)

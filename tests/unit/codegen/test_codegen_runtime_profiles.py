@@ -24,7 +24,11 @@ class TestsFlextInfraCodegenRuntimeProfiles:
     )
     @pytest.mark.parametrize("composed", [False, True])
     def test_declared_profile_restores_runtime_and_preserves_custom_specs(
-        self, tmp_path: Path, upstream: str, *, composed: bool,
+        self,
+        tmp_path: Path,
+        upstream: str,
+        *,
+        composed: bool,
     ) -> None:
         """Real standalone and parent plans consume the same member-owned profile."""
         root = tmp_path / "workspace"
@@ -56,7 +60,8 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             # A member cannot introduce another parent target through its manifest.
             members=(
                 u.Tests.repository_ref(
-                    "unselected-project", path=Path("unselected-project"),
+                    "unselected-project",
+                    path=Path("unselected-project"),
                 ),
             ),
         )
@@ -123,7 +128,8 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             mode=c.Infra.CodegenConformMode.CHECK,
         )
         service = FlextInfraCodegenConform(
-            repository_root=request_root, request=request,
+            repository_root=request_root,
+            request=request,
         )
         first = tm.ok(service.plan(request))
         rendered = u.Tests.codegen_file_text(
@@ -160,7 +166,8 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             ),
         )
         tm.that(
-            set(u.Tests.toml_strings_at(expected, "project", "dependencies")), eq=owned,
+            set(u.Tests.toml_strings_at(expected, "project", "dependencies")),
+            eq=owned,
         )
         tm.that(first.workspace.repository, eq=before.repository)
         tm.that(first.workspace.subprojects, eq=before.subprojects)
@@ -185,7 +192,8 @@ class TestsFlextInfraCodegenRuntimeProfiles:
             u.Infra.overlay_preserved(rendered, live, preserve_project_keys=()),
         )
         tm.that(
-            u.Tests.toml_strings_at(result, "project", "dependencies"), eq=("owned>=2",),
+            u.Tests.toml_strings_at(result, "project", "dependencies"),
+            eq=("owned>=2",),
         )
 
     @pytest.mark.parametrize("invalid", ['["external>=1", 42]', '"external>=1"'])

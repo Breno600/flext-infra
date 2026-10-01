@@ -36,13 +36,17 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
                 snapshot.error or f"cannot inspect docs pyproject: {pyproject_path}",
             )
         return FlextInfraUtilitiesDocsScopeStateMixin._state_from_content(
-            root, pyproject_path, snapshot.value.content,
+            root,
+            pyproject_path,
+            snapshot.value.content,
         ).model_copy(deep=True)
 
     @staticmethod
     @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
     def _state_from_content(
-        root: Path, pyproject_path: Path, content: bytes | None,
+        root: Path,
+        pyproject_path: Path,
+        content: bytes | None,
     ) -> mw.ProjectPyprojectState:
         """Parse once per byte-identical canonical pyproject snapshot."""
         if content is None:
@@ -89,12 +93,15 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
             docs_meta=docs_meta,
             project_name=(
                 FlextInfraUtilitiesDocsScopeStateMixin.project_name_from_payload(
-                    root, payload,
+                    root,
+                    payload,
                 )
             ),
             package_name=(
                 FlextInfraUtilitiesDocsScopeStateMixin.package_name_from_payload(
-                    root, payload, docs_meta,
+                    root,
+                    payload,
+                    docs_meta,
                 )
             ),
             dependency_names=dependency_names,
@@ -138,7 +145,9 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
 
     @staticmethod
     def package_name_from_payload(
-        project_root: Path, payload: t.JsonMapping, docs_meta: t.JsonMapping,
+        project_root: Path,
+        payload: t.JsonMapping,
+        docs_meta: t.JsonMapping,
     ) -> str:
         """Return the primary package name using pre-loaded payload.
 
@@ -151,7 +160,9 @@ class FlextInfraUtilitiesDocsScopeStateMixin(FlextInfraUtilitiesDocsScopePathsMi
         Raises ``ValueError`` only for flext- projects unable to resolve.
         """
         return FlextInfraUtilitiesPyproject.package_name_from_payload(
-            project_root, payload, docs_meta,
+            project_root,
+            payload,
+            docs_meta,
         )
 
     @staticmethod

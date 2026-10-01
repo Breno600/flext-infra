@@ -31,7 +31,9 @@ class FlextInfraCodegenLazyInitProjectionManifest:
 
     @classmethod
     def projection_manifest_plans(
-        cls, *, files: t.VariadicTuple[m.Infra.CodegenFilePlan],
+        cls,
+        *,
+        files: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Append one manifest plan per project that owns projected files.
 

@@ -52,7 +52,9 @@ class FlextInfraDocFormatter(FlextInfraDocServiceBase):
             projects=projects,
             output_dir=output_dir,
             handler=lambda scope: self._format_scope(
-                scope, apply=apply, gate_factory=gate_factory,
+                scope,
+                apply=apply,
+                gate_factory=gate_factory,
             ),
         )
 

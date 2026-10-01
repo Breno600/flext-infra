@@ -26,7 +26,9 @@ class FlextInfraWorkspaceChecker(
     _registry: FlextInfraGateRegistry
     _default_reports_dir: Path
     model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-        validate_by_name=True, validate_by_alias=True, arbitrary_types_allowed=True,
+        validate_by_name=True,
+        validate_by_alias=True,
+        arbitrary_types_allowed=True,
     )
 
     @override
@@ -36,7 +38,9 @@ class FlextInfraWorkspaceChecker(
         self._repository_root = self.repository_root
         self._registry = FlextInfraGateRegistry()
         self._default_reports_dir = u.Cli.resolve_report_dir(
-            self._repository_root, c.Infra.PROJECT, c.Infra.VERB_CHECK,
+            self._repository_root,
+            c.Infra.PROJECT,
+            c.Infra.VERB_CHECK,
         )
 
     @staticmethod
@@ -130,7 +134,8 @@ class FlextInfraWorkspaceChecker(
             return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
                 tuple(
                     m.Infra.CheckProjectTarget(
-                        name=project_name, path=params.repository_root / project_name,
+                        name=project_name,
+                        path=params.repository_root / project_name,
                     )
                     for project_name in requested
                 ),
@@ -158,7 +163,9 @@ class FlextInfraWorkspaceChecker(
         )
 
     def run_project(
-        self, project: str, gates: t.StrSequence,
+        self,
+        project: str,
+        gates: t.StrSequence,
     ) -> p.Result[t.SequenceOf[m.Infra.ProjectResult]]:
         """Run selected gates for one project."""
         return self.run_projects([project], list(gates))
@@ -208,12 +215,16 @@ class FlextInfraWorkspaceChecker(
                 "gate context fail_fast disagrees with the requested project policy",
             )
         outcome = self._run_project_loop(
-            targets, resolved_gates, effective_ctx, fail_fast=fail_fast,
+            targets,
+            resolved_gates,
+            effective_ctx,
+            fail_fast=fail_fast,
         )
         return self._write_reports_and_summary(resolved_gates, report_base, outcome)
 
     def _project_targets(
-        self, projects: t.StrSequence | t.SequenceOf[m.Infra.CheckProjectTarget],
+        self,
+        projects: t.StrSequence | t.SequenceOf[m.Infra.CheckProjectTarget],
     ) -> t.SequenceOf[m.Infra.CheckProjectTarget]:
         """Return typed project targets from public names or internal selections."""
         targets: list[m.Infra.CheckProjectTarget] = []
@@ -223,7 +234,8 @@ class FlextInfraWorkspaceChecker(
                 continue
             targets.append(
                 m.Infra.CheckProjectTarget(
-                    name=project, path=self._repository_root / project,
+                    name=project,
+                    path=self._repository_root / project,
                 ),
             )
         return tuple(targets)

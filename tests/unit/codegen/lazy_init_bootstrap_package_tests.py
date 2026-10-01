@@ -45,7 +45,8 @@ class TestsFlextInfraLazyInitBootstrapPackage:
         return facet_dir
 
     def test_bootstrap_owner_private_facets_stay_side_effect_free(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Private facets of the bootstrap owner never import the bootstrap."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(
@@ -67,7 +68,8 @@ class TestsFlextInfraLazyInitBootstrapPackage:
             tm.that(init_content, lacks="install_lazy_exports")
 
     def test_generated_bootstrap_owner_facet_is_preserved_not_removed(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A generated facet initializer stays a generated facet initializer.
 
@@ -98,7 +100,8 @@ class TestsFlextInfraLazyInitBootstrapPackage:
         tm.that(rendered, lacks="install_lazy_exports")
 
     def test_other_distributions_still_receive_the_lazy_bootstrap(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Private packages outside the bootstrap owner keep their generated map."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)

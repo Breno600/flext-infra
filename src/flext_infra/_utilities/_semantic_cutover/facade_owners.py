@@ -34,7 +34,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
     def facade_classes(cls, package: str) -> t.StrMapping:
         """Map every letter ``package`` publishes to its declared facade class."""
         modules = FlextInfraUtilitiesPrivateImportFacades.source_modules(
-            {}, (f"from {package} import *",),
+            {},
+            (f"from {package} import *",),
         )
         indexed = modules.get(package)
         if indexed is None:
@@ -51,7 +52,10 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
 
     @classmethod
     def _facade_declared_owner(
-        cls, modules: t.MappingKV[str, t.Pair[str, bool]], module: str, letter: str,
+        cls,
+        modules: t.MappingKV[str, t.Pair[str, bool]],
+        module: str,
+        letter: str,
     ) -> str:
         """Return the class ``letter`` names, or raise with the missing proof."""
         owner = cls._facade_letter_class(modules, module, letter)
@@ -65,7 +69,10 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
 
     @classmethod
     def _facade_letter_class(
-        cls, modules: t.MappingKV[str, t.Pair[str, bool]], module: str, letter: str,
+        cls,
+        modules: t.MappingKV[str, t.Pair[str, bool]],
+        module: str,
+        letter: str,
     ) -> str | None:
         """Return the declared class of a letter that ``module`` publishes."""
         resolved = cls._facade_declared_class(modules, module, letter, frozenset())
@@ -129,7 +136,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                     if (imported.asname or imported.name) == name:
                         source_module = (
                             resolve_name(
-                                "." * node.level + (node.module or ""), package,
+                                "." * node.level + (node.module or ""),
+                                package,
                             )
                             if node.level
                             else node.module or ""
@@ -153,7 +161,9 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                     d for d in ast.walk(node.value) if isinstance(d, ast.Dict)
                 ):
                     for key, value in zip(
-                        dict_node.keys, dict_node.values, strict=False,
+                        dict_node.keys,
+                        dict_node.values,
+                        strict=False,
                     ):
                         if (
                             isinstance(key, ast.Constant)
@@ -162,7 +172,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                         ):
                             for element in value.elts:
                                 if isinstance(element, ast.Constant) and isinstance(
-                                    element.value, str,
+                                    element.value,
+                                    str,
                                 ):
                                     inline.setdefault(element.value, key.value)
         if declared:
@@ -182,7 +193,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
     @staticmethod
     @lru_cache(maxsize=c.Infra.CONTENT_CACHE_MAXSIZE)
     def _facade_module_statements(
-        source: str, module: str,
+        source: str,
+        module: str,
     ) -> t.VariadicTuple[ast.stmt]:
         """Parse one module source once per content; resolution only reads it.
 
@@ -212,7 +224,8 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
         for (
             node
         ) in FlextInfraUtilitiesSemanticCutoverFacadeOwners._facade_module_statements(
-            source, module,
+            source,
+            module,
         ):
             if not (
                 isinstance(node, ast.Assign | ast.AnnAssign)
@@ -238,14 +251,16 @@ class FlextInfraUtilitiesSemanticCutoverFacadeOwners:
                         continue
                     for element in value.elts:
                         if isinstance(element, ast.Constant) and isinstance(
-                            element.value, str,
+                            element.value,
+                            str,
                         ):
                             bindings.setdefault(element.value, key.value)
         return MappingProxyType(bindings)
 
     @classmethod
     def _facade_ordered_statements(
-        cls, body: t.SequenceOf[ast.stmt],
+        cls,
+        body: t.SequenceOf[ast.stmt],
     ) -> Iterator[ast.stmt]:
         """Yield module-scope bindings in execution order, entering conditionals."""
         for node in body:

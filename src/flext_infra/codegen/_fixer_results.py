@@ -30,7 +30,8 @@ class FlextInfraCodegenFixerResultsMixin:
 
     @staticmethod
     def _build_result(
-        project_name: str, ctx: m.Infra.FixContext,
+        project_name: str,
+        ctx: m.Infra.FixContext,
     ) -> m.Infra.AutoFixResult:
         """Build result."""
         return m.Infra.AutoFixResult(
@@ -41,7 +42,9 @@ class FlextInfraCodegenFixerResultsMixin:
         )
 
     def _load_initial_violations(
-        self, ctx: m.Infra.FixContext, project_path: Path,
+        self,
+        ctx: m.Infra.FixContext,
+        project_path: Path,
     ) -> t.SequenceOf[m.Infra.CensusViolation]:
         """Read the initial namespace violations and record skip reason on failure."""
         initial_violations_result = u.Infra.parse_namespace_validation(

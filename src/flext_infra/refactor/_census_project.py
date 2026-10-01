@@ -33,11 +33,17 @@ class FlextInfraRefactorCensusProjectMixin:
         def _object_key(item: m.Infra.Object) -> str: ...
         @staticmethod
         def _violation(
-            item: m.Infra.Object, *, kind: str, description: str,
+            item: m.Infra.Object,
+            *,
+            kind: str,
+            description: str,
         ) -> m.Infra.Violation: ...
         @classmethod
         def _removal_candidate(
-            cls, item: m.Infra.Object, *, include_unused: bool,
+            cls,
+            item: m.Infra.Object,
+            *,
+            include_unused: bool,
         ) -> m.Infra.RemovalCandidate | None: ...
 
     def _project_report(
@@ -54,13 +60,19 @@ class FlextInfraRefactorCensusProjectMixin:
         rule_names = scan_config.rule_names
         selected_rules = scan_config.selected_rules
         include_unused = self._include_rule(
-            "unused", rule_names=rule_names, selected_rules=selected_rules,
+            "unused",
+            rule_names=rule_names,
+            selected_rules=selected_rules,
         )
         include_duplicate = self._include_rule(
-            "duplicate", rule_names=rule_names, selected_rules=selected_rules,
+            "duplicate",
+            rule_names=rule_names,
+            selected_rules=selected_rules,
         )
         include_wrong_tier = self._include_rule(
-            "wrong_tier", rule_names=rule_names, selected_rules=selected_rules,
+            "wrong_tier",
+            rule_names=rule_names,
+            selected_rules=selected_rules,
         )
         unused_count = 0
         removal_candidates: list[m.Infra.RemovalCandidate] = []

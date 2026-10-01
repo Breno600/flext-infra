@@ -23,12 +23,15 @@ from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
 
 
 class FlextInfraCodegenLayout(
-    FlextInfraCodegenLayoutApplyMixin, FlextInfraCodegenLayoutPlanMixin, s[str],
+    FlextInfraCodegenLayoutApplyMixin,
+    FlextInfraCodegenLayoutPlanMixin,
+    s[str],
 ):
     """Check or apply the canonical project layout from the layout SSOT."""
 
     project_name: Annotated[
-        str | None, m.Field(alias="project", description="Single project to conform"),
+        str | None,
+        m.Field(alias="project", description="Single project to conform"),
     ] = None
 
     @override

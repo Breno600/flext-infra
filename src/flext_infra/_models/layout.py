@@ -32,7 +32,10 @@ class FlextInfraModelsLayout:
         """
 
         model_config = m.ConfigDict(
-            strict=False, frozen=True, extra="forbid", str_strip_whitespace=False,
+            strict=False,
+            frozen=True,
+            extra="forbid",
+            str_strip_whitespace=False,
         )
 
     class LayoutMoveSpec(_LayoutContract):
@@ -84,19 +87,24 @@ class FlextInfraModelsLayout:
 
         version: Annotated[int, m.Field(ge=1, description="Config schema version")]
         archive_root: Annotated[
-            t.NonEmptyStr, m.Field(description="Archive-not-delete root directory"),
+            t.NonEmptyStr,
+            m.Field(description="Archive-not-delete root directory"),
         ]
         docs_target: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical documentation directory"),
+            t.NonEmptyStr,
+            m.Field(description="Canonical documentation directory"),
         ]
         examples_target: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical examples directory"),
+            t.NonEmptyStr,
+            m.Field(description="Canonical examples directory"),
         ]
         diagrams_target: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical diagrams directory"),
+            t.NonEmptyStr,
+            m.Field(description="Canonical diagrams directory"),
         ]
         allow_hidden: Annotated[
-            bool, m.Field(description="Whether any `.*` root entry is canonical"),
+            bool,
+            m.Field(description="Whether any `.*` root entry is canonical"),
         ] = True
         canonical_root_files: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
@@ -170,16 +178,20 @@ class FlextInfraModelsLayout:
 
         rule: Annotated[t.Infra.LayoutRule, m.Field(description="Decision kind")]
         path: Annotated[
-            t.NonEmptyStr, m.Field(description="Project-relative source path"),
+            t.NonEmptyStr,
+            m.Field(description="Project-relative source path"),
         ]
         target: Annotated[
-            str, m.Field(description="Project-relative destination path"),
+            str,
+            m.Field(description="Project-relative destination path"),
         ] = ""
         message: Annotated[
-            t.NonEmptyStr, m.Field(description="Human-readable decision detail"),
+            t.NonEmptyStr,
+            m.Field(description="Human-readable decision detail"),
         ]
         status: Annotated[
-            t.Infra.LayoutStatus, m.Field(description="Execution status"),
+            t.Infra.LayoutStatus,
+            m.Field(description="Execution status"),
         ] = "planned"
 
     class LayoutProjectReport(mm.ProjectNameMixin, _LayoutContract):

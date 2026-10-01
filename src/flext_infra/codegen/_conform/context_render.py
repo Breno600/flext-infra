@@ -33,7 +33,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         fails, through ``render_integration_branch``, exactly as before.
         """
         branch = FlextInfraCodegenConformContextRender._resolve_integration_branch(
-            target=target, workspace=workspace, codegen=codegen,
+            target=target,
+            workspace=workspace,
+            codegen=codegen,
         )
         return m.Infra.CodegenRenderInputs(
             target=target,
@@ -80,7 +82,8 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         )
 
     def make_render_context(
-        self, render_inputs: m.Infra.CodegenRenderInputs,
+        self,
+        render_inputs: m.Infra.CodegenRenderInputs,
     ) -> p.Result[m.Infra.MakeRenderContext]:
         """Build the typed context consumed by the generated Makefile."""
         target = render_inputs.target
@@ -95,7 +98,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             else ()
         )
         gitlinks = self._managed_gitlinks(
-            workspace, codegen, repository_root=repository_root,
+            workspace,
+            codegen,
+            repository_root=repository_root,
         )
         if gitlinks.failure:
             return r[m.Infra.MakeRenderContext].from_failure(gitlinks)
@@ -223,7 +228,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             # conforming a governed repository never depends on scaffold-only
             # declarations.
             derived = self._project_spec_from_existing(
-                repository, repository_root, codegen,
+                repository,
+                repository_root,
+                codegen,
             )
             if derived.failure:
                 return r[m.Infra.ProjectRenderContext].from_failure(derived)
@@ -294,7 +301,9 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
         # the consumer's organization or branch: a repository in another org
         # otherwise renders a mixed family and uv rejects conflicting URLs.
         flext_line = u.Infra.flext_integration_line_for_checkout(
-            codegen=codegen, repository_root=repository_root, workspace=workspace,
+            codegen=codegen,
+            repository_root=repository_root,
+            workspace=workspace,
         )
         if flext_line.failure:
             return r[m.Infra.ProjectRenderContext].from_failure(flext_line)

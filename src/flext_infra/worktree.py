@@ -12,10 +12,12 @@ class FlextInfraWorktreeService(s[str]):
     """List, add, update, and remove development lanes under the repository."""
 
     operation: Annotated[
-        c.Infra.WorktreeOperation, m.Field(description="Worktree lifecycle operation"),
+        c.Infra.WorktreeOperation,
+        m.Field(description="Worktree lifecycle operation"),
     ]
     branch: Annotated[
-        str | None, m.Field(description="Git branch identifying the development lane"),
+        str | None,
+        m.Field(description="Git branch identifying the development lane"),
     ] = None
     base: Annotated[
         str | None,
@@ -49,7 +51,8 @@ class FlextInfraWorktreeService(s[str]):
 
     @staticmethod
     def _lanes_root(
-        primary_root: Path, epic_lane: Path | None = None,
+        primary_root: Path,
+        epic_lane: Path | None = None,
     ) -> p.Result[Path]:
         """Place new lanes outside every ancestor project discovery boundary.
 
@@ -74,12 +77,17 @@ class FlextInfraWorktreeService(s[str]):
         ]
         namespace = f"{resolved_primary.name}-{namespace_digest}"
         return r[Path].ok(
-            (outermost_project.parent / c.Infra.WORKTREES_DIRNAME / namespace).resolve(),
+            (
+                outermost_project.parent / c.Infra.WORKTREES_DIRNAME / namespace
+            ).resolve(),
         )
 
     @classmethod
     def _lane_path(
-        cls, primary_root: Path, branch: str, epic_lane: Path | None = None,
+        cls,
+        primary_root: Path,
+        branch: str,
+        epic_lane: Path | None = None,
     ) -> p.Result[Path]:
         """Derive an isolated lane path and reject branch traversal."""
         root_result = cls._lanes_root(primary_root, epic_lane)
@@ -96,7 +104,10 @@ class FlextInfraWorktreeService(s[str]):
 
     @classmethod
     def canonical_lane_path(
-        cls, primary_root: Path, branch: str, epic_lane: Path | None = None,
+        cls,
+        primary_root: Path,
+        branch: str,
+        epic_lane: Path | None = None,
     ) -> p.Result[Path]:
         """Return the canonical path reserved by one branch topology."""
         return cls._lane_path(primary_root, branch, epic_lane)
@@ -118,7 +129,9 @@ class FlextInfraWorktreeService(s[str]):
 
     @classmethod
     def registered_lanes(
-        cls, primary_root: Path, branch: str,
+        cls,
+        primary_root: Path,
+        branch: str,
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Return the lanes Git registers for a branch; empty means none exists."""
         entries = cls._registered_worktrees(primary_root)
@@ -140,7 +153,9 @@ class FlextInfraWorktreeService(s[str]):
 
     @classmethod
     def registered_children(
-        cls, primary_root: Path, epic_lane: Path,
+        cls,
+        primary_root: Path,
+        epic_lane: Path,
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Return every registered lane nested under one epic lane container."""
         entries = cls._registered_worktrees(primary_root)
@@ -181,7 +196,11 @@ class FlextInfraWorktreeService(s[str]):
     ) -> p.Result[str]:
         """Roll back only a clean lane created by the current add operation."""
         return u.Infra.rollback_new_lane(
-            primary_root, lane, branch, created_branch_oid, setup_error,
+            primary_root,
+            lane,
+            branch,
+            created_branch_oid,
+            setup_error,
         )
 
     def _add(self, primary_root: Path, branch: str, base: str) -> p.Result[str]:

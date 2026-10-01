@@ -100,7 +100,8 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         """Ruff lint settings loaded from YAML."""
 
         select: Annotated[
-            t.StrSequence, m.Field(description="Ruff lint rule selectors."),
+            t.StrSequence,
+            m.Field(description="Ruff lint rule selectors."),
         ] = m.Field(default_factory=tuple)
         unfixable: Annotated[
             t.StrSequence,
@@ -165,13 +166,15 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         ] = m.Field(default_factory=tuple)
         fix: Annotated[bool, m.Field(description="Enable automatic ruff fixes")]
         line_length: Annotated[
-            int, m.Field(alias="line-length", description="Maximum line length."),
+            int,
+            m.Field(alias="line-length", description="Maximum line length."),
         ]
         preview: Annotated[bool, m.Field(description="Enable preview ruff behavior.")]
         respect_gitignore: Annotated[
             bool,
             m.Field(
-                alias="respect-gitignore", description="Respect .gitignore exclusions.",
+                alias="respect-gitignore",
+                description="Respect .gitignore exclusions.",
             ),
         ]
         show_fixes: Annotated[
@@ -188,7 +191,8 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         target_version: Annotated[
             str,
             m.Field(
-                alias="target-version", description="Python target version for ruff.",
+                alias="target-version",
+                description="Python target version for ruff.",
             ),
         ]
         format: FlextInfraModelsDepsToolConfigLinters.RuffFormatConfig = m.Field(
@@ -202,7 +206,8 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
         """Single [[tool.mypy.overrides]] entry."""
 
         modules: Annotated[
-            t.StrSequence, m.Field(description="Module patterns for this override."),
+            t.StrSequence,
+            m.Field(description="Module patterns for this override."),
         ]
         follow_untyped_imports: Annotated[
             bool,

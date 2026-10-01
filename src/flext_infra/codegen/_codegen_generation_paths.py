@@ -31,7 +31,8 @@ class FlextInfraCodegenGenerationPathsMixin:
 
     @staticmethod
     def _should_publish_root_export(
-        export_name: str, lazy_filtered: t.LazyAliasMap,
+        export_name: str,
+        lazy_filtered: t.LazyAliasMap,
     ) -> bool:
         """Return whether a root export belongs in the frozen ``__all__`` ABI."""
         if export_name in c.Infra.INFRA_ONLY_EXPORTS | c.Infra.PUBLISHED_ALL_EXCLUDE:
@@ -115,7 +116,8 @@ class FlextInfraCodegenGenerationPathsMixin:
             return mod
         if mod.split(".", maxsplit=1)[0] == current_pkg.split(".", maxsplit=1)[0]:
             return FlextInfraCodegenGenerationPathsMixin._relative_owned_module(
-                current_pkg, mod,
+                current_pkg,
+                mod,
             )
         if mod.startswith("_"):
             return f".{mod}"
@@ -134,7 +136,8 @@ class FlextInfraCodegenGenerationPathsMixin:
 
     @staticmethod
     def _normalize_type_checking_module_path(
-        mod: str, local_package_root: str | None,
+        mod: str,
+        local_package_root: str | None,
     ) -> str:
         """Normalize local TYPE_CHECKING owners to package-relative imports."""
         if not local_package_root:
@@ -145,7 +148,8 @@ class FlextInfraCodegenGenerationPathsMixin:
         first_segment = mod.split(".", maxsplit=1)[0]
         if first_segment == root_pkg:
             return FlextInfraCodegenGenerationPathsMixin._relative_owned_module(
-                local_package_root, mod,
+                local_package_root,
+                mod,
             )
         internal_segments = frozenset(local_package_root.split(".")[1:])
         if (
@@ -162,7 +166,9 @@ class FlextInfraCodegenGenerationPathsMixin:
 
     @staticmethod
     def _reject_noncanonical_type_checking_import(
-        mod: str, local_package_root: str | None, items: t.StrPairSequence,
+        mod: str,
+        local_package_root: str | None,
+        items: t.StrPairSequence,
     ) -> None:
         """Reject a relative TYPE_CHECKING import with no local package context.
 

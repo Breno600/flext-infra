@@ -17,7 +17,9 @@ from tests import u as test_u
 
 
 def _plan(
-    project: Path, relative: str, content: bytes | None,
+    project: Path,
+    relative: str,
+    content: bytes | None,
 ) -> m.Infra.CodegenFilePlan:
     path = project / relative
     if content is None:
@@ -78,13 +80,16 @@ class TestsFlextInfraLazyInitProjectionManifest:
         tm.that(manifest.desired_content.endswith(b"\n"), eq=True)
 
     def test_manifest_excludes_itself_and_non_projected_plans(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Only .agents/.codex projections feed entries; the manifest never self-refs."""
         projected = _plan(tmp_path, ".agents/aihub-hooks/x.py", b"kept")
         engine = _plan(tmp_path, "src/engine.py", b"ignored")
         existing = _plan(
-            tmp_path, ".agents/projections.lock.json", b'{"apiVersion": "stale"}',
+            tmp_path,
+            ".agents/projections.lock.json",
+            b'{"apiVersion": "stale"}',
         )
         result = FlextInfraCodegenLazyInitProjectionManifest.projection_manifest_plans(
             files=(projected, engine, existing),

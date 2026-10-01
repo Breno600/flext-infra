@@ -24,7 +24,8 @@ class TestsFlextInfraLazyInitFixtureSettingsCollision:
     """Private fixtures never widen the generated public root."""
 
     def test_root_excludes_private_fixtures_and_keeps_runtime_singletons(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """The public root keeps direct singletons without private fixture exports."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -77,7 +78,8 @@ class TestsFlextInfraLazyInitFixtureSettingsCollision:
         compile(init_content, "__init__.py", "exec")
 
     def test_private_fixture_never_displaces_declared_settings_singleton(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A colliding private fixture never costs the root its declared singleton."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -106,7 +108,8 @@ class TestsFlextInfraLazyInitFixtureSettingsCollision:
         )
         tm.that(result, eq=0)
         tm.that(
-            init_content, contains='"._settings": ("FlextSampleSettings", "settings")',
+            init_content,
+            contains='"._settings": ("FlextSampleSettings", "settings")',
         )
         tm.that(
             init_content,

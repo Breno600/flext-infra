@@ -124,7 +124,9 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                 means the reference will land in that shared class scope.
                 """
                 current: cst.CSTNode | None = self.get_metadata(
-                    ParentNodeProvider, node, None,
+                    ParentNodeProvider,
+                    node,
+                    None,
                 )
                 while current is not None:
                     if isinstance(current, cst.FunctionDef):
@@ -138,7 +140,10 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                 return False
 
             def _single_binding(
-                self, original_node: cst.CSTNode, *, ambiguity: str,
+                self,
+                original_node: cst.CSTNode,
+                *,
+                ambiguity: str,
             ) -> str | None:
                 """Return the one class-nesting replacement bound to ``original_node``.
 
@@ -148,7 +153,9 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                 replacements = {
                     replacement
                     for qualified_name in self.get_metadata(
-                        QualifiedNameProvider, original_node, (),
+                        QualifiedNameProvider,
+                        original_node,
+                        (),
                     )
                     if (replacement := self.qualified.get(qualified_name.name))
                     is not None
@@ -162,14 +169,17 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
 
             @override
             def leave_Name(
-                self, original_node: cst.Name, updated_node: cst.Name,
+                self,
+                original_node: cst.Name,
+                updated_node: cst.Name,
             ) -> cst.BaseExpression:
                 bound = self._single_binding(original_node, ambiguity="binding")
                 if bound is None:
                     return updated_node
                 parent = self.get_metadata(ParentNodeProvider, original_node)
                 if FlextInfraUtilitiesQualifiedNames.rebinds_name_in_place(
-                    parent, original_node,
+                    parent,
+                    original_node,
                 ):
                     return updated_node
                 if isinstance(parent, cst.ClassDef) and parent.name is original_node:
@@ -185,7 +195,9 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
 
             @override
             def leave_Attribute(
-                self, original_node: cst.Attribute, updated_node: cst.Attribute,
+                self,
+                original_node: cst.Attribute,
+                updated_node: cst.Attribute,
             ) -> cst.BaseExpression:
                 bound = self._single_binding(original_node, ambiguity="attribute")
                 if bound is None:
@@ -198,10 +210,13 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
 
             @override
             def leave_ImportFrom(
-                self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom,
+                self,
+                original_node: cst.ImportFrom,
+                updated_node: cst.ImportFrom,
             ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
                 bindings = self.bindings_by_module.get(
-                    self._import_module(original_node), {},
+                    self._import_module(original_node),
+                    {},
                 )
                 if not bindings or isinstance(updated_node.names, cst.ImportStar):
                     return updated_node
@@ -230,24 +245,31 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                     return cst.RemoveFromParent()
                 return updated_node.with_changes(
                     names=FlextInfraUtilitiesQualifiedNames.normalized_import_aliases(
-                        aliases, parenthesized=bool(updated_node.lpar),
+                        aliases,
+                        parenthesized=bool(updated_node.lpar),
                     ),
                 )
 
             @override
             def leave_Assign(
-                self, original_node: cst.Assign, updated_node: cst.Assign,
+                self,
+                original_node: cst.Assign,
+                updated_node: cst.Assign,
             ) -> cst.BaseSmallStatement:
                 return FlextInfraUtilitiesQualifiedNames.filter_exports(
-                    updated_node, self.definitions,
+                    updated_node,
+                    self.definitions,
                 )
 
             @override
             def leave_AnnAssign(
-                self, original_node: cst.AnnAssign, updated_node: cst.AnnAssign,
+                self,
+                original_node: cst.AnnAssign,
+                updated_node: cst.AnnAssign,
             ) -> cst.BaseSmallStatement:
                 return FlextInfraUtilitiesQualifiedNames.filter_exports(
-                    updated_node, self.definitions,
+                    updated_node,
+                    self.definitions,
                 )
 
         return (

@@ -30,7 +30,9 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
 
     @classmethod
     def git_committed_directory_blobs(
-        cls, repo_root: Path, relative_dir: str,
+        cls,
+        repo_root: Path,
+        relative_dir: str,
     ) -> p.Result[t.MappingKV[str, bytes]]:
         """Read every blob directly under ``relative_dir`` in HEAD.
 
@@ -52,12 +54,14 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
             })
         except (OSError, ValueError) as exc:
             return r[t.MappingKV[str, bytes]].fail_op(
-                f"read committed blobs {relative_dir} at {repo_root}", exc,
+                f"read committed blobs {relative_dir} at {repo_root}",
+                exc,
             )
 
     @classmethod
     def git_head_numstat(
-        cls, request: m.Infra.GitRepoRequest,
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitNumstatReport]:
         """Capture HEAD subject and ``HEAD~1..HEAD`` numstat."""
         try:
@@ -68,7 +72,8 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
             return r[m.Infra.GitNumstatReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitNumstatReport].fail(
-                f"git numstat read failed: {exc}", exception=exc,
+                f"git numstat read failed: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitNumstatReport].ok(
             m.Infra.GitNumstatReport(subject=subject.strip(), numstat=numstat),
@@ -76,7 +81,8 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
 
     @classmethod
     def git_fingerprint_inputs(
-        cls, request: m.Infra.GitRepoRequest,
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitFingerprintInputsReport]:
         """Capture byte-exact fingerprint inputs for one worktree."""
         try:
@@ -86,11 +92,14 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
             return r[m.Infra.GitFingerprintInputsReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitFingerprintInputsReport].fail(
-                f"failed to capture fingerprint inputs: {exc}", exception=exc,
+                f"failed to capture fingerprint inputs: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitFingerprintInputsReport].ok(
             m.Infra.GitFingerprintInputsReport(
-                paths_z=paths_z, index_z=index_z, head=head,
+                paths_z=paths_z,
+                index_z=index_z,
+                head=head,
             ),
         )
 
@@ -98,7 +107,10 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
     def _git_capture_fingerprint(repo: Repo) -> t.Triple[bytes, bytes, bytes]:
         """Capture (paths_z, index_z, head) bytes for fingerprinting."""
         paths_z = repo.git.ls_files(
-            "-z", "--cached", "--others", "--exclude-standard",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-standard",
         ).encode(c.Cli.ENCODING_DEFAULT)
         index_z = repo.git.ls_files("--stage", "-z").encode(c.Cli.ENCODING_DEFAULT)
         # An unborn HEAD has no commit; its fingerprint input is the typed
@@ -112,7 +124,8 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
 
     @classmethod
     def git_update_index_gitlink(
-        cls, request: m.Infra.GitUpdateIndexGitlinkRequest,
+        cls,
+        request: m.Infra.GitUpdateIndexGitlinkRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
         """Stage one gitlink (mode 160000) into the index."""
         try:
@@ -128,13 +141,15 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
             return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to update-index gitlink: {exc}", exception=exc,
+                f"failed to update-index gitlink: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=True))
 
     @classmethod
     def git_staged_gitlink_oid(
-        cls, request: m.Infra.GitRefRequest,
+        cls,
+        request: m.Infra.GitRefRequest,
     ) -> p.Result[m.Infra.GitOidReport]:
         """Return the gitlink OID the index records for one submodule path.
 
@@ -180,11 +195,13 @@ class FlextInfraUtilitiesGitSemanticIndexMixin(
             staged = repo.git.ls_files("--stage")
         except (GitCommandError, InvalidGitRepositoryError, NoSuchPathError) as exc:
             return r[t.StrSequence].fail(
-                f"failed to read the Git index: {exc}", exception=exc,
+                f"failed to read the Git index: {exc}",
+                exception=exc,
             )
         except (OSError, ValueError) as exc:
             return r[t.StrSequence].fail(
-                f"failed to read the Git index: {exc}", exception=exc,
+                f"failed to read the Git index: {exc}",
+                exception=exc,
             )
         fields_per_record = c.Infra.GIT_LS_FILES_STAGE_FIELDS
         records = tuple(

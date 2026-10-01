@@ -69,7 +69,9 @@ class TestsSelfFacadeCutover:
         ],
     )
     def test_eager_reference_is_rejected_before_publication(
-        self, tmp_path: Path, consumer: str,
+        self,
+        tmp_path: Path,
+        consumer: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
@@ -93,7 +95,9 @@ class TestsSelfFacadeCutover:
         ],
     )
     def test_multiple_aliases_and_duplicate_imports_preserve_each_use(
-        self, tmp_path: Path, declaration: str,
+        self,
+        tmp_path: Path,
+        declaration: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"

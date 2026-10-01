@@ -61,7 +61,8 @@ class FlextInfraCodegenGenerationStandardMixin(
         previous_top: str | None = None
         for module in sorted(eager_groups, key=str.lower):
             rendered_module = cls._absolute_import_module(
-                current_pkg, cls._compact_lazy_module_path(current_pkg, module),
+                current_pkg,
+                cls._compact_lazy_module_path(current_pkg, module),
             )
             top = rendered_module.split(".", maxsplit=1)[0]
             if previous_top is not None and top != previous_top:
@@ -84,7 +85,8 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @classmethod
     def _lazy_groups(
-        cls, plan: m.Infra.LazyInitPlan,
+        cls,
+        plan: m.Infra.LazyInitPlan,
     ) -> t.Triple[
         t.SequenceOf[t.StrSequencePair],
         t.SequenceOf[t.StrPairSequencePair],
@@ -191,7 +193,8 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @classmethod
     def _format_lazy_module_mapping(
-        cls, groups: t.SequenceOf[t.StrSequencePair],
+        cls,
+        groups: t.SequenceOf[t.StrSequencePair],
     ) -> str:
         """Render the immutable module mapping without a formatter subprocess."""
         compact = f"        {cls._lazy_module_argument_inline(groups)},"
@@ -211,7 +214,8 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @classmethod
     def _format_lazy_alias_mapping(
-        cls, groups: t.SequenceOf[t.StrPairSequencePair],
+        cls,
+        groups: t.SequenceOf[t.StrPairSequencePair],
     ) -> str:
         """Render the immutable alias mapping without a formatter subprocess."""
         compact = f"        {cls._lazy_alias_argument_inline(groups)},"
@@ -358,7 +362,8 @@ class FlextInfraCodegenGenerationStandardMixin(
         return m.Infra.LazyInitRootRender(
             autogen_header=c.Infra.AUTOGEN_HEADER,
             docstring=cls._format_root_package_docstring(
-                current_pkg, cls._copyright_notice(plan.context.pkg_dir),
+                current_pkg,
+                cls._copyright_notice(plan.context.pkg_dir),
             ),
             runtime_import_lines=runtime_import_lines,
             blank_lines_before_exports=(
@@ -381,7 +386,8 @@ class FlextInfraCodegenGenerationStandardMixin(
 
     @classmethod
     def _static_context(
-        cls, plan: m.Infra.LazyInitPlan,
+        cls,
+        plan: m.Infra.LazyInitPlan,
     ) -> m.Infra.StaticPackageInitRender:
         """Build a side-effect-free private or non-production initializer."""
         return m.Infra.StaticPackageInitRender(

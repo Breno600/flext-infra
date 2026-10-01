@@ -17,10 +17,13 @@ class TestsFlextInfraCodegenUpgWorkspace:
     """Upgrade a real workspace with an indexed, uninitialized member."""
 
     def test_upg_materializes_member_before_resolving_workspace_lock(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.WORKSPACE, bootstrap=True,
+            tmp_path,
+            c.Infra.MakeProfile.WORKSPACE,
+            bootstrap=True,
         )
         member = u.Tests.repository_ref("fixture-member", path=Path("fixture-member"))
         source = tmp_path / "member-origin"
@@ -54,11 +57,13 @@ class TestsFlextInfraCodegenUpgWorkspace:
         u.Tests.git_bootstrap(root, ("commit", "-m", "Declare real workspace member"))
         gitlink = tm.ok(
             u.Cli.capture(
-                [c.Infra.GIT, "rev-parse", f"HEAD:{member.path.as_posix()}"], cwd=root,
+                [c.Infra.GIT, "rev-parse", f"HEAD:{member.path.as_posix()}"],
+                cwd=root,
             ),
         ).strip()
         repository = u.Tests.repository_ref(
-            root.name, role=c.Infra.MakeProfile.WORKSPACE,
+            root.name,
+            role=c.Infra.MakeProfile.WORKSPACE,
         )
         workspace = u.Tests.workspace_spec(
             repository,
@@ -113,7 +118,8 @@ class TestsFlextInfraCodegenUpgWorkspace:
             has=member.distribution,
         )
         tm.that(
-            (u.Infra.runtime_environment_dir(root) / "pyvenv.cfg").is_file(), eq=True,
+            (u.Infra.runtime_environment_dir(root) / "pyvenv.cfg").is_file(),
+            eq=True,
         )
         tm.that((checkout / ".venv").exists(), eq=False)
         pin = tm.ok(

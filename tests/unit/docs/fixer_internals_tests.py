@@ -18,7 +18,8 @@ class TestsFlextInfraFixerInternals:
     """Public utility tests used by docs fixing flows."""
 
     def test_docs_maybe_fix_link_adds_md_suffix_when_target_exists(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         docs_dir = tmp_path / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
@@ -39,12 +40,15 @@ class TestsFlextInfraFixerInternals:
     def test_anchorize_and_build_toc_are_public_helpers(self) -> None:
         tm.that(u.Infra.anchorize("Hello World"), eq="hello-world")
         tm.that(
-            u.Infra.build_toc("# Main\n\nNo sections here.\n"), has="No sections found",
+            u.Infra.build_toc("# Main\n\nNo sections here.\n"),
+            has="No sections found",
         )
 
     @pytest.mark.parametrize("separator", ["\n", "\n\n", "\n\n\n"])
     def test_fix_keeps_closing_fence_on_its_own_line(
-        self, tmp_path: Path, separator: str,
+        self,
+        tmp_path: Path,
+        separator: str,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
         sample = workspace / "docs/fenced.md"
@@ -69,7 +73,8 @@ class TestsFlextInfraFixerInternals:
         tm.that(fixed, has="## After The Block")
 
     def test_fix_updates_docs_readme_when_apply_is_enabled(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
 

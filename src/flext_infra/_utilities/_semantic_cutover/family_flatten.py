@@ -20,7 +20,9 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
 
     @classmethod
     def _family_flatten_edits(
-        cls, workspace: p.Infra.RopeWorkspaceDsl, sources: t.MappingKV[Path, str],
+        cls,
+        workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         from flext_infra import u
 
@@ -40,14 +42,19 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
             ).unwrap(),
         )
         project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
-            workspace.rope_project, sources,
+            workspace.rope_project,
+            sources,
         )
         rewrites: MutableMapping[Path, list[m.Infra.SourceRewrite]] = {}
         wrappers = 0
         try:
             for path in candidates:
                 count = cls._flatten_family_part(
-                    workspace, project, path, sources, rewrites,
+                    workspace,
+                    project,
+                    path,
+                    sources,
+                    rewrites,
                 )
                 wrappers += count
             edits: list[m.Infra.SemanticMigrationEdit] = []
@@ -56,7 +63,9 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
                     path.relative_to(Path(project.root.real_path)).as_posix(),
                 )
                 change = FlextInfraUtilitiesRopeRuntimeRefactors.content_change(
-                    resource, sources[path], changes,
+                    resource,
+                    sources[path],
+                    changes,
                 )
                 edits.append(
                     m.Infra.SemanticMigrationEdit(
@@ -183,7 +192,9 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
                 continue
             resource = project.get_resource(consumer.relative_to(root).as_posix())
             blocked, changes = cls._family_consumer_rewrites(
-                resource, source, flatten=flatten,
+                resource,
+                source,
+                flatten=flatten,
             )
             if blocked:
                 # A consumer treats the wrapper as a real entity; preserve the

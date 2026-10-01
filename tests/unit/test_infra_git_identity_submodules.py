@@ -142,7 +142,8 @@ class TestsFlextInfraGitIdentitySubmodules:
         tm.that(identity.is_attached_submodule, eq=True)
 
     def test_linked_worktree_of_submodule_keeps_primary_identity(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A linked submodule lane resolves facts through its shared Git config."""
         parent = self._superproject(tmp_path)
@@ -172,7 +173,8 @@ class TestsFlextInfraGitIdentitySubmodules:
         tm.that(identity.is_attached_submodule, eq=False)
 
     def test_absorbed_submodule_with_git_dir_is_still_a_submodule(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Nested checkout with a real .git directory still reports is_submodule.
 
@@ -235,7 +237,9 @@ class TestsFlextInfraGitIdentitySubmodules:
         nested.mkdir(parents=True)
         (nested / "module.py").write_text("x = 1\n", encoding="utf-8")
         identity = tm.ok(
-            u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=nested / "module.py")),
+            u.Infra.git_identity(
+                m.Infra.GitRepoRequest(repo_root=nested / "module.py")
+            ),
         )
         tm.that(identity.repo_root, eq=root.resolve())
         tm.that(identity.requested_path, eq=(nested / "module.py").resolve())

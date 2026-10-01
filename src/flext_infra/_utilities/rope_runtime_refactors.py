@@ -16,7 +16,8 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
 
     @staticmethod
     def unwrap_class_rewrites(
-        source: str, layout: m.Infra.ClassBlockLayout,
+        source: str,
+        layout: m.Infra.ClassBlockLayout,
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
         """Remove one Rope-resolved header without changing literal payloads.
 
@@ -61,7 +62,9 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 raise ValueError(msg)
             edits.append(
                 m.Infra.SourceRewrite(
-                    start=offset, end=offset + layout.indentation, text="",
+                    start=offset,
+                    end=offset + layout.indentation,
+                    text="",
                 ),
             )
         if layout.docstring_span is not None:
@@ -69,7 +72,8 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
                 m.Infra.SourceRewrite(
                     start=lines.get_line_start(layout.docstring_span[0]),
                     end=min(
-                        lines.get_line_end(layout.docstring_span[1]) + 1, len(source),
+                        lines.get_line_end(layout.docstring_span[1]) + 1,
+                        len(source),
                     ),
                     text="",
                 ),
@@ -108,7 +112,8 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
             msg = "Rope ChangeCollector returned a non-source result"
             raise TypeError(msg)
         change = cls._runtime_callable("rope.base.change", "ChangeContents")(
-            resource, updated,
+            resource,
+            updated,
         )
         if not isinstance(change, p.Infra.RopeChangeContents):
             msg = "Rope ChangeContents returned an invalid content plan"
@@ -180,10 +185,15 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         in_hierarchy: bool,
     ) -> t.Infra.RopeOccurrenceFinder:
         create_finder = cls._runtime_callable(
-            "rope.refactor.occurrences", "create_finder",
+            "rope.refactor.occurrences",
+            "create_finder",
         )
         finder = create_finder(
-            rope_project, name, pyname, imports=imports, in_hierarchy=in_hierarchy,
+            rope_project,
+            name,
+            pyname,
+            imports=imports,
+            in_hierarchy=in_hierarchy,
         )
         if not isinstance(finder, p.Infra.RopeOccurrenceFinder):
             msg = "rope occurrence finder does not satisfy p.Infra.RopeOccurrenceFinder"

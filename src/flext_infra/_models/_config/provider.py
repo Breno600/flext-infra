@@ -38,10 +38,12 @@ class FlextInfraConfigModelsProvider:
         """Portable repository identity derived through one declared provider."""
 
         distribution: Annotated[
-            t.NonEmptyStr, m.Field(description="Repository distribution name"),
+            t.NonEmptyStr,
+            m.Field(description="Repository distribution name"),
         ]
         provider: Annotated[
-            t.NonEmptyStr, m.Field(description="Provider key owning URL and branch"),
+            t.NonEmptyStr,
+            m.Field(description="Provider key owning URL and branch"),
         ]
 
         @m.computed_field
@@ -85,7 +87,8 @@ class FlextInfraConfigModelsProvider:
         """One GitHub Action reference from the codegen catalog."""
 
         repository: Annotated[
-            t.NonEmptyStr, m.Field(description="GitHub owner/repository action name"),
+            t.NonEmptyStr,
+            m.Field(description="GitHub owner/repository action name"),
         ]
         version: Annotated[
             t.NonEmptyStr,
@@ -110,7 +113,8 @@ class FlextInfraConfigModelsProvider:
             ),
         ]
         path: Annotated[
-            t.NonEmptyStr, m.Field(description="Checkout-relative submodule path"),
+            t.NonEmptyStr,
+            m.Field(description="Checkout-relative submodule path"),
         ]
         remote: Annotated[
             t.NonEmptyStr,
@@ -154,7 +158,8 @@ class FlextInfraConfigModelsProvider:
         paths: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                min_length=1, description="Submodule paths to init before make setup",
+                min_length=1,
+                description="Submodule paths to init before make setup",
             ),
         ]
         deploy_keys: Annotated[

@@ -42,7 +42,11 @@ class FlextInfraWorkspaceEnvironmentContracts:
 
     @classmethod
     def _resolve_env_target(
-        cls, raw: str, root: Path, *, resolve_home: bool,
+        cls,
+        raw: str,
+        root: Path,
+        *,
+        resolve_home: bool,
     ) -> Path | None:
         """Resolve one quoted target to a concrete path, or None when dynamic.
 
@@ -74,7 +78,11 @@ class FlextInfraWorkspaceEnvironmentContracts:
 
     @classmethod
     def envrc_contract_violations(
-        cls, content: str, *, root: Path, resolve_home: bool = True,
+        cls,
+        content: str,
+        *,
+        root: Path,
+        resolve_home: bool = True,
     ) -> t.VariadicTuple[m.Infra.EnvironmentContractViolation]:
         """Return one typed violation per direnv contract issue in ``content``.
 
@@ -106,7 +114,9 @@ class FlextInfraWorkspaceEnvironmentContracts:
             if target_match is None:
                 continue
             resolved = cls._resolve_env_target(
-                target_match.group(1), root, resolve_home=resolve_home,
+                target_match.group(1),
+                root,
+                resolve_home=resolve_home,
             )
             if resolved is None:
                 continue
@@ -152,7 +162,8 @@ class FlextInfraWorkspaceEnvironmentContracts:
 
     @classmethod
     def envrc_local_contract_violations(
-        cls, content: str,
+        cls,
+        content: str,
     ) -> t.VariadicTuple[m.Infra.EnvironmentContractViolation]:
         """Return one typed violation per activation residue in ``.envrc.local``.
 

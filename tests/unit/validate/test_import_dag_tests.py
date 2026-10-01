@@ -24,7 +24,8 @@ class TestsFlextInfraImportDag:
         project = tmp_path / "sample"
         (project / "pyproject.toml").parent.mkdir(parents=True, exist_ok=True)
         (project / "pyproject.toml").write_text(
-            '[project]\nname = "sample"\nversion = "0.0.1"\n', encoding="utf-8",
+            '[project]\nname = "sample"\nversion = "0.0.1"\n',
+            encoding="utf-8",
         )
         for relative, source in files.items():
             target = project / relative
@@ -46,7 +47,10 @@ class TestsFlextInfraImportDag:
         ],
     )
     def test_forbidden_edges_fail(
-        self, tmp_path: Path, source: str, imported: str,
+        self,
+        tmp_path: Path,
+        source: str,
+        imported: str,
     ) -> None:
         project = self._project(tmp_path, {source: imported})
         report: m.Infra.ValidationReport = tm.ok(
@@ -55,7 +59,8 @@ class TestsFlextInfraImportDag:
         tm.that(report.passed, eq=False)
 
     def test_forward_facets_and_type_checking_reverse_edges_pass(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         project = self._project(
             tmp_path,

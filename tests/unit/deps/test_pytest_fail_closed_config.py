@@ -25,7 +25,8 @@ class TestsFlextInfraPytestFailClosedConfig:
         tm.that(asyncio.current_task() is not None, eq=True)
 
     def test_phase_replaces_stale_collection_and_warning_policy(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Replace ignored roots and warning filters without second-apply drift."""
         policy = config.Infra.tooling.tools.pytest

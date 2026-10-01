@@ -24,10 +24,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
     def _write_run_context(report_dir: Path, context: m.Infra.PytestRunContext) -> None:
         """Name the mode and database before any subprocess can fail."""
         u.Cli.atomic_write_text_file(
-            report_dir / "run-context.json", context.model_dump_json(indent=2) + "\n",
+            report_dir / "run-context.json",
+            context.model_dump_json(indent=2) + "\n",
         ).unwrap()
         u.Cli.atomic_write_text_file(
-            report_dir.parent / "latest.txt", f"{report_dir.name}\n",
+            report_dir.parent / "latest.txt",
+            f"{report_dir.name}\n",
         ).unwrap()
 
     @staticmethod
@@ -37,7 +39,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         return f"{message}\n--- pytest.log (tail) ---\n{tail}" if tail else message
 
     def _accounting(
-        self, junit: Path, log: Path, *, cache_restored: bool, reported_count: int,
+        self,
+        junit: Path,
+        log: Path,
+        *,
+        cache_restored: bool,
+        reported_count: int,
     ) -> p.Result[m.Infra.TestmonRunAccounting]:
         """Parse typed executed/deselected accounting from durable artifacts."""
         if not junit.exists():
@@ -129,7 +136,9 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             report_log=report_dir / "events.jsonl",
         )
         return extractor.extract(
-            extractor.junit, extractor.log_path, report_log=extractor.report_log,
+            extractor.junit,
+            extractor.log_path,
+            report_log=extractor.report_log,
         )
 
     @staticmethod
@@ -140,7 +149,8 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         ).unwrap()
         receipt = report_log.with_suffix(".diagnostics.json")
         u.Cli.atomic_write_text_file(
-            receipt, diagnostics.model_dump_json(indent=2) + "\n",
+            receipt,
+            diagnostics.model_dump_json(indent=2) + "\n",
         ).unwrap()
         if any((
             diagnostics.collection_failed_count,
@@ -196,7 +206,8 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
             raise ValueError(msg)
         if coverage.stat().st_size == 0:
             msg = self._failure_detail(
-                f"empty coverage artifact: {coverage}", report_dir / "pytest.log",
+                f"empty coverage artifact: {coverage}",
+                report_dir / "pytest.log",
             )
             raise ValueError(msg)
         return r.ok(True)

@@ -34,7 +34,9 @@ class TestsFlextInfraUtilitiesGitMixin:
         branch = TestsFlextInfraUtilitiesGitMixin.integration_branch(repo_root)
         already_on_branch = (
             TestsFlextInfraUtilitiesGitMixin.git_capture(
-                repo_root, "branch", "--show-current",
+                repo_root,
+                "branch",
+                "--show-current",
             ).strip()
             == branch
         )
@@ -44,7 +46,8 @@ class TestsFlextInfraUtilitiesGitMixin:
         # workspace renames the checkout to the provider baseline); an absent
         # branch is a legitimate answer of the ref owner, never a failed probe.
         local_exists = TestsFlextInfraUtilitiesGitMixin.git_ref_exists(
-            repo_root, f"refs/heads/{branch}",
+            repo_root,
+            f"refs/heads/{branch}",
         )
         arguments = (
             ("switch", branch) if local_exists else ("switch", "--create", branch)
@@ -68,7 +71,9 @@ class TestsFlextInfraUtilitiesGitMixin:
         tm.ok(run([c.Infra.GIT, "commit", "-m", f"work: {subject}"], cwd=repo_root))
         tm.ok(run([c.Infra.GIT, "switch", current], cwd=repo_root))
         tm.ok(
-            run([c.Infra.GIT, "merge", "--no-ff", "-m", subject, branch], cwd=repo_root),
+            run(
+                [c.Infra.GIT, "merge", "--no-ff", "-m", subject, branch], cwd=repo_root
+            ),
         )
 
     @staticmethod
@@ -105,7 +110,8 @@ class TestsFlextInfraUtilitiesGitMixin:
         bare_remote.mkdir(parents=True, exist_ok=True)
         bootstrap(bare_remote, ("init", "--bare"))
         bootstrap(
-            repo_root, ("remote", "set-url", c.Infra.GIT_ORIGIN, str(bare_remote)),
+            repo_root,
+            ("remote", "set-url", c.Infra.GIT_ORIGIN, str(bare_remote)),
         )
         # The checkout carries the provider-declared integration branch, so the
         # bare origin publishes that same line as its default target.
@@ -113,12 +119,15 @@ class TestsFlextInfraUtilitiesGitMixin:
         tm.ok(
             u.Infra.git_push_upstream(
                 m.Infra.GitPushRequest(
-                    repo_root=repo_root, remote=c.Infra.GIT_ORIGIN, branch=branch,
+                    repo_root=repo_root,
+                    remote=c.Infra.GIT_ORIGIN,
+                    branch=branch,
                 ),
             ),
         )
         bootstrap(
-            bare_remote, ("symbolic-ref", c.Infra.GIT_HEAD, f"refs/heads/{branch}"),
+            bare_remote,
+            ("symbolic-ref", c.Infra.GIT_HEAD, f"refs/heads/{branch}"),
         )
         return bare_remote
 
@@ -127,7 +136,8 @@ class TestsFlextInfraUtilitiesGitMixin:
         """Set deterministic repository-local identity for real Git fixtures."""
         bootstrap = TestsFlextInfraUtilitiesGitMixin.git_bootstrap
         bootstrap(
-            repository_root, ("config", "--local", "user.email", "tests@flext.local"),
+            repository_root,
+            ("config", "--local", "user.email", "tests@flext.local"),
         )
         bootstrap(repository_root, ("config", "--local", "user.name", "Flext Tests"))
 
@@ -198,13 +208,15 @@ class TestsFlextInfraUtilitiesGitMixin:
         bootstrap(repo_root, ("config", "user.name", "Flext Tests"))
         declared_origin = origin_url or str(repo_root)
         existing_origin = TestsFlextInfraUtilitiesGitMixin._read_origin_url(
-            repo_root, c.Infra.GIT_ORIGIN,
+            repo_root,
+            c.Infra.GIT_ORIGIN,
         )
         if existing_origin == declared_origin:
             return
         if existing_origin:
             bootstrap(
-                repo_root, ("remote", "set-url", c.Infra.GIT_ORIGIN, declared_origin),
+                repo_root,
+                ("remote", "set-url", c.Infra.GIT_ORIGIN, declared_origin),
             )
         else:
             bootstrap(repo_root, ("remote", "add", c.Infra.GIT_ORIGIN, declared_origin))

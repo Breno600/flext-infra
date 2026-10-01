@@ -24,7 +24,8 @@ class FlextInfraMiseStaging:
     """
 
     def stage(
-        self, plan: m.Infra.MiseToolchainWorkspacePlan,
+        self,
+        plan: m.Infra.MiseToolchainWorkspacePlan,
     ) -> p.Result[
         t.Pair[
             t.VariadicTuple[m.Infra.CodegenStagedFile],
@@ -59,12 +60,15 @@ class FlextInfraMiseStaging:
                 )
             stage_root = project.layout.transaction_root / "stage"
             staged = self._stage_project(
-                project, stage_root=stage_root, projected=projected,
+                project,
+                stage_root=stage_root,
+                projected=projected,
             )
             if staged.failure:
                 return result_type.from_failure(staged)
             receipts = FlextInfraMiseArtifactsCandidates.publication_plan(
-                (project,), (stage_root,),
+                (project,),
+                (stage_root,),
             )
             if receipts.failure:
                 return result_type.from_failure(receipts)
@@ -89,7 +93,8 @@ class FlextInfraMiseStaging:
                 f"Mise stage already exists for {project.layout.selector}",
             )
         created = u.Cli.atomic_create_directory_chain_guarded(
-            stage_plan.value, permission_mode=0o700,
+            stage_plan.value,
+            permission_mode=0o700,
         )
         if created.failure:
             return result_type.from_failure(created)
@@ -101,7 +106,9 @@ class FlextInfraMiseStaging:
         if config_write.failure:
             return result_type.from_failure(config_write)
         for content, (name, mode) in zip(
-            projected, c.Infra.ARTIFACT_SPECS, strict=True,
+            projected,
+            c.Infra.ARTIFACT_SPECS,
+            strict=True,
         ):
             copied = process.write_new(stage_root / name, content, mode)
             if copied.failure:

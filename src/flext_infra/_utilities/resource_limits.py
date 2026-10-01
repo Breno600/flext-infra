@@ -216,7 +216,8 @@ class FlextInfraUtilitiesResourceLimits:
                 )
                 raise ValueError(msg)
             limit = m.Infra.MypyResourceLimit(
-                memory_limit_mb=limit.memory_limit_mb, timeout_seconds=budget,
+                memory_limit_mb=limit.memory_limit_mb,
+                timeout_seconds=budget,
             )
         return cls.mypy_runner_timeout(limit)
 
@@ -263,17 +264,24 @@ class FlextInfraUtilitiesResourceLimits:
 
     @classmethod
     def mypy_launch_failure_diagnostic(
-        cls, detail: str, limit: m.Infra.MypyResourceLimit | None = None,
+        cls,
+        detail: str,
+        limit: m.Infra.MypyResourceLimit | None = None,
     ) -> str:
         """Report an outer-runner failure that precluded a process exit status."""
         validated_limit = limit or cls.mypy_resource_limit()
         return cls._bounded_mypy_diagnostic(
-            validated_limit, detail=detail, exit_code="unavailable", signal="none",
+            validated_limit,
+            detail=detail,
+            exit_code="unavailable",
+            signal="none",
         )
 
     @classmethod
     def mypy_failure_diagnostic(
-        cls, output: p.Cli.CommandOutput, limit: m.Infra.MypyResourceLimit | None = None,
+        cls,
+        output: p.Cli.CommandOutput,
+        limit: m.Infra.MypyResourceLimit | None = None,
     ) -> str | None:
         """Return a controlled diagnostic only for timeout or memory exhaustion."""
         validated_limit = limit or cls.mypy_resource_limit()

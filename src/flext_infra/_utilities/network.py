@@ -37,14 +37,16 @@ class FlextInfraUtilitiesNetwork:
         defect and raises.
         """
         connection = FlextInfraUtilitiesNetwork._connection(
-            url, timeout_seconds=timeout_seconds,
+            url,
+            timeout_seconds=timeout_seconds,
         )
         try:
             connection.request("HEAD", urlsplit(url).path or "/")
             connection.getresponse()
         except (HTTPException, OSError) as exc:
             return r[bool].fail(
-                f"endpoint {url!r} did not respond: {exc}", exception=exc,
+                f"endpoint {url!r} did not respond: {exc}",
+                exception=exc,
             )
         else:
             return r[bool].ok(True)
@@ -69,7 +71,8 @@ class FlextInfraUtilitiesNetwork:
         header and never appears in a failure message.
         """
         connection = FlextInfraUtilitiesNetwork._connection(
-            url, timeout_seconds=timeout_seconds,
+            url,
+            timeout_seconds=timeout_seconds,
         )
         encoded = urlencode(tuple(form))
         path = urlsplit(url).path or "/"

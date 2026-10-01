@@ -44,7 +44,8 @@ class FlextInfraUtilitiesPyprojectSession:
             for item in requirements
             if (
                 parsed := FlextInfraUtilitiesDependencies.active_requirement(
-                    item, environment=environment,
+                    item,
+                    environment=environment,
                 )
             )
             is not None
@@ -59,7 +60,8 @@ class FlextInfraUtilitiesPyprojectSession:
             for item in explicit
             if (
                 parsed := FlextInfraUtilitiesDependencies.active_requirement(
-                    item, environment=environment,
+                    item,
+                    environment=environment,
                 )
             )
             is not None
@@ -100,7 +102,8 @@ class FlextInfraUtilitiesPyprojectSession:
                 )
                 if (
                     parsed := FlextInfraUtilitiesDependencies.active_requirement(
-                        item, environment=environment,
+                        item,
+                        environment=environment,
                     )
                 )
                 is not None

@@ -32,7 +32,9 @@ class FlextInfraMiseArtifactsCandidates:
                 project.artifacts.version_pin,
             )
             for before, (name, mode) in zip(
-                before_states, c.Infra.PUBLICATION_SPECS, strict=True,
+                before_states,
+                c.Infra.PUBLICATION_SPECS,
+                strict=True,
             ):
                 replacement = files.read_state(stage / name, required=True)
                 if replacement.failure or replacement.value.content is None:

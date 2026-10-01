@@ -12,7 +12,9 @@ class FlextInfraUtilitiesPyprojectTomlPhases:
 
     @classmethod
     def apply_toml_phases(
-        cls, payload: t.MutableJsonMapping, *phases: m.Infra.DepsToml.PhaseConfig,
+        cls,
+        payload: t.MutableJsonMapping,
+        *phases: m.Infra.DepsToml.PhaseConfig,
     ) -> t.StrSequence:
         """Apply declarative phases in order and return one flat change list."""
         return [
@@ -54,17 +56,24 @@ class FlextInfraUtilitiesPyprojectTomlPhases:
         """Apply one operation; return its ``(relative key path, outcome)`` change."""
         if isinstance(operation, m.Infra.DepsToml.SetOp):
             changed = u.Cli.toml_mapping_sync_value(
-                table, operation.key, operation.value,
+                table,
+                operation.key,
+                operation.value,
             )
             return (((operation.key,), f"set to {operation.value}"),) if changed else ()
         if isinstance(operation, m.Infra.DepsToml.ListOp):
             if operation.strategy == c.Infra.TomlMergeMode.REPLACE:
                 changed = u.Cli.toml_mapping_sync_string_list(
-                    table, operation.key, operation.values, sort_values=operation.sort,
+                    table,
+                    operation.key,
+                    operation.values,
+                    sort_values=operation.sort,
                 )
                 return (((operation.key,), "set"),) if changed else ()
             changed = u.Cli.toml_mapping_merge_string_list(
-                table, operation.key, operation.values,
+                table,
+                operation.key,
+                operation.values,
             )
             return (((operation.key,), "updated"),) if changed else ()
         target = (
@@ -73,7 +82,8 @@ class FlextInfraUtilitiesPyprojectTomlPhases:
             else table
         )
         removed = target is not None and u.Cli.toml_mapping_remove_key_if_present(
-            target, operation.key,
+            target,
+            operation.key,
         )
         return (((*operation.table_path, operation.key), "removed"),) if removed else ()
 

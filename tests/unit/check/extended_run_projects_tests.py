@@ -32,7 +32,9 @@ class TestsFlextInfraRunProjects:
 
     def test_invalid_gates_fail(self, tmp_path: Path) -> None:
         result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
-            ["p1"], ["invalid_gate"], reports_dir=tmp_path / "reports",
+            ["p1"],
+            ["invalid_gate"],
+            reports_dir=tmp_path / "reports",
         )
 
         tm.fail(result)
@@ -40,7 +42,9 @@ class TestsFlextInfraRunProjects:
     def test_project_without_pyproject_fails_loudly(self, tmp_path: Path) -> None:
         u.Tests.mk_project(tmp_path, "p1", with_src=True)
         result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
-            ["p1", "nonexistent"], ["lint"], reports_dir=tmp_path / "reports",
+            ["p1", "nonexistent"],
+            ["lint"],
+            reports_dir=tmp_path / "reports",
         )
 
         tm.fail(result, has=str(tmp_path / "nonexistent" / c.PYPROJECT_FILENAME))
@@ -48,7 +52,9 @@ class TestsFlextInfraRunProjects:
 
     def test_empty_project_selection_fails_loudly(self, tmp_path: Path) -> None:
         result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
-            [], ["lint"], reports_dir=tmp_path / "reports",
+            [],
+            ["lint"],
+            reports_dir=tmp_path / "reports",
         )
 
         tm.fail(result, has="selected no projects")
@@ -58,14 +64,18 @@ class TestsFlextInfraRunProjects:
         [c.Infra.CHECK_REPORT_MARKDOWN_FILENAME, c.Infra.CHECK_REPORT_SARIF_FILENAME],
     )
     def test_run_projects_creates_reports(
-        self, tmp_path: Path, report_name: str,
+        self,
+        tmp_path: Path,
+        report_name: str,
     ) -> None:
         checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
 
         result = checker.run_projects(
-            ["p1"], ["lint"], reports_dir=tmp_path / "reports",
+            ["p1"],
+            ["lint"],
+            reports_dir=tmp_path / "reports",
         )
 
         tm.ok(result)
@@ -73,14 +83,17 @@ class TestsFlextInfraRunProjects:
         tm.that((tmp_path / "reports" / report_name).exists(), eq=True)
 
     def test_run_projects_creates_project_scoped_reports_dir(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
 
         result = checker.run_projects(
-            ["p1"], ["lint"], reports_dir=tmp_path / "reports",
+            ["p1"],
+            ["lint"],
+            reports_dir=tmp_path / "reports",
         )
 
         tm.ok(result)
@@ -91,7 +104,8 @@ class TestsFlextInfraRunProjects:
         for name in ("p1", "p2", "p3"):
             project_dir = u.Tests.mk_project(tmp_path, name, with_src=True)
             (project_dir / "src" / "test.py").write_text(
-                "import os\nimport os\n", encoding="utf-8",
+                "import os\nimport os\n",
+                encoding="utf-8",
             )
         result = checker.run_projects(
             ["p1", "p2", "p3"],
@@ -108,12 +122,15 @@ class TestsFlextInfraRunProjects:
         for name in ("p1", "p2"):
             project_dir = u.Tests.mk_project(tmp_path, name, with_src=True)
             (project_dir / "src" / "test.py").write_text(
-                "value = 1\n", encoding="utf-8",
+                "value = 1\n",
+                encoding="utf-8",
             )
         p1 = tmp_path / "p1"
         (p1 / "src" / "test.py").write_text("import os\nimport os\n", encoding="utf-8")
         result = checker.run_projects(
-            ["p1", "p2"], ["lint"], reports_dir=tmp_path / "reports",
+            ["p1", "p2"],
+            ["lint"],
+            reports_dir=tmp_path / "reports",
         )
 
         tm.ok(result)

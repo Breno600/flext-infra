@@ -40,7 +40,8 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
     app_name: ClassVar[str] = "flext-infra"
 
     def bootstrap_candidate(
-        self, request: m.Infra.CandidateBootstrapCommand,
+        self,
+        request: m.Infra.CandidateBootstrapCommand,
     ) -> p.Result[bool]:
         """Compose typed declarations, conform planner and one atomic publisher."""
         identity = u.Infra.exact_worktree_root(
@@ -50,7 +51,8 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
             return r[bool].from_failure(identity)
         source_root = identity.value.repo_root
         manifest = u.Cli.atomic_read_binary_file_state(
-            u.Infra.workspace_manifest_path(source_root), required=True,
+            u.Infra.workspace_manifest_path(source_root),
+            required=True,
         )
         if manifest.failure:
             return r[bool].from_failure(manifest)
@@ -67,7 +69,8 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         ).execute(source_root, workspace.value, request, manifest.value)
 
     def rope_workspace(
-        self, repository_root: Path | None = None,
+        self,
+        repository_root: Path | None = None,
     ) -> p.Infra.RopeWorkspaceDsl:
         """Open the public Rope workspace DSL directly from the facade."""
         # NOTE (multi-agent, flext-wkii.17.24): Rope reads its source policy
@@ -118,7 +121,10 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
 
     @staticmethod
     def docs_artifact_planner(
-        *, repository_root: Path, projects: t.StrSequence, include_root: bool,
+        *,
+        repository_root: Path,
+        projects: t.StrSequence,
+        include_root: bool,
     ) -> p.Infra.DocsArtifactPlanner:
         """Build the docs planner complete conform publishes through."""
         return FlextInfraDocGenerator(
@@ -151,11 +157,14 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
     ) -> p.Result[m.Infra.CodegenResult]:
         """Conform generated files with the facade-wired cross-family ports."""
         return FlextInfraCodegenConform.execute_request(
-            request, initial_workspace, ports=self.codegen_conform_ports(),
+            request,
+            initial_workspace,
+            ports=self.codegen_conform_ports(),
         )
 
     def codegen_new(
-        self, command: FlextInfraCodegenProjectNew,
+        self,
+        command: FlextInfraCodegenProjectNew,
     ) -> p.Result[m.Infra.CodegenResult]:
         """Scaffold one project through conform with the facade-wired ports."""
         return command.model_copy(
@@ -169,13 +178,16 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         ).execute()
 
     def apply_renames(
-        self, request: m.Infra.ApplyRenamesInput,
+        self,
+        request: m.Infra.ApplyRenamesInput,
     ) -> p.Result[m.Infra.ApplyRenamesReport]:
         """Compose and run one explicitly supplied CSV rename campaign."""
         return FlextInfraApplyRenames().run(request)
 
     def mod(
-        self, request: m.Infra.ModCommand, progress: p.Infra.ModProgress,
+        self,
+        request: m.Infra.ModCommand,
+        progress: p.Infra.ModProgress,
     ) -> p.Result[t.Cli.ResultValue]:
         """Compose the codemod use case from typed config and real adapters."""
         root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
@@ -214,7 +226,8 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
             ).execute()
 
     def validate_namespace(
-        self, request: m.Infra.NamespaceValidateCommand,
+        self,
+        request: m.Infra.NamespaceValidateCommand,
     ) -> p.Result[m.Infra.ValidationReport]:
         """Validate one project against the rule catalog."""
         return FlextInfraNamespaceValidator(
@@ -227,7 +240,8 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         return FlextInfraModTextGateEngine.run(root, apply=request.apply)
 
     def mod_text_candidate(
-        self, request: m.Infra.ModTextCommand,
+        self,
+        request: m.Infra.ModTextCommand,
     ) -> p.Result[t.Cli.ResultValue]:
         """Replay one manifest-declared candidate using this healthy provider."""
         source_root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
@@ -247,7 +261,8 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         if identity.failure:
             return r[t.Cli.ResultValue].from_failure(identity)
         return FlextInfraModTextGateEngine.run(
-            identity.value.repo_root, apply=request.apply,
+            identity.value.repo_root,
+            apply=request.apply,
         )
 
     @staticmethod

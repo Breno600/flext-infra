@@ -48,14 +48,19 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
 
     @classmethod
     def conformed_pyproject_source(
-        cls, source: str, *, render_inputs: m.Infra.CodegenRenderInputs,
+        cls,
+        source: str,
+        *,
+        render_inputs: m.Infra.CodegenRenderInputs,
     ) -> p.Result[str]:
         """Conform one pyproject source."""
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
         flext_line = u.Infra.flext_integration_line_for_checkout(
-            codegen=codegen, repository_root=target.root, workspace=workspace,
+            codegen=codegen,
+            repository_root=target.root,
+            workspace=workspace,
         )
         if flext_line.failure:
             return r[str].from_failure(flext_line)
@@ -72,7 +77,8 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
             workspace = workspace.model_copy(
                 update={
                     "integration": m.Infra.WorkspaceIntegrationSpec(
-                        provider=workspace.repository.provider, branch=branch.value,
+                        provider=workspace.repository.provider,
+                        branch=branch.value,
                     ),
                 },
             )
@@ -118,7 +124,8 @@ class FlextInfraCodegenConformPyprojectPolicy(FlextInfraCodegenConformFilePlans)
 
     @staticmethod
     def validate_custom_make(
-        content: str, policy: m.Infra.CustomHandlerPolicy,
+        content: str,
+        policy: m.Infra.CustomHandlerPolicy,
     ) -> p.Result[bool]:
         """Reject public targets, aliases, includes, and toolchain declarations."""
         target_re = re.compile(policy.target_pattern)

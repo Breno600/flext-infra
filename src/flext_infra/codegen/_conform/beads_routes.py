@@ -15,7 +15,8 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
     """Beads ledger route reconciliation for composed repositories."""
 
     def conform_workspace_beads_routes(
-        self, request: m.Infra.CodegenConformRequest,
+        self,
+        request: m.Infra.CodegenConformRequest,
     ) -> p.Result[bool]:
         """Reconcile private metadata directories without cross-project links.
 

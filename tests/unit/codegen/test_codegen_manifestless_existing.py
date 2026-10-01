@@ -20,7 +20,8 @@ from tests import c, u
 @pytest.mark.slow
 class TestsFlextInfraCodegenManifestlessExisting:
     def test_existing_root_uses_pep621_metadata_for_managed_artifacts(
-        self, infra_git_repo: Path,
+        self,
+        infra_git_repo: Path,
     ) -> None:
         root = infra_git_repo
         repository = u.Tests.repository_ref(config.Infra.name)
@@ -166,7 +167,8 @@ class TestsFlextInfraCodegenManifestlessExisting:
         )
 
     def test_root_distribution_owns_its_dependency_profile(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """The tree's root declares no flext runtime dependency and still conforms.
 
@@ -222,7 +224,8 @@ class TestsFlextInfraCodegenManifestlessExisting:
         )
         u.Tests.write_project_beads_config(root, distribution)
         u.Tests.initialize_git_repo(
-            root, origin_url=u.Tests.repository_ref(distribution).url,
+            root,
+            origin_url=u.Tests.repository_ref(distribution).url,
         )
 
         plan = tm.ok(

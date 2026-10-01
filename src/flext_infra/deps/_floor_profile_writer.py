@@ -102,7 +102,9 @@ class FlextInfraDepsFloorProfileWriter:
 
         # Rewrite each profile's runtime and codegen requirement lists
         for profile, contract in zip(
-            profiles, validated.scaffold.project.dependency_profiles, strict=True,
+            profiles,
+            validated.scaffold.project.dependency_profiles,
+            strict=True,
         ):
             if not isinstance(profile, dict):
                 message = f"dependency profile must be a mapping in {ssot_path}"

@@ -17,7 +17,8 @@ class FlextInfraPytestRunnerBase(s[int]):
     """Own immutable inputs shared by all pytest runner phases."""
 
     started_at_monotonic: Annotated[
-        float, m.Field(gt=0, description="Clock captured before FLEXT imports."),
+        float,
+        m.Field(gt=0, description="Clock captured before FLEXT imports."),
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
@@ -142,20 +143,23 @@ class FlextInfraPytestRunnerBase(s[int]):
         return policy.run_timeout_overrides.get(name, policy.run_timeout_seconds)
 
     def _declared_worker_ceiling(
-        self, policy: PytestPolicy,
+        self,
+        policy: PytestPolicy,
     ) -> int | m.Infra.PytestWorkerCeiling:
         """Resolve the declared project's ceiling over the fleet default."""
         if not policy.parallel_worker_overrides:
             return policy.parallel_workers
         pyproject_path = self.root / c.PYPROJECT_FILENAME
         name = u.Infra.project_name_from_payload(
-            pyproject_path, u.Infra.pyproject_payload(pyproject_path),
+            pyproject_path,
+            u.Infra.pyproject_payload(pyproject_path),
         )
         return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
 
     @staticmethod
     def resolve_worker_ceiling(
-        ceiling: int | m.Infra.PytestWorkerCeiling, cpu_count: int,
+        ceiling: int | m.Infra.PytestWorkerCeiling,
+        cpu_count: int,
     ) -> int:
         """Resolve a declared ceiling against the process CPU count.
 

@@ -64,7 +64,9 @@ class FlextInfraPromotedDispatch(FlextInfraPromotedDiscovery):
 
     @staticmethod
     def dispatch(
-        registry: p.Infra.PromotedRegistry, requested_verb: str, requested_what: str,
+        registry: p.Infra.PromotedRegistry,
+        requested_verb: str,
+        requested_what: str,
     ) -> int:
         """Dispatch one requested verb to help or its selected promoted command.
 

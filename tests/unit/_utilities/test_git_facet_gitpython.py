@@ -15,7 +15,8 @@ class TestsFlextInfraGitFacet:
     """Exercise the public Git facade against a real repository worktree."""
 
     def test_tracked_scope_preserves_literal_names_across_index_states(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         scope = repository / "literal names"
@@ -40,7 +41,8 @@ class TestsFlextInfraGitFacet:
         tm.that(set(paths), eq={tracked, raw_name, removed, destination, untracked})
 
     def test_tracked_scope_propagates_corrupt_index_failure(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         (repository / ".git" / "index").write_bytes(b"invalid index")
@@ -49,7 +51,8 @@ class TestsFlextInfraGitFacet:
             u.Infra.git_tracked_scope_paths(repository)
 
     def test_identity_marks_only_a_missing_symbolic_branch_as_unborn(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = tmp_path / "unborn"
         repository.mkdir()
@@ -112,7 +115,8 @@ class TestsFlextInfraGitFacet:
         )
 
     def test_tracked_scope_refreshes_after_filesystem_mutation(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Tracked-scope discovery must not retain a stale dirty-file inventory."""
         repository = test_u.Tests.git_repository(tmp_path)
@@ -126,7 +130,8 @@ class TestsFlextInfraGitFacet:
         tm.that(u.Infra.git_tracked_scope_paths(scope), eq=[created])
 
     def test_invalid_nested_git_marker_does_not_borrow_parent_index(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """An explicit invalid Git boundary falls back to filesystem discovery."""
         repository = test_u.Tests.git_repository(tmp_path)
@@ -143,7 +148,8 @@ class TestsFlextInfraGitFacet:
         tm.that(tracked, eq=[created])
 
     def test_tracked_scope_does_not_borrow_an_ignoring_parent_repository(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """An explicitly selected ignored scope remains excluded by its repository."""
         repository = test_u.Tests.git_repository(tmp_path)
@@ -157,7 +163,8 @@ class TestsFlextInfraGitFacet:
         tm.that(tracked, eq=[])
 
     def test_merge_no_edit_requires_a_non_fast_forward_merge(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         tm.ok(test_u.Cli.run_checked([c.Infra.GIT, "branch", "topic"], cwd=repository))
@@ -166,7 +173,8 @@ class TestsFlextInfraGitFacet:
         tm.ok(test_u.Cli.run_checked([c.Infra.GIT, "add", "topic.txt"], cwd=repository))
         tm.ok(
             test_u.Cli.run_checked(
-                [c.Infra.GIT, "commit", "-m", "topic"], cwd=repository,
+                [c.Infra.GIT, "commit", "-m", "topic"],
+                cwd=repository,
             ),
         )
         topic = tm.ok(
@@ -232,7 +240,10 @@ class TestsFlextInfraGitFacet:
 
     @pytest.mark.parametrize("change", ["tracked", "staged", "untracked"])
     def test_verify_clean_cli_rejects_real_worktree_changes(
-        self, real_git_repo: Path, capsys: pytest.CaptureFixture[str], change: str,
+        self,
+        real_git_repo: Path,
+        capsys: pytest.CaptureFixture[str],
+        change: str,
     ) -> None:
         """The public CLI passes a clean checkout and exposes a dirty Git report."""
         argv = ["workspace", "verify-clean", "--repo-root", str(real_git_repo)]
@@ -248,7 +259,8 @@ class TestsFlextInfraGitFacet:
             if change == "staged":
                 tm.ok(
                     test_u.Cli.run_checked(
-                        [c.Infra.GIT, "add", changed_path.name], cwd=real_git_repo,
+                        [c.Infra.GIT, "add", changed_path.name],
+                        cwd=real_git_repo,
                     ),
                 )
 
@@ -257,7 +269,8 @@ class TestsFlextInfraGitFacet:
         tm.that(output.out + output.err, has=changed_path.name)
 
     def test_changed_paths_reports_tracked_and_untracked_files(
-        self, real_git_repo: Path,
+        self,
+        real_git_repo: Path,
     ) -> None:
         """The public Git facade returns the complete existing worktree delta."""
         readme = real_git_repo / "README.md"
@@ -272,7 +285,8 @@ class TestsFlextInfraGitFacet:
         tm.that(set(changed), eq={readme.resolve(), created.resolve()})
 
     def test_status_classifies_registered_nested_worktrees_as_administrative(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         container = repository / ".worktrees"
@@ -283,12 +297,14 @@ class TestsFlextInfraGitFacet:
         tm.ok(test_u.Cli.run_checked([c.Infra.GIT, "branch", "second"], cwd=repository))
         tm.ok(
             test_u.Cli.run_checked(
-                [c.Infra.GIT, "worktree", "add", str(first), "first"], cwd=repository,
+                [c.Infra.GIT, "worktree", "add", str(first), "first"],
+                cwd=repository,
             ),
         )
         tm.ok(
             test_u.Cli.run_checked(
-                [c.Infra.GIT, "worktree", "add", str(second), "second"], cwd=repository,
+                [c.Infra.GIT, "worktree", "add", str(second), "second"],
+                cwd=repository,
             ),
         )
         clean = tm.ok(
@@ -315,7 +331,8 @@ class TestsFlextInfraGitFacet:
         (repository / "README.md").write_text("# Test Repository\n", encoding="utf-8")
         tm.ok(
             test_u.Cli.run_checked(
-                [c.Infra.GIT, "worktree", "remove", str(second)], cwd=repository,
+                [c.Infra.GIT, "worktree", "remove", str(second)],
+                cwd=repository,
             ),
         )
         second.mkdir(parents=True)
@@ -342,7 +359,8 @@ class TestsFlextInfraGitFacet:
         tm.that(refreshed.value, eq=True)
 
     def test_remove_clean_worktree_preserves_primary_submodule_state(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         source = test_u.Tests.git_repository(tmp_path, "member-source")
@@ -352,12 +370,14 @@ class TestsFlextInfraGitFacet:
         gitmodules = (repository / ".gitmodules").read_text(encoding="utf-8")
         gitlink = tm.ok(
             u.Cli.capture(
-                (c.Infra.GIT, "ls-files", "--stage", "member"), cwd=repository,
+                (c.Infra.GIT, "ls-files", "--stage", "member"),
+                cwd=repository,
             ),
         )
         configured = tm.ok(
             u.Cli.capture(
-                (c.Infra.GIT, "config", "--get", "submodule.member.url"), cwd=repository,
+                (c.Infra.GIT, "config", "--get", "submodule.member.url"),
+                cwd=repository,
             ),
         )
 
@@ -369,7 +389,8 @@ class TestsFlextInfraGitFacet:
         assert (
             tm.ok(
                 u.Cli.capture(
-                    (c.Infra.GIT, "ls-files", "--stage", "member"), cwd=repository,
+                    (c.Infra.GIT, "ls-files", "--stage", "member"),
+                    cwd=repository,
                 ),
             )
             == gitlink
@@ -385,7 +406,8 @@ class TestsFlextInfraGitFacet:
         )
 
     def test_remove_clean_worktree_refuses_dirty_nested_submodule(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         nested_source = test_u.Tests.git_repository(tmp_path, "nested-source")
@@ -395,7 +417,8 @@ class TestsFlextInfraGitFacet:
         lane = self._add_lane(tmp_path, repository, "dirty-lane")
         self._update_submodules(lane)
         (lane / "member" / "nested" / "dirty.txt").write_text(
-            "dirty\n", encoding="utf-8",
+            "dirty\n",
+            encoding="utf-8",
         )
 
         result = u.Infra.git_remove_clean_worktree(repository, lane)
@@ -404,7 +427,8 @@ class TestsFlextInfraGitFacet:
         assert lane.is_dir()
 
     def test_remove_clean_worktree_refuses_locked_worktree(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         repository = test_u.Tests.git_repository(tmp_path)
         lane = self._add_lane(tmp_path, repository, "locked-lane")
@@ -416,7 +440,8 @@ class TestsFlextInfraGitFacet:
         assert lane.is_dir()
 
     def test_is_ancestor_proves_any_pair_and_defaults_to_head(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """One owner proves ancestry for a pair and for the HEAD-bound case."""
         repository = test_u.Tests.git_repository(tmp_path)
@@ -425,14 +450,16 @@ class TestsFlextInfraGitFacet:
         ).oid
         tm.ok(
             test_u.Cli.run_checked(
-                [c.Infra.GIT, "switch", "-c", "topic"], cwd=repository,
+                [c.Infra.GIT, "switch", "-c", "topic"],
+                cwd=repository,
             ),
         )
         (repository / "topic.txt").write_text("topic\n", encoding="utf-8")
         tm.ok(test_u.Cli.run_checked([c.Infra.GIT, "add", "topic.txt"], cwd=repository))
         tm.ok(
             test_u.Cli.run_checked(
-                [c.Infra.GIT, "commit", "-m", "topic"], cwd=repository,
+                [c.Infra.GIT, "commit", "-m", "topic"],
+                cwd=repository,
             ),
         )
         topic = tm.ok(
@@ -442,14 +469,18 @@ class TestsFlextInfraGitFacet:
         ancestor = tm.ok(
             u.Infra.git_is_ancestor(
                 m.Infra.GitAncestryRequest(
-                    repo_root=repository, ancestor=base, descendant=topic,
+                    repo_root=repository,
+                    ancestor=base,
+                    descendant=topic,
                 ),
             ),
         )
         reverse = tm.ok(
             u.Infra.git_is_ancestor(
                 m.Infra.GitAncestryRequest(
-                    repo_root=repository, ancestor=topic, descendant=base,
+                    repo_root=repository,
+                    ancestor=topic,
+                    descendant=base,
                 ),
             ),
         )
@@ -494,7 +525,8 @@ class TestsFlextInfraGitFacet:
 
         tm.ok(
             test_u.Cli.run_checked(
-                [c.Infra.GIT, "commit", "-m", "staged"], cwd=repository,
+                [c.Infra.GIT, "commit", "-m", "staged"],
+                cwd=repository,
             ),
         )
         tm.that(tm.ok(u.Infra.git_has_staged_changes(request)).value, eq=False)

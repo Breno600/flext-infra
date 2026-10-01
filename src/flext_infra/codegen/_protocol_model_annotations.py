@@ -83,7 +83,9 @@ class FlextInfraCodegenProtocolModelAnnotations:
 
     @classmethod
     def render(
-        cls, annotation: t.TypeHintSpecifier | None, target: ProtocolModelTarget,
+        cls,
+        annotation: t.TypeHintSpecifier | None,
+        target: ProtocolModelTarget,
     ) -> str:
         """Render one field/property type without exposing a concrete model."""
         if isinstance(annotation, ForwardRef):
@@ -164,7 +166,9 @@ class FlextInfraCodegenProtocolModelAnnotations:
 
     @classmethod
     def _facade_name(
-        cls, value: p.AttributeProbe, target: ProtocolModelTarget,
+        cls,
+        value: p.AttributeProbe,
+        target: ProtocolModelTarget,
     ) -> str | None:
         """Return the existing public facade path for an identical runtime type."""
         for prefix, probe in target.facade_probes:
@@ -191,10 +195,12 @@ class FlextInfraCodegenProtocolModelAnnotations:
         if rendered.startswith(cls._ANNOTATED_PREFIX):
             rendered = cls._first_annotated_argument(rendered)
         rendered = target.model_ref_re.sub(
-            rf"{target.protocol_ref_prefix}.\1", rendered,
+            rf"{target.protocol_ref_prefix}.\1",
+            rendered,
         )
         rendered = rendered.replace(
-            target.models_facade_name, target.protocol_ref_prefix,
+            target.models_facade_name,
+            target.protocol_ref_prefix,
         )
         return cls._validate(rendered)
 

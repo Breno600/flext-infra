@@ -22,7 +22,8 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
 
     @classmethod
     def _state_require_original(
-        cls, snapshot: m.Infra.GitWorktreeStateSnapshot,
+        cls,
+        snapshot: m.Infra.GitWorktreeStateSnapshot,
     ) -> None:
         actual = cls._state_snapshot(
             m.Infra.GitWorktreeStateRequest(
@@ -37,7 +38,9 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
 
     @classmethod
     def _state_checkpoint(
-        cls, snapshot: m.Infra.GitWorktreeStateSnapshot, checkpoint_ref: str,
+        cls,
+        snapshot: m.Infra.GitWorktreeStateSnapshot,
+        checkpoint_ref: str,
     ) -> m.Infra.GitWorktreeStateCheckpoint:
         cls._state_require_original(snapshot)
         repo = cls._repo(snapshot.repo_root)
@@ -50,7 +53,8 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
             raise ValueError(msg)
         repo.git.check_ref_format(checkpoint_ref)
         existing = repo.git.for_each_ref(
-            "--format=%(refname)", checkpoint_ref,
+            "--format=%(refname)",
+            checkpoint_ref,
         ).splitlines()
         if checkpoint_ref in existing:
             commit = repo.commit(checkpoint_ref)
@@ -80,7 +84,11 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
         index_tree = cls._state_tree(snapshot, snapshot.index_entries)
         worktree_tree = cls._state_tree(snapshot, cls._state_working_entries(snapshot))
         index_commit = repo.git.commit_tree(
-            index_tree, "-p", snapshot.head, "-m", "Captured index",
+            index_tree,
+            "-p",
+            snapshot.head,
+            "-m",
+            "Captured index",
         )
         retained_parents = tuple(
             part for oid in snapshot.retained_commits for part in ("-p", oid)
@@ -108,7 +116,9 @@ class FlextInfraUtilitiesGitStateCheckpointMixin(FlextInfraUtilitiesGitStateTree
 
     @classmethod
     def git_checkpoint_worktree_state(
-        cls, snapshot: m.Infra.GitWorktreeStateSnapshot, checkpoint_ref: str,
+        cls,
+        snapshot: m.Infra.GitWorktreeStateSnapshot,
+        checkpoint_ref: str,
     ) -> p.Result[m.Infra.GitWorktreeStateCheckpoint]:
         """Create a dedicated checkpoint, or verify an identical prior receipt."""
         try:

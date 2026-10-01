@@ -42,7 +42,9 @@ class TestsFlextInfraCodegenScaffolderNaming:
             _ = compile(source, str(base_dir / mod), "exec")
 
     def _validate_class_names(
-        self, base_dir: Path, filename_to_expected_class: t.StrMapping,
+        self,
+        base_dir: Path,
+        filename_to_expected_class: t.StrMapping,
     ) -> None:
         """Validate expected class names exist in modules.
 
@@ -58,33 +60,46 @@ class TestsFlextInfraCodegenScaffolderNaming:
             )
 
     def _project_info(
-        self, project: Path, *, package_name: str = "test_project",
+        self,
+        project: Path,
+        *,
+        package_name: str = "test_project",
     ) -> m.Infra.ProjectInfo:
         return u.Tests.create_project_info(
-            project, name=project.name, package_name=package_name,
+            project,
+            name=project.name,
+            package_name=package_name,
         )
 
     class TestsGeneratedFilesAreValidPython:
         """Generated source and test modules compile as Python."""
 
         def _validate_modules_parse(
-            self, base_dir: Path, modules: t.StrSequence,
+            self,
+            base_dir: Path,
+            modules: t.StrSequence,
         ) -> None:
             for mod in modules:
                 source = (base_dir / mod).read_text(encoding="utf-8")
                 _ = compile(source, str(base_dir / mod), "exec")
 
         def _project_info(
-            self, project: Path, *, package_name: str = "test_project",
+            self,
+            project: Path,
+            *,
+            package_name: str = "test_project",
         ) -> m.Infra.ProjectInfo:
             return u.Tests.create_project_info(
-                project, name=project.name, package_name=package_name,
+                project,
+                name=project.name,
+                package_name=package_name,
             )
 
         def test_generated_src_modules_parse_successfully(self, tmp_path: Path) -> None:
             """Compile every generated source facade module."""
             project = u.Tests.create_scaffolder_test_project(
-                tmp_path=tmp_path, with_all_modules=False,
+                tmp_path=tmp_path,
+                with_all_modules=False,
             )
             scaffolder = FlextInfraCodegenScaffolder(repository_root=tmp_path)
             _ = scaffolder.run(projects=[self._project_info(project)])
@@ -92,11 +107,13 @@ class TestsFlextInfraCodegenScaffolderNaming:
             self._validate_modules_parse(pkg, u.Tests.src_module_files())
 
         def test_generated_tests_modules_parse_successfully(
-            self, tmp_path: Path,
+            self,
+            tmp_path: Path,
         ) -> None:
             """Compile every generated test facade module."""
             project = u.Tests.create_scaffolder_test_project(
-                tmp_path=tmp_path, with_all_modules=True,
+                tmp_path=tmp_path,
+                with_all_modules=True,
             )
             tests_dir = project / "tests"
             tests_dir.mkdir()
@@ -111,7 +128,9 @@ class TestsFlextInfraCodegenScaffolderNaming:
             return c.Infra.DETECTION_CLASS_DECL_RE.findall(source)
 
         def _validate_class_names(
-            self, base_dir: Path, filename_to_expected_class: t.StrMapping,
+            self,
+            base_dir: Path,
+            filename_to_expected_class: t.StrMapping,
         ) -> None:
             for filename, expected_class in filename_to_expected_class.items():
                 source = (base_dir / filename).read_text(encoding="utf-8")
@@ -123,16 +142,22 @@ class TestsFlextInfraCodegenScaffolderNaming:
                 )
 
         def _project_info(
-            self, project: Path, *, package_name: str = "test_project",
+            self,
+            project: Path,
+            *,
+            package_name: str = "test_project",
         ) -> m.Infra.ProjectInfo:
             return u.Tests.create_project_info(
-                project, name=project.name, package_name=package_name,
+                project,
+                name=project.name,
+                package_name=package_name,
             )
 
         def test_src_class_names_use_prefix_suffix(self, tmp_path: Path) -> None:
             """Use the project prefix on generated source facade classes."""
             project = u.Tests.create_scaffolder_test_project(
-                tmp_path=tmp_path, with_all_modules=False,
+                tmp_path=tmp_path,
+                with_all_modules=False,
             )
             scaffolder = FlextInfraCodegenScaffolder(repository_root=tmp_path)
             _ = scaffolder.run(projects=[self._project_info(project)])
@@ -149,11 +174,13 @@ class TestsFlextInfraCodegenScaffolderNaming:
             )
 
         def test_tests_class_names_use_tests_prefix_suffix(
-            self, tmp_path: Path,
+            self,
+            tmp_path: Path,
         ) -> None:
             """Use the Tests prefix on generated test facade classes."""
             project = u.Tests.create_scaffolder_test_project(
-                tmp_path=tmp_path, with_all_modules=True,
+                tmp_path=tmp_path,
+                with_all_modules=True,
             )
             tests_dir = project / "tests"
             tests_dir.mkdir()
@@ -179,7 +206,9 @@ class TestsFlextInfraCodegenScaffolderNaming:
             [result] = scaffolder.run(
                 projects=[
                     u.Tests.create_project_info(
-                        project, name="empty-project", package_name="",
+                        project,
+                        name="empty-project",
+                        package_name="",
                     ),
                 ],
             )

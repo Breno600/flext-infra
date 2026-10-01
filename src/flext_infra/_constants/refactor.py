@@ -149,6 +149,7 @@ class FlextInfraConstantsRefactor:
         COMPOSES_FAMILY = "composes-family"
         CLASS_STEM = "class-stem"
         PACKAGE_LAYERS = "package-layers"
+        PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
 
     @unique
@@ -185,7 +186,8 @@ class FlextInfraConstantsRefactor:
     RK_ALLOW_TARGET_SUFFIXES: ClassVar[str] = "allow_target_suffixes"
     CODEMOD_RULE_SUFFIX: ClassVar[str] = ".yml"
     CODEMOD_DOCUMENT_SEPARATOR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^---\s*$", re.MULTILINE,
+        r"^---\s*$",
+        re.MULTILINE,
     )
     CODEMOD_CONFIG_FILENAME: ClassVar[str] = "sgconfig.yml"
     # Static rules are data under the one rule root, config/rules: the

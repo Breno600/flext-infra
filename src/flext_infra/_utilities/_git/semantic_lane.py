@@ -24,7 +24,9 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
 
     @classmethod
     def git_publish_lane(
-        cls, request: m.Infra.GitLaneRequest, produce: Callable[[], p.Result[bool]],
+        cls,
+        request: m.Infra.GitLaneRequest,
+        produce: Callable[[], p.Result[bool]],
     ) -> p.Result[bool]:
         """Carry what ``produce`` writes from ``base`` to a pull request on ``branch``.
 
@@ -94,7 +96,8 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             cwd=root,
         )
         fetched = u.Cli.run_checked(
-            [c.Infra.GIT, "fetch", c.Infra.GIT_ORIGIN, branch], cwd=root,
+            [c.Infra.GIT, "fetch", c.Infra.GIT_ORIGIN, branch],
+            cwd=root,
         )
         if local.success:
             switched = u.Cli.run_checked([c.Infra.GIT, "switch", branch], cwd=root)
@@ -111,7 +114,8 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
             )
         else:
             return u.Cli.run_checked(
-                [c.Infra.GIT, "switch", "--create", branch], cwd=root,
+                [c.Infra.GIT, "switch", "--create", branch],
+                cwd=root,
             )
         if switched.failure:
             return switched
@@ -154,7 +158,8 @@ class FlextInfraUtilitiesGitSemanticLaneMixin(
         if pushed.failure:
             return r[bool].from_failure(pushed)
         exists = u.Cli.capture(
-            [c.Infra.GH, "pr", "view", branch, "--json", "number"], cwd=root,
+            [c.Infra.GH, "pr", "view", branch, "--json", "number"],
+            cwd=root,
         )
         command = (
             [c.Infra.GH, "pr", "edit", branch]

@@ -17,7 +17,8 @@ class TestsFlextInfraStubChain:
 
     def test_project_names_and_dirs_are_normalized(self, tmp_path: Path) -> None:
         chain = FlextInfraStubSupplyChain(
-            repository_root=tmp_path, selected_projects=[" alpha, beta ", "gamma delta"],
+            repository_root=tmp_path,
+            selected_projects=[" alpha, beta ", "gamma delta"],
         )
         tm.that(chain.project_names, eq=["alpha", "beta", "gamma", "delta"])
         tm.that(
@@ -32,7 +33,9 @@ class TestsFlextInfraStubChain:
 
     def test_project_dirs_are_disabled_for_all_projects(self, tmp_path: Path) -> None:
         chain = FlextInfraStubSupplyChain(
-            repository_root=tmp_path, selected_projects=["alpha"], all_projects=True,
+            repository_root=tmp_path,
+            selected_projects=["alpha"],
+            all_projects=True,
         )
         tm.that(chain.project_dirs is None, eq=True)
 

@@ -44,7 +44,8 @@ class TestsFlextInfraCodegenHookConformance:
             u.Cli.template_render(
                 _HOOK_TEMPLATE,
                 m.Infra.MakeWorkflowRenderSpec(
-                    dist="flext-demo", make=config.Infra.codegen.make,
+                    dist="flext-demo",
+                    make=config.Infra.codegen.make,
                 ),
             ),
         )
@@ -53,7 +54,8 @@ class TestsFlextInfraCodegenHookConformance:
 
     @staticmethod
     def _check(
-        root: Path, workspace: m.Infra.WorkspaceSpec,
+        root: Path,
+        workspace: m.Infra.WorkspaceSpec,
     ) -> p.Result[m.Infra.CodegenResult]:
         return infra.codegen_conform(
             test_u.Tests.conform_request(
@@ -66,7 +68,8 @@ class TestsFlextInfraCodegenHookConformance:
         )
 
     def test_check_never_requires_runtime_hook_installation(
-        self, infra_git_repo: Path,
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Conform owns generated files; AI Hub owns hook installation."""
         root = infra_git_repo
@@ -100,7 +103,8 @@ class TestsFlextInfraCodegenHookConformance:
                 tm.that(hook.read_text(encoding="utf-8"), lacks=f"--hook-type={stage}")
 
     def test_generated_hooks_use_one_strict_shell_per_workflow_step(
-        self, infra_git_repo: Path,
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Each enabled stage runs every declared verb in its own strict shell.
 
@@ -129,11 +133,14 @@ class TestsFlextInfraCodegenHookConformance:
 
     @pytest.mark.parametrize("inherited", ["ci", "local"])
     def test_pre_push_check_unsets_inherited_ci_before_the_real_make_runtime(
-        self, tmp_path: Path, inherited: str,
+        self,
+        tmp_path: Path,
+        inherited: str,
     ) -> None:
         """Execute the generated hook entry without replacing any runtime owner."""
         root, _ = test_u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE,
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         tm.ok(test_u.Tests.create_python_environment(root))
         policy = config.Infra.codegen.make
@@ -143,7 +150,8 @@ class TestsFlextInfraCodegenHookConformance:
             "pre_push": True,
             "workflow": (
                 m.Infra.MakeWorkflowStepSpec(
-                    verb="check", contexts=("local", "pre_push"),
+                    verb="check",
+                    contexts=("local", "pre_push"),
                 ),
             ),
         })
@@ -196,7 +204,8 @@ class TestsFlextInfraCodegenHookConformance:
         )
 
     def test_check_and_apply_never_overwrite_foreign_hook_shims(
-        self, infra_git_repo: Path,
+        self,
+        infra_git_repo: Path,
     ) -> None:
         """Conform never overwrites a foreign executable hook."""
         root = infra_git_repo
@@ -299,24 +308,28 @@ class TestsFlextInfraCodegenHookConformance:
         )
 
         planned = FlextInfraCodegenConform.retired_projection_plans(
-            root, c.Infra.MakeProfile.STANDALONE,
+            root,
+            c.Infra.MakeProfile.STANDALONE,
         )
 
         retired = {plan.path for plan in tm.ok(planned) if plan.desired_content is None}
         tm.that(hook_config in retired, eq=False)
 
     def test_standalone_retires_workspace_only_generated_projection(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Remove a generated projection excluded from the selected profile."""
         target = tmp_path / ".github/ci-template/ci.yml"
         target.parent.mkdir(parents=True)
         target.write_text(
-            f"# {c.Infra.TEMPLATE_GENERATED_MARKERS[0]}\n", encoding="utf-8",
+            f"# {c.Infra.TEMPLATE_GENERATED_MARKERS[0]}\n",
+            encoding="utf-8",
         )
 
         planned = FlextInfraCodegenConform.retired_projection_plans(
-            tmp_path, c.Infra.MakeProfile.STANDALONE,
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
 
         retired = {plan.path for plan in tm.ok(planned) if plan.desired_content is None}

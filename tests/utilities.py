@@ -93,7 +93,8 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             """Build the generated Make and activation fixture consumed by real verbs."""
             role = c.Infra.MakeProfile(profile.value)
             repository = u.Tests.repository_ref(
-                "fixture-project", role=role,
+                "fixture-project",
+                role=role,
             ).model_copy(
                 update={
                     "editable": True,
@@ -104,7 +105,8 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             )
             project_root = tmp_path / profile.value / "fixture-project"
             u.Tests.WorktreeFixture.write_python_project(
-                project_root, repository.distribution,
+                project_root,
+                repository.distribution,
             )
             # The generated Makefile consumes the tracked Mise launcher for every
             # verb (setup/check/fix/...), not only at bootstrap: the
@@ -149,7 +151,8 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             )
             repository_root = project_root
             workspace = u.Tests.workspace_spec(
-                repository, project=u.Tests.project_spec("fixture-project"),
+                repository,
+                project=u.Tests.project_spec("fixture-project"),
             )
             request = u.Tests.conform_request(
                 project_root,
@@ -220,19 +223,23 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     ),
                 )
                 (project_root / ".envrc.local").write_text(
-                    'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n', encoding="utf-8",
+                    'export MAKE_ACTIVATION_PROOF="$PROJECT_ROOT"\n',
+                    encoding="utf-8",
                 )
             else:
                 tm.ok(
                     u.Cli.run_checked(
-                        ["direnv", "allow", str(project_root)], cwd=project_root,
+                        ["direnv", "allow", str(project_root)],
+                        cwd=project_root,
                     ),
                 )
             return project_root, repository_root
 
         @staticmethod
         def resolved_make_checkout(
-            template: Path, parent: Path, profile: c.Infra.MakeProfile,
+            template: Path,
+            parent: Path,
+            profile: c.Infra.MakeProfile,
         ) -> Path:
             """Check out a resolved ``make upg`` template as a fresh repository.
 
@@ -248,7 +255,8 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 ignore=shutil.ignore_patterns(".venv", ".git"),
             )
             u.Tests.initialize_git_repo(
-                root, origin_url=u.Tests.repository_ref(root.name, role=profile).url,
+                root,
+                origin_url=u.Tests.repository_ref(root.name, role=profile).url,
             )
             tm.ok(
                 u.Cli.run_checked(
@@ -293,7 +301,8 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 _ = shutil.copy2(path, destination, follow_symlinks=False)
             tm.that((root / ".venv").exists(), eq=False)
             u.Tests.initialize_git_repo(
-                root, origin_url=u.Tests.repository_ref(config.Infra.name).url,
+                root,
+                origin_url=u.Tests.repository_ref(config.Infra.name).url,
             )
             return root
 
@@ -311,7 +320,8 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                     return r[bool].from_failure(directory_plan)
                 if directory_plan.value.directories:
                     created = u.Cli.atomic_create_directory_chain_guarded(
-                        directory_plan.value, permission_mode=0o755,
+                        directory_plan.value,
+                        permission_mode=0o755,
                     )
                     if created.failure:
                         return r[bool].from_failure(created)

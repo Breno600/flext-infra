@@ -25,7 +25,8 @@ class FlextInfraDocServer(FlextInfraDocServiceBase):
     """Serve one MkDocs site in dev mode (blocking local preview)."""
 
     dev_addr: Annotated[
-        str, m.Field(description="Dev server bind address (host:port)"),
+        str,
+        m.Field(description="Dev server bind address (host:port)"),
     ] = "127.0.0.1:8000"
     livereload: Annotated[bool, m.Field(description="Enable MkDocs livereload")] = True
     strict: Annotated[bool, m.Field(description="Enable MkDocs strict mode")] = True
@@ -80,7 +81,9 @@ class FlextInfraDocServer(FlextInfraDocServiceBase):
     def _serve_scope(self, scope: m.Infra.DocScope) -> m.Infra.DocsPhaseReport:
         """Serve one scope through the docs build utilities (blocking)."""
         self.logger.info(
-            "docs_serve_scope_started", project=scope.name, dev_addr=self.dev_addr,
+            "docs_serve_scope_started",
+            project=scope.name,
+            dev_addr=self.dev_addr,
         )
         report: m.Infra.DocsPhaseReport = u.Infra.docs_serve_mkdocs(
             scope,

@@ -212,7 +212,8 @@ class FlextInfraUtilitiesCodegen(
         if planned.failure:
             return r[bool].from_failure(planned)
         created = u.Cli.atomic_create_directory_chain_guarded(
-            planned.value, permission_mode=0o700,
+            planned.value,
+            permission_mode=0o700,
         )
         if created.failure:
             return r[bool].from_failure(created)
@@ -220,7 +221,11 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def generate_module_skeleton(
-        *, class_name: str, base_class: str, base_module: str, docstring: str,
+        *,
+        class_name: str,
+        base_class: str,
+        base_module: str,
+        docstring: str,
     ) -> str:
         """Render one module skeleton through the cli template engine (ADR-005).
 
@@ -247,7 +252,8 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def generate_test_module_skeleton(
-        *, context: m.Infra.TestModuleSkeletonRenderContext,
+        *,
+        context: m.Infra.TestModuleSkeletonRenderContext,
     ) -> str:
         """Render one canonical test facade skeleton from its validated context."""
         template_path = (

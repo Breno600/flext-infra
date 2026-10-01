@@ -13,7 +13,8 @@ class TestsFlextInfraDepsModernizerConsolidate:
 
     @staticmethod
     def _consolidated(
-        source: str, canonical_dev: t.StrSequence = (),
+        source: str,
+        canonical_dev: t.StrSequence = (),
     ) -> t.Pair[t.JsonMapping, t.StrSequence]:
         """Consolidate one payload twice; return the payload and first changes."""
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(

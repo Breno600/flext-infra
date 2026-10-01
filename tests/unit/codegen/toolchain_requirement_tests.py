@@ -15,7 +15,8 @@ class TestsFlextInfraToolchainRequirement:
         toolchain = config.Infra.codegen.toolchain
 
         tm.that(
-            toolchain.python_required_version, has=f">={toolchain.python_version},<",
+            toolchain.python_required_version,
+            has=f">={toolchain.python_version},<",
         )
 
     def test_python_requirement_rejects_the_next_minor(self) -> None:

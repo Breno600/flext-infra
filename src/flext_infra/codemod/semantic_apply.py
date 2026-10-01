@@ -18,7 +18,9 @@ class FlextInfraCodemodSemanticApply:
 
     @classmethod
     def source_fingerprint(
-        cls, root: Path, preflight: m.Infra.ModScanReport,
+        cls,
+        root: Path,
+        preflight: m.Infra.ModScanReport,
     ) -> t.VariadicTuple[t.Pair[str, str]]:
         """Identify the complete governed source state between mod phases."""
         return tuple(
@@ -40,12 +42,15 @@ class FlextInfraCodemodSemanticApply:
         )
 
         return FlextInfraUtilitiesCodegenPathCutover.plan_transaction_path_cutover(
-            rope_workspace=rope_workspace, sources=original,
+            rope_workspace=rope_workspace,
+            sources=original,
         )
 
     @classmethod
     def apply_transaction_paths(
-        cls, root: Path, edits: t.VariadicTuple[m.Infra.SemanticMigrationEdit],
+        cls,
+        root: Path,
+        edits: t.VariadicTuple[m.Infra.SemanticMigrationEdit],
     ) -> None:
         """Publish the exact callback included in the existing progress fingerprint."""
         original = {edit.file_path: edit.original_source for edit in edits}
@@ -149,7 +154,10 @@ class FlextInfraCodemodSemanticApply:
             published = dict(cls._source_inventory(root, preflight))
             rope_workspace.refresh()
             return cls._verify_fixed_point(
-                root, published, preflight, rope_workspace,
+                root,
+                published,
+                preflight,
+                rope_workspace,
             ).flat_map(
                 lambda _: cls._check_residue(
                     "import-alignment",
@@ -158,7 +166,11 @@ class FlextInfraCodemodSemanticApply:
             )
 
         return cls._publish(
-            root, original, working, changed, validator=validate_published,
+            root,
+            original,
+            working,
+            changed,
+            validator=validate_published,
         )
 
     @classmethod
@@ -197,7 +209,9 @@ class FlextInfraCodemodSemanticApply:
 
     @staticmethod
     def _phase_future_annotations(
-        root: Path, preflight: m.Infra.ModScanReport, working: MutableMapping[Path, str],
+        root: Path,
+        preflight: m.Infra.ModScanReport,
+        working: MutableMapping[Path, str],
     ) -> t.VariadicTuple[m.Infra.SemanticMigrationEdit]:
         """Plan the future-annotations phase; the pipeline applies the edits."""
         future_annotations: list[m.Infra.SemanticMigrationEdit] = []
@@ -209,7 +223,8 @@ class FlextInfraCodemodSemanticApply:
             original_source = working.get(file_path)
             if original_source is None:
                 state = u.Cli.atomic_read_binary_file_state(
-                    file_path, required=True,
+                    file_path,
+                    required=True,
                 ).unwrap()
                 content = state.content
                 if content is None:
@@ -234,7 +249,8 @@ class FlextInfraCodemodSemanticApply:
 
     @staticmethod
     def _check_residue(
-        phase: str, planned: p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]],
+        phase: str,
+        planned: p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]],
     ) -> p.Result[bool]:
         """Reject a replan failure or edits replanned by a completed phase."""
         if planned.failure:
@@ -261,7 +277,8 @@ class FlextInfraCodemodSemanticApply:
             edits.ok(cls._phase_future_annotations(root, preflight, working)),
         ).flat_map(
             lambda _: cls._check_residue(
-                "deferred-models", edits.ok(cls._deferred_model_edits(working)),
+                "deferred-models",
+                edits.ok(cls._deferred_model_edits(working)),
             ),
         )
         for phase in c.Infra.SemanticCutoverPhase:
@@ -280,7 +297,8 @@ class FlextInfraCodemodSemanticApply:
 
     @staticmethod
     def _source_inventory(
-        root: Path, preflight: m.Infra.ModScanReport,
+        root: Path,
+        preflight: m.Infra.ModScanReport,
     ) -> t.MappingKV[Path, str]:
         """Read governed sources and every Python path reported by preflight."""
         project_roots = u.Infra.governed_project_roots(root)
@@ -389,7 +407,9 @@ class FlextInfraCodemodSemanticApply:
             if project_root is None:
                 project_root = root
             normalized = FlextInfraRefactorCensusApplyFormattingMixin.normalize_source(
-                root, path, updated[path],
+                root,
+                path,
+                updated[path],
             )
             if normalized.failure:
                 return r[bool].from_failure(normalized)
@@ -409,7 +429,9 @@ class FlextInfraCodemodSemanticApply:
         if not semantic_plans:
             return validator() if validator is not None else r[bool].ok(True)
         return FlextInfraSemanticPublication.publish_semantic_file_plans(
-            semantic_plans, repository_root=root, validator=validator,
+            semantic_plans,
+            repository_root=root,
+            validator=validator,
         ).map(lambda _: True)
 
     @staticmethod

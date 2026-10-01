@@ -21,13 +21,16 @@ if TYPE_CHECKING:
 
 
 class FlextInfraUtilitiesSemanticCutoverAliases(
-    FlextInfraUtilitiesSemanticCutoverAliasCst, FlextInfraUtilitiesSemanticCutoverEdits,
+    FlextInfraUtilitiesSemanticCutoverAliasCst,
+    FlextInfraUtilitiesSemanticCutoverEdits,
 ):
     """Plan atomic removal of API aliases and their proven consumers."""
 
     @classmethod
     def _api_alias_specs(
-        cls, root: Path, findings: t.SequenceOf[m.Infra.ModScanFinding],
+        cls,
+        root: Path,
+        findings: t.SequenceOf[m.Infra.ModScanFinding],
     ) -> p.Result[
         t.Pair[t.MappingKV[Path, t.StrMapping], t.MappingKV[str, t.StrMapping]]
     ]:
@@ -114,13 +117,16 @@ class FlextInfraUtilitiesSemanticCutoverAliases(
                         ((imported.asname or imported.name, alias), target)
                         for imported in node.names
                         for alias, target in specs_by_module.get(
-                            imported.name, {},
+                            imported.name,
+                            {},
                         ).items()
                     )
             if not (local_aliases or import_aliases or attribute_aliases):
                 return source, ()
             FlextInfraUtilitiesCompatibilityAliasValidation.require_static_compatibility_alias_exports(
-                tree, path, frozenset(local_aliases),
+                tree,
+                path,
+                frozenset(local_aliases),
             )
             rewritten = cls._rewrite_compatibility_alias_source(
                 source,

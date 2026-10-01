@@ -30,7 +30,8 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         if new_errors or request.skip_pytest:
             return None
         pytest_result = FlextInfraUtilitiesProtectedEditApply._pytest_failure(
-            path, request.workspace,
+            path,
+            request.workspace,
         )
         if pytest_result.failure:
             error_message = pytest_result.error
@@ -48,31 +49,40 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         reports: list[str] = []
         failed = False
         after_lints = FlextInfraUtilitiesProtectedEditApply.lint_snapshots(
-            tuple(updates), request.workspace, gates=request.gates,
+            tuple(updates),
+            request.workspace,
+            gates=request.gates,
         )
         dirty = tuple(
             path
             for path in updates
             if FlextInfraUtilitiesProtectedEditApply.lint_new_errors(
-                before_lints[path], after_lints[path],
+                before_lints[path],
+                after_lints[path],
             )
         )
         if dirty:
             FlextInfraUtilitiesProtectedEditApply.ruff_fix_files(
-                dirty, request.workspace,
+                dirty,
+                request.workspace,
             )
             after_lints.update(
                 FlextInfraUtilitiesProtectedEditApply.lint_snapshots(
-                    dirty, request.workspace, gates=request.gates,
+                    dirty,
+                    request.workspace,
+                    gates=request.gates,
                 ),
             )
         for path in updates:
             new_errors = FlextInfraUtilitiesProtectedEditApply.lint_new_errors(
-                before_lints[path], after_lints[path],
+                before_lints[path],
+                after_lints[path],
             )
             test_fail = (
                 FlextInfraUtilitiesProtectedEditApply._protected_write_test_failure(
-                    path, request, new_errors,
+                    path,
+                    request,
+                    new_errors,
                 )
             )
             if not new_errors and not test_fail:
@@ -107,7 +117,8 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
         tree = ast.parse(py_file.read_text(encoding=c.Cli.ENCODING_DEFAULT))
         for node in ast.walk(tree):
             if isinstance(
-                node, ast.FunctionDef | ast.AsyncFunctionDef,
+                node,
+                ast.FunctionDef | ast.AsyncFunctionDef,
             ) and node.name.startswith("test_"):
                 return True
             if isinstance(node, ast.ClassDef) and node.name.startswith("Test"):
@@ -157,14 +168,19 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
 
     @staticmethod
     def protected_file_edit(
-        py_file: Path, *, request: m.Infra.ProtectedFileEditRequest,
+        py_file: Path,
+        *,
+        request: m.Infra.ProtectedFileEditRequest,
     ) -> t.Infra.EditResult:
         """Apply one edit, validate lint deltas, and restore on failure."""
         rel = FlextInfraUtilitiesProtectedEditApply._relative_path(
-            py_file, request.workspace,
+            py_file,
+            request.workspace,
         )
         before = FlextInfraUtilitiesProtectedEditApply.lint_snapshot(
-            py_file, request.workspace, gates=request.gates,
+            py_file,
+            request.workspace,
+            gates=request.gates,
         )
 
         def _restore() -> None:
@@ -180,19 +196,24 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
             new_errors = FlextInfraUtilitiesProtectedEditApply.lint_new_errors(
                 before,
                 FlextInfraUtilitiesProtectedEditApply.lint_snapshot(
-                    py_file, request.workspace, gates=request.gates,
+                    py_file,
+                    request.workspace,
+                    gates=request.gates,
                 ),
             )
             # Normalize only an edit's new findings, then judge the repaired delta.
             # A clean delta must not rewrite unrelated pre-existing style.
             if new_errors:
                 FlextInfraUtilitiesProtectedEditApply.ruff_fix_files(
-                    (py_file,), request.workspace,
+                    (py_file,),
+                    request.workspace,
                 )
                 new_errors = FlextInfraUtilitiesProtectedEditApply.lint_new_errors(
                     before,
                     FlextInfraUtilitiesProtectedEditApply.lint_snapshot(
-                        py_file, request.workspace, gates=request.gates,
+                        py_file,
+                        request.workspace,
+                        gates=request.gates,
                     ),
                 )
             edit_completed = True
@@ -204,7 +225,8 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
             None
             if new_errors
             else FlextInfraUtilitiesProtectedEditApply._pytest_failure(
-                py_file, request.workspace,
+                py_file,
+                request.workspace,
             ).fold(on_failure=lambda msg: msg, on_success=lambda _: None)
         )
         if not new_errors and not test_fail:
@@ -232,7 +254,9 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
 
     @staticmethod
     def protected_source_write(
-        py_file: Path, *, request: m.Infra.ProtectedSourceWriteRequest,
+        py_file: Path,
+        *,
+        request: m.Infra.ProtectedSourceWriteRequest,
     ) -> t.Infra.EditResult:
         """Write validated source content with protected validation and rollback."""
         original_source = py_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
@@ -293,7 +317,9 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
                 )
         before_sources, before_lints = (
             FlextInfraUtilitiesProtectedEditApply._preview_write_baselines(
-                normalized_updates, request.workspace, gates=request.gates,
+                normalized_updates,
+                request.workspace,
+                gates=request.gates,
             )
         )
         write_completed = False
@@ -305,7 +331,10 @@ class FlextInfraUtilitiesProtectedEditApply(FlextInfraUtilitiesProtectedEditPrev
                 request.post_write()
             ok, reports = (
                 FlextInfraUtilitiesProtectedEditApply._protected_write_reports(
-                    normalized_updates, before_sources, before_lints, request,
+                    normalized_updates,
+                    before_sources,
+                    before_lints,
+                    request,
                 )
             )
             write_completed = True

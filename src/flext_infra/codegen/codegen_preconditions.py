@@ -21,7 +21,8 @@ class FlextInfraCodegenPreconditions:
 
     @staticmethod
     def phase_sources(
-        phase: str, plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
+        phase: str,
+        plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[t.Pair[str, m.Cli.AtomicFileState]]]:
         """Reject conflicting observations and tag each source with its phase."""
         result_type = r[tuple[tuple[str, m.Cli.AtomicFileState], ...]]
@@ -67,7 +68,8 @@ class FlextInfraCodegenPreconditions:
 
     @staticmethod
     def unchanged_journal(
-        session: m.Infra.CodegenTransactionSession, changed_error: str,
+        session: m.Infra.CodegenTransactionSession,
+        changed_error: str,
     ) -> p.Result[m.Infra.CodegenTransactionSession]:
         """Require the complete journal receipt; a lease cannot authorize replacement."""
         result_type = r[m.Infra.CodegenTransactionSession]

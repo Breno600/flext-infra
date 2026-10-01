@@ -23,7 +23,8 @@ class FlextInfraUtilitiesGitWorktreeRootsMixin(
 
     @classmethod
     def git_repository_root(
-        cls, request: m.Infra.GitRepoRequest,
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitRootReport]:
         """Resolve the superproject root or the repository's own top level."""
         root = cls._git_repository_root_path(request.repo_root)
@@ -35,7 +36,8 @@ class FlextInfraUtilitiesGitWorktreeRootsMixin(
 
     @classmethod
     def git_primary_worktree_root(
-        cls, request: m.Infra.GitRepoRequest,
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitPrimaryRootReport]:
         """Resolve the primary worktree from Git's canonical storage topology."""
         primary = cls._git_primary_worktree_root_path(request.repo_root)
@@ -61,7 +63,8 @@ class FlextInfraUtilitiesGitWorktreeRootsMixin(
             root = superproject or repo.git.rev_parse("--show-toplevel").strip()
         except (GitCommandError, OSError, ValueError) as exc:
             return r[Path].fail(
-                f"failed to resolve repository root: {exc}", exception=exc,
+                f"failed to resolve repository root: {exc}",
+                exception=exc,
             )
         return r[Path].ok(Path(root).resolve())
 

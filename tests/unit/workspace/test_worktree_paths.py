@@ -19,7 +19,8 @@ class TestsFlextInfraWorktreePaths(u.Tests.WorktreeFixture):
 
         listed = tm.ok(
             FlextInfraWorktreeService(
-                repository_root=repository, operation=c.Infra.WorktreeOperation.LIST,
+                repository_root=repository,
+                operation=c.Infra.WorktreeOperation.LIST,
             ).execute(),
         )
 
@@ -38,7 +39,9 @@ class TestsFlextInfraWorktreePaths(u.Tests.WorktreeFixture):
         tm.that(not lane.is_relative_to(repository), where=bool)
         tm.that(
             tm.ok(
-                u.Infra.git_list_worktrees(m.Infra.GitRepoRequest(repo_root=repository)),
+                u.Infra.git_list_worktrees(
+                    m.Infra.GitRepoRequest(repo_root=repository)
+                ),
             ).porcelain,
             has=f"worktree {lane}",
         )
@@ -56,14 +59,16 @@ class TestsFlextInfraWorktreePaths(u.Tests.WorktreeFixture):
         tm.that(not lane.exists(), where=bool)
 
     def test_add_reads_the_lane_instead_of_dirty_primary_metadata(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Setup never inherits the primary checkout as its workspace owner."""
         repository = self._repository(tmp_path)
         branch = "feature/isolated-metadata"
         lane = tm.ok(FlextInfraWorktreeService.canonical_lane_path(repository, branch))
         (repository / "pyproject.toml").write_text(
-            '[dependency-groups]\ndescription = "dirty primary WIP"\n', encoding="utf-8",
+            '[dependency-groups]\ndescription = "dirty primary WIP"\n',
+            encoding="utf-8",
         )
 
         added = self.add_worktree(repository, branch)
@@ -83,7 +88,8 @@ class TestsFlextInfraWorktreePaths(u.Tests.WorktreeFixture):
         outer_project = tmp_path / "outer"
         outer_project.mkdir()
         (outer_project / "pyproject.toml").write_text(
-            '[dependency-groups]\ndescription = "dirty outer WIP"\n', encoding="utf-8",
+            '[dependency-groups]\ndescription = "dirty outer WIP"\n',
+            encoding="utf-8",
         )
         nested = outer_project / "nested"
         nested.mkdir()
@@ -101,13 +107,15 @@ class TestsFlextInfraWorktreePaths(u.Tests.WorktreeFixture):
         )
 
     def test_same_named_repositories_use_distinct_lane_namespaces(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Repository names never collide inside one outer lane container."""
         outer_project = tmp_path / "outer"
         outer_project.mkdir()
         (outer_project / "pyproject.toml").write_text(
-            '[project]\nname = "outer"\nversion = "0.1.0"\n', encoding="utf-8",
+            '[project]\nname = "outer"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         first_parent = outer_project / "first"
         second_parent = outer_project / "second"

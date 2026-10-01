@@ -95,7 +95,9 @@ class FlextInfraCodegenStaging:
             except OSError as exc:
                 return result_type.fail_op(f"inspect {phase} staging filesystem", exc)
             reparse = getattr(parent_state, "st_file_attributes", 0) & getattr(
-                stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0,
+                stat,
+                "FILE_ATTRIBUTE_REPARSE_POINT",
+                0,
             )
             if (
                 not stat.S_ISDIR(parent_state.st_mode)
@@ -119,7 +121,8 @@ class FlextInfraCodegenStaging:
                     # AtomicFileState and is published below; reusing it here
                     # bound a Result and the staged-file model rejected it.
                     phase_root_before = u.Cli.atomic_read_empty_directory_state(
-                        phase_root, required=False,
+                        phase_root,
+                        required=False,
                     )
                     if phase_root_before.failure:
                         return result_type.from_failure(phase_root_before)
@@ -140,7 +143,8 @@ class FlextInfraCodegenStaging:
         # journal.
         for phase_root_state in phase_roots.values():
             created = u.Cli.atomic_create_empty_directory_guarded(
-                phase_root_state, permission_mode=0o700,
+                phase_root_state,
+                permission_mode=0o700,
             )
             if created.failure:
                 return result_type.from_failure(created)

@@ -14,7 +14,8 @@ class TestsFlextInfraWorktreeRemoval(u.Tests.WorktreeFixture):
     """Group cohesive worktree behavior."""
 
     def test_remove_refuses_an_epic_lane_with_registered_children(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A registered child keeps its epic lane alive until the child is gone."""
         repository = self._repository(tmp_path)

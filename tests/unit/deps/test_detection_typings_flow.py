@@ -25,7 +25,8 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
         """Write a project declaring CUSTOM typings and one mypy policy."""
         (root / "src" / "typed_reader").mkdir(parents=True)
         (root / "src" / "typed_reader" / c.Infra.INIT_PY).write_text(
-            "", encoding="utf-8",
+            "",
+            encoding="utf-8",
         )
         (root / "pyproject.toml").write_text(
             '[project]\nname = "typed-reader"\n'
@@ -46,13 +47,15 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
         limits = self._typed_reader(tmp_path, follow=followed)
         report = tm.ok(
             FlextInfraDependencyDetectionService().analyze_required_typings(
-                tmp_path, limits,
+                tmp_path,
+                limits,
             ),
         )
         tm.that(report.untyped_imports_followed, eq=followed)
         tm.that(report.to_add, empty=True)
         tm.that(
-            report.to_remove, eq=[] if followed else ["types-pyyaml", "types-requests"],
+            report.to_remove,
+            eq=[] if followed else ["types-pyyaml", "types-requests"],
         )
 
     def test_project_policy_conflict_fails_loud(self, tmp_path: Path) -> None:
@@ -61,7 +64,8 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
         limits = self._typed_reader(tmp_path, follow=not followed)
         tm.fail(
             FlextInfraDependencyDetectionService().analyze_required_typings(
-                tmp_path, limits,
+                tmp_path,
+                limits,
             ),
             has="policy conflict",
         )
@@ -85,7 +89,8 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
         )
 
     def test_custom_typings_and_managed_dev_are_both_available(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         (tmp_path / "pyproject.toml").write_text(
             '[project]\nname = "typed-reader"\n'
@@ -137,7 +142,9 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
 
     @pytest.mark.parametrize("requirement", ["", " "])
     def test_blank_typing_requirement_is_rejected(
-        self, tmp_path: Path, requirement: str,
+        self,
+        tmp_path: Path,
+        requirement: str,
     ) -> None:
         (tmp_path / "pyproject.toml").write_text(
             f'[project.optional-dependencies]\ntypings = ["{requirement}"]\n',

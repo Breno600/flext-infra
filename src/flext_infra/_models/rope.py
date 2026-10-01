@@ -27,7 +27,8 @@ class FlextInfraModelsRope:
         project_roots: Annotated[
             t.VariadicTuple[Path],
             m.Field(
-                min_length=1, description="Non-empty ordered project roots to scan",
+                min_length=1,
+                description="Non-empty ordered project roots to scan",
             ),
         ]
 
@@ -35,17 +36,20 @@ class FlextInfraModelsRope:
         """Canonical options for Rope module export discovery."""
 
         include_dunder: Annotated[
-            bool, m.Field(description="Whether dunder exports should be returned."),
+            bool,
+            m.Field(description="Whether dunder exports should be returned."),
         ] = False
         allow_main: Annotated[
-            bool, m.Field(description="Whether a module-level main() may be exported."),
+            bool,
+            m.Field(description="Whether a module-level main() may be exported."),
         ] = False
         allow_assignments: Annotated[
             bool,
             m.Field(description="Whether assignment-backed names may be exported."),
         ] = False
         allow_functions: Annotated[
-            bool, m.Field(description="Whether module functions may be exported."),
+            bool,
+            m.Field(description="Whether module functions may be exported."),
         ] = False
         require_explicit_all: Annotated[
             bool,
@@ -87,18 +91,22 @@ class FlextInfraModelsRope:
         """
 
         indent: Annotated[
-            int, m.Field(ge=0, description="Leading-whitespace column of the statement"),
+            int,
+            m.Field(ge=0, description="Leading-whitespace column of the statement"),
         ]
         # Rope owns both boundaries so multiline consumers
         # never reconstruct statement ranges from source text.
         end_line: Annotated[
-            int, m.Field(ge=1, description="Final line in the Rope logical region"),
+            int,
+            m.Field(ge=1, description="Final line in the Rope logical region"),
         ]
         start_offset: Annotated[
-            int, m.Field(ge=0, description="Source offset where the region starts"),
+            int,
+            m.Field(ge=0, description="Source offset where the region starts"),
         ]
         end_offset: Annotated[
-            int, m.Field(ge=0, description="Source offset where the region ends"),
+            int,
+            m.Field(ge=0, description="Source offset where the region ends"),
         ]
         category: Annotated[
             c.Infra.StatementCategory,
@@ -115,10 +123,12 @@ class FlextInfraModelsRope:
         # Consumers share this Rope-derived guard fact instead
         # of rebuilding TYPE_CHECKING control flow with stdlib AST visitors.
         type_checking_guarded: Annotated[
-            bool, m.Field(description="Whether the statement is inside TYPE_CHECKING"),
+            bool,
+            m.Field(description="Whether the statement is inside TYPE_CHECKING"),
         ] = False
         text: Annotated[
-            str, m.Field(description="Rope-owned source slice for the statement"),
+            str,
+            m.Field(description="Rope-owned source slice for the statement"),
         ] = ""
 
     class FamilyWrapperFlatten(m.ArbitraryTypesModel):
@@ -131,10 +141,12 @@ class FlextInfraModelsRope:
             m.Field(description="Rope snapshot project resolving every consumer"),
         ]
         owner_name: Annotated[
-            str, m.Field(description="Family owner class receiving promoted members"),
+            str,
+            m.Field(description="Family owner class receiving promoted members"),
         ]
         wrapper_name: Annotated[
-            str, m.Field(description="Declared name of the flattened namespace wrapper"),
+            str,
+            m.Field(description="Declared name of the flattened namespace wrapper"),
         ]
         wrapper: Annotated[
             t.Infra.RopePyName,
@@ -146,7 +158,9 @@ class FlextInfraModelsRope:
         ]
 
     class ConstantInfo(
-        mm.NonNegativeLineMixin, mm.NestedClassPathMixin, m.ContractModel,
+        mm.NonNegativeLineMixin,
+        mm.NestedClassPathMixin,
+        m.ContractModel,
     ):
         """Final-annotated constant definition from rope semantic analysis."""
 
@@ -159,7 +173,8 @@ class FlextInfraModelsRope:
 
         name: Annotated[str, m.Field(description="Symbol name")]
         kind: Annotated[
-            str, m.Field(description="Symbol kind: class, function, assignment"),
+            str,
+            m.Field(description="Symbol kind: class, function, assignment"),
         ]
 
     class ConsolidatorScannedFile(m.ArbitraryTypesModel):
@@ -188,10 +203,12 @@ class FlextInfraModelsRope:
             m.Field(description="Local classes discovered in the module"),
         ] = ()
         declared_imports: Annotated[
-            t.StrMapping, m.Field(description="Declared import targets by name"),
+            t.StrMapping,
+            m.Field(description="Declared import targets by name"),
         ]
         semantic_imports: Annotated[
-            t.StrMapping, m.Field(description="Resolved import targets by name"),
+            t.StrMapping,
+            m.Field(description="Resolved import targets by name"),
         ]
 
     class RopeModuleIndexEntry(m.ContractModel):
@@ -199,10 +216,12 @@ class FlextInfraModelsRope:
 
         file_path: Annotated[Path, m.Field(description="Absolute filesystem path")]
         resource_path: Annotated[
-            str, m.Field(description="Rope resource path relative to the project root"),
+            str,
+            m.Field(description="Rope resource path relative to the project root"),
         ]
         module_name: Annotated[
-            str, m.Field(description="Fully-qualified Rope module name for this file"),
+            str,
+            m.Field(description="Fully-qualified Rope module name for this file"),
         ]
         package_name: Annotated[
             str,
@@ -211,7 +230,8 @@ class FlextInfraModelsRope:
             ),
         ]
         package_dir: Annotated[
-            Path, m.Field(description="Absolute package directory for this module"),
+            Path,
+            m.Field(description="Absolute package directory for this module"),
         ]
         project_root: Annotated[
             Path | None,
@@ -307,20 +327,24 @@ class FlextInfraModelsRope:
         project_name: Annotated[str, m.Field(description="Canonical project name")]
         package_name: Annotated[str, m.Field(description="Primary Python package name")]
         package_alias: Annotated[
-            str, m.Field(description="Canonical root alias derived from the package"),
+            str,
+            m.Field(description="Canonical root alias derived from the package"),
         ]
         class_stem: Annotated[
             str,
             m.Field(description="Canonical facade class stem derived from the project"),
         ]
         src_dir: Annotated[
-            Path, m.Field(description="Resolved source directory for the project"),
+            Path,
+            m.Field(description="Resolved source directory for the project"),
         ]
         package_dir: Annotated[
-            Path, m.Field(description="Resolved package directory for the project"),
+            Path,
+            m.Field(description="Resolved package directory for the project"),
         ]
         init_path: Annotated[
-            Path, m.Field(description="Resolved package __init__.py path"),
+            Path,
+            m.Field(description="Resolved package __init__.py path"),
         ]
         runtime_aliases: Annotated[
             t.StrSequence,
@@ -334,11 +358,13 @@ class FlextInfraModelsRope:
 
         file_path: Annotated[Path, m.Field(description="Resolved Python module path")]
         relative_path: Annotated[
-            Path, m.Field(description="Module path relative to its package directory"),
+            Path,
+            m.Field(description="Module path relative to its package directory"),
         ]
         module_name: Annotated[str, m.Field(description="Fully-qualified module name")]
         package_name: Annotated[
-            str, m.Field(description="Importable package name for the module"),
+            str,
+            m.Field(description="Importable package name for the module"),
         ]
         package_dir: Annotated[
             Path,
@@ -371,17 +397,21 @@ class FlextInfraModelsRope:
             m.Field(description="Rope resource containing the symbol definition"),
         ]
         source: Annotated[
-            str, m.Field(description="Full source text used to compute fingerprints"),
+            str,
+            m.Field(description="Full source text used to compute fingerprints"),
         ]
         name: Annotated[str, m.Field(description="Resolved symbol name being recorded")]
         pyname: Annotated[
-            t.Infra.RopePyName, m.Field(description="Rope pyname node for the symbol"),
+            t.Infra.RopePyName,
+            m.Field(description="Rope pyname node for the symbol"),
         ]
         module_name: Annotated[
-            str, m.Field(description="Resolved module name for the symbol"),
+            str,
+            m.Field(description="Resolved module name for the symbol"),
         ]
         project_name: Annotated[
-            str, m.Field(description="Resolved project name for census attribution"),
+            str,
+            m.Field(description="Resolved project name for census attribution"),
         ]
         convention: Annotated[
             FlextInfraModelsRope.RopeModuleConvention,

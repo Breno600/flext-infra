@@ -34,7 +34,9 @@ class TestsFlextInfraCodegenPipelinePerformance:
         for i in range(_PROJECT_COUNT):
             pkg_name = f"flext_perf_pkg_{i}"
             _, pkg_dir = u.Tests.create_lazy_init_workspace(
-                repository_root, project_name=f"perf-project-{i}", package_name=pkg_name,
+                repository_root,
+                project_name=f"perf-project-{i}",
+                package_name=pkg_name,
             )
             for j in range(_MODULES_PER_PROJECT):
                 u.Tests.write_lazy_init_namespace_module(
@@ -83,7 +85,8 @@ class TestsFlextInfraCodegenPipelinePerformance:
         )
 
     def test_generated_initializers_are_directly_compilable(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Every planned initializer is valid without a formatter subprocess."""
         repository_root = self._build_synthetic_workspace(tmp_path)

@@ -16,7 +16,8 @@ class TestsFlextInfraPytestRunnerCoverage:
 
     @pytest.mark.slow
     def test_coverage_verb_publishes_artifact_without_testmon(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """The coverage pass runs its own process: real artifact, zero testmon."""
         codegen = config.Infra.codegen
@@ -45,16 +46,19 @@ class TestsFlextInfraPytestRunnerCoverage:
             execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
         )
         tm.that(
-            [arg for arg in inventory_command if arg.startswith("--testmon")], eq=[],
+            [arg for arg in inventory_command if arg.startswith("--testmon")],
+            eq=[],
         )
         tm.that(
-            (reports_root / latest_name / "testmon-inventory.json").is_file(), eq=True,
+            (reports_root / latest_name / "testmon-inventory.json").is_file(),
+            eq=True,
         )
         tm.that(runner.testmon_db.exists(), eq=False)
 
     @pytest.mark.slow
     def test_failed_coverage_suite_preserves_original_failure_and_accounting(
-        self, cached_runner_project: Path,
+        self,
+        cached_runner_project: Path,
     ) -> None:
         """No-cov-on-fail omits coverage without hiding the failed test evidence."""
         runner = runner_for(cached_runner_project)

@@ -43,7 +43,8 @@ class TestsFlextInfraCodegenCensus:
             encoding="utf-8",
         )
         config_path.write_text(
-            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8",
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n",
+            encoding="utf-8",
         )
         (rules / "fixable.yml").write_text(
             f"id: {cls._FIXABLE_RULE}\nlanguage: Python\nseverity: error\n"
@@ -57,12 +58,14 @@ class TestsFlextInfraCodegenCensus:
             encoding="utf-8",
         )
         (project / "src" / "subject.py").write_text(
-            "first(1)\nthird(2)\n", encoding="utf-8",
+            "first(1)\nthird(2)\n",
+            encoding="utf-8",
         )
         return project
 
     def test_report_violations_carry_rule_location_and_fixability(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         project = self._project(tmp_path)
         report = FlextInfraNamespaceValidator(repository_root=project).build_report()
@@ -111,9 +114,11 @@ class TestsFlextInfraCodegenCensus:
 
     def test_execute_fails_when_apply_changes_requested(self, tmp_path: Path) -> None:
         result = FlextInfraCodegenCensus(
-            repository_root=tmp_path, apply_changes=True,
+            repository_root=tmp_path,
+            apply_changes=True,
         ).execute()
 
         tm.fail(
-            result, has="census is read-only; use flext-infra codegen auto-fix --apply",
+            result,
+            has="census is read-only; use flext-infra codegen auto-fix --apply",
         )

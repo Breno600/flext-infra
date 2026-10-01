@@ -139,7 +139,10 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def _resolve_governance_link(
-        prefix: str, path: str, *, is_dir: bool = False,
+        prefix: str,
+        path: str,
+        *,
+        is_dir: bool = False,
     ) -> str:
         """Return a resolvable governance link for README or project docs.
 
@@ -167,7 +170,8 @@ class FlextInfraUtilitiesDocsRender:
     def _exclude_plugin_lines(data: t.JsonMapping) -> t.SequenceOf[str]:
         """Render optional ``mkdocs-exclude`` plugin lines."""
         patterns = FlextInfraUtilitiesDocsRender.as_string_sequence(
-            data, "exclude_docs",
+            data,
+            "exclude_docs",
         )
         if not patterns:
             return []
@@ -250,7 +254,9 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def _collection_rules_lines(
-        scope: m.Infra.DocScope, *, link_prefix: str,
+        scope: m.Infra.DocScope,
+        *,
+        link_prefix: str,
     ) -> t.SequenceOf[str]:
         """Return a thin pointer to the canonical Collection Rules.
 
@@ -263,7 +269,8 @@ class FlextInfraUtilitiesDocsRender:
         """
         _ = scope
         agents_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix, "AGENTS.md",
+            link_prefix,
+            "AGENTS.md",
         )
         return [
             "## Collection Rules",
@@ -279,7 +286,8 @@ class FlextInfraUtilitiesDocsRender:
         make-check and AGENTS.md Make contract instead.
         """
         agents_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix, "AGENTS.md",
+            link_prefix,
+            "AGENTS.md",
         )
         return [
             "## Quality Gates",
@@ -296,16 +304,21 @@ class FlextInfraUtilitiesDocsRender:
     def _governance_pointer_lines(*, link_prefix: str) -> t.SequenceOf[str]:
         """Return a thin pointer to the canonical governance surface."""
         agents_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix, "AGENTS.md",
+            link_prefix,
+            "AGENTS.md",
         )
         skills_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix, ".agents/skills/", is_dir=True,
+            link_prefix,
+            ".agents/skills/",
+            is_dir=True,
         )
         onboarding_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix, "docs/guides/onboarding.md",
+            link_prefix,
+            "docs/guides/onboarding.md",
         )
         governance_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
-            link_prefix, "docs/GOVERNANCE.md",
+            link_prefix,
+            "docs/GOVERNANCE.md",
         )
         return [
             "## Governance Pointer",
@@ -345,7 +358,8 @@ class FlextInfraUtilitiesDocsRender:
                 *FlextInfraUtilitiesDocsRender._public_surface_lines(scope),
                 "",
                 *FlextInfraUtilitiesDocsRender._collection_rules_lines(
-                    scope, link_prefix=link_prefix,
+                    scope,
+                    link_prefix=link_prefix,
                 ),
                 "",
                 *FlextInfraUtilitiesDocsRender._quality_gates_lines(
@@ -396,7 +410,8 @@ class FlextInfraUtilitiesDocsRender:
             *FlextInfraUtilitiesDocsRender._public_surface_lines(scope),
             "",
             *FlextInfraUtilitiesDocsRender._collection_rules_lines(
-                scope, link_prefix=link_prefix,
+                scope,
+                link_prefix=link_prefix,
             ),
             "",
             "## Operation Flow",
@@ -424,7 +439,9 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def docs_guides_index(
-        scope: m.Infra.DocScope, *, guide_paths: t.SequenceOf[Path],
+        scope: m.Infra.DocScope,
+        *,
+        guide_paths: t.SequenceOf[Path],
     ) -> str:
         """Index the planned guide inventory, including retained custom guides."""
         entries = [
@@ -446,7 +463,9 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def docs_api_readme(
-        scope: m.Infra.DocScope, contract: t.JsonMapping, modules: t.SequenceOf[str],
+        scope: m.Infra.DocScope,
+        contract: t.JsonMapping,
+        modules: t.SequenceOf[str],
     ) -> str:
         """Return the standard API readme for a project.
 
@@ -522,7 +541,9 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def docs_project_mkdocs(
-        scope: m.Infra.DocScope, contract: t.JsonMapping, modules: t.SequenceOf[str],
+        scope: m.Infra.DocScope,
+        contract: t.JsonMapping,
+        modules: t.SequenceOf[str],
     ) -> str:
         """Return the managed mkdocs.yml for a project scope.
 
@@ -564,7 +585,9 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def docs_overview_page(
-        scope: m.Infra.DocScope, contract: t.JsonMapping, modules: t.SequenceOf[str],
+        scope: m.Infra.DocScope,
+        contract: t.JsonMapping,
+        modules: t.SequenceOf[str],
     ) -> str:
         """Return the generated overview page for a project API.
 
@@ -633,7 +656,8 @@ class FlextInfraUtilitiesDocsRender:
             return FlextInfraUtilitiesDocsRender._render_markdown(lines)
         for module_name in modules:
             relative_path = FlextInfraUtilitiesDocsRender._module_relative_doc_path(
-                scope.package_name, module_name,
+                scope.package_name,
+                module_name,
             )
             lines.append(f"- [{module_name}]({relative_path})")
         lines.append("")
@@ -655,7 +679,8 @@ class FlextInfraUtilitiesDocsRender:
 
     @staticmethod
     def docs_root_mkdocs(
-        contract: t.JsonMapping, src_paths: t.SequenceOf[str] = (),
+        contract: t.JsonMapping,
+        src_paths: t.SequenceOf[str] = (),
     ) -> str:
         """Return the managed mkdocs.yml for the repository root.
 

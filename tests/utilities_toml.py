@@ -17,7 +17,10 @@ class TestsFlextInfraUtilitiesTomlMixin:
 
     @staticmethod
     def write_mise_lock(
-        root: Path, tool: str, version: str, selector: str = "latest",
+        root: Path,
+        tool: str,
+        version: str,
+        selector: str = "latest",
     ) -> None:
         """Pin ``tool`` in a fixture mise.lock the way ``make upg`` writes it."""
         (root / c.Infra.MISE_LOCK_FILENAME).write_text(
@@ -38,7 +41,9 @@ class TestsFlextInfraUtilitiesTomlMixin:
     def pinned_mise_version(lock_text: str, tool: str) -> str:
         """Return the ``str`` version a mise.lock text pins for ``tool``."""
         entry = TestsFlextInfraUtilitiesTomlMixin.toml_tables_at(
-            lock_text, "tools", tool,
+            lock_text,
+            "tools",
+            tool,
         )[0]
         version = entry["version"]
         assert isinstance(version, str), f"mise.lock pins no {tool} version: {entry!r}"
@@ -56,7 +61,8 @@ class TestsFlextInfraUtilitiesTomlMixin:
             root,
             tool,
             TestsFlextInfraUtilitiesTomlMixin.pinned_mise_version(
-                TestsFlextInfraUtilitiesTomlMixin.repo_mise_lock(), tool,
+                TestsFlextInfraUtilitiesTomlMixin.repo_mise_lock(),
+                tool,
             ),
         )
 

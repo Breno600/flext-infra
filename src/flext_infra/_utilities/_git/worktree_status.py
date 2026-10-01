@@ -46,7 +46,8 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def git_status(
-        cls, request: m.Infra.GitStatusRequest,
+        cls,
+        request: m.Infra.GitStatusRequest,
     ) -> p.Result[m.Infra.GitStatusReport]:
         """Capture porcelain status for one repository.
 
@@ -58,23 +59,29 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         try:
             repo = cls._repo(repo_path)
             lifecycle = cls._lifecycle_porcelain(
-                repo, repo_path, repo.git.status("--porcelain", "--untracked-files=all"),
+                repo,
+                repo_path,
+                repo.git.status("--porcelain", "--untracked-files=all"),
             )
         except GitCommandError as exc:
             return r[m.Infra.GitStatusReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitStatusReport].fail(
-                f"git status failed: {exc}", exception=exc,
+                f"git status failed: {exc}",
+                exception=exc,
             )
         return r[m.Infra.GitStatusReport].ok(
             m.Infra.GitStatusReport(
-                repo_root=repo_path, porcelain=lifecycle, dirty=bool(lifecycle.strip()),
+                repo_root=repo_path,
+                porcelain=lifecycle,
+                dirty=bool(lifecycle.strip()),
             ),
         )
 
     @classmethod
     def git_repository_head(
-        cls, request: m.Infra.GitRepoRequest,
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitOidReport]:
         """Capture the current repository HEAD as a typed oid report."""
         oid = cls._git_head_oid(request.repo_root)
@@ -84,7 +91,8 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def git_changed_paths(
-        cls, request: m.Infra.GitRepoRequest,
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[t.SequenceOf[Path]]:
         """Return every existing staged, unstaged, or untracked path in one repo."""
         repo_path = request.repo_root.expanduser().resolve()
@@ -100,7 +108,8 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
             return r[t.SequenceOf[Path]].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[t.SequenceOf[Path]].fail(
-                f"git changed paths failed: {exc}", exception=exc,
+                f"git changed paths failed: {exc}",
+                exception=exc,
             )
         return r[t.SequenceOf[Path]].ok(
             tuple(
@@ -123,7 +132,8 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
 
     @classmethod
     def git_has_staged_changes(
-        cls, request: m.Infra.GitRepoRequest,
+        cls,
+        request: m.Infra.GitRepoRequest,
     ) -> p.Result[m.Infra.GitBoolReport]:
         """Return whether the index carries changes staged for the next commit.
 
@@ -136,13 +146,17 @@ class FlextInfraUtilitiesGitWorktreeStatusMixin(FlextInfraUtilitiesGitRepo):
         try:
             repo = cls._repo(repo_path)
             status, _out, _err = repo.git.diff(
-                "--cached", "--quiet", with_extended_output=True, with_exceptions=False,
+                "--cached",
+                "--quiet",
+                with_extended_output=True,
+                with_exceptions=False,
             )
         except GitCommandError as exc:
             return r[m.Infra.GitBoolReport].fail(str(exc), exception=exc)
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to inspect staged state: {exc}", exception=exc,
+                f"failed to inspect staged state: {exc}",
+                exception=exc,
             )
         if status == 0:
             return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))

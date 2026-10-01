@@ -85,7 +85,10 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
                     else rewritten
                 )
                 rewritten = cls._rewrite_facade_base_source(
-                    explicit, shape=shape, owner=owner, owner_bound=owner in bound,
+                    explicit,
+                    shape=shape,
+                    owner=owner,
+                    owner_bound=owner in bound,
                 )
                 changes.append(f"extended {shape[0]}.{owner} in {shape[3]}")
             if cls._facade_shapes(path, ast.parse(rewritten)):
@@ -94,12 +97,14 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
             return rewritten, tuple(changes)
 
         return cls._semantic_edits(
-            tuple(item for item in items if item[0] in shapes), rewrite,
+            tuple(item for item in items if item[0] in shapes),
+            rewrite,
         )
 
     @staticmethod
     def _facade_shapes(
-        path: Path, tree: ast.Module,
+        path: Path,
+        tree: ast.Module,
     ) -> t.VariadicTuple[t.Quad[str, str, str, str]]:
         """Return every ``(module, letter, local, facade)`` rebound letter base.
 
@@ -148,7 +153,10 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBases(
 
     @staticmethod
     def _explicit_parent_reads(
-        source: str, tree: ast.Module, letter: str, owner: str,
+        source: str,
+        tree: ast.Module,
+        letter: str,
+        owner: str,
     ) -> str:
         """Spell the parent class wherever the letter is read before its rebind.
 

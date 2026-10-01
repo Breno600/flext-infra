@@ -18,13 +18,16 @@ class FlextInfraModelsCodegenLazyInitModels:
         """One projected file recorded in the deterministic projection lock."""
 
         path: Annotated[
-            t.NonEmptyStr, m.Field(description="Project-relative projected path"),
+            t.NonEmptyStr,
+            m.Field(description="Project-relative projected path"),
         ]
         sha256: Annotated[
-            t.NonEmptyStr, m.Field(description="Digest of the projected bytes"),
+            t.NonEmptyStr,
+            m.Field(description="Digest of the projected bytes"),
         ]
         bytes: Annotated[
-            t.NonNegativeInt, m.Field(description="Byte length of the projected file"),
+            t.NonNegativeInt,
+            m.Field(description="Byte length of the projected file"),
         ]
 
     class ProjectionLockPayload(m.ContractModel):
@@ -101,7 +104,8 @@ class FlextInfraModelsCodegenLazyInitModels:
             description="Inline constants emitted directly into __init__.py.",
         )
         wildcard_runtime_modules: t.StrSequence = m.Field(
-            default_factory=tuple, description="Runtime wildcard import modules.",
+            default_factory=tuple,
+            description="Runtime wildcard import modules.",
         )
         child_packages_for_lazy: t.StrSequence = m.Field(
             default_factory=tuple,
@@ -124,8 +128,10 @@ class FlextInfraModelsCodegenLazyInitModels:
         """Per-project quality gate findings."""
 
         violations_total: Annotated[
-            t.NonNegativeInt, m.Field(description="Total violations"),
+            t.NonNegativeInt,
+            m.Field(description="Total violations"),
         ]
         validator_passed: Annotated[
-            bool, m.Field(description="Whether validator passed"),
+            bool,
+            m.Field(description="Whether validator passed"),
         ]

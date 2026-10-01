@@ -62,7 +62,8 @@ class TestsFlextInfraManagedConflictRecovery:
 
         recovered = tm.ok(
             u.Infra.recover_managed_toml(
-                content, conflict_sections=("tool.ruff.lint.per-file-ignores",),
+                content,
+                conflict_sections=("tool.ruff.lint.per-file-ignores",),
             ),
         )
 

@@ -32,7 +32,8 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
     @staticmethod
     def _inheritance_bound_to_owner(
-        classes: t.MappingKV[str, ast.ClassDef], owner_name: str,
+        classes: t.MappingKV[str, ast.ClassDef],
+        owner_name: str,
     ) -> frozenset[str]:
         """Return top-level classes an owner cannot contain.
 
@@ -68,7 +69,10 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
     @classmethod
     def _class_nesting_definitions(
-        cls, rope_workspace: p.Infra.RopeWorkspaceDsl, file_path: Path, source: str,
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        file_path: Path,
+        source: str,
     ) -> p.Result[t.StrMapping]:
         """Map each loose top-level class to the owner Rope's module policy elects."""
         planned = r[t.StrMapping]
@@ -98,7 +102,9 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
     @classmethod
     def _plan_class_nesting(
-        cls, rope_workspace: p.Infra.RopeWorkspaceDsl, sources: t.MappingKV[Path, str],
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         """Compose helper promotion, family flattening, and orphan nesting."""
         planned = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
@@ -142,7 +148,9 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
 
     @classmethod
     def _plan_orphan_nesting(
-        cls, rope_workspace: p.Infra.RopeWorkspaceDsl, sources: t.MappingKV[Path, str],
+        cls,
+        rope_workspace: p.Infra.RopeWorkspaceDsl,
+        sources: t.MappingKV[Path, str],
     ) -> p.Result[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]:
         """Plan all structural nesting and consumer rewrites without effects."""
         planned_edits = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
@@ -179,11 +187,14 @@ class FlextInfraUtilitiesSemanticCutoverNesting(
         if not nested_names:
             return planned_edits.ok(())
         project = FlextInfraUtilitiesRopeRuntimeModules.snapshot_project(
-            rope_workspace.rope_project, sources,
+            rope_workspace.rope_project,
+            sources,
         )
         try:
             quoted = cls._nesting_quoted_sources(
-                project, dict(editable), definitions_by_file,
+                project,
+                dict(editable),
+                definitions_by_file,
             )
         finally:
             project.close()

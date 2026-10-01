@@ -34,7 +34,9 @@ version = "{project_version}"
 
 class TestsFlextInfraCodegenVersionFile:
     def _create_workspace(
-        self, tmp_path: Path, project_name: str,
+        self,
+        tmp_path: Path,
+        project_name: str,
     ) -> t.Triple[Path, Path, Path]:
         """Create minimal workspace/project/package structure."""
         ws = tmp_path / "workspace"
@@ -51,7 +53,8 @@ class TestsFlextInfraCodegenVersionFile:
         proj.mkdir()
         (proj / "pyproject.toml").write_text(
             _PROJECT_PYPROJECT.format(
-                project_name=project_name, project_version=c.Tests.RELEASE_VERSION_BASE,
+                project_name=project_name,
+                project_version=c.Tests.RELEASE_VERSION_BASE,
             ),
             encoding="utf-8",
         )
@@ -125,7 +128,8 @@ class TestsFlextInfraCodegenVersionFile:
         tm.that(first_content, eq=second_content)
 
     def test_project_filter_only_generates_for_matching_project(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         # Create workspace with two projects
         ws = tmp_path / "workspace"
@@ -146,7 +150,8 @@ class TestsFlextInfraCodegenVersionFile:
             proj.mkdir()
             (proj / "pyproject.toml").write_text(
                 _PROJECT_PYPROJECT.format(
-                    project_name=name, project_version=c.Tests.RELEASE_VERSION_BASE,
+                    project_name=name,
+                    project_version=c.Tests.RELEASE_VERSION_BASE,
                 ),
                 encoding="utf-8",
             )
@@ -154,7 +159,8 @@ class TestsFlextInfraCodegenVersionFile:
             pkg.mkdir(parents=True)
             (pkg / "__init__.py").write_text("", encoding="utf-8")
         u.Tests.declare_workspace_projects(
-            ws, c.Tests.PROJECT_MEMBERS_BY_SCENARIO["filtered"],
+            ws,
+            c.Tests.PROJECT_MEMBERS_BY_SCENARIO["filtered"],
         )
         svc = FlextInfraCodegenVersionFile.model_validate({
             "repository_root": ws,

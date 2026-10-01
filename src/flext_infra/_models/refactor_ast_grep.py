@@ -19,7 +19,8 @@ class FlextInfraModelsRefactorGrep:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         variable: Annotated[
-            t.NonEmptyStr, m.Field(description="Captured single metavariable name"),
+            t.NonEmptyStr,
+            m.Field(description="Captured single metavariable name"),
         ]
         predicate: Annotated[
             c.Infra.CodemodContextPredicate,
@@ -65,16 +66,20 @@ class FlextInfraModelsRefactorGrep:
 
         id: Annotated[t.NonEmptyStr, m.Field(description="Canonical ast-grep rule ID")]
         digest: Annotated[
-            t.NonEmptyStr, m.Field(description="SHA-256 of the canonical rule document"),
+            t.NonEmptyStr,
+            m.Field(description="SHA-256 of the canonical rule document"),
         ]
         provider: Annotated[
-            t.NonEmptyStr, m.Field(description="Distribution or local rule provider"),
+            t.NonEmptyStr,
+            m.Field(description="Distribution or local rule provider"),
         ]
         resource: Annotated[
-            Path, m.Field(description="Rule document resource containing this ID"),
+            Path,
+            m.Field(description="Rule document resource containing this ID"),
         ]
         fixable: Annotated[
-            bool, m.Field(description="Whether the rule declares an automated fix"),
+            bool,
+            m.Field(description="Whether the rule declares an automated fix"),
         ]
         expected: Annotated[
             int | None,
@@ -129,13 +134,16 @@ class FlextInfraModelsRefactorGrep:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         provider: Annotated[
-            t.NonEmptyStr, m.Field(description="Distribution or local rule provider"),
+            t.NonEmptyStr,
+            m.Field(description="Distribution or local rule provider"),
         ]
         config: Annotated[
-            Path, m.Field(description="Provider-owned ast-grep sgconfig path"),
+            Path,
+            m.Field(description="Provider-owned ast-grep sgconfig path"),
         ]
         rule_ids: Annotated[
-            t.StrSequence, m.Field(description="Rule IDs elected from this provider"),
+            t.StrSequence,
+            m.Field(description="Rule IDs elected from this provider"),
         ]
         fixable_rule_ids: Annotated[
             t.StrSequence,
@@ -148,7 +156,8 @@ class FlextInfraModelsRefactorGrep:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         provider_order: Annotated[
-            t.StrSequence, m.Field(description="Dependency-first provider precedence"),
+            t.StrSequence,
+            m.Field(description="Dependency-first provider precedence"),
         ]
         rules: Annotated[
             t.VariadicTuple[FlextInfraModelsRefactorGrep.CodemodRule],
@@ -195,7 +204,8 @@ class FlextInfraModelsRefactorGrep:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         source_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Canonical symbol name to replace"),
+            t.NonEmptyStr,
+            m.Field(description="Canonical symbol name to replace"),
         ]
         replacement_name: Annotated[
             t.NonEmptyStr,
@@ -206,7 +216,8 @@ class FlextInfraModelsRefactorGrep:
             m.Field(description="Human-readable explanation for the rename"),
         ]
         origin: Annotated[
-            str, m.Field(description="Canonical API origin this rewrite is tied to"),
+            str,
+            m.Field(description="Canonical API origin this rewrite is tied to"),
         ] = ""
 
     class AccessorMigrationChange(m.ArbitraryTypesModel):
@@ -220,17 +231,20 @@ class FlextInfraModelsRefactorGrep:
             m.Field(description="1-based source line number when available"),
         ]
         original_name: Annotated[
-            t.NonEmptyStr, m.Field(description="Original accessor or helper name"),
+            t.NonEmptyStr,
+            m.Field(description="Original accessor or helper name"),
         ]
         replacement_name: Annotated[
-            str, m.Field(description="Suggested or applied replacement name"),
+            str,
+            m.Field(description="Suggested or applied replacement name"),
         ] = ""
         automated: Annotated[
             bool,
             m.Field(description="Whether the migration was performed automatically"),
         ]
         reason: Annotated[
-            str, m.Field(description="Human-readable migration rationale"),
+            str,
+            m.Field(description="Human-readable migration rationale"),
         ]
 
     class AccessorMigrationFile(m.ArbitraryTypesModel):
@@ -256,10 +270,12 @@ class FlextInfraModelsRefactorGrep:
         warnings: t.VariadicTuple[
             FlextInfraModelsRefactorGrep.AccessorMigrationChange
         ] = m.Field(
-            default_factory=tuple, description="Manual follow-up warnings for this file",
+            default_factory=tuple,
+            description="Manual follow-up warnings for this file",
         )
         diff: Annotated[
-            str, m.Field(description="Unified diff preview for the file"),
+            str,
+            m.Field(description="Unified diff preview for the file"),
         ] = ""
         lint_before: Annotated[
             t.MappingKV[str, t.StrSequence],
@@ -286,13 +302,16 @@ class FlextInfraModelsRefactorGrep:
         workspace: Annotated[t.NonEmptyStr, m.Field(description="Repository root path")]
         dry_run: Annotated[bool, m.Field(description="Dry-run indicator")]
         files_scanned: Annotated[
-            t.NonNegativeInt, m.Field(description="Total Python files scanned"),
+            t.NonNegativeInt,
+            m.Field(description="Total Python files scanned"),
         ]
         files_with_changes: Annotated[
-            t.NonNegativeInt, m.Field(description="Files with automated rewrites"),
+            t.NonNegativeInt,
+            m.Field(description="Files with automated rewrites"),
         ]
         automated_change_count: Annotated[
-            t.NonNegativeInt, m.Field(description="Total automated rewrites detected"),
+            t.NonNegativeInt,
+            m.Field(description="Total automated rewrites detected"),
         ]
         warning_count: Annotated[
             t.NonNegativeInt,

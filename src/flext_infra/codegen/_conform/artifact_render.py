@@ -15,7 +15,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
     @staticmethod
     def with_planned_pyproject(
-        render_inputs: m.Infra.CodegenRenderInputs, composed: str,
+        render_inputs: m.Infra.CodegenRenderInputs,
+        composed: str,
     ) -> p.Result[m.Infra.CodegenRenderInputs]:
         """Record the direct-reference requirements of the pyproject just planned.
 
@@ -81,7 +82,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             rendered = overlaid.value
             if render_inputs is not None:
                 conformed = cls.conformed_pyproject_source(
-                    rendered, render_inputs=render_inputs,
+                    rendered,
+                    render_inputs=render_inputs,
                 )
                 if conformed.failure:
                     return r[m.Infra.CodegenArtifactComposition].from_failure(conformed)
@@ -114,11 +116,13 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             resolved_artifacts = render_inputs.managed_artifacts
         composed = (
             u.Infra.compose_mise_toml_from_snapshot(
-                resolved_artifacts.sources, rendered,
+                resolved_artifacts.sources,
+                rendered,
             )
             if resolved_artifacts.sources
             else u.Infra.compose_mise_toml_from_resolution(
-                resolved_artifacts.resolution, rendered,
+                resolved_artifacts.resolution,
+                rendered,
             )
         )
         if composed.failure:
@@ -128,7 +132,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[m.Infra.CodegenArtifactComposition].from_failure(config_sources)
         return r[m.Infra.CodegenArtifactComposition].ok(
             m.Infra.CodegenArtifactComposition(
-                rendered=composed.value, source_states=config_sources.value,
+                rendered=composed.value,
+                source_states=config_sources.value,
             ),
         )
 
@@ -148,7 +153,9 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         prepends to a render failure.
         """
         artifact_context = self._artifact_render_context(
-            render_inputs, destination=destination, project_context=project_context,
+            render_inputs,
+            destination=destination,
+            project_context=project_context,
         )
         if artifact_context.failure:
             return r[str].from_failure(artifact_context)
@@ -215,7 +222,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             # sonar.tests never names an absent directory.
             return r[p.Model].ok(
                 m.Infra.SonarcloudRenderSpec(
-                    sonarcloud=codegen.sonarcloud, tests_dir=c.Infra.DIR_TESTS,
+                    sonarcloud=codegen.sonarcloud,
+                    tests_dir=c.Infra.DIR_TESTS,
                 ),
             )
         if destination == c.Infra.ENVRC_FILENAME:
@@ -328,7 +336,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                     dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
                     cooldown_excluded_dependencies=excluded.value,
                     checkout_submodules=codegen.checkout_submodules_overrides.get(
-                        dist, codegen.checkout_submodules,
+                        dist,
+                        codegen.checkout_submodules,
                     ),
                     custom_steps=self._custom_ci_steps(repository_root),
                     private_submodules=codegen.ci_private_submodules.get(dist),
@@ -389,13 +398,16 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
     ) -> p.Result[m.Infra.MakefileRenderSpec]:
         """Resolve Makefile inputs directly from the declared repository topology."""
         gitlinks = self._managed_gitlinks(
-            workspace, codegen, repository_root=target.root,
+            workspace,
+            codegen,
+            repository_root=target.root,
         )
         if gitlinks.failure:
             return r[m.Infra.MakefileRenderSpec].from_failure(gitlinks)
         pytest = config.Infra.tooling.tools.pytest
         run_timeout_seconds = pytest.run_timeout_overrides.get(
-            target.canonical_project_name, pytest.run_timeout_seconds,
+            target.canonical_project_name,
+            pytest.run_timeout_seconds,
         )
         return r[m.Infra.MakefileRenderSpec].ok(
             m.Infra.MakefileRenderSpec(

@@ -18,7 +18,8 @@ class FlextInfraMiseArtifactsFiles:
 
     @classmethod
     def transaction_participants(
-        cls, layout: m.Infra.MiseToolchainWorkspaceLayout,
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
     ) -> t.VariadicTuple[
         m.Infra.MiseToolchainProjectLayout | m.Infra.CodegenFileParticipant
     ]:
@@ -27,11 +28,14 @@ class FlextInfraMiseArtifactsFiles:
 
     @classmethod
     def transaction_relative(
-        cls, layout: m.Infra.MiseToolchainWorkspaceLayout, path: Path,
+        cls,
+        layout: m.Infra.MiseToolchainWorkspaceLayout,
+        path: Path,
     ) -> p.Result[str]:
         """Encode a file capability path without weakening workspace containment."""
         participants = sorted(
-            layout.file_participants, key=lambda item: -len(item.root.parts),
+            layout.file_participants,
+            key=lambda item: -len(item.root.parts),
         )
         for participant in participants:
             if path.is_relative_to(participant.root):
@@ -94,7 +98,10 @@ class FlextInfraMiseArtifactsFiles:
 
     @classmethod
     def read_state(
-        cls, path: Path, *, required: bool,
+        cls,
+        path: Path,
+        *,
+        required: bool,
     ) -> p.Result[m.Cli.AtomicFileState]:
         """Read exact state through the canonical descriptor-authenticated owner."""
         return u.Cli.atomic_read_binary_file_state(path, required=required)
@@ -107,7 +114,9 @@ class FlextInfraMiseArtifactsFiles:
         except OSError as exc:
             return r[tuple[int, int]].fail_op("inspect generation directory", exc)
         reparse = getattr(observed, "st_file_attributes", 0) & getattr(
-            stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0,
+            stat,
+            "FILE_ATTRIBUTE_REPARSE_POINT",
+            0,
         )
         if not stat.S_ISDIR(observed.st_mode) or reparse:
             return r[tuple[int, int]].fail(
@@ -117,7 +126,8 @@ class FlextInfraMiseArtifactsFiles:
 
     @classmethod
     def write_publication(
-        cls, publication: m.Infra.CodegenStagedFile,
+        cls,
+        publication: m.Infra.CodegenStagedFile,
     ) -> p.Result[bool]:
         """Consume one staged create/replace/mode/delete through the CLI owner.
 
@@ -195,7 +205,11 @@ class FlextInfraMiseArtifactsFiles:
 
     @classmethod
     def resolve_relative(
-        cls, root: Path, selector: str, *, purpose: str,
+        cls,
+        root: Path,
+        selector: str,
+        *,
+        purpose: str,
     ) -> p.Result[Path]:
         """Resolve a lexical relative selector without dereferencing its leaf."""
         relative = Path(selector)

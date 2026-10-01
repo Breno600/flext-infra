@@ -59,7 +59,8 @@ class TestsFlextInfraCodegenLayoutGitignore:
         tm.that("docs/guides/intro.md" in tracked_names, eq=True)
         tm.that("guides/intro.md" in tracked_names, eq=False)
         tm.that(
-            f"{archive_root()}/{project.name}/output.log" in tracked_names, eq=False,
+            f"{archive_root()}/{project.name}/output.log" in tracked_names,
+            eq=False,
         )
 
     def test_managed_gitignore_render_includes_layout_additions(self) -> None:
@@ -75,7 +76,8 @@ class TestsFlextInfraCodegenLayoutGitignore:
         tm.that(rendered.value, has=f"{archive_root()}/")
 
     def test_rendered_gitignore_keeps_backup_named_python_sources(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """A backup module is source code even when its name contains backup."""
         rendered = FlextInfraCodegenConform.render_project_gitignore(
@@ -98,7 +100,9 @@ class TestsFlextInfraCodegenLayoutGitignore:
     @pytest.mark.slow
     @pytest.mark.parametrize("directory_suffix", ["", "-lane"])
     def test_rendered_gitignore_satisfies_layout_additions(
-        self, tmp_path: Path, directory_suffix: str,
+        self,
+        tmp_path: Path,
+        directory_suffix: str,
     ) -> None:
         """The public gitignore renderer satisfies the layout consumer.
 
@@ -166,7 +170,8 @@ class TestsFlextInfraCodegenLayoutGitignore:
         )
 
     def test_layout_preserves_tracked_ignored_files_and_ignores_local_artifacts(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Local ignored files are not layout inputs; tracked files remain reviewable."""
         project = build_loose_project(tmp_path)
@@ -177,11 +182,13 @@ class TestsFlextInfraCodegenLayoutGitignore:
         ignore = project / c.Infra.GITIGNORE
         content = ignore.read_text(encoding="utf-8") if ignore.exists() else ""
         ignore.write_text(
-            f"{content}\n{local.name}\n{tracked.name}\n", encoding="utf-8",
+            f"{content}\n{local.name}\n{tracked.name}\n",
+            encoding="utf-8",
         )
         tm.ok(
             u.Cli.capture(
-                [c.Infra.GIT, "add", "--force", "--", tracked.name], cwd=project,
+                [c.Infra.GIT, "add", "--force", "--", tracked.name],
+                cwd=project,
             ),
         )
 

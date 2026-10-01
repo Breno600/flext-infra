@@ -24,7 +24,10 @@ class TestsFlextInfraReleaseDependencyOrder:
     """Behavior contract for wave computation over declared dependencies."""
 
     def _write_project(
-        self, root: Path, name: str, dependencies: t.VariadicTuple[str],
+        self,
+        root: Path,
+        name: str,
+        dependencies: t.VariadicTuple[str],
     ) -> None:
         """Materialize one project whose pyproject declares the given dependencies."""
         project = root / name
@@ -54,7 +57,8 @@ class TestsFlextInfraReleaseDependencyOrder:
         tm.that(flattened.index("flext-cli") < flattened.index("flext-ldap"), eq=True)
 
     def test_project_without_internal_dependency_lands_in_first_wave(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Schedule a project with no internal dependency in the first wave."""
         self._write_project(tmp_path, "flext-core", ())
@@ -105,7 +109,8 @@ class TestsFlextInfraReleaseDependencyOrder:
         tm.that(result.error or "", has="flext-beta")
 
     def test_dependency_outside_the_selection_is_not_an_edge(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Ignore an internal dependency that the release does not publish.
 

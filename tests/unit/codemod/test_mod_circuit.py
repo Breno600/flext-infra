@@ -25,7 +25,9 @@ class TestsFlextInfraModCliRoute:
     """
 
     def test_receipt_is_complete_and_replaced_by_zero_scan(
-        self, mod_workspace: Path, capsys: pytest.CaptureFixture[str],
+        self,
+        mod_workspace: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         report_path = mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
         sample_path = mod_workspace / "sample.py"
@@ -50,7 +52,8 @@ class TestsFlextInfraModCliRoute:
 
         tm.that(first_exit, ne=0)
         tm.that(
-            first_evidence.schema_version, eq=c.Infra.MOD_SCAN_REPORT_SCHEMA_VERSION,
+            first_evidence.schema_version,
+            eq=c.Infra.MOD_SCAN_REPORT_SCHEMA_VERSION,
         )
         tm.that(first_evidence.command, eq=c.Infra.ModScanCommand.SCAN)
         tm.that(first_evidence.root, eq=mod_workspace.resolve())
@@ -82,7 +85,8 @@ class TestsFlextInfraModCliRoute:
 
         tm.ok(
             u.Cli.atomic_write_text_file(
-                sample_path, "from __future__ import annotations\n\nvalue = 1\n",
+                sample_path,
+                "from __future__ import annotations\n\nvalue = 1\n",
             ),
         )
         second_exit = infra_main([
@@ -114,7 +118,9 @@ class TestsFlextInfraModCliRoute:
         tm.that(second_console, lacks=first_digest)
 
     def test_apply_reports_detection_only_residue_and_still_succeeds(
-        self, mod_workspace: Path, capsys: pytest.CaptureFixture[str],
+        self,
+        mod_workspace: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """Repair applies every rewrite, reports what it cannot act on, exits zero.
 
@@ -155,7 +161,8 @@ class TestsFlextInfraModCliRoute:
         tm.that(console, has="ban-make-serialization")
 
     def test_apply_repeats_new_actionable_rule_cascades_until_fixed_point(
-        self, mod_workspace: Path,
+        self,
+        mod_workspace: Path,
     ) -> None:
         """Carry findings exposed by one rewrite into the next apply iteration."""
         config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
@@ -163,7 +170,8 @@ class TestsFlextInfraModCliRoute:
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
             ),
         )
         tm.ok(
@@ -226,7 +234,8 @@ class TestsFlextInfraModCliRoute:
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\n",
+                config_path,
+                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\n",
             ),
         )
         tm.ok(
@@ -278,7 +287,8 @@ class TestsFlextInfraModCliRoute:
         ])
         report_state = tm.ok(
             u.Cli.atomic_read_binary_file_state(
-                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH, required=True,
+                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH,
+                required=True,
             ),
         )
         report = m.Infra.ModScanEvidence.model_validate_json(
@@ -298,7 +308,8 @@ class TestsFlextInfraModCliRoute:
         )
 
     def test_scan_aggregates_every_local_rule_and_accepts_hint(
-        self, mod_workspace: Path,
+        self,
+        mod_workspace: Path,
     ) -> None:
         """Execute every rule of the local catalog and retain its exact rule file."""
         expected_rule_files: t.MutableMappingKV[str, str] = {}
@@ -334,7 +345,8 @@ class TestsFlextInfraModCliRoute:
             source_lines.append(statement)
         tm.ok(
             u.Cli.atomic_write_text_file(
-                mod_workspace / "sample.py", "\n".join(source_lines) + "\n",
+                mod_workspace / "sample.py",
+                "\n".join(source_lines) + "\n",
             ),
         )
 
@@ -346,7 +358,8 @@ class TestsFlextInfraModCliRoute:
         ])
         report_state = tm.ok(
             u.Cli.atomic_read_binary_file_state(
-                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH, required=True,
+                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH,
+                required=True,
             ),
         )
         report = m.Infra.ModScanEvidence.model_validate_json(
@@ -369,7 +382,8 @@ class TestsFlextInfraModCliRoute:
         )
 
     def test_scan_rejects_byte_identical_declared_fix(
-        self, mod_workspace: Path,
+        self,
+        mod_workspace: Path,
     ) -> None:
         """Keep a declared fix that changes no bytes in the fixed-point residue."""
         config_path = mod_workspace / c.Infra.CODEMOD_CONFIG_RELPATH
@@ -408,7 +422,8 @@ class TestsFlextInfraModCliRoute:
         ])
         report_state = tm.ok(
             u.Cli.atomic_read_binary_file_state(
-                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH, required=True,
+                mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH,
+                required=True,
             ),
         )
         report = m.Infra.ModScanEvidence.model_validate_json(

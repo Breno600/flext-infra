@@ -68,7 +68,8 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
 
     @staticmethod
     def settings_plan(
-        sonarcloud: m.Infra.SonarcloudSpec, project_key: str,
+        sonarcloud: m.Infra.SonarcloudSpec,
+        project_key: str,
     ) -> p.Result[m.Infra.SonarcloudSettingsPlan]:
         """Build the complete server state one project must carry."""
         # model_validate by field name: the constructor signature type checkers
@@ -118,7 +119,8 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
 
     @staticmethod
     def current_field_values(
-        plan: m.Infra.SonarcloudSettingsPlan, current: m.Infra.SonarcloudSettingsValues,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        current: m.Infra.SonarcloudSettingsValues,
     ) -> t.VariadicTuple[m.Infra.SonarcloudIssueFieldValue]:
         """Read effective entries without excluding values inherited from a parent."""
         return tuple(
@@ -159,7 +161,9 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
 
     @classmethod
     def _server_values(
-        cls, plan: m.Infra.SonarcloudSettingsPlan, token: t.SecretStr,
+        cls,
+        plan: m.Infra.SonarcloudSettingsPlan,
+        token: t.SecretStr,
     ) -> p.Result[m.Infra.SonarcloudSettingsValues]:
         """Read the project's current value of the plan's setting."""
         body = cls._call(
@@ -172,7 +176,9 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
         if body.failure:
             return r[m.Infra.SonarcloudSettingsValues].from_failure(body)
         return u.validate_value(
-            m.Infra.SonarcloudSettingsValues, body.value, from_json=True,
+            m.Infra.SonarcloudSettingsValues,
+            body.value,
+            from_json=True,
         )
 
     @override
@@ -189,12 +195,18 @@ class FlextInfraSonarcloudSettingsSync(s[bool]):
             return r[bool].from_failure(planned)
         plan = planned.value
         auth_body = self._call(
-            plan, token.value, "GET", c.Infra.SONARCLOUD_API_AUTH_VALIDATE_PATH, (),
+            plan,
+            token.value,
+            "GET",
+            c.Infra.SONARCLOUD_API_AUTH_VALIDATE_PATH,
+            (),
         )
         if auth_body.failure:
             return r[bool].from_failure(auth_body)
         auth = u.validate_value(
-            m.Infra.SonarcloudAuthentication, auth_body.value, from_json=True,
+            m.Infra.SonarcloudAuthentication,
+            auth_body.value,
+            from_json=True,
         )
         if auth.failure:
             return r[bool].from_failure(auth)

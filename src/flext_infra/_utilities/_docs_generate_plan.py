@@ -94,7 +94,9 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
         # re-read here, once, immediately before publication planning; the
         # destination CAS re-validates physically at publish time.
         stable = FlextInfraUtilitiesDocsGeneratePlanMixin.docs_verify_sources(
-            repository_root, bundle.source_states, extra_roots=scope_roots,
+            repository_root,
+            bundle.source_states,
+            extra_roots=scope_roots,
         )
         if stable.failure:
             return r[tuple[m.Infra.CodegenFilePlan, ...]].from_failure(stable)
@@ -115,7 +117,9 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
 
     @staticmethod
     def _prune_generated_tree_artifacts(
-        project: Path, root: Path, rendered: t.SequenceOf[t.Pair[Path, str]],
+        project: Path,
+        root: Path,
+        rendered: t.SequenceOf[t.Pair[Path, str]],
     ) -> p.Result[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]]:
         """Describe stale files owned by one generated tree as absent artifacts."""
         planned = cli_u.Cli.atomic_plan_directory_chain(root)

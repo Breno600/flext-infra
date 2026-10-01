@@ -38,7 +38,8 @@ class FlextInfraUtilitiesPyproject:
         if spec_result.failure:
             return r[str].from_failure(spec_result)
         return FlextInfraUtilitiesManagedConflicts.recover_managed_toml(
-            raw, conflict_sections=spec_result.value.conflict_sections,
+            raw,
+            conflict_sections=spec_result.value.conflict_sections,
         )
 
     @staticmethod
@@ -156,7 +157,8 @@ class FlextInfraUtilitiesPyproject:
         if declared != c.Infra.MISE_MOVING_SELECTOR:
             return r[str].ok(declared)
         return FlextInfraUtilitiesPyproject._locked_tool_version(
-            toolchain_root, c.Infra.TAPLO_MISE_TOOL_NAME,
+            toolchain_root,
+            c.Infra.TAPLO_MISE_TOOL_NAME,
         )
 
     @staticmethod
@@ -195,7 +197,9 @@ class FlextInfraUtilitiesPyproject:
     ) -> p.Result[str]:
         del config_digest
         taplo = FlextInfraUtilitiesPyproject._taplo_binary(
-            taplo_version, process_timeout_seconds, execution_root,
+            taplo_version,
+            process_timeout_seconds,
+            execution_root,
         )
         if taplo.failure:
             return r[str].from_failure(taplo)
@@ -225,13 +229,17 @@ class FlextInfraUtilitiesPyproject:
             formatted = output.stdout.decode(c.Cli.ENCODING_DEFAULT)
         except UnicodeDecodeError as exc:
             return r[str].fail(
-                f"taplo format returned non-UTF-8 output: {exc}", exception=exc,
+                f"taplo format returned non-UTF-8 output: {exc}",
+                exception=exc,
             )
         return r[str].ok(formatted)
 
     @staticmethod
     def _locked_mise_version(
-        execution_root: Path, tool: str, selector: str, declared_version: str = "",
+        execution_root: Path,
+        tool: str,
+        selector: str,
+        declared_version: str = "",
     ) -> p.Result[str]:
         """Resolve the selector's pinned version from the committed mise.lock.
 
@@ -293,7 +301,9 @@ class FlextInfraUtilitiesPyproject:
     @staticmethod
     @cache
     def _taplo_binary(
-        taplo_version: str, process_timeout_seconds: int, execution_root: Path,
+        taplo_version: str,
+        process_timeout_seconds: int,
+        execution_root: Path,
     ) -> p.Result[Path]:
         """Resolve and authenticate Make's config-versioned Taplo executable.
 
@@ -420,7 +430,9 @@ class FlextInfraUtilitiesPyproject:
 
     @staticmethod
     def package_name_from_payload(
-        project_root: Path, payload: t.JsonMapping, docs_meta: t.JsonMapping,
+        project_root: Path,
+        payload: t.JsonMapping,
+        docs_meta: t.JsonMapping,
     ) -> str:
         """Return the primary package name using pre-loaded pyproject payload."""
         configured = docs_meta.get("package_name")
@@ -446,7 +458,8 @@ class FlextInfraUtilitiesPyproject:
                     child_path: Path = child
                     return child_path.name
         project_name = FlextInfraUtilitiesPyproject.project_name_from_payload(
-            project_root, payload,
+            project_root,
+            payload,
         )
         if project_name.startswith(c.Infra.PKG_PREFIX_HYPHEN):
             msg = (
@@ -465,7 +478,9 @@ class FlextInfraUtilitiesPyproject:
         )
         docs_meta = FlextInfraUtilitiesPyproject.docs_meta_from_payload(payload)
         return FlextInfraUtilitiesPyproject.package_name_from_payload(
-            project_root, payload, docs_meta,
+            project_root,
+            payload,
+            docs_meta,
         )
 
     @staticmethod

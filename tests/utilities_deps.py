@@ -24,7 +24,8 @@ class TestsFlextInfraUtilitiesDepsMixin:
         )
         recorded = m.Cli.CommandOutput.model_validate(output, from_attributes=True)
         u.Cli.atomic_write_text_file(
-            receipt, recorded.model_dump_json(indent=2) + "\n",
+            receipt,
+            recorded.model_dump_json(indent=2) + "\n",
         ).unwrap()
 
     @staticmethod
@@ -71,7 +72,8 @@ class TestsFlextInfraUtilitiesDepsMixin:
 
     @staticmethod
     def detect_command(
-        repository_root: Path, **overrides: t.JsonValue,
+        repository_root: Path,
+        **overrides: t.JsonValue,
     ) -> m.Infra.DetectCommand:
         """Create a validated dependency-detection command."""
         validated: m.Infra.DetectCommand = m.Infra.DetectCommand.model_validate({

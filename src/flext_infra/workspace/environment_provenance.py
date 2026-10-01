@@ -23,14 +23,18 @@ class FlextInfraWorkspaceEnvironmentProvenance:
 
     @classmethod
     def execute_request(
-        cls, request: p.Infra.WorkspaceEnvironmentRequest,
+        cls,
+        request: p.Infra.WorkspaceEnvironmentRequest,
     ) -> p.Result[int]:
         """Validate one CLI request without mutating the environment."""
         return cls.validate(request.repository_root)
 
     @classmethod
     def validate(
-        cls, repository_root: Path, *, metadata_paths: t.StrSequence | None = None,
+        cls,
+        repository_root: Path,
+        *,
+        metadata_paths: t.StrSequence | None = None,
     ) -> p.Result[int]:
         """Validate PEP 610 and editable path metadata for active members."""
         resolved_root = repository_root.resolve()
@@ -51,7 +55,8 @@ class FlextInfraWorkspaceEnvironmentProvenance:
                 if metadata_paths is None
                 else tuple(
                     distributions(
-                        name=repository.distribution, path=list(metadata_paths),
+                        name=repository.distribution,
+                        path=list(metadata_paths),
                     ),
                 )
             )
@@ -88,7 +93,9 @@ class FlextInfraWorkspaceEnvironmentProvenance:
                     f"actual={len(pth_files)}",
                 )
             pth_result = cls._validate_pth(
-                repository.distribution, pth_files[0], expected_root,
+                repository.distribution,
+                pth_files[0],
+                expected_root,
             )
             if pth_result.failure:
                 return pth_result
@@ -97,7 +104,10 @@ class FlextInfraWorkspaceEnvironmentProvenance:
 
     @classmethod
     def _validate_direct_url(
-        cls, distribution: str, raw_payload: str | None, expected_root: Path,
+        cls,
+        distribution: str,
+        raw_payload: str | None,
+        expected_root: Path,
     ) -> p.Result[int]:
         """Validate one PEP 610 payload against the declared member root."""
         if raw_payload is None:
@@ -107,11 +117,13 @@ class FlextInfraWorkspaceEnvironmentProvenance:
             )
         try:
             payload = m.Infra.EditableDirectUrl.model_validate_json(
-                raw_payload, strict=True,
+                raw_payload,
+                strict=True,
             )
         except ValueError as exc:
             return r[int].fail_op(
-                f"editable provenance direct_url validation ({distribution})", exc,
+                f"editable provenance direct_url validation ({distribution})",
+                exc,
             )
         parsed = urlparse(payload.url)
         if parsed.scheme != "file" or not payload.dir_info.editable:
@@ -130,7 +142,10 @@ class FlextInfraWorkspaceEnvironmentProvenance:
 
     @classmethod
     def _validate_pth(
-        cls, distribution: str, pth_file: Path, expected_root: Path,
+        cls,
+        distribution: str,
+        pth_file: Path,
+        expected_root: Path,
     ) -> p.Result[int]:
         """Validate the distribution-owned editable path file."""
         read_result = u.Cli.files_read_text(pth_file)

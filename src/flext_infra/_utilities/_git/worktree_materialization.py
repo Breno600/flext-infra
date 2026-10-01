@@ -26,7 +26,9 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
 
     @classmethod
     def git_add_detached_worktree(
-        cls, source_root: Path, worktree_root: Path,
+        cls,
+        source_root: Path,
+        worktree_root: Path,
     ) -> p.Result[str]:
         """Create a detached worktree at the source repository HEAD."""
         ensure_parent = u.Cli.ensure_dir(worktree_root.parent)
@@ -37,7 +39,8 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
                 worktree_root.rmdir()
             except OSError as exc:
                 return r[str].fail(
-                    f"worktree target is not empty: {exc}", exception=exc,
+                    f"worktree target is not empty: {exc}",
+                    exception=exc,
                 )
         head_result = cls._git_head_oid(source_root)
         if head_result.failure:
@@ -71,7 +74,10 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
 
     @classmethod
     def _git_copy_untracked(
-        cls, source_root: Path, worktree_root: Path, excluded: t.SequenceOf[Path],
+        cls,
+        source_root: Path,
+        worktree_root: Path,
+        excluded: t.SequenceOf[Path],
     ) -> p.Result[bool]:
         """Copy non-ignored untracked files into an isolated worktree."""
         try:
@@ -132,7 +138,10 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
         )
         try:
             return cls._git_copy_worktree_layers(
-                source_root, worktree_root, excluded, pathspecs,
+                source_root,
+                worktree_root,
+                excluded,
+                pathspecs,
             )
         except GitCommandError as exc:
             return r[bool].fail(str(exc), exception=exc)
@@ -227,7 +236,10 @@ class FlextInfraUtilitiesGitWorktreeMaterializationMixin(
                     continue
                 with FlextInfraUtilitiesGitWorktreeIO.git_stdin(patch_bytes) as istream:
                     worktree_repo.git.apply(
-                        *layer, *(("--check",) if check else ()), "-", istream=istream,
+                        *layer,
+                        *(("--check",) if check else ()),
+                        "-",
+                        istream=istream,
                     )
         # Git records only executable bits; apply creates files through the
         # process umask. Preserve the physical source permissions separately.

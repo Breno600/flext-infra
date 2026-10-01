@@ -19,7 +19,11 @@ class TestsDynamicEnvironmentCutover:
     @pytest.mark.parametrize("value", [None, "", "literal value"])
     @pytest.mark.parametrize("required", [False, True])
     def test_real_settings_consumer_preserves_lookup_contract(
-        self, tmp_path: Path, value: str | None, *, required: bool,
+        self,
+        tmp_path: Path,
+        value: str | None,
+        *,
+        required: bool,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"
@@ -84,10 +88,13 @@ class TestsDynamicEnvironmentCutover:
         tm.that(output.stdout, eq="" if mode == "missing-required" else f"{value!r}\n")
 
     @pytest.mark.parametrize(
-        "access", ["os.environ.get('STATIC_KEY')", "os.environ.get(unknown_key)"],
+        "access",
+        ["os.environ.get('STATIC_KEY')", "os.environ.get(unknown_key)"],
     )
     def test_unproven_environment_key_stays_red(
-        self, tmp_path: Path, access: str,
+        self,
+        tmp_path: Path,
+        access: str,
     ) -> None:
         root, package = u.Tests.create_lazy_init_workspace(tmp_path)
         path = package / "consumer.py"

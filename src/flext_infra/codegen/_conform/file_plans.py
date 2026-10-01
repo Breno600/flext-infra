@@ -112,7 +112,9 @@ class FlextInfraCodegenConformFilePlans(FlextInfraCodegenConformBeadsRoutes):
 
     @classmethod
     def retired_projection_plans(
-        cls, root: Path, profile: c.Infra.MakeProfile,
+        cls,
+        root: Path,
+        profile: c.Infra.MakeProfile,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
         """Plan removal of generated projections this profile no longer renders.
 

@@ -37,7 +37,10 @@ class FlextInfraPyprojectModernizerRun:
         def project_names(self) -> t.StrSequence | None: ...
 
         def _read_document_state(
-            self, path: Path, *, source: str | None = None,
+            self,
+            path: Path,
+            *,
+            source: str | None = None,
         ) -> p.Result[m.Infra.PyprojectDocumentState]: ...
 
         def _process_document_state(
@@ -85,7 +88,8 @@ class FlextInfraPyprojectModernizerRun:
                     f"{state.error}",
                 )
             name = u.Infra.project_name_from_payload(
-                state.value.pyproject_path, state.value.payload,
+                state.value.pyproject_path,
+                state.value.payload,
             )
             if path not in aliases.setdefault(name, []):
                 aliases[name].append(path)
@@ -129,7 +133,8 @@ class FlextInfraPyprojectModernizerRun:
         if include_root:
             try:
                 _ = u.Infra.project_name_from_payload(
-                    root_pyproject, root_state.value.payload,
+                    root_pyproject,
+                    root_state.value.payload,
                 )
             except c.EXC_TYPE_VALIDATION as exc:
                 u.Cli.error(str(exc))
@@ -207,12 +212,16 @@ class FlextInfraPyprojectModernizerRun:
         return self._run_build_check(states, invalid_paths=invalid_paths)
 
     def _rewrite_constraints(
-        self, root_state: m.Infra.PyprojectDocumentState, *, dry_run: bool,
+        self,
+        root_state: m.Infra.PyprojectDocumentState,
+        *,
+        dry_run: bool,
     ) -> int:
         """Write runtime-resolved floors to the codegen SSOT."""
         try:
             root_project_name = u.Infra.project_name_from_payload(
-                root_state.pyproject_path, root_state.payload,
+                root_state.pyproject_path,
+                root_state.payload,
             )
         except c.EXC_TYPE_VALIDATION as exc:
             u.Cli.error(str(exc))

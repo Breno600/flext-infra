@@ -100,7 +100,9 @@ class FlextInfraRefactorCensusRemovalMixin(
         return tuple(validated_reports)
 
     def _apply_removal_candidates(
-        self, rope: p.Infra.RopeWorkspaceDsl, report: m.Infra.WorkspaceReport,
+        self,
+        rope: p.Infra.RopeWorkspaceDsl,
+        report: m.Infra.WorkspaceReport,
     ) -> bool:
         """Remove every candidate through its gates; a failed removal escapes.
 
@@ -110,7 +112,10 @@ class FlextInfraRefactorCensusRemovalMixin(
         touched_paths: set[Path] = set()
         for candidate in report.removal_candidates:
             apply_result = u.Infra.apply_simple_removal_candidate(
-                rope, self.root, candidate, gates=self.dry_run_gate_names,
+                rope,
+                self.root,
+                candidate,
+                gates=self.dry_run_gate_names,
             )
             if apply_result.failure:
                 msg = (

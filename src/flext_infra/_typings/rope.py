@@ -39,7 +39,8 @@ class FlextInfraTypesRope:
     type RopeOccurrenceFinder = FlextInfraProtocolsRopeRuntime.RopeOccurrenceFinder
 
     type RopeTransformFn = Callable[
-        [RopeProject, RopeResource], t.Pair[str, t.StrSequence],
+        [RopeProject, RopeResource],
+        t.Pair[str, t.StrSequence],
     ]
 
 

@@ -87,7 +87,8 @@ class FlextInfraModTextGateEngine:
 
     @classmethod
     def _rules_from_states(
-        cls, snapshots: t.VariadicTuple[m.Cli.AtomicFileState],
+        cls,
+        snapshots: t.VariadicTuple[m.Cli.AtomicFileState],
     ) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
         """Compose provider rules before local rules and reject ambiguous ids."""
         rules: list[m.Infra.ModTextRule] = []
@@ -109,7 +110,8 @@ class FlextInfraModTextGateEngine:
 
     @classmethod
     def _rules_from_state(
-        cls, snapshot: m.Cli.AtomicFileState,
+        cls,
+        snapshot: m.Cli.AtomicFileState,
     ) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
         """Parse only the exact authenticated catalogue bytes used by the plan."""
         if snapshot.content is None:
@@ -139,7 +141,8 @@ class FlextInfraModTextGateEngine:
 
     @staticmethod
     def _build_rule(
-        raw: p.AttributeProbe, source: Path,
+        raw: p.AttributeProbe,
+        source: Path,
     ) -> p.Result[m.Infra.ModTextRule]:
         """Validate one raw list entry into a frozen text rule."""
         if not isinstance(raw, dict):
@@ -223,7 +226,8 @@ class FlextInfraModTextGateEngine:
 
     @staticmethod
     def _source_paths(
-        root: Path, rules: t.VariadicTuple[m.Infra.ModTextRule],
+        root: Path,
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Inventory Python sources and only explicitly declared Markdown globs."""
         paths: set[Path] = set()
@@ -262,7 +266,11 @@ class FlextInfraModTextGateEngine:
 
     @classmethod
     def scan(
-        cls, root: Path, *, fix: bool, validate_receipts: bool = False,
+        cls,
+        root: Path,
+        *,
+        fix: bool,
+        validate_receipts: bool = False,
     ) -> p.Result[m.Infra.ModTextReport]:
         """Scan the governed surface or apply every rule rewrite in place."""
         root = root.absolute()
@@ -294,7 +302,9 @@ class FlextInfraModTextGateEngine:
             inputs.append(before)
             source = before.content.decode(c.Cli.ENCODING_DEFAULT)
             updated, target_entries, target_actionable = cls._rewrite_source(
-                source, relative, rules,
+                source,
+                relative,
+                rules,
             )
             entries.extend(target_entries)
             actionable += target_actionable
@@ -346,7 +356,9 @@ class FlextInfraModTextGateEngine:
         )
         roots = {"@mod-text": root}
         analysis = m.Infra.CodegenPhaseAnalysis(
-            phase="mod-text", files=plans, inputs=inputs,
+            phase="mod-text",
+            files=plans,
+            inputs=inputs,
         )
 
         def validate_inventory() -> p.Result[bool]:
@@ -380,7 +392,9 @@ class FlextInfraModTextGateEngine:
                 session: m.Infra.CodegenTransactionSession,
             ) -> p.Result[t.VariadicTuple[Path]]:
                 published = transaction.append_phase_locked(
-                    session, analysis.phase, plans,
+                    session,
+                    analysis.phase,
+                    plans,
                 )
                 if published.failure:
                     return r[t.VariadicTuple[Path]].from_failure(published)
@@ -392,7 +406,8 @@ class FlextInfraModTextGateEngine:
 
     @staticmethod
     def _validate_expected_receipts(
-        rules: t.VariadicTuple[m.Infra.ModTextRule], report: m.Infra.ModTextReport,
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
+        report: m.Infra.ModTextReport,
     ) -> None:
         """Require exact migration preconditions, including zero-match mismatches.
 
@@ -414,7 +429,10 @@ class FlextInfraModTextGateEngine:
 
     @classmethod
     def _rewrite_source(
-        cls, source: str, target: str, rules: t.VariadicTuple[m.Infra.ModTextRule],
+        cls,
+        source: str,
+        target: str,
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
     ) -> t.Triple[str, list[m.Infra.ModTextFinding], int]:
         """Rewrite one source text through every elected rule entry."""
         updated = source
@@ -429,7 +447,11 @@ class FlextInfraModTextGateEngine:
             found: list[m.Infra.ModTextFinding] = []
             pattern = cls._compiled(rule)
             expand = functools.partial(
-                cls._expand_match, rule, target, line_starts, found,
+                cls._expand_match,
+                rule,
+                target,
+                line_starts,
+                found,
             )
             candidate = pattern.sub(expand, updated)
             if found:

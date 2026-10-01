@@ -96,7 +96,9 @@ class FlextInfraSemanticPublication:
                 session: m.Infra.CodegenTransactionSession,
             ) -> p.Result[t.VariadicTuple[Path]]:
                 published = transaction.append_phase_locked(
-                    session, analysis.phase, analysis.files,
+                    session,
+                    analysis.phase,
+                    analysis.files,
                 )
                 if published.failure:
                     return r[tuple[Path, ...]].from_failure(published)

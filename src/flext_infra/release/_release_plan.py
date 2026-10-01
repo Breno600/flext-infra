@@ -14,7 +14,8 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
     """Decide the release and prove no version changed outside the protocol."""
 
     def phase_plan(
-        self, ctx: m.Infra.ReleasePhaseDispatchConfig,
+        self,
+        ctx: m.Infra.ReleasePhaseDispatchConfig,
     ) -> p.Result[m.Infra.ReleasePlan]:
         """Derive the next version and record it as the plan receipt."""
         root = ctx.repository_root
@@ -86,7 +87,8 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
         # A pre-release segment is kept: ``0.12.0`` is ahead of ``v0.12.0rc2``.
         ahead = (
             u.Infra.version_is_newer(
-                final.value, latest.removeprefix(c.Infra.TAG_FORMAT.format(version="")),
+                final.value,
+                latest.removeprefix(c.Infra.TAG_FORMAT.format(version="")),
             )
             if latest
             else r[bool].ok(True)
@@ -149,7 +151,8 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
         if base_oid == head_oid:
             return r[bool].ok(True)
         content = u.Cli.capture(
-            [c.Infra.GIT, "show", f"{base_oid}:{c.PYPROJECT_FILENAME}"], cwd=root,
+            [c.Infra.GIT, "show", f"{base_oid}:{c.PYPROJECT_FILENAME}"],
+            cwd=root,
         )
         if content.failure:
             return r[bool].from_failure(content)
@@ -181,7 +184,10 @@ class FlextInfraReleasePlanMixin(FlextInfraReleasePublishMixin):
 
     @staticmethod
     def _subjects(
-        root: Path, since: str, *, merges_only: bool,
+        root: Path,
+        since: str,
+        *,
+        merges_only: bool,
     ) -> p.Result[t.VariadicTuple[str]]:
         """Return commit subjects reachable from HEAD since ``since``.
 

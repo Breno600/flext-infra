@@ -18,7 +18,9 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
 
     @classmethod
     def docs_collect_plan_files(
-        cls, repository_root: Path, configuration: m.Infra.PlanCollectionConfig,
+        cls,
+        repository_root: Path,
+        configuration: m.Infra.PlanCollectionConfig,
     ) -> m.Infra.PlanCollectionBundle:
         """Capture sources before any canonical or home projection writes."""
         root = repository_root.absolute()
@@ -45,7 +47,9 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             raise ValueError(msg)
         states: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
         manifest, excluded_outputs = cls.collection_manifest(
-            canonical, projection, states,
+            canonical,
+            projection,
+            states,
         )
         if not configuration.enabled:
             owned_outputs = {
@@ -131,7 +135,8 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 )
                 inventories.append(
                     m.Infra.PlanCollectionSourceInventory(
-                        source_id=source.id, paths=paths,
+                        source_id=source.id,
+                        paths=paths,
                     ),
                 )
                 continue
@@ -168,7 +173,11 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                     ),
                 )
                 revision = cls._docs_collect_revision(
-                    canonical, incoming_revision, artifacts, desired, states=states,
+                    canonical,
+                    incoming_revision,
+                    artifacts,
+                    desired,
+                    states=states,
                 )
                 key = (revision.identity, revision.digest)
                 if key not in observed:
@@ -177,7 +186,8 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                     revisions_by_identity[revision.identity] = revision
             inventories.append(
                 m.Infra.PlanCollectionSourceInventory(
-                    source_id=source.id, paths=tuple(sorted(source_paths)),
+                    source_id=source.id,
+                    paths=tuple(sorted(source_paths)),
                 ),
             )
             coverage.append(
@@ -249,7 +259,11 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
                 msg = f"undeclared collection destination: {path}"
                 raise ValueError(msg)
             planned = FlextInfraUtilitiesDocsContract.docs_file_plan(
-                owner, path, content, desired_mode=0o644, source_states=inputs,
+                owner,
+                path,
+                content,
+                desired_mode=0o644,
+                source_states=inputs,
             ).unwrap()
             expected = states.get(path)
             if expected is not None and planned.before != expected:
@@ -311,7 +325,8 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
             msg = f"plan content absent: {path}"
             raise ValueError(msg)
         original, normalized = cls.collection_source_updated(
-            plan, source.updated_fields,
+            plan,
+            source.updated_fields,
         )
         target = canonical / (
             previous.canonical_path
@@ -358,7 +373,9 @@ class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify)
         desired[target] = existing.content if existing.content is not None else plan
         desired[incoming / "plan.md"] = plan
         for name, attachment in zip(
-            incoming_revision.attachments, artifacts[1:], strict=True,
+            incoming_revision.attachments,
+            artifacts[1:],
+            strict=True,
         ):
             if attachment.content is None:
                 msg = f"attachment content absent: {artifacts[0].path}"

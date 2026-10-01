@@ -115,15 +115,19 @@ class FlextInfraProtocolsPromoted(Protocol):
         def resolve_verb(self, verb: str) -> str: ...
 
         def alias_target(
-            self, verb: str,
+            self,
+            verb: str,
         ) -> FlextInfraProtocolsPromoted.PromotedAliasTarget | None: ...
 
         def commands(
-            self, verb: str,
+            self,
+            verb: str,
         ) -> t.MappingKV[str, FlextInfraProtocolsPromoted.PromotedCommand]: ...
 
         def command(
-            self, verb: str, what: str,
+            self,
+            verb: str,
+            what: str,
         ) -> FlextInfraProtocolsPromoted.PromotedCommand: ...
 
         def verbs(self) -> t.StrSequence: ...

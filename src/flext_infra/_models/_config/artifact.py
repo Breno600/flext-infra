@@ -41,16 +41,20 @@ class FlextInfraConfigModelsArtifact:
             True
         )
         vscode_exclude: Annotated[
-            bool, m.Field(description="Feed VS Code files.exclude + search.exclude"),
+            bool,
+            m.Field(description="Feed VS Code files.exclude + search.exclude"),
         ] = True
         watch_exclude: Annotated[
-            bool, m.Field(description="Feed VS Code files.watcherExclude"),
+            bool,
+            m.Field(description="Feed VS Code files.watcherExclude"),
         ] = True
         gitignore: Annotated[
-            bool, m.Field(description="Feed the Python/tool section of .gitignore"),
+            bool,
+            m.Field(description="Feed the Python/tool section of .gitignore"),
         ] = True
         source_scan_ignore: Annotated[
-            bool, m.Field(description="Feed source_scan.ignored_resources"),
+            bool,
+            m.Field(description="Feed source_scan.ignored_resources"),
         ] = False
 
     class CodegenVscodeSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -84,7 +88,8 @@ class FlextInfraConfigModelsArtifact:
         """Per-module logical-LOC ceiling policy (scc code lines)."""
 
         max_lines: Annotated[
-            int, m.Field(ge=1, description="Per-module code-LOC ceiling"),
+            int,
+            m.Field(ge=1, description="Per-module code-LOC ceiling"),
         ]
 
     class CodegenConfigSpec(FlextInfraConfigModelsContract.ConfigContract):
@@ -423,22 +428,28 @@ class FlextInfraConfigModelsArtifact:
             m.Field(description="Output paths selected for conformance planning"),
         ] = None
         complete_governed: Annotated[
-            bool, m.Field(description="Whether every governed output is represented"),
+            bool,
+            m.Field(description="Whether every governed output is represented"),
         ] = False
         dependencies_only: Annotated[
-            bool, m.Field(description="Whether planning is dependency-only"),
+            bool,
+            m.Field(description="Whether planning is dependency-only"),
         ] = False
         delegates: Annotated[
-            bool, m.Field(description="Whether delegated templates are planned"),
+            bool,
+            m.Field(description="Whether delegated templates are planned"),
         ] = True
         pyproject: Annotated[
-            bool, m.Field(description="Whether project metadata is planned"),
+            bool,
+            m.Field(description="Whether project metadata is planned"),
         ] = True
         templates: Annotated[
-            bool, m.Field(description="Whether managed templates are planned"),
+            bool,
+            m.Field(description="Whether managed templates are planned"),
         ] = True
         custom: Annotated[
-            bool, m.Field(description="Whether custom Make policy is planned"),
+            bool,
+            m.Field(description="Whether custom Make policy is planned"),
         ] = True
 
     class CodegenConformRequest(FlextInfraConfigModelsContract.ConfigContract):
@@ -462,7 +473,8 @@ class FlextInfraConfigModelsArtifact:
         """Rendered artifact plus the exact source states used to compose it."""
 
         rendered: Annotated[
-            str, m.Field(description="Fully composed managed-file content"),
+            str,
+            m.Field(description="Fully composed managed-file content"),
         ]
         source_states: Annotated[
             t.VariadicTuple[m.Cli.AtomicFileState],
@@ -698,10 +710,12 @@ class FlextInfraConfigModelsArtifact:
         """One declared literal regex substitution for the mod verb's sed phase."""
 
         pattern: Annotated[
-            str, m.Field(description="Regular expression matched against file sources"),
+            str,
+            m.Field(description="Regular expression matched against file sources"),
         ]
         replacement: Annotated[
-            str, m.Field(description="Literal replacement applied to every match"),
+            str,
+            m.Field(description="Literal replacement applied to every match"),
         ]
         file_glob: Annotated[
             str | None,

@@ -59,7 +59,8 @@ class TestsFlextInfraExtendedConfigFixer:
             tm.that(pyproject.read_text(), eq=original)
 
         def test_process_file_syncs_search_path_from_public_manager(
-            self, tmp_path: Path,
+            self,
+            tmp_path: Path,
         ) -> None:
             """Synchronize search paths through the public manager."""
             (tmp_path / "typings" / "generated").mkdir(parents=True)
@@ -73,7 +74,9 @@ class TestsFlextInfraExtendedConfigFixer:
             tm.ok(result)
             tm.that(result.value, has="synchronized search-path from YAML rules")
             pyrefly = u.Tests.toml_table_at(
-                pyproject.read_text(encoding="utf-8"), "tool", "pyrefly",
+                pyproject.read_text(encoding="utf-8"),
+                "tool",
+                "pyrefly",
             )
             tm.that(
                 pyrefly["search-path"],
@@ -83,17 +86,20 @@ class TestsFlextInfraExtendedConfigFixer:
             )
 
         def test_process_file_keeps_all_existing_tracked_project_includes(
-            self, tmp_path: Path,
+            self,
+            tmp_path: Path,
         ) -> None:
             """Keep every existing tracked Python root in project includes."""
             u.Tests.write_project_beads_config(tmp_path, "tmp")
             (tmp_path / "src").mkdir()
             (tmp_path / "src" / "package.py").write_text(
-                "VALUE = 1\n", encoding="utf-8",
+                "VALUE = 1\n",
+                encoding="utf-8",
             )
             (tmp_path / "tests").mkdir()
             (tmp_path / "tests" / "test_package.py").write_text(
-                "def test_package() -> None:\n    pass\n", encoding="utf-8",
+                "def test_package() -> None:\n    pass\n",
+                encoding="utf-8",
             )
             pyproject = tmp_path / "pyproject.toml"
             pyproject.write_text(
@@ -114,12 +120,15 @@ class TestsFlextInfraExtendedConfigFixer:
             tm.ok(result)
             tm.that(result.value, lacks="synchronized project-includes from YAML rules")
             pyrefly = u.Tests.toml_table_at(
-                pyproject.read_text(encoding="utf-8"), "tool", "pyrefly",
+                pyproject.read_text(encoding="utf-8"),
+                "tool",
+                "pyrefly",
             )
             tm.that(pyrefly["project-includes"], eq=["src/**/*.py*", "tests/**/*.py*"])
 
         def test_process_file_preserves_unrelated_toml_comments_and_formatting(
-            self, tmp_path: Path,
+            self,
+            tmp_path: Path,
         ) -> None:
             """Preserve unrelated TOML trivia while changing Pyrefly keys."""
             pyproject = tmp_path / "pyproject.toml"
@@ -159,7 +168,8 @@ class TestsFlextInfraExtendedConfigFixer:
             tm.that(result.value, has="synchronized search-path from YAML rules")
 
         def test_process_file_removes_ignored_sub_configs_via_public_api(
-            self, tmp_path: Path,
+            self,
+            tmp_path: Path,
         ) -> None:
             """Remove ignored Pyrefly sub-configurations through the public API."""
             pyproject = tmp_path / "pyproject.toml"
@@ -182,13 +192,16 @@ class TestsFlextInfraExtendedConfigFixer:
             tm.ok(result)
             tm.that(result.value, has="removed ignore=true sub-settings for '*.py'")
             pyrefly = u.Tests.toml_table_at(
-                pyproject.read_text(encoding="utf-8"), "tool", "pyrefly",
+                pyproject.read_text(encoding="utf-8"),
+                "tool",
+                "pyrefly",
             )
             expected_sub_settings: t.JsonList = [{"matches": "*.pyi", "ignore": False}]
             tm.that(pyrefly["sub-settings"], eq=expected_sub_settings)
 
         def test_process_file_syncs_root_project_excludes_via_public_api(
-            self, tmp_path: Path,
+            self,
+            tmp_path: Path,
         ) -> None:
             """Synchronize root exclusions from the validated config singleton."""
             pyproject = tmp_path / "pyproject.toml"
@@ -203,7 +216,9 @@ class TestsFlextInfraExtendedConfigFixer:
             tm.ok(result)
             tm.that(result.value, has="synchronized project-excludes from YAML rules")
             pyrefly = u.Tests.toml_table_at(
-                pyproject.read_text(encoding="utf-8"), "tool", "pyrefly",
+                pyproject.read_text(encoding="utf-8"),
+                "tool",
+                "pyrefly",
             )
             tm.that(
                 pyrefly["project-excludes"],

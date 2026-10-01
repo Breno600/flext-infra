@@ -25,7 +25,8 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
     """
 
     all_projects: Annotated[
-        bool, m.Field(alias="all", description="Validate all projects"),
+        bool,
+        m.Field(alias="all", description="Validate all projects"),
     ] = False
     _runner: p.Cli.CommandRunner | None = m.PrivateAttr(default=None)
 
@@ -118,7 +119,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return spec is not None
 
     def analyze(
-        self, project_dir: Path, repository_root: Path,
+        self,
+        project_dir: Path,
+        repository_root: Path,
     ) -> p.Result[m.Infra.StubAnalysisReport]:
         """Analyze a project for missing typed dependencies.
 
@@ -142,7 +145,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
             )
 
     def build_report(
-        self, repository_root: Path, project_dirs: t.SequenceOf[Path] | None = None,
+        self,
+        repository_root: Path,
+        project_dirs: t.SequenceOf[Path] | None = None,
     ) -> p.Result[m.Infra.ValidationReport]:
         """Validate typed dependency supply chain across projects.
 
@@ -158,11 +163,14 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
             return self._build_typed_dependency_report(repository_root, project_dirs)
         except c.EXC_OS_TYPE_VALUE as exc:
             return r[m.Infra.ValidationReport].fail_op(
-                "typed dependency validation", exc,
+                "typed dependency validation",
+                exc,
             )
 
     def _classify_missing_imports(
-        self, missing_imports: t.StrSequence, project_name: str,
+        self,
+        missing_imports: t.StrSequence,
+        project_name: str,
     ) -> t.Pair[t.StrSequence, t.StrSequence]:
         """Split missing imports into internal and unresolved external groups."""
         internal = tuple(
@@ -183,7 +191,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return internal, unresolved
 
     def _analyze_project(
-        self, project_dir: Path, repository_root: Path,
+        self,
+        project_dir: Path,
+        repository_root: Path,
     ) -> p.Result[m.Infra.StubAnalysisReport]:
         """Analyze one project after path resolution."""
         _ = repository_root
@@ -197,7 +207,8 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
             return r[m.Infra.StubAnalysisReport].from_failure(pyrefly_result)
         missing_imports = pyrefly_result.value
         internal, unresolved = self._classify_missing_imports(
-            missing_imports, proj.name,
+            missing_imports,
+            proj.name,
         )
         return r[m.Infra.StubAnalysisReport].ok(
             m.Infra.StubAnalysisReport(
@@ -210,7 +221,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         )
 
     def _project_violations(
-        self, project_dir: Path, repository_root: Path,
+        self,
+        project_dir: Path,
+        repository_root: Path,
     ) -> t.StrSequence:
         """Return typed-dependency violations for one project."""
         result = self.analyze(project_dir, repository_root)
@@ -233,7 +246,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return tuple(violations)
 
     def _typed_dependency_violations(
-        self, projects: t.SequenceOf[Path], repository_root: Path,
+        self,
+        projects: t.SequenceOf[Path],
+        repository_root: Path,
     ) -> t.StrSequence:
         """Collect typed-dependency violations for all selected projects."""
         violations: t.MutableSequenceOf[str] = []
@@ -242,7 +257,9 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
         return tuple(violations)
 
     def _build_typed_dependency_report(
-        self, repository_root: Path, project_dirs: t.SequenceOf[Path] | None,
+        self,
+        repository_root: Path,
+        project_dirs: t.SequenceOf[Path] | None,
     ) -> p.Result[m.Infra.ValidationReport]:
         """Build the workspace typed-dependency validation report."""
         root = repository_root.resolve()
@@ -266,7 +283,8 @@ class FlextInfraStubSupplyChain(FlextInfraProjectSelectionServiceBase[bool]):
     def execute(self) -> p.Result[bool]:
         """Execute the typed-dependency validation CLI flow."""
         report_result = self.build_report(
-            self.repository_root, project_dirs=self.project_dirs,
+            self.repository_root,
+            project_dirs=self.project_dirs,
         )
         if report_result.failure:
             return r[bool].from_failure(report_result)

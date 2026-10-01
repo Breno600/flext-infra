@@ -36,7 +36,9 @@ class FlextInfraPytestDiagXmlMixin:
 
     @staticmethod
     def _build_trace_chunk(
-        heading: str, label: str, element: p.Infra.XmlElementLike,
+        heading: str,
+        label: str,
+        element: p.Infra.XmlElementLike,
     ) -> str:
         """Build an error/failure trace chunk from a JUnit XML element."""
         msg = (element.attrib.get(c.Infra.RK_MESSAGE) or "").strip()
@@ -50,7 +52,8 @@ class FlextInfraPytestDiagXmlMixin:
 
     @staticmethod
     def _process_testcase(
-        case: p.Infra.XmlElementLike, diag: m.Infra.DiagResult,
+        case: p.Infra.XmlElementLike,
+        diag: m.Infra.DiagResult,
     ) -> t.Pair[float, str]:
         """Process a single testcase element; returns (seconds, label)."""
         classname = case.attrib.get("classname", "")
@@ -61,7 +64,9 @@ class FlextInfraPytestDiagXmlMixin:
             diag.failed_cases.append(label)
             diag.error_traces.append(
                 FlextInfraPytestDiagXmlMixin._build_trace_chunk(
-                    "FAILURE", label, failure,
+                    "FAILURE",
+                    label,
+                    failure,
                 ),
             )
         if (error := case.find(c.Infra.ERROR)) is not None:

@@ -33,7 +33,11 @@ class TestsFlextInfraPyprojectConformPreservesLintScope:
             encoding="utf-8",
         )
         ignores = tu.Tests.toml_table_at(
-            content, "tool", "ruff", "lint", "per-file-ignores",
+            content,
+            "tool",
+            "ruff",
+            "lint",
+            "per-file-ignores",
         )
         return frozenset(ignores)
 

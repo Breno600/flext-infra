@@ -34,7 +34,10 @@ class FlextInfraCodegenGenerationRenderersMixin(
 
     @staticmethod
     def _render_model(
-        template_name: str, context: p.Model, *, target_filename: str,
+        template_name: str,
+        context: p.Model,
+        *,
+        target_filename: str,
     ) -> str:
         """Render one deterministic, already-canonical typed Python artifact."""
         template_path = FlextInfraCodegenGenerationRenderersMixin._template_path(

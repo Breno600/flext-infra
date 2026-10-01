@@ -22,7 +22,9 @@ class TestsFlextInfraDocsMainEntry:
     @staticmethod
     def _workspace(tmp_path: Path, *, fixable: bool = False) -> Path:
         workspace: Path = u.Tests.create_docs_workspace(
-            tmp_path, project_names=("flext-a", "flext-b"), include_fixable_link=fixable,
+            tmp_path,
+            project_names=("flext-a", "flext-b"),
+            include_fixable_link=fixable,
         )
         return workspace
 
@@ -53,7 +55,8 @@ class TestsFlextInfraDocsMainEntry:
         tm.that(FlextInfraCli.docs_main([]), eq=1)
 
     def test_audit_projects_filter_writes_selected_reports(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Keep custom relative reports under each explicitly selected project."""
         workspace = self._workspace(tmp_path)
@@ -74,10 +77,12 @@ class TestsFlextInfraDocsMainEntry:
         )
         tm.that((workspace / output_dir / "audit-report.md").exists(), eq=True)
         tm.that(
-            (workspace / "flext-a" / output_dir / "audit-report.md").exists(), eq=True,
+            (workspace / "flext-a" / output_dir / "audit-report.md").exists(),
+            eq=True,
         )
         tm.that(
-            (workspace / "flext-b" / output_dir / "audit-report.md").exists(), eq=False,
+            (workspace / "flext-b" / output_dir / "audit-report.md").exists(),
+            eq=False,
         )
 
     def test_fix_uses_public_route(self, tmp_path: Path) -> None:
@@ -91,7 +96,8 @@ class TestsFlextInfraDocsMainEntry:
         tm.that((workspace / "docs/README.md").read_text(), has="guides/setup.md")
 
     def test_generate_apply_rejects_publication_outside_conform(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Reject direct publication because conform owns the transaction."""
         workspace = self._workspace(tmp_path)
@@ -110,10 +116,12 @@ class TestsFlextInfraDocsMainEntry:
         )
         tm.that((workspace / ".reports/docs/generate-report.md").exists(), eq=False)
         tm.that(
-            (workspace / "flext-a/.reports/docs/generate-report.md").exists(), eq=False,
+            (workspace / "flext-a/.reports/docs/generate-report.md").exists(),
+            eq=False,
         )
         tm.that(
-            (workspace / "flext-b/.reports/docs/generate-report.md").exists(), eq=False,
+            (workspace / "flext-b/.reports/docs/generate-report.md").exists(),
+            eq=False,
         )
 
     def test_build_uses_public_route(self, tmp_path: Path) -> None:

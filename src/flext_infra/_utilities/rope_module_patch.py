@@ -16,7 +16,9 @@ class FlextInfraUtilitiesRopeModulePatch:
 
     @staticmethod
     def runtime_alias_bindings(
-        source: str, *, alias: str,
+        source: str,
+        *,
+        alias: str,
     ) -> t.VariadicTuple[ast.Assign | ast.AnnAssign]:
         """Return only direct module bindings for the declared alias."""
         return tuple(
@@ -95,7 +97,8 @@ class FlextInfraUtilitiesRopeModulePatch:
         if alias not in exports:
             return source
         return cls._rewrite_all_declaration(
-            source, names=[name for name in exports if name != alias],
+            source,
+            names=[name for name in exports if name != alias],
         )
 
     @staticmethod

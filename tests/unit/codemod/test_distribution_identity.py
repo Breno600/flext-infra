@@ -29,7 +29,9 @@ class TestsFlextInfraDistributionIdentity:
         )
 
     def test_repeated_directory_is_one_installation(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         self.project(tmp_path)
         site = tmp_path / "site"
@@ -40,7 +42,9 @@ class TestsFlextInfraDistributionIdentity:
         assert planned.success, planned.error
 
     def test_distinct_duplicate_installations_are_rejected(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         self.project(tmp_path)
         for name in ("first", "second"):

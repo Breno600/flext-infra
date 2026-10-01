@@ -14,7 +14,8 @@ class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
     """Exercise Git's primary registry for an attached repository."""
 
     def test_attached_submodule_uses_one_primary_local_container(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         child_source = tmp_path / "child-source"
         child_source.mkdir()
@@ -51,7 +52,8 @@ class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
         attached = superproject / "attached"
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "config", "--unset", "core.worktree"], cwd=attached,
+                [c.Infra.GIT, "config", "--unset", "core.worktree"],
+                cwd=attached,
             ),
         )
         tm.that(
@@ -79,7 +81,8 @@ class TestsFlextInfraAttachedRepositoryWorktree(u.Tests.WorktreeFixture):
         )
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "worktree", "remove", "--force", str(linked)], cwd=linked,
+                [c.Infra.GIT, "worktree", "remove", "--force", str(linked)],
+                cwd=linked,
             ),
         )
         branch = "feature/attached"

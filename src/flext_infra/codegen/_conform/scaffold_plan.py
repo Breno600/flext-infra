@@ -41,7 +41,8 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             (
                 entry,
                 entry.destination.format(
-                    package_name=project.package_name, ns=project.namespace,
+                    package_name=project.package_name,
+                    ns=project.namespace,
                 ),
             )
             for entry in codegen.templates.entries
@@ -149,7 +150,8 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         # The pyproject plans first: renders that derive from its requirements
         # (the dependabot cooldown exclusion) read the planned bytes.
         for entry, destination in sorted(
-            scaffold_entries, key=lambda item: item[1] != c.PYPROJECT_FILENAME,
+            scaffold_entries,
+            key=lambda item: item[1] != c.PYPROJECT_FILENAME,
         ):
             if entry.delegate == c.Infra.TemplateDelegate.MANIFEST:
                 manifest_path = (
@@ -171,7 +173,9 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 )
                 rendered = u.Cli.yaml_roundtrip_dump_text(
                     manifest.model_dump(
-                        mode="json", exclude_none=True, exclude_computed_fields=True,
+                        mode="json",
+                        exclude_none=True,
+                        exclude_computed_fields=True,
                     ),
                 )
             else:
@@ -189,7 +193,10 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
             if rendered.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(rendered)
             rendered_content = self.compose_project_artifact(
-                root, destination, rendered.value, render_inputs=render_inputs,
+                root,
+                destination,
+                rendered.value,
+                render_inputs=render_inputs,
             )
             if rendered_content.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
@@ -197,7 +204,8 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 )
             if destination == c.PYPROJECT_FILENAME:
                 recorded = self.with_planned_pyproject(
-                    render_inputs, rendered_content.value.rendered,
+                    render_inputs,
+                    rendered_content.value.rendered,
                 )
                 if recorded.failure:
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(

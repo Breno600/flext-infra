@@ -35,7 +35,10 @@ class FlextInfraWorktreeProvisioning:
 
     @staticmethod
     def _verify_gitlink_state(
-        lane: Path, member_path: Path, declared_url: str, recorded_oid: str,
+        lane: Path,
+        member_path: Path,
+        declared_url: str,
+        recorded_oid: str,
     ) -> p.Result[bool]:
         from flext_infra import u
 
@@ -60,7 +63,9 @@ class FlextInfraWorktreeProvisioning:
 
     @classmethod
     def _validate_governed_gitlink(
-        cls, lane: Path, member_path: Path,
+        cls,
+        lane: Path,
+        member_path: Path,
     ) -> p.Result[bool]:
         from flext_infra import u
 
@@ -79,7 +84,10 @@ class FlextInfraWorktreeProvisioning:
         if ensured.failure:
             return ensured
         return cls._verify_gitlink_state(
-            lane, member_path, contract.value.url, recorded.value.oid,
+            lane,
+            member_path,
+            contract.value.url,
+            recorded.value.oid,
         )
 
     @classmethod
@@ -102,7 +110,9 @@ class FlextInfraWorktreeProvisioning:
                 )
             managed = u.Infra.git_submodule_config_value(
                 m.Infra.GitSubmoduleConfigRequest(
-                    repo_root=lane, section=section, key=c.Infra.GITMODULE_MANAGED_KEY,
+                    repo_root=lane,
+                    section=section,
+                    key=c.Infra.GITMODULE_MANAGED_KEY,
                 ),
             )
             if managed.failure:

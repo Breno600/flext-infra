@@ -22,12 +22,15 @@ class TestsFlextInfraCodegenWorkflowRetirement:
 
     @staticmethod
     def _declared_workspace(
-        root: Path, *, publishes_release: bool,
+        root: Path,
+        *,
+        publishes_release: bool,
     ) -> m.Infra.WorkspaceSpec:
         """Declare release capability through the real repository manifest."""
         TestsFlextInfraConformSupport.seed_infra_package_tree(root)
         manifest_path = test_u.Tests.write_standalone_workspace_manifest(
-            root, config.Infra.name,
+            root,
+            config.Infra.name,
         )
         workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
         manifest = m.Infra.WorkspaceManifestSpec(
@@ -44,7 +47,11 @@ class TestsFlextInfraCodegenWorkflowRetirement:
     @pytest.mark.parametrize("declared_release", [False, True])
     @pytest.mark.parametrize("marker", [None, *c.Infra.TEMPLATE_GENERATED_MARKERS])
     def test_retirement_requires_both_exclusion_and_codegen_authorship(
-        self, infra_git_repo: Path, *, declared_release: bool, marker: str | None,
+        self,
+        infra_git_repo: Path,
+        *,
+        declared_release: bool,
+        marker: str | None,
     ) -> None:
         """Effective target policy and current markers determine desired presence."""
         root = infra_git_repo
@@ -96,7 +103,10 @@ class TestsFlextInfraCodegenWorkflowRetirement:
 
     @pytest.mark.parametrize("declared_release", [False, True])
     def test_release_workflows_converge_from_scaffold_to_existing_repository(
-        self, infra_git_repo: Path, *, declared_release: bool,
+        self,
+        infra_git_repo: Path,
+        *,
+        declared_release: bool,
     ) -> None:
         """Both public apply routes preserve the declared release capability."""
         root = infra_git_repo

@@ -78,7 +78,10 @@ class FlextInfraUtilitiesRepository:
 
     @classmethod
     def configured_repository_ref(
-        cls, *, codegen: m.Infra.CodegenConfigSpec, repository_root: Path,
+        cls,
+        *,
+        codegen: m.Infra.CodegenConfigSpec,
+        repository_root: Path,
     ) -> p.Result[m.Infra.RepositoryRef]:
         """Detect one reference for the infrastructure distribution.
 
@@ -92,7 +95,8 @@ class FlextInfraUtilitiesRepository:
         source = codegen.infra_repository
         distribution = source.distribution
         line = cls.flext_integration_line(
-            codegen=codegen, repository_root=repository_root,
+            codegen=codegen,
+            repository_root=repository_root,
         )
         if line.failure:
             return r[m.Infra.RepositoryRef].from_failure(line)
@@ -213,7 +217,11 @@ class FlextInfraUtilitiesRepository:
 
     @classmethod
     def _detected_infra_source(
-        cls, *, repository_root: Path, distribution: str, preference: t.StrSequence,
+        cls,
+        *,
+        repository_root: Path,
+        distribution: str,
+        preference: t.StrSequence,
     ) -> p.Result[t.Pair[str, str]]:
         """Detect the infrastructure distribution's canonical URL and ref."""
         from flext_infra import u
@@ -222,7 +230,8 @@ class FlextInfraUtilitiesRepository:
         if metadata.success and metadata.value.project.name == distribution:
             origin = u.Infra.git_remote_url(
                 m.Infra.GitRemoteUrlRequest(
-                    repo_root=repository_root, remote=c.Infra.GIT_DEFAULT_REMOTE,
+                    repo_root=repository_root,
+                    remote=c.Infra.GIT_DEFAULT_REMOTE,
                 ),
             )
             if origin.failure or not origin.value.text.strip():
@@ -231,7 +240,8 @@ class FlextInfraUtilitiesRepository:
                     f"{repository_root}",
                 )
             branch = cls.resolve_integration_branch(
-                repository_root, preference=preference,
+                repository_root,
+                preference=preference,
             )
             if branch.failure:
                 return r[t.Pair[str, str]].from_failure(branch)
@@ -251,13 +261,15 @@ class FlextInfraUtilitiesRepository:
             if declared.value[0]:
                 return declared
         manifest = cls._manifest_declared_url(
-            repository_root=repository_root, distribution=distribution,
+            repository_root=repository_root,
+            distribution=distribution,
         )
         if manifest.failure:
             return r[t.Pair[str, str]].from_failure(manifest)
         if manifest.value:
             branch = cls.resolve_integration_branch(
-                repository_root, preference=preference,
+                repository_root,
+                preference=preference,
             )
             if branch.failure:
                 return r[t.Pair[str, str]].from_failure(branch)
@@ -274,7 +286,8 @@ class FlextInfraUtilitiesRepository:
 
     @classmethod
     def _manifest_flext_source(
-        cls, repository_root: Path,
+        cls,
+        repository_root: Path,
     ) -> p.Result[t.Pair[str, str]]:
         """Return the manifest's hand-authored ``project.flext_source`` line.
 
@@ -335,7 +348,11 @@ class FlextInfraUtilitiesRepository:
 
     @classmethod
     def _declared_dependency_source(
-        cls, *, pyproject_path: Path, distribution: str, prefix: str,
+        cls,
+        *,
+        pyproject_path: Path,
+        distribution: str,
+        prefix: str,
     ) -> p.Result[t.Pair[str, str]]:
         """Return the family line the pyproject declares, as a source for one member.
 
@@ -416,7 +433,9 @@ class FlextInfraUtilitiesRepository:
 
     @staticmethod
     def _manifest_declared_url(
-        *, repository_root: Path, distribution: str,
+        *,
+        repository_root: Path,
+        distribution: str,
     ) -> p.Result[str]:
         """Return the workspace manifest's declared URL for one distribution."""
         loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
@@ -522,7 +541,8 @@ class FlextInfraUtilitiesRepository:
         # generation fixed point (ADR-018 p.10 — derive from the declaration
         # and from published Git facts, never from the environment).
         baseline = cls.repository_baseline_branch(
-            repository_root, preference=tuple(preference) or None,
+            repository_root,
+            preference=tuple(preference) or None,
         )
         if baseline.success:
             return r[str].ok(baseline.value)
@@ -533,7 +553,9 @@ class FlextInfraUtilitiesRepository:
 
     @staticmethod
     def gitmodule_branch_is_governed(
-        declared_branch: str, *, integration_branch: str | None = None,
+        declared_branch: str,
+        *,
+        integration_branch: str | None = None,
     ) -> bool:
         """Accept follow-superproject (``.``) or the detected integration line."""
         if declared_branch == c.Infra.FOLLOW_SUPERPROJECT_BRANCH:

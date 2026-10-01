@@ -34,7 +34,8 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     """Post-import runtime enforcement census across workspace projects."""
 
     project_filter: Annotated[
-        str | None, m.Field(description="Project filter (comma-separated)"),
+        str | None,
+        m.Field(description="Project filter (comma-separated)"),
     ] = None
     census_gate: Annotated[
         str,
@@ -48,7 +49,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
 
     @classmethod
     def for_project(
-        cls, project_dir: Path, *, census_gate: str,
+        cls,
+        project_dir: Path,
+        *,
+        census_gate: str,
     ) -> p.Result[FlextInfraRuntimeCensusValidator]:
         """Scope one census run to ``project_dir`` for ``census_gate``.
 
@@ -107,7 +111,9 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         prefix = package.__name__ + "."
         modules: list[str] = [package.__name__]
         for _, modname, _ in pkgutil.walk_packages(
-            package.__path__, prefix=prefix, onerror=cls._raise_package_walk_error,
+            package.__path__,
+            prefix=prefix,
+            onerror=cls._raise_package_walk_error,
         ):
             modules.append(modname)
         return modules
@@ -150,7 +156,8 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         ]
 
     def _project_report(
-        self, project: p.Infra.ProjectInfo,
+        self,
+        project: p.Infra.ProjectInfo,
     ) -> p.Result[m.Infra.ValidationReport]:
         """Run the runtime census for one project and return a merged report.
 
@@ -191,7 +198,9 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=merged_violations, summary=summary,
+                passed=passed,
+                violations=merged_violations,
+                summary=summary,
             ),
         )
 
@@ -296,7 +305,9 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         )
         return r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(
-                passed=passed, violations=tuple(merged_violations), summary=summary,
+                passed=passed,
+                violations=tuple(merged_violations),
+                summary=summary,
             ),
         )
 

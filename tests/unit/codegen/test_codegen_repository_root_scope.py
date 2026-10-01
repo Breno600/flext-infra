@@ -31,7 +31,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         tm.that(makefile_entries[0].profiles, has=c.Infra.MakeProfile.WORKSPACE)
 
     def test_repository_root_projection_uses_workspace_profile(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """The workspace projection has one local body per verb and no fan-out."""
         repository_root = self._render_root_makefile(tmp_path)
@@ -41,13 +42,15 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         tm.that(rendered, lacks=["orchestrate", "GITHUB_ACTIONS", "_builtin-self-"])
         tm.that(rendered, has="MAKE_PROFILE := workspace")
         tm.that(
-            rendered, has="PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra",
+            rendered,
+            has="PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra",
         )
         tm.that(rendered.endswith("\n"), eq=True)
         tm.that(rendered.endswith("\n\n"), eq=False)
 
     def test_repository_root_gate_verbs_evaluate_only_the_root(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Generated workspace check/test run the root's own gates and tests."""
         repository_root = self._render_root_makefile(tmp_path)
@@ -85,7 +88,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         )
 
     def test_repository_root_upg_profiles_canonical_modernization(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Generated upg renders the exact lock-upgrade and modernizer invocation.
 
@@ -118,7 +122,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         tm.that(rendered, has="--upgrade --refresh")
 
     def test_repository_root_upg_locks_tools_from_the_rendered_manifest(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """One ``make upg`` converges: every final lock follows ``gen``.
 
@@ -189,7 +194,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         """Render base/Makefile.j2 from a typed workspace fixture."""
         repository = u.Tests.repository_ref("workspace-fixture")
         workspace = u.Tests.workspace_spec(
-            repository, project=u.Tests.project_spec(repository.name),
+            repository,
+            project=u.Tests.project_spec(repository.name),
         )
         # The bootstrap projection refreshes the dispatcher of an existing
         # checkout: the root is a Git repository (the workspace profile resolves

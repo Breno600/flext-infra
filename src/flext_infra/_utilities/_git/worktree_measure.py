@@ -67,7 +67,8 @@ class FlextInfraUtilitiesGitWorktreeMeasureMixin(
 
     @classmethod
     def _worktree_entry_metrics(
-        cls, entry: os.DirEntry[str],
+        cls,
+        entry: os.DirEntry[str],
     ) -> t.Triple[bool, int, float]:
         """Return ``(descend, bytes, mtime)`` for one entry, skipping symlinks."""
         descend = False

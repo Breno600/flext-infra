@@ -24,7 +24,8 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
 
     @classmethod
     def iter_python_files(
-        cls, request: p.Infra.SourceScanRequest,
+        cls,
+        request: p.Infra.SourceScanRequest,
     ) -> p.Result[t.SequenceOf[Path]]:
         """Return Python files from the exact production roots in ``request``.
 
@@ -37,7 +38,8 @@ class FlextInfraUtilitiesIterationWorkspace(FlextInfraUtilitiesIterationDirector
 
         """
         invalid_root = next(
-            (root for root in request.project_roots if not root.is_dir()), None,
+            (root for root in request.project_roots if not root.is_dir()),
+            None,
         )
         if invalid_root is not None:
             return r[t.SequenceOf[Path]].fail(

@@ -22,10 +22,12 @@ class FlextInfraModelsWorktree:
         tool: Annotated[t.NonEmptyStr, m.Field(description="Canonical tool name")]
         exit_code: Annotated[int, m.Field(description="Tool process exit code")]
         errors: Annotated[
-            t.NonNegativeInt, m.Field(description="Detected error count"),
+            t.NonNegativeInt,
+            m.Field(description="Detected error count"),
         ] = 0
         warnings: Annotated[
-            t.NonNegativeInt, m.Field(description="Detected warning count"),
+            t.NonNegativeInt,
+            m.Field(description="Detected warning count"),
         ] = 0
         output: Annotated[str, m.Field(description="Combined captured tool output")] = (
             ""
@@ -41,16 +43,20 @@ class FlextInfraModelsWorktree:
             m.Field(description="Repository path relative to the repository root"),
         ]
         source_root: Annotated[
-            Path, m.Field(description="Original repository worktree root"),
+            Path,
+            m.Field(description="Original repository worktree root"),
         ]
         worktree_root: Annotated[
-            Path, m.Field(description="Temporary repository worktree root"),
+            Path,
+            m.Field(description="Temporary repository worktree root"),
         ]
         checkpoint_sha: Annotated[
-            t.NonEmptyStr, m.Field(description="Synthetic dirty-state checkpoint SHA"),
+            t.NonEmptyStr,
+            m.Field(description="Synthetic dirty-state checkpoint SHA"),
         ]
         changed_files: Annotated[
-            t.StrSequence, m.Field(description="Files changed by the isolated command"),
+            t.StrSequence,
+            m.Field(description="Files changed by the isolated command"),
         ] = ()
         patch: Annotated[
             bytes,
@@ -67,13 +73,16 @@ class FlextInfraModelsWorktree:
             m.Field(description="Repository path relative to the repository root"),
         ]
         source_root: Annotated[
-            Path, m.Field(description="Original repository worktree root"),
+            Path,
+            m.Field(description="Original repository worktree root"),
         ]
         worktree_root: Annotated[
-            Path, m.Field(description="Temporary detached repository worktree root"),
+            Path,
+            m.Field(description="Temporary detached repository worktree root"),
         ]
         checkpoint_sha: Annotated[
-            t.NonEmptyStr, m.Field(description="Current isolated checkpoint SHA"),
+            t.NonEmptyStr,
+            m.Field(description="Current isolated checkpoint SHA"),
         ]
 
     class WorktreeFactsPolicy(m.ContractModel):
@@ -114,7 +123,8 @@ class FlextInfraModelsWorktree:
         ]
         now: Annotated[float, m.Field(description="Current epoch seconds")]
         activity_window_days: Annotated[
-            int, m.Field(ge=0, description="Staleness window in days"),
+            int,
+            m.Field(ge=0, description="Staleness window in days"),
         ]
         bead_rows: Annotated[
             t.VariadicTuple[t.JsonMapping],
@@ -148,18 +158,22 @@ class FlextInfraModelsWorktree:
         ]
         bytes: Annotated[t.NonNegativeInt, m.Field(description="Total tree bytes")] = 0
         deps_bytes: Annotated[
-            t.NonNegativeInt, m.Field(description="Rebuildable deps bytes"),
+            t.NonNegativeInt,
+            m.Field(description="Rebuildable deps bytes"),
         ] = 0
         stale_days: Annotated[
-            float, m.Field(ge=0, description="Days since the newest mtime"),
+            float,
+            m.Field(ge=0, description="Days since the newest mtime"),
         ] = 0.0
         exact: Annotated[
-            bool, m.Field(description="Whether the measurement hit no bound"),
+            bool,
+            m.Field(description="Whether the measurement hit no bound"),
         ] = True
         branch: Annotated[str, m.Field(description="HEAD-derived branch")] = ""
         bead: Annotated[str, m.Field(description="Correlated bead id")] = ""
         pr_number: Annotated[
-            int | None, m.Field(description="Correlated pull request number"),
+            int | None,
+            m.Field(description="Correlated pull request number"),
         ] = None
         actor: Annotated[str, m.Field(description="Last known actor")] = ""
         session_id: Annotated[str, m.Field(description="Attributed session id")] = ""
@@ -191,11 +205,13 @@ class FlextInfraModelsWorktree:
         ]
         path: Annotated[Path, m.Field(description="Mutation subject")]
         reason: Annotated[
-            t.NonEmptyStr, m.Field(description="Why the action is planned"),
+            t.NonEmptyStr,
+            m.Field(description="Why the action is planned"),
         ]
         owner: Annotated[t.NonEmptyStr, m.Field(description="Owning surface")]
         reclaim_bytes: Annotated[
-            t.NonNegativeInt, m.Field(description="Bytes the action reclaims"),
+            t.NonNegativeInt,
+            m.Field(description="Bytes the action reclaims"),
         ] = 0
 
     class PrunePlan(m.ContractModel):
@@ -211,7 +227,8 @@ class FlextInfraModelsWorktree:
             m.Field(description="Planned actions in stable order"),
         ] = ()
         total_reclaim_bytes: Annotated[
-            t.NonNegativeInt, m.Field(description="Total bytes the plan reclaims"),
+            t.NonNegativeInt,
+            m.Field(description="Total bytes the plan reclaims"),
         ] = 0
 
     class WorktreesReport(m.ContractModel):

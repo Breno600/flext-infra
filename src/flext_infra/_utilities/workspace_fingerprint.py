@@ -64,7 +64,10 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
 
     @classmethod
     def workspace_fingerprint(
-        cls, checkout: Path, *, excluded_paths: t.SequenceOf[Path] = (),
+        cls,
+        checkout: Path,
+        *,
+        excluded_paths: t.SequenceOf[Path] = (),
     ) -> p.Result[m.Infra.WorkspaceFingerprint]:
         """Capture a content-addressed snapshot of one Git checkout."""
         root = checkout.resolve()
@@ -111,7 +114,8 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
             entry_digest.update(content_result.value)
             entries.append(
                 m.Infra.WorkspaceFingerprintEntry(
-                    path=relative.as_posix(), digest=entry_digest.hexdigest(),
+                    path=relative.as_posix(),
+                    digest=entry_digest.hexdigest(),
                 ),
             )
 
@@ -123,13 +127,15 @@ class FlextInfraUtilitiesWorkspaceFingerprint:
             aggregate.update(b"\0")
         return r[m.Infra.WorkspaceFingerprint].ok(
             m.Infra.WorkspaceFingerprint(
-                digest=aggregate.hexdigest(), entries=tuple(entries),
+                digest=aggregate.hexdigest(),
+                entries=tuple(entries),
             ),
         )
 
     @staticmethod
     def workspace_fingerprint_changes(
-        before: m.Infra.WorkspaceFingerprint, after: m.Infra.WorkspaceFingerprint,
+        before: m.Infra.WorkspaceFingerprint,
+        after: m.Infra.WorkspaceFingerprint,
     ) -> t.StrSequence:
         """Return repository paths whose content or index state changed."""
         before_entries = {entry.path: entry.digest for entry in before.entries}

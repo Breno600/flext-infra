@@ -18,7 +18,8 @@ from tests import u
 
 class TestsFlextInfraCodegenWorkspaceMemberGroup:
     def test_workspace_root_group_survives_conform_at_a_fixed_point(
-        self, tmp_path: Path,
+        self,
+        tmp_path: Path,
     ) -> None:
         """Real root conform declares every attached member and converges."""
         root = tmp_path / "workspace"
@@ -38,12 +39,17 @@ class TestsFlextInfraCodegenWorkspaceMemberGroup:
             issue_prefix="sample",
         )
         u.Tests.WorktreeFixture.attach_submodule(
-            root, member, distribution="sample-member", relative_path="sample-member",
+            root,
+            member,
+            distribution="sample-member",
+            relative_path="sample-member",
         )
         # A governed workspace root declares its own project, exactly as the
         # real composed root does; conform renders no root pyproject without it.
         u.Tests.write_standalone_workspace_manifest(
-            root, "sample-workspace", role=c.Infra.MakeProfile.WORKSPACE,
+            root,
+            "sample-workspace",
+            role=c.Infra.MakeProfile.WORKSPACE,
         )
         request = u.Tests.conform_request(
             root,

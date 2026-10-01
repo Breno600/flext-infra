@@ -33,13 +33,17 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
             flags = (path.is_symlink(), path.is_file(), path.exists(), path.is_dir())
         except OSError as exc:
             return r[tuple[bool, bool, bool, bool]].fail_op(
-                f"classify lazy-init support path {path}", exc,
+                f"classify lazy-init support path {path}",
+                exc,
             )
         return r[tuple[bool, bool, bool, bool]].ok(flags)
 
     @staticmethod
     def _glob_paths(
-        directory: Path, pattern: str, *, operation: str,
+        directory: Path,
+        pattern: str,
+        *,
+        operation: str,
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Return deterministic glob results with their causal I/O failure."""
         try:
@@ -49,7 +53,8 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         return r[t.VariadicTuple[Path]].ok(paths)
 
     def _cleanup_generated_support_file_states(
-        self, plan: m.Infra.LazyInitPlan,
+        self,
+        plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Return the complete physical file set selected for deletion."""
         states: MutableMapping[Path, m.Cli.AtomicFileState] = {}
@@ -73,7 +78,8 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         )
 
     def _obsolete_root_support_states(
-        self, plan: m.Infra.LazyInitPlan,
+        self,
+        plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Inventory closed root registries superseded by inline maps."""
         context = plan.context
@@ -110,7 +116,9 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
                     f"unexpected obsolete root-support path type: {path}",
                 )
             children = self._glob_paths(
-                path, "**/*", operation="inventory obsolete root support",
+                path,
+                "**/*",
+                operation="inventory obsolete root support",
             )
             if children.failure:
                 return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(children)
@@ -139,7 +147,8 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         return u.Infra.required_file_states(stale_paths)
 
     def _obsolete_generated_file_states(
-        self, plan: m.Infra.LazyInitPlan,
+        self,
+        plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Inventory generated artifacts retired by the inline-root contract."""
         states: list[m.Cli.AtomicFileState] = []
@@ -153,7 +162,8 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         return r[tuple[m.Cli.AtomicFileState, ...]].ok(tuple(states))
 
     def _generated_typing_stub_states(
-        self, plan: m.Infra.LazyInitPlan,
+        self,
+        plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Inventory stale codegen-owned ``__init__.pyi`` files."""
         stub_path = plan.context.pkg_dir / c.Infra.INIT_PYI
@@ -165,7 +175,8 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
         )
 
     def _generated_export_sidecar_states(
-        self, plan: m.Infra.LazyInitPlan,
+        self,
+        plan: m.Infra.LazyInitPlan,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
         """Inventory legacy generated export files outside the canonical owner."""
         search_dirs = {
@@ -185,7 +196,9 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
             if not is_dir:
                 continue
             candidates = self._glob_paths(
-                base_dir, "*.py", operation="inventory generated export sidecars",
+                base_dir,
+                "*.py",
+                operation="inventory generated export sidecars",
             )
             if candidates.failure:
                 return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(candidates)
@@ -214,7 +227,9 @@ class FlextInfraCodegenLazyInitGenerationRegistryMixin:
             )
         if init_is_file:
             modules = self._glob_paths(
-                constants_dir, "*.py", operation="inventory generated constants package",
+                constants_dir,
+                "*.py",
+                operation="inventory generated constants package",
             )
             if modules.failure:
                 return r[tuple[m.Cli.AtomicFileState, ...]].from_failure(modules)
