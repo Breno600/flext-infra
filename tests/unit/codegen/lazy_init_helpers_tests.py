@@ -29,7 +29,8 @@ class TestsFlextInfraLazyInitHelpers:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
 
-    def test_discover_package_from_standard_roots(self) -> None:
+    @staticmethod
+    def test_discover_package_from_standard_roots() -> None:
         """Resolve package names consistently for every supported source shape."""
         tm.that(
             u.Infra.package_name(Path("/workspace/src/test_pkg/__init__.py")),
@@ -531,8 +532,8 @@ class TestsFlextInfraLazyInitHelpers:
         tm.that(generated, has='    "r",')
         tm.that(generated, has='    "c",')
 
+    @staticmethod
     def test_generated_parent_initializer_is_not_an_alias_owner(
-        self,
         tmp_path: Path,
     ) -> None:
         """Ignore stale aliases that exist only in a generated parent projection."""

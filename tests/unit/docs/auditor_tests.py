@@ -90,8 +90,8 @@ class TestsFlextInfraAuditor:
         check: str,
         output_dir: str,
     ) -> None:
-        # The command-contract check loads the governed workspace spec, whose
-        # repository-local Beads configuration every real repository carries,
+        # The command-contract check loads the governed workspace spec,
+        # its repository-local Beads configuration,
         # and it resolves a Git identity from the audited root. A selected
         # ``projects`` entry only matches a scope the workspace actually
         # declares, so the fixture is built by the canonical docs workspace

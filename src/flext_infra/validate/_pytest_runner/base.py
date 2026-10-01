@@ -17,18 +17,14 @@ class FlextInfraPytestRunnerBase(s[int]):
     """Own immutable inputs shared by all pytest runner phases."""
 
     started_at_monotonic: Annotated[
-        float, m.Field(gt=0, description="Clock captured before FLEXT imports.")
+        float,
+        m.Field(gt=0, description="Clock captured before FLEXT imports."),
     ]
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
     testmon_db: Annotated[
-        Path | None,
-        m.Field(
-            description=(
-                "Absolute external pytest-testmon SQLite database path; absent "
-                "for the testmon-free full and coverage verbs."
-            )
-        ),
+        Path,
+        m.Field(description="Absolute external pytest-testmon SQLite database path."),
     ]
     ci_context: Annotated[
         bool,
@@ -36,17 +32,24 @@ class FlextInfraPytestRunnerBase(s[int]):
     ] = False
     profile_enabled: Annotated[
         bool,
-        m.Field(description="Profile the real suite child and preserve its native exit"),
+        m.Field(
+            description="Profile the real suite child and preserve its native exit",
+        ),
     ] = False
     collection_command_prefix: Annotated[
         t.StrTuple,
         m.Field(
-            description="Explicit profiling child invocation from the outer boundary."
+            description="Explicit profiling child invocation from the outer boundary.",
         ),
     ] = ()
     slow_phase: Annotated[
         bool,
-        m.Field(description="Select only the declared slow marker in this phase"),
+        m.Field(
+            description=(
+                "Run only the configured slow marker in its own phase; otherwise "
+                "the budgeted phase runs everything else."
+            ),
+        ),
     ] = False
 
     @staticmethod
@@ -60,42 +63,26 @@ class FlextInfraPytestRunnerBase(s[int]):
         *,
         started_at_monotonic: float,
         collection_command_prefix: t.StrTuple = (),
-        testmon: bool = True,
-        slow_phase: bool = False,
         profile_enabled: bool = False,
+        slow_phase: bool = False,
     ) -> Self:
-        """Create the runner exclusively from generated Make inputs.
-
-        Only the incremental verb reads the persistent database location; the
-        full verb's Make recipe passes none.
-        """
+        """Create the runner exclusively from generated Make inputs."""
         ci = config.Infra.codegen.make.ci
         return cls(
             repository_root=Path.cwd(),
             started_at_monotonic=started_at_monotonic,
             collection_command_prefix=collection_command_prefix,
-            slow_phase=slow_phase,
             profile_enabled=profile_enabled,
+            slow_phase=slow_phase,
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
-            testmon_db=(
-                Path(
-                    cls._environment_value(
-                        config.Infra.codegen.make.testmon_cache.database_environment_variable
-                    )
-                )
-                if testmon
-                else None
+            testmon_db=Path(
+                cls._environment_value(
+                    config.Infra.codegen.make.testmon_cache.database_environment_variable,
+                ),
             ),
         )
-
-    def required_testmon_db(self) -> Path:
-        """Return the persistent database the incremental verb requires."""
-        if self.testmon_db is None:
-            msg = "the incremental pytest verb requires the persistent testmon database"
-            raise ValueError(msg)
-        return self.testmon_db
 
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
@@ -118,8 +105,6 @@ class FlextInfraPytestRunnerBase(s[int]):
         if not target_path.is_dir() or target_path.is_symlink():
             msg = f"test target must be an existing directory: {self.target}"
             raise ValueError(msg)
-        if self.testmon_db is None:
-            return self
         if not self.testmon_db.is_absolute():
             msg = "testmon database path must be absolute"
             raise ValueError(msg)
@@ -136,34 +121,45 @@ class FlextInfraPytestRunnerBase(s[int]):
         if page_size <= 0 or pages <= 0:
             msg = "physical memory capacity is unavailable"
             raise ValueError(msg)
-        memory_gb = (page_size * pages) // (1024**3)
+        memory_gb = (page_size * pages) // c.Infra.BYTES_PER_GIB
         if memory_gb <= 0:
             msg = "physical memory is below one GiB"
             raise ValueError(msg)
         return memory_gb
 
-    def _declared_worker_ceiling(
-        self, policy: PytestPolicy
-    ) -> int | m.Infra.PytestWorkerCeiling:
-        """Resolve the declared project's ceiling over the fleet default.
+    def _declared_project_name(self) -> str | None:
+        """Read the declared project identity shared by runtime policies."""
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        payload = u.Infra.pyproject_payload(pyproject_path)
+        if "project" not in payload:
+            return None
+        return u.Infra.project_name_from_payload(pyproject_path, payload)
 
-        A tree without a declared ``[project].name`` (fixture projects, raw
-        workbenches) is an expected state and takes the fleet-wide default.
-        """
+    def run_timeout_seconds(self, policy: PytestPolicy) -> int:
+        """Resolve the declared project's measured wall over the fleet default."""
+        name = self._declared_project_name()
+        if name is None:
+            return policy.run_timeout_seconds
+        return policy.run_timeout_overrides.get(name, policy.run_timeout_seconds)
+
+    def _declared_worker_ceiling(
+        self,
+        policy: PytestPolicy,
+    ) -> int | m.Infra.PytestWorkerCeiling:
+        """Resolve the declared project's ceiling over the fleet default."""
         if not policy.parallel_worker_overrides:
             return policy.parallel_workers
         pyproject_path = self.root / c.PYPROJECT_FILENAME
-        try:
-            name = u.Infra.project_name_from_payload(
-                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
-            )
-        except (TypeError, ValueError):
-            return policy.parallel_workers
+        name = u.Infra.project_name_from_payload(
+            pyproject_path,
+            u.Infra.pyproject_payload(pyproject_path),
+        )
         return policy.parallel_worker_overrides.get(name, policy.parallel_workers)
 
     @staticmethod
     def resolve_worker_ceiling(
-        ceiling: int | m.Infra.PytestWorkerCeiling, cpu_count: int
+        ceiling: int | m.Infra.PytestWorkerCeiling,
+        cpu_count: int,
     ) -> int:
         """Resolve a declared ceiling against the process CPU count.
 

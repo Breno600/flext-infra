@@ -10,7 +10,8 @@ from tests import u
 class TestsFlextInfraDocsUpdateTocFrontmatter:
     """update_toc must preserve YAML frontmatter and real H1 headings."""
 
-    def test_docs_contract_update_toc_inserts_after_h1_beyond_frontmatter(self) -> None:
+    @staticmethod
+    def test_docs_contract_update_toc_inserts_after_h1_beyond_frontmatter() -> None:
         content = (
             "---\ntitle: ADR-001\n---\n\n# ADR-001 — Example\n\n## Context\n\nBody.\n"
         )
@@ -24,9 +25,8 @@ class TestsFlextInfraDocsUpdateTocFrontmatter:
             eq=True,
         )
 
-    def test_docs_contract_update_toc_repairs_invented_h1_before_frontmatter(
-        self,
-    ) -> None:
+    @staticmethod
+    def test_docs_contract_update_toc_repairs_invented_h1_before_frontmatter() -> None:
         mangled = (
             "# Documentation\n"
             "\n"
@@ -54,9 +54,8 @@ class TestsFlextInfraDocsUpdateTocFrontmatter:
             eq=True,
         )
 
-    def test_docs_contract_update_toc_still_invents_h1_for_headingless_stub(
-        self,
-    ) -> None:
+    @staticmethod
+    def test_docs_contract_update_toc_still_invents_h1_for_headingless_stub() -> None:
         content = "<!-- AUTO-GENERATED -->\n\nStub body.\n"
         updated, changed = u.Infra.update_toc(content)
         tm.that(changed, eq=1)

@@ -12,10 +12,9 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, config, m, p, t
-
-from .codegen_facades import FlextInfraUtilitiesCodegenFacades
-from .codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from .gitignore import FlextInfraUtilitiesGitignore
+from flext_infra._utilities.codegen_facades import FlextInfraUtilitiesCodegenFacades
+from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
+from flext_infra._utilities.gitignore import FlextInfraUtilitiesGitignore
 
 
 class FlextInfraUtilitiesCodegen(
@@ -47,10 +46,7 @@ class FlextInfraUtilitiesCodegen(
                     "MISE_LOCKFILE_PLATFORMS",
                     ",".join(toolchain.mise_lockfile_platforms),
                 ),
-                (
-                    "MISE_MINIMUM_RELEASE_AGE",
-                    f"{toolchain.dependency_cooldown_days}d",
-                ),
+                ("MISE_MINIMUM_RELEASE_AGE", f"{toolchain.dependency_cooldown_days}d"),
             ),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
@@ -73,6 +69,7 @@ class FlextInfraUtilitiesCodegen(
         """Return the sole typed context every generated ``.envrc`` renders from."""
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
+            environment_directory=config.Infra.codegen.make.runtime_environment_directory,
             environment_path_prepends=toolchain.environment_path_prepends,
             mise_bootstrap=FlextInfraUtilitiesCodegen.mise_bootstrap_environment(),
         )

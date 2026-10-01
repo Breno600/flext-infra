@@ -12,7 +12,8 @@ from tests import c, m
 class TestsFlextInfraAuditorContract:
     """The typed owner has no budget or optional strict-mode contract."""
 
-    def test_default_request_has_no_permissive_controls(self) -> None:
+    @staticmethod
+    def test_default_request_has_no_permissive_controls() -> None:
         params = m.Infra.AuditScopeParams()
         tm.that(params.check, eq="all")
         tm.that(params.docstring_min, none=True)
@@ -25,7 +26,8 @@ class TestsFlextInfraAuditorContract:
         with pytest.raises(c.ValidationError, match="strict"):
             m.Infra.AuditScopeParams.model_validate({"strict": strict})
 
-    def test_invalid_json_fails_at_request_ingress(self) -> None:
+    @staticmethod
+    def test_invalid_json_fails_at_request_ingress() -> None:
         with pytest.raises(c.ValidationError, match="Invalid JSON"):
             m.Infra.AuditScopeParams.model_validate_json("{invalid json}")
 
@@ -36,7 +38,8 @@ class TestsFlextInfraAuditorContract:
                 "budgets": (budget, {"test-project": budget}),
             })
 
-    def test_scope_budget_without_default_is_rejected(self) -> None:
+    @staticmethod
+    def test_scope_budget_without_default_is_rejected() -> None:
         with pytest.raises(c.ValidationError, match="budgets"):
             m.Infra.AuditScopeParams.model_validate({
                 "budgets": (None, {"test-project": 3}),

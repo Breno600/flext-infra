@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsRenderGuidesIndex:
     """Regression tests for the generated guides index."""
 
-    def _scope(self, tmp_path: Path) -> m.Infra.DocScope:
+    @staticmethod
+    def _scope(tmp_path: Path) -> m.Infra.DocScope:
         """Return one isolated doc scope rooted at the fixture directory."""
         return m.Infra.DocScope(
             name="fixture-project",

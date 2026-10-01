@@ -66,7 +66,8 @@ class TestsFlextInfraDepsDetectorReportFlags:
             gt=0,
         )
 
-    def test_run_with_json_stdout_flag(self, real_detector_project: Path) -> None:
+    @staticmethod
+    def test_run_with_json_stdout_flag(real_detector_project: Path) -> None:
         outcome = tm.ok(
             u.Tests.run_real_detector(
                 real_detector_project,

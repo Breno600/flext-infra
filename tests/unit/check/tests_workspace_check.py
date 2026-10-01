@@ -11,6 +11,7 @@ from flext_infra import main
 
 
 class TestsFlextInfraWorkspaceCheckModule:
-    def test_workspace_check_main_returns_error_without_projects(self) -> None:
+    @staticmethod
+    def test_workspace_check_main_returns_error_without_projects() -> None:
         exit_code = main(["check", "run"])
         tm.that(exit_code, eq=1)

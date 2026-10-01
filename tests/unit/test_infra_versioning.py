@@ -58,7 +58,8 @@ class TestsFlextInfraInfraVersioning:
         """Reject malformed and legacy release spellings."""
         tm.fail(u.Infra.parse_semver(version), has="invalid semver")
 
-    def test_parse_semver_result_type(self) -> None:
+    @staticmethod
+    def test_parse_semver_result_type() -> None:
         """Return the canonical three-integer release tuple."""
         tm.ok(u.Infra.parse_semver("1.2.3"), is_=tuple)
 
@@ -98,7 +99,8 @@ class TestsFlextInfraInfraVersioning:
         """Reject unsupported bump kinds and invalid source versions."""
         tm.fail(u.Infra.bump_version(version, bump_type), has=error)
 
-    def test_bump_version_result_type(self) -> None:
+    @staticmethod
+    def test_bump_version_result_type() -> None:
         """Return canonical version text from a valid bump."""
         tm.ok(u.Infra.bump_version("1.2.3", "major"), is_=str)
 

@@ -155,7 +155,8 @@ class TestsFlextInfraDepsModernizerPackaging:
         tm.that({f"/{path}/**" for path in package_paths} <= included, eq=True)
         tm.that(u.Tests.toml_mapping(sdist["force-include"]), has=module_path)
         tm.that(
-            u.Tests.toml_mapping(sdist["force-include"])[module_path], eq=module_path
+            u.Tests.toml_mapping(sdist["force-include"])[module_path],
+            eq=module_path,
         )
 
         manifest_path = infra_git_repo / c.PYPROJECT_FILENAME
@@ -167,7 +168,7 @@ class TestsFlextInfraDepsModernizerPackaging:
             u.Cli.atomic_write_text_file(
                 manifest_path,
                 manifest.replace(header, header + '"stale.txt" = "stale.txt"\n'),
-            )
+            ),
         )
         tm.that(self._conform_self(infra_git_repo), eq=0)
         repaired = u.Tests.toml_table_at(

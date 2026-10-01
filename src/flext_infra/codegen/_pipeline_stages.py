@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .. import c, m, t, u
-from ..deps import FlextInfraRuntimeDevDependencyDetector
-from . import (
+from flext_infra import c, m, t, u
+from flext_infra.codegen import (
     FlextInfraCodegenCensus,
     FlextInfraCodegenConform,
     FlextInfraCodegenFixer,
@@ -14,6 +13,7 @@ from . import (
     FlextInfraCodegenPyTyped,
     FlextInfraCodegenScaffolder,
 )
+from flext_infra.deps import FlextInfraRuntimeDevDependencyDetector
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -167,9 +167,7 @@ class FlextInfraCodegenPipelineStagesMixin:
             FlextInfraCodegenCensus,
             t.SequenceOf[m.Infra.CensusReport],
         ]:
-            census = FlextInfraCodegenCensus(
-                repository_root=ctx.repository_root,
-            )
+            census = FlextInfraCodegenCensus(repository_root=ctx.repository_root)
             projects = self._state.discovered_projects
             reports_result = census.run(projects=projects)
             if reports_result.failure:
@@ -273,9 +271,7 @@ class FlextInfraCodegenPipelineStagesMixin:
         def _action() -> t.SequenceOf[m.Infra.CensusReport]:
             census = self._state.census_service
             if census is None:
-                census = FlextInfraCodegenCensus(
-                    repository_root=ctx.repository_root,
-                )
+                census = FlextInfraCodegenCensus(repository_root=ctx.repository_root)
             projects = self._state.discovered_projects
             reports_result = census.run(projects=projects)
             if reports_result.failure:

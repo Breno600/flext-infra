@@ -5,8 +5,9 @@ from __future__ import annotations
 import ast
 
 from flext_infra import t
-
-from ._rope_method_order import FlextInfraUtilitiesRopeMethodOrderMixin
+from flext_infra._utilities._rope_method_order import (
+    FlextInfraUtilitiesRopeMethodOrderMixin,
+)
 
 
 class FlextInfraUtilitiesRopeHelpers(FlextInfraUtilitiesRopeMethodOrderMixin):

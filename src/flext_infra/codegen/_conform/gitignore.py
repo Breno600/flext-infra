@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ... import c, m, p, u
-from .bootstrap import FlextInfraCodegenConformBootstrap
+from flext_infra import c, m, p, u
+from flext_infra.codegen._conform.bootstrap import FlextInfraCodegenConformBootstrap
 
 
 class FlextInfraCodegenConformGitignore(FlextInfraCodegenConformBootstrap):

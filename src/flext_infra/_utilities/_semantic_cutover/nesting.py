@@ -8,13 +8,22 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t
-
-from ..namespace import FlextInfraUtilitiesCodegenNamespace
-from ..rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
-from .family_flatten import FlextInfraUtilitiesSemanticFamilyFlatten
-from .nesting_cst import FlextInfraUtilitiesSemanticCutoverNestingCst
-from .test_helpers import FlextInfraUtilitiesSemanticTestHelpers
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.family_flatten import (
+    FlextInfraUtilitiesSemanticFamilyFlatten,
+)
+from flext_infra._utilities._semantic_cutover.nesting_cst import (
+    FlextInfraUtilitiesSemanticCutoverNestingCst,
+)
+from flext_infra._utilities._semantic_cutover.test_helpers import (
+    FlextInfraUtilitiesSemanticTestHelpers,
+)
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path

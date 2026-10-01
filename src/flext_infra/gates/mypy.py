@@ -8,8 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, config, m, t, u
-
-from .base_gate import FlextInfraGate
+from flext_infra.gates.base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -65,7 +64,8 @@ class FlextInfraMypyGate(FlextInfraGate):
         discovered_dirs = [
             directory
             for directory in self._dirs_with_py(
-                project_dir, config.Infra.source_scan.roots
+                project_dir,
+                config.Infra.source_scan.roots,
             )
             if self._has_real_module(project_dir / directory)
             and (exclude is None or not exclude.match(f"{directory}/"))

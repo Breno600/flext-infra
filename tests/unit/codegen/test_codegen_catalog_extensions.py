@@ -17,8 +17,8 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenCatalogExtensions:
     """Prove generic extensions without a repository registry or second manifest."""
 
+    @staticmethod
     def test_scaffold_source_resolves_before_the_project_exists(
-        self,
         tmp_path: Path,
     ) -> None:
         """An explicit source supplies provenance without guessing from the consumer."""
@@ -37,8 +37,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(line.branch, eq=u.Tests.provider_branch())
         tm.that(root.exists(), eq=False)
 
+    @staticmethod
     def test_invalid_scaffold_source_fails_before_filesystem_effects(
-        self,
         tmp_path: Path,
     ) -> None:
         """Source validation happens before creating a directory or Git metadata."""
@@ -58,12 +58,14 @@ class TestsFlextInfraCodegenCatalogExtensions:
                 ),
             },
         )
-        result = infra.codegen_conform(u.Tests.conform_request(
-            root,
-            scope=c.Infra.CodegenConformScope.SELF,
-            mode=c.Infra.CodegenConformMode.APPLY,
-        ),
-        initial_workspace=workspace,)
+        result = infra.codegen_conform(
+            u.Tests.conform_request(
+                root,
+                scope=c.Infra.CodegenConformScope.SELF,
+                mode=c.Infra.CodegenConformMode.APPLY,
+            ),
+            initial_workspace=workspace,
+        )
         tm.that(result.failure, eq=True)
         tm.that(
             result.error,
@@ -71,8 +73,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
         )
         tm.that(root.exists(), eq=False)
 
+    @staticmethod
     def _repository(
-        self,
         name: str,
         *,
         path: str,
@@ -84,8 +86,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
             update={"package": is_standalone, "editable": is_standalone},
         )
 
+    @staticmethod
     def test_infra_repository_identity_is_detected_from_the_checkout(
-        self,
         tmp_path: Path,
     ) -> None:
         """The infra URL is detected from the checkout's own dependency line."""
@@ -112,8 +114,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(resolved.url, eq=f"{provider.base_url}/{source.distribution}.git")
         tm.that(source.internal_distribution_prefix, eq="flext-")
 
+    @staticmethod
     def test_flext_line_follows_the_declared_infra_source_not_the_consumer(
-        self,
         tmp_path: Path,
     ) -> None:
         """Every internal floor renders from the infra dependency's own source."""
@@ -139,8 +141,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(line.base_url, eq=provider.base_url)
         tm.that(line.organization, eq=provider.organization)
 
+    @staticmethod
     def test_flext_line_fails_loud_on_conflicting_infra_sources(
-        self,
         tmp_path: Path,
     ) -> None:
         """Family members declared from two lines in one document are a defect."""
@@ -213,8 +215,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
             tm.that(result.error, has="outside owner-declared TOML sections")
         tm.that(path.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=content)
 
+    @staticmethod
     def test_infra_repository_identity_fails_loud_when_undeclared(
-        self,
         tmp_path: Path,
     ) -> None:
         """A checkout that declares the infra distribution nowhere fails loudly."""
@@ -234,8 +236,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(result.failure, eq=True)
         tm.that(result.error, has="is undeclared by this checkout")
 
+    @staticmethod
     def test_bootstrap_toolchain_tracks_latest_mise_release(
-        self,
         tmp_path: Path,
     ) -> None:
         """The rendered bootstrap launches the tracked Mise and records its receipt."""
@@ -255,8 +257,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
         )
         tm.that(mise_toml, lacks="jdx/mise")
 
+    @staticmethod
     def test_setup_provisions_only_and_gen_owns_conformance(
-        self,
         tmp_path: Path,
     ) -> None:
         """``make setup`` provisions tooling; ``make gen`` owns conformance."""
@@ -277,7 +279,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(mise, has=f'make = "{toolchain.make_version}"')
         tm.that(mise, lacks="credential_command")
         tm.that(
-            mise, has=f'minimum_release_age = "{toolchain.dependency_cooldown_days}d"'
+            mise,
+            has=f'minimum_release_age = "{toolchain.dependency_cooldown_days}d"',
         )
         # S1 (operator law 2026-09-14): gen has one always-apply recipe; the
         # CHECK_ONLY-selected check/apply pair no longer exists.
@@ -291,8 +294,8 @@ class TestsFlextInfraCodegenCatalogExtensions:
         tm.that(verb_names, has="setup")
         tm.that(verb_names, has="gen")
 
+    @staticmethod
     def test_codegen_composes_project_mise_tools_through_toml(
-        self,
         tmp_path: Path,
     ) -> None:
         """The codegen artifact boundary consumes the project YAML overlay."""

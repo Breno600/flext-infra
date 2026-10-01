@@ -134,8 +134,8 @@ class TestsFlextInfraApplyRenames:
             eq="campaign_renamed_token campaign_renamed_token\ncampaign_renamed_token\n",
         )
 
+    @staticmethod
     def test_rope_uses_current_owner_and_preserves_alias_homonyms(
-        self,
         mod_workspace: Path,
     ) -> None:
         (mod_workspace / "renames.csv").write_text(
@@ -231,8 +231,8 @@ class TestsFlextInfraApplyRenames:
         tm.that(target.read_bytes(), eq=original)
         tm.that((mod_workspace / "renames.csv").read_text(), has="concurrent_name")
 
+    @staticmethod
     def test_sibling_repositories_resolve_installed_provider_and_local_mro(
-        self,
         mod_workspace: Path,
     ) -> None:
         roots = (mod_workspace / "first", mod_workspace / "second")

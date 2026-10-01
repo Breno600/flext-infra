@@ -43,7 +43,8 @@ class TestsFlextInfraCodegenCensus:
             encoding="utf-8",
         )
         config_path.write_text(
-            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n", encoding="utf-8"
+            f"ruleDirs: [{c.Cli.RULES_DIR_NAME}]\n",
+            encoding="utf-8",
         )
         (rules / "fixable.yml").write_text(
             f"id: {cls._FIXABLE_RULE}\nlanguage: Python\nseverity: error\n"
@@ -96,11 +97,7 @@ class TestsFlextInfraCodegenCensus:
         ],
         ids=["empty", "no-brackets", "wrong-dash", "missing-rule", "non-numeric"],
     )
-    def test_malformed_report_line_raises(
-        self,
-        tmp_path: Path,
-        violation: str,
-    ) -> None:
+    def test_malformed_report_line_raises(self, tmp_path: Path, violation: str) -> None:
         project = self._project(tmp_path)
         report = r[m.Infra.ValidationReport].ok(
             m.Infra.ValidationReport(passed=False, violations=[violation]),
@@ -113,12 +110,10 @@ class TestsFlextInfraCodegenCensus:
         project = self._project(tmp_path)
         report = r[m.Infra.ValidationReport].fail("scan failed")
 
-        tm.fail(
-            u.Infra.parse_namespace_validation(report, project),
-            has="scan failed",
-        )
+        tm.fail(u.Infra.parse_namespace_validation(report, project), has="scan failed")
 
-    def test_execute_fails_when_apply_changes_requested(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_execute_fails_when_apply_changes_requested(tmp_path: Path) -> None:
         result = FlextInfraCodegenCensus(
             repository_root=tmp_path,
             apply_changes=True,

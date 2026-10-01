@@ -6,7 +6,7 @@ from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
-from ._codegen_generation_type_checking import (
+from flext_infra.codegen._codegen_generation_type_checking import (
     FlextInfraCodegenGenerationTypeCheckingMixin,
 )
 

@@ -16,10 +16,9 @@ from typing import Annotated, override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ..base import s
-from ._layout_apply import FlextInfraCodegenLayoutApplyMixin
-from ._layout_plan import FlextInfraCodegenLayoutPlanMixin
+from flext_infra.base import s
+from flext_infra.codegen._layout_apply import FlextInfraCodegenLayoutApplyMixin
+from flext_infra.codegen._layout_plan import FlextInfraCodegenLayoutPlanMixin
 
 
 class FlextInfraCodegenLayout(

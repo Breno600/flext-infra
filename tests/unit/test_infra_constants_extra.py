@@ -14,27 +14,33 @@ from tests import c
 class TestsFlextInfraInfraConstantsExtra:
     """Tests for Check namespace constants."""
 
-    def test_github_constants_are_strings(self) -> None:
+    @staticmethod
+    def test_github_constants_are_strings() -> None:
         tm.that(c.Infra.GITHUB_REPO_URL, is_=str)
         tm.that(c.Infra.GITHUB_REPO_NAME, is_=str)
 
-    def test_encoding_constant_is_string(self) -> None:
+    @staticmethod
+    def test_encoding_constant_is_string() -> None:
         tm.that(c.Infra.ENCODING_DEFAULT, is_=str)
 
-    def test_c_alias_is_string(self) -> None:
+    @staticmethod
+    def test_c_alias_is_string() -> None:
         tm.that(c, is_=type)
 
-    def test_excluded_dirs_are_immutable(self) -> None:
+    @staticmethod
+    def test_excluded_dirs_are_immutable() -> None:
         excluded = c.Infra.COMMON_EXCLUDED_DIRS
         tm.that(excluded, is_=frozenset)
 
-    def test_all_status_values_are_uppercase(self) -> None:
+    @staticmethod
+    def test_all_status_values_are_uppercase() -> None:
         tm.that(c.Infra.ResultStatus.PASSED.isupper(), eq=True)
         tm.that(c.Infra.ResultStatus.FAIL.isupper(), eq=True)
         tm.that(c.Infra.ResultStatus.OK.isupper(), eq=True)
         tm.that(c.Infra.ResultStatus.WARN.isupper(), eq=True)
 
-    def test_all_gate_values_are_lowercase(self) -> None:
+    @staticmethod
+    def test_all_gate_values_are_lowercase() -> None:
         gates = [
             c.Infra.LINT,
             c.Infra.FORMAT,
@@ -47,7 +53,8 @@ class TestsFlextInfraInfraConstantsExtra:
         for gate in gates:
             tm.that(gate.islower(), eq=True, msg=f"Gate {gate} should be lowercase")
 
-    def test_excluded_dirs_no_duplicates(self) -> None:
+    @staticmethod
+    def test_excluded_dirs_no_duplicates() -> None:
         common = c.Infra.COMMON_EXCLUDED_DIRS
         doc = c.Infra.DOC_EXCLUDED_DIRS
         tm.that(len(common), eq=len(set(common)))

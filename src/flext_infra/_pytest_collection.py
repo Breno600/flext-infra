@@ -17,7 +17,7 @@ from warnings import WarningMessage
 import pytest
 from xdist.dsession import DSession
 
-from ._constants.check import FlextInfraConstantsCheck
+from flext_infra._constants.check import FlextInfraConstantsCheck
 
 
 class FlextInfraPytestCollection:

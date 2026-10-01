@@ -14,7 +14,8 @@ from flext_infra import FlextInfraTestmonDbInspector, config, m
 class TestsFlextInfraTestmonDbInspector:
     """Prove WAL checkpoint, integrity, and saveability decisions."""
 
-    def test_missing_db_fails_loud(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_missing_db_fails_loud(tmp_path: Path) -> None:
         filename = config.Infra.codegen.make.testmon_cache.database_filename
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
@@ -27,7 +28,8 @@ class TestsFlextInfraTestmonDbInspector:
         with pytest.raises(FileNotFoundError):
             inspector.execute()
 
-    def test_database_inside_checkout_is_rejected(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_database_inside_checkout_is_rejected(tmp_path: Path) -> None:
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
 
@@ -39,7 +41,8 @@ class TestsFlextInfraTestmonDbInspector:
                 pre_run_digest=None,
             )
 
-    def test_corrupt_db_preserves_sqlite_failure(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_corrupt_db_preserves_sqlite_failure(tmp_path: Path) -> None:
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
         db = (
@@ -57,7 +60,8 @@ class TestsFlextInfraTestmonDbInspector:
                 pre_run_digest=None,
             ).execute()
 
-    def test_healthy_new_db_is_saveable_seed(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_healthy_new_db_is_saveable_seed(tmp_path: Path) -> None:
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
         db = (
@@ -82,7 +86,8 @@ class TestsFlextInfraTestmonDbInspector:
         tm.that(state.saveable, eq=True)
         tm.that(state.reason, eq="seed_ready")
 
-    def test_unchanged_db_is_not_saveable(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_unchanged_db_is_not_saveable(tmp_path: Path) -> None:
         repository_root = tmp_path / "checkout"
         repository_root.mkdir()
         db = (
@@ -107,7 +112,8 @@ class TestsFlextInfraTestmonDbInspector:
         tm.that(state.saveable, eq=False)
         tm.that(state.reason, eq="unchanged")
 
-    def test_in_checkout_database_is_rejected(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_in_checkout_database_is_rejected(tmp_path: Path) -> None:
         filename = config.Infra.codegen.make.testmon_cache.database_filename
 
         with pytest.raises(ValueError, match="outside the repository checkout"):

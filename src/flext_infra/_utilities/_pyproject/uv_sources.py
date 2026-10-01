@@ -8,10 +8,13 @@ from typing import TYPE_CHECKING
 from flext_cli import r, u
 
 from flext_infra import c, t
-
-from ..dependencies import FlextInfraUtilitiesDependencies
-from .requirements import FlextInfraUtilitiesPyprojectRequirements
-from .session import FlextInfraUtilitiesPyprojectSession
+from flext_infra._utilities._pyproject.requirements import (
+    FlextInfraUtilitiesPyprojectRequirements,
+)
+from flext_infra._utilities._pyproject.session import (
+    FlextInfraUtilitiesPyprojectSession,
+)
+from flext_infra._utilities.dependencies import FlextInfraUtilitiesDependencies
 
 if TYPE_CHECKING:
     from flext_infra import m, p
@@ -65,7 +68,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
 
     @classmethod
     def direct_source_names(
-        cls, document: t.Cli.TomlDocument
+        cls,
+        document: t.Cli.TomlDocument,
     ) -> p.Result[t.VariadicTuple[str]]:
         """Name every requirement taken by direct ``@ source`` reference.
 
@@ -83,8 +87,8 @@ class FlextInfraUtilitiesPyprojectUvSources(
                     if cls._declares_direct_source(item)
                     and (name := FlextInfraUtilitiesDependencies.dep_name(item))
                     is not None
-                })
-            )
+                }),
+            ),
         )
 
     @classmethod

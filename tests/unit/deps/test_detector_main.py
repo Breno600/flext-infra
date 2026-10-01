@@ -16,8 +16,8 @@ pytestmark = [pytest.mark.slow, pytest.mark.remote]
 
 
 class TestsFlextInfraDepsDetectorMain:
+    @staticmethod
     def test_run_without_typings_skips_typings_detection(
-        self,
         real_detector_project: Path,
     ) -> None:
         root = real_detector_project
@@ -168,8 +168,8 @@ class TestsFlextInfraDepsDetectorMain:
         )
         tm.that((root / "pyproject.toml").read_bytes(), eq=snapshot)
 
+    @staticmethod
     def test_apply_typings_dry_run_preserves_source_and_lock(
-        self,
         real_detector_project: Path,
     ) -> None:
         root = real_detector_project
@@ -185,7 +185,8 @@ class TestsFlextInfraDepsDetectorMain:
         )
         tm.that(tuple(path.read_bytes() for path in paths), eq=before)
 
-    def test_main_returns_failure_code_on_run_failure(self) -> None:
+    @staticmethod
+    def test_main_returns_failure_code_on_run_failure() -> None:
         tm.that(
             main([
                 "deps",
@@ -210,8 +211,8 @@ class TestsFlextInfraDepsDetectorMain:
     # diagnostic instead of silently scanning under a different project's
     # binaries. This rewrites the retired "authoritative parent environment"
     # expectation to the current, intentional contract.
+    @staticmethod
     def test_member_without_own_venv_fails_closed_not_parent_environment(
-        self,
         real_detector_project: Path,
     ) -> None:
         root = real_detector_project

@@ -8,8 +8,9 @@ from flext_cli import cli
 
 from flext_core import r
 from flext_infra import m, u
-
-from ._namespace_enforcer_project import FlextInfraNamespaceEnforcerProjectMixin
+from flext_infra.refactor._namespace_enforcer_project import (
+    FlextInfraNamespaceEnforcerProjectMixin,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path

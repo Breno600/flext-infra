@@ -8,11 +8,12 @@ from typing import ClassVar, override
 
 from flext_core import r
 from flext_infra import c, config, m, p, t, u
-
-from ..base import FlextInfraServiceBase
-from ._workspace_check_reports import FlextInfraWorkspaceCheckReportsMixin
-from .gate_registry import FlextInfraGateRegistry
-from .workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
+from flext_infra.base import FlextInfraServiceBase
+from flext_infra.check._workspace_check_reports import (
+    FlextInfraWorkspaceCheckReportsMixin,
+)
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
+from flext_infra.check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
 
 
 class FlextInfraWorkspaceChecker(
@@ -133,22 +134,21 @@ class FlextInfraWorkspaceChecker(
         if requested:
             return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
                 tuple(
-                    m.Infra.CheckProjectTarget(
-                        name=project_name,
-                        path=params.repository_root / project_name,
+                    m.Infra.CheckProjectTarget.from_workspace_name(
+                        params.repository_root,
+                        project_name,
                     )
                     for project_name in requested
                 ),
             )
-        resolved = u.Infra.resolve_projects(params.repository_root, (".",))
-        if resolved.failure:
-            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(resolved)
-        return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(
-            tuple(
-                m.Infra.CheckProjectTarget(name=project.name, path=project.path)
-                for project in resolved.value
-            ),
+        discovered = u.Infra.resolve_projects(params.repository_root, ())
+        if discovered.failure:
+            return r[t.SequenceOf[m.Infra.CheckProjectTarget]].from_failure(discovered)
+        project_targets = tuple(
+            m.Infra.CheckProjectTarget(name=project.name, path=project.path)
+            for project in discovered.value
         )
+        return r[t.SequenceOf[m.Infra.CheckProjectTarget]].ok(project_targets)
 
     def format(self, project_dir: Path) -> p.Result[m.Infra.GateResult]:
         """Run format checks for one project."""

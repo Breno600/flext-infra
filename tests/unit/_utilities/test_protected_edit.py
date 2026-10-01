@@ -156,8 +156,8 @@ class TestsFlextInfraUtilitiesProtectedEdit:
             eq=updated_source.rstrip("\n"),
         )
 
+    @staticmethod
     def test_pyrefly_snapshot_uses_the_edited_projects_config(
-        self,
         tmp_path: Path,
     ) -> None:
         """Protected validation never inherits the orchestrator's Pyrefly config."""
@@ -173,8 +173,8 @@ class TestsFlextInfraUtilitiesProtectedEdit:
         tm.that(commands["pyrefly"], has="--config")
         tm.that(commands["pyrefly"], has=str(config_path))
 
+    @staticmethod
     def test_preview_source_writes_restores_original_sources_after_preview(
-        self,
         tmp_path: Path,
     ) -> None:
         py_file = tmp_path / "sample.py"
@@ -205,8 +205,8 @@ class TestsFlextInfraUtilitiesProtectedEdit:
         tests_dir.mkdir()
         self._assert_protected_source_write(tests_dir / "test_placeholder.py", tmp_path)
 
+    @staticmethod
     def test_protected_source_writes_applies_request_options(
-        self,
         tmp_path: Path,
     ) -> None:
         left_file = tmp_path / "left.py"

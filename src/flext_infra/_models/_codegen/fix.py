@@ -7,9 +7,9 @@ from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
 
-from ... import t
-from .. import FlextInfraModelsMixins as mm
-from .scaffold import FlextInfraModelsCodegenScaffoldModels
+from flext_infra import t
+from flext_infra._models import FlextInfraModelsMixins as mm
+from flext_infra._models._codegen.scaffold import FlextInfraModelsCodegenScaffoldModels
 
 
 class FlextInfraModelsCodegenFixModels:

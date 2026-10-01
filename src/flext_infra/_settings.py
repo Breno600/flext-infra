@@ -14,8 +14,7 @@ from typing import ClassVar
 
 from flext_core import FlextSettings
 from flext_infra import m
-
-from ._models.settings import FlextInfraSettingsModels
+from flext_infra._models.settings import FlextInfraSettingsModels
 
 
 class FlextInfraSettings(FlextSettings):

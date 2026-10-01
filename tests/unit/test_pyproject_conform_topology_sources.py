@@ -30,14 +30,16 @@ class TestsFlextInfraPyprojectConformTopologySources:
             path=Path(path),
         )
 
-    def _workspace(self, *members: m.Infra.RepositoryRef) -> m.Infra.WorkspaceSpec:
+    @staticmethod
+    def _workspace(*members: m.Infra.RepositoryRef) -> m.Infra.WorkspaceSpec:
         """Compose one workspace fixture from its declared member references."""
         return test_u.Tests.workspace_spec(
             test_u.Tests.repository_ref("workspace"),
             subprojects=tuple(members),
         )
 
-    def _inline_requirement(self, ref: m.Infra.RepositoryRef) -> str:
+    @staticmethod
+    def _inline_requirement(ref: m.Infra.RepositoryRef) -> str:
         """Render the direct-source form derived from the declared fixture branch."""
         return f"{ref.distribution} @ git+{ref.url}@{test_u.Tests.provider_branch()}"
 
@@ -271,7 +273,7 @@ class TestsFlextInfraPyprojectConformTopologySources:
                 required_dev_dependencies=(),
                 uv_resolution=self._toolchain_resolution(),
                 family_line=test_u.Tests.provider_branch(),
-            )
+            ),
         )
         parsed = tu.Tests.toml_mapping(u.Cli.toml_parse_text(rendered))
         tool = tu.Tests.toml_mapping(parsed.get("tool"))

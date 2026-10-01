@@ -42,8 +42,8 @@ class TestsFlextInfraExtendedConfigFixerErrors:
         tm.ok(result)
         tm.that(result.value, eq=[])
 
+    @staticmethod
     def test_run_returns_verbose_messages_for_selected_project(
-        self,
         tmp_path: Path,
     ) -> None:
         u.Tests.mk_project(
@@ -64,8 +64,8 @@ class TestsFlextInfraExtendedConfigFixerErrors:
             eq=True,
         )
 
+    @staticmethod
     def test_run_dry_run_preserves_file_while_reporting_fixes(
-        self,
         tmp_path: Path,
     ) -> None:
         project_dir = u.Tests.mk_project(

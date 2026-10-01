@@ -33,8 +33,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
-
-from .detector import FlextInfraWorkspaceDetector
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p

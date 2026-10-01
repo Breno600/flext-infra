@@ -70,7 +70,8 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
             has="policy conflict",
         )
 
-    def test_module_to_types_package(self) -> None:
+    @staticmethod
+    def test_module_to_types_package() -> None:
         service = FlextInfraDependencyDetectionService()
         tm.that(service.module_to_types_package("yaml", {}), eq=None)
         tm.that(service.module_to_types_package("flext_core", {}), eq=None)
@@ -88,8 +89,8 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
             eq="custom-types-yaml",
         )
 
+    @staticmethod
     def test_custom_typings_and_managed_dev_are_both_available(
-        self,
         tmp_path: Path,
     ) -> None:
         (tmp_path / "pyproject.toml").write_text(
@@ -110,7 +111,8 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
             eq=["types-pyyaml", "types-requests"],
         )
 
-    def test_retired_poetry_typings_are_not_a_source(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_retired_poetry_typings_are_not_a_source(tmp_path: Path) -> None:
         (tmp_path / "pyproject.toml").write_text(
             '[tool.poetry.group.typings.dependencies]\ntypes-requests = "*"\n',
             encoding="utf-8",
@@ -122,7 +124,8 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
             empty=True,
         )
 
-    def test_invalid_typings_table_fails_at_ingress(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_invalid_typings_table_fails_at_ingress(tmp_path: Path) -> None:
         (tmp_path / "pyproject.toml").write_text(
             '[project.optional-dependencies.typings]\ntypes-requests = "*"\n',
             encoding="utf-8",
@@ -132,7 +135,8 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
                 tmp_path,
             )
 
-    def test_absent_pyproject_has_no_declarations(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_absent_pyproject_has_no_declarations(tmp_path: Path) -> None:
         tm.that(
             FlextInfraDependencyDetectionService().read_current_typings_from_pyproject(
                 tmp_path,
@@ -155,7 +159,8 @@ class TestsFlextInfraDepsDetectionTypingsFlow:
                 tmp_path,
             )
 
-    def test_malformed_pyproject_preserves_read_failure(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_malformed_pyproject_preserves_read_failure(tmp_path: Path) -> None:
         (tmp_path / "pyproject.toml").write_text("[broken", encoding="utf-8")
         with pytest.raises(RuntimeError, match="failed to read"):
             FlextInfraDependencyDetectionService().read_current_typings_from_pyproject(

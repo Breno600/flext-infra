@@ -116,8 +116,8 @@ class TestsFlextInfraCodegenLayout:
                 eq=f"{filename}\n",
             )
 
+    @staticmethod
     def test_check_reports_move_archive_review_and_gitignore(
-        self,
         tmp_path: Path,
     ) -> None:
         """Check mode classifies every loose root entry without writing."""
@@ -142,20 +142,21 @@ class TestsFlextInfraCodegenLayout:
         tm.that(bool(gitignore), eq=True)
         tm.that(gitignore[0].target, eq=f"{archive_root()}/")
 
-    def test_check_execute_fails_on_layout_findings(
-        self,
+    @staticmethod
+    def test_check_execute_passes_while_severity_is_warning(
         tmp_path: Path,
     ) -> None:
-        """A layout finding blocks the check at every severity."""
+        """CLI check posture is report-only while the SSOT severity is warning."""
         build_loose_project(tmp_path)
         engine = layout_engine(tmp_path)
 
         result = engine.execute()
 
-        tm.fail(result, has="move guides -> docs/guides")
+        tm.ok(result)
+        tm.that(result.value, has="move guides -> docs/guides")
 
+    @staticmethod
     def test_apply_moves_archives_and_converges_idempotently(
-        self,
         tmp_path: Path,
     ) -> None:
         """Apply reorganizes once; a second apply performs zero operations."""
@@ -180,8 +181,8 @@ class TestsFlextInfraCodegenLayout:
         tm.that(len(residual.actionable), eq=0)
         tm.that([finding.rule for finding in residual.findings], eq=["review"])
 
+    @staticmethod
     def test_apply_docs_collision_keeps_target_and_archives_source(
-        self,
         tmp_path: Path,
     ) -> None:
         """Different-content collisions preserve both sides (archive-not-delete)."""
@@ -200,8 +201,8 @@ class TestsFlextInfraCodegenLayout:
         tm.that(archived.read_text(encoding="utf-8"), eq="intro\n")
         tm.that((project / "guides").exists(), eq=False)
 
+    @staticmethod
     def test_apply_override_move_then_archives_emptied_dir(
-        self,
         tmp_path: Path,
     ) -> None:
         """Override moves run before the emptied directory is archived."""
@@ -229,7 +230,8 @@ class TestsFlextInfraCodegenLayout:
             eq=True,
         )
 
-    def test_gate_reports_violations_and_fails_on_warning(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_gate_reports_violations_and_fails_on_warning(tmp_path: Path) -> None:
         """The shared gate contract rejects warnings without hiding their severity."""
         project = build_loose_project(tmp_path)
         gate = FlextInfraLayoutGate(tmp_path)
@@ -268,7 +270,8 @@ class TestsFlextInfraCodegenLayout:
             keep_count=keep_count,
         )
 
-    def test_special_and_reference_root_dirs_skipped(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_special_and_reference_root_dirs_skipped(tmp_path: Path) -> None:
         """data/ is skipped; external-docs/ is allowed as reference corpus."""
         project = build_loose_project(tmp_path)
         (project / "data").mkdir()
@@ -283,7 +286,8 @@ class TestsFlextInfraCodegenLayout:
         tm.that("data" in paths, eq=False)
         tm.that("external-docs" in paths, eq=False)
 
-    def test_infrastructure_root_is_canonical(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_infrastructure_root_is_canonical(tmp_path: Path) -> None:
         """Pulumi and Ansible share the canonical root infrastructure directory."""
         project = build_loose_project(tmp_path)
         infrastructure = project / "infra"
@@ -296,8 +300,8 @@ class TestsFlextInfraCodegenLayout:
         paths = {finding.path for finding in report.findings}
         tm.that("infra" in paths, eq=False)
 
+    @staticmethod
     def test_declared_repositories_are_canonical_root_entries(
-        self,
         tmp_path: Path,
     ) -> None:
         """A workspace root accepts only repository directories declared by topology."""
@@ -320,8 +324,8 @@ class TestsFlextInfraCodegenLayout:
         tm.that(declared_name in findings, eq=False)
         tm.that(findings[undeclared_name].rule, eq="review")
 
+    @staticmethod
     def test_duplicate_root_md_archives_when_docs_copy_exists(
-        self,
         tmp_path: Path,
     ) -> None:
         """Root move_docs_files collide with docs/ -> archive root, keep docs."""

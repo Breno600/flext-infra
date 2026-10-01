@@ -7,8 +7,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
-
-from .._floor_profile_writer import FlextInfraDepsFloorProfileWriter
+from flext_infra.deps._floor_profile_writer import FlextInfraDepsFloorProfileWriter
 
 if TYPE_CHECKING:
     from collections.abc import MutableMapping

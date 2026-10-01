@@ -150,8 +150,8 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(rendered_makefile, has="REPOSITORY_ROOT := $(MAKEFILE_ROOT)")
         tm.that(rendered_makefile, lacks="INIT_FLEXT_INFRA")
 
+    @staticmethod
     def test_project_selector_resolves_members_from_repository_root(
-        self,
         rendered_makefile: str,
     ) -> None:
         """Workspace members are projected as declared gitlinks, not a WORKSPACE var.

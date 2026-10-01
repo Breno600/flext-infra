@@ -9,8 +9,7 @@ from git import BadName, GitCommandError
 
 from flext_core import r
 from flext_infra import c, m
-
-from .worktree import FlextInfraUtilitiesGitWorktreeMixin
+from flext_infra._utilities._git.worktree import FlextInfraUtilitiesGitWorktreeMixin
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -59,7 +58,8 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             if exc.status == c.Infra.GIT_EXIT_NEGATIVE:
                 return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to validate branch name: {exc}", exception=exc
+                f"failed to validate branch name: {exc}",
+                exception=exc,
             )
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(
@@ -83,7 +83,8 @@ class FlextInfraUtilitiesGitSemanticRefsMixin(FlextInfraUtilitiesGitWorktreeMixi
             if exc.status == c.Infra.GIT_EXIT_NEGATIVE:
                 return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
             return r[m.Infra.GitBoolReport].fail(
-                f"failed to inspect Git ref: {exc}", exception=exc
+                f"failed to inspect Git ref: {exc}",
+                exception=exc,
             )
         except (OSError, ValueError) as exc:
             return r[m.Infra.GitBoolReport].fail(

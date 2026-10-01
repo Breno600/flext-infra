@@ -7,30 +7,34 @@ from pathlib import Path
 from typing import override
 
 from flext_core import r
-
-from .. import FlextInfraServiceBase, m, p, t, u
-from . import (
+from flext_infra import FlextInfraServiceBase, m, p, t, u
+from flext_infra.codemod import (
     FlextInfraCodemodSemanticApply,
     FlextInfraModGateEngine,
     FlextInfraModTextGateEngine,
 )
-from .batch_replacements import FlextInfraModReplacements
+from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 
 
 class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
     """Apply every discovered AST rewrite without destructive rollback."""
 
     rename_runner: t.Port[p.Infra.RenameCampaignRunner] = m.Field(
-        exclude=True, description="Injected CSV campaign execution port"
+        exclude=True,
+        description="Injected CSV campaign execution port",
     )
     progress: t.Port[p.Infra.ModProgress] = m.Field(
-        exclude=True, description="Injected mod progress transport port"
+        exclude=True,
+        description="Injected mod progress transport port",
     )
     rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True, description="Injected Rope workspace port"
+        exclude=True,
+        description="Injected Rope workspace port",
     )
     rename_inputs: t.VariadicTuple[m.Infra.ApplyRenamesInput] = m.Field(
-        exclude=True, default=(), description="Typed declared CSV campaigns"
+        exclude=True,
+        default=(),
+        description="Typed declared CSV campaigns",
     )
 
     @override

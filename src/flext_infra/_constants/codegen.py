@@ -15,10 +15,12 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar
 
-from .._constants.codegen_detection import FlextInfraConstantsCodegenDetection
-from .._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
-from .._constants.codegen_render_names import FlextInfraConstantsCodegenRenderNames
-from .workspace import FlextInfraConstantsWorkspace
+from flext_infra._constants.codegen_detection import FlextInfraConstantsCodegenDetection
+from flext_infra._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
+from flext_infra._constants.codegen_render_names import (
+    FlextInfraConstantsCodegenRenderNames,
+)
+from flext_infra._constants.workspace import FlextInfraConstantsWorkspace
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -103,7 +105,7 @@ class FlextInfraConstantsCodegen(
     "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
         r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
-        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)"
+        r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
     )
     "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
     PROTOCOL_MODEL_LINE_BUDGET: ClassVar[int] = 170

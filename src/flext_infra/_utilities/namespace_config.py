@@ -9,9 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config
-
-from .git import FlextInfraUtilitiesGit
-from .pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -50,7 +49,9 @@ class FlextInfraUtilitiesNamespaceConfig:
     def namespace_enabled(project_root: Path) -> bool:
         """Return whether namespace enforcement is enabled (enabled when unset)."""
         return FlextInfraUtilitiesNamespaceConfig._namespace_flag(
-            project_root, "enabled", absent=True
+            project_root,
+            "enabled",
+            absent=True,
         )
 
     @staticmethod
@@ -106,7 +107,9 @@ class FlextInfraUtilitiesNamespaceConfig:
     def namespace_include_dynamic_dirs(project_root: Path) -> bool:
         """Return whether namespace enforcement scans non-canonical dirs (off when unset)."""
         return FlextInfraUtilitiesNamespaceConfig._namespace_flag(
-            project_root, "include_dynamic_dirs", absent=False
+            project_root,
+            "include_dynamic_dirs",
+            absent=False,
         )
 
 

@@ -12,7 +12,8 @@ import flext_infra
 class TestsFlextInfraPublicApi:
     """Exercise the root public package metadata against its pyproject."""
 
-    def test_public_runtime_metadata_matches_public_constants(self) -> None:
+    @staticmethod
+    def test_public_runtime_metadata_matches_public_constants() -> None:
         metadata = tm.ok(
             flext_infra.u.Infra.read_project_metadata_result(
                 Path(__file__).resolve().parents[2],

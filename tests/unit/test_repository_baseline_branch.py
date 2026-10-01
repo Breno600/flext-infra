@@ -57,8 +57,8 @@ class TestsFlextInfraRepositoryBaselineBranch:
         tm.ok(resolved)
         tm.that(resolved.value, eq="dev")
 
+    @staticmethod
     def test_baseline_fails_closed_without_any_integration_branch(
-        self,
         tmp_path: Path,
     ) -> None:
         """A checkout without a published integration branch never guesses."""

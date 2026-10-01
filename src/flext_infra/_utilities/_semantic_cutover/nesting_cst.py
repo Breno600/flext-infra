@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from .nesting_references import FlextInfraUtilitiesSemanticCutoverNestingReferences
+from flext_infra._utilities._semantic_cutover.nesting_references import (
+    FlextInfraUtilitiesSemanticCutoverNestingReferences,
+)
 
 if TYPE_CHECKING:
     import libcst as cst

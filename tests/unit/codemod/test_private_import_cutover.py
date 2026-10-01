@@ -13,6 +13,20 @@ from flext_infra import c, infra, m, p, t, u
 class TestsFlextInfraPrivateImportCutover:
     """Exercise private-import automation only through ``u.Infra``."""
 
+    def test_earlier_semantic_move_retires_stale_preflight_import(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        consumer, statement, _ = self._facade_case(
+            tmp_path,
+            "constants",
+            "profile",
+            "Profile",
+            "c",
+        )
+        sources = {consumer: "from flext_sample import c\nvalue = c.Profile.Value\n"}
+        tm.that(self._edits(tmp_path, sources, consumer, statement), empty=True)
+
     @pytest.mark.parametrize("bad_source_reachable", [False, True])
     def test_installed_import_validation_follows_public_reachability(
         self,
@@ -54,7 +68,8 @@ class TestsFlextInfraPrivateImportCutover:
             # flext-core's result factory catches broad runtime errors only
             # ("no IO, no import"): an invalid reachable import escapes raw.
             with pytest.raises(
-                ImportError, match="attempted relative import beyond top-level"
+                ImportError,
+                match="attempted relative import beyond top-level",
             ):
                 self._plan(tmp_path, sources, consumer, statement)
             return
@@ -275,7 +290,8 @@ class TestsFlextInfraPrivateImportCutover:
             tm.that(edits[0].updated_source, lacks=statement)
         else:
             with pytest.raises(
-                ValueError, match=expected or "no public facade exposes"
+                ValueError,
+                match=expected or "no public facade exposes",
             ):
                 self._plan(tmp_path, sources, consumer, statement)
         for path, source in dependency_sources.items():

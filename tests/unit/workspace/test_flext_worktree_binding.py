@@ -230,8 +230,8 @@ class TestsFlextInfraWorktreeBinding:
             none=True,
         )
 
+    @staticmethod
     def test_ci_binding_rejects_before_consumer_or_supplier_access(
-        self,
         tmp_path: Path,
     ) -> None:
         """The real public CLI rejects CI before any environment mutation."""

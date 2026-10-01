@@ -10,15 +10,14 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 from flext_core import r
-
-from .. import c, m, p, settings, t, u
-from ..detectors import FlextInfraLspDiagnosticsDetector
-from ..gates import (
+from flext_infra import c, m, p, settings, t, u
+from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
+from flext_infra.detectors import FlextInfraLspDiagnosticsDetector
+from flext_infra.gates import (
     FlextInfraPyreflyGate,
     FlextInfraRuffFormatGate,
     FlextInfraRuffLintGate,
 )
-from . import FlextInfraCodemodSnapshotReconciler
 
 
 class FlextInfraModGateEngine:
@@ -157,7 +156,7 @@ class FlextInfraModGateEngine:
             if scratch.resolve().is_relative_to(config_root.resolve()):
                 msg = "rule fixture scratch must be outside its source root"
                 raise ValueError(msg)
-            owner_root = u.Infra.project_root(config_root)
+            owner_root = u.Infra.nearest_project_root(root, config_root)
             owners.append((
                 config_root,
                 tuple(owner_rules),
@@ -404,7 +403,7 @@ class FlextInfraModGateEngine:
             actionable=classes.count(c.Infra.ModScanFindingClass.ACTIONABLE),
             detection_only=classes.count(c.Infra.ModScanFindingClass.DETECTION_ONLY),
             non_actionable_with_fix=classes.count(
-                c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX
+                c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX,
             ),
             files=frozenset(entry.file for entry in entries),
             entries=entries,

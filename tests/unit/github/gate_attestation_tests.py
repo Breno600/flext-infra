@@ -16,7 +16,8 @@ from tests import u as test_u
 class TestsFlextInfraGithubGateAttestation:
     """Behavior tests for local SSH-signed gate attestations."""
 
-    def _signed_repository(self, root: Path) -> Path:
+    @staticmethod
+    def _signed_repository(root: Path) -> Path:
         test_u.Tests.git_bootstrap(root, ("init", "-b", c.Infra.GIT_MAIN))
         for key, value in (
             ("user.name", "Attestation Test"),
@@ -78,13 +79,15 @@ class TestsFlextInfraGithubGateAttestation:
         )
         return allowed_signers
 
-    def _head(self, root: Path) -> str:
+    @staticmethod
+    def _head(root: Path) -> str:
         oid: str = tm.ok(
             u.Infra.git_repository_head(m.Infra.GitRepoRequest(repo_root=root)),
         ).oid
         return oid
 
-    def _rev_parse(self, root: Path, commitish: str) -> str:
+    @staticmethod
+    def _rev_parse(root: Path, commitish: str) -> str:
         oid: str = tm.ok(
             u.Infra.git_rev_parse(
                 m.Infra.GitCommitishRequest(repo_root=root, commitish=commitish),
@@ -97,15 +100,16 @@ class TestsFlextInfraGithubGateAttestation:
         """Create one SSH-signing fixture repository per test invocation."""
         return self._signed_repository
 
-    def _request(self, root: Path) -> m.Infra.GateAttestationCreateRequest:
+    @staticmethod
+    def _request(root: Path) -> m.Infra.GateAttestationCreateRequest:
         return m.Infra.GateAttestationCreateRequest(
             workspace=str(root),
             signer="attester@example.test",
             gates=("gen", "check", "test"),
         )
 
+    @staticmethod
     def _verify(
-        self,
         root: Path,
         allowed_signers: Path,
         commit_sha: str,
