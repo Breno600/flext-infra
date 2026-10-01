@@ -1,6 +1,21 @@
 id: ban-cli-command-output-exit-code-reader
 valid:
-  - output.outcome.raw_return_code
+  - |
+    def report(output):
+        return output.outcome.raw_return_code
+  - |
+    def summarize(record):
+        return record.exit_code
+  - |
+    def check(command):
+        output = u.Cli.run_raw(command).unwrap()
+        return output.outcome.raw_return_code
 invalid:
-  - output.exit_code
-  - command.exit_code
+  - |
+    def check(command):
+        output = u.Cli.run_raw(command).unwrap()
+        return output.exit_code
+  - |
+    def check(command):
+        output = u.Cli.run_checked(command).value
+        return output.exit_code == 0
