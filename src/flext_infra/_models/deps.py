@@ -262,9 +262,8 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             m.Field(description="Repository-declared relative data paths to ship"),
         ] = ()
         packaged_data_excludes: Annotated[
-            t.VariadicTuple[t.NonEmptyStr],
+            t.StrTuple,
             m.Field(
-                default=(),
                 description="Repository-relative files omitted from declared data directories",
             ),
         ] = ()
