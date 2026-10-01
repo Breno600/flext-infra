@@ -92,7 +92,7 @@ Infra:
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      jscpd_version: latest
+      jscpd_version: "5.4.0"
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
@@ -397,6 +397,8 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
+        # The gate registry derives the fast CI set by gate kind; CI=N runs
+        # its strict complement and an unset CI runs every active check gate.
         # Rules, not a skip-list: local_check_gates is the ONLY
         # declared set. CI=Y runs its strict complement, derived in
         # MakeSpec.check_gates_ci over the active default universe, so every

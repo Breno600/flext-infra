@@ -39,30 +39,23 @@ class FlextInfraModelsWorkspace:
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
-    class SubprojectLoadContext(m.ContractModel):
-        """Workspace governance scope shared by every declared subproject entry."""
+    class SuperprojectGovernance(m.ContractModel):
+        """Resolved superproject facts shared by every composed member load."""
 
+        root: Annotated[Path, m.Field(description="Superproject repository root")]
         integration_branch: Annotated[
-            str | None,
-            m.Field(
-                description=(
-                    "Resolved workspace integration line; absent defers to the "
-                    "provider's conventional branch fallback"
-                ),
-            ),
+            str | None, m.Field(description="Resolved workspace integration branch")
         ] = None
-        workspace_beads: Annotated[
+        beads: Annotated[
             FlextInfraConfigModels.BeadsProjectSpec | None,
-            m.Field(description="Workspace Beads ledger spec; absent disables routing"),
+            m.Field(description="Workspace Beads ledger spec"),
         ] = None
+        members: Annotated[
+            t.MappingKV[Path, FlextInfraConfigModels.RepositoryRef],
+            m.Field(description="Manifest member identities indexed by path"),
+        ]
         allow_unprovisioned_members: Annotated[
-            bool,
-            m.Field(
-                description=(
-                    "Whether declared Python members may stay unprovisioned "
-                    "checkouts while CI omits them deliberately"
-                ),
-            ),
+            bool, m.Field(description="Permit declared members before checkout setup")
         ] = False
 
     class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):

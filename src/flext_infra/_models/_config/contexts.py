@@ -403,6 +403,10 @@ class FlextInfraConfigModelsContexts:
             t.StrSequence,
             m.Field(description="Validated individually declared data files"),
         ]
+        packaged_data_excludes: Annotated[
+            t.StrSequence,
+            m.Field(description="Validated files excluded from packaged data roots"),
+        ]
         class_stem: Annotated[
             t.NonEmptyStr,
             m.Field(description="Public facade class stem"),

@@ -14,8 +14,7 @@ from typing import override
 
 from flext_cli import u
 
-from flext_infra import config
-
+from .._config import config
 from ..constants import c
 from ..models import m
 from ..typings import t
@@ -291,16 +290,21 @@ class FlextInfraUtilitiesProjectDiscovery(
         owns the environment. Undeclared, the owner derives it: a subproject
         checked out inside a workspace uses the workspace environment; a
         standalone checkout or a linked worktree owns its own, exactly as the
-        generated Makefile resolves ``REPOSITORY_ROOT``. The environment is
-        always ``<runtime root>/.venv``; its location is law, never
-        configuration (operator law 2026-10-01, flext-h2a9h).
+        generated Makefile resolves ``REPOSITORY_ROOT``. The sibling directory
+        comes from the typed codegen contract, shared with the Makefile.
         """
         if runtime_root is None:
             runtime = FlextInfraUtilitiesGit.git_repository_root(
                 m.Infra.GitRepoRequest(repo_root=project_root),
             ).unwrap()
             runtime_root = runtime.repository_root
-        return runtime_root.resolve() / c.Infra.ENVIRONMENT_DIRECTORY
+        physical_root = runtime_root.resolve()
+        relative_identity = physical_root.as_posix().lstrip("/").replace(":", "/")
+        return (
+            physical_root.parent
+            / config.Infra.codegen.make.runtime_environment_directory
+            / relative_identity
+        )
 
     @classmethod
     def runtime_python(

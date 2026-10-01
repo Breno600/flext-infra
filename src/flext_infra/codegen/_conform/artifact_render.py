@@ -322,6 +322,7 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
                         )),
                     ),
                     python_version=codegen.toolchain.python_version,
+                    docs_report_filenames=c.Infra.DOCS_STRUCTURED_REPORT_FILENAMES,
                     github_actions=codegen.github_actions,
                     make=codegen.make,
                     workspace_repositories=workspace_repositories,
