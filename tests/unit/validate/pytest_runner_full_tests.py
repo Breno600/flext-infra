@@ -123,7 +123,7 @@ class TestsFlextInfraPytestRunnerFull(PytestRunnerContract):
             {context.deadline_monotonic for context in parsed},
             eq={
                 runner.started_at_monotonic
-                + config.Infra.tooling.tools.pytest.run_timeout_seconds
+                + runner.run_timeout_seconds(config.Infra.tooling.tools.pytest)
             },
         )
         incremental, full = (path.parent for path in contexts)
