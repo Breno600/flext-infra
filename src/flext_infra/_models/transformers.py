@@ -61,7 +61,7 @@ class FlextInfraModelsTransformers:
     class SemanticMigrationEdit(m.ContractModel):
         """One validated in-memory semantic source rewrite."""
 
-        # Why (flext-ygc2k): source bytes must survive validation byte-exact;
+        # Why: source bytes must survive validation byte-exact;
         # the strict base strips whitespace, which corrupts CAS comparisons.
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(str_strip_whitespace=False)
 

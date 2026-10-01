@@ -1,4 +1,4 @@
-"""Pure planning for the project-layout engine (flext-0wuz, epic flext-hzox).
+"""Pure planning for the project-layout engine.
 
 Every classification derives from ``config.Infra.codegen.layout`` — this mixin
 reads the declarative SSOT and produces typed findings; it never writes.

@@ -52,7 +52,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         """Return whether one Rope name is defined in ``resource``."""
         if isinstance(pyname, (p.Infra.RopeImportedName, p.Infra.RopeImportedModule)):
             return False
-        # NOTE (multi-agent, flext-f8vk / kimi): p.Infra declares
+        # p.Infra declares
         # get_definition_location() as tuple-always (every other caller
         # unpacks directly); the old None guard was dead code.
         module, line = pyname.get_definition_location()
@@ -98,7 +98,7 @@ class FlextInfraUtilitiesRopeAnalysisAstHelpers:
         """Return a process-wide rope project usable for string parsing."""
         cached = FlextInfraUtilitiesRopeAnalysisAstHelpers._parse_project
         if cached is None:
-            # flext-o6h5 (agent: kimi) — root-cause fix: the anchor was a hardcoded
+            # Root-cause fix: the anchor was a hardcoded
             # operator path that crashed CI (FileNotFoundError) and silently bound
             # the parse project to the wrong tree locally. Anchor on the validated
             # settings SSOT, with cwd as last resort — both exist where CLI runs.

@@ -80,14 +80,14 @@ class FlextInfraCodegenConsolidatorStepsMixin:
     @staticmethod
     def _match_assignments(
         symbols: t.SequenceOf[m.Infra.SymbolInfo],
-        # flext-j47u (codex): use the canonical scalar sequence alias directly.
+        # Use the canonical scalar sequence alias directly.
         source_lines: t.StrSequence,
         value_to_ref: t.StrMapping,
     ) -> t.SequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]]:
         """Match assignments."""
         matches: t.MutableSequenceOf[t.Triple[m.Infra.SymbolInfo, str, str]] = []
         for symbol in symbols:
-            # flext-j47u (codex): widen the validated constrained int for indexing.
+            # Widen the validated constrained int for indexing.
             line_number: int = symbol.line
             if line_number < 1 or line_number > len(source_lines):
                 continue

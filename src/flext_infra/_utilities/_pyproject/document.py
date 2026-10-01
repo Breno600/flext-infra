@@ -150,8 +150,7 @@ class FlextInfraUtilitiesPyprojectDocument(FlextInfraUtilitiesPyprojectUvSources
 
         ``None`` or an empty sequence leaves the section untouched: projects
         without a declared scope keep the dynamic every-root behavior. A
-        non-empty sequence is the workspace manifest's production scope
-        (cosmos-3flk9 decision A).
+        non-empty sequence is the workspace manifest's production scope.
         """
         if not namespace_scan_dirs:
             return r[bool].ok(True)

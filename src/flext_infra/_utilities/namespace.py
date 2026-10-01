@@ -22,7 +22,7 @@ from .rope_source import FlextInfraUtilitiesRopeSource
 class FlextInfraUtilitiesCodegenNamespace:
     """Canonical namespace helpers for codegen discovery, parsing, and fixes."""
 
-    # flext-perf.1 (agent: codex): cache __all__ AST extraction by path+mtime
+    # Cache __all__ AST extraction by path+mtime
     # so the 4-5 redundant _declared_exports calls per policy() hit memory
     # instead of re-reading + re-parsing the same file from disk each time.
     _declared_exports_cache: ClassVar[

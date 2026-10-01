@@ -61,7 +61,7 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
                     export_options=m.Infra.ExportOptions(allow_assignments=True),
                 )
             )
-        # Why (flext-b3xmn/R32): a parent outside the scan scope is read by
+        # Why: a parent outside the scan scope is read by
         # path from the one package the active environment declares; a name
         # that resolves nowhere raises in the resolver. A module (not a
         # package) can never have been accepted as a facade parent.

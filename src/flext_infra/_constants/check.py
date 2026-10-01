@@ -185,10 +185,10 @@ class FlextInfraConstantsCheck:
     })
     # ADR-0018 stdlib island: the native hook client runs as `python3 -I -S`
     # and is excluded from the facade-boundary rules; the fragment matches the
-    # real posix path segments (src/ai_hub/hook_client.py).
+    # real posix path segments of the consumer's hook client module.
     BOUNDARY_SKIP_PATH_FRAGMENTS: ClassVar[t.StrSequence] = (
         "/ai_hub/hook_client",
-        # Vendored standalone workspace tooling (cosmos-command dispatcher):
+        # Vendored standalone workspace tooling (promoted-command dispatcher):
         # it must stay importable by a bare `python3` outside any project
         # venv, so the facade imports the boundary rules mandate are
         # impossible by design; its stdlib usage belongs to the distributor.
@@ -311,7 +311,7 @@ class FlextInfraConstantsCheck:
     })
     "qlty ruleId suffix -> flext-core enforcement tag (texts SSOT: core ENFORCEMENT_RULES_TEXT)."
 
-    # --- jscpd duplication gate SSOT (operator 2026-09-04: flext-infra owns the
+    # --- jscpd duplication gate SSOT (flext-infra owns the
     # jscpd plugin behind one centralized `make check` verb; its config is
     # rendered from this typed SSOT at scan time, never a hand-maintained file).
     JSCPD_BINARY: ClassVar[str] = "jscpd"

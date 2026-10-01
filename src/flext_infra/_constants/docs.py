@@ -108,8 +108,7 @@ class FlextInfraConstantsDocs:
 
     ``argocd`` is the in-container HOME of the Argo CD side images
     (argocd-cmp-plugin / repo-server) referenced in ADR_024 and the release
-    convergence plan; it is an image contract, not an operator machine
-    (flext-9v0d.3 / cosmos-iracn.7)."""
+    convergence plan; it is an image contract, not an operator machine."""
     PYTHON_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^```python\s*\n(?P<body>.*?)^```\s*$", re.MULTILINE | re.DOTALL
     )

@@ -209,7 +209,7 @@ class FlextInfraPyprojectModernizerRun:
     def _rewrite_constraints(
         self, root_state: m.Infra.PyprojectDocumentState, *, dry_run: bool
     ) -> int:
-        """Write runtime-resolved floors to the codegen SSOT (flext-gzfd2 cutover)."""
+        """Write runtime-resolved floors to the codegen SSOT."""
         try:
             root_project_name = u.Infra.project_name_from_payload(
                 root_state.pyproject_path, root_state.payload

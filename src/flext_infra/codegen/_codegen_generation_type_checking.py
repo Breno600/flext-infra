@@ -114,7 +114,7 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
                 for export_name, attr_name in items
             )
         ):
-            # flext-i6nq.10: Module aliases emit from their parent package.
+            # Module aliases emit from their parent package.
             return mod.rsplit(".", maxsplit=1)[0] or "."
         return mod
 
@@ -130,7 +130,7 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         if export_name != export_name.lower():
             return False
         if not attr_name:
-            # flext-i6nq.10: Literal __all__ requires every module alias binding.
+            # Literal __all__ requires every module alias binding.
             return False
         # A lowercase ``from mod import name`` (package-name alias like ``grpc``
         # or a lowercase module-level function) is a real symbol

@@ -555,7 +555,7 @@ class FlextInfraUtilitiesRopeAnalysisSourceScan:
     def _keyword_value_source(args: t.StrSequence, keyword: str) -> str:
         """Return a keyword argument value source from split call args."""
         prefix = f"{keyword}="
-        # NOTE (multi-agent, flext-f8vk / kimi): args is t.StrSequence
+        # args is t.StrSequence
         # (SequenceOf[str]); the old isinstance guard was dead code.
         for arg in args:
             text = arg.strip()

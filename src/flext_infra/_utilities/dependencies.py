@@ -540,7 +540,7 @@ class FlextInfraUtilitiesDependencies:
         """Collect optional dependency groups from one TOML document."""
         normalized = FlextInfraUtilitiesPyproject.normalized_toml_payload(document)
         if not normalized:
-            # flext-j47u (codex): keep the empty mapping immutable and fully typed.
+            # Keep the empty mapping immutable and fully typed.
             return MappingProxyType(dict[str, t.VariadicTuple[str]]())
         return cls.project_dev_groups_from_payload(normalized)
 
@@ -577,7 +577,7 @@ class FlextInfraUtilitiesDependencies:
         cls, payload: t.MappingKV[str, t.JsonValue]
     ) -> t.StrSequence:
         """Extract every declared ``flext-*`` dependency as a Python namespace."""
-        # flext-j47u (codex): FLEXT dependencies are first-party contracts even
+        # FLEXT dependencies are first-party contracts even
         # when their uv source declaration is owned by an enclosing workspace.
         normalized = FlextInfraUtilitiesPyproject.validate_infra_payload(payload)
         return tuple(

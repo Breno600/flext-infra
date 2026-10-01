@@ -1,4 +1,4 @@
-"""Gitignore ownership for the layout engine apply path (flext-0wuz).
+"""Gitignore ownership for the layout engine apply path.
 
 Codegen-managed projects converge through the canonical conform render (one
 owner, one template); unmanaged or external projects receive idempotent

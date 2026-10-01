@@ -109,7 +109,7 @@ class FlextInfraConfigFixer(FlextInfraConfigFixerSteps, FlextInfraServiceBase[bo
             pyrefly_table = tool_table[c.Infra.PYREFLY]
             if not isinstance(pyrefly_table, MutableMapping):
                 return r[t.StrSequence].fail(f"invalid {path} [tool.pyrefly] table")
-            # flext-wkii.17 (codex): reassign only changed keys so an untouched
+            # Reassign only changed keys so an untouched
             # nested table retains adjacent managed comments and TOML trivia.
             for key, value in pyrefly.items():
                 if key in original_pyrefly and original_pyrefly[key] == value:

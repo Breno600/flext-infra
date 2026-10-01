@@ -262,7 +262,7 @@ class FlextInfraConstantsSharedInfra:
     TIER_WHITELIST_LEAF_CONFIG_FILES: ClassVar[frozenset[str]] = frozenset({
         "_config.py"
     })
-    "Leaf config modules (e.g. ai-hub/_config.py) that own their external-library"
+    "Leaf config modules (e.g. a consumer's _config.py) that own their external-library"
     "imports directly as the bottom of the c/t/p/m/u chain."
     DIR_TYPINGS: ClassVar[str] = "typings"
     DIR_DOCS: ClassVar[str] = "docs"

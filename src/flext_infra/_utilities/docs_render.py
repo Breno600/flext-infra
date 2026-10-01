@@ -186,10 +186,10 @@ class FlextInfraUtilitiesDocsRender:
         ``docs/<section>/README.md`` pages that generated index pages link to
         (producing nav 404s). The rooted ``/README.md`` excludes only the
         docs-dir root README (the project README mirror), preserving nested
-        section READMEs. [flext-3o9s nav404 fix]
+        section READMEs.
 
         Curated ``API/**`` mirrors duplicate the generated public-API page and
-        register the same flat symbol anchors (for example ``cosmos_main.s``),
+        register the same flat symbol anchors (for example ``<package>.s``),
         producing ``Multiple primary URLs`` autorefs conflicts. The generated
         page is canonical; the curated mirror is excluded.
         """
@@ -275,7 +275,7 @@ class FlextInfraUtilitiesDocsRender:
     def _quality_gates_lines(*, link_prefix: str) -> t.SequenceOf[str]:
         """Return a thin pointer to the canonical Quality Gates surface.
 
-        Why: flext-4p0t — flext-quality-gates skill path does not exist; route to
+        Why: the flext-quality-gates skill path does not exist; route to
         make-check and AGENTS.md Make contract instead.
         """
         agents_link = FlextInfraUtilitiesDocsRender._resolve_governance_link(
@@ -528,8 +528,7 @@ class FlextInfraUtilitiesDocsRender:
         _ = modules
         data = contract
 
-        # NOTE (multi-agent, flext-p4s3.2 / agent: uv_overlay_owner): preserve one
-        # typed context across the sole public template-rendering boundary.
+        # Preserve one typed context across the sole public template-rendering boundary.
         context = m.Infra.MkdocsProjectRenderContext(
             site_title=str(data.get("site_title", "")).strip() or scope.name,
             site_url=str(data.get("site_url", "")).strip() or c.Infra.GITHUB_REPO_URL,
@@ -658,8 +657,7 @@ class FlextInfraUtilitiesDocsRender:
         """
         data = contract
 
-        # NOTE (multi-agent, flext-p4s3.2 / agent: uv_overlay_owner): preserve one
-        # typed context across the sole public template-rendering boundary.
+        # Preserve one typed context across the sole public template-rendering boundary.
         # The title falls back to the governed project name — never a fleet
         # brand — so a standalone repository describes itself (ag-q6uo).
         context = m.Infra.MkdocsRenderContext(

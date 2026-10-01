@@ -387,7 +387,7 @@ class FlextInfraConfigModelsArtifact:
             FlextInfraConfigModelsTemplates.TemplatesSpec,
             m.Field(description="New-project-only scaffold template manifest"),
         ]
-        # Operator law: flext-infra owns generic conform policy only. The set
+        # flext-infra owns generic conform policy only. The set
         # of projects it serves is NOT its knowledge — each repository's own
         # .gitmodules is the read-only topology authority.
 

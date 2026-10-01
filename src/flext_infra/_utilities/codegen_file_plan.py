@@ -49,10 +49,10 @@ class FlextInfraUtilitiesCodegenFilePlan:
         Neither path removes the lock identity when ownership ends.
 
         Acquisition waits politely for a held lease up to
-        ``c.Infra.JOURNAL_LEASE_WAIT_SECONDS`` (flext-c2kp3): a legitimate fleet
+        ``c.Infra.JOURNAL_LEASE_WAIT_SECONDS``: a legitimate fleet
         ``make gen`` holds the lease for minutes, so an immediate non-blocking
         refusal manufactured spurious ``JournalLeaseTimeoutError`` failures
-        under ordinary multi-agent traffic. The wait stays bounded, so a truly
+        under ordinary concurrent traffic. The wait stays bounded, so a truly
         wedged holder still fails loud rather than hanging forever.
         Only native contention (EACCES, EAGAIN or EWOULDBLOCK) enters this wait;
         every other acquisition error escapes unchanged.

@@ -193,7 +193,7 @@ class FlextInfraWorkspaceDetector(
             observed.url
         ):
             contradictions.append("url identity differs from Git origin")
-        # Why (cosmos-d0qn4): a repository-local manifest carries the
+        # Why: a repository-local manifest carries the
         # repository's own coordinates. Whether that repository is currently
         # checked out as a submodule is a fact of the parent's Git tree, not of
         # the manifest, so the same manifest must load both standalone (its own
@@ -816,7 +816,7 @@ class FlextInfraWorkspaceDetector(
         # phase and turned one member conform into thousands of Git processes.
         if not (resolved_root / c.Infra.GITMODULES).is_file():
             return r[t.VariadicTuple[Path]].ok(())
-        # Why (flext-gajwa): a governed root owns its own repository. A tree
+        # Why: a governed root owns its own repository. A tree
         # that carries .beads/.gitmodules but no .git (a test sandbox, a
         # scratch copy) is ungoverned; asking Git here would discover an
         # ancestor checkout and validate *its* submodules against *this*

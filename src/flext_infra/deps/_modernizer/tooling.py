@@ -105,7 +105,7 @@ class FlextInfraPyprojectModernizerTooling:
             c.Infra.PROJECT: {c.Infra.NAME: project_name},
             c.Infra.TOOL: {"flext": {"docs": {"package_name": package_name}}},
         }
-        # flext-j47u (codex): atomic scaffolds provide validated future roots;
+        # Atomic scaffolds provide validated future roots;
         # existing repositories keep filesystem discovery through empty ones.
         conformed = self.conform_source(
             u.Cli.toml_dumps(u.Cli.toml_document_from_mapping(seed)),
@@ -174,7 +174,7 @@ class FlextInfraPyprojectModernizerTooling:
         # truthy and blocked declared_roots ('src', '.'). Prefer declared roots
         # for search/mypy whenever scaffolding supplied them; pyright extras keep
         # discovery order (sorted {'.', 'src'}) so the first write matches sync.
-        # mypy and pyrefly diverge (cosmos-45hiv, 2026-08-31): mypy enumerates
+        # mypy and pyrefly diverge: mypy enumerates
         # each search-path root as a package root, so roots that re-spell the
         # same files make it abort with source-file-found-twice; pyrefly
         # resolves first-match and needs the extra roots.

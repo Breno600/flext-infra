@@ -192,7 +192,7 @@ class FlextInfraUtilitiesVersioning:
         refname collates later. The release protocol then read the newest
         release as a release candidate, decided the released version still
         "awaits its tag", and never bumped again in any repository that had
-        ever cut an rc (flext-1wjg1.16.34). Order by the same PEP 440 owner
+        ever cut an rc. Order by the same PEP 440 owner
         ``version_is_newer`` already uses, and fail loud on a ``v*`` tag that
         is not a version rather than silently ranking it.
         """

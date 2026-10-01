@@ -122,7 +122,7 @@ class FlextInfraModelsRefactor(
             m.Field(description="Family letter to FLEXT chain mapping"),
         ]
 
-    # NOTE (multi-agent): the two models below replace the
+    # The two models below replace the
     # dataclass payloads that lived in refactor/_wrapper_rewrite.py and
     # refactor/classvar_constant_autofix.py (deep-FLEXT: models only in m).
     class WrapperRewriteAccumulator(m.ArbitraryTypesModel):

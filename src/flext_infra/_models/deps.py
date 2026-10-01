@@ -155,7 +155,7 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
             ),
         ] = False
 
-    # NOTE (multi-agent, flext-wkii.17.9): codegen consumes the pure pyproject
+    # Codegen consumes the pure pyproject
     # renderer directly, so no deps CLI payload remains for path/workspace modes.
 
     class PyprojectDocumentState(m.ArbitraryTypesModel):

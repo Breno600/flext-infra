@@ -235,7 +235,7 @@ class FlextInfraConfigModelsContexts:
     class ProjectRenderContext(MakeRenderContext):
         """Complete typed input consumed by project scaffold templates."""
 
-        # NOTE (multi-agent, flext-get3j): this render field is the exact
+        # This render field is the exact
         # projection of ProjectSpec; templates must not infer or default a hook.
         hatch_build_hook_path: Annotated[
             Path | None,
@@ -472,7 +472,7 @@ class FlextInfraConfigModelsContexts:
             m.Field(
                 description=(
                     "Taplo release selector; the committed mise.lock pins the "
-                    "version generation authenticates (flext-t7668)"
+                    "version generation authenticates"
                 )
             ),
         ]
@@ -544,7 +544,7 @@ class FlextInfraConfigModelsContexts:
             ),
         ] = None
 
-        # NOTE (multi-agent, flext-get3j): ProjectSpec is the sole declaration
+        # ProjectSpec is the sole declaration
         # owner; absence is meaningful and must never select a conventional hook.
         hatch_build_hook_path: Annotated[
             Path | None,
@@ -913,7 +913,7 @@ class FlextInfraConfigModelsContexts:
     class SgconfigRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input for the generated ast-grep project config.
 
-        Why (ai-hub-qwoc): a provider manifest can declare ``sgconfig.yml`` as a
+        Why: a provider manifest can declare ``sgconfig.yml`` as a
         required surface, but no generator owned it, so the file was authored by
         hand in one repository and simply absent in another -- provider discovery
         then failed closed with ``missing declared file: sgconfig.yml``. The rule

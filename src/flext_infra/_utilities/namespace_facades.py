@@ -18,7 +18,7 @@ from .namespace import FlextInfraUtilitiesCodegenNamespace
 from .namespace_common import FlextInfraUtilitiesRefactorNamespaceCommon
 from .rope_module_patch import FlextInfraUtilitiesRopeModulePatch
 
-# flext-j47u (codex): annotation-only stdlib types are safe runtime imports;
+# Annotation-only stdlib types are safe runtime imports;
 # TYPE_CHECKING is reserved for real reverse-dependency cycle boundaries.
 
 

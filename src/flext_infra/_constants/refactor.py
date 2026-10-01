@@ -378,7 +378,7 @@ class FlextInfraConstantsRefactor:
         c.ENFORCEMENT_PROJECT_ALIAS_OWNERS
     )
     "Project package → canonical aliases it re-exports locally (SSOT: flext-core)."
-    # flext-j47u: consume core enforcement data through its exact canonical alias.
+    # Consume core enforcement data through its exact canonical alias.
     ENFORCEMENT_LIBRARY_OWNERS: ClassVar[t.StrMapping] = c.ENFORCEMENT_LIBRARY_OWNERS
     "External library → project that owns its abstraction facade (SSOT: flext-core)."
     FUTURE_ANNOTATIONS_RE: ClassVar[t.RegexPattern] = re.compile(

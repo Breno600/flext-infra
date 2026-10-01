@@ -115,7 +115,7 @@ class FlextInfraCodegenConformBeadsRoutes(FlextInfraCodegenConformDocsOwnership)
     def dry_run_config_backup(name: str) -> bool:
         """Return whether ``name`` is a dry-run ``config.yaml`` backup snapshot.
 
-        Why (cosmos-3flk9): the bd client rewrites ``last-touched`` on every
+        Why: the bd client rewrites ``last-touched`` on every
         write, and a dry-run ``make gen`` leaves ``config.yaml.<ts>.bak``
         snapshots behind — both are ephemeral tooling state, not unmerged
         ledger state, so they must not fail the composed-project verify.

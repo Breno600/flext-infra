@@ -131,7 +131,7 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
             return r[m.Infra.GitBoolReport].from_failure(refreshed)
         resolved = request.repo_root.expanduser().resolve()
         try:
-            # Why (flext-infra-c3h): same nested-path contract as git_open_repo.
+            # Why: same nested-path contract as git_open_repo.
             repo = Repo(resolved, search_parent_directories=True)
         except InvalidGitRepositoryError:
             return r[m.Infra.GitBoolReport].ok(m.Infra.GitBoolReport(value=False))
@@ -201,11 +201,11 @@ class FlextInfraUtilitiesGitSemanticIdentityMixin(
         has_submodules = any(
             line.startswith(f"{_GITLINK_MODE} ") for line in staged_entries.splitlines()
         )
-        # Why (flext-2cafk / ai-hub-n1nh.5): git rev-parse --show-superproject-
+        # Why: git rev-parse --show-superproject-
         # working-tree already means "this working tree is a submodule".
         # Requiring .git to be a gitfile excluded absorbed/converted submodules
-        # whose .git is a real directory (cosmos-charts under cosmos-main), so
-        # is_submodule stayed False and ai-hub demoted them to unmanaged.
+        # whose .git is a real directory, so is_submodule stayed False and
+        # consumers demoted them to unmanaged.
         is_submodule = superproject is not None
         is_attached_submodule = (
             superproject is not None and working_tree.is_relative_to(superproject)

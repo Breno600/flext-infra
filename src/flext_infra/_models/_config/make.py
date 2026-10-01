@@ -362,7 +362,7 @@ class FlextInfraConfigModelsMake:
     class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
         """Declarative Actions-cache policy for the shared testmon database.
 
-        Implements the preserved #1001 delta (bead flext-j0u23): two-phase
+        Implements the preserved #1001 delta: two-phase
         generations with per-mode caps, a per-repository byte budget with a
         three-stage quota ladder, a save-ref allowlist (never save from PRs)
         and a cache-key namespace.
@@ -501,14 +501,14 @@ class FlextInfraConfigModelsMake:
     class MakeRuffSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Ruff CLI contract for generated Make verbs and quality gates.
 
-        Operator 2026-09-08: ruff is the style and autofix rule. Every
+        Ruff is the style and autofix rule. Every
         invocation uses preview. Never weaken ruff to keep a file; change the
-        code. Single-pass verb law (operator 2026-09-18): ``make fmt`` runs
+        code. Single-pass verb law: ``make fmt`` runs
         format only and ``make fix`` owns lint repair through the lint gate —
         there is deliberately no ``lint_apply`` key, because a lint pass
         inside fmt would repeat the lint gate's fix.
 
-        ``make fix`` never deletes information (flext-itpd1.5): the lint repair
+        ``make fix`` never deletes information: the lint repair
         applies Ruff's safe fixes only, so ``lint_fix`` rejects the unsafe-fix
         flag. Rules whose fixes delete code stay reported through the
         ``unfixable`` list rendered from ``tooling.yaml``.
@@ -582,7 +582,7 @@ class FlextInfraConfigModelsMake:
             FlextInfraConfigModelsMake.MakeWorkInProgressSpec,
             m.Field(description="WIP branch and draft PR gate predicate"),
         ]
-        # Why (operator law 2026-08-24): git-hook stages are OFF by default and
+        # Why: git-hook stages are OFF by default and
         # re-enabled case by case via these config gates. The workflow keeps
         # owning WHICH steps belong to each stage; the booleans only govern
         # whether the stage is generated and installed at all.
@@ -729,7 +729,7 @@ class FlextInfraConfigModelsMake:
         def _validate_verbs(self) -> Self:
             """Validate declared public verbs against workflow and contract.
 
-            Why there is no `"setup" in declared` rejection here (flext-lq86m):
+            Why there is no `"setup" in declared` rejection here:
             the message it carried -- "make setup cannot require the managed
             validation environment" -- is a statement about a verb's
             ENVIRONMENT DEPENDENCY, not about the name `setup`. Testing the
@@ -782,7 +782,7 @@ class FlextInfraConfigModelsMake:
             if len(standalone_gates) != len(set(standalone_gates)):
                 msg = "make standalone_check_gates must route each gate once"
                 raise ValueError(msg)
-            # Why (hq-36xk, flext-lq86m): the guard that lived here read
+            # Why: the guard that lived here read
             # `if "setup" in serialized` and protected `make setup` from being
             # placed in the serialized mutation set, so it could never require
             # the managed validation environment it is supposed to CREATE.

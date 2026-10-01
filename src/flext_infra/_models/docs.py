@@ -14,7 +14,7 @@ from .docs_collection import FlextInfraModelsDocsCollection
 from .docs_generation import FlextInfraModelsDocsGeneration
 
 
-# NOTE (multi-agent, flext-wkii.17.23 / agent: uv_overlay_owner): docs transport
+# Docs transport
 # retains the exact metadata/config models and declares only analysis deltas.
 class FlextInfraModelsDocs(
     FlextInfraModelsDocsGeneration, FlextInfraModelsDocsCollection

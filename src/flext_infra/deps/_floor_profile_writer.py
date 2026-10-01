@@ -1,4 +1,4 @@
-"""Runtime-derived dependency floors written back to the codegen SSOT (flext-gzfd2)."""
+"""Runtime-derived dependency floors written back to the codegen SSOT."""
 
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ class FlextInfraDepsFloorProfileWriter:
         ``root`` is the modernizer's own declared ``--repository-root``.
         A workspace declares its infrastructure member through its typed
         manifest; a standalone owner carries its own configuration. Neither
-        route consults the installed package location (flext-eles2).
+        route consults the installed package location.
 
         Returns a list of change descriptions for the deps report.
         """

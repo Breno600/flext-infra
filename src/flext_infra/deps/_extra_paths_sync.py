@@ -66,7 +66,7 @@ class FlextInfraExtraPathsSyncMixin:
             pyright_table["extraPaths"] = expected
             changes.append("synchronized pyright extraPaths")
         if mypy_table is not None:
-            # NOT the pyrefly search path any more (cosmos-45hiv, 2026-08-31).
+            # NOT the pyrefly search path any more.
             # mypy enumerates every search-path root as a package root, so a
             # root that re-spells an already-rooted module makes it report the
             # same file twice ("Source file found twice under different module
@@ -111,7 +111,7 @@ class FlextInfraExtraPathsSyncMixin:
         # Mypy resolves the same import graph as Pyrefly, so it needs the same
         # roots. pyright_extra_paths omits path dependencies, which left sibling
         # packages unresolvable and degraded every symbol they export to Any.
-        # It does NOT take pyrefly_search_paths any more (cosmos-45hiv): mypy
+        # It does NOT take pyrefly_search_paths any more: mypy
         # enumerates each root as a package root and aborts repo-wide when two
         # roots re-spell one file (source-file-found-twice). First-match
         # resolution is pyrefly-only.

@@ -52,7 +52,7 @@ class FlextInfraConstantsCodegenLazy:
     "Test-module filenames forbidden from installable package export maps."
     INIT_PY: ClassVar[str] = "__init__.py"
     "Standard Python package initializer filename."
-    # flext-wkii.17.26 (codex): cleanup is the only owner of retired init artifacts.
+    # Cleanup is the only owner of retired init artifacts.
     OBSOLETE_GENERATED_INIT_FILES: ClassVar[t.StrSequence] = ("__unit__.py",)
     "Generated initializer artifacts removed during every codegen pass."
     INIT_PYI: ClassVar[str] = "__init__.pyi"
@@ -78,7 +78,7 @@ class FlextInfraConstantsCodegenLazy:
     "Root import surfaces generated as private lazy plumbing, not public ABI."
     WRAPPER_NAMESPACE_DEPTH: ClassVar[int] = 2
     "Dotted depth of a namespace package under a governed wrapper surface."
-    # flext-pulj (codex): pytest must register fixture plugins before importing
+    # Pytest must register fixture plugins before importing
     # them, so their private package initializer is always side-effect free.
     # Real cycle exceptions are the bootstrap packages imported while
     # ``flext_core.lazy`` initializes; importing them with a lazy facade would
@@ -159,7 +159,7 @@ class FlextInfraConstantsCodegenLazy:
         "lazy",
         "normalize_lazy_imports",
     })
-    # flext-pulj (codex): these remain direct inline lazy imports without
+    # These remain direct inline lazy imports without
     # widening the explicit wildcard contract or requiring root sidecars.
     "Public-module symbols withheld from generated root-facade __all__."
     PUBLIC_ROOT_ALIAS_ORDER: ClassVar[t.StrSequence] = (

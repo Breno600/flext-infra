@@ -67,7 +67,7 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 *workspace.external_dependency_paths,
             )
         )
-        # Why (flext-6itas.4): a scaffold's declared roots are the complete
+        # Why: a scaffold's declared roots are the complete
         # future topology only for a subproject/standalone target; a workspace
         # root aggregates subproject trees it has not declared here.
         tooling_result = modernizer.resolve_tooling_context(

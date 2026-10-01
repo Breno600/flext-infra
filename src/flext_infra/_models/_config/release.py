@@ -97,7 +97,7 @@ class FlextInfraConfigModelsRelease:
     class ReleasePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
         """The release protocol's declared data: who publishes, what bumps, where.
 
-        Why (aihub-ioijy.9): `ReleaseOrchestrator._build_targets` hardcoded
+        Why: `ReleaseOrchestrator._build_targets` hardcoded
         `project.name.startswith("flext-")`, so any consumer of this release
         engine whose distribution is not named `flext-*` resolved zero targets
         and died with "release build selected no publishable projects".

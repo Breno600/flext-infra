@@ -114,7 +114,7 @@ class FlextInfraModelsDepsToolConfig(
     class PytestConfig(m.ArbitraryTypesModel):
         """Pytest baseline settings loaded from YAML."""
 
-        # flext-j47u (codex): every rendered pytest value is validated config data.
+        # Every rendered pytest value is validated config data.
         case_timeout_seconds: Annotated[
             int,
             m.Field(
@@ -292,7 +292,7 @@ class FlextInfraModelsDepsToolConfig(
                 description="Canonical pytest test module patterns.",
             ),
         ]
-        # flext-wkii.17 (codex): collection roots are validated config, not local state.
+        # Collection roots are validated config, not local state.
         test_paths: Annotated[
             t.StrTuple,
             m.Field(
@@ -532,7 +532,7 @@ class FlextInfraModelsDepsToolConfig(
     class VultureConfig(m.ArbitraryTypesModel):
         """Vulture production-reachability policy loaded from YAML."""
 
-        # NOTE (multi-agent, flext-j47u): keep dead-code scope fully config-owned.
+        # Keep dead-code scope fully config-owned.
         exclude: Annotated[
             t.StrTuple,
             m.Field(
@@ -821,7 +821,7 @@ class FlextInfraModelsDepsToolConfig(
             ),
         ] = ()
 
-    # flext-j47u (codex): explicit runtime-only values keep the Jinja structure full.
+    # Explicit runtime-only values keep the Jinja structure full.
     class ToolingRuntimeContext(m.ArbitraryTypesModel):
         """Resolved project/workspace values consumed by the complete template."""
 

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class FlextInfraCodegenGenerationPathsMixin:
     """Path and root-publication helper methods."""
 
-    # flext-i6nq.10: Only canonical path/publication decisions remain here.
+    # Only canonical path/publication decisions remain here.
     @staticmethod
     def _is_module_or_package_export(attr_name: str) -> bool:
         """Return whether an entry exports a module or package name."""

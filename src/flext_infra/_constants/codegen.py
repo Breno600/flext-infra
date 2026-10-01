@@ -65,8 +65,8 @@ class FlextInfraConstantsCodegen(
     """Bounded polite wait for a held lease before failing loud.
 
     A legitimate fleet ``make gen`` holds the lease for minutes; an immediate
-    non-blocking refusal turned ordinary multi-agent traffic into a spurious
-    ``JournalLeaseTimeoutError`` (flext-c2kp3). The wait is bounded so a truly
+    non-blocking refusal turned ordinary concurrent traffic into a spurious
+    ``JournalLeaseTimeoutError``. The wait is bounded so a truly
     wedged holder still fails loud instead of hanging forever.
     """
 
@@ -93,9 +93,9 @@ class FlextInfraConstantsCodegen(
         ("utilities.py", "Utilities", "FlextTestsUtilities", "Test utilities"),
     )
     "Base module definitions for tests/: (filename, class_suffix, base_class, docstring)."
-    # flext-wkii.14 (agent: codegen) — canonical root config/settings pair: a
+    # Canonical root config/settings pair: a
     # private `_config.py`/`_settings.py` module exporting the singleton.
-    # Consumed by the scaffold generator (flext-wkii.10).
+    # Consumed by the scaffold generator.
     RUNTIME_MODULES: ClassVar[t.VariadicTuple[t.Quad[str, str, str, str]]] = (
         ("_config.py", "Config", "FlextConfig", "Runtime config"),
         ("_settings.py", "Settings", "FlextSettings", "Runtime settings"),

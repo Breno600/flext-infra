@@ -53,7 +53,7 @@ class FlextInfraUtilitiesRopeAnalysisExports:
         """Recurse the rope scope tree, appending one entry per child scope."""
         for child in scope.get_scopes():
             start = child.get_start()
-            # NOTE (multi-agent, flext-f8vk / kimi): RopeScope.get_start() is
+            # RopeScope.get_start() is
             # declared int in p.Infra; the old isinstance guard was dead code.
             definitions.append(
                 m.Infra.ScopeDefinition(

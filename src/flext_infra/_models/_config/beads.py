@@ -95,8 +95,8 @@ class FlextInfraConfigModelsBeads:
         read back from the checkout's own ``.beads/identity.toml`` so a
         regeneration preserves it. Omitting it made every ``make gen`` strip the
         key, and Beads then minted a fresh identity on next access — observed in
-        rig ``gmn`` (commit 3e7ba1e), where the ledger identity changed from
-        2b1a0582-… to e9a551fc-…. ``None`` means the checkout has no ledger
+        a consumer rig, where the ledger identity changed on regeneration.
+        ``None`` means the checkout has no ledger
         identity yet, and Beads mints the first one.
         """
 

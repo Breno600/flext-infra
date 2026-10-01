@@ -64,7 +64,7 @@ class FlextInfraUtilitiesRopeStructure:
             FlextInfraUtilitiesRopeStructure._push_encloser(
                 enclosers=enclosers, category=category, indent=indent, text=text
             )
-            # flext-j47u (codex): all detectors consume this single guard fact.
+            # All detectors consume this single guard fact.
             if (
                 category == c.Infra.StatementCategory.IF_GUARD
                 and FlextInfraUtilitiesRopeStructure._is_type_checking_guard(text)

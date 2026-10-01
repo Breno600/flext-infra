@@ -179,7 +179,7 @@ class FlextInfraUtilitiesRopeAnalysisWorkspace:
                 path, resolved_root, governed_roots=governed_roots
             )
         }
-        # flext-pulj (codex): Rope's source roots omit tests/examples/scripts;
+        # Rope's source roots omit tests/examples/scripts;
         # index those declared wrapper surfaces so explicitly targeted codegen
         # can update their generated initializers without textual fallbacks.
         wrapper_paths = {

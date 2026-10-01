@@ -83,8 +83,7 @@ class FlextInfraConfigModelsRender:
                     "whole manifest, which silently disables EVERY ecosystem in "
                     "it, security updates included. Derived from the repository "
                     "on disk rather than declared, because the directory is the "
-                    "fact and a second declaration could disagree with it "
-                    "(hq-36xk)"
+                    "fact and a second declaration could disagree with it"
                 ),
             ),
         ]

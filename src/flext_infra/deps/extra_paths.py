@@ -8,7 +8,7 @@ distribution in the environment the project runs against, never through a
 filesystem hop out of the project root: a generated surface that encodes
 ``../<sibling>/src`` describes one host layout, so it is wrong in any checkout
 whose siblings sit elsewhere and it makes one generator emit different content
-per clone (flext-c6di).
+per clone.
 """
 
 from __future__ import annotations
@@ -150,17 +150,17 @@ class FlextInfraExtraPathsManager(
         Only roots inside ``project_dir`` are emitted. Path dependencies and uv
         workspace projects are importable through their installed distributions,
         so they need no search-path entry and must never be described by a path
-        that leaves the project (flext-c6di).
+        that leaves the project.
         """
         rules = config.Infra.tooling.tools.pyrefly.path_rules
         source_root = rules.source_dir
-        # Why (cosmos-45hiv, 2026-08-31): the project root closes the chain for
+        # Why: the project root closes the chain for
         # cross-tree imports. `scripts/` is a checked env dir and owns
         # `scripts/__init__.py`, so `tests/` and `scripts/` import its modules
         # as `scripts.*`; resolving them needs the repo root on the search
         # path. It must come LAST: pyrefly resolves the FIRST matching entry,
         # so `source_dir` ahead of "." keeps `src.x` from also resolving as
-        # `x` (the ai-hub-qwoc duplicate-class failure below). mypy cannot
+        # `x` (the duplicate-class failure). mypy cannot
         # share this value — it enumerates every search-path root and reports
         # the same file under two module names as source-file-found-twice —
         # which is why the two tools now derive separately.
@@ -215,7 +215,7 @@ class FlextInfraExtraPathsManager(
     ) -> t.StrSequence:
         """Build Pyrefly includes from configured productive directories."""
         rules = config.Infra.tooling.tools.pyrefly.path_rules
-        # flext-j47u (codex): never reread an on-disk Pyright table while its
+        # Never reread an on-disk Pyright table while its
         # in-memory payload is being conformed; include only real production roots.
         discovered_python_roots = set(
             u.Infra.discover_python_dirs(
