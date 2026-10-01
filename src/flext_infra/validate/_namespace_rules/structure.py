@@ -169,9 +169,8 @@ class FlextInfraNamespaceRulesStructure(FlextInfraNamespaceRulesBase):
             for node in cls.walk(tree)
             if cls.kind(node) in c.Infra.NAMESPACE_LOGICAL_STATEMENT_KINDS
         )
-        # Why (operator 2026-09-07, codegen.yaml loc_cap): the per-module
-        # ceiling is config-owned SSOT — the superseded hardcoded 200 constant
-        # is retired, so this rule and the loc-cap gate share one source.
+        # The per-module ceiling is the gated config key loc_cap.max_lines;
+        # this rule and the loc-cap gate share that one source.
         cap = config.Infra.codegen.loc_cap.max_lines
         if logical > cap:
             messages.append(

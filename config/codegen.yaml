@@ -13,8 +13,8 @@ Infra:
     # Fresh import probes are independent subprocesses within one validation.
     fresh_import_workers: 3
 
-    # Per-module scc code-LOC ceiling. Operator instruction 2026-09-07:
-    # the former 1000-LOC allowance stands (supersedes the 200 constant).
+    # Per-module scc code-LOC ceiling, enforced by the loc-cap gate. This key
+    # is its only declaration; guidance references the key, never its value.
     loc_cap:
       max_lines: 1000
 
