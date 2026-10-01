@@ -308,8 +308,13 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
                 ).plan(request),
             )
             # Materialize the complete activation contract through its guarded
-            # publisher, including Beads metadata consumed by the generated .envrc.
-            paths = {project_root / c.Infra.MAKEFILE_FILENAME, project_root / ".envrc"}
+            # publisher, including Beads metadata consumed by the generated .envrc
+            # and the Mise lock publisher the generated upg recipe runs.
+            paths = {
+                project_root / c.Infra.MAKEFILE_FILENAME,
+                project_root / ".envrc",
+                project_root / "bin" / "mise-lock-transaction.py",
+            }
             if bootstrap:
                 paths.update(
                     project_root / name
