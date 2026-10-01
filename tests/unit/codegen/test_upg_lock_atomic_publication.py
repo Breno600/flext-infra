@@ -72,14 +72,7 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 # and require that one of its threads waits on the FIFO.
                 observed = tm.ok(
                     u.Cli.run(
-                        [
-                            "ps",
-                            "--sid",
-                            str(child.pid),
-                            "-L",
-                            "-o",
-                            "pid=,comm=,wchan:64=",
-                        ],
+                        ["ps", "--sid", str(child.pid), "-L", "-o", "comm=,wchan:64="],
                         timeout=self.INTERRUPT_AFTER_SECONDS,
                     )
                 )

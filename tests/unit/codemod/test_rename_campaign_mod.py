@@ -9,8 +9,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraConfig, c, m
-from flext_infra.codemod import FlextInfraApplyRenames
+from flext_infra import FlextInfraConfig, c, infra, m
 from tests import u
 
 
@@ -62,6 +61,8 @@ class TestsRenameCampaignMod:
             )
         )
         tm.that(u.Cli.process_succeeded(result.outcome), eq=apply, msg=result.stderr)
+        if apply:
+            tm.that(result.stdout, has="published file(s)")
         tm.that(
             guide.read_text(),
             eq="A campaign_renamed_token paragraph.\n"
@@ -106,13 +107,13 @@ class TestsRenameCampaignMod:
                 python_documentation=campaign.python_documentation,
                 exclude_globs=campaign.exclude_globs,
             )
-            tm.ok(FlextInfraApplyRenames.run(params))
+            tm.ok(infra.apply_renames(params))
             for old, new in pairs:
                 tm.that(guide.read_text(), has=f"- {new}\n")
                 tm.that(guide.read_text(), lacks=f"- {old}\n")
             tm.that(guide.read_text(), has="Surrounding prose remains.\n")
             first = guide.read_bytes()
-            second = tm.ok(FlextInfraApplyRenames.run(params))
+            second = tm.ok(infra.apply_renames(params))
             tm.that(second.files_changed, eq=0)
             tm.that(second.occurrences, eq=0)
             tm.that(guide.read_bytes(), eq=first)

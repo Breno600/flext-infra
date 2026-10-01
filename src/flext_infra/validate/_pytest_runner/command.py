@@ -65,18 +65,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         keep at most one item in flight, so their reserve is smaller.
         """
         pytest = config.Infra.tooling.tools.pytest
-        if self.slow_phase:
-            reserve = (
-                pytest.slow_serial_suite_stop_reserve_seconds
-                if serial
-                else pytest.slow_suite_stop_reserve_seconds
-            )
-        else:
-            reserve = (
-                pytest.serial_suite_stop_reserve_seconds
-                if serial
-                else pytest.suite_stop_reserve_seconds
-            )
+        reserve = (
+            pytest.serial_suite_stop_reserve_seconds
+            if serial
+            else pytest.suite_stop_reserve_seconds
+        )
         return self.started_at_monotonic + pytest.run_timeout_seconds - reserve
 
     def ci_excluded_markers(

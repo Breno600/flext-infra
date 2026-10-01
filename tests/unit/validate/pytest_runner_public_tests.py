@@ -9,12 +9,8 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, t, u
-from tests.unit.validate.pytest_runner_support import (
-    declare_parallel_project,
-    runner_for,
-    summary,
-)
+from flext_infra import c, config, m, u
+from tests.unit.validate.pytest_runner_support import runner_for, summary
 
 
 class TestsFlextInfraPytestRunner:
@@ -24,12 +20,7 @@ class TestsFlextInfraPytestRunner:
     def test_marker_selection_is_shared_by_collection_execution_and_coverage(
         self, cached_runner_project: Path, *, ci_context: bool
     ) -> None:
-        """Selection, inventory and execution share one budgeted expression.
-
-        Premise (rules/workflow/gate-budget.md): slow cases run in their own
-        phase, so the budgeted phase always deselects the slow marker; the
-        coverage run keeps CI-excluded markers selectable outside CI.
-        """
+        """CI/pre-commit omit slow cases; local/pre-push keep them selectable."""
         runner = runner_for(cached_runner_project, ci_context=ci_context)
         report = (
             cached_runner_project
@@ -250,7 +241,8 @@ class TestsFlextInfraPytestRunner:
         tm.that(outcome.timed_out, eq=False)
         tm.that(outcome.forwarded_signal, none=True)
         tm.that(
-            summary(reports_root), has=["failed=1", f"exit={outcome.raw_return_code}"]
+            summary(reports_root),
+            has=["failed=1", f"exit={pytest.ExitCode.INTERRUPTED.value}"],
         )
         events = tm.ok(u.Cli.files_read_text(report_path.parent / "events.jsonl"))
         tm.that(events, has="first failure evidence", lacks="second failure evidence")

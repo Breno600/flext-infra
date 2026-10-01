@@ -330,6 +330,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             return r[m.Infra.ProjectRenderContext].from_failure(version_result)
         return r[m.Infra.ProjectRenderContext].ok(
             m.Infra.ProjectRenderContext(
+                docs_audit=workspace.docs_audit,
                 **make_context.value.model_dump(
                     by_alias=True,
                     exclude={"mise_bootstrap", "ruff_per_file_ignores"},

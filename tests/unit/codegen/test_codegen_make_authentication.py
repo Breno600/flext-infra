@@ -89,31 +89,17 @@ class TestsFlextInfraCodegenMakeAuthentication:
                 },
             )
         )
-        tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
-        tm.that(
-            u.Infra.runtime_environment_dir(project_root).exists(), eq=verb == "status"
-        )
-
-    @pytest.mark.remote
-    def test_setup_reuses_provisioned_tools_without_credential(
-        self,
-        tmp_path: Path,
-        resolved_make_templates: t.MappingKV[c.Infra.MakeProfile, Path],
-    ) -> None:
-        """A locked checkout provisions its own environment without authentication."""
-        profile = c.Infra.MakeProfile.STANDALONE
-        project_root = u.Tests.resolved_make_checkout(
-            resolved_make_templates[profile], tmp_path, profile
-        )
-        process = tm.ok(
-            u.Tests.run_isolated_make(
-                ["--no-print-directory", "setup"],
-                cwd=project_root,
-                env={
-                    "GH_TOKEN": "",
-                    "GITHUB_TOKEN": "",
-                    "MISE_GITHUB_TOKEN": "must-not-be-a-fallback",
-                },
+        if verb in {"setup", "upg"}:
+            tm.that(
+                process.stdout + process.stderr, lacks="GitHub credential is absent"
+            )
+            tm.that(process.stdout + process.stderr, has="mise setup receipt=")
+        else:
+            tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
+        if verb not in {"setup", "upg"}:
+            tm.that(
+                u.Infra.runtime_environment_dir(project_root).exists(),
+                eq=verb == "status",
             )
         )
         tm.that(

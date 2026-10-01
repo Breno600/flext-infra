@@ -86,7 +86,7 @@ that explicit contract, avoiding host-interpreter marker evaluation.
 An Infra integration lane can bootstrap declared candidate worktrees with
 `make bootstrap-candidate`. Its handwritten `config/workspace.yaml` lists
 `candidate_bootstrap_targets`, each with a relative `path` and a `what` value of
-`makefile` or `docs-config`.
+`makefile`, `docs-config`, or `pyproject`.
 The verb uses the current branch-matched Infra generator and validates every target
 as an exact Git worktree root. It plans all declared recovery projections before
 starting one recoverable, multi-root publication, then verifies every target before

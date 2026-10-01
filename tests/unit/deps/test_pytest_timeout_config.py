@@ -142,7 +142,8 @@ class TestsFlextInfraPytestTimeoutConfig:
         payload["run-timeout-seconds"] = policy.suite_stop_reserve_seconds
 
         with pytest.raises(
-            c.ValidationError, match="pytest run timeout must exceed the suite stop reserve"
+            c.ValidationError,
+            match="pytest run timeout must exceed the suite stop reserve",
         ):
             type(policy).model_validate(payload)
 

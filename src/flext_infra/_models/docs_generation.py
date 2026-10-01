@@ -32,7 +32,7 @@ class FlextInfraModelsDocsGeneration:
         package_name: Annotated[
             str, m.Field(description="Primary package name for scope")
         ] = ""
-        # Why (docs_policy_list root-cause fix): a member-project scope inside
+        # Why (docs_audit_policy root-cause fix): a member-project scope inside
         # a larger declared workspace does not own the physical repository
         # (its docs policy file lives at the workspace root, not under
         # `path`). This override is the declared physical repository root for

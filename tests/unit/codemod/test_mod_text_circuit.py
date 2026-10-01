@@ -9,7 +9,7 @@ import pytest
 from flext_tests import tm
 
 from flext_core import r
-from flext_infra import c, m, p, u
+from flext_infra import c, config, m, p, u
 from flext_infra.codegen import (
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,
@@ -207,6 +207,36 @@ class TestsFlextInfraModTextGateEngine:
 
         tm.that(first.read_bytes(), eq=original)
         tm.that(second.read_bytes(), eq=b"\xff")
+
+    def test_invalid_python_replacement_rejects_entire_batch(
+        self, mod_workspace: Path
+    ) -> None:
+        """A malformed multiline rewrite never publishes any source file."""
+        first, second = self._publication_inputs(mod_workspace)
+        original_first, original_second = first.read_bytes(), second.read_bytes()
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                (
+                    "rules:\n"
+                    "  - id: valid-first\n"
+                    "    include: ['src/mod_workspace/first.py']\n"
+                    "    find: 'before'\n"
+                    "    replace: 'after'\n"
+                    "  - id: malformed-second\n"
+                    "    include: ['src/mod_workspace/second.py']\n"
+                    "    find: 'value = \"before\"'\n"
+                    "    replace: |2-\n"
+                    "        value = (\n"
+                ),
+            )
+        )
+
+        with pytest.raises(SyntaxError):
+            FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
+
+        tm.that(first.read_bytes(), eq=original_first)
+        tm.that(second.read_bytes(), eq=original_second)
 
     def test_linked_destination_identity_never_publishes_the_batch(
         self, mod_workspace: Path

@@ -222,15 +222,17 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         if surface not in {
             c.Infra.CodegenConformSurface.MAKEFILE,
             c.Infra.CodegenConformSurface.DOCS_CONFIG,
+            c.Infra.CodegenConformSurface.PYPROJECT,
         }:
             return r[m.Infra.CodegenResult].fail(
                 "partial codegen apply is prohibited; use the complete all surface"
             )
-        destination = (
-            Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME
-            if surface is c.Infra.CodegenConformSurface.DOCS_CONFIG
-            else Path(c.Infra.MAKEFILE_FILENAME)
-        )
+        destinations = self.surface_contract(surface).destinations
+        if destinations is None or len(destinations) != 1:
+            return r[m.Infra.CodegenResult].fail(
+                f"bootstrap requires one destination for {surface}"
+            )
+        destination = Path(next(iter(destinations)))
         expected_path = request.root.expanduser().resolve() / destination
         if (
             any(file.path != expected_path for file in plan.files)
