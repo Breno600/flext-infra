@@ -190,7 +190,7 @@
 	mise_receipt runtime-version "$$pinned_mise"; \
 	runtime_release="$$receipt_release"; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config "$$pinned_mise" latest {{ bootstrap.release_selector }}; \
+		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config env MISE_CACHE_DIR="$$scratch/resolve-cache" MISE_FETCH_REMOTE_VERSIONS_CACHE=0s "$$pinned_mise" latest {{ bootstrap.release_selector }}; \
 		resolved_release=$$(cat "$$scratch/resolve.stdout"); \
 		if ! printf '%s\n' "$$resolved_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
 			printf 'ERROR: mise latest {{ bootstrap.release_selector }} returned an invalid release: %s\n' "$$resolved_release" >&2; exit 2; \

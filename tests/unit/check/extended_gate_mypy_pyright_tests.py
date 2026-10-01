@@ -152,7 +152,9 @@ class TestsFlextInfraTypeGates:
         result = FlextInfraMypyGate(project).check(project, checker_context)
 
         tm.that(result.result.passed, eq=False)
-        tm.that(tuple(issue.code for issue in result.issues), has=c.Infra.ToolOutcome.ERROR)
+        tm.that(
+            tuple(issue.code for issue in result.issues), has=c.Infra.ToolOutcome.ERROR
+        )
         tm.that(
             "\n".join(issue.message for issue in result.issues),
             has="native-plugin-output",

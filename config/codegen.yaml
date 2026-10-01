@@ -321,9 +321,6 @@ Infra:
         discovery_scope: none
 
     make:
-      # Physical workspace environments live beside the checkout so a linked
-      # worktree shares one project-keyed environment instead of an in-tree
-      # duplicate (runtime_environment_dir derives the same path).
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.

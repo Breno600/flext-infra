@@ -1,8 +1,4 @@
-"""Fail-closed qlty code-smell quality gate.
-
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-"""
+"""Fail-closed qlty code-smell quality gate."""
 
 from __future__ import annotations
 
@@ -13,7 +9,6 @@ from typing import TYPE_CHECKING, ClassVar, override
 from flext_core import r
 from flext_infra import c, m, u
 from flext_infra.gates.base_gate import FlextInfraGate
-from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -38,15 +33,8 @@ class FlextInfraSmellsGate(FlextInfraGate):
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Filter one scan to the blocking issues owned by ``project``.
 
-        The process outcome decides what an unusable payload means: a
-        successful scan that emits no SARIF payload is a zero-findings pass,
-        while a scanner that crashed or could not run at all is a blocking
-        issue carrying its own error, never a clean pass. Non-blank output
-        that fails to parse stays a loud parse failure.
-
-        Returns:
-            The resulting ``t.SequenceOf[m.Infra.Issue]``.
-
+        Empty or malformed SARIF is a blocking scan failure, regardless of the
+        process status. A valid SARIF document with zero results is a pass.
         """
         prefix = (
             ""
@@ -57,11 +45,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
         issues: t.VariadicTuple[m.Infra.Issue]
         if parsed.success:
             issues = parsed.value
-        elif not scan.stdout.strip():
-            issues = ()
+        elif not scan.stdout.strip() and not u.Cli.process_succeeded(scan.outcome):
+            issues = (self._tool_failure_issue(scan),)
         else:
             issues = (self._failure_issue(parsed.error),)
-        issues = self._drop_generated_projections(issues, project_dir)
         if not issues and not u.Cli.process_succeeded(scan.outcome):
             return (self._tool_failure_issue(scan),)
         return issues
@@ -72,79 +59,17 @@ class FlextInfraSmellsGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
-        """One qlty scan of ``project_dir``'s check directories.
-
-        Returns:
-            The resulting ``m.Infra.GateExecution``.
-
-        """
+        """One qlty scan of ``project_dir``'s check directories."""
         _ = ctx
         started = time.monotonic()
         scan = self._scan(project_dir)
-        issues = self._owned_issues(scan, project_dir)
+        issues = self._scanned_issues(scan, project_dir)
         return self._build_check_gate_execution(
             project_dir,
             passed=not issues,
             issues=issues,
             raw_output=self._raw_output(scan),
             started=started,
-        )
-
-    def _owned_issues(
-        self,
-        scan: p.Cli.CommandOutput,
-        project_dir: Path,
-    ) -> t.VariadicTuple[m.Infra.Issue]:
-        """Every smell this gate owns: the qlty scan and the census families.
-
-        The single composition behind both entry points, so ``check`` and the
-        ``check_files`` path can never grade different finding sets.
-
-        Returns:
-            The resulting ``t.VariadicTuple[m.Infra.Issue]``.
-
-        """
-        return (
-            *self._scanned_issues(scan, project_dir),
-            *self._census_issues(project_dir),
-        )
-
-    def _census_issues(self, project_dir: Path) -> t.SequenceOf[m.Infra.Issue]:
-        """Runtime-census findings of the smell families this gate owns.
-
-        Every smell family, qlty or runtime census, runs through
-        ``make smells`` and never ``make check``. A census that cannot run
-        is a blocking issue, never a clean pass.
-
-        Returns:
-            The resulting ``t.SequenceOf[m.Infra.Issue]``.
-
-        """
-        validator = FlextInfraRuntimeCensusValidator.for_project(
-            project_dir,
-            census_gate=self.gate_id,
-        )
-        if validator.failure:
-            messages: t.StrSequence = (
-                validator.error or "runtime census scoping failed",
-            )
-        else:
-            report = validator.value.build_report()
-            messages = (
-                report.value.violations
-                if report.success
-                else (report.error or "runtime census failed",)
-            )
-        return tuple(
-            m.Infra.Issue(
-                file=str(project_dir),
-                line=1,
-                column=1,
-                code=self.gate_id,
-                message=message,
-                severity=str(c.Infra.GateSeverity.ERROR.value),
-            )
-            for message in messages
         )
 
     @override
@@ -154,15 +79,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
         ctx: m.Infra.GateContext,
         check_dirs: t.StrSequence,
     ) -> t.StrSequence:
-        """The project's scan command (check() names its check dirs itself).
-
-        Returns:
-            The resulting ``t.StrSequence``.
-
-        Raises:
-            FileNotFoundError: If ``binary is None``.
-
-        """
+        """The project's scan command (check() names its check dirs itself)."""
         _ = ctx, check_dirs
         binary = self._resolve_binary()
         if binary is None:
@@ -176,26 +93,13 @@ class FlextInfraSmellsGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse SARIF stdout into per-project issues (check_files path).
-
-        Returns:
-            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
-
-        """
+        """Parse SARIF stdout into per-project issues (check_files path)."""
         _ = ctx
-        issues = self._owned_issues(result, project_dir)
+        issues = self._scanned_issues(result, project_dir)
         return not issues, issues
 
     def _scan_command(self, binary: str, project_dir: Path) -> t.StrSequence:
-        """Name the project's paths explicitly; qlty scans them in full.
-
-        Returns:
-            The resulting ``t.StrSequence``.
-
-        Raises:
-            ValueError: If smells.
-
-        """
+        """Name the project's paths explicitly; qlty scans them in full."""
         paths = tuple(
             (project_dir / directory).relative_to(self._repository_root).as_posix()
             for directory in self._existing_check_dirs(project_dir)
@@ -207,12 +111,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @staticmethod
     def _unrunnable_scan_output(stderr: str) -> p.Cli.CommandOutput:
-        """Synthesize the scan result for a scanner that cannot run at all.
-
-        Returns:
-            The resulting ``p.Cli.CommandOutput``.
-
-        """
+        """Synthesize the scan result for a scanner that cannot run at all."""
         return m.Cli.CommandOutput(
             stdout="",
             stderr=stderr,
@@ -234,10 +133,6 @@ class FlextInfraSmellsGate(FlextInfraGate):
         unexplained `wip` commit. The generator owns the file, so its absence
         is a generation gap reported through the gate result with the exact
         path, never papered over mid-scan and never read as a clean pass.
-
-        Returns:
-            The resulting ``p.Cli.CommandOutput``.
-
         """
         binary = self._resolve_binary()
         if binary is None:
@@ -261,12 +156,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @staticmethod
     def _failure_issue(message: str | None) -> m.Infra.Issue:
-        """Represent malformed or absent scanner output as a blocking issue.
-
-        Returns:
-            The resulting ``m.Infra.Issue``.
-
-        """
+        """Represent malformed or absent scanner output as a blocking issue."""
         return m.Infra.Issue(
             file=c.PYPROJECT_FILENAME,
             line=1,
@@ -275,33 +165,6 @@ class FlextInfraSmellsGate(FlextInfraGate):
             message=message or "qlty returned no parseable SARIF output",
             severity=str(c.Infra.GateSeverity.ERROR.value),
         )
-
-    def _drop_generated_projections(
-        self,
-        issues: t.VariadicTuple[m.Infra.Issue],
-        project_dir: Path,
-    ) -> t.VariadicTuple[m.Infra.Issue]:
-        """Drop findings in generated projections; their owner is the generator.
-
-        A file whose first line carries the canonical AUTO-GENERATED header is a
-        projection of one codegen source, so duplication between projections is
-        by construction and the smell gate reports only hand-written source.
-        ``Issue.file`` is project-relative while ``qlty`` URIs are
-        workspace-relative, so the project directory is joined to the workspace
-        root before reading the header.
-
-        Returns:
-            The resulting ``t.VariadicTuple[m.Infra.Issue]``.
-
-        """
-        visible: list[m.Infra.Issue] = []
-        for issue in issues:
-            path = project_dir / issue.file
-            with path.open("r", encoding=c.Cli.ENCODING_DEFAULT) as handle:
-                first_line = handle.readline()
-            if c.Infra.AUTOGEN_HEADER not in first_line:
-                visible.append(issue)
-        return tuple(visible)
 
     @classmethod
     def _issues_from_sarif(
@@ -313,10 +176,6 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
         Pure function over a literal qlty SARIF payload (unit-testable, no
         subprocess) — same strategy as ``loc_cap._files_over_cap``.
-
-        Returns:
-            The resulting ``p.Result[t.VariadicTuple[m.Infra.Issue]]``.
-
         """
         if not sarif_json.strip():
             return r[tuple[m.Infra.Issue, ...]].fail("qlty returned empty SARIF output")
@@ -335,12 +194,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @classmethod
     def _issue_from_result(cls, result: t.JsonMapping, prefix: str) -> m.Infra.Issue:
-        """Map one SARIF result to an Issue enriched with the FLEXT fix text.
-
-        Returns:
-            The resulting ``m.Infra.Issue``.
-
-        """
+        """Map one SARIF result to an Issue enriched with the FLEXT fix text."""
         rule_id = u.Cli.json_pick_str(result, "ruleId")
         code = rule_id.removeprefix(c.Infra.SMELLS_RULE_PREFIX)
         physical = u.Cli.json_deep_mapping(
@@ -362,12 +216,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @classmethod
     def _result_uri(cls, result: t.JsonMapping) -> str:
-        """Workspace-relative URI of the finding's first location.
-
-        Returns:
-            The resulting ``str``.
-
-        """
+        """Workspace-relative URI of the finding's first location."""
         uri: str = u.Cli.json_pick_str(
             u.Cli.json_deep_mapping(
                 cls._first_location(result),
@@ -380,12 +229,7 @@ class FlextInfraSmellsGate(FlextInfraGate):
 
     @staticmethod
     def _first_location(result: t.JsonMapping) -> t.JsonMapping:
-        """First SARIF location mapping (empty mapping when absent).
-
-        Returns:
-            The resulting ``t.JsonMapping``.
-
-        """
+        """First SARIF location mapping (empty mapping when absent)."""
         locations = u.Cli.json_deep_mapping_list(result, "locations")
         return locations[0] if locations else {}
 
@@ -396,10 +240,6 @@ class FlextInfraSmellsGate(FlextInfraGate):
         The SARIF text already states the concrete problem (name and count);
         the core problem text is a census template whose placeholders qlty
         does not supply, so only the fix is appended.
-
-        Returns:
-            The resulting ``str``.
-
         """
         tag = c.Infra.SMELLS_RULE_TAGS.get(code, "")
         text = c.ENFORCEMENT_RULES_TEXT.get(tag) if tag else None

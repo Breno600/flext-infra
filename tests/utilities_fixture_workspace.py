@@ -386,6 +386,7 @@ class TestsFlextInfraUtilitiesWorkspaceFixtureMixin:
         (project / "pyproject.toml").write_text(
             (
                 f"[project]\nname='{name}'\nversion='0.1.0'\n"
+                'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                 "dependencies=['flext-core>=0.1.0']\n"
             ),
             encoding="utf-8",

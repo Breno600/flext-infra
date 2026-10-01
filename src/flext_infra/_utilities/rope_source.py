@@ -165,6 +165,49 @@ class FlextInfraUtilitiesRopeSource:
         return True
 
     @staticmethod
+    def move_statements_to_module_end(
+        file_path: Path,
+        statement_lines: t.SequenceOf[t.IntPair],
+    ) -> bool:
+        """Move top-level statements after the module's last statement.
+
+        ``statement_lines`` holds the 1-based inclusive line span of each
+        top-level statement a rule found. The statements keep their text and
+        relative order and close the module, separated from what precedes them
+        by the blank lines PEP 8 asks for: two after a class or function, one
+        otherwise. A result that no longer parses raises: the move is never
+        half-applied.
+
+        Returns:
+            The resulting ``bool``.
+
+        """
+        if not statement_lines:
+            return False
+        source = file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        lines = source.splitlines(keepends=True)
+        drop = {
+            index for start, end in statement_lines for index in range(start, end + 1)
+        }
+        moved = "".join(
+            "".join(lines[start - 1 : end]).rstrip() + "\n"
+            for start, end in sorted(statement_lines)
+        )
+        kept = "".join(
+            line for index, line in enumerate(lines, start=1) if index not in drop
+        ).rstrip()
+        body = ast.parse(kept, filename=str(file_path)).body
+        closes_definition = bool(body) and isinstance(
+            body[-1],
+            ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+        )
+        separator = "\n\n\n" if closes_definition else "\n\n"
+        updated = f"{kept}{separator}{moved}" if kept else moved
+        ast.parse(updated, filename=str(file_path))
+        file_path.write_text(updated, encoding=c.Cli.ENCODING_DEFAULT)
+        return True
+
+    @staticmethod
     def rewrite_source_at_offsets(
         rope_project: t.Infra.RopeProject,
         resource: t.Infra.RopeResource,

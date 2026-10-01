@@ -44,7 +44,6 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
         started = time.monotonic()
         validator = FlextInfraRuntimeCensusValidator.for_project(
             project_dir,
-            census_gate=self.gate_id,
         )
         if validator.failure:
             return self._build_project_error_gate_result(
