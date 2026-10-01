@@ -12,6 +12,7 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import ast
 import functools
 import re
 from bisect import bisect_right
@@ -28,6 +29,28 @@ from ..codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransacti
 
 class FlextInfraModTextGateEngine:
     """Scan, apply, and prove the declarative sed-by-list rule cascade."""
+
+    @classmethod
+    def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
+        """Replay only text rules through their authenticated transaction."""
+        pending = cls.scan(root, fix=False, validate_receipts=True)
+        if pending.failure:
+            return r[t.Cli.ResultValue].from_failure(pending)
+        if apply and pending.value.actionable:
+            applied = cls.scan(root, fix=True, validate_receipts=True)
+            if applied.failure:
+                return r[t.Cli.ResultValue].from_failure(applied)
+        remaining = cls.scan(root, fix=False)
+        if remaining.failure:
+            return r[t.Cli.ResultValue].from_failure(remaining)
+        if remaining.value.findings:
+            return r[t.Cli.ResultValue].fail(
+                f"mod-text has {remaining.value.findings} pending finding(s)"
+            )
+        return r[t.Cli.ResultValue].ok(
+            f"mod-text: {pending.value.actionable if apply else 0} "
+            "actionable finding(s) applied; fixed point verified"
+        )
 
     @classmethod
     def load_rules(cls, root: Path) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
@@ -232,6 +255,8 @@ class FlextInfraModTextGateEngine:
                         return r[m.Infra.ModTextReport].fail(
                             f"generated findings require canonical generator repair: {path}"
                         )
+                    if path.suffix == c.Infra.EXT_PYTHON:
+                        ast.parse(updated, filename=str(path))
                     plans.append(
                         m.Infra.CodegenFilePlan(
                             project=root,
