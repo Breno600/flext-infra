@@ -1,4 +1,8 @@
-"""Codegen utilities composition for the infrastructure namespace."""
+"""Codegen utilities composition for the infrastructure namespace.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -12,10 +16,9 @@ from flext_cli import u
 
 from flext_core import r
 from flext_infra import c, config, m, p, t
-
-from .codegen_facades import FlextInfraUtilitiesCodegenFacades
-from .codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from .gitignore import FlextInfraUtilitiesGitignore
+from flext_infra._utilities.codegen_facades import FlextInfraUtilitiesCodegenFacades
+from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
+from flext_infra._utilities.gitignore import FlextInfraUtilitiesGitignore
 
 
 class FlextInfraUtilitiesCodegen(
@@ -32,28 +35,27 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def mise_bootstrap_environment() -> m.Infra.MiseBootstrapEnvironmentSpec:
-        """Return the single typed isolation contract used by setup and codegen."""
+        """Return the single typed isolation contract used by setup and codegen.
+
+        Returns:
+            The single typed isolation contract used by setup and codegen.
+
+        """
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.MiseBootstrapEnvironmentSpec(
             storage_root_variable=c.Infra.MISE_BOOTSTRAP_STORAGE_ROOT_VARIABLE,
             fixed_environment=(
                 *c.Infra.MISE_BOOTSTRAP_FIXED_ENVIRONMENT,
                 # Safe mode ignores project settings. Preserve the lock policy
-                # in the isolated runtime, including the global write guard.
+                # and the supply-chain cooldown in the isolated runtime,
+                # including the global write guard.
                 ("MISE_LOCKFILE", str(toolchain.mise_lockfile).lower()),
                 ("MISE_LOCKED", str(toolchain.mise_locked).lower()),
                 (
                     "MISE_LOCKFILE_PLATFORMS",
                     ",".join(toolchain.mise_lockfile_platforms),
                 ),
-                ("MISE_PYTHON_COMPILE", str(toolchain.python_compile).lower()),
-                # The fleet supply-chain cooldown (one SSOT, operator
-                # 2026-10-01): safe mode would ignore the .mise.toml setting,
-                # so `make upg` could resolve a release younger than it.
-                (
-                    "MISE_MINIMUM_RELEASE_AGE",
-                    f"{toolchain.dependency_cooldown_days}d",
-                ),
+                ("MISE_MINIMUM_RELEASE_AGE", f"{toolchain.dependency_cooldown_days}d"),
             ),
             transient_environment=tuple(c.Infra.MISE_BOOTSTRAP_TRANSIENT_ENVIRONMENT),
             persistent_environment=tuple(c.Infra.MISE_BOOTSTRAP_PERSISTENT_ENVIRONMENT),
@@ -61,10 +63,15 @@ class FlextInfraUtilitiesCodegen(
             passthrough_environment=tuple(
                 c.Infra.MISE_BOOTSTRAP_PASSTHROUGH_ENVIRONMENT,
             ),
+            credential_commands=toolchain.github_credential_commands,
             version_pin_file=c.Infra.MISE_VERSION_PIN_FILENAME,
             version_pin_header=c.Infra.MISE_VERSION_PIN_HEADER,
             version_pin_reader=c.Infra.MISE_VERSION_PIN_READER,
-            release_selector=c.Infra.MISE_RELEASE_SELECTOR,
+            release_selector=(
+                toolchain.mise_selector
+                if toolchain.mise_version == c.Infra.MISE_MOVING_SELECTOR
+                else f"{toolchain.mise_selector}@{toolchain.mise_version}"
+            ),
             artifact_specs=c.Infra.ARTIFACT_SPECS,
             lock_file=c.Infra.MISE_LOCK_FILENAME,
             runtime_install_relative_template=c.Infra.MISE_RUNTIME_INSTALL_RELATIVE_TEMPLATE,
@@ -73,7 +80,12 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def envrc_render_spec() -> m.Infra.EnvrcRenderSpec:
-        """Return the sole typed context every generated ``.envrc`` renders from."""
+        """Return the sole typed context every generated ``.envrc`` renders from.
+
+        Returns:
+            The sole typed context every generated ``.envrc`` renders from.
+
+        """
         toolchain = config.Infra.codegen.toolchain
         return m.Infra.EnvrcRenderSpec(
             environment_path_prepends=toolchain.environment_path_prepends,
@@ -86,7 +98,12 @@ class FlextInfraUtilitiesCodegen(
         environment: t.StrMapping,
         contract: m.Infra.MiseBootstrapEnvironmentSpec,
     ) -> p.Result[Path]:
-        """Resolve and create one persistent Mise storage outside the checkout."""
+        """Resolve and create one persistent Mise storage outside the checkout.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         configured = environment.get(contract.storage_root_variable, "").strip()
         xdg_data_home = environment.get("XDG_DATA_HOME", "").strip()
         caller_home = environment.get("HOME", "").strip()
@@ -183,6 +200,10 @@ class FlextInfraUtilitiesCodegen(
 
         Comment and blank lines are the generated header; the shell readers
         apply the same rule through ``c.Infra.MISE_VERSION_PIN_READER``.
+
+        Returns:
+            The release a ``mise.version`` pin records: its sole data line.
+
         """
         data = tuple(
             line
@@ -198,7 +219,12 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def mise_runtime_install_path(storage_root: Path, release: str) -> p.Result[Path]:
-        """Return the immutable persistent binary path for one exact release."""
+        """Return the immutable persistent binary path for one exact release.
+
+        Returns:
+            The immutable persistent binary path for one exact release.
+
+        """
         if re.fullmatch(c.Infra.MISE_RELEASE_PATTERN, release) is None:
             return r[Path].fail(f"invalid Mise runtime release: {release}")
         suffix = ".exe" if os.name == "nt" else ""
@@ -209,7 +235,12 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def _create_mise_storage_directory(path: Path) -> p.Result[bool]:
-        """Create one persistent directory through the atomic filesystem owner."""
+        """Create one persistent directory through the atomic filesystem owner.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if path.exists():
             if not path.is_dir():
                 return r[bool].fail(f"persistent Mise path is not a directory: {path}")
@@ -239,6 +270,10 @@ class FlextInfraUtilitiesCodegen(
         builds the context (explicit base module) and renders fail-closed via
         ``u.Cli.template_render``. A render failure is a real incident and
         surfaces via ``unwrap`` (no silent fallback).
+
+        Returns:
+            The resulting ``str``.
+
         """
         template_path = (
             Path(__file__).resolve().parent.parent
@@ -261,7 +296,12 @@ class FlextInfraUtilitiesCodegen(
         *,
         context: m.Infra.TestModuleSkeletonRenderContext,
     ) -> str:
-        """Render one canonical test facade skeleton from its validated context."""
+        """Render one canonical test facade skeleton from its validated context.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         template_path = (
             Path(__file__).resolve().parent.parent
             / "templates"
@@ -272,7 +312,12 @@ class FlextInfraUtilitiesCodegen(
 
     @staticmethod
     def dir_has_py_files(pkg_dir: Path) -> bool:
-        """Return whether a package directory contains canonical Python files."""
+        """Return whether a package directory contains canonical Python files.
+
+        Returns:
+            Whether a package directory contains canonical Python files.
+
+        """
         if not pkg_dir.is_dir():
             return False
         return any(
@@ -283,7 +328,12 @@ class FlextInfraUtilitiesCodegen(
     def parse_final_constant_definitions(
         source_lines: t.SequenceOf[str],
     ) -> t.SequenceOf[tuple[str, str, str, str, int]]:
-        """Parse ``NAME: Final[...] = VALUE`` definitions with class-path context."""
+        """Parse ``NAME: Final[...] = VALUE`` definitions with class-path context.
+
+        Returns:
+            The resulting ``t.SequenceOf[tuple[str, str, str, str, int]]``.
+
+        """
         class_stack: t.MutableSequenceOf[t.Pair[str, int]] = []
         parsed: t.MutableSequenceOf[tuple[str, str, str, str, int]] = []
         for line_number, line in enumerate(source_lines, 1):

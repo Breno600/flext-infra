@@ -1,4 +1,8 @@
-"""Canonical file-plan composition for generated package initializers."""
+"""Canonical file-plan composition for generated package initializers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,8 +12,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, u
-
-from .codegen_generation import FlextInfraCodegenGeneration
+from flext_infra.codegen.codegen_generation import FlextInfraCodegenGeneration
 
 if TYPE_CHECKING:
     from collections.abc import Set as AbstractSet
@@ -32,7 +35,12 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
         required_paths: AbstractSet[Path],
         optional_paths: AbstractSet[Path],
     ) -> p.Result[MutableMapping[Path, m.Cli.AtomicFileState]]:
-        """Capture one descriptor-authenticated state for every planner input."""
+        """Capture one descriptor-authenticated state for every planner input.
+
+        Returns:
+            The resulting ``p.Result[MutableMapping[Path, m.Cli.AtomicFileState]]``.
+
+        """
         snapshots: MutableMapping[Path, m.Cli.AtomicFileState] = {}
         paths = sorted(required_paths | optional_paths)
         progress_interval = max(1, len(paths) // 20)
@@ -56,7 +64,12 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
         index: m.Infra.RopeWorkspaceIndex,
         package_dirs: t.SequenceOf[Path],
     ) -> p.Result[MutableMapping[Path, m.Cli.AtomicFileState]]:
-        """Snapshot Python, project, target, and template inputs before planning."""
+        """Snapshot Python, project, target, and template inputs before planning.
+
+        Returns:
+            The resulting ``p.Result[MutableMapping[Path, m.Cli.AtomicFileState]]``.
+
+        """
         selected_dirs = frozenset(package_dirs)
         module_paths = {
             entry.file_path.resolve()
@@ -83,7 +96,12 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
     def _verify_snapshots(
         snapshots: MutableMapping[Path, m.Cli.AtomicFileState],
     ) -> p.Result[bool]:
-        """Verify the captured source identities through the atomic file owner."""
+        """Verify the captured source identities through the atomic file owner.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return u.Cli.atomic_verify_binary_file_states(tuple(snapshots.values()))
 
     @staticmethod
@@ -93,7 +111,12 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
         before: m.Cli.AtomicFileState,
         desired_content: bytes | None,
     ) -> m.Infra.CodegenFilePlan:
-        """Bind one exact target state to its desired initializer state."""
+        """Bind one exact target state to its desired initializer state.
+
+        Returns:
+            The resulting ``m.Infra.CodegenFilePlan``.
+
+        """
         return m.Infra.CodegenFilePlan(
             project=project,
             path=before.path,
@@ -104,7 +127,12 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
 
     @staticmethod
     def _is_generated(content: bytes | None) -> bool:
-        """Return whether bytes carry an accepted lazy-init owner marker."""
+        """Return whether bytes carry an accepted lazy-init owner marker.
+
+        Returns:
+            Whether bytes carry an accepted lazy-init owner marker.
+
+        """
         return content is not None and content.startswith(
             tuple(
                 header.encode(c.Cli.ENCODING_DEFAULT)
@@ -119,7 +147,12 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
         project: Path,
         init_before: m.Cli.AtomicFileState,
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
-        """Describe the initializer and every cleanup effect for one package."""
+        """Describe the initializer and every cleanup effect for one package.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
+
+        """
         if plan.action is c.Infra.LazyInitAction.SKIP:
             return r[tuple[m.Infra.CodegenFilePlan, ...]].ok(())
         if plan.action is c.Infra.LazyInitAction.REMOVE:
@@ -162,7 +195,12 @@ class FlextInfraCodegenLazyInitGenerationFilePlanMixin:
         index: m.Infra.RopeWorkspaceIndex,
         snapshots: t.MappingKV[Path, m.Cli.AtomicFileState],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
-        """Build, deduplicate, and source-bind every lazy-init file plan."""
+        """Build, deduplicate, and source-bind every lazy-init file plan.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
+
+        """
         by_path: MutableMapping[Path, m.Infra.CodegenFilePlan] = {}
         for plan in plans:
             package_key = str(plan.context.pkg_dir.resolve())

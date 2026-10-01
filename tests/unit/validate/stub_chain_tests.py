@@ -1,4 +1,8 @@
-"""Public behavior tests for FlextInfraStubSupplyChain."""
+"""Public behavior tests for FlextInfraStubSupplyChain.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,7 +19,9 @@ if TYPE_CHECKING:
 class TestsFlextInfraStubChain:
     """Declarative public-contract tests for stub-chain validation."""
 
-    def test_project_names_and_dirs_are_normalized(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_project_names_and_dirs_are_normalized(tmp_path: Path) -> None:
+        """Test project names and dirs are normalized."""
         chain = FlextInfraStubSupplyChain(
             repository_root=tmp_path,
             selected_projects=[" alpha, beta ", "gamma delta"],
@@ -31,7 +37,9 @@ class TestsFlextInfraStubChain:
             ],
         )
 
-    def test_project_dirs_are_disabled_for_all_projects(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_project_dirs_are_disabled_for_all_projects(tmp_path: Path) -> None:
+        """Test project dirs are disabled for all projects."""
         chain = FlextInfraStubSupplyChain(
             repository_root=tmp_path,
             selected_projects=["alpha"],
@@ -39,7 +47,9 @@ class TestsFlextInfraStubChain:
         )
         tm.that(chain.project_dirs is None, eq=True)
 
-    def test_build_report_fails_for_missing_workspace(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_build_report_fails_for_missing_workspace(tmp_path: Path) -> None:
+        """Test build report fails for missing workspace."""
         result = FlextInfraStubSupplyChain(repository_root=tmp_path).build_report(
             tmp_path / "missing",
         )

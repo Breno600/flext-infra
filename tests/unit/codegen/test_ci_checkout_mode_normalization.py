@@ -1,13 +1,16 @@
-"""Verify ci.yml normalizes runner checkout modes before any gate runs."""
+"""Verify ci.yml normalizes runner checkout modes before any gate runs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from flext_tests import tm
 
 from flext_infra import config
-
-from ._support import CodegenTestSupport
-from .test_ci_integration_branch_triggers import (
+from tests import u
+from tests.unit.codegen.test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,
 )
 
@@ -15,8 +18,10 @@ from .test_ci_integration_branch_triggers import (
 class TestsFlextInfraCiCheckoutModeNormalization:
     """Runner umask 002 checks out 0664; canonical Mise artifacts demand 0o644."""
 
-    def test_ci_job_normalizes_checkout_modes_before_gates(self) -> None:
-        steps = CodegenTestSupport.Ci.ci_job_steps(
+    @staticmethod
+    def test_ci_job_normalizes_checkout_modes_before_gates() -> None:
+        """Test ci job normalizes checkout modes before gates."""
+        steps = u.CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
                 repository_branch="0.12.0-dev",
             ),

@@ -15,10 +15,12 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar
 
-from .._constants.codegen_detection import FlextInfraConstantsCodegenDetection
-from .._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
-from .._constants.codegen_render_names import FlextInfraConstantsCodegenRenderNames
-from .workspace import FlextInfraConstantsWorkspace
+from flext_infra._constants.codegen_detection import FlextInfraConstantsCodegenDetection
+from flext_infra._constants.codegen_lazy import FlextInfraConstantsCodegenLazy
+from flext_infra._constants.codegen_render_names import (
+    FlextInfraConstantsCodegenRenderNames,
+)
+from flext_infra._constants.workspace import FlextInfraConstantsWorkspace
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -129,13 +131,6 @@ class FlextInfraConstantsCodegen(
     MISE_COLD_START_DIRECTORY: ClassVar[str] = "templates/bootstrap"
     "Package-local byte copy of flext-infra's own upg-written triple (cold start)."
 
-    # 2026.9.17 crashes during the launcher generation (unwrap-on-None in its
-    # script builder); the fleet bootstrap stays on the last known good
-    # release until upstream ships a fixed one. Revert to the bare selector
-    # ("github:jdx/mise") when that release lands.
-    MISE_KNOWN_GOOD_RELEASE: ClassVar[str] = "2026.9.16"
-    MISE_RELEASE_SELECTOR: ClassVar[str] = f"github:jdx/mise@{MISE_KNOWN_GOOD_RELEASE}"
-    "Tool selector `make upg` resolves through the pinned mise (`mise latest`)."
     MISE_LATEST_RESOLUTION_MARKER: ClassVar[str] = "releases/latest"
     "Live-resolution endpoint a pinned, offline launcher must never contain."
     MISE_LAUNCHER_BAKED_RELEASE_PATTERNS: ClassVar[t.StrMapping] = MappingProxyType({
@@ -147,7 +142,8 @@ class FlextInfraConstantsCodegen(
         "# @flext-generated: upg",
         (
             "# @flext-owner: flext-infra/src/flext_infra/templates/project/base/"
-            f"tool_bootstrap_recipe.j2 (mise latest {MISE_RELEASE_SELECTOR})"
+            "tool_bootstrap_recipe.j2 (toolchain.mise_selector and"
+            " toolchain.mise_version in flext-infra/config/codegen.yaml)"
         ),
         (
             "# @flext-adjust: never hand-edit; bin/mise and bin/mise.cmd are"
@@ -243,12 +239,9 @@ class FlextInfraConstantsCodegen(
         "PATHEXT",
         "SYSTEMROOT",
         "WINDIR",
-        # Credential and network-policy keys the lock-time provenance fetch
-        # requires: without them the shared-host GitHub rate limit fails the
-        # lock generation closed. Reinjection stays explicit (allowlist).
+        # The one GitHub credential variable (optional) and the network
+        # policy key the lock-time provenance fetch reads.
         "GITHUB_TOKEN",
-        "GH_TOKEN",
-        "MISE_GITHUB_CREDENTIAL_COMMAND",
         "MISE_HTTP_TIMEOUT",
         "FLEXT_MYPY_PROFILE_OUTPUT",
         # The generated launchers bake their release; the bootstrap passes the

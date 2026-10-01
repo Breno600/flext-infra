@@ -19,6 +19,9 @@ one rule, applied consistently.
 
 Every contract is asserted on the Makefile the public conform owner renders
 for a workspace fixture composing one member.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -42,7 +45,12 @@ class TestsFlextInfraGenRespectsInvocationScope:
 
     @pytest.fixture
     def rendered_makefile(self, tmp_path: Path) -> str:
-        """Render the workspace Makefile through the conform owner."""
+        """Render the workspace Makefile through the conform owner.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return u.Tests.scaffold_text(
             tmp_path / "fixture-project",
             c.Infra.MAKEFILE_FILENAME,
@@ -51,7 +59,12 @@ class TestsFlextInfraGenRespectsInvocationScope:
 
     @staticmethod
     def _recipe_bodies(text: str) -> t.MutableMappingKV[str, list[str]]:
-        """Return each rendered ``_builtin_*`` target mapped to its recipe lines."""
+        """Return each rendered ``_builtin_*`` target mapped to its recipe lines.
+
+        Returns:
+            Each rendered ``_builtin_*`` target mapped to its recipe lines.
+
+        """
         bodies: t.MutableMappingKV[str, list[str]] = {}
         current: str | None = None
         for line in text.splitlines():
@@ -150,8 +163,8 @@ class TestsFlextInfraGenRespectsInvocationScope:
         tm.that(rendered_makefile, has="REPOSITORY_ROOT := $(MAKEFILE_ROOT)")
         tm.that(rendered_makefile, lacks="INIT_FLEXT_INFRA")
 
+    @staticmethod
     def test_project_selector_resolves_members_from_repository_root(
-        self,
         rendered_makefile: str,
     ) -> None:
         """Workspace members are projected as declared gitlinks, not a WORKSPACE var.

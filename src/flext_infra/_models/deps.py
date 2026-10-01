@@ -1,4 +1,8 @@
-"""Domain models for the deps subpackage."""
+"""Domain models for the deps subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,10 +12,9 @@ from typing import Annotated, ClassVar
 from flext_cli import m
 
 from flext_infra import t
-
-from .deps_toml import FlextInfraModelsDepsToml
-from .deps_tool_config import FlextInfraModelsDepsToolConfig
-from .mixins import FlextInfraModelsMixins as mm
+from flext_infra._models.deps_toml import FlextInfraModelsDepsToml
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
+from flext_infra._models.mixins import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsToml):
@@ -254,12 +257,18 @@ class FlextInfraModelsDeps(FlextInfraModelsDepsToolConfig, FlextInfraModelsDepsT
         repository_namespace_packages: Annotated[
             t.StrTuple,
             m.Field(
-                description="Implicit namespace directories shipped from the repository root"
+                description="Implicit namespace directories shipped from the repository root",
             ),
         ] = ()
         packaged_data_paths: Annotated[
             t.StrTuple,
             m.Field(description="Repository-declared relative data paths to ship"),
+        ] = ()
+        packaged_data_excludes: Annotated[
+            t.StrTuple,
+            m.Field(
+                description="Repository-relative files omitted from declared data directories",
+            ),
         ] = ()
         planned_data_files: Annotated[
             t.StrTuple,

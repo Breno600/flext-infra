@@ -1,4 +1,8 @@
-"""Refactor migration model mixins for rope-oriented orchestration."""
+"""Refactor migration model mixins for rope-oriented orchestration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,7 +23,8 @@ class FlextInfraModelsRefactorGrep:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         variable: Annotated[
-            t.NonEmptyStr, m.Field(description="Captured single metavariable name")
+            t.NonEmptyStr,
+            m.Field(description="Captured single metavariable name"),
         ]
         predicate: Annotated[
             c.Infra.CodemodContextPredicate,
@@ -36,7 +41,7 @@ class FlextInfraModelsRefactorGrep:
                     "Captured metavariable naming the module the predicate is "
                     "evaluated against; absent for predicates of the project "
                     "or of the finding's own module"
-                )
+                ),
             ),
         ] = None
         arg: Annotated[
@@ -45,7 +50,7 @@ class FlextInfraModelsRefactorGrep:
                 description=(
                     "Literal operands the rule passes to the predicate (layer "
                     "names, for the layer predicates); empty when it takes none"
-                )
+                ),
             ),
         ] = ()
         as_: Annotated[
@@ -54,7 +59,7 @@ class FlextInfraModelsRefactorGrep:
                 description=(
                     "Layer the predicate assumes for a captured name that is "
                     "not itself a layer; empty when the rule assumes none"
-                )
+                ),
             ),
         ] = ()
 
@@ -96,7 +101,7 @@ class FlextInfraModelsRefactorGrep:
                 description=(
                     "Canonical distribution name whose own plan drops the rule; "
                     "absent when the rule applies to every project"
-                )
+                ),
             ),
         ] = None
         consumers_of: Annotated[
@@ -105,7 +110,7 @@ class FlextInfraModelsRefactorGrep:
                 description=(
                     "Canonical distribution name whose runtime consumers alone "
                     "elect the rule; absent when the rule applies to every project"
-                )
+                ),
             ),
         ] = None
         relocation: Annotated[
@@ -114,7 +119,7 @@ class FlextInfraModelsRefactorGrep:
                 description=(
                     "Rope relocation that repairs the rule's findings over the "
                     "captured $NAME; absent for token-fix and plain detection rules"
-                )
+                ),
             ),
         ] = None
         context: Annotated[
@@ -123,7 +128,7 @@ class FlextInfraModelsRefactorGrep:
                 description=(
                     "Project-context conditions a finding must satisfy; empty "
                     "when the syntactic match alone is the finding"
-                )
+                ),
             ),
         ] = ()
 

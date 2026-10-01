@@ -1,13 +1,18 @@
-"""Governed artifact rendering and project overlay composition."""
+"""Governed artifact rendering and project overlay composition.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from .context_render import FlextInfraCodegenConformContextRender
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.context_render import (
+    FlextInfraCodegenConformContextRender,
+)
 
 
 class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRender):
@@ -15,35 +20,45 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
     @staticmethod
     def with_planned_pyproject(
-        render_inputs: m.Infra.CodegenRenderInputs, composed: str
+        render_inputs: m.Infra.CodegenRenderInputs,
+        composed: str,
     ) -> p.Result[m.Infra.CodegenRenderInputs]:
         """Record the direct-reference requirements of the pyproject just planned.
 
         Planners compose the pyproject before every other destination, so a
         scaffold (no pyproject on disk yet) and a conformance that changes the
         requirements both render from the planned bytes, never stale ones.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenRenderInputs]``.
+
         """
         document = u.Cli.toml_parse_text(composed)
         if document is None:
             return r[m.Infra.CodegenRenderInputs].fail(
-                "planned pyproject is not valid TOML"
+                "planned pyproject is not valid TOML",
             )
         names = u.Infra.direct_source_names(document)
         if names.failure:
             return r[m.Infra.CodegenRenderInputs].from_failure(names)
         return r[m.Infra.CodegenRenderInputs].ok(
-            render_inputs.model_copy(update={"planned_direct_sources": names.value})
+            render_inputs.model_copy(update={"planned_direct_sources": names.value}),
         )
 
     @staticmethod
     def direct_sources(
         render_inputs: m.Infra.CodegenRenderInputs,
     ) -> p.Result[t.VariadicTuple[str]]:
-        """Return the planned direct-reference names, else the committed ones."""
+        """Return the planned direct-reference names, else the committed ones.
+
+        Returns:
+            The planned direct-reference names, else the committed ones.
+
+        """
         if render_inputs.planned_direct_sources is not None:
             return r[t.VariadicTuple[str]].ok(render_inputs.planned_direct_sources)
         document = u.Cli.toml_read_document(
-            render_inputs.target.root / c.Infra.PYPROJECT_FILENAME
+            render_inputs.target.root / c.PYPROJECT_FILENAME,
         )
         if document.failure:
             return r[t.VariadicTuple[str]].from_failure(document)
@@ -62,7 +77,27 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
 
         Without ``render_inputs`` the committed project catalog overlays the
         render and no pyproject conformance runs.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenArtifactComposition]``.
+
         """
+        if destination == c.Infra.GITIGNORE:
+            if render_inputs is None:
+                resolved = u.Infra.load_project_managed_artifacts(repository_root)
+                if resolved.failure:
+                    return r[m.Infra.CodegenArtifactComposition].from_failure(resolved)
+                blocks = resolved.value.artifacts.Gitignore.preserved_blocks
+            else:
+                blocks = render_inputs.managed_artifacts.resolution.artifacts.Gitignore.preserved_blocks
+            composed = u.Infra.preserve_project_gitignore_blocks(
+                rendered,
+                repository_root,
+                blocks,
+            )
+            if composed.failure:
+                return r[m.Infra.CodegenArtifactComposition].from_failure(composed)
+            rendered = composed.value
         if destination == c.PYPROJECT_FILENAME:
             live_path = repository_root / c.PYPROJECT_FILENAME
             live: str | None = None
@@ -150,6 +185,10 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         ``failure_prefix`` carries the only difference between the scaffold and
         existing-repository planners: the stage banner the scaffold planner
         prepends to a render failure.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
         """
         artifact_context = self._artifact_render_context(
             render_inputs,
@@ -177,7 +216,12 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         destination: str,
         project_context: m.Infra.ProjectRenderContext | None,
     ) -> p.Result[p.Model]:
-        """Resolve one governed artifact to its canonical typed render input."""
+        """Resolve one governed artifact to its canonical typed render input.
+
+        Returns:
+            The resulting ``p.Result[p.Model]``.
+
+        """
         target = render_inputs.target
         workspace = render_inputs.workspace
         codegen = render_inputs.codegen
@@ -395,7 +439,12 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         workspace: m.Infra.WorkspaceSpec,
         codegen: m.Infra.CodegenConfigSpec,
     ) -> p.Result[m.Infra.MakefileRenderSpec]:
-        """Resolve Makefile inputs directly from the declared repository topology."""
+        """Resolve Makefile inputs directly from the declared repository topology.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.MakefileRenderSpec]``.
+
+        """
         gitlinks = self._managed_gitlinks(
             workspace,
             codegen,
@@ -405,7 +454,8 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             return r[m.Infra.MakefileRenderSpec].from_failure(gitlinks)
         pytest = config.Infra.tooling.tools.pytest
         run_timeout_seconds = pytest.run_timeout_overrides.get(
-            target.canonical_project_name, pytest.run_timeout_seconds
+            target.canonical_project_name,
+            pytest.run_timeout_seconds,
         )
         return r[m.Infra.MakefileRenderSpec].ok(
             m.Infra.MakefileRenderSpec(
@@ -466,6 +516,10 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
         This is the CI counterpart of ``custom.mk``: the generator injects the
         block verbatim and never interprets it, so a project extends its own
         pipeline without the generator learning that project's concerns.
+
+        Returns:
+            The resulting ``str``.
+
         """
         source: Path = repository_root / c.Infra.CUSTOM_CI_STEPS_FILENAME
         if not source.is_file():

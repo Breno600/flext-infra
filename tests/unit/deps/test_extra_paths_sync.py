@@ -1,4 +1,8 @@
-"""Test extra paths sync behavior."""
+"""Test extra paths sync behavior.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -19,18 +23,24 @@ class TestsFlextInfraDepsExtraPathsSync:
 
     @pytest.fixture
     def pyright_content(self) -> str:
-        """Provide minimal Pyright configuration content."""
+        """Provide minimal Pyright configuration content.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return "[tool.pyright]\nextraPaths = []\n"
 
-    def _create_pyproject(self, directory: Path, content: str) -> Path:
+    @staticmethod
+    def _create_pyproject(directory: Path, content: str) -> Path:
         pyproject_path: Path = tf(base_dir=directory).create(
             content=content,
             name="pyproject.toml",
         )
         return pyproject_path
 
+    @staticmethod
     def _manager(
-        self,
         repository_root: Path | None = None,
     ) -> FlextInfraExtraPathsManager:
         return FlextInfraExtraPathsManager(

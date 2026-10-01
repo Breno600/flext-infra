@@ -1,4 +1,8 @@
-"""Centralized constants for the check subpackage."""
+"""Centralized constants for the check subpackage.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -44,6 +48,20 @@ class FlextInfraConstantsCheck:
         NOTE = "note"
 
     @unique
+    class ToolOutcome(StrEnum):
+        """How a completed tool run ended, read from its exit and its report.
+
+        ``CLEAN`` and ``FINDINGS`` are runs the tool completed; only ``ERROR``
+        (a status the tool does not declare, a timeout, a signal, or a findings
+        status with nothing reported) breaks a repair verb. Findings stay
+        reported and are enforced by ``make check``.
+        """
+
+        CLEAN = "clean"
+        FINDINGS = "findings"
+        ERROR = "error"
+
+    @unique
     class GateKind(StrEnum):
         """Who owns a gate's rule catalog, which decides where the gate blocks.
 
@@ -57,6 +75,21 @@ class FlextInfraConstantsCheck:
         TYPE_CHECKER = "type-checker"
         INFRA = "infra"
 
+    @unique
+    class LintFixRecipe(StrEnum):
+        """Repair the lint gate applies to a finding Ruff reports without a fix.
+
+        The tooling owner maps each Ruff rule name to one recipe; ``make fix``
+        applies Ruff's own fixes first and then the recipe of every finding
+        left, so no rule code or repair text lives in the gate.
+        """
+
+        RETURNS_SECTION = "returns-section"
+        YIELDS_SECTION = "yields-section"
+        RAISES_SECTION = "raises-section"
+        SUMMARY_DOCSTRING = "summary-docstring"
+        COPYRIGHT_NOTICE = "copyright-notice"
+
     AST_GREP_DOCS_URL: ClassVar[str] = "https://ast-grep.github.io/"
     "Canonical ast-grep documentation URL for gate metadata."
     # Quality gate identifiers shared with the tool-name vocabulary.
@@ -68,42 +101,45 @@ class FlextInfraConstantsCheck:
     SMELLS: ClassVar[str] = "smells"
     RUNTIME_CENSUS: ClassVar[str] = "runtime-census"
     "Gate id whose census rule families no other gate owns."
-    GATE_TOOLS_BY_KIND: ClassVar[
-        t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]
-    ] = MappingProxyType({
-        GateKind.EXTERNAL: MappingProxyType({
-            "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
-            "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
-            "security": ("Bandit", "https://bandit.readthedocs.io/"),
-            "markdown": ("rumdl", "https://rumdl.dev/"),
-            "markdown-format": ("Prettier", "https://prettier.io/"),
-            "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
-            "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
-        }),
-        GateKind.TYPE_CHECKER: MappingProxyType({
-            "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
-            "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
-            "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
-        }),
-        GateKind.INFRA: MappingProxyType({
-            "loc-cap": ("scc", "https://github.com/boyter/scc"),
-            "runtime-census": (
-                "Flext Runtime Enforcement Census",
-                "internal://flext-infra/runtime-census",
-            ),
-            "index-declarations": (
-                "Flext Index Declarations Gate",
-                "internal://flext-infra/index-declarations",
-            ),
-            SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
-            "codemod": ("ast-grep", AST_GREP_DOCS_URL),
-            "layout": ("Flext Project Layout Gate", "internal://flext-infra/layout"),
-            "direnv": (
-                "Flext Direnv Environment Contract Gate",
-                "internal://flext-infra/direnv",
-            ),
-        }),
-    })
+    GATE_TOOLS_BY_KIND: ClassVar[t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]] = (
+        MappingProxyType({
+            GateKind.EXTERNAL: MappingProxyType({
+                "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
+                "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
+                "security": ("Bandit", "https://bandit.readthedocs.io/"),
+                "markdown": ("rumdl", "https://rumdl.dev/"),
+                "markdown-format": ("Prettier", "https://prettier.io/"),
+                "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
+                "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
+            }),
+            GateKind.TYPE_CHECKER: MappingProxyType({
+                "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
+                "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
+                "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
+            }),
+            GateKind.INFRA: MappingProxyType({
+                "loc-cap": ("scc", "https://github.com/boyter/scc"),
+                "runtime-census": (
+                    "Flext Runtime Enforcement Census",
+                    "internal://flext-infra/runtime-census",
+                ),
+                "index-declarations": (
+                    "Flext Index Declarations Gate",
+                    "internal://flext-infra/index-declarations",
+                ),
+                SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
+                "codemod": ("ast-grep", AST_GREP_DOCS_URL),
+                "layout": (
+                    "Flext Project Layout Gate",
+                    "internal://flext-infra/layout",
+                ),
+                "direnv": (
+                    "Flext Direnv Environment Contract Gate",
+                    "internal://flext-infra/direnv",
+                ),
+            }),
+        })
+    )
     """The gate registry: each gate is declared once, under its kind.
 
     ``loc-cap`` and ``codemod`` drive an external engine (scc, ast-grep) over a
@@ -114,14 +150,16 @@ class FlextInfraConstantsCheck:
         gate: kind for kind, tools in GATE_TOOLS_BY_KIND.items() for gate in tools
     })
     "Gate id -> kind, derived from the registry declaration."
+    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER],
+    )
+    "Native type-checker gates, derived from the registry declaration."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
-        gate: tool for tools in GATE_TOOLS_BY_KIND.values() for gate, tool in tools.items()
+        gate: tool
+        for tools in GATE_TOOLS_BY_KIND.values()
+        for gate, tool in tools.items()
     })
     "Gate id -> (tool name, tool url), derived from the registry declaration."
-    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
-        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
-    )
-    "Native type-checker gates: independent read-only analyzers of one tree."
     ALLOWED_GATES: ClassVar[frozenset[str]] = frozenset(SARIF_TOOL_INFO)
     "Gate identifiers — derived from SARIF_TOOL_INFO keys (single SSOT)."
     CHECK_REPORT_MARKDOWN_FILENAME: ClassVar[str] = "check-report.md"

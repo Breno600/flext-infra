@@ -33,8 +33,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
-
-from .detector import FlextInfraWorkspaceDetector
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -45,7 +44,12 @@ class FlextInfraFlextBindingService:
 
     @staticmethod
     def _consumer_environment(consumer_root: Path, python: Path) -> p.Result[Path]:
-        """Require a physical consumer environment while permitting base Python links."""
+        """Require a physical consumer environment while permitting base Python links.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         environment = u.Infra.runtime_environment_dir(consumer_root)
         scripts = Path(
             sysconfig.get_path(
@@ -86,7 +90,12 @@ class FlextInfraFlextBindingService:
         consumer_root: Path,
         python: Path,
     ) -> p.Result[t.StrMapping]:
-        """Read PEP 508 facts from the authenticated consumer interpreter."""
+        """Read PEP 508 facts from the authenticated consumer interpreter.
+
+        Returns:
+            The resulting ``p.Result[t.StrMapping]``.
+
+        """
         environment = cls._consumer_environment(consumer_root, python)
         if environment.failure:
             return r[t.StrMapping].from_failure(environment)
@@ -109,7 +118,15 @@ class FlextInfraFlextBindingService:
 
     @staticmethod
     def _document(consumer_root: Path) -> t.Cli.TomlDocument:
-        """Read the consumer declaration through its canonical parser."""
+        """Read the consumer declaration through its canonical parser.
+
+        Returns:
+            The resulting ``t.Cli.TomlDocument``.
+
+        Raises:
+            ValueError: If consumer dependency declaration is not valid TOML.
+
+        """
         document = u.Cli.toml_parse_text(
             u.Cli.files_read_text(consumer_root / c.PYPROJECT_FILENAME).unwrap(),
         )
@@ -128,6 +145,10 @@ class FlextInfraFlextBindingService:
 
         Fails closed when ``flext_root`` is not a flext workspace, so a mistyped
         path can never silently bind nothing and leave the consumer on its pins.
+
+        Returns:
+            The distributions this worktree can supply to the consumer.
+
         """
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(flext_root)
         if workspace.failure:
@@ -168,7 +189,12 @@ class FlextInfraFlextBindingService:
         flext_root: Path,
         python: Path,
     ) -> p.Result[t.VariadicTuple[str]]:
-        """Resolve targets with marker facts from the consumer's interpreter."""
+        """Resolve targets with marker facts from the consumer's interpreter.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[str]]``.
+
+        """
         environment = cls.consumer_marker_environment(
             consumer_root=consumer_root,
             python=python,
@@ -191,7 +217,12 @@ class FlextInfraFlextBindingService:
         flext_root: Path,
         python: Path,
     ) -> p.Result[int]:
-        """Rebind the consumer environment onto the worktree for this session."""
+        """Rebind the consumer environment onto the worktree for this session.
+
+        Returns:
+            The resulting ``p.Result[int]``.
+
+        """
         ci = config.Infra.codegen.make.ci
         if u.Infra.env_value(ci.variable) == ci.value:
             return r[int].fail(

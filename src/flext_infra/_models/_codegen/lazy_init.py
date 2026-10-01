@@ -1,4 +1,8 @@
-"""Lazy-init planning and quality-gate models."""
+"""Lazy-init planning and quality-gate models.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,8 @@ from typing import Annotated
 
 from flext_cli import m
 
-from ... import c, t
-from .. import FlextInfraModelsMixins as mm
+from flext_infra import c, t
+from flext_infra._models import FlextInfraModelsMixins as mm
 
 
 class FlextInfraModelsCodegenLazyInitModels:
@@ -54,12 +58,6 @@ class FlextInfraModelsCodegenLazyInitModels:
         )
         lazy_map: t.LazyAliasMap = m.Field(
             description="Lazy import map: export name to module/attribute target.",
-        )
-        type_checking_map: t.LazyAliasMap = m.Field(
-            description=(
-                "Type-checking import map used to publish static package attributes "
-                "without widening the runtime/public lazy export surface."
-            ),
         )
         eager_dunders: t.LazyAliasMap = m.Field(
             description=(

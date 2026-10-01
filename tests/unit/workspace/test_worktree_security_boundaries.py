@@ -1,4 +1,8 @@
-"""Security contracts for real Git worktree boundaries."""
+"""Security contracts for real Git worktree boundaries.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -53,6 +57,7 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
         tmp_path: Path,
         base: str,
     ) -> None:
+        """Test option like base fails before lane mutation."""
         repository = self._repository(tmp_path)
 
         result = self._add(repository, "feature/option-base", base)
@@ -70,6 +75,7 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
         )
 
     def test_unresolved_base_fails_before_lane_mutation(self, tmp_path: Path) -> None:
+        """Test unresolved base fails before lane mutation."""
         repository = self._repository(tmp_path)
 
         result = self._add(repository, "feature/missing-base", "missing/base")
@@ -90,6 +96,7 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
         tmp_path: Path,
         entry: str,
     ) -> None:
+        """Test symlinked epic topology fails closed."""
         repository = self._repository(tmp_path)
         epic = Path(tm.ok(self._add(repository, "feature/secure-epic")))
         outside = tmp_path / "outside"
@@ -112,6 +119,7 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
                 epic.unlink()
 
     def test_epic_path_must_match_git_registry(self, tmp_path: Path) -> None:
+        """Test epic path must match git registry."""
         repository = self._repository(tmp_path)
         tm.ok(self._add(repository, "feature/registry-epic"))
         alias = tmp_path / "unregistered-epic"
@@ -125,6 +133,7 @@ class TestsFlextInfraWorktreeSecurityBoundaries:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test same child branch cannot be reused under another epic."""
         repository = self._repository(tmp_path)
         first = Path(tm.ok(self._add(repository, "feature/first-epic")))
         second = Path(tm.ok(self._add(repository, "feature/second-epic")))

@@ -1,8 +1,14 @@
-"""Write and restore flows facade for protected edit workflows."""
+"""Write and restore flows facade for protected edit workflows.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-from .protected_edit_apply import FlextInfraUtilitiesProtectedEditApply
+from flext_infra._utilities.protected_edit_apply import (
+    FlextInfraUtilitiesProtectedEditApply,
+)
 
 
 class FlextInfraUtilitiesProtectedEditWrites(FlextInfraUtilitiesProtectedEditApply):

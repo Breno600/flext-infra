@@ -1,4 +1,8 @@
-"""Immutable source-bundle and physical-path contracts for docs planning."""
+"""Immutable source-bundle and physical-path contracts for docs planning.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -17,15 +21,21 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsGeneratorBundle:
     """Immutable source-bundle and physical-path contracts for docs planning."""
 
-    def _generator(self, workspace: Path) -> FlextInfraDocGenerator:
-        """Return the public generator for the governed fixture project."""
+    @staticmethod
+    def _generator(workspace: Path) -> FlextInfraDocGenerator:
+        """Return the public generator for the governed fixture project.
+
+        Returns:
+            The public generator for the governed fixture project.
+
+        """
         return FlextInfraDocGenerator(
             repository_root=workspace,
             selected_projects=["flext-a"],
         )
 
+    @staticmethod
     def _materialize_required_parents(
-        self,
         generator: FlextInfraDocGenerator,
         bundle: m.Infra.DocsGenerationBundle,
     ) -> None:
@@ -117,8 +127,8 @@ class TestsFlextInfraDocsGeneratorBundle:
         tm.that(prepared.error or "", has="atomic")
         tm.that(keep.read_text(encoding="utf-8"), eq="keep\n")
 
+    @staticmethod
     def test_selected_project_symlink_cannot_escape_workspace(
-        self,
         tmp_path: Path,
     ) -> None:
         """Reject a selected local path whose physical project lives outside the root."""

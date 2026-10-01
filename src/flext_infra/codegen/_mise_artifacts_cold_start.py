@@ -1,4 +1,8 @@
-"""Projection of flext-infra's own `make upg` triple into its packaged copy."""
+"""Projection of flext-infra's own `make upg` triple into its packaged copy.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,11 +11,14 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t, u
-
-from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
-from .mise_artifacts import FlextInfraCodegenMiseArtifacts
-from .mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
+from flext_infra.codegen._mise_artifacts_derivation import (
+    FlextInfraMiseArtifactsDerivation,
+)
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from flext_infra.codegen.mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -29,7 +36,12 @@ class FlextInfraMiseColdStart:
 
     @staticmethod
     def candidate_plans(root: Path) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Recover one complete candidate triple from the packaged upg output."""
+        """Recover one complete candidate triple from the packaged upg output.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        """
         result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
         source_root = files.cold_start_directory()
         validated = FlextInfraMiseArtifactsDerivation.validate_packaged(source_root)
@@ -38,7 +50,8 @@ class FlextInfraMiseColdStart:
         sources: list[m.Cli.AtomicFileState] = []
         for name, _mode in c.Infra.ARTIFACT_SPECS:
             state = u.Cli.atomic_read_binary_file_state(
-                source_root / Path(name).name, required=True
+                source_root / Path(name).name,
+                required=True,
             )
             if state.failure:
                 return result_type.from_failure(state)
@@ -61,13 +74,18 @@ class FlextInfraMiseColdStart:
                     desired_content=source.content,
                     desired_mode=mode,
                     source_states=(source,),
-                )
+                ),
             )
         return result_type.ok(tuple(plans))
 
     @classmethod
     def plans(cls, root: Path) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
-        """Plan the packaged copy when ``root`` holds the running package."""
+        """Plan the packaged copy when ``root`` holds the running package.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
+
+        """
         result_type = r[tuple[m.Infra.CodegenFilePlan, ...]]
         project = root.expanduser().resolve()
         package = files.package_directory()

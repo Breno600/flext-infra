@@ -4,6 +4,9 @@
 sync stopped writing it when the toolchain transaction landed), so the
 composition rule is proven through the immutable project snapshot and the
 public composer that turns that source view into the managed file.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

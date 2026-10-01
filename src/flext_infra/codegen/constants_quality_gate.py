@@ -1,4 +1,8 @@
-"""Workspace-wide quality gate for constants refactor outcomes."""
+"""Workspace-wide quality gate for constants refactor outcomes.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -11,10 +15,9 @@ from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_infra import c, m, t, u
+from flext_infra.base import s
+from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 from flext_infra.refactor.census import FlextInfraRefactorCensus
-
-from ..base import s
-from .lazy_init import FlextInfraCodegenLazyInit
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -27,7 +30,12 @@ class FlextInfraCodegenQualityGate(s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the quality gate and return its CLI success/failure status."""
+        """Execute the quality gate and return its CLI success/failure status.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         report_result = self.build_report()
         if report_result.failure:
             return r[bool].from_failure(report_result)
@@ -37,7 +45,12 @@ class FlextInfraCodegenQualityGate(s[bool]):
         return r[bool].fail(f"quality gate verdict: {verdict}")
 
     def build_report(self) -> p.Result[t.JsonMapping]:
-        """Execute quality gate and return structured report payload."""
+        """Execute quality gate and return structured report payload.
+
+        Returns:
+            The resulting ``p.Result[t.JsonMapping]``.
+
+        """
         lazy_plans = FlextInfraCodegenLazyInit(
             repository_root=self.repository_root,
         ).plan_files()
@@ -104,7 +117,12 @@ class FlextInfraCodegenQualityGate(s[bool]):
 
     @staticmethod
     def modified_python_files(repository_root: Path) -> t.StrSequence:
-        """Return modified Python files detected by git porcelain status."""
+        """Return modified Python files detected by git porcelain status.
+
+        Returns:
+            Modified Python files detected by git porcelain status.
+
+        """
         modified: t.MutableSequenceOf[str] = []
         git_bin = shutil.which(c.Infra.GIT)
         if git_bin is None:
@@ -135,7 +153,12 @@ class FlextInfraCodegenQualityGate(s[bool]):
         modified_files: t.StrSequence,
         tool: str,
     ) -> t.MappingKV[str, t.JsonValue]:
-        """Run a targeted static tool on modified files and normalize result."""
+        """Run a targeted static tool on modified files and normalize result.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.JsonValue]``.
+
+        """
         if not modified_files:
             return {
                 "passed": True,
@@ -197,6 +220,11 @@ class FlextInfraCodegenQualityGate(s[bool]):
         independent, so they can execute concurrently. When no files changed,
         the empty-result payload is reused for both tools without spawning
         subprocesses.
+
+        Returns:
+            The resulting ``t.Pair[t.MappingKV[str, t.JsonValue], t.MappingKV[str,
+                t.JsonValue]]``.
+
         """
         empty_result: t.MappingKV[str, t.JsonValue] = {
             "passed": True,
@@ -229,7 +257,12 @@ class FlextInfraCodegenQualityGate(s[bool]):
         census_report: m.Infra.WorkspaceReport,
         modified_files: t.StrSequence,
     ) -> t.MappingKV[str, t.JsonValue]:
-        """Build post-run metrics summary used by quality checks."""
+        """Build post-run metrics summary used by quality checks.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.JsonValue]``.
+
+        """
         by_kind: t.MutableIntMapping = {}
         for project in census_report.projects:
             for parsed in project.violations:
@@ -261,7 +294,12 @@ class FlextInfraCodegenQualityGate(s[bool]):
         pyrefly_check: t.MappingKV[str, t.JsonValue],
         ruff_check: t.MappingKV[str, t.JsonValue],
     ) -> t.SequenceOf[t.MappingKV[str, t.JsonValue]]:
-        """Build quality gate check entries from metrics and tool results."""
+        """Build quality gate check entries from metrics and tool results.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.MappingKV[str, t.JsonValue]]``.
+
+        """
         # Metric-driven checks share the shape ``(name, value==0, "label=value")``.
         # Each row maps to a single ``QualityGateCheck`` via Pydantic v2 batch
         # construction. The detail-label key may differ from the metric path
@@ -304,7 +342,12 @@ class FlextInfraCodegenQualityGate(s[bool]):
 
     @staticmethod
     def compute_verdict(checks: t.SequenceOf[t.MappingKV[str, t.JsonValue]]) -> str:
-        """Return PASS only when all checks passed."""
+        """Return PASS only when all checks passed.
+
+        Returns:
+            PASS only when all checks passed.
+
+        """
         return (
             "PASS"
             if all(bool(check.get("passed", False)) for check in checks)
@@ -315,7 +358,12 @@ class FlextInfraCodegenQualityGate(s[bool]):
     def project_findings(
         census_report: m.Infra.WorkspaceReport,
     ) -> t.SequenceOf[t.MappingKV[str, t.JsonValue]]:
-        """Convert census reports into sorted per-project findings."""
+        """Convert census reports into sorted per-project findings.
+
+        Returns:
+            The resulting ``t.SequenceOf[t.MappingKV[str, t.JsonValue]]``.
+
+        """
         return [
             item.model_dump()
             for item in sorted(
@@ -337,7 +385,12 @@ class FlextInfraCodegenQualityGate(s[bool]):
         report: t.JsonMapping,
         render_text: str,
     ) -> p.Result[t.JsonMapping]:
-        """Persist quality gate artifacts to the report directory."""
+        """Persist quality gate artifacts to the report directory.
+
+        Returns:
+            The resulting ``p.Result[t.JsonMapping]``.
+
+        """
         report_dir = repository_root / c.Infra.QG_REPORT_DIR
         report_dir.mkdir(parents=True, exist_ok=True)
         report_json = report_dir / "latest.json"
@@ -360,7 +413,12 @@ class FlextInfraCodegenQualityGate(s[bool]):
 
     @classmethod
     def render_text(cls, report: t.JsonMapping) -> str:
-        """Render compact human-readable summary."""
+        """Render compact human-readable summary.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         checks = u.Cli.json_deep_mapping_list(report, "checks")
         after = u.Cli.json_deep_mapping(report, "after")
         duplicate_groups = u.Cli.json_deep_mapping_list(
@@ -412,6 +470,10 @@ class FlextInfraCodegenQualityGate(s[bool]):
 
         Domain-verb naming per AGENTS.md §3.1: boolean outcomes use
         noun/adjective names, not ``is_*`` prefixes.
+
+        Returns:
+            True for verdicts that should exit with status 0.
+
         """
         return verdict == "PASS"
 

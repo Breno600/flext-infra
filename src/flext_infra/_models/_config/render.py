@@ -1,4 +1,8 @@
-"""Render specification models for generated workflow and env surfaces."""
+"""Render specification models for generated workflow and env surfaces.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,16 +11,17 @@ from typing import Annotated
 
 from flext_cli import m
 
-from ... import t
-from ..._constants import (
+from flext_infra import t
+from flext_infra._constants import (
     FlextInfraConstantsCodegenProject,
+    FlextInfraConstantsDocs,
     FlextInfraConstantsWorkspace,
 )
-from ..deps_tool_config import FlextInfraModelsDepsToolConfig
-from .contexts import FlextInfraConfigModelsContexts
-from .contract import FlextInfraConfigModelsContract
-from .make import FlextInfraConfigModelsMake
-from .provider import FlextInfraConfigModelsProvider
+from flext_infra._models._config.contexts import FlextInfraConfigModelsContexts
+from flext_infra._models._config.contract import FlextInfraConfigModelsContract
+from flext_infra._models._config.make import FlextInfraConfigModelsMake
+from flext_infra._models._config.provider import FlextInfraConfigModelsProvider
+from flext_infra._models.deps_tool_config import FlextInfraModelsDepsToolConfig
 
 
 class FlextInfraConfigModelsRender:
@@ -26,6 +31,10 @@ class FlextInfraConfigModelsRender:
         """Typed input consumed by generated GitHub workflow templates."""
 
         dist: Annotated[t.NonEmptyStr, m.Field(description="Distribution name")]
+        docs_report_filenames: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(description="Structured docs reports CI dumps and uploads"),
+        ] = FlextInfraConstantsDocs.DOCS_STRUCTURED_REPORT_FILENAMES
         make_profile: Annotated[
             FlextInfraConstantsCodegenProject.MakeProfile,
             m.Field(
@@ -111,7 +120,7 @@ class FlextInfraConfigModelsRender:
                     "Requirement names the project takes by direct git "
                     "reference (forks and local projects): derived from its "
                     "pyproject, they never enter the cooldown."
-                )
+                ),
             ),
         ] = ()
         checkout_submodules: Annotated[
@@ -214,12 +223,6 @@ class FlextInfraConfigModelsRender:
     class EnvrcRenderSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Typed input consumed only by the generated project ``.envrc``."""
 
-        runtime_environment_directory: Annotated[
-            t.NonEmptyStr,
-            m.Field(
-                description="Sibling directory for physical workspace environments",
-            ),
-        ]
         repository_root_rel: Annotated[
             t.NonEmptyStr,
             m.Field(description="Project-relative owner of the runtime environment"),

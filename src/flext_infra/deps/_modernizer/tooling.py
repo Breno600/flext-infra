@@ -1,4 +1,8 @@
-"""Render one canonical pyproject and resolve its typed template context."""
+"""Render one canonical pyproject and resolve its typed template context.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,9 +10,8 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
-
-from ..extra_paths import FlextInfraExtraPathsManager
-from ..phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
+from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+from flext_infra.deps.phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -73,6 +76,10 @@ class FlextInfraPyprojectModernizerTooling:
         scaffold knows its future roots before they exist on disk; filesystem
         discovery would find none and silently produce a different fixed point
         than the post-write conformance pass. An empty topology keeps discovery.
+
+        Returns:
+            One canonical pyproject using the same phases as workspace apply.
+
         """
         state = self._read_document_state(path, source=source)
         if state.failure:
@@ -106,7 +113,12 @@ class FlextInfraPyprojectModernizerTooling:
         path: Path,
         topology: m.Infra.PyprojectDeclaredTopology,
     ) -> p.Result[m.Infra.ToolingRuntimeContext]:
-        """Resolve typed Jinja values from the seed conformed to one topology."""
+        """Resolve typed Jinja values from the seed conformed to one topology.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ToolingRuntimeContext]``.
+
+        """
         result_type = r[m.Infra.ToolingRuntimeContext]
         seed: t.JsonMapping = {
             c.Infra.PROJECT: {c.Infra.NAME: project_name},
@@ -255,6 +267,9 @@ class FlextInfraPyprojectModernizerTooling:
                     derived_mypy_path
                     if declared_roots
                     else tools.mypy_path or derived_mypy_path
+                ),
+                "mypy_facade_rebind_modules": u.Infra.facade_rebind_modules(
+                    project_dir,
                 ),
                 "pyrefly_search_path": (
                     derived_search_path

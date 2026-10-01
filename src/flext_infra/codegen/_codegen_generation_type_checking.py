@@ -1,4 +1,8 @@
-"""TYPE_CHECKING render helpers for lazy-init generation."""
+"""TYPE_CHECKING render helpers for lazy-init generation.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,9 @@ from collections.abc import MutableMapping
 from typing import TYPE_CHECKING
 
 from flext_infra import c
-
-from ._codegen_generation_imports import FlextInfraCodegenGenerationImportsMixin
+from flext_infra.codegen._codegen_generation_imports import (
+    FlextInfraCodegenGenerationImportsMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -24,7 +29,12 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         groups: t.MappingKV[str, t.StrPairSequence],
         child_packages: t.StrSequence | None,
     ) -> t.MappingKV[str, t.MutableSequenceOf[t.StrPair]]:
-        """Collapse child module imports into configured child packages."""
+        """Collapse child module imports into configured child packages.
+
+        Returns:
+            The resulting ``t.MappingKV[str, t.MutableSequenceOf[t.StrPair]]``.
+
+        """
         sorted_children: list[str] = sorted(
             set(child_packages or []),
             key=len,
@@ -42,7 +52,12 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
 
     @staticmethod
     def _has_flext_types(collapsed: t.MappingKV[str, t.StrPairSequence]) -> bool:
-        """Return whether a collapsed import map already imports FlextTypes."""
+        """Return whether a collapsed import map already imports FlextTypes.
+
+        Returns:
+            Whether a collapsed import map already imports FlextTypes.
+
+        """
         return any(
             export_name == "FlextTypes"
             for items in collapsed.values()
@@ -62,6 +77,10 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         violating I001 in the generated ``tests`` initializers. Sections are
         derived from the emitted module's owner and the package root so the
         generated order mirrors each project's ruff isort config.
+
+        Returns:
+            The resulting ``t.StrPair``.
+
         """
         if mod.startswith("."):
             return ("2", mod.lower())  # local-folder section
@@ -70,7 +89,12 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
 
     @staticmethod
     def _is_root_module_alias_group(mod: str, items: t.StrPairSequence) -> bool:
-        """Return whether ``mod`` is one direct root child reexporting itself."""
+        """Return whether ``mod`` is one direct root child reexporting itself.
+
+        Returns:
+            Whether ``mod`` is one direct root child reexporting itself.
+
+        """
         return (
             mod.count(".") == 1
             and bool(items)
@@ -90,6 +114,10 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         as one root-relative import; separate per-child groups emitted one line
         each, so every generation diverged from the formatter's canonical form
         and only a post-generation autofix converged the published initializer.
+
+        Returns:
+            The resulting ``MutableMapping[str, t.StrPairSequence]``.
+
         """
         merged: MutableMapping[str, t.StrPairSequence] = {}
         root_items: t.StrPairSequence = ()
@@ -107,7 +135,12 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
 
     @staticmethod
     def _type_checking_sort_owner(mod: str, items: t.StrPairSequence) -> str:
-        """Return the module that owns the emitted import for sorting."""
+        """Return the module that owns the emitted import for sorting.
+
+        Returns:
+            The module that owns the emitted import for sorting.
+
+        """
         module_basename = mod.rsplit(".", maxsplit=1)[-1]
         if (
             "." in mod
@@ -128,7 +161,12 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         attr_name: str,
         root_name: str,
     ) -> bool:
-        """Return whether a symbol import is a redundant root self-import."""
+        """Return whether a symbol import is a redundant root self-import.
+
+        Returns:
+            Whether a symbol import is a redundant root self-import.
+
+        """
         if export_name in c.Infra.ALIAS_NAMES or not export_name:
             return False
         if export_name in {"cli", "main", "infra"}:
@@ -218,7 +256,12 @@ class FlextInfraCodegenGenerationTypeCheckingMixin(
         local_package_root: str | None = None,
         root_names: frozenset[str] | None = None,
     ) -> t.StrSequence:
-        """Generate a TYPE_CHECKING import block."""
+        """Generate a TYPE_CHECKING import block.
+
+        Returns:
+            The resulting ``t.StrSequence``.
+
+        """
         if not groups and not include_flext_types:
             return ()
         if not groups:

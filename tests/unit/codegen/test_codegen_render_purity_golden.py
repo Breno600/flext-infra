@@ -1,4 +1,8 @@
-"""Tri-environment golden contract for pure generation inputs."""
+"""Tri-environment golden contract for pure generation inputs.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -15,8 +19,14 @@ from tests import c, u
 class TestsFlextInfraCodegenRenderPurityGolden:
     """Render remains f(SSOT, templates, PINS) across three host shapes."""
 
-    def _project(self, root: Path) -> Path:
-        """Materialize one governed fixture repository."""
+    @staticmethod
+    def _project(root: Path) -> Path:
+        """Materialize one governed fixture repository.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project = u.Tests.mk_project(
             root,
             "render-purity",
@@ -30,7 +40,8 @@ class TestsFlextInfraCodegenRenderPurityGolden:
         )
         return project
 
-    def _committed_overlay(self, project: Path, body: str) -> None:
+    @staticmethod
+    def _committed_overlay(project: Path, body: str) -> None:
         """Commit one project-owned ManagedArtifacts catalog."""
         config_dir = project / c.CONFIG_DIR_NAME
         config_dir.mkdir(exist_ok=True)
@@ -109,7 +120,8 @@ class TestsFlextInfraCodegenRenderPurityGolden:
             eq=("committed-cache/", "wip-cache/"),
         )
 
-    def test_fixture_scaffold_year_is_the_production_ssot(self) -> None:
+    @staticmethod
+    def test_fixture_scaffold_year_is_the_production_ssot() -> None:
         """Fixture identity uses the same year declaration production renders."""
         year = config.Infra.codegen.scaffold.project.copyright_year
         spec: m.Infra.ProjectSpec = u.Tests.project_spec("year-owner")

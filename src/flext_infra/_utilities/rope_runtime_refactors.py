@@ -1,12 +1,15 @@
-"""Rope refactor and occurrence boundary methods."""
+"""Rope refactor and occurrence boundary methods.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import ClassVar
 
 from flext_infra import m, p, t
-
-from .rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
+from flext_infra._utilities.rope_runtime_base import FlextInfraUtilitiesRopeRuntimeBase
 
 
 class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase):
@@ -23,19 +26,17 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
 
         The body statements own the dedent width and the wrapper docstring, so
         both derive from the logical facts instead of being passed alongside.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.SourceRewrite]``.
+
+        Raises:
+            ValueError: If Rope wrapper body has inconsistent indentation.
+
         """
         from rope.base import codeanalyze, simplify
 
         lines = codeanalyze.SourceLinesAdapter(source)
-        indentation = body[0].indent - header.indent
-        docstring_span = (
-            (body[0].line, body[0].end_line)
-            if lines
-            .get_line(body[0].line)
-            .lstrip()
-            .startswith(('"""', "'''", '"', "'"))
-            else None
-        )
         regions = tuple(simplify.ignored_regions(source))
         start = lines.get_line_start(layout.header_start)
         end = min(lines.get_line_end(layout.header_end) + 1, len(source))
@@ -96,7 +97,18 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         source: str,
         rewrites: t.SequenceOf[m.Infra.SourceRewrite],
     ) -> p.Infra.RopeChangeContents:
-        """Preview checked, disjoint edits through Rope's change machinery."""
+        """Preview checked, disjoint edits through Rope's change machinery.
+
+        Returns:
+            The resulting ``p.Infra.RopeChangeContents``.
+
+        Raises:
+            TypeError: If Rope ChangeCollector has an invalid contract; or if Rope
+                ChangeCollector returned a non-source result; or if Rope ChangeContents
+                returned an invalid content plan.
+            ValueError: If Rope source edits overlap or escape their snapshot.
+
+        """
         collector = cls._runtime_callable("rope.base.codeanalyze", "ChangeCollector")(
             source,
         )
@@ -139,7 +151,16 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         arguments: t.MappingKV[str, str],
         resources: t.SequenceOf[p.Infra.RopeResource],
     ) -> p.Infra.RopeChangeSet:
-        """Plan Rope 1.14 semantic changes without invoking Project.do."""
+        """Plan Rope 1.14 semantic changes without invoking Project.do.
+
+        Returns:
+            The resulting ``p.Infra.RopeChangeSet``.
+
+        Raises:
+            TypeError: If rope Restructure does not satisfy its public planning
+                contract.
+
+        """
         factory = cls._runtime_callable("rope.refactor.restructure", "Restructure")
         restructuring = factory(rope_project, pattern, goal, args=dict(arguments))
         if not isinstance(restructuring, p.Infra.RopeRestructure):
@@ -228,7 +249,17 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
 
     @classmethod
     def word_is_function_call(cls, source: str, offset: int) -> bool:
-        """Return Rope's syntactic call fact for the primary at ``offset``."""
+        """Return Rope's syntactic call fact for the primary at ``offset``.
+
+        Returns:
+            Rope's syntactic call fact for the primary at ``offset``.
+
+        Raises:
+            TypeError: If rope Worder does not expose callable
+                is_a_function_being_called; or if rope Worder returned a non-boolean
+                function-call fact.
+
+        """
         word_finder = cls._word_finder(source)
         is_called = getattr(word_finder, "is_a_function_being_called", None)
         if not callable(is_called):

@@ -3,6 +3,9 @@
 The lint is pure (no subprocess): gates run it before the runtime smoke so
 contract defects fail with precise messages, and the workspace sync runs it
 after every generated write so a regression can never land silently.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -54,6 +57,10 @@ class FlextInfraWorkspaceEnvironmentContracts:
         generation time and, when resolved at check time, the REAL home is
         substituted for the prefix — stripping the prefix without substituting
         would probe a bogus absolute path (``/.config/...``) that never exists.
+
+        Returns:
+            The resulting ``Path | None``.
+
         """
         home_match = cls._HOME_PREFIX.match(raw)
         candidate = home_match.group(1) if home_match is not None else raw
@@ -95,6 +102,10 @@ class FlextInfraWorkspaceEnvironmentContracts:
           derived from runtime variables (any remaining ``$``) are skipped. With
           ``resolve_home=False`` (generation-time lint) ``${HOME}`` targets are also
           skipped because they describe machine state, not repository state.
+
+        Returns:
+            One typed violation per direnv contract issue in ``content``.
+
         """
         violations: list[m.Infra.EnvironmentContractViolation] = []
         for match in cls._UNGUARDED_DIRENV_DIR.finditer(content):
@@ -139,6 +150,10 @@ class FlextInfraWorkspaceEnvironmentContracts:
         unterminated sections included) and generated ownership marker
         lines. Custom operator content is preserved verbatim; an empty
         remainder means the file must not exist.
+
+        Returns:
+            The resulting ``str``.
+
         """
         kept: list[str] = []
         skipping = False
@@ -170,6 +185,10 @@ class FlextInfraWorkspaceEnvironmentContracts:
         Local overrides never activate Beads: managed section markers,
         generated ownership markers, and inherited orchestration or Beads
         endpoint variables are all residue of a second activation owner.
+
+        Returns:
+            One typed violation per activation residue in ``.envrc.local``.
+
         """
         violations: list[m.Infra.EnvironmentContractViolation] = []
         for line_number, line in enumerate(content.splitlines(), start=1):

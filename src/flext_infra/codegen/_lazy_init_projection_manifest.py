@@ -8,6 +8,9 @@ consumers gain the machine-checkable contract their post-generation
 projection synchronization verifies. The path deliberately avoids the
 ai-hub-owned ``.agents/projection.json`` (the projection INPUT manifest);
 this file is the projected OUTPUT state, owned by the generator alone.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -30,13 +33,18 @@ class FlextInfraCodegenLazyInitProjectionManifest:
 
     @staticmethod
     def projection_manifest_plans(
-        *, files: t.VariadicTuple[m.Infra.CodegenFilePlan]
+        *,
+        files: t.VariadicTuple[m.Infra.CodegenFilePlan],
     ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
         """Append one manifest plan per project that owns projected files.
 
         Entries derive only from the other plans' desired states, so the
         manifest bytes are a pure function of the phase plan: stable order,
         stable digests, no self-reference.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]``.
+
         """
         projected: MutableMapping[Path, list[t.JsonDict]] = {}
         for plan in files:
@@ -52,7 +60,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                 "sha256": hashlib.sha256(plan.desired_content).hexdigest(),
                 "bytes": len(plan.desired_content),
             })
-        plans: list[m.Infra.CodegenFilePlan] = []
+        plans: t.MutableSequenceOf[m.Infra.CodegenFilePlan] = []
         for project in sorted(projected):
             payload: t.JsonDict = {
                 "apiVersion": c.Infra.MANIFEST_API_VERSION,
@@ -68,7 +76,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
             serialized = u.Cli.json_dumps(payload, indent=2)
             if serialized.failure:
                 return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].from_failure(
-                    serialized
+                    serialized,
                 )
             content = f"{serialized.value}\n".encode(c.Cli.ENCODING_DEFAULT)
             manifest_path = project / ".agents" / c.Infra.MANIFEST_FILENAME
@@ -82,7 +90,7 @@ class FlextInfraCodegenLazyInitProjectionManifest:
                     before=state.value,
                     desired_content=content,
                     desired_mode=0o644,
-                )
+                ),
             )
         return r[t.VariadicTuple[m.Infra.CodegenFilePlan]].ok(tuple(plans))
 

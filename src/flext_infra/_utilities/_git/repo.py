@@ -4,6 +4,9 @@ Only ``FlextInfraUtilitiesGitRepo`` lives here. Semantic operations use
 GitPython's object-oriented API (``Repo``, ``IndexFile``, ``Remote``,
 ``BaseIndexEntry``) or the ``repo.git.<cmd>(args)`` proxy directly;
 ``Git(path).execute(tuple)`` with manual cast/protocol is eliminated.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -35,7 +38,12 @@ class FlextInfraUtilitiesGitRepo:
     def _registered_worktree_entries(
         porcelain: str,
     ) -> t.VariadicTuple[m.Infra.GitWorktreeEntry]:
-        """Parse one ``worktree list --porcelain`` document into typed entries."""
+        """Parse one ``worktree list --porcelain`` document into typed entries.
+
+        Returns:
+            The resulting ``t.VariadicTuple[m.Infra.GitWorktreeEntry]``.
+
+        """
         entries: list[m.Infra.GitWorktreeEntry] = []
         path: Path | None = None
         head: str | None = None
@@ -79,7 +87,12 @@ class FlextInfraUtilitiesGitRepo:
 
     @classmethod
     def refresh_binary(cls) -> p.Result[bool]:
-        """Point GitPython at the absolute path of the canonical git binary."""
+        """Point GitPython at the absolute path of the canonical git binary.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         # Git.refresh resolves relative names against cwd; always pass an absolute path.
         resolved = shutil.which(c.Infra.GIT)
         if resolved is None:
@@ -100,6 +113,10 @@ class FlextInfraUtilitiesGitRepo:
         open with the same contract, and one of them documents it as "the same
         nested-path contract as git_open_repo" -- but this opener had lost it,
         so every nested path failed with "cannot open git repository".
+
+        Returns:
+            The resulting ``p.Result[Repo]``.
+
         """
         resolved = repo_root.expanduser().resolve()
         try:
@@ -126,6 +143,13 @@ class FlextInfraUtilitiesGitRepo:
 
         This is the canonical helper for semantic methods that prefer
         try/except → ``r[...].fail()`` over ``Result`` chaining.
+
+        Returns:
+            The resulting ``Repo``.
+
+        Raises:
+            OSError: If ``opened.failure``.
+
         """
         opened = cls._open_repo(repo_root)
         if opened.failure:
@@ -134,7 +158,12 @@ class FlextInfraUtilitiesGitRepo:
 
     @classmethod
     def _git_primary_worktree_root_path(cls, repository_path: Path) -> p.Result[Path]:
-        """Resolve the primary worktree from Git's shared storage topology."""
+        """Resolve the primary worktree from Git's shared storage topology.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         try:
             repo = cls._repo(repository_path)
             common_dir = Path(

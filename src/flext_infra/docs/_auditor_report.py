@@ -1,4 +1,8 @@
-"""Report construction helpers for FlextInfraDocAuditor."""
+"""Report construction helpers for FlextInfraDocAuditor.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -22,7 +26,12 @@ class FlextInfraDocAuditorReportMixin:
         params: m.Infra.AuditScopeParams,
         docstring_coverage: m.Infra.DocstringCoverage | None = None,
     ) -> m.Infra.DocsPhaseReport:
-        """Build the standard docs audit phase report."""
+        """Build the standard docs audit phase report.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         issue_count = len(issues)
         coverage_breached = (
             params.docstring_min is not None

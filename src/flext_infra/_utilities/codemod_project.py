@@ -7,6 +7,9 @@ building those project facts (once per project root and process); rule
 documents name the verdict they need through ``metadata.context`` predicates.
 No rule lives here: the rule data decides where a fact is asked and what it
 means.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -22,16 +25,21 @@ from flext_cli import u
 from packaging.utils import canonicalize_name
 
 from flext_infra import c, config, m, p, r, t
-
-from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from ._rope_analysis.exports import FlextInfraUtilitiesRopeAnalysisExports
-from ._rope_analysis.importstate import FlextInfraUtilitiesRopeAnalysisImportState
-from .base import FlextInfraUtilitiesBase
-from .codemod_rules import FlextInfraUtilitiesCodemodRules
-from .namespace import FlextInfraUtilitiesCodegenNamespace
-from .pyproject import FlextInfraUtilitiesPyproject
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_imports import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities._rope_analysis.asthelpers import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
+from flext_infra._utilities._rope_analysis.exports import (
+    FlextInfraUtilitiesRopeAnalysisExports,
+)
+from flext_infra._utilities._rope_analysis.importstate import (
+    FlextInfraUtilitiesRopeAnalysisImportState,
+)
+from flext_infra._utilities.base import FlextInfraUtilitiesBase
+from flext_infra._utilities.codemod_rules import FlextInfraUtilitiesCodemodRules
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
 
 
 class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
@@ -40,7 +48,8 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @classmethod
     @lru_cache(maxsize=8)
     def project_import_graph(
-        cls, root: Path
+        cls,
+        root: Path,
     ) -> t.Pair[t.MappingKV[str, frozenset[str]], t.MappingKV[Path, str]]:
         """Return the runtime import graph and the module name of each file.
 
@@ -48,13 +57,21 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         ``if TYPE_CHECKING:`` imports and function-local imports out: only
         imports that run when the module loads can form a cycle. Each target
         is truncated to the longest module the project defines.
+
+        Returns:
+            The runtime import graph and the module name of each file.
+
+        Raises:
+            ValueError: If rope could not name module.
+
         """
         raw: MutableMapping[str, set[str]] = {}
         modules: MutableMapping[Path, str] = {}
         with FlextInfraUtilitiesRopeCore.open_project(root) as project:
             for resource in FlextInfraUtilitiesRopeCore.python_resources(project):
                 pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                    project, resource
+                    project,
+                    resource,
                 )
                 name = pymodule.get_name()
                 if not name:
@@ -68,10 +85,11 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 raw[name] = set(
                     FlextInfraUtilitiesRopeImports.imported_module_paths(
                         FlextInfraUtilitiesRopeCore.resolve_module_imports(
-                            project, resource
+                            project,
+                            resource,
                         ),
                         current_package=package,
-                    )
+                    ),
                 )
         known = frozenset(raw)
         graph = {
@@ -88,7 +106,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @classmethod
     @lru_cache(maxsize=8)
     def project_import_cycles(cls, root: Path) -> t.MappingKV[str, frozenset[str]]:
-        """Map each module in a runtime import cycle to its cycle's members."""
+        """Map each module in a runtime import cycle to its cycle's members.
+
+        Returns:
+            The resulting ``t.MappingKV[str, frozenset[str]]``.
+
+        """
         graph, _ = cls.project_import_graph(root)
         cycles: MutableMapping[str, frozenset[str]] = {}
         for component in FlextInfraUtilitiesBase.strongly_connected_components({
@@ -101,26 +124,44 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @classmethod
     def import_closes_cycle(
-        cls, root: Path, file_path: Path, imported: str, name: str | None
+        cls,
+        root: Path,
+        file_path: Path,
+        imported: str,
+        name: str | None,
     ) -> bool:
         """Return whether one import of ``file_path`` is an edge of a cycle.
 
         ``imported`` is the import's module as written (relative dots
         included); ``name`` is the imported name of a from-import, which is
         itself a module when the statement imports a submodule.
+
+        Returns:
+            Whether one import of ``file_path`` is an edge of a cycle.
+
+        Raises:
+            ValueError: If source module is absent from the project import graph.
+
         """
         graph, modules = cls.project_import_graph(root)
         source = modules.get(file_path.resolve())
         if source is None:
-            msg = f"file is not a module of the project import graph: {file_path}"
-            raise ValueError(msg)
+            layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
+            if layout is not None and file_path.is_relative_to(layout.src_dir):
+                msg = f"source module is absent from the project import graph: {file_path}"
+                raise ValueError(msg)
+            # Project-level files are scanned by ast-grep but have no package
+            # import graph node, so none of their imports can close a cycle.
+            return False
         package = (
             source if file_path.name == c.Infra.INIT_PY else source.rpartition(".")[0]
         )
         level = len(imported) - len(imported.lstrip("."))
         absolute = (
             FlextInfraUtilitiesRopeAnalysisImportState.resolve_import_module(
-                current_package=package, module_name=imported.lstrip("."), level=level
+                current_package=package,
+                module_name=imported.lstrip("."),
+                level=level,
             )
             if level
             else imported
@@ -147,6 +188,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         reachable through the bases of the facade's ``namespace`` class,
         following the bases each package class declares. A facade without a
         family package composes nothing and holds.
+
+        Returns:
+            Whether ``namespace`` in a facade module composes its family.
+
         """
         package = facade_file.parent / f"_{facade_file.stem}"
         if not package.is_dir():
@@ -159,11 +204,13 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             source = module.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             declared = frozenset(
                 FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
-                    source
-                )
+                    source,
+                ),
             )
-            for info in FlextInfraUtilitiesRopeAnalysisAstHelpers.class_info_from_source(
-                source
+            for (
+                info
+            ) in FlextInfraUtilitiesRopeAnalysisAstHelpers.class_info_from_source(
+                source,
             ):
                 bases_by_class[info.name] = tuple(info.bases)
                 if info.name in declared:
@@ -180,9 +227,17 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @staticmethod
     def _nested_class_bases(facade_file: Path, namespace: str) -> t.StrSequence:
-        """Return the base names of class ``namespace`` nested in the facade."""
+        """Return the base names of class ``namespace`` nested in the facade.
+
+        Returns:
+            The base names of class ``namespace`` nested in the facade.
+
+        Raises:
+            ValueError: If class.
+
+        """
         tree = FlextInfraUtilitiesRopeAnalysisAstHelpers.parse_string_module(
-            facade_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            facade_file.read_text(encoding=c.Cli.ENCODING_DEFAULT),
         ).get_ast()
         for node in FlextInfraUtilitiesRopeAnalysisAstHelpers.walk_ast_nodes(tree):
             if (
@@ -192,7 +247,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 return tuple(
                     name
                     for base in getattr(node, "bases", ()) or ()
-                    if (name := FlextInfraUtilitiesRopeAnalysisAstHelpers.class_base_name(base))
+                    if (
+                        name
+                        := FlextInfraUtilitiesRopeAnalysisAstHelpers.class_base_name(
+                            base,
+                        )
+                    )
                 )
         msg = f"class {namespace} is not declared in {facade_file}"
         raise ValueError(msg)
@@ -211,6 +271,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         single capture (``{"text": ...}``) or transformed value (a string). A
         declared variable the finding did not capture is a rule defect and
         raises; the syntactic match alone never stands in for it.
+
+        Returns:
+            Whether one finding satisfies its rule's project context.
+
         """
         source = (file_path if file_path.is_absolute() else root / file_path).resolve()
         for condition in rule.context:
@@ -232,7 +296,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @staticmethod
     def _captured_text(
-        rule: m.Infra.CodemodRule, variable: str, captures: t.JsonMapping, source: Path
+        rule: m.Infra.CodemodRule,
+        variable: str,
+        captures: t.JsonMapping,
+        source: Path,
     ) -> str:
         capture = captures.get(variable)
         text = capture.get("text") if isinstance(capture, Mapping) else capture
@@ -243,6 +310,25 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             raise ValueError(msg)
         return text.strip()
 
+    @staticmethod
+    def _codemod_runtime_aliases(root: Path, package: str, own: str) -> frozenset[str]:
+        """Read local aliases from source and dependency aliases from runtime.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        Raises:
+            ValueError: If project layout is unresolved.
+
+        """
+        if package == own:
+            layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
+            if layout is None:
+                msg = f"project layout is unresolved: {root}"
+                raise ValueError(msg)
+            return frozenset(layout.runtime_aliases)
+        return frozenset(u.runtime_alias_names(package))
+
     @classmethod
     def _context_holds(
         cls,
@@ -251,7 +337,15 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         captured: t.Pair[str, str | None],
         file_path: Path,
     ) -> bool:
-        """Evaluate one predicate against the project SSOT it names."""
+        """Evaluate one predicate against the project SSOT it names.
+
+        Returns:
+            The resulting ``bool``.
+
+        Raises:
+            ValueError: If project layout is unresolved; or if predicate.
+
+        """
         value, of = captured
         predicate = condition.predicate
         module = cls._top_module(value)
@@ -260,16 +354,21 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             case c.Infra.CodemodContextPredicate.STDLIB_MODULE:
                 return module in sys.stdlib_module_names
             case c.Infra.CodemodContextPredicate.OWN_PACKAGE:
-                return module == own
+                # The project owns its public package and its internal tiers
+                # (tests, examples, scripts); an absolute import between them
+                # never crosses a package boundary.
+                return module == own or module in c.Infra.NON_PUBLIC_LAZY_ROOTS
             case c.Infra.CodemodContextPredicate.RUNTIME_PACKAGE:
                 return module in cls._runtime_modules(root)
             case c.Infra.CodemodContextPredicate.FACADE_PACKAGE:
                 return module in cls._runtime_modules(root) and bool(
-                    u.runtime_alias_names(module)
+                    cls._codemod_runtime_aliases(root, module, own),
                 )
             case c.Infra.CodemodContextPredicate.RUNTIME_ALIAS:
-                return value in u.runtime_alias_names(
-                    own if of is None else cls._top_module(of)
+                return value in cls._codemod_runtime_aliases(
+                    root,
+                    own if of is None else cls._top_module(of),
+                    own,
                 )
             case c.Infra.CodemodContextPredicate.LOCAL_ALIAS:
                 layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
@@ -289,7 +388,7 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
             case c.Infra.CodemodContextPredicate.FACADE_MODULE:
                 return bool(
                     frozenset(config.Infra.tooling.lazy_init.import_layer_order)
-                    & cls._module_exports(file_path)
+                    & cls._module_exports(file_path),
                 )
             case c.Infra.CodemodContextPredicate.LATER_LAYER:
                 return cls._later_layer(root, file_path, value, condition)
@@ -297,6 +396,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 return cls._has_class_stem(root, file_path, value)
             case c.Infra.CodemodContextPredicate.PACKAGE_LAYERS:
                 return cls._package_has_layers(file_path.parent, condition.arg)
+            case c.Infra.CodemodContextPredicate.PACKAGE_ROOT_INIT:
+                layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
+                if layout is None:
+                    msg = f"project layout is unresolved: {root}"
+                    raise ValueError(msg)
+                return file_path.resolve() == layout.init_path.resolve()
             case c.Infra.CodemodContextPredicate.FAMILY_BASE:
                 return cls._family_package_has_base(file_path)
             case c.Infra.CodemodContextPredicate.IMPORT_CYCLE:
@@ -306,16 +411,29 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @staticmethod
     def _top_module(value: str) -> str:
-        """Return the top-level package of a captured dotted module."""
+        """Return the top-level package of a captured dotted module.
+
+        Returns:
+            The top-level package of a captured dotted module.
+
+        """
         return value.split(maxsplit=1)[0].split(".", maxsplit=1)[0]
 
     @classmethod
     @lru_cache(maxsize=8)
     def _runtime_modules(cls, root: Path) -> frozenset[str]:
-        """Top-level import names provided by the project's runtime closure."""
-        project = FlextInfraUtilitiesCodemodRules.codemod_project_requirements(root).unwrap()
+        """Top-level import names provided by the project's runtime closure.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        """
+        project = FlextInfraUtilitiesCodemodRules.codemod_project_requirements(
+            root,
+        ).unwrap()
         closure = FlextInfraUtilitiesCodemodRules.codemod_runtime_closure(
-            project[1], FlextInfraUtilitiesCodemodRules.codemod_distributions()
+            project[1],
+            FlextInfraUtilitiesCodemodRules.codemod_distributions(),
         )
         return frozenset(
             module
@@ -325,11 +443,16 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @staticmethod
     def _module_exports(file_path: Path) -> frozenset[str]:
-        """Names one module source declares in its own ``__all__``."""
+        """Names one module source declares in its own ``__all__``.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        """
         return frozenset(
             FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
-                file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            )
+                file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT),
+            ),
         )
 
     @classmethod
@@ -341,6 +464,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         in (``<pkg>/_models/x.py`` belongs to what ``<pkg>/models.py``
         declares). The letter vocabulary is the tooling import-layer order;
         no file name is mapped to a letter.
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
         """
         letters = frozenset(config.Infra.tooling.lazy_init.import_layer_order)
         facades = (
@@ -362,7 +489,15 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
     @classmethod
     @lru_cache(maxsize=256)
     def _package_exports(cls, module: str) -> frozenset[str]:
-        """Names an installed module declares in its ``__all__`` (not imported)."""
+        """Names an installed module declares in its ``__all__`` (not imported).
+
+        Returns:
+            The resulting ``frozenset[str]``.
+
+        Raises:
+            ValueError: If module is not importable for its exports.
+
+        """
         spec = find_spec(module)
         if spec is None or spec.origin is None:
             msg = f"module is not importable for its exports: {module}"
@@ -385,6 +520,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         ``base``, ``api``); an imported letter is its own layer. A rule may
         name the layer to compare with (``arg``) instead of the module's, and
         the layer an imported name that is no layer stands for (``as``).
+
+        Returns:
+            Whether an import reaches a later layer than its module's.
+
         """
         order = tuple(config.Infra.tooling.lazy_init.import_layer_order)
         owner = cls._layer_rank(
@@ -411,6 +550,13 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
         The stem is derived from the project name; a module of the project's
         tests tree prefixes it with ``Tests``.
+
+        Returns:
+            Whether a class name carries the project's class stem.
+
+        Raises:
+            ValueError: If project layout is unresolved.
+
         """
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None:
@@ -427,6 +573,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         A layer is provided by a runtime alias the package's modules declare
         (a facade letter), by a module or private module named for it, or by
         a subpackage of that name.
+
+        Returns:
+            Whether a package provides every named layer.
+
         """
         aliases = frozenset(
             alias
@@ -448,6 +598,10 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
         A family package is a private directory ``_<stem>`` beside a facade
         module ``<stem>.py`` that declares a facade letter.
+
+        Returns:
+            Whether the family package holding a module has ``base.py``.
+
         """
         letters = frozenset(config.Infra.tooling.lazy_init.import_layer_order)
         for directory in file_path.parents:
@@ -478,7 +632,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @staticmethod
     def _own_module_path(root: Path, file_path: Path, imported: str) -> Path | None:
-        """Resolve an import of the own package to its module file or package."""
+        """Resolve an import of the own package to its module file or package.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
         layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
         if layout is None or not file_path.is_relative_to(layout.src_dir):
             return None
@@ -506,6 +665,13 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
         A violation is fixable when its rule declares a token fix or a rope
         relocation in the project's rule plan.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CensusViolation]]``.
+
+        Raises:
+            ValueError: If namespace violation does not follow the report format.
+
         """
         if validation.failure:
             return r[t.VariadicTuple[m.Infra.CensusViolation]].from_failure(validation)
@@ -515,7 +681,9 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
         repairable = frozenset(
             rule.id
             for rule in planned.value.rules
-            if rule.fixable or rule.relocation is not None
+            if rule.fixable
+            or rule.relocation is not None
+            or rule.id in c.Infra.SEMANTIC_CUTOVER_RULE_IDS.values()
         )
         parsed: list[m.Infra.CensusViolation] = []
         for violation in validation.value.violations:
@@ -536,7 +704,12 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
 
     @staticmethod
     def _known_prefix(module: str, known: frozenset[str]) -> str | None:
-        """Return the longest dotted prefix of ``module`` the project defines."""
+        """Return the longest dotted prefix of ``module`` the project defines.
+
+        Returns:
+            The longest dotted prefix of ``module`` the project defines.
+
+        """
         parts = module.split(".")
         for size in range(len(parts), 0, -1):
             candidate = ".".join(parts[:size])

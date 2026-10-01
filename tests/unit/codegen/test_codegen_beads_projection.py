@@ -1,4 +1,8 @@
-"""Projection-only contract for repository-owned Beads configuration."""
+"""Projection-only contract for repository-owned Beads configuration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -30,6 +34,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test local identity renders declarative beads routing."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
@@ -43,10 +48,21 @@ class TestsFlextInfraCodegenBeadsProjection:
         if rendered_config is None:
             pytest.fail("local identity must produce the declarative Beads config")
         # `issue_prefix` is the key bd itself resolves (`bd config get
-        # issue_prefix`); the hyphenated spelling reads as unset, so bd appended
-        # its own key on first write and left every governed checkout dirty.
-        tm.that(rendered_config, has='issue_prefix: "project-prefix"')
-        tm.that(rendered_config, lacks="issue-prefix:")
+        # issue_prefix`); a hyphen-only prefix reads as unset, so bd appended its
+        # own key on first write. A Gas City rig also carries gc's canonical
+        # mirror keys: gc rewrites a managed rig's config into exactly that key
+        # set on every adopt and start, so a projection in any other form left
+        # every governed checkout dirty after each gc pass.
+        beads = config.Infra.codegen.toolchain.beads
+        parsed = u.Tests.toml_mapping(tm.ok(u.Cli.yaml_safe_load(rendered_config)))
+        tm.that(parsed["issue_prefix"], eq="project-prefix")
+        tm.that(parsed["issue-prefix"], eq="project-prefix")
+        tm.that(parsed["dolt.mode"], eq=beads.dolt_mode)
+        tm.that(
+            parsed["dolt"],
+            eq={"disable-event-flush": beads.dolt_disable_event_flush},
+        )
+        tm.that("dolt.disable-event-flush" in parsed, eq=False)
         # A checkout with no workspace manifest declares city participation by
         # fleet default (True): the endpoint keys mirror the inherited city and
         # `types.custom` stays generator-owned.
@@ -68,6 +84,9 @@ class TestsFlextInfraCodegenBeadsProjection:
         # the portable routing marker but never mints the ledger identity.
         tm.that("project_id" in metadata, eq=False)
         tm.that(set(metadata), eq={"backend", "database", "dolt_mode", "dolt_database"})
+        # gc writes this marker as a sorted-key JSON object; the projection uses
+        # the same order so gc's first write after adoption is byte-identical.
+        tm.that(list(metadata), eq=sorted(metadata))
 
     def test_gascity_disabled_renders_standalone_beads_config(
         self,
@@ -94,6 +113,11 @@ class TestsFlextInfraCodegenBeadsProjection:
         tm.that(rendered_config, has='issue_prefix: "project-prefix"')
         tm.that(rendered_config, lacks="issue-prefix:")
         tm.that(rendered_config, lacks="dolt.auto-start:")
+        # The mode mirror and the event-flush switch are read only by gc; a
+        # standalone ledger carries neither (bd takes the flush switch from its
+        # environment and the mode from metadata.json).
+        tm.that(rendered_config, lacks="dolt.mode:")
+        tm.that(rendered_config, lacks="disable-event-flush")
         tm.that(rendered_config, lacks="gc.endpoint_origin")
         tm.that(rendered_config, lacks="gc.endpoint_status")
         tm.that(rendered_config, lacks="Gas City contract")
@@ -291,11 +315,13 @@ class TestsFlextInfraCodegenBeadsProjection:
             set(metadata),
             eq={"database", "backend", "dolt_mode", "dolt_database", "project_id"},
         )
+        tm.that(list(metadata), eq=sorted(metadata))
 
     def test_projection_preserves_the_manual_identity_input(
         self,
         tmp_path: Path,
     ) -> None:
+        """Test projection preserves the manual identity input."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
@@ -308,7 +334,8 @@ class TestsFlextInfraCodegenBeadsProjection:
 
         tm.that(identity.read_bytes(), eq=before)
 
-    def test_beads_gate_lock_is_tolerated_runtime_state(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_beads_gate_lock_is_tolerated_runtime_state(tmp_path: Path) -> None:
         """The bd gate serialization marker never fails composed verification.
 
         The bd client writes ``dolt.gate.lock`` beside the ledger on every gate

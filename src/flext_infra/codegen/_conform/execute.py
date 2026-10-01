@@ -1,4 +1,8 @@
-"""Transactional execution of conformance plans."""
+"""Transactional execution of conformance plans.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,15 +10,14 @@ from pathlib import Path
 from typing import Self, override
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from ...workspace import FlextInfraWorkspaceDetector
-from .. import (
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen import (
     FlextInfraCodegenLazyInit,
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,
 )
-from .plan import FlextInfraCodegenConformPlan
+from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
@@ -39,6 +42,10 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
 
         ``ports`` is required at every call: the complete surface consumes it,
         and a single-file surface declares its absence explicitly with ``None``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
         """
         root = request.root.expanduser().resolve()
         bootstrap: t.VariadicTuple[m.Cli.AtomicDirectoryState] = ()
@@ -181,7 +188,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         initialized_git: bool,
         directories: t.VariadicTuple[m.Cli.AtomicDirectoryState],
     ) -> p.Result[bool]:
-        """Undo only Git and root directories created by this invocation."""
+        """Undo only Git and root directories created by this invocation.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if initialized_git:
             inventory = u.Cli.atomic_inventory_physical_tree(root / c.Infra.GIT_DIR)
             if inventory.failure:
@@ -193,7 +205,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:
-        """Run check or apply and require a verified fixed point."""
+        """Run check or apply and require a verified fixed point.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         request = self.request or m.Infra.CodegenConformRequest(
             root=self.repository_root,
         )
@@ -213,7 +230,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         self,
         request: m.Infra.CodegenConformRequest,
     ) -> p.Result[m.Infra.CodegenResult]:
-        """Execute a non-toolchain conform surface without widening its scope."""
+        """Execute a non-toolchain conform surface without widening its scope.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         u.Cli.header("Codegen Conform")
         u.Cli.info(
             f"stage=plan mode={request.mode} scope={request.scope} "
@@ -244,7 +266,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         destinations = self.surface_contract(surface).destinations
         if destinations is None or len(destinations) != 1:
             return r[m.Infra.CodegenResult].fail(
-                f"bootstrap requires one destination for {surface}"
+                f"bootstrap requires one destination for {surface}",
             )
         destination = Path(next(iter(destinations)))
         expected_path = request.root.expanduser().resolve() / destination
@@ -258,12 +280,37 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         written: t.VariadicTuple[Path] = ()
         if changed:
             (file,) = changed
-            before = u.Infra.codegen_file_before_state(file)
-            if before.failure:
-                return r[m.Infra.CodegenResult].from_failure(before)
             if file.desired_content is None or file.desired_mode is None:
                 return r[m.Infra.CodegenResult].fail(
                     "Makefile bootstrap cannot delete its dispatcher",
+                )
+            # A bootstrap destination under an absent parent (``docs/`` on a
+            # fresh candidate) materializes that chain first, the same guarded
+            # primitive the managed scaffold uses, and removes only what this
+            # attempt created when publication fails.
+            created: t.VariadicTuple[m.Cli.AtomicDirectoryState] = ()
+            if not file.path.parent.is_dir():
+                chain = u.Cli.atomic_plan_directory_chain(file.path.parent)
+                if chain.failure:
+                    return r[m.Infra.CodegenResult].from_failure(chain)
+                materialized = u.Cli.atomic_create_directory_chain_guarded(
+                    chain.value,
+                    permission_mode=0o755,
+                )
+                if materialized.failure:
+                    return r[m.Infra.CodegenResult].from_failure(materialized)
+                created = tuple(materialized.value)
+                replanned = self.plan(request)
+                if replanned.failure:
+                    return self._bootstrap_rollback(created, replanned)
+                (file,) = replanned.value.files
+            before = u.Infra.codegen_file_before_state(file)
+            if before.failure:
+                return self._bootstrap_rollback(created, before)
+            if file.desired_content is None or file.desired_mode is None:
+                return self._bootstrap_rollback(
+                    created,
+                    r[bool].fail(f"bootstrap cannot delete {destination}"),
                 )
             published = u.Cli.atomic_write_binary_file_guarded(
                 before.value,
@@ -271,7 +318,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
                 permission_mode=file.desired_mode,
             )
             if published.failure:
-                return r[m.Infra.CodegenResult].from_failure(published)
+                return self._bootstrap_rollback(created, published)
             written = (file.path,)
         verified = self.plan(request)
         if verified.failure:
@@ -293,7 +340,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         self,
         request: m.Infra.CodegenConformRequest,
     ) -> p.Result[m.Infra.CodegenResult]:
-        """Run complete conformance inside the sole generation lock."""
+        """Run complete conformance inside the sole generation lock.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         ports = self.ports
         if ports is None:
             return r[m.Infra.CodegenResult].fail(
@@ -320,7 +372,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         transaction: FlextInfraCodegenTransaction,
         ports: m.Infra.CodegenConformPorts,
     ) -> p.Result[m.Infra.CodegenResult]:
-        """Materialize scaffold parents, then run one locked generation cycle."""
+        """Materialize scaffold parents, then run one locked generation cycle.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         prepared = self._prepare_scaffold_directories(request)
         if prepared.failure:
             return r[m.Infra.CodegenResult].from_failure(prepared)
@@ -359,6 +416,10 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         transaction. Lazy-init plans exactly the repositories conform
         rewrites: the selected mutable ``internal_flext`` repositories of
         ``plan``, never a scope-excluded root or a third-party checkout.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
+
         """
         files: list[m.Infra.CodegenFilePlan] = []
         inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {}
@@ -398,7 +459,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         transaction: FlextInfraCodegenTransaction,
         ports: m.Infra.CodegenConformPorts,
     ) -> p.Result[m.Infra.CodegenResult]:
-        """Plan, publish, and validate one prepared locked generation cycle."""
+        """Plan, publish, and validate one prepared locked generation cycle.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         u.Cli.header("Codegen Conform")
         u.Cli.info(
             f"stage=plan mode={request.mode} scope={request.scope} "
@@ -499,7 +565,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         session: m.Infra.CodegenTransactionSession,
         ports: m.Infra.CodegenConformPorts,
     ) -> p.Result[m.Infra.CodegenResult]:
-        """Complete every post-begin phase through prepared-state recovery."""
+        """Complete every post-begin phase through prepared-state recovery.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         lazy_analysis = self._lazy_phase(request, plan)
         if lazy_analysis.failure:
             aborted = transaction.abort_locked(
@@ -596,7 +667,12 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         self,
         request: m.Infra.CodegenConformRequest,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]:
-        """Create config-declared scaffold parent chains under the generation lock."""
+        """Create config-declared scaffold parent chains under the generation lock.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicDirectoryState]]``.
+
+        """
         if (
             c.Infra.CodegenConformMode(request.mode)
             is not c.Infra.CodegenConformMode.APPLY
@@ -674,11 +750,36 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             created.extend(materialized.value)
         return r[t.VariadicTuple[m.Cli.AtomicDirectoryState]].ok(tuple(created))
 
+    @classmethod
+    def _bootstrap_rollback(
+        cls,
+        created: t.VariadicTuple[m.Cli.AtomicDirectoryState],
+        failure: p.FailureLike,
+    ) -> p.Result[m.Infra.CodegenResult]:
+        """Return the original bootstrap failure after removing its own parents.
+
+        Returns:
+            The original bootstrap failure after removing its own parents.
+
+        """
+        rollback = cls._rollback_scaffold_directories(created)
+        if rollback.failure:
+            return r[m.Infra.CodegenResult].fail(
+                f"{failure.error}; bootstrap directory rollback failed: "
+                f"{rollback.error}",
+            )
+        return r[m.Infra.CodegenResult].from_failure(failure)
+
     @staticmethod
     def _rollback_scaffold_directories(
         created: t.VariadicTuple[m.Cli.AtomicDirectoryState],
     ) -> p.Result[bool]:
-        """Remove only directories created by this locked scaffold attempt."""
+        """Remove only directories created by this locked scaffold attempt.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         for state in reversed(created):
             removed = u.Cli.atomic_delete_empty_directory_guarded(state)
             if removed.failure:
@@ -698,6 +799,10 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         generator owns the file it renders, so apply heals the allow itself
         instead of leaving every environment stale until the operator re-runs
         setup.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         if (
             c.Infra.CodegenConformMode(request.mode)
@@ -741,6 +846,10 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         changes generated content publishes between it and the journal commit,
         so the caller reuses ``verified_plan`` as its result instead of
         planning the whole fleet a second time.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
         """
         u.Cli.info("stage=verify-fixed-point")
         verified = self.plan(request)
@@ -784,9 +893,7 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
             if validated.failure:
                 return r[bool].from_failure(validated)
         u.Cli.info("stage=verify-fresh-imports")
-        imported = ports.fresh_import(
-            repository_root=request.root,
-        ).build_report(
+        imported = ports.fresh_import(repository_root=request.root).build_report(
             publications=lazy_analysis.publications,
             repository_roots=self.fresh_import_repository_roots(
                 request.root,
@@ -813,6 +920,10 @@ class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):
         ``package: false`` (a workspace umbrella root, for example) owns no
         importable layout, and requiring one there made ``make gen`` fail on
         every such checkout regardless of what conform actually published.
+
+        Returns:
+            The resulting ``t.VariadicTuple[Path]``.
+
         """
         return tuple(
             root / repository.path for repository in repositories if repository.package

@@ -3,6 +3,9 @@
 The root environment serves every attached member: setup syncs every group of
 the root lock exactly, so a conform that drops the member group makes that
 sync uninstall the members and every later member import fails.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -17,8 +20,10 @@ from tests import u
 
 
 class TestsFlextInfraCodegenWorkspaceMemberGroup:
+    """Tests for ``FlextInfraCodegenWorkspaceMemberGroup``."""
+
+    @staticmethod
     def test_workspace_root_group_survives_conform_at_a_fixed_point(
-        self,
         tmp_path: Path,
     ) -> None:
         """Real root conform declares every attached member and converges."""

@@ -1,4 +1,8 @@
-"""Public API facade for flext-infra."""
+"""Public API facade for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,26 +11,27 @@ from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_core import r
 from flext_infra import FlextInfraConfig, m, t, u
-
-from .base import s
-from .check.workspace_check import FlextInfraWorkspaceChecker
-from .codegen.census import FlextInfraCodegenCensus
-from .codegen.codegen_transaction import FlextInfraCodegenTransaction
-from .codegen.conform import FlextInfraCodegenConform
-from .codegen.fixer import FlextInfraCodegenFixer
-from .codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
-from .codegen.pipeline import FlextInfraCodegenPipeline
-from .codegen.project_new import FlextInfraCodegenProjectNew
-from .codemod.text_gates import FlextInfraModTextGateEngine
-from .docs.formatter import FlextInfraDocFormatter
-from .docs.generator import FlextInfraDocGenerator
-from .gates.markdown_format import FlextInfraMarkdownFormatGate
-from .services.candidate_bootstrap import FlextInfraCandidateBootstrapService
-from .validate.fresh_import import FlextInfraValidateFreshImport
-from .validate.namespace_validator import FlextInfraNamespaceValidator
-from .workspace.detector import FlextInfraWorkspaceDetector
-from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin
-from .workspace.rope import FlextInfraRopeWorkspace
+from flext_infra.base import s
+from flext_infra.check.workspace_check import FlextInfraWorkspaceChecker
+from flext_infra.codegen.census import FlextInfraCodegenCensus
+from flext_infra.codegen.codegen_transaction import FlextInfraCodegenTransaction
+from flext_infra.codegen.conform import FlextInfraCodegenConform
+from flext_infra.codegen.fixer import FlextInfraCodegenFixer
+from flext_infra.codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
+from flext_infra.codegen.pipeline import FlextInfraCodegenPipeline
+from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
+from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
+from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
+from flext_infra.codemod.text_gates import FlextInfraModTextGateEngine
+from flext_infra.docs.formatter import FlextInfraDocFormatter
+from flext_infra.docs.generator import FlextInfraDocGenerator
+from flext_infra.gates.markdown_format import FlextInfraMarkdownFormatGate
+from flext_infra.services.candidate_bootstrap import FlextInfraCandidateBootstrapService
+from flext_infra.validate.fresh_import import FlextInfraValidateFreshImport
+from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
+from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
+from flext_infra.workspace.environment import FlextInfraWorkspaceEnvironmentMixin
+from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -41,7 +46,12 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         self,
         request: m.Infra.CandidateBootstrapCommand,
     ) -> p.Result[bool]:
-        """Compose typed declarations, conform planner and one atomic publisher."""
+        """Compose typed declarations, conform planner and one atomic publisher.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         identity = u.Infra.exact_worktree_root(
             request.repository_root.expanduser().absolute(),
         )
@@ -70,7 +80,12 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         self,
         repository_root: Path | None = None,
     ) -> p.Infra.RopeWorkspaceDsl:
-        """Open the public Rope workspace DSL directly from the facade."""
+        """Open the public Rope workspace DSL directly from the facade.
+
+        Returns:
+            The resulting ``p.Infra.RopeWorkspaceDsl``.
+
+        """
         # NOTE (multi-agent, flext-wkii.17.24): Rope reads its source policy
         # directly from config.Infra at the service boundary.
         resolved_root = (
@@ -79,13 +94,23 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         return FlextInfraRopeWorkspace.open_workspace(resolved_root)
 
     def check(self, request: m.Infra.RunCommand) -> p.Result[bool]:
-        """Compose one shared Rope cycle and execute every requested gate."""
+        """Compose one shared Rope cycle and execute every requested gate.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return FlextInfraWorkspaceChecker(
             repository_root=request.repository_root,
         ).execute_payload(request)
 
     def codegen_census(self, request: m.Infra.CodegenCommand) -> p.Result[str]:
-        """Run the read-only census within the facade-owned Rope lifecycle."""
+        """Run the read-only census within the facade-owned Rope lifecycle.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         return FlextInfraCodegenCensus(
             repository_root=request.repository_root,
             apply_changes=request.apply,
@@ -95,7 +120,12 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         ).execute()
 
     def codegen_auto_fix(self, request: m.Infra.CodegenAutoFixCommand) -> p.Result[str]:
-        """Run namespace fixes within the facade-owned Rope lifecycle."""
+        """Run namespace fixes within the facade-owned Rope lifecycle.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         return FlextInfraCodegenFixer(
             repository_root=request.repository_root,
             apply_changes=request.apply,
@@ -107,13 +137,19 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         ).execute()
 
     def codegen_pipeline(self, request: m.Infra.CodegenCommand) -> p.Result[str]:
-        """Run the codegen pipeline within the facade-owned Rope lifecycle."""
+        """Run the codegen pipeline with the facade-wired conform ports.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         return FlextInfraCodegenPipeline(
             repository_root=request.repository_root,
             apply_changes=request.apply,
             check_only=request.check_only,
             dry_run=request.dry_run,
             output_format=request.output_format,
+            conform_collaborators=self.codegen_conform_collaborators(),
         ).execute()
 
     @staticmethod
@@ -123,7 +159,12 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         projects: t.StrSequence,
         include_root: bool,
     ) -> p.Infra.DocsArtifactPlanner:
-        """Build the docs planner complete conform publishes through."""
+        """Build the docs planner complete conform publishes through.
+
+        Returns:
+            The resulting ``p.Infra.DocsArtifactPlanner``.
+
+        """
         return FlextInfraDocGenerator(
             repository_root=repository_root,
             projects=projects,
@@ -132,16 +173,31 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
 
     @staticmethod
     def fresh_import_probe(*, repository_root: Path) -> p.Infra.FreshImportProbe:
-        """Build the fresh-import probe complete conform validates with."""
+        """Build the fresh-import probe complete conform validates with.
+
+        Returns:
+            The resulting ``p.Infra.FreshImportProbe``.
+
+        """
         return FlextInfraValidateFreshImport(repository_root=repository_root)
 
     @staticmethod
     def markdown_format_gate(repository_root: Path) -> p.Infra.MarkdownFormatGate:
-        """Build the markdown format gate the docs formatter delegates to."""
+        """Build the markdown format gate the docs formatter delegates to.
+
+        Returns:
+            The resulting ``p.Infra.MarkdownFormatGate``.
+
+        """
         return FlextInfraMarkdownFormatGate(repository_root)
 
-    def codegen_conform_ports(self) -> m.Infra.CodegenConformPorts:
-        """Bind the docs and fresh-import families complete conform crosses into."""
+    def codegen_conform_collaborators(self) -> m.Infra.CodegenConformPorts:
+        """Bind the docs and fresh-import families complete conform crosses into.
+
+        Returns:
+            The resulting ``m.Infra.CodegenConformPorts``.
+
+        """
         return m.Infra.CodegenConformPorts(
             docs_planner=self.docs_artifact_planner,
             fresh_import=self.fresh_import_probe,
@@ -152,52 +208,90 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         request: m.Infra.CodegenConformRequest,
         initial_workspace: m.Infra.WorkspaceSpec | None = None,
     ) -> p.Result[m.Infra.CodegenResult]:
-        """Conform generated files with the facade-wired cross-family ports."""
+        """Conform generated files with the facade-wired cross-family ports.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         return FlextInfraCodegenConform.execute_request(
             request,
             initial_workspace,
-            ports=self.codegen_conform_ports(),
+            ports=self.codegen_conform_collaborators(),
         )
 
     def codegen_new(
         self,
         command: FlextInfraCodegenProjectNew,
     ) -> p.Result[m.Infra.CodegenResult]:
-        """Scaffold one project through conform with the facade-wired ports."""
+        """Scaffold one project through conform with the facade-wired ports.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         return command.model_copy(
-            update={"conform_ports": self.codegen_conform_ports()},
+            update={"conform_collaborators": self.codegen_conform_collaborators()},
         ).execute()
 
     def docs_format(self, command: FlextInfraDocFormatter) -> p.Result[bool]:
-        """Format docs through the facade-bound markdown format gate."""
+        """Format docs through the facade-bound markdown format gate.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return command.model_copy(
             update={"format_gate": self.markdown_format_gate},
         ).execute()
 
     def apply_renames(
-        self, request: m.Infra.ApplyRenamesInput
+        self,
+        request: m.Infra.ApplyRenamesInput,
     ) -> p.Result[m.Infra.ApplyRenamesReport]:
-        """Compose and run one explicitly supplied CSV rename campaign."""
+        """Compose and run one explicitly supplied CSV rename campaign.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ApplyRenamesReport]``.
+
+        """
         return FlextInfraApplyRenames().run(request)
 
     def mod(
-        self, request: m.Infra.ModCommand, progress: p.Infra.ModProgress
+        self,
+        request: m.Infra.ModCommand,
+        progress: p.Infra.ModProgress,
     ) -> p.Result[t.Cli.ResultValue]:
-        """Compose the codemod use case from typed config and real adapters."""
+        """Compose the codemod use case from typed config and real adapters.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
         config = FlextInfraConfig.fetch_global().Infra.refactor_csv_campaigns
         config_dir = FlextInfraConfig.ssot_config_dir()
+        config_root = config_dir.resolve()
+        repository_root = root.resolve()
         campaigns: list[m.Infra.ApplyRenamesInput] = []
         for declared in config.campaigns:
-            csv = Path(declared.csv)
+            csv = config_dir / declared.csv
+            if not csv.resolve().is_relative_to(config_root):
+                return r[t.Cli.ResultValue].fail(
+                    f"CSV campaign driver escapes config directory: {csv}",
+                )
             campaign_roots = tuple(
-                str(path if path.is_absolute() else root / path)
-                for path in (Path(value) for value in declared.roots)
-            )
+                (root / value).resolve() for value in declared.roots
+            ) or (root,)
+            for path in campaign_roots:
+                if not path.resolve().is_relative_to(repository_root):
+                    return r[t.Cli.ResultValue].fail(
+                        f"CSV campaign scan root escapes repository: {path}",
+                    )
             campaigns.append(
                 m.Infra.ApplyRenamesInput(
-                    csv=str(csv if csv.is_absolute() else config_dir / csv),
-                    roots=campaign_roots or (str(root),),
+                    csv=str(csv),
+                    roots=tuple(str(path) for path in campaign_roots),
                     apply=request.apply
                     and not request.check
                     and not request.dry_run_mode,
@@ -205,7 +299,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
                     text_globs=declared.text_globs,
                     python_documentation=declared.python_documentation,
                     exclude_globs=declared.exclude_globs,
-                )
+                ),
             )
         with self.rope_workspace(root) as rope:
             return FlextInfraCodemodBatchApply(
@@ -223,20 +317,36 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         self,
         request: m.Infra.NamespaceValidateCommand,
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Validate one project against the rule catalog."""
+        """Validate one project against the rule catalog.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ValidationReport]``.
+
+        """
         return FlextInfraNamespaceValidator(
             repository_root=request.repository_root,
         ).build_report()
 
     def mod_text(self, request: m.Infra.ModTextCommand) -> p.Result[t.Cli.ResultValue]:
-        """Compose the standalone authenticated text-rule replay."""
+        """Compose the standalone authenticated text-rule replay.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
         return FlextInfraModTextGateEngine.run(root, apply=request.apply)
 
     def mod_text_candidate(
-        self, request: m.Infra.ModTextCommand
+        self,
+        request: m.Infra.ModTextCommand,
     ) -> p.Result[t.Cli.ResultValue]:
-        """Replay one manifest-declared candidate using this healthy provider."""
+        """Replay one manifest-declared candidate using this healthy provider.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         source_root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
         workspace = FlextInfraWorkspaceDetector.load_workspace_spec(source_root)
         if workspace.failure:
@@ -244,20 +354,28 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         targets = workspace.value.candidate_bootstrap_targets
         if len(targets) != 1:
             return r[t.Cli.ResultValue].fail(
-                "mod-text-candidate requires exactly one candidate_bootstrap_target"
+                "mod-text-candidate requires exactly one candidate_bootstrap_target",
             )
+        # Non-strict: a missing declared worktree is graded by the exact-root
+        # owner's typed failure instead of escaping as FileNotFoundError.
         identity = u.Infra.exact_worktree_root(
-            (source_root / targets[0].path).resolve(strict=True)
+            (source_root / targets[0].path).resolve(),
         )
         if identity.failure:
             return r[t.Cli.ResultValue].from_failure(identity)
         return FlextInfraModTextGateEngine.run(
-            identity.value.repo_root, apply=request.apply
+            identity.value.repo_root,
+            apply=request.apply,
         )
 
     @staticmethod
     def project_context(cwd: Path) -> p.Result[m.Infra.WorkspaceProjectContext]:
-        """Derive Git, workspace, and effective project facts from ``cwd``."""
+        """Derive Git, workspace, and effective project facts from ``cwd``.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.WorkspaceProjectContext]``.
+
+        """
         resolved = cwd.expanduser().resolve()
         if not resolved.is_dir():
             return r[m.Infra.WorkspaceProjectContext].fail(
@@ -291,7 +409,12 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
 
     @override
     def execute(self) -> p.Result[t.JsonDict]:
-        """Execute a lightweight facade health report."""
+        """Execute a lightweight facade health report.
+
+        Returns:
+            The resulting ``p.Result[t.JsonDict]``.
+
+        """
         report: t.JsonDict = {
             "service": "flext-infra",
             "status": "ok",
