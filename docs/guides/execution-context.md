@@ -90,7 +90,7 @@ overlay.
 
 Code in a checkout runs in the environment of its `RUNTIME_ROOT`. The generated Makefile
 exports `RUNTIME_ROOT`, and flext-infra reads it as a typed declaration: the
-`fresh-import` validation runs its probes with `<RUNTIME_ROOT>/.venv/bin/python`, never
+`fresh-import` validation runs its probes with the platform-specific Python interpreter in `<RUNTIME_ROOT>/.venv`, never
 with the interpreter hosting the tool. Without a declaration, the owner derives the
 checkout's Git root; a declaration without an interpreter fails.
 
