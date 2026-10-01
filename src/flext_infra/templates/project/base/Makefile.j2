@@ -637,110 +637,8 @@ _upg_activated:
 	esac
 
 
-# _builtin-self-* targets serve the workspace root itself (project selector
-# `.` from the orchestrator). They apply the same member-style gate recipes to
-# PROJECT_ROOT without recursing into submodules, so the root distribution
-# runs its own evidence in the global cycles. Where the standalone profile's
-# `_builtin-*_all` twin owns the identical body, the self target delegates to
-# that twin so the gate-selection shell block is emitted exactly once; the
-# workspace profile emits the root-local body because its `_all` twin
-# recurses into members instead.
-{% if make_profile == "workspace" %}
-_builtin-self-test: _builtin_require_environment
-{{ test_report_recipe(
-    runner=pytest_test_runner(),
-) }}
-
-_builtin-self-check: _builtin_require_environment
-{{ local_check_body() }}
-
-_builtin-self-test-full: _builtin_require_environment
-{{ test_report_recipe(
-    runner=pytest_test_runner("full"),
-) }}
-
-_builtin-self-fmt: _builtin_require_environment
-{{ fmt_body() }}
-
-_builtin-self-fix: _builtin_require_environment
-{{ fix_body() }}
-
-# Catalog-driven enforcement fixes: every ENFORCE rule whose fix action is
-# declared safe, applied through its registered adapter.
-_builtin-self-fix-enforcement: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) check fix-enforcement --repository-root "$(PROJECT_ROOT)" --safe-only --apply
-
-_builtin-self-build:
-{% if package %}
-	@$(UV) build --project "$(PROJECT_ROOT)"
-{% else %}
-	@printf '%s\n' 'INFO: build: repository declares package=false (content-only root); no distribution to build'
-{% endif %}
-{% else %}
-# Standalone: the `_all` twins own the one emitted body (SSOT); each carries
-# its own `_builtin_require_environment` edge.
-_builtin-self-test: _builtin_test_all
-
-_builtin-self-check: _builtin_check_all
-
-_builtin-self-test-full: _builtin_test_full_all
-
-_builtin-self-fmt: _builtin_fmt_all
-
-_builtin-self-fix: _builtin_fix_all
-
-_builtin-self-fix-enforcement: _builtin_fix_enforcement
-
-_builtin-self-build: _builtin_build_artifacts
-{% endif %}
-
-_builtin-self-clean: _builtin_clean_generated
-
-_builtin-self-docs: _builtin_docs_all
-
-# SonarCloud server-side issue exclusions (SSOT: codegen.sonarcloud). The verb
-# writes an external service with SONAR_TOKEN from the environment; it belongs
-# to no setup/gen/check/test workflow row and never runs implicitly.
-_builtin_sonarcloud_sync_project: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
-
-_builtin-self-sonarcloud-sync: _builtin_sonarcloud_sync_project
-
-{% if make_profile == "workspace" %}
-_builtin_build_artifacts:
-	@$(WORKSPACE_ORCHESTRATE) --verb build $(WORKSPACE_PROJECT_ARGS)
-
-# Check is read-only: it validates and reports, never rewrites the tree (fix
-# and fmt own mutation). The workspace delegates the same operation to each
-# member; each generated member selects the same active local partition,
-# its CI complement, or all active gates when the CI token is absent.
-_builtin_check_all: _builtin_require_environment
-	@$(WORKSPACE_ORCHESTRATE) --verb check $(WORKSPACE_PROJECT_ARGS)
-
-_builtin_test_all: _builtin_require_environment
-	@$(WORKSPACE_ORCHESTRATE) --verb test $(WORKSPACE_PROJECT_ARGS)
-
-_builtin_test_full_all: _builtin_require_environment
-	@$(WORKSPACE_ORCHESTRATE) --verb test-full $(WORKSPACE_PROJECT_ARGS)
-
-_builtin_fmt_all: _builtin_require_environment
-	@$(WORKSPACE_ORCHESTRATE) --verb fmt $(WORKSPACE_PROJECT_ARGS)
-
-_builtin_fix_all: _builtin_require_environment
-	@$(WORKSPACE_ORCHESTRATE) --verb fix $(WORKSPACE_PROJECT_ARGS)
-
-_builtin_fix_enforcement: _builtin_require_environment
-	@$(WORKSPACE_ORCHESTRATE) --verb fix-enforcement $(WORKSPACE_PROJECT_ARGS)
-
-_builtin_sonarcloud_sync_all: _builtin_require_environment
-	@$(WORKSPACE_ORCHESTRATE) --verb sonarcloud-sync $(WORKSPACE_PROJECT_ARGS)
-
-# Member propagation exists only where members exist: this workspace's
-# flext-infra conforms and relocks each declared member and publishes one
-# pull-request lane per member that changed. It never merges.
-_builtin-propagate: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) {{ workspace_cli_group }} propagate --repository-root "$(PROJECT_ROOT)"
-{% else %}
+# Gate, fix and build verbs act on this repository only, with one body per verb
+# in every profile: a workspace root evaluates itself exactly as CI does.
 _builtin_build_artifacts:
 {% if package %}
 	@$(UV) build --project "$(PROJECT_ROOT)"
@@ -750,21 +648,20 @@ _builtin_build_artifacts:
 
 # Check is read-only: it runs the gates without --apply, so the tree is left
 # unchanged; fix applies the declared repairs of the fixable gates.
-# CI={{ make.ci.value }} runs make.check_gates_ci, the external gates of the
-# registry; CI={{ make.ci.local_value }} runs make.check_gates_local, its strict
-# complement (type checkers and flext-infra validators).
+# CI={{ make.ci.value }} keeps make.check_gates_ci, the strict complement of
+# make.check_gates_local; CI={{ make.ci.local_value }} runs that local partition.
 # An absent CI token runs every active default gate.
 _builtin_check_all: _builtin_require_environment
 {{ local_check_body() }}
 
 _builtin_test_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner(("", "slow")),
+    runner=pytest_test_runner(),
 ) }}
 
 _builtin_test_full_all: _builtin_require_environment
 {{ test_report_recipe(
-    runner=pytest_test_runner(("full",)),
+    runner=pytest_test_runner("full"),
 ) }}
 
 # fmt is format-only (single-pass verb law): ruff formats Python, the
