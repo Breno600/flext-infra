@@ -17,44 +17,37 @@ from tests import c, u
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra import p
-
 
 class TestsFlextInfraRunProjects:
     """Verify project execution through the public checker methods."""
 
-    def test_empty_gate_selection_fails(
-        self,
-        tmp_path: Path,
-    ) -> None:
+    @staticmethod
+    def test_empty_gate_selection_fails(tmp_path: Path) -> None:
+        """Test empty gate selection fails."""
         project = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        )
+        checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
 
         result = checker.run_projects(["p1"], [], reports_dir=tmp_path / "reports")
 
         tm.fail(result, has="at least one quality gate is required")
 
-    def test_invalid_gates_fail(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).run_projects(["p1"], ["invalid_gate"], reports_dir=tmp_path / "reports")
+    @staticmethod
+    def test_invalid_gates_fail(tmp_path: Path) -> None:
+        """Test invalid gates fail."""
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            ["p1"],
+            ["invalid_gate"],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.fail(result)
 
-    def test_project_without_pyproject_fails_loudly(
-        self,
-        tmp_path: Path,
-    ) -> None:
+    @staticmethod
+    def test_project_without_pyproject_fails_loudly(tmp_path: Path) -> None:
+        """Test project without pyproject fails loudly."""
         u.Tests.mk_project(tmp_path, "p1", with_src=True)
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).run_projects(
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
             ["p1", "nonexistent"],
             ["lint"],
             reports_dir=tmp_path / "reports",
@@ -63,13 +56,14 @@ class TestsFlextInfraRunProjects:
         tm.fail(result, has=str(tmp_path / "nonexistent" / c.PYPROJECT_FILENAME))
         tm.that((tmp_path / "reports" / "p1").exists(), eq=False)
 
-    def test_empty_project_selection_fails_loudly(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        result = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        ).run_projects([], ["lint"], reports_dir=tmp_path / "reports")
+    @staticmethod
+    def test_empty_project_selection_fails_loudly(tmp_path: Path) -> None:
+        """Test empty project selection fails loudly."""
+        result = FlextInfraWorkspaceChecker(repository_root=tmp_path).run_projects(
+            [],
+            ["lint"],
+            reports_dir=tmp_path / "reports",
+        )
 
         tm.fail(result, has="selected no projects")
 
@@ -82,9 +76,8 @@ class TestsFlextInfraRunProjects:
         tmp_path: Path,
         report_name: str,
     ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        )
+        """Test run projects creates reports."""
+        checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
 
@@ -98,13 +91,12 @@ class TestsFlextInfraRunProjects:
         tm.that(tuple(result.value[0].gates), eq=("lint",))
         tm.that((tmp_path / "reports" / report_name).exists(), eq=True)
 
+    @staticmethod
     def test_run_projects_creates_project_scoped_reports_dir(
-        self,
         tmp_path: Path,
     ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        )
+        """Test run projects creates project scoped reports dir."""
+        checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
 
@@ -117,13 +109,10 @@ class TestsFlextInfraRunProjects:
         tm.ok(result)
         tm.that((tmp_path / "reports" / "p1").is_dir(), eq=True)
 
-    def test_fail_fast_stops_after_first_failed_project(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        )
+    @staticmethod
+    def test_fail_fast_stops_after_first_failed_project(tmp_path: Path) -> None:
+        """Test fail fast stops after first failed project."""
+        checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
         for name in ("p1", "p2", "p3"):
             project_dir = u.Tests.mk_project(tmp_path, name, with_src=True)
             (project_dir / "src" / "test.py").write_text(
@@ -140,13 +129,10 @@ class TestsFlextInfraRunProjects:
         tm.ok(result)
         tm.that(len(result.value), eq=1)
 
-    def test_run_projects_reports_mixed_project_errors(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        )
+    @staticmethod
+    def test_run_projects_reports_mixed_project_errors(tmp_path: Path) -> None:
+        """Test run projects reports mixed project errors."""
+        checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
         for name in ("p1", "p2"):
             project_dir = u.Tests.mk_project(tmp_path, name, with_src=True)
             (project_dir / "src" / "test.py").write_text(
@@ -166,13 +152,10 @@ class TestsFlextInfraRunProjects:
         tm.that(result.value[0].total_findings > 0, eq=True)
         tm.that(result.value[1].total_findings, eq=0)
 
-    def test_run_project_returns_single_project_result(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        checker = FlextInfraWorkspaceChecker(
-            repository_root=tmp_path,
-        )
+    @staticmethod
+    def test_run_project_returns_single_project_result(tmp_path: Path) -> None:
+        """Test run project returns single project result."""
+        checker = FlextInfraWorkspaceChecker(repository_root=tmp_path)
         project_dir = u.Tests.mk_project(tmp_path, "p1", with_src=True)
         (project_dir / "src" / "test.py").write_text("value = 1\n", encoding="utf-8")
 

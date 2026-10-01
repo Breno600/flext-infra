@@ -1,4 +1,8 @@
-"""Constants namespace for flext_infra.refactor."""
+"""Constants namespace for flext_infra.refactor.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING, ClassVar, Literal
 
 from flext_core import c
-
-from .base import FlextInfraConstantsBase as cb
+from flext_infra._constants.base import FlextInfraConstantsBase as cb
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -64,6 +67,8 @@ class FlextInfraConstantsRefactor:
         - ``future-annotations``: add the future import to the file;
         - ``module-import``: hoist the matched import statement to the
           module import block;
+        - ``module-end``: move the matched top-level statement after the
+          module's last statement;
         - ``package-root-import``: rebind ``$NAME`` from ``$MODULE`` to that
           module's top-level package;
         - ``own-package-import``: rebind ``$NAME`` from ``$MODULE`` to the
@@ -76,6 +81,7 @@ class FlextInfraConstantsRefactor:
         TYPING_ALIAS = "typing-alias"
         FUTURE_ANNOTATIONS = "future-annotations"
         MODULE_IMPORT = "module-import"
+        MODULE_END = "module-end"
         PACKAGE_ROOT_IMPORT = "package-root-import"
         OWN_PACKAGE_IMPORT = "own-package-import"
         FACADE_CLASS = "facade-class"
@@ -149,6 +155,7 @@ class FlextInfraConstantsRefactor:
         COMPOSES_FAMILY = "composes-family"
         CLASS_STEM = "class-stem"
         PACKAGE_LAYERS = "package-layers"
+        PACKAGE_ROOT_INIT = "package-root-init"
         FAMILY_BASE = "family-base"
 
     @unique

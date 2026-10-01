@@ -199,32 +199,62 @@ class FlextInfraConstantsSourceCode:
 
     @staticmethod
     def compile_multiline(pattern: str) -> t.RegexPattern:
-        """Compile a user-supplied pattern with ``re.MULTILINE`` (centralized)."""
+        """Compile a user-supplied pattern with ``re.MULTILINE`` (centralized).
+
+        Returns:
+            The resulting ``t.RegexPattern``.
+
+        """
         return re.compile(pattern, re.MULTILINE)
 
     @staticmethod
     def compile(pattern: str, *, multiline: bool = False) -> t.RegexPattern:
-        """Compile an arbitrary pattern (centralized so consumers needn't import re)."""
+        """Compile an arbitrary pattern (centralized so consumers needn't import re).
+
+        Returns:
+            The resulting ``t.RegexPattern``.
+
+        """
         return re.compile(pattern, re.MULTILINE if multiline else 0)
 
     @staticmethod
     def compile_class_base_with_generic(name: str) -> t.RegexPattern:
-        r"""Compile ``<escaped name>(?:\[.*\])?`` for class-base + generic match."""
+        r"""Compile ``<escaped name>(?:\[.*\])?`` for class-base + generic match.
+
+        Returns:
+            The resulting ``t.RegexPattern``.
+
+        """
         return re.compile(rf"{re.escape(name)}(?:\[.*\])?")
 
     @staticmethod
     def escape(literal: str) -> str:
-        """Escape ``literal`` for inclusion in a regex (centralized re.escape)."""
+        """Escape ``literal`` for inclusion in a regex (centralized re.escape).
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return re.escape(literal)
 
     @staticmethod
     def compile_from_module_paren_open(module_name: str) -> t.RegexPattern:
-        """Compile ``^from <module_name> import (`` for parenthesized-import detection."""
+        """Compile ``^from <module_name> import (`` for parenthesized-import detection.
+
+        Returns:
+            The resulting ``t.RegexPattern``.
+
+        """
         return re.compile(rf"^from\s+{re.escape(module_name)}\s+import\s+\(")
 
     @staticmethod
     def compile_from_module_import_line(module_name: str) -> t.RegexPattern:
-        """Compile ``^from <module_name> import .+$`` (MULTILINE) for whole-line replace."""
+        """Compile ``^from <module_name> import .+$`` (MULTILINE) for whole-line replace.
+
+        Returns:
+            The resulting ``t.RegexPattern``.
+
+        """
         return re.compile(
             rf"^from\s+{re.escape(module_name)}\s+import\s+.+$",
             re.MULTILINE,

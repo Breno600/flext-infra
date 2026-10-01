@@ -1,4 +1,8 @@
-"""Workspace members must resolve one ledger without owning a second identity."""
+"""Workspace members must resolve one ledger without owning a second identity.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -74,7 +78,12 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
 
     @staticmethod
     def _member_ledger_identity(member: Path) -> m.Infra.WorkspaceSpec:
-        """Rewrite the member's ledger input and self-load its typed identity."""
+        """Rewrite the member's ledger input and self-load its typed identity.
+
+        Returns:
+            The resulting ``m.Infra.WorkspaceSpec``.
+
+        """
         u.Tests.WorktreeFixture.write_beads_project(
             member,
             workspace="member-workspace",
@@ -85,7 +94,12 @@ class TestsFlextInfraWorkspaceMemberLedgerIdentity:
 
     @staticmethod
     def _attach_member_to_workspace(tmp_path: Path) -> t.Pair[Path, Path]:
-        """Create one governed, committed workspace/member checkout pair."""
+        """Create one governed, committed workspace/member checkout pair.
+
+        Returns:
+            The resulting ``t.Pair[Path, Path]``.
+
+        """
         child_source = tmp_path / "child-source"
         u.Tests.WorktreeFixture.initialize_governed_project(
             child_source,

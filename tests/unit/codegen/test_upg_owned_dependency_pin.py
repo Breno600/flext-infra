@@ -1,5 +1,8 @@
 """uv.lock, written only by ``make upg``, owns every internal dependency pin.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Each ``flext-*`` requirement renders on its integration line. ``make upg``
 re-resolves that line (``uv lock --upgrade --refresh``) to the branch tip and
 records the commit in uv.lock; generation re-renders any commit left in the
@@ -37,7 +40,12 @@ class TestsFlextInfraUpgOwnedDependencyPin:
         infra_ref: str = LINE,
         flext_source: str = "",
     ) -> str:
-        """Write one standalone consumer declaring the family on the given refs."""
+        """Write one standalone consumer declaring the family on the given refs.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         (root / "config").mkdir(parents=True)
         repository: t.JsonDict = {
             "name": "consumer",

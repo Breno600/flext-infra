@@ -1,5 +1,8 @@
 """Topological publish ordering behavior for the release orchestrator.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Publishing to an index is immutable, so a dependent uploaded before its
 dependency leaves the index in a state no rollback can repair. The order is
 derived from each project's declared dependencies -- never from a hand-written
@@ -23,8 +26,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraReleaseDependencyOrder:
     """Behavior contract for wave computation over declared dependencies."""
 
+    @staticmethod
     def _write_project(
-        self,
         root: Path,
         name: str,
         dependencies: t.VariadicTuple[str],

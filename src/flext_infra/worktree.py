@@ -1,4 +1,8 @@
-"""Repository-local development worktree lifecycle service."""
+"""Repository-local development worktree lifecycle service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -29,7 +33,12 @@ class FlextInfraWorktreeService(s[str]):
     ] = None
 
     def _primary_root(self) -> p.Result[Path]:
-        """Resolve the primary worktree from Git's canonical registry."""
+        """Resolve the primary worktree from Git's canonical registry.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         primary = u.Infra.git_primary_worktree_root(
             m.Infra.GitRepoRequest(repo_root=self.repository_root),
         )
@@ -38,7 +47,12 @@ class FlextInfraWorktreeService(s[str]):
         return r[Path].ok(primary.value.primary_root)
 
     def _validated_branch(self) -> p.Result[str]:
-        """Validate and return the branch required by mutating operations."""
+        """Validate and return the branch required by mutating operations.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         branch = (self.branch or "").strip()
         if not branch:
             return r[str].fail(f"worktree {self.operation} requires --branch")
@@ -60,6 +74,10 @@ class FlextInfraWorktreeService(s[str]):
         the epic owns the container, so Git's own registry proves the
         parent/child topology and no epic can be retired while one of its
         children is still registered.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
         """
         if epic_lane is not None:
             return r[Path].ok(
@@ -89,7 +107,12 @@ class FlextInfraWorktreeService(s[str]):
         branch: str,
         epic_lane: Path | None = None,
     ) -> p.Result[Path]:
-        """Derive an isolated lane path and reject branch traversal."""
+        """Derive an isolated lane path and reject branch traversal.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         root_result = cls._lanes_root(primary_root, epic_lane)
         if root_result.failure:
             return r[Path].from_failure(root_result)
@@ -109,14 +132,24 @@ class FlextInfraWorktreeService(s[str]):
         branch: str,
         epic_lane: Path | None = None,
     ) -> p.Result[Path]:
-        """Return the canonical path reserved by one branch topology."""
+        """Return the canonical path reserved by one branch topology.
+
+        Returns:
+            The canonical path reserved by one branch topology.
+
+        """
         return cls._lane_path(primary_root, branch, epic_lane)
 
     @staticmethod
     def _registered_worktrees(
         primary_root: Path,
     ) -> p.Result[t.VariadicTuple[t.Pair[Path, str]]]:
-        """Pair every registered worktree root with the branch it checks out."""
+        """Pair every registered worktree root with the branch it checks out.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[t.Pair[Path, str]]]``.
+
+        """
         listed = u.Infra.git_list_worktrees(
             m.Infra.GitRepoRequest(repo_root=primary_root),
         )
@@ -133,7 +166,12 @@ class FlextInfraWorktreeService(s[str]):
         primary_root: Path,
         branch: str,
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Return the lanes Git registers for a branch; empty means none exists."""
+        """Return the lanes Git registers for a branch; empty means none exists.
+
+        Returns:
+            The lanes Git registers for a branch; empty means none exists.
+
+        """
         entries = cls._registered_worktrees(primary_root)
         if entries.failure:
             return r[t.VariadicTuple[Path]].from_failure(entries)
@@ -143,7 +181,12 @@ class FlextInfraWorktreeService(s[str]):
 
     @classmethod
     def registered_lane(cls, primary_root: Path, branch: str) -> p.Result[Path]:
-        """Resolve an existing branch lane from Git's canonical registry."""
+        """Resolve an existing branch lane from Git's canonical registry.
+
+        Returns:
+            The resulting ``p.Result[Path]``.
+
+        """
         lanes = cls.registered_lanes(primary_root, branch)
         if lanes.failure:
             return r[Path].from_failure(lanes)
@@ -157,7 +200,12 @@ class FlextInfraWorktreeService(s[str]):
         primary_root: Path,
         epic_lane: Path,
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Return every registered lane nested under one epic lane container."""
+        """Return every registered lane nested under one epic lane container.
+
+        Returns:
+            Every registered lane nested under one epic lane container.
+
+        """
         entries = cls._registered_worktrees(primary_root)
         if entries.failure:
             return r[t.VariadicTuple[Path]].from_failure(entries)
@@ -173,7 +221,12 @@ class FlextInfraWorktreeService(s[str]):
         )
 
     def _ref_exists(self, reference: str) -> p.Result[bool]:
-        """Return whether an exact Git ref exists, preserving command failures."""
+        """Return whether an exact Git ref exists, preserving command failures.
+
+        Returns:
+            Whether an exact Git ref exists, preserving command failures.
+
+        """
         checked = u.Infra.git_ref_exists(
             m.Infra.GitRefRequest(repo_root=self.repository_root, reference=reference),
         )
@@ -183,7 +236,12 @@ class FlextInfraWorktreeService(s[str]):
 
     @classmethod
     def setup_lane(cls, lane: Path) -> p.Result[bool]:
-        """Provision an isolated environment inside one lane."""
+        """Provision an isolated environment inside one lane.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return u.Infra.setup_lane(lane)
 
     @staticmethod
@@ -194,7 +252,12 @@ class FlextInfraWorktreeService(s[str]):
         created_branch_oid: str | None,
         setup_error: str,
     ) -> p.Result[str]:
-        """Roll back only a clean lane created by the current add operation."""
+        """Roll back only a clean lane created by the current add operation.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         return u.Infra.rollback_new_lane(
             primary_root,
             lane,
@@ -204,7 +267,12 @@ class FlextInfraWorktreeService(s[str]):
         )
 
     def _add(self, primary_root: Path, branch: str, base: str) -> p.Result[str]:
-        """Create one branch worktree without provisioning it."""
+        """Create one branch worktree without provisioning it.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         if not self.apply_changes:
             return r[str].fail("worktree add requires --apply")
         if base.startswith("-"):
@@ -299,7 +367,12 @@ class FlextInfraWorktreeService(s[str]):
         return r[str].ok(str(lane))
 
     def _remove(self, primary_root: Path, branch: str) -> p.Result[str]:
-        """Remove one clean canonical lane without deleting its branch."""
+        """Remove one clean canonical lane without deleting its branch.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         if not self.apply_changes:
             return r[str].fail("worktree remove requires --apply")
         lane_result = self.registered_lane(primary_root, branch)
@@ -324,7 +397,12 @@ class FlextInfraWorktreeService(s[str]):
         return r[str].ok(str(lane))
 
     def _update(self, primary_root: Path, branch: str, base: str) -> p.Result[str]:
-        """Merge-forward one clean canonical lane to the requested base."""
+        """Merge-forward one clean canonical lane to the requested base.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         if not self.apply_changes:
             return r[str].fail("worktree update requires --apply")
         lane_result = self.registered_lane(primary_root, branch)
@@ -335,7 +413,12 @@ class FlextInfraWorktreeService(s[str]):
 
     @override
     def execute(self) -> p.Result[str]:
-        """Execute the selected worktree operation."""
+        """Execute the selected worktree operation.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         primary = self._primary_root()
         if primary.failure:
             return r[str].from_failure(primary)

@@ -1,4 +1,8 @@
-"""Rule-test snapshots change only through their explicit refresh, never in mod."""
+"""Rule-test snapshots change only through their explicit refresh, never in mod.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,12 @@ class TestsFlextInfraModRuleFixtureSnapshots:
         fix: str = "bar($A)",
         invalid: t.StrSequence = ("foo(1)",),
     ) -> Path:
-        """Declare one governed rule with its test under ``root``; return the rule."""
+        """Declare one governed rule with its test under ``root``; return the rule.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         for directory in ("src", f"{fixtures}/rules", f"{fixtures}/tests"):
             tm.ok(u.Cli.ensure_dir(root / directory))
         tm.ok(
@@ -52,7 +61,12 @@ class TestsFlextInfraModRuleFixtureSnapshots:
 
     @staticmethod
     def _snapshot(root: Path, rule_id: str = "demo") -> Path:
-        """Return the committed snapshot path of one rule under ``root``."""
+        """Return the committed snapshot path of one rule under ``root``.
+
+        Returns:
+            The committed snapshot path of one rule under ``root``.
+
+        """
         return (
             root
             / "codemod"

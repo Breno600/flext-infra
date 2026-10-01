@@ -1,4 +1,8 @@
-"""Public CLI routing tests for docs commands."""
+"""Public CLI routing tests for docs commands.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -28,7 +32,8 @@ class TestsFlextInfraDocsMainEntry:
         )
         return workspace
 
-    def test_requires_subcommand(self) -> None:
+    @staticmethod
+    def test_requires_subcommand() -> None:
         """Return the usage exit code when docs has no subcommand."""
         tm.that(infra_main(["docs"]), eq=1)
 
@@ -48,7 +53,8 @@ class TestsFlextInfraDocsMainEntry:
         """Expose help successfully for every public docs route."""
         tm.that(infra_main(argv), eq=0)
 
-    def test_package_entrypoint_routes_through_docs_group(self) -> None:
+    @staticmethod
+    def test_package_entrypoint_routes_through_docs_group() -> None:
         """Route the package entry point through the public docs command group."""
         tm.that(FlextInfraCli.docs_main(["--help"]), eq=0)
         tm.that(FlextInfraCli.docs_main(["audit", "--help"]), eq=0)
@@ -124,7 +130,8 @@ class TestsFlextInfraDocsMainEntry:
             eq=False,
         )
 
-    def test_build_uses_public_route(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_build_uses_public_route(tmp_path: Path) -> None:
         """Run build through its public command route."""
         build_workspace = u.Tests.create_docs_workspace(tmp_path / "build-root")
         (build_workspace / "mkdocs.yml").write_text(

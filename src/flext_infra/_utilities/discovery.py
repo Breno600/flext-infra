@@ -1,4 +1,8 @@
-"""Project discovery utilities for package and workspace resolution."""
+"""Project discovery utilities for package and workspace resolution.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,11 +13,10 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_core import r
 from flext_infra import c, t
-
-from .namespace_config import FlextInfraUtilitiesNamespaceConfig
-from .project_discovery import FlextInfraUtilitiesProjectDiscovery
-from .pyproject import FlextInfraUtilitiesPyproject
-from .rope_analysis import FlextInfraUtilitiesRopeAnalysis
+from flext_infra._utilities.namespace_config import FlextInfraUtilitiesNamespaceConfig
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.rope_analysis import FlextInfraUtilitiesRopeAnalysis
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -35,7 +38,12 @@ class FlextInfraUtilitiesDiscovery(
 
     @staticmethod
     def _discover_project_root_from_path(file_path: str) -> str:
-        """Discover the enclosing project root path cached by file path."""
+        """Discover the enclosing project root path cached by file path.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         resolved = Path(file_path).resolve()
         candidate = (
             resolved.parent if resolved.suffix == c.Infra.EXT_PYTHON else resolved
@@ -59,14 +67,24 @@ class FlextInfraUtilitiesDiscovery(
 
     @staticmethod
     def _relative_path_parts(resolved: Path, project_root: Path | None) -> t.StrTuple:
-        """Return path parts relative to project root when possible."""
+        """Return path parts relative to project root when possible.
+
+        Returns:
+            Path parts relative to project root when possible.
+
+        """
         if project_root is None or not resolved.is_relative_to(project_root):
             return ()
         return resolved.relative_to(project_root).parts
 
     @staticmethod
     def _normalized_python_parts(resolved: Path, path_parts: t.StrTuple) -> t.StrTuple:
-        """Normalize filesystem parts into package/module parts."""
+        """Normalize filesystem parts into package/module parts.
+
+        Returns:
+            The resulting ``t.StrTuple``.
+
+        """
         if path_parts and path_parts[-1] == c.Infra.INIT_PY:
             return path_parts[:-1]
         if resolved.suffix == c.Infra.EXT_PYTHON and path_parts:
@@ -75,7 +93,12 @@ class FlextInfraUtilitiesDiscovery(
 
     @staticmethod
     def _package_name_from_wrapper_parts(path_parts: t.StrSequence) -> str:
-        """Return package name when path parts start with a known wrapper."""
+        """Return package name when path parts start with a known wrapper.
+
+        Returns:
+            Package name when path parts start with a known wrapper.
+
+        """
         if not path_parts:
             return ""
         root_name = path_parts[0]
@@ -88,7 +111,12 @@ class FlextInfraUtilitiesDiscovery(
 
     @staticmethod
     def _package_name_from_src_dir(resolved: Path) -> str:
-        """Return the package name when the path is a project root with src/<pkg>."""
+        """Return the package name when the path is a project root with src/<pkg>.
+
+        Returns:
+            The package name when the path is a project root with src/<pkg>.
+
+        """
         src_dir = resolved / c.Infra.DEFAULT_SRC_DIR
         if not src_dir.is_dir():
             return ""
@@ -100,7 +128,12 @@ class FlextInfraUtilitiesDiscovery(
 
     @staticmethod
     def pytest_test_module(file_path: Path) -> bool:
-        """Return whether a file is a pytest test module, not a production module."""
+        """Return whether a file is a pytest test module, not a production module.
+
+        Returns:
+            Whether a file is a pytest test module, not a production module.
+
+        """
         if c.Infra.DIR_TESTS not in file_path.parts:
             return False
         file_name = file_path.name
@@ -110,7 +143,12 @@ class FlextInfraUtilitiesDiscovery(
 
     @staticmethod
     def project_root(file_path: Path) -> Path | None:
-        """Discover the enclosing project root for one file or directory path."""
+        """Discover the enclosing project root for one file or directory path.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
         project_root = FlextInfraUtilitiesDiscovery._discover_project_root_from_path(
             str(file_path),
         )
@@ -118,7 +156,12 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def _discover_package_from_path(cls, file_path: str) -> str:
-        """Discover the package path cached by file path."""
+        """Discover the package path cached by file path.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         resolved = Path(file_path).resolve()
         project_root_value = cls._discover_project_root_from_path(file_path)
         project_root = Path(project_root_value) if project_root_value else None
@@ -154,7 +197,12 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def package_name(cls, file_path: Path) -> str:
-        """Discover the module or package path for one Python file or package directory."""
+        """Discover the module or package path for one Python file or package directory.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         return cls._discover_package_from_path(str(file_path))
 
     @staticmethod
@@ -167,6 +215,10 @@ class FlextInfraUtilitiesDiscovery(
         executed). ``None`` is the typed absence: the name is not a package
         in this environment (absent, or a plain module). A caller that
         REQUIRES the package — a declared facade parent — raises.
+
+        Returns:
+            The package directory the active environment declares for a name.
+
         """
         spec = importlib_util.find_spec(package_name)
         if spec is None or not spec.submodule_search_locations:
@@ -186,6 +238,10 @@ class FlextInfraUtilitiesDiscovery(
         ``workspace_excluded_top_dirs`` is the caller's validated analysis
         scope: the service that owns the workspace topology computes it and
         passes it in, so discovery never reaches back into that service.
+
+        Returns:
+            Top-level directories that contain at least one Python file.
+
         """
         if not project_dir.is_dir():
             return list[str]()
@@ -207,7 +263,10 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def discover_python_targets(
-        cls, project_dir: Path, *, workspace_excluded_top_dirs: frozenset[str]
+        cls,
+        project_dir: Path,
+        *,
+        workspace_excluded_top_dirs: frozenset[str],
     ) -> t.StrSequence:
         """Return every first-party Python target owned by one project root.
 
@@ -215,6 +274,10 @@ class FlextInfraUtilitiesDiscovery(
         the repository root. Analyzer and codemod gates must use the same
         complete target inventory so semantic discovery cannot find a file
         that their safety measurements silently exclude.
+
+        Returns:
+            Every first-party Python target owned by one project root.
+
         """
         if not project_dir.is_dir():
             return list[str]()
@@ -225,7 +288,8 @@ class FlextInfraUtilitiesDiscovery(
         ]
         return [
             *cls.discover_python_dirs(
-                project_dir, workspace_excluded_top_dirs=workspace_excluded_top_dirs
+                project_dir,
+                workspace_excluded_top_dirs=workspace_excluded_top_dirs,
             ),
             *root_modules,
         ]
@@ -244,6 +308,10 @@ class FlextInfraUtilitiesDiscovery(
         populated ``.venv`` that is tens of thousands of irrelevant files, and
         the caller's only signal is a timeout. Pruning applies the same names at
         every depth instead of only to the top-level entry.
+
+        Yields:
+            Each ``Path``.
+
         """
         for parent, child_dirs, file_names in directory.walk():
             child_dirs[:] = [
@@ -257,7 +325,12 @@ class FlextInfraUtilitiesDiscovery(
 
     @staticmethod
     def _python_file_belongs_to_project(project_dir: Path, source: Path) -> bool:
-        """Return whether ``source`` is owned by ``project_dir``'s manifest."""
+        """Return whether ``source`` is owned by ``project_dir``'s manifest.
+
+        Returns:
+            Whether ``source`` is owned by ``project_dir``'s manifest.
+
+        """
         for parent in source.parents:
             if parent == project_dir:
                 return True
@@ -288,6 +361,10 @@ class FlextInfraUtilitiesDiscovery(
         A directory owning a ``pyproject.toml`` is a project in its own right,
         never a root of this one: workspace subprojects are Python directories
         too, and each is analyzed under its own local configuration.
+
+        Returns:
+            The Python roots every analyzer surface must agree on.
+
         """
         discovered = cls.discover_python_dirs(
             project_dir,
@@ -305,7 +382,12 @@ class FlextInfraUtilitiesDiscovery(
 
     @classmethod
     def rope_repository_root(cls, repository_root: Path) -> Path:
-        """Resolve a local project without expanding it to an ancestor workspace."""
+        """Resolve a local project without expanding it to an ancestor workspace.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         resolved_root = repository_root.resolve()
         execution_dir = (
             resolved_root if resolved_root.is_dir() else resolved_root.parent
@@ -342,7 +424,12 @@ class FlextInfraUtilitiesDiscovery(
         skip_dirs: frozenset[str] | None = None,
         project_paths: t.SequenceOf[Path] | None = None,
     ) -> p.Result[t.SequenceOf[Path]]:
-        """Find all managed ``pyproject.toml`` files for one workspace root."""
+        """Find all managed ``pyproject.toml`` files for one workspace root.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[Path]]``.
+
+        """
         if not repository_root.exists() or not repository_root.is_dir():
             return r[t.SequenceOf[Path]].ok([])
         effective_skip = skip_dirs if skip_dirs is not None else c.Infra.SKIP_DIRS

@@ -1,5 +1,8 @@
 """Baseline branch derives from live repository reality, not a provider constant.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 A provider declares ONE branch, but managed repositories under the same provider
 legitimately integrate on different branches (for example ``dev`` and
 ``develop``). Deriving the baseline from ``provider.branch`` therefore fails
@@ -57,8 +60,8 @@ class TestsFlextInfraRepositoryBaselineBranch:
         tm.ok(resolved)
         tm.that(resolved.value, eq="dev")
 
+    @staticmethod
     def test_baseline_fails_closed_without_any_integration_branch(
-        self,
         tmp_path: Path,
     ) -> None:
         """A checkout without a published integration branch never guesses."""

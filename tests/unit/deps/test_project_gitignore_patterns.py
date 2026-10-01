@@ -1,4 +1,8 @@
-"""Project-owned ignore patterns: declaration, composition, and rendering."""
+"""Project-owned ignore patterns: declaration, composition, and rendering.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -27,6 +31,7 @@ class TestsFlextInfraProjectGitignorePatterns:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test declared patterns render as one project section."""
         root = self._project(
             tmp_path / "project",
             {
@@ -54,6 +59,7 @@ class TestsFlextInfraProjectGitignorePatterns:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test patterns compose across documents without duplicates."""
         root = self._project(
             tmp_path / "project",
             {
@@ -69,6 +75,7 @@ class TestsFlextInfraProjectGitignorePatterns:
         assert len(patterns) == 3
 
     def test_absent_declaration_adds_no_section(self, tmp_path: Path) -> None:
+        """Test absent declaration adds no section."""
         root = self._project(
             tmp_path / "project",
             {"tooling.yaml": "ManagedArtifacts: {}\n"},
@@ -84,6 +91,7 @@ class TestsFlextInfraProjectGitignorePatterns:
         assert c.Infra.GITIGNORE_PROJECT_SECTION_NAME not in tm.ok(rendered)
 
     def test_empty_pattern_is_rejected(self, tmp_path: Path) -> None:
+        """Test empty pattern is rejected."""
         root = self._project(
             tmp_path / "project",
             {"tooling.yaml": "ManagedArtifacts:\n  Gitignore:\n    patterns: ['']\n"},

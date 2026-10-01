@@ -1,4 +1,8 @@
-"""Projection-only contract for repository-owned Beads configuration."""
+"""Projection-only contract for repository-owned Beads configuration.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -30,6 +34,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test local identity renders declarative beads routing."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
@@ -296,6 +301,7 @@ class TestsFlextInfraCodegenBeadsProjection:
         self,
         tmp_path: Path,
     ) -> None:
+        """Test projection preserves the manual identity input."""
         root = self._project(
             tmp_path / "project",
             database="project_database",
@@ -308,7 +314,8 @@ class TestsFlextInfraCodegenBeadsProjection:
 
         tm.that(identity.read_bytes(), eq=before)
 
-    def test_beads_gate_lock_is_tolerated_runtime_state(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_beads_gate_lock_is_tolerated_runtime_state(tmp_path: Path) -> None:
         """The bd gate serialization marker never fails composed verification.
 
         The bd client writes ``dolt.gate.lock`` beside the ledger on every gate

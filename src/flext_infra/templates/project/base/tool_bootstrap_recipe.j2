@@ -190,7 +190,7 @@
 	mise_receipt runtime-version "$$pinned_mise"; \
 	runtime_release="$$receipt_release"; \
 	if [ "$(TOOL_BOOTSTRAP_RESOLVE)" = "1" ]; then \
-		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config "$$pinned_mise" latest {{ bootstrap.release_selector }}; \
+		mise_checked_stdout "$$scratch/resolve.stdout" "$$scratch/resolve.stderr" mise_exec no-config env MISE_CACHE_DIR="$$scratch/resolve-cache" MISE_FETCH_REMOTE_VERSIONS_CACHE=0s "$$pinned_mise" latest {{ bootstrap.release_selector }}; \
 		resolved_release=$$(cat "$$scratch/resolve.stdout"); \
 		if ! printf '%s\n' "$$resolved_release" | grep -Eq '^{{ bootstrap.resolved_release_pattern }}$$'; then \
 			printf 'ERROR: mise latest {{ bootstrap.release_selector }} returned an invalid release: %s\n' "$$resolved_release" >&2; exit 2; \
@@ -236,28 +236,55 @@
 	# configured tool in one pass so removed selectors cannot survive beside \
 	# their replacement in mise.lock. \
 	if [ "$(TOOL_BOOTSTRAP_LOCK)" = "1" ]; then \
-		lock_snapshot() { \
-			for lock in mise.lock uv.lock; do \
-				if [ -f "$$project_root/$$lock" ]; then cp "$$project_root/$$lock" "$$project_root/$$lock.bak"; fi; \
-				done; \
-		}; \
-		lock_restore() { \
-			for lock in mise.lock uv.lock; do \
-				if [ -f "$$project_root/$$lock.bak" ]; then mv "$$project_root/$$lock.bak" "$$project_root/$$lock"; fi; \
-				done; \
-		}; \
-		# Recover a lock orphaned by an interrupted previous run, then snapshot and \
-		# restore on any failure so a killed lock never leaves a truncated lock. \
-		for lock in mise.lock uv.lock; do \
-			if [ -f "$$project_root/$$lock.bak" ] && [ ! -f "$$project_root/$$lock" ]; then mv "$$project_root/$$lock.bak" "$$project_root/$$lock"; fi; \
-			done; \
-		lock_snapshot; \
-		trap 'lock_restore' EXIT; \
-		mise_checked "$$scratch/lock.log" mise_exec project "$$pinned_mise" -C "$$project_root" lock --bump; \
+		# Stage on the destination filesystem: the bumped lock is resolved and \
+		# installed from a private stage, and published by one rename only after \
+		# both succeed. A failed or killed run leaves mise.lock untouched; no \
+		# backup copy exists. \
+		lock_stage="$$(mktemp -d "$$project_root/.mise-lock-stage.XXXXXX")"; \
+		trap 'find "$$lock_stage" -depth -delete' EXIT; \
+		cp "$$project_root/.mise.toml" "$$lock_stage/.mise.toml"; \
+		if [ -f "$$project_root/mise.lock" ]; then cp "$$project_root/mise.lock" "$$lock_stage/mise.lock"; fi; \
+		mise_checked "$$scratch/lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; \
+		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
+		# mise lock writes each tool's dependency sidecar under .mise/locks \
+		# beside the staged lock. Every sidecar the bumped lock references is \
+		# published first (a path the committed lock does not reference yet is \
+		# inert), the lock rename is the commit point, and default-lock sidecars \
+		# it no longer references are removed afterwards. Sidecar paths carry \
+		# their build identity, so a referenced path whose staged content \
+		# differs from the published one fails instead of being replaced under \
+		# the committed lock. \
+		referenced_sidecars=" $$(sed -n 's|.*path = "\(\.mise/locks/[^"]*\)".*|\1|p' "$$lock_stage/mise.lock" | tr '\n' ' ')"; \
+		for relative in $$referenced_sidecars; do \
+			staged="$$lock_stage/$$relative"; \
+			published="$$project_root/$$relative"; \
+			if [ -e "$$published" ]; then \
+				if [ -e "$$staged" ] && ! diff -r "$$staged" "$$published" >&2; then \
+					printf 'ERROR: mise lock rewrote the published sidecar %s under an unchanged path\n' "$$relative" >&2; \
+					exit 2; \
+				fi; \
+			elif [ -d "$$staged" ]; then \
+				mkdir -p "$$(dirname "$$published")"; \
+				mv "$$staged" "$$published"; \
+			else \
+				printf 'ERROR: mise.lock references the sidecar %s that mise lock did not write\n' "$$relative" >&2; \
+				exit 2; \
+			fi; \
+		done; \
+		mv "$$lock_stage/mise.lock" "$$project_root/mise.lock"; \
+		for sidecar in "$$project_root"/.mise/locks/*/*; do \
+			[ -d "$$sidecar" ] || continue; \
+			relative="$${sidecar#"$$project_root"/}"; \
+			case "$$relative" in .mise/locks/mise.*) continue ;; esac; \
+			case "$$referenced_sidecars" in *" $$relative "*) ;; *) find "$$sidecar" -depth -delete ;; esac; \
+		done; \
+		if [ -d "$$project_root/.mise/locks" ]; then find "$$project_root/.mise/locks" -mindepth 1 -type d -empty -delete; fi; \
+		find "$$lock_stage" -depth -delete; \
+		trap - EXIT; \
+	else \
+		# ``locked`` mode installs exactly what the committed mise.lock pins. \
+		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
 	fi; \
-	# ``locked`` mode installs exactly what the committed mise.lock pins. \
-	mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
-	if [ "$(TOOL_BOOTSTRAP_LOCK)" = "1" ]; then trap - EXIT; rm -f "$$project_root/mise.lock.bak" "$$project_root/uv.lock.bak"; fi; \
 	mise_checked_stdout "$$scratch/ast-grep-version.stdout" "$$scratch/ast-grep-version.stderr" mise_exec project "$$pinned_mise" -C "$$project_root" exec -- ast-grep --version; \
 	if [ -s "$$scratch/ast-grep-version.stderr" ]; then \
 		printf 'ERROR: ast-grep emitted diagnostics after installation\n' >&2; exit 2; \

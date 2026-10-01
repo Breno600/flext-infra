@@ -1,4 +1,8 @@
-"""Configured CSV campaigns through the real public mod command."""
+"""Configured CSV campaigns through the real public mod command.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -40,6 +44,7 @@ class TestsRenameCampaignMod:
         *,
         apply: bool,
     ) -> None:
+        """Test public mod consumes declared text campaign."""
         config_dir = tmp_path / "campaign_config"
         self._declare(config_dir)
         (mod_workspace / "sample.py").write_text(
@@ -82,10 +87,11 @@ class TestsRenameCampaignMod:
         )
         tm.that(consumer.stdout, eq="campaign_token\n")
 
+    @staticmethod
     def test_packaged_campaigns_preserve_prose_and_converge(
-        self,
         tmp_path: Path,
     ) -> None:
+        """Test packaged campaigns preserve prose and converge."""
         mod_workspace, _package = u.Tests.create_lazy_init_workspace(tmp_path)
         config_dir = FlextInfraConfig.ssot_config_dir()
         campaigns = (

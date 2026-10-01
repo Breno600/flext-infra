@@ -13,9 +13,8 @@ from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
+from flext_infra.base import s
 from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
-
-from ..base import s
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -26,7 +25,12 @@ class FlextInfraCodegenCensus(s[str]):
 
     @override
     def execute(self) -> p.Result[str]:
-        """Execute the census directly from the validated CLI service model."""
+        """Execute the census directly from the validated CLI service model.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         if self.apply_changes:
             return r[str].fail(
                 "census is read-only; use flext-infra codegen auto-fix --apply",
@@ -86,7 +90,12 @@ class FlextInfraCodegenCensus(s[str]):
         *,
         projects: t.SequenceOf[p.Infra.ProjectInfo] | None = None,
     ) -> p.Result[t.VariadicTuple[m.Infra.CensusReport]]:
-        """Census all projects in workspace using the standard path."""
+        """Census all projects in workspace using the standard path.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.CensusReport]]``.
+
+        """
         if projects is not None:
             selected_projects = tuple(projects)
         else:

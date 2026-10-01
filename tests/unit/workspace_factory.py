@@ -27,11 +27,21 @@ class TestsFlextInfraWorkspaceFactory:
     encoding: str = c.Cli.ENCODING_DEFAULT
 
     def create_minimal(self, tmp_path: Path, name: t.NonEmptyStr = "test-proj") -> Path:
-        """Create a minimal project with pyproject.toml, Makefile, and src/."""
+        """Create a minimal project with pyproject.toml, Makefile, and src/.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return self._create_project(tmp_path=tmp_path, name=name, deps=[])
 
     def create_full(self, tmp_path: Path, name: t.NonEmptyStr) -> Path:
-        """Create a full project with docs/, AGENTS.md, and README.md."""
+        """Create a full project with docs/, AGENTS.md, and README.md.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project_root = self.create_minimal(tmp_path=tmp_path, name=name)
         docs_dir = project_root / "docs"
         docs_dir.mkdir(parents=True, exist_ok=True)
@@ -55,11 +65,21 @@ class TestsFlextInfraWorkspaceFactory:
         name: t.NonEmptyStr,
         deps: t.StrSequence,
     ) -> Path:
-        """Create a project with the specified dependencies."""
+        """Create a project with the specified dependencies.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         return self._create_project(tmp_path=tmp_path, name=name, deps=deps)
 
     def create_workspace(self, tmp_path: Path, projects: int = 3) -> Path:
-        """Create a multi-project workspace using real project fixtures."""
+        """Create a multi-project workspace using real project fixtures.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         repository_root: Path = tmp_path / "workspace"
         repository_root.mkdir(parents=True, exist_ok=True)
         project_names = [f"test-proj-{idx + 1}" for idx in range(projects)]
@@ -96,7 +116,12 @@ class TestsFlextInfraWorkspaceFactory:
         name: t.NonEmptyStr,
         deps: t.StrSequence,
     ) -> Path:
-        """Create a project structure with package and tests directories."""
+        """Create a project structure with package and tests directories.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         project_name = name
         project_root: Path = tmp_path / project_name
         package_dir: Path = project_root / "src" / project_name.replace("-", "_")
@@ -119,7 +144,12 @@ class TestsFlextInfraWorkspaceFactory:
         return project_root
 
     def _project_pyproject(self, name: t.NonEmptyStr, deps: t.StrSequence) -> str:
-        """Generate pyproject.toml content using infra constants."""
+        """Generate pyproject.toml content using infra constants.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         project_name: str = name
         default_python: str = self.default_python
         default_version: str = self.default_version

@@ -26,14 +26,24 @@ class TestsFlextInfraGitIdentitySubmodules:
 
     @staticmethod
     def _repo(root: Path) -> Path:
-        """Initialize one real Git repository carrying a single commit."""
+        """Initialize one real Git repository carrying a single commit.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         root.mkdir(parents=True, exist_ok=True)
         test_u.Tests.initialize_git_repo(root)
         return root
 
     @classmethod
     def _superproject(cls, tmp_path: Path) -> Path:
-        """Build a real superproject whose index carries a gitlink entry."""
+        """Build a real superproject whose index carries a gitlink entry.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         child = cls._repo(tmp_path / "child")
         parent = cls._repo(tmp_path / "parent")
         tm.ok(
@@ -120,7 +130,8 @@ class TestsFlextInfraGitIdentitySubmodules:
         tm.that(identity.origin_remote, eq=origin)
         tm.that(identity.upstream_remote, eq=upstream)
 
-    def test_unborn_repository_returns_typed_failure(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_unborn_repository_returns_typed_failure(tmp_path: Path) -> None:
         """Discovery can reject an initialized repository with no committed HEAD."""
         unborn = tmp_path / "unborn"
         unborn.mkdir()

@@ -21,7 +21,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraAuditorScope:
     """Tests for FlextInfraDocAuditor scope, forbidden terms, and audit_scope."""
 
-    def test_forbidden_term_issues_empty_scope(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_forbidden_term_issues_empty_scope(tmp_path: Path) -> None:
         """Test forbidden_term_issues with no markdown files."""
         auditor = FlextInfraDocAuditor()
         scope = m.Infra.DocScope(
@@ -32,7 +33,8 @@ class TestsFlextInfraAuditorScope:
         issues = auditor.forbidden_term_issues(scope)
         tm.that(len(issues), gte=0)
 
-    def test_forbidden_term_issues_root_scope(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_forbidden_term_issues_root_scope(tmp_path: Path) -> None:
         """Test forbidden_term_issues filters by docs/ for root scope."""
         auditor = FlextInfraDocAuditor()
         docs_dir = tmp_path / "docs"
@@ -46,7 +48,8 @@ class TestsFlextInfraAuditorScope:
         issues = auditor.forbidden_term_issues(scope)
         tm.that(len(issues), gte=0)
 
-    def test_forbidden_term_issues_project_scope(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_forbidden_term_issues_project_scope(tmp_path: Path) -> None:
         """Test forbidden_term_issues filters by project name."""
         auditor = FlextInfraDocAuditor()
         docs_dir = tmp_path / "docs"
@@ -60,8 +63,8 @@ class TestsFlextInfraAuditorScope:
         issues = auditor.forbidden_term_issues(scope)
         tm.that(len(issues), gte=0)
 
+    @staticmethod
     def test_forbidden_term_issues_root_scope_non_docs_file(
-        self,
         tmp_path: Path,
     ) -> None:
         """Test forbidden_term_issues skips non-docs files in root scope."""
@@ -75,7 +78,8 @@ class TestsFlextInfraAuditorScope:
         issues = auditor.forbidden_term_issues(scope)
         tm.that(len(issues), gte=0)
 
-    def test_forbidden_term_issues_non_flext_scope(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_forbidden_term_issues_non_flext_scope(tmp_path: Path) -> None:
         """Test forbidden_term_issues skips non-flext scopes."""
         auditor = FlextInfraDocAuditor()
         (tmp_path / "test.md").write_text("# Test")
@@ -87,7 +91,8 @@ class TestsFlextInfraAuditorScope:
         issues = auditor.forbidden_term_issues(scope)
         tm.that(len(issues), gte=0)
 
-    def test_audit_scope_with_links_check(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_audit_scope_with_links_check(tmp_path: Path) -> None:
         """Test audit_scope runs links check."""
         auditor = FlextInfraDocAuditor()
         scope = m.Infra.DocScope(
@@ -102,7 +107,8 @@ class TestsFlextInfraAuditorScope:
         tm.that(report.phase, eq="audit")
         tm.that(report.checks, has="links")
 
-    def test_audit_scope_with_forbidden_terms_check(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_audit_scope_with_forbidden_terms_check(tmp_path: Path) -> None:
         """Test audit_scope runs forbidden-terms check."""
         auditor = FlextInfraDocAuditor()
         scope = m.Infra.DocScope(
@@ -117,7 +123,8 @@ class TestsFlextInfraAuditorScope:
         tm.that(report.phase, eq="audit")
         tm.that(report.checks, has="forbidden-terms")
 
-    def test_audit_scope_without_issues_passes(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_audit_scope_without_issues_passes(tmp_path: Path) -> None:
         """An issue-free audit passes without opting into a mode.
 
         Why: the all-check resolves the Make verb contract from repository
@@ -146,7 +153,8 @@ class TestsFlextInfraAuditorScope:
         tm.that(report.passed, eq=True)
         tm.that(report.result, eq=c.Infra.ResultStatus.OK)
 
-    def test_audit_scope_with_issues_fails(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_audit_scope_with_issues_fails(tmp_path: Path) -> None:
         """A broken link fails and stays visible in persisted evidence."""
         auditor = FlextInfraDocAuditor()
         (tmp_path / "README.md").write_text("[Broken](missing.md)\n", encoding="utf-8")
@@ -226,8 +234,8 @@ class TestsFlextInfraAuditorScope:
         tm.that(report.passed, eq=False)
         tm.that(report.result, eq=c.Infra.ResultStatus.FAIL)
 
+    @staticmethod
     def test_machine_path_issues_flags_user_home_and_skips_container_identity(
-        self,
         tmp_path: Path,
     ) -> None:
         """A /home/<user> or /Users/<user> root is flagged; CI/container homes pass."""
@@ -252,8 +260,9 @@ class TestsFlextInfraAuditorScope:
         tm.that(issues[0].message, has="/home/someone")
         tm.that(issues[1].message, has="/Users/someone")
 
+    @staticmethod
     def test_machine_path_issues_honours_exact_evidence_files(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Only a named historical file keeps an observed machine path."""
         auditor = FlextInfraDocAuditor()
@@ -276,18 +285,21 @@ class TestsFlextInfraAuditorScope:
             eq={"docs/live.md", "docs/plans/new-plan.md"},
         )
 
+    @staticmethod
     def test_placeholder_patterns_distinguish_open_marker_from_plural_word(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """The declared lexical rule flags TODO colon, not ordinary TODOS prose."""
         docs = tmp_path / "docs"
         docs.mkdir()
         (docs / "guide.md").write_text("TODOS are reviewed.\n")
         (docs / "docs_config.json").write_text(
-            '{"audit": {"placeholder_patterns": ["TODO[ ]*:"]}}'
+            '{"audit": {"placeholder_patterns": ["TODO[ ]*:"]}}',
         )
         scope = m.Infra.DocScope(
-            name="root", path=tmp_path, report_dir=tmp_path / "reports"
+            name="root",
+            path=tmp_path,
+            report_dir=tmp_path / "reports",
         )
         auditor = FlextInfraDocAuditor()
         tm.that(auditor.placeholder_issues(scope), eq=[])
@@ -296,16 +308,19 @@ class TestsFlextInfraAuditorScope:
         tm.that(len(issues), eq=1)
         tm.that(issues[0].file, eq="docs/guide.md")
 
-    def test_invalid_audit_policy_fails_public_boundary(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_invalid_audit_policy_fails_public_boundary(tmp_path: Path) -> None:
         """A malformed audit declaration fails instead of silently disabling a gate."""
         docs = tmp_path / "docs"
         docs.mkdir()
         (docs / "guide.md").write_text("/home/someone/flext\n")
         (docs / "docs_config.json").write_text(
-            '{"audit": {"historical_evidence_files": ["docs/plans/"]}}'
+            '{"audit": {"historical_evidence_files": ["docs/plans/"]}}',
         )
         scope = m.Infra.DocScope(
-            name="root", path=tmp_path, report_dir=tmp_path / "reports"
+            name="root",
+            path=tmp_path,
+            report_dir=tmp_path / "reports",
         )
         with pytest.raises(ValueError, match="historical evidence"):
             FlextInfraDocAuditor().machine_path_issues(scope)

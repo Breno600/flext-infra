@@ -21,10 +21,12 @@ from fnmatch import fnmatch
 from pathlib import Path
 
 from flext_core import r
-
-from .. import c, m, p, t, u
-from .._config import FlextInfraConfig
-from ..codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransaction
+from flext_infra import c, m, p, t, u
+from flext_infra._config import FlextInfraConfig
+from flext_infra.codegen import (
+    FlextInfraCodegenMiseArtifacts,
+    FlextInfraCodegenTransaction,
+)
 
 
 class FlextInfraModTextGateEngine:
@@ -32,7 +34,12 @@ class FlextInfraModTextGateEngine:
 
     @classmethod
     def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
-        """Replay only text rules through their authenticated transaction."""
+        """Replay only text rules through their authenticated transaction.
+
+        Returns:
+            The resulting ``p.Result[t.Cli.ResultValue]``.
+
+        """
         pending = cls.scan(root, fix=False, validate_receipts=True)
         if pending.failure:
             return r[t.Cli.ResultValue].from_failure(pending)
@@ -45,16 +52,21 @@ class FlextInfraModTextGateEngine:
             return r[t.Cli.ResultValue].from_failure(remaining)
         if remaining.value.findings:
             return r[t.Cli.ResultValue].fail(
-                f"mod-text has {remaining.value.findings} pending finding(s)"
+                f"mod-text has {remaining.value.findings} pending finding(s)",
             )
         return r[t.Cli.ResultValue].ok(
             f"mod-text: {pending.value.actionable if apply else 0} "
-            "actionable finding(s) applied; fixed point verified"
+            "actionable finding(s) applied; fixed point verified",
         )
 
     @classmethod
     def load_rules(cls, root: Path) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
-        """Load package and workspace text rules into one validated tuple."""
+        """Load package and workspace text rules into one validated tuple.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.ModTextRule]]``.
+
+        """
         snapshots = cls._catalogue_states(root.absolute())
         if snapshots.failure:
             return r[t.VariadicTuple[m.Infra.ModTextRule]].from_failure(snapshots)
@@ -64,7 +76,12 @@ class FlextInfraModTextGateEngine:
     def _catalogue_states(
         root: Path,
     ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
-        """Capture the packaged rules and the consumer overlay exactly once."""
+        """Capture the packaged rules and the consumer overlay exactly once.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]``.
+
+        """
         provider = (
             FlextInfraConfig.ssot_config_dir().parent
             / c.Infra.CODEMOD_TEXT_RULES_RELPATH
@@ -90,7 +107,12 @@ class FlextInfraModTextGateEngine:
         cls,
         snapshots: t.VariadicTuple[m.Cli.AtomicFileState],
     ) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
-        """Compose provider rules before local rules and reject ambiguous ids."""
+        """Compose provider rules before local rules and reject ambiguous ids.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.ModTextRule]]``.
+
+        """
         rules: list[m.Infra.ModTextRule] = []
         owners: dict[str, Path] = {}
         for snapshot in snapshots:
@@ -113,7 +135,12 @@ class FlextInfraModTextGateEngine:
         cls,
         snapshot: m.Cli.AtomicFileState,
     ) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
-        """Parse only the exact authenticated catalogue bytes used by the plan."""
+        """Parse only the exact authenticated catalogue bytes used by the plan.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[m.Infra.ModTextRule]]``.
+
+        """
         if snapshot.content is None:
             return r[t.VariadicTuple[m.Infra.ModTextRule]].ok(())
         source = snapshot.path
@@ -144,7 +171,12 @@ class FlextInfraModTextGateEngine:
         raw: p.AttributeProbe,
         source: Path,
     ) -> p.Result[m.Infra.ModTextRule]:
-        """Validate one raw list entry into a frozen text rule."""
+        """Validate one raw list entry into a frozen text rule.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ModTextRule]``.
+
+        """
         if not isinstance(raw, dict):
             return r[m.Infra.ModTextRule].fail(
                 f"text rule entry must be a mapping in {source}: {raw!r}",
@@ -190,7 +222,7 @@ class FlextInfraModTextGateEngine:
             for name, value in capture_equals.items()
         ):
             return r[m.Infra.ModTextRule].fail(
-                f"text rule capture_equals must map capture names to strings in {source}"
+                f"text rule capture_equals must map capture names to strings in {source}",
             )
         try:
             compiled = re.compile(find)
@@ -201,7 +233,7 @@ class FlextInfraModTextGateEngine:
         unknown_captures = set(capture_equals).difference(compiled.groupindex)
         if unknown_captures:
             return r[m.Infra.ModTextRule].fail(
-                f"unknown regex captures {sorted(unknown_captures)} in {source}"
+                f"unknown regex captures {sorted(unknown_captures)} in {source}",
             )
         rule = m.Infra.ModTextRule(
             rule_id=str(raw.get(c.Infra.CODEMOD_TEXT_KEY_ID, "")),
@@ -226,9 +258,15 @@ class FlextInfraModTextGateEngine:
 
     @staticmethod
     def _source_paths(
-        root: Path, rules: t.VariadicTuple[m.Infra.ModTextRule]
+        root: Path,
+        rules: t.VariadicTuple[m.Infra.ModTextRule],
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Inventory Python sources and only explicitly declared Markdown globs."""
+        """Inventory Python sources and only explicitly declared Markdown globs.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
         paths: set[Path] = set()
         for target in u.Infra.ast_grep_scan_targets(root):
             candidate = root / target
@@ -243,12 +281,12 @@ class FlextInfraModTextGateEngine:
                     continue
                 if declared.is_absolute() or ".." in declared.parts:
                     return r[t.VariadicTuple[Path]].fail(
-                        f"text Markdown include escapes repository: {pattern}"
+                        f"text Markdown include escapes repository: {pattern}",
                     )
                 matches = tuple(sorted(root.glob(pattern)))
                 if not matches:
                     return r[t.VariadicTuple[Path]].fail(
-                        f"text Markdown include has no source: {pattern}"
+                        f"text Markdown include has no source: {pattern}",
                     )
                 for path in matches:
                     if (
@@ -258,7 +296,7 @@ class FlextInfraModTextGateEngine:
                         or path.stat().st_nlink != 1
                     ):
                         return r[t.VariadicTuple[Path]].fail(
-                            f"text Markdown source must be physical: {path}"
+                            f"text Markdown source must be physical: {path}",
                         )
                     paths.add(path)
         return r[t.VariadicTuple[Path]].ok(tuple(sorted(paths)))
@@ -271,7 +309,12 @@ class FlextInfraModTextGateEngine:
         fix: bool,
         validate_receipts: bool = False,
     ) -> p.Result[m.Infra.ModTextReport]:
-        """Scan the governed surface or apply every rule rewrite in place."""
+        """Scan the governed surface or apply every rule rewrite in place.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.ModTextReport]``.
+
+        """
         root = root.absolute()
         catalogues = cls._catalogue_states(root)
         if catalogues.failure:
@@ -349,7 +392,12 @@ class FlextInfraModTextGateEngine:
         inputs: t.VariadicTuple[m.Cli.AtomicFileState],
         rules: t.VariadicTuple[m.Infra.ModTextRule],
     ) -> p.Result[t.VariadicTuple[Path]]:
-        """Publish the complete authenticated batch through the shared journal."""
+        """Publish the complete authenticated batch through the shared journal.
+
+        Returns:
+            The resulting ``p.Result[t.VariadicTuple[Path]]``.
+
+        """
         transaction = FlextInfraCodegenTransaction(
             FlextInfraCodegenMiseArtifacts(repository_root=root),
         )
@@ -412,6 +460,10 @@ class FlextInfraModTextGateEngine:
 
         A positive expected count is a one-invocation precondition, not an
         idempotence promise after that migration has consumed its matches.
+
+        Raises:
+            RuntimeError: If text rule.
+
         """
         counts: MutableMapping[str, int] = {}
         for entry in report.entries:
@@ -433,7 +485,12 @@ class FlextInfraModTextGateEngine:
         target: str,
         rules: t.VariadicTuple[m.Infra.ModTextRule],
     ) -> t.Triple[str, list[m.Infra.ModTextFinding], int]:
-        """Rewrite one source text through every elected rule entry."""
+        """Rewrite one source text through every elected rule entry.
+
+        Returns:
+            The resulting ``t.Triple[str, list[m.Infra.ModTextFinding], int]``.
+
+        """
         updated = source
         entries: list[m.Infra.ModTextFinding] = []
         actionable = 0
@@ -469,7 +526,15 @@ class FlextInfraModTextGateEngine:
         found: list[m.Infra.ModTextFinding],
         match: re.Match[str],
     ) -> str:
-        """Record and expand one match, binding every loop value explicitly."""
+        """Record and expand one match, binding every loop value explicitly.
+
+        Returns:
+            The resulting ``str``.
+
+        Raises:
+            ValueError: If text rule.
+
+        """
         for name, expected in rule.capture_equals.items():
             actual = match.group(name)
             if actual != expected:
@@ -493,7 +558,12 @@ class FlextInfraModTextGateEngine:
 
     @staticmethod
     def _rule_elects(rule: m.Infra.ModTextRule, target: str) -> bool:
-        """Return whether one target path is elected by the rule globs."""
+        """Return whether one target path is elected by the rule globs.
+
+        Returns:
+            Whether one target path is elected by the rule globs.
+
+        """
         if rule.exclude and any(fnmatch(target, glob) for glob in rule.exclude):
             return False
         return not (
@@ -502,7 +572,12 @@ class FlextInfraModTextGateEngine:
 
     @staticmethod
     def _compiled(rule: m.Infra.ModTextRule) -> re.Pattern[str]:
-        """Compile one rule pattern with its declared SSOT flag names."""
+        """Compile one rule pattern with its declared SSOT flag names.
+
+        Returns:
+            The resulting ``re.Pattern[str]``.
+
+        """
         flags = 0
         for name in rule.flags:
             flags |= c.Infra.CODEMOD_TEXT_FLAG_NAMES[name]

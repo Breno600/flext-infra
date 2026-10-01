@@ -1,4 +1,8 @@
-"""Durable diagnostics and execution accounting for pytest."""
+"""Durable diagnostics and execution accounting for pytest.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -9,9 +13,8 @@ from defusedxml import ElementTree as DefusedET
 
 from flext_core import r
 from flext_infra import c, m, u
+from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
-
-from .base import FlextInfraPytestRunnerBase
 
 if TYPE_CHECKING:
     from flext_infra import p, t
@@ -34,7 +37,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
 
     @staticmethod
     def _failure_detail(message: str, pytest_log: Path) -> str:
-        """Attach the bounded log tail to an artifact failure."""
+        """Attach the bounded log tail to an artifact failure.
+
+        Returns:
+            The resulting ``str``.
+
+        """
         tail = "\n".join(pytest_log.read_text(encoding="utf-8").splitlines()[-40:])
         return f"{message}\n--- pytest.log (tail) ---\n{tail}" if tail else message
 
@@ -46,7 +54,20 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         cache_restored: bool,
         reported_count: int,
     ) -> p.Result[m.Infra.TestmonRunAccounting]:
-        """Parse typed executed/deselected accounting from durable artifacts."""
+        """Parse typed executed/deselected accounting from durable artifacts.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.TestmonRunAccounting]``.
+
+        Raises:
+            FileNotFoundError: If ``not junit.exists()``.
+            RuntimeError: Always; or if non-coverage accounting requires the durable
+                selection plan; or if testmon selected node IDs outside the complete
+                collection inventory.
+            ValueError: If JUnit must be a regular file; or if ``junit.stat().st_size ==
+                0``; or if ``root is None``.
+
+        """
         if not junit.exists():
             raise FileNotFoundError(junit)
         if not junit.is_file():
@@ -128,7 +149,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         raise RuntimeError(msg)
 
     def _diagnostics(self, report_dir: Path) -> p.Result[m.Infra.PytestDiagnostics]:
-        """Extract diagnostics through the canonical typed service."""
+        """Extract diagnostics through the canonical typed service.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.PytestDiagnostics]``.
+
+        """
         extractor = FlextInfraPytestDiagExtractor(
             repository_root=self.root,
             junit=report_dir / "junit.xml",
@@ -143,7 +169,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
 
     @staticmethod
     def _collection_diagnostics(report_log: Path) -> None:
-        """Require complete collection evidence before accepting a selection."""
+        """Require complete collection evidence before accepting a selection.
+
+        Raises:
+            RuntimeError: If pytest collection contains blocking findings.
+
+        """
         diagnostics = FlextInfraPytestDiagExtractor.extract_report_log(
             report_log,
         ).unwrap()
@@ -167,7 +198,12 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         context: m.Infra.PytestRunContext,
         suite: m.Infra.PytestDiagnostics,
     ) -> t.VariadicTuple[t.Pair[str, m.Infra.PytestDiagnostics]]:
-        """Read each subprocess receipt once in execution order."""
+        """Read each subprocess receipt once in execution order.
+
+        Returns:
+            The resulting ``t.VariadicTuple[t.Pair[str, m.Infra.PytestDiagnostics]]``.
+
+        """
         phases: t.MutableSequenceOf[t.Pair[str, m.Infra.PytestDiagnostics]] = []
         if context.execution_mode != c.Infra.PytestExecutionMode.COVERAGE:
             selection_plan = m.Infra.PytestSelectionPlan.model_validate_json(
@@ -197,7 +233,17 @@ class FlextInfraPytestRunnerReports(FlextInfraPytestRunnerBase):
         return (*phases, ("suite", suite))
 
     def _validate_coverage(self, report_dir: Path) -> p.Result[bool]:
-        """Require a non-empty coverage report; the percentage is never a gate."""
+        """Require a non-empty coverage report; the percentage is never a gate.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        Raises:
+            FileNotFoundError: If ``not coverage.exists()``.
+            ValueError: If coverage artifact must be a regular file; or if
+                ``coverage.stat().st_size == 0``.
+
+        """
         coverage = report_dir / "coverage.xml"
         if not coverage.exists():
             raise FileNotFoundError(coverage)

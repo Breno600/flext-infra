@@ -328,6 +328,7 @@ if TYPE_CHECKING:
     from flext_infra._utilities.iteration_workspace import (
         FlextInfraUtilitiesIterationWorkspace,
     )
+    from flext_infra._utilities.lint_recipes import FlextInfraUtilitiesLintRecipes
     from flext_infra._utilities.log_parser import FlextInfraUtilitiesLogParser
     from flext_infra._utilities.managed_conflicts import (
         FlextInfraUtilitiesManagedConflicts,
@@ -442,7 +443,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraMypyDarwinSupervisor",
     "FlextInfraMypyProfiler",
     "FlextInfraRopeProject",
-    "FlextInfraRopeRuleLoaderService",
     "FlextInfraUtilitiesBase",
     "FlextInfraUtilitiesCodegen",
     "FlextInfraUtilitiesCodegenFacades",
@@ -519,6 +519,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraUtilitiesIterationDirectory",
     "FlextInfraUtilitiesIterationMatching",
     "FlextInfraUtilitiesIterationWorkspace",
+    "FlextInfraUtilitiesLintRecipes",
     "FlextInfraUtilitiesLogParser",
     "FlextInfraUtilitiesManagedConflicts",
     "FlextInfraUtilitiesNamespaceConfig",
@@ -817,6 +818,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".iteration_directory": ("FlextInfraUtilitiesIterationDirectory",),
             ".iteration_matching": ("FlextInfraUtilitiesIterationMatching",),
             ".iteration_workspace": ("FlextInfraUtilitiesIterationWorkspace",),
+            ".lint_recipes": ("FlextInfraUtilitiesLintRecipes",),
             ".log_parser": ("FlextInfraUtilitiesLogParser",),
             ".managed_conflicts": ("FlextInfraUtilitiesManagedConflicts",),
             ".namespace": ("FlextInfraUtilitiesCodegenNamespace",),
@@ -860,7 +862,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".rope_imports": ("FlextInfraUtilitiesRopeImports",),
             ".rope_inventory": ("FlextInfraUtilitiesRopeInventory",),
             ".rope_module_patch": ("FlextInfraUtilitiesRopeModulePatch",),
-            ".rope_rule_loader": ("FlextInfraRopeRuleLoaderService",),
             ".rope_runtime": ("FlextInfraUtilitiesRopeRuntime",),
             ".rope_runtime_base": ("FlextInfraUtilitiesRopeRuntimeBase",),
             ".rope_runtime_modules": ("FlextInfraUtilitiesRopeRuntimeModules",),

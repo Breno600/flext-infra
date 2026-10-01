@@ -1,5 +1,8 @@
 """Constants for FLEXT infra tests.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 Provides TestsFlextInfraConstants, extending FlextTestsConstants with
 infra-specific constants for infrastructure testing, project names, and test
 markers.
@@ -136,6 +139,12 @@ class TestsFlextInfraConstants(FlextTestsConstants, FlextInfraConstants):
             FlextInfraConstants.Infra.MAKE_REPOSITORY_ROOT,
             *FlextInfraConstants.Infra.ORCHESTRATOR_REMOVE_ENV_KEYS,
             *DIRENV_SESSION_ENV_KEYS,
+            # The host's GitHub credential (and the aliases Make unexports)
+            # never enters a test; a test that needs one passes its own.
+            "GITHUB_TOKEN",
+            "GH_TOKEN",
+            "MISE_GITHUB_TOKEN",
+            "GITHUB_API_TOKEN",
         )
         """Environment inherited from an outer Make invocation to discard in tests.
 

@@ -1,4 +1,8 @@
-"""Typed SonarCloud web API contracts for the server-side settings sync."""
+"""Typed SonarCloud web API contracts for the server-side settings sync.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 

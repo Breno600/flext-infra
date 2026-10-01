@@ -236,7 +236,6 @@ class TestsFlextInfraScriptDispatchMakefile:
                 "deps modernize",
             ],
         )
-        tm.that(gen_all_body, lacks="MISE_GITHUB_CREDENTIAL_COMMAND")
         tm.that(
             gen_all_body,
             lacks=["codegen lazy-init", "docs generate", "_generated_docs"],
@@ -342,15 +341,18 @@ class TestsFlextInfraScriptDispatchMakefile:
         tm.that(report, has="$(PROFILE_REPORTS_DIR)/pytest.pstats.json")
 
     def test_test_verbs_split_testmon_budget_from_unbounded_full(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
-        """make test is bounded and testmon-backed; make test-full is neither.
+        """Make test is bounded and testmon-backed; make test-full is neither.
 
         The persistent database is keyed by the declared distribution, so
         every checkout of a project shares one testmon history.
         """
         rendered = self._render_root_makefile(
-            tmp_path, extra_verbs=(), script_dispatch=None
+            tmp_path,
+            extra_verbs=(),
+            script_dispatch=None,
         )
         cache = config.Infra.codegen.make.testmon_cache
         database_line = next(

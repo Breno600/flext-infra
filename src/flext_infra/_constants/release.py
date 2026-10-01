@@ -1,5 +1,8 @@
 """Centralized constants for the release subpackage.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The release protocol derives every version bump from the Conventional Commits
 subject that a merged pull request leaves on its merge commit, writes the
 version only through the protocol, and identifies a release by one tag shape.

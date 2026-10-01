@@ -99,9 +99,9 @@ A member attached as a submodule uses the environment of its containing Git
 superproject; a standalone checkout or linked worktree has its own. The physical
 directory is `.venv` at the runtime root (`c.Infra.ENVIRONMENT_DIRECTORY`), never a
 configuration value. The generated Makefile, the generated `.envrc`, and
-`runtime_environment_dir` resolve that location from the same resolved runtime root, so
-entering the checkout through a symlink does not change the selected environment. No environment is borrowed from another checkout
-through a symlink.
+`runtime_environment_dir` resolve that location from the same resolved runtime root,
+so entering the checkout through a symlink does not change the selected environment.
+No environment is borrowed from another checkout through a symlink.
 
 ## Mise launchers
 
@@ -160,15 +160,15 @@ never authorizes broad exclusions or changes to the native payload.
 
 ## Bootstrap credentials
 
-Network bootstrap receives an explicit credential in the process environment: `GH_TOKEN`
-takes precedence over `GITHUB_TOKEN`. Make never queries `gh` or the keyring. Without
-either, `make setup` may reuse already provisioned tools and dependencies; an operation
-that needs the network fails in the owning backend. An invalid token preserves the
-backend's native error, without an anonymous retry or source switch. Mise reads the same
-`GITHUB_TOKEN`; Make removes any inherited `MISE_GITHUB_TOKEN` from recipe environments,
-because an alias of the same credential would take precedence over it. The credential
-launcher or CI job must inject `GITHUB_TOKEN` into the process; containers receive the
-variable or BuildKit secret explicitly.
+The GitHub credential is optional and has one variable, `GITHUB_TOKEN`, which mise,
+gh, and uv all read. Only the caller's environment supplies it: when the caller sets
+it, every recipe receives it; when the caller does not, mise runs anonymously. No
+recipe reads a stored credential (`gh auth token`, a keyring, netrc) to fill an absent
+one. Make unexports the tool-scoped aliases `GH_TOKEN`, `MISE_GITHUB_TOKEN`, and
+`GITHUB_API_TOKEN` from every recipe, because an alias of the same credential would
+shadow or outrank `GITHUB_TOKEN`. An invalid token preserves the backend's native
+error, without an anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`;
+containers receive the variable or a BuildKit secret explicitly.
 
 ## Evidence and checkpoints
 
@@ -180,9 +180,9 @@ completion requires integration and runtime measured at the integrated SHA.
 
 For namespace automation, investigate catalog, classifier, transformation, publication,
 and consumers in that order. The namespace laws are codemod catalog rules, so the
-codemod gate is their one verdict. Preserve mutability, inheritance, imports, and collection; validate the
-transformation through the public interface before widening the batch. Structural
-refactors go through `make mod`.
+codemod gate is their one verdict. Preserve mutability, inheritance, imports, and
+collection; validate the transformation through the public interface before widening
+the batch. Structural refactors go through `make mod`.
 
 ## Check gate partitions
 
@@ -201,7 +201,10 @@ both partitions without overlap. Validators keep their severity, and active func
 gates still require execution without warnings or residual findings.
 
 `smells` is not part of the `make check` partitions. The selector-free `make smells`
-verb runs the same analysis gate separately and fails when it finds defects.
+verb runs only the qlty smell scan and fails when it finds defects. The
+`runtime-census` gate stays in `make check` and grades every runtime enforcement
+finding, including rules that qlty also classifies as smells. An empty or
+malformed qlty SARIF response is a failed scan, not a zero-finding receipt.
 
 ## Bounded Mypy failure status
 

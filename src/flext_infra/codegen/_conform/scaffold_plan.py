@@ -1,14 +1,19 @@
-"""Complete scaffold planning for ``codegen new``."""
+"""Complete scaffold planning for ``codegen new``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, m, p, t, u
-from ...deps import FlextInfraPyprojectModernizer
-from .existing_plan import FlextInfraCodegenConformExistingPlan
+from flext_infra import c, m, p, t, u
+from flext_infra.codegen._conform.existing_plan import (
+    FlextInfraCodegenConformExistingPlan,
+)
+from flext_infra.deps import FlextInfraPyprojectModernizer
 
 
 class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan):
@@ -22,7 +27,12 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         codegen: m.Infra.CodegenConfigSpec,
         contract: m.Infra.CodegenConformSurfaceContract,
     ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
-        """Render the complete scaffold for ``codegen new`` only."""
+        """Render the complete scaffold for ``codegen new`` only.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]``.
+
+        """
         project = workspace.project
         if project is None:
             return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
@@ -150,7 +160,8 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
         # The pyproject plans first: renders that derive from its requirements
         # (the dependabot cooldown exclusion) read the planned bytes.
         for entry, destination in sorted(
-            scaffold_entries, key=lambda item: item[1] != c.PYPROJECT_FILENAME
+            scaffold_entries,
+            key=lambda item: item[1] != c.PYPROJECT_FILENAME,
         ):
             if entry.delegate == c.Infra.TemplateDelegate.MANIFEST:
                 manifest_path = (
@@ -203,11 +214,12 @@ class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan)
                 )
             if destination == c.PYPROJECT_FILENAME:
                 recorded = self.with_planned_pyproject(
-                    render_inputs, rendered_content.value.rendered
+                    render_inputs,
+                    rendered_content.value.rendered,
                 )
                 if recorded.failure:
                     return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
-                        recorded
+                        recorded,
                     )
                 render_inputs = recorded.value
             file_plan = self.file_plan(

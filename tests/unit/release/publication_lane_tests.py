@@ -1,5 +1,8 @@
 """Publication lane behavior: what a step produces reaches one pull request.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The lane is the canonical owner release and member propagation share: from a
 clean integration checkout, ``u.Infra.git_publish_lane`` enters the lane,
 runs the producing step, commits exactly the paths it produced, pushes the
@@ -33,7 +36,12 @@ class TestsFlextInfraReleasePublicationLane:
         self,
         tmp_path: Path,
     ) -> Generator[t.Triple[Path, m.Infra.GitLaneRequest, Path]]:
-        """Yield a clean integration checkout, its lane request and the ``gh`` log."""
+        """Yield a clean integration checkout, its lane request and the ``gh`` log.
+
+        Yields:
+            Each ``t.Triple[Path, m.Infra.GitLaneRequest, Path]``.
+
+        """
         repo = u.Tests.git_repository(tmp_path)
         base = u.Tests.checkout_integration(repo)
         u.Tests.configure_local_origin(repo, tmp_path / "remote")
@@ -56,11 +64,21 @@ class TestsFlextInfraReleasePublicationLane:
         repo: Path,
         content: str = "produced\n",
     ) -> Callable[[], p.Result[bool]]:
-        """Return a producing step that writes one file."""
+        """Return a producing step that writes one file.
+
+        Returns:
+            A producing step that writes one file.
+
+        """
         return lambda: u.Cli.files_write_text(repo / "produced.txt", content)
 
     def _published(self, tmp_path: Path) -> str:
-        """Return the lane branch the bare origin carries, or an empty string."""
+        """Return the lane branch the bare origin carries, or an empty string.
+
+        Returns:
+            The lane branch the bare origin carries, or an empty string.
+
+        """
         return u.Tests.git_capture(
             tmp_path / "remote" / "origin.git",
             "branch",

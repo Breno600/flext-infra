@@ -14,13 +14,16 @@ from time import perf_counter
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-
-from .. import c, config, m, t, u
-from ..workspace.rope import FlextInfraRopeWorkspace
-from ._execution import FlextInfraCodegenExecutionBase
-from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
-from ._lazy_init_projection_manifest import FlextInfraCodegenLazyInitProjectionManifest
-from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
+from flext_infra import c, config, m, t, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._lazy_init_generation import (
+    FlextInfraCodegenLazyInitGenerationMixin,
+)
+from flext_infra.codegen._lazy_init_projection_manifest import (
+    FlextInfraCodegenLazyInitProjectionManifest,
+)
+from flext_infra.codegen.lazy_init_planner import FlextInfraCodegenLazyInitPlanner
+from flext_infra.workspace.rope import FlextInfraRopeWorkspace
 
 if TYPE_CHECKING:
     from .. import p
@@ -55,7 +58,12 @@ class FlextInfraCodegenLazyInit(
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Check lazy-init drift; publication belongs to conform's transaction."""
+        """Check lazy-init drift; publication belongs to conform's transaction.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         planned = self.plan_files()
         if planned.failure:
             return r[bool].from_failure(planned)
@@ -78,7 +86,12 @@ class FlextInfraCodegenLazyInit(
         return r[bool].ok(True)
 
     def plan_files(self) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
-        """Return one complete immutable lazy-init analysis receipt."""
+        """Return one complete immutable lazy-init analysis receipt.
+
+        Returns:
+            One complete immutable lazy-init analysis receipt.
+
+        """
         self._modified_files.clear()
         if not self.repository_root.is_dir():
             return r[m.Infra.CodegenPhaseAnalysis].fail(
@@ -115,11 +128,21 @@ class FlextInfraCodegenLazyInit(
         return r[m.Infra.CodegenPhaseAnalysis].ok(analysis)
 
     def _plan_in_workspace(self) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
-        """Plan once against a stable snapshot and expose the first failure."""
+        """Plan once against a stable snapshot and expose the first failure.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
+
+        """
         return self._plan_attempt()
 
     def _plan_attempt(self) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
-        """Compose explicitly selected repositories without widening their indexes."""
+        """Compose explicitly selected repositories without widening their indexes.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
+
+        """
         roots = (
             (self.repository_root.resolve(),)
             if self.project_scope_roots is None
@@ -163,7 +186,7 @@ class FlextInfraCodegenLazyInit(
         composed = tuple(file for analysis in analyses for file in analysis.files)
         manifests = (
             FlextInfraCodegenLazyInitProjectionManifest.projection_manifest_plans(
-                files=composed
+                files=composed,
             )
         )
         if manifests.failure:
@@ -184,7 +207,12 @@ class FlextInfraCodegenLazyInit(
         index: m.Infra.RopeWorkspaceIndex,
         root: Path,
     ) -> t.VariadicTuple[Path]:
-        """Resolve the target through the current repository's authenticated index."""
+        """Resolve the target through the current repository's authenticated index.
+
+        Returns:
+            The resulting ``t.VariadicTuple[Path]``.
+
+        """
         if self.target_module is None:
             return ()
         mapped = index.package_dir_by_name.get(self.target_module)
@@ -205,7 +233,12 @@ class FlextInfraCodegenLazyInit(
         self,
         rope: FlextInfraRopeWorkspace,
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
-        """Build immutable plans from one stable Rope workspace snapshot."""
+        """Build immutable plans from one stable Rope workspace snapshot.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenPhaseAnalysis]``.
+
+        """
         workspace_index = rope.workspace_index
         resolved_repository_root = self.repository_root.resolve()
         candidate_entries = tuple(
@@ -310,7 +343,12 @@ class FlextInfraCodegenLazyInit(
         target_package_dir: Path | None,
         repository_root: Path,
     ) -> t.VariadicTuple[Path]:
-        """Select the target's source/test scope and its production sibling."""
+        """Select the target's source/test scope and its production sibling.
+
+        Returns:
+            The resulting ``t.VariadicTuple[Path]``.
+
+        """
         if target_package_dir is None:
             return tuple(indexed_package_dirs)
         target_parts = target_package_dir.relative_to(repository_root).parts

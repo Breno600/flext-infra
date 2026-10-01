@@ -10,10 +10,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_core import r
-
-from .. import c, m, t, u
-from ._execution import FlextInfraCodegenExecutionBase
-from .conform import FlextInfraCodegenConform
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen.conform import FlextInfraCodegenConform
 
 # New file per operator live
 # order (ULW). ctx via u.derive_class_stem (no parallel detection, ADR-005 §9);
@@ -127,7 +126,7 @@ class FlextInfraCodegenProjectNew(
         ),
     ]
     year: Annotated[int, m.Field(ge=2025, description="Deterministic copyright year.")]
-    conform_ports: Annotated[
+    conform_collaborators: Annotated[
         m.Infra.CodegenConformPorts | None,
         m.Field(
             default=None,
@@ -141,7 +140,12 @@ class FlextInfraCodegenProjectNew(
 
     @override
     def execute(self) -> p.Result[m.Infra.CodegenResult]:
-        """Build one typed manifest and delegate all output to conform."""
+        """Build one typed manifest and delegate all output to conform.
+
+        Returns:
+            The resulting ``p.Result[m.Infra.CodegenResult]``.
+
+        """
         if self.effective_dry_run:
             return r[m.Infra.CodegenResult].fail("codegen new requires apply mode")
         # Every identity fact is an explicit caller declaration: for a

@@ -1,4 +1,8 @@
-"""Data-only contracts for the canonical AST-grep circuit."""
+"""Data-only contracts for the canonical AST-grep circuit.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -85,8 +89,8 @@ class FlextInfraModelsCodemod:
         captures: Annotated[
             t.JsonMapping,
             m.Field(
-                default_factory=lambda: MappingProxyType({}),
                 validation_alias=m.AliasPath("metaVariables", "single"),
+                default_factory=lambda: MappingProxyType({}),
                 description=(
                     "Captured single metavariables; ast-grep omits the payload "
                     "for a match that captures none"
@@ -96,8 +100,8 @@ class FlextInfraModelsCodemod:
         transformed: Annotated[
             t.JsonMapping,
             m.Field(
-                default_factory=lambda: MappingProxyType({}),
                 validation_alias=m.AliasPath("metaVariables", "transformed"),
+                default_factory=lambda: MappingProxyType({}),
                 description="Metavariables the rule derived through transform",
             ),
         ]
