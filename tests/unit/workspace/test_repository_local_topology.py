@@ -414,6 +414,67 @@ class TestsFlextInfraRepositoryLocalTopology:
         tm.that((member / c.PYPROJECT_FILENAME).exists(), eq=False)
         tm.that((member / c.Infra.GIT_DIR).exists(), eq=False)
 
+    def test_declared_content_member_remains_governed_without_checkout(
+        self, tmp_path: Path
+    ) -> None:
+        """A content-only member's declared identity survives deinitialization."""
+        member = self._attached_member(tmp_path)
+        root = member.parents[1]
+        before = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        declared = tuple(
+            item.model_copy(update={"package": False})
+            for item in before.subprojects
+        )
+        self._declare_members(root, declared)
+        relative = member.relative_to(root).as_posix()
+        tm.ok(
+            u.Cli.run_checked(
+                (c.Infra.GIT, "submodule", "absorbgitdirs", "--", relative), cwd=root
+            )
+        )
+        tm.ok(
+            u.Cli.run_checked(
+                (c.Infra.GIT, "submodule", "deinit", "-f", "--", relative), cwd=root
+            )
+        )
+
+        workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+
+        tm.that(workspace.subprojects, eq=declared)
+        tm.that(workspace.external_dependency_paths, empty=True)
+        tm.that((member / c.Infra.GIT_DIR).exists(), eq=False)
+
+    def test_explicitly_unmanaged_content_member_remains_external(
+        self, tmp_path: Path
+    ) -> None:
+        """The .gitmodules opt-out takes precedence over a cataloged member."""
+        member = self._attached_member(tmp_path)
+        root = member.parents[1]
+        before = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+        self._declare_members(
+            root,
+            tuple(item.model_copy(update={"package": False}) for item in before.subprojects),
+        )
+        relative = member.relative_to(root).as_posix()
+        tm.ok(
+            u.Cli.run_checked(
+                (
+                    c.Infra.GIT,
+                    "config",
+                    "-f",
+                    c.Infra.GITMODULES,
+                    "submodule.apps/member.flext-managed",
+                    "false",
+                ),
+                cwd=root,
+            )
+        )
+
+        workspace = tm.ok(FlextInfraWorkspaceDetector.load_workspace_spec(root))
+
+        tm.that(workspace.subprojects, empty=True)
+        tm.that(workspace.external_dependency_paths, has=Path(relative))
+
     def test_declared_member_url_must_match_its_gitmodules_url(
         self, tmp_path: Path
     ) -> None:
