@@ -214,3 +214,71 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True)),
             eq=first,
         )
+
+    def test_mise_triple_recovery_is_complete_and_idempotent(
+        self, tmp_path: Path
+    ) -> None:
+        """One declared recovery publishes all upg-owned launch artifacts."""
+        source, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+        )
+        candidate, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+        )
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + "\ncandidate_bootstrap_targets:\n"
+            + f"  - path: {Path(os.path.relpath(candidate, source)).as_posix()}\n"
+            + "    what: mise-triple\n",
+            encoding="utf-8",
+        )
+        for name, _mode in c.Infra.ARTIFACT_SPECS:
+            (candidate / name).write_text("<<<<<<< HEAD\n", encoding="utf-8")
+        command = m.Infra.CandidateBootstrapCommand(repository_root=source)
+
+        tm.ok(infra.bootstrap_candidate(command))
+        first = tuple(
+            tm.ok(u.Cli.atomic_read_binary_file_state(candidate / name, required=True))
+            for name, _mode in c.Infra.ARTIFACT_SPECS
+        )
+        tm.that(all(state.content != b"<<<<<<< HEAD\n" for state in first), eq=True)
+        tm.ok(infra.bootstrap_candidate(command))
+        repeated = tuple(
+            tm.ok(u.Cli.atomic_read_binary_file_state(candidate / name, required=True))
+            for name, _mode in c.Infra.ARTIFACT_SPECS
+        )
+        tm.that(repeated, eq=first)
+
+    def test_mise_triple_fails_before_partial_publication(
+        self, tmp_path: Path
+    ) -> None:
+        """An invalid destination prevents any member of the triple from writing."""
+        source, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+        )
+        candidate, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+        )
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + "\ncandidate_bootstrap_targets:\n"
+            + f"  - path: {Path(os.path.relpath(candidate, source)).as_posix()}\n"
+            + "    what: mise-triple\n",
+            encoding="utf-8",
+        )
+        first = candidate / c.Infra.ARTIFACT_SPECS[0][0]
+        first.write_text("<<<<<<< HEAD\n", encoding="utf-8")
+        last = candidate / c.Infra.ARTIFACT_SPECS[-1][0]
+        last.unlink()
+        last.mkdir()
+
+        result = infra.bootstrap_candidate(
+            m.Infra.CandidateBootstrapCommand(repository_root=source)
+        )
+
+        tm.that(result.failure, eq=True)
+        tm.that(first.read_text(encoding="utf-8"), eq="<<<<<<< HEAD\n")

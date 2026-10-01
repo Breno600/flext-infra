@@ -123,6 +123,13 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                 return m.Infra.CodegenConformSurfaceContract(
                     destinations=frozenset({destination}), pyproject=False, custom=False
                 )
+            case c.Infra.CodegenConformSurface.MISE_TRIPLE:
+                return m.Infra.CodegenConformSurfaceContract(
+                    destinations=frozenset(c.Infra.ARTIFACT_NAMES),
+                    pyproject=False,
+                    delegates=False,
+                    custom=False,
+                )
             case _:
                 return m.Infra.CodegenConformSurfaceContract(
                     destinations=frozenset({c.PYPROJECT_FILENAME}),

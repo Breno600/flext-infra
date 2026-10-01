@@ -9,6 +9,7 @@ from flext_core import r
 from flext_infra import c, m, u
 
 from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
+from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
 from .mise_artifacts import FlextInfraCodegenMiseArtifacts
 from .mise_artifacts_workspace import FlextInfraMiseWorkspacePlanner
 
@@ -25,6 +26,50 @@ class FlextInfraMiseColdStart:
     ``src/`` holds the running ``flext_infra`` package owns that copy, so every
     other repository plans nothing and nobody maintains a hand-written seed.
     """
+
+    @classmethod
+    def candidate_plans(
+        cls, root: Path
+    ) -> p.Result[t.SequenceOf[m.Infra.CodegenFilePlan]]:
+        """Recover one complete candidate triple from the packaged upg output."""
+        result_type = r[t.SequenceOf[m.Infra.CodegenFilePlan]]
+        source_root = files.cold_start_directory()
+        validated = FlextInfraMiseArtifactsDerivation.validate(
+            source_root, source_root
+        )
+        if validated.failure:
+            return result_type.from_failure(validated)
+        sources: list[m.Cli.AtomicFileState] = []
+        for name, _mode in c.Infra.ARTIFACT_SPECS:
+            state = u.Cli.atomic_read_binary_file_state(
+                source_root / Path(name).name, required=True
+            )
+            if state.failure:
+                return result_type.from_failure(state)
+            sources.append(state.value)
+        if len(sources) != len(c.Infra.ARTIFACT_SPECS) or any(
+            state.content is None for state in sources
+        ):
+            return result_type.fail("packaged Mise recovery triple is incomplete")
+        plans: list[m.Infra.CodegenFilePlan] = []
+        for source, (name, mode) in zip(
+            sources, c.Infra.ARTIFACT_SPECS, strict=True
+        ):
+            destination = root / name
+            before = u.Cli.atomic_read_binary_file_state(destination, required=False)
+            if before.failure:
+                return result_type.from_failure(before)
+            plans.append(
+                m.Infra.CodegenFilePlan(
+                    project=root,
+                    path=destination,
+                    before=before.value,
+                    desired_content=source.content,
+                    desired_mode=mode,
+                    source_states=(source,),
+                )
+            )
+        return result_type.ok(tuple(plans))
 
     @classmethod
     def plans(cls, root: Path) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:

@@ -32,6 +32,7 @@ class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):
                     request.what
                     in {
                         c.Infra.CodegenConformSurface.MAKEFILE,
+                        c.Infra.CodegenConformSurface.MISE_TRIPLE,
                         c.Infra.CodegenConformSurface.DOCS_CONFIG,
                         c.Infra.CodegenConformSurface.PYPROJECT,
                     }

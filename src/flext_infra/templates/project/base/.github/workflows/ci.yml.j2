@@ -127,9 +127,11 @@ jobs:
         # source state is absent or unauthenticated". The job token
         # authenticates those reads without changing the toolchain contract.
         run: |
+          set -eu
           {{ make.ci.variable }}={{ make.ci.value }} make gen
           git status --short
-          test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none || true)"
+          candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
+          test -z "$candidate_status"
 
       # Setup installs frozen from the committed uv.lock (`uv sync --locked`)
       # and never rewrites it; the deps audit proves that locked graph.
@@ -150,8 +152,10 @@ jobs:
       # Repairs left in the runner checkout require a new commit and CI run.
       - name: Candidate cleanliness (blocking)
         run: |
+          set -eu
           git status --short
-          test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none || true)"
+          candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
+          test -z "$candidate_status"
 {%- if ci_tests.selected %}
 
       - name: Dump reports on failure
