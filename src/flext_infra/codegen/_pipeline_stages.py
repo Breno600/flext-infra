@@ -33,6 +33,7 @@ class FlextInfraCodegenPipelineStagesMixin:
         # here so the handlers type-resolve against the facade state + harness.
         _state: m.Infra.CodegenPipelineState
         rope: p.Infra.RopeWorkspaceDsl
+        conform_ports: m.Infra.CodegenConformPorts
 
         def _run_stage[V](
             self,
@@ -86,6 +87,7 @@ class FlextInfraCodegenPipelineStagesMixin:
                         else c.Infra.CodegenConformMode.APPLY
                     ),
                 ),
+                ports=self.conform_ports,
             )
             if result.failure:
                 msg = result.error or "toolchain conform failed"
