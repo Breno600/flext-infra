@@ -759,6 +759,11 @@ class FlextInfraWorkspaceDetector(
         return r[m.Infra.WorkspaceSpec].ok(
             m.Infra.WorkspaceSpec(
                 name=workspace_name,
+                docs_audit=(
+                    declared_manifest.value[0].docs_audit
+                    if declared_manifest.value
+                    else m.Infra.DocsAuditOverridesSpec()
+                ),
                 beads=beads,
                 gascity_enabled=gascity_enabled,
                 repository=repository_ref,

@@ -43,55 +43,10 @@ class FlextInfraConstantsDocs:
         "tel",
     })
     DOCS_FRAGMENT_PREFIX: ClassVar[str] = "#"
-    PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = (
-        "D100",
-        "D101",
-        "D102",
-        "D103",
-        "PLR2004",
-        "S101",
-        "INP001",
-        "T201",
-        "T203",
-        "ANN001",
-        "ANN002",
-        "ANN003",
-        "ANN201",
-        "ANN202",
-        "ANN204",
-        "ANN205",
-        "PLC0415",
-        "D106",
-        "B018",
-        "F821",
-        "F811",
-        "SLF001",
-        "S106",
-        "PT004",
-        "E402",
-        "PLW0127",
-        "PLC0414",
-        "pytest-useless-yield-fixture",
-        "unused-variable",
-        "unused-static-method-argument",
-    )
-    """Rules ignored for executable docs snippets that are not full modules/tests.
-
-    ``D106`` and ``B018`` join the set because the docs are teaching material:
-    a nested example class needs no docstring, and a bare attribute access
-    (``c.Settings.y``) is the idiom being demonstrated, not a useless
-    expression (measured 2026-09-30: 61 findings across the root's docs were
-    exactly these two rules). ``F821`` joins for the same reason one level up:
-    docs snippets are fragments that cite symbols defined in the surrounding
-    prose, other repositories, or the installed fleet — a snippet is never a
-    whole module, so every foreign name is undefined by construction
-    (measured: the root's remaining 57 fence findings were all F821). The
-    final block joins the last fragment-inherent rules measured on the same
-    sweep: ``F811`` (each block re-exemplifies the same protocol), ``SLF001``
-    (demonstrating the lazy internal accessor), ``S106`` (example docker
-    credentials), ``PT004`` (didactic fixture), ``E402`` (contextual import
-    mid-document), ``PLW0127``/``PLC0414`` (the self-assignment aliasing the
-    lazy-export pattern itself teaches)."""
+    PYTHON_FENCE_RUFF_EXTEND_IGNORE: ClassVar[t.StrSequence] = ("D100", "INP001")
+    """Only module-docstring and package rules are inapplicable to a
+    standalone Markdown fence. All names, behavior, types, and security
+    rules remain active and require correction in the authored source."""
     MACHINE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
         r"(?<![\w./-])/(?:home|Users)/(?P<user>[A-Za-z0-9_.-]+)(?=/|\b)"
     )
