@@ -147,6 +147,7 @@ class FlextInfraEnsurePackagingPhase:
                         ),
                         toml.RemoveOp(key="packages"),
                         toml.RemoveOp(key="only-include"),
+                        toml.RemoveOp(key="exclude"),
                         toml.SetOp(
                             key="sources",
                             value={
@@ -179,6 +180,9 @@ class FlextInfraEnsurePackagingPhase:
                             ),
                         ),
                         toml.RemoveOp(key="only-include"),
+                        toml.RemoveOp(key="packages"),
+                        toml.RemoveOp(key="exclude"),
+                        toml.RemoveOp(key="force-include"),
                     ),
                 ),
                 (

@@ -136,6 +136,25 @@ class TestsFlextInfraDepsModernizerPackaging:
             u.Tests.toml_mapping(sdist["force-include"])[module_path], eq=module_path
         )
 
+        manifest_path = infra_git_repo / c.PYPROJECT_FILENAME
+        header = "[tool.hatch.build.targets.sdist.force-include]\n"
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                manifest_path,
+                manifest.replace(header, header + '"stale.txt" = "stale.txt"\n'),
+            )
+        )
+        tm.that(self._conform_self(infra_git_repo), eq=0)
+        repaired = u.Tests.toml_table_at(
+            manifest_path.read_text(encoding="utf-8"),
+            c.Infra.TOOL,
+            "hatch",
+            "build",
+            "targets",
+            "sdist",
+        )
+        tm.that(u.Tests.toml_mapping(repaired["force-include"]), lacks="stale.txt")
+
         fixed_point = infra_main([
             c.Infra.CLI_GROUP_CODEGEN,
             "conform",

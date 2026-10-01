@@ -148,7 +148,7 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
         )
         if sdist_includes.failure:
             return r[bool].fail_op("validate Hatch sdist include", sdist_includes.error)
-        if not wheel_includes.value or tuple(wheel_includes.value) != tuple(
+        if not wheel_includes.value or set(wheel_includes.value) != set(
             sdist_includes.value
         ):
             return r[bool].fail("Hatch wheel and sdist source patterns must match")
@@ -165,20 +165,33 @@ class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):
             != {source: source for source in sources}
         ):
             return r[bool].fail("Hatch sdist must retain every forced wheel source")
-        if "only-include" in wheel or "only-include" in sdist:
-            return r[bool].fail("Hatch targets must use source patterns")
+        for target in (wheel, sdist):
+            if any(key in target for key in ("only-include", "packages", "exclude")):
+                return r[bool].fail(
+                    "Hatch targets must use source patterns without exclusions"
+                )
         for pattern in wheel_includes.value:
             if not pattern.startswith("/") or not pattern.endswith("/**"):
                 return r[bool].fail(
                     f"Hatch source pattern is not a directory: {pattern}"
                 )
+        for source in sources:
+            if PurePosixPath(source).is_absolute():
+                return r[bool].fail(
+                    f"Hatch source path is outside the release boundary: {source}"
+                )
         for source in (*wheel_includes.value, *sources):
-            relative = source.removeprefix("/").removesuffix("/**")
+            relative = (
+                source.removeprefix("/").removesuffix("/**")
+                if source in wheel_includes.value
+                else source
+            )
             path = PurePosixPath(relative)
             if (
                 not relative
                 or path.is_absolute()
                 or ".." in path.parts
+                or path.as_posix() != relative
                 or not cls._sdist_member_allowed(("release-root", *path.parts))
             ):
                 return r[bool].fail(
