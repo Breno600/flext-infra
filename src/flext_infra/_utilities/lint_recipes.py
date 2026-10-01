@@ -256,10 +256,17 @@ class FlextInfraUtilitiesLintRecipes:
             value.end_col_offset or 0,
         )
         raw = "".join(lines)[start:end]
-        if not (raw.startswith('"""') and raw.endswith('"""') and len(raw) >= 6):
-            msg = f'{path}: docstring at line {value.lineno} is not a plain """ literal'
+        body = raw.lstrip("rRuU")
+        if not (body.startswith('"""') and body.endswith('"""') and len(body) >= 6):
+            msg = f'{path}: docstring at line {value.lineno} is not a """ literal'
             raise ValueError(msg)
         return start, end, raw
+
+    @staticmethod
+    def _split_literal(raw: str) -> t.Pair[str, str]:
+        """Split a docstring literal into its string prefix and inner text."""
+        prefix = raw[: len(raw) - len(raw.lstrip("rRuU"))]
+        return prefix, raw[len(prefix) + 3 : -3]
 
     @staticmethod
     def _returns_entry(function: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
@@ -362,15 +369,17 @@ class FlextInfraUtilitiesLintRecipes:
             return f"Test {name.removeprefix('test_').replace('_', ' ')}."
         return f"Provide ``{name}``."
 
-    @staticmethod
+    @classmethod
     def _with_sections(
+        cls,
         raw: str,
         indent: str,
         wanted: t.MappingKV[str, t.StrSequence],
     ) -> str:
         """Return the docstring literal with the wanted sections appended."""
         width = config.Infra.tooling.tools.ruff.line_length
-        inner = raw[3:-3].rstrip()
+        prefix, inner = cls._split_literal(raw)
+        inner = inner.rstrip()
         appended: list[str] = []
         for header in ("Returns", "Yields", "Raises"):
             entries = wanted.get(header)
@@ -401,16 +410,17 @@ class FlextInfraUtilitiesLintRecipes:
             inner = f"{inner[:cut].rstrip()}\n" + "\n".join(block) + inner[cut:]
         if appended:
             inner = f"{inner}\n\n" + "\n\n".join(appended)
-        return f'"""{inner}\n{indent}"""'
+        return f'{prefix}"""{inner}\n{indent}"""'
 
-    @staticmethod
-    def _with_notice(raw: str, notice: str) -> str:
+    @classmethod
+    def _with_notice(cls, raw: str, notice: str) -> str:
         """Return the module docstring with the notice after its summary."""
-        summary, _, rest = raw[3:-3].partition("\n")
+        prefix, inner = cls._split_literal(raw)
+        summary, _, rest = inner.partition("\n")
         remainder = rest.strip("\n")
         if remainder.strip():
-            return f'"""{summary}\n\n{notice}\n\n{remainder}\n"""'
-        return f'"""{summary.rstrip()}\n\n{notice}\n"""'
+            return f'{prefix}"""{summary}\n\n{notice}\n\n{remainder}\n"""'
+        return f'{prefix}"""{summary.rstrip()}\n\n{notice}\n"""'
 
 
 __all__: list[str] = ["FlextInfraUtilitiesLintRecipes"]
