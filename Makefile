@@ -231,6 +231,7 @@ set -eu; \
 		caller_xdg_data_home="$$caller_home/.local/share"; \
 	fi; \
 	caller_path="$$PATH"; \
+	mise_trusted_config_paths="$$project_root"; \
 mise_lockfile_platforms="linux-x64,linux-x64-musl,linux-arm64,macos-x64,macos-arm64,windows-x64"; \
 caller_comspec="$${COMSPEC:-}"; \
 caller_pathext="$${PATHEXT:-}"; \
@@ -311,7 +312,7 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 			*) printf 'ERROR: persistent Mise path escaped storage: %s\n' "$$persistent_physical" >&2; exit 2 ;; \
 		esac; \
 	done; \
-	scratch=$$(mktemp -d); \
+	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
 	trap 'find "$$scratch" -depth -delete' EXIT; \
 	mkdir -p "$$scratch/home" "$$scratch/home" "$$scratch/appdata" "$$scratch/appdata" "$$scratch/xdg-config" "$$scratch/xdg-data" "$$scratch/xdg-cache" "$$scratch/xdg-state" "$$scratch/config" "$$scratch/tmp" "$$scratch/." "$$scratch/system-config" "$$scratch/system-data" "$$scratch/system-installs" "$$scratch/system-shims" "$$scratch/tmp" "$$scratch/tmp" "$$scratch/tmp"; \
 : > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
@@ -391,7 +392,7 @@ $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"}
 "UV_CACHE_DIR=$$mise_storage_root/uv-cache" \
 "GIT_CEILING_DIRECTORIES=$$project_parent" \
 			"MISE_CEILING_PATHS=$$project_parent" \
-			"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
+			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
 $${caller_path:+"PATH=$$caller_path"} \
 $${caller_comspec:+"COMSPEC=$$caller_comspec"} \
 $${caller_pathext:+"PATHEXT=$$caller_pathext"} \
@@ -454,6 +455,7 @@ _bootstrap_setup_tools:
 		caller_xdg_data_home="$$caller_home/.local/share"; \
 	fi; \
 	caller_path="$$PATH"; \
+	mise_trusted_config_paths="$$project_root"; \
 mise_lockfile_platforms="linux-x64,linux-x64-musl,linux-arm64,macos-x64,macos-arm64,windows-x64"; \
 caller_comspec="$${COMSPEC:-}"; \
 caller_pathext="$${PATHEXT:-}"; \
@@ -534,7 +536,7 @@ mise_pin_file="$(MISE_VERSION_PIN)"; \
 			*) printf 'ERROR: persistent Mise path escaped storage: %s\n' "$$persistent_physical" >&2; exit 2 ;; \
 		esac; \
 	done; \
-	scratch=$$(mktemp -d); \
+	scratch=$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-bootstrap.XXXXXX"); \
 	trap 'find "$$scratch" -depth -delete' EXIT; \
 	mkdir -p "$$scratch/home" "$$scratch/home" "$$scratch/appdata" "$$scratch/appdata" "$$scratch/xdg-config" "$$scratch/xdg-data" "$$scratch/xdg-cache" "$$scratch/xdg-state" "$$scratch/config" "$$scratch/tmp" "$$scratch/." "$$scratch/system-config" "$$scratch/system-data" "$$scratch/system-installs" "$$scratch/system-shims" "$$scratch/tmp" "$$scratch/tmp" "$$scratch/tmp"; \
 : > "$$scratch/global-config.toml"; chmod 600 "$$scratch/global-config.toml"; \
@@ -614,7 +616,7 @@ $${mise_lockfile_platforms:+"MISE_LOCKFILE_PLATFORMS=$$mise_lockfile_platforms"}
 "UV_CACHE_DIR=$$mise_storage_root/uv-cache" \
 "GIT_CEILING_DIRECTORIES=$$project_parent" \
 			"MISE_CEILING_PATHS=$$project_parent" \
-			"MISE_TRUSTED_CONFIG_PATHS=$$project_root" \
+			"MISE_TRUSTED_CONFIG_PATHS=$$mise_trusted_config_paths" \
 $${caller_path:+"PATH=$$caller_path"} \
 $${caller_comspec:+"COMSPEC=$$caller_comspec"} \
 $${caller_pathext:+"PATHEXT=$$caller_pathext"} \
@@ -699,47 +701,18 @@ caller_mise_version=; \
 		# installed from a private stage, and published by one rename only after \
 		# both succeed. A failed or killed run leaves mise.lock untouched; no \
 		# backup copy exists. \
-		lock_stage="$$(mktemp -d "$$project_root/.mise-lock-stage.XXXXXX")"; \
-		trap 'find "$$lock_stage" -depth -delete' EXIT; \
+		lock_stage="$$(mktemp -d "$$project_parent/.$${project_root##*/}.mise-lock-stage.XXXXXX")"; \
 		cp "$$project_root/.mise.toml" "$$lock_stage/.mise.toml"; \
 		if [ -f "$$project_root/mise.lock" ]; then cp "$$project_root/mise.lock" "$$lock_stage/mise.lock"; fi; \
+		if [ -d "$$project_root/.mise/locks" ]; then mkdir -p "$$lock_stage/.mise"; cp -R "$$project_root/.mise/locks" "$$lock_stage/.mise/locks"; fi; \
+		mise_trusted_config_paths="$$lock_stage"; \
 		mise_checked "$$scratch/lock.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" lock --bump; \
 		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" install --yes; \
-		# mise lock writes each tool's dependency sidecar under .mise/locks \
-		# beside the staged lock. Every sidecar the bumped lock references is \
-		# published first (a path the committed lock does not reference yet is \
-		# inert), the lock rename is the commit point, and default-lock sidecars \
-		# it no longer references are removed afterwards. Sidecar paths carry \
-		# their build identity, so a referenced path whose staged content \
-		# differs from the published one fails instead of being replaced under \
-		# the committed lock. \
-		referenced_sidecars=" $$(sed -n 's|.*path = "\(\.mise/locks/[^"]*\)".*|\1|p' "$$lock_stage/mise.lock" | tr '\n' ' ')"; \
-		for relative in $$referenced_sidecars; do \
-			staged="$$lock_stage/$$relative"; \
-			published="$$project_root/$$relative"; \
-			if [ -e "$$published" ]; then \
-				if [ -e "$$staged" ] && ! diff -r "$$staged" "$$published" >&2; then \
-					printf 'ERROR: mise lock rewrote the published sidecar %s under an unchanged path\n' "$$relative" >&2; \
-					exit 2; \
-				fi; \
-			elif [ -d "$$staged" ]; then \
-				mkdir -p "$$(dirname "$$published")"; \
-				mv "$$staged" "$$published"; \
-			else \
-				printf 'ERROR: mise.lock references the sidecar %s that mise lock did not write\n' "$$relative" >&2; \
-				exit 2; \
-			fi; \
-		done; \
-		mv "$$lock_stage/mise.lock" "$$project_root/mise.lock"; \
-		for sidecar in "$$project_root"/.mise/locks/*/*; do \
-			[ -d "$$sidecar" ] || continue; \
-			relative="$${sidecar#"$$project_root"/}"; \
-			case "$$relative" in .mise/locks/mise.*) continue ;; esac; \
-			case "$$referenced_sidecars" in *" $$relative "*) ;; *) find "$$sidecar" -depth -delete ;; esac; \
-		done; \
-		if [ -d "$$project_root/.mise/locks" ]; then find "$$project_root/.mise/locks" -mindepth 1 -type d -empty -delete; fi; \
-		find "$$lock_stage" -depth -delete; \
-		trap - EXIT; \
+		mise_checked "$$scratch/staged-python.log" mise_exec project "$$pinned_mise" -C "$$lock_stage" which python; \
+		staged_python=$$(cat "$$scratch/staged-python.log"); \
+		if [ ! -x "$$staged_python" ]; then printf 'ERROR: staged Mise Python is not executable: %s\n' "$$staged_python" >&2; exit 2; fi; \
+		mise_checked "$$scratch/publish-lock.log" "$$staged_python" "$$project_root/bin/mise-lock-transaction.py" publish "$$project_root" "$$lock_stage"; \
+		mise_trusted_config_paths="$$project_root"; \
 	else \
 		# ``locked`` mode installs exactly what the committed mise.lock pins. \
 		mise_checked "$$scratch/install.log" mise_exec project "$$pinned_mise" -C "$$project_root" install --yes; \
