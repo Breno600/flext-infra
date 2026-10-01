@@ -193,11 +193,13 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         candidate_rewrites.setdefault(path, []).extend(
             FlextInfraUtilitiesRopeRuntimeRefactors.unwrap_class_rewrites(
                 sources[path],
-                header_start=header.line,
-                header_end=header.end_line,
-                body_end=child.get_end(),
-                indentation=body[0].indent - header.indent,
-                docstring_span=wrapper_docstring,
+                span=m.Infra.WrapperSourceSpan(
+                    header_start=header.line,
+                    header_end=header.end_line,
+                    body_end=child.get_end(),
+                    indentation=body[0].indent - header.indent,
+                    docstring_span=wrapper_docstring,
+                ),
             )
         )
         for consumer, changes in candidate_rewrites.items():

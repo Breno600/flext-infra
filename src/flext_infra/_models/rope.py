@@ -183,6 +183,20 @@ class FlextInfraModelsRope:
             m.Field(description="Wrapper member names mapped to promoted names"),
         ]
 
+    class WrapperSourceSpan(m.ContractModel):
+        """Line coordinates of one Rope-resolved wrapper source rewrite."""
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
+
+        header_start: Annotated[int, m.Field(ge=1, description="First header line")]
+        header_end: Annotated[int, m.Field(ge=1, description="Last header line")]
+        body_end: Annotated[int, m.Field(ge=1, description="Last body line")]
+        indentation: Annotated[int, m.Field(ge=0, description="Body indentation")]
+        docstring_span: Annotated[
+            tuple[int, int] | None,
+            m.Field(description="Optional wrapper docstring line range"),
+        ] = None
+
     class ConstantInfo(
         mm.NonNegativeLineMixin, mm.NestedClassPathMixin, m.ContractModel
     ):
