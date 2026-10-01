@@ -72,8 +72,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                 """
                 if not isinstance(asname.name, cst.Name):
                     msg = (
-                        f"unsupported import alias target: "
-                        f"{type(asname.name).__name__}"
+                        f"unsupported import alias target: {type(asname.name).__name__}"
                     )
                     raise TypeError(msg)
                 return asname.name.value
@@ -95,9 +94,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
 
             @override
             def visit_ImportFrom(self, node: cst.ImportFrom) -> None:
-                bindings = self.bindings_by_module.get(
-                    self._import_module(node), {}
-                )
+                bindings = self.bindings_by_module.get(self._import_module(node), {})
                 if not bindings or isinstance(node.names, cst.ImportStar):
                     return
                 for imported in node.names:
@@ -110,9 +107,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                     local_name = (
                         self._alias_name(imported.asname) if imported.asname else name
                     )
-                    owner_name = (
-                        local_name if imported.asname else bindings[name]
-                    )
+                    owner_name = local_name if imported.asname else bindings[name]
                     self.local_expressions[local_name] = f"{owner_name}.{name}"
 
             def _resolves_bare_after_nesting(self, node: cst.CSTNode) -> bool:
@@ -161,10 +156,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                 if not replacements:
                     return None
                 if len(replacements) != 1:
-                    msg = (
-                        f"ambiguous class-nesting {ambiguity}: "
-                        f"{sorted(replacements)}"
-                    )
+                    msg = f"ambiguous class-nesting {ambiguity}: {sorted(replacements)}"
                     raise ValueError(msg)
                 return replacements.pop()
 
@@ -200,9 +192,7 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                     return updated_node
                 owner, name = bound.split(".", maxsplit=1)
                 return cst.Attribute(
-                    value=cst.Attribute(
-                        value=updated_node.value, attr=cst.Name(owner)
-                    ),
+                    value=cst.Attribute(value=updated_node.value, attr=cst.Name(owner)),
                     attr=cst.Name(name),
                 )
 
@@ -229,13 +219,9 @@ class FlextInfraUtilitiesSemanticCutoverNestingReferences:
                         else imported
                     )
                     identity = (
-                        FlextInfraUtilitiesQualifiedNames.dotted_name(
-                            rewritten.name
-                        )
+                        FlextInfraUtilitiesQualifiedNames.dotted_name(rewritten.name)
                         or "",
-                        self._alias_name(rewritten.asname)
-                        if rewritten.asname
-                        else "",
+                        self._alias_name(rewritten.asname) if rewritten.asname else "",
                     )
                     if identity not in seen:
                         seen.add(identity)

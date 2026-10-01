@@ -42,11 +42,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
                     for qualified_name in self.get_metadata(
                         QualifiedNameProvider, original_node, ()
                     )
-                    if (
-                        target := self.plan.qualified_aliases.get(
-                            qualified_name.name
-                        )
-                    )
+                    if (target := self.plan.qualified_aliases.get(qualified_name.name))
                     is not None
                 }
                 if not targets:
@@ -95,9 +91,7 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
                 self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
             ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
                 rewrites = self.plan.import_aliases.get(
-                    FlextInfraUtilitiesQualifiedNames.dotted_name(
-                        original_node.module
-                    )
+                    FlextInfraUtilitiesQualifiedNames.dotted_name(original_node.module)
                     or ""
                 )
                 if not rewrites or isinstance(updated_node.names, cst.ImportStar):
@@ -105,16 +99,13 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
                 retained: list[cst.ImportAlias] = []
                 for imported in updated_node.names:
                     target = rewrites.get(
-                        FlextInfraUtilitiesQualifiedNames.dotted_name(
-                            imported.name
-                        )
+                        FlextInfraUtilitiesQualifiedNames.dotted_name(imported.name)
                         or ""
                     )
                     if target is None:
                         retained.append(imported)
                     elif (
-                        imported.asname is None
-                        and target in self.plan.target_bindings
+                        imported.asname is None and target in self.plan.target_bindings
                     ):
                         continue
                     else:
@@ -130,14 +121,13 @@ class FlextInfraUtilitiesSemanticCutoverAliasCst:
                 self, original_node: cst.Attribute, updated_node: cst.Attribute
             ) -> cst.BaseExpression:
                 owner = (
-                    FlextInfraUtilitiesQualifiedNames.dotted_name(
-                        original_node.value
-                    )
+                    FlextInfraUtilitiesQualifiedNames.dotted_name(original_node.value)
                     or ""
                 )
-                target = self.plan.attribute_aliases.get(
-                    (owner, original_node.attr.value)
-                )
+                target = self.plan.attribute_aliases.get((
+                    owner,
+                    original_node.attr.value,
+                ))
                 return (
                     updated_node.with_changes(attr=cst.Name(target))
                     if target

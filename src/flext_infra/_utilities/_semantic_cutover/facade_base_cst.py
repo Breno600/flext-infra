@@ -106,9 +106,7 @@ class FlextInfraUtilitiesSemanticCutoverFacadeBaseCst:
                 for original, updated in zip(
                     original_node.names, updated_node.names, strict=True
                 ):
-                    name = FlextInfraUtilitiesQualifiedNames.dotted_name(
-                        original.name
-                    )
+                    name = FlextInfraUtilitiesQualifiedNames.dotted_name(original.name)
                     bound = (
                         FlextInfraUtilitiesQualifiedNames.dotted_name(
                             original.asname.name
