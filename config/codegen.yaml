@@ -70,6 +70,7 @@ Infra:
       # never parses a newer lockfile format.
       mise_lockfile: true
       mise_locked: true
+      python_compile: false
       # Projection: .mise.toml [settings] lockfile_platforms. The platforms the
       # CI matrix runs on (ubuntu, macos, windows runners, x64 and arm64);
       # `make upg` resolves these plus the current host, which mise always adds.
@@ -317,6 +318,7 @@ Infra:
         discovery_scope: none
 
     make:
+      runtime_environment_directory: .flext-venvs
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
@@ -345,15 +347,6 @@ Infra:
       # formats — without it the ruff-format surface has no verb home and
       # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
-      check_gate_suspensions:
-        - gate: namespace
-          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
-          reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
-          # Census consistency (gc-wisp-d7mnad): the runtime census honors the
-          # SAME suspension for the rule families this gate owns — ENFORCE ids
-          # match a census rule id exactly, tag families by prefix. Unmapped
-          # families (e.g. ENFORCE-079) stay fully blocking.
-          census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
       testmon_cache:

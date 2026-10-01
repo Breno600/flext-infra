@@ -66,6 +66,7 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SMELLS: ClassVar[str] = "smells"
+    RUNTIME_CENSUS: ClassVar[str] = "runtime-census"
     GATE_TOOLS_BY_KIND: ClassVar[
         t.MappingKV[GateKind, t.MappingKV[str, t.StrPair]]
     ] = MappingProxyType({
@@ -89,7 +90,7 @@ class FlextInfraConstantsCheck:
                 "internal://flext-infra/deferred-self-reference",
             ),
             "loc-cap": ("scc", "https://github.com/boyter/scc"),
-            "runtime-census": (
+            RUNTIME_CENSUS: (
                 "Flext Runtime Enforcement Census",
                 "internal://flext-infra/runtime-census",
             ),
