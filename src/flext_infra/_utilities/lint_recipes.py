@@ -309,7 +309,9 @@ class FlextInfraUtilitiesLintRecipes:
 
         """
         prefix = raw[: len(raw) - len(raw.lstrip("rRuU"))]
-        return prefix, raw[len(prefix) + 3 : -3]
+        # A blank line inside a docstring carries no indentation.
+        inner = re.sub(r"(?m)^[ \t]+$", "", raw[len(prefix) + 3 : -3])
+        return prefix, inner
 
     @staticmethod
     def _returns_entry(function: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
@@ -378,11 +380,8 @@ class FlextInfraUtilitiesLintRecipes:
             condition
             for raised in ast.walk(function)
             if isinstance(raised, ast.Raise)
-            and raised.exc is not None
-            and ast.unparse(
-                raised.exc.func if isinstance(raised.exc, ast.Call) else raised.exc,
-            ).rsplit(".", maxsplit=1)[-1]
-            == name.rsplit(".", maxsplit=1)[-1]
+            and name.rsplit(".", maxsplit=1)[-1]
+            in cls._raised_names(raised, parents)
             and (condition := cls._raise_condition(function, raised, parents))
         ]
         if not conditions:
@@ -392,6 +391,38 @@ class FlextInfraUtilitiesLintRecipes:
             )
             raise ValueError(msg)
         return f"{name}: If {'; or if '.join(dict.fromkeys(conditions))}."
+
+    @staticmethod
+    def _raised_names(
+        raised: ast.Raise,
+        parents: t.MappingKV[ast.AST, ast.AST],
+    ) -> frozenset[str]:
+        """Return the exception names one ``raise`` statement raises.
+
+        A bare ``raise`` re-raises what its enclosing handler caught.
+
+        Returns:
+            The unqualified names of the raised exception classes.
+
+        """
+        if raised.exc is not None:
+            target = (
+                raised.exc.func if isinstance(raised.exc, ast.Call) else raised.exc
+            )
+            return frozenset({ast.unparse(target).rsplit(".", maxsplit=1)[-1]})
+        node: ast.AST = raised
+        while (parent := parents.get(node)) is not None:
+            if isinstance(parent, ast.ExceptHandler) and parent.type is not None:
+                caught = (
+                    parent.type.elts
+                    if isinstance(parent.type, ast.Tuple)
+                    else (parent.type,)
+                )
+                return frozenset(
+                    ast.unparse(item).rsplit(".", maxsplit=1)[-1] for item in caught
+                )
+            node = parent
+        return frozenset()
 
     @classmethod
     def _raise_condition(
