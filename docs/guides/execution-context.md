@@ -219,8 +219,8 @@ passando pelo `make mod`.
 Um WIP publicado preserva o trabalho e permite revisão. Conclusão exige os critérios do
 Bead ativo, integração e runtime medido no SHA integrado. Exceções registradas em
 handoffs históricos, incluindo aceite temporário com gates customizados vermelhos, não
-transferem para uma revisão ou Bead posterior. Nenhum gate é suspenso e nenhum achado
-é observacional: todo achado de todo gate selecionado bloqueia. Um gate que analisa
+transferem para uma revisão ou Bead posterior. Todo achado de todo gate selecionado
+bloqueia. Um gate que analisa
 fontes Python (`pyrefly`, `pyright`) só é selecionado para um projeto cujo conteúdo
 detectado possui alvos Python. `make check` falha quando a seleção não
 contém projetos ou quando um projeto selecionado não tem `pyproject.toml`; nenhum
