@@ -1,14 +1,14 @@
 """Baseline branch derives from live repository reality, not a provider constant.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 A provider declares ONE branch, but managed repositories under the same provider
 legitimately integrate on different branches (for example ``dev`` and
 ``develop``). Deriving the baseline from ``provider.branch`` therefore fails
 closed on every repository whose integration branch differs from the provider
 default. The canonical baseline is the integration branch the repository really
 publishes, discovered from Git itself.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

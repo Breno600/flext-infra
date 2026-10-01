@@ -1,13 +1,13 @@
 """make fix never deletes information: the lint repair applies safe fixes only.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Ruff's unsafe fixes delete code: the T201 fix removed
 ``print(..., file=sys.stderr)`` from a consumer script and turned its failures
 silent. The typed Make contract refuses the unsafe-fix flag, and every
 generated pyproject carries the fix-safety policy of the tooling SSOT, so a
 direct or IDE Ruff run follows the same policy as ``make fix``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

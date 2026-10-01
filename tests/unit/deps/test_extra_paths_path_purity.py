@@ -1,14 +1,14 @@
 """Generated search paths never leave the project that owns them.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 A search-path entry is written into a project's own ``pyproject.toml``, so it
 describes that project forever. ``../<sibling>/src`` describes the *host* the
 generator happened to run on: it is wrong in any clone whose siblings sit
 elsewhere, it is absent in a worktree that materializes one project alone, and
 it makes the same generator emit different content per checkout. Cross-checkout
 dependencies resolve through their installed distributions instead (flext-c6di).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
