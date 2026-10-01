@@ -23,6 +23,50 @@ if TYPE_CHECKING:
 class TestsFlextInfraModTextGateEngine:
     """Exercise the declarative sed-by-list engine through its public scan."""
 
+    def test_declared_markdown_file_reaches_a_fixed_point(
+        self, mod_workspace: Path
+    ) -> None:
+        """An explicit text include can repair authored Markdown transactionally."""
+        source = mod_workspace / "docs" / "spec.md"
+        source.parent.mkdir(parents=True)
+        tm.ok(u.Cli.atomic_write_text_file(source, "legacy paragraph\n"))
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                "rules:\n"
+                "  - id: markdown-paragraph\n"
+                "    include: [docs/spec.md]\n"
+                "    find: '^legacy paragraph$'\n"
+                "    replace: 'wrapped paragraph'\n"
+                "    flags: [MULTILINE]\n",
+            )
+        )
+
+        tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=True))
+        tm.that(source.read_text(encoding="utf-8"), eq="wrapped paragraph\n")
+        tm.that(
+            tm.ok(FlextInfraModTextGateEngine.scan(mod_workspace, fix=False)).findings,
+            eq=0,
+        )
+
+    def test_declared_text_include_cannot_escape_the_repository(
+        self, mod_workspace: Path
+    ) -> None:
+        """An explicit text surface cannot authorize a parent-directory write."""
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                mod_workspace / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                "rules:\n"
+                "  - id: external-markdown\n"
+                "    include: ['../outside.md']\n"
+                "    find: legacy\n"
+                "    replace: modern\n",
+            )
+        )
+
+        with pytest.raises(ValueError, match="escapes the repository"):
+            FlextInfraModTextGateEngine.scan(mod_workspace, fix=True)
+
     def test_capture_guard_rejects_wrong_keyword_before_publication(
         self, mod_workspace: Path
     ) -> None:
