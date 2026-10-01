@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import cProfile
+import os
 import runpy
 import sys
 import time
@@ -22,14 +23,17 @@ class FlextInfraPytestProfile:
         self.context: m.Infra.PytestRunContext | None = None
 
     def run_parent(
-        self, *, started_at_monotonic: float, collection_command_prefix: t.StrTuple
+        self,
+        *,
+        started_at_monotonic: float,
+        collection_command_prefix: t.StrTuple,
     ) -> int:
         """Start profiling before importing the runner or any FLEXT service."""
         if not collection_command_prefix:
             msg = "profile execution requires an injected collection command prefix"
             raise ValueError(msg)
         if not self.output.resolve().is_relative_to(
-            (Path.cwd() / ".reports").resolve()
+            (Path.cwd() / ".reports").resolve(),
         ):
             msg = "parent profile must stay under the repository reports directory"
             raise ValueError(msg)
@@ -39,7 +43,9 @@ class FlextInfraPytestProfile:
         profile = cProfile.Profile()
         try:
             return profile.runcall(
-                self._run_parent, started_at_monotonic, collection_command_prefix
+                self._run_parent,
+                started_at_monotonic,
+                collection_command_prefix,
             )
         finally:
             self._finish(profile)
@@ -65,30 +71,58 @@ class FlextInfraPytestProfile:
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
         runner = FlextInfraPytestRunner.from_environment(
-            started_at_monotonic=started_at_monotonic, collection_command_prefix=prefix
+            started_at_monotonic=started_at_monotonic,
+            collection_command_prefix=prefix,
         )
-        exit_code = runner.execute().unwrap()
-        # The runner publishes its run context itself; the parent binds the
-        # profile artifacts to the receipt that invocation just wrote.
+        # The runner publishes its run context before any child can fail; the
+        # parent binds the profile to the receipt THIS invocation wrote, also
+        # when the run fails (a blocked collection is a profiled run too). The
+        # runner executes in this process and names its report directory with
+        # this pid, so a concurrent run under the shared reports root (another
+        # pid) and a receipt that predates this run are both excluded.
         from flext_infra import m
 
         reports_root = runner.root / runner.reports
-        latest = max(
-            reports_root.glob("*/run-context.json"),
-            key=lambda receipt: receipt.stat().st_mtime,
-        )
-        self._record_context(
-            m.Infra.PytestRunContext.model_validate_json(
-                latest.read_text(encoding="utf-8")
-            )
-        )
-        return exit_code
+        preexisting = frozenset(reports_root.glob("*/run-context.json"))
+
+        def owned_receipts() -> list[Path]:
+            return [
+                receipt
+                for receipt in reports_root.glob(f"*-{os.getpid()}/run-context.json")
+                if receipt not in preexisting
+            ]
+
+        def bind(owned: list[Path]) -> None:
+            if owned:
+                self._record_context(
+                    m.Infra.PytestRunContext.model_validate_json(
+                        owned[0].read_text(encoding="utf-8")
+                    )
+                )
+
+        try:
+            outcome = runner.execute().unwrap()
+        except BaseException as failure:
+            owned = owned_receipts()
+            if len(owned) > 1:
+                # The original failure stays the one raised; the ambiguity
+                # travels with it instead of replacing it.
+                failure.add_note(f"profile left unbound: run contexts {owned}")
+            else:
+                bind(owned)
+            raise
+        owned = owned_receipts()
+        if len(owned) > 1:
+            msg = f"profiled run published more than one run context: {owned}"
+            raise RuntimeError(msg)
+        bind(owned)
+        return outcome
 
     def _run_collection(self, receipt_path: Path) -> int:
         from flext_infra import m
 
         context = m.Infra.PytestRunContext.model_validate_json(
-            receipt_path.read_text(encoding="utf-8")
+            receipt_path.read_text(encoding="utf-8"),
         )
         if (
             context.report_directory is None
@@ -108,11 +142,20 @@ class FlextInfraPytestProfile:
     def _finish(self, profile: cProfile.Profile) -> None:
         """Keep raw profiles on early failure, but publish only this run's receipt."""
         profile.dump_stats(str(self.output))
+        from flext_infra import config
+
+        policy = config.Infra.tooling.tools.pytest
+        if self.output.name == policy.profile_suite_filename:
+            process_dir = self.output.parent / policy.profile_process_directory
+            process_dir.mkdir(parents=True, exist_ok=True)
+            (process_dir / f"{os.getpid()}{self.output.suffix}").hardlink_to(
+                self.output
+            )
         if self.context is not None:
             from flext_infra import u
 
             receipt = self.context.model_copy(
-                update={"profile_sha256": u.Cli.sha256_bytes(self.output.read_bytes())}
+                update={"profile_sha256": u.Cli.sha256_bytes(self.output.read_bytes())},
             )
             u.Cli.atomic_write_text_file(
                 self.output.with_suffix(".pstats.json"),

@@ -106,6 +106,12 @@ class FlextInfraConstantsCodegen(
         r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)"
     )
     "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
+    PROTOCOL_MODEL_LINE_BUDGET: ClassVar[int] = 170
+    "Line budget of one generated structural-protocol module chunk."
+    PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
+    "Header lines of a generated protocol class; at or below it the body is empty."
+    LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"
+    "Module binding the flext-core lazy engine writes and resolves exports from."
     MISE_RELEASE_COMPONENT_COUNT: ClassVar[int] = 3
     "Number of numeric components in a generated Mise release version."
     MISE_RELEASE_PATTERN: ClassVar[str] = (
@@ -175,7 +181,6 @@ class FlextInfraConstantsCodegen(
         ("MISE_EXEC_AUTO_INSTALL", "false"),
         ("MISE_TASK_RUN_AUTO_INSTALL", "false"),
         ("MISE_AUTO_UPDATE", "false"),
-        ("MISE_MINIMUM_RELEASE_AGE", "0s"),
         ("MISE_HTTP_RETRIES", "0"),
         ("MISE_NETRC", "false"),
         ("MISE_NOT_FOUND_AUTO_INSTALL", "false"),
@@ -297,6 +302,11 @@ class FlextInfraConstantsCodegen(
     QG_CHECK_DUPLICATION_REDUCTION: ClassVar[str] = "duplication_reduction"
     QG_CHECK_TYPE_SAFETY: ClassVar[str] = "type_safety"
     QG_CHECK_LINT_CLEAN: ClassVar[str] = "lint_clean"
+
+    # Lazy-init projection manifest (.agents/projections.lock.json, v1): the
+    # projected OUTPUT lock owned by the generator alone.
+    PROJECTIONS_LOCK_API_VERSION: ClassVar[str] = "flext-infra/projections-lock/v1"
+    PROJECTIONS_LOCK_FILENAME: ClassVar[str] = "projections.lock.json"
 
 
 __all__: list[str] = ["FlextInfraConstantsCodegen"]

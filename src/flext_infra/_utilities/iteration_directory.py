@@ -40,7 +40,7 @@ class FlextInfraUtilitiesIterationDirectory(FlextInfraUtilitiesGitScopeMixin):
         if not resolved_directory.is_dir():
             return []
         tracked_files = FlextInfraUtilitiesGitScopeMixin.git_tracked_scope_paths(
-            resolved_directory
+            resolved_directory,
         )
         files = (
             sorted(resolved_directory.rglob(c.Infra.EXT_PYTHON_GLOB))
@@ -57,7 +57,7 @@ class FlextInfraUtilitiesIterationDirectory(FlextInfraUtilitiesGitScopeMixin):
             if file_path.is_file()
             and file_path.suffixes == [c.Infra.EXT_PYTHON]
             and not frozenset(config.Infra.codegen.source_scan_ignored).intersection(
-                file_path.relative_to(resolved_directory).parts
+                file_path.relative_to(resolved_directory).parts,
             )
         ]
 

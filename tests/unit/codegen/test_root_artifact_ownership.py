@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import config
+from flext_infra import config, infra
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from tests import c, m, u
 
@@ -89,8 +89,8 @@ class TestsFlextInfraRootArtifactOwnership:
             update={
                 "managed_files": tuple(
                     item for item in spec.managed_files if item.path != target.path
-                )
-            }
+                ),
+            },
         )
 
         with pytest.raises(ValueError, match="ownership mismatch"):
@@ -109,8 +109,8 @@ class TestsFlextInfraRootArtifactOwnership:
                     if item.path == target.path
                     else item
                     for item in spec.managed_files
-                )
-            }
+                ),
+            },
         )
 
         with pytest.raises(ValueError, match="must be full-managed"):
@@ -134,14 +134,14 @@ class TestsFlextInfraRootArtifactOwnership:
                     "[project.urls]\n"
                     'Repository = "https://github.com/flext-sh/flext-demo"\n'
                 ),
-            )
+            ),
         )
         request = u.Tests.conform_request(
             root,
             what=c.Infra.CodegenConformSurface.MAKEFILE,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
-        tm.ok(FlextInfraCodegenConform.execute_request(request))
+        tm.ok(infra.codegen_conform(request))
         manual = {"custom.mk": b"# manual project extension\n"}
         (root / "custom.mk").write_bytes(manual["custom.mk"])
         configured_policy = next(
@@ -154,10 +154,10 @@ class TestsFlextInfraRootArtifactOwnership:
                 (path.relative_to(root).as_posix(), path.read_bytes())
                 for path in root.rglob("*")
                 if path.is_file() and ".git" not in path.relative_to(root).parts
-            )
+            ),
         )
 
-        first = FlextInfraCodegenConform.execute_request(request)
+        first = infra.codegen_conform(request)
         result = tm.ok(first)
         governed = tuple(file for file in result.plan.files if file.policy is not None)
         tm.that(tuple(file.path for file in governed), eq=(root / "Makefile",))
@@ -168,7 +168,7 @@ class TestsFlextInfraRootArtifactOwnership:
                 (path.relative_to(root).as_posix(), path.read_bytes())
                 for path in root.rglob("*")
                 if path.is_file() and ".git" not in path.relative_to(root).parts
-            )
+            ),
         )
         tm.that(after, eq=before)
         for relative, expected in manual.items():
@@ -191,7 +191,7 @@ class TestsFlextInfraRootArtifactOwnership:
                     f'requires-python = "{config.Infra.codegen.toolchain.python_required_version}"\n'
                     'authors = [{name = "FLEXT Team", email = "team@flext.dev"}]\n'
                     'dependencies = ["flext-core>=0.1.0"]\n',
-                )
+                ),
             )
             package_init = root / "src" / dist.replace("-", "_") / "__init__.py"
             package_init.parent.mkdir(parents=True, exist_ok=True)
@@ -218,6 +218,6 @@ class TestsFlextInfraRootArtifactOwnership:
             request = m.Infra.CodegenConformRequest(root=root)
             tm.ok(
                 FlextInfraCodegenConform(repository_root=root, request=request).plan(
-                    request
-                )
+                    request,
+                ),
             )

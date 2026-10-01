@@ -29,7 +29,7 @@ class FlextInfraUtilitiesSemanticCutoverEdits:
                 (path.resolve(), source)
                 for path, source in sources.items()
                 if not source.startswith(c.Infra.AUTOGEN_HEADERS)
-            )
+            ),
         )
 
     @staticmethod
@@ -52,7 +52,7 @@ class FlextInfraUtilitiesSemanticCutoverEdits:
         failures: list[str] = []
         for path, source in items:
             planned = r[t.Infra.TransformResult].create_from_callable(
-                partial(rewrite, path, source)
+                partial(rewrite, path, source),
             )
             if planned.failure:
                 failures.append(f"{path}: {planned.error}")
@@ -65,7 +65,7 @@ class FlextInfraUtilitiesSemanticCutoverEdits:
                         original_source=source,
                         updated_source=updated,
                         changes=tuple(changes),
-                    )
+                    ),
                 )
         result = r[t.VariadicTuple[m.Infra.SemanticMigrationEdit]]
         return result.fail("; ".join(failures)) if failures else result.ok(tuple(edits))

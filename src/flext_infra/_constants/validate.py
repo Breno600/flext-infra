@@ -17,15 +17,8 @@ class FlextInfraConstantsSharedInfra:
     """Shared infrastructure constants consumed by flext_infra.constants."""
 
     TYPING_MUTATION_METADATA_DEPENDENCIES: ClassVar[
-        tuple[
-            type[ScopeProvider | ParentNodeProvider | ExpressionContextProvider],
-            ...,
-        ]
-    ] = (
-        ScopeProvider,
-        ParentNodeProvider,
-        ExpressionContextProvider,
-    )
+        tuple[type[ScopeProvider | ParentNodeProvider | ExpressionContextProvider], ...]
+    ] = (ScopeProvider, ParentNodeProvider, ExpressionContextProvider)
     "LibCST metadata providers the typing-mutation visitor requires (c.Infra.*)."
 
     @unique
@@ -61,72 +54,17 @@ class FlextInfraConstantsSharedInfra:
         "x",
         "tc",
     })
-    DUNDER_ALLOWED: ClassVar[frozenset[str]] = frozenset({"__all__", "__version__"})
-    TYPEVAR_CALLABLES: ClassVar[frozenset[str]] = frozenset({
-        "TypeVar",
-        "ParamSpec",
-        "TypeVarTuple",
-    })
-    ENUM_BASES: ClassVar[frozenset[str]] = frozenset({"StrEnum", "Enum", "IntEnum"})
     CLASSVAR_ANNOTATION_NAMES: ClassVar[frozenset[str]] = frozenset({"ClassVar"})
     "Names treated as class-variable constant annotations."
-    COLLECTION_CALLS: ClassVar[frozenset[str]] = frozenset({
-        "frozenset",
-        "tuple",
-        "dict",
-        "list",
-    })
     SKILLS_DIR: ClassVar[Path] = Path(".agents/skills")
     BASELINE_DEFAULT: ClassVar[str] = ".agents/skills/{skill}/baseline.json"
-    SCRIPT_EXIT_CODE_VALUES: ClassVar[frozenset[int]] = frozenset(
-        int(item) for item in ScriptExitCode
-    )
-    SCRIPT_HEADER_MAX_LINES: ClassVar[int] = 10
-    SCRIPT_MIN_CODE_LINES: ClassVar[int] = 20
     CPROFILE_RECEIPT_ARGUMENT_COUNT: ClassVar[int] = 3
     "``argv`` length when an explicit run receipt accompanies the profile path."
-    SKILL_REPORT_VALIDATED_TOP_DIRS: ClassVar[frozenset[str]] = frozenset({"."})
-    SKILL_REPORT_SKIPPED_TOP_DIRS: ClassVar[frozenset[str]] = frozenset({
-        "evidence",
-        "plans",
-        "drafts",
-        "validation",
-        "dependencies",
-    })
-    SKILL_REPORT_SKIPPED_FILES: ClassVar[frozenset[str]] = frozenset({".gitkeep"})
     PYTHON_IMPORT_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$"
-    )
-    SKILL_OWNER_MARKER_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^# Owner-Skill:\s+(.agents/skills/([a-z0-9][-a-z0-9]*)/SKILL\.md)\s*$"
-    )
-    SKILL_REPORT_ARTIFACT_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[a-z][-a-z0-9]*--[a-z]+--[a-z][-a-z0-9]*\.[a-z]+$"
-    )
-    SKILL_REPORT_ARTIFACT_SKILL_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^[a-z][-a-z0-9]*$"
-    )
-    SKILL_REPORT_ARTIFACT_SLUG_INVALID_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"[^a-z0-9-]+"
-    )
-    SKILL_REPORT_ARTIFACT_MULTI_DASH_RE: ClassVar[t.RegexPattern] = re.compile(r"-+")
-    SKILL_REPORTS_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\.reports/([^\s\"']+)"
-    )
-    SKILL_BASH_EXIT_RE: ClassVar[t.RegexPattern] = re.compile(r"^\s*exit\s+(\d+)")
-    SKILL_INTERACTIVE_PY_RE: ClassVar[t.RegexPattern] = re.compile(r"\binput\s*\(")
-    SKILL_INTERACTIVE_SH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"\bread\s+-p\b|\bselect\s+\w+\s+in\b|\bdialog\b|\bwhiptail\b"
-    )
-    SKILL_INTERACTIVE_GATE_RE: ClassVar[t.RegexPattern] = re.compile(r"--interactive")
-    SKILL_VALIDATOR_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(enforce|check|validate|test|verify|audit|lint|scan)[-_]"
-    )
-    SKILL_FIXER_NAME_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(fix|autofix|repair|correct|reorder|refactor|standardize)[-_]"
+        r"^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$",
     )
     MISSING_IMPORT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"Cannot find module `([^`]+)` \[missing-import\]"
+        r"Cannot find module `([^`]+)` \[missing-import\]",
     )
     MYPY_HINT_RE: ClassVar[t.RegexPattern] = re.compile(
         r'note:\s+(?:hint|note):\s+(?:["`].*?\bpip\s+install\s+|install\s+stub\s+package\s+["`]?)'
@@ -134,19 +72,9 @@ class FlextInfraConstantsSharedInfra:
         re.IGNORECASE,
     )
     MYPY_STUB_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"Library stubs not installed for ['\"](\S+?)['\"]"
+        r"Library stubs not installed for ['\"](\S+?)['\"]",
     )
     INTERNAL_PREFIXES: ClassVar[t.VariadicTuple[str]] = ("flext_", "flext-")
-    METADATA_TOMLLIB_MODULES: ClassVar[frozenset[str]] = frozenset({"tomllib"})
-    # Package-tree markers matched against "/<path relative to the scanned
-    # root>" (X-77): the directory name of the working copy (a lane may be
-    # named anything) never takes part in the match.
-    METADATA_ALLOWLIST_PATH_MARKERS: ClassVar[t.StrSequence] = (
-        "/src/flext_core/_utilities/project_metadata.py",
-        "/src/flext_infra/iteration.py",
-        "/src/flext_infra/__version__.py",
-    )
-    METADATA_TARGET_SCOPE_MARKERS: ClassVar[t.StrSequence] = ("/src/flext_infra/",)
 
     # --- Integration baseline discovery ---
     # Ordered preference used to derive one repository's integration baseline
@@ -169,16 +97,6 @@ class FlextInfraConstantsSharedInfra:
     PYPROJECT_FILENAME: ClassVar[str] = "pyproject.toml"
     MAKEFILE_FILENAME: ClassVar[str] = "Makefile"
     GITMODULES: ClassVar[str] = ".gitmodules"
-    # Why: conform .gitmodules merge classifies sections via these patterns;
-    # they belong beside GITMODULES on c.Infra, not as leaf re.compile copies.
-    GITMODULE_SECTION_RE: ClassVar[t.RegexPattern] = re.compile(
-        r'(?m)^\[submodule "[^"]+"\]\s*$'
-    )
-    "``.gitmodules`` submodule section header at line start."
-    GITMODULE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"(?m)^[ \t]*path[ \t]*=[ \t]*(.+?)[ \t]*$"
-    )
-    "``.gitmodules`` path assignment value inside a submodule section."
     GITMODULE_MANAGED_KEY: ClassVar[str] = "flext-managed"
     "``.gitmodules`` key whose explicit non-``true`` value opts a member out of governance."
     FOLLOW_SUPERPROJECT_BRANCH: ClassVar[str] = "."
@@ -248,28 +166,17 @@ class FlextInfraConstantsSharedInfra:
     # --- File extensions (was: class Extensions) ---
     EXT_PYTHON: ClassVar[str] = ".py"
     EXT_PYTHON_GLOB: ClassVar[str] = "*.py"
+    EXT_PYTHON_STUB: ClassVar[str] = ".pyi"
+    PYTHON_SOURCE_SUFFIXES: ClassVar[t.VariadicTuple[str]] = (
+        EXT_PYTHON,
+        EXT_PYTHON_STUB,
+    )
+    "Suffixes of Python source the rule engine scans: modules and stubs."
 
     # --- Directory names (was: class Directories) ---
     DIR_TESTS: ClassVar[str] = "tests"
     DIR_EXAMPLES: ClassVar[str] = "examples"
     DIR_SCRIPTS: ClassVar[str] = "scripts"
-    # Runtime-exempt surfaces, matched on path parts RELATIVE to the scanned
-    # repository root (X-75): an ancestor directory name never grants an
-    # exemption. Scope exclusions (state/cache dirs) belong to the source-scan
-    # ignore list, not here.
-    TIER_WHITELIST_NON_RUNTIME_DIR_PARTS: ClassVar[frozenset[str]] = frozenset({
-        DIR_TESTS,
-        DIR_EXAMPLES,
-        DIR_SCRIPTS,
-        "evaluate",
-    })
-    TIER_WHITELIST_SETTINGS_MODULE_LIBRARIES: ClassVar[frozenset[str]] = frozenset({
-        "pydantic_settings"
-    })
-    TIER_WHITELIST_LEAF_CONFIG_FILES: ClassVar[frozenset[str]] = frozenset({
-        "_config.py"
-    })
-    "Leaf config modules (e.g. ai-hub/_config.py) that own their external-library"
     "imports directly as the bottom of the c/t/p/m/u chain."
     DIR_TYPINGS: ClassVar[str] = "typings"
     DIR_DOCS: ClassVar[str] = "docs"

@@ -18,7 +18,8 @@ class FlextInfraGitService(s[m.Infra.GitStatusReport]):
     """Thin Git status and cleanliness use cases over ``u.Infra.git_status``."""
 
     repository: Annotated[
-        Path | None, m.Field(description="Repository path; defaults to repository_root")
+        Path | None,
+        m.Field(description="Repository path; defaults to repository_root"),
     ] = None
 
     def _repo(self) -> Path:

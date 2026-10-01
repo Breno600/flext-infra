@@ -17,7 +17,9 @@ class FlextInfraPytestEntry:
         """Parse the Make boundary and return the exact child process status.
 
         ``full`` runs incremental then complete testmon execution. ``coverage``
-        selects coverage alone; the default is the incremental operation.
+        selects coverage alone; the default is the incremental operation. The
+        ``slow`` operation runs the incremental phase over the slow marker
+        only, as its own bounded process outside the budgeted clock.
         """
         mode = sys.argv[1] if len(sys.argv) > 1 else ""
         if mode in {"profile", "profile-collection"}:
@@ -45,7 +47,7 @@ class FlextInfraPytestEntry:
             return runner.execute_coverage().unwrap()
         if mode == "full":
             return runner.execute_full().unwrap()
-        if not mode:
+        if mode in {"", "slow"}:
             return runner.execute().unwrap()
         msg = f"unsupported pytest operation: {mode}"
         raise ValueError(msg)

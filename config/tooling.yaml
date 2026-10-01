@@ -354,11 +354,6 @@ Infra:
               - unused-import
 
       mypy:
-        # Project wall-time budget for the bounded Mypy execution (SSOT;
-        # MYPY_TIMEOUT_SECONDS env overrides at the ingress boundary). The
-        # fleet cold runs need the model's bounded maximum: flext-core CI
-        # exhausted 120s under host load without a type diagnostic.
-        timeout_seconds: 600
         # The returns plugin types p.Result: without it every Result.value /
         # .map boundary resolves to Any and consumers flood with
         # no-any-return (proven by assert_type on 2026-09-23); its removal
@@ -660,13 +655,18 @@ Infra:
         # fsync can obey a five-second Python signal deadline. The aggregate
         # budget below independently terminates an incomplete full suite.
         case-timeout-seconds: 10
-        # Slow marks are a narrow integration-harness budget, not permission
-        # for an unbounded test. Cases that exceed it require owner repair.
-        slow-timeout-seconds: 30
-        # A local suite that cannot finish within two minutes is a performance
-        # defect. The generated process wall is derived from this value and the
-        # termination grace by the typed model; no second timeout source exists.
-        run-timeout-seconds: 120
+        # Slow marks cover nested public runner executions, including a cold
+        # cache seed and a warm replay under parallel suite load.
+        slow-timeout-seconds: 180
+        # The declared marker whose cases form the bounded-budget phase; the
+        # remaining cases run in their own phase under the full inventory
+        # budget (gate-budget rule).
+        slow-marker: slow
+        # The complete inventory exceeds 3300 cases. A 189-case incremental
+        # execution took 127 seconds, projecting over 2200 seconds for the
+        # inventory before the slowest integration cases. Keep a bounded wall
+        # that permits complete accounting instead of truncating the suite.
+        run-timeout-seconds: 3600
         termination-grace-seconds: 2
         # Operator decision 2026-09-26: one failure stops the invocation. The
         # next run starts from the corrected owner instead of accumulating a
@@ -726,6 +726,8 @@ Infra:
         parallel-schedule-chunk: 1
         profile-sort: cumulative
         profile-limit: 50
+        profile-suite-filename: pytest.pstats
+        profile-process-directory: profiles
         min-version: "8.0"
         python-classes: ["Test*"]
         python-files: ["*_test.py", "*_tests.py", "test_*.py"]

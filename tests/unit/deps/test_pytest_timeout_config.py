@@ -16,7 +16,7 @@ class TestsFlextInfraPytestTimeoutConfig:
         policy = config.Infra.tooling.tools.pytest
 
         round_tripped = type(policy).model_validate(
-            policy.model_dump(by_alias=True, exclude_computed_fields=True)
+            policy.model_dump(by_alias=True, exclude_computed_fields=True),
         )
 
         tm.that(round_tripped, eq=policy)
@@ -28,7 +28,7 @@ class TestsFlextInfraPytestTimeoutConfig:
             "termination_grace_seconds",
             "parallel_workers",
         ),
-        [(1, 3, 1, 1), (7, 20, 2, 8)],
+        [(1, 6, 1, 1), (7, 20, 2, 8)],
     )
     def test_arbitrary_valid_execution_policy_round_trips(
         self,
@@ -56,7 +56,7 @@ class TestsFlextInfraPytestTimeoutConfig:
 
         arbitrary_policy = type(policy).model_validate(payload)
         round_tripped = type(policy).model_validate(
-            arbitrary_policy.model_dump(by_alias=True, exclude_computed_fields=True)
+            arbitrary_policy.model_dump(by_alias=True, exclude_computed_fields=True),
         )
 
         tm.that(round_tripped, eq=arbitrary_policy)
@@ -74,7 +74,8 @@ class TestsFlextInfraPytestTimeoutConfig:
             type(policy).model_validate(payload)
 
     @pytest.mark.parametrize(
-        "override", ["-o", "-o=addopts=", "--override-ini", "--override-ini=addopts="]
+        "override",
+        ["-o", "-o=addopts=", "--override-ini", "--override-ini=addopts="],
     )
     def test_pytest_ini_override_is_forbidden(self, override: str) -> None:
         policy = config.Infra.tooling.tools.pytest
@@ -87,17 +88,20 @@ class TestsFlextInfraPytestTimeoutConfig:
         ):
             type(policy).model_validate(payload)
 
-    def test_run_budget_contains_item_and_termination_windows(self) -> None:
+    def test_run_budget_exceeds_the_derived_suite_stop_reserve(self) -> None:
+        """A run budget at the reserve (item windows + grace) is unrepresentable.
+
+        The slow budget stays inside its own case/run walls, so only the
+        reserve relation is violated.
+        """
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
-        payload["run-timeout-seconds"] = (
-            policy.case_timeout_seconds + policy.termination_grace_seconds - 1
-        )
+        payload["run-timeout-seconds"] = policy.suite_stop_reserve_seconds
         payload["slow-timeout-seconds"] = policy.case_timeout_seconds + 1
 
         with pytest.raises(
             c.ValidationError,
-            match="pytest run timeout must include item and termination budgets",
+            match="pytest run timeout must exceed the suite stop reserve",
         ):
             type(policy).model_validate(payload)
 
@@ -136,13 +140,16 @@ class TestsFlextInfraPytestTimeoutConfig:
         tm.that(policy.process_timeout_seconds, eq=expected)
         tm.that("process-timeout-seconds" in policy.model_dump(by_alias=True), eq=False)
 
-    def test_run_budget_exceeds_the_derived_suite_stop_reserve(self) -> None:
+    def test_project_run_budget_exceeds_the_derived_suite_stop_reserve(self) -> None:
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
-        payload["run-timeout-seconds"] = policy.suite_stop_reserve_seconds
+        payload["run-timeout-overrides"] = {
+            config.Infra.name: policy.suite_stop_reserve_seconds
+        }
 
         with pytest.raises(
-            c.ValidationError, match="pytest run timeout must exceed the suite stop reserve"
+            c.ValidationError,
+            match="pytest run timeout must exceed the suite stop reserve",
         ):
             type(policy).model_validate(payload)
 
@@ -173,7 +180,8 @@ class TestsFlextInfraPytestTimeoutConfig:
         ],
     )
     def test_reporting_policy_cannot_override_runner_owned_argv(
-        self, argument: str
+        self,
+        argument: str,
     ) -> None:
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
