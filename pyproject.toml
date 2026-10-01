@@ -459,7 +459,7 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = ["TC004"]
+"**/__init__.py" = ["RUF067", "TC004"]
 
 [tool.tomlsort]
 all = true
