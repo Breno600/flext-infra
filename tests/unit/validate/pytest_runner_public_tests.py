@@ -457,7 +457,12 @@ class TestsFlextInfraPytestRunner:
                 complete=True,
                 execution_mode=c.Infra.PytestExecutionMode.FULL,
             ),
-            runner.build_command(full, execution_mode=c.Infra.PytestExecutionMode.FULL),
+            runner.build_command(
+                full,
+                invocation=m.Infra.PytestInvocation(
+                    execution_mode=c.Infra.PytestExecutionMode.FULL
+                ),
+            ),
         ):
             tm.that("-m" in command[3:], eq=False)
 

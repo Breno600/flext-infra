@@ -60,7 +60,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             if serial
             else pytest.suite_stop_reserve_seconds
         )
-        return self.started_at_monotonic + pytest.run_timeout_seconds - reserve
+        return (
+            self.started_at_monotonic
+            + pytest.run_timeout_seconds
+            - reserve
+        )
 
     def ci_excluded_markers(
         self,
@@ -128,15 +132,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             )
         )
         return (
-            *(
-                (
-                    *self.collection_command_prefix,
-                    str(manifest_path.with_suffix(".pstats")),
-                    str(manifest_path.parent / "run-context.json"),
-                )
-                if self.collection_command_prefix
-                else (sys.executable, "-m", "pytest")
-            ),
+            sys.executable,
+            "-m",
+            "pytest",
             str(self.target),
             *testmon,
             "--collect-only",
@@ -159,27 +157,31 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     def build_command(
         self,
         report_dir: Path,
-        manifest: m.Infra.PytestSelectionPlan | None = None,
-        *,
-        serialize: bool = False,
-        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
+        selected_node_ids: t.StrSequence | None = None,
+        invocation: m.Infra.PytestInvocation | None = None,
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin).
 
-        A nonempty selection is enforced from its owning manifest artifact,
-        so the plan always carries the node IDs together with the manifest
-        path that declares them.
+        A nonempty selection is enforced from its manifest, so it requires
+        ``manifest_path``.
         """
         pytest = config.Infra.tooling.tools.pytest
-        selection = (manifest.node_ids or None) if manifest is not None else None
-        manifest_path = manifest.manifest_path if manifest is not None else None
+        invocation = invocation or m.Infra.PytestInvocation()
+        manifest_path = invocation.manifest_path
+        serialize = invocation.serialize
+        whole_target = invocation.whole_target
+        execution_mode = invocation.execution_mode
+        selection = selected_node_ids or None
+        if selection and manifest_path is None:
+            msg = "a runner selection requires its collection manifest path"
+            raise ValueError(msg)
         # An empty selection needs no workers, and a selection smaller than the
         # worker budget never needs more workers than items: every extra worker
         # only pays startup cost for an empty queue. Explicit serial execution
         # remains available to callers; cold and warm cache runs share the same
         # manifest.
         budget = self.parallel_worker_budget(pytest)
-        if serialize or (manifest is not None and not manifest.node_ids):
+        if serialize or selected_node_ids == ():
             workers = "0"
         elif selection:
             workers = str(min(budget, len(selection)))
@@ -195,8 +197,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             serial=serial,
             targets=(
                 (str(self.target),)
-                if selection is None
-                or (manifest is not None and manifest.whole_target)
+                if whole_target or selection is None
                 else tuple(selection)
             ),
             workers=workers,
@@ -206,18 +207,13 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     (
                         "-p",
                         FlextInfraPytestCollection.__module__,
-                        (
-                            f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}="
-                            f"{manifest_path}"
-                        ),
+                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={manifest_path}",
                     )
-                    if manifest_path is not None
+                    if selection
                     else ()
                 ),
                 "--testmon",
-                *(
-                    ("--testmon-noselect",) if selection else ("--testmon-forceselect",)
-                ),
+                *(("--testmon-noselect",) if selection else ("--testmon-forceselect",)),
                 "--testmon-env",
                 f"'{self._toolchain_testmon_environment()}'",
                 *self._NO_COVERAGE,

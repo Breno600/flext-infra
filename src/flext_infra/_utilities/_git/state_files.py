@@ -65,24 +65,20 @@ class FlextInfraUtilitiesGitStateFilesMixin(
     def _state_require_payload(
         cls,
         root: Path,
-        observed: m.Infra.GitWorktreeObservedContent,
+        path: Path,
+        observed: m.Infra.GitWorktreeObservedFile,
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
         """Hash the observed bytes and accept only an allowed captured state."""
         if observed.content is None and None in allowed:
             return
         if observed.content is not None:
-            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(
-                observed.content
-            ) as stream:
+            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(observed.content) as stream:
                 oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
-            candidate = m.Infra.GitWorktreeFileState(
-                path=observed.path,
-                mode=observed.mode,
-                permissions=observed.permissions,
-                oid=oid,
+            captured = m.Infra.GitWorktreeFileState(
+                path=path, mode=observed.mode, permissions=observed.permissions, oid=oid
             )
-            if candidate in allowed:
+            if captured in allowed:
                 return
         msg = f"owned file changed before guarded effect: {observed.path}"
         raise ValueError(msg)
@@ -113,8 +109,8 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 raise ValueError(msg) from exc
             cls._state_require_payload(
                 root,
-                m.Infra.GitWorktreeObservedContent(
-                    path=path,
+                path,
+                m.Infra.GitWorktreeObservedFile(
                     content=os.fsencode(raw_target),
                     mode="120000",
                     permissions=link_mode,
@@ -133,8 +129,8 @@ class FlextInfraUtilitiesGitStateFilesMixin(
             permissions = before_file.mode if before_file.mode is not None else 0
             cls._state_require_payload(
                 root,
-                m.Infra.GitWorktreeObservedContent(
-                    path=path,
+                path,
+                m.Infra.GitWorktreeObservedFile(
                     content=before_file.content,
                     mode="100755" if permissions & stat.S_IXUSR else "100644",
                     permissions=permissions,
