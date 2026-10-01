@@ -109,17 +109,10 @@ class FlextInfraEnsureRuffConfigPhase:
             if global_ignores is None
             else global_ignores
         )
+        # The per-repo Ruff exemption overlay (ManagedArtifacts.Ruff) was
+        # exterminated (flext-edlgx e8b6b2068): no project-local Ruff
+        # per-file-ignores exist. The fleet SSOT owns the complete map.
         local_ignores: t.MappingKV[str, t.StrSequence] = {}
-        if managed_artifacts is not None:
-            local_ignores = managed_artifacts.artifacts.Ruff.per_file_ignores
-        elif project_dir.is_dir():
-            # A scaffold target is materialized by this same plan, so it owns
-            # no declared exemption yet. A directory that does exist but cannot
-            # be inspected still fails loud.
-            loaded = u.Infra.load_project_managed_artifacts(project_dir)
-            if loaded.failure:
-                raise ValueError(loaded.error or "project artifact load failed")
-            local_ignores = loaded.value.artifacts.Ruff.per_file_ignores
         # An exemption glob rooted on a first-class directory that the
         # workspace retired (e.g. scripts/**, declared as an analysis
         # exclusion in its workspace SSOT) must not survive the render: it
