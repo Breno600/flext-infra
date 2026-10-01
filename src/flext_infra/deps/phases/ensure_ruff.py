@@ -358,7 +358,7 @@ class FlextInfraEnsureRuffConfigPhase:
             The resulting ``t.StrSequence``.
 
         """
-        effective_ignores = self.project_per_file_ignores(
+        effective_ignores = FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
             path.parent,
             self._tool_config.tools.ruff.lint.per_file_ignores,
         )
