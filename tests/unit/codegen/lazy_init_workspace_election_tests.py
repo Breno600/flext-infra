@@ -102,7 +102,7 @@ class TestsFlextInfraLazyInitWorkspaceElection:
             u.Infra.lazy_imports_name_source(generated),
         )
 
-        tm.that(sources.get(".constants", ()), has="c")
+        tm.that(dict(entries).get(".constants", ()), has="c")
 
         # The middle declares its facade parent in ANOTHER repository. Self
         # scope never indexes a sibling: with the parent not installed in the

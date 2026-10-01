@@ -267,7 +267,10 @@ class TestsFlextInfraCodegenLazyInitService:
         generated = examples_init.read_text(encoding=c.Cli.ENCODING_DEFAULT)
 
         tm.that(result.success, eq=True)
-        tm.that(generated, contains="from .demo import ExamplesDemo")
+        tm.that(
+            generated,
+            contains=f"from {c.Infra.DIR_EXAMPLES}.demo import ExamplesDemo",
+        )
         tm.that(generated, contains="ExamplesDemo")
         tm.that(generated, contains='"ExamplesDemo"')
         tm.that(generated, contains="install_lazy_exports")
