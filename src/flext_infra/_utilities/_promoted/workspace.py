@@ -65,9 +65,8 @@ class FlextInfraUtilitiesPromotedWorkspace:
             return
         active = Path(sys.executable)
         expected = active
-        live_settings = type(settings).fetch_global()
         if (
-            not (live_settings.Infra.virtual_env and active.exists())
+            not (settings.Infra.virtual_env and active.exists())
             and spec.local_python.exists()
         ):
             expected = spec.local_python
@@ -89,11 +88,10 @@ class FlextInfraUtilitiesPromotedWorkspace:
         """
         from flext_infra import settings
 
-        live_settings = type(settings).fetch_global()
         if (
-            live_settings.Infra.cosmos_command_dispatched
+            settings.Infra.cosmos_command_dispatched
             != c.Infra.PromotedSelector.DISPATCHED
-            or live_settings.Infra.cosmos_command_path
+            or settings.Infra.cosmos_command_path
             != str(Path(script_file).resolve())
         ):
             sys.stderr.write(c.Infra.PromotedMessage.NOT_DISPATCHED)
