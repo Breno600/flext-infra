@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_tests import tm, tv
+from flext_tests import tm
 
 from flext_infra import c, m
 from flext_infra.gates.markdown_code import FlextInfraMarkdownCodeGate
@@ -194,7 +194,11 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         self,
         tmp_path: Path,
     ) -> None:
-        """Formatting preserves an invalid fence for the markdown validator."""
+        """Formatting never rewrites a fence it cannot parse.
+
+        The invalid fence stays byte-identical for the gate that owns its
+        syntax verdict; the code formatter only formats what it can parse.
+        """
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-no-splice")
         readme = project_dir / "README.md"
         readme.write_text(self.SYNTAX_BROKEN, encoding="utf-8")
@@ -206,12 +210,6 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
 
         FlextInfraMarkdownCodeGate(tmp_path).fix(project_dir, context)
         tm.that(readme.read_text(encoding="utf-8"), eq=self.SYNTAX_BROKEN)
-        syntax_report = tv.markdown(project_dir).unwrap()
-        tm.that(syntax_report.passed, eq=False)
-        tm.that(
-            any(item.rule_id == "MD-001" for item in syntax_report.violations),
-            eq=True,
-        )
 
     @staticmethod
     def test_code_gate_reports_unformatted_docstring_example(

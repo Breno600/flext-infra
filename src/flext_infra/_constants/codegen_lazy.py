@@ -208,7 +208,6 @@ class FlextInfraConstantsCodegenLazy:
             "tf": ("flext_tests", "tf"),
             "tk": ("flext_tests", "tk"),
             "tm": ("flext_tests", "tm"),
-            "tv": ("flext_tests", "tv"),
             "u": ("flext_tests", "u"),
             "x": ("flext_tests", "x"),
         })
