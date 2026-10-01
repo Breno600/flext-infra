@@ -32,7 +32,8 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
         def __init__(
             self,
             replacements: t.MappingKV[
-                cst.BaseSmallStatement, t.SequenceOf[cst.BaseSmallStatement]
+                cst.BaseSmallStatement,
+                t.SequenceOf[cst.BaseSmallStatement],
             ],
         ) -> None:
             """Retain replacements keyed by their original statement identity."""
@@ -40,7 +41,9 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
 
         @override
         def on_leave(
-            self, original_node: cst.CSTNodeT, updated_node: cst.CSTNodeT
+            self,
+            original_node: cst.CSTNodeT,
+            updated_node: cst.CSTNodeT,
         ) -> cst.CSTNodeT | cst.RemovalSentinel | cst.FlattenSentinel[cst.CSTNodeT]:
             if (
                 isinstance(original_node, cst.BaseSmallStatement)
@@ -81,11 +84,14 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
 
         @override
         def on_leave(
-            self, original_node: cst.CSTNodeT, updated_node: cst.CSTNodeT
+            self,
+            original_node: cst.CSTNodeT,
+            updated_node: cst.CSTNodeT,
         ) -> cst.CSTNodeT | cst.RemovalSentinel | cst.FlattenSentinel[cst.CSTNodeT]:
             updated = super().on_leave(original_node, updated_node)
             if isinstance(original_node, cst.Import | cst.ImportFrom) and isinstance(
-                updated, cst.Import | cst.ImportFrom
+                updated,
+                cst.Import | cst.ImportFrom,
             ):
                 self.imports.append((
                     original_node,
@@ -117,7 +123,10 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
             return scope
 
         def _require_binding(
-            self, scope: Scope, original: cst.BaseExpression, replacement: str
+            self,
+            scope: Scope,
+            original: cst.BaseExpression,
+            replacement: str,
         ) -> None:
             name = u.Infra.dotted_name(original)
             if name is None:
@@ -136,7 +145,9 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
             self.aliases_by_import.setdefault(assignment.node, set()).add(alias)
 
         def _replacement(
-            self, original: cst.BaseExpression, updated: cst.BaseExpression
+            self,
+            original: cst.BaseExpression,
+            updated: cst.BaseExpression,
         ) -> cst.BaseExpression:
             names = self.get_metadata(QualifiedNameProvider, original, ())
             replacements = {
@@ -164,7 +175,9 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
 
         @override
         def leave_Name(
-            self, original_node: cst.Name, updated_node: cst.Name
+            self,
+            original_node: cst.Name,
+            updated_node: cst.Name,
         ) -> cst.BaseExpression:
             parent = self.get_metadata(ParentNodeProvider, original_node)
             if u.Infra.rebinds_name_in_place(parent, original_node):
@@ -173,12 +186,16 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
 
         @override
         def leave_Attribute(
-            self, original_node: cst.Attribute, updated_node: cst.Attribute
+            self,
+            original_node: cst.Attribute,
+            updated_node: cst.Attribute,
         ) -> cst.BaseExpression:
             return self._replacement(original_node, updated_node)
 
         def _type_expression(
-            self, original: cst.BaseExpression, updated: cst.BaseExpression
+            self,
+            original: cst.BaseExpression,
+            updated: cst.BaseExpression,
         ) -> cst.BaseExpression:
             scope = self._scope(original)
             rewriter = FlextInfraRefactorTypingUnifierRewriteMixin.TypeExpression(
@@ -195,11 +212,13 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
             return annotation
 
         def _replacement_alias(
-            self, imported: cst.ImportAlias, replacement: str
+            self,
+            imported: cst.ImportAlias,
+            replacement: str,
         ) -> str:
             """Require the removed binding's public consumers to have migrated."""
             bound = u.Infra.dotted_name(
-                imported.asname.name if imported.asname else imported.name
+                imported.asname.name if imported.asname else imported.name,
             )
             if bound is None:
                 msg = "import migration requires a static bound import name"
@@ -210,7 +229,9 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
             return replacement.split(".", maxsplit=1)[0]
 
         def _from_import(
-            self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+            self,
+            original_node: cst.ImportFrom,
+            updated_node: cst.ImportFrom,
         ) -> tuple[list[cst.BaseSmallStatement], set[str]]:
             module = u.Infra.dotted_name(original_node.module)
             if (
@@ -235,28 +256,33 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
                 statements.append(
                     updated_node.with_changes(
                         names=u.Infra.normalized_import_aliases(
-                            retained, parenthesized=bool(updated_node.lpar)
-                        )
-                    )
+                            retained,
+                            parenthesized=bool(updated_node.lpar),
+                        ),
+                    ),
                 )
             self.changes.append(
-                f"Replaced import from {module} with its declared facade"
+                f"Replaced import from {module} with its declared facade",
             )
             return statements, aliases
 
         @override
         def leave_Module(
-            self, original_node: cst.Module, updated_node: cst.Module
+            self,
+            original_node: cst.Module,
+            updated_node: cst.Module,
         ) -> cst.Module:
             replacements: t.MutableMappingKV[
-                cst.BaseSmallStatement, list[cst.BaseSmallStatement]
+                cst.BaseSmallStatement,
+                list[cst.BaseSmallStatement],
             ] = {}
             for original, updated, scope in self.imports:
                 self._verify_string_consumers(original, scope)
                 statements: list[cst.BaseSmallStatement]
                 aliases: set[str]
                 if isinstance(original, cst.ImportFrom) and isinstance(
-                    updated, cst.ImportFrom
+                    updated,
+                    cst.ImportFrom,
                 ):
                     statements, aliases = self._from_import(original, updated)
                 else:
@@ -268,11 +294,13 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
                         statements.append(declaration)
                 replacements[updated] = statements
             return updated_node.visit(
-                FlextInfraRefactorImportModernizer._ImportStatements(replacements)
+                FlextInfraRefactorImportModernizer._ImportStatements(replacements),
             )
 
         def _verify_string_consumers(
-            self, declaration: cst.CSTNode, scope: Scope
+            self,
+            declaration: cst.CSTNode,
+            scope: Scope,
         ) -> None:
             """Reject unsupported deferred typing-call consumers before import removal."""
             for assignment in scope.assignments:
@@ -283,14 +311,21 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
                     continue
                 for access in assignment.references:
                     self._verify_typing_call_string(
-                        access.node, access.scope, is_type_hint=access.is_type_hint
+                        access.node,
+                        access.scope,
+                        is_type_hint=access.is_type_hint,
                     )
 
         def _verify_typing_call_string(
-            self, node: cst.CSTNode, scope: Scope, *, is_type_hint: bool
+            self,
+            node: cst.CSTNode,
+            scope: Scope,
+            *,
+            is_type_hint: bool,
         ) -> None:
             if not is_type_hint or not isinstance(
-                node, cst.SimpleString | cst.ConcatenatedString
+                node,
+                cst.SimpleString | cst.ConcatenatedString,
             ):
                 return
             parent = self.get_metadata(ParentNodeProvider, node, None)
@@ -310,7 +345,10 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
                 raise ValueError(msg)
 
         def _alias_import(
-            self, scope: Scope, alias: str, original: cst.CSTNode
+            self,
+            scope: Scope,
+            alias: str,
+            original: cst.CSTNode,
         ) -> cst.ImportFrom | None:
             """Reuse only an earlier declaration in the same straight-line suite."""
             bound = self.facades.require_available(scope, alias)
@@ -355,7 +393,8 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
             left = self.get_metadata(ParentNodeProvider, declaration)
             right = self.get_metadata(ParentNodeProvider, consumer)
             if not isinstance(left, cst.SimpleStatementLine) or not isinstance(
-                right, cst.SimpleStatementLine
+                right,
+                cst.SimpleStatementLine,
             ):
                 return False
             suite = self.get_metadata(ParentNodeProvider, left)
@@ -388,7 +427,9 @@ class FlextInfraRefactorImportModernizer(FlextInfraRopeTransformer):
 
     @override
     def transform(
-        self, rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
+        self,
+        rope_project: t.Infra.RopeProject,
+        resource: t.Infra.RopeResource,
     ) -> t.Infra.TransformResult:
         """Publish a complete binding-proven rewrite to the owned resource."""
         source = resource.read()

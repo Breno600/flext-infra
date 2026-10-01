@@ -20,11 +20,13 @@ class FlextInfraLooseObjectDetector:
 
     @classmethod
     def detect_file(
-        cls, ctx: m.Infra.DetectorContext
+        cls,
+        ctx: m.Infra.DetectorContext,
     ) -> t.SequenceOf[m.Infra.LooseObjectViolation]:
         """Detect loose top-level objects in a single file."""
         if ctx.project_root is not None and not cls._is_src_file(
-            file_path=ctx.file_path, project_root=ctx.project_root
+            file_path=ctx.file_path,
+            project_root=ctx.project_root,
         ):
             return []
         if u.Infra.pytest_test_module(ctx.file_path):
@@ -48,8 +50,10 @@ class FlextInfraLooseObjectDetector:
         file_str = str(file_path)
         violations = list(
             cls._detect_logger_assignments(
-                lines=lines, file_str=file_str, class_stem=class_stem
-            )
+                lines=lines,
+                file_str=file_str,
+                class_stem=class_stem,
+            ),
         )
         logger_keys = {
             (violation.line, violation.name)
@@ -66,10 +70,10 @@ class FlextInfraLooseObjectDetector:
                     name=symbol.name,
                     kind=kind,
                     suggestion=f"{class_stem}{suffix}",
-                )
+                ),
             )
 
-        # Why (cosmos-3flk9): a module whose top level holds only imports,
+        # Why: a module whose top level holds only imports,
         # the export manifest and the package entrypoint call (operational
         # r/e/x/h/d/s re-exports, ``__main__`` stubs) carries no loose
         # object by law. Derived from the collected symbols — never a
@@ -127,13 +131,14 @@ class FlextInfraLooseObjectDetector:
                 resource=res,
                 file_path=file_path,
                 class_stem=class_stem,
-            )
+            ),
         )
 
         if not violations and not class_symbols:
             return []
         if len(class_symbols) != 1 and not cls._allows_private_base_module_classes(
-            file_path=file_path, class_symbols=class_symbols
+            file_path=file_path,
+            class_symbols=class_symbols,
         ):
             violations.append(
                 m.Infra.LooseObjectViolation(
@@ -142,7 +147,7 @@ class FlextInfraLooseObjectDetector:
                     name=file_path.stem,
                     kind="single_class",
                     suggestion=f"{class_stem}Utilities",
-                )
+                ),
             )
 
         return violations
@@ -165,7 +170,10 @@ class FlextInfraLooseObjectDetector:
 
     @classmethod
     def _allows_private_base_module_classes(
-        cls, *, file_path: Path, class_symbols: t.SequenceOf[m.Infra.SymbolInfo]
+        cls,
+        *,
+        file_path: Path,
+        class_symbols: t.SequenceOf[m.Infra.SymbolInfo],
     ) -> bool:
         """Return whether a private ``_base.py`` module satisfies FLEXT contracts."""
         if file_path.name != c.Infra.NAMESPACE_PRIVATE_BASE_MODULE:
@@ -206,7 +214,7 @@ class FlextInfraLooseObjectDetector:
                     name=name,
                     kind=kind,
                     suggestion=f"{class_stem}{suffix}",
-                )
+                ),
             )
 
         class_bases = {
@@ -363,7 +371,10 @@ class FlextInfraLooseObjectDetector:
 
     @staticmethod
     def _detect_logger_assignments(
-        *, lines: t.StrSequence, file_str: str, class_stem: str
+        *,
+        lines: t.StrSequence,
+        file_str: str,
+        class_stem: str,
     ) -> t.SequenceOf[m.Infra.LooseObjectViolation]:
         """Detect top-level logger assignments directly from module source."""
         return tuple(

@@ -21,7 +21,9 @@ class FlextInfraNamespaceEnforcerPhasesMixin:
     _rope_project: t.Infra.RopeProject
 
     def _resolve_project_roots(
-        self, *, project_names: t.StrSequence | None = None
+        self,
+        *,
+        project_names: t.StrSequence | None = None,
     ) -> t.SequenceOf[Path]:
         """Resolve project roots."""
         msg = "_resolve_project_roots must be provided by the concrete enforcer"
@@ -63,7 +65,8 @@ class FlextInfraNamespaceEnforcerPhasesMixin:
         """Scan facades and optionally create missing ones."""
         project_root, project_name = project
         facade_statuses = FlextInfraScanner.scan_project(
-            project_root=project_root, rope_project=rope_project
+            project_root=project_root,
+            rope_project=rope_project,
         )
         if not apply:
             return facade_statuses
@@ -74,14 +77,15 @@ class FlextInfraNamespaceEnforcerPhasesMixin:
             repository_root=repository_root,
         )
         return FlextInfraScanner.scan_project(
-            project_root=project_root, rope_project=rope_project
+            project_root=project_root,
+            rope_project=rope_project,
         )
 
     @staticmethod
     def _collect_py_files(*, project_root: Path) -> t.SequenceOf[Path]:
         """Collect Python files for scanning."""
         py_files_result = u.Infra.iter_python_files(
-            m.Infra.SourceScanRequest(project_roots=(project_root,))
+            m.Infra.SourceScanRequest(project_roots=(project_root,)),
         )
         if py_files_result.failure:
             msg = py_files_result.error or (

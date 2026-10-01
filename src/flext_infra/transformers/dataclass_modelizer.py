@@ -27,26 +27,6 @@ from flext_infra import t
 from ._rewrite import FlextInfraSourceRewrite, FlextInfraSourceRewriter
 from .rope_transformer import FlextInfraRopeTransformer
 
-_PRIMITIVE_TOKENS: frozenset[str] = frozenset({
-    "str",
-    "int",
-    "float",
-    "bool",
-    "None",
-    "Path",
-})
-
-_SKIP_REASON_MUTABLE = "mutable dataclass requires manual model-base selection"
-_SKIP_REASON_NON_SERIALIZABLE = "field annotation is not JSON-serializable"
-_SKIP_REASON_KEYWORDS = "dataclass keywords change runtime semantics"
-_SKIP_REASON_CUSTOM_INIT = "class declares __init__ or __post_init__"
-
-
-def _is_serializable_annotation(annotation_text: str) -> bool:
-    """Return whether an unparsed annotation only names serializable tokens."""
-    tokens = set(re.findall(r"[A-Za-z_][A-Za-z_0-9.]*", annotation_text))
-    return bool(tokens) and tokens <= _PRIMITIVE_TOKENS
-
 
 @final
 class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
@@ -55,6 +35,32 @@ class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
     _description = (
         "convert serializable frozen dataclasses to canonical m.FrozenModel contracts"
     )
+
+    _PRIMITIVE_TOKENS: ClassVar[frozenset[str]] = frozenset({
+        "str",
+        "int",
+        "float",
+        "bool",
+        "None",
+        "Path",
+    })
+    _SKIP_REASON_MUTABLE: ClassVar[str] = (
+        "mutable dataclass requires manual model-base selection"
+    )
+    _SKIP_REASON_NON_SERIALIZABLE: ClassVar[str] = (
+        "field annotation is not JSON-serializable"
+    )
+    _SKIP_REASON_KEYWORDS: ClassVar[str] = "dataclass keywords change runtime semantics"
+    _SKIP_REASON_CUSTOM_INIT: ClassVar[str] = "class declares __init__ or __post_init__"
+
+    @staticmethod
+    def _is_serializable_annotation(annotation_text: str) -> bool:
+        """Return whether an unparsed annotation only names serializable tokens."""
+        tokens = set(re.findall(r"[A-Za-z_][A-Za-z_0-9.]*", annotation_text))
+        return (
+            bool(tokens)
+            and tokens <= FlextInfraRefactorDataclassModelizer._PRIMITIVE_TOKENS
+        )
 
     _FORBIDDEN_METHODS: ClassVar[frozenset[str]] = frozenset({
         "__init__",
@@ -108,7 +114,9 @@ class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
                 self.generic_visit(node)
                 return
             if not self._is_frozen(decorator):
-                self.skips.append(f"{node.name}: {_SKIP_REASON_MUTABLE}")
+                self.skips.append(
+                    f"{node.name}: {FlextInfraRefactorDataclassModelizer._SKIP_REASON_MUTABLE}",
+                )
                 self.generic_visit(node)
                 return
             reason = self._conversion_blocker(node, decorator)
@@ -120,7 +128,8 @@ class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
             self.generic_visit(node)
 
         def _dataclass_decorator(
-            self, node: ast.ClassDef
+            self,
+            node: ast.ClassDef,
         ) -> ast.Call | ast.Name | None:
             """Return the dataclass decorator node when the class carries one."""
             for decorator in node.decorator_list:
@@ -147,7 +156,9 @@ class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
             )
 
         def _conversion_blocker(
-            self, node: ast.ClassDef, decorator: ast.Call | ast.Name
+            self,
+            node: ast.ClassDef,
+            decorator: ast.Call | ast.Name,
         ) -> str | None:
             """Return the skip reason when the dataclass cannot convert safely."""
             if isinstance(decorator, ast.Call):
@@ -156,39 +167,45 @@ class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
                         keyword.arg
                         in FlextInfraRefactorDataclassModelizer._DISALLOWED_KEYWORDS
                     ):
-                        return _SKIP_REASON_KEYWORDS
+                        return (
+                            FlextInfraRefactorDataclassModelizer._SKIP_REASON_KEYWORDS
+                        )
                     if keyword.arg == "frozen" and not (
                         isinstance(keyword.value, ast.Constant)
                         and keyword.value.value is True
                     ):
-                        return _SKIP_REASON_MUTABLE
+                        return FlextInfraRefactorDataclassModelizer._SKIP_REASON_MUTABLE
                     if keyword.arg == "init" and not (
                         isinstance(keyword.value, ast.Constant)
                         and keyword.value.value is True
                     ):
-                        return _SKIP_REASON_CUSTOM_INIT
+                        return FlextInfraRefactorDataclassModelizer._SKIP_REASON_CUSTOM_INIT
             for item in node.body:
                 if (
                     isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef))
                     and item.name
                     in FlextInfraRefactorDataclassModelizer._FORBIDDEN_METHODS
                 ):
-                    return _SKIP_REASON_CUSTOM_INIT
+                    return FlextInfraRefactorDataclassModelizer._SKIP_REASON_CUSTOM_INIT
             for item in node.body:
                 if isinstance(item, ast.AnnAssign) and not self._field_serializable(
-                    item
+                    item,
                 ):
-                    return _SKIP_REASON_NON_SERIALIZABLE
+                    return FlextInfraRefactorDataclassModelizer._SKIP_REASON_NON_SERIALIZABLE
             return None
 
         def _field_serializable(self, item: ast.AnnAssign) -> bool:
             """Return whether one annotated field type is serializable."""
             if not isinstance(item.target, ast.Name):
                 return False
-            return _is_serializable_annotation(ast.unparse(item.annotation))
+            return FlextInfraRefactorDataclassModelizer._is_serializable_annotation(
+                ast.unparse(item.annotation),
+            )
 
         def _rewrite_to_frozen_model(
-            self, node: ast.ClassDef, decorator: ast.Call | ast.Name
+            self,
+            node: ast.ClassDef,
+            decorator: ast.Call | ast.Name,
         ) -> None:
             """Replace decorator lines and the class header with m.FrozenModel."""
             decorator_start = self.node_offset(decorator, start=True)
@@ -196,7 +213,7 @@ class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
             if decorator_start < class_start:
                 line_start = self._source.rfind("\n", 0, decorator_start) + 1
                 self.rewrites.append(
-                    FlextInfraSourceRewrite(line_start, class_start, "")
+                    FlextInfraSourceRewrite(line_start, class_start, ""),
                 )
                 self.changes.append(f"{node.name}: removed @dataclass decorator")
 
@@ -209,10 +226,10 @@ class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
                 joined = ", ".join([*base_names, "m.FrozenModel"])
                 new_header = f"class {node.name}({joined}):"
             self.rewrites.append(
-                FlextInfraSourceRewrite(header_start, header_end, new_header)
+                FlextInfraSourceRewrite(header_start, header_end, new_header),
             )
             self.changes.append(
-                f"{node.name}: converted frozen dataclass to m.FrozenModel"
+                f"{node.name}: converted frozen dataclass to m.FrozenModel",
             )
             self._ensure_model_import()
 
@@ -232,7 +249,9 @@ class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
                 return
             module_source = self._source
             if re.search(
-                r"^from\s+\S+\s+import\s+.*\bm\b", module_source, re.MULTILINE
+                r"^from\s+\S+\s+import\s+.*\bm\b",
+                module_source,
+                re.MULTILINE,
             ):
                 return
             if re.search(r"^import\s+\S*\bm\b", module_source, re.MULTILINE):
@@ -248,8 +267,10 @@ class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
             insertion_at = future_match.end() if future_match else 0
             self.rewrites.append(
                 FlextInfraSourceRewrite(
-                    insertion_at, insertion_at, "\n\nfrom flext_core import m"
-                )
+                    insertion_at,
+                    insertion_at,
+                    "\n\nfrom flext_core import m",
+                ),
             )
             self._import_planned = True
             self.changes.append("inserted canonical m alias import")
@@ -286,10 +307,10 @@ class FlextInfraRefactorDataclassModelizer(FlextInfraRopeTransformer):
                 start = match.start(2)
                 end = match.end(2)
                 self.rewrites.append(
-                    FlextInfraSourceRewrite(start, end, new_names_text)
+                    FlextInfraSourceRewrite(start, end, new_names_text),
                 )
                 self.changes.append(
-                    f"rewired m into canonical facade import from {package}"
+                    f"rewired m into canonical facade import from {package}",
                 )
                 return True
             return False

@@ -65,18 +65,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         keep at most one item in flight, so their reserve is smaller.
         """
         pytest = config.Infra.tooling.tools.pytest
-        if self.slow_phase:
-            reserve = (
-                pytest.slow_serial_suite_stop_reserve_seconds
-                if serial
-                else pytest.slow_suite_stop_reserve_seconds
-            )
-        else:
-            reserve = (
-                pytest.serial_suite_stop_reserve_seconds
-                if serial
-                else pytest.suite_stop_reserve_seconds
-            )
+        return (
+            self.started_at_monotonic
+            + self.run_timeout_seconds(pytest)
+            - pytest.suite_stop_reserve_seconds
+        )
         return self.started_at_monotonic + pytest.run_timeout_seconds - reserve
 
     def ci_excluded_markers(
@@ -90,7 +83,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return ()
 
     def _plugin_policy_args(
-        self, *, execution_mode: c.Infra.PytestExecutionMode
+        self,
+        *,
+        execution_mode: c.Infra.PytestExecutionMode,
     ) -> t.VariadicTuple[str]:
         """Apply the same configured plugin contract to collection and execution.
 
@@ -168,10 +163,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                 f"'{self._toolchain_testmon_environment()}'",
             )
         )
-        return (
-            sys.executable,
-            "-m",
-            "pytest",
+        pytest_arguments = (
             str(self.target),
             *testmon,
             "--collect-only",
@@ -190,28 +182,30 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             "0",
             "--no-cov",
         )
+        if self.collection_command_prefix:
+            return (
+                *self.collection_command_prefix,
+                str(manifest_path.with_suffix(".pstats")),
+                str(manifest_path.parent / "run-context.json"),
+                *pytest_arguments,
+            )
+        return (sys.executable, "-m", "pytest", *pytest_arguments)
 
     def build_command(
         self,
         report_dir: Path,
-        selected_node_ids: t.StrSequence | None = None,
-        invocation: m.Infra.PytestInvocation | None = None,
+        selection_plan: m.Infra.PytestSelectionPlan | None = None,
+        *,
+        serialize: bool = False,
+        execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin).
 
-        A nonempty selection is enforced from its manifest, so it requires
-        ``manifest_path``.
+        A resolved plan carries the selected IDs and their manifest together.
         """
         pytest = config.Infra.tooling.tools.pytest
-        invocation = invocation or m.Infra.PytestInvocation()
-        manifest_path = invocation.manifest_path
-        serialize = invocation.serialize
-        whole_target = invocation.whole_target
-        execution_mode = invocation.execution_mode
+        selected_node_ids = selection_plan.node_ids if selection_plan else None
         selection = selected_node_ids or None
-        if selection and manifest_path is None:
-            msg = "a runner selection requires its collection manifest path"
-            raise ValueError(msg)
         # An empty selection needs no workers, and a selection smaller than the
         # worker budget never needs more workers than items: every extra worker
         # only pays startup cost for an empty queue. Explicit serial execution
@@ -234,7 +228,11 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             serial=serial,
             targets=(
                 (str(self.target),)
-                if whole_target or selection is None
+                if (
+                    selection_plan is None
+                    or selection_plan.whole_target
+                    or selection is None
+                )
                 else tuple(selection)
             ),
             workers=workers,
@@ -244,9 +242,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     (
                         "-p",
                         FlextInfraPytestCollection.__module__,
-                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={manifest_path}",
+                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={selection_plan.manifest_path}",
                     )
-                    if selection
+                    if selection_plan is not None and selection
                     else ()
                 ),
                 "--testmon",
@@ -258,7 +256,10 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         )
 
     def build_coverage_command(
-        self, report_dir: Path, *, serialize: bool = False
+        self,
+        report_dir: Path,
+        *,
+        serialize: bool = False,
     ) -> t.VariadicTuple[str]:
         """Build the whole-suite coverage argv (never the testmon plugin).
 
@@ -275,7 +276,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             workers=workers,
             trailing=(
                 *self._plugin_policy_args(
-                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE
+                    execution_mode=c.Infra.PytestExecutionMode.COVERAGE,
                 ),
                 f"--cov={self.root / c.Infra.DEFAULT_SRC_DIR}",
                 f"--cov-report=xml:{report_dir / 'coverage.xml'}",
@@ -297,7 +298,16 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         return (
             sys.executable,
             "-m",
-            "pytest",
+            "flext_infra._pytest_entry" if self.profile_enabled else "pytest",
+            *(
+                (
+                    "profile-collection",
+                    str(report_dir / pytest.profile_suite_filename),
+                    str(report_dir / "run-context.json"),
+                )
+                if self.profile_enabled
+                else ()
+            ),
             *targets,
             *pytest.progress_args,
             *pytest.report_args,

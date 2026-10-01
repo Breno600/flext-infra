@@ -103,7 +103,8 @@ class FlextInfraRefactorImportFacades:
                 package=package,
                 qualified=roots.pop(),
                 bindings=cls._ModuleIndex(
-                    modules, lambda source: u.Infra.declared_exports(source)[0]
+                    modules,
+                    lambda source: u.Infra.declared_exports(source)[0],
                 ),
                 class_bases=cls._ModuleIndex(modules, u.Infra.class_bases),
             )
@@ -112,7 +113,9 @@ class FlextInfraRefactorImportFacades:
 
     @classmethod
     def _facade_sources(
-        cls, package: str, alias: str
+        cls,
+        package: str,
+        alias: str,
     ) -> t.MappingKV[str, t.Pair[str, bool]]:
         """Complete only the dependency ancestry of declared facade owners."""
         modules = u.Infra.source_modules(
@@ -140,7 +143,7 @@ class FlextInfraRefactorImportFacades:
                         f"from {dependency} import *"
                         for dependency in sorted(dependencies)
                     ),
-                )
+                ),
             )
 
     @staticmethod

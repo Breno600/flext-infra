@@ -21,7 +21,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
     borrows repository_root + the include-init / dry-run flags + the wrapper
     package set from the facade via FLEXT. ``module_ast`` is narrowed to the
     rope-AST protocol at the parsing boundary via ``ensure_ast_node``, which
-    deliberately avoids ``import ast`` at the consumer layer (tracked: flext-6flt).
+    deliberately avoids ``import ast`` at the consumer layer.
     """
 
     if TYPE_CHECKING:
@@ -48,12 +48,10 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
             rel = file_path
         project_name = rel.parts[0] if rel.parts else "."
         runtime_aliases = project_runtime_aliases.get(
-            project_name, metadata_runtime_aliases
+            project_name,
+            metadata_runtime_aliases,
         )
-        if not any(
-            part in c.Infra.ROOT_WRAPPER_SEGMENTS and part != c.Infra.DEFAULT_SRC_DIR
-            for part in rel.parts
-        ):
+        if not any(part in self._WRAPPER_PACKAGES for part in rel.parts):
             return
         if file_path.name == c.Infra.INIT_PY and (not self.include_init):
             return
@@ -62,7 +60,9 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
         module_ast = u.Infra.ensure_ast_node(pymodule.get_ast())
         line_offsets = self._build_line_offsets(source)
         core_rewrites = self._collect_core_test_rewrites(
-            module_ast, line_offsets=line_offsets, runtime_aliases=runtime_aliases
+            module_ast,
+            line_offsets=line_offsets,
+            runtime_aliases=runtime_aliases,
         )
         has_import_candidate = self._has_wrapper_import_candidate(
             module_ast,
@@ -161,12 +161,15 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
 
     @staticmethod
     def _apply_byte_rewrites(
-        source: str, rewrites: t.SequenceOf[t.Triple[int, int, str]]
+        source: str,
+        rewrites: t.SequenceOf[t.Triple[int, int, str]],
     ) -> str:
         """Apply ``(start, end, replacement)`` triples to ``source`` (right-to-left)."""
         updated = source
         for start, end, replacement in sorted(
-            rewrites, key=itemgetter(0), reverse=True
+            rewrites,
+            key=itemgetter(0),
+            reverse=True,
         ):
             updated = updated[:start] + replacement + updated[end:]
         return updated

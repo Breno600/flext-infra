@@ -19,6 +19,8 @@ minimum_release_age = "{{ dependency_cooldown_days }}d"
 lockfile = {{ "true" if mise_lockfile else "false" }}
 locked = {{ "true" if mise_locked else "false" }}
 lockfile_platforms = [{% for platform in mise_lockfile_platforms %}"{{ platform }}"{{ ", " if not loop.last }}{% endfor %}]
+[settings.python]
+compile = {{ "true" if python_compile else "false" }}
 [settings.npm]
 # Aube replays the locked dependency graph. Only the configured ast-grep
 # package is approved below to run its native binary-selection lifecycle.
@@ -35,7 +37,7 @@ locked = {{ "true" if mise_locked else "false" }}
 #          prettier_selector/prettier_version, waza_selector/waza_version/waza_version_prefix,
 #          go_version, make_version)
 [tools]
-python = "{{ python_version }}"
+python = "{{ python_tool_version }}"
 uv = "{{ uv_version }}"
 # Native toolchain (single source: Infra.codegen.toolchain in codegen.yaml).
 kubectl = "{{ kubectl_version }}"

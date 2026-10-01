@@ -16,7 +16,9 @@ class TestsFlextInfraCodegenConformProgress:
     """Prove conform emits stage and repository progress on stdout."""
 
     def test_plan_emits_stage_and_repository_progress(
-        self, infra_git_repo: Path, capsys: pytest.CaptureFixture[str]
+        self,
+        infra_git_repo: Path,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         """A check-mode conform must report stage and per-repository progress."""
         root = infra_git_repo
@@ -32,14 +34,16 @@ class TestsFlextInfraCodegenConformProgress:
         tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
         _ = capsys.readouterr()
         checked = FlextInfraCodegenConform.execute_request(
-            request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK})
+            request.model_copy(update={"mode": c.Infra.CodegenConformMode.CHECK}),
         )
         tm.ok(checked)
         captured = capsys.readouterr().out
         tm.that("Codegen Conform" in captured, where=bool, msg=captured[-3000:])
         tm.that("stage=plan" in captured, where=bool, msg=captured[-3000:])
         tm.that(
-            "stage=plan repositories=" in captured, where=bool, msg=captured[-3000:]
+            "stage=plan repositories=" in captured,
+            where=bool,
+            msg=captured[-3000:],
         )
         tm.that(
             "[1/" in captured and "conform" in captured,

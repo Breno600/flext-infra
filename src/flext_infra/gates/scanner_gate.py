@@ -23,16 +23,19 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
     """
 
     scan_error_message: ClassVar[str] = ""
+    requires_python_targets: ClassVar[bool] = True
 
     @override
     def check(
-        self, project_dir: Path, ctx: m.Infra.GateContext
+        self,
+        project_dir: Path,
+        ctx: m.Infra.GateContext,
     ) -> m.Infra.GateExecution:
         """Scan all Python files in ``project_dir`` and report detected issues."""
         _ = ctx
         started = time.monotonic()
         files_result = u.Infra.iter_python_files(
-            m.Infra.SourceScanRequest(project_roots=(project_dir,))
+            m.Infra.SourceScanRequest(project_roots=(project_dir,)),
         )
         if files_result.failure:
             return self._build_single_issue_result(
@@ -42,23 +45,32 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
                 passed=False,
                 started=started,
             )
+        if not files_result.value:
+            return self._skip_result(project_dir, started)
         rope_project = u.Infra.init_rope_project(project_dir)
         try:
             issues = [
                 issue
                 for file_path in files_result.value
                 for issue in self._detect_file_issues(
-                    file_path, project_dir, rope_project
+                    file_path,
+                    project_dir,
+                    rope_project,
                 )
             ]
         finally:
             rope_project.close()
         return self._detected_gate_execution(
-            project_dir, issues=issues, started=started
+            project_dir,
+            issues=issues,
+            started=started,
         )
 
     def _detect_file_issues(
-        self, file_path: Path, project_dir: Path, rope_project: t.Infra.RopeProject
+        self,
+        file_path: Path,
+        project_dir: Path,
+        rope_project: t.Infra.RopeProject,
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Override in subclass to detect issues for a single file."""
         _ = file_path, project_dir, rope_project

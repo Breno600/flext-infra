@@ -1,0 +1,14 @@
+id: ban-flext-core-library-import
+valid:
+  - from flext_core import m, u
+  - import returnsx
+  - from flext_core import returns
+  - import pydantic
+invalid:
+  - import yaml as y
+  - from dependency_injector import containers
+  - from returns.result import Result
+  - |
+    def load():
+        import yaml
+        return yaml

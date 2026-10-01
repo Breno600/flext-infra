@@ -46,7 +46,8 @@ class FlextInfraRefactorCensusRulesSharedMixin:
         def _fix_key(file_path: Path, object_name: str, action: str = "") -> str: ...
         @staticmethod
         def _named_object(
-            objects: t.VariadicTuple[m.Infra.Object], name: str
+            objects: t.VariadicTuple[m.Infra.Object],
+            name: str,
         ) -> m.Infra.Object | None: ...
 
 

@@ -15,10 +15,10 @@ if TYPE_CHECKING:
     from flext_infra import p
 
 
-# NOTE (multi-agent, flext-wkii.17.26 / agent: codex): lazy generation delegates
+# Lazy generation delegates
 # exact models to flext-cli and proves every rendered initializer is Ruff-clean.
 class FlextInfraCodegenGenerationRenderersMixin(
-    FlextInfraCodegenGenerationLazyEntriesMixin
+    FlextInfraCodegenGenerationLazyEntriesMixin,
 ):
     """Render codegen models through the canonical CLI template facade."""
 
@@ -34,11 +34,14 @@ class FlextInfraCodegenGenerationRenderersMixin(
 
     @staticmethod
     def _render_model(
-        template_name: str, context: p.Model, *, target_filename: str
+        template_name: str,
+        context: p.Model,
+        *,
+        target_filename: str,
     ) -> str:
         """Render one deterministic, already-canonical typed Python artifact."""
         template_path = FlextInfraCodegenGenerationRenderersMixin._template_path(
-            template_name
+            template_name,
         )
         rendered = u.Cli.template_render(template_path, context).unwrap()
         compile(rendered, target_filename, "exec")

@@ -20,14 +20,16 @@ class TestsFlextInfraCyclicImportDetector:
 
     @staticmethod
     def _project(
-        tmp_path: Path, files: t.StrMapping
+        tmp_path: Path,
+        files: t.StrMapping,
     ) -> t.Pair[Path, t.MutableMappingKV[str, Path]]:
         project = tmp_path / "demo-project"
         package = project / "src" / "demo_pkg"
         package.mkdir(parents=True)
         (package / "__init__.py").write_text("", encoding="utf-8")
         (project / "pyproject.toml").write_text(
-            '[project]\nname = "demo-project"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "demo-project"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         paths: t.MutableMappingKV[str, Path] = {}
         for filename, source in files.items():
@@ -63,7 +65,8 @@ class TestsFlextInfraCyclicImportDetector:
 
     def test_preserves_relative_import_module_identity(self, tmp_path: Path) -> None:
         project, paths = self._project(
-            tmp_path, {"a.py": "from demo_pkg import b\n", "b.py": "VALUE = 1\n"}
+            tmp_path,
+            {"a.py": "from demo_pkg import b\n", "b.py": "VALUE = 1\n"},
         )
         with u.Infra.open_project(project) as rope_project:
             cycles = FlextInfraCyclicImportDetector.scan_project(

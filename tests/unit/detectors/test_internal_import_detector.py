@@ -38,14 +38,15 @@ class TestsFlextInfraInternalImportDetector:
                     rope_project=rope_project,
                     parse_failures=parse_failures,
                     project_root=project,
-                )
+                ),
             )
 
         tm.that(parse_failures, eq=[])
         tm.that(violations, eq=[])
 
     def test_allows_private_local_alias_for_public_external_symbol(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project, package_dir = test_u.Tests.demo_project(tmp_path)
         constants_file = package_dir / "constants.py"
@@ -65,7 +66,7 @@ class TestsFlextInfraInternalImportDetector:
                     rope_project=rope_project,
                     parse_failures=parse_failures,
                     project_root=project,
-                )
+                ),
             )
 
         tm.that(parse_failures, eq=[])

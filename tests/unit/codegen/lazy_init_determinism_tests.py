@@ -24,7 +24,8 @@ class TestsFlextInfraLazyInitDeterminism:
     """
 
     def test_rendered_lazy_map_keys_are_canonically_ordered(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Every rendered mapping key row follows lexicographic order."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
@@ -51,10 +52,11 @@ class TestsFlextInfraLazyInitDeterminism:
         exit_code = u.Tests.run_lazy_init(repository_root)
         tm.that(exit_code, eq=0)
         init_text = (package_root / c.Infra.INIT_PY).read_text(
-            encoding=c.Cli.ENCODING_DEFAULT
+            encoding=c.Cli.ENCODING_DEFAULT,
         )
         entries, _refs = u.Infra.module_mapping_assignment_source(
-            init_text, u.Infra.lazy_imports_name_source(init_text)
+            init_text,
+            u.Infra.lazy_imports_name_source(init_text),
         )
         keys = [key for key, _names in entries]
         tm.that(keys, empty=False)

@@ -34,7 +34,10 @@ class TestsFlextInfraTierWhitelist:
 
     @pytest.mark.parametrize("placement", [".claude/worktrees/lane", "worktrees/lane"])
     def test_linked_checkout_ancestors_do_not_hide_violations(
-        self, tmp_path: Path, v: FlextInfraValidateTierWhitelist, placement: str
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateTierWhitelist,
+        placement: str,
     ) -> None:
         project = tmp_path / placement
         pkg = u.Tests.write_package_init(project / "src" / "pkg", "").parent
@@ -45,27 +48,36 @@ class TestsFlextInfraTierWhitelist:
         tm.that(" | ".join(report.violations), has="bad.py")
 
     def test_empty_workspace_passes(
-        self, tmp_path: Path, v: FlextInfraValidateTierWhitelist
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateTierWhitelist,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report, is_=m.Infra.ValidationReport)
         tm.that(report.passed, eq=True)
 
     def test_clean_imports_pass(
-        self, tmp_path: Path, v: FlextInfraValidateTierWhitelist
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateTierWhitelist,
     ) -> None:
         pkg = u.Tests.write_package_init(tmp_path / "src" / "pkg", "").parent
         tf(base_dir=pkg).create(
-            "from flext_core import m, c\nX = m.BaseModel\n", "good.py"
+            "from flext_core import m, c\nX = m.BaseModel\n",
+            "good.py",
         )
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.passed, eq=True)
 
     @pytest.mark.parametrize(
-        "source", ["from .yaml import value\n", "from . import yaml\n"]
+        "source",
+        ["from .yaml import value\n", "from . import yaml\n"],
     )
     def test_relative_module_is_not_a_third_party_import(
-        self, tmp_path: Path, v: FlextInfraValidateTierWhitelist, source: str
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateTierWhitelist,
+        source: str,
     ) -> None:
         """A local module named like a library retains its package identity."""
         pkg = u.Tests.write_package_init(tmp_path / "src" / "pkg", "").parent
@@ -97,7 +109,9 @@ class TestsFlextInfraTierWhitelist:
         tm.that(" | ".join(report.violations), has=expected_substring)
 
     def test_flext_core_src_is_allowlisted(
-        self, tmp_path: Path, v: FlextInfraValidateTierWhitelist
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateTierWhitelist,
     ) -> None:
         # Emulate a flext-core layout — bare pydantic is legal here.
         project = tmp_path / "flext-core"
@@ -107,16 +121,20 @@ class TestsFlextInfraTierWhitelist:
         # A project declares its own name; the exemption is granted to the
         # declaring project, never to a directory that merely looks like it.
         (project / "pyproject.toml").write_text(
-            '[project]\nname = "flext-core"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "flext-core"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
         tf(base_dir=src).create(
-            "from pydantic import BaseModel\nX = BaseModel\n", "abstractions.py"
+            "from pydantic import BaseModel\nX = BaseModel\n",
+            "abstractions.py",
         )
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))
         tm.that(report.passed, eq=True)
 
     def test_failing_summary_reports_count(
-        self, tmp_path: Path, v: FlextInfraValidateTierWhitelist
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateTierWhitelist,
     ) -> None:
         pkg = u.Tests.write_package_init(tmp_path / "src" / "pkg", "").parent
         tf(base_dir=pkg).create("from pydantic import BaseModel\n", "a.py")
@@ -125,7 +143,9 @@ class TestsFlextInfraTierWhitelist:
         tm.that(report.summary, has="2")
 
     def test_passing_summary_mentions_boundary(
-        self, tmp_path: Path, v: FlextInfraValidateTierWhitelist
+        self,
+        tmp_path: Path,
+        v: FlextInfraValidateTierWhitelist,
     ) -> None:
         u.Tests.write_package_init(tmp_path / "src" / "pkg", "")
         report: m.Infra.ValidationReport = tm.ok(v.build_report(tmp_path))

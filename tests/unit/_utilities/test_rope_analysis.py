@@ -29,7 +29,10 @@ class TestsFlextInfraRopeAnalysis:
         ],
     )
     def test_declared_imports_preserve_relative_levels(
-        self, tmp_path: Path, statement: str, suffix: str
+        self,
+        tmp_path: Path,
+        statement: str,
+        suffix: str,
     ) -> None:
         """Bare dots and renamed symbols retain their actual package provenance."""
         project, package = test_u.Tests.demo_project(tmp_path)
@@ -37,7 +40,8 @@ class TestsFlextInfraRopeAnalysis:
         nested.mkdir(parents=True)
         for directory in (package, nested.parent, nested):
             (directory / "__init__.py").write_text(
-                "class Owner:\n    pass\n", encoding="utf-8"
+                "class Owner:\n    pass\n",
+                encoding="utf-8",
             )
         source = nested / "consumer.py"
         source.write_text(
@@ -52,7 +56,8 @@ class TestsFlextInfraRopeAnalysis:
         tm.that(imports["Path"], eq="pathlib.Path")
 
     def test_declared_imports_reject_relative_level_beyond_package(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """An invalid relative import is not converted into an absolute import."""
         project, package = test_u.Tests.demo_project(tmp_path)
@@ -78,7 +83,8 @@ class TestsFlextInfraRopeAnalysis:
             u.Infra.ensure_ast_node(object())
 
     def test_facade_scanner_reads_facade_with_imported_superclass(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project, package_dir = test_u.Tests.demo_project(tmp_path)
         _ = (package_dir / "constants.py").write_text(
@@ -94,23 +100,27 @@ class TestsFlextInfraRopeAnalysis:
 
         with u.Infra.open_project(project) as rope_project:
             statuses = FlextInfraScanner.scan_project(
-                project_root=project, rope_project=rope_project
+                project_root=project,
+                rope_project=rope_project,
             )
 
         constants_status = next(status for status in statuses if status.family == "c")
         tm.that(constants_status.exists, eq=True)
         tm.that(constants_status.class_name, eq="DemoProjectConstants")
         model_context = u.Infra.contextual_runtime_alias_sources(
-            project_root=project, file_path=package_dir / "_models" / "brand.py"
+            project_root=project,
+            file_path=package_dir / "_models" / "brand.py",
         )
         settings_context = u.Infra.contextual_runtime_alias_sources(
-            project_root=project, file_path=package_dir / "settings.py"
+            project_root=project,
+            file_path=package_dir / "settings.py",
         )
         tm.that(model_context["m"], eq=frozenset({"flext_cli", "flext_core"}))
         tm.that(settings_context["m"], eq=frozenset({"flext_cli", "flext_core"}))
 
     def test_contextual_runtime_sources_resolve_parent_facade_alias_base(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         project, package_dir = test_u.Tests.demo_project(tmp_path)
         _ = (package_dir / "constants.py").write_text(
@@ -125,13 +135,16 @@ class TestsFlextInfraRopeAnalysis:
         )
 
         parent_packages = u.Infra.resolve_parent_constants_flext(
-            package_dir, return_module=True
+            package_dir,
+            return_module=True,
         )
         model_context = u.Infra.contextual_runtime_alias_sources(
-            project_root=project, file_path=package_dir / "_utilities" / "brand.py"
+            project_root=project,
+            file_path=package_dir / "_utilities" / "brand.py",
         )
         base_context = u.Infra.contextual_runtime_alias_sources(
-            project_root=project, file_path=package_dir / "base.py"
+            project_root=project,
+            file_path=package_dir / "base.py",
         )
 
         tm.that(parent_packages, contains="flext_cli")
@@ -139,7 +152,8 @@ class TestsFlextInfraRopeAnalysis:
         tm.that(base_context["s"], eq=frozenset({"flext_cli", "flext_core"}))
 
     def test_contextual_runtime_sources_resolve_transitive_parent_facades(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         workspace = tmp_path / "workspace"
         workspace.mkdir()
@@ -167,11 +181,13 @@ class TestsFlextInfraRopeAnalysis:
             package_dir.mkdir(parents=True)
             project = workspace / project_name
             _ = (project / "pyproject.toml").write_text(
-                f"[project]\nname='{project_name}'\n", encoding="utf-8"
+                f"[project]\nname='{project_name}'\n",
+                encoding="utf-8",
             )
             _ = (project / "Makefile").write_text("all:\n\t@true\n", encoding="utf-8")
             _ = (package_dir / "__init__.py").write_text(
-                "from .constants import c\n", encoding="utf-8"
+                "from .constants import c\n",
+                encoding="utf-8",
             )
         _ = (grandparent_pkg / "constants.py").write_text(
             "from __future__ import annotations\n"
@@ -199,7 +215,8 @@ class TestsFlextInfraRopeAnalysis:
         )
 
         base_context = u.Infra.contextual_runtime_alias_sources(
-            project_root=child_project, file_path=child_pkg / "base.py"
+            project_root=child_project,
+            file_path=child_pkg / "base.py",
         )
 
         tm.that(base_context["s"], contains="demo_parent")

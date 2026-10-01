@@ -26,7 +26,8 @@ if TYPE_CHECKING:
 def governed_project(tmp_path: Path) -> Path:
     """Provide a valid project identity for package discovery."""
     (tmp_path / "pyproject.toml").write_text(
-        '[project]\nname = "test-helpers"\nversion = "0.1.0"\n', encoding="utf-8"
+        '[project]\nname = "test-helpers"\nversion = "0.1.0"\n',
+        encoding="utf-8",
     )
     return tmp_path
 
@@ -81,7 +82,8 @@ class TestsFlextInfraCodegenLazyInit:
         def test_tests_dir_is_scanned(self, governed_project: Path) -> None:
             """Scan test packages in check mode."""
             self._create_init_file(
-                governed_project / "tests" / "helpers", self._VALID_TESTS_INIT
+                governed_project / "tests" / "helpers",
+                self._VALID_TESTS_INIT,
             )
             generator = FlextInfraCodegenLazyInit(repository_root=governed_project)
             result = generator.plan_files()
@@ -91,13 +93,15 @@ class TestsFlextInfraCodegenLazyInit:
             """Regenerate discovered test package initializers."""
             self._create_init_file(tmp_path / "src" / "pkg", self._VALID_INIT)
             tests_init = self._create_init_file(
-                tmp_path / "tests" / "helpers", self._VALID_TESTS_INIT
+                tmp_path / "tests" / "helpers",
+                self._VALID_TESTS_INIT,
             )
             original_content = tests_init.read_text(encoding="utf-8")
             tm.that(u.Tests.run_lazy_init(tmp_path), eq=0)
             new_content = tests_init.read_text(encoding="utf-8")
             tm.that(
-                new_content != original_content or "__all__" in new_content, eq=True
+                new_content != original_content or "__all__" in new_content,
+                eq=True,
             )
 
         def test_nested_tests_packages_are_found(self, tmp_path: Path) -> None:
@@ -130,7 +134,8 @@ class TestsFlextInfraCodegenLazyInit:
         def test_check_only_does_not_modify_files(self, governed_project: Path) -> None:
             """Leave initializer bytes unchanged in check mode."""
             tests_init = self._create_init_file(
-                governed_project / "tests" / "helpers", self._VALID_TESTS_INIT
+                governed_project / "tests" / "helpers",
+                self._VALID_TESTS_INIT,
             )
             original_content = tests_init.read_text(encoding="utf-8")
             generator = FlextInfraCodegenLazyInit(repository_root=governed_project)
@@ -161,7 +166,8 @@ class TestsFlextInfraCodegenLazyInit:
             """Exclude vendored test packages from discovery."""
             self._create_init_file(tmp_path / "src" / "pkg", self._VALID_INIT)
             self._create_init_file(
-                tmp_path / "tests" / "vendor" / "pkg", self._VALID_TESTS_INIT
+                tmp_path / "tests" / "vendor" / "pkg",
+                self._VALID_TESTS_INIT,
             )
             generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
             result = generator.plan_files()
@@ -171,7 +177,8 @@ class TestsFlextInfraCodegenLazyInit:
             """Exclude virtual-environment test packages from discovery."""
             self._create_init_file(tmp_path / "src" / "pkg", self._VALID_INIT)
             self._create_init_file(
-                tmp_path / "tests" / ".venv" / "pkg", self._VALID_TESTS_INIT
+                tmp_path / "tests" / ".venv" / "pkg",
+                self._VALID_TESTS_INIT,
             )
             generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
             result = generator.plan_files()
@@ -206,13 +213,15 @@ class TestsFlextInfraCodegenLazyInit:
             tm.that({plan.path for plan in result.value.files}, lacks=scratch_init)
 
         def test_generated_tool_state_is_excluded_from_plans(
-            self, tmp_path: Path
+            self,
+            tmp_path: Path,
         ) -> None:
             """Exclude disposable test and projected provider package trees."""
             self._create_init_file(tmp_path / "src" / "pkg", self._VALID_INIT)
             generated = tuple(
                 self._create_init_file(
-                    tmp_path / directory / "provider" / "pkg", self._VALID_TESTS_INIT
+                    tmp_path / directory / "provider" / "pkg",
+                    self._VALID_TESTS_INIT,
                 )
                 for directory in (".agents-sync-home", ".test-tmp")
             )

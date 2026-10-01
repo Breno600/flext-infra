@@ -48,7 +48,10 @@ class TestsFlextInfraInfraReportingCore:
     def test_resolve_report_path_workspace_scope(self, tmp_path: Path) -> None:
         """Test getting workspace-level report file path."""
         result = u.Cli.resolve_report_path(
-            tmp_path, "workspace", "validate", "summary.log"
+            tmp_path,
+            "workspace",
+            "validate",
+            "summary.log",
         )
         tm.that(result, is_=Path)
         tm.that(result.name, eq="summary.log")
@@ -59,7 +62,10 @@ class TestsFlextInfraInfraReportingCore:
     def test_resolve_report_path_with_string_root(self, tmp_path: Path) -> None:
         """Test getting report file path with string root."""
         result = u.Cli.resolve_report_path(
-            str(tmp_path), "project", "test", "results.xml"
+            str(tmp_path),
+            "project",
+            "test",
+            "results.xml",
         )
         tm.that(result, is_=Path)
         tm.that(result.name, eq="results.xml")

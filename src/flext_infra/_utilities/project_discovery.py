@@ -22,7 +22,7 @@ from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
 
 
 class FlextInfraUtilitiesProjectDiscovery(
-    FlextInfraUtilitiesProjectDiscoveryCandidatesMixin
+    FlextInfraUtilitiesProjectDiscoveryCandidatesMixin,
 ):
     """Static helpers for discovering governed project roots in a workspace."""
 
@@ -31,13 +31,18 @@ class FlextInfraUtilitiesProjectDiscovery(
     def load_refactor_config(cls, repository_root: Path) -> m.Infra.RefactorConfigSpec:
         """Load declared refactor configuration, propagating invalid manifests."""
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
-            repository_root
+            repository_root,
+        )
+        packaged = m.Infra.RefactorConfigSpec(
+            project_scan_dirs=config.Infra.source_scan.roots
         )
         if not manifest_path.is_file():
-            return m.Infra.RefactorConfigSpec()
+            return packaged
         loaded = u.Cli.config_load(manifest_path, expand_env=False).unwrap()
         manifest = m.Infra.WorkspaceManifestSpec.model_validate(loaded.data)
-        return manifest.refactor or m.Infra.RefactorConfigSpec()
+        if manifest.refactor is None:
+            return packaged
+        return manifest.refactor
 
     @classmethod
     @lru_cache(maxsize=1)
@@ -64,7 +69,7 @@ class FlextInfraUtilitiesProjectDiscovery(
         manifest fails before discovery can expand the declared scope.
         """
         manifest_path = FlextInfraUtilitiesWorkspaceManifest.workspace_manifest_path(
-            repository_root
+            repository_root,
         )
         if not manifest_path.is_file():
             return frozenset()
@@ -83,7 +88,10 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @classmethod
     def _is_nonparticipant(
-        cls, candidate: Path, repository_root: Path, nonparticipants: frozenset[str]
+        cls,
+        candidate: Path,
+        repository_root: Path,
+        nonparticipants: frozenset[str],
     ) -> bool:
         """Return whether one candidate lies at or under a declared non-participant."""
         # "Is this candidate inside the root?" is a question, not a failure, so
@@ -105,7 +113,10 @@ class FlextInfraUtilitiesProjectDiscovery(
     @classmethod
     @override
     def discover_project_candidates(
-        cls, repository_root: Path, *, scan_dirs: frozenset[str] | None = None
+        cls,
+        repository_root: Path,
+        *,
+        scan_dirs: frozenset[str] | None = None,
     ) -> t.SequenceOf[Path]:
         """Enumerate candidates, dropping every manifest-excluded directory.
 
@@ -118,7 +129,8 @@ class FlextInfraUtilitiesProjectDiscovery(
         has no transaction participant".
         """
         candidates = super().discover_project_candidates(
-            repository_root, scan_dirs=scan_dirs
+            repository_root,
+            scan_dirs=scan_dirs,
         )
         nonparticipants = cls.manifest_nonparticipant_paths(repository_root)
         if not nonparticipants:
@@ -131,7 +143,10 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @classmethod
     def discover_project_roots(
-        cls, repository_root: Path, *, scan_dirs: frozenset[str] | None = None
+        cls,
+        repository_root: Path,
+        *,
+        scan_dirs: frozenset[str] | None = None,
     ) -> t.SequenceOf[Path]:
         """Discover all project directories under repository root.
 
@@ -150,13 +165,14 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         """
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
-            repository_root
+            repository_root,
         )
         if declared_paths.failure:
             raise ValueError(declared_paths.error or "invalid .gitmodules")
         configured_projects = tuple(path.as_posix() for path in declared_paths.value)
         candidates = cls.discover_project_candidates(
-            repository_root, scan_dirs=scan_dirs
+            repository_root,
+            scan_dirs=scan_dirs,
         )
         resolved_repository_root = repository_root.resolve()
         if not configured_projects:
@@ -167,11 +183,13 @@ class FlextInfraUtilitiesProjectDiscovery(
         def configured_key(candidate: Path) -> t.Pair[int, str]:
             relative = candidate.relative_to(resolved_repository_root).as_posix()
             return configured_order.get(
-                relative, len(configured_projects)
+                relative,
+                len(configured_projects),
             ), candidate.name
 
         non_root_candidates = sorted(
-            (c for c in candidates if c != resolved_repository_root), key=configured_key
+            (c for c in candidates if c != resolved_repository_root),
+            key=configured_key,
         )
         ordered.extend(non_root_candidates)
         return ordered
@@ -182,7 +200,7 @@ class FlextInfraUtilitiesProjectDiscovery(
 
         A declared submodule is another repository: it is consumed as an
         installed library and never indexed from here (every repository
-        evaluates only itself, operator ruling 2026-09-29). The raw child scan
+        evaluates only itself). The raw child scan
         below is a second enumerator, so it must honour the same manifest
         authority as ``discover_project_candidates``. Without that filter every
         direct child holding a ``pyproject.toml`` re-entered the scope the
@@ -192,7 +210,7 @@ class FlextInfraUtilitiesProjectDiscovery(
         """
         resolved_root = repository_root.resolve()
         declared_paths = FlextInfraUtilitiesGit.git_declared_submodule_paths(
-            resolved_root
+            resolved_root,
         )
         if declared_paths.failure:
             raise ValueError(declared_paths.error or "invalid .gitmodules")
@@ -213,7 +231,7 @@ class FlextInfraUtilitiesProjectDiscovery(
             sorted(
                 {root for root in (*declared, *direct) if root not in submodules},
                 key=Path.as_posix,
-            )
+            ),
         )
 
     @classmethod
@@ -232,25 +250,28 @@ class FlextInfraUtilitiesProjectDiscovery(
         scan_dirs = refactor_config.project_scan_dirs
         targets: set[str] = set()
         for project in cls.governed_project_roots(resolved_root):
-            # Python files directly in the project root (e.g., conftest.py)
-            for target in project.glob(f"*{c.Infra.EXT_PYTHON}"):
-                if target.exists():
-                    targets.add(target.relative_to(resolved_root).as_posix())
-            # Recursively scan configured directories for Python files
-            for directory in scan_dirs:
-                scan_dir = project / directory
-                if scan_dir.exists():
-                    for target in scan_dir.rglob(f"*{c.Infra.EXT_PYTHON}"):
-                        if target.is_file():
-                            targets.add(target.relative_to(resolved_root).as_posix())
+            for suffix in c.Infra.PYTHON_SOURCE_SUFFIXES:
+                # Python files directly in the project root (e.g., conftest.py)
+                for target in project.glob(f"*{suffix}"):
+                    if target.exists():
+                        targets.add(target.relative_to(resolved_root).as_posix())
+                # Recursively scan configured directories for Python sources:
+                # modules and the stubs the catalog rules also govern.
+                for directory in scan_dirs:
+                    scan_dir = project / directory
+                    if scan_dir.exists():
+                        for target in scan_dir.rglob(f"*{suffix}"):
+                            if target.is_file():
+                                targets.add(
+                                    target.relative_to(resolved_root).as_posix()
+                                )
         return tuple(sorted(targets))
 
     @classmethod
     def governed_project_roots(cls, repository_root: Path) -> t.SequenceOf[Path]:
         """Return the repositories a verb run at ``repository_root`` governs.
 
-        Every repository evaluates and rewrites only itself (operator ruling
-        2026-09-29): a workspace root consumes its declared members as
+        Every repository evaluates and rewrites only itself: a workspace root consumes its declared members as
         installed libraries and never scans, checks, or rewrites them; each
         member runs its own verbs in its own repository.
         """
@@ -258,9 +279,11 @@ class FlextInfraUtilitiesProjectDiscovery(
 
     @staticmethod
     def runtime_environment_dir(
-        project_root: Path, *, runtime_root: Path | None = None
+        project_root: Path,
+        *,
+        runtime_root: Path | None = None,
     ) -> Path:
-        """Resolve the checkout's Python environment (D-VENV, flext-x8gn6).
+        """Resolve the checkout's Python environment.
 
         A declared ``runtime_root`` (the generated Makefile's ``RUNTIME_ROOT``)
         owns the environment. Undeclared, the owner derives it: a subproject
@@ -270,16 +293,25 @@ class FlextInfraUtilitiesProjectDiscovery(
         always ``<runtime root>/.venv``; its location is law, never
         configuration (operator law 2026-10-01, flext-h2a9h).
         """
-        if runtime_root is not None:
-            return runtime_root / c.Infra.ENVIRONMENT_DIRECTORY
-        runtime = FlextInfraUtilitiesGit.git_repository_root(
-            m.Infra.GitRepoRequest(repo_root=project_root)
-        ).unwrap()
-        return runtime.repository_root / c.Infra.ENVIRONMENT_DIRECTORY
+        if runtime_root is None:
+            runtime = FlextInfraUtilitiesGit.git_repository_root(
+                m.Infra.GitRepoRequest(repo_root=project_root),
+            ).unwrap()
+            runtime_root = runtime.repository_root
+        physical_root = runtime_root.resolve()
+        relative_identity = physical_root.as_posix().lstrip("/").replace(":", "/")
+        return (
+            physical_root.parent
+            / config.Infra.codegen.make.runtime_environment_directory
+            / relative_identity
+        )
 
     @classmethod
     def runtime_python(
-        cls, project_root: Path, *, runtime_root: Path | None = None
+        cls,
+        project_root: Path,
+        *,
+        runtime_root: Path | None = None,
     ) -> Path:
         """Resolve the fixed Python entrypoint inside the managed environment.
 

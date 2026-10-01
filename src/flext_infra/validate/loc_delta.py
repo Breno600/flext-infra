@@ -23,7 +23,11 @@ class FlextInfraLocDeltaValidator(s[bool]):
 
     @classmethod
     def evaluate(
-        cls, *, subject: str, insertions: int, deletions: int
+        cls,
+        *,
+        subject: str,
+        insertions: int,
+        deletions: int,
     ) -> p.Result[bool]:
         """Pure rule: net positive delta on a labelled commit is a violation."""
         lowered = subject.lower()
@@ -34,7 +38,7 @@ class FlextInfraLocDeltaValidator(s[bool]):
             return r[bool].fail(
                 f"net-LOC-delta violation (§3.5): '{subject}' adds +{delta} "
                 f"(insertions={insertions}, deletions={deletions}); refactor/cleanup "
-                "commits must be net non-positive"
+                "commits must be net non-positive",
             )
         return r[bool].ok(True)
 
@@ -56,13 +60,15 @@ class FlextInfraLocDeltaValidator(s[bool]):
     def execute(self) -> p.Result[bool]:
         """Evaluate the workspace HEAD commit's labelled net-LOC delta."""
         report = u.Infra.git_head_numstat(
-            m.Infra.GitRepoRequest(repo_root=self.repository_root)
+            m.Infra.GitRepoRequest(repo_root=self.repository_root),
         )
         if report.failure:
             return r[bool].from_failure(report)
         insertions, deletions = self._sum_numstat(report.value.numstat)
         verdict = self.evaluate(
-            subject=report.value.subject, insertions=insertions, deletions=deletions
+            subject=report.value.subject,
+            insertions=insertions,
+            deletions=deletions,
         )
         if verdict.failure:
             return r[bool].from_failure(verdict)
