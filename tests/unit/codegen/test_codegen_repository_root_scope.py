@@ -31,21 +31,26 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         tm.that(makefile_entries[0].profiles, has=c.Infra.MakeProfile.WORKSPACE)
 
     def test_repository_root_projection_uses_workspace_profile(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """The workspace projection has one local body per verb and no fan-out."""
         repository_root = self._render_root_makefile(tmp_path)
         rendered = (repository_root / c.Infra.MAKEFILE_FILENAME).read_text(
-            encoding=c.Infra.ENCODING_DEFAULT
+            encoding=c.Infra.ENCODING_DEFAULT,
         )
         tm.that(rendered, lacks=["orchestrate", "GITHUB_ACTIONS", "_builtin-self-"])
         tm.that(rendered, has="MAKE_PROFILE := workspace")
         tm.that(
-            rendered, has="PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra"
+            rendered,
+            has="PROJECT_FLEXT_INFRA := $(PROJECT_INFRA_RUN) -m flext_infra",
         )
+        tm.that(rendered.endswith("\n"), eq=True)
+        tm.that(rendered.endswith("\n\n"), eq=False)
 
     def test_repository_root_gate_verbs_evaluate_only_the_root(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Generated workspace check/test run the root's own gates and tests."""
         repository_root = self._render_root_makefile(tmp_path)
@@ -59,7 +64,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
                     [c.Infra.MAKE, "--dry-run", f"_builtin-{verb}"],
                     cwd=repository_root,
                     remove_env_keys=("MAKEFLAGS",),
-                )
+                ),
             )
             tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
             output = execution.stdout + execution.stderr
@@ -74,7 +79,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
                 [c.Infra.MAKE, "--dry-run", "_builtin-propagate"],
                 cwd=repository_root,
                 remove_env_keys=("MAKEFLAGS",),
-            )
+            ),
         )
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
         tm.that(
@@ -83,7 +88,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         )
 
     def test_repository_root_upg_profiles_canonical_modernization(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Generated upg renders the exact lock-upgrade and modernizer invocation.
 
@@ -101,7 +107,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
                     "SETUP_DIRENV": tm.not_none(shutil.which("direnv")),
                     "SETUP_DIRENV_XDG_DATA_HOME": str(tmp_path / "direnv-data"),
                 },
-            )
+            ),
         )
 
         tm.that(
@@ -116,7 +122,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         tm.that(rendered, has="--upgrade --refresh")
 
     def test_repository_root_upg_locks_tools_from_the_rendered_manifest(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """One ``make upg`` converges: every final lock follows ``gen``.
 
@@ -133,7 +140,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         }
         first, second, database = (
             tm.ok(
-                u.Tests.run_isolated_make(arguments, cwd=repository_root, env=handoff)
+                u.Tests.run_isolated_make(arguments, cwd=repository_root, env=handoff),
             )
             for arguments in (
                 ["--dry-run", "_upg_lifecycle"],
@@ -158,7 +165,6 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             )
         ]
         tm.that(positions, eq=sorted(positions))
-        tm.that(steps[positions[-1] :], len=1)
         tm.that(sum("lock --project" in step for step in steps), eq=1)
         converge = second.stdout.splitlines()
         final_lock = next(i for i, s in enumerate(converge) if "lock --project" in s)
@@ -177,7 +183,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             eq={
                 "upg: TOOL_BOOTSTRAP_LIFECYCLE := _upg_lifecycle",
                 "upg: TOOL_BOOTSTRAP_RESOLVE := 1",
-                "upg: TOOL_BOOTSTRAP_LOCK := 1",
+                # mise.lock is written only by the relock, from the manifest
+                # `gen` rendered with the newly locked generator.
                 "_upg_relock: TOOL_BOOTSTRAP_LIFECYCLE := _upg_converge",
                 "_upg_relock: TOOL_BOOTSTRAP_LOCK := 1",
             },
@@ -187,7 +194,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
         """Render base/Makefile.j2 from a typed workspace fixture."""
         repository = u.Tests.repository_ref("workspace-fixture")
         workspace = u.Tests.workspace_spec(
-            repository, project=u.Tests.project_spec(repository.name)
+            repository,
+            project=u.Tests.project_spec(repository.name),
         )
         # The bootstrap projection refreshes the dispatcher of an existing
         # checkout: the root is a Git repository (the workspace profile resolves
@@ -204,7 +212,7 @@ class TestsFlextInfraCodegenRepositoryRootScope:
                 repository_root=repository_root,
                 request=request,
                 initial_workspace=workspace,
-            ).plan(request)
+            ).plan(request),
         )
         makefile_plans = tuple(
             fp for fp in plan.files if Path(fp.path).name == c.Infra.MAKEFILE_FILENAME

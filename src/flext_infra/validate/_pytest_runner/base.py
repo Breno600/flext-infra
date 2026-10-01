@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Self
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, m, t, u
 from flext_infra.base import s
 
 type PytestPolicy = m.Infra.PytestConfig
@@ -22,12 +22,31 @@ class FlextInfraPytestRunnerBase(s[int]):
     target: Annotated[Path, m.Field(description="Repository-relative test root.")]
     reports: Annotated[Path, m.Field(description="Repository-relative report root.")]
     testmon_db: Annotated[
-        Path,
-        m.Field(description="Absolute external pytest-testmon SQLite database path."),
+        Path | None,
+        m.Field(
+            description=(
+                "Absolute external pytest-testmon SQLite database path; absent "
+                "for the testmon-free full and coverage verbs."
+            )
+        ),
     ]
     ci_context: Annotated[
         bool,
         m.Field(description="CI/pre-commit selection captured at the Make boundary."),
+    ] = False
+    profile_enabled: Annotated[
+        bool,
+        m.Field(description="Profile the real suite child and preserve its native exit"),
+    ] = False
+    collection_command_prefix: Annotated[
+        t.StrTuple,
+        m.Field(
+            description="Explicit profiling child invocation from the outer boundary."
+        ),
+    ] = ()
+    slow_phase: Annotated[
+        bool,
+        m.Field(description="Select only the declared slow marker in this phase"),
     ] = False
 
     @staticmethod
@@ -36,21 +55,47 @@ class FlextInfraPytestRunnerBase(s[int]):
         return u.Cli.env_read(name, dict(os.environ)).unwrap().strip()
 
     @classmethod
-    def from_environment(cls, *, started_at_monotonic: float) -> Self:
-        """Create the runner exclusively from generated Make inputs."""
+    def from_environment(
+        cls,
+        *,
+        started_at_monotonic: float,
+        collection_command_prefix: t.StrTuple = (),
+        testmon: bool = True,
+        slow_phase: bool = False,
+        profile_enabled: bool = False,
+    ) -> Self:
+        """Create the runner exclusively from generated Make inputs.
+
+        Only the incremental verb reads the persistent database location; the
+        full verb's Make recipe passes none.
+        """
         ci = config.Infra.codegen.make.ci
         return cls(
             repository_root=Path.cwd(),
             started_at_monotonic=started_at_monotonic,
+            collection_command_prefix=collection_command_prefix,
+            slow_phase=slow_phase,
+            profile_enabled=profile_enabled,
             ci_context=(u.Infra.env_lookup(ci.variable) or "").strip() == ci.value,
             target=Path(cls._environment_value(c.Infra.PYTEST_ENV_TARGET)),
             reports=Path(cls._environment_value(c.Infra.PYTEST_ENV_REPORTS)),
-            testmon_db=Path(
-                cls._environment_value(
-                    config.Infra.codegen.make.testmon_cache.database_environment_variable
+            testmon_db=(
+                Path(
+                    cls._environment_value(
+                        config.Infra.codegen.make.testmon_cache.database_environment_variable
+                    )
                 )
+                if testmon
+                else None
             ),
         )
+
+    def required_testmon_db(self) -> Path:
+        """Return the persistent database the incremental verb requires."""
+        if self.testmon_db is None:
+            msg = "the incremental pytest verb requires the persistent testmon database"
+            raise ValueError(msg)
+        return self.testmon_db
 
     @u.model_validator(mode="after")
     def _validate_paths(self) -> Self:
@@ -73,6 +118,8 @@ class FlextInfraPytestRunnerBase(s[int]):
         if not target_path.is_dir() or target_path.is_symlink():
             msg = f"test target must be an existing directory: {self.target}"
             raise ValueError(msg)
+        if self.testmon_db is None:
+            return self
         if not self.testmon_db.is_absolute():
             msg = "testmon database path must be absolute"
             raise ValueError(msg)

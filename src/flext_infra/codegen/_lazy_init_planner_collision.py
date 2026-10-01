@@ -29,7 +29,8 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         if module_file is None:
             return score
         policy = u.Infra.publication_policy(
-            module_file, rope_project=self.rope_workspace.rope_project
+            module_file,
+            rope_project=self.rope_workspace.rope_project,
         )
         if policy.expected_alias == name:
             score += 100
@@ -51,7 +52,9 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         declared_exports = self.rope_workspace.exports(
             module_file,
             export_options=m.Infra.ExportOptions(
-                allow_assignments=True, allow_functions=True, require_explicit_all=True
+                allow_assignments=True,
+                allow_functions=True,
+                require_explicit_all=True,
             ),
         )
         if name in declared_exports:
@@ -62,7 +65,7 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
             score -= 80
         part_number = module_file.stem.rpartition("_part_")[2]
         if part_number.isdecimal():
-            # flext-pulj (codex): the final public facade owns the external
+            # The final public facade owns the external
             # class identity; numbered implementation parts only rank among
             # themselves when no facade candidate exists.
             score -= 50
@@ -72,7 +75,10 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         return final_score
 
     def _pick_preferred_target(
-        self, name: str, existing: t.StrPair, target: t.StrPair
+        self,
+        name: str,
+        existing: t.StrPair,
+        target: t.StrPair,
     ) -> t.StrPair:
         """Return the higher-scored of two competing export targets."""
         existing_score = self._target_score(name, existing)
@@ -89,24 +95,30 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         if existing is None or existing == target:
             index[name] = target
             return
-        # flext-j47u (codex): MutableLazyAliasMap values are always StrPair.
+        # MutableLazyAliasMap values are always StrPair.
         winner = self._pick_preferred_target(name, existing, target)
         if self._is_intentional_reexport(existing, target):
             index[name] = self._published_reexport_target(
-                existing, target, score_winner=winner
+                existing,
+                target,
+                score_winner=winner,
             )
             return
         self._collision_count += 1
         u.Cli.error(
             f"export collision for {name!r}: {existing} vs {target}; "
-            f"candidate selected for complete inventory: {winner}"
+            f"candidate selected for complete inventory: {winner}",
         )
         index[name] = winner
 
     def _published_reexport_target(
-        self, a: t.StrPair, b: t.StrPair, *, score_winner: t.StrPair
+        self,
+        a: t.StrPair,
+        b: t.StrPair,
+        *,
+        score_winner: t.StrPair,
     ) -> t.StrPair:
-        """Elect the published facade path of one re-export pair (flext-6qy4m).
+        """Elect the published facade path of one re-export pair.
 
         An intentional re-export pair is one symbol surfacing through two
         module paths — a public facade and a deeper private implementation
@@ -144,7 +156,7 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
         """Return whether one module is a root-namespace stub re-exporting from the other."""
         if self._is_flext_part_reexport(a, b):
             return True
-        # flext-pulj (codex): root typing sidecars are removed; real source
+        # Root typing sidecars are removed; real source
         # owners now participate in the normal collision policy.
         if self._is_private_facade_reexport(a, b):
             return True
@@ -184,7 +196,8 @@ class FlextInfraCodegenLazyInitPlannerCollisionMixin:
             if root_file is None or root_file.name != "__init__.py":
                 continue
             declared_exports = self.rope_workspace.exports(
-                root_file, export_options=m.Infra.ExportOptions(allow_assignments=True)
+                root_file,
+                export_options=m.Infra.ExportOptions(allow_assignments=True),
             )
             if attr in declared_exports:
                 return True

@@ -25,7 +25,8 @@ class TestsFlextInfraMiseDistributionPolicy:
         return root
 
     def test_managed_artifacts_fleet_wins_over_divergent_pin(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """A project pin diverging from a tool the fleet now owns is residue.
 
@@ -47,7 +48,8 @@ class TestsFlextInfraMiseDistributionPolicy:
 
         snapshot = tm.ok(u.Infra.snapshot_project_managed_artifacts(root))
         result = u.Infra.compose_mise_toml_from_snapshot(
-            snapshot.sources, f'[tools]\n"{selector}" = "{version}"\n'
+            snapshot.sources,
+            f'[tools]\n"{selector}" = "{version}"\n',
         )
 
         tm.ok(result)

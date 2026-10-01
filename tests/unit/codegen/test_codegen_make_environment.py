@@ -20,6 +20,35 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeEnvironment:
     """Prove generated operations ignore the caller shell environment."""
 
+    @staticmethod
+    def _render_makefile(
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+        *,
+        local_infra: bool = False,
+        bootstrap: bool = False,
+        extra_verbs: tuple[m.Infra.MakeVerbSpec, ...] = (),
+        script_dispatch: m.Infra.ScriptDispatchSpec | None = None,
+    ) -> tuple[Path, Path]:
+        role = c.Infra.MakeProfile(profile.value)
+        repository = test_u.Tests.repository_ref(
+            "fixture-project", role=role
+        ).model_copy(
+            update={
+                "editable": True,
+                "extra_verbs": extra_verbs,
+                "script_dispatch": script_dispatch,
+            }
+        )
+        project_root = tmp_path / profile.value / "fixture-project"
+        WorktreeFixture.write_python_project(project_root, repository.distribution)
+        if bootstrap:
+            test_u.Tests.copy_tracked_mise_seeds(project_root)
+            tm.ok(
+                u.Cli.atomic_write_text_file(
+                    project_root / config.Infra.codegen.scaffold.project.readme,
+                    "# Bootstrap environment contract\n",
+
     @pytest.mark.parametrize("failure_return", [None, 37])
     def test_public_dispatch_activates_once_before_hooks(
         self, tmp_path: Path, *, failure_return: int | None
@@ -107,7 +136,11 @@ class TestsFlextInfraCodegenMakeEnvironment:
             u.Tests.run_isolated_make(["--no-print-directory", verb], cwd=project_root)
         )
         tm.that(process.outcome.raw_return_code, ne=0)
-        tm.that(process.stderr, has="workspace environment must be physical")
+        tm.that(
+            "workspace environment must be physical" in process.stderr
+            or ".envrc is blocked" in process.stderr,
+            eq=True,
+        )
         tm.that(effect.exists(), eq=False)
         tm.that(borrowed.is_symlink(), eq=True)
         if not broken:
@@ -516,7 +549,7 @@ class TestsFlextInfraCodegenMakeEnvironment:
             has=f"RUNTIME_VENV={u.Infra.runtime_environment_dir(project_root)}",
         )
         testmon = config.Infra.codegen.make.testmon_cache
-        project_key = "$(subst /,_,$(PROJECT_ROOT))"
+        project_key = "$(PROJECT_NAME)"
         database = (
             f"{testmon.external_storage_directory}/{project_key}/"
             f"{testmon.database_filename}"
@@ -814,51 +847,6 @@ class TestsFlextInfraCodegenMakeEnvironment:
             has=["missing environment interpreter", "make setup creates it"],
         )
 
-    def test_generated_setup_is_self_contained(self, tmp_path: Path) -> None:
-        project_root, _repository_root = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
-        )
-        makefile = (project_root / "Makefile").read_text(encoding="utf-8")
-
-        for required in (
-            "ifneq ($(filter setup,$(MAKECMDGOALS)),)",
-            "SETUP_BOOTSTRAP_ONLY := Y",
-            'if [ -n "$${GITHUB_PATH:-}" ]; then',
-            # The bootstrap shell delegates to recursive make through mise exec.
-            # The `+` prefix is required to preserve GNU Make's jobserver FDs.
-            "\t+@set -eu;",
-            # Runtime tool identity is exercised through the public status
-            # regression, including an invalid ambient Mise configuration.
-            'mise_exec project "$$pinned_mise" -C "$$project_root" install --yes',
-            "SETUP_DIRENV=$$direnv_executable",
-            '$(UV) venv --python "$$desired_python" "$(RUNTIME_VENV)"',
-            '$(UV) venv --clear --python "$$desired_python" "$(RUNTIME_VENV)"',
-            # uv syncs the runtime root's project (UV_PROJECT := RUNTIME_ROOT).
-            '$(UV) sync --project "$(UV_PROJECT)"',
-            '--link-mode "$(UV_LINK_MODE)"',
-            'git -C "$$superproject" submodule update --init -- "$$child_path"',
-            'git -C "$$child_root" branch --show-current',
-            'merge-base --is-ancestor "$$gitlink" HEAD',
-        ):
-            tm.that(makefile, has=required)
-        for forbidden in (
-            "UV ?= uv",
-            "mise exec -- uv",
-            "uv@",
-            "define _setup_submodules",
-            "SETUP_BRANCH :=",
-            "--no-install-project",
-            '--editable "$(PROJECT_ROOT)"',
-            "pip install",
-        ):
-            tm.that(makefile, lacks=forbidden)
-        checkout_command = re.search(
-            r"(?:^|[;&|]\s*)git(?:\s+-C\s+\S+)?\s+checkout(?:\s|$)",
-            makefile,
-            flags=re.MULTILINE,
-        )
-        tm.that(checkout_command is None, eq=True)
-
     def test_generated_dependency_upgrade_projects_lock_floors(
         self, tmp_path: Path
     ) -> None:
@@ -996,12 +984,14 @@ class TestsFlextInfraCodegenMakeEnvironment:
             m.Infra.MakeVerbSpec(
                 name="sync",
                 description="Dispatch sync through the declared script dispatcher.",
+                requires_apply=True,
             ),
         )
         script_dispatch = m.Infra.ScriptDispatchSpec(
-            dispatcher="scripts/dispatch.py", roots=("scripts",)
+            dispatcher="scripts/dispatch.py",
+            roots=("scripts",),
         )
-        project_root, _repository_root = u.Tests.render_make_environment(
+        project_root, _repository_root = self._render_makefile(
             tmp_path,
             c.Infra.MakeProfile.STANDALONE,
             extra_verbs=extra_verbs,

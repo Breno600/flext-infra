@@ -19,7 +19,8 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         rope_workspace: p.Infra.RopeWorkspaceDsl
 
         def _package_entry(
-            self, pkg_dir: Path
+            self,
+            pkg_dir: Path,
         ) -> m.Infra.RopePackageIndexEntry | None: ...
 
         def context(self, pkg_dir: Path) -> m.Infra.LazyInitPackageContext: ...
@@ -27,7 +28,10 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         _source_plan_cache: MutableMapping[str, m.Infra.LazyInitPlan]
 
         def _add(
-            self, index: t.MutableLazyAliasMap, name: str, target: t.StrPair
+            self,
+            index: t.MutableLazyAliasMap,
+            name: str,
+            target: t.StrPair,
         ) -> None: ...
 
         @staticmethod
@@ -40,7 +44,8 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         def _is_private_owner(module_path: str, *, root_pkg: str) -> bool: ...
 
     def _has_live_package_content(
-        self, package_entry: m.Infra.RopePackageIndexEntry
+        self,
+        package_entry: m.Infra.RopePackageIndexEntry,
     ) -> bool:
         """Return whether a package owns a module or a manual initializer."""
         candidates = (package_entry.package_dir, *package_entry.descendant_child_dirs)
@@ -79,14 +84,14 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
         is_facade_root = self._is_facade_root(parent_context)
         direct: list[str] = []
         for child_dir in package_entry.descendant_child_dirs:
-            # flext-pulj (codex): do not merge retired root registries into the
+            # Do not merge retired root registries into the
             # inline map that replaces them.
             if child_dir.name in c.Infra.OBSOLETE_ROOT_SUPPORT_NAMES:
                 continue
             if not self.context(child_dir).importable:
                 continue
             resolved_child_dir = child_dir.resolve()
-            # flext-mh7g4: children are planned before their parent (depth
+            # Children are planned before their parent (depth
             # descending), so the parent inventory follows the child's plan in
             # the same pass — a planned WRITE counts as a package even before
             # its initializer exists on disk, and a planned REMOVE/SKIP (for
@@ -134,7 +139,7 @@ class FlextInfraCodegenLazyInitPlannerChildrenMixin:
                 source_module_name = module_name.rsplit(".", maxsplit=1)[-1]
                 test_only_source_module = (
                     c.Infra.TEST_ONLY_SOURCE_MODULE_RE.fullmatch(
-                        f"{source_module_name}.py"
+                        f"{source_module_name}.py",
                     )
                     is not None
                 )

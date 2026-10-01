@@ -11,7 +11,7 @@ from tests import c, u
 
 
 class TestsFlextInfraLazyInitWorkspaceElection:
-    """A repository-local planner never borrows a sibling checkout's facade."""
+    """Workspace planning uses declared sibling source without publishing it."""
 
     @staticmethod
     def _write_constants(package_root: Path, *, parent: str, class_name: str) -> None:
@@ -25,36 +25,56 @@ class TestsFlextInfraLazyInitWorkspaceElection:
             encoding=c.Infra.ENCODING_DEFAULT,
         )
 
-    def test_workspace_plan_does_not_resolve_an_uninstalled_sibling_parent(
-        self, tmp_path: Path
+    def test_workspace_plan_uses_declared_sibling_without_installing_it(
+        self,
+        tmp_path: Path,
     ) -> None:
-        """A child needs its declared parent installed in its own environment."""
+        """A workspace resolves siblings, while a standalone child stays isolated."""
         workspace = tmp_path / "workspace"
         _owner_repo, owner = u.Tests.create_lazy_init_workspace(
-            workspace, project_name="flext-ws-owner", package_name="flext_ws_owner"
+            workspace,
+            project_name="flext-ws-owner",
+            package_name="flext_ws_owner",
         )
         _middle_repo, middle = u.Tests.create_lazy_init_workspace(
-            workspace, project_name="flext-ws-middle", package_name="flext_ws_middle"
+            workspace,
+            project_name="flext-ws-middle",
+            package_name="flext_ws_middle",
         )
         child_repo, child = u.Tests.create_lazy_init_workspace(
-            workspace, project_name="flext-ws-child", package_name="flext_ws_child"
+            workspace,
+            project_name="flext-ws-child",
+            package_name="flext_ws_child",
         )
         u.Tests.write_lazy_init_namespace_module(
-            owner / c.Infra.CONSTANTS_PY, class_name="FlextWsOwnerConstants", alias="c"
+            owner / c.Infra.CONSTANTS_PY,
+            class_name="FlextWsOwnerConstants",
+            alias="c",
         )
         u.Tests.write_lazy_init_namespace_module(
-            owner / "result.py", class_name="FlextWsOwnerResult", alias="r"
+            owner / "result.py",
+            class_name="FlextWsOwnerResult",
+            alias="r",
         )
         self._write_constants(
-            middle, parent="flext_ws_owner", class_name="FlextWsMiddleConstants"
+            middle,
+            parent="flext_ws_owner",
+            class_name="FlextWsMiddleConstants",
         )
         self._write_constants(
-            child, parent="flext_ws_middle", class_name="FlextWsChildConstants"
+            child,
+            parent="flext_ws_middle",
+            class_name="FlextWsChildConstants",
         )
 
         child_init = child / c.Infra.INIT_PY
         before = child_init.read_bytes()
-        tm.that(tm.ok(u.Tests.plan_lazy_init(workspace)).files, eq=())
+        planned = tm.ok(u.Tests.plan_lazy_init(workspace)).files
+        child_plan = next(item for item in planned if item.path == child_init)
+        desired = child_plan.desired_content
+        if desired is None:
+            pytest.fail("workspace child initializer has no planned content")
+        tm.that(desired.decode(), has="from flext_ws_middle import r")
         with pytest.raises(
             ValueError,
             match="declared facade parent 'flext_ws_middle' resolves nowhere",

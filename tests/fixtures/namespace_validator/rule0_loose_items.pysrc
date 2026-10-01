@@ -1,9 +1,0 @@
-from __future__ import annotations
-
-
-class FlextTestModels:
-    pass
-
-
-def helper() -> str:
-    return "x"

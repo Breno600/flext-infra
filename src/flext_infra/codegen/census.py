@@ -1,7 +1,7 @@
 """Census service for namespace violation counting and reporting.
 
 Read-only service that counts and classifies namespace violations
-across all workspace projects using FlextInfraNamespaceValidator.
+across all workspace projects from the rule engine's findings.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -24,16 +24,12 @@ if TYPE_CHECKING:
 class FlextInfraCodegenCensus(s[str]):
     """Read-only census service for namespace violation counting."""
 
-    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True, description="Shared Rope cycle injected by the composition root"
-    )
-
     @override
     def execute(self) -> p.Result[str]:
         """Execute the census directly from the validated CLI service model."""
         if self.apply_changes:
             return r[str].fail(
-                "census is read-only; use flext-infra codegen auto-fix --apply"
+                "census is read-only; use flext-infra codegen auto-fix --apply",
             )
         reports_result = self.run()
         if reports_result.failure:
@@ -58,7 +54,7 @@ class FlextInfraCodegenCensus(s[str]):
         ]
         lines.append(
             f"Total: {total_violations} violations ({total_fixable} fixable)"
-            f" across {len(reports)} projects"
+            f" across {len(reports)} projects",
         )
         return r[str].ok("\n".join(lines))
 
@@ -97,42 +93,16 @@ class FlextInfraCodegenCensus(s[str]):
             projects_result = u.Infra.projects(workspace)
             if projects_result.failure:
                 return r[t.VariadicTuple[m.Infra.CensusReport]].from_failure(
-                    projects_result
+                    projects_result,
                 )
             selected_projects = tuple(projects_result.value)
-        bindings = tuple(
-            FlextInfraNamespaceValidator(
-                repository_root=project.path, rope=self.rope
-            ).callback_binding()
-            for project in selected_projects
-        )
-        cycle_result = self.rope.cycle(
-            bindings,
-            project_names=tuple(
-                project.path.resolve().name for project in selected_projects
-            ),
-        )
-        if cycle_result.failure:
-            return r[t.VariadicTuple[m.Infra.CensusReport]].from_failure(cycle_result)
         reports: t.MutableSequenceOf[m.Infra.CensusReport] = []
         for project in selected_projects:
             project_root = project.path.resolve()
-            raw_violations = tuple(
-                violation
-                for outcome in cycle_result.value.outcomes
-                if outcome.callback_id == "namespace"
-                and outcome.project_root.resolve() == project_root
-                and outcome.applicable
-                for violation in outcome.violations
-            )
-            validation = r[m.Infra.ValidationReport].ok(
-                m.Infra.ValidationReport(
-                    passed=not raw_violations,
-                    violations=raw_violations,
-                    summary=f"{len(raw_violations)} namespace violation(s)",
-                )
-            )
-            parsed = u.Infra.parse_namespace_validation(validation)
+            validation = FlextInfraNamespaceValidator(
+                repository_root=project_root,
+            ).build_report()
+            parsed = u.Infra.parse_namespace_validation(validation, project_root)
             if parsed.failure:
                 return r[t.VariadicTuple[m.Infra.CensusReport]].from_failure(parsed)
             violations = parsed.value
@@ -142,7 +112,7 @@ class FlextInfraCodegenCensus(s[str]):
                     violations=violations,
                     total=len(violations),
                     fixable=u.count(violations, lambda violation: violation.fixable),
-                )
+                ),
             )
         return r[t.VariadicTuple[m.Infra.CensusReport]].ok(tuple(reports))
 

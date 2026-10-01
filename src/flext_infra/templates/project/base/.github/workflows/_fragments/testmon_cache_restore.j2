@@ -1,0 +1,14 @@
+
+      # Why: make test always selects through the persistent testmon database
+      # (make.testmon_cache), which lives outside the checkout under the
+      # declared project name. A runner without it starts from an empty history
+      # and selects the whole suite. Restore the newest database of any earlier
+      # run: testmon revalidates every recorded file by checksum, so a restored
+      # database never hides a changed dependency of a selected test.
+      - name: Restore testmon database
+        uses: {{ github_actions["cache"].repository }}/restore@{{ github_actions["cache"].version }}
+        with:
+          path: ~/{{ make.testmon_cache.home_cache_directory }}/{{ make.testmon_cache.external_storage_directory }}
+          key: {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}-{{ make.testmon_cache_policy.key_prefix }}{% raw %}-${{ github.run_id }}-${{ github.run_attempt }}{% endraw %}
+          restore-keys: |
+            {% raw %}${{ runner.os }}-{% endraw %}{{ python_version }}-{{ make.testmon_cache_policy.key_prefix }}-

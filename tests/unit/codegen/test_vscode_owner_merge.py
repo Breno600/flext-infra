@@ -14,21 +14,23 @@ class TestsFlextInfraVscodeOwnerMerge:
     """Prove the vscode owner merge renders canonical settings in conform."""
 
     def test_merge_marks_drift_and_renders_canonical_content(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Plan a changed merge artifact with canonical and custom keys."""
         root = tmp_path / "project"
         settings_path = root / ".vscode" / "settings.json"
         settings_path.parent.mkdir(parents=True)
         _ = settings_path.write_text(
-            '{"python.languageServer": "None"}\n', encoding="utf-8"
+            '{"python.languageServer": "None"}\n',
+            encoding="utf-8",
         )
 
         result = FlextInfraCodegen.render_vscode_settings(root)
 
         tm.ok(result)
         doc = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-            tm.ok(u.Cli.json_parse(result.value))
+            tm.ok(u.Cli.json_parse(result.value)),
         )
         for key, expected_value in config.Infra.codegen.vscode.scalar_settings.items():
             tm.that(doc[key], eq=expected_value)
@@ -54,7 +56,8 @@ class TestsFlextInfraVscodeOwnerMerge:
         tm.that(second.value, eq=first.value)
 
     def test_merge_removes_keys_absent_from_artifact_authority(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Artifact exclude maps are exact projections, not append-only unions."""
         root = tmp_path / "project"
@@ -70,10 +73,11 @@ class TestsFlextInfraVscodeOwnerMerge:
 
         tm.ok(result)
         doc = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-            tm.ok(u.Cli.json_parse(result.value))
+            tm.ok(u.Cli.json_parse(result.value)),
         )
         tm.that(
-            doc["files.exclude"], eq=dict(config.Infra.codegen.vscode_files_exclude_map)
+            doc["files.exclude"],
+            eq=dict(config.Infra.codegen.vscode_files_exclude_map),
         )
 
     def test_merge_strips_retired_pyright_keys(self, tmp_path: Path) -> None:
@@ -86,9 +90,9 @@ class TestsFlextInfraVscodeOwnerMerge:
                 u.Cli.json_dumps({
                     "python.analysis.typeCheckingMode": "standard",
                     "python.analysis.diagnosticSeverityOverrides": {
-                        "reportMissingTypeStubs": "error"
+                        "reportMissingTypeStubs": "error",
                     },
-                })
+                }),
             ),
             encoding="utf-8",
         )
@@ -97,7 +101,7 @@ class TestsFlextInfraVscodeOwnerMerge:
 
         tm.ok(result)
         doc = t.Cli.JSON_MAPPING_ADAPTER.validate_python(
-            tm.ok(u.Cli.json_parse(result.value))
+            tm.ok(u.Cli.json_parse(result.value)),
         )
         tm.that("python.analysis.typeCheckingMode" in doc, eq=False)
         tm.that("python.analysis.diagnosticSeverityOverrides" in doc, eq=False)

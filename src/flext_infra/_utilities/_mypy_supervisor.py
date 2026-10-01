@@ -3,7 +3,8 @@
 This supervisor validates the owned checker request before launching Mypy.
 Darwin's initial VM mappings
 can already exceed the configured memory budget; RLIMIT_AS cannot represent a
-usable allocation ceiling there. RSS is sampled every 100 ms instead. It is a
+usable allocation ceiling there. RSS is sampled every
+``c.Infra.MYPY_SUPERVISOR_POLL_SECONDS`` instead. It is a
 termination threshold, not a kernel allocation barrier: transient overshoot is
 possible. Linux retains its kernel-enforced address-space limit.
 """
@@ -16,7 +17,7 @@ import sys
 import time
 from types import FrameType
 
-from flext_infra import c, m, t, u
+from flext_infra import c, m, t
 
 
 class FlextInfraMypyDarwinSupervisor:
@@ -46,6 +47,8 @@ class FlextInfraMypyDarwinSupervisor:
 
     @staticmethod
     def _usage(pid: int) -> t.Pair[int, bool]:
+        from flext_infra import u
+
         snapshot = u.Cli.run(
             ("/bin/ps", "-axo", "pgid=,rss=,stat="),
             timeout=c.Infra.MYPY_SUPERVISOR_PS_TIMEOUT,
@@ -57,7 +60,7 @@ class FlextInfraMypyDarwinSupervisor:
             if int(group) == pid and not state.startswith("Z"):
                 total_kib += int(rss)
                 alive = True
-        return total_kib * 1024, alive
+        return total_kib * c.Infra.BYTES_PER_KIB, alive
 
     @classmethod
     def run(
@@ -68,6 +71,8 @@ class FlextInfraMypyDarwinSupervisor:
         kill_after: int,
     ) -> int:
         """Run the owned checker with inherited streams and bounded group lifetime."""
+        from flext_infra import u
+
         if min(memory_bytes, timeout, kill_after) <= 0:
             msg = "positive memory, timeout and kill-after are required"
             raise ValueError(msg)
@@ -75,7 +80,9 @@ class FlextInfraMypyDarwinSupervisor:
         cls._usage(os.getpgrp())
         deadline = time.monotonic() + timeout
         child = u.Cli.process_start(
-            u.Infra.mypy_command(invocation), capture=False, start_new_session=True
+            u.Infra.mypy_command(invocation),
+            capture=False,
+            start_new_session=True,
         ).unwrap()
         received_signal: int = 0
 
@@ -131,5 +138,5 @@ if __name__ == "__main__":
             int(memory),
             int(timeout),
             int(kill_after),
-        )
+        ),
     )
