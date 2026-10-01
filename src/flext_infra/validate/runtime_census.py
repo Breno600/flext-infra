@@ -36,6 +36,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         str | None,
         m.Field(description="Project filter (comma-separated)"),
     ] = None
+
     @classmethod
     def for_project(
         cls,
