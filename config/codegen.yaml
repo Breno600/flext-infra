@@ -476,8 +476,6 @@ Infra:
         # prerequisite. `validate` is the structural check (blocking when the
         # .md set is incomplete).
         actions: [generate, fix, fmt, validate, audit]
-        api_modules:
-          flext-infra: [flext_infra]
         mutable_actions: [fix, fmt]
         reports_dir: .reports/docs
         cross_project_relative_link_pattern: '^(?:\.\./)+flext-[a-z0-9-]+(?:/|$)'
