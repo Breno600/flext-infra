@@ -10,9 +10,8 @@ import time
 from typing import TYPE_CHECKING, ClassVar, override
 
 from flext_infra import c, m
+from flext_infra.gates.base_gate import FlextInfraGate
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
-
-from .base_gate import FlextInfraGate
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -39,9 +38,16 @@ class FlextInfraRuntimeCensusGate(FlextInfraGate):
             project_dir,
             census_gate=self.gate_id,
         )
+        if validator.failure:
+            return self._build_project_error_gate_result(
+                project_dir,
+                passed=False,
+                errors=[validator.error or "runtime census scoping failed"],
+                started=started,
+            )
         # ``build_report`` (not ``execute``) keeps violations structured so the
         # gate can grade a broken invocation separately from found violations.
-        report_result = validator.build_report()
+        report_result = validator.value.build_report()
         if report_result.failure:
             return self._build_project_error_gate_result(
                 project_dir,
