@@ -57,6 +57,8 @@ class FlextInfraConstantsGit:
 
     GIT_DEFAULT_REMOTE: ClassVar[str] = "origin"
     "Canonical upstream remote name."
+    GIT_EXIT_NEGATIVE: ClassVar[int] = 1
+    "Exit status a Git predicate command documents for a negative answer."
     GIT_URL_SCHEME_PREFIX: ClassVar[str] = "git+"
     "PEP 508 direct-reference prefix that marks a Git dependency source."
     GIT_PORCELAIN_PATH_OFFSET: ClassVar[int] = 3
