@@ -1,5 +1,11 @@
 # CSV rename campaigns
 
+<!-- TOC START -->
+
+- No sections found
+
+<!-- TOC END -->
+
 For a recovery that only needs declarative Sed text rules, run `make mod-text`
 at the affected repository root. This public verb validates exact rule receipts,
 checks Python syntax before publication, applies the authenticated text batch,
