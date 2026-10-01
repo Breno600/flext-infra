@@ -45,17 +45,17 @@ direnv = "latest"
 taplo = "latest"
 "npm:@ast-grep/cli" = { version = "0.45.3", allow_builds = ["@ast-grep/cli"] }
 gitleaks = "latest"
-"aqua:boyter/scc" = "latest"
+"aqua:boyter/scc" = "4.1.0"
 kubeconform = "latest"
 node = "latest"
-"npm:prettier" = "3.5.3"
+"npm:prettier" = "3.9.9"
 go = "latest"
 make = "latest"
 [tools."github:qltysh/qlty"]
-version = "0.642.0"
+version = "0.650.0"
 [tools."github:kucherenko/jscpd"]
-version = "latest"
+version = "5.4.0"
 [tools."github:microsoft/waza"]
-version = "latest"
+version = "0.38.8"
 version_prefix = "v"
 # End SECTION: tools
