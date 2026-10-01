@@ -101,7 +101,7 @@ class FlextInfraModelsCheck:
             int,
             m.Field(
                 gt=0,
-                le=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
+                le=c.Infra.MYPY_TIMEOUT_SECONDS_FLEET_BOUND,
                 description=(
                     "Positive Mypy wall-time limit in seconds; neither the"
                     " project budget nor the env override may exceed the"

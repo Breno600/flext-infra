@@ -19,6 +19,8 @@ Infra:
       max_lines: 1000
 
     toolchain:
+      # Precompiled-builds-only Python resolution and installation.
+      python_compile: false
       # The language floor is a minor line. The runtime tool is pinned to the
       # newest Python patch whose lock resolves on all declared platforms.
       # Derived as computed fields on ToolchainSpec:
@@ -345,17 +347,9 @@ Infra:
       # formats — without it the ruff-format surface has no verb home and
       # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
-      check_gate_suspensions:
-        - gate: namespace
-          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
-          reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
-          # Census consistency (gc-wisp-d7mnad): the runtime census honors the
-          # SAME suspension for the rule families this gate owns — ENFORCE ids
-          # match a census rule id exactly, tag families by prefix. Unmapped
-          # families (e.g. ENFORCE-079) stay fully blocking.
-          census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
+      runtime_environment_directory: .flext-venvs
       testmon_cache:
         database_filename: .testmondata
         database_environment_variable: TESTMON_DATAFILE
