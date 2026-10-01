@@ -52,7 +52,7 @@ make = "latest"
 [tools."github:qltysh/qlty"]
 version = "0.642.0"
 [tools."github:kucherenko/jscpd"]
-version = "latest"
+version = "5.4.0"
 [tools."github:microsoft/waza"]
 version = "latest"
 version_prefix = "v"
