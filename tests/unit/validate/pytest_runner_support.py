@@ -48,6 +48,32 @@ def runner_for(
     )
 
 
+def declare_parallel_project(project_root: Path) -> None:
+    """Declare the fixture as a project whose worker ceiling admits xdist.
+
+    The fleet default is one worker (a serial dispatch), so a case that needs
+    real xdist workers declares a project that owns a multi-worker override in
+    the config-owned map, never a hardcoded name or count.
+    """
+    policy = config.Infra.tooling.tools.pytest
+    parallel_project = next(
+        name
+        for name, ceiling in policy.parallel_worker_overrides.items()
+        if (isinstance(ceiling, int) and ceiling > 1)
+        or (
+            not isinstance(ceiling, int)
+            and ceiling.workers is not None
+            and ceiling.workers > 1
+        )
+    )
+    pyproject = project_root / c.PYPROJECT_FILENAME
+    pyproject.write_text(
+        f'[project]\nname = "{parallel_project}"\nversion = "0.0.0"\n'
+        + pyproject.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+
 def profile_parent(runner: FlextInfraPytestRunner, output: Path) -> int:
     """Exercise the real -m entry in a fresh process with the Make-owned inputs."""
     output.parent.mkdir(parents=True, exist_ok=True)

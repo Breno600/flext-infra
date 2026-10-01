@@ -51,10 +51,10 @@ class TestsFlextInfraPrivateImportCutover:
         }
 
         if bad_source_reachable:
-            tm.fail(
-                self._plan(tmp_path, sources, consumer, statement),
-                has="attempted relative import beyond top-level package",
-            )
+            with pytest.raises(
+                ImportError, match="attempted relative import beyond top-level package"
+            ):
+                self._plan(tmp_path, sources, consumer, statement)
             return
         edits = self._edits(tmp_path, sources, consumer, statement)
 
@@ -130,8 +130,11 @@ class TestsFlextInfraPrivateImportCutover:
             tm.that(tuple(edit.file_path for edit in edits), eq=(consumer,))
             tm.that(edits[0].updated_source, has="from flext_sample import c")
             tm.that(edits[0].updated_source, has="profile = c.Profile.Value")
-        else:
+        elif case == "shadowed":
             tm.fail(self._plan(tmp_path, sources, consumer, statement), has=case)
+        else:
+            with pytest.raises(ValueError, match=case):
+                self._plan(tmp_path, sources, consumer, statement)
         for path, source in dependency_sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=source)
         tm.that(tuple(sources), eq=(consumer,))
@@ -269,10 +272,10 @@ class TestsFlextInfraPrivateImportCutover:
             tm.that(edits[0].updated_source, has=f"value = {expected}.Value")
             tm.that(edits[0].updated_source, lacks=statement)
         else:
-            tm.fail(
-                self._plan(tmp_path, sources, consumer, statement),
-                has=expected or "no public facade exposes",
-            )
+            with pytest.raises(
+                ValueError, match=expected or "no public facade exposes"
+            ):
+                self._plan(tmp_path, sources, consumer, statement)
         for path, source in dependency_sources.items():
             tm.that(path.read_text(encoding="utf-8"), eq=source)
 
@@ -417,7 +420,8 @@ class TestsFlextInfraPrivateImportCutover:
             else "ambiguous"
         )
 
-        tm.fail(self._plan(tmp_path, sources, consumer, statement), has=expected)
+        with pytest.raises(ValueError, match=expected):
+            self._plan(tmp_path, sources, consumer, statement)
 
     @staticmethod
     def _finding(file_path: Path, text: str) -> m.Infra.ModScanFinding:

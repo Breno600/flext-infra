@@ -9,7 +9,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import m, u
+from flext_infra import c, m
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
 from .base_gate import FlextInfraGate
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class FlextInfraRuntimeCensusGate(FlextInfraGate):
     """Post-import runtime enforcement census gate."""
 
-    gate_id: ClassVar[str] = "runtime-census"
+    gate_id: ClassVar[str] = c.Infra.RUNTIME_CENSUS
     gate_name: ClassVar[str] = "Runtime Enforcement Census"
     can_fix: ClassVar[bool] = False
     requires_python_targets: ClassVar[bool] = True

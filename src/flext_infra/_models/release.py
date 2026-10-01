@@ -75,6 +75,23 @@ class FlextInfraModelsRelease:
                 raise ValueError(msg)
             return self
 
+    class ArtifactExpectation(m.StrictBoundaryModel):
+        """Committed identity, source license and distribution boundary to prove."""
+
+        project: Annotated[t.NonEmptyStr, m.Field(description="Distribution name")]
+        version: Annotated[t.NonEmptyStr, m.Field(description="Distribution version")]
+        license_sha256: Annotated[
+            t.Infra.ReleaseArtifactSha256,
+            m.Field(description="Committed source LICENSE SHA-256"),
+        ]
+        allowed_roots: Annotated[
+            t.StrTuple,
+            m.Field(description="Validated public source roots in the sdist"),
+        ]
+        versions: Annotated[
+            t.StrMapping, m.Field(description="Resolved internal dependency versions")
+        ]
+
     class BuildRecord(mm.ProjectNameMixin, m.StrictBoundaryModel):
         """Base model for build result data."""
 

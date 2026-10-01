@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -291,6 +292,11 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         )
         source_file.write_text(source, encoding="utf-8")
         u.Tests.initialize_git_repo(project_dir)
+        probe = "from demo.documented import first; print(first(['ok']))"
+        before = tm.ok(
+            u.Cli.run_raw((sys.executable, "-c", probe), cwd=source_file.parent.parent)
+        )
+        assert u.Cli.process_succeeded(before.outcome), before.stderr
 
         result = FlextInfraEnforcementFixerOrchestrator(
             repository_root=project_dir,

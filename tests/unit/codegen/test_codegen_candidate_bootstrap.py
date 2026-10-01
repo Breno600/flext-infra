@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import c, infra, m, u
@@ -12,7 +13,7 @@ from tests import u as tests_u
 
 
 class TestsFlextInfraCodegenCandidateBootstrap:
-    """A declared campaign publishes all Makefiles or none."""
+    """A declared campaign publishes all recovery projections or none."""
 
     @staticmethod
     def _campaign(tmp_path: Path) -> tuple[Path, Path, Path]:
@@ -65,6 +66,10 @@ class TestsFlextInfraCodegenCandidateBootstrap:
         tm.that(result.failure, eq=True)
         tm.that(result.error, has="candidate bootstrap targets are not declared")
 
+    # Real conform transactions over a fixture repository (several full plans
+    # per case): integration-scale, so it runs in the slow phase under its
+    # per-item bound (rules/workflow/gate-budget.md), never a raised limit.
+    @pytest.mark.slow
     def test_invalid_second_target_preserves_first_and_allows_retry(
         self,
         tmp_path: Path,
@@ -95,6 +100,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             ),
         )
 
+    @pytest.mark.slow
     def test_two_targets_reach_one_repeatable_fixed_point(self, tmp_path: Path) -> None:
         """A successful campaign publishes both and repeats without drift."""
         source, first, second = self._campaign(tmp_path)
@@ -131,6 +137,7 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             eq=True,
         )
 
+    @pytest.mark.slow
     def test_check_only_reports_drift_without_publication(self, tmp_path: Path) -> None:
         """A check does not enter the recoverable writer or change a target."""
         source, first, _ = self._campaign(tmp_path)
@@ -149,3 +156,144 @@ class TestsFlextInfraCodegenCandidateBootstrap:
             tm.ok(u.Cli.atomic_read_binary_file_state(first_makefile, required=True)),
             eq=before,
         )
+
+    def test_docs_config_conflict_recovers_from_declared_template(
+        self, tmp_path: Path
+    ) -> None:
+        """A conflicted docs projection is repaired before normal generation parses it."""
+        source, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+        )
+        candidate, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+        )
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + "\ncandidate_bootstrap_targets:\n"
+            + f"  - path: {Path(os.path.relpath(candidate, source)).as_posix()}\n"
+            + "    what: docs-config\n",
+            encoding="utf-8",
+        )
+        projection = candidate / c.Infra.DIR_DOCS / c.Infra.DOCS_CONFIG_FILENAME
+        tm.ok(u.Cli.ensure_dir(projection.parent))
+        tm.ok(u.Cli.atomic_write_text_file(projection, "<<<<<<< HEAD\n"))
+        command = m.Infra.CandidateBootstrapCommand(repository_root=source)
+
+        tm.ok(infra.bootstrap_candidate(command))
+        first = tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True))
+        tm.ok(u.Cli.json_loads(first.content or b""))
+        tm.ok(infra.bootstrap_candidate(command))
+        tm.that(
+            tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True)),
+            eq=first,
+        )
+
+    def test_pyproject_bootstrap_uses_declared_candidate_surface(
+        self, tmp_path: Path
+    ) -> None:
+        """A healthy provider restores a candidate before its own Make can import."""
+        source, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+        )
+        candidate, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+        )
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + "\ncandidate_bootstrap_targets:\n"
+            + f"  - path: {Path(os.path.relpath(candidate, source)).as_posix()}\n"
+            + "    what: pyproject\n",
+            encoding="utf-8",
+        )
+        projection = candidate / c.PYPROJECT_FILENAME
+        tm.ok(
+            u.Cli.atomic_write_text_file(
+                projection,
+                projection.read_text(encoding="utf-8") + "\n# stale projection\n",
+            )
+        )
+        command = m.Infra.CandidateBootstrapCommand(repository_root=source)
+
+        tm.ok(infra.bootstrap_candidate(command))
+        first = tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True))
+        tm.that(
+            u.Cli.toml_mapping_from_text((first.content or b"").decode("utf-8"))
+            is not None,
+            eq=True,
+        )
+        tm.that(first.content or b"", lacks=b"# stale projection")
+        tm.ok(infra.bootstrap_candidate(command))
+        tm.that(
+            tm.ok(u.Cli.atomic_read_binary_file_state(projection, required=True)),
+            eq=first,
+        )
+
+    def test_mise_triple_recovery_is_complete_and_idempotent(
+        self, tmp_path: Path
+    ) -> None:
+        """One declared recovery publishes all upg-owned launch artifacts."""
+        source, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+        )
+        candidate, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+        )
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + "\ncandidate_bootstrap_targets:\n"
+            + f"  - path: {Path(os.path.relpath(candidate, source)).as_posix()}\n"
+            + "    what: mise-triple\n",
+            encoding="utf-8",
+        )
+        for name, _mode in c.Infra.ARTIFACT_SPECS:
+            (candidate / name).write_text("<<<<<<< HEAD\n", encoding="utf-8")
+        command = m.Infra.CandidateBootstrapCommand(repository_root=source)
+
+        tm.ok(infra.bootstrap_candidate(command))
+        first = tuple(
+            tm.ok(u.Cli.atomic_read_binary_file_state(candidate / name, required=True))
+            for name, _mode in c.Infra.ARTIFACT_SPECS
+        )
+        tm.that(all(state.content != b"<<<<<<< HEAD\n" for state in first), eq=True)
+        tm.ok(infra.bootstrap_candidate(command))
+        repeated = tuple(
+            tm.ok(u.Cli.atomic_read_binary_file_state(candidate / name, required=True))
+            for name, _mode in c.Infra.ARTIFACT_SPECS
+        )
+        tm.that(repeated, eq=first)
+
+    def test_mise_triple_fails_before_partial_publication(self, tmp_path: Path) -> None:
+        """An invalid destination prevents any member of the triple from writing."""
+        source, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "source", c.Infra.MakeProfile.STANDALONE
+        )
+        candidate, _ = tests_u.Tests.render_make_environment(
+            tmp_path / "candidate", c.Infra.MakeProfile.STANDALONE
+        )
+        manifest = tests_u.Tests.write_workspace_manifest(source, source.name)
+        tests_u.Tests.write_workspace_manifest(candidate, candidate.name)
+        manifest.write_text(
+            manifest.read_text(encoding="utf-8")
+            + "\ncandidate_bootstrap_targets:\n"
+            + f"  - path: {Path(os.path.relpath(candidate, source)).as_posix()}\n"
+            + "    what: mise-triple\n",
+            encoding="utf-8",
+        )
+        first = candidate / c.Infra.ARTIFACT_SPECS[0][0]
+        first.write_text("<<<<<<< HEAD\n", encoding="utf-8")
+        last = candidate / c.Infra.ARTIFACT_SPECS[-1][0]
+        last.unlink()
+        last.mkdir()
+
+        result = infra.bootstrap_candidate(
+            m.Infra.CandidateBootstrapCommand(repository_root=source)
+        )
+
+        tm.that(result.failure, eq=True)
+        tm.that(first.read_text(encoding="utf-8"), eq="<<<<<<< HEAD\n")

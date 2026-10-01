@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
 from tests import m, u
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from tests import t
 
 
+@pytest.mark.slow
 class TestsFlextInfraRefactorInfraRefactorNamespaceMoves:
     """Behavior contract for test_infra_refactor_namespace_moves."""
 

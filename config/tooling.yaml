@@ -451,10 +451,16 @@ Infra:
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
         slow-timeout-seconds: 30
-        # A local suite that cannot finish within two minutes is a performance
-        # defect. The generated process wall is derived from this value and the
-        # termination grace by the typed model; no second timeout source exists.
+        # Fleet default for one runner operation, including selection and suite.
+        # Large measured consumers declare their own wall below; the generated
+        # process wall and runner deadline use the same typed budget.
         run-timeout-seconds: 120
+        run-timeout-overrides:
+          # `make profile-test` on 2026-09-30 selected 3354 cases in 26.04s;
+          # the 120s entry clock stopped the suite after 112 cases/25.62s.
+          # This measurement ceiling permits a complete cold profile before
+          # tightening the limit to the observed full-suite runtime.
+          flext-infra: 1200
         termination-grace-seconds: 2
         # Operator decision 2026-09-26: one failure stops the invocation. The
         # next run starts from the corrected owner instead of accumulating a
@@ -514,6 +520,8 @@ Infra:
         parallel-schedule-chunk: 1
         profile-sort: cumulative
         profile-limit: 50
+        profile-suite-filename: pytest.pstats
+        profile-process-directory: profiles
         min-version: "8.0"
         python-classes: ["Test*"]
         python-files: ["*_test.py", "*_tests.py", "test_*.py"]

@@ -6,13 +6,10 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import override
 
-from flext_cli import cli
-
 from flext_core import r
 
-from .. import FlextInfraConfig, FlextInfraServiceBase, infra, m, p, t, u
+from .. import FlextInfraServiceBase, m, p, t, u
 from . import (
-    FlextInfraApplyRenames,
     FlextInfraCodemodSemanticApply,
     FlextInfraModGateEngine,
     FlextInfraModTextGateEngine,
@@ -23,6 +20,19 @@ from .batch_replacements import FlextInfraModReplacements
 class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
     """Apply every discovered AST rewrite without destructive rollback."""
 
+    rename_runner: t.Port[p.Infra.RenameCampaignRunner] = m.Field(
+        exclude=True, description="Injected CSV campaign execution port"
+    )
+    progress: t.Port[p.Infra.ModProgress] = m.Field(
+        exclude=True, description="Injected mod progress transport port"
+    )
+    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
+        exclude=True, description="Injected Rope workspace port"
+    )
+    rename_inputs: t.VariadicTuple[m.Infra.ApplyRenamesInput] = m.Field(
+        exclude=True, default=(), description="Typed declared CSV campaigns"
+    )
+
     @override
     def execute(self) -> p.Result[t.Cli.ResultValue]:
         """Inspect or apply the complete rule cascade with visible phases."""
@@ -31,7 +41,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             return r[t.Cli.ResultValue].from_failure(planned)
         rules = tuple(dict.fromkeys(rule.resource for rule in planned.value.rules))
         if self.effective_dry_run:
-            cli.display_text(f"mod: scan {len(rules)} discovered rule file(s)")
+            self.progress.emit(f"mod: scan {len(rules)} discovered rule file(s)")
             pending = FlextInfraModGateEngine.scan(
                 self.repository_root,
                 fix=False,
@@ -62,9 +72,9 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
             validated = FlextInfraModGateEngine.validate(self.repository_root)
             if validated.failure:
                 return r[t.Cli.ResultValue].from_failure(validated)
-            cli.display_text("mod: no pending ast-grep or sed-by-list fixes")
+            self.progress.emit("mod: no pending ast-grep or sed-by-list fixes")
             return r[t.Cli.ResultValue].ok(True)
-        return self._execute_apply(self.repository_root, rules)
+        return self._execute_apply(rules)
 
     @staticmethod
     def _execute_apply(
@@ -86,6 +96,8 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
         rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> p.Result[t.Cli.ResultValue]:
         """Converge every mod phase through one shared Rope workspace."""
+        root = self.repository_root
+        rope_workspace = self.rope
         current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
         fingerprint = FlextInfraCodemodSemanticApply.source_fingerprint
         seen: MutableMapping[t.VariadicTuple[t.Pair[str, str]], int] = {}
@@ -101,7 +113,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     "changes retained for mandatory owner repair",
                 )
             seen[before] = iteration
-            cli.display_text(
+            self.progress.emit(
                 f"mod: joint iteration {iteration} — "
                 f"{current.actionable} actionable, "
                 f"{current.detection_only} detection-only",
@@ -111,7 +123,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 FlextInfraModGateEngine.scan(root, fix=True).unwrap()
                 rope_workspace.refresh()
                 after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
-            FlextInfraCodemodBatchApply.validate_fix_match(current, after_ast)
+            self.validate_fix_match(current, after_ast)
             phase_states = [fingerprint(root, after_ast)]
             transaction_paths = FlextInfraCodemodSemanticApply.plan_transaction_paths(
                 root,
@@ -163,6 +175,7 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 renamed = FlextInfraApplyRenames.run(rename_params)
                 if renamed.failure:
                     return r[t.Cli.ResultValue].from_failure(renamed)
+                self.progress.emit_rename(renamed.value)
             current = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
             current_text = FlextInfraModTextGateEngine.scan(root, fix=False).unwrap()
             after = fingerprint(root, current)
@@ -199,18 +212,18 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     for finding in current.entries
                     if not finding.actionable
                 })
-                cli.display_text(
+                self.progress.emit(
                     f"mod: {current.detection_only} detection-only and "
                     f"{current.non_actionable_with_fix} non-actionable with fix "
                     f"finding(s) remain for owner repair: {', '.join(detection_rules)}",
                 )
             if current_text.findings:
                 text_rules = sorted({entry.rule_id for entry in current_text.entries})
-                cli.display_text(
+                self.progress.emit(
                     f"mod: {current_text.findings} detection-only sed-by-list "
                     f"finding(s) remain for owner repair: {', '.join(text_rules)}",
                 )
-            cli.display_text(
+            self.progress.emit(
                 "mod: joint AST, semantic, and text fixed point verified "
                 "with zero actionable findings",
             )
@@ -262,8 +275,8 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
     def _pending_renames(root: Path) -> p.Result[int]:
         """Count pending rename occurrences across the configured campaigns."""
         pending = 0
-        for params in FlextInfraCodemodBatchApply._rename_inputs(root, apply=False):
-            report = FlextInfraApplyRenames.run(params)
+        for params in self.rename_inputs:
+            report = self.rename_runner.run(params)
             if report.failure:
                 return r[int].from_failure(report)
             pending += report.value.occurrences

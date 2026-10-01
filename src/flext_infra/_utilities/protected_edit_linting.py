@@ -468,7 +468,7 @@ class FlextInfraUtilitiesProtectedEditLinting:
         *,
         gates: t.StrSequence | None = None,
     ) -> MutableMapping[Path, t.Infra.LintSnapshot]:
-        """Run lint snapshots for multiple files concurrently."""
+        """Validate files in order while each file runs its tools concurrently."""
         ordered_paths = tuple(paths)
         if not ordered_paths:
             return {}

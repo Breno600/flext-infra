@@ -9,6 +9,7 @@ SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, ClassVar, Literal
 
 from flext_cli import m
@@ -201,6 +202,10 @@ class FlextInfraModelsScan:
             t.StrSequence,
             m.Field(description="Regex flag names from the SSOT map"),
         ] = ()
+        capture_equals: Annotated[
+            t.MappingKV[str, str],
+            m.Field(description="Named regex captures and their required exact values"),
+        ] = MappingProxyType({})
         expected: Annotated[
             int | None,
             m.Field(

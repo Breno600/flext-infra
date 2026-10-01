@@ -252,12 +252,15 @@ class TestsFlextInfraAuditorScope:
         tm.that(issues[0].message, has="/home/someone")
         tm.that(issues[1].message, has="/Users/someone")
 
-    def test_machine_path_issues_honours_exempt_paths(self, tmp_path: Path) -> None:
-        """Frozen evidence declared in docs_config.json audit policy is skipped whole."""
+    def test_machine_path_issues_honours_exact_evidence_files(
+        self, tmp_path: Path
+    ) -> None:
+        """Only a named historical file keeps an observed machine path."""
         auditor = FlextInfraDocAuditor()
         plans = tmp_path / "docs" / "plans"
         plans.mkdir(parents=True, exist_ok=True)
         (plans / "2026-01-01-run.md").write_text("ran at /home/someone/flext\n")
+        (plans / "new-plan.md").write_text("run at /home/someone/flext\n")
         (tmp_path / "docs" / "live.md").write_text("see /home/someone/flext\n")
         (tmp_path / "docs" / "docs_config.json").write_text(
             '{"audit": {"machine_path_exempt_paths": ["docs/plans/"]}}',
@@ -268,4 +271,41 @@ class TestsFlextInfraAuditorScope:
             report_dir=tmp_path / "reports",
         )
         issues = auditor.machine_path_issues(scope)
-        tm.that([issue.file for issue in issues], eq=["docs/live.md"])
+        tm.that(
+            {issue.file for issue in issues},
+            eq={"docs/live.md", "docs/plans/new-plan.md"},
+        )
+
+    def test_placeholder_patterns_distinguish_open_marker_from_plural_word(
+        self, tmp_path: Path
+    ) -> None:
+        """The declared lexical rule flags TODO colon, not ordinary TODOS prose."""
+        docs = tmp_path / "docs"
+        docs.mkdir()
+        (docs / "guide.md").write_text("TODOS are reviewed.\n")
+        (docs / "docs_config.json").write_text(
+            '{"audit": {"placeholder_patterns": ["TODO[ ]*:"]}}'
+        )
+        scope = m.Infra.DocScope(
+            name="root", path=tmp_path, report_dir=tmp_path / "reports"
+        )
+        auditor = FlextInfraDocAuditor()
+        tm.that(auditor.placeholder_issues(scope), eq=[])
+        (docs / "guide.md").write_text("TODOS are reviewed.\nTODO: finish me.\n")
+        issues = auditor.placeholder_issues(scope)
+        tm.that(len(issues), eq=1)
+        tm.that(issues[0].file, eq="docs/guide.md")
+
+    def test_invalid_audit_policy_fails_public_boundary(self, tmp_path: Path) -> None:
+        """A malformed audit declaration fails instead of silently disabling a gate."""
+        docs = tmp_path / "docs"
+        docs.mkdir()
+        (docs / "guide.md").write_text("/home/someone/flext\n")
+        (docs / "docs_config.json").write_text(
+            '{"audit": {"historical_evidence_files": ["docs/plans/"]}}'
+        )
+        scope = m.Infra.DocScope(
+            name="root", path=tmp_path, report_dir=tmp_path / "reports"
+        )
+        with pytest.raises(ValueError, match="historical evidence"):
+            FlextInfraDocAuditor().machine_path_issues(scope)

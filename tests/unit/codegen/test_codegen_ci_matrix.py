@@ -212,8 +212,9 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflow, has="CI=Y make gen")
         tm.that(
             workflow,
-            has='test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none || true)"',
+            has='candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"\n          test -z "$candidate_status"',
         )
+        tm.that(workflow, lacks="|| true")
         tm.that(workflow, lacks="run: CI=Y make conform")
         tm.that(workflow, has="run: CI=Y make audit")
         tm.that(workflow, lacks="attest/gates/v1")
@@ -328,7 +329,7 @@ class TestsFlextInfraCodegenCiMatrix:
         tmp_path: Path,
     ) -> None:
         """Empty private_submodules include must not accumulate blank lines."""
-        root = self.render_project(tmp_path / "member")
+        root = rendered_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8",
         )
@@ -527,9 +528,9 @@ class TestsFlextInfraCodegenCiMatrix:
             content = (docker_dir / f"{distro}.Dockerfile").read_text(encoding="utf-8")
             tm.that("libatomic" not in content, eq=True, msg=distro)
 
-    def test_dockerfiles_render_byte_idempotently(self, tmp_path: Path) -> None:
+    def test_dockerfiles_render_byte_idempotently(self, rendered_project: Path) -> None:
         """Repeated project generation preserves the generated Dockerfiles."""
-        root = self.render_project(tmp_path / "external")
+        root = rendered_project
         before = {
             distro: (
                 root / "tests" / "fixtures" / "ci" / "docker" / f"{distro}.Dockerfile"
@@ -673,6 +674,48 @@ class TestsFlextInfraCodegenCiMatrix:
 
         for branch in config.Infra.codegen.branch_policy.ci_trigger_branches:
             tm.that(content, has=f"      - {branch}")
+
+    def test_docs_failure_upload_keeps_audit_failure_and_scopes_hidden_reports(
+        self, rendered_project: Path
+    ) -> None:
+        """A generated Docs job fails on audit findings and retains safe reports."""
+        workflow = u.Cli.yaml_load_mapping(
+            rendered_project / ".github/workflows/docs.yml"
+        )
+        jobs = t.Cli.JSON_MAPPING_ADAPTER.validate_python(workflow["jobs"])
+        docs_job = t.Cli.JSON_MAPPING_ADAPTER.validate_python(jobs["docs-quality"])
+        raw_steps = docs_job["steps"]
+        if not isinstance(raw_steps, list):
+            msg = "Docs workflow steps must be a sequence"
+            raise TypeError(msg)
+        steps = [t.Cli.JSON_MAPPING_ADAPTER.validate_python(step) for step in raw_steps]
+        docs_step = next(
+            step for step in steps if step["name"] == "Docs lifecycle (blocking)"
+        )
+        upload = next(
+            step for step in steps if step.get("name") == "Upload docs reports on failure"
+        )
+        tm.that(docs_step.get("run"), eq="make docs")
+        tm.that(docs_step.get("continue-on-error"), eq=None)
+        tm.that(upload["if"], eq="failure()")
+        upload_with = t.Cli.JSON_MAPPING_ADAPTER.validate_python(upload["with"])
+        tm.that(upload_with["include-hidden-files"], eq=True)
+        tm.that(upload_with["if-no-files-found"], eq="error")
+        report_path_value = upload_with["path"]
+        if not isinstance(report_path_value, str):
+            msg = "Docs report paths must be text"
+            raise TypeError(msg)
+        report_paths = report_path_value.splitlines()
+        tm.that(report_paths, empty=False)
+        permitted_names = {
+            "audit-summary.json",
+            "audit-report.md",
+            "validate-summary.json",
+            "validate-report.md",
+        }
+        tm.that({Path(path).name for path in report_paths}, eq=permitted_names)
+        for path in report_paths:
+            tm.that(".reports" in Path(path).parts, eq=True)
 
     def test_docs_workflow_jobs_authenticate_toolchain_resolution(
         self,

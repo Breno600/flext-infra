@@ -108,6 +108,21 @@ class FlextInfraPytestRunnerBase(s[int]):
             raise ValueError(msg)
         return memory_gb
 
+    def _declared_project_name(self) -> str | None:
+        """Read the declared project identity shared by runtime policies."""
+        pyproject_path = self.root / c.PYPROJECT_FILENAME
+        payload = u.Infra.pyproject_payload(pyproject_path)
+        if "project" not in payload:
+            return None
+        return u.Infra.project_name_from_payload(pyproject_path, payload)
+
+    def run_timeout_seconds(self, policy: PytestPolicy) -> int:
+        """Resolve the declared project's measured wall over the fleet default."""
+        name = self._declared_project_name()
+        if name is None:
+            return policy.run_timeout_seconds
+        return policy.run_timeout_overrides.get(name, policy.run_timeout_seconds)
+
     def _declared_worker_ceiling(
         self,
         policy: PytestPolicy,

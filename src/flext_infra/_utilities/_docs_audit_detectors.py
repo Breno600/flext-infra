@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 import sys
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_cli import u
@@ -14,8 +16,6 @@ from .docs_api import FlextInfraUtilitiesDocsApi
 from .docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     from flext_infra import t
 
 
@@ -43,13 +43,9 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
 
     @staticmethod
     def docs_text_token_issues(
-        scope: m.Infra.DocScope,
-        *,
-        tokens: t.StrSequence,
-        issue_type: str,
-        exempt_paths: t.StrSequence = (),
+        scope: m.Infra.DocScope, *, tokens: t.StrSequence, issue_type: str
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect token-presence issues, skipping exempt frozen-evidence prefixes."""
+        """Collect token-presence issues in the complete Markdown scope."""
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues
@@ -74,6 +70,28 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
         return issues
 
     @staticmethod
+    def docs_placeholder_issues(
+        scope: m.Infra.DocScope, *, patterns: t.StrSequence
+    ) -> t.SequenceOf[m.Infra.AuditIssue]:
+        """Find unfinished markers using declared lexical patterns."""
+        issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
+        compiled = tuple(re.compile(pattern) for pattern in patterns)
+        for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
+            rel = md_file.relative_to(scope.path).as_posix()
+            content = md_file.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            for pattern in compiled:
+                if pattern.search(content):
+                    issues.append(
+                        m.Infra.AuditIssue(
+                            file=rel,
+                            issue_type="placeholder",
+                            severity="medium",
+                            message=f"matches placeholder pattern `{pattern.pattern}`",
+                        )
+                    )
+        return issues
+
+    @staticmethod
     def docs_machine_path_issues(
         scope: m.Infra.DocScope,
         *,
@@ -83,9 +101,8 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
 
         A path rooted at one operator's home binds the document to one machine;
         container and CI identities declared in ``c.Infra.MACHINE_PATH_CONTAINER_USERS``
-        are image contracts and pass. ``exempt_paths`` are scope-relative prefixes
-        (frozen evidence such as dated plans) declared by the repository's docs
-        policy; they are skipped whole.
+        are image contracts and pass. Only exact declared dated evidence files
+        retain the observed machine path.
         """
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         for (
@@ -237,11 +254,13 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
                 )
                 if outcome.failure:
                     detail = outcome.error
-                elif u.Cli.process_succeeded(outcome.value.outcome):
+                elif (
+                    u.Cli.process_succeeded(outcome.value.outcome)
+                    and not outcome.value.stderr
+                ):
                     continue
                 else:
-                    # flext-o6h5 (agent: kimi) — ruff reports parse errors on stderr
-                    # only; indexing an empty stdout crashes with IndexError.
+                    # Ruff diagnostics on stderr remain findings even with exit zero.
                     detail = (
                         f"{outcome.value.stdout}\n{outcome.value.stderr}".strip()
                         or f"ruff exit {outcome.value.outcome.raw_return_code}"

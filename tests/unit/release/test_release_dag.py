@@ -6,6 +6,7 @@ import hashlib
 import zipfile
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import config
@@ -199,6 +200,68 @@ class TestsFlextInfraReleaseDag:
                     project_name,
                 ).exists(),
                 eq=False,
+            )
+
+        @staticmethod
+        @pytest.mark.parametrize("target", ["build", "wheel", "sdist"])
+        def test_hatch_exclusion_cannot_cancel_declared_source(
+            tmp_path: Path, target: str
+        ) -> None:
+            """Reject an archive target that excludes its declared package."""
+            project_name = "flext-a"
+            workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
+            project = workspace / project_name
+            pyproject = project / "pyproject.toml"
+            content = pyproject.read_text(encoding="utf-8")
+            header = f"[tool.hatch.build.targets.{target}]\n"
+            replacement = header + 'exclude = ["/src/flext_a/**"]\n'
+            expected = "Hatch wheel and sdist exclusions must match"
+            if target == "build":
+                header = "[tool.hatch.build.targets.sdist]\n"
+                replacement = (
+                    '[tool.hatch.build]\nexclude = ["/src/flext_a/**"]\n\n' + header
+                )
+                expected = (
+                    "Hatch build must use target source patterns without exclusions"
+                )
+            pyproject.write_text(content.replace(header, replacement), encoding="utf-8")
+            u.Tests.commit_git_changes(project, "add conflicting Hatch exclusion")
+
+            result = u.Tests.run_release_build(workspace, project_name, dry_run=True)
+
+            tm.that(result, eq=1)
+            tm.that(
+                u.Tests.release_build_log_text(workspace, project_name), has=expected
+            )
+
+        @staticmethod
+        def test_hatch_force_include_rejects_absolute_host_source(
+            tmp_path: Path,
+        ) -> None:
+            """Keep a host path outside the release staging boundary."""
+            project_name = "flext-a"
+            workspace = u.Tests.release_internal_workspace(tmp_path, project_name)
+            project = workspace / project_name
+            pyproject = project / "pyproject.toml"
+            content = pyproject.read_text(encoding="utf-8")
+            header = "[tool.hatch.metadata]\n"
+            forced = (
+                "[tool.hatch.build.targets.wheel.force-include]\n"
+                '"/src/host.py" = "host.py"\n\n'
+                "[tool.hatch.build.targets.sdist.force-include]\n"
+                '"/src/host.py" = "/src/host.py"\n\n'
+            )
+            pyproject.write_text(
+                content.replace(header, forced + header), encoding="utf-8"
+            )
+            u.Tests.commit_git_changes(project, "add absolute Hatch source")
+
+            result = u.Tests.run_release_build(workspace, project_name, dry_run=True)
+
+            tm.that(result, eq=1)
+            tm.that(
+                u.Tests.release_build_log_text(workspace, project_name),
+                has="Hatch source path is outside the release boundary",
             )
 
     class TestsGitleaksPolicy:

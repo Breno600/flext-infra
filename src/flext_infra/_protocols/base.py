@@ -22,6 +22,22 @@ class FlextInfraProtocolsBase(Protocol):
     """Base protocols for flext-infra project."""
 
     @runtime_checkable
+    class RenameCampaignRunner(Protocol):
+        """Apply or inspect one validated CSV rename campaign."""
+
+        def run(
+            self, params: m.Infra.ApplyRenamesInput
+        ) -> p.Result[m.Infra.ApplyRenamesReport]: ...
+
+    @runtime_checkable
+    class ModProgress(Protocol):
+        """Report long-running mod phases to the calling transport."""
+
+        def emit(self, message: str) -> None: ...
+
+        def emit_rename(self, report: m.Infra.ApplyRenamesReport) -> None: ...
+
+    @runtime_checkable
     class OutputStream(Protocol):
         """Minimal text stream contract used by infrastructure output backends."""
 
@@ -95,6 +111,12 @@ class FlextInfraProtocolsBase(Protocol):
     @runtime_checkable
     class CandidateBootstrapPlanner(Protocol):
         """Conform plan boundary consumed by the candidate campaign."""
+
+        def surface_contract(
+            self, surface: c.Infra.CodegenConformSurface
+        ) -> m.Infra.CodegenConformSurfaceContract:
+            """Resolve the declared output set for a recovery surface."""
+            ...
 
         def plan(
             self,

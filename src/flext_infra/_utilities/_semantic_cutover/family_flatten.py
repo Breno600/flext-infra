@@ -137,14 +137,6 @@ class FlextInfraUtilitiesSemanticFamilyFlatten(
         if not body:
             msg = f"inline namespace wrapper cannot be flattened safely: {path}"
             raise ValueError(msg)
-        wrapper_docstring = (
-            (body[0].line, body[0].end_line)
-            if sources[path]
-            .splitlines()[body[0].line - 1]
-            .lstrip()
-            .startswith(('"""', "'''", '"', "'"))
-            else None
-        )
         if any(
             item.enclosing_name == wrapper_name
             and item.category

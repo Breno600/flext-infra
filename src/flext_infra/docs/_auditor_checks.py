@@ -16,28 +16,6 @@ class FlextInfraDocAuditorChecksMixin:
     """Mixin for documentation audit issue checks."""
 
     @staticmethod
-    def _policy_token_issues(
-        scope: m.Infra.DocScope,
-        *,
-        policy_key: str,
-        issue_type: str,
-        exempt_key: str | None = None,
-    ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Return text-token issues for one scope using the named policy list."""
-        exempt = (
-            u.Infra.docs_policy_list(scope, section="audit", key=exempt_key)
-            if exempt_key is not None
-            else ()
-        )
-        issues: t.SequenceOf[m.Infra.AuditIssue] = u.Infra.docs_text_token_issues(
-            scope,
-            tokens=u.Infra.docs_policy_list(scope, section="audit", key=policy_key),
-            issue_type=issue_type,
-            exempt_paths=exempt,
-        )
-        return issues
-
-    @staticmethod
     def forbidden_term_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
@@ -51,18 +29,15 @@ class FlextInfraDocAuditorChecksMixin:
     @staticmethod
     def placeholder_issues(scope: m.Infra.DocScope) -> t.SequenceOf[m.Infra.AuditIssue]:
         """Return placeholder-text issues for one scope."""
-        return FlextInfraDocAuditorChecksMixin._policy_token_issues(
-            scope,
-            policy_key="placeholder_terms",
-            issue_type="placeholder",
-            exempt_key="placeholder_exempt_paths",
+        return u.Infra.docs_placeholder_issues(
+            scope, patterns=u.Infra.docs_audit_policy(scope).placeholder_patterns
         )
 
     @staticmethod
     def machine_path_issues(
         scope: m.Infra.DocScope,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Return machine-local absolute path issues, honouring the scope's exempt paths."""
+        """Return machine-local paths outside exact historical evidence files."""
         return u.Infra.docs_machine_path_issues(
             scope,
             exempt_paths=u.Infra.docs_policy_list(

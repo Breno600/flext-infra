@@ -117,6 +117,7 @@ class FlextInfraEnsurePackagingPhase:
         *,
         package_name: str,
         data: m.Infra.PackagedDataSelection,
+        data_excludes: t.StrSequence,
         root_modules: t.StrSequence,
         root_packages: t.StrSequence,
     ) -> m.Infra.DepsToml.PhaseConfig:
@@ -145,15 +146,11 @@ class FlextInfraEnsurePackagingPhase:
                     root_path=(),
                     table_path=("wheel",),
                     operations=(
+                        toml.ListOp(key="packages", values=package_paths),
                         toml.ListOp(
-                            key="include",
-                            values=(
-                                *(f"/{path}/**" for path in package_paths),
-                                *(f"/{path}/**" for path in data.directories),
-                            ),
+                            key="only-include",
+                            values=(*package_paths, *data.directories),
                         ),
-                        toml.RemoveOp(key="packages"),
-                        toml.RemoveOp(key="only-include"),
                         toml.SetOp(
                             key="sources",
                             value={
@@ -179,16 +176,44 @@ class FlextInfraEnsurePackagingPhase:
                     table_path=("sdist",),
                     operations=(
                         toml.ListOp(
-                            key="include",
+                            key="only-include",
                             values=(
-                                *(f"/{path}/**" for path in package_paths),
-                                *(f"/{path}" for path in module_paths),
-                                *(f"/{path}" for path in data.files),
-                                *(f"/{path}/**" for path in data.directories),
+                                *package_paths,
+                                *module_paths,
+                                *data.files,
+                                *data.directories,
                             ),
                         ),
                         toml.RemoveOp(key="only-include"),
+                        toml.RemoveOp(key="packages"),
+                        (
+                            toml.ListOp(
+                                key="exclude",
+                                values=tuple(f"/{item}" for item in data_excludes),
+                            )
+                            if data_excludes
+                            else toml.RemoveOp(key="exclude")
+                        ),
+                        toml.RemoveOp(key="force-include"),
                     ),
+                ),
+                (
+                    toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("sdist", "force-include"),
+                        operations=tuple(
+                            toml.SetOp(key=source, value=source)
+                            for source, _destination in force_include
+                        ),
+                    )
+                    if force_include
+                    else toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("sdist",),
+                        operations=(toml.RemoveOp(key="force-include"),),
+                    )
                 ),
                 (
                     toml.PhaseConfig(
@@ -277,11 +302,15 @@ class FlextInfraEnsurePackagingPhase:
             topology.packaged_data_paths,
             topology.planned_data_files,
         )
+        data_excludes = self.resolve_data_excludes(
+            project_dir, data_paths, topology.packaged_data_excludes
+        )
         return u.Infra.apply_toml_phases(
             payload,
             self._phase(
                 package_name=package_name,
                 data=data_paths,
+                data_excludes=data_excludes,
                 root_modules=topology.root_modules,
                 root_packages=topology.root_packages,
             ),

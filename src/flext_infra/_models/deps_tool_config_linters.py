@@ -221,12 +221,11 @@ class FlextInfraModelsDepsToolConfigLinters(FlextInfraModelsDepsToolConfigProjec
             int,
             m.Field(
                 gt=0,
-                le=c.Infra.MYPY_TIMEOUT_SECONDS_MAX,
+                le=c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT,
                 description=(
                     "Project Mypy wall-time budget in seconds (SSOT; the env"
                     " MYPY_TIMEOUT_SECONDS overrides it at the ingress"
-                    " boundary). Whole-program cold runs on large members"
-                    " need more than the default."
+                    " boundary). It may tighten the fleet bound, never raise it."
                 ),
             ),
         ] = c.Infra.MYPY_TIMEOUT_SECONDS_DEFAULT

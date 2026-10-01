@@ -78,15 +78,14 @@ jobs:
       - name: Normalize checkout modes
         run: chmod -R go-w .
 
-      # Why (flext-7jnr0): every fresh runner paid a cold full-dependency Mypy,
-      # Pyrefly and Ruff analysis. The caches below are content-addressed by the
-      # committed dependency locks, so a warm cache is always valid for the same
-      # lock and can never hide a finding; it only removes the cold recompute.
+      # Why (flext-7jnr0): every fresh runner paid a cold Ruff analysis. The
+      # caches below are content-addressed by the committed dependency locks,
+      # so a warm cache is always valid for the same lock and can never hide a
+      # finding; it only removes the cold recompute.
       # Why (flext-gd3m1): the same pair keeps the locked Mise tool storage, so
       # a cold runner never re-downloads the pinned tarballs, where a network
       # blip failed setup.
 {%- include "_fragments/toolchain_cache_restore.j2" %}
-{%- include "_fragments/mypy_cache_restore.j2" %}
 {%- if custom_steps %}
 
       # Project-owned steps, the CI counterpart of custom.mk: the generator
@@ -127,9 +126,11 @@ jobs:
         # source state is absent or unauthenticated". The job token
         # authenticates those reads without changing the toolchain contract.
         run: |
+          set -eu
           {{ make.ci.variable }}={{ make.ci.value }} make gen
           git status --short
-          test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
+          candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
+          test -z "$candidate_status"
 
       # Setup installs frozen from the committed uv.lock (`uv sync --locked`)
       # and never rewrites it; the deps audit proves that locked graph.
@@ -137,21 +138,20 @@ jobs:
         run: {{ make.ci.variable }}={{ make.ci.value }} make audit
 {%- endif %}
 {%- if step.verb == "check" %}
-
-      # Both blocking steps derive from the same active default universe.
-      # {{ make.ci.variable }}={{ make.ci.value }} runs {{ make.check_gates_ci | join(" ") }}.
-      # {{ make.ci.variable }}={{ make.ci.local_value }} runs {{ make.check_gates_local | join(" ") }}.
-      # The partitions are disjoint and together execute every active gate.
-      - name: {{ step.verb }} complement (blocking)
-        run: {{ make.ci.variable }}={{ make.ci.local_value }} make {{ step.verb }}
+        # Fast partition only, derived from the gate registry kind:
+        # {{ make.check_gates_ci | join(" ") }}.
+        # Type checkers and flext-infra validators block locally and at
+        # pre-push ({{ make.ci.variable }}={{ make.ci.local_value }} runs {{ make.check_gates_local | join(" ") }}).
 {%- endif %}
 {% endfor %}
       # Mutating gates and tests must validate the committed candidate.
       # Repairs left in the runner checkout require a new commit and CI run.
       - name: Candidate cleanliness (blocking)
         run: |
+          set -eu
           git status --short
-          test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
+          candidate_status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"
+          test -z "$candidate_status"
 {%- if ci_tests.selected %}
 
       - name: Dump reports on failure
@@ -194,7 +194,6 @@ jobs:
       # Why (flext-7jnr0): save on every outcome — including a failing gate — so
       # the next run starts warm. Only written when the restore missed.
 {%- include "_fragments/toolchain_cache_save.j2" %}
-{%- include "_fragments/mypy_cache_save.j2" %}
   # End SECTION: ci job
 
   # === SECTION: release-plan job (managed) ===
