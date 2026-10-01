@@ -234,10 +234,7 @@ class TestsFlextInfraGitFacet:
 
     @pytest.mark.parametrize("change", ["tracked", "staged", "untracked"])
     def test_verify_clean_cli_rejects_real_worktree_changes(
-        self,
-        real_git_repo: Path,
-        capsys: pytest.CaptureFixture[str],
-        change: str,
+        self, real_git_repo: Path, capsys: pytest.CaptureFixture[str], change: str
     ) -> None:
         """The public CLI passes a clean checkout and exposes a dirty Git report."""
         argv = ["workspace", "verify-clean", "--repo-root", str(real_git_repo)]
