@@ -9,6 +9,7 @@ from flext_cli import m
 
 from .. import c, t
 from ._config.base import FlextInfraConfigModels
+from ._config.contexts import FlextInfraConfigModelsContexts
 from ._git import FlextInfraModelsGitIdentity
 from .mixins import FlextInfraModelsMixins as mm
 
@@ -53,6 +54,14 @@ class FlextInfraModelsWorkspace:
                 ),
             ),
         ] = False
+
+        declared_member: Annotated[
+            FlextInfraConfigModelsContexts.RepositoryRef | None,
+            m.Field(
+                default=None,
+                description="Catalog-declared member reference for this entry",
+            ),
+        ]
 
     class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
         """One static ``.envrc``/``.envrc.local`` contract violation.

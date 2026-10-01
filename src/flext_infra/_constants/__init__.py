@@ -11,6 +11,7 @@ from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 if TYPE_CHECKING:
     from .adapters import FlextInfraConstantsAdapters
     from .base import FlextInfraConstantsBase
+    from .census import FlextInfraConstantsCensus
     from .check import FlextInfraConstantsCheck
     from .cli import FlextInfraConstantsCli
     from .codegen import FlextInfraConstantsCodegen
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     from .codegen_project import FlextInfraConstantsCodegenProject
     from .codegen_render_names import FlextInfraConstantsCodegenRenderNames
     from .deps import FlextInfraConstantsDeps
+    from .detectors import FlextInfraConstantsDetectors
     from .docs import FlextInfraConstantsDocs
     from .git import FlextInfraConstantsGit
     from .make import FlextInfraConstantsMake
@@ -36,6 +38,7 @@ if TYPE_CHECKING:
 __all__: tuple[str, ...] = (
     "FlextInfraConstantsAdapters",
     "FlextInfraConstantsBase",
+    "FlextInfraConstantsCensus",
     "FlextInfraConstantsCheck",
     "FlextInfraConstantsCli",
     "FlextInfraConstantsCodegen",
@@ -44,6 +47,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraConstantsCodegenProject",
     "FlextInfraConstantsCodegenRenderNames",
     "FlextInfraConstantsDeps",
+    "FlextInfraConstantsDetectors",
     "FlextInfraConstantsDocs",
     "FlextInfraConstantsGit",
     "FlextInfraConstantsMake",
@@ -63,6 +67,7 @@ _LAZY_IMPORTS = MappingProxyType(
         MappingProxyType({
             ".adapters": ("FlextInfraConstantsAdapters",),
             ".base": ("FlextInfraConstantsBase",),
+            ".census": ("FlextInfraConstantsCensus",),
             ".check": ("FlextInfraConstantsCheck",),
             ".cli": ("FlextInfraConstantsCli",),
             ".codegen": ("FlextInfraConstantsCodegen",),
@@ -71,6 +76,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".codegen_project": ("FlextInfraConstantsCodegenProject",),
             ".codegen_render_names": ("FlextInfraConstantsCodegenRenderNames",),
             ".deps": ("FlextInfraConstantsDeps",),
+            ".detectors": ("FlextInfraConstantsDetectors",),
             ".docs": ("FlextInfraConstantsDocs",),
             ".git": ("FlextInfraConstantsGit",),
             ".make": ("FlextInfraConstantsMake",),
@@ -86,7 +92,7 @@ _LAZY_IMPORTS = MappingProxyType(
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)
