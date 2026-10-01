@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-
 from flext_infra import c, m, p, t, u
 
 
@@ -17,6 +16,7 @@ class FlextInfraCandidateBootstrapService:
         planner: p.Infra.CandidateBootstrapPlanner,
         transaction: p.Infra.CandidateBootstrapTransaction,
     ) -> None:
+        """Wire the declared-target planner to its atomic publisher."""
         self._planner = planner
         self._transaction = transaction
 
