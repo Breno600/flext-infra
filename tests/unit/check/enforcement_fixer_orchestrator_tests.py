@@ -275,6 +275,11 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         )
         source_file.write_text(source, encoding="utf-8")
         u.Tests.initialize_git_repo(project_dir)
+        probe = "from demo.documented import first; print(first(['ok']))"
+        before = tm.ok(
+            u.Cli.run_raw((sys.executable, "-c", probe), cwd=source_file.parent.parent)
+        )
+        assert u.Cli.process_succeeded(before.outcome), before.stderr
 
         # Baseline run of the documented surface: the probe imports the module
         # and exercises only the defect-free call, so the debugger trap inside

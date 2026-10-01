@@ -69,13 +69,23 @@ class FlextInfraUtilitiesGitStateFilesMixin(
 
     @staticmethod
     def _state_require_payload(
+        cls,
+        root: Path,
         path: Path,
-        observed: m.Infra.GitWorktreeFileState | None,
+        observed: m.Infra.GitWorktreeObservedFile,
         allowed: t.SequenceOf[m.Infra.GitWorktreeFileState | None],
     ) -> None:
         """Accept only an allowed captured working state."""
         if observed in allowed:
             return
+        if observed.content is not None:
+            with FlextInfraUtilitiesGitWorktreeIO.git_stdin(observed.content) as stream:
+                oid = cls._repo(root).git.hash_object("--stdin", istream=stream)
+            captured = m.Infra.GitWorktreeFileState(
+                path=path, mode=observed.mode, permissions=observed.permissions, oid=oid
+            )
+            if captured in allowed:
+                return
         msg = f"owned file changed before guarded effect: {path}"
         raise ValueError(msg)
 
@@ -108,12 +118,12 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 msg = f"symlink disappeared before guarded effect: {path}"
                 raise ValueError(msg) from exc
             cls._state_require_payload(
+                root,
                 path,
                 m.Infra.GitWorktreeFileState(
                     path=path,
                     mode="120000",
                     permissions=link_mode,
-                    oid=cls._state_blob_oid(root, os.fsencode(raw_target)),
                 ),
                 allowed,
             )
@@ -130,15 +140,16 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 destination, required=False
             ).unwrap()
             permissions = before_file.mode if before_file.mode is not None else 0
-            observed: m.Infra.GitWorktreeFileState | None = None
-            if before_file.content is not None:
-                observed = m.Infra.GitWorktreeFileState(
-                    path=path,
+            cls._state_require_payload(
+                root,
+                path,
+                m.Infra.GitWorktreeObservedFile(
+                    content=before_file.content,
                     mode="100755" if permissions & stat.S_IXUSR else "100644",
                     permissions=permissions,
-                    oid=cls._state_blob_oid(root, before_file.content),
-                )
-            cls._state_require_payload(path, observed, allowed)
+                ),
+                allowed,
+            )
             if desired is not None and desired.mode != "120000":
                 payload = cls._state_blob_payload(root, desired.oid)
                 u.Cli.atomic_write_binary_file_guarded(

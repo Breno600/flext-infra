@@ -339,7 +339,6 @@ Infra:
     make:
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
-      runtime_environment_directory: .flext-venvs
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
@@ -366,9 +365,18 @@ Infra:
       # formats — without it the ruff-format surface has no verb home and
       # drift survives a green check until `make mod` validates.
       fmt_gates: [format, markdown-format]
-      check_gate_suspensions: []
+      check_gate_suspensions:
+        - gate: namespace
+          authority: "flext-itpd1.3; operator decision 2026-09-27 (keep plan v12 suspension); flext-infra#913"
+          reason: "Fleet namespace backlog (141 findings here) is repaired after the fleet is green; the gate returns with its Rope single-cycle owner fix."
+          # Census consistency (gc-wisp-d7mnad): the runtime census honors the
+          # SAME suspension for the rule families this gate owns — ENFORCE ids
+          # match a census rule id exactly, tag families by prefix. Unmapped
+          # families (e.g. ENFORCE-079) stay fully blocking.
+          census_rule_families: [ENFORCE-046, ENFORCE-066, ENFORCE-067, ENFORCE-069, class_prefix]
       # One filename and the root-relative runner paths; the runner places the
       # database in platformdirs' external per-worktree cache.
+      runtime_environment_directory: .flext-venvs
       testmon_cache:
         database_filename: .testmondata
         database_environment_variable: TESTMON_DATAFILE
@@ -378,7 +386,10 @@ Infra:
         external_storage_directory: flext/infra/testmon
         target_directory: tests
         reports_directory: .reports/tests
-      # Shared testmon cache policy: bounded generations, quota and save refs.
+      # Declarative Actions-cache policy for the shared testmon database
+      # (preserved #1001 delta, bead flext-j0u23): two-phase generations with
+      # per-mode caps, per-repo byte budget with a three-stage quota ladder,
+      # save-ref allowlist (never save from PRs) and the cache-key namespace.
       testmon_cache_policy:
         mode: stable
         save_enabled: true
@@ -390,9 +401,10 @@ Infra:
         block_threshold_percent: 95
         allowed_save_refs: ["main", "0.12.0-dev"]
         key_prefix: flext-testmon
-      # The Mypy gate shares analysis across checkouts of the same project name.
-      # Relocks retain the directory; Mypy revalidates changed modules. Distinct
-      # project names keep their module namespaces in separate directories.
+      # One lock-keyed Mypy analysis shared by every checkout on the same
+      # dependency lock. Mypy's cache is content-addressed by module hash, so a
+      # warm cache only removes the cold whole-fleet recompute and can never
+      # mask a finding (flext-7jnr0).
       mypy_cache:
         cache_environment_variable: MYPY_CACHE_DIR
         data_home_environment_variable: XDG_CACHE_HOME
@@ -471,8 +483,8 @@ Infra:
         # Operator law 2026-09-22: `make docs` is a docs-only lifecycle
         # (generate -> fix -> fmt -> check); it never runs the workspace-wide
         # codegen conform as a prerequisite. `validate` is the structural
-        # check (blocking when the .md set is incomplete); `audit` findings
-        # are warnings owned by cleanup beads, never CI blockers.
+        # check (blocking when the .md set is incomplete); every `audit`
+        # finding fails the lifecycle and requires source-owner repair.
         actions: [generate, fix, fmt, validate, audit]
         api_modules:
           flext-infra:
@@ -565,12 +577,17 @@ Infra:
         - name: gen
           description: Regenerate every managed projection atomically.
           produces_activation: true
+        - name: bootstrap-candidate
+          description: Conform the sibling candidate worktree declared in this repository manifest.
+          profiles: [standalone]
         - name: initialize
           description: Materialize the declared package initializer graph.
         - name: mod
           description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
         - name: mod-text
-          description: Replay only declarative Sed text rules through their authenticated transaction.
+          description: Apply only declared Sed text rules with syntax preflight and atomic publication.
+        - name: mod-text-candidate
+          description: Replay Sed rules in the single candidate worktree declared by the workspace manifest.
         # The explicit snapshot regeneration (flext-itpd1.7): `mod` only verifies
         # snapshots, so a changed rule output lands as a reviewed commit.
         - name: mod-snapshots
@@ -1056,10 +1073,9 @@ Infra:
       - path: .python-version
         owner: codegen
         policy: full
-    # The docs auditor's placeholder/forbidden-term lists are fleet policy: one
-    # template owns them, so the placeholder and forbidden-term checks in
-    # _auditor_checks.py enforce on every governed repository instead of
-    # silently reading an absent file as empty lists.
+    # The docs auditor's lexical defaults and repository-specific exact-file
+    # evidence declarations are rendered from the template and typed workspace
+    # manifest, then enforced from this full codegen-owned projection.
       - path: docs/docs_config.json
         owner: codegen
         policy: full
@@ -1977,13 +1993,13 @@ Infra:
           profiles: [workspace, standalone]
           delegate: render
           overwrite: true
-      # Static docs-auditor policy: no Jinja vars; the docs scope policy and
-      # the auditor read it as data (docs_policy_list).
+      # Repository-owned audit policy is validated from workspace.yaml,
+      # rendered per project, and parsed into DocsAuditPolicySpec by the auditor.
         - source: base/docs/docs_config.json.j2
           destination: docs/docs_config.json
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
+          overwrite: true
         - source: base/gitignore.j2
           destination: .gitignore
           profiles: [workspace, standalone]

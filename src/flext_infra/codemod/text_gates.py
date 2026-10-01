@@ -84,6 +84,28 @@ class FlextInfraModTextGateEngine:
         )
 
     @classmethod
+    def run(cls, root: Path, *, apply: bool) -> p.Result[t.Cli.ResultValue]:
+        """Replay only text rules through their authenticated transaction."""
+        pending = cls.scan(root, fix=False, validate_receipts=True)
+        if pending.failure:
+            return r[t.Cli.ResultValue].from_failure(pending)
+        if apply and pending.value.actionable:
+            applied = cls.scan(root, fix=True, validate_receipts=True)
+            if applied.failure:
+                return r[t.Cli.ResultValue].from_failure(applied)
+        remaining = cls.scan(root, fix=False)
+        if remaining.failure:
+            return r[t.Cli.ResultValue].from_failure(remaining)
+        if remaining.value.findings:
+            return r[t.Cli.ResultValue].fail(
+                f"mod-text has {remaining.value.findings} pending finding(s)"
+            )
+        return r[t.Cli.ResultValue].ok(
+            f"mod-text: {pending.value.actionable if apply else 0} "
+            "actionable finding(s) applied; fixed point verified"
+        )
+
+    @classmethod
     def load_rules(cls, root: Path) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
         """Load package and workspace text rules into one validated tuple."""
         snapshots = cls._catalogue_states(root.absolute())
@@ -299,12 +321,15 @@ class FlextInfraModTextGateEngine:
         if loaded.failure:
             return r[m.Infra.ModTextReport].from_failure(loaded)
         rules = loaded.value
+        sources = cls._source_paths(root, rules)
+        if sources.failure:
+            return r[m.Infra.ModTextReport].from_failure(sources)
         entries: list[m.Infra.ModTextFinding] = []
         files: set[Path] = set()
         actionable = 0
         inputs = list(catalogues.value)
         plans: list[m.Infra.CodegenFilePlan] = []
-        for path in cls._inventory_paths(root, rules):
+        for path in sources.value:
             relative = path.relative_to(root).as_posix()
             captured = u.Cli.atomic_read_binary_file_state(path, required=True)
             if captured.failure:
@@ -350,13 +375,7 @@ class FlextInfraModTextGateEngine:
         if validate_receipts:
             cls._validate_expected_receipts(rules, report)
         if fix and plans:
-            published = cls._publish(
-                root,
-                tuple(plans),
-                tuple(inputs),
-                frozenset(state.path for state in catalogues.value),
-                rules,
-            )
+            published = cls._publish(root, tuple(plans), tuple(inputs), rules)
             if published.failure:
                 return r[m.Infra.ModTextReport].from_failure(published)
         return r[m.Infra.ModTextReport].ok(report)
@@ -388,7 +407,6 @@ class FlextInfraModTextGateEngine:
         root: Path,
         plans: t.VariadicTuple[m.Infra.CodegenFilePlan],
         inputs: t.VariadicTuple[m.Cli.AtomicFileState],
-        catalogue_paths: frozenset[Path],
         rules: t.VariadicTuple[m.Infra.ModTextRule],
     ) -> p.Result[t.VariadicTuple[Path]]:
         """Publish the complete authenticated batch through the shared journal."""
@@ -404,8 +422,11 @@ class FlextInfraModTextGateEngine:
             expected = {
                 state.path for state in inputs if state.path not in catalogue_paths
             }
-            observed = set(FlextInfraModTextGateEngine._inventory_paths(root, rules))
-            if observed != expected:
+            expected = {state.path for state in inputs if state.path not in catalogues}
+            observed = FlextInfraModTextGateEngine._source_paths(root, rules)
+            if observed.failure:
+                return r[bool].from_failure(observed)
+            if set(observed.value) != expected:
                 return r[bool].fail("text source inventory changed before publication")
             return r[bool].ok(True)
 

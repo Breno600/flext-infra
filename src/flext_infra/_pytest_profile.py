@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import cProfile
-import os
 import runpy
 import sys
 import time

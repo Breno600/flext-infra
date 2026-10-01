@@ -203,7 +203,8 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
         The fixture project owns one test, so the serial dispatch applies and
         the stop request lands after the whole selection executed and passed:
-        the accounting is complete and the run is green.
+        the accounting is complete and the run is green although pytest still
+        reports its interrupt.
         """
         runner = self._spent_runner(cached_runner_project, serial=True)
 

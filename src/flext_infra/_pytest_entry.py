@@ -41,13 +41,13 @@ class FlextInfraPytestEntry:
         from flext_infra.validate.pytest_runner import FlextInfraPytestRunner
 
         runner = FlextInfraPytestRunner.from_environment(
-            started_at_monotonic=cls._STARTED_AT_MONOTONIC, slow_phase=mode == "slow"
+            started_at_monotonic=cls._STARTED_AT_MONOTONIC
         )
         if mode == "coverage":
             return runner.execute_coverage().unwrap()
         if mode == "full":
             return runner.execute_full().unwrap()
-        if mode in {"", "slow"}:
+        if not mode:
             return runner.execute().unwrap()
         msg = f"unsupported pytest operation: {mode}"
         raise ValueError(msg)

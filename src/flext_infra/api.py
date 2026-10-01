@@ -16,9 +16,8 @@ from .codegen.conform import FlextInfraCodegenConform
 from .codegen.fixer import FlextInfraCodegenFixer
 from .codegen.mise_artifacts import FlextInfraCodegenMiseArtifacts
 from .codegen.pipeline import FlextInfraCodegenPipeline
-from .codemod.apply_renames import FlextInfraApplyRenames
-from .codemod.batch_apply import FlextInfraCodemodBatchApply
 from .codemod.text_gates import FlextInfraModTextGateEngine
+from .services.candidate_bootstrap import FlextInfraCandidateBootstrapService
 from .validate.namespace_validator import FlextInfraNamespaceValidator
 from .workspace.detector import FlextInfraWorkspaceDetector
 from .workspace.environment import FlextInfraWorkspaceEnvironmentMixin

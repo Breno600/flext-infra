@@ -129,11 +129,7 @@ PYTEST_PROCESS_TIMEOUT_SECONDS := {{ pytest_process_timeout_seconds }}
 PYTEST_BOUNDED = {{ timeout_command }} --signal=TERM --kill-after={{ timeout_kill_after_seconds }}s "$(PYTEST_PROCESS_TIMEOUT_SECONDS)s"
 PYTEST_REPORTS_DIR := {{ make.testmon_cache.reports_directory }}
 PYTEST_CACHE_HOME = $(if $(strip $({{ make.testmon_cache.data_home_environment_variable }})),$({{ make.testmon_cache.data_home_environment_variable }}),$(if $(strip $({{ make.testmon_cache.user_home_environment_variable }})),$({{ make.testmon_cache.user_home_environment_variable }})/{{ make.testmon_cache.home_cache_directory }},))
-# One persistent testmon database per project, shared by every checkout and
-# worktree of it (like the Mypy cache): testmon tracks each checkout's source by
-# file checksum, so a new lane starts from the project's measured selection
-# instead of a cold full inventory (flext-3l1gk).
-override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/{{ make.testmon_cache.external_storage_directory }}/$(PROJECT_NAME)/{{ make.testmon_cache.database_filename }})
+override FLEXT_PYTEST_TESTMON_DATABASE = $(if $(strip $(PYTEST_CACHE_HOME)),$(PYTEST_CACHE_HOME)/{{ make.testmon_cache.external_storage_directory }}/$(subst /,_,$(PROJECT_ROOT))/{{ make.testmon_cache.database_filename }})
 # Profiles sit beside the other reports of this checkout (.reports is ignored).
 PROFILE_REPORTS_DIR = $(PROJECT_ROOT)/$(dir $(PYTEST_REPORTS_DIR))profiles
 override PYTEST_CASE_TIMEOUT_SECONDS := {{ pytest.case_timeout_seconds }}
@@ -850,24 +846,8 @@ profile-gen-report: _builtin_require_environment
 		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
 		"$(PROFILE_REPORTS_DIR)/lazy-init.pstats"
 
-# Profile the installed refactor CLI against the same repository and rule
-# catalog as mod. The dry run measures planning without publishing changes.
-.PHONY: profile-mod
-profile-mod: _builtin_require_environment
-	@mkdir -p "$(PROFILE_REPORTS_DIR)"
-	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
-		'import atexit, cProfile, sys; from flext_infra.cli import main; profile = cProfile.Profile(); atexit.register(profile.dump_stats, sys.argv[1]); status = profile.runcall(main, sys.argv[2:]); raise SystemExit(status)' \
-		"$(PROFILE_REPORTS_DIR)/mod.pstats" refactor mod \
-		--repository-root "$(PROJECT_ROOT)"
-
-.PHONY: profile-mod-report
-profile-mod-report: _builtin_require_environment
-	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -c \
-		'import pstats, sys; pstats.Stats(sys.argv[1]).sort_stats("cumtime").print_stats(50)' \
-		"$(PROFILE_REPORTS_DIR)/mod.pstats"
-
-# Profile the canonical pytest entry (flext_infra._pytest_entry) under cProfile
-# for cold-run diagnosis (flext-itpd1.3.7): the same persistent testmon database
+# Profile the cold canonical pytest execution through its thin entrypoint
+# for startup diagnosis (flext-itpd1.3.7): the same persistent testmon database
 # guard and environment as the bounded gate, but deliberately NOT wrapped in
 # PYTEST_BOUNDED. The runner's own deadline still applies. Central collection
 # children also write profiles beside their manifests and print their paths.
@@ -879,12 +859,12 @@ profile-test: _builtin_require_environment
 	@mkdir -p "$(PROFILE_REPORTS_DIR)"
 	@{{ pytest_testmon_guard() }}
 	{{ make.testmon_cache.database_environment_variable }}="$$database" $(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._pytest_entry profile \
-		"$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}"
+		"$(PROFILE_REPORTS_DIR)/pytest.pstats"
 
 .PHONY: profile-test-report
 profile-test-report: _builtin_require_environment
 	@$(PROJECT_TOOL_EXEC) "$(RUNTIME_PYTHON)" -m flext_infra._cprofile_entry \
-		"$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}" "$(PROFILE_REPORTS_DIR)/{{ pytest.profile_suite_filename }}.json"
+		"$(PROFILE_REPORTS_DIR)/pytest.pstats" "$(PROFILE_REPORTS_DIR)/pytest.pstats.json"
 
 _builtin_status_diagnostics: _builtin_require_environment
 	@printf 'profile=%s\nproject=%s\nruntime=%s\n' \
@@ -974,8 +954,11 @@ _builtin-bootstrap-candidate: _builtin_require_environment
 _builtin_mod_apply: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) refactor mod --apply
 
-_builtin_mod_text_apply: _builtin_require_environment
+_builtin_mod_text: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) refactor mod-text --apply
+
+_builtin_mod_text_candidate: _builtin_require_environment
+	@$(PROJECT_FLEXT_INFRA) refactor mod-text-candidate --apply
 
 # `mod` verifies committed rule-test snapshots and never rewrites them; this is
 # the one explicit regeneration, whose diff is reviewed and committed.
@@ -1009,10 +992,6 @@ _builtin-audit:
 	@$(UV) pip check --python "$(RUNTIME_VENV)"
 	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
 _builtin-status: _builtin_status_diagnostics
-_builtin-verify-clean: _builtin_require_environment
-	@$(PROJECT_FLEXT_INFRA) codegen conform --root "$(PROJECT_ROOT)" --mode check
-	@$(PROJECT_FLEXT_INFRA) docs audit --repository-root "$(PROJECT_ROOT)" --output-dir "{{ make.docs.reports_dir }}" --projects .
-	@git -C "$(PROJECT_ROOT)" diff --exit-code
 _builtin-docs: _builtin_docs_all
 _builtin-clean: _builtin_clean_generated
 _builtin-release-plan: _builtin_release_plan
@@ -1023,7 +1002,8 @@ _builtin-publication: _builtin_release_publish
 _builtin-gen: _builtin_gen_all
 _builtin-initialize: _builtin_gen_init
 _builtin-mod: _builtin_mod_apply
-_builtin-mod-text: _builtin_mod_text_apply
+_builtin-mod-text: _builtin_mod_text
+_builtin-mod-text-candidate: _builtin_mod_text_candidate
 _builtin-mod-snapshots: _builtin_mod_snapshots
 _builtin-waza:
 	@cd "$(PROJECT_ROOT)" && $(PROJECT_TOOL_EXEC) waza check --no-update-check

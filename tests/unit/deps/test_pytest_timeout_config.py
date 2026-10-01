@@ -39,10 +39,17 @@ class TestsFlextInfraPytestTimeoutConfig:
     ) -> None:
         policy = config.Infra.tooling.tools.pytest
         payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
+        slow_timeout_seconds = case_timeout_seconds + 1
+        run_timeout_seconds = max(
+            run_timeout_seconds,
+            max(2, policy.parallel_schedule_chunk) * slow_timeout_seconds
+            + termination_grace_seconds
+            + 1,
+        )
         payload.update({
             "case-timeout-seconds": case_timeout_seconds,
             "run-timeout-seconds": run_timeout_seconds,
-            "slow-timeout-seconds": case_timeout_seconds + 1,
+            "slow-timeout-seconds": slow_timeout_seconds,
             "termination-grace-seconds": termination_grace_seconds,
             "parallel-workers": parallel_workers,
         })
@@ -128,6 +135,17 @@ class TestsFlextInfraPytestTimeoutConfig:
 
         tm.that(policy.process_timeout_seconds, eq=expected)
         tm.that("process-timeout-seconds" in policy.model_dump(by_alias=True), eq=False)
+
+    def test_run_budget_exceeds_the_derived_suite_stop_reserve(self) -> None:
+        policy = config.Infra.tooling.tools.pytest
+        payload = policy.model_dump(by_alias=True, exclude_computed_fields=True)
+        payload["run-timeout-seconds"] = policy.suite_stop_reserve_seconds
+
+        with pytest.raises(
+            c.ValidationError,
+            match="pytest run timeout must exceed the suite stop reserve",
+        ):
+            type(policy).model_validate(payload)
 
     def test_progress_policy_cannot_hide_item_names(self) -> None:
         policy = config.Infra.tooling.tools.pytest
