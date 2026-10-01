@@ -581,14 +581,3 @@ Infra:
       phases:
         # Component toggles for make mod (rule: toggles are data, not flags).
         import-alignment: true
-
-# Project-local managed-artifact additions for flext-infra itself.
-#
-# `Infra.tooling` above is the FLEET policy every generated project inherits.
-# This block is the same-file project override that conform merges over it for
-# THIS repository only, matching how flext-cli and flext-auth declare theirs.
-# A path that exists only here belongs in this block, never in the fleet policy:
-# declaring it there writes a dead exemption into every project's pyproject.toml.
-ManagedArtifacts:
-  Ruff:
-    per_file_ignores: {}
