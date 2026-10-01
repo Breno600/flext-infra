@@ -44,9 +44,7 @@ class FlextInfraUtilitiesDocsGeneratePlanMixin(
                 return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"docs publication paths must be absolute and lexical: {target}",
                 )
-            try:
-                target.relative_to(project)
-            except ValueError:
+            if not target.is_relative_to(project):
                 return r[t.VariadicTuple[t.Infra.DocsRenderedArtifactTuple]].fail(
                     f"docs publication target escapes project {project}: {target}",
                 )

@@ -366,19 +366,9 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def extract_lazy_init_exports(source: str) -> t.Pair[bool, t.StrSequence]:
-        """Read the published lazy export contract from generated source."""
-        assignments = dict(u.Infra.extract_module_level_assignments(source))
-        all_value = assignments.get(c.Infra.DUNDER_ALL)
-        if all_value is None:
-            return (False, ())
-        literal_exports = tuple(c.Tests.LAZY_INIT_EXPORT_NAME_RE.findall(all_value))
-        if literal_exports:
-            return (True, literal_exports)
-        public_value = assignments.get("_PUBLIC_EXPORTS", "")
-        return (
-            "_PUBLIC_EXPORTS" in all_value,
-            tuple(c.Tests.LAZY_INIT_EXPORT_NAME_RE.findall(public_value)),
-        )
+        """Read the published lazy export contract through the public source reader."""
+        exports = u.Infra.module_assignment_strings_source(source, c.Infra.DUNDER_ALL)
+        return (bool(exports), exports)
 
     @staticmethod
     def consolidate_codegen(

@@ -126,6 +126,99 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
+    class DocsArtifactPlanner(Protocol):
+        """Docs render planner the complete conform transaction publishes."""
+
+        def prepare_bundle(self) -> p.Result[m.Infra.DocsGenerationBundle]:
+            """Freeze the configured render and its authenticated inputs."""
+            ...
+
+        def required_directories(
+            self,
+            bundle: m.Infra.DocsGenerationBundle,
+        ) -> p.Result[t.VariadicTuple[Path]]:
+            """Derive the parent directories the render needs."""
+            ...
+
+        def plan_files(
+            self,
+            bundle: m.Infra.DocsGenerationBundle,
+        ) -> p.Result[t.VariadicTuple[m.Infra.CodegenFilePlan]]:
+            """Bind the render to exact live destination states."""
+            ...
+
+    @runtime_checkable
+    class DocsArtifactPlannerFactory(Protocol):
+        """Build the docs planner for one conform scope."""
+
+        def __call__(
+            self,
+            *,
+            repository_root: Path,
+            projects: t.StrSequence,
+            include_root: bool,
+        ) -> FlextInfraProtocolsBase.DocsArtifactPlanner:
+            """Bind the planner to the repositories conform publishes."""
+            ...
+
+    @runtime_checkable
+    class FreshImportProbe(Protocol):
+        """Fresh-process import validation run at the conform fixed point."""
+
+        def build_report(
+            self,
+            packages: t.StrSequence = (),
+            *,
+            publications: t.SequenceOf[m.Infra.LazyInitPlan] = (),
+            repository_roots: t.SequenceOf[Path] = (),
+        ) -> p.Result[m.Infra.ValidationReport]:
+            """Validate published packages in fresh interpreters."""
+            ...
+
+    @runtime_checkable
+    class FreshImportProbeFactory(Protocol):
+        """Build the fresh-import probe for one repository root."""
+
+        def __call__(
+            self,
+            *,
+            repository_root: Path,
+        ) -> FlextInfraProtocolsBase.FreshImportProbe:
+            """Bind the probe to the conformed repository."""
+            ...
+
+    @runtime_checkable
+    class MarkdownFormatGate(Protocol):
+        """Markdown formatting gate the docs formatter delegates to."""
+
+        def check(
+            self,
+            project_dir: Path,
+            ctx: m.Infra.GateContext,
+        ) -> m.Infra.GateExecution:
+            """Report pending formatting without writing."""
+            ...
+
+        def fix(
+            self,
+            project_dir: Path,
+            ctx: m.Infra.GateContext,
+        ) -> m.Infra.GateExecution:
+            """Apply formatting."""
+            ...
+
+    @runtime_checkable
+    class MarkdownFormatGateFactory(Protocol):
+        """Build the markdown format gate for one docs scope."""
+
+        def __call__(
+            self,
+            repository_root: Path,
+        ) -> FlextInfraProtocolsBase.MarkdownFormatGate:
+            """Bind the gate to the scope root."""
+            ...
+
+    @runtime_checkable
     class CandidateBootstrapTransaction(Protocol):
         """Atomic multi-root file publisher consumed by the campaign."""
 
@@ -827,26 +920,6 @@ class FlextInfraProtocolsBase(Protocol):
 
         def transform(self, files: t.SequenceOf[Path]) -> p.Result[t.SequenceOf[Path]]:
             """Apply transformation to files, return paths of modified files."""
-            ...
-
-    @runtime_checkable
-    class RopeSourceTransformer(Protocol):
-        """Contract for one rope transformer applied to one resource."""
-
-        def transform(
-            self, rope_project: t.Infra.RopeProject, resource: t.Infra.RopeResource
-        ) -> t.Infra.TransformResult:
-            """Rewrite the resource and return the updated source and changes."""
-            ...
-
-    @runtime_checkable
-    class ProjectAliasMigratorFactory(Protocol):
-        """Builds the transformer that moves owned aliases to the local facade."""
-
-        def __call__(
-            self, *, file_path: Path | None, current_project: str
-        ) -> FlextInfraProtocolsBase.RopeSourceTransformer:
-            """Build the migrator for one file owned by ``current_project``."""
             ...
 
     @runtime_checkable

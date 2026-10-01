@@ -70,7 +70,6 @@ from ._utilities.rope_module_patch import FlextInfraUtilitiesRopeModulePatch
 from ._utilities.rope_runtime import FlextInfraUtilitiesRopeRuntime
 from ._utilities.rope_source import FlextInfraUtilitiesRopeSource
 from ._utilities.rope_structure import FlextInfraUtilitiesRopeStructure
-from ._utilities.safety import FlextInfraUtilitiesSafety
 from ._utilities.semantic_cutover import FlextInfraUtilitiesSemanticCutover
 from ._utilities.transformer_header import FlextInfraUtilitiesTransformerHeader
 from ._utilities.versioning import FlextInfraUtilitiesVersioning
@@ -147,7 +146,6 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesRefactorNamespaceMoves,
         FlextInfraUtilitiesRelease,
         FlextInfraUtilitiesRepository,
-        FlextInfraUtilitiesSafety,
         FlextInfraUtilitiesVersioning,
         FlextInfraWorktreeLifecycle,
         FlextInfraWorktreeProvisioning,
