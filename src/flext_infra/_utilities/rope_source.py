@@ -11,8 +11,6 @@ import textwrap
 from operator import itemgetter
 from pathlib import Path
 
-from flext_cli import u
-
 from flext_infra import c, t
 from flext_infra._utilities.discovery import FlextInfraUtilitiesDiscovery
 
@@ -167,26 +165,26 @@ class FlextInfraUtilitiesRopeSource:
         return True
 
     @staticmethod
-    def move_statements_to_module_end(
-        file_path: Path,
+    def statements_at_module_end(
+        source: str,
         statement_lines: t.SequenceOf[t.IntPair],
-    ) -> bool:
-        """Move top-level statements after the module's last statement.
+        *,
+        filename: str,
+    ) -> str:
+        """Return ``source`` with top-level statements moved after its last one.
 
         ``statement_lines`` holds the 1-based inclusive line span of each
-        top-level statement a rule found. The statements keep their text and
+        top-level statement to move. The statements keep their text and
         relative order and close the module, separated from what precedes them
         by the blank lines PEP 8 asks for: two after a class or function, one
-        otherwise. A result that no longer parses raises: the move is never
-        half-applied.
+        otherwise. A result that no longer parses raises.
 
         Returns:
-            The resulting ``bool``.
+            The rewritten source; ``source`` itself when nothing moves.
 
         """
         if not statement_lines:
-            return False
-        source = file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+            return source
         lines = source.splitlines(keepends=True)
         drop = {
             index for start, end in statement_lines for index in range(start, end + 1)
@@ -198,19 +196,15 @@ class FlextInfraUtilitiesRopeSource:
         kept = "".join(
             line for index, line in enumerate(lines, start=1) if index not in drop
         ).rstrip()
-        body = ast.parse(kept, filename=str(file_path)).body
+        body = ast.parse(kept, filename=filename).body
         closes_definition = bool(body) and isinstance(
             body[-1],
             ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
         )
         separator = "\n\n\n" if closes_definition else "\n\n"
         updated = f"{kept}{separator}{moved}" if kept else moved
-        ast.parse(updated, filename=str(file_path))
-        written = u.Cli.files_write_text(file_path, updated)
-        if written.failure:
-            msg = written.error or f"failed to rewrite {file_path}"
-            raise RuntimeError(msg)
-        return True
+        ast.parse(updated, filename=filename)
+        return updated
 
     @staticmethod
     def rewrite_source_at_offsets(

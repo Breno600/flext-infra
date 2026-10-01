@@ -88,7 +88,7 @@ message: >-
 # top-level statement unless a later statement consumes it (the generated
 # lazy-init install_lazy_exports call reads it), so the export contract is
 # read after every name it lists exists. Moving a statement across others is
-# a relocation, not a token fix.
+# a semantic move, not a token fix: the module-end phase of make mod applies it.
 id: require-all-last
 language: python
 severity: error
@@ -102,8 +102,6 @@ ignores:
   - "**/node_modules/**"
   - "**/*_pb2.py"
   - "**/*_pb2_grpc.py"
-metadata:
-  relocation: module-end
 rule:
   kind: expression_statement
   inside:
@@ -127,13 +125,14 @@ rule:
         stopBy: end
 message: >-
   `__all__` must be the module's last statement unless a later statement
-  consumes it; the rope module-end relocation moves the declaration there.
+  consumes it; the module-end phase of make mod moves the declaration there.
 ---
 # The copyright notice closes the module docstring: the summary leads, the
 # module's own text follows it, and the notice paragraph (the copyright line
 # and its SPDX line) is the docstring's last lines. The SPDX line ends the
 # notice, so any text after it means the notice is not last. Moving a
-# paragraph inside a docstring is a relocation, not a token fix.
+# paragraph inside a docstring is a semantic move, not a token fix: the
+# notice-last phase of make mod applies it.
 id: require-notice-last
 language: python
 severity: error
@@ -147,8 +146,6 @@ ignores:
   - "**/node_modules/**"
   - "**/*_pb2.py"
   - "**/*_pb2_grpc.py"
-metadata:
-  relocation: docstring-notice-last
 rule:
   kind: string_content
   regex: 'SPDX-License-Identifier:[^\n]*\n\s*\S'
@@ -166,5 +163,5 @@ rule:
             kind: comment
 message: >-
   The copyright notice must be the last lines of the module docstring; the
-  docstring-notice-last relocation moves the notice paragraph after the rest
-  of the docstring text.
+  notice-last phase of make mod moves the notice paragraph after the rest of
+  the docstring text.

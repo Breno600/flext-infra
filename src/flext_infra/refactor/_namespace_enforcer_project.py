@@ -115,8 +115,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             MutableMapping[Path, set[str]],
         ] = defaultdict(lambda: defaultdict(set))
         spans: MutableMapping[Path, list[t.IntPair]] = defaultdict(list)
-        tails: MutableMapping[Path, list[t.IntPair]] = defaultdict(list)
-        notices: set[Path] = set()
         imports: MutableMapping[Path, MutableMapping[t.StrPair, set[str]]] = (
             defaultdict(lambda: defaultdict(set))
         )
@@ -127,10 +125,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             match relocation:
                 case c.Infra.CodemodRelocation.MODULE_IMPORT:
                     spans[file_path].append(self._finding_lines(finding))
-                case c.Infra.CodemodRelocation.MODULE_END:
-                    tails[file_path].append(self._finding_lines(finding))
-                case c.Infra.CodemodRelocation.DOCSTRING_NOTICE_LAST:
-                    notices.add(file_path)
                 case c.Infra.CodemodRelocation.FUTURE_ANNOTATIONS:
                     names[relocation].setdefault(file_path, set())
                 case c.Infra.CodemodRelocation.PACKAGE_ROOT_IMPORT:
@@ -165,11 +159,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     )
         for file_path, statement_lines in spans.items():
             u.Infra.hoist_inline_imports(file_path, statement_lines)
-        # Both moves address the scan's line spans: a module whose imports were
-        # just hoisted keeps its tail finding for the next pass, which rescans.
-        for file_path, statement_lines in tails.items():
-            if file_path not in spans:
-                u.Infra.move_statements_to_module_end(file_path, statement_lines)
         self._rebind_imports(imports)
         self._move_classes(project_root, classes)
         for relocation, names_by_file in names.items():
@@ -191,10 +180,6 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     u.Infra.rewrite_missing_future_annotations(
                         py_files=tuple(names_by_file),
                     )
-        # The notice move re-reads each module, so it runs after every move
-        # that addresses the scan's line spans.
-        for file_path in sorted(notices):
-            u.Infra.move_notice_last(file_path)
         self._rope_project.validate(self._rope_project.root)
         return len(self._relocation_findings(project_root, py_files))
 
