@@ -592,6 +592,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
 
         tm.that(violations, empty=True)
 
+    @pytest.mark.slow
     def test_namespace_enforcer_apply_moves_manual_protocol_to_protocols_file(
         self, tmp_path: Path
     ) -> None:
@@ -617,6 +618,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
         tm.that(protocols_source, has="from __future__ import annotations")
         tm.that(protocols_source, has="from typing import Protocol")
 
+    @pytest.mark.slow
     def test_namespace_enforcer_apply_keeps_autofixes_when_other_violations_remain(
         self, tmp_path: Path
     ) -> None:

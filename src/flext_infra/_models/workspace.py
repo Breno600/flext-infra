@@ -28,32 +28,6 @@ class FlextInfraModelsWorkspace:
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
-    class SubprojectLoadContext(m.ContractModel):
-        """Workspace governance scope shared by every declared subproject entry."""
-
-        integration_branch: Annotated[
-            str | None,
-            m.Field(
-                description=(
-                    "Resolved workspace integration line; absent defers to the "
-                    "provider's conventional branch fallback"
-                )
-            ),
-        ] = None
-        workspace_beads: Annotated[
-            FlextInfraConfigModels.BeadsProjectSpec | None,
-            m.Field(description="Workspace Beads ledger spec; absent disables routing"),
-        ] = None
-        allow_unprovisioned_members: Annotated[
-            bool,
-            m.Field(
-                description=(
-                    "Whether declared Python members may stay unprovisioned "
-                    "checkouts while CI omits them deliberately"
-                )
-            ),
-        ] = False
-
     class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
         """One static ``.envrc``/``.envrc.local`` contract violation.
 
@@ -111,6 +85,20 @@ class FlextInfraModelsWorkspace:
         editable: Annotated[
             bool, m.Field(description="Distribution is installed as editable")
         ]
+
+    class DirectUrlReceipt(m.ContractModel):
+        """Any installed distribution's PEP 610 receipt, read for its kind only.
+
+        VCS and archive receipts carry other keys; only the directory metadata
+        decides whether the receipt names a checkout path.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="ignore", frozen=True)
+
+        dir_info: Annotated[
+            FlextInfraModelsWorkspace.DirectUrlDirectoryInfo | None,
+            m.Field(description="Directory metadata of a local install"),
+        ] = None
 
     class EditableDirectUrl(m.ContractModel):
         """Validated PEP 610 editable provenance payload."""

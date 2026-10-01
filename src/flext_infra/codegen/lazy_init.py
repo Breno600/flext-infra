@@ -19,6 +19,7 @@ from .. import c, config, m, t, u
 from ..workspace.rope import FlextInfraRopeWorkspace
 from ._execution import FlextInfraCodegenExecutionBase
 from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
+from ._lazy_init_projection_manifest import FlextInfraCodegenLazyInitProjectionManifest
 from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
 if TYPE_CHECKING:
@@ -157,10 +158,18 @@ class FlextInfraCodegenLazyInit(
         stable = self._verify_snapshots(inputs)
         if stable.failure:
             return r[m.Infra.CodegenPhaseAnalysis].from_failure(stable)
+        composed = tuple(file for analysis in analyses for file in analysis.files)
+        manifests = (
+            FlextInfraCodegenLazyInitProjectionManifest.projection_manifest_plans(
+                files=composed
+            )
+        )
+        if manifests.failure:
+            return r[m.Infra.CodegenPhaseAnalysis].from_failure(manifests)
         return r[m.Infra.CodegenPhaseAnalysis].ok(
             m.Infra.CodegenPhaseAnalysis(
                 phase="lazy-init",
-                files=tuple(file for analysis in analyses for file in analysis.files),
+                files=composed + manifests.value,
                 inputs=tuple(inputs[path] for path in sorted(inputs)),
                 publications=tuple(
                     plan for analysis in analyses for plan in analysis.publications

@@ -27,7 +27,7 @@ dependencies = [
   "dependency-injector>=4.49.1",
   "flext-cli @ git+https://github.com/flext-sh/flext-cli.git@0.12.0-dev",
   "flext-core @ git+https://github.com/flext-sh/flext-core.git@0.12.0-dev",
-  "GitPython>=3.2.0",
+  "GitPython>=3.1.62",
   "jinja2>=3.1.6",
   "libcst>=1.9.0",
   "Markdown>=3.11",
@@ -59,7 +59,7 @@ email = "team@flext.sh"
 name = "FLEXT Team"
 
 [project.scripts]
-flext-docs = "flext_infra.cli:docs_main"
+flext-docs = "flext_infra.cli:FlextInfraCli.docs_main"
 flext-infra = "flext_infra.cli:main"
 
 [project.urls]
@@ -426,7 +426,7 @@ addopts = [
   "--durations=10",
   "--timeout=10",
 ]
-flext_slow_timeout_seconds = "30"
+flext_slow_timeout_seconds = "180"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
   "error",

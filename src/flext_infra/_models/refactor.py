@@ -246,6 +246,14 @@ class FlextInfraModelsRefactor(
 
     # -- CSV-driven Rename Models ---------------------------------------------
 
+    class ModCommand(mm.WriteMixin, m.ContractModel):
+        """CLI request for the shared AST, semantic, and text codemod cascade."""
+
+        check: Annotated[bool, m.Field(description="Validate without writing")] = False
+        dry_run_mode: Annotated[
+            bool, m.Field(alias="dry-run", description="Inspect without writing")
+        ] = False
+
     class ApplyRenamesInput(mm.WriteMixin, m.ContractModel):
         """Validated CLI request for CSV-driven symbol renames."""
 

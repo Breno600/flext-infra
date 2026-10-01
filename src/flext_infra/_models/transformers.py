@@ -205,27 +205,6 @@ class FlextInfraModelsTransformers:
             int, m.Field(description="Byte offset after the last import statement")
         ] = 0
 
-    class ClassBlockLayout(m.ArbitraryTypesModel):
-        """Measured layout of one wrapper class block to unwrap.
-
-        Line coordinates are Rope's one-based lines; ``indentation`` is the
-        body column width to strip, and ``docstring_span`` excludes the
-        wrapper's own docstring lines from the strip when present.
-        """
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        header_start: Annotated[int, m.Field(description="First header line")]
-        header_end: Annotated[int, m.Field(description="Last header line")]
-        body_end: Annotated[int, m.Field(description="Last body line")]
-        indentation: Annotated[
-            int, m.Field(description="Body indent width stripped per line")
-        ]
-        docstring_span: Annotated[
-            tuple[int, int] | None,
-            m.Field(default=None, description="Wrapper docstring line span"),
-        ]
-
     class HeaderInfo(m.ArbitraryTypesModel):
         """Structural summary of a module header."""
 

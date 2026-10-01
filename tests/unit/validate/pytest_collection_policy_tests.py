@@ -9,11 +9,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import FlextInfraPytestDiagExtractor, c, m
-from tests.unit.validate.pytest_runner_support import (
-    profile_parent,
-    runner_for,
-    summary,
-)
+from tests.unit.validate.pytest_runner_support import profile_parent, runner_for
 
 
 class TestsFlextInfraPytestCollectionPolicy:
@@ -81,7 +77,7 @@ class TestsFlextInfraPytestCollectionPolicy:
             "*/testmon-selection.events.jsonl"
         )
         diagnostic = tm.ok(FlextInfraPytestDiagExtractor.extract_report_log(events))
-        tm.that(diagnostic.blocking_warning_count, eq=int(finding == "warning"))
+        tm.that(diagnostic.warning_count, eq=int(finding == "warning"))
         tm.that(diagnostic.collection_skipped_count, eq=int(finding == "module-skip"))
         tm.that(diagnostic.collection_failed_count, eq=int(finding == "module-error"))
         tm.that((events.parent / "suite-outcome.json").exists(), eq=False)
@@ -97,20 +93,15 @@ class TestsFlextInfraPytestCollectionPolicy:
             assert pstats.Stats(str(profile)).get_stats_profile().func_profiles
             parent = cached_runner_project / ".reports" / "profiles" / "pytest.pstats"
             assert pstats.Stats(str(parent)).get_stats_profile().func_profiles
-            assert parent.with_suffix(".pstats.json").is_file()
+            assert not parent.with_suffix(".pstats.json").exists()
 
     @pytest.mark.slow
-    @pytest.mark.parametrize(
-        ("strict", "homonym"), [(False, False), (True, False), (False, True)]
-    )
-    def test_serial_collection_warning_policy_preserves_identity_and_strict(
-        self, cached_runner_project: Path, *, strict: bool, homonym: bool
+    @pytest.mark.parametrize("homonym", [False, True])
+    def test_serial_collection_warning_blocks_and_preserves_identity(
+        self, cached_runner_project: Path, *, homonym: bool
     ) -> None:
-        """Serial collection applies the same runtime policy as xdist execution."""
+        """Serial collection blocks on every warning, MRO violations included."""
         runner = runner_for(cached_runner_project)
-        if strict:
-            with (cached_runner_project / "pyproject.toml").open("a") as stream:
-                stream.write('\naddopts = ["--flext-enforce-strict"]\n')
         category = c.FlextSmellViolation.__name__ if homonym else "ConsumerNotice"
         declaration = (
             f"class {category}(UserWarning):\n    pass\n"
@@ -131,45 +122,21 @@ class TestsFlextInfraPytestCollectionPolicy:
             f"        warnings.warn('serial policy evidence', {category})\n",
             encoding="utf-8",
         )
-        blocking = strict or homonym
-
-        if blocking:
-            with pytest.raises(
-                RuntimeError, match="collection contains blocking findings"
-            ):
-                runner.execute()
-        else:
-            tm.that(tm.ok(runner.execute()), eq=0)
+        with pytest.raises(RuntimeError, match="collection contains blocking findings"):
+            runner.execute()
 
         (receipt,) = (cached_runner_project / runner.reports).glob(
             "*/testmon-selection.events.diagnostics.json"
         )
         diagnostics = m.Infra.PytestDiagnostics.model_validate_json(receipt.read_text())
         tm.that(diagnostics.warning_count, eq=1)
-        tm.that(diagnostics.blocking_warning_count, eq=int(blocking))
-        tm.that(diagnostics.suspended_warning_count, eq=int(not blocking))
+        tm.that(diagnostics.warning_lines[0], contains="serial policy evidence")
         events = receipt.with_name("testmon-selection.events.jsonl")
         identity = m.Infra.PytestWarningEvent.model_validate_json(
             events.with_suffix(c.Infra.PYTEST_WARNING_EVENTS_SUFFIX).read_text().strip()
         )
-        tm.that(identity.enforcement_strict, eq=strict)
+        tm.that(identity.category, eq=category)
         tm.that(identity.category_module, eq="runner_sample.notices")
-        if not blocking:
-            # A cold cache has no stored selection to verify, so the serial
-            # selection pass is the only collection phase of this run.
-            summary_lines = summary(cached_runner_project / runner.reports).splitlines()
-            for count in (
-                "warnings=1",
-                "suspended_warnings=1",
-                "selection_warnings=1",
-                "suite_warnings=0",
-            ):
-                tm.that(count in summary_lines, eq=True)
-            tm.that(
-                any(line.startswith("inventory_") for line in summary_lines), eq=False
-            )
-            evidence = (receipt.parent / "warnings.txt").read_text()
-            tm.that(evidence.count("serial policy evidence"), eq=1)
 
     @pytest.mark.slow
     def test_warm_inventory_captures_warnings_from_stable_modules(
@@ -202,7 +169,7 @@ class TestsFlextInfraPytestCollectionPolicy:
         diagnostics = m.Infra.PytestDiagnostics.model_validate_json(
             (context.parent / "testmon-inventory.events.diagnostics.json").read_text()
         )
-        tm.that(diagnostics.blocking_warning_count, eq=1)
+        tm.that(diagnostics.warning_count, eq=1)
         tm.that(diagnostics.warning_lines[0], contains="stable inventory finding")
         tm.that((context.parent / "suite-outcome.json").exists(), eq=False)
 

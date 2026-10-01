@@ -12,14 +12,12 @@ from .. import c, m, p, t, u
 from ._execution import FlextInfraCodegenExecutionBase
 from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
 from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles
-from ._mise_artifacts_publication import publish_file_plan
+from ._mise_artifacts_publication import FlextInfraMisePublication
 from ._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
 from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-_log = u.fetch_logger(__name__)
 
 
 class FlextInfraCodegenPipeline(
@@ -49,7 +47,7 @@ class FlextInfraCodegenPipeline(
                     c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run or not self.apply_changes
                 },
             ),
-            logger=_log,
+            logger=self.logger,
         )
         if pipeline_result.failure:
             return r[str].from_failure(pipeline_result)
@@ -150,5 +148,5 @@ __all__: list[str] = [
     "FlextInfraCodegenPipeline",
     "FlextInfraCodegenPipelineStagesMixin",
     "FlextInfraMiseArtifactsFiles",
-    "publish_file_plan",
+    "FlextInfraMisePublication",
 ]

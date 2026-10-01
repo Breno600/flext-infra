@@ -7,9 +7,7 @@ from typing import ClassVar
 
 from flext_infra import infra, m, p, t
 from flext_infra.codegen.protocol_models import FlextInfraCodegenProtocolModels
-from flext_infra.codemod.apply_renames import FlextInfraApplyRenames
 from flext_infra.codemod.ast_scan import FlextInfraCodemodAstScan
-from flext_infra.codemod.batch_apply import FlextInfraCodemodBatchApply
 from flext_infra.codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
 from flext_infra.refactor.accessor_migration import (
     FlextInfraAccessorMigrationOrchestrator,
@@ -30,6 +28,27 @@ from flext_infra.transformers.dataclass_modelizer import (
 from flext_infra.transformers.pydantic_modernizer import (
     FlextInfraRefactorPydanticModernizer,
 )
+
+
+class FlextInfraCliModProgress:
+    """Render mod progress at the CLI transport boundary."""
+
+    def emit(self, message: str) -> None:
+        """Show the current canonical mod phase."""
+        cli.display_text(message)
+
+    def emit_rename(self, report: m.Infra.ApplyRenamesReport) -> None:
+        """Show one completed CSV campaign."""
+        cli.display_text(FlextInfraCliModProgress.render_rename(report))
+
+    @staticmethod
+    def render_rename(report: m.Infra.ApplyRenamesReport) -> str:
+        """Render native published paths and pending edit spans."""
+        return (
+            f"{report.label}: {report.files_changed} published file(s), "
+            f"{report.occurrences} pending source edit(s), "
+            f"{report.files_scanned} scanned file(s)"
+        )
 
 
 class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
@@ -54,7 +73,7 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
             name="apply-renames",
             help_text="Check or apply an old,new CSV rename list",
             model_cls=m.Infra.ApplyRenamesInput,
-            handler=FlextInfraApplyRenames.execute_command,
+            handler=execute_apply_renames,
         ),
         m.Cli.ResultCommandRoute(
             name="namespace-enforce",
@@ -136,8 +155,26 @@ class FlextInfraRefactorRoutes(FlextInfraCliRouteBase):
                 "Apply ast-grep rules, prove fixed point, then require Ruff, "
                 "Pyrefly, and real LSP diagnostics"
             ),
-            model_cls=FlextInfraCodemodBatchApply,
-            handler=FlextInfraCodemodBatchApply.execute_command,
+            model_cls=m.Infra.ModCommand,
+            handler=execute_mod,
+        ),
+        m.Cli.ResultCommandRoute(
+            name="mod-text",
+            help_text="Replay only authenticated declarative text rules",
+            model_cls=m.Infra.ModCommand,
+            handler=execute_mod_text,
+        ),
+        m.Cli.ResultCommandRoute(
+            name="mod-text",
+            help_text="Replay only authenticated declarative text rules",
+            model_cls=m.Infra.ModTextCommand,
+            handler=execute_mod_text,
+        ),
+        m.Cli.ResultCommandRoute(
+            name="mod-text-candidate",
+            help_text="Replay text rules in the declared candidate worktree",
+            model_cls=m.Infra.ModTextCommand,
+            handler=execute_mod_text_candidate,
         ),
         m.Cli.ResultCommandRoute(
             name="mod-text",

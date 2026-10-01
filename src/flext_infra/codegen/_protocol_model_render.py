@@ -10,13 +10,9 @@ from collections.abc import MutableMapping
 from inspect import getattr_static
 from types import FunctionType
 
-from flext_infra import m, t
+from flext_infra import c, m, t
 
 from ._protocol_model_annotations import FlextInfraCodegenProtocolModelAnnotations
-
-Target = FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
-LineBudget = 170
-MinimalBodyLines = 3
 
 
 class FlextInfraCodegenProtocolModelRender:
@@ -26,7 +22,9 @@ class FlextInfraCodegenProtocolModelRender:
 
     @classmethod
     def render_member_modules(
-        cls, models: t.SequenceOf[type[m.BaseModel]], target: Target
+        cls,
+        models: t.SequenceOf[type[m.BaseModel]],
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> t.MappingKV[str, str]:
         """Render every generated module (path -> content) for a member."""
         grouped: MutableMapping[str, list[type[m.BaseModel]]] = {}
@@ -48,14 +46,20 @@ class FlextInfraCodegenProtocolModelRender:
 
     @classmethod
     def _chunks(
-        cls, models: t.SequenceOf[type[m.BaseModel]], target: Target
+        cls,
+        models: t.SequenceOf[type[m.BaseModel]],
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> t.SequenceOf[str]:
         """Split one owner's protocol bodies under the line budget."""
         chunks: list[str] = []
         current = ""
         for model in models:
             body = cls._render_protocol(model, target)
-            if current and current.count("\n") + body.count("\n") > LineBudget:
+            if (
+                current
+                and current.count("\n") + body.count("\n")
+                > c.Infra.PROTOCOL_MODEL_LINE_BUDGET
+            ):
                 chunks.append(current)
                 current = ""
             current += body
@@ -64,7 +68,11 @@ class FlextInfraCodegenProtocolModelRender:
         return chunks
 
     @classmethod
-    def _render_protocol(cls, model: type[m.BaseModel], target: Target) -> str:
+    def _render_protocol(
+        cls,
+        model: type[m.BaseModel],
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
+    ) -> str:
         """Render one runtime-checkable structural protocol for ``model``."""
         lines = [
             "@runtime_checkable",
@@ -92,13 +100,16 @@ class FlextInfraCodegenProtocolModelRender:
             ))
         while lines and not lines[-1]:
             lines.pop()
-        if len(lines) <= MinimalBodyLines:
+        if len(lines) <= c.Infra.PROTOCOL_MODEL_MINIMAL_BODY_LINES:
             lines.append("    pass")
         return "\n".join(lines) + "\n\n"
 
     @classmethod
     def _render_annotation(
-        cls, name: str, annotation: t.TypeHintSpecifier | None, target: Target
+        cls,
+        name: str,
+        annotation: t.TypeHintSpecifier | None,
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
     ) -> str:
         """Render one pydantic field annotation through the facade mapper."""
         if annotation is None:
@@ -118,7 +129,12 @@ class FlextInfraCodegenProtocolModelRender:
         return sorted(names)
 
     @classmethod
-    def _render_owned(cls, name: str, model: type[m.BaseModel], target: Target) -> str:
+    def _render_owned(
+        cls,
+        name: str,
+        model: type[m.BaseModel],
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
+    ) -> str:
         """Render one owned property return annotation, failing when missing."""
         descriptor = getattr_static(model, name)
         getter = descriptor.fget if isinstance(descriptor, property) else descriptor
@@ -135,7 +151,11 @@ class FlextInfraCodegenProtocolModelRender:
         return cls.Annotations.render(annotation, target)
 
     @classmethod
-    def _render_aggregate(cls, part_names: t.SequenceOf[str], target: Target) -> str:
+    def _render_aggregate(
+        cls,
+        part_names: t.SequenceOf[str],
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
+    ) -> str:
         """Render the aggregate owner composing every generated part."""
         container = f"{target.facade_container}ProtocolsGeneratedModels"
         lines = [cls._module_header(target), f"class {container}:", ""]
@@ -152,7 +172,12 @@ class FlextInfraCodegenProtocolModelRender:
         return f"{camel}ProtocolsGeneratedPart{index:02d}"
 
     @classmethod
-    def _module_path(cls, target: Target, owner: str, index: int) -> str:
+    def _module_path(
+        cls,
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
+        owner: str,
+        index: int,
+    ) -> str:
         """Return the generated part module path for an owner chunk."""
         return (
             f"src/{target.package_name}/_protocols/"
@@ -160,7 +185,9 @@ class FlextInfraCodegenProtocolModelRender:
         )
 
     @classmethod
-    def _aggregate_path(cls, target: Target) -> str:
+    def _aggregate_path(
+        cls, target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget
+    ) -> str:
         """Return the generated aggregate module path."""
         return f"src/{target.package_name}/_protocols/generated_models.py"
 
@@ -183,7 +210,9 @@ class FlextInfraCodegenProtocolModelRender:
         )
 
     @staticmethod
-    def _module_header(target: Target) -> str:
+    def _module_header(
+        target: FlextInfraCodegenProtocolModelAnnotations.ProtocolModelTarget,
+    ) -> str:
         """Return the generated-file header with regeneration instruction."""
         return (
             "# AUTO-GENERATED FILE — Regenerate with: make gen\n"
