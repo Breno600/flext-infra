@@ -56,10 +56,10 @@ class TestsFlextInfraLazyInitWorkspaceElection:
         before = child_init.read_bytes()
         planned = tm.ok(u.Tests.plan_lazy_init(workspace)).files
         child_plan = next(item for item in planned if item.path == child_init)
-        tm.that(
-            child_plan.desired_content,
-            has=b"from flext_ws_middle import r",
-        )
+        desired = child_plan.desired_content
+        if desired is None:
+            pytest.fail("workspace child initializer has no planned content")
+        tm.that(desired.decode(), has="from flext_ws_middle import r")
         with pytest.raises(
             ValueError,
             match="declared facade parent 'flext_ws_middle' resolves nowhere",
