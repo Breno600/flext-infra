@@ -110,16 +110,6 @@ class FlextInfraConstantsSharedInfra:
     PYPROJECT_FILENAME: ClassVar[str] = "pyproject.toml"
     MAKEFILE_FILENAME: ClassVar[str] = "Makefile"
     GITMODULES: ClassVar[str] = ".gitmodules"
-    # Why: conform .gitmodules merge classifies sections via these patterns;
-    # they belong beside GITMODULES on c.Infra, not as leaf re.compile copies.
-    GITMODULE_SECTION_RE: ClassVar[t.RegexPattern] = re.compile(
-        r'(?m)^\[submodule "[^"]+"\]\s*$'
-    )
-    "``.gitmodules`` submodule section header at line start."
-    GITMODULE_PATH_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"(?m)^[ \t]*path[ \t]*=[ \t]*(.+?)[ \t]*$"
-    )
-    "``.gitmodules`` path assignment value inside a submodule section."
     GITMODULE_MANAGED_KEY: ClassVar[str] = "flext-managed"
     "``.gitmodules`` key whose explicit non-``true`` value opts a member out of governance."
     FOLLOW_SUPERPROJECT_BRANCH: ClassVar[str] = "."

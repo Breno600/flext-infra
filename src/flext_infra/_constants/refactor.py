@@ -248,8 +248,6 @@ class FlextInfraConstantsRefactor:
     "Canonical utilities package directory name."
     CONSTANTS_CLASS_SUFFIX: ClassVar[str] = "Constants"
     "Class-name suffix used to identify constants facades."
-    CONSTANT_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"^_*[A-Z][A-Z0-9_]*$")
-    "Compiled naming pattern for module-level constant candidates."
     FAMILY_SUFFIXES: ClassVar[t.StrMapping] = MappingProxyType({
         "c": "Constants",
         "t": "Types",
@@ -377,10 +375,6 @@ class FlextInfraConstantsRefactor:
     "Matches ``m = FlextFooModels`` alias assignments in facade files."
 
     # --- Detector regex constants ---
-    ASSIGN_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Z_]\w*)\s*[:=]", re.MULTILINE
-    )
-    "Matches top-level UPPER_CASE assignments for loose constant detection."
     LOGGER_ASSIGN_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^([A-Za-z_]\w*)\s*[:=]\s*(?:(?:\w+\.)*)?"
         r"(?:fetch_logger|create_module_logger|get_logger|logging\.getLogger)\s*\(",
@@ -399,10 +393,6 @@ class FlextInfraConstantsRefactor:
         re.MULTILINE,
     )
     "Matches TypeVar/ParamSpec/TypeVarTuple/NewType assignments."
-    COMPAT_ALIAS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^([A-Z]\w+)\s*=\s*([A-Z]\w+)\s*$", re.MULTILINE
-    )
-    "Matches compatibility alias assignments (CapitalName = CapitalName)."
     COMPAT_SKIP_NAMES: ClassVar[frozenset[str]] = frozenset({
         "__all__",
         "__version__",
@@ -421,10 +411,6 @@ class FlextInfraConstantsRefactor:
     ENFORCEMENT_LIBRARY_OWNERS: ClassVar[t.StrMapping] = c.ENFORCEMENT_LIBRARY_OWNERS
     "External library → project that owns its abstraction facade (SSOT: flext-core)."
     "Matches 'from __future__ import annotations' import statement."
-    ONLY_DOCSTRING_RE: ClassVar[t.RegexPattern] = re.compile(
-        r'^("""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\')\s*$'
-    )
-    "Matches files that contain only a module docstring."
     MIN_METHODS_FOR_REORDER: ClassVar[int] = 2
     "Minimum method count before class method reordering is attempted."
 
@@ -474,30 +460,6 @@ class FlextInfraConstantsRefactor:
     # --- Symbol/identifier patterns ---
     IDENTIFIER_PATTERN: ClassVar[t.RegexPattern] = re.compile(r"\b[A-Za-z_]\w*\b")
     "Regex: Python identifier word boundary match."
-
-    # --- Import bypass pattern (for transformer matching) ---
-    IMPORT_BYPASS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^try:\n"
-        r"(    from .+\n)"
-        r"except ImportError:\n"
-        r"    from .+\n",
-        re.MULTILINE,
-    )
-    "Regex: try/except ImportError import bypass block (strict form)."
-
-    # --- Deprecated class pattern ---
-    CLASS_BLOCK_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(class\s+(\w+)\b[^\n]*:\n(?:(?:[ \t]+[^\n]*|[ \t]*)\n)*)", re.MULTILINE
-    )
-    "Regex: full class block including body lines."
-    DEPRECATION_WARN_RE: ClassVar[t.RegexPattern] = re.compile(r"\.warn\s*\(")
-    "Regex: deprecation warning call site (.warn())."
-
-    # --- Lazy import fixer ---
-    DEF_ASYNC_CLASS_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?:def |async def |class )", re.MULTILINE
-    )
-    "Regex: top-level def/async def/class keyword (for lazy import detection)."
 
 
 __all__: list[str] = ["FlextInfraConstantsRefactor"]
