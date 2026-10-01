@@ -42,7 +42,7 @@ if TYPE_CHECKING:
     from ._config import FlextInfraConfig, config
     from ._settings import FlextInfraSettings, settings
     from .api import FlextInfra, infra
-    from .base import FlextInfraServiceBase, s
+    from .base import FlextInfraServiceBase, FlextInfraServiceBase as s
     from .base_selection import FlextInfraProjectSelectionServiceBase
     from .check.gate_registry import FlextInfraGateRegistry
     from .check.workspace_check import FlextInfraWorkspaceChecker
@@ -67,7 +67,7 @@ if TYPE_CHECKING:
         FlextInfraCodegenPipeline,
         FlextInfraCodegenPipelineStagesMixin,
         FlextInfraMiseArtifactsFiles,
-        publish_file_plan,
+        FlextInfraMisePublication,
     )
     from .codegen.project_new import FlextInfraCodegenProjectNew
     from .codegen.protocol_models import FlextInfraCodegenProtocolModels
@@ -157,18 +157,9 @@ if TYPE_CHECKING:
     from .gates.loc_cap import FlextInfraLocCapGate
     from .gates.markdown import FlextInfraMarkdownGate
     from .gates.markdown_code import FlextInfraMarkdownCodeGate
-    from .gates.markdown_code_sources import (
-        is_syntax_broken,
-        source_name,
-        write_docstring_sources,
-        write_fenced_block_sources,
-    )
+    from .gates.markdown_code_sources import FlextInfraMarkdownCodeSources
     from .gates.markdown_format import FlextInfraMarkdownFormatGate
-    from .gates.markdown_support import (
-        FlextInfraMarkdownGateBase,
-        collect_markdown_files,
-        read_ignore_patterns,
-    )
+    from .gates.markdown_support import FlextInfraMarkdownGateBase
     from .gates.mypy import FlextInfraMypyGate
     from .gates.namespace import FlextInfraNamespaceGate
     from .gates.pyrefly import FlextInfraPyreflyGate
@@ -374,10 +365,12 @@ __all__: tuple[str, ...] = (
     "FlextInfraManualProtocolDetector",
     "FlextInfraManualTypingAliasDetector",
     "FlextInfraMarkdownCodeGate",
+    "FlextInfraMarkdownCodeSources",
     "FlextInfraMarkdownFormatGate",
     "FlextInfraMarkdownGate",
     "FlextInfraMarkdownGateBase",
     "FlextInfraMiseArtifactsFiles",
+    "FlextInfraMisePublication",
     "FlextInfraMiseWorkspacePlanner",
     "FlextInfraModGateEngine",
     "FlextInfraModReplacements",
@@ -478,7 +471,6 @@ __all__: tuple[str, ...] = (
     "check",
     "codegen",
     "codemod",
-    "collect_markdown_files",
     "config",
     "d",
     "deps",
@@ -490,27 +482,21 @@ __all__: tuple[str, ...] = (
     "gates",
     "h",
     "infra",
-    "is_syntax_broken",
     "m",
     "main",
     "maintenance",
     "p",
-    "publish_file_plan",
     "r",
-    "read_ignore_patterns",
     "refactor",
     "release",
     "s",
     "services",
     "settings",
-    "source_name",
     "t",
     "transformers",
     "u",
     "validate",
     "workspace",
-    "write_docstring_sources",
-    "write_fenced_block_sources",
     "x",
 )
 
@@ -547,7 +533,7 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraCodegenPipeline",
                 "FlextInfraCodegenPipelineStagesMixin",
                 "FlextInfraMiseArtifactsFiles",
-                "publish_file_plan",
+                "FlextInfraMisePublication",
             ),
             ".codegen.project_new": ("FlextInfraCodegenProjectNew",),
             ".codegen.protocol_models": ("FlextInfraCodegenProtocolModels",),
@@ -651,18 +637,9 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates.loc_cap": ("FlextInfraLocCapGate",),
             ".gates.markdown": ("FlextInfraMarkdownGate",),
             ".gates.markdown_code": ("FlextInfraMarkdownCodeGate",),
-            ".gates.markdown_code_sources": (
-                "is_syntax_broken",
-                "source_name",
-                "write_docstring_sources",
-                "write_fenced_block_sources",
-            ),
+            ".gates.markdown_code_sources": ("FlextInfraMarkdownCodeSources",),
             ".gates.markdown_format": ("FlextInfraMarkdownFormatGate",),
-            ".gates.markdown_support": (
-                "FlextInfraMarkdownGateBase",
-                "collect_markdown_files",
-                "read_ignore_patterns",
-            ),
+            ".gates.markdown_support": ("FlextInfraMarkdownGateBase",),
             ".gates.mypy": ("FlextInfraMypyGate",),
             ".gates.namespace": ("FlextInfraNamespaceGate",),
             ".gates.pyrefly": ("FlextInfraPyreflyGate",),

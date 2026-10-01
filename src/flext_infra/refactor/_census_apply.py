@@ -461,11 +461,11 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                 continue
             if node.lineno != line:
                 continue
-            parent = _find_parent(tree, node)
+            parent = FlextInfraRefactorCensusApplyMixin._find_parent(tree, node)
             while parent is not None:
                 if isinstance(parent, ast.FunctionDef | ast.AsyncFunctionDef):
                     return node
-                parent = _find_parent(tree, parent)
+                parent = FlextInfraRefactorCensusApplyMixin._find_parent(tree, parent)
         return None
 
     @staticmethod
@@ -482,14 +482,14 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
         """Prove initializer planning before conform publishes the transaction."""
         FlextInfraCodegenLazyInit(repository_root=self.root).plan_files().unwrap()
 
-
-def _find_parent(tree: ast.AST, target: ast.AST) -> ast.AST | None:
-    """Return the parent AST node of ``target`` within ``tree``."""
-    for parent in ast.walk(tree):
-        for child in ast.iter_child_nodes(parent):
-            if child is target:
-                return parent
-    return None
+    @staticmethod
+    def _find_parent(tree: ast.AST, target: ast.AST) -> ast.AST | None:
+        """Return the parent AST node of ``target`` within ``tree``."""
+        for parent in ast.walk(tree):
+            for child in ast.iter_child_nodes(parent):
+                if child is target:
+                    return parent
+        return None
 
 
 __all__: list[str] = ["FlextInfraRefactorCensusApplyMixin"]

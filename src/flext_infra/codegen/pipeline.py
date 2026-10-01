@@ -12,7 +12,7 @@ from .. import c, m, p, t, u
 from ._execution import FlextInfraCodegenExecutionBase
 from ._lazy_init_generation import FlextInfraCodegenLazyInitGenerationMixin
 from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles
-from ._mise_artifacts_publication import publish_file_plan
+from ._mise_artifacts_publication import FlextInfraMisePublication
 from ._pipeline_stages import FlextInfraCodegenPipelineStagesMixin
 from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 
@@ -148,5 +148,5 @@ __all__: list[str] = [
     "FlextInfraCodegenPipeline",
     "FlextInfraCodegenPipelineStagesMixin",
     "FlextInfraMiseArtifactsFiles",
-    "publish_file_plan",
+    "FlextInfraMisePublication",
 ]

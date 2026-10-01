@@ -22,17 +22,17 @@ if TYPE_CHECKING:
     from flext_infra import p, t
 
 
-def _contract_boundary() -> type[p.Infra.WorkspaceEnvironmentContracts]:
-    """Return the contract owner typed at its published ``p.Infra`` boundary."""
-    return FlextInfraWorkspaceEnvironmentContracts
-
-
 class FlextInfraDirenvGate(FlextInfraGate):
     """Enforce direnv file contracts, then prove real activation."""
 
     gate_id: ClassVar[str] = "direnv"
     gate_name: ClassVar[str] = "DIRENV ENVIRONMENT CONTRACT"
     can_fix: ClassVar[bool] = False
+
+    @staticmethod
+    def _contract_boundary() -> type[p.Infra.WorkspaceEnvironmentContracts]:
+        """Return the contract owner typed at its published ``p.Infra`` boundary."""
+        return FlextInfraWorkspaceEnvironmentContracts
 
     @staticmethod
     def _contract_issue(
@@ -74,7 +74,7 @@ class FlextInfraDirenvGate(FlextInfraGate):
                 raw_output=issue.message,
                 started=started,
             )
-        violations = _contract_boundary().envrc_contract_violations(
+        violations = self._contract_boundary().envrc_contract_violations(
             content.value, root=project_dir
         )
         issues = tuple(
@@ -103,8 +103,10 @@ class FlextInfraDirenvGate(FlextInfraGate):
                         FlextInfraDirenvGate._contract_issue(
                             c.Infra.ENVRC_LOCAL_RELPATH, violation
                         )
-                        for violation in _contract_boundary().envrc_local_contract_violations(
-                            local_read.value
+                        for violation in (
+                            self._contract_boundary().envrc_local_contract_violations(
+                                local_read.value
+                            )
                         )
                     ),
                 )

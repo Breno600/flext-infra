@@ -19,23 +19,6 @@ from ..._constants import (
 from .contract import FlextInfraConfigModelsContract
 
 
-def _shared_mypy_cache_spec() -> FlextInfraConfigModelsMake.MypyCacheSpec:
-    """Build the declared default shared Mypy analysis cache policy.
-
-    Declared here (module scope) so the field default is one shared policy that
-    a member may override, instead of forcing every hand-owned ``codegen.yaml``
-    to repeat the same block just to satisfy a required field.
-    """
-    return FlextInfraConfigModelsMake.MypyCacheSpec()
-
-
-def _default_testmon_cache_policy() -> (
-    FlextInfraConfigModelsMake.TestmonCachePolicySpec
-):
-    """Build the declared default testmon cache policy (#1001 delta)."""
-    return FlextInfraConfigModelsMake.TestmonCachePolicySpec()
-
-
 class FlextInfraConfigModelsMake:
     """Make workflow, verb, CI, and cache specification models."""
 
@@ -345,135 +328,6 @@ class FlextInfraConfigModelsMake:
                 raise ValueError(msg)
             return self
 
-    class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Declarative Actions-cache policy for the shared testmon database.
-
-        Implements the preserved #1001 delta (bead flext-j0u23): two-phase
-        generations with per-mode caps, a per-repository byte budget with a
-        three-stage quota ladder, a save-ref allowlist (never save from PRs)
-        and a cache-key namespace.
-        """
-
-        mode: Annotated[
-            Literal["bootstrap", "stable"],
-            m.Field(description="Cache phase: bootstrap seeds, stable saves"),
-        ] = "stable"
-        save_enabled: Annotated[
-            bool, m.Field(description="Master switch for cache publishes")
-        ] = False
-        max_bootstrap_generations: Annotated[
-            int, m.Field(gt=0, description="Retention cap for bootstrap generations")
-        ] = 3
-        max_stable_generations: Annotated[
-            int, m.Field(gt=0, description="Retention cap for stable generations")
-        ] = 3
-        per_repo_budget_bytes: Annotated[
-            int, m.Field(gt=0, description="Per-repository byte budget")
-        ] = 52_428_800
-        warning_threshold_percent: Annotated[
-            int, m.Field(ge=0, le=100, description="Quota-ladder warning stage")
-        ] = 80
-        maintenance_threshold_percent: Annotated[
-            int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage")
-        ] = 90
-        block_threshold_percent: Annotated[
-            int, m.Field(ge=0, le=100, description="Quota-ladder block stage")
-        ] = 95
-        allowed_save_refs: Annotated[
-            tuple[t.NonEmptyStr, ...],
-            m.Field(description="Refs whose pushes may publish cache generations"),
-        ] = ("main", "0.12.0-dev")
-        key_prefix: Annotated[
-            t.NonEmptyStr, m.Field(description="Actions cache key namespace")
-        ] = "flext-testmon"
-
-        @u.model_validator(mode="after")
-        def require_ascending_quota_ladder(self) -> Self:
-            """Keep the quota ladder strictly ascending within the percent scale."""
-            full_scale = 100
-            if not (
-                self.warning_threshold_percent
-                < self.maintenance_threshold_percent
-                < self.block_threshold_percent
-                <= full_scale
-            ):
-                msg = "testmon cache quota ladder must ascend warning < maintenance < block <= 100"
-                raise ValueError(msg)
-            return self
-
-    class MypyCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
-        """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
-
-        cache_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
-                description="Mypy's cache-directory environment variable",
-            ),
-        ]
-        data_home_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
-                description="XDG persistent cache-home variable",
-            ),
-        ]
-        user_home_environment_variable: Annotated[
-            FlextInfraConstantsMake.MypyCacheEnvironment,
-            m.Field(
-                default=FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
-                description="User home variable for the XDG default",
-            ),
-        ]
-        home_cache_directory: Annotated[
-            Path,
-            m.Field(
-                default=Path(".cache"),
-                description="Standard cache directory below the user home",
-            ),
-        ]
-        external_storage_directory: Annotated[
-            Path,
-            m.Field(
-                default=Path("flext/infra/mypy"),
-                description="FLEXT-owned directory below the cache home",
-            ),
-        ]
-
-        @u.model_validator(mode="after")
-        def require_external_cache_contract(self) -> Self:
-            """Keep the official cache variable and the external path policy exact."""
-            for name, actual, expected in (
-                (
-                    "cache_environment_variable",
-                    self.cache_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
-                ),
-                (
-                    "data_home_environment_variable",
-                    self.data_home_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
-                ),
-                (
-                    "user_home_environment_variable",
-                    self.user_home_environment_variable,
-                    FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
-                ),
-            ):
-                if actual != expected:
-                    msg = f"mypy cache {name} must be {expected.value}"
-                    raise ValueError(msg)
-            for name, path in (
-                ("home_cache_directory", self.home_cache_directory),
-                ("external_storage_directory", self.external_storage_directory),
-            ):
-                if path.is_absolute() or any(
-                    part in {"", ".", ".."} for part in path.parts
-                ):
-                    msg = f"mypy cache {name} must be normalized and relative"
-                    raise ValueError(msg)
-            return self
-
     class MakeWorkInProgressSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Predicate the generated CI merge guard applies to pull request heads.
 
@@ -554,6 +408,136 @@ class FlextInfraConfigModelsMake:
     class MakeSpec(FlextInfraConfigModelsContract.ConfigContract):
         """Complete generated Makefile public and extension contract."""
 
+        class TestmonCachePolicySpec(FlextInfraConfigModelsContract.ConfigContract):
+            """Declarative Actions-cache policy for the shared testmon database.
+
+            Implements the preserved #1001 delta (bead flext-j0u23): two-phase
+            generations with per-mode caps, a per-repository byte budget with a
+            three-stage quota ladder, a save-ref allowlist (never save from PRs)
+            and a cache-key namespace.
+            """
+
+            mode: Annotated[
+                Literal["bootstrap", "stable"],
+                m.Field(description="Cache phase: bootstrap seeds, stable saves"),
+            ] = "stable"
+            save_enabled: Annotated[
+                bool, m.Field(description="Master switch for cache publishes")
+            ] = False
+            max_bootstrap_generations: Annotated[
+                int,
+                m.Field(gt=0, description="Retention cap for bootstrap generations"),
+            ] = 3
+            max_stable_generations: Annotated[
+                int, m.Field(gt=0, description="Retention cap for stable generations")
+            ] = 3
+            per_repo_budget_bytes: Annotated[
+                int, m.Field(gt=0, description="Per-repository byte budget")
+            ] = 52_428_800
+            warning_threshold_percent: Annotated[
+                int, m.Field(ge=0, le=100, description="Quota-ladder warning stage")
+            ] = 80
+            maintenance_threshold_percent: Annotated[
+                int, m.Field(ge=0, le=100, description="Quota-ladder maintenance stage")
+            ] = 90
+            block_threshold_percent: Annotated[
+                int, m.Field(ge=0, le=100, description="Quota-ladder block stage")
+            ] = 95
+            allowed_save_refs: Annotated[
+                tuple[t.NonEmptyStr, ...],
+                m.Field(description="Refs whose pushes may publish cache generations"),
+            ] = ("main", "0.12.0-dev")
+            key_prefix: Annotated[
+                t.NonEmptyStr, m.Field(description="Actions cache key namespace")
+            ] = "flext-testmon"
+
+            @u.model_validator(mode="after")
+            def require_ascending_quota_ladder(self) -> Self:
+                """Keep the quota ladder strictly ascending within the percent scale."""
+                full_scale = 100
+                if not (
+                    self.warning_threshold_percent
+                    < self.maintenance_threshold_percent
+                    < self.block_threshold_percent
+                    <= full_scale
+                ):
+                    msg = "testmon cache quota ladder must ascend warning < maintenance < block <= 100"
+                    raise ValueError(msg)
+                return self
+
+        class MypyCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
+            """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
+
+            cache_environment_variable: Annotated[
+                FlextInfraConstantsMake.MypyCacheEnvironment,
+                m.Field(
+                    default=FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                    description="Mypy's cache-directory environment variable",
+                ),
+            ]
+            data_home_environment_variable: Annotated[
+                FlextInfraConstantsMake.MypyCacheEnvironment,
+                m.Field(
+                    default=FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                    description="XDG persistent cache-home variable",
+                ),
+            ]
+            user_home_environment_variable: Annotated[
+                FlextInfraConstantsMake.MypyCacheEnvironment,
+                m.Field(
+                    default=FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                    description="User home variable for the XDG default",
+                ),
+            ]
+            home_cache_directory: Annotated[
+                Path,
+                m.Field(
+                    default=Path(".cache"),
+                    description="Standard cache directory below the user home",
+                ),
+            ]
+            external_storage_directory: Annotated[
+                Path,
+                m.Field(
+                    default=Path("flext/infra/mypy"),
+                    description="FLEXT-owned directory below the cache home",
+                ),
+            ]
+
+            @u.model_validator(mode="after")
+            def require_external_cache_contract(self) -> Self:
+                """Keep the official cache variable and the external path policy exact."""
+                for name, actual, expected in (
+                    (
+                        "cache_environment_variable",
+                        self.cache_environment_variable,
+                        FlextInfraConstantsMake.MypyCacheEnvironment.CACHE_DIR,
+                    ),
+                    (
+                        "data_home_environment_variable",
+                        self.data_home_environment_variable,
+                        FlextInfraConstantsMake.MypyCacheEnvironment.DATA_HOME,
+                    ),
+                    (
+                        "user_home_environment_variable",
+                        self.user_home_environment_variable,
+                        FlextInfraConstantsMake.MypyCacheEnvironment.USER_HOME,
+                    ),
+                ):
+                    if actual != expected:
+                        msg = f"mypy cache {name} must be {expected.value}"
+                        raise ValueError(msg)
+                for name, path in (
+                    ("home_cache_directory", self.home_cache_directory),
+                    ("external_storage_directory", self.external_storage_directory),
+                ):
+                    if path.is_absolute() or any(
+                        part in {"", ".", ".."} for part in path.parts
+                    ):
+                        msg = f"mypy cache {name} must be normalized and relative"
+                        raise ValueError(msg)
+                return self
+
         runtime_environment_directory: Annotated[
             t.NonEmptyStr,
             m.Field(
@@ -616,17 +600,19 @@ class FlextInfraConfigModelsMake:
             FlextInfraConfigModelsMake.TestmonCacheSpec,
             m.Field(description="Adaptive testmon Actions cache policy"),
         ]
+        # A member may override either declared policy; the defaults spare
+        # every hand-owned codegen.yaml from repeating the block.
         testmon_cache_policy: Annotated[
-            FlextInfraConfigModelsMake.TestmonCachePolicySpec,
+            FlextInfraConfigModelsMake.MakeSpec.TestmonCachePolicySpec,
             m.Field(
-                default_factory=_default_testmon_cache_policy,
+                default_factory=TestmonCachePolicySpec,
                 description="Declarative save/budget/quota policy for the shared testmon cache (#1001 delta)",
             ),
         ]
         mypy_cache: Annotated[
-            FlextInfraConfigModelsMake.MypyCacheSpec,
+            FlextInfraConfigModelsMake.MakeSpec.MypyCacheSpec,
             m.Field(
-                default_factory=_shared_mypy_cache_spec,
+                default_factory=MypyCacheSpec,
                 description="Project-keyed shared Mypy analysis cache policy",
             ),
         ]
