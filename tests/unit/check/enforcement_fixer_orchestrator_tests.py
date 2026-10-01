@@ -281,19 +281,6 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         )
         assert u.Cli.process_succeeded(before.outcome), before.stderr
 
-        # Baseline run of the documented surface: the probe imports the module
-        # and exercises only the defect-free call, so the debugger trap inside
-        # ``total`` is never armed. Byte-for-byte stdout/stderr equality below
-        # proves the fix run rewrote nothing.
-        probe = (
-            "import documented\n"
-            "print(documented.HINT)\n"
-            "print(documented.first(['a', 'b']))\n"
-        )
-        before = tm.ok(
-            u.Cli.run_raw((sys.executable, "-c", probe), cwd=source_file.parent.parent)
-        )
-
         result = FlextInfraEnforcementFixerOrchestrator(
             repository_root=project_dir, selected_projects=("demo",), apply=True
         ).execute()

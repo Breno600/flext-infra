@@ -93,15 +93,15 @@ class FlextInfraCandidateBootstrapService:
             if planned.failure:
                 return r[m.Infra.CodegenPhaseAnalysis].from_failure(planned)
             destinations = self._planner.surface_contract(target.what).destinations
-            if destinations is None or len(destinations) != 1:
+            if not destinations:
                 return r[m.Infra.CodegenPhaseAnalysis].fail(
-                    f"candidate bootstrap requires one destination for {target.what}"
+                    f"candidate bootstrap has no destinations for {target.what}"
                 )
-            destination = Path(next(iter(destinations)))
-            expected = root / destination
-            if len(planned.value.files) != 1 or planned.value.files[0].path != expected:
+            expected = {root / destination for destination in destinations}
+            actual = tuple(file.path for file in planned.value.files)
+            if len(actual) != len(expected) or set(actual) != expected:
                 return r[m.Infra.CodegenPhaseAnalysis].fail(
-                    f"candidate bootstrap must plan exactly one {destination}: {root}"
+                    f"candidate bootstrap must plan exactly {sorted(destinations)}: {root}"
                 )
             for file in planned.value.files:
                 files.append(file)

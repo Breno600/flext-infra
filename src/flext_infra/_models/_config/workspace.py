@@ -34,6 +34,7 @@ class FlextInfraConfigModelsWorkspace:
                 raise ValueError(msg)
             if self.what not in {
                 FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE,
+                FlextInfraConstantsCodegenProject.CodegenConformSurface.MISE_TRIPLE,
                 FlextInfraConstantsCodegenProject.CodegenConformSurface.DOCS_CONFIG,
                 FlextInfraConstantsCodegenProject.CodegenConformSurface.PYPROJECT,
             }:
@@ -166,10 +167,6 @@ class FlextInfraConfigModelsWorkspace:
                 description="Repository-owned documentation audit declarations",
             ),
         ]
-        test_inputs: Annotated[
-            FlextInfraConfigModelsWorkspace.TestInputsSpec | None,
-            m.Field(description="Declared non-Python test behavior inputs"),
-        ] = None
         namespace_scan_dirs: Annotated[
             t.StrSequence,
             m.Field(

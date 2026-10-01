@@ -181,7 +181,7 @@ class FlextInfraPytestRunnerExecution(
         pytest_settings = config.Infra.tooling.tools.pytest
         return m.Cli.ProcessDeadline(
             expires_at_monotonic=self.started_at_monotonic
-            + pytest_settings.run_timeout_seconds,
+            + self.run_timeout_seconds(pytest_settings),
             termination_grace_seconds=pytest_settings.termination_grace_seconds,
         )
 

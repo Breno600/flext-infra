@@ -86,8 +86,8 @@ class TestsFlextInfraBanditAndMarkdownGates:
         [
             (HEADING_SKIP, None, True, ["MD001"]),
             ("# Test\n", '{"broken": [', True, ["TOOL_ERROR"]),
-            # Residual MD013 findings remain blocking when the native formatter
-            # cannot repair the configured paragraph width.
+            # A residual MD013 reflow finding remains blocking when the
+            # formatter cannot normalize the paragraph.
             (
                 REFLOW_HINT,
                 (
