@@ -16,7 +16,7 @@ import sys
 import time
 from types import FrameType
 
-from flext_infra import c, m, t, u
+from flext_infra import c, m, t
 
 
 class FlextInfraMypyDarwinSupervisor:
@@ -46,6 +46,8 @@ class FlextInfraMypyDarwinSupervisor:
 
     @staticmethod
     def _usage(pid: int) -> t.Pair[int, bool]:
+        from flext_infra import u
+
         snapshot = u.Cli.run(
             ("/bin/ps", "-axo", "pgid=,rss=,stat="),
             timeout=c.Infra.MYPY_SUPERVISOR_PS_TIMEOUT,
@@ -68,6 +70,8 @@ class FlextInfraMypyDarwinSupervisor:
         kill_after: int,
     ) -> int:
         """Run the owned checker with inherited streams and bounded group lifetime."""
+        from flext_infra import u
+
         if min(memory_bytes, timeout, kill_after) <= 0:
             msg = "positive memory, timeout and kill-after are required"
             raise ValueError(msg)

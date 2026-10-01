@@ -28,9 +28,12 @@ class FlextInfraUtilitiesDocsAuditDetectorsMixin:
 
     @staticmethod
     def docs_text_token_issues(
-        scope: m.Infra.DocScope, *, tokens: t.StrSequence, issue_type: str
+        scope: m.Infra.DocScope,
+        *,
+        tokens: t.StrSequence,
+        issue_type: str,
     ) -> t.SequenceOf[m.Infra.AuditIssue]:
-        """Collect simple token-presence issues from markdown files."""
+        """Collect token-presence issues in the complete Markdown scope."""
         issues: t.MutableSequenceOf[m.Infra.AuditIssue] = []
         if not tokens:
             return issues

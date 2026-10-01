@@ -22,6 +22,7 @@ from pathlib import Path
 from flext_core import r
 
 from .. import c, m, p, t, u
+from .._config import FlextInfraConfig
 from ..codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransaction
 
 
@@ -31,12 +32,52 @@ class FlextInfraModTextGateEngine:
     @classmethod
     def load_rules(cls, root: Path) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
         """Load package and workspace text rules into one validated tuple."""
-        snapshot = u.Cli.atomic_read_binary_file_state(
-            root / c.Infra.CODEMOD_TEXT_RULES_RELPATH, required=False
+        snapshots = cls._catalogue_states(root.absolute())
+        if snapshots.failure:
+            return r[t.VariadicTuple[m.Infra.ModTextRule]].from_failure(snapshots)
+        return cls._rules_from_states(snapshots.value)
+
+    @staticmethod
+    def _catalogue_states(
+        root: Path,
+    ) -> p.Result[t.VariadicTuple[m.Cli.AtomicFileState]]:
+        """Capture the packaged rules and the consumer overlay exactly once."""
+        provider = (
+            FlextInfraConfig.ssot_config_dir().parent
+            / c.Infra.CODEMOD_TEXT_RULES_RELPATH
         )
-        if snapshot.failure:
-            return r[t.VariadicTuple[m.Infra.ModTextRule]].from_failure(snapshot)
-        return cls._rules_from_state(snapshot.value)
+        consumer = root / c.Infra.CODEMOD_TEXT_RULES_RELPATH
+        snapshots: list[m.Cli.AtomicFileState] = []
+        for path, required in ((provider, True), (consumer, False)):
+            if snapshots and path == snapshots[0].path:
+                continue
+            snapshot = u.Cli.atomic_read_binary_file_state(path, required=required)
+            if snapshot.failure:
+                return r[t.VariadicTuple[m.Cli.AtomicFileState]].from_failure(snapshot)
+            snapshots.append(snapshot.value)
+        return r[t.VariadicTuple[m.Cli.AtomicFileState]].ok(tuple(snapshots))
+
+    @classmethod
+    def _rules_from_states(
+        cls, snapshots: t.VariadicTuple[m.Cli.AtomicFileState]
+    ) -> p.Result[t.VariadicTuple[m.Infra.ModTextRule]]:
+        """Compose provider rules before local rules and reject ambiguous ids."""
+        rules: list[m.Infra.ModTextRule] = []
+        owners: dict[str, Path] = {}
+        for snapshot in snapshots:
+            parsed = cls._rules_from_state(snapshot)
+            if parsed.failure:
+                return r[t.VariadicTuple[m.Infra.ModTextRule]].from_failure(parsed)
+            for rule in parsed.value:
+                previous = owners.get(rule.rule_id)
+                if previous is not None:
+                    return r[t.VariadicTuple[m.Infra.ModTextRule]].fail(
+                        f"duplicate text rule id {rule.rule_id} in "
+                        f"{previous} and {snapshot.path}"
+                    )
+                owners[rule.rule_id] = snapshot.path
+                rules.append(rule)
+        return r[t.VariadicTuple[m.Infra.ModTextRule]].ok(tuple(rules))
 
     @classmethod
     def _rules_from_state(
@@ -143,13 +184,10 @@ class FlextInfraModTextGateEngine:
     ) -> p.Result[m.Infra.ModTextReport]:
         """Scan the governed surface or apply every rule rewrite in place."""
         root = root.absolute()
-        catalogue_result = u.Cli.atomic_read_binary_file_state(
-            root / c.Infra.CODEMOD_TEXT_RULES_RELPATH, required=False
-        )
-        if catalogue_result.failure:
-            return r[m.Infra.ModTextReport].from_failure(catalogue_result)
-        catalogue = catalogue_result.value
-        loaded = cls._rules_from_state(catalogue)
+        catalogues = cls._catalogue_states(root)
+        if catalogues.failure:
+            return r[m.Infra.ModTextReport].from_failure(catalogues)
+        loaded = cls._rules_from_states(catalogues.value)
         if loaded.failure:
             return r[m.Infra.ModTextReport].from_failure(loaded)
         rules = loaded.value
@@ -157,7 +195,7 @@ class FlextInfraModTextGateEngine:
         entries: list[m.Infra.ModTextFinding] = []
         files: set[Path] = set()
         actionable = 0
-        inputs = [catalogue]
+        inputs = list(catalogues.value)
         plans: list[m.Infra.CodegenFilePlan] = []
         inventoried: set[Path] = set()
         for target in targets:
@@ -201,7 +239,7 @@ class FlextInfraModTextGateEngine:
                             before=before,
                             desired_content=updated.encode(c.Cli.ENCODING_DEFAULT),
                             desired_mode=before.mode,
-                            source_states=(catalogue, before),
+                            source_states=(*catalogues.value, before),
                             owner="mod-text",
                         )
                     )
@@ -235,11 +273,12 @@ class FlextInfraModTextGateEngine:
         )
 
         def validate_inventory() -> p.Result[bool]:
-            expected = {
-                state.path
-                for state in inputs
-                if state.path != root / c.Infra.CODEMOD_TEXT_RULES_RELPATH
+            catalogues = {
+                FlextInfraConfig.ssot_config_dir().parent
+                / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
+                root / c.Infra.CODEMOD_TEXT_RULES_RELPATH,
             }
+            expected = {state.path for state in inputs if state.path not in catalogues}
             observed: set[Path] = set()
             for target in u.Infra.ast_grep_scan_targets(root):
                 candidate = root / target

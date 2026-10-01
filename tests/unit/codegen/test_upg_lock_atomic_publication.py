@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import errno
 import os
-import threading
+import sys
 import time
 import zipfile
 from pathlib import Path
@@ -52,27 +52,48 @@ class TestsFlextInfraUpgLockAtomicPublication:
         # would release it: uv seeks the zip, which a FIFO cannot serve.
         wheel = self._wheel_path(tmp_path)
         os.mkfifo(wheel)
-        blocked: list[int] = []
-        stop = threading.Event()
-        watcher = threading.Thread(
-            target=self._await_blocked_reader, args=(blocked, stop)
-        )
-        watcher.start()
-        try:
-            execution = tm.ok(
-                u.Cli.run_raw(
-                    [c.Infra.MAKE, "_upg_lifecycle"],
-                    cwd=root,
-                    timeout=self.INTERRUPT_AFTER_SECONDS,
-                    remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
-                )
+        child = tm.ok(
+            u.Cli.process_start(
+                [c.Infra.MAKE, "_upg_lifecycle"],
+                cwd=root,
+                remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
+                start_new_session=True,
             )
+        )
+        try:
+            deadline = time.monotonic() + self.INTERRUPT_AFTER_SECONDS
+            while time.monotonic() < deadline:
+                tm.that(
+                    child.poll(), eq=None, msg="upgrade exited before FIFO observation"
+                )
+                observed = tm.ok(
+                    u.Cli.run(
+                        ["ps", "--sid", str(child.pid), "-L", "-o", "comm=,wchan:64="],
+                        timeout=self.INTERRUPT_AFTER_SECONDS,
+                    )
+                )
+                if any(
+                    row.split() == [c.Infra.UV, "wait_for_partner"]
+                    for row in observed.stdout.splitlines()
+                ):
+                    break
+                time.sleep(0.02)
+            else:
+                pytest.fail("owned uv never opened the dependency for resolution")
         finally:
-            stop.set()
-            watcher.join()
-            self._release_fifo(wheel)
-        tm.that(blocked, len=1, msg="uv never opened the dependency for resolution")
-        tm.that(execution.outcome.timed_out, eq=True, msg=execution.stderr)
+            primary = sys.exception()
+            try:
+                tm.ok(child.terminate())
+                status = tm.ok(child.wait(timeout=self.INTERRUPT_AFTER_SECONDS))
+                self._release_fifo(wheel)
+            except BaseException as cleanup_error:
+                if primary is not None:
+                    message = "upgrade observation and owned-session cleanup failed"
+                    raise BaseExceptionGroup(
+                        message, [primary, cleanup_error]
+                    ) from primary
+                raise
+        tm.that(status != 0, eq=True, msg=child.stderr)
         tm.that(lock.read_bytes(), eq=committed)
         tm.that(sorted(path.name for path in root.glob(".uv.lock.*")), eq=[])
 
@@ -136,21 +157,6 @@ class TestsFlextInfraUpgLockAtomicPublication:
                 tm.ok(u.Cli.run_checked([c.Infra.UV, "lock", "--offline"], cwd=root))
         lock = root / c.Infra.UV_LOCK_FILENAME
         return root, lock, lock.read_bytes()
-
-    @staticmethod
-    def _await_blocked_reader(blocked: list[int], stop: threading.Event) -> None:
-        """Record the uv process whose thread waits to open the FIFO."""
-        while not stop.is_set():
-            for task in Path("/proc").glob("[0-9]*/task/[0-9]*"):
-                try:
-                    command = (task.parents[1] / "comm").read_text(encoding="utf-8")
-                    waiting = (task / "wchan").read_text(encoding="utf-8")
-                except (FileNotFoundError, ProcessLookupError):
-                    continue
-                if command.strip() == "uv" and waiting == "wait_for_partner":
-                    blocked.append(int(task.parents[1].name))
-                    return
-            time.sleep(0.02)
 
     @staticmethod
     def _release_fifo(fifo: Path) -> None:
