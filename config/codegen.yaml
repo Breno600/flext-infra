@@ -565,6 +565,10 @@ Infra:
           description: Materialize the declared package initializer graph.
         - name: mod
           description: Apply the declared structural codemods; committed rule-test snapshots are verified, never rewritten.
+        - name: mod-text
+          description: Apply the declared Sed text rules with exact receipts and guarded publication.
+        - name: mod-text-candidate
+          description: Apply declared Sed text rules to the configured candidate workspace.
         # The explicit snapshot regeneration: `mod` only verifies
         # snapshots, so a changed rule output lands as a reviewed commit.
         - name: mod-snapshots

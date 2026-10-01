@@ -25,7 +25,9 @@ class TestsFlextInfraCodegenCiCustomSteps:
             dist="mcb",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="main",
-            ci_trigger_branches=tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
+            ci_trigger_branches=tests.utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_trigger_branches(
+                "main"
+            ),
             custom_steps=custom_steps,
         )
 

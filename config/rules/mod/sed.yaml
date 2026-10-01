@@ -16,6 +16,36 @@
 #     expected: 3                  # optional exact finding count receipt
 
 rules:
+  - id: codegen-test-ci-branches-from-config
+    description: Derive CI trigger branches from the same branch policy as the renderer.
+    include: [tests/utilities.py]
+    find: |-
+      (?s)            # Why: ci_trigger_branches is no longer config-owned.*?            @staticmethod
+                  def synthetic_private_submodules
+    replace: |2-
+                  @staticmethod
+                  def ci_trigger_branches(repository_branch: str) -> t.VariadicTuple[str]:
+                      """Derive the repository trigger set from the configured policy."""
+                      return tuple(dict.fromkeys((
+                          *config.Infra.codegen.branch_policy.ci_trigger_branches,
+                          repository_branch,
+                      )))
+
+                  @staticmethod
+                  def synthetic_private_submodules
+  - id: codegen-test-retire-unused-classvar-import
+    description: Remove the import made obsolete by the configured CI branch policy.
+    include: [tests/utilities.py]
+    find: '^from typing import ClassVar\n'
+    replace: ''
+    flags: [MULTILINE]
+  - id: codegen-test-ci-branch-consumers
+    description: Pass each fixture repository branch to the canonical configured derivation.
+    include:
+      - tests/unit/codegen/ci_custom_steps_tests.py
+      - tests/unit/codegen/test_template_formatter_fixed_point.py
+    find: '(?P<prefix>repository_branch="(?P<branch>[^"]+)",\n[ \t]+ci_trigger_branches=)(?P<owner>(?:tests\.)?utilities\.TestsFlextInfraUtilities\.CodegenTestSupport\.Ci)\.CI_TRIGGER_BASELINE_BRANCHES'
+    replace: '\g<prefix>\g<owner>.ci_trigger_branches("\g<branch>")'
   - id: docs-strict-python-fence-ruff-ignores
     description: Retain only syntax-context docstring and package exceptions for isolated executable fences.
     include: [src/flext_infra/_constants/docs.py]

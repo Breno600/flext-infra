@@ -49,7 +49,9 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             dist="demo",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
-            ci_trigger_branches=utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.CI_TRIGGER_BASELINE_BRANCHES,
+            ci_trigger_branches=utilities.TestsFlextInfraUtilities.CodegenTestSupport.Ci.ci_trigger_branches(
+                "develop"
+            ),
             workspace_repositories=workspace_repositories,
             has_devcontainer=has_devcontainer,
         )
