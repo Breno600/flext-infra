@@ -23,11 +23,8 @@ if TYPE_CHECKING:
 def smells_project(tmp_path: Path) -> Iterator[Path]:
     """One declared, importable project inside ``tmp_path``.
 
-    The gate also runs the runtime census, which discovers projects through
-    their ``[project]`` table and imports their package, failing loud on
-    either gap — exactly as in a real lane, whose package is importable from
-    its environment. The package name is unique per test so no module cached
-    by another test stands in for this one.
+    The package name is unique per test so no module cached by another test
+    stands in for this one.
     """
     name = f"smells-{tmp_path.name}"
     project = u.Tests.mk_project(
@@ -135,40 +132,19 @@ class TestsFlextInfraSmellsGate:
         tm.that(any("{" in message for message in messages), eq=False)
         tm.that(all(" Fix: " in message for message in messages), eq=True)
 
-    def test_runtime_census_smell_families_are_graded_here(
+    def test_qlty_scan_does_not_run_runtime_census(
         self,
         tmp_path: Path,
         smells_project: Path,
     ) -> None:
-        """Premise (operator 2026-10-01): make smells owns every smell family.
-
-        A class method over the parameter threshold trips the runtime-census
-        smell; the smells gate reports it as a blocking finding.
-        """
+        """Qlty owns this gate even when census project metadata is unavailable."""
         self._configure(tmp_path)
-        params = ", ".join(
-            f"p{index}" for index in range(c.SMELL_THRESHOLDS["params"] + 1)
-        )
-        (self._package(smells_project) / "__init__.py").write_text(
-            '"""Fixture package with one wide method."""\n\n\n'
-            "class Wide:\n"
-            '    """Holds one method over the parameter threshold."""\n\n'
-            f"    def run(self, {params}):\n"
-            '        """Too many parameters."""\n'
-            "        return p0\n",
-            encoding=c.Cli.ENCODING_DEFAULT,
-        )
+        (smells_project / c.PYPROJECT_FILENAME).unlink()
 
         execution = FlextInfraSmellsGate(tmp_path).check(
             smells_project,
             self._ctx(tmp_path),
         )
 
-        tm.that(execution.result.passed, eq=False)
-        census_tags = {
-            tag
-            for issue in execution.issues
-            for tag in c.ENFORCEMENT_SMELL_TAGS
-            if issue.message.endswith(f"[{tag}]")
-        }
-        tm.that("smell_function_parameters" in census_tags, eq=True)
+        tm.that(execution.result.passed, eq=True)
+        tm.that(execution.issues, length=0)
