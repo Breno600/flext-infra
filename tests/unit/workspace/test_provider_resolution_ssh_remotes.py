@@ -1,5 +1,8 @@
 """CI rewrites private submodule origins to SSH; resolution must still find the provider.
 
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+
 The generated workflow materializes a read-only deploy key per private member and
 points that member's ``origin`` at an SSH URL, sometimes through a Host alias so
 two keys can coexist on one forge. Provider resolution reads the live ``origin``,
@@ -22,7 +25,12 @@ class TestsFlextInfraProviderResolutionAcceptsSshRemotes:
 
     @staticmethod
     def _governed_project(root: Path, name: str) -> Path:
-        """Create one governed repository owned by the configured provider."""
+        """Create one governed repository owned by the configured provider.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
         u.Tests.WorktreeFixture.initialize_governed_project(
             root,
             name,
@@ -37,8 +45,9 @@ class TestsFlextInfraProviderResolutionAcceptsSshRemotes:
         """Rewrite ``origin`` the way the generated CI deploy-key step does."""
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "remote", "set-url", "origin", url], cwd=root
-            )
+                [c.Infra.GIT, "remote", "set-url", "origin", url],
+                cwd=root,
+            ),
         )
 
     def test_ssh_origin_resolves(self, tmp_path: Path) -> None:
@@ -69,7 +78,8 @@ class TestsFlextInfraProviderResolutionAcceptsSshRemotes:
         """Accepting SSH must not make the organization stop discriminating."""
         root = self._governed_project(tmp_path / "foreign-origin", "foreign-origin")
         self._repoint_origin(
-            root, "git@github-alias:organization-nobody-declares/foreign-origin.git"
+            root,
+            "git@github-alias:organization-nobody-declares/foreign-origin.git",
         )
 
         tm.fail(FlextInfraWorkspaceDetector.load_workspace_spec(root))

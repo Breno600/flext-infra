@@ -19,10 +19,9 @@ from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_core.__version__ import FlextVersion
-
-from .. import c, m, u
-from ._execution import FlextInfraCodegenExecutionBase
-from ._mise_artifacts_publication import publish_file_plan
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
     from .. import p
@@ -42,8 +41,13 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Generate __version__.py for each discovered project."""
-        # NOTE (multi-agent, flext-p4s3.2 / agent: uv_overlay_owner): the exact
+        """Generate __version__.py for each discovered project.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        # The exact
         # source metadata model crosses the sole CLI rendering boundary.
         template_path = (
             Path(__file__).resolve().parent.parent
@@ -102,7 +106,10 @@ class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
                 owner="codegen",
                 policy="full",
             )
-            write_result = publish_file_plan(planned, phase="version-file")
+            write_result = FlextInfraMisePublication.publish_file_plan(
+                planned,
+                phase="version-file",
+            )
             if write_result.failure:
                 return r[bool].from_failure(write_result)
             generated += 1

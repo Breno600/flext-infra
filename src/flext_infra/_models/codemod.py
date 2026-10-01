@@ -1,8 +1,13 @@
-"""Data-only contracts for the canonical AST-grep circuit."""
+"""Data-only contracts for the canonical AST-grep circuit.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, ClassVar, Literal
 
 from flext_core import m
@@ -23,7 +28,8 @@ class FlextInfraModelsCodemod:
 
         file: Annotated[str, m.Field(min_length=1, description="Reported source path")]
         rule_id: Annotated[
-            str, m.Field(alias="ruleId", min_length=1, description="Native rule ID")
+            str,
+            m.Field(alias="ruleId", min_length=1, description="Native rule ID"),
         ]
         severity: Annotated[
             Literal["error", "warning", "info", "hint"],
@@ -80,6 +86,25 @@ class FlextInfraModelsCodemod:
                 description="Exclusive UTF-8 byte offset",
             ),
         ]
+        captures: Annotated[
+            t.JsonMapping,
+            m.Field(
+                validation_alias=m.AliasPath("metaVariables", "single"),
+                default_factory=lambda: MappingProxyType({}),
+                description=(
+                    "Captured single metavariables; ast-grep omits the payload "
+                    "for a match that captures none"
+                ),
+            ),
+        ]
+        transformed: Annotated[
+            t.JsonMapping,
+            m.Field(
+                validation_alias=m.AliasPath("metaVariables", "transformed"),
+                default_factory=lambda: MappingProxyType({}),
+                description="Metavariables the rule derived through transform",
+            ),
+        ]
 
     class AstGrepReport(m.RootModel[tuple[AstGrepDiagnostic, ...]]):
         """Complete ``ast-grep scan --json=compact`` array; malformed input raises."""
@@ -103,13 +128,13 @@ class FlextInfraModelsCodemod:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         rule_dirs: t.VariadicTuple[Path] = m.Field(
-            description="Validated rule directories declared by the ast-grep owner"
+            description="Validated rule directories declared by the ast-grep owner",
         )
         util_dirs: t.VariadicTuple[Path] = m.Field(
-            description="Validated utility directories declared by the ast-grep owner"
+            description="Validated utility directories declared by the ast-grep owner",
         )
         test_dirs: t.VariadicTuple[Path] = m.Field(
-            description="Validated fixture directories declared by the ast-grep owner"
+            description="Validated fixture directories declared by the ast-grep owner",
         )
 
     class ModRuleBatch(m.ArbitraryTypesModel):
@@ -118,35 +143,21 @@ class FlextInfraModelsCodemod:
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
 
         inline_rules: Annotated[
-            t.NonEmptyStr, m.Field(description="Executable YAML document stream")
+            t.NonEmptyStr,
+            m.Field(description="Executable YAML document stream"),
         ]
         rule_count: Annotated[
-            t.PositiveInt, m.Field(description="Discovered rule file count")
+            t.PositiveInt,
+            m.Field(description="Discovered rule file count"),
         ]
         all_ids: Annotated[
-            frozenset[str], m.Field(description="Every validated rule ID")
+            frozenset[str],
+            m.Field(description="Every validated rule ID"),
         ]
         fixable_ids: Annotated[
-            frozenset[str], m.Field(description="Rule IDs owning an automatic rewrite")
+            frozenset[str],
+            m.Field(description="Rule IDs owning an automatic rewrite"),
         ]
-
-    class ModGateSnapshot(m.ArbitraryTypesModel):
-        """Exact Ruff and Pyrefly measurement with raw diagnostics."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(frozen=True)
-
-        ruff_errors: Annotated[
-            t.NonNegativeInt, m.Field(description="Ruff error count")
-        ]
-        pyrefly_errors: Annotated[
-            t.NonNegativeInt, m.Field(description="Pyrefly error count")
-        ]
-        ruff_output: Annotated[
-            str, m.Field(description="Complete Ruff machine output")
-        ] = ""
-        pyrefly_output: Annotated[
-            str, m.Field(description="Complete Pyrefly machine output")
-        ] = ""
 
 
 __all__: list[str] = ["FlextInfraModelsCodemod"]

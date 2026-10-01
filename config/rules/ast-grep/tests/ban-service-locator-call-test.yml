@@ -1,0 +1,8 @@
+id: ban-service-locator-call
+valid:
+  - runner = p.Foo.Runner()
+  - value = self.resolve(name)
+invalid:
+  - runner = get_service("runner")
+  - runner = self.container()
+  - runner = registry.resolve_service(Runner)

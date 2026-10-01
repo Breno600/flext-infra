@@ -1,8 +1,14 @@
-"""Semantic ``make mod`` cutover planning, composed from private domain partials."""
+"""Semantic ``make mod`` cutover planning, composed from private domain partials.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
-from ._semantic_cutover.base import FlextInfraUtilitiesSemanticCutoverBase
+from flext_infra._utilities._semantic_cutover.base import (
+    FlextInfraUtilitiesSemanticCutoverBase,
+)
 
 
 class FlextInfraUtilitiesSemanticCutover(FlextInfraUtilitiesSemanticCutoverBase):

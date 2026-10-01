@@ -1,4 +1,8 @@
-"""Generated public verbs enforce the committed Mise runtime pin."""
+"""Generated public verbs enforce the committed Mise runtime pin.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,11 +22,14 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraCodegenMakeLockContract:
     """A frozen operation fails before activation or any launcher execution."""
 
+    @staticmethod
     def test_conform_publication_preserves_committed_lock_graph(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
+        """Test conform publication preserves committed lock graph."""
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         lock = root / c.Infra.UV_LOCK_FILENAME
         lock.write_bytes((Path(__file__).resolve().parents[3] / lock.name).read_bytes())
@@ -39,16 +46,18 @@ class TestsFlextInfraCodegenMakeLockContract:
         )
         before = {path: path.read_bytes() for path in paths}
         repository = u.Tests.repository_ref(
-            root.name, role=c.Infra.MakeProfile.STANDALONE
+            root.name,
+            role=c.Infra.MakeProfile.STANDALONE,
         )
         workspace = u.Tests.workspace_spec(
-            repository, project=u.Tests.project_spec(repository.name)
+            repository,
+            project=u.Tests.project_spec(repository.name),
         )
         plan = u.Tests.conform_plan(root, workspace)
         tm.ok(
             u.Tests.materialize_codegen_plans(
-                r[tuple[m.Infra.CodegenFilePlan, ...]].ok(tuple(plan.files))
-            )
+                r[tuple[m.Infra.CodegenFilePlan, ...]].ok(tuple(plan.files)),
+            ),
         )
 
         tm.that({path: path.read_bytes() for path in paths}, eq=before)
@@ -57,15 +66,18 @@ class TestsFlextInfraCodegenMakeLockContract:
             eq=config.Infra.codegen.toolchain.mise_lockfile,
         )
 
+    @staticmethod
     def test_direnv_isolates_nested_checkout_from_parent_mise_config(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """The real Mise reader cannot observe an unrelated ancestor config."""
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         (root.parent / c.Infra.MISE_TOML_FILENAME).write_text(
-            "invalid-parent = [\n", encoding="utf-8"
+            "invalid-parent = [\n",
+            encoding="utf-8",
         )
         # The launcher bakes the pinned release itself: no MISE_VERSION is
         # injected, and an inherited one must not leak into the probe.
@@ -86,7 +98,7 @@ class TestsFlextInfraCodegenMakeLockContract:
                     "GIT_CEILING_DIRECTORIES",
                     "MISE_CEILING_PATHS",
                 ),
-            )
+            ),
         )
 
         tm.that(
@@ -97,16 +109,18 @@ class TestsFlextInfraCodegenMakeLockContract:
         tm.that(process.stderr, lacks="mise WARN")
         tm.that(process.stderr, lacks="invalid-parent")
 
+    @staticmethod
     def test_direnv_runs_real_make_from_pinned_tool_paths_without_lock_changes(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """An outer direnv entry never delegates Make to an older shared shim."""
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         bootstrap = u.Infra.mise_bootstrap_environment()
         storage = tm.ok(
-            u.Infra.prepare_mise_runtime_storage(root, os.environ, bootstrap)
+            u.Infra.prepare_mise_runtime_storage(root, os.environ, bootstrap),
         )
         sidecars = root / ".mise" / "locks"
         paths = (
@@ -125,7 +139,7 @@ class TestsFlextInfraCodegenMakeLockContract:
                 ["direnv", "exec", str(root), "bash", "-c", "command -v make"],
                 cwd=root,
                 remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
-            )
+            ),
         )
         tm.that(
             u.Cli.process_succeeded(identity.outcome),
@@ -143,7 +157,7 @@ class TestsFlextInfraCodegenMakeLockContract:
                 ["direnv", "exec", str(root), "make", "--no-print-directory", "help"],
                 cwd=root,
                 remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
-            )
+            ),
         )
         tm.that(
             u.Cli.process_succeeded(process.outcome),
@@ -162,19 +176,21 @@ class TestsFlextInfraCodegenMakeLockContract:
             eq={path for path in paths if path.is_relative_to(sidecars)},
         )
 
+    @staticmethod
     def test_direnv_rejects_unprovisioned_runtime_without_installing(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Activation names setup instead of downloading a missing pinned runtime."""
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         bootstrap = u.Infra.mise_bootstrap_environment()
         cold_storage = tmp_path / "unprovisioned-mise"
         release = tm.ok(
             u.Infra.mise_pinned_release(
-                (root / bootstrap.version_pin_file).read_text(encoding="utf-8")
-            )
+                (root / bootstrap.version_pin_file).read_text(encoding="utf-8"),
+            ),
         )
         # The host's direnv launcher may itself be a Mise shim that provisions
         # direnv into the storage it is handed; the activation contract is only
@@ -188,7 +204,7 @@ class TestsFlextInfraCodegenMakeLockContract:
                 cwd=root,
                 env={bootstrap.storage_root_variable: str(cold_storage)},
                 remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
-            )
+            ),
         )
 
         tm.that(u.Cli.process_succeeded(process.outcome), eq=False)
@@ -198,11 +214,14 @@ class TestsFlextInfraCodegenMakeLockContract:
 
     @pytest.mark.parametrize("pin_content", [None, "latest\n", " \n", "1.2.3\n4.5.6\n"])
     def test_direnv_rejects_unresolved_runtime_pin(
-        self, tmp_path: Path, pin_content: str | None
+        self,
+        tmp_path: Path,
+        pin_content: str | None,
     ) -> None:
         """Missing, symbolic, and malformed pins never launch the bootstrapper."""
         root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         pin = root / u.Infra.mise_bootstrap_environment().version_pin_file
         if pin_content is None:
@@ -215,7 +234,7 @@ class TestsFlextInfraCodegenMakeLockContract:
                 ["direnv", "exec", str(root), "make", "--no-print-directory", "help"],
                 cwd=root,
                 remove_env_keys=c.Tests.MAKE_ISOLATION_ENV_KEYS,
-            )
+            ),
         )
 
         tm.that(u.Cli.process_succeeded(process.outcome), eq=False)
@@ -239,10 +258,15 @@ class TestsFlextInfraCodegenMakeLockContract:
         ],
     )
     def test_frozen_verbs_reject_an_unresolved_pin_before_effects(
-        self, tmp_path: Path, verb: str, pin_content: str | None
+        self,
+        tmp_path: Path,
+        verb: str,
+        pin_content: str | None,
     ) -> None:
+        """Test frozen verbs reject an unresolved pin before effects."""
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         pin = project_root / c.Infra.MISE_VERSION_PIN_FILENAME
         if pin_content is None:
@@ -252,45 +276,55 @@ class TestsFlextInfraCodegenMakeLockContract:
         (project_root / "bin" / "mise").unlink()
         activation = project_root / "activation-effect"
         (project_root / ".envrc.local").write_text(
-            f'touch "{activation}"\n', encoding="utf-8"
+            f'touch "{activation}"\n',
+            encoding="utf-8",
         )
 
         process = tm.ok(
-            u.Tests.run_isolated_make(["--no-print-directory", verb], cwd=project_root)
+            u.Tests.run_isolated_make(["--no-print-directory", verb], cwd=project_root),
         )
 
         tm.that(process.outcome.raw_return_code, ne=0)
         tm.that(process.stderr, has=str(pin))
         tm.that(process.stderr, lacks="missing generated mise launcher")
         tm.that(activation.exists(), eq=False)
-        tm.that((project_root / ".venv").exists(), eq=False)
+        tm.that(u.Infra.runtime_environment_dir(project_root).exists(), eq=False)
 
     @pytest.mark.parametrize("verb", ["help", "clean", "upg"])
     def test_bootstrap_and_shell_verbs_do_not_require_the_pin(
-        self, tmp_path: Path, verb: str
+        self,
+        tmp_path: Path,
+        verb: str,
     ) -> None:
+        """Test bootstrap and shell verbs do not require the pin."""
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         pin = project_root / c.Infra.MISE_VERSION_PIN_FILENAME
         pin.unlink()
         (project_root / "bin" / "mise").unlink()
 
         process = tm.ok(
-            u.Tests.run_isolated_make(["--no-print-directory", verb], cwd=project_root)
+            u.Tests.run_isolated_make(["--no-print-directory", verb], cwd=project_root),
         )
 
         tm.that(process.stderr, lacks=str(pin))
         if verb == "upg":
             tm.that(process.outcome.raw_return_code, ne=0)
-            tm.that(process.stderr, has="missing generated mise launcher")
+            tm.that(
+                process.stderr, has="GitHub credential is absent for network bootstrap"
+            )
         else:
             tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         tm.that(pin.exists(), eq=False)
 
     @pytest.mark.parametrize("attached", [False, True])
     def test_setup_bootstraps_from_the_runtime_root_pin(
-        self, tmp_path: Path, *, attached: bool
+        self,
+        tmp_path: Path,
+        *,
+        attached: bool,
     ) -> None:
         """Setup reads the Mise pin of the runtime that owns the checkout.
 
@@ -299,7 +333,8 @@ class TestsFlextInfraCodegenMakeLockContract:
         consumption) never contradicts the runtime pin during setup.
         """
         project_root, _ = u.Tests.render_make_environment(
-            tmp_path, c.Infra.MakeProfile.STANDALONE
+            tmp_path,
+            c.Infra.MakeProfile.STANDALONE,
         )
         pin = project_root / c.Infra.MISE_VERSION_PIN_FILENAME
         pinned = pin.read_text(encoding="utf-8")
@@ -315,7 +350,7 @@ class TestsFlextInfraCodegenMakeLockContract:
                 u.Cli.capture(
                     ["git", "rev-parse", "--show-superproject-working-tree"],
                     cwd=project_root,
-                )
+                ),
             )
             tm.that(Path(superproject).resolve(), eq=runtime_root.resolve())
         storage_variable = u.Infra.mise_bootstrap_environment().storage_root_variable
@@ -326,10 +361,10 @@ class TestsFlextInfraCodegenMakeLockContract:
                 cwd=project_root,
                 env={
                     **os.environ,
-                    "GH_TOKEN": "invalid-test-credential",
+                    "GITHUB_TOKEN": "invalid-test-credential",
                     storage_variable: "relative-storage",
                 },
-            )
+            ),
         )
 
         tm.that(process.outcome.raw_return_code, ne=0)

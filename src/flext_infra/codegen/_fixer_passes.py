@@ -1,4 +1,8 @@
-"""Pipeline pass helpers for the codegen fixer service."""
+"""Pipeline pass helpers for the codegen fixer service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,11 +10,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 from flext_infra import m, u
-
-from ._fixer_results import FlextInfraCodegenFixerResultsMixin
-from .lazy_init import FlextInfraCodegenLazyInit
-
-_log = u.fetch_logger(__name__)
+from flext_infra.codegen._fixer_results import FlextInfraCodegenFixerResultsMixin
+from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
 
 
 class FlextInfraCodegenFixerPassesMixin(FlextInfraCodegenFixerResultsMixin):
@@ -31,7 +32,7 @@ class FlextInfraCodegenFixerPassesMixin(FlextInfraCodegenFixerResultsMixin):
         )
         if not violating_projects:
             return
-        _log.warning(
+        FlextInfraCodegenFixerPassesMixin._fixer_log.warning(
             "namespace_enforcement_failed",
             project=project_path.name,
             error="violations remain after namespace enforcement",
