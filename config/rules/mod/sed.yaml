@@ -77,9 +77,14 @@ rules:
     flags: [MULTILINE]
   - id: codegen-test-retire-shadowed-utility-import
     description: Let the test u facade supply inherited production utilities.
-    include: [tests/unit/codegen/test_release_checkout_credentials.py]
-    find: '^from flext_infra import c, t, u$'
-    replace: 'from flext_infra import c, t'
+    include:
+      - tests/unit/codegen/test_release_checkout_credentials.py
+      - tests/unit/codegen/test_ci_declared_secrets_contract.py
+      - tests/unit/codegen/test_ci_integration_branch_triggers.py
+      - tests/unit/codegen/test_ci_package_registry_read.py
+      - tests/unit/codegen/test_ci_system_packages.py
+    find: '^from flext_infra import ((?:\w+, )*\w+), u$'
+    replace: 'from flext_infra import \g<1>'
     flags: [MULTILINE]
   - id: docs-strict-python-fence-ruff-ignores
     description: Retain only syntax-context docstring and package exceptions for isolated executable fences.

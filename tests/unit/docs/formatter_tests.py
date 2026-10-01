@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_infra import infra
+from flext_infra.docs.fixer import FlextInfraDocFixer
 from flext_infra.docs.formatter import FlextInfraDocFormatter
 from tests import c, u
 
@@ -97,7 +98,7 @@ class TestsFlextInfraDocsFormatter:
             encoding="utf-8",
         )
         fixer = FlextInfraDocFixer()
-        formatter = FlextInfraDocFormatter()
+        formatter = self._formatter()
 
         first_fix = fixer.fix(workspace, apply=True)
         tm.ok(first_fix)

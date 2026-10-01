@@ -8,7 +8,7 @@ from pathlib import Path
 from flext_tests import tm
 
 from tests import u
-from flext_infra import c, config, u
+from flext_infra import c, config
 
 
 class TestsFlextInfraCiIntegrationBranchTriggers:
