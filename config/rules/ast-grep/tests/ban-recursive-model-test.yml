@@ -1,0 +1,32 @@
+id: ban-recursive-model
+valid:
+  - |
+    class Node(m.ContractModel):
+        value: int
+  - |
+    class Node(m.ContractModel):
+        adapter: ClassVar[TypeAdapter[Node]] = TypeAdapter(int)
+  - |
+    class Outer:
+        class Inner(m.ContractModel):
+            parent: Outer.Other | None = None
+  - |
+    class Node(m.ContractModel):
+        def build(self) -> None:
+            child: Node = self
+  - |
+    class Outer:
+        class Spec(m.ContractModel):
+            policy: Outer.Policy.Spec
+invalid:
+  - |
+    class Node(m.ContractModel):
+        children: list[Node]
+  - |
+    class Node(m.ContractModel):
+        parent: Node | None = None
+  - |
+    class Outer:
+        class Node(m.ContractModel):
+            if True:
+                peer: Node | None = None

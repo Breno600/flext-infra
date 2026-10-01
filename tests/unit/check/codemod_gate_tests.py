@@ -126,7 +126,6 @@ class TestsFlextInfraCodemodGate:
     def test_workspace_pipeline_fails_the_project_on_policy_findings(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
         severity: str,
     ) -> None:
         """The public check facade fails the project on any rule finding.
@@ -141,7 +140,6 @@ class TestsFlextInfraCodemodGate:
         results = tm.ok(
             FlextInfraWorkspaceChecker(
                 repository_root=tmp_path,
-                rope=rope_workspace,
             ).run_projects([project.name], ["codemod"], reports_dir=reports),
         )
 

@@ -22,7 +22,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
     _repository_root: Path
     _registry: FlextInfraGateRegistry
     _default_reports_dir: Path
-    rope: p.Infra.RopeWorkspaceDsl
     _gate_logger: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     def _isolate_context(
@@ -46,7 +45,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
         target: m.Infra.CheckProjectTarget,
         resolved_gates: t.StrSequence,
         ctx: m.Infra.GateContext,
-        rope_outcomes: t.VariadicTuple[m.Infra.RopeCallbackOutcome],
     ) -> m.Infra.ProjectResult:
         """Check one project after the loop has validated its target."""
         project_dir = target.path
@@ -57,7 +55,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
             project_dir,
             resolved_gates,
             project_ctx,
-            rope_outcomes,
         )
         elapsed = time.monotonic() - start
         u.Cli.status(
@@ -73,7 +70,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
         projects: t.SequenceOf[m.Infra.CheckProjectTarget],
         resolved_gates: t.StrSequence,
         ctx: m.Infra.GateContext,
-        rope_outcomes: t.VariadicTuple[m.Infra.RopeCallbackOutcome],
         *,
         fail_fast: bool,
     ) -> m.Infra.LoopOutcome:
@@ -88,7 +84,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 target,
                 resolved_gates,
                 ctx,
-                rope_outcomes,
             )
             results.append(project_result)
             project_passed: bool = project_result.passed
@@ -138,7 +133,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
         project_dir: Path,
         gates: t.StrSequence,
         ctx: m.Infra.GateContext,
-        rope_outcomes: t.VariadicTuple[m.Infra.RopeCallbackOutcome],
     ) -> m.Infra.ProjectResult:
         """Run gates for one project and retain every executed gate in order.
 
@@ -174,7 +168,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
                         project_dir,
                         ctx,
                         executions,
-                        rope_outcomes,
                     ),
                 ),
             )
@@ -217,7 +210,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
         project_dir: Path,
         ctx: m.Infra.GateContext,
         gates_sink: MutableMapping[str, m.Infra.GateExecution],
-        rope_outcomes: t.VariadicTuple[m.Infra.RopeCallbackOutcome],
     ) -> p.Cli.PipelineStage:
         """Build a pipeline stage handler that executes a single gate.
 
@@ -245,7 +237,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 gate_instance,
                 project_dir,
                 gate_ctx,
-                rope_outcomes,
             )
             gates_sink[gate_id] = execution
             self._gate_logger.info(
@@ -275,7 +266,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
         gate_instance: FlextInfraGate,
         project_dir: Path,
         ctx: m.Infra.GateContext,
-        rope_outcomes: t.VariadicTuple[m.Infra.RopeCallbackOutcome],
     ) -> m.Infra.GateExecution:
         """Run fix-only under ``--apply``; check-only otherwise.
 
@@ -289,8 +279,6 @@ class FlextInfraWorkspaceCheckGatesMixin:
         """
         if ctx.apply_fixes and (not ctx.check_only) and gate_instance.can_fix:
             return gate_instance.fix(project_dir, ctx)
-        if isinstance(gate_instance, p.Infra.RopeCheckGate):
-            return gate_instance.check_rope_outcomes(project_dir, ctx, rope_outcomes)
         return gate_instance.check(project_dir, ctx)
 
 

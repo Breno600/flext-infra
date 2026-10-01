@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, infra, m, u
 from flext_infra.codegen import FlextInfraCodegenConform
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import u as test_u
@@ -116,7 +116,7 @@ class TestsFlextInfraCodegenWorkflowRetirement:
             scope=c.Infra.CodegenConformScope.SELF,
             mode=c.Infra.CodegenConformMode.APPLY,
         )
-        tm.ok(FlextInfraCodegenConform.execute_request(request, workspace))
+        tm.ok(infra.codegen_conform(request, workspace))
         target = tm.ok(FlextInfraWorkspaceDetector.conform_target(root))
         tm.that(target.publishes_release, eq=declared_release)
         releases = tuple(
@@ -137,7 +137,7 @@ class TestsFlextInfraCodegenWorkflowRetirement:
             if (root / entry.destination).is_file()
         }
 
-        conformed = tm.ok(FlextInfraCodegenConform.execute_request(request))
+        conformed = tm.ok(infra.codegen_conform(request))
 
         release_paths = {root / entry.destination for entry in releases}
         tm.that(release_paths.intersection(conformed.written_files), empty=True)

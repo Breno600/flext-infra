@@ -51,17 +51,18 @@ class FlextInfraCodegenGenerationStandardMixin(
     @classmethod
     def _runtime_import_lines(cls, plan: m.Infra.LazyInitPlan) -> str:
         """Render explicit eager and wildcard runtime imports."""
+        current_pkg = plan.context.current_pkg
         lines: t.MutableSequenceOf[str] = [
-            f"from {module} import *"
+            f"from {cls._absolute_import_module(current_pkg, module)} import *"
             for module in sorted(set(plan.wildcard_runtime_modules))
         ]
         eager_lines: t.MutableSequenceOf[str] = []
         eager_groups = cls._group_imports(plan.eager_dunders)
         previous_top: str | None = None
         for module in sorted(eager_groups, key=str.lower):
-            rendered_module = cls._compact_lazy_module_path(
-                plan.context.current_pkg,
-                module,
+            rendered_module = cls._absolute_import_module(
+                current_pkg,
+                cls._compact_lazy_module_path(current_pkg, module),
             )
             top = rendered_module.split(".", maxsplit=1)[0]
             if previous_top is not None and top != previous_top:
@@ -248,18 +249,42 @@ class FlextInfraCodegenGenerationStandardMixin(
         (``examples/``, ``scripts/``, ``tests/``) whose TYPE_CHECKING
         block sorted the project package as third-party, diverging from
         CI renders and failing ruff I001 at the generated fixed point.
-        Return ``None`` when no manifest is reachable and the directory
-        proxy when the manifest is unreadable, so the caller keeps its
-        prior behavior.
+        Return ``None`` when no manifest is reachable; an unreadable manifest
+        raises with the metadata reader's diagnostic.
         """
         for candidate in (pkg_dir, *pkg_dir.parents):
             if not (candidate / c.PYPROJECT_FILENAME).is_file():
                 continue
-            metadata_result = u.Infra.read_project_metadata_result(candidate)
-            if metadata_result.success:
-                return metadata_result.value.package_name
-            return candidate.name.replace("-", "_")
+            return u.Infra.read_project_metadata_result(candidate).unwrap().package_name
         return None
+
+    @staticmethod
+    def _copyright_notice(pkg_dir: Path) -> str:
+        """Render the copyright notice of the project that owns ``pkg_dir``.
+
+        The author is the manifest's first declared author and the year is
+        the scaffold copyright year, the same owners the scaffold templates
+        render; a package outside any project, or a project without a named
+        author, raises.
+        """
+        for candidate in (pkg_dir, *pkg_dir.parents):
+            if not (candidate / c.PYPROJECT_FILENAME).is_file():
+                continue
+            authors = (
+                u.Infra.read_project_metadata_result(candidate).unwrap().project.authors
+            )
+            author = authors[0].name if authors else None
+            if not author:
+                msg = f"project manifest declares no author name: {candidate}"
+                raise ValueError(msg)
+            scaffold = config.Infra.codegen.scaffold.project
+            return (
+                f"Copyright (c) {scaffold.copyright_year} {author}. "
+                "All rights reserved.\n"
+                f"SPDX-License-Identifier: {scaffold.supported_licenses[0]}"
+            )
+        msg = f"package is outside any project manifest: {pkg_dir}"
+        raise ValueError(msg)
 
     @staticmethod
     def _project_first_party_names(project_root: Path) -> t.StrSequence:
@@ -336,7 +361,10 @@ class FlextInfraCodegenGenerationStandardMixin(
         runtime_import_lines = cls._runtime_import_lines(plan)
         return m.Infra.LazyInitRootRender(
             autogen_header=c.Infra.AUTOGEN_HEADER,
-            docstring=cls._format_root_package_docstring(current_pkg),
+            docstring=cls._format_root_package_docstring(
+                current_pkg,
+                cls._copyright_notice(plan.context.pkg_dir),
+            ),
             runtime_import_lines=runtime_import_lines,
             blank_lines_before_exports=(
                 "\n" if not (runtime_import_lines or type_checking_lines) else "\n\n"
@@ -366,6 +394,7 @@ class FlextInfraCodegenGenerationStandardMixin(
             autogen_header=c.Infra.AUTOGEN_HEADER,
             docstring=cls._format_root_package_docstring(
                 plan.context.current_pkg.rsplit(".", maxsplit=1)[-1],
+                cls._copyright_notice(plan.context.pkg_dir),
             ),
         )
 

@@ -35,10 +35,6 @@ class FlextInfraCodegenFixer(
         bool,
         m.Field(description="Only apply rule-based fixes, skip heuristic ones"),
     ] = False
-    rope: t.Port[p.Infra.RopeWorkspaceDsl] = m.Field(
-        exclude=True,
-        description="Shared Rope cycle injected by the composition root",
-    )
 
     @override
     def execute(self) -> p.Result[str]:

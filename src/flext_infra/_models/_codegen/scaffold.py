@@ -20,7 +20,7 @@ class FlextInfraModelsCodegenScaffoldModels:
 
         module: t.NonEmptyStr = m.Field(description="Module file path")
         rule: t.NonEmptyStr = m.Field(
-            description="Violated rule identifier (e.g. NS-001)",
+            description="Violated catalog rule identifier",
         )
         message: t.NonEmptyStr = m.Field(description="Human-readable violation message")
         fixable: bool = m.Field(description="Whether this violation can be auto-fixed")
