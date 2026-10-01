@@ -9,8 +9,7 @@ from packaging.utils import canonicalize_name
 
 from flext_core import r
 from flext_infra import c, p, t, u
-
-from ._release_source import FlextInfraReleaseSourceMixin
+from flext_infra.release._release_source import FlextInfraReleaseSourceMixin
 
 
 class FlextInfraReleaseMetadataMixin(FlextInfraReleaseSourceMixin):

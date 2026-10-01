@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, p, u
-
-from ._detector_runtime_steps import FlextInfraDependencyDetectorRuntimeSteps
+from flext_infra.deps._detector_runtime_steps import (
+    FlextInfraDependencyDetectorRuntimeSteps,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, MutableMapping

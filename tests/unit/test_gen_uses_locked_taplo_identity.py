@@ -25,7 +25,8 @@ class TestsFlextInfraGenUsesLockedTaploIdentity:
 
     _SOURCE = "a = 1\n\n[tool]\nb = 2\n"
 
-    def _toolchain_root(self, tmp_path: Path, lock_body: str | None) -> Path:
+    @staticmethod
+    def _toolchain_root(tmp_path: Path, lock_body: str | None) -> Path:
         """Build a toolchain root holding the declared config and *lock_body*."""
         root = tmp_path / "toolchain"
         root.mkdir()

@@ -24,8 +24,8 @@ class TestsFlextInfraPytestFailClosedConfig:
         await asyncio.sleep(0)
         tm.that(asyncio.current_task() is not None, eq=True)
 
+    @staticmethod
     def test_phase_replaces_stale_collection_and_warning_policy(
-        self,
         tmp_path: Path,
     ) -> None:
         """Replace ignored roots and warning filters without second-apply drift."""

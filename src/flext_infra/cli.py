@@ -5,8 +5,7 @@ from __future__ import annotations
 import sys
 
 from flext_infra import c, t
-
-from .services.cli_dispatch import FlextInfraCliDispatchService
+from flext_infra.services.cli_dispatch import FlextInfraCliDispatchService
 
 
 class FlextInfraCli(FlextInfraCliDispatchService):

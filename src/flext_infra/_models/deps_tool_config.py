@@ -8,9 +8,12 @@ from typing import Annotated, Literal, Self
 from flext_cli import m, u
 
 from flext_infra import t
-
-from .deps_tool_config_linters import FlextInfraModelsDepsToolConfigLinters
-from .deps_tool_config_type_checkers import FlextInfraModelsDepsToolConfigTypeCheckers
+from flext_infra._models.deps_tool_config_linters import (
+    FlextInfraModelsDepsToolConfigLinters,
+)
+from flext_infra._models.deps_tool_config_type_checkers import (
+    FlextInfraModelsDepsToolConfigTypeCheckers,
+)
 
 
 class FlextInfraModelsDepsToolConfig(

@@ -24,7 +24,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraCodegenMakeLintFixSafety:
     """The lint repair contract and its projection preserve information."""
 
-    def test_lint_fix_rejects_the_unsafe_fix_flag(self) -> None:
+    @staticmethod
+    def test_lint_fix_rejects_the_unsafe_fix_flag() -> None:
         """An information-destroying lint repair is unrepresentable."""
         ruff = config.Infra.codegen.make.ruff
         payload = ruff.model_dump()

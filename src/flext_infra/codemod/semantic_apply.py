@@ -8,9 +8,8 @@ from pathlib import Path
 from flext_cli import cli
 
 from flext_core import r
-
-from .. import c, config, m, p, t, u
-from ..transformers import FlextInfraSemanticPublication
+from flext_infra import c, config, m, p, t, u
+from flext_infra.transformers import FlextInfraSemanticPublication
 
 
 class FlextInfraCodemodSemanticApply:

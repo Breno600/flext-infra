@@ -233,8 +233,8 @@ class TestsFlextInfraDepsModernizerToolTables:
             },
         )
 
+    @staticmethod
     def test_first_party_uses_live_package_when_distribution_name_differs(
-        self,
         tmp_path: Path,
     ) -> None:
         """A distribution name must not invent an importable package."""
@@ -261,8 +261,8 @@ class TestsFlextInfraDepsModernizerToolTables:
         tm.that(first, empty=False)
         tm.that(second, empty=True)
 
+    @staticmethod
     def test_modernizer_roots_and_members_converge_without_coverage_floor(
-        self,
         tmp_path: Path,
     ) -> None:
         """Roots and members converge once and never project a coverage floor."""

@@ -14,8 +14,8 @@ if TYPE_CHECKING:
 
 
 class TestsFlextInfraExtraPathsSearchPaths:
+    @staticmethod
     def test_pyrefly_search_paths_include_declared_generated_roots(
-        self,
         tmp_path: Path,
     ) -> None:
         manager = FlextInfraExtraPathsManager(
@@ -29,8 +29,8 @@ class TestsFlextInfraExtraPathsSearchPaths:
 
     """Verify productive, existing Pyrefly search roots."""
 
+    @staticmethod
     def test_pyrefly_search_paths_only_use_local_project_dirs(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep project-local roots when dependencies are development-only."""
@@ -69,8 +69,8 @@ class TestsFlextInfraExtraPathsSearchPaths:
 
         tm.that(result, eq=("src", "."))
 
+    @staticmethod
     def test_pyrefly_search_paths_include_project_root_for_tests_package(
-        self,
         tmp_path: Path,
     ) -> None:
         """Include the project root when the tests package is importable."""
@@ -91,8 +91,8 @@ class TestsFlextInfraExtraPathsSearchPaths:
 
         tm.that(result, eq=("src", "."))
 
+    @staticmethod
     def test_pyrefly_search_paths_ignore_non_path_dependencies_at_root(
-        self,
         tmp_path: Path,
     ) -> None:
         """Ignore undeclared local roots for ordinary dependencies."""
@@ -106,8 +106,8 @@ class TestsFlextInfraExtraPathsSearchPaths:
 
         tm.that(result, eq=("src", "."))
 
+    @staticmethod
     def test_pyrefly_search_paths_omit_workspace_dependency_src_dirs_at_root(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep declared workspace projects out of the root's search path."""
@@ -146,8 +146,8 @@ class TestsFlextInfraExtraPathsSearchPaths:
 
         tm.that(result, eq=("src", "."))
 
+    @staticmethod
     def test_pyrefly_search_paths_exclude_dependency_dirs_at_root(
-        self,
         tmp_path: Path,
     ) -> None:
         """Exclude every dependency directory, environments included."""

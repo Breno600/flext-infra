@@ -10,8 +10,7 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, p, u
-
-from ._conform import FlextInfraCodegenConformExecute
+from flext_infra.codegen._conform import FlextInfraCodegenConformExecute
 
 if TYPE_CHECKING:
     from pathlib import Path

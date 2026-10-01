@@ -27,7 +27,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraLazyInitBootstrapPackage:
     """The bootstrap import chain is never generated into a cycle."""
 
-    def _write_bootstrap_owner(self, package_root: Path, subpackage: str) -> Path:
+    @staticmethod
+    def _write_bootstrap_owner(package_root: Path, subpackage: str) -> Path:
         """Create a private facet of the bootstrap-owning distribution."""
         facet_dir = package_root / subpackage
         facet_dir.mkdir()

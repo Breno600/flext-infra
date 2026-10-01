@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsGeneratorInternals:
     """Public utility tests used by docs generation flows."""
 
-    def test_anchorize_normalizes_headings(self) -> None:
+    @staticmethod
+    def test_anchorize_normalizes_headings() -> None:
         tm.that(u.Infra.anchorize("Hello World"), eq="hello-world")
         tm.that(u.Infra.anchorize("Test-Case"), eq="test-case")
         tm.that(u.Infra.anchorize(""), eq="")
@@ -33,21 +34,24 @@ class TestsFlextInfraDocsGeneratorInternals:
         tm.that(rendered, has=f'id="{anchor}"')
         tm.that(u.Infra.build_toc(f"# API\n\n## {heading}\n"), has=f"](#{anchor})")
 
-    def test_anchorize_keeps_underscores_like_python_markdown(self) -> None:
+    @staticmethod
+    def test_anchorize_keeps_underscores_like_python_markdown() -> None:
         tm.that(
             u.Infra.anchorize(r"marts/metrics/met_wms\_\_kpi_dashboard"),
             eq="martsmetricsmet_wms__kpi_dashboard",
         )
         tm.that(u.Infra.anchorize("Config _private_ keys"), eq="config-_private_-keys")
 
-    def test_build_toc_lists_h2_and_h3_sections(self) -> None:
+    @staticmethod
+    def test_build_toc_lists_h2_and_h3_sections() -> None:
         toc = u.Infra.build_toc("# Main\n\n## Section 1\n\n### Subsection\n")
 
         tm.that(toc, has="<!-- TOC START -->")
         tm.that(toc, has="Section 1")
         tm.that(toc, has="Subsection")
 
-    def test_build_toc_skips_headings_inside_fenced_code(self) -> None:
+    @staticmethod
+    def test_build_toc_skips_headings_inside_fenced_code() -> None:
         content = (
             "# Main\n\n"
             "## Real Section\n\n"
@@ -69,7 +73,8 @@ class TestsFlextInfraDocsGeneratorInternals:
         tm.that(toc, lacks="Wave Assignment")
         tm.that(toc, lacks="Tilde Sample")
 
-    def test_build_toc_uses_rendered_ids_and_plain_link_labels(self) -> None:
+    @staticmethod
+    def test_build_toc_uses_rendered_ids_and_plain_link_labels() -> None:
         """Explicit IDs, inline links and duplicates resolve to real rendered anchors."""
         content = (
             "# Main\n\n"
@@ -99,7 +104,8 @@ class TestsFlextInfraDocsGeneratorInternals:
         tm.that(twice, eq=updated)
         tm.that(changed, eq=0)
 
-    def test_update_toc_replaces_existing_block(self) -> None:
+    @staticmethod
+    def test_update_toc_replaces_existing_block() -> None:
         updated, changed = u.Infra.update_toc(
             "# Main\n\n<!-- TOC START -->\n- stale\n<!-- TOC END -->\n\n## Section\n",
         )
@@ -108,8 +114,8 @@ class TestsFlextInfraDocsGeneratorInternals:
         tm.that(updated, lacks="stale")
         tm.that(updated, has="Section")
 
+    @staticmethod
     def test_generated_markdown_is_toc_normalized_before_write(
-        self,
         tmp_path: Path,
     ) -> None:
         generated = tmp_path / "generated.md"
@@ -124,15 +130,16 @@ class TestsFlextInfraDocsGeneratorInternals:
         tm.that(generated.read_text(), has="<!-- TOC START -->")
         tm.that(generated.read_text(), has="[Section](#section)")
 
-    def test_update_toc_preserves_single_blank_after_level_one_heading(self) -> None:
+    @staticmethod
+    def test_update_toc_preserves_single_blank_after_level_one_heading() -> None:
         updated, changed = u.Infra.update_toc("# Main\n\n## Section\n")
 
         tm.that(changed, eq=1)
         tm.that(updated, has="# Main\n\n<!-- TOC START -->")
         tm.that(updated, lacks="# Main\n\n\n<!-- TOC START -->")
 
+    @staticmethod
     def test_generated_non_markdown_preserves_exact_content(
-        self,
         tmp_path: Path,
     ) -> None:
         generated = tmp_path / "mkdocs.yml"
@@ -143,7 +150,8 @@ class TestsFlextInfraDocsGeneratorInternals:
         tm.that(result.changed, eq=True)
         tm.that(generated.read_text(), eq=content)
 
-    def test_generate_creates_selected_project_reports(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_generate_creates_selected_project_reports(tmp_path: Path) -> None:
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -153,7 +161,8 @@ class TestsFlextInfraDocsGeneratorInternals:
 
         result = generator.generate(
             m.Infra.DocsGenerateRequest(
-                repository_root=workspace, projects=["flext-a"]
+                repository_root=workspace,
+                projects=["flext-a"],
             ),
         )
 

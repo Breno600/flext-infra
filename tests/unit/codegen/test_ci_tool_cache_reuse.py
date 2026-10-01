@@ -5,9 +5,8 @@ from __future__ import annotations
 from flext_tests import tm
 
 from flext_infra import c, config, t
-
-from ._support import CodegenTestSupport
-from .test_ci_integration_branch_triggers import (
+from tests.unit.codegen._support import CodegenTestSupport
+from tests.unit.codegen.test_ci_integration_branch_triggers import (
     TestsFlextInfraCiIntegrationBranchTriggers,
 )
 
@@ -15,7 +14,8 @@ from .test_ci_integration_branch_triggers import (
 class TestsFlextInfraCiToolCacheReuse:
     """A cold tool cache must not be recomputed on every run."""
 
-    def test_ci_reuses_and_saves_the_declared_tool_caches(self) -> None:
+    @staticmethod
+    def test_ci_reuses_and_saves_the_declared_tool_caches() -> None:
         steps = CodegenTestSupport.Ci.ci_job_steps(
             TestsFlextInfraCiIntegrationBranchTriggers.render_ci(
                 repository_branch="0.12.0-dev",
@@ -40,7 +40,8 @@ class TestsFlextInfraCiToolCacheReuse:
             tm.that(directory in restore_paths, eq=True)
         tm.that(save_with["key"], eq=restore_with["key"])
 
-    def test_ci_carries_no_type_checker_cache(self) -> None:
+    @staticmethod
+    def test_ci_carries_no_type_checker_cache() -> None:
         """No type checker runs in CI, so CI restores and saves no Mypy cache."""
         make = config.Infra.codegen.make
         tm.that(set(make.check_gates_ci) & c.Infra.TYPE_CHECKER_GATES, eq=set())

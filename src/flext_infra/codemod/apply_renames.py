@@ -8,10 +8,9 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
+from flext_infra.codemod._rename_sources import FlextInfraRenameSources
+from flext_infra.codemod._rename_symbols import FlextInfraRenameSymbols
 from flext_infra.transformers import FlextInfraSemanticPublication
-
-from ._rename_sources import FlextInfraRenameSources
-from ._rename_symbols import FlextInfraRenameSymbols
 
 
 class FlextInfraApplyRenames:

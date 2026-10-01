@@ -8,9 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 
 from flext_infra import c, config, m, t
-
-from .project_discovery import FlextInfraUtilitiesProjectDiscovery
-from .rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
 
 
 class FlextInfraUtilitiesRopeAnalysisWorkspace:

@@ -83,7 +83,8 @@ class TestsFlextInfraCodegenProjectNewValidation:
         tm.fail(result, has="not canonicalizable to HTTPS")
         tm.that(not (tmp_path / "project").exists())
 
-    def test_ssh_origin_canonicalizes_to_https(self) -> None:
+    @staticmethod
+    def test_ssh_origin_canonicalizes_to_https() -> None:
         """The declared origin is stored in its canonical HTTPS form."""
         canonical = u.Infra.validate_git_remote_url(
             "git@github.com:flext-sh/flext-demo.git",
@@ -91,14 +92,16 @@ class TestsFlextInfraCodegenProjectNewValidation:
         tm.ok(canonical)
         tm.that(canonical.value, eq="https://github.com/flext-sh/flext-demo.git")
 
-    def test_surrounding_whitespace_is_stripped_before_validation(self) -> None:
+    @staticmethod
+    def test_surrounding_whitespace_is_stripped_before_validation() -> None:
         """A padded but valid URL validates to the same canonical form."""
         padded = f"  {u.Tests.repository_ref(config.Infra.name).url}  "
         canonical = u.Infra.validate_git_remote_url(padded)
         tm.ok(canonical)
         tm.that(canonical.value, eq=u.Tests.repository_ref(config.Infra.name).url)
 
-    def test_pathless_url_is_rejected(self) -> None:
+    @staticmethod
+    def test_pathless_url_is_rejected() -> None:
         """A URL naming only a host carries no repository identity."""
         result = u.Infra.validate_git_remote_url("https://github.com")
         tm.fail(result, has="must name a host and repository path")

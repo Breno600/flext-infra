@@ -13,9 +13,8 @@ from pathlib import Path
 
 from flext_core import r
 from flext_infra import m, p, t
-
-from ._layout_files import FlextInfraCodegenLayoutFilesMixin
-from ._layout_gitignore import FlextInfraCodegenLayoutGitignoreMixin
+from flext_infra.codegen._layout_files import FlextInfraCodegenLayoutFilesMixin
+from flext_infra.codegen._layout_gitignore import FlextInfraCodegenLayoutGitignoreMixin
 
 
 class FlextInfraCodegenLayoutApplyMixin(

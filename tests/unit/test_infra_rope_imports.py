@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraRopeImports:
     """Validate fail-fast behavior for Rope import utility wrappers."""
 
+    @staticmethod
     def test_normalize_imports_removes_orphaned_imports_and_formats(
-        self,
         tmp_path: Path,
     ) -> None:
         """Centralized import cleanup should leave one lint-clean module."""
@@ -56,8 +56,8 @@ class TestsFlextInfraRopeImports:
             ),
         )
 
+    @staticmethod
     def test_normalize_imports_preserves_quoted_cast_types(
-        self,
         tmp_path: Path,
     ) -> None:
         """A type referenced only inside cast must retain its import."""
@@ -89,8 +89,8 @@ class TestsFlextInfraRopeImports:
                 eq=False,
             )
 
+    @staticmethod
     def test_organize_imports_treats_already_clean_module_as_noop(
-        self,
         tmp_path: Path,
     ) -> None:
         """An already-organized module yields a clean no-op result."""
@@ -118,8 +118,8 @@ class TestsFlextInfraRopeImports:
         tm.ok(result)
         tm.that(result.value, eq=False)
 
+    @staticmethod
     def test_organize_imports_reports_change_for_unused_import(
-        self,
         tmp_path: Path,
     ) -> None:
         """A module with an unused import yields a pending organize change."""

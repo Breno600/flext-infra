@@ -30,8 +30,8 @@ class TestsFlextInfraFreshImport:
         """Shared validator instance."""
         return FlextInfraValidateFreshImport()
 
+    @staticmethod
     def test_probes_run_in_the_declared_target_environment(
-        self,
         tmp_path: Path,
     ) -> None:
         """The declared target interpreter runs the probes, not the tool's.
@@ -50,8 +50,8 @@ class TestsFlextInfraFreshImport:
         tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="No module named 'flext_core'")
 
+    @staticmethod
     def test_declared_target_without_interpreter_fails_loudly(
-        self,
         tmp_path: Path,
     ) -> None:
         """A declared target lacking its interpreter fails, never falls back."""
@@ -62,18 +62,21 @@ class TestsFlextInfraFreshImport:
         result = validator.build_report(packages=("sys",))
         tm.fail(result, has="fresh-import target interpreter is missing")
 
-    def test_empty_package_list_passes(self, v: FlextInfraValidateFreshImport) -> None:
+    @staticmethod
+    def test_empty_package_list_passes(v: FlextInfraValidateFreshImport) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=()))
         tm.that(report, is_=m.Infra.ValidationReport)
         tm.that(report.passed, eq=True)
         tm.that(report.violations, length=0)
 
-    def test_stdlib_package_passes(self, v: FlextInfraValidateFreshImport) -> None:
+    @staticmethod
+    def test_stdlib_package_passes(v: FlextInfraValidateFreshImport) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=("sys",)))
         tm.that(report.passed, eq=True)
         tm.that(report.violations, length=0)
 
-    def test_nonexistent_package_fails(self, v: FlextInfraValidateFreshImport) -> None:
+    @staticmethod
+    def test_nonexistent_package_fails(v: FlextInfraValidateFreshImport) -> None:
         report: m.Infra.ValidationReport = tm.ok(
             v.build_report(packages=("nonexistent_pkg_xyz_abc_123",)),
         )
@@ -81,8 +84,8 @@ class TestsFlextInfraFreshImport:
         tm.that(report.violations, length=1)
         tm.that(report.violations[0], has="nonexistent_pkg_xyz_abc_123")
 
+    @staticmethod
     def test_mixed_good_and_bad_reports_only_bad(
-        self,
         v: FlextInfraValidateFreshImport,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(
@@ -92,8 +95,8 @@ class TestsFlextInfraFreshImport:
         tm.that(report.violations, length=1)
         tm.that(report.violations[0], has="nonexistent_xyz_qqq")
 
+    @staticmethod
     def test_stops_at_first_causal_failure(
-        self,
         v: FlextInfraValidateFreshImport,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(
@@ -104,14 +107,15 @@ class TestsFlextInfraFreshImport:
         tm.that(report.violations[0], lacks="nonexistent_b_qqq")
         tm.that(report.summary, has="failed")
 
+    @staticmethod
     def test_passing_summary_is_human_readable(
-        self,
         v: FlextInfraValidateFreshImport,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(v.build_report(packages=("sys", "os")))
         tm.that(report.summary, has="import")
 
-    def test_workspace_src_package_passes(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_workspace_src_package_passes(tmp_path: Path) -> None:
         package_root = tmp_path / "src" / "demo_external"
         package_root.mkdir(parents=True)
         package_root.joinpath("__init__.py").write_text("VALUE = 1\n", encoding="utf-8")
@@ -154,8 +158,8 @@ class TestsFlextInfraFreshImport:
         else:
             tm.that(report.violations, length=0)
 
+    @staticmethod
     def test_removed_initializer_is_not_a_publication_contract(
-        self,
         tmp_path: Path,
     ) -> None:
         """A planned removal cannot certify the package's public exports."""
@@ -180,8 +184,8 @@ class TestsFlextInfraFreshImport:
 
         tm.fail(result, has=f"missing public export contract for {package.name}")
 
+    @staticmethod
     def test_layout_without_a_plan_verifies_its_on_disk_contract(
-        self,
         tmp_path: Path,
     ) -> None:
         """A layout no publication claims is verified from its live exports.
@@ -206,8 +210,8 @@ class TestsFlextInfraFreshImport:
 
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
+    @staticmethod
     def test_layout_without_a_plan_still_fails_on_a_broken_disk_contract(
-        self,
         tmp_path: Path,
     ) -> None:
         """A live package whose declared export cannot resolve still fails."""
@@ -282,8 +286,8 @@ class TestsFlextInfraFreshImport:
             has="has no attribute 'main'" if target_exists else "ModuleNotFoundError",
         )
 
+    @staticmethod
     def test_declared_script_contract_violation_stays_blocking(
-        self,
         tmp_path: Path,
     ) -> None:
         """A missing export surfacing through a loadable script fails the report."""
@@ -324,7 +328,8 @@ class TestsFlextInfraFreshImport:
         tm.that(report.passed, eq=False)
         tm.that(report.violations[0], has="ImportError")
 
-    def test_advertised_lazy_export_must_resolve(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_advertised_lazy_export_must_resolve(tmp_path: Path) -> None:
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
         package.mkdir(parents=True)
         (package / c.Infra.INIT_PY).write_text(
@@ -391,8 +396,8 @@ class TestsFlextInfraFreshImport:
             tm.that(report.violations[0], has="consumer.py")
             tm.that(report.violations[0], has="Traceback")
 
+    @staticmethod
     def test_probe_larger_than_one_process_argument_still_runs(
-        self,
         tmp_path: Path,
     ) -> None:
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
@@ -432,8 +437,8 @@ class TestsFlextInfraFreshImport:
         )
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
+    @staticmethod
     def test_rejects_owned_module_imported_from_another_directory(
-        self,
         tmp_path: Path,
     ) -> None:
         package = tmp_path / c.Infra.DEFAULT_SRC_DIR / "flext_import_probe"
@@ -480,8 +485,8 @@ class TestsFlextInfraFreshImport:
         tm.that(report.violations[0], has="is outside")
         tm.that(report.violations[0], has=str(foreign))
 
+    @staticmethod
     def test_foreign_origin_is_reported_before_phantom_export(
-        self,
         tmp_path: Path,
     ) -> None:
         """A module loaded from outside this checkout names the origin first.
@@ -537,8 +542,8 @@ class TestsFlextInfraFreshImport:
         tm.that(report.violations[0], has=str(foreign))
         tm.that(report.violations[0], lacks="has no attribute")
 
+    @staticmethod
     def test_origin_gate_keeps_the_probed_module_for_export_resolution(
-        self,
         tmp_path: Path,
     ) -> None:
         """Exports resolve against the published package, not the last loaded module.
@@ -593,14 +598,15 @@ class TestsFlextInfraFreshImport:
         )
         tm.that(report.passed, eq=True, msg=str(report.violations))
 
-    def test_flext_core_imports_cleanly(self, v: FlextInfraValidateFreshImport) -> None:
+    @staticmethod
+    def test_flext_core_imports_cleanly(v: FlextInfraValidateFreshImport) -> None:
         report: m.Infra.ValidationReport = tm.ok(
             v.build_report(packages=("flext_core",)),
         )
         tm.that(report.passed, eq=True, msg=report.summary)
 
+    @staticmethod
     def test_flext_infra_imports_cleanly(
-        self,
         v: FlextInfraValidateFreshImport,
     ) -> None:
         report: m.Infra.ValidationReport = tm.ok(

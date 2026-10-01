@@ -13,8 +13,8 @@ from tests import u as test_u
 class TestsFlextInfraGitStateCheckpoint:
     """Checkpoints retain original staging while saved candidates evolve."""
 
+    @staticmethod
     def _publish(
-        self,
         parent: Path,
         checkpoint: m.Infra.GitWorktreeStateCheckpoint,
     ) -> m.Infra.GitWorktreeCheckpointPublication:
@@ -26,12 +26,14 @@ class TestsFlextInfraGitStateCheckpoint:
             u.Infra.git_publish_worktree_checkpoint(checkpoint, "checkpoint-remote"),
         )
 
-    def _blob_text(self, root: Path, revision: str) -> str:
+    @staticmethod
+    def _blob_text(root: Path, revision: str) -> str:
         execution = tm.ok(u.Cli.run_raw(["git", "show", revision], cwd=root))
         tm.that(u.Cli.process_succeeded(execution.outcome), eq=True)
         return execution.stdout
 
-    def _capture(self, parent: Path) -> m.Infra.GitWorktreeStateCheckpoint:
+    @staticmethod
+    def _capture(parent: Path) -> m.Infra.GitWorktreeStateCheckpoint:
         source = test_u.Tests.git_repository(parent)
         tracked = source / "README.md"
         tracked.write_text("baseline\n", encoding="utf-8")
@@ -59,8 +61,8 @@ class TestsFlextInfraGitStateCheckpoint:
             ),
         )
 
+    @staticmethod
     def _lane(
-        self,
         parent: Path,
         checkpoint: m.Infra.GitWorktreeStateCheckpoint,
     ) -> Path:
@@ -222,8 +224,8 @@ class TestsFlextInfraGitStateCheckpoint:
             eq="staged\n",
         )
 
+    @staticmethod
     def test_empty_scope_is_explicit_and_intent_to_add_is_rejected(
-        self,
         tmp_path: Path,
     ) -> None:
         source = test_u.Tests.git_repository(tmp_path)
@@ -244,7 +246,8 @@ class TestsFlextInfraGitStateCheckpoint:
         )
         tm.that(rejected.failure, eq=True)
 
-    def _diverge_remote(self, checkpoint: m.Infra.GitWorktreeStateCheckpoint) -> str:
+    @staticmethod
+    def _diverge_remote(checkpoint: m.Infra.GitWorktreeStateCheckpoint) -> str:
         """Force-move the published remote ref to an unrelated capture."""
         source = checkpoint.snapshot.repo_root
         tree = test_u.Tests.git_capture(
@@ -270,8 +273,8 @@ class TestsFlextInfraGitStateCheckpoint:
         )
         return divergent
 
+    @staticmethod
     def _remote_advertisement(
-        self,
         checkpoint: m.Infra.GitWorktreeStateCheckpoint,
     ) -> str:
         return test_u.Tests.git_capture(

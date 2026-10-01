@@ -6,10 +6,8 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from tests import c, t
-
-from ... import m, u
-from ._support import CodegenTestSupport
+from tests import c, m, t, u
+from tests.unit.codegen._support import CodegenTestSupport
 
 
 class TestsFlextInfraTemplateFormatterFixedPoint:
@@ -57,8 +55,8 @@ class TestsFlextInfraTemplateFormatterFixedPoint:
             has_devcontainer=has_devcontainer,
         )
 
+    @staticmethod
     def test_standalone_pyproject_does_not_declare_empty_workspace(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep standalone projects eligible for a real parent uv workspace."""

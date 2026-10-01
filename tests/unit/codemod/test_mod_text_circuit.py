@@ -23,8 +23,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraModTextGateEngine:
     """Exercise the declarative sed-by-list engine through its public scan."""
 
+    @staticmethod
     def test_external_consumer_inherits_provider_and_composes_local_rules(
-        self,
         mod_workspace: Path,
     ) -> None:
         """A standalone consumer sees the packaged catalogue and its own overlay."""
@@ -89,8 +89,8 @@ class TestsFlextInfraModTextGateEngine:
         tm.fail(result, has="duplicate text rule id")
         tm.that(first.read_bytes(), eq=original)
 
+    @staticmethod
     def test_declared_markdown_rule_replays_and_reaches_fixed_point(
-        self,
         mod_workspace: Path,
     ) -> None:
         """An authored Markdown guide is an authenticated public text input."""
@@ -115,8 +115,8 @@ class TestsFlextInfraModTextGateEngine:
             eq=0,
         )
 
+    @staticmethod
     def test_declared_markdown_symlink_fails_before_publication(
-        self,
         mod_workspace: Path,
     ) -> None:
         """A declared guide cannot route publication through a symbolic link."""
@@ -142,8 +142,8 @@ class TestsFlextInfraModTextGateEngine:
         )
         tm.that(source.read_text(encoding="utf-8"), eq="Old guidance.\n")
 
+    @staticmethod
     def test_capture_guard_rejects_wrong_keyword_before_publication(
-        self,
         mod_workspace: Path,
     ) -> None:
         """A broad regex cannot rewrite a different keyword by accident."""
@@ -167,8 +167,8 @@ class TestsFlextInfraModTextGateEngine:
 
         tm.that(source.read_bytes(), eq=before)
 
+    @staticmethod
     def test_capture_guard_accepts_declared_keyword_and_fixed_point(
-        self,
         mod_workspace: Path,
     ) -> None:
         """A guarded rule rewrites once, then observes no further match."""
@@ -193,8 +193,8 @@ class TestsFlextInfraModTextGateEngine:
             eq=0,
         )
 
+    @staticmethod
     def test_capture_guard_requires_a_declared_named_group(
-        self,
         mod_workspace: Path,
     ) -> None:
         """An invalid catalogue fails before scanning any candidate source."""
@@ -400,8 +400,8 @@ class TestsFlextInfraModTextGateEngine:
             tm.that(state.path.read_bytes(), eq=state.content)
         tm.that(tuple(mod_workspace.rglob("*.semantic-staging")), empty=True)
 
+    @staticmethod
     def test_scan_proves_rewrite_receipt_and_fixed_point(
-        self,
         mod_workspace: Path,
     ) -> None:
         """One list entry rewrites its match once and reaches a fixed point."""
@@ -497,8 +497,8 @@ class TestsFlextInfraModTextGateEngine:
             )
         tm.that((mod_workspace / "sample.py").read_bytes(), eq=original)
 
+    @staticmethod
     def test_load_rules_rejects_unknown_keys_and_duplicate_ids(
-        self,
         mod_workspace: Path,
     ) -> None:
         """Declarative list entries must be exact and unique."""
@@ -538,8 +538,8 @@ class TestsFlextInfraModTextGateEngine:
         valid = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
         tm.that({"first", "second"} <= {rule.rule_id for rule in valid}, eq=True)
 
+    @staticmethod
     def test_include_and_exclude_globs_elect_exact_targets(
-        self,
         mod_workspace: Path,
     ) -> None:
         """Glob election scopes the rewrite to the declared surfaces only."""

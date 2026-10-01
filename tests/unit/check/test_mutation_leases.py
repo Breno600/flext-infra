@@ -51,7 +51,8 @@ class TestsFlextInfraMutationLeases:
         tm.that(target.read_text(encoding="utf-8"), has="import os")
         tm.that(gate.check(root, context).result.passed, eq=True)
 
-    def test_malformed_git_marker_is_not_a_file_scope(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_malformed_git_marker_is_not_a_file_scope(tmp_path: Path) -> None:
         marker = tmp_path / c.Infra.GIT_DIR
         marker.mkdir()
         request = m.Infra.GitRepoRequest(repo_root=tmp_path)
@@ -59,8 +60,8 @@ class TestsFlextInfraMutationLeases:
         tm.that(u.Infra.git_mutation_scope(request).failure, eq=True)
         tm.that((tmp_path / c.Infra.TRANSACTION_STATE_DIRNAME).exists(), eq=False)
 
+    @staticmethod
     def test_nested_git_scope_uses_original_worktree_journal(
-        self,
         tmp_path: Path,
     ) -> None:
         root = test_u.Tests.git_repository(tmp_path)

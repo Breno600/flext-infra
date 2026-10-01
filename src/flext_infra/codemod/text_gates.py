@@ -21,10 +21,12 @@ from fnmatch import fnmatch
 from pathlib import Path
 
 from flext_core import r
-
-from .. import c, m, p, t, u
-from .._config import FlextInfraConfig
-from ..codegen import FlextInfraCodegenMiseArtifacts, FlextInfraCodegenTransaction
+from flext_infra import c, m, p, t, u
+from flext_infra._config import FlextInfraConfig
+from flext_infra.codegen import (
+    FlextInfraCodegenMiseArtifacts,
+    FlextInfraCodegenTransaction,
+)
 
 
 class FlextInfraModTextGateEngine:

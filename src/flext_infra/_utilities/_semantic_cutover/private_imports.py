@@ -8,12 +8,21 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import m, t
-
-from ..private_import_ancestry import FlextInfraUtilitiesPrivateImportAncestry
-from ..private_import_facades import FlextInfraUtilitiesPrivateImportFacades
-from ..private_import_validation import FlextInfraUtilitiesPrivateImportValidation
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
-from .private_import_cst import FlextInfraUtilitiesSemanticCutoverPrivateImportCst
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.private_import_cst import (
+    FlextInfraUtilitiesSemanticCutoverPrivateImportCst,
+)
+from flext_infra._utilities.private_import_ancestry import (
+    FlextInfraUtilitiesPrivateImportAncestry,
+)
+from flext_infra._utilities.private_import_facades import (
+    FlextInfraUtilitiesPrivateImportFacades,
+)
+from flext_infra._utilities.private_import_validation import (
+    FlextInfraUtilitiesPrivateImportValidation,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path

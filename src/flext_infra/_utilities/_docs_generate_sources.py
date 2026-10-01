@@ -9,9 +9,8 @@ from flext_cli import u as cli_u
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from .codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from .docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from flext_infra import p

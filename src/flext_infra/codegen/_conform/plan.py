@@ -7,11 +7,12 @@ from pathlib import Path
 from typing import override
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from ...workspace import FlextInfraWorkspaceDetector
-from .._mise_artifacts_cold_start import FlextInfraMiseColdStart
-from .scaffold_plan import FlextInfraCodegenConformScaffoldPlan
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen._conform.scaffold_plan import (
+    FlextInfraCodegenConformScaffoldPlan,
+)
+from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformPlan(FlextInfraCodegenConformScaffoldPlan):

@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraCodegenAutofixWorkspace:
     """Test suite for FlextInfraCodegenFixer workspace-level operations."""
 
+    @staticmethod
     def _project_info(
-        self,
         project: Path,
         *,
         package_name: str = "test_proj",

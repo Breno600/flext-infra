@@ -5,10 +5,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from flext_core import r
-
-from ... import c, m, p, t, u
-from ...deps import FlextInfraPyprojectModernizer
-from .existing_plan import FlextInfraCodegenConformExistingPlan
+from flext_infra import c, m, p, t, u
+from flext_infra.codegen._conform.existing_plan import (
+    FlextInfraCodegenConformExistingPlan,
+)
+from flext_infra.deps import FlextInfraPyprojectModernizer
 
 
 class FlextInfraCodegenConformScaffoldPlan(FlextInfraCodegenConformExistingPlan):

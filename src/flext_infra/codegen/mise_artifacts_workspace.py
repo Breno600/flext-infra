@@ -7,11 +7,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_core import r
-
-from .. import c, m, u
-from ..workspace import FlextInfraWorkspaceDetector
-from ._mise_artifacts_derivation import FlextInfraMiseArtifactsDerivation
-from ._mise_artifacts_files import FlextInfraMiseArtifactsFiles as files
+from flext_infra import c, m, u
+from flext_infra.codegen._mise_artifacts_derivation import (
+    FlextInfraMiseArtifactsDerivation,
+)
+from flext_infra.codegen._mise_artifacts_files import (
+    FlextInfraMiseArtifactsFiles as files,
+)
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from .. import p, t

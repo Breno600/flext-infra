@@ -27,8 +27,8 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
             selected_projects=("demo",),
         )
 
+    @staticmethod
     def test_beartype_rules_collect_real_python_file_probes(
-        self,
         tmp_path: Path,
     ) -> None:
         """The public dry-run reports a no-change skip for a clean source file."""
@@ -59,7 +59,8 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
             eq="from __future__ import annotations\n",
         )
 
-    def test_stub_file_rule_collects_pyi_probes(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_stub_file_rule_collects_pyi_probes(tmp_path: Path) -> None:
         """The public dry-run reports source stubs and ignores virtualenv stubs."""
         project_dir = u.Tests.mk_project(
             tmp_path,
@@ -88,7 +89,8 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         tm.that(report, has=str(stub_file))
         tm.that(report, lacks=str(excluded_stub))
 
-    def test_remove_stub_file_dry_run_does_not_unlink(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_remove_stub_file_dry_run_does_not_unlink(tmp_path: Path) -> None:
         """The remove-stub adapter previews deletion in dry-run."""
         project_dir = tmp_path / "demo"
         stub_file = project_dir / "src" / "demo" / "__init__.pyi"
@@ -108,7 +110,8 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         tm.that(result.fixed, eq=())
         tm.that(result.failed, eq=())
 
-    def test_remove_stub_file_apply_unlinks_only_stub(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_remove_stub_file_apply_unlinks_only_stub(tmp_path: Path) -> None:
         """The remove-stub adapter deletes the reported ``.pyi`` in apply mode."""
         project_dir = tmp_path / "demo"
         stub_file = project_dir / "src" / "demo" / "__init__.pyi"
@@ -128,7 +131,8 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         tm.that(result.files_modified, eq=(str(stub_file),))
         tm.that(result.failed, eq=())
 
-    def test_manual_fix_dry_run_previews_without_mutation(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_manual_fix_dry_run_previews_without_mutation(tmp_path: Path) -> None:
         """Manual fix actions produce explicit previews in dry-run."""
         rule = u.Tests.enforcement_rule("ENFORCE-097")
         fix_action = rule.fix_action
@@ -161,7 +165,8 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         tm.that(result.fixed, eq=())
         tm.that(result.failed, eq=())
 
-    def test_manual_fix_apply_fails_loudly(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_manual_fix_apply_fails_loudly(tmp_path: Path) -> None:
         """Manual fix actions cannot be reported as applied automatically."""
         rule = u.Tests.enforcement_rule("ENFORCE-097")
         adapter = FlextInfraManualFixerAdapter(tmp_path)
@@ -189,7 +194,8 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         tm.that(len(result.failed), eq=1)
         tm.that(result.failed[0].error, has="manual fix required for ENFORCE-097")
 
-    def test_missing_selected_project_fails_resolution(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_missing_selected_project_fails_resolution(tmp_path: Path) -> None:
         """A typoed project filter is a hard failure, not a zero-project success."""
         _ = u.Tests.mk_project(
             tmp_path,
@@ -208,7 +214,8 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         tm.fail(result)
         tm.that((result.error or ""), has="missing")
 
-    def test_explicit_unsafe_rule_fails_under_safe_only(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_explicit_unsafe_rule_fails_under_safe_only(tmp_path: Path) -> None:
         """Explicit unsafe fix requests must fail instead of becoming no-op success."""
         orchestrator = FlextInfraEnforcementFixerOrchestrator(
             repository_root=tmp_path,
@@ -221,8 +228,8 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         tm.fail(result)
         tm.that(result.error, has="unsafe under --safe-only")
 
+    @staticmethod
     def test_every_catalog_fix_action_resolves_to_an_adapter(
-        self,
         tmp_path: Path,
     ) -> None:
         """Preflight proves the catalog and the adapter registry agree.

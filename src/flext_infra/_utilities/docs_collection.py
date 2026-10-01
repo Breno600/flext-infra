@@ -8,9 +8,10 @@ from hashlib import sha256
 from pathlib import Path
 
 from flext_infra import m, t
-
-from .docs_collection_verify import FlextInfraUtilitiesDocsCollectionVerify
-from .docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities.docs_collection_verify import (
+    FlextInfraUtilitiesDocsCollectionVerify,
+)
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
 
 
 class FlextInfraUtilitiesDocsCollection(FlextInfraUtilitiesDocsCollectionVerify):

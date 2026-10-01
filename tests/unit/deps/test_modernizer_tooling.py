@@ -35,8 +35,8 @@ class TestsFlextInfraDepsModernizerTooling:
             u.Tests.toml_mapping(payload["tool"])["ruff"],
         )
 
+    @staticmethod
     def test_typecheck_policy_keeps_tracked_surfaces_visible(
-        self,
         tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Keep every tracked Python surface visible to all four analyzers."""
@@ -132,8 +132,8 @@ class TestsFlextInfraDepsModernizerTooling:
             },
         )
 
+    @staticmethod
     def test_project_cannot_declare_its_own_ruff_exemption(
-        self,
         tmp_path: Path,
     ) -> None:
         """Per-file exemptions live only at the tooling owner, never per project."""

@@ -88,16 +88,16 @@ class TestsFlextInfraIndexDeclarationsGate:
 
         return run
 
+    @staticmethod
     def test_consistent_repository_passes(
-        self,
         gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
         result = gate_result()
         tm.that(result.passed, eq=True)
         tm.that(len(result.errors), eq=0)
 
+    @staticmethod
     def test_undeclared_gitlink_fails_naming_the_path(
-        self,
         gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
         result = gate_result(orphan_gitlink=True)
@@ -106,8 +106,8 @@ class TestsFlextInfraIndexDeclarationsGate:
         tm.that(result.errors[0], has="nested")
         tm.that(result.errors[0], has=".gitmodules")
 
+    @staticmethod
     def test_declared_gitlink_passes(
-        self,
         gate_result: Callable[..., m.Infra.GateResult],
     ) -> None:
         # The same gitlink, now declared, is legitimate topology and must not

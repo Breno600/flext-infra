@@ -47,7 +47,8 @@ def _plan(
 class TestsFlextInfraLazyInitProjectionManifest:
     """The manifest is a pure, deterministic function of the phase plans."""
 
-    def test_manifest_is_deterministic_and_digest_bound(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_manifest_is_deterministic_and_digest_bound(tmp_path: Path) -> None:
         """Identical plans render identical bytes bound to content digests."""
         first = _plan(tmp_path, ".agents/aihub-hooks/__init__.py", b"alpha")
         second = _plan(tmp_path, ".codex/rules/rule.mdc", b"beta")
@@ -79,8 +80,8 @@ class TestsFlextInfraLazyInitProjectionManifest:
         assert manifest.desired_content is not None
         tm.that(manifest.desired_content.endswith(b"\n"), eq=True)
 
+    @staticmethod
     def test_manifest_excludes_itself_and_non_projected_plans(
-        self,
         tmp_path: Path,
     ) -> None:
         """Only .agents/.codex projections feed entries; the manifest never self-refs."""
@@ -106,7 +107,8 @@ class TestsFlextInfraLazyInitProjectionManifest:
         assert isinstance(only_entry, dict)
         tm.that(only_entry.get("path"), eq=".agents/aihub-hooks/x.py")
 
-    def test_project_without_projections_gets_no_manifest(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_project_without_projections_gets_no_manifest(tmp_path: Path) -> None:
         """A project owning no projected files emits no manifest plan."""
         engine = _plan(tmp_path, "src/engine.py", b"only")
         result = FlextInfraCodegenLazyInitProjectionManifest.projection_manifest_plans(
@@ -115,7 +117,8 @@ class TestsFlextInfraLazyInitProjectionManifest:
         tm.that(result.failure, eq=False)
         tm.that(result.value, eq=())
 
-    def test_manifest_groups_one_plan_per_project(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_manifest_groups_one_plan_per_project(tmp_path: Path) -> None:
         """Two projects each receive their own manifest at their own root."""
         other = tmp_path / "member"
         other.mkdir()

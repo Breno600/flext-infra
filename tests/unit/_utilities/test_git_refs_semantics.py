@@ -13,15 +13,16 @@ from tests import u as test_u
 class TestsFlextInfraGitRefsSemantics:
     """Prove the single canonical ref owner per fact through the public facade."""
 
-    def _linked_lane(self, tmp_path: Path, repository: Path, branch: str) -> Path:
+    @staticmethod
+    def _linked_lane(tmp_path: Path, repository: Path, branch: str) -> Path:
         """Register ``branch`` as a linked worktree lane beside the primary."""
         lane = tmp_path / branch
         _ = test_u.Tests.git_run(repository, "branch", branch)
         _ = test_u.Tests.git_run(repository, "worktree", "add", str(lane), branch)
         return lane
 
+    @staticmethod
     def test_current_branch_reports_the_checked_out_branch(
-        self,
         tmp_path: Path,
     ) -> None:
         """The single branch owner reads the branch the worktree is on."""
@@ -33,8 +34,8 @@ class TestsFlextInfraGitRefsSemantics:
 
         tm.that(branch.text, eq=c.Infra.GIT_MAIN)
 
+    @staticmethod
     def test_current_branch_fails_loudly_on_a_detached_head(
-        self,
         tmp_path: Path,
     ) -> None:
         """A detached HEAD has no branch; the owner fails instead of a sentinel."""
@@ -48,7 +49,8 @@ class TestsFlextInfraGitRefsSemantics:
         assert result.failure
         assert result.error is not None
 
-    def test_ref_exists_distinguishes_present_from_absent(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_ref_exists_distinguishes_present_from_absent(tmp_path: Path) -> None:
         """The ref owner answers the exact-ref question, never raising on absence."""
         repository = test_u.Tests.git_repository(tmp_path)
 
@@ -72,7 +74,8 @@ class TestsFlextInfraGitRefsSemantics:
         tm.that(present.value, eq=True)
         tm.that(absent.value, eq=False)
 
-    def test_check_branch_format_accepts_and_rejects(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_check_branch_format_accepts_and_rejects(tmp_path: Path) -> None:
         """The branch-format owner answers from Git's own check-ref-format."""
         repository = test_u.Tests.git_repository(tmp_path)
 
@@ -89,7 +92,8 @@ class TestsFlextInfraGitRefsSemantics:
         tm.that(invalid.failure, eq=True)
         tm.that(invalid.error, contains="not a valid branch name")
 
-    def test_resolve_commit_and_rev_parse_agree_on_head(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_resolve_commit_and_rev_parse_agree_on_head(tmp_path: Path) -> None:
         """Both oid owners resolve the same HEAD to the same 40-hex oid."""
         repository = test_u.Tests.git_repository(tmp_path)
 
@@ -113,7 +117,8 @@ class TestsFlextInfraGitRefsSemantics:
         tm.that(resolved.oid, eq=parsed.oid)
         tm.that(len(resolved.oid), eq=40)
 
-    def test_resolve_commit_fails_on_an_unknown_commitish(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_resolve_commit_fails_on_an_unknown_commitish(tmp_path: Path) -> None:
         """An unresolvable commit-ish is a failure, never an empty oid."""
         repository = test_u.Tests.git_repository(tmp_path)
 

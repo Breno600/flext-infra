@@ -13,8 +13,7 @@ from typing import Annotated, ClassVar, override
 
 from flext_core import r
 from flext_infra import c, config, m, p, settings, t, u
-
-from ..base import FlextInfraServiceBase
+from flext_infra.base import FlextInfraServiceBase
 
 
 class FlextInfraValidateFreshImport(FlextInfraServiceBase[bool]):

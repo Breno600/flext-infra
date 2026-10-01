@@ -27,7 +27,8 @@ class TestsFlextInfraAuditorDocstring:
     _FULL_COVERAGE_PERCENT = 100.0
     _PARTIAL_COVERAGE_THRESHOLD = 80.0
 
-    def _assert_verdict(self, result: p.Result[bool]) -> None:
+    @staticmethod
+    def _assert_verdict(result: p.Result[bool]) -> None:
         """A docstring finding fails the public execute boundary."""
         tm.fail(result)
 
@@ -83,14 +84,16 @@ __all__ = ["documented_fn", "undocumented_fn"]
             eq=round(100.0 * coverage.documented / coverage.checked, 1),
         )
 
-    def test_empty_contract_reports_full_coverage(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_empty_contract_reports_full_coverage(tmp_path: Path) -> None:
         coverage = u.Infra.docstring_coverage(tmp_path, {})
 
         tm.that(coverage.checked, eq=0)
         tm.that(coverage.documented, eq=0)
         tm.that(coverage.percent, eq=pytest.approx(100.0))
 
-    def test_root_scope_has_no_coverage_metric(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_root_scope_has_no_coverage_metric(tmp_path: Path) -> None:
         scope = m.Infra.DocScope(
             name="root",
             path=tmp_path,

@@ -94,7 +94,8 @@ def _importable_project(root: Path) -> Iterator[Path]:
 class TestRuntimeCensusSelection:
     """Empty discovery is a broken invocation, not evidence of conformance."""
 
-    def test_empty_checkout_fails_the_gate(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_empty_checkout_fails_the_gate(tmp_path: Path) -> None:
         context = m.Infra.GateContext(
             repository_root=tmp_path,
             reports_dir=tmp_path / ".reports",
@@ -108,8 +109,8 @@ class TestRuntimeCensusSelection:
 class TestsRuntimeCensusBlocking:
     """Every census violation blocks; no rule family is set aside."""
 
+    @staticmethod
     def test_every_rule_family_in_the_project_blocks(
-        self,
         mixed_project: Path,
         genuine_project: Path,
     ) -> None:
@@ -138,8 +139,8 @@ class TestsRuntimeCensusBlocking:
             eq=f"runtime census found {len(mixed.violations)} violation(s)",
         )
 
+    @staticmethod
     def test_single_violation_reports_verbatim(
-        self,
         genuine_project: Path,
         capsys: pytest.CaptureFixture[str],
     ) -> None:
@@ -206,8 +207,8 @@ class TestsRuntimeCensusSmellOwnership:
         tm.that(report.violations, length=len(self._smell_tokens(report.violations)))
         tm.that("\n".join(report.violations), has="[smell_function_parameters]")
 
+    @staticmethod
     def test_gate_without_census_families_is_a_failure(
-        self,
         mixed_project: Path,
     ) -> None:
         """A gate that owns no census family cannot grade a census run."""

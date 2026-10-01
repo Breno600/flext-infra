@@ -39,7 +39,8 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(content, lacks="__unit__")
         compile(content, "__init__.py", "exec")
 
-    def test_check_only_reports_drift_without_writing(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_check_only_reports_drift_without_writing(tmp_path: Path) -> None:
         """Report initializer drift while preserving every source byte."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(
@@ -57,8 +58,8 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(init_path.read_bytes(), eq=original)
         tm.that(str(init_path) in service.modified_files, eq=True)
 
+    @staticmethod
     def test_every_nested_level_is_lazy_formatted_and_idempotent(
-        self,
         tmp_path: Path,
     ) -> None:
         """Generate lazy facades at every importable package level."""
@@ -122,8 +123,8 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(check_service.modified_files, empty=True)
         tm.that(after, eq=before)
 
+    @staticmethod
     def test_manual_private_initializer_exports_survive_adoption(
-        self,
         tmp_path: Path,
     ) -> None:
         """Adopt the private facade while retaining its declared public export."""
@@ -150,7 +151,8 @@ class TestsFlextInfraLazyInitProcessing:
         tm.that(u.Tests.run_lazy_init(repository_root), eq=0)
         tm.that(init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT), eq=generated)
 
-    def test_apply_removes_obsolete_generated_sidecars(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_apply_removes_obsolete_generated_sidecars(tmp_path: Path) -> None:
         """Remove retired generated manifests while writing the initializer."""
         repository_root, package_root = u.Tests.create_lazy_init_workspace(tmp_path)
         u.Tests.write_lazy_init_namespace_module(

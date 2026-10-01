@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraValidateCli:
     """Exercise the public validate CLI entrypoints."""
 
-    def test_stub_validate_accepts_all_flag(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_stub_validate_accepts_all_flag(tmp_path: Path) -> None:
         workspace = tmp_path / "workspace"
         workspace.mkdir(parents=True, exist_ok=True)
 
@@ -31,7 +32,8 @@ class TestsFlextInfraValidateCli:
             eq=0,
         )
 
-    def test_stub_validate_help_returns_zero(self) -> None:
+    @staticmethod
+    def test_stub_validate_help_returns_zero() -> None:
         tm.that(infra_main(["validate", "stub-validate", "--help"]), eq=0)
 
     @staticmethod

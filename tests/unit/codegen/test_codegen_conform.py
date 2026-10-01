@@ -28,8 +28,7 @@ from flext_infra.docs import FlextInfraDocGenerator
 from flext_infra.services.cli_routes_codegen import FlextInfraCodegenRoutes
 from flext_infra.workspace import FlextInfraWorkspaceDetector
 from tests import c, m, p, t, u
-
-from .conform_support import TestsFlextInfraConformSupport
+from tests.unit.codegen.conform_support import TestsFlextInfraConformSupport
 
 pytestmark = [pytest.mark.slow]
 
@@ -225,8 +224,8 @@ class TestsFlextInfraCodegenConform:
             tm.that((root / ".lifecycle-cas").read_bytes(), eq=b"foreign\n")
             tm.that(capsys.readouterr().out, lacks="mode=converge")
 
+    @staticmethod
     def test_public_scaffold_exception_restores_bootstrap_state(
-        self,
         tmp_path: Path,
     ) -> None:
         """A raised prepared operation removes invocation-owned root and Git state."""
@@ -379,8 +378,8 @@ class TestsFlextInfraCodegenConform:
         tm.that(u.Tests.codegen_file_text(second), eq=u.Tests.codegen_file_text(first))
         tm.that(u.Infra.codegen_file_requires_effect(second), eq=False)
 
+    @staticmethod
     def test_pyproject_plan_rejects_local_path_internal_source(
-        self,
         tmp_path: Path,
     ) -> None:
         """A local-path internal source has no detectable identity: fail loud."""
@@ -407,8 +406,8 @@ class TestsFlextInfraCodegenConform:
 
         tm.fail(result, has="internal dependency direct source must be a git URL")
 
+    @staticmethod
     def _conform_with_rendered_makefile(
-        self,
         root: Path,
         help_text: str,
         *,
@@ -926,8 +925,8 @@ class TestsFlextInfraCodegenConform:
         tm.ok(fixed_point)
         tm.that(fixed_point.value.written_files, eq=())
 
+    @staticmethod
     def test_workspace_uv_plan_owns_root_lock_and_editable_repositories(
-        self,
         tmp_path: Path,
     ) -> None:
         """Keep workspace setup data complete without Make-side re-derivation."""
@@ -1053,8 +1052,8 @@ class TestsFlextInfraCodegenConform:
         tm.that(package_root, has='"flext_cli": (')
         tm.that(package_root, has='"r"')
 
+    @staticmethod
     def test_docs_config_apply_materializes_an_absent_docs_parent(
-        self,
         infra_git_repo: Path,
     ) -> None:
         """Bootstrapping docs-config on a checkout without ``docs/`` publishes it."""

@@ -11,8 +11,7 @@ from urllib.parse import urlsplit
 from flext_cli import u
 
 from flext_infra import c, config, m, t
-
-from .docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
 
 
 class FlextInfraUtilitiesDocsRender:

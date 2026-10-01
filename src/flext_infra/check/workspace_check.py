@@ -8,11 +8,12 @@ from typing import ClassVar, override
 
 from flext_core import r
 from flext_infra import c, config, m, p, t, u
-
-from ..base import FlextInfraServiceBase
-from ._workspace_check_reports import FlextInfraWorkspaceCheckReportsMixin
-from .gate_registry import FlextInfraGateRegistry
-from .workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
+from flext_infra.base import FlextInfraServiceBase
+from flext_infra.check._workspace_check_reports import (
+    FlextInfraWorkspaceCheckReportsMixin,
+)
+from flext_infra.check.gate_registry import FlextInfraGateRegistry
+from flext_infra.check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
 
 
 class FlextInfraWorkspaceChecker(

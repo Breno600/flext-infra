@@ -37,33 +37,39 @@ def _spec_payload(**overrides: t.JsonValue) -> dict[str, object]:
 class TestsFlextInfraMakeDocsActionsConfig:
     """Validation contract for make.docs lifecycle actions."""
 
-    def test_live_config_actions_stay_on_the_registered_cli_surface(self) -> None:
+    @staticmethod
+    def test_live_config_actions_stay_on_the_registered_cli_surface() -> None:
         """The declared workspace lifecycle dispatches only existing verbs."""
         docs = config.Infra.codegen.make.docs
         tm.that(set(docs.actions) <= c.Infra.DOCS_ACTION_IDS, eq=True)
         tm.that(set(docs.mutable_actions) <= set(docs.actions), eq=True)
 
-    def test_synthetic_lifecycle_validates(self) -> None:
+    @staticmethod
+    def test_synthetic_lifecycle_validates() -> None:
         spec = m.Infra.MakeDocsSpec.model_validate(_spec_payload())
         tm.that(spec.actions, eq=("generate", "fix", "validate"))
 
-    def test_unknown_action_is_rejected(self) -> None:
+    @staticmethod
+    def test_unknown_action_is_rejected() -> None:
         with pytest.raises(c.ValidationError, match="not a registered CLI action"):
             m.Infra.MakeDocsSpec.model_validate(
                 _spec_payload(actions=["generate", "deploy"]),
             )
 
-    def test_duplicate_action_is_rejected(self) -> None:
+    @staticmethod
+    def test_duplicate_action_is_rejected() -> None:
         with pytest.raises(c.ValidationError, match="must be unique"):
             m.Infra.MakeDocsSpec.model_validate(
                 _spec_payload(actions=["generate", "generate"]),
             )
 
-    def test_mutable_action_outside_lifecycle_is_rejected(self) -> None:
+    @staticmethod
+    def test_mutable_action_outside_lifecycle_is_rejected() -> None:
         with pytest.raises(c.ValidationError, match="not part of the docs lifecycle"):
             m.Infra.MakeDocsSpec.model_validate(_spec_payload(mutable_actions=["fmt"]))
 
-    def test_warning_posture_is_not_a_docs_option(self) -> None:
+    @staticmethod
+    def test_warning_posture_is_not_a_docs_option() -> None:
         with pytest.raises(c.ValidationError):
             m.Infra.MakeDocsSpec.model_validate(
                 _spec_payload(warning_actions=["audit"]),

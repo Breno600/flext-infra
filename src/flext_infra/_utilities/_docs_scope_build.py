@@ -6,12 +6,15 @@ from typing import TYPE_CHECKING
 
 from flext_core import r
 from flext_infra import c, m, t
-
-from ._docs_scope_selection import FlextInfraUtilitiesDocsScopeSelectionMixin
-from .base import FlextInfraUtilitiesBase
-from .docs_scope import FlextInfraUtilitiesDocsScope
-from .pyproject import FlextInfraUtilitiesPyproject
-from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
+from flext_infra._utilities._docs_scope_selection import (
+    FlextInfraUtilitiesDocsScopeSelectionMixin,
+)
+from flext_infra._utilities.base import FlextInfraUtilitiesBase
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.workspace_manifest import (
+    FlextInfraUtilitiesWorkspaceManifest,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path

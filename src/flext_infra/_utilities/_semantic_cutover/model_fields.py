@@ -10,9 +10,12 @@ from libcst.codemod import CodemodContext
 from libcst.codemod.visitors import AddImportsVisitor
 
 from flext_infra import m, t
-
-from .edits import FlextInfraUtilitiesSemanticCutoverEdits
-from .model_fields_bindings import FlextInfraUtilitiesSemanticCutoverModelFieldsBindings
+from flext_infra._utilities._semantic_cutover.edits import (
+    FlextInfraUtilitiesSemanticCutoverEdits,
+)
+from flext_infra._utilities._semantic_cutover.model_fields_bindings import (
+    FlextInfraUtilitiesSemanticCutoverModelFieldsBindings,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path

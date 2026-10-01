@@ -8,13 +8,16 @@ from pathlib import Path
 from typing import Literal
 
 from flext_core import r
-
-from ... import c, m, p, t, u
-from ...deps import FlextInfraPyprojectModernizer
-from ...services.codegen import FlextInfraCodegen
-from ...workspace.environment_contracts import FlextInfraWorkspaceEnvironmentContracts
-from .._mise_artifacts_cold_start import FlextInfraMiseColdStart
-from .artifact_render import FlextInfraCodegenConformArtifactRender
+from flext_infra import c, m, p, t, u
+from flext_infra.codegen._conform.artifact_render import (
+    FlextInfraCodegenConformArtifactRender,
+)
+from flext_infra.codegen._mise_artifacts_cold_start import FlextInfraMiseColdStart
+from flext_infra.deps import FlextInfraPyprojectModernizer
+from flext_infra.services.codegen import FlextInfraCodegen
+from flext_infra.workspace.environment_contracts import (
+    FlextInfraWorkspaceEnvironmentContracts,
+)
 
 
 class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRender):

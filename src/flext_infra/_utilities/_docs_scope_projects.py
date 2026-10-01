@@ -9,10 +9,11 @@ from typing import TYPE_CHECKING
 
 from flext_core.result import FlextResult as r
 from flext_infra import c, m, t
-
-from ._docs_scope_policy import FlextInfraUtilitiesDocsScopePolicyMixin
-from .git import FlextInfraUtilitiesGit
-from .project_discovery import FlextInfraUtilitiesProjectDiscovery
+from flext_infra._utilities._docs_scope_policy import (
+    FlextInfraUtilitiesDocsScopePolicyMixin,
+)
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
+from flext_infra._utilities.project_discovery import FlextInfraUtilitiesProjectDiscovery
 
 if TYPE_CHECKING:
     from flext_infra import FlextInfraProtocols as p

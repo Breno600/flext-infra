@@ -6,9 +6,12 @@ import ast
 from collections.abc import Iterator
 
 from flext_infra import c, m, p, t
-
-from ..rope_runtime_modules import FlextInfraUtilitiesRopeRuntimeModules
-from ..rope_runtime_refactors import FlextInfraUtilitiesRopeRuntimeRefactors
+from flext_infra._utilities.rope_runtime_modules import (
+    FlextInfraUtilitiesRopeRuntimeModules,
+)
+from flext_infra._utilities.rope_runtime_refactors import (
+    FlextInfraUtilitiesRopeRuntimeRefactors,
+)
 
 
 class FlextInfraUtilitiesSemanticFamilyTypeReferences:
@@ -69,7 +72,9 @@ class FlextInfraUtilitiesSemanticFamilyTypeReferences:
         runtime = FlextInfraUtilitiesRopeRuntimeModules
         nodes = tuple(
             cls._type_nodes(
-                ast.parse(source, mode="eval").body, flatten.project, scope
+                ast.parse(source, mode="eval").body,
+                flatten.project,
+                scope,
             ),
         )
         edits: list[m.Infra.SourceRewrite] = []

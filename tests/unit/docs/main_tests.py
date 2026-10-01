@@ -16,7 +16,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsMain:
     """Public validation-flow tests for the docs CLI."""
 
-    def test_docs_cli_validate_fails_before_generation(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_docs_cli_validate_fails_before_generation(tmp_path: Path) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
 
         tm.that(
@@ -39,8 +40,8 @@ class TestsFlextInfraDocsMain:
             eq=True,
         )
 
+    @staticmethod
     def test_docs_cli_generate_apply_rejects_a_second_publication_owner(
-        self,
         tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))

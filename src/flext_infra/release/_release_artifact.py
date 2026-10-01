@@ -14,8 +14,7 @@ from packaging.version import InvalidVersion, Version
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ._release_boundary import FlextInfraReleaseBoundaryMixin
+from flext_infra.release._release_boundary import FlextInfraReleaseBoundaryMixin
 
 
 class FlextInfraReleaseArtifactMixin(FlextInfraReleaseBoundaryMixin):

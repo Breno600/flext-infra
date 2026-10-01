@@ -27,13 +27,15 @@ if TYPE_CHECKING:
 class TestsFlextInfraInfraMaintenanceMain:
     """Tests for the maintenance main entry point."""
 
-    def _maintenance_main(self, argv: t.SequenceOf[str] | None = None) -> int:
+    @staticmethod
+    def _maintenance_main(argv: t.SequenceOf[str] | None = None) -> int:
         args = ["maintenance"]
         if argv is not None:
             args.extend(argv)
         return infra_main(args)
 
-    def _create_workspace(self, root: Path, *, python_minor: int = 13) -> Path:
+    @staticmethod
+    def _create_workspace(root: Path, *, python_minor: int = 13) -> Path:
         """Create a valid workspace structure for testing."""
         root.mkdir(exist_ok=True)
         (root / ".git").mkdir(exist_ok=True)
@@ -161,6 +163,7 @@ class TestsFlextInfraInfraMaintenanceMain:
         result = enforcer.execute(check_only=True, verbose=False)
         tm.fail(result)
 
-    def test_enforcer_creates_instance(self) -> None:
+    @staticmethod
+    def test_enforcer_creates_instance() -> None:
         enforcer = FlextInfraPythonVersionEnforcer()
         tm.that(type(enforcer).__name__, eq="FlextInfraPythonVersionEnforcer")

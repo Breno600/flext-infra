@@ -14,8 +14,7 @@ from pathlib import Path
 from flext_cli import m
 
 from flext_infra import t
-
-from .base import FlextInfraModelsBase
+from flext_infra._models.base import FlextInfraModelsBase
 
 
 class FlextInfraModelsPromoted(FlextInfraModelsBase):

@@ -22,15 +22,16 @@ class TestsFlextInfraDepsExtraPathsSync:
         """Provide minimal Pyright configuration content."""
         return "[tool.pyright]\nextraPaths = []\n"
 
-    def _create_pyproject(self, directory: Path, content: str) -> Path:
+    @staticmethod
+    def _create_pyproject(directory: Path, content: str) -> Path:
         pyproject_path: Path = tf(base_dir=directory).create(
             content=content,
             name="pyproject.toml",
         )
         return pyproject_path
 
+    @staticmethod
     def _manager(
-        self,
         repository_root: Path | None = None,
     ) -> FlextInfraExtraPathsManager:
         return FlextInfraExtraPathsManager(

@@ -147,7 +147,8 @@ class TestsFlextInfraInfraMaintenancePythonVersion:
         tm.ok(svc.execute(check_only=True, verbose=False), eq=0)
         tm.that(version_file.read_text(encoding="utf-8"), eq=f"3.{self._MINOR}\n")
 
-    def test_empty_dir_returns_empty(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_empty_dir_returns_empty(tmp_path: Path) -> None:
         d = tmp_path / "empty"
         d.mkdir()
         result = u.Infra.discover_projects(d)

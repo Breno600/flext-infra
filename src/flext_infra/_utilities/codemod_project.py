@@ -22,16 +22,21 @@ from flext_cli import u
 from packaging.utils import canonicalize_name
 
 from flext_infra import c, config, m, p, r, t
-
-from ._rope_analysis.asthelpers import FlextInfraUtilitiesRopeAnalysisAstHelpers
-from ._rope_analysis.exports import FlextInfraUtilitiesRopeAnalysisExports
-from ._rope_analysis.importstate import FlextInfraUtilitiesRopeAnalysisImportState
-from .base import FlextInfraUtilitiesBase
-from .codemod_rules import FlextInfraUtilitiesCodemodRules
-from .namespace import FlextInfraUtilitiesCodegenNamespace
-from .pyproject import FlextInfraUtilitiesPyproject
-from .rope_core import FlextInfraUtilitiesRopeCore
-from .rope_imports import FlextInfraUtilitiesRopeImports
+from flext_infra._utilities._rope_analysis.asthelpers import (
+    FlextInfraUtilitiesRopeAnalysisAstHelpers,
+)
+from flext_infra._utilities._rope_analysis.exports import (
+    FlextInfraUtilitiesRopeAnalysisExports,
+)
+from flext_infra._utilities._rope_analysis.importstate import (
+    FlextInfraUtilitiesRopeAnalysisImportState,
+)
+from flext_infra._utilities.base import FlextInfraUtilitiesBase
+from flext_infra._utilities.codemod_rules import FlextInfraUtilitiesCodemodRules
+from flext_infra._utilities.namespace import FlextInfraUtilitiesCodegenNamespace
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
+from flext_infra._utilities.rope_core import FlextInfraUtilitiesRopeCore
+from flext_infra._utilities.rope_imports import FlextInfraUtilitiesRopeImports
 
 
 class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
@@ -300,11 +305,13 @@ class FlextInfraUtilitiesCodemodProject(FlextInfraUtilitiesCodemodRules):
                 return module in cls._runtime_modules(root)
             case c.Infra.CodemodContextPredicate.FACADE_PACKAGE:
                 return module in cls._runtime_modules(root) and bool(
-                    cls._codemod_runtime_aliases(root, module, own)
+                    cls._codemod_runtime_aliases(root, module, own),
                 )
             case c.Infra.CodemodContextPredicate.RUNTIME_ALIAS:
                 return value in cls._codemod_runtime_aliases(
-                    root, own if of is None else cls._top_module(of), own
+                    root,
+                    own if of is None else cls._top_module(of),
+                    own,
                 )
             case c.Infra.CodemodContextPredicate.LOCAL_ALIAS:
                 layout = FlextInfraUtilitiesCodegenNamespace.layout(root)

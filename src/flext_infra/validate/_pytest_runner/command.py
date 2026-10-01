@@ -10,9 +10,8 @@ from pathlib import Path
 from typing import ClassVar
 
 from flext_infra import c, config, m, t
-
-from ..._pytest_collection import FlextInfraPytestCollection
-from .base import FlextInfraPytestRunnerBase
+from flext_infra._pytest_collection import FlextInfraPytestCollection
+from flext_infra.validate._pytest_runner.base import FlextInfraPytestRunnerBase
 
 
 class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):

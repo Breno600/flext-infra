@@ -7,14 +7,13 @@ from pathlib import Path
 from typing import override
 
 from flext_core import r
-
-from .. import FlextInfraServiceBase, m, p, t, u
-from . import (
+from flext_infra import FlextInfraServiceBase, m, p, t, u
+from flext_infra.codemod import (
     FlextInfraCodemodSemanticApply,
     FlextInfraModGateEngine,
     FlextInfraModTextGateEngine,
 )
-from .batch_replacements import FlextInfraModReplacements
+from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 
 
 class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):

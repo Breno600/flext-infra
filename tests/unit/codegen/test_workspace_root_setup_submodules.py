@@ -20,7 +20,8 @@ pytestmark = pytest.mark.slow
 class TestsFlextInfraWorkspaceRootSetupSubmodules:
     """Prove root submodule setup initializes once and never repairs."""
 
-    def _git_stdout(self, repository: Path, *args: str) -> str:
+    @staticmethod
+    def _git_stdout(repository: Path, *args: str) -> str:
         process = tm.ok(u.Cli.run_raw([c.Infra.GIT, *args], cwd=repository))
         tm.that(u.Cli.process_succeeded(process.outcome), eq=True)
         return process.stdout.strip()
@@ -31,14 +32,18 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
             self._git_stdout(repository, "rev-parse", "HEAD"),
         )
 
-    def _run_setup(self, workspace: Path, env: dict[str, str]) -> p.Cli.CommandOutput:
+    @staticmethod
+    def _run_setup(workspace: Path, env: dict[str, str]) -> p.Cli.CommandOutput:
         return tm.ok(
             u.Cli.run_raw(
-                ["make", "_builtin_setup_submodules"], cwd=workspace, env=env
+                ["make", "_builtin_setup_submodules"],
+                cwd=workspace,
+                env=env,
             ),
         )
 
-    def _render_repository_root_makefile(self, tmp_path: Path) -> str:
+    @staticmethod
+    def _render_repository_root_makefile(tmp_path: Path) -> str:
         root_repository = test_u.Tests.repository_ref("flext")
         member = test_u.Tests.repository_ref(
             "flext-core",
@@ -69,7 +74,8 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         )
         return tm.not_none(makefile.desired_content).decode("utf-8")
 
-    def _create_member_origin(self, tmp_path: Path) -> Path:
+    @staticmethod
+    def _create_member_origin(tmp_path: Path) -> Path:
         member = tmp_path / "member-source"
         member.mkdir()
         (member / "pyproject.toml").write_text(
@@ -86,7 +92,8 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         test_u.Tests.initialize_git_repo(member)
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"], cwd=member
+                [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"],
+                cwd=member,
             ),
         )
         tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "main"], cwd=member))
@@ -138,7 +145,8 @@ class TestsFlextInfraWorkspaceRootSetupSubmodules:
         test_u.Tests.commit_git_changes(source, "Declare workspace project")
         tm.ok(
             u.Cli.run_checked(
-                [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"], cwd=source
+                [c.Infra.GIT, "checkout", "-b", "0.12.0-dev"],
+                cwd=source,
             ),
         )
         tm.ok(u.Cli.run_checked([c.Infra.GIT, "checkout", "main"], cwd=source))

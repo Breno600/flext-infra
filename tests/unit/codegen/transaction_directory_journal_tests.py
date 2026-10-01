@@ -275,7 +275,9 @@ class TestsFlextInfraTransactionDirectoryJournal:
             )
             session = tm.ok(
                 owner.begin_locked(
-                    scope_root, (config_plan,), (config_plan, generated)
+                    scope_root,
+                    (config_plan,),
+                    (config_plan, generated),
                 ),
             )
             return owner.publish_prepared_locked(session, failing_phase)
@@ -297,8 +299,8 @@ class TestsFlextInfraTransactionDirectoryJournal:
         tm.that(target.exists(), eq=False)
         tm.ok(owner.run_locked(prepare=True, operation=r[Path].ok))
 
+    @staticmethod
     def test_appended_phase_rejects_replaced_created_parent(
-        self,
         tmp_path: Path,
     ) -> None:
         """Never adopt a foreign parent while staging a previously absent file."""

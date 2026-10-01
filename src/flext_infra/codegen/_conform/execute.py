@@ -6,15 +6,14 @@ from pathlib import Path
 from typing import Self, override
 
 from flext_core import r
-
-from ... import c, config, m, p, t, u
-from ...workspace import FlextInfraWorkspaceDetector
-from .. import (
+from flext_infra import c, config, m, p, t, u
+from flext_infra.codegen import (
     FlextInfraCodegenLazyInit,
     FlextInfraCodegenMiseArtifacts,
     FlextInfraCodegenTransaction,
 )
-from .plan import FlextInfraCodegenConformPlan
+from flext_infra.codegen._conform.plan import FlextInfraCodegenConformPlan
+from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 
 class FlextInfraCodegenConformExecute(FlextInfraCodegenConformPlan):

@@ -8,8 +8,7 @@ from flext_tests import tm
 
 from flext_infra import c, u
 from tests import t
-
-from ._support import CodegenTestSupport
+from tests.unit.codegen._support import CodegenTestSupport
 
 
 class TestsFlextInfraCiSystemPackages:

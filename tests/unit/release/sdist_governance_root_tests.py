@@ -15,12 +15,14 @@ from flext_infra import c
 class TestsFlextInfraReleaseSdistGovernanceRoot:
     """Behavior contract for the public sdist root-file boundary."""
 
-    def test_governance_agent_manifest_is_admitted_at_the_sdist_root(self) -> None:
+    @staticmethod
+    def test_governance_agent_manifest_is_admitted_at_the_sdist_root() -> None:
         """The deployed-agents governance manifest is public root content."""
         # ``has`` takes one item; a set argument is matched as one element.
         tm.that(c.Infra.RELEASE_SDIST_ROOT_FILES, has="agents.md")
 
-    def test_boundary_still_refuses_operational_roots(self) -> None:
+    @staticmethod
+    def test_boundary_still_refuses_operational_roots() -> None:
         """The root-file set admits no directories, only named files."""
         tm.that(
             all(not name.endswith("/") for name in c.Infra.RELEASE_SDIST_ROOT_FILES),

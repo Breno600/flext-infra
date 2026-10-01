@@ -21,7 +21,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraScanner:
     """Core, multi-file, and nested-directory scanning tests."""
 
-    def _scanner(self) -> FlextInfraTextPatternScanner:
+    @staticmethod
+    def _scanner() -> FlextInfraTextPatternScanner:
         """Return a scanner instance with a harmless default pattern for helper tests."""
         return FlextInfraTextPatternScanner(pattern="")
 

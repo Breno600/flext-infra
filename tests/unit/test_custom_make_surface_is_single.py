@@ -20,7 +20,8 @@ from flext_infra import config
 
 
 class TestsFlextInfraCustomMakeSurfaceIsSingle:
-    def test_codegen_declares_only_the_custom_make_surface(self) -> None:
+    @staticmethod
+    def test_codegen_declares_only_the_custom_make_surface() -> None:
         """custom.mk is project-owned: scaffolded once, never a managed file.
 
         The managed-files catalog owns only codegen-managed projections. The
@@ -42,7 +43,8 @@ class TestsFlextInfraCustomMakeSurfaceIsSingle:
         tm.that("custom.mk" in scaffolded, eq=True)
         tm.that(scaffolded["custom.mk"].overwrite, eq=False)
 
-    def test_no_template_emits_a_second_custom_surface(self) -> None:
+    @staticmethod
+    def test_no_template_emits_a_second_custom_surface() -> None:
         """No shipped template references a custom surface other than custom.mk."""
         templates_root = Path(flext_infra.__file__).resolve().parent / "templates"
         offenders = sorted(

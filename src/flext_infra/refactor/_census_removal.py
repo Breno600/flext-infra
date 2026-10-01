@@ -8,8 +8,9 @@ from typing import TYPE_CHECKING
 
 from flext_infra import m, u
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-
-from ._census_apply_formatting import FlextInfraRefactorCensusApplyFormattingMixin
+from flext_infra.refactor._census_apply_formatting import (
+    FlextInfraRefactorCensusApplyFormattingMixin,
+)
 
 if TYPE_CHECKING:
     from flext_infra import p, t

@@ -15,9 +15,8 @@ from typing import TYPE_CHECKING, override
 
 from flext_core import r
 from flext_infra import m, p, t, u
-
-from ..base import s
-from ..codemod.batch_gates import FlextInfraModGateEngine
+from flext_infra.base import s
+from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 
 if TYPE_CHECKING:
     from pathlib import Path

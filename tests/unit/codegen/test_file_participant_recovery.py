@@ -46,7 +46,8 @@ class TestsFlextInfraFileParticipantRecovery:
                     path=destination,
                     before=tm.ok(
                         u.Cli.atomic_read_binary_file_state(
-                            destination, required=False
+                            destination,
+                            required=False,
                         ),
                     ),
                     desired_content=b"generated replacement\n",
@@ -79,8 +80,8 @@ class TestsFlextInfraFileParticipantRecovery:
         # the previous implementation refuses its unregistered phase directory.
         tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
 
+    @staticmethod
     def test_fresh_import_failure_restores_published_initializer(
-        self,
         tmp_path: Path,
     ) -> None:
         root = test_u.Tests.git_repository(tmp_path)
@@ -124,7 +125,8 @@ class TestsFlextInfraFileParticipantRecovery:
         tm.that(restored.mode, eq=before.mode)
         tm.ok(owner.run_files_locked(roots, lambda _scope: r[bool].ok(True)))
 
-    def test_recovers_external_only_prepared_journal(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_recovers_external_only_prepared_journal(tmp_path: Path) -> None:
         workspace = test_u.Tests.create_docs_workspace(tmp_path, project_names=())
         docs_root = tmp_path / "published-docs"
         docs_root.mkdir()

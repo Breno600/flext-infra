@@ -10,15 +10,14 @@ from collections.abc import Mapping, MutableMapping
 from pathlib import Path
 
 from flext_core import r
-
-from .. import c, m, p, settings, t, u
-from ..detectors import FlextInfraLspDiagnosticsDetector
-from ..gates import (
+from flext_infra import c, m, p, settings, t, u
+from flext_infra.codemod import FlextInfraCodemodSnapshotReconciler
+from flext_infra.detectors import FlextInfraLspDiagnosticsDetector
+from flext_infra.gates import (
     FlextInfraPyreflyGate,
     FlextInfraRuffFormatGate,
     FlextInfraRuffLintGate,
 )
-from . import FlextInfraCodemodSnapshotReconciler
 
 
 class FlextInfraModGateEngine:

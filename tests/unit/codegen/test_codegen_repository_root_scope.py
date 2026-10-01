@@ -20,7 +20,8 @@ from tests import u, u as test_u
 
 
 class TestsFlextInfraCodegenRepositoryRootScope:
-    def test_conform_owns_repository_root_makefile(self) -> None:
+    @staticmethod
+    def test_conform_owns_repository_root_makefile() -> None:
         """The single Makefile render entry includes the workspace profile."""
         makefile_entries = tuple(
             entry
@@ -190,7 +191,8 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             },
         )
 
-    def _render_root_makefile(self, tmp_path: Path) -> Path:
+    @staticmethod
+    def _render_root_makefile(tmp_path: Path) -> Path:
         """Render base/Makefile.j2 from a typed workspace fixture."""
         repository = u.Tests.repository_ref("workspace-fixture")
         workspace = u.Tests.workspace_spec(

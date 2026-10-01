@@ -8,8 +8,7 @@ from tempfile import TemporaryDirectory
 
 from flext_core import r
 from flext_infra import c, m, p, t, u
-
-from ._release_metadata import FlextInfraReleaseMetadataMixin
+from flext_infra.release._release_metadata import FlextInfraReleaseMetadataMixin
 
 
 class FlextInfraReleaseProjectMixin(FlextInfraReleaseMetadataMixin):

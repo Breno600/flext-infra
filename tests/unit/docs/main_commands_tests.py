@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsMainCommands:
     """Public service execution tests for docs commands."""
 
-    def test_auditor_execute_fails_on_finding(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_auditor_execute_fails_on_finding(tmp_path: Path) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path)
         (workspace / "docs/README.md").write_text(
             "# Docs\n\n[Broken](missing.md)\n",
@@ -31,7 +32,8 @@ class TestsFlextInfraDocsMainCommands:
 
         tm.fail(result)
 
-    def test_fixer_execute_applies_link_and_toc_updates(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_fixer_execute_applies_link_and_toc_updates(tmp_path: Path) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
 
         result = FlextInfraDocFixer(
@@ -44,7 +46,8 @@ class TestsFlextInfraDocsMainCommands:
         tm.that(content, has="guides/setup.md")
         tm.that(content, has="<!-- TOC START -->")
 
-    def test_fixer_execute_fails_on_unapplied_drift(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_fixer_execute_fails_on_unapplied_drift(tmp_path: Path) -> None:
         """The command boundary rejects fixable docs left unapplied."""
         workspace = u.Tests.create_docs_workspace(tmp_path, include_fixable_link=True)
 
@@ -52,7 +55,8 @@ class TestsFlextInfraDocsMainCommands:
 
         tm.fail(result)
 
-    def test_generator_plans_root_and_selected_project(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_generator_plans_root_and_selected_project(tmp_path: Path) -> None:
         workspace, generator = u.Tests.docs_workspace_generator(
             tmp_path,
             project_names=("flext-a", "flext-b"),
@@ -68,8 +72,8 @@ class TestsFlextInfraDocsMainCommands:
         tm.that(workspace / "flext-a/README.md" in planned_paths, eq=True)
         tm.that(workspace / "flext-b/README.md" not in planned_paths, eq=True)
 
+    @staticmethod
     def test_validator_execute_fails_before_generation_and_succeeds_after(
-        self,
         tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
@@ -96,7 +100,8 @@ class TestsFlextInfraDocsMainCommands:
         )
         tm.that((workspace / "flext-a/TODOS.md").exists(), eq=False)
 
-    def test_builder_execute_fails_when_mkdocs_is_missing(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_builder_execute_fails_when_mkdocs_is_missing(tmp_path: Path) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path)
 
         result = FlextInfraDocBuilder(repository_root=workspace).execute()
@@ -104,8 +109,8 @@ class TestsFlextInfraDocsMainCommands:
         tm.fail(result)
         tm.that((workspace / ".reports/docs/build-report.md").exists(), eq=True)
 
+    @staticmethod
     def test_builder_execute_fails_with_invalid_mkdocs_config(
-        self,
         tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path)
@@ -115,8 +120,8 @@ class TestsFlextInfraDocsMainCommands:
 
         tm.fail(result)
 
+    @staticmethod
     def test_generate_fix_cycle_is_byte_identical_on_second_run(
-        self,
         tmp_path: Path,
     ) -> None:
         workspace = u.Tests.create_docs_workspace(tmp_path)
@@ -141,7 +146,7 @@ class TestsFlextInfraDocsMainCommands:
         tm.ok(second_bundle)
         tm.ok(
             u.Tests.materialize_codegen_plans(
-                generator.plan_files(second_bundle.value)
+                generator.plan_files(second_bundle.value),
             ),
         )
         tm.ok(fixer.execute())
