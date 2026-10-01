@@ -238,15 +238,6 @@ class TestsFlextInfraCodegenMiseArtifacts:
 
         tm.ok(result, eq=True)
 
-    # Root cause: `config.Infra.codegen.toolchain.suspended_mise_selector_patterns`
-    # is currently an empty tuple in config/codegen.yaml (no toolchain is
-    # suspended today), and it is a fixed-config field with no declared public
-    # input to override in a test. The prior fixture asserted "beads" was
-    # suspended, which is no longer true and cannot be injected through the
-    # public surface, so the retired scenario is dropped rather than faked.
-    # `_validate_suspended_selectors` itself remains covered structurally by
-    # every other `.execute()` call in this file, which passes through it.
-
     def test_config_only_validation_skips_launcher_contract(
         self, tmp_path: Path
     ) -> None:

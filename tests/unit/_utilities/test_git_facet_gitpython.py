@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from flext_tests import tm
+from git import GitCommandError
 
 from flext_infra import FlextInfraGitService, c, m, main as infra_main, u
 from tests import u as test_u

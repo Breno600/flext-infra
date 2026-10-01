@@ -49,8 +49,8 @@ class TestsFlextInfraGateErrorReporting:
         tm.that(tuple(project.gates), eq=tuple(gates))
         tm.that(all(not item.result.passed for item in project.gates.values()), eq=True)
         tm.that(
-            project.total_errors,
-            eq=sum(item.error_count for item in project.gates.values()),
+            project.total_findings,
+            eq=sum(len(item.issues) for item in project.gates.values()),
         )
         report = (reports_dir / c.Infra.CHECK_REPORT_MARKDOWN_FILENAME).read_text(
             encoding="utf-8"

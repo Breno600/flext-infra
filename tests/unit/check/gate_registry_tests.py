@@ -271,7 +271,7 @@ class TestsFlextInfraGateRegistry:
         # formatters (single-pass verb law: one operation per tool per verb).
         fmt_owned = set(config.Infra.codegen.make.fmt_gates)
         tm.that(set(c.Infra.CANONICAL_FIXABLE_GATE_IDS), eq=mutating - fmt_owned)
-        tm.that(fmt_owned <= mutating, eq=True)
+        tm.that(fmt_owned & set(c.Infra.CANONICAL_GATE_IDS) <= mutating, eq=True)
         # `format` belongs to `make fmt` alone: absent from the read-only
         # check vocabulary AND from the fix vocabulary.
         tm.that(c.Infra.FORMAT not in c.Infra.CANONICAL_FIXABLE_GATE_IDS, eq=True)

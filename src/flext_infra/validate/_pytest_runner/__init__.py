@@ -12,12 +12,10 @@ if TYPE_CHECKING:
     from .base import FlextInfraPytestRunnerBase
     from .command import FlextInfraPytestRunnerCommand
     from .execution import FlextInfraPytestRunnerExecution
-    from .inputs import FlextInfraPytestInputs
     from .reports import FlextInfraPytestRunnerReports
 
 
 __all__: tuple[str, ...] = (
-    "FlextInfraPytestInputs",
     "FlextInfraPytestRunnerBase",
     "FlextInfraPytestRunnerCommand",
     "FlextInfraPytestRunnerExecution",
@@ -30,7 +28,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".base": ("FlextInfraPytestRunnerBase",),
             ".command": ("FlextInfraPytestRunnerCommand",),
             ".execution": ("FlextInfraPytestRunnerExecution",),
-            ".inputs": ("FlextInfraPytestInputs",),
             ".reports": ("FlextInfraPytestRunnerReports",),
         }),
         alias_groups=MappingProxyType({}),

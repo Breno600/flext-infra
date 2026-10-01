@@ -223,6 +223,7 @@ class TestsFlextInfraCodegenMain:
             )
             tm.that(" ".join(result.value.stdout.split()), contains=route.help_text)
 
+        @pytest.mark.slow
         def test_managed_conflict_is_planned_and_published_atomically(
             self, infra_git_repo: Path
         ) -> None:

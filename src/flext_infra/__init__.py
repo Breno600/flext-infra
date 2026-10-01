@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     from .check.workspace_check import FlextInfraWorkspaceChecker
     from .check.workspace_check_gates import FlextInfraWorkspaceCheckGatesMixin
     from .cli import FlextInfraCli, docs_main, main
+    from .codegen.candidate_bootstrap import FlextInfraCodegenCandidateBootstrap
     from .codegen.census import FlextInfraCodegenCensus
     from .codegen.codegen_generation import FlextInfraCodegenGeneration
     from .codegen.codegen_transaction import FlextInfraCodegenTransaction
@@ -79,7 +80,6 @@ if TYPE_CHECKING:
     from .codemod.batch_apply import FlextInfraCodemodBatchApply
     from .codemod.batch_gates import FlextInfraModGateEngine
     from .codemod.batch_replacements import FlextInfraModReplacements
-    from .codemod.sed_apply import FlextInfraCodemodSedApply
     from .codemod.semantic_apply import FlextInfraCodemodSemanticApply
     from .codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
     from .codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
@@ -206,7 +206,6 @@ if TYPE_CHECKING:
     from .refactor.signature_propagation import FlextInfraRefactorSignaturePropagation
     from .refactor.wrapper_root_namespace import FlextInfraWrapperRootNamespaceRefactor
     from .release.orchestrator import FlextInfraReleaseOrchestrator
-    from .services.candidate_bootstrap import FlextInfraCandidateBootstrapService
     from .services.cli_dispatch import FlextInfraCliDispatchService
     from .services.cli_route_base import FlextInfraCliRouteBase
     from .services.cli_routes import FlextInfraCliRouteService
@@ -279,7 +278,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraApplyRenames",
     "FlextInfraBanditGate",
     "FlextInfraCProfileReport",
-    "FlextInfraCandidateBootstrapService",
     "FlextInfraCanonicalAliasGate",
     "FlextInfraClassPlacementDetector",
     "FlextInfraCleanService",
@@ -288,6 +286,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraCliRouteBase",
     "FlextInfraCliRouteService",
     "FlextInfraCodegen",
+    "FlextInfraCodegenCandidateBootstrap",
     "FlextInfraCodegenCensus",
     "FlextInfraCodegenConform",
     "FlextInfraCodegenConsolidator",
@@ -312,7 +311,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenVersionFile",
     "FlextInfraCodemodAstScan",
     "FlextInfraCodemodBatchApply",
-    "FlextInfraCodemodSedApply",
     "FlextInfraCodemodSemanticApply",
     "FlextInfraCodemodSnapshotReconciler",
     "FlextInfraCodemodSnapshotRefresh",
@@ -528,6 +526,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".check.workspace_check_gates": ("FlextInfraWorkspaceCheckGatesMixin",),
             ".cli": ("FlextInfraCli", "docs_main", "main"),
             ".codegen": ("codegen",),
+            ".codegen.candidate_bootstrap": ("FlextInfraCodegenCandidateBootstrap",),
             ".codegen.census": ("FlextInfraCodegenCensus",),
             ".codegen.codegen_generation": ("FlextInfraCodegenGeneration",),
             ".codegen.codegen_transaction": ("FlextInfraCodegenTransaction",),
@@ -560,7 +559,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".codemod.batch_apply": ("FlextInfraCodemodBatchApply",),
             ".codemod.batch_gates": ("FlextInfraModGateEngine",),
             ".codemod.batch_replacements": ("FlextInfraModReplacements",),
-            ".codemod.sed_apply": ("FlextInfraCodemodSedApply",),
             ".codemod.semantic_apply": ("FlextInfraCodemodSemanticApply",),
             ".codemod.snapshot_reconciler": ("FlextInfraCodemodSnapshotReconciler",),
             ".codemod.snapshot_refresh": ("FlextInfraCodemodSnapshotRefresh",),
@@ -708,7 +706,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".release": ("release",),
             ".release.orchestrator": ("FlextInfraReleaseOrchestrator",),
             ".services": ("services",),
-            ".services.candidate_bootstrap": ("FlextInfraCandidateBootstrapService",),
             ".services.cli_dispatch": ("FlextInfraCliDispatchService",),
             ".services.cli_route_base": ("FlextInfraCliRouteBase",),
             ".services.cli_routes": ("FlextInfraCliRouteService",),

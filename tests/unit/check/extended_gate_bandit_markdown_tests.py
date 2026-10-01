@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import shutil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
+from flext_cli import cli
 from flext_tests import tm
 
-from flext_infra import m, t
+from flext_infra import config, m, t
 from flext_infra.gates.bandit import FlextInfraBanditGate
 from flext_infra.gates.markdown import FlextInfraMarkdownGate
 from tests import TestsFlextInfraUtilities as u, c
@@ -27,6 +28,11 @@ class TestsFlextInfraBanditAndMarkdownGates:
         "Kappa lambda mu nu xi omicron pi rho sigma tau.\n"
     )
     LONG_LINE = "# Test\n\n" + " ".join(["word"] * 30) + "\n"
+    # The .markdownlint.json projection renders this exact typed SSOT; tests
+    # of the markdown contract read it instead of freezing a config literal.
+    CANONICAL_MARKDOWNLINT_CONFIG: ClassVar[str] = cli.json_dumps(
+        dict(config.Infra.tooling.tools.markdown.rules)
+    ).unwrap()
 
     def test_bandit_reports_real_finding(self, tmp_path: Path) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "bandit-project")
@@ -44,14 +50,18 @@ class TestsFlextInfraBanditAndMarkdownGates:
     def test_bandit_without_source_tree_has_no_audit_surface(
         self, tmp_path: Path
     ) -> None:
-        """A project without ``src`` declares no package to audit (d94decf10)."""
+        """A project without ``src`` does not select bandit at all.
+
+        Premise (#1223 content selection): an unselected gate never runs and
+        never passes; a direct check without inputs establishes no acceptance.
+        """
         project_dir = u.Tests.mk_project(tmp_path, "p1")
 
+        tm.that(FlextInfraBanditGate(tmp_path).selected_for(project_dir), eq=False)
         result = u.Tests.run_gate_check(FlextInfraBanditGate, tmp_path, project_dir)
 
-        tm.that(result.result.passed, eq=True)
-        tm.that(result.result.errors, empty=True)
-        tm.that(result.issues, empty=True)
+        tm.that(result.result.passed, eq=False)
+        tm.that(" | ".join(result.result.errors), has="no check targets were collected")
 
     def test_bandit_scans_large_tree_with_sanitized_path(self, tmp_path: Path) -> None:
         """The workspace interpreter runs Bandit without any PATH-provided tool."""
@@ -74,9 +84,6 @@ class TestsFlextInfraBanditAndMarkdownGates:
     @pytest.mark.parametrize(
         ("markdown_text", "config_text", "findings_block", "codes"),
         [
-            # A project with no markdown has nothing to check, so the gate is
-            # not applicable and skips neutrally (4dc7027ed).
-            ("", None, False, []),
             (HEADING_SKIP, None, True, ["MD001"]),
             ("# Test\n", '{"broken": [', True, ["TOOL_ERROR"]),
             # A residual MD013 reflow finding remains blocking when the
@@ -90,6 +97,15 @@ class TestsFlextInfraBanditAndMarkdownGates:
                 True,
                 ["MD013"],
             ),
+            # A hand-wrapped document that rumdl's normalize pass would only
+            # hint at must pass under the PROJECTED config: the canonical
+            # MD013 declares reflow disabled (flext-md-converge: wrapping is
+            # hand-owned — the normalize pass joins paragraphs into lines no
+            # verb can repair), so the hint path cannot fire and the gate
+            # reads the same typed rules SSOT the .markdownlint.json
+            # projection renders. A hand-written config literal here would
+            # freeze a shape no projection produces.
+            (REFLOW_HINT, CANONICAL_MARKDOWNLINT_CONFIG, False, []),
         ],
     )
     def test_markdown_check(
@@ -108,7 +124,6 @@ class TestsFlextInfraBanditAndMarkdownGates:
             (project_dir / c.Infra.MARKDOWNLINT_CONFIG_FILENAME).write_text(
                 config_text, encoding="utf-8"
             )
-
         result = u.Tests.check_gate_asserting(
             FlextInfraMarkdownGate,
             tmp_path,
@@ -123,6 +138,27 @@ class TestsFlextInfraBanditAndMarkdownGates:
                 [issue.severity.lower() for issue in result.issues],
                 eq=[str(c.Infra.GateSeverity.ERROR.value)] * len(codes),
             )
+
+    def test_markdown_gate_is_not_selected_without_markdown(
+        self, tmp_path: Path
+    ) -> None:
+        """A project without governed Markdown never selects the gate."""
+        project_dir = u.Tests.mk_project(tmp_path, "markdown-empty")
+        gate = FlextInfraMarkdownGate(tmp_path)
+
+        tm.that(gate.selected_for(project_dir), eq=False)
+        tm.that(
+            gate.check(project_dir, u.Tests.gate_context(tmp_path)).result.passed,
+            eq=False,
+        )
+
+    def test_bandit_is_not_selected_without_a_src_tree(self, tmp_path: Path) -> None:
+        """A project without a ``src`` package surface never selects bandit."""
+        bare = u.Tests.mk_project(tmp_path, "bandit-bare")
+        packaged = u.Tests.mk_project(tmp_path, "bandit-packaged", with_src=True)
+
+        tm.that(FlextInfraBanditGate(tmp_path).selected_for(bare), eq=False)
+        tm.that(FlextInfraBanditGate(tmp_path).selected_for(packaged), eq=True)
 
     def test_markdown_applies_only_the_local_config(self, tmp_path: Path) -> None:
         """A standalone project's gate never crosses its repository boundary."""

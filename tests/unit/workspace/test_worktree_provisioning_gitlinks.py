@@ -6,7 +6,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import FlextInfraWorktreeService, c
+from flext_infra import FlextInfraWorktreeService, c, config
 from tests import t, u
 
 
@@ -34,7 +34,9 @@ class TestsFlextInfraWorktreeProvisioningGitlinks:
             '[project]\nname = "fixture"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         (lane / "Makefile").write_text(
-            f"RUNTIME_VENV := $(CURDIR)/{c.Infra.ENVIRONMENT_DIRECTORY}\n"
+            "RUNTIME_VENV := $(dir $(CURDIR))"
+            f"{config.Infra.codegen.make.runtime_environment_directory}/"
+            "$(patsubst /%,%,$(CURDIR))\n"
             ".PHONY: setup\n"
             "setup:\n"
             "\t@mkdir -p $(RUNTIME_VENV)/bin\n"

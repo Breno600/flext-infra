@@ -207,8 +207,9 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflow, has="CI=Y make gen")
         tm.that(
             workflow,
-            has='test -z "$(git status --porcelain --untracked-files=all --ignore-submodules=none || true)"',
+            has='status="$(git status --porcelain --untracked-files=all --ignore-submodules=none)"',
         )
+        tm.that(workflow, lacks="|| true")
         tm.that(workflow, lacks="run: CI=Y make conform")
         tm.that(workflow, has="run: CI=Y make audit")
         tm.that(workflow, lacks="attest/gates/v1")
@@ -667,9 +668,9 @@ class TestsFlextInfraCodegenCiMatrix:
             step for step in steps if step["name"] == "Docs lifecycle (blocking)"
         )
         upload = next(
-            step for step in steps if step["name"] == "Upload docs reports on failure"
+            step for step in steps if step.get("name") == "Upload docs reports on failure"
         )
-        tm.that(docs_step["run"], eq="make docs")
+        tm.that(docs_step.get("run"), eq="make docs")
         tm.that(docs_step.get("continue-on-error"), eq=None)
         tm.that(upload["if"], eq="failure()")
         upload_with = t.Cli.JSON_MAPPING_ADAPTER.validate_python(upload["with"])

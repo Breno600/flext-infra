@@ -354,11 +354,6 @@ Infra:
               - unused-import
 
       mypy:
-        # Project wall-time budget for the bounded Mypy execution (SSOT;
-        # MYPY_TIMEOUT_SECONDS env overrides at the ingress boundary). The
-        # fleet cold runs need the model's bounded maximum: flext-core CI
-        # exhausted 120s under host load without a type diagnostic.
-        timeout_seconds: 600
         # The returns plugin types p.Result: without it every Result.value /
         # .map boundary resolves to Any and consumers flood with
         # no-any-return (proven by assert_type on 2026-09-23); its removal
@@ -732,6 +727,8 @@ Infra:
         parallel-schedule-chunk: 1
         profile-sort: cumulative
         profile-limit: 50
+        profile-suite-filename: pytest.pstats
+        profile-process-directory: profiles
         min-version: "8.0"
         python-classes: ["Test*"]
         python-files: ["*_test.py", "*_tests.py", "test_*.py"]

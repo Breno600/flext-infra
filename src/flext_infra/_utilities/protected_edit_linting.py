@@ -440,26 +440,12 @@ class FlextInfraUtilitiesProtectedEditLinting:
         *,
         gates: t.StrSequence | None = None,
     ) -> MutableMapping[Path, t.Infra.LintSnapshot]:
-        """Run lint snapshots for multiple files concurrently."""
+        """Validate files in order while each file runs its tools concurrently."""
         ordered_paths = tuple(paths)
-        if not ordered_paths:
-            return {}
-        if len(ordered_paths) == 1:
-            path = ordered_paths[0]
-            return {path: cls.lint_snapshot(path, workspace, gates=gates)}
-
-        snapshots_by_path: MutableMapping[Path, t.Infra.LintSnapshot] = {}
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=max(1, min(cls._SNAPSHOT_MAX_WORKERS, len(ordered_paths)))
-        ) as pool:
-            futures_by_path = {
-                pool.submit(cls.lint_snapshot, path, workspace, gates=gates): path
-                for path in ordered_paths
-            }
-            for future in concurrent.futures.as_completed(futures_by_path):
-                snapshots_by_path[futures_by_path[future]] = future.result()
-
-        return {path: snapshots_by_path[path] for path in ordered_paths}
+        return {
+            path: cls.lint_snapshot(path, workspace, gates=gates)
+            for path in ordered_paths
+        }
 
     @staticmethod
     def lint_new_errors(

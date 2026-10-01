@@ -32,6 +32,20 @@ class FlextInfraGate:
     # Name of the external scanner a gate provisions on PATH, when it uses one.
     scanner_binary: ClassVar[str] = ""
     checker_info_prefixes: ClassVar[t.StrSequence] = ()
+    # A gate that analyzes Python sources is selected only for a project whose
+    # detected content holds a first-party Python target.
+    requires_python_targets: ClassVar[bool] = False
+
+    def selected_for(self, project_dir: Path) -> bool:
+        """Whether this project's detected content selects the gate at all.
+
+        The single selection hook: a gate whose inputs depend on the project's
+        content overrides it to declare that content. An unselected gate never
+        runs, never passes, and is never listed.
+        """
+        return not self.requires_python_targets or bool(
+            u.Infra.discover_python_targets(project_dir)
+        )
 
     def __init__(
         self, repository_root: Path, *, runner: p.Cli.CommandRunner | None = None
@@ -68,20 +82,10 @@ class FlextInfraGate:
         started = time.monotonic()
         check_dirs = self._get_check_dirs(project_dir, ctx)
         if not check_dirs:
-            return self._empty_targets_result(project_dir, started)
+            # Content selection keeps the checker from running a gate without
+            # inputs; a direct call without targets establishes no acceptance.
+            return self._skip_result(project_dir, started)
         return self._execute_check_command(project_dir, ctx, check_dirs, started)
-
-    def _empty_targets_result(
-        self, project_dir: Path, started: float
-    ) -> m.Infra.GateExecution:
-        """Outcome when a gate collects no check targets.
-
-        Failing loud is the default: a selected gate with no inputs did not
-        establish acceptance. A gate whose targets are conditional on the
-        project topology (absent by declared design, not by accident)
-        overrides this with a neutral skip naming the condition.
-        """
-        return self._skip_result(project_dir, started)
 
     def check_files(
         self, files: t.SequenceOf[Path], project_dir: Path, ctx: m.Infra.GateContext
@@ -281,29 +285,16 @@ class FlextInfraGate:
     ) -> m.Infra.GateExecution:
         """Assemble a gate execution from parsed check output.
 
-        Severity decides blockingness in one owner: error/warning findings
-        fail the gate; informational findings are receipts and travel as
-        observations (report-only), never overriding acceptance.
+        Every parsed finding blocks the gate, whatever its native severity.
         """
-        blocking = tuple(
-            issue
-            for issue in issues
-            if issue.severity.lower() in {"error", "warning", "warn"}
-        )
-        observational = tuple(
-            issue
-            for issue in issues
-            if issue.severity.lower() not in {"error", "warning", "warn"}
-        )
         return m.Infra.GateExecution(
             result=self._gate_result(
                 project_dir,
-                passed=passed and not blocking,
-                errors=[issue.formatted for issue in blocking],
+                passed=passed and not issues,
+                errors=[issue.formatted for issue in issues],
                 started=started,
             ),
-            issues=blocking,
-            observational_issues=observational,
+            issues=tuple(issues),
             raw_output=raw_output,
         )
 
@@ -569,15 +560,6 @@ class FlextInfraGate:
                 project_dir, passed=False, errors=(message,), started=started
             ),
             raw_output=message,
-        )
-
-    def _neutral_skip_result(
-        self, project_dir: Path, started: float, *, message: str = ""
-    ) -> m.Infra.GateExecution:
-        """An intentional skip (e.g. source package) that passes by design."""
-        detail = message or f"{self.gate_id}: intentionally skipped"
-        return self._build_check_gate_execution(
-            project_dir, passed=True, issues=(), raw_output=detail, started=started
         )
 
 

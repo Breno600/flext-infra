@@ -114,8 +114,14 @@ class TestsFlextInfraDepsModernizerTooling:
         )
         tm.that(ruff["line-length"], eq=ruff_policy.line_length)
         tm.that(ruff["target-version"], eq=ruff_policy.target_version)
+        # The declared src list stays the SSOT; the projection filters it to
+        # roots that exist (a retired tree must not name analyzer entries),
+        # with roots the active plan is materializing accepted as present.
         tm.that(
-            frozenset(u.Tests.toml_strings(ruff["src"])), eq=frozenset(ruff_policy.src)
+            frozenset(u.Tests.toml_strings(ruff["src"])),
+            eq=frozenset(
+                root for root in ruff_policy.src if (project_dir / root).is_dir()
+            ),
         )
         tm.that(
             u.Tests.toml_mapping(ruff["format"])["docstring-code-format"],

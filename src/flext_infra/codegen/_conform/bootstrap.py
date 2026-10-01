@@ -116,6 +116,13 @@ class FlextInfraCodegenConformBootstrap(s[m.Infra.CodegenResult]):
                     pyproject=False,
                     custom=False,
                 )
+            case c.Infra.CodegenConformSurface.DOCS_CONFIG:
+                destination = (
+                    Path(c.Infra.DIR_DOCS) / c.Infra.DOCS_CONFIG_FILENAME
+                ).as_posix()
+                return m.Infra.CodegenConformSurfaceContract(
+                    destinations=frozenset({destination}), pyproject=False, custom=False
+                )
             case _:
                 return m.Infra.CodegenConformSurfaceContract(
                     destinations=frozenset({c.PYPROJECT_FILENAME}),

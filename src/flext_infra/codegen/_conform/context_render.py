@@ -330,6 +330,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
             return r[m.Infra.ProjectRenderContext].from_failure(version_result)
         return r[m.Infra.ProjectRenderContext].ok(
             m.Infra.ProjectRenderContext(
+                docs_audit=workspace.docs_audit,
                 **make_context.value.model_dump(
                     by_alias=True,
                     exclude={"mise_bootstrap", "ruff_per_file_ignores"},
@@ -371,6 +372,15 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                     *packaged_data_paths.directories,
                 ),
                 packaged_data_files=packaged_data_paths.files,
+                packaged_data_excludes=(
+                    FlextInfraEnsurePackagingPhase.resolve_data_excludes(
+                        repository_root,
+                        packaged_data_paths,
+                        project.packaged_data_excludes,
+                    )
+                    if profile is not c.Infra.MakeProfile.WORKSPACE
+                    else ()
+                ),
                 namespace_scan_dirs=project.namespace_scan_dirs,
                 workspace_integration=workspace.integration,
                 # NOTE (multi-agent, flext-get3j): carry only the validated
