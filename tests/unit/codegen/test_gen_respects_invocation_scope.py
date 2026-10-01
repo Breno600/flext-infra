@@ -124,7 +124,9 @@ class TestsFlextInfraGenRespectsInvocationScope:
         )
         tm.that(any("codegen conform" in line for line in init_lines), eq=False)
         for verb in config.Infra.codegen.make.verbs:
-            if verb.name in {"setup", "upg", "help", "clean"}:
+            if verb.name in {"setup", "upg", "help", "clean"} or (
+                verb.profiles and c.Infra.MakeProfile.WORKSPACE not in verb.profiles
+            ):
                 continue
             tm.that(
                 rendered_makefile,
