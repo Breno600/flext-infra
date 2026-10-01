@@ -739,6 +739,7 @@ class FlextInfraConfigModelsArtifact:
                 path = Path(value)
                 if (
                     path.is_absolute()
+                    or PureWindowsPath(value).root
                     or not path.parts
                     or ".." in path.parts
                     or "\\" in value
