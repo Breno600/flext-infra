@@ -6,12 +6,15 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from rope.base import codeanalyze, simplify, worder
+from typing import TYPE_CHECKING
 
 from flext_infra import c, m, t
 
 from .rope_core import FlextInfraUtilitiesRopeCore
 from .rope_runtime import FlextInfraUtilitiesRopeRuntime
+
+if TYPE_CHECKING:
+    from rope.base import codeanalyze
 
 
 class FlextInfraUtilitiesRopeStructure:
@@ -20,6 +23,8 @@ class FlextInfraUtilitiesRopeStructure:
     @staticmethod
     def logical_statements(source: str) -> t.SequenceOf[m.Infra.LogicalStatement]:
         """Return Rope logical regions with scope and TYPE_CHECKING context."""
+        from rope.base import codeanalyze
+
         if not source:
             return ()
         lines = codeanalyze.SourceLinesAdapter(source)
@@ -121,6 +126,8 @@ class FlextInfraUtilitiesRopeStructure:
         project_name: str,
     ) -> t.SequenceOf[m.Infra.PatternSmellViolation]:
         """Evaluate config rules in one Rope logical-statement pass."""
+        from rope.base import codeanalyze, worder
+
         if not source:
             return ()
         facts = m.Infra.RopeSourceFacts(
@@ -313,6 +320,8 @@ class FlextInfraUtilitiesRopeStructure:
         source: str, lines: codeanalyze.SourceLinesAdapter
     ) -> t.VariadicTuple[m.Infra.IgnoredRegion]:
         """Validate Rope string/comment regions into immutable facts."""
+        from rope.base import simplify
+
         regions: t.VariadicTuple[m.Infra.IgnoredRegion] = ()
         for start, end, _metadata in simplify.ignored_regions(source):
             text = source[start:end]
