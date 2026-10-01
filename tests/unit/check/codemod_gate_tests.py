@@ -152,7 +152,8 @@ class TestsFlextInfraCodemodGate:
             if finding.rule_id == "contract-second"
         )
         tm.that(len(observed), eq=1)
-        tm.that(observed[0].level, eq="error")
+        tm.that(observed[0].level, eq="note")
+        tm.that(observed[0].message, has="Observational [error]")
         tm.that(observed[0].message, has="Observed second")
 
     def test_invalid_rule_is_a_native_failure(self, tmp_path: Path) -> None:
