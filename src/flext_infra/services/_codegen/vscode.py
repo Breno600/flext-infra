@@ -1,8 +1,5 @@
 """VS Code settings codegen owner — the single canonical merge instrumentation.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 This is the only place that knows how ``.vscode/settings.json`` is produced.
 It parses that explicitly JSONC document through the canonical string-aware
 normalizer, validates the resulting mapping, merges the config-driven canonical
@@ -11,6 +8,9 @@ and serializes the result with ``u.Cli.json_dumps``. Rendering is deliberately
 independent of repository topology so opening a root or declared_repository produces the
 same document. Planning, atomic writes, and fixed-point verification stay owned
 by ``FlextInfraCodegenConform``.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

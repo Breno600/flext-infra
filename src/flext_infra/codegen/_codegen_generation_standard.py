@@ -352,25 +352,9 @@ class FlextInfraCodegenGenerationStandardMixin(
         Returns:
             Validated template data for the generated root initializer.
 
-        Raises:
-            ValueError: A configured public name is absent from template bindings.
-
         """
         lazy_module_groups, lazy_alias_groups, lazy_map = cls._lazy_groups(plan)
         current_pkg = plan.context.current_pkg
-        template_public_exports = config.Infra.codegen.root_template_public_exports.get(
-            current_pkg,
-            (),
-        )
-        invalid_template_exports = set(template_public_exports).difference(
-            c.Infra.ROOT_TEMPLATE_BINDINGS,
-        )
-        if invalid_template_exports:
-            msg = (
-                f"public template exports for {current_pkg} are not template "
-                f"bindings: {sorted(invalid_template_exports)}"
-            )
-            raise ValueError(msg)
         public_type_checking_imports = cls._type_checking_filtered(plan)
         # The generated TYPE_CHECKING block must mirror the project's ruff
         # isort sections exactly: every namespace the project's
@@ -418,12 +402,29 @@ class FlextInfraCodegenGenerationStandardMixin(
             ),
         )
         runtime_import_lines = cls._runtime_import_lines(plan)
+        # The bootstrap owner's packages import the helpers from the module
+        # that defines them; every other distribution imports them from the
+        # bootstrap root, which therefore publishes them in its __all__.
+        bootstrap_owner = (
+            current_pkg.split(".", maxsplit=1)[0] == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+        )
+        published_helpers = (
+            c.Infra.LAZY_BOOTSTRAP_HELPERS
+            if current_pkg == c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+            else ()
+        )
         return m.Infra.LazyInitRootRender(
             autogen_header=c.Infra.AUTOGEN_HEADER,
             docstring=cls._format_root_package_docstring(
                 current_pkg,
                 u.Infra.copyright_notice(plan.context.pkg_dir),
             ),
+            lazy_helpers_module=(
+                c.Infra.LAZY_BOOTSTRAP_MODULE
+                if bootstrap_owner
+                else c.Infra.LAZY_BOOTSTRAP_ROOT_PACKAGE
+            ),
+            lazy_helpers=c.Infra.LAZY_BOOTSTRAP_HELPERS,
             runtime_import_lines=runtime_import_lines,
             blank_lines_before_exports=(
                 "\n" if not (runtime_import_lines or type_checking_lines) else "\n\n"
@@ -432,8 +433,8 @@ class FlextInfraCodegenGenerationStandardMixin(
             exports_tuple=cls._format_exports_tuple(
                 cls._build_published_exports(
                     (
-                        *template_public_exports,
-                        *tuple(
+                        *published_helpers,
+                        *(
                             name
                             for name in plan.exports
                             if name in lazy_map or name in plan.eager_dunders

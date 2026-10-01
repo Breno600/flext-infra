@@ -13,12 +13,6 @@ Infra:
     # Fresh import probes are independent subprocesses within one validation.
     fresh_import_workers: 3
 
-    # The bootstrap root owns these names in its generated initializer's
-    # existing eager import. They are public on that root only; other roots
-    # keep the same template bindings private.
-    root_template_public_exports:
-      flext_core: [build_lazy_import_map, install_lazy_exports]
-
     # Per-module scc code-LOC ceiling, enforced by the loc-cap gate. This key
     # is its only declaration; guidance references the key, never its value.
     loc_cap:
@@ -46,8 +40,9 @@ Infra:
       uv_environments: ["sys_platform == 'linux'", "sys_platform == 'darwin'"]
       # Global compatibility exceptions become [tool.uv] constraint-dependencies
       # in every project, including projects using the dependency transitively.
-      # Declarations stay latest: an upstream's own bound is resolved by uv from
-      # that upstream's metadata, never restated here as a fleet cap.
+      # Keep reasons here; an empty list removes constraints from all projections.
+      # Dependency compatibility is resolved from the declared project graph;
+      # upstream packages own any bounds their public contracts require.
       uv_constraint_dependencies: []
       # Moving selectors consumed by generated .mise.toml and CI. Only
       # `make upg` resolves them to the newest release and writes mise.lock;
@@ -92,16 +87,42 @@ Infra:
         - macos-x64
         - macos-arm64
         - windows-x64
+      # The Mise release `make upg` writes to every project's mise.version and
+      # bakes into bin/mise and bin/mise.cmd. make upg resolves the hold under
+      # the dependency cooldown, so a hold younger than the cooldown resolves
+      # nothing and stops upg. Held at 2026.9.13, the newest release the 7-day
+      # cooldown admits (measured 2026-10-01: mise latest github:jdx/mise
+      # returns 2026.9.13 with MISE_MINIMUM_RELEASE_AGE=7d, and nothing for
+      # @2026.9.16). The hold also keeps out 2026.9.17, whose artifact fails
+      # the receipt check ("Mise receipt returned invalid version"). Move it
+      # only to a release outside the cooldown that passes that check.
+      mise_selector: github:jdx/mise
+      mise_version: "2026.9.13"
+      # The network bootstrap (make setup, make upg) selects its GitHub
+      # credential once, before any effect: the caller's GITHUB_TOKEN when it
+      # is set (ai-hub propagates it through .envrc.ai-hub); otherwise the first
+      # command below whose executable is on PATH. A selected command that fails
+      # or prints nothing stops the verb; it never degrades to anonymous. With
+      # no source present, mise reaches GitHub anonymously.
+      github_credential_commands:
+        - [gh, auth, token]
       # Projection: .mise.toml [tools] keys. Override the selector here.
       qlty_selector: github:qltysh/qlty
       qlty_version: latest
       node_version: latest
       jscpd_selector: github:kucherenko/jscpd
-      jscpd_version: latest
+      # Held at 5.3.2 (#1315): 5.3.3 ships no macos-arm64 asset and 5.4.0
+      # ships none for the fleet's six platforms, so mise cannot lock either
+      # and make upg fails fleet-wide. Move to latest once a newer release
+      # publishes assets for all six declared platforms.
+      jscpd_version: "5.3.2"
       # Prettier is the markdown formatter (markdown-format gate): provisioned
       # through npm so the fleet binary version is owned by this SSOT alone.
       prettier_selector: npm:prettier
-      prettier_version: latest
+      # Pinned to 3.5.x: prettier 3.7+ changed markdown formatting (list-continuation
+      # printer, proseWrap) which the markdown-format gate has not been revalidated
+      # against. Only float through `make upg` once the docs gate is verified.
+      prettier_version: 3.5.3
       waza_selector: github:microsoft/waza
       waza_version: latest
       # microsoft/waza also publishes azd-extension tags, and GitHub marks
@@ -327,6 +348,10 @@ Infra:
         discovery_scope: none
 
     make:
+      # Physical workspace environments live beside the checkout so a linked
+      # worktree shares one project-keyed environment instead of an in-tree
+      # duplicate (runtime_environment_dir derives the same path).
+      runtime_environment_directory: .flext-venvs
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
@@ -383,9 +408,11 @@ Infra:
         block_threshold_percent: 95
         allowed_save_refs: [main, 0.12.0-dev]
         key_prefix: flext-testmon
-      # The Mypy gate shares analysis across checkouts of the same project name.
-      # Relocks retain the directory; Mypy revalidates changed modules. Distinct
-      # project names keep their module namespaces in separate directories.
+      # The Mypy gate shares one analysis per project name across checkouts
+      # (u.Infra.mypy_cache_directory). Relocks retain the directory; Mypy
+      # revalidates changed modules by source hash, so a warm cache never masks
+      # a finding. Distinct project names keep their module namespaces in
+      # separate directories.
       mypy_cache:
         cache_environment_variable: MYPY_CACHE_DIR
         data_home_environment_variable: XDG_CACHE_HOME
@@ -400,16 +427,19 @@ Infra:
         # Other pre-push verbs use this token to preserve local test behavior;
         # pre-push check unsets CI so it runs every active check gate.
         local_value: N
-        # Rules, not a skip-list: local_check_gates is the ONLY
-        # declared set. CI=Y runs its strict complement, derived in
-        # MakeSpec.check_gates_ci over the active default universe, so every
-        # active gate retains an owner. CI=N intersects the declared local set
-        # with that universe; an unset CI runs all active gates. `format`
-        # is not a check gate at all -- it mutates files, so it belongs to
-        # make fmt / make fix only. This supersedes the earlier
-        # check_gates_skip list, which could drift out of sync with the set it
-        # was meant to complement.
-        # CI is ternary (Y/N/absent).
+        # No declared gate list: MakeSpec.check_gates_ci derives the CI
+        # partition from the registry gate kind (EXTERNAL gates) and
+        # check_gates_local is its strict complement, so every active gate
+        # keeps an owner. CI is ternary (Y/N/absent); an unset CI runs all
+        # active gates. tooling.tools.pytest.ci-excluded-markers defines the
+        # slow-test exclusion for CI and pre-commit, not local/pre-push runs.
+        # Rules, not a skip-list: no gate set is declared here. CI=Y runs
+        # MakeSpec.check_gates_ci, the active default gates the check registry
+        # classifies EXTERNAL; CI=N runs MakeSpec.check_gates_local, its strict
+        # complement (type checkers and flext-infra validators), so every
+        # active gate retains an owner. An unset CI runs all active gates.
+        # `format` is not a check gate -- it mutates files, so it belongs to
+        # make fmt / make fix only.
         # tooling.tools.pytest.ci-excluded-markers defines the slow-test
         # exclusion for CI and pre-commit, not local/pre-push runs.
         # CI=N owns the complementary local check gates; absent uses testmon
@@ -545,7 +575,7 @@ Infra:
         - name: status
           description: Report the resolved runtime and repository state.
         - name: verify-clean
-          description: Verify that generated documentation and managed artifacts leave the Git tree clean.
+          description: Verify that managed artifacts and generated documentation match their sources and leave no unstaged change to a tracked file.
         - name: docs
           description: Generate, fix, format, and check documentation.
         - name: clean
@@ -1021,6 +1051,11 @@ Infra:
       - path: .envrc.local
         owner: codegen
         policy: merge
+      # The fleet template owns its rendered sections. A project's
+      # ManagedArtifacts.Gitignore.preserved_blocks declares exact delimiter
+      # pairs for sections written by another generator; codegen retains those
+      # live bytes and rejects incomplete or duplicate delimiters. No external
+      # destination list belongs in this fleet manifest.
       - path: .gitignore
         owner: codegen
         policy: merge
@@ -2046,12 +2081,10 @@ Infra:
           destination: tests/fixtures/ci/docker/arch.Dockerfile
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: false
         - source: base/bin/mise-lock-transaction.py.j2
           destination: bin/mise-lock-transaction.py
           profiles: [workspace, standalone]
           delegate: render
-          overwrite: true
         - source: base/Makefile.j2
           destination: Makefile
         # The generic conform engine is the single Makefile owner for every

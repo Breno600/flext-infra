@@ -204,11 +204,8 @@ class FlextInfraConfigModelsMake:
         ]
         stale_github_organizations: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
-            m.Field(
-                default=("organization",),
-                description="Placeholder GitHub orgs that must be rewritten",
-            ),
-        ] = ("organization",)
+            m.Field(description="Placeholder GitHub orgs that must be rewritten"),
+        ]
         github_repos: Annotated[
             t.VariadicTuple[FlextInfraConfigModelsMake.DocsGithubRepoSpec],
             m.Field(
@@ -629,6 +626,12 @@ class FlextInfraConfigModelsMake:
                         raise ValueError(msg)
                 return self
 
+        runtime_environment_directory: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description="Sibling directory for physical workspace environments",
+            ),
+        ]
         examples_timeout_seconds: Annotated[
             int,
             m.Field(gt=0, le=120, description="Workspace examples process deadline"),
@@ -644,7 +647,6 @@ class FlextInfraConfigModelsMake:
         fmt_gates: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(
-                default=("markdown-format",),
                 description=(
                     "Gates whose mutating side `make fmt` drives (formatters). "
                     "The read-only side runs in `make check`; `make fix` never "

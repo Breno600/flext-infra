@@ -1,14 +1,14 @@
 """Hermetic Git provider: local bare mirrors that keep fixture sources real.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Governed fixtures declare their internal dependencies with direct Git sources
 (a source-less internal dependency fails loudly), so ``uv lock`` inside a
 fixture resolves those sources. These helpers serve the exact locked revisions
 from local bare mirrors built out of objects this checkout already holds, and
 the environment they return makes any network transport fail instead of
 silently reaching a remote.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

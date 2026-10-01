@@ -1,11 +1,11 @@
 """Workspace environment sync owner for the public ``infra`` facade.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 This is the canonical in-process surface for keeping one workspace's direnv
 activation aligned with the codegen SSOT. ``codegen conform`` exclusively owns
 ``.mise.toml`` so environment sync cannot race toolchain publication.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

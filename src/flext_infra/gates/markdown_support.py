@@ -1,11 +1,11 @@
 """Shared markdown-gate surface: collection, config, and ignore resolution.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 ``markdown`` (rumdl) and ``markdown-format`` (prettier) drive different tools
 over the same governed markdown surface, so the file collection and the
 ignore-projection reader live here exactly once.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

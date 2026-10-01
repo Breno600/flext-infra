@@ -87,8 +87,6 @@ class FlextInfraConstantsBase(
     "Mypy tool section key."
     PYRIGHT: ClassVar[str] = "pyright"
     "Pyright tool section key."
-    PYRIGHT_LANGSERVER: ClassVar[str] = "pyright-langserver"
-    "Pyright Language Server Protocol executable."
     PYTEST: ClassVar[str] = "pytest"
     "Pytest tool section key."
     RUFF: ClassVar[str] = "ruff"
@@ -238,8 +236,6 @@ class FlextInfraConstantsBase(
         "--require-hashes",
     )
     "Fail-closed isolated build of one release artifact from staged source."
-    JSON_RPC_VERSION: ClassVar[str] = "2.0"
-    "Canonical JSON-RPC protocol version used by LSP transports."
     GATE_ATTESTATION_SCHEMA: ClassVar[str] = "https://flext.sh/attestations/gates/v1"
     "Canonical schema identifier for signed gate attestations."
     UV_HTTP_CONNECT_TIMEOUT: ClassVar[str] = "UV_HTTP_CONNECT_TIMEOUT"

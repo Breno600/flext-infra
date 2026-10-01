@@ -61,7 +61,8 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
             Names exported from the package __init__.py.
 
         Raises:
-            ValueError: If lazy-init facade parent '.
+            ValueError: If a facade parent outside the scan scope resolves to a
+                module, not a package, in the active environment.
 
         """
         index = self.rope_workspace.workspace_index
@@ -73,8 +74,12 @@ class FlextInfraCodegenLazyInitPlannerCacheMixin:
             source = init_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
             # A generated __init__ is the parent's published ABI — what an
             # importer sees — in the workspace exactly as when installed, so
-            # both scopes elect the same nearest re-exporting parent.
+            # both scopes elect the same nearest re-exporting parent. A
+            # generated __init__ with an unresolved merge is an output this run
+            # rebuilds, not an ABI: the package's sources publish for it.
             if source.startswith(c.Infra.AUTOGEN_HEADERS):
+                if u.Infra.first_merge_conflict_marker(source) is not None:
+                    return frozenset()
                 return frozenset(u.Infra.public_export_names_source(source))
             return frozenset(
                 self.rope_workspace.exports(

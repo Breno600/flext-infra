@@ -82,6 +82,22 @@ class FlextInfraCodegenConformArtifactRender(FlextInfraCodegenConformContextRend
             The resulting ``p.Result[m.Infra.CodegenArtifactComposition]``.
 
         """
+        if destination == c.Infra.GITIGNORE:
+            if render_inputs is None:
+                resolved = u.Infra.load_project_managed_artifacts(repository_root)
+                if resolved.failure:
+                    return r[m.Infra.CodegenArtifactComposition].from_failure(resolved)
+                blocks = resolved.value.artifacts.Gitignore.preserved_blocks
+            else:
+                blocks = render_inputs.managed_artifacts.resolution.artifacts.Gitignore.preserved_blocks
+            composed = u.Infra.preserve_project_gitignore_blocks(
+                rendered,
+                repository_root,
+                blocks,
+            )
+            if composed.failure:
+                return r[m.Infra.CodegenArtifactComposition].from_failure(composed)
+            rendered = composed.value
         if destination == c.PYPROJECT_FILENAME:
             live_path = repository_root / c.PYPROJECT_FILENAME
             live: str | None = None

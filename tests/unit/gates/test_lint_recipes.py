@@ -126,6 +126,33 @@ class TestsFlextInfraLintRecipes:
             has='ValueError: If ``not body.startswith(\'"""\')``.',
         )
 
+    def test_raises_condition_drops_the_opener_its_placeholder_left(self) -> None:
+        """A message prefix cut at a placeholder keeps no dangling bracket."""
+        source = (
+            "def select(code: int) -> int:\n"
+            '    """Select one outcome."""\n'
+            "    if code:\n"
+            '        msg = f"selection failed ({code}): rejected"\n'
+            "        raise RuntimeError(msg)\n"
+            "    return code\n"
+        )
+
+        repaired = self._apply(
+            source,
+            ("docstring-missing-returns", 2, "`return` is not documented"),
+            (
+                "docstring-missing-exception",
+                5,
+                "Raised exception `RuntimeError` missing from docstring",
+            ),
+        )
+
+        function = ast.parse(repaired).body[0]
+        tm.that(function, is_=ast.FunctionDef)
+        docstring = ast.get_docstring(function) or ""
+        tm.that(docstring, has="RuntimeError: If selection failed.")
+        tm.that(docstring, lacks="failed (")
+
     def test_summary_docstring_derives_from_the_name(self) -> None:
         """Test summary docstring derives from the name."""
         source = (

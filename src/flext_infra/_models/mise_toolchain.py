@@ -99,10 +99,10 @@ class FlextInfraModelsMiseToolchain:
     class ToolchainSpec(_ConfigContract):
         """Language-runtime and native-tool versions shared by generated projects.
 
-        Language runtimes and native tools are declared as moving ``latest``
-        selectors or a major.minor line. Only ``make upg`` resolves them and
-        writes the committed mise.lock; setup installs frozen from it. Python linters/type-checkers remain owned
-        by pyproject manifests.
+        Native tools use moving ``latest`` selectors; Python retains its
+        required major.minor runtime line. Only ``make upg`` resolves the
+        selectors and writes mise.lock; setup installs frozen from that lock.
+        Python linters and type checkers remain owned by pyproject manifests.
         """
 
         # Selector families rejected while their capabilities are suspended.
@@ -244,6 +244,37 @@ class FlextInfraModelsMiseToolchain:
         npm_package_manager: Annotated[
             Literal["aube"],
             m.Field(description="Mise npm installer with a locked dependency graph"),
+        ]
+        github_credential_commands: Annotated[
+            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
+            m.Field(
+                description=(
+                    "Commands that print the GitHub credential when the caller's "
+                    "environment carries none, in precedence order. The first "
+                    "whose executable is on PATH is the selected source and must "
+                    "deliver; none present means anonymous GitHub access. "
+                    "Override toolchain.github_credential_commands."
+                ),
+            ),
+        ]
+        mise_selector: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Selector `make upg` resolves for the Mise release itself. "
+                    "Override toolchain.mise_selector."
+                ),
+            ),
+        ]
+        mise_version: Annotated[
+            t.NonEmptyStr,
+            m.Field(
+                description=(
+                    "Mise release `make upg` writes to mise.version and the "
+                    "launchers: 'latest', or a held release while upstream's "
+                    "newest one is broken"
+                ),
+            ),
         ]
         qlty_selector: Annotated[
             t.NonEmptyStr,
@@ -458,6 +489,15 @@ class FlextInfraModelsMiseToolchain:
         passthrough_environment: Annotated[
             t.VariadicTuple[t.NonEmptyStr],
             m.Field(min_length=1, description="Explicitly reinjected host variables"),
+        ]
+        credential_commands: Annotated[
+            t.VariadicTuple[t.VariadicTuple[t.NonEmptyStr]],
+            m.Field(
+                description=(
+                    "Declared GitHub credential commands consulted, in order, "
+                    "only when the caller's environment carries no credential"
+                ),
+            ),
         ]
         version_pin_file: Annotated[
             t.NonEmptyStr,

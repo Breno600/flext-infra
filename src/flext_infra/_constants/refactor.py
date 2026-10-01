@@ -67,8 +67,6 @@ class FlextInfraConstantsRefactor:
         - ``future-annotations``: add the future import to the file;
         - ``module-import``: hoist the matched import statement to the
           module import block;
-        - ``module-end``: move the matched top-level statement after the
-          module's last statement;
         - ``package-root-import``: rebind ``$NAME`` from ``$MODULE`` to that
           module's top-level package;
         - ``own-package-import``: rebind ``$NAME`` from ``$MODULE`` to the
@@ -81,7 +79,6 @@ class FlextInfraConstantsRefactor:
         TYPING_ALIAS = "typing-alias"
         FUTURE_ANNOTATIONS = "future-annotations"
         MODULE_IMPORT = "module-import"
-        MODULE_END = "module-end"
         PACKAGE_ROOT_IMPORT = "package-root-import"
         OWN_PACKAGE_IMPORT = "own-package-import"
         FACADE_CLASS = "facade-class"
@@ -169,6 +166,8 @@ class FlextInfraConstantsRefactor:
         MODEL_FIELDS = "model-fields"
         SELF_FACADE_IMPORT = "self-facade-import"
         DYNAMIC_ENVIRONMENT = "dynamic-environment"
+        MODULE_END = "module-end"
+        NOTICE_LAST = "notice-last"
 
     SEMANTIC_CUTOVER_RULE_IDS: ClassVar[t.MappingKV[str, str]] = MappingProxyType({
         SemanticCutoverPhase.COMPAT_ALIAS: "ban-compat-alias",
@@ -177,6 +176,8 @@ class FlextInfraConstantsRefactor:
         SemanticCutoverPhase.MODEL_FIELDS: "rewire-getattr-model-fields-to-direct-access",
         SemanticCutoverPhase.SELF_FACADE_IMPORT: "ban-infra-utility-module-self-facade-import",
         SemanticCutoverPhase.DYNAMIC_ENVIRONMENT: "ban-ambient-environ-read",
+        SemanticCutoverPhase.MODULE_END: "require-all-last",
+        SemanticCutoverPhase.NOTICE_LAST: "require-notice-last",
     })
     "ast-grep rule whose findings select each finding-driven semantic cutover."
 
@@ -229,6 +230,7 @@ class FlextInfraConstantsRefactor:
     CODEMOD_TEXT_KEY_DESCRIPTION: ClassVar[str] = "description"
     CODEMOD_TEXT_KEY_INCLUDE: ClassVar[str] = "include"
     CODEMOD_TEXT_KEY_EXCLUDE: ClassVar[str] = "exclude"
+    CODEMOD_TEXT_KEY_DISTRIBUTIONS: ClassVar[str] = "distributions"
     CODEMOD_TEXT_KEY_FIND: ClassVar[str] = "find"
     CODEMOD_TEXT_KEY_REPLACE: ClassVar[str] = "replace"
     CODEMOD_TEXT_KEY_FLAGS: ClassVar[str] = "flags"

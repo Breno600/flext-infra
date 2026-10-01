@@ -1,11 +1,11 @@
 """Release sdist root boundary admits declared governance manifests.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 A project may ship its governance agent manifest as one declared runtime
 asset at the sdist root (ai-hub embeds AGENTS.md for the agents it
 deploys); the boundary constant must admit it by name.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

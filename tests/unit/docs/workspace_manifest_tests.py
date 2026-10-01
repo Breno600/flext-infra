@@ -1,8 +1,5 @@
 """The fleet-umbrella question has exactly one owner and one signal.
 
-Copyright (c) 2026 FLEXT Team. All rights reserved.
-SPDX-License-Identifier: MIT
-
 Why this exists: the workspace-manifest path was re-derived in five places, and
 a sixth copy asked the wrong file. It tested the Beads override, which every
 project carries, so every standalone project was classified as a fleet umbrella.
@@ -12,6 +9,9 @@ and silently dropped its README and project docs.
 These cases pin the signal itself, independently of the docs generator, so the
 classification cannot drift again. Both artifacts are written through the shared
 fixture owners, so a test never encodes a second spelling of either file.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations

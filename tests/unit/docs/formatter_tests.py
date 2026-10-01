@@ -98,7 +98,7 @@ class TestsFlextInfraDocsFormatter:
             encoding="utf-8",
         )
         fixer = FlextInfraDocFixer()
-        formatter = self._formatter()
+        formatter = FlextInfraDocFormatter()
 
         first_fix = fixer.fix(workspace, apply=True)
         tm.ok(first_fix)

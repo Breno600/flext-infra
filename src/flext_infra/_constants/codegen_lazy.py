@@ -49,13 +49,17 @@ class FlextInfraConstantsCodegenLazy:
         "_root_typing_parts",
     })
     "Closed set of retired root registry module and package names."
+    LAZY_BOOTSTRAP_HELPERS: ClassVar[t.VariadicTuple[str]] = (
+        "build_lazy_import_map",
+        "install_lazy_exports",
+    )
+    "Lazy helpers every initializer imports; the bootstrap root publishes them."
     ROOT_TEMPLATE_BINDINGS: ClassVar[frozenset[str]] = frozenset({
         "MappingProxyType",
         "TYPE_CHECKING",
-        "build_lazy_import_map",
-        "install_lazy_exports",
+        *LAZY_BOOTSTRAP_HELPERS,
     })
-    "Names owned by the canonical root initializer template, never public exports."
+    "Names the root initializer template binds; only the helpers are ever published."
     TEST_ONLY_SOURCE_MODULE_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^(?:_?test(?:_[A-Za-z0-9_]+)?|[A-Za-z0-9_]+_tests?)\.py$",
     )
@@ -97,16 +101,19 @@ class FlextInfraConstantsCodegenLazy:
     })
     "Package segments whose initializer must remain empty to avoid bootstrap cycles."
 
-    # The generated bootstrap opens with `from flext_core.lazy import ...`, so a
-    # package that `flext_core.lazy` itself reaches at module scope cannot carry
-    # one: importing it would re-enter the module that is still initializing and
-    # fail with "cannot import name 'build_lazy_import_map' from partially
-    # initialized module 'flext_core.lazy'". `flext_core.lazy` pulls
-    # `._lazy_parts`, which pulls `._typings`, which reaches the other private
-    # facets, so the whole private surface of the bootstrap-owning distribution
-    # keeps side-effect-free initializers. Private packages of every OTHER
-    # distribution import the bootstrap normally and are unaffected.
+    # The bootstrap-owning distribution's generated initializers open with
+    # `from flext_core.lazy import ...`, so a package that `flext_core.lazy`
+    # itself reaches at module scope cannot carry one: importing it would
+    # re-enter the module that is still initializing and fail with "cannot
+    # import name 'build_lazy_import_map' from partially initialized module
+    # 'flext_core.lazy'". `flext_core.lazy` pulls `._lazy_parts`, which pulls
+    # `._typings`, which reaches the other private facets, so the whole private
+    # surface of the bootstrap-owning distribution keeps side-effect-free
+    # initializers. Every OTHER distribution imports the helpers from the
+    # `flext_core` root, which publishes them, never from its submodule.
     LAZY_BOOTSTRAP_ROOT_PACKAGE: ClassVar[str] = "flext_core"
+    LAZY_BOOTSTRAP_MODULE: ClassVar[str] = "flext_core.lazy"
+    "Module defining the lazy helpers; only the bootstrap owner imports it directly."
 
     BARE_IMPORT_FROM_RE: ClassVar[t.RegexPattern] = re.compile(
         r"^from\s+import\s",

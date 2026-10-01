@@ -48,7 +48,10 @@ class TestsFlextInfraLazyInitTransforms:
             encoding=c.Cli.ENCODING_DEFAULT,
         )
         tm.that(result, eq=0)
-        tm.that(init_content, has="from .mapper import FlextDemoUtilitiesMapper")
+        tm.that(
+            init_content,
+            has=f"from {package_root.name}._utilities.mapper import FlextDemoUtilitiesMapper",
+        )
         tm.that(init_content, has="FlextDemoUtilitiesMapper")
         tm.that(init_content, has="__all__: tuple[str, ...]")
         tm.that(init_content, has="install_lazy_exports(")

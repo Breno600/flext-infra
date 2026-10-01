@@ -104,8 +104,9 @@ class FlextInfraEnsureRuffConfigPhase:
             )
         return frozenset(p.parts[0] for p in paths.value if Path(p).parts)
 
-    @staticmethod
-    def project_per_file_ignores(
+    @classmethod
+    def compose_per_file_ignores(
+        cls,
         project_dir: Path,
         global_ignores: t.MappingKV[str, t.StrSequence],
     ) -> t.MappingKV[str, t.StrSequence]:
@@ -345,7 +346,7 @@ class FlextInfraEnsureRuffConfigPhase:
             The resulting ``t.StrSequence``.
 
         """
-        effective_ignores = self.project_per_file_ignores(
+        effective_ignores = FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
             path.parent,
             self._tool_config.tools.ruff.lint.per_file_ignores,
         )
