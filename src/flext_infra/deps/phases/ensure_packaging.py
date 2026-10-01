@@ -168,7 +168,11 @@ class FlextInfraEnsurePackagingPhase:
             if (
                 not valid_path
                 or not declared_child
-                or (declaration in excluded or not source.is_file() or source.is_symlink())
+                or (
+                    declaration in excluded
+                    or not source.is_file()
+                    or source.is_symlink()
+                )
             ):
                 msg = f"invalid packaged data exclusion: {declaration}"
                 raise ValueError(msg)

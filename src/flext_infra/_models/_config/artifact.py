@@ -753,7 +753,9 @@ class FlextInfraConfigModelsArtifact:
                     or "\\" in value
                     or PureWindowsPath(value).drive
                 ):
-                    msg = f"CSV campaign path must be relative and non-escaping: {value}"
+                    msg = (
+                        f"CSV campaign path must be relative and non-escaping: {value}"
+                    )
                     raise ValueError(msg)
             return self
 
