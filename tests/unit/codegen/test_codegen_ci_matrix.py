@@ -313,10 +313,10 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflow, has="cancel-in-progress: true")
 
     def test_ci_workflow_stable_blank_line_without_private_submodules(
-        self, tmp_path: Path
+        self, tmp_path: Path, rendered_project: Path
     ) -> None:
         """Empty private_submodules include must not accumulate blank lines."""
-        root = self.render_project(tmp_path / "member")
+        root = rendered_project
         workflow = (root / ".github" / "workflows" / "ci.yml").read_text(
             encoding="utf-8"
         )
@@ -510,9 +510,9 @@ class TestsFlextInfraCodegenCiMatrix:
             content = (docker_dir / f"{distro}.Dockerfile").read_text(encoding="utf-8")
             tm.that("libatomic" not in content, eq=True, msg=distro)
 
-    def test_dockerfiles_render_byte_idempotently(self, tmp_path: Path) -> None:
+    def test_dockerfiles_render_byte_idempotently(self, rendered_project: Path) -> None:
         """Repeated project generation preserves the generated Dockerfiles."""
-        root = self.render_project(tmp_path / "external")
+        root = rendered_project
         before = {
             distro: (
                 root / "tests" / "fixtures" / "ci" / "docker" / f"{distro}.Dockerfile"
