@@ -97,12 +97,10 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             The resulting ``t.MappingKV[str, frozenset[str]]``.
 
         """
-        smell_tags = c.ENFORCEMENT_SMELL_TAGS
-        rules_by_tag = u.rules_by_tag()
         return {
             c.Infra.SMELLS: frozenset({
-                *smell_tags,
-                *(rules_by_tag[tag].id for tag in smell_tags),
+                *c.ENFORCEMENT_SMELL_TAGS,
+                *c.SMELL_RULES_TEXT,
             }),
         }
 

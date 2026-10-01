@@ -126,7 +126,7 @@ class FlextInfraCodegenProjectNew(
         ),
     ]
     year: Annotated[int, m.Field(ge=2025, description="Deterministic copyright year.")]
-    conform_ports: Annotated[
+    conform_collaborators: Annotated[
         m.Infra.CodegenConformPorts | None,
         m.Field(
             default=None,
@@ -253,7 +253,7 @@ class FlextInfraCodegenProjectNew(
         return FlextInfraCodegenConform.execute_request(
             request,
             initial_workspace=workspace,
-            ports=self.conform_ports,
+            ports=self.conform_collaborators,
         )
 
 

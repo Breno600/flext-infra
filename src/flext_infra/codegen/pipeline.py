@@ -31,7 +31,7 @@ class FlextInfraCodegenPipeline(
 ):
     """Run the full codegen pipeline directly from the validated CLI model."""
 
-    conform_ports: m.Infra.CodegenConformPorts = m.Field(
+    conform_collaborators: m.Infra.CodegenConformPorts = m.Field(
         exclude=True,
         description="Docs and fresh-import ports the toolchain conform crosses into",
     )

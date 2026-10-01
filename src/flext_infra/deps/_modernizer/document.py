@@ -300,8 +300,8 @@ class FlextInfraPyprojectModernizerDocument:
             *FlextInfraEnsureRuffConfigPhase(tooling).apply_payload(
                 payload,
                 path=path,
-                generated_python_roots=topology.declared_python_dirs,
                 analysis_exclusions=topology.analysis_exclusions,
+                generated_python_roots=topology.declared_python_dirs,
             ),
             *FlextInfraEnsurePackagingPhase().apply_payload(
                 payload,

@@ -149,7 +149,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
             check_only=request.check_only,
             dry_run=request.dry_run,
             output_format=request.output_format,
-            conform_ports=self.codegen_conform_ports(),
+            conform_collaborators=self.codegen_conform_collaborators(),
         ).execute()
 
     @staticmethod
@@ -191,7 +191,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         """
         return FlextInfraMarkdownFormatGate(repository_root)
 
-    def codegen_conform_ports(self) -> m.Infra.CodegenConformPorts:
+    def codegen_conform_collaborators(self) -> m.Infra.CodegenConformPorts:
         """Bind the docs and fresh-import families complete conform crosses into.
 
         Returns:
@@ -217,7 +217,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
         return FlextInfraCodegenConform.execute_request(
             request,
             initial_workspace,
-            ports=self.codegen_conform_ports(),
+            ports=self.codegen_conform_collaborators(),
         )
 
     def codegen_new(
@@ -231,7 +231,7 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
 
         """
         return command.model_copy(
-            update={"conform_ports": self.codegen_conform_ports()},
+            update={"conform_collaborators": self.codegen_conform_collaborators()},
         ).execute()
 
     def docs_format(self, command: FlextInfraDocFormatter) -> p.Result[bool]:

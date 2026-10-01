@@ -198,7 +198,7 @@ class TestsFlextInfraCodegenConform:
             if scenario.endswith("-failure")
             else _FlextInfraCodegenConformLifecycleProbe.execute_request
         )
-        ports = infra.codegen_conform_ports()
+        ports = infra.codegen_conform_collaborators()
 
         if scenario.startswith("exception-"):
             with pytest.raises(OSError, match="raised after begin") as raised:
