@@ -276,6 +276,17 @@ class FlextInfraEnsureRuffConfigPhase:
                 toml.PhaseConfig(
                     name="ruff",
                     root_path=(),
+                    table_path=(c.Infra.LINT_SECTION, "pydocstyle"),
+                    operations=(
+                        toml.SetOp(
+                            key="convention",
+                            value=ruff_cfg.lint.pydocstyle.convention,
+                        ),
+                    ),
+                ),
+                toml.PhaseConfig(
+                    name="ruff",
+                    root_path=(),
                     table_path=(c.Infra.LINT_SECTION, "flake8-tidy-imports"),
                     operations=(
                         toml.SetOp(
