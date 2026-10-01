@@ -1,0 +1,13 @@
+id: ban-unwrap-or-sentinel
+valid:
+  - value = result.unwrap_or(default_value)
+  - value = result.unwrap_or(0)
+  - value = result.unwrap()
+invalid:
+  - value = result.unwrap_or(False)
+  - value = result.unwrap_or(None)
+  - items = result.unwrap_or([])
+  - items = result.unwrap_or(())
+  - mapping = result.unwrap_or({})
+  - names = result.unwrap_or(frozenset())
+  - flag = result.unwrap_or(True)

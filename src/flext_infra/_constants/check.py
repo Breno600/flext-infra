@@ -52,7 +52,6 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SMELLS: ClassVar[str] = "smells"
-    SILENT_FAILURE: ClassVar[str] = "silent-failure"
     TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset({
         "pyrefly",
         "mypy",
@@ -71,10 +70,6 @@ class FlextInfraConstantsCheck:
         "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
         "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
         "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
-        "silent-failure": (
-            "Flext Silent Failure Detector",
-            "internal://flext-infra/silent-failure",
-        ),
         "deferred-self-reference": (
             "Flext Deferred Self Reference Detector",
             "internal://flext-infra/deferred-self-reference",

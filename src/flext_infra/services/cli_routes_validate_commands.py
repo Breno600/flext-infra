@@ -15,7 +15,6 @@ from flext_infra.validate.lazy_map_freshness import FlextInfraValidateLazyMapFre
 from flext_infra.validate.pytest_diag import FlextInfraPytestDiagExtractor
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 from flext_infra.validate.scanner import FlextInfraTextPatternScanner
-from flext_infra.validate.silent_failure import FlextInfraSilentFailureValidator
 from flext_infra.validate.skill_validator import FlextInfraSkillValidator
 from flext_infra.validate.stub_chain import FlextInfraStubSupplyChain
 
@@ -94,14 +93,6 @@ class FlextInfraValidationCommandRoutes(FlextInfraCliRouteBase):
                     FlextInfraSkillValidator,
                     FlextInfraCliRouteBase.result_handler(
                         FlextInfraSkillValidator.execute
-                    ),
-                ),
-                (
-                    "silent-failure",
-                    "Validate silent failure sentinel returns",
-                    FlextInfraSilentFailureValidator,
-                    FlextInfraCliRouteBase.result_handler(
-                        FlextInfraSilentFailureValidator.execute
                     ),
                 ),
                 (

@@ -1,0 +1,361 @@
+# A failure path never collapses into silence: no swallowed exception, no
+# suppressed error, no sentinel standing in for a failed result. Each document
+# is one shape of the same law.
+#
+# Relaxations that are part of the law, not exceptions to it:
+# - test modules may suppress lifecycle errors of process teardown;
+# - a narrow except branch returning True is a fail-closed predicate answer;
+# - a `has_*` / `is_*` / `should_*` predicate maps its expected exception to a
+#   boolean by meaning;
+# - a findings collector (`collect_*`, `*_findings`) returns an empty result
+#   for "no findings";
+# - a branch that records the failure through `.skip(...)` is loud.
+id: ban-silent-suppress
+language: python
+severity: error
+files:
+  - "**/*.py"
+ignores:
+  - "**/tests/**"
+rule:
+  any:
+    - pattern: contextlib.suppress($$$ARGS)
+    - all:
+        - pattern: $MODULE.suppress($$$ARGS)
+        - inside:
+            kind: module
+            stopBy: end
+            has:
+              stopBy: end
+              pattern: import contextlib as $MODULE
+    - all:
+        - pattern: suppress($$$ARGS)
+        - inside:
+            kind: module
+            stopBy: end
+            has:
+              stopBy: end
+              kind: import_from_statement
+              all:
+                - has:
+                    field: module_name
+                    regex: "^contextlib$"
+                - has:
+                    kind: dotted_name
+                    regex: "^suppress$"
+    - all:
+        - pattern: $ALIAS($$$ARGS)
+        - inside:
+            kind: module
+            stopBy: end
+            has:
+              stopBy: end
+              kind: import_from_statement
+              all:
+                - has:
+                    field: module_name
+                    regex: "^contextlib$"
+                - has:
+                    kind: aliased_import
+                    all:
+                      - has:
+                          field: name
+                          regex: "^suppress$"
+                      - has:
+                          field: alias
+                          pattern: $ALIAS
+message: >-
+  contextlib.suppress(...) silences exceptions without propagation; handle
+  the exact failure or let it escape.
+---
+id: ban-unwrap-or-sentinel
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  kind: call
+  all:
+    - has:
+        field: function
+        kind: attribute
+        has:
+          field: attribute
+          regex: "^unwrap_or$"
+    - has:
+        field: arguments
+        pattern: $_
+        has:
+          nthChild: 1
+          matches: sentinel-value
+message: >-
+  unwrap_or(<sentinel>) hides a failure path; propagate the result or branch
+  on its failure explicitly.
+---
+id: ban-except-pass
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  matches: except-pass
+message: >-
+  An except handler whose body is only `pass` swallows the exception.
+---
+id: ban-broad-except-without-propagation
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  all:
+    - matches: except-broad
+    - not:
+        matches: except-pass
+    - not:
+        has:
+          stopBy: end
+          matches: failure-propagation
+message: >-
+  A broad except (bare, Exception or BaseException) must re-raise or
+  propagate through a failure factory (r.fail / e.fail_*).
+---
+# Deterministic repair: inside a function that returns r[T], an except branch
+# that binds its exception and returns a sentinel returns the failure instead.
+id: fix-except-sentinel-return
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  all:
+    - matches: sentinel-return
+    - not:
+        has:
+          kind: "true"
+    - inside:
+        kind: except_clause
+        stopBy: end
+        all:
+          - has:
+              field: value
+              kind: as_pattern
+              has:
+                field: alias
+                pattern: $ERROR
+          - not:
+              matches: except-broad
+          - not:
+              has:
+                stopBy: end
+                matches: failure-propagation
+          - not:
+              has:
+                stopBy: end
+                matches: skip-record
+    - inside:
+        stopBy: end
+        kind: function_definition
+        has:
+          field: return_type
+          pattern: $_
+          has:
+            any:
+              - all:
+                  - kind: generic_type
+                  - has:
+                      kind: identifier
+                      regex: "^(?:r|Result)$"
+                  - has:
+                      kind: type_parameter
+                      has:
+                        kind: type
+                        pattern: $INNER
+              - pattern: $FACADE.Result[$INNER]
+    - not:
+        inside:
+          stopBy: end
+          kind: function_definition
+          has:
+            field: name
+            regex: "^(?:has_|is_|should_)"
+fix: return r[$INNER].fail(str($ERROR), exception=$ERROR)
+message: >-
+  An exception branch returns a sentinel instead of propagating; return the
+  failure with its exception.
+---
+id: ban-except-sentinel-return
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  all:
+    - matches: sentinel-return
+    - not:
+        has:
+          kind: "true"
+    - inside:
+        kind: except_clause
+        stopBy: end
+        all:
+          - has:
+              field: value
+              pattern: $_
+          - not:
+              matches: except-broad
+          - not:
+              has:
+                stopBy: end
+                matches: failure-propagation
+          - not:
+              has:
+                stopBy: end
+                matches: skip-record
+    - not:
+        inside:
+          stopBy: end
+          kind: function_definition
+          has:
+            field: name
+            regex: "^(?:has_|is_|should_)"
+    # The repairable shape is reported (and fixed) by fix-except-sentinel-return.
+    - not:
+        all:
+          - inside:
+              kind: except_clause
+              stopBy: end
+              has:
+                field: value
+                kind: as_pattern
+          - inside:
+              stopBy: end
+              matches: result-returning-function
+message: >-
+  An exception branch returns a sentinel instead of propagating; return a
+  typed failure or let the exception escape.
+---
+# Deterministic repair: inside a function that returns r[T], the failure
+# branch of a result returns that failure instead of a sentinel. The guarded
+# block is the if statement's own consequence (an else/elif block hangs below
+# its clause, not below the if statement).
+id: fix-result-guard-sentinel-return
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  all:
+    - matches: sentinel-return
+    - inside:
+        kind: block
+        stopBy: end
+        inside:
+          kind: if_statement
+          all:
+            - has:
+                field: condition
+                any:
+                  - pattern: $RESULT.failure
+                  - pattern: not $RESULT.success
+            - not:
+                has:
+                  field: consequence
+                  pattern: $_
+                  has:
+                    stopBy: end
+                    matches: skip-record
+    - inside:
+        stopBy: end
+        kind: function_definition
+        has:
+          field: return_type
+          pattern: $_
+          has:
+            any:
+              - all:
+                  - kind: generic_type
+                  - has:
+                      kind: identifier
+                      regex: "^(?:r|Result)$"
+                  - has:
+                      kind: type_parameter
+                      has:
+                        kind: type
+                        pattern: $INNER
+              - pattern: $FACADE.Result[$INNER]
+    - not:
+        inside:
+          stopBy: end
+          kind: function_definition
+          has:
+            field: name
+            regex: "(?:^collect_|_findings$)"
+constraints:
+  RESULT:
+    kind: identifier
+fix: return r[$INNER].from_failure($RESULT)
+message: >-
+  The failure branch of a result returns a sentinel; return the failure
+  itself.
+---
+id: ban-result-guard-sentinel-return
+language: python
+severity: error
+files:
+  - "**/*.py"
+rule:
+  all:
+    - matches: sentinel-return
+    - inside:
+        kind: block
+        stopBy: end
+        inside:
+          kind: if_statement
+          all:
+            - has:
+                field: condition
+                any:
+                  - pattern: $RESULT.failure
+                  - pattern: $RESULT.success
+                  - pattern: not $RESULT.failure
+                  - pattern: not $RESULT.success
+            - not:
+                has:
+                  field: consequence
+                  pattern: $_
+                  has:
+                    stopBy: end
+                    matches: skip-record
+    - not:
+        inside:
+          stopBy: end
+          kind: function_definition
+          has:
+            field: name
+            regex: "(?:^collect_|_findings$)"
+    # The repairable shape is reported (and fixed) by
+    # fix-result-guard-sentinel-return.
+    - not:
+        all:
+          - inside:
+              kind: block
+              stopBy: end
+              inside:
+                kind: if_statement
+                has:
+                  field: condition
+                  any:
+                    - pattern: $GUARDED.failure
+                    - pattern: not $GUARDED.success
+          - inside:
+              stopBy: end
+              matches: result-returning-function
+constraints:
+  RESULT:
+    kind: identifier
+  GUARDED:
+    kind: identifier
+message: >-
+  A result guard branch returns a sentinel instead of the failure; return a
+  typed failure.

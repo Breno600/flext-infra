@@ -50,9 +50,6 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
         def _rule_inline_import(
             self, scan: m.Infra.ModuleScan
         ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
-        def _rule_silent_failure(
-            self, scan: m.Infra.ModuleScan
-        ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]: ...
 
     def _module_rules(
         self, scan: m.Infra.ModuleScan
@@ -67,7 +64,6 @@ class FlextInfraRefactorCensusRulesDispatchMixin(
             ("private_import_bypass", self._rule_private_import_bypass),
             ("compatibility_alias", self._rule_compatibility_alias),
             ("inline_import", self._rule_inline_import),
-            ("silent_failure", self._rule_silent_failure),
         )
         for rule_name, rule in rules:
             if not self._include_rule(

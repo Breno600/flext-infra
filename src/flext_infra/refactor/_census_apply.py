@@ -192,17 +192,6 @@ class FlextInfraRefactorCensusApplyMixin(FlextInfraRefactorCensusApplyFormatting
                 changed = self._apply_class_family_relocation(
                     rope=rope, file_path=file_path, object_names=object_names
                 )
-            elif action == "fix_silent_failure_sentinels":
-                resource = rope.resource(file_path)
-                if resource is None:
-                    continue
-                _updated, changes = u.Infra.fix_silent_failure_sentinels(
-                    rope.rope_project,
-                    resource,
-                    apply=True,
-                    kinds=frozenset(object_names) if object_names else None,
-                )
-                changed = len(changes) > 0
             elif action in {"deep_namespace_refactor", "manual"}:
                 # Manual-only actions: reported in dry-run, no-op during apply.
                 pass

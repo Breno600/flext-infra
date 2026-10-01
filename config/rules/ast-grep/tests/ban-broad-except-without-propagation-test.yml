@@ -1,0 +1,48 @@
+id: ban-broad-except-without-propagation
+valid:
+  - |
+    try:
+        run()
+    except (ValueError, KeyError) as exc:
+        return None
+  - |
+    try:
+        run()
+    except Exception as exc:
+        raise RuntimeError() from exc
+  - |
+    try:
+        run()
+    except Exception as exc:
+        return r[int].fail(str(exc))
+  - |
+    try:
+        run()
+    except Exception:
+        pass
+  - |
+    try:
+        run()
+    except KeyError:
+        return None
+invalid:
+  - |
+    try:
+        run()
+    except (ValueError, Exception):
+        return None
+  - |
+    try:
+        run()
+    except Exception as exc:
+        log(exc)
+  - |
+    try:
+        run()
+    except:
+        cleanup()
+  - |
+    try:
+        run()
+    except BaseException as exc:
+        return False

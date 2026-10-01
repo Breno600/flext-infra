@@ -15,9 +15,6 @@ from flext_infra.detectors.inline_import_detector import FlextInfraInlineImportD
 from flext_infra.detectors.private_import_bypass_detector import (
     FlextInfraPrivateImportBypassDetector,
 )
-from flext_infra.detectors.silent_failure_detector import (
-    FlextInfraSilentFailureDetector,
-)
 
 from ._census_rules_shared import FlextInfraRefactorCensusRulesSharedMixin
 
@@ -228,52 +225,6 @@ class FlextInfraRefactorCensusRulesStructMixin(
                         files_changed=1,
                         applied=self._fix_key(
                             scan.file_path, detector_violation.current_import, action
-                        )
-                        in scan.scan_config.applied,
-                    )
-                )
-        return violations, fixes
-
-    def _rule_silent_failure(
-        self, scan: m.Infra.ModuleScan
-    ) -> t.Pair[list[m.Infra.Violation], list[m.Infra.Fix]]:
-        """Detect exception-silencing patterns; auto-fix deterministic sentinels."""
-        ctx = self._detector_context(
-            scan.rope, scan.file_path, convention=scan.convention
-        )
-        selected_kinds = scan.scan_config.selected_kinds
-        violations: list[m.Infra.Violation] = []
-        fixes: list[m.Infra.Fix] = []
-        for detector_violation in FlextInfraSilentFailureDetector.detect_violations(
-            ctx
-        ):
-            object_kind = "statement"
-            if selected_kinds and object_kind not in selected_kinds:
-                continue
-            action = detector_violation.fix_action
-            fixable = action == "fix_silent_failure_sentinels"
-            violations.append(
-                m.Infra.Violation(
-                    project=scan.project,
-                    object_name=detector_violation.kind,
-                    object_kind=object_kind,
-                    kind="silent_failure",
-                    file_path=str(scan.file_path),
-                    line=detector_violation.line,
-                    description=detector_violation.detail,
-                    fixable=fixable,
-                    fix_action=action,
-                )
-            )
-            if fixable:
-                fixes.append(
-                    m.Infra.Fix(
-                        object_name=detector_violation.kind,
-                        action=action,
-                        source_file=str(scan.file_path),
-                        files_changed=1,
-                        applied=self._fix_key(
-                            scan.file_path, detector_violation.kind, action
                         )
                         in scan.scan_config.applied,
                     )

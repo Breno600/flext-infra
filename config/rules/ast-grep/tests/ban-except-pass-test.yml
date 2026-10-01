@@ -1,0 +1,31 @@
+id: ban-except-pass
+valid:
+  - |
+    try:
+        run()
+    except KeyError:
+        log()
+        pass
+  - |
+    try:
+        run()
+    except KeyError:
+        raise
+invalid:
+  - |
+    try:
+        run()
+    except KeyError:
+        pass
+  - |
+    try:
+        run()
+    except Exception:
+        """Ignored."""
+        pass
+  - |
+    try:
+        run()
+    except:
+        # nothing
+        pass

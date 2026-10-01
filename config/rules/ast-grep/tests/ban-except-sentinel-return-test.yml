@@ -1,0 +1,51 @@
+id: ban-except-sentinel-return
+valid:
+  - |
+    def has_header(path):
+        try:
+            return parse(path)
+        except RegistryError:
+            return False
+  - |
+    def run():
+        try:
+            return parse()
+        except KeyError:
+            return True
+  - |
+    def run():
+        try:
+            return parse()
+        except KeyError as exc:
+            raise RuntimeError() from exc
+  - |
+    def run_except() -> p.Result[bool]:
+        try:
+            raise ValueError('boom')
+        except ValueError as exc:
+            return None
+  - |
+    def run():
+        try:
+            return parse()
+        except Exception:
+            return None
+invalid:
+  - |
+    def run():
+        try:
+            return parse()
+        except KeyError:
+            return None
+  - |
+    def run() -> bool:
+        try:
+            return parse()
+        except KeyError as exc:
+            return False
+  - |
+    def run() -> r[bool]:
+        try:
+            return parse()
+        except KeyError:
+            return {}

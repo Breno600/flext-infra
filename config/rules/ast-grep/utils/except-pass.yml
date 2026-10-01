@@ -1,0 +1,30 @@
+# An except clause whose body is only `pass` (optionally beside bare constant
+# expressions such as a docstring): the exception is swallowed.
+id: except-pass
+language: python
+rule:
+  kind: except_clause
+  has:
+    kind: block
+    all:
+      - has:
+          kind: pass_statement
+      - not:
+          has:
+            pattern: $_
+            not:
+              any:
+                - kind: pass_statement
+                - kind: comment
+                - all:
+                    - kind: expression_statement
+                    - has:
+                        any:
+                          - kind: string
+                          - kind: concatenated_string
+                          - kind: integer
+                          - kind: float
+                          - kind: ellipsis
+                          - kind: "true"
+                          - kind: "false"
+                          - kind: none

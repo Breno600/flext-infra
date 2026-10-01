@@ -1,0 +1,26 @@
+# An except clause that declares no exception type, or declares Exception or
+# BaseException alone, inside a tuple, or behind `as name`. A declared element
+# that is neither a name nor a dotted name cannot be proven narrow and counts
+# as broad. `except (A, B):` is exactly as narrow as `except A:`.
+id: except-broad
+language: python
+rule:
+  kind: except_clause
+  any:
+    - all:
+        - kind: except_clause
+        - not:
+            has:
+              field: value
+              pattern: $_
+    - has:
+        field: value
+        pattern: $_
+        matches: declared-exception-broad
+    - has:
+        field: value
+        kind: as_pattern
+        has:
+          nthChild: 1
+          pattern: $_
+          matches: declared-exception-broad

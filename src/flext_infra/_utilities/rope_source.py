@@ -14,7 +14,6 @@ from flext_infra import c, m, t
 
 from .discovery import FlextInfraUtilitiesDiscovery
 from .rope_core import FlextInfraUtilitiesRopeCore
-from .silent_failure_ast import FlextInfraUtilitiesSilentFailureAst
 
 
 class FlextInfraUtilitiesRopeSource:
@@ -349,44 +348,6 @@ class FlextInfraUtilitiesRopeSource:
         if apply and source != resource.read():
             resource.write(source)
         return source
-
-    @classmethod
-    def fix_silent_failure_sentinels(
-        cls,
-        rope_project: t.Infra.RopeProject,
-        resource: t.Infra.RopeResource,
-        *,
-        apply: bool = True,
-        kinds: set[str] | frozenset[str] | None = None,
-    ) -> t.Infra.TransformResult:
-        """Fix silent failure sentinels using rope-backed AST detection.
-
-        Only deterministic replacements (guard / except-sentinel with an
-        inferrable ``r[T]`` / ``Result[T]`` return type) are rewritten.
-        """
-        source = resource.read()
-        try:
-            pymodule = FlextInfraUtilitiesRopeCore.resolve_pymodule(
-                rope_project, resource
-            )
-            tree = pymodule.get_ast()
-        except c.EXC_BROAD_RUNTIME as exc:
-            msg = f"silent failure sentinel AST collection failed for {resource.path}"
-            raise RuntimeError(msg) from exc
-        if not isinstance(tree, ast.Module):
-            msg = (
-                f"silent failure sentinel AST collection returned {type(tree).__name__}"
-            )
-            raise TypeError(msg)
-        changes = FlextInfraUtilitiesSilentFailureAst.collect_silent_failure_fixes(
-            tree, source, kinds=kinds
-        )
-        if not changes:
-            return source, []
-        updated = cls.rewrite_source_at_offsets(
-            rope_project, resource, changes, apply=apply
-        )
-        return updated, [f"Replaced {len(changes)} silent failure sentinel return(s)"]
 
     @classmethod
     def apply_transformer_to_source(

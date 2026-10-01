@@ -139,39 +139,6 @@ class FlextInfraModelsNamespaceEnforcer:
             bool, m.Field(description="Whether this is an importlib.import_module call")
         ] = False
 
-    class SilentFailureViolation(FileLineViolation):
-        """Exception-handling construct that silences failures."""
-
-        kind: Annotated[
-            str,
-            m.Field(description="Violation kind (suppress/except_pass/broad_except)"),
-        ]
-        detail: Annotated[
-            str, m.Field(description="Human-readable violation description")
-        ] = ""
-        fix_action: Annotated[
-            str, m.Field(description="Recommended fix action identifier")
-        ] = "manual"
-
-    class SilentFailureFinding(m.ContractModel):
-        """One silent-failure occurrence found in a module, with its optional fix."""
-
-        line: Annotated[t.NonNegativeInt, m.Field(description="1-based source line")]
-        column: Annotated[
-            t.NonNegativeInt, m.Field(description="0-based source column")
-        ]
-        kind: Annotated[t.NonEmptyStr, m.Field(description="Silent-failure kind")]
-        detail: Annotated[
-            t.NonEmptyStr, m.Field(description="Human-readable finding description")
-        ]
-        fix_action: Annotated[
-            t.NonEmptyStr, m.Field(description="Recommended fix action identifier")
-        ]
-        replacement: Annotated[
-            t.Triple[int, int, str] | None,
-            m.Field(description="Structural fix as (start, end, text) offsets"),
-        ] = None
-
     class CyclicImportViolation(m.ContractModel):
         """Cyclic import violation."""
 
