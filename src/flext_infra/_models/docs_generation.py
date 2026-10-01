@@ -1,4 +1,8 @@
-"""Typed immutable inputs for one documentation generation pass."""
+"""Typed immutable inputs for one documentation generation pass.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -18,21 +22,26 @@ class FlextInfraModelsDocsGeneration:
         """Documentation scope targeting a project or workspace root."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            arbitrary_types_allowed=True, extra="forbid", frozen=True
+            arbitrary_types_allowed=True,
+            extra="forbid",
+            frozen=True,
         )
 
         name: Annotated[t.NonEmptyStr, m.Field(description="Scope name")]
         path: Annotated[Path, m.Field(description="Absolute lexical scope root")]
         report_dir: Annotated[
-            Path, m.Field(description="Absolute lexical report output directory")
+            Path,
+            m.Field(description="Absolute lexical report output directory"),
         ]
         project_class: Annotated[
-            str, m.Field(description="Docs scope classification")
+            str,
+            m.Field(description="Docs scope classification"),
         ] = "root"
         package_name: Annotated[
-            str, m.Field(description="Primary package name for scope")
+            str,
+            m.Field(description="Primary package name for scope"),
         ] = ""
-        # Why (docs_policy_list root-cause fix): a member-project scope inside
+        # Why (docs_audit_policy root-cause fix): a member-project scope inside
         # a larger declared workspace does not own the physical repository
         # (its docs policy file lives at the workspace root, not under
         # `path`). This override is the declared physical repository root for
@@ -46,7 +55,7 @@ class FlextInfraModelsDocsGeneration:
                     "Physical repository root when it differs from `path` "
                     "(a member project scope inside a declared workspace); "
                     "absent for a scope that owns its own docs policy"
-                )
+                ),
             ),
         ] = None
 
@@ -61,7 +70,8 @@ class FlextInfraModelsDocsGeneration:
         @u.field_validator("repository_root_override")
         @classmethod
         def _validate_absolute_lexical_repository_root_override(
-            cls, value: Path | None
+            cls,
+            value: Path | None,
         ) -> Path | None:
             if value is None:
                 return None
@@ -101,17 +111,22 @@ class FlextInfraModelsDocsGeneration:
         """One immutable desired docs artifact relative to its owning scope."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            arbitrary_types_allowed=True, extra="forbid", frozen=True
+            arbitrary_types_allowed=True,
+            extra="forbid",
+            frozen=True,
         )
 
         relative_path: Annotated[
-            Path, m.Field(description="Normalized scope-relative destination")
+            Path,
+            m.Field(description="Normalized scope-relative destination"),
         ]
         desired_content: Annotated[
-            bytes | None, m.Field(description="Exact desired bytes, or absence")
+            bytes | None,
+            m.Field(description="Exact desired bytes, or absence"),
         ]
         desired_mode: Annotated[
-            Literal[0o644] | None, m.Field(description="Exact desired mode, or absence")
+            Literal[0o644] | None,
+            m.Field(description="Exact desired mode, or absence"),
         ]
 
         @u.field_validator("relative_path")
@@ -138,7 +153,9 @@ class FlextInfraModelsDocsGeneration:
         """One scope paired with its complete rendered artifact inventory."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            arbitrary_types_allowed=True, extra="forbid", frozen=True
+            arbitrary_types_allowed=True,
+            extra="forbid",
+            frozen=True,
         )
 
         scope: Annotated[
@@ -154,7 +171,9 @@ class FlextInfraModelsDocsGeneration:
         """Single render and source snapshot consumed through publication."""
 
         model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-            arbitrary_types_allowed=True, extra="forbid", frozen=True
+            arbitrary_types_allowed=True,
+            extra="forbid",
+            frozen=True,
         )
 
         scopes: Annotated[
@@ -169,7 +188,8 @@ class FlextInfraModelsDocsGeneration:
         # verification even when the root is excluded from `scopes` (DECLARED
         # conform scope), so it can no longer be inferred from `scopes[0]`.
         repository_root: Annotated[
-            Path, m.Field(description="Absolute lexical physical workspace root")
+            Path,
+            m.Field(description="Absolute lexical physical workspace root"),
         ]
 
         @u.field_validator("repository_root")
@@ -198,13 +218,29 @@ class FlextInfraModelsDocsGeneration:
             if len(set(source_paths)) != len(source_paths):
                 msg = "docs generation source paths must be unique"
                 raise ValueError(msg)
+            # ``AtomicFileState`` models absence as every physical field unset;
+            # an absent optional input (the collection's own manifest before
+            # its first generation) is a legitimate source state. A present
+            # file must carry its full physical identity with a single link.
             if any(
-                state.content is None
-                or state.mode is None
-                or state.device is None
-                or state.inode is None
-                or state.link_count != 1
-                or state.reparse_tag not in {None, 0}
+                not (
+                    (
+                        state.content is None
+                        and state.mode is None
+                        and state.device is None
+                        and state.inode is None
+                        and state.link_count is None
+                        and state.reparse_tag is None
+                    )
+                    or (
+                        state.content is not None
+                        and state.mode is not None
+                        and state.device is not None
+                        and state.inode is not None
+                        and state.link_count == 1
+                        and state.reparse_tag in {None, 0}
+                    )
+                )
                 for state in self.source_states
             ):
                 msg = "docs generation source state is absent or unauthenticated"

@@ -5,9 +5,13 @@
 # Canonical direnv activation for one generated beads-workspace environment.
 # End SECTION: header
 
-# === SECTION: strict evaluation (managed) ===
-# Source: template (direnv stdlib contract)
 strict_env
-# End SECTION: strict evaluation
-
-{% include ".envrc.gascity.j2" %}
+{% with gascity = {
+    "environment_sources": environment_sources,
+    "identity_var": identity_var,
+    "unset_vars": unset_vars,
+    "beads_metadata_relpath": beads_metadata_relpath,
+    "city_state_relpath": city_state_relpath
+} %}
+{% include "_envrc_beads.j2" %}
+{% endwith %}

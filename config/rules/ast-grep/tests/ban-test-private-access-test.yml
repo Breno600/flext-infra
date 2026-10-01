@@ -1,0 +1,39 @@
+id: ban-test-private-access
+valid:
+  - value = service.public_value
+  - name = instance.__class__.__name__
+  - exports = module.__all__
+  - label = Color.RED._value_
+  - updated = point._replace(x=1)
+  - data = record._asdict()
+  - names = Row._fields
+  - self._helper()
+  - cls._declare(workspace, expected="1")
+  - |
+    for _ in range(3):
+        pass
+  - result = self.service.run()
+  - |
+    class TestsHandlerDiscovery:
+        class _CreateCommand:
+            pass
+
+        def test_discovers(self) -> None:
+            command = TestsHandlerDiscovery._CreateCommand()
+  - module = import_module("flext_core.result")
+  - module = importlib.import_module(name)
+  - module = import_module("flext_core.__main__")
+invalid:
+  - lazy_parts = import_module("flext_core._lazy_parts")
+  - typings = importlib.import_module("flext_core._typings.base")
+  - state = service._cache
+  - Service._build()
+  - |
+    class TestsHandlerDiscovery:
+        def test_discovers(self) -> None:
+            command = FlextHandlers._CreateCommand()
+  - value = self.service._state
+  - service._cache = {}
+  - token = settings_model._token
+  - helper = flext_core._utilities.helper
+  - tm.that(runner._invocations, eq=1)

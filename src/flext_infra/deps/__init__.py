@@ -1,45 +1,61 @@
 # AUTO-GENERATED FILE — Regenerate with: make gen
-"""Flext Infra.deps package."""
+"""Flext Infra.deps package.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from types import MappingProxyType
 from typing import TYPE_CHECKING
 
-from flext_core.lazy import build_lazy_import_map, install_lazy_exports
+from flext_core import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from . import phases
-    from ._detection_runners import FlextInfraDependencyDetectionRunnersMixin
-    from ._detector_runtime_steps import FlextInfraDependencyDetectorRuntimeSteps
-    from ._extra_paths_sync import FlextInfraExtraPathsSyncMixin
-    from ._floor_profile_writer import FlextInfraDepsFloorProfileWriter
-    from ._modernizer_document import FlextInfraPyprojectModernizerDocumentMixin
-    from ._modernizer_payload import FlextInfraPyprojectModernizerPayloadMixin
-    from ._modernizer_run import FlextInfraPyprojectModernizerRunMixin
-    from ._pyrefly_fix_steps import FlextInfraConfigFixerSteps
-    from ._toml_phase_ops import FlextInfraTomlPhaseOps
-    from .detection import FlextInfraDependencyDetectionService
-    from .detection_analysis import FlextInfraDependencyDetectionAnalysis
-    from .detector import FlextInfraRuntimeDevDependencyDetector
-    from .detector_runtime import FlextInfraDependencyDetectorRuntime
-    from .extra_paths import FlextInfraExtraPathsManager
-    from .fix_pyrefly_config import FlextInfraConfigFixer
-    from .modernizer import FlextInfraPyprojectModernizer
-    from .phases.consolidate_groups import FlextInfraConsolidateGroupsPhase
-    from .phases.ensure_coverage import FlextInfraEnsureCoverageConfigPhase
-    from .phases.ensure_formatting import FlextInfraEnsureFormattingToolingPhase
-    from .phases.ensure_mypy import FlextInfraEnsureMypyConfigPhase
-    from .phases.ensure_namespace import FlextInfraEnsureNamespaceToolingPhase
-    from .phases.ensure_packaging import FlextInfraEnsurePackagingPhase
-    from .phases.ensure_pydantic_mypy import FlextInfraEnsurePydanticMypyConfigPhase
-    from .phases.ensure_pyrefly import FlextInfraEnsurePyreflyConfigPhase
-    from .phases.ensure_pyright import FlextInfraEnsurePyrightConfigPhase
-    from .phases.ensure_pytest import FlextInfraEnsurePytestConfigPhase
-    from .phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
-    from .phases.ensure_vulture import FlextInfraEnsureVultureConfigPhase
-    from .phases.inject_comments import FlextInfraInjectCommentsPhase
-    from .toml_phase import FlextInfraTomlPhaseService
+    from flext_infra.deps import _modernizer, phases
+    from flext_infra.deps._detection_runners import (
+        FlextInfraDependencyDetectionRunnersMixin,
+    )
+    from flext_infra.deps._detector_runtime_steps import (
+        FlextInfraDependencyDetectorRuntimeSteps,
+    )
+    from flext_infra.deps._extra_paths_sync import FlextInfraExtraPathsSyncMixin
+    from flext_infra.deps._floor_profile_writer import FlextInfraDepsFloorProfileWriter
+    from flext_infra.deps._modernizer.base import FlextInfraPyprojectModernizerBase
+    from flext_infra.deps._modernizer.document import (
+        FlextInfraPyprojectModernizerDocument,
+    )
+    from flext_infra.deps._modernizer.run import FlextInfraPyprojectModernizerRun
+    from flext_infra.deps._modernizer.tooling import (
+        FlextInfraPyprojectModernizerTooling,
+    )
+    from flext_infra.deps._pyrefly_fix_steps import FlextInfraConfigFixerSteps
+    from flext_infra.deps.detection import FlextInfraDependencyDetectionService
+    from flext_infra.deps.detection_analysis import (
+        FlextInfraDependencyDetectionAnalysis,
+    )
+    from flext_infra.deps.detector import FlextInfraRuntimeDevDependencyDetector
+    from flext_infra.deps.detector_runtime import FlextInfraDependencyDetectorRuntime
+    from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
+    from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
+    from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
+    from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
+    from flext_infra.deps.phases.consolidate_groups import (
+        FlextInfraConsolidateGroupsPhase,
+    )
+    from flext_infra.deps.phases.ensure_packaging import FlextInfraEnsurePackagingPhase
+    from flext_infra.deps.phases.ensure_pyrefly import (
+        FlextInfraEnsurePyreflyConfigPhase,
+    )
+    from flext_infra.deps.phases.ensure_pyright import (
+        FlextInfraEnsurePyrightConfigPhase,
+    )
+    from flext_infra.deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
+    from flext_infra.deps.phases.inject_comments import FlextInfraInjectCommentsPhase
+    from flext_infra.deps.phases.tool_tables import FlextInfraToolTablesPhase
+
+
 __all__: tuple[str, ...] = (
     "FlextInfraConfigFixer",
     "FlextInfraConfigFixerSteps",
@@ -50,27 +66,22 @@ __all__: tuple[str, ...] = (
     "FlextInfraDependencyDetectorRuntime",
     "FlextInfraDependencyDetectorRuntimeSteps",
     "FlextInfraDepsFloorProfileWriter",
-    "FlextInfraEnsureCoverageConfigPhase",
-    "FlextInfraEnsureFormattingToolingPhase",
-    "FlextInfraEnsureMypyConfigPhase",
-    "FlextInfraEnsureNamespaceToolingPhase",
     "FlextInfraEnsurePackagingPhase",
-    "FlextInfraEnsurePydanticMypyConfigPhase",
     "FlextInfraEnsurePyreflyConfigPhase",
     "FlextInfraEnsurePyrightConfigPhase",
-    "FlextInfraEnsurePytestConfigPhase",
     "FlextInfraEnsureRuffConfigPhase",
-    "FlextInfraEnsureVultureConfigPhase",
     "FlextInfraExtraPathsManager",
     "FlextInfraExtraPathsSyncMixin",
     "FlextInfraInjectCommentsPhase",
+    "FlextInfraLockIntegrityVerifier",
     "FlextInfraPyprojectModernizer",
-    "FlextInfraPyprojectModernizerDocumentMixin",
-    "FlextInfraPyprojectModernizerPayloadMixin",
-    "FlextInfraPyprojectModernizerRunMixin",
+    "FlextInfraPyprojectModernizerBase",
+    "FlextInfraPyprojectModernizerDocument",
+    "FlextInfraPyprojectModernizerRun",
+    "FlextInfraPyprojectModernizerTooling",
     "FlextInfraRuntimeDevDependencyDetector",
-    "FlextInfraTomlPhaseOps",
-    "FlextInfraTomlPhaseService",
+    "FlextInfraToolTablesPhase",
+    "_modernizer",
     "phases",
 )
 
@@ -81,39 +92,32 @@ _LAZY_IMPORTS = MappingProxyType(
             "._detector_runtime_steps": ("FlextInfraDependencyDetectorRuntimeSteps",),
             "._extra_paths_sync": ("FlextInfraExtraPathsSyncMixin",),
             "._floor_profile_writer": ("FlextInfraDepsFloorProfileWriter",),
-            "._modernizer_document": ("FlextInfraPyprojectModernizerDocumentMixin",),
-            "._modernizer_payload": ("FlextInfraPyprojectModernizerPayloadMixin",),
-            "._modernizer_run": ("FlextInfraPyprojectModernizerRunMixin",),
+            "._modernizer": ("_modernizer",),
+            "._modernizer.base": ("FlextInfraPyprojectModernizerBase",),
+            "._modernizer.document": ("FlextInfraPyprojectModernizerDocument",),
+            "._modernizer.run": ("FlextInfraPyprojectModernizerRun",),
+            "._modernizer.tooling": ("FlextInfraPyprojectModernizerTooling",),
             "._pyrefly_fix_steps": ("FlextInfraConfigFixerSteps",),
-            "._toml_phase_ops": ("FlextInfraTomlPhaseOps",),
             ".detection": ("FlextInfraDependencyDetectionService",),
             ".detection_analysis": ("FlextInfraDependencyDetectionAnalysis",),
             ".detector": ("FlextInfraRuntimeDevDependencyDetector",),
             ".detector_runtime": ("FlextInfraDependencyDetectorRuntime",),
             ".extra_paths": ("FlextInfraExtraPathsManager",),
             ".fix_pyrefly_config": ("FlextInfraConfigFixer",),
+            ".lock_integrity": ("FlextInfraLockIntegrityVerifier",),
             ".modernizer": ("FlextInfraPyprojectModernizer",),
             ".phases": ("phases",),
             ".phases.consolidate_groups": ("FlextInfraConsolidateGroupsPhase",),
-            ".phases.ensure_coverage": ("FlextInfraEnsureCoverageConfigPhase",),
-            ".phases.ensure_formatting": ("FlextInfraEnsureFormattingToolingPhase",),
-            ".phases.ensure_mypy": ("FlextInfraEnsureMypyConfigPhase",),
-            ".phases.ensure_namespace": ("FlextInfraEnsureNamespaceToolingPhase",),
             ".phases.ensure_packaging": ("FlextInfraEnsurePackagingPhase",),
-            ".phases.ensure_pydantic_mypy": (
-                "FlextInfraEnsurePydanticMypyConfigPhase",
-            ),
             ".phases.ensure_pyrefly": ("FlextInfraEnsurePyreflyConfigPhase",),
             ".phases.ensure_pyright": ("FlextInfraEnsurePyrightConfigPhase",),
-            ".phases.ensure_pytest": ("FlextInfraEnsurePytestConfigPhase",),
             ".phases.ensure_ruff": ("FlextInfraEnsureRuffConfigPhase",),
-            ".phases.ensure_vulture": ("FlextInfraEnsureVultureConfigPhase",),
             ".phases.inject_comments": ("FlextInfraInjectCommentsPhase",),
-            ".toml_phase": ("FlextInfraTomlPhaseService",),
+            ".phases.tool_tables": ("FlextInfraToolTablesPhase",),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,
-    )
+    ),
 )
 
 install_lazy_exports(__name__, globals(), _LAZY_IMPORTS, public_exports=__all__)

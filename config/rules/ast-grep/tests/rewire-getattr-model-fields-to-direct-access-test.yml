@@ -1,0 +1,9 @@
+id: rewire-getattr-model-fields-to-direct-access
+valid:
+  - fields = model_cls.model_fields
+  - fields = getattr(options, "verbosity", 1)
+  - fields = getattr(opts, "model_config", {})
+invalid:
+  - fields = getattr(model_cls, "model_fields", {})
+  - fields = getattr(self.model_class, 'model_fields', {})
+  - fields = getattr(model_cls, "model_fields")

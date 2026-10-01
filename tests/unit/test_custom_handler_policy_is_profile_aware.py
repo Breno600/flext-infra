@@ -5,8 +5,8 @@ the profiles have genuinely different contracts:
 
 * a standalone repository may only define private
   ``_custom_<verb>_<what>`` handlers and hooks;
-* a workspace *root* orchestrates the members, so its ``custom.mk`` legitimately
-  owns public orchestration targets and the variables they read.
+* a workspace *root* may carry developer-local Makefile extensions, so its
+  ``custom.mk`` may own public targets and the variables they read.
 
 Applying the member rule to the root made ``codegen conform`` reject the root's
 own surface on every run and block the whole transaction -- which is why no
@@ -31,7 +31,10 @@ from tests import t
 
 
 class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
-    def test_every_declared_profile_has_a_custom_handler_policy(self) -> None:
+    """Tests for ``FlextInfraCustomHandlerPolicyIsProfileAware``."""
+
+    @staticmethod
+    def test_every_declared_profile_has_a_custom_handler_policy() -> None:
         """Each Make profile declares the contract for its own custom surface."""
         codegen_profiles: t.VariadicTuple[m.Infra.ProfileSpec] = (
             config.Infra.codegen.profiles
@@ -48,8 +51,9 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
 
         tm.that(declared - covered, eq=frozenset())
 
-    def test_repository_root_may_own_public_orchestration_targets(self) -> None:
-        """The root profile permits the public targets it actually ships."""
+    @staticmethod
+    def test_repository_root_may_own_public_targets() -> None:
+        """The root profile permits developer-local public targets."""
         policy: m.Infra.CustomHandlerPolicy = (
             config.Infra.codegen.make.custom_handler_policies[
                 c.Infra.MakeProfile.WORKSPACE
@@ -58,7 +62,8 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
 
         tm.that(policy.allow_public_targets, eq=True)
 
-    def test_standalone_stays_private_only(self) -> None:
+    @staticmethod
+    def test_standalone_stays_private_only() -> None:
         """A standalone custom surface may only define private handlers."""
         policy: m.Infra.CustomHandlerPolicy = (
             config.Infra.codegen.make.custom_handler_policies[
@@ -68,7 +73,8 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
 
         tm.that(policy.allow_public_targets, eq=False)
 
-    def test_validator_honours_the_permissions_it_is_given(self) -> None:
+    @staticmethod
+    def test_validator_honours_the_permissions_it_is_given() -> None:
         """A permissive policy accepts what a strict one rejects.
 
         The ``allow_*`` flags were declarative only: the validator read just
@@ -91,7 +97,8 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
         tm.that(validate(content, strict).failure, eq=True)
         tm.that(validate(content, permissive).success, eq=True)
 
-    def test_policy_keys_are_normalised_to_profile_values(self) -> None:
+    @staticmethod
+    def test_policy_keys_are_normalised_to_profile_values() -> None:
         """Lookup succeeds for both a raw string and its StrEnum member.
 
         ``MakeProfile`` is a ``StrEnum``, so a key declared in YAML and the same
@@ -101,12 +108,9 @@ class TestsFlextInfraCustomHandlerPolicyIsProfileAware:
         reject the repository root's own custom surface.
         """
         policies: t.MutableMappingKV[str, m.Infra.CustomHandlerPolicy] = dict(
-            config.Infra.codegen.make.custom_handler_policies
+            config.Infra.codegen.make.custom_handler_policies,
         )
         profile: c.Infra.MakeProfile = c.Infra.MakeProfile.WORKSPACE
 
         tm.that(set(policies), eq={member.value for member in c.Infra.MakeProfile})
         tm.that(policies[profile] is policies[profile.value], eq=True)
-
-
-__all__: list[str] = ["TestsFlextInfraCustomHandlerPolicyIsProfileAware"]

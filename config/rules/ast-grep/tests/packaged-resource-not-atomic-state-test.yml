@@ -1,0 +1,5 @@
+id: packaged-resource-not-atomic-state
+valid:
+  - state = u.Cli.atomic_read_binary_file_state(destination, required=True)
+invalid:
+  - state = u.Cli.atomic_read_binary_file_state(Path(__file__).parent / name, required=True)

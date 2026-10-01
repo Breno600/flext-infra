@@ -1,4 +1,8 @@
-"""Documentation shared utilities for the u.Infra FLEXT chain."""
+"""Documentation shared utilities for the u.Infra FLEXT chain.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -8,19 +12,18 @@ from urllib.parse import urlsplit
 from flext_cli import u
 
 from flext_core import r
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
-
-from ._docs_scope_build import FlextInfraUtilitiesDocsScopeBuildMixin
-from .docs_contract import FlextInfraUtilitiesDocsContract
-from .docs_scope import FlextInfraUtilitiesDocsScope
+from flext_infra import c, m, t
+from flext_infra._utilities._docs_scope_build import (
+    FlextInfraUtilitiesDocsScopeBuildMixin,
+)
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra._utilities.docs_scope import FlextInfraUtilitiesDocsScope
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-    from flext_infra.protocols import p
+    from flext_infra import p
 
 
 class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
@@ -28,7 +31,15 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
 
     @staticmethod
     def docs_url_scheme(target: str) -> str:
-        """Return the normalized scheme and reject insecure documentation URLs."""
+        """Return the normalized scheme and reject insecure documentation URLs.
+
+        Returns:
+            The normalized scheme and reject insecure documentation URLs.
+
+        Raises:
+            ValueError: If insecure documentation URL is prohibited; use HTTPS.
+
+        """
         normalized = u.norm_str(target, case="lower").lstrip("<")
         scheme = urlsplit(normalized).scheme
         if scheme == c.Infra.DOCS_INSECURE_WEB_SCHEME:
@@ -38,13 +49,23 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
 
     @staticmethod
     def docs_is_secure_web_url(target: str) -> bool:
-        """Return whether a documentation target is an HTTPS URL."""
+        """Return whether a documentation target is an HTTPS URL.
+
+        Returns:
+            Whether a documentation target is an HTTPS URL.
+
+        """
         secure_scheme: str = c.Infra.DOCS_SECURE_WEB_SCHEME
         return FlextInfraUtilitiesDocs.docs_url_scheme(target) == secure_scheme
 
     @staticmethod
     def docs_is_external(target: str) -> bool:
-        """Return whether a target has a permitted external scheme."""
+        """Return whether a target has a permitted external scheme.
+
+        Returns:
+            Whether a target has a permitted external scheme.
+
+        """
         return (
             FlextInfraUtilitiesDocs.docs_url_scheme(target)
             in c.Infra.DOCS_EXTERNAL_SCHEMES
@@ -52,14 +73,18 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
 
     @staticmethod
     def iter_markdown_files(repository_root: Path) -> t.SequenceOf[Path]:
-        """Recursively collect markdown files under the docs scope."""
+        """Recursively collect markdown files under the docs scope.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
+        """
         docs_root = repository_root / c.Infra.DIR_DOCS
         search_root = docs_root if docs_root.is_dir() else repository_root
         return sorted(
             path
             for path in search_root.rglob("*.md")
-            if ".bak" not in path.name
-            and not any(
+            if not any(
                 part in c.Infra.DOC_EXCLUDED_DIRS or part.startswith(".")
                 for part in path.relative_to(search_root).parts
             )
@@ -67,14 +92,19 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
 
     @staticmethod
     def iter_scope_markdown_files(scope: m.Infra.DocScope) -> t.SequenceOf[Path]:
-        """Collect markdown files governed by one docs scope."""
+        """Collect markdown files governed by one docs scope.
+
+        Returns:
+            The resulting ``t.SequenceOf[Path]``.
+
+        """
         scope_root = scope.path
         files = FlextInfraUtilitiesDocs.iter_markdown_files(scope_root)
         if scope.name == c.Infra.RK_ROOT:
             return [
                 path
                 for path in files
-                if not FlextInfraUtilitiesDocsScope.is_excluded_doc_path(
+                if not FlextInfraUtilitiesDocsScope.excluded_doc_path(
                     scope_root,
                     path.relative_to(scope_root / c.Infra.DIR_DOCS)
                     if path.is_relative_to(scope_root / c.Infra.DIR_DOCS)
@@ -87,38 +117,122 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
             for path in files
             if not (
                 path.is_relative_to(docs_root)
-                and FlextInfraUtilitiesDocsScope.is_excluded_doc_path(
-                    scope_root, path.relative_to(docs_root)
+                and FlextInfraUtilitiesDocsScope.excluded_doc_path(
+                    scope_root,
+                    path.relative_to(docs_root),
                 )
             )
         ]
 
     @staticmethod
     def write_markdown(path: Path, lines: t.StrSequence) -> p.Result[bool]:
-        """Write markdown lines to path, creating parent dirs as needed."""
+        """Write markdown lines to path, creating parent dirs as needed.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             u.write_file(
-                path, "\n".join(lines).rstrip() + "\n", encoding=c.Cli.ENCODING_DEFAULT
+                path,
+                "\n".join(lines).rstrip() + "\n",
+                encoding=c.Cli.ENCODING_DEFAULT,
             )
             return r[bool].ok(True)
         except OSError as exc:
             return r[bool].fail(f"markdown write error: {exc}", exception=exc)
 
     @staticmethod
+    def docs_write_phase_reports(
+        scope: m.Infra.DocScope,
+        *,
+        phase: str,
+        table: m.Cli.TableRenderRequest,
+        apply: bool,
+    ) -> None:
+        """Persist one phase summary and markdown report from its titled table.
+
+        Every table row is one changed file, so the row count is the changed
+        file count both reports publish.
+        """
+        summary_payload = t.Cli.JSON_MAPPING_ADAPTER.validate_python({
+            c.Infra.RK_SUMMARY: {
+                c.Infra.RK_SCOPE: scope.name,
+                "changed_files": len(table.rows),
+                "apply": apply,
+            },
+            "changes": [list(row) for row in table.rows],
+        })
+        _ = u.Cli.json_write(
+            scope.report_dir / f"{phase}-summary.json",
+            summary_payload,
+        )
+        header = "| " + " | ".join(table.columns) + " |"
+        divider = "|---|" + "---:|" * (len(table.columns) - 1)
+        _ = FlextInfraUtilitiesDocs.write_markdown(
+            scope.report_dir / f"{phase}-report.md",
+            [
+                f"# {table.title}",
+                "",
+                f"Scope: {scope.name}",
+                f"Apply: {int(apply)}",
+                f"Changed files: {len(table.rows)}",
+                "",
+                header,
+                divider,
+                *(" | ".join(row) + " |" for row in table.rows),
+            ],
+        )
+
+    @staticmethod
+    def docs_write_fmt_reports(
+        scope: m.Infra.DocScope,
+        *,
+        items: t.SequenceOf[m.Infra.DocsPhaseItemModel],
+        apply: bool,
+    ) -> None:
+        """Persist the standard fmt summary and markdown report."""
+        FlextInfraUtilitiesDocs.docs_write_phase_reports(
+            scope,
+            phase="fmt",
+            table=m.Cli.TableRenderRequest(
+                title="Docs Format Report",
+                columns=("file",),
+                rows=tuple((item.file,) for item in items),
+            ),
+            apply=apply,
+        )
+
+    @staticmethod
     def anchorize(text: str) -> str:
-        """Convert heading text to the anchor consumed by MkDocs."""
-        return FlextInfraUtilitiesDocsContract.docs_anchorize(text)
+        """Convert heading text to the anchor consumed by MkDocs.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        return FlextInfraUtilitiesDocsContract.docs_contract_anchorize(text)
 
     @staticmethod
     def build_toc(content: str) -> str:
-        """Generate a TOC block from ## and ### headings in content."""
-        return FlextInfraUtilitiesDocsContract.docs_build_toc(content)
+        """Generate a TOC block from ## and ### headings in content.
+
+        Returns:
+            The resulting ``str``.
+
+        """
+        return FlextInfraUtilitiesDocsContract.docs_contract_build_toc(content)
 
     @staticmethod
     def update_toc(content: str) -> t.StrIntPair:
-        """Insert or replace the TOC in content, returning (updated, changed)."""
-        return FlextInfraUtilitiesDocsContract.docs_update_toc(content)
+        """Insert or replace the TOC in content, returning (updated, changed).
+
+        Returns:
+            The resulting ``t.StrIntPair``.
+
+        """
+        return FlextInfraUtilitiesDocsContract.docs_contract_update_toc(content)
 
     @staticmethod
     def run_scoped(
@@ -128,9 +242,16 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
         output_dir: Path | str,
         handler: Callable[[m.Infra.DocScope], m.Infra.DocsPhaseReport],
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Build scopes and run handler on each, collecting reports."""
+        """Build scopes and run handler on each, collecting reports.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         scopes_result = FlextInfraUtilitiesDocs.build_scopes(
-            repository_root=repository_root, projects=projects, output_dir=output_dir
+            repository_root=repository_root,
+            projects=projects,
+            output_dir=output_dir,
         )
         if scopes_result.failure:
             return r[t.SequenceOf[m.Infra.DocsPhaseReport]].from_failure(scopes_result)

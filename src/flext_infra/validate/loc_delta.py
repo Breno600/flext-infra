@@ -3,6 +3,9 @@
 A commit whose subject is labelled ``refactor``/``deduplicate``/``cleanup``/
 ``yagni``/``simplify`` MUST show ``insertions - deletions <= 0``. Non-labelled
 commits (feat/fix/docs/…) are exempt — they may legitimately add lines.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -22,9 +25,18 @@ class FlextInfraLocDeltaValidator(s[bool]):
 
     @classmethod
     def evaluate(
-        cls, *, subject: str, insertions: int, deletions: int
+        cls,
+        *,
+        subject: str,
+        insertions: int,
+        deletions: int,
     ) -> p.Result[bool]:
-        """Pure rule: net positive delta on a labelled commit is a violation."""
+        """Pure rule: net positive delta on a labelled commit is a violation.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         lowered = subject.lower()
         if not any(label in lowered for label in c.Infra.REFACTOR_COMMIT_LABELS):
             return r[bool].ok(True)
@@ -33,13 +45,18 @@ class FlextInfraLocDeltaValidator(s[bool]):
             return r[bool].fail(
                 f"net-LOC-delta violation (§3.5): '{subject}' adds +{delta} "
                 f"(insertions={insertions}, deletions={deletions}); refactor/cleanup "
-                "commits must be net non-positive"
+                "commits must be net non-positive",
             )
         return r[bool].ok(True)
 
     @staticmethod
     def _sum_numstat(numstat: str) -> t.Pair[int, int]:
-        """Sum insertions/deletions from `git diff --numstat` output (skip binary)."""
+        """Sum insertions/deletions from `git diff --numstat` output (skip binary).
+
+        Returns:
+            The resulting ``t.Pair[int, int]``.
+
+        """
         insertions = 0
         deletions = 0
         for line in numstat.splitlines():
@@ -53,15 +70,22 @@ class FlextInfraLocDeltaValidator(s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Evaluate the workspace HEAD commit's labelled net-LOC delta."""
+        """Evaluate the workspace HEAD commit's labelled net-LOC delta.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         report = u.Infra.git_head_numstat(
-            m.Infra.GitRepoRequest(repo_root=self.repository_root)
+            m.Infra.GitRepoRequest(repo_root=self.repository_root),
         )
         if report.failure:
             return r[bool].from_failure(report)
         insertions, deletions = self._sum_numstat(report.value.numstat)
         verdict = self.evaluate(
-            subject=report.value.subject, insertions=insertions, deletions=deletions
+            subject=report.value.subject,
+            insertions=insertions,
+            deletions=deletions,
         )
         if verdict.failure:
             return r[bool].from_failure(verdict)

@@ -1,0 +1,13 @@
+# Shape only: the engine admits a finding when $MODULE belongs to another
+# facade package and $NAME is not one of its runtime aliases.
+id: ban-consumer-submodule-import
+valid:
+  - from flext_cli import FlextCli
+  - from flext_cli._models import Model
+  - import flext_cli
+  - import flext_cli._models
+invalid:
+  - from flext_cli.models import FlextCliModels
+  - from flext_cli.models import FlextCliModels as Models
+  - import flext_cli.models
+  - import flext_cli.models as models

@@ -1,0 +1,25 @@
+# Ambient process-environment reads bypass the typed config/settings SSOT
+# boundary (rule python--config-settings-ssot). Evidence: X-17
+# (deps/detector_runtime.py read UV_PROJECT_ENVIRONMENT with a default outside
+# the typed boundary). Detection-only: the correct settings.<Ns>.* /
+# config.<Ns>.* field depends on which typed model owns the value in that
+# context, so an automatic rewrite would guess.
+id: ban-ambient-environ-read
+language: python
+severity: error
+files:
+  - "src/**/*.py"
+ignores:
+  - "**/settings.py"
+  - "**/_settings/**"
+  - "**/_settings.py"
+rule:
+  any:
+    - pattern: os.environ[$KEY]
+    - pattern: os.environ.get($$$ARGS)
+    - pattern: os.getenv($$$ARGS)
+message: >-
+  [ban-ambient-environ-read] Ambient os.environ/os.getenv read outside the
+  typed settings boundary — fix: read the value through config.<Ns>.*
+  / settings.<Ns>.* (owned by settings.py / _settings/) instead of the raw
+  process environment · ref: rule python--config-settings-ssot

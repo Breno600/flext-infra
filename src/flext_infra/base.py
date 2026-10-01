@@ -1,18 +1,23 @@
-"""Shared service foundation for flext-infra command services."""
+"""Shared service foundation for flext-infra command services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Annotated, ClassVar, Self, override
 
-from flext_core import r, s
-from flext_infra import c, m, p, settings, t, u
-
-from ._base_payload import FlextInfraCommandPayloadMixin
+from flext_core import FlextService, r
+from flext_infra import c, m, p, t, u
+from flext_infra._base_payload import FlextInfraCommandPayloadMixin
+from flext_infra._settings import settings
 
 
 class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
-    s[TDomainResult], FlextInfraCommandPayloadMixin
+    FlextService[TDomainResult],
+    FlextInfraCommandPayloadMixin,
 ):
     """Domain command context shared by all flext-infra CLI services.
 
@@ -21,12 +26,18 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     """
 
     model_config: ClassVar[m.ConfigDict] = m.ConfigDict(
-        validate_by_name=True, validate_by_alias=True
+        validate_by_name=True,
+        validate_by_alias=True,
     )
 
     @classmethod
-    def _runtime_bootstrap_options(cls) -> p.RuntimeBootstrapOptions:
-        """Bootstrap service runtime using the shared CLI settings namespace."""
+    def runtime_bootstrap_options(cls) -> p.RuntimeBootstrapOptions:
+        """Bootstrap service runtime using the shared CLI settings namespace.
+
+        Returns:
+            The resulting ``p.RuntimeBootstrapOptions``.
+
+        """
         # flext-j47u: configure the inherited runtime once; no settings proxy/property.
         return m.RuntimeBootstrapOptions(settings_type=type(settings))
 
@@ -34,8 +45,8 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
         Path,
         m.BeforeValidator(
             lambda v: u.Infra.resolve_repository_root_or_cwd(
-                v if isinstance(v, Path) else Path(v)
-            )
+                v if isinstance(v, Path) else Path(v),
+            ),
         ),
     ] = m.Field(
         default_factory=u.Infra.resolve_repository_root_or_cwd,
@@ -80,13 +91,19 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
         m.BeforeValidator(u.Infra.normalize_optional_path),
     ] = None
     output_dir: Annotated[
-        Path | None, m.Field(description="Output directory", exclude=True)
+        Path | None,
+        m.Field(description="Output directory", exclude=True),
     ] = None
 
     @m.field_validator("project_filter", mode="before")
     @classmethod
     def _normalize_project_filter(cls, value: str | t.StrSequence | None) -> str | None:
-        """Normalize project filters into a compact comma-separated string."""
+        """Normalize project filters into a compact comma-separated string.
+
+        Returns:
+            The resulting ``str | None``.
+
+        """
         if value is None:
             return None
         normalized_values = (
@@ -99,7 +116,12 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     @m.field_validator("output_dir", mode="before")
     @classmethod
     def _normalize_output_dir(cls, value: str | Path | None) -> Path | None:
-        """Preserve relative output dirs so callers can scope them under workspace roots."""
+        """Preserve relative output dirs so callers can scope them under workspace roots.
+
+        Returns:
+            The resulting ``Path | None``.
+
+        """
         if value is None:
             return None
         path: Path = u.Cli.resolve_optional_path(value, default=Path())
@@ -114,7 +136,7 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     @property
     def fail_fast(self) -> bool:
         """Stop at the first failure as an invariant, never a CLI choice."""
-        return True
+        return c.Infra.SERVICE_FAIL_FAST
 
     @m.computed_field
     @property
@@ -123,9 +145,15 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
         return self.dry_run or self.check_only or (not self.apply_changes)
 
     def _filtered_projects(
-        self, projects: t.SequenceOf[p.Infra.ProjectInfo]
+        self,
+        projects: t.SequenceOf[p.Infra.ProjectInfo],
     ) -> t.SequenceOf[p.Infra.ProjectInfo]:
-        """Apply the comma-separated ``project_filter`` when one is configured."""
+        """Apply the comma-separated ``project_filter`` when one is configured.
+
+        Returns:
+            The resulting ``t.SequenceOf[p.Infra.ProjectInfo]``.
+
+        """
         if self.project_filter is None:
             return projects
         selected = {
@@ -137,7 +165,12 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
     def _report_execution(
         report_result: p.Result[m.Infra.ValidationReport],
     ) -> p.Result[bool]:
-        """Map one validation report onto the boolean outcome a validator returns."""
+        """Map one validation report onto the boolean outcome a validator returns.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         if report_result.failure:
             return r[bool].from_failure(report_result)
         report = report_result.unwrap()
@@ -155,7 +188,12 @@ class FlextInfraServiceBase[TDomainResult: t.Cli.ResultValue](
 
     @classmethod
     def execute_command(cls, params: Self) -> p.Result[TDomainResult]:
-        """Execute the validated CLI service instance directly."""
+        """Execute the validated CLI service instance directly.
+
+        Returns:
+            The resulting ``p.Result[TDomainResult]``.
+
+        """
         return params.execute()
 
 

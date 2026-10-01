@@ -1,0 +1,8 @@
+id: fix-json-loads-paired-validate
+valid:
+  - model = Model.model_validate(json.loads(raw, cls=CustomDecoder))
+  - model = Model.model_validate_json(raw)
+  - model = parse_model(json.loads(raw))
+invalid:
+  - model = Model.model_validate(json.loads(raw))
+  - payload = Sink.model_validate(json.loads(self._read(path)))

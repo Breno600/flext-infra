@@ -1,4 +1,8 @@
-"""Public utility evidence for semantic API-alias cutovers."""
+"""Public utility evidence for semantic API-alias cutovers.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -6,13 +10,14 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, m, u
+from flext_infra import c, infra, m, u
 
 
 class TestsFlextInfraApiAliasCutover:
     """Exercise owner-first alias removal only through ``u.Infra``."""
 
-    def test_rewires_consumer_before_removing_owner(self, tmp_path: Path) -> None:
+    @staticmethod
+    def test_rewires_consumer_before_removing_owner(tmp_path: Path) -> None:
         """Plan the complete owner/export/import/reference cutover together."""
         owner = tmp_path / "flext-sample/src/flext_sample/api.py"
         consumer = tmp_path / "flext-sample/tests/test_api.py"
@@ -37,9 +42,15 @@ class TestsFlextInfraApiAliasCutover:
             payload={},
         )
 
-        edits = u.Infra.plan_api_alias_cutover(
-            root=tmp_path, sources=sources, findings=(finding,)
-        )
+        with infra.rope_workspace(tmp_path) as rope:
+            planned = u.Infra.plan_semantic_cutover(
+                c.Infra.SemanticCutoverPhase.COMPAT_ALIAS,
+                rope_workspace=rope,
+                sources=sources,
+                findings=(finding,),
+            )
+        tm.ok(planned)
+        edits = planned.value
         by_path = {edit.file_path: edit.updated_source for edit in edits}
 
         tm.that(len(edits), eq=2)
@@ -48,6 +59,3 @@ class TestsFlextInfraApiAliasCutover:
         tm.that(by_path[consumer], has="from flext_sample.api import FlextSample")
         tm.that(by_path[consumer], has="facade = FlextSample")
         tm.that(by_path[consumer], lacks="import sample")
-
-
-__all__: list[str] = ["TestsFlextInfraApiAliasCutover"]

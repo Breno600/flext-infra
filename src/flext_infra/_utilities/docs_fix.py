@@ -1,4 +1,8 @@
-"""Fix helpers for docs services."""
+"""Fix helpers for docs services.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,13 +11,10 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_infra.constants import c
-from flext_infra.models import m
-from flext_infra.typings import t
-
-from ._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
-from .docs import FlextInfraUtilitiesDocs
-from .docs_contract import FlextInfraUtilitiesDocsContract
+from flext_infra import c, config, m, t
+from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
+from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
+from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
 
 if TYPE_CHECKING:
     import re
@@ -25,7 +26,12 @@ class FlextInfraUtilitiesDocsFix:
 
     @staticmethod
     def docs_maybe_fix_link(md_file: Path, raw_link: str) -> str | None:
-        """Return a corrected link target when a simple fix is possible."""
+        """Return a corrected link target when a simple fix is possible.
+
+        Returns:
+            A corrected link target when a simple fix is possible.
+
+        """
         if FlextInfraUtilitiesDocs.docs_is_secure_web_url(raw_link):
             return FlextInfraUtilitiesDocsGithubLinks.docs_rewrite_github_url(raw_link)
         result: str | None = None
@@ -46,26 +52,34 @@ class FlextInfraUtilitiesDocsFix:
 
     @staticmethod
     def docs_fix_python_codeblocks(
-        scope: m.Infra.DocScope, *, apply: bool
+        scope: m.Infra.DocScope,
+        *,
+        apply: bool,
     ) -> t.SequenceOf[m.Infra.GeneratedFile]:
         """Auto-fix ``python`` fenced code blocks using ``ruff check --fix``.
 
-        Only fixes issues that ``ruff`` can resolve automatically; blocks that
-        still contain unfixable diagnostics are left untouched so the audit
-        gate reports them.
+        Apply only fixes that ``ruff`` resolves completely. An unfixable
+        diagnostic fails this phase with the original process detail so the
+        authored Markdown can be corrected before publication.
+
+        Returns:
+            The resulting ``t.SequenceOf[m.Infra.GeneratedFile]``.
+
         """
         changed: t.MutableSequenceOf[m.Infra.GeneratedFile] = []
         for md_file in FlextInfraUtilitiesDocs.iter_scope_markdown_files(scope):
             original = md_file.read_text(
-                encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
+                encoding=c.Cli.ENCODING_DEFAULT,
+                errors=c.Infra.IGNORE,
             )
 
             def _replace_fence(
-                match: re.Match[str], source_file: Path = md_file
+                match: re.Match[str],
+                source_file: Path = md_file,
             ) -> str:
                 body = match.group("body")
                 rel = source_file.relative_to(scope.path).as_posix()
-                # flext-o6h5 (agent: kimi) — ruff via running interpreter (venv SSOT);
+                # Ruff via running interpreter (venv SSOT);
                 # bare "ruff" breaks when .venv/bin is not on PATH (CI docs fix).
                 outcome = u.Cli.run_raw(
                     [
@@ -73,7 +87,7 @@ class FlextInfraUtilitiesDocsFix:
                         "-m",
                         c.Infra.RUFF,
                         c.Infra.VERB_CHECK,
-                        "--fix",
+                        *config.Infra.codegen.make.ruff.lint_fix,
                         "--extend-ignore",
                         ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
                         "--stdin-filename",
@@ -83,7 +97,15 @@ class FlextInfraUtilitiesDocsFix:
                     input_data=body.encode(),
                 )
                 if outcome.failure:
-                    return match.group(0)
+                    raise RuntimeError(outcome.error or f"Ruff could not inspect {rel}")
+                if outcome.value.stderr or not u.Cli.process_succeeded(
+                    outcome.value.outcome,
+                ):
+                    msg = (
+                        f"Ruff could not fix {rel}: "
+                        f"{outcome.value.stdout}\n{outcome.value.stderr}"
+                    )
+                    raise RuntimeError(msg)
                 fixed_body = outcome.value.stdout
                 if fixed_body == body:
                     return match.group(0)
@@ -94,30 +116,53 @@ class FlextInfraUtilitiesDocsFix:
                 closed_body = (
                     fixed_body if fixed_body.endswith("\n") else f"{fixed_body}\n"
                 )
-                return f"{match.group('open')}{closed_body}```"
+                indent = match.group("indent")
+                return f"{indent}{match.group('open')}{closed_body}{indent}```"
 
-            sanitized = c.Infra.PYTHON_FENCE_FIX_RE.sub(_replace_fence, original)
+            repaired = c.Infra.WELDED_FENCE_RE.sub(
+                lambda match: (
+                    f"{match.group('indent')}{match.group('body')}"
+                    f"\n{match.group('indent')}```"
+                ),
+                original,
+            )
+            sanitized = c.Infra.PYTHON_FENCE_FIX_RE.sub(_replace_fence, repaired)
             if sanitized == original:
                 continue
             changed.append(
                 FlextInfraUtilitiesDocsContract.docs_write_if_needed(
-                    md_file, sanitized, apply=apply
-                )
+                    md_file,
+                    sanitized,
+                    apply=apply,
+                ),
             )
         return changed
 
     @staticmethod
     def docs_process_markdown_file(
-        md_file: Path, *, apply: bool
+        md_file: Path,
+        *,
+        apply: bool,
     ) -> m.Infra.DocsPhaseItemModel:
-        """Fix one markdown file and return the phase item summary."""
+        """Fix one markdown file and return the phase item summary.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseItemModel``.
+
+        """
         original = md_file.read_text(
-            encoding=c.Cli.ENCODING_DEFAULT, errors=c.Infra.IGNORE
+            encoding=c.Cli.ENCODING_DEFAULT,
+            errors=c.Infra.IGNORE,
         )
         link_count = 0
 
-        def replace_link(match: t.Infra.RegexMatch) -> str:
-            """Replace link."""
+        def replace_link(match: t.RegexMatch) -> str:
+            """Replace link.
+
+            Returns:
+                The resulting ``str``.
+
+            """
             nonlocal link_count
             text, link = match.groups()
             fixed = FlextInfraUtilitiesDocsFix.docs_maybe_fix_link(md_file, link)
@@ -128,11 +173,16 @@ class FlextInfraUtilitiesDocsFix:
             return f"[{text}]({fixed})"
 
         updated = c.Infra.MARKDOWN_LINK_RE.sub(replace_link, original)
+        fence_changed = c.Infra.FENCE_NOTEST_ATTR_RE.subn(r"```{.\1 .notest}", updated)
+        updated = fence_changed[0]
         updated, toc_changed = FlextInfraUtilitiesDocs.update_toc(updated)
-        if apply and (link_count > 0 or toc_changed > 0) and updated != original:
+        if apply and updated != original:
             _ = md_file.write_text(updated, encoding=c.Cli.ENCODING_DEFAULT)
         return m.Infra.DocsPhaseItemModel(
-            phase="fix", file=md_file.as_posix(), links=link_count, toc=toc_changed
+            phase="fix",
+            file=md_file.as_posix(),
+            links=link_count + fence_changed[1],
+            toc=toc_changed,
         )
 
     @staticmethod
@@ -143,32 +193,17 @@ class FlextInfraUtilitiesDocsFix:
         apply: bool,
     ) -> None:
         """Persist the standard fix summary and markdown report."""
-        changes_payload: t.JsonList = [
-            {c.Infra.RK_FILE: item.file, "links": item.links, "toc": item.toc}
-            for item in items
-        ]
-        summary_payload = t.Cli.JSON_MAPPING_ADAPTER.validate_python({
-            c.Infra.RK_SUMMARY: {
-                c.Infra.RK_SCOPE: scope.name,
-                "changed_files": len(items),
-                "apply": apply,
-            },
-            "changes": changes_payload,
-        })
-        _ = u.Cli.json_write(scope.report_dir / "fix-summary.json", summary_payload)
-        _ = FlextInfraUtilitiesDocs.write_markdown(
-            scope.report_dir / "fix-report.md",
-            [
-                "# Docs Fix Report",
-                "",
-                f"Scope: {scope.name}",
-                f"Apply: {int(apply)}",
-                f"Changed files: {len(items)}",
-                "",
-                "| file | link_fixes | toc_updates |",
-                "|---|---:|---:|",
-                *[f"| {item.file} | {item.links} | {item.toc} |" for item in items],
-            ],
+        FlextInfraUtilitiesDocs.docs_write_phase_reports(
+            scope,
+            phase="fix",
+            table=m.Cli.TableRenderRequest(
+                title="Docs Fix Report",
+                columns=("file", "link_fixes", "toc_updates"),
+                rows=tuple(
+                    (item.file, str(item.links), str(item.toc)) for item in items
+                ),
+            ),
+            apply=apply,
         )
 
 

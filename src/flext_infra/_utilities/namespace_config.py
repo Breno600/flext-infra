@@ -8,15 +8,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from flext_infra.constants import c
-
-from .git import FlextInfraUtilitiesGit
-from .pyproject import FlextInfraUtilitiesPyproject
+from flext_infra import c, config
+from flext_infra._utilities.git import FlextInfraUtilitiesGit
+from flext_infra._utilities.pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from flext_infra.typings import t
+    from flext_infra import t
 
 
 class FlextInfraUtilitiesNamespaceConfig:
@@ -24,18 +23,57 @@ class FlextInfraUtilitiesNamespaceConfig:
 
     @staticmethod
     def namespace_meta(project_root: Path) -> t.JsonMapping:
-        """Return optional ``tool.flext.namespace`` metadata for one project."""
+        """Return optional ``tool.flext.namespace`` metadata for one project.
+
+        Returns:
+            Optional ``tool.flext.namespace`` metadata for one project.
+
+        Raises:
+            TypeError: If [tool.flext.namespace] must be a table in.
+
+        """
         flext_meta = FlextInfraUtilitiesPyproject.tool_flext_meta(project_root)
-        namespace = flext_meta.get("namespace")
-        return namespace if isinstance(namespace, dict) else {}
+        if "namespace" not in flext_meta:
+            return {}
+        namespace = flext_meta["namespace"]
+        if not isinstance(namespace, dict):
+            msg = f"[tool.flext.namespace] must be a table in {project_root}"
+            raise TypeError(msg)
+        return namespace
+
+    @staticmethod
+    def _namespace_flag(project_root: Path, key: str, *, absent: bool) -> bool:
+        """Return one boolean ``[tool.flext.namespace]`` flag; a non-bool fails.
+
+        Returns:
+            One boolean ``[tool.flext.namespace]`` flag; a non-bool fails.
+
+        Raises:
+            TypeError: If [tool.flext.namespace].
+
+        """
+        meta = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root)
+        if key not in meta:
+            return absent
+        value = meta[key]
+        if not isinstance(value, bool):
+            msg = f"[tool.flext.namespace] {key} must be a boolean in {project_root}"
+            raise TypeError(msg)
+        return value
 
     @staticmethod
     def namespace_enabled(project_root: Path) -> bool:
-        """Return whether namespace enforcement is enabled for a project."""
-        enabled = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root).get(
-            "enabled", True
+        """Return whether namespace enforcement is enabled (enabled when unset).
+
+        Returns:
+            Whether namespace enforcement is enabled (enabled when unset).
+
+        """
+        return FlextInfraUtilitiesNamespaceConfig._namespace_flag(
+            project_root,
+            "enabled",
+            absent=True,
         )
-        return enabled if isinstance(enabled, bool) else True
 
     @staticmethod
     def namespace_scan_dirs(project_root: Path) -> frozenset[str]:
@@ -43,23 +81,46 @@ class FlextInfraUtilitiesNamespaceConfig:
 
         Priority:
         1. Explicit ``[tool.flext.namespace] scan_dirs`` in pyproject.toml.
-        2. Git-tracked top-level directories that exist on disk (dynamic).
-        3. Fixed candidate list filtered by ``is_dir()`` (fallback).
+        2. Git-tracked top-level directories that exist on disk.
+        3. Outside Git, the configured source-scan roots that exist on disk.
+
+        Returns:
+            Configured scan dirs for namespace enforcement.
+
+        Raises:
+            TypeError: If [tool.flext.namespace] scan_dirs must be a list of non-empty
+                strings in.
+            ValueError: If [tool.flext.namespace] scan_dirs is empty in; or if
+                ``declared.failure``.
+
         """
-        configured = FlextInfraUtilitiesNamespaceConfig.namespace_meta(
-            project_root
-        ).get("scan_dirs")
-        if isinstance(configured, list):
-            normalized = frozenset(
-                str(item).strip() for item in configured if str(item).strip()
-            )
-            if normalized:
-                return normalized
+        meta = FlextInfraUtilitiesNamespaceConfig.namespace_meta(project_root)
+        if "scan_dirs" in meta:
+            configured = meta["scan_dirs"]
+            if not isinstance(configured, list) or not all(
+                isinstance(item, str) and item.strip() for item in configured
+            ):
+                msg = (
+                    "[tool.flext.namespace] scan_dirs must be a list of "
+                    f"non-empty strings in {project_root}"
+                )
+                raise TypeError(msg)
+            if not configured:
+                msg = f"[tool.flext.namespace] scan_dirs is empty in {project_root}"
+                raise ValueError(msg)
+            return frozenset(item.strip() for item in configured)
         tracked = FlextInfraUtilitiesGit.git_tracked_top_level_dir_names(project_root)
         if tracked is not None:
-            excluded = c.Infra.COMMON_EXCLUDED_DIRS | {
-                name for name in tracked if name.startswith(".")
-            }
+            declared = FlextInfraUtilitiesGit.git_declared_submodule_paths(project_root)
+            if declared.failure:
+                raise ValueError(declared.error)
+            # A declared submodule is another repository, consumed as an
+            # installed library and never scanned from here.
+            excluded = (
+                c.Infra.COMMON_EXCLUDED_DIRS
+                | {name for name in tracked if name.startswith(".")}
+                | {path.as_posix() for path in declared.value if len(path.parts) == 1}
+            )
             dynamic = frozenset(
                 name
                 for name in tracked
@@ -67,16 +128,25 @@ class FlextInfraUtilitiesNamespaceConfig:
             )
             if dynamic:
                 return dynamic
-        candidates = ("docs", "examples", "scripts", "src", "tests")
-        return frozenset(name for name in candidates if (project_root / name).is_dir())
+        return frozenset(
+            name
+            for name in config.Infra.source_scan.roots
+            if (project_root / name).is_dir()
+        )
 
     @staticmethod
     def namespace_include_dynamic_dirs(project_root: Path) -> bool:
-        """Return whether namespace enforcement should scan non-canonical dirs."""
-        include_dynamic_dirs = FlextInfraUtilitiesNamespaceConfig.namespace_meta(
-            project_root
-        ).get("include_dynamic_dirs")
-        return include_dynamic_dirs if isinstance(include_dynamic_dirs, bool) else False
+        """Return whether namespace enforcement scans non-canonical dirs (off when unset).
+
+        Returns:
+            Whether namespace enforcement scans non-canonical dirs (off when unset).
+
+        """
+        return FlextInfraUtilitiesNamespaceConfig._namespace_flag(
+            project_root,
+            "include_dynamic_dirs",
+            absent=False,
+        )
 
 
 __all__: list[str] = ["FlextInfraUtilitiesNamespaceConfig"]

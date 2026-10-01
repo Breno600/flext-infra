@@ -1,9 +1,12 @@
 """Tests for the module-cap SUPREME LAW (§3.1) gate.
 
-The gate flags any module whose scc `Code` line count exceeds the config-owned
-ceiling and accepts modules under it, exercised through the public gate runner.
-Fixtures derive from that config-owned ceiling so a legitimate cap change never
-silently inverts these assertions (UNIVERSAL_CORE P0).
+The gate flags any module whose real scc `Code` line count exceeds the
+config-owned ceiling and accepts modules under it, exercised through the public
+gate runner. Fixtures derive from that config-owned ceiling so a legitimate cap
+change never silently inverts these assertions (UNIVERSAL_CORE P0).
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
 """
 
 from __future__ import annotations
@@ -13,90 +16,150 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import config, r
+from flext_infra import config, m
 from flext_infra.gates.loc_cap import FlextInfraLocCapGate
-from tests import u
+from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests import t
-
 
 class TestsFlextInfraLocCapGate:
-    # Fixtures are derived from the current cap so a future owner change
-    # cannot silently invert these assertions.
-    _OVER_CAP_LOC = config.Infra.codegen.loc_cap.max_lines + 50
-    _UNDER_CAP_LOC = 1
-    _OVER_CAP = (
-        "from __future__ import annotations\n\n"
-        + "\n".join(f"x{i} = {i}" for i in range(_OVER_CAP_LOC))
-        + "\n"
-    )
-    _UNDER_CAP = "from __future__ import annotations\n\nx = 1\n"
-    _SCC_OVER_CAP = (
-        '[{"Name":"Python","Files":[{"Location":"src/sample.py","Code":'
-        f"{_OVER_CAP_LOC}"
-        "}]}]"
-    )
-    _SCC_UNDER_CAP = (
-        '[{"Name":"Python","Files":[{"Location":"src/sample.py","Code":'
-        f"{_UNDER_CAP_LOC}"
-        "}]}]"
-    )
+    """Tests for ``FlextInfraLocCapGate``."""
 
-    def _gate_project(self, tmp_path: Path, *, name: str, module_src: str) -> Path:
-        project_path: Path = u.Tests.create_codegen_project(
-            tmp_path=tmp_path,
-            name=name,
-            pkg_name=name.replace("-", "_"),
-            files={"sample.py": module_src},
+    @staticmethod
+    def gate_project(tmp_path: Path, *, code_lines: int) -> Path:
+        """Create one real project whose sample module carries ``code_lines``.
+
+        Returns:
+            The resulting ``Path``.
+
+        """
+        module = "from __future__ import annotations\n\n" + "".join(
+            f"x{index} = {index}\n" for index in range(code_lines)
         )
-        return project_path
+        return u.Tests.create_codegen_project(
+            tmp_path=tmp_path,
+            name="demo-project",
+            pkg_name="demo_project",
+            files={"sample.py": module},
+        )
 
-    def test_gate_identity(self) -> None:
+    @staticmethod
+    def test_gate_identity() -> None:
+        """Test gate identity."""
         tm.that(FlextInfraLocCapGate.gate_id, eq="loc-cap")
         tm.that(FlextInfraLocCapGate.can_fix, eq=False)
 
-    def test_over_cap_module_is_flagged(self, tmp_path: Path) -> None:
-        project = self._gate_project(
-            tmp_path, name="demo-project", module_src=self._OVER_CAP
-        )
-        runner = u.Tests.SequenceRunner([
-            r.ok(u.Tests.create_command_output(stdout=self._SCC_OVER_CAP))
-        ])
+    @pytest.mark.parametrize(
+        ("code_lines", "passed"),
+        [(config.Infra.codegen.loc_cap.max_lines + 50, False), (1, True)],
+    )
+    def test_cap_is_enforced_on_real_scc_counts(
+        self,
+        tmp_path: Path,
+        code_lines: int,
+        *,
+        passed: bool,
+    ) -> None:
+        """Test cap is enforced on real scc counts."""
+        project = self.gate_project(tmp_path, code_lines=code_lines)
 
-        result = u.Tests.run_gate_check(
-            FlextInfraLocCapGate, tmp_path, project, runner=runner
-        )
+        result = u.Tests.run_gate_check(FlextInfraLocCapGate, tmp_path, project)
 
-        tm.that(not result.result.passed, eq=True)
-        tm.that(any(issue.code == "LOC_CAP" for issue in result.issues), eq=True)
+        tm.that(result.result.passed, eq=passed)
+        flagged = [issue.file for issue in result.issues if issue.code == "LOC_CAP"]
+        tm.that(len(flagged), eq=0 if passed else 1)
+        tm.that(all(path.endswith("sample.py") for path in flagged), eq=True)
 
-    def test_under_cap_module_passes(self, tmp_path: Path) -> None:
-        project = self._gate_project(
-            tmp_path, name="demo-project", module_src=self._UNDER_CAP
-        )
-        runner = u.Tests.SequenceRunner([
-            r.ok(u.Tests.create_command_output(stdout=self._SCC_UNDER_CAP))
-        ])
+    def test_unavailable_scanner_is_not_silenced(self, tmp_path: Path) -> None:
+        """Test unavailable scanner is not silenced."""
+        project = self.gate_project(tmp_path, code_lines=1)
+        empty_path = tmp_path / "empty-path"
+        empty_path.mkdir()
 
-        result = u.Tests.run_gate_check(
-            FlextInfraLocCapGate, tmp_path, project, runner=runner
+        with (
+            tm.scope(env={"PATH": str(empty_path)}),
+            pytest.raises(RuntimeError, match=c.Infra.SCC_BINARY),
+        ):
+            u.Tests.run_gate_check(FlextInfraLocCapGate, tmp_path, project)
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            "",
+            "not-json",
+            "null",
+            "{}",
+            "[null]",
+            '[{"Files":[]}]',
+            '[{"Name":"Python"}]',
+            '[{"Name":"Python","Files":null}]',
+            '[{"Name":"Python","Files":[null]}]',
+            '[{"Name":"Python","Files":[{"Code":1}]}]',
+            '[{"Name":"Python","Files":[{"Location":"sample.py"}]}]',
+            '[{"Name":"Python","Files":[{"Location":"","Code":1}]}]',
+            '[{"Name":"Python","Files":[{"Location":"sample.py","Code":-1}]}]',
+            '[{"Name":"Python","Files":[{"Location":"sample.py","Code":"1"}]}]',
+            '[{"Name":"Python","Files":[{"Location":"sample.py","Code":true}]}]',
+        ],
+    )
+    def test_scc_boundary_rejects_incomplete_or_malformed_output(
+        self,
+        payload: str,
+    ) -> None:
+        """Invalid native reports cannot become an empty successful scan."""
+        with pytest.raises(c.ValidationError):
+            m.Infra.SccReport.model_validate_json(payload, strict=True)
+
+    @pytest.mark.parametrize("payload", ["[]", '[{"Name":"Python","Files":[]}]'])
+    def test_scc_boundary_accepts_valid_empty_collections(self, payload: str) -> None:
+        """Empty scanner collections differ from absent or malformed output."""
+        report = m.Infra.SccReport.model_validate_json(payload, strict=True)
+
+        tm.that(tuple(file for group in report.root for file in group.files), eq=())
+
+    def test_generated_header_is_read_relative_to_scanned_project(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """A real SCC relative path resolves under the project, not the caller."""
+        project = self.gate_project(
+            tmp_path,
+            code_lines=config.Infra.codegen.loc_cap.max_lines + 1,
         )
+        module = project / "src" / "demo_project" / "sample.py"
+        source = module.read_text(encoding=c.Cli.ENCODING_DEFAULT)
+        module.write_text(
+            f"{c.Infra.AUTOGEN_HEADER}\n{source}",
+            encoding=c.Cli.ENCODING_DEFAULT,
+        )
+        gate = FlextInfraLocCapGate(tmp_path)
+
+        result = gate.check_files((module,), project, u.Tests.gate_context(tmp_path))
 
         tm.that(result.result.passed, eq=True)
-
-    def test_tool_execution_failure_is_not_silenced(self, tmp_path: Path) -> None:
-        project = self._gate_project(
-            tmp_path, name="demo-project", module_src=self._UNDER_CAP
+        tm.that(result.issues, eq=())
+        report = m.Infra.SccReport.model_validate_json(result.raw_output, strict=True)
+        scanned_paths = tuple(
+            project / file.location
+            for language in report.root
+            for file in language.files
         )
-        runner = u.Tests.SequenceRunner([r.fail("scc is unavailable")])
+        tm.that(scanned_paths, has=module)
 
-        with pytest.raises(RuntimeError, match="scc is unavailable"):
-            u.Tests.run_gate_check(
-                FlextInfraLocCapGate, tmp_path, project, runner=runner
-            )
+    def test_invalid_source_encoding_is_not_a_generated_header_fallback(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """SCC counts bytes; reading an invalid Python UTF-8 header must fail."""
+        project = self.gate_project(
+            tmp_path,
+            code_lines=config.Infra.codegen.loc_cap.max_lines + 1,
+        )
+        module = project / "src" / "demo_project" / "sample.py"
+        module.write_bytes(b"# \xff\n" + module.read_bytes())
+        gate = FlextInfraLocCapGate(tmp_path)
 
-
-__all__: t.StrSequence = ["TestsFlextInfraLocCapGate"]
+        with pytest.raises(UnicodeDecodeError):
+            gate.check_files((module,), project, u.Tests.gate_context(tmp_path))

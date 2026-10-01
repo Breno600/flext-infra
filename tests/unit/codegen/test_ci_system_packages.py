@@ -1,16 +1,17 @@
-"""Verify ci.yml installs the runner packages a distribution declares."""
+"""Verify ci.yml installs the runner packages a distribution declares.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from flext_cli import u
 from flext_tests import tm
 
 from flext_infra import c
-from tests import t
-
-from ._support import CodegenTestSupport
+from tests import t, u
 
 
 class TestsFlextInfraCiSystemPackages:
@@ -24,7 +25,7 @@ class TestsFlextInfraCiSystemPackages:
 
     @classmethod
     def _render_ci(cls, *, system_packages: t.VariadicTuple[str]) -> str:
-        spec = CodegenTestSupport.Ci.workflow_spec(
+        spec = u.CodegenTestSupport.Ci.workflow_spec(
             dist="fixture-engine",
             make_profile=c.Infra.MakeProfile.STANDALONE,
             repository_branch="develop",
@@ -34,6 +35,7 @@ class TestsFlextInfraCiSystemPackages:
         return tm.ok(u.Cli.template_render(cls.ci_template, spec))
 
     def test_declared_packages_render_one_install_step_before_the_gates(self) -> None:
+        """Test declared packages render one install step before the gates."""
         rendered = self._render_ci(system_packages=("engine-calc", "engine-fonts"))
 
         tm.that(rendered.count(self.step_name), eq=1)
@@ -42,13 +44,12 @@ class TestsFlextInfraCiSystemPackages:
             has="apt-get install -y -qq --no-install-recommends engine-calc engine-fonts",
         )
         tm.that(
-            rendered.index(self.step_name) < rendered.index("setup (blocking)"), eq=True
+            rendered.index(self.step_name) < rendered.index("setup (blocking)"),
+            eq=True,
         )
 
     def test_no_declaration_renders_no_install_step(self) -> None:
+        """Test no declaration renders no install step."""
         rendered = self._render_ci(system_packages=())
 
         tm.that(rendered, lacks=self.step_name)
-
-
-__all__: list[str] = ["TestsFlextInfraCiSystemPackages"]

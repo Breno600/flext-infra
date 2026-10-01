@@ -1,11 +1,13 @@
 # flext-infra Documentation
 
 <!-- TOC START -->
+
 - [Start Here](#start-here)
 - [Public Surface Summary](#public-surface-summary)
 - [Collection Rules](#collection-rules)
 - [Quality Gates](#quality-gates)
 - [Governance Pointer](#governance-pointer)
+
 <!-- TOC END -->
 
 <!-- AUTO-GENERATED — DO NOT EDIT MANUALLY -->
@@ -13,11 +15,11 @@
 - Version: `0.12.0`
 - Project class: `infra`
 - Package: `flext_infra`
-- Description: FLEXT Infrastructure Tooling - Build automation, code generation,
-  and workspace management
+- Description: FLEXT Infrastructure Tooling - Build automation, code generation, and
+  workspace management
 
-This project portal is generated from `pyproject.toml`, package exports, and
-real docstrings.
+This project portal is generated from `pyproject.toml`, package exports, and real
+docstrings.
 
 ## Start Here
 
@@ -29,6 +31,7 @@ real docstrings.
 ## Public Surface Summary
 
 ::: flext_infra
+
     options:
       members: false
       show_root_heading: false
@@ -37,18 +40,18 @@ real docstrings.
 
 ## Collection Rules
 
-Read
-[`/flext/AGENTS.md`](https://github.com/flext-sh/flext/blob/0.12.0-dev/AGENTS.md)
-§9 — Agent Execution Pre-requisites — for the canonical pre-change checklist
-(parent FLEXT chain, Scope bootstrap, skill loading, zero-debt baseline,
-slot registry verification).
+Read [`/flext/AGENTS.md`](https://github.com/flext-sh/flext/blob/0.12.0-dev/AGENTS.md)
+§9 — Agent Execution Pre-requisites — for the canonical pre-change checklist (parent
+FLEXT chain, Scope bootstrap, skill loading, zero-debt baseline, slot registry
+verification).
 
 ## Quality Gates
 
-Canonical `make` verbs (`gen`, `check`, `test`, `fmt`, `docs`) execute their
-declared operations directly — see
-[`/flext/AGENTS.md`](https://github.com/flext-sh/flext/blob/0.12.0-dev/AGENTS.md)
-`Build & Test` and `Required Python quality gates`.
+Canonical `make` verbs (`gen`, `check`, `test`, `fmt`, `docs`) execute their declared
+operations directly.
+
+See [`/flext/AGENTS.md`](https://github.com/flext-sh/flext/blob/0.12.0-dev/AGENTS.md)
+for the build, test, and Python quality gates.
 
 ## Governance Pointer
 

@@ -1,0 +1,151 @@
+id: ban-test-fakes
+snapshots:
+  ? |
+    class DummyService(Service):
+        pass
+  : labels:
+    - source: |-
+        class DummyService(Service):
+            pass
+      style: primary
+      start: 0
+      end: 37
+    - source: DummyService
+      style: secondary
+      start: 6
+      end: 18
+  ? |
+    class FakeRunner:
+        pass
+  : labels:
+    - source: |-
+        class FakeRunner:
+            pass
+      style: primary
+      start: 0
+      end: 26
+    - source: FakeRunner
+      style: secondary
+      start: 6
+      end: 16
+  ? |
+    class GatewayFake(Gateway):
+        pass
+  : labels:
+    - source: |-
+        class GatewayFake(Gateway):
+            pass
+      style: primary
+      start: 0
+      end: 36
+    - source: GatewayFake
+      style: secondary
+      start: 6
+      end: 17
+  ? |
+    class Mock:
+        pass
+  : labels:
+    - source: |-
+        class Mock:
+            pass
+      style: primary
+      start: 0
+      end: 20
+    - source: Mock
+      style: secondary
+      start: 6
+      end: 10
+  ? |
+    class Recorder(p.Cli.Runner):
+        pass
+  : labels:
+    - source: |-
+        class Recorder(p.Cli.Runner):
+            pass
+      style: primary
+      start: 0
+      end: 38
+    - source: p.Cli.Runner
+      style: secondary
+      start: 15
+      end: 27
+    - source: p.Cli.Runner
+      style: secondary
+      start: 15
+      end: 27
+  ? |
+    class RunnerSpy:
+        pass
+  : labels:
+    - source: |-
+        class RunnerSpy:
+            pass
+      style: primary
+      start: 0
+      end: 25
+    - source: RunnerSpy
+      style: secondary
+      start: 6
+      end: 15
+  ? |
+    class TestsFlextInfraUtilitiesTomlMixin:
+        class TomlReaderSequence(p.Infra.TomlReader):
+            pass
+  : labels:
+    - source: |-
+        class TomlReaderSequence(p.Infra.TomlReader):
+                pass
+      style: primary
+      start: 45
+      end: 103
+    - source: p.Infra.TomlReader
+      style: secondary
+      start: 70
+      end: 88
+    - source: p.Infra.TomlReader
+      style: secondary
+      start: 70
+      end: 88
+  ? |
+    class _StubClient:
+        pass
+  : labels:
+    - source: |-
+        class _StubClient:
+            pass
+      style: primary
+      start: 0
+      end: 27
+    - source: _StubClient
+      style: secondary
+      start: 6
+      end: 17
+  ? |
+    def _stub_fetch(url: str) -> str:
+        return ""
+  : labels:
+    - source: |-
+        def _stub_fetch(url: str) -> str:
+            return ""
+      style: primary
+      start: 0
+      end: 47
+    - source: _stub_fetch
+      style: secondary
+      start: 4
+      end: 15
+  ? |
+    def fake_run(*args) -> int:
+        return 0
+  : labels:
+    - source: |-
+        def fake_run(*args) -> int:
+            return 0
+      style: primary
+      start: 0
+      end: 40
+    - source: fake_run
+      style: secondary
+      start: 4
+      end: 12

@@ -12,13 +12,29 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
 from flext_tests import tm
 
 from flext_infra.codegen.lazy_init import FlextInfraCodegenLazyInit
-from tests import u
+from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.fixture
+def governed_project(tmp_path: Path) -> Path:
+    """Provide a valid project identity for package discovery.
+
+    Returns:
+        The resulting ``Path``.
+
+    """
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "test-helpers"\nversion = "0.1.0"\n',
+        encoding="utf-8",
+    )
+    return tmp_path
 
 
 class TestsFlextInfraCodegenLazyInit:
@@ -35,7 +51,8 @@ class TestsFlextInfraCodegenLazyInit:
         '__all__: list[str] = ["SomeFixture"]\n'
     )
 
-    def _create_init_file(self, directory: Path, content: str) -> Path:
+    @staticmethod
+    def _create_init_file(directory: Path, content: str) -> Path:
         directory.mkdir(parents=True, exist_ok=True)
         init_file = directory / "__init__.py"
         init_file.write_text(content, encoding="utf-8")
@@ -55,7 +72,8 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["SomeFixture"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
@@ -68,12 +86,13 @@ class TestsFlextInfraCodegenLazyInit:
             result = generator.plan_files()
             tm.that(result.success, eq=True)
 
-        def test_tests_dir_is_scanned(self, tmp_path: Path) -> None:
+        def test_tests_dir_is_scanned(self, governed_project: Path) -> None:
             """Scan test packages in check mode."""
             self._create_init_file(
-                tmp_path / "tests" / "helpers", self._VALID_TESTS_INIT
+                governed_project / "tests" / "helpers",
+                self._VALID_TESTS_INIT,
             )
-            generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
+            generator = FlextInfraCodegenLazyInit(repository_root=governed_project)
             result = generator.plan_files()
             tm.that(result.success, eq=True)
 
@@ -81,13 +100,15 @@ class TestsFlextInfraCodegenLazyInit:
             """Regenerate discovered test package initializers."""
             self._create_init_file(tmp_path / "src" / "pkg", self._VALID_INIT)
             tests_init = self._create_init_file(
-                tmp_path / "tests" / "helpers", self._VALID_TESTS_INIT
+                tmp_path / "tests" / "helpers",
+                self._VALID_TESTS_INIT,
             )
             original_content = tests_init.read_text(encoding="utf-8")
             tm.that(u.Tests.run_lazy_init(tmp_path), eq=0)
             new_content = tests_init.read_text(encoding="utf-8")
             tm.that(
-                new_content != original_content or "__all__" in new_content, eq=True
+                new_content != original_content or "__all__" in new_content,
+                eq=True,
             )
 
         def test_nested_tests_packages_are_found(self, tmp_path: Path) -> None:
@@ -111,19 +132,21 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["SomeFixture"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
             return init_file
 
-        def test_check_only_does_not_modify_files(self, tmp_path: Path) -> None:
+        def test_check_only_does_not_modify_files(self, governed_project: Path) -> None:
             """Leave initializer bytes unchanged in check mode."""
             tests_init = self._create_init_file(
-                tmp_path / "tests" / "helpers", self._VALID_TESTS_INIT
+                governed_project / "tests" / "helpers",
+                self._VALID_TESTS_INIT,
             )
             original_content = tests_init.read_text(encoding="utf-8")
-            generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
+            generator = FlextInfraCodegenLazyInit(repository_root=governed_project)
             tm.that(generator.plan_files().success, eq=True)
             tm.that(tests_init.read_text(encoding="utf-8"), eq=original_content)
 
@@ -141,7 +164,8 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["SomeFixture"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
@@ -151,7 +175,8 @@ class TestsFlextInfraCodegenLazyInit:
             """Exclude vendored test packages from discovery."""
             self._create_init_file(tmp_path / "src" / "pkg", self._VALID_INIT)
             self._create_init_file(
-                tmp_path / "tests" / "vendor" / "pkg", self._VALID_TESTS_INIT
+                tmp_path / "tests" / "vendor" / "pkg",
+                self._VALID_TESTS_INIT,
             )
             generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
             result = generator.plan_files()
@@ -161,7 +186,8 @@ class TestsFlextInfraCodegenLazyInit:
             """Exclude virtual-environment test packages from discovery."""
             self._create_init_file(tmp_path / "src" / "pkg", self._VALID_INIT)
             self._create_init_file(
-                tmp_path / "tests" / ".venv" / "pkg", self._VALID_TESTS_INIT
+                tmp_path / "tests" / ".venv" / "pkg",
+                self._VALID_TESTS_INIT,
             )
             generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
             result = generator.plan_files()
@@ -195,6 +221,27 @@ class TestsFlextInfraCodegenLazyInit:
             tm.ok(result)
             tm.that({plan.path for plan in result.value.files}, lacks=scratch_init)
 
+        def test_generated_tool_state_is_excluded_from_plans(
+            self,
+            tmp_path: Path,
+        ) -> None:
+            """Exclude disposable test and projected provider package trees."""
+            self._create_init_file(tmp_path / "src" / "pkg", self._VALID_INIT)
+            generated = tuple(
+                self._create_init_file(
+                    tmp_path / directory / "provider" / "pkg",
+                    self._VALID_TESTS_INIT,
+                )
+                for directory in (".agents-sync-home", ".test-tmp")
+            )
+
+            result = FlextInfraCodegenLazyInit(repository_root=tmp_path).plan_files()
+
+            tm.ok(result)
+            planned = {plan.path for plan in result.value.files}
+            for init_file in generated:
+                tm.that(planned, lacks=init_file)
+
     class TestsEdgeCases:
         """Edge cases for directory scanning."""
 
@@ -204,13 +251,15 @@ class TestsFlextInfraCodegenLazyInit:
             '__all__: list[str] = ["TestClass"]\n'
         )
 
-        def _create_init_file(self, directory: Path, content: str) -> Path:
+        @staticmethod
+        def _create_init_file(directory: Path, content: str) -> Path:
             directory.mkdir(parents=True, exist_ok=True)
             init_file = directory / "__init__.py"
             init_file.write_text(content, encoding="utf-8")
             return init_file
 
-        def test_empty_workspace_returns_zero(self, tmp_path: Path) -> None:
+        @staticmethod
+        def test_empty_workspace_returns_zero(tmp_path: Path) -> None:
             """Return zero changes for an empty workspace."""
             generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
             tm.that(generator.plan_files().success, eq=True)
@@ -233,13 +282,21 @@ class TestsFlextInfraCodegenLazyInit:
             result = generator.plan_files()
             tm.that(result.success, eq=True)
 
-        def test_execute_method_returns_flext_result(self, tmp_path: Path) -> None:
-            """Expose execution status through the public result contract."""
+        def test_plan_files_returns_flext_result(self, tmp_path: Path) -> None:
+            """Expose planning status through the public result contract.
+
+            Publication is owned by ``codegen conform``: the generation
+            transaction publishes ``plan_files()``, so a direct ``execute()``
+            is refused by design and the planning surface is the contract.
+            """
             self._create_init_file(tmp_path / "src" / "pkg", self._VALID_INIT)
             generator = FlextInfraCodegenLazyInit(repository_root=tmp_path)
-            result = generator.execute()
-            tm.that(result.success, eq=True)
-            tm.that(type(result.value).__name__, eq="bool")
+            tm.that(generator.execute().failure, eq=True)
+            planned = tm.ok(generator.plan_files())
+            tm.that(
+                all(plan.path.name == c.Infra.INIT_PY for plan in planned.files),
+                eq=True,
+            )
 
         def test_src_content_consistent_across_runs(self, tmp_path: Path) -> None:
             """Render identical source packages to identical bytes."""
@@ -257,6 +314,3 @@ class TestsFlextInfraCodegenLazyInit:
             tm.that(u.Tests.run_lazy_init(tmp_path / "b"), eq=0)
             content_b = (src_dir_b / "__init__.py").read_text(encoding="utf-8")
             tm.that(content_a, eq=content_b)
-
-
-__all__: list[str] = ["TestsFlextInfraCodegenLazyInit"]

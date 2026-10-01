@@ -17,16 +17,17 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
+from flext_core import r
 from flext_core.__version__ import FlextVersion
-
-from .. import c, r, s, u
-from ._mise_artifacts_publication import publish_file_plan
+from flext_infra import c, m, u
+from flext_infra.codegen._execution import FlextInfraCodegenExecutionBase
+from flext_infra.codegen._mise_artifacts_publication import FlextInfraMisePublication
 
 if TYPE_CHECKING:
     from .. import p
 
 
-class FlextInfraCodegenVersionFile(s[bool]):
+class FlextInfraCodegenVersionFile(FlextInfraCodegenExecutionBase[bool]):
     """Generate ``__version__.py`` for every workspace project.
 
     Projects whose derived version class name equals ``FlextVersion``
@@ -40,8 +41,13 @@ class FlextInfraCodegenVersionFile(s[bool]):
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Generate __version__.py for each discovered project."""
-        # NOTE (multi-agent, flext-p4s3.2 / agent: uv_overlay_owner): the exact
+        """Generate __version__.py for each discovered project.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
+        # The exact
         # source metadata model crosses the sole CLI rendering boundary.
         template_path = (
             Path(__file__).resolve().parent.parent
@@ -55,7 +61,7 @@ class FlextInfraCodegenVersionFile(s[bool]):
         generated = 0
         skipped = 0
 
-        for project_info in discovered.value:
+        for project_info in self._filtered_projects(discovered.value):
             metadata_result = u.Infra.read_project_metadata_result(project_info.path)
             if metadata_result.failure:
                 return r[bool].from_failure(metadata_result)
@@ -64,9 +70,6 @@ class FlextInfraCodegenVersionFile(s[bool]):
 
             if class_name == FlextVersion.__name__:
                 skipped += 1
-                continue
-
-            if self.project_filter and meta.project.name != self.project_filter:
                 continue
 
             src_pkg = project_info.path / "src" / meta.package_name
@@ -91,18 +94,22 @@ class FlextInfraCodegenVersionFile(s[bool]):
                 generated += 1
                 continue
 
-            planned = u.Infra.planned_file(
-                project_info.path,
-                target,
-                required=False,
+            before = u.Cli.atomic_read_binary_file_state(target, required=False)
+            if before.failure:
+                return r[bool].from_failure(before)
+            planned = m.Infra.CodegenFilePlan(
+                project=project_info.path,
+                path=target,
+                before=before.value,
                 desired_content=content.encode(c.Cli.ENCODING_DEFAULT),
                 desired_mode=0o644,
                 owner="codegen",
                 policy="full",
             )
-            if planned.failure:
-                return r[bool].from_failure(planned)
-            write_result = publish_file_plan(planned.value, phase="version-file")
+            write_result = FlextInfraMisePublication.publish_file_plan(
+                planned,
+                phase="version-file",
+            )
             if write_result.failure:
                 return r[bool].from_failure(write_result)
             generated += 1

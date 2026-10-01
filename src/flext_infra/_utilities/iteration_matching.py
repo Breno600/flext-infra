@@ -9,7 +9,7 @@ from __future__ import annotations
 import fnmatch
 from typing import TYPE_CHECKING
 
-from .._utilities._git.scope import FlextInfraUtilitiesGitScopeMixin
+from flext_infra._utilities._git.scope import FlextInfraUtilitiesGitScopeMixin
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -22,9 +22,18 @@ class FlextInfraUtilitiesIterationMatching(FlextInfraUtilitiesGitScopeMixin):
 
     @classmethod
     def iter_matching_files(
-        cls, root: Path, *, includes: t.StrSequence, excludes: t.StrSequence = ()
+        cls,
+        root: Path,
+        *,
+        includes: t.StrSequence,
+        excludes: t.StrSequence = (),
     ) -> t.SequenceOf[Path]:
-        """Return files in one scope through the canonical git-aware selection path."""
+        """Return files in one scope through the canonical git-aware selection path.
+
+        Returns:
+            Files in one scope through the canonical git-aware selection path.
+
+        """
         if not root.is_dir():
             return []
         root = root.resolve()

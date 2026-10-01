@@ -1,25 +1,29 @@
-"""Text-scan fixture pattern constants for FLEXT infra tests."""
+"""Text-scan fixture pattern constants for FLEXT infra tests.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 import re as _re
-from typing import TYPE_CHECKING, ClassVar, Final
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from flext_infra import t
 
 
 class TestsFlextInfraConstantsScanMixin:
-    """Log, scanner, and lazy-init export scan fixture patterns."""
+    """Log and scanner fixture patterns."""
 
-    LOG_NOISE_LINES: Final[t.StrSequence] = (
+    LOG_NOISE_LINES: ClassVar[t.StrSequence] = (
         "make[1]: Nothing to be done",
         "INFO: running tests",
         "warning: ignoring duplicate",
         "Success: 5 passed",
         "make[2]: Entering directory",
     )
-    LOG_ERROR_LINES: Final[t.StrSequence] = (
+    LOG_ERROR_LINES: ClassVar[t.StrSequence] = (
         "ERROR: something went wrong",
         "FAIL: test_foo failed",
         "error: compilation failed",
@@ -34,20 +38,17 @@ class TestsFlextInfraConstantsScanMixin:
         ("warning: ignoring duplicate", 0),
         ("Success: 5 passed", 0),
     )
-    LOG_ERROR_PREFIX_RE: ClassVar[t.Infra.RegexPattern] = _re.compile(
-        r"^(ERROR|FAIL|error|E\s+AssertionError|FAILED)"
+    LOG_ERROR_PREFIX_RE: ClassVar[t.RegexPattern] = _re.compile(
+        r"^(ERROR|FAIL|error|E\s+AssertionError|FAILED)",
     )
-    LOG_MIXED_SCENARIO_LINES: Final[t.StrSequence] = (
+    LOG_MIXED_SCENARIO_LINES: ClassVar[t.StrSequence] = (
         "make[1]: running",
         "ERROR: build failed",
         "INFO: post-build",
         "FAIL: test broken",
         "Total: 2 failed",
     )
-    SCANNER_HELLO_RE: Final[t.Infra.RegexPattern] = _re.compile(r"hello", _re.MULTILINE)
-    LAZY_INIT_EXPORT_NAME_RE: Final[t.Infra.RegexPattern] = _re.compile(
-        r'["\']([^"\']+)["\']'
-    )
+    SCANNER_HELLO_RE: ClassVar[t.RegexPattern] = _re.compile(r"hello", _re.MULTILINE)
 
 
 __all__: list[str] = ["TestsFlextInfraConstantsScanMixin"]

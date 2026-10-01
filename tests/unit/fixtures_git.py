@@ -36,6 +36,3 @@ def real_git_repo(tmp_path: Path) -> Path:
     u.Tests.initialize_git_repo(repo_root)
 
     return repo_root
-
-
-__all__: list[str] = ["real_git_repo"]

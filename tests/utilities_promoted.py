@@ -1,4 +1,8 @@
-"""Promoted-command test utilities for flext-infra."""
+"""Promoted-command test utilities for flext-infra.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -25,12 +29,17 @@ class TestsFlextInfraUtilitiesPromotedMixin:
         *,
         path: Path,
         mutates: bool = True,
-        params: t.VariadicTuple[m.Infra.Promoted.Param] = (),
+        params: t.VariadicTuple[m.Infra.PromotedParam] = (),
         verb: str = "probe",
         what: str = "all",
-    ) -> m.Infra.Promoted.Command:
-        """Build one real promoted command model for contract tests."""
-        return m.Infra.Promoted.Command(
+    ) -> m.Infra.PromotedCommand:
+        """Build one real promoted command model for contract tests.
+
+        Returns:
+            The resulting ``m.Infra.PromotedCommand``.
+
+        """
+        return m.Infra.PromotedCommand(
             verb=verb,
             what=what,
             domain="probe",

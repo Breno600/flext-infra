@@ -1,0 +1,23 @@
+id: ban-manual-protocol-outside-protocols
+valid:
+  - |
+    class Service(Base):
+        pass
+  - |
+    class Plain:
+        pass
+  - |
+    def build() -> type:
+        class Local(Protocol):
+            def run(self) -> None: ...
+        return Local
+invalid:
+  - |
+    class Reader(Protocol):
+        def read(self) -> str: ...
+  - |
+    class Box(Protocol[T]):
+        def get(self) -> T: ...
+  - |
+    class Writer(typing.Protocol):
+        def write(self, data: str) -> None: ...

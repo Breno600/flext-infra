@@ -1,15 +1,18 @@
-"""Documentation auditor service."""
+"""Documentation auditor service.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, override
 
 from flext_infra import m, u
-
-from ._auditor_checks import FlextInfraDocAuditorChecksMixin
-from ._auditor_report import FlextInfraDocAuditorReportMixin
-from .auditor_mixin import FlextInfraDocAuditorMixin
-from .base import FlextInfraDocServiceBase
+from flext_infra.docs._auditor_checks import FlextInfraDocAuditorChecksMixin
+from flext_infra.docs._auditor_report import FlextInfraDocAuditorReportMixin
+from flext_infra.docs.auditor_mixin import FlextInfraDocAuditorMixin
+from flext_infra.docs.base import FlextInfraDocServiceBase
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -23,20 +26,21 @@ class FlextInfraDocAuditor(
     FlextInfraDocAuditorChecksMixin,
     FlextInfraDocAuditorReportMixin,
 ):
-    """Audit governed docs scopes; every finding or coverage breach fails.
+    """Audit governed docs scopes; every finding is reported.
 
-    There is no permissive mode or issue budget. ``docstring_min`` is an
-    additional floor, never permission to accept missing-docstring findings.
+    There is no issue budget and no findings are dropped: the report always
+    carries the complete issue list and every finding fails the phase.
     """
 
     checks: Annotated[
-        str, m.Field(description="Comma-separated audit checks (default: all)")
+        str,
+        m.Field(description="Comma-separated audit checks (default: all)"),
     ] = "all"
 
     docstring_min: Annotated[
         float | None,
         m.Field(
-            description="Minimum docstring coverage percent; breach fails the audit"
+            description="Minimum docstring coverage percent; breach fails the audit",
         ),
     ] = None
 
@@ -48,12 +52,18 @@ class FlextInfraDocAuditor(
         output_dir: Path | str | None = None,
         params: m.Infra.AuditScopeParams | None = None,
     ) -> p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]:
-        """Audit root and governed project docs scopes."""
+        """Audit root and governed project docs scopes.
+
+        Returns:
+            The resulting ``p.Result[t.SequenceOf[m.Infra.DocsPhaseReport]]``.
+
+        """
         resolved_params = (
             params
             if params is not None
             else m.Infra.AuditScopeParams(
-                check=self.checks, docstring_min=self.docstring_min
+                check=self.checks,
+                docstring_min=self.docstring_min,
             )
         )
         return self.run_scoped_docs(
@@ -64,9 +74,17 @@ class FlextInfraDocAuditor(
         )
 
     def audit_scope(
-        self, scope: m.Infra.DocScope, *, params: m.Infra.AuditScopeParams
+        self,
+        scope: m.Infra.DocScope,
+        *,
+        params: m.Infra.AuditScopeParams,
     ) -> m.Infra.DocsPhaseReport:
-        """Audit one scope and persist the standard reports."""
+        """Audit one scope and persist the standard reports.
+
+        Returns:
+            The resulting ``m.Infra.DocsPhaseReport``.
+
+        """
         checks = sorted(self.resolve_checks(params.check))
         issues = self._collect_issues(scope, checks)
         docstring_coverage = (
@@ -99,7 +117,12 @@ class FlextInfraDocAuditor(
 
     @override
     def execute(self) -> p.Result[bool]:
-        """Execute the configured docs audit flow."""
+        """Execute the configured docs audit flow.
+
+        Returns:
+            The resulting ``p.Result[bool]``.
+
+        """
         return self._propagate_phase_outcome(
             "audit",
             self.audit(
@@ -107,7 +130,8 @@ class FlextInfraDocAuditor(
                 projects=self.selected_projects,
                 output_dir=self.output_dir,
                 params=m.Infra.AuditScopeParams(
-                    check=self.checks, docstring_min=self.docstring_min
+                    check=self.checks,
+                    docstring_min=self.docstring_min,
                 ),
             ),
             failure_predicate=lambda report: not report.passed,

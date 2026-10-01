@@ -1,4 +1,8 @@
-"""Root-owned guide projections through the public immutable docs planner."""
+"""Root-owned guide projections through the public immutable docs planner.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -7,6 +11,7 @@ from typing import TYPE_CHECKING
 from flext_tests import tm
 
 from flext_core import r
+from flext_infra import c
 from flext_infra.docs.generator import FlextInfraDocGenerator
 from tests import m, u
 
@@ -17,12 +22,15 @@ if TYPE_CHECKING:
 class TestsFlextInfraDocsGeneratorGuides:
     """Root-owned guide projections through the public immutable docs planner."""
 
+    @staticmethod
     def test_root_guide_change_reaches_member_and_one_pass_fixed_point(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Render current root bytes and the desired index without a second pass."""
         workspace, generator = u.Tests.docs_workspace_generator(
-            tmp_path, project_names=("flext-a",), selected_projects=["flext-a"]
+            tmp_path,
+            project_names=("flext-a",),
+            selected_projects=["flext-a"],
         )
         source = workspace / "docs/guides/operator.md"
         source.write_text("# Operator\n\nFirst body.\n", encoding="utf-8")
@@ -40,8 +48,8 @@ class TestsFlextInfraDocsGeneratorGuides:
         tm.that(destination.exists(), eq=False)
         tm.ok(
             u.Tests.materialize_codegen_plans(
-                r[tuple[m.Infra.CodegenFilePlan, ...]].ok(plans)
-            )
+                r[tuple[m.Infra.CodegenFilePlan, ...]].ok(plans),
+            ),
         )
         index = destination.parent / "README.md"
         tm.that(index.read_text(encoding="utf-8"), has="(operator.md)")
@@ -71,15 +79,19 @@ class TestsFlextInfraDocsGeneratorGuides:
             eq=False,
         )
         tm.that(
-            source.read_text(encoding="utf-8"), eq="# Operator\n\nChanged root body.\n"
+            source.read_text(encoding="utf-8"),
+            eq="# Operator\n\nChanged root body.\n",
         )
 
+    @staticmethod
     def test_removed_root_guide_plans_only_exact_owned_member_deletion(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Retain custom and differently owned guides; journal only our stale target."""
         workspace, generator = u.Tests.docs_workspace_generator(
-            tmp_path, project_names=("flext-a",), selected_projects=["flext-a"]
+            tmp_path,
+            project_names=("flext-a",),
+            selected_projects=["flext-a"],
         )
         source = workspace / "docs/guides/operator.md"
         source.write_text("# Operator\n\nBody.\n", encoding="utf-8")
@@ -89,7 +101,8 @@ class TestsFlextInfraDocsGeneratorGuides:
         custom.write_text("# Custom\n\nKeep.\n", encoding="utf-8")
         foreign = guides / "foreign.md"
         foreign.write_text(
-            "<!-- AUTO-GENERATED FILE by another owner -->\n", encoding="utf-8"
+            "<!-- AUTO-GENERATED FILE by another owner -->\n",
+            encoding="utf-8",
         )
         mismatched = guides / "mismatched.md"
         mismatched.write_bytes((guides / "operator.md").read_bytes())
@@ -101,14 +114,15 @@ class TestsFlextInfraDocsGeneratorGuides:
         tm.that(deleted.desired_content, eq=None)
         tm.that(deleted.desired_mode, eq=None)
         tm.that(
-            any(state.path == deleted.path for state in deleted.source_states), eq=True
+            any(state.path == deleted.path for state in deleted.source_states),
+            eq=True,
         )
         tm.that(any(plan.path in retained for plan in plans), eq=False)
         tm.that(deleted.path.exists(), eq=True)
         tm.ok(
             u.Tests.materialize_codegen_plans(
-                r[tuple[m.Infra.CodegenFilePlan, ...]].ok(plans)
-            )
+                r[tuple[m.Infra.CodegenFilePlan, ...]].ok(plans),
+            ),
         )
         tm.that(deleted.path.exists(), eq=False)
         tm.that({path: path.read_bytes() for path in retained}, eq=retained)
@@ -123,12 +137,15 @@ class TestsFlextInfraDocsGeneratorGuides:
             eq=False,
         )
 
+    @staticmethod
     def test_root_guide_cannot_overwrite_protected_custom_collision(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Reject a filename collision without adopting or overwriting custom content."""
         workspace, generator = u.Tests.docs_workspace_generator(
-            tmp_path, project_names=("flext-a",), selected_projects=["flext-a"]
+            tmp_path,
+            project_names=("flext-a",),
+            selected_projects=["flext-a"],
         )
         source = workspace / "docs/guides/operator.md"
         source.write_text("# Canonical\n", encoding="utf-8")
@@ -142,12 +159,76 @@ class TestsFlextInfraDocsGeneratorGuides:
         tm.that(prepared.error or "", has="protected custom guide")
         tm.that(destination.read_text(encoding="utf-8"), eq="# Custom\n")
 
+    @staticmethod
+    def test_previous_generated_guide_header_is_adopted_by_current_owner(
+        tmp_path: Path,
+    ) -> None:
+        """Test previous generated guide header is adopted by current owner."""
+        workspace, generator = u.Tests.docs_workspace_generator(
+            tmp_path,
+            project_names=("flext-a",),
+            selected_projects=["flext-a"],
+        )
+        source = workspace / "docs/guides/operator.md"
+        source.write_text("# Operator\n\nCurrent.\n", encoding="utf-8")
+        destination = workspace / "flext-a/docs/guides/operator.md"
+        destination.parent.mkdir(parents=True)
+        destination.write_text(
+            "<!-- AUTO-GENERATED FILE — regenerate through `make gen` from the workspace root. -->\n"
+            "<!-- Source of truth: `docs/guides/operator.md`; adjust that source, never this projection. -->\n\n"
+            "# flext-a - Operator\n\n> Project profile: `flext-a`\n\nPrevious.\n",
+            encoding="utf-8",
+        )
+
+        plan = next(
+            item
+            for item in u.Tests.plan_docs_bundle(generator)
+            if item.path == destination
+        )
+
+        tm.that(
+            plan.desired_content or b"",
+            has=b"`<workspace-root>/docs/guides/operator.md`",
+        )
+
+    @staticmethod
+    def test_legacy_generated_guide_header_is_adopted_by_current_owner(
+        tmp_path: Path,
+    ) -> None:
+        """Adopt only the historical generator marker, never unmarked custom text."""
+        workspace, generator = u.Tests.docs_workspace_generator(
+            tmp_path,
+            project_names=("flext-a",),
+            selected_projects=["flext-a"],
+        )
+        source = workspace / "docs/guides/operator.md"
+        source.write_text("# Operator\n\nCurrent.\n", encoding="utf-8")
+        destination = workspace / "flext-a/docs/guides/operator.md"
+        destination.parent.mkdir(parents=True)
+        destination.write_text(
+            "<!-- AUTO-GENERATED FILE — regenerate through `make gen` from the workspace root. -->\n"
+            "<!-- Source of truth: `docs/guides/operator.md`; adjust that source, never this projection. -->\n\n"
+            "# flext-a - Operator\n\n> Project profile: `flext-a`\n\nPrevious.\n",
+            encoding="utf-8",
+        )
+
+        plan = next(
+            item
+            for item in u.Tests.plan_docs_bundle(generator)
+            if item.path == destination
+        )
+
+        tm.that(plan.desired_content or b"", has=b"Current.")
+
+    @staticmethod
     def test_root_guide_snapshot_change_rejects_prepared_bundle(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Keep root inputs behind the same source barrier as destination ownership."""
         workspace, generator = u.Tests.docs_workspace_generator(
-            tmp_path, project_names=("flext-a",), selected_projects=["flext-a"]
+            tmp_path,
+            project_names=("flext-a",),
+            selected_projects=["flext-a"],
         )
         source = workspace / "docs/guides/operator.md"
         source.write_text("# Operator\n", encoding="utf-8")
@@ -157,15 +238,18 @@ class TestsFlextInfraDocsGeneratorGuides:
         planned = generator.plan_files(bundle)
 
         tm.fail(planned)
-        tm.that(planned.error or "", has="docs source changed during planning")
+        tm.that(planned.error or "", has=c.Infra.DOCS_SOURCE_STATE_RACE_MARKER)
         tm.that((workspace / "flext-a/docs/guides/operator.md").exists(), eq=False)
 
+    @staticmethod
     def test_guide_parent_identity_change_rejects_prepared_bundle(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Replacing the root guide parent must not preserve authority via same bytes."""
         workspace, generator = u.Tests.docs_workspace_generator(
-            tmp_path, project_names=("flext-a",), selected_projects=["flext-a"]
+            tmp_path,
+            project_names=("flext-a",),
+            selected_projects=["flext-a"],
         )
         source = workspace / "docs/guides/operator.md"
         source.write_text("# Operator\n", encoding="utf-8")
@@ -178,14 +262,17 @@ class TestsFlextInfraDocsGeneratorGuides:
         planned = generator.plan_files(bundle)
 
         tm.fail(planned)
-        tm.that(planned.error or "", has="docs source changed during planning")
+        tm.that(planned.error or "", has=c.Infra.DOCS_SOURCE_STATE_RACE_MARKER)
 
+    @staticmethod
     def test_stale_guide_ownership_change_rejects_prepared_delete(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Do not delete a member guide converted to custom content after preparation."""
         workspace, generator = u.Tests.docs_workspace_generator(
-            tmp_path, project_names=("flext-a",), selected_projects=["flext-a"]
+            tmp_path,
+            project_names=("flext-a",),
+            selected_projects=["flext-a"],
         )
         source = workspace / "docs/guides/operator.md"
         source.write_text("# Operator\n", encoding="utf-8")
@@ -198,16 +285,18 @@ class TestsFlextInfraDocsGeneratorGuides:
         planned = generator.plan_files(bundle)
 
         tm.fail(planned)
-        tm.that(planned.error or "", has="docs source changed during planning")
+        tm.that(planned.error or "", has=c.Infra.DOCS_SOURCE_STATE_RACE_MARKER)
         tm.that(destination.read_text(encoding="utf-8"), eq="# Now custom\n")
 
+    @staticmethod
     def test_standalone_guides_never_read_parent_or_project_their_own_heading(
-        self, tmp_path: Path
+        tmp_path: Path,
     ) -> None:
         """Standalone has no implicit umbrella context, even beside root guides."""
         workspace = u.Tests.create_docs_workspace(tmp_path, project_names=("flext-a",))
         (workspace / "docs/guides/operator.md").write_text(
-            "# Parent\n", encoding="utf-8"
+            "# Parent\n",
+            encoding="utf-8",
         )
         project = workspace / "flext-a"
         guide = project / "docs/guides/operator.md"
@@ -220,7 +309,8 @@ class TestsFlextInfraDocsGeneratorGuides:
 
         tm.that(any(plan.path == guide for plan in (*first, *second)), eq=False)
         tm.that(
-            guide.read_text(encoding="utf-8"), eq="# Local\n\nKeep local content.\n"
+            guide.read_text(encoding="utf-8"),
+            eq="# Local\n\nKeep local content.\n",
         )
         tm.that(
             any(
@@ -230,6 +320,3 @@ class TestsFlextInfraDocsGeneratorGuides:
             ),
             eq=False,
         )
-
-
-__all__: list[str] = ["TestsFlextInfraDocsGeneratorGuides"]

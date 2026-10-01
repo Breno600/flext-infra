@@ -1,4 +1,8 @@
-"""Reject dead governance skill paths and conflicting authority sequences."""
+"""Reject dead governance skill paths and conflicting authority sequences.
+
+Copyright (c) 2026 FLEXT Team. All rights reserved.
+SPDX-License-Identifier: MIT
+"""
 
 from __future__ import annotations
 
@@ -21,8 +25,8 @@ class TestsFlextInfraGovernanceAuthority:
                 u.Cli.capture(
                     ["git", "rev-parse", "--path-format=absolute", "--git-common-dir"],
                     cwd=self.ROOT,
-                )
-            )
+                ),
+            ),
         )
 
     def _repository_root(self) -> Path:
@@ -42,11 +46,12 @@ class TestsFlextInfraGovernanceAuthority:
                 u.Cli.capture(
                     ["git", "rev-parse", "--path-format=absolute", "--show-toplevel"],
                     cwd=resolve_root,
-                )
-            )
+                ),
+            ),
         )
 
     def test_prompt_skills_resolve_to_existing_paths(self) -> None:
+        """Test prompt skills resolve to existing paths."""
         prompts = self.ROOT / ".github" / "prompts"
         law_link = "../../.agents/skills/flext-law/SKILL.md"
         for prompt in prompts.glob("*.prompt.md"):
@@ -62,8 +67,9 @@ class TestsFlextInfraGovernanceAuthority:
                 assert target.exists(), f"{prompt.name} dead skill path: {law_link}"
 
     def test_markdownlint_does_not_suppress_strict_rules(self) -> None:
+        """Test markdownlint does not suppress strict rules."""
         config = u.Tests.json_payload(
-            (self.ROOT / ".markdownlint.json").read_text(encoding="utf-8")
+            (self.ROOT / ".markdownlint.json").read_text(encoding="utf-8"),
         )
         assert config.get("MD012") is not False
         assert config.get("MD050") is not False
@@ -78,10 +84,11 @@ class TestsFlextInfraGovernanceAuthority:
         # formatter chooses, so a literal match answers about the wrap and not
         # about the law. Collapse runs of whitespace and assert the sentence
         # itself.
+        """Test flext law requires automated structural rewires."""
         law = " ".join(
             (self._repository_root() / ".agents/skills/flext-law/SKILL.md")
             .read_text(encoding="utf-8")
-            .split()
+            .split(),
         )
 
         for required in (
@@ -94,6 +101,3 @@ class TestsFlextInfraGovernanceAuthority:
             "Repetitive manual call-site editing is prohibited",
         ):
             tm.that(law, has=required)
-
-
-__all__: list[str] = ["TestsFlextInfraGovernanceAuthority"]

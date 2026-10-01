@@ -1,11 +1,11 @@
 ---
 paths:
-- commands/*.md
-- config/governance.json
-- evals/**
-- rules/**/*.md
-- skills/**
-- skills.lock.json
+  - commands/*.md
+  - config/governance.json
+  - evals/**
+  - rules/**/*.md
+  - skills/**
+  - skills.lock.json
 ---
 
 # Compose governance through one owner per behavior
@@ -18,19 +18,18 @@ Classify every surviving statement before editing it:
 - deterministic validation, discovery, or publication belongs to typed runtime;
 - provider-specific output is a generated projection.
 
-Reference the selected owner instead of copying its contract into adjacent
-artifacts. A mixed source is split by responsibility; its historical filename,
-type, wording, or directory does not survive as an alias.
+Reference the selected owner instead of copying its contract into adjacent artifacts. A
+mixed source is split by responsibility; its historical filename, type, wording, or
+directory does not survive as an alias.
 
-External and historical artifacts are evidence only. Before adopting behavior,
-prove its current requirement and consumer, provenance and license, executable
-or generated resources, activation boundary, effects, failure contract, and
-overlap with canonical owners. Extend the current owner when it already covers
-the behavior. A distinct identity requires an independently recurring outcome
-and material semantic evaluation.
+External and historical artifacts are evidence only. Before adopting behavior, prove its
+current requirement and consumer, provenance and license, executable or generated
+resources, activation boundary, effects, failure contract, and overlap with canonical
+owners. Extend the current owner when it already covers the behavior. A distinct
+identity requires an independently recurring outcome and material semantic evaluation.
 
-Reject foreign updaters and runtimes, fallback, retry, compatibility, partial
-execution, copied projections, private paths, and behavior with no current
-consumer. After convergence, update the ownership map, evaluations, inventory,
-documentation, and projections through their canonical owners and prove a
-second generation makes no change.
+Reject foreign updaters and runtimes, fallback, retry, compatibility, partial execution,
+copied projections, private paths, and behavior with no current consumer. After
+convergence, update the ownership map, evaluations, inventory, documentation, and
+projections through their canonical owners and prove a second generation makes no
+change.
