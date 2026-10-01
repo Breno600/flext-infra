@@ -65,6 +65,10 @@ Infra:
       # The embedded aube installer preserves the locked dependency graph;
       # the approved package lifecycle is declared in the mise projection.
       npm_package_manager: aube
+      # False keeps Python resolution and installation on precompiled builds:
+      # compiling from source selected releases ahead of their published
+      # builds and stalled the fleet bootstrap (operator 2026-10-01).
+      python_compile: false
       gitleaks_version: latest
       kubeconform_version: latest
       # Projection: .mise.toml [settings] lockfile / locked and [tool_config] locked.
@@ -321,11 +325,10 @@ Infra:
         discovery_scope: none
 
     make:
-      # Physical workspace environments live beside the checkout, one
-      # directory per absolute runtime path (a member inside a workspace
-      # shares the workspace environment; standalone and linked worktrees
-      # own theirs).
-      runtime_environment_directory: ".flext-venvs"
+      # Physical workspace environments live beside the checkout so a linked
+      # worktree shares one project-keyed environment instead of an in-tree
+      # duplicate (runtime_environment_dir derives the same path).
+      runtime_environment_directory: .flext-venvs
       examples_timeout_seconds: 120
       submodule_timeout_seconds: 120
       # Operator 2026-09-08: ruff is the formatting and autofix rule.
