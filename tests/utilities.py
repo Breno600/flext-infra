@@ -98,7 +98,6 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             package: bool = True,
             extra_verbs: t.VariadicTuple[m.Infra.MakeVerbSpec] = (),
             script_dispatch: m.Infra.ScriptDispatchSpec | None = None,
-            flext_ref: str | None = None,
         ) -> t.Pair[Path, Path]:
             """Build the generated Make and activation fixture consumed by real verbs."""
             role = c.Infra.MakeProfile(profile.value)
@@ -160,10 +159,7 @@ class TestsFlextInfraUtilities(FlextTestsUtilities, FlextInfraUtilities):
             repository_root = project_root
             workspace = u.Tests.workspace_spec(
                 repository,
-                project=u.Tests.project_spec(
-                    "fixture-project", cli_module=False, flext_ref=flext_ref
-                ),
-                flext_ref=flext_ref,
+                project=u.Tests.project_spec("fixture-project", cli_module=False),
             )
             request = u.Tests.conform_request(
                 project_root,
