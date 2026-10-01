@@ -45,20 +45,22 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         digest = hashlib.sha256(fingerprint.encode()).hexdigest()[:12]
         return f"toolchain-{digest}"
 
-    def suite_stop_monotonic(self) -> float:
+    def suite_stop_monotonic(self, *, serial: bool = False) -> float:
         """Derive the graceful suite stop instant from the entrypoint deadline.
 
         Selection and inventory consume the same clock, so the instant leaves
         exactly the typed stop reserve before the process deadline: pytest
         ends its own session there and testmon persists what ran, instead of
-        the deadline SIGTERM discarding every unflushed result.
+        the deadline SIGTERM discarding every unflushed result. Serial runs
+        keep at most one item in flight, so their reserve is smaller.
         """
         pytest = config.Infra.tooling.tools.pytest
-        return (
-            self.started_at_monotonic
-            + pytest.run_timeout_seconds
-            - pytest.suite_stop_reserve_seconds
+        reserve = (
+            pytest.serial_suite_stop_reserve_seconds
+            if serial
+            else pytest.suite_stop_reserve_seconds
         )
+        return self.started_at_monotonic + pytest.run_timeout_seconds - reserve
 
     def ci_excluded_markers(
         self,
@@ -175,8 +177,14 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             workers = str(min(budget, len(selection)))
         else:
             workers = str(budget)
+        # A serial dispatch keeps one item in flight, so its drain reserve is
+        # the single-item budget instead of the xdist two-deep worst case.
+        serial = workers in {"0", "1"}
+        if serial:
+            workers = "0"
         return self._suite_argv(
             report_dir,
+            serial=serial,
             targets=(
                 (str(self.target),)
                 if (
@@ -219,6 +227,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         workers = "0" if serialize else str(self.parallel_worker_budget(pytest))
         return self._suite_argv(
             report_dir,
+            serial=workers == "0",
             targets=(str(self.target),),
             workers=workers,
             trailing=(
@@ -235,6 +244,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         self,
         report_dir: Path,
         *,
+        serial: bool,
         targets: t.StrSequence,
         workers: str,
         trailing: t.StrSequence,
@@ -249,7 +259,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             *pytest.progress_args,
             *pytest.report_args,
             f"--timeout={pytest.case_timeout_seconds}",
-            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic()!r}",
+            f"{c.Infra.PYTEST_SUITE_STOP_OPTION}={self.suite_stop_monotonic(serial=serial)!r}",
             f"--maxfail={pytest.max_failures}",
             f"--junitxml={report_dir / 'junit.xml'}",
             f"--report-log={report_dir / 'events.jsonl'}",

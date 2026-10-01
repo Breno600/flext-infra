@@ -5,9 +5,11 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
 from flext_tests import tm
 
 from flext_infra import c, m, u
+from tests.unit.validate.pytest_runner_support import runner_for
 
 
 class TestsFlextInfraPytestCollectionManifest:
@@ -68,3 +70,20 @@ class TestsFlextInfraPytestCollectionManifest:
             target.read_text(encoding="utf-8")
         )
         tm.that(manifest.node_ids, eq=("tests/test_sample.py::test_sample",))
+
+    @pytest.mark.slow
+    def test_missing_collection_manifest_preserves_file_failure(
+        self, cached_runner_project: Path
+    ) -> None:
+        (cached_runner_project / "conftest.py").write_text(
+            "from pathlib import Path\n\n"
+            "def pytest_sessionfinish(session):\n"
+            "    target = session.config.getoption(\n"
+            f"        {c.Infra.PYTEST_COLLECTION_MANIFEST_OPTION!r})\n"
+            "    if target:\n        Path(target).unlink()\n",
+            encoding="utf-8",
+        )
+        runner = runner_for(cached_runner_project)
+
+        with pytest.raises(FileNotFoundError, match=r"testmon-selection\.json"):
+            runner.execute()
