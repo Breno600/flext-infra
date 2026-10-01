@@ -662,6 +662,11 @@ Infra:
         # Slow marks are a narrow integration-harness budget, not permission
         # for an unbounded test. Cases that exceed it require owner repair.
         slow-timeout-seconds: 30
+        # gate-budget rule: the run budget covers the budgeted phase only;
+        # items carrying this native pytest marker run in their own phase, each
+        # within slow-timeout-seconds (pytest-timeout marker), selected with the
+        # native -m expression.
+        slow-marker: slow
         # A local suite that cannot finish within two minutes is a performance
         # defect. The generated process wall is derived from this value and the
         # termination grace by the typed model; no second timeout source exists.
