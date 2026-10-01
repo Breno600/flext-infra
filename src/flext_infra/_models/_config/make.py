@@ -311,7 +311,33 @@ class FlextInfraConfigModelsMake:
                 raise ValueError(msg)
             return self
 
-    class TestmonCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
+    class ExternalCacheDirectorySpec(FlextInfraConfigModelsContract.ConfigContract):
+        """External-cache path pair every tool cache spec owns identically."""
+
+        home_cache_directory: Annotated[
+            Path, m.Field(description="Standard cache directory below the user home")
+        ]
+        external_storage_directory: Annotated[
+            Path, m.Field(description="FLEXT-owned directory below the cache home")
+        ]
+
+        @u.model_validator(mode="after")
+        def require_relative_cache_directories(self) -> Self:
+            """Keep both cache directories normalized and repository-relative."""
+            for name, path in (
+                ("home_cache_directory", self.home_cache_directory),
+                ("external_storage_directory", self.external_storage_directory),
+            ):
+                if path.is_absolute() or any(
+                    part in {"", ".", ".."} for part in path.parts
+                ):
+                    msg = f"cache {name} must be normalized and relative"
+                    raise ValueError(msg)
+            return self
+
+    class TestmonCacheSpec(
+        ExternalCacheDirectorySpec, FlextInfraConfigModelsContract.ConfigContract
+    ):
         """Persistent pytest-testmon database and runner paths."""
 
         database_filename: Annotated[
@@ -328,12 +354,6 @@ class FlextInfraConfigModelsMake:
         user_home_environment_variable: Annotated[
             FlextInfraConstantsMake.PytestCacheEnvironment,
             m.Field(description="User home variable for the XDG default"),
-        ]
-        home_cache_directory: Annotated[
-            Path, m.Field(description="Standard cache directory below the user home")
-        ]
-        external_storage_directory: Annotated[
-            Path, m.Field(description="FLEXT-owned directory below the cache home")
         ]
         target_directory: Annotated[
             Path, m.Field(description="Repository-relative pytest target")
@@ -364,15 +384,6 @@ class FlextInfraConfigModelsMake:
             ):
                 if actual != expected:
                     msg = f"testmon cache {name} must be {expected.value}"
-                    raise ValueError(msg)
-            for name, path in (
-                ("home_cache_directory", self.home_cache_directory),
-                ("external_storage_directory", self.external_storage_directory),
-            ):
-                if path.is_absolute() or any(
-                    part in {"", ".", ".."} for part in path.parts
-                ):
-                    msg = f"testmon cache {name} must be normalized and relative"
                     raise ValueError(msg)
             if Path(self.database_filename).name != self.database_filename:
                 msg = "testmon cache database_filename must be a filename"
@@ -435,7 +446,9 @@ class FlextInfraConfigModelsMake:
                 raise ValueError(msg)
             return self
 
-    class MypyCacheSpec(FlextInfraConfigModelsContract.ConfigContract):
+    class MypyCacheSpec(
+        ExternalCacheDirectorySpec, FlextInfraConfigModelsContract.ConfigContract
+    ):
         """Project-keyed shared Mypy cache: one analysis per project, reused across relocks."""
 
         cache_environment_variable: Annotated[
@@ -496,15 +509,6 @@ class FlextInfraConfigModelsMake:
             ):
                 if actual != expected:
                     msg = f"mypy cache {name} must be {expected.value}"
-                    raise ValueError(msg)
-            for name, path in (
-                ("home_cache_directory", self.home_cache_directory),
-                ("external_storage_directory", self.external_storage_directory),
-            ):
-                if path.is_absolute() or any(
-                    part in {"", ".", ".."} for part in path.parts
-                ):
-                    msg = f"mypy cache {name} must be normalized and relative"
                     raise ValueError(msg)
             return self
 
