@@ -39,10 +39,10 @@ endif
 endif
 
 # GITHUB_TOKEN is the one GitHub credential variable every tool reads (mise,
-# gh, uv). The credential is optional: local operations need none, and the
-# network bootstrap fills an absent one from gh. A tool-scoped alias of the same
-# credential never reaches a recipe, where it would shadow or outrank it. The
-# value stays in the environment, never in a rendered recipe.
+# gh, uv), and only the caller's environment supplies it: no recipe reads a
+# stored credential (gh, keyring, netrc) to fill an absent one. A tool-scoped
+# alias of the same credential never reaches a recipe, where it would shadow or
+# outrank it. The value stays in the environment, never in a rendered recipe.
 export GITHUB_TOKEN
 unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN
 
@@ -240,12 +240,7 @@ caller_github_token="$${GITHUB_TOKEN:-}"; \
 caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
 caller_flext_mypy_profile_output="$${FLEXT_MYPY_PROFILE_OUTPUT:-}"; \
 caller_mise_version="$${MISE_VERSION:-}"; \
-if [ -z "$$caller_github_token" ] \
-		&& command -v gh >/dev/null 2>&1 \
-		&& gh_auth_token="$$(gh auth token 2>/dev/null)"; then \
-		caller_github_token="$$gh_auth_token"; \
-	fi; \
-	mise_pin_file="$(MISE_VERSION_PIN)"; \
+mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \
 		mise_pin=$$(awk '!/^[[:space:]]*(#|$$)/ { lines++; release = $$0 } END { if (lines == 1) print release }' "$$mise_pin_file"); \
@@ -468,12 +463,7 @@ caller_github_token="$${GITHUB_TOKEN:-}"; \
 caller_mise_http_timeout="$${MISE_HTTP_TIMEOUT:-}"; \
 caller_flext_mypy_profile_output="$${FLEXT_MYPY_PROFILE_OUTPUT:-}"; \
 caller_mise_version="$${MISE_VERSION:-}"; \
-if [ -z "$$caller_github_token" ] \
-		&& command -v gh >/dev/null 2>&1 \
-		&& gh_auth_token="$$(gh auth token 2>/dev/null)"; then \
-		caller_github_token="$$gh_auth_token"; \
-	fi; \
-	mise_pin_file="$(MISE_VERSION_PIN)"; \
+mise_pin_file="$(MISE_VERSION_PIN)"; \
 	mise_pin=; \
 	if [ -f "$$mise_pin_file" ]; then \
 		mise_pin=$$(awk '!/^[[:space:]]*(#|$$)/ { lines++; release = $$0 } END { if (lines == 1) print release }' "$$mise_pin_file"); \

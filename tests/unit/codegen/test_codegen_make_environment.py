@@ -913,6 +913,28 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(makefile, has="$(SELF_MAKE) gen; \\")
         tm.that(makefile, lacks=["gen > /dev/null", "could not be staged"])
 
+    @pytest.mark.parametrize("profile", tuple(c.Infra.MakeProfile))
+    def test_bootstrap_reads_only_the_caller_github_token(
+        self,
+        tmp_path: Path,
+        profile: c.Infra.MakeProfile,
+    ) -> None:
+        """The one credential variable comes from the caller, never a store.
+
+        An absent ``GITHUB_TOKEN`` leaves mise anonymous; no recipe asks gh, a
+        keyring or netrc for a stored credential to fill it.
+        """
+        project_root, _repository_root = u.Tests.render_make_environment(
+            tmp_path,
+            profile,
+            bootstrap=True,
+        )
+        makefile = (project_root / c.Infra.MAKEFILE_FILENAME).read_text(
+            encoding="utf-8",
+        )
+        tm.that(makefile, has="export GITHUB_TOKEN")
+        tm.that(makefile, lacks=["gh auth", "gh_auth_token"])
+
     @staticmethod
     def test_public_gate_fails_closed_before_managed_environment_exists(
         tmp_path: Path,

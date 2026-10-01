@@ -91,10 +91,10 @@ endif
 endif
 
 # GITHUB_TOKEN is the one GitHub credential variable every tool reads (mise,
-# gh, uv). The credential is optional: local operations need none, and the
-# network bootstrap fills an absent one from gh. A tool-scoped alias of the same
-# credential never reaches a recipe, where it would shadow or outrank it. The
-# value stays in the environment, never in a rendered recipe.
+# gh, uv), and only the caller's environment supplies it: no recipe reads a
+# stored credential (gh, keyring, netrc) to fill an absent one. A tool-scoped
+# alias of the same credential never reaches a recipe, where it would shadow or
+# outrank it. The value stays in the environment, never in a rendered recipe.
 export GITHUB_TOKEN
 unexport GH_TOKEN MISE_GITHUB_TOKEN GITHUB_API_TOKEN
 

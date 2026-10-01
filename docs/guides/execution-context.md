@@ -161,11 +161,11 @@ never authorizes broad exclusions or changes to the native payload.
 ## Bootstrap credentials
 
 The GitHub credential is optional and has one variable, `GITHUB_TOKEN`, which mise,
-gh, and uv all read. When the caller sets it, every recipe receives it. When the caller
-does not, the network bootstrap of `make setup` and `make upg` asks an installed,
-authenticated `gh` for the token it stores (`gh auth token`: its configuration, then
-its keyring); without gh or its credential, mise runs anonymously. Make unexports the tool-scoped aliases `GH_TOKEN`, `MISE_GITHUB_TOKEN`,
-and `GITHUB_API_TOKEN` from every recipe, because an alias of the same credential would
+gh, and uv all read. Only the caller's environment supplies it: when the caller sets
+it, every recipe receives it; when the caller does not, mise runs anonymously. No
+recipe reads a stored credential (`gh auth token`, a keyring, netrc) to fill an absent
+one. Make unexports the tool-scoped aliases `GH_TOKEN`, `MISE_GITHUB_TOKEN`, and
+`GITHUB_API_TOKEN` from every recipe, because an alias of the same credential would
 shadow or outrank `GITHUB_TOKEN`. An invalid token preserves the backend's native
 error, without an anonymous retry or source switch. CI jobs inject `GITHUB_TOKEN`;
 containers receive the variable or a BuildKit secret explicitly.
