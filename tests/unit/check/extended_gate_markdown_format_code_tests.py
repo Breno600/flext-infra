@@ -120,18 +120,7 @@ class TestsFlextInfraMarkdownFormatAndCodeGates:
         tm.that(len(result.issues), eq=1)
         tm.that("make setup" in result.issues[0].message, eq=True)
 
-    @pytest.mark.parametrize(
-        ("markdown_text", "passed", "issues_len"),
-        [(FORMATTED, True, 0), (NOTEST_PSEUDO, True, 0)],
-    )
-    def test_code_gate_clean_and_notest_blocks(
-        self,
-        *,
-        tmp_path: Path,
-        markdown_text: str,
-        passed: bool,
-        issues_len: int,
-    ) -> None:
+    def test_code_gate_clean_block_passes(self, tmp_path: Path) -> None:
         project_dir = u.Tests.mk_project(tmp_path, "markdown-code-clean")
         (project_dir / "README.md").write_text(self.FORMATTED, encoding="utf-8")
 

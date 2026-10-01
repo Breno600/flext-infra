@@ -359,17 +359,12 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 ),
                 dependency_profile=dependency_profile,
                 tooling=config.Infra.tooling,
-                # Why: the fleet policy alone is not the effective Ruff contract.
-                # A repository may carry an operator-authorized exemption in its
-                # committed ``config/*.yaml`` ManagedArtifacts catalog, and
-                # ensure_ruff composes the two when it edits a pyproject in
-                # place. Composed through the static contract directly (no
-                # phase instance, so the historic constructor-binding defect
-                # cannot resurface); both call sites share this single owner.
+                # The in-place pyproject edit and this render read the same
+                # fleet exemption map, scoped to the project.
                 ruff_per_file_ignores=(
-                    FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
+                    FlextInfraEnsureRuffConfigPhase.project_per_file_ignores(
                         repository_root,
-                        managed_artifacts=catalog_artifacts,
+                        config.Infra.tooling.tools.ruff.lint.per_file_ignores,
                     )
                 ),
                 environment_path_prepends=(codegen.toolchain.environment_path_prepends),

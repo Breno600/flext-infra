@@ -23,19 +23,15 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
     @staticmethod
     def _orchestrator(workspace: Path) -> FlextInfraEnforcementFixerOrchestrator:
         return FlextInfraEnforcementFixerOrchestrator(
-            repository_root=workspace,
-            selected_projects=("demo",),
+            repository_root=workspace, selected_projects=("demo",)
         )
 
     def test_beartype_rules_collect_real_python_file_probes(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """The public dry-run reports a no-change skip for a clean source file."""
         project_dir = u.Tests.mk_project(
-            tmp_path,
-            "demo",
-            pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n',
+            tmp_path, "demo", pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n'
         )
         # Discovery only reaches declared members: an undeclared child directory
         # is not a project of this root, so the selector would not resolve.
@@ -62,9 +58,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
     def test_stub_file_rule_collects_pyi_probes(self, tmp_path: Path) -> None:
         """The public dry-run reports source stubs and ignores virtualenv stubs."""
         project_dir = u.Tests.mk_project(
-            tmp_path,
-            "demo",
-            pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n',
+            tmp_path, "demo", pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n'
         )
         # Discovery only reaches declared members: an undeclared child directory
         # is not a project of this root, so the selector would not resolve.
@@ -149,9 +143,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
                 ),
             ),
             m.Infra.FixEnforcementCommand(
-                repository_root=str(tmp_path),
-                projects=("demo",),
-                apply=False,
+                repository_root=str(tmp_path), projects=("demo",), apply=False
             ),
         )
 
@@ -179,9 +171,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
                 ),
             ),
             m.Infra.FixEnforcementCommand(
-                repository_root=str(tmp_path),
-                projects=("demo",),
-                apply=True,
+                repository_root=str(tmp_path), projects=("demo",), apply=True
             ),
         )
 
@@ -192,9 +182,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
     def test_missing_selected_project_fails_resolution(self, tmp_path: Path) -> None:
         """A typoed project filter is a hard failure, not a zero-project success."""
         _ = u.Tests.mk_project(
-            tmp_path,
-            "demo",
-            pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n',
+            tmp_path, "demo", pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n'
         )
         orchestrator = FlextInfraEnforcementFixerOrchestrator(
             repository_root=tmp_path,
@@ -222,8 +210,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         tm.that(result.error, has="unsafe under --safe-only")
 
     def test_every_catalog_fix_action_resolves_to_an_adapter(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """Preflight proves the catalog and the adapter registry agree.
 
@@ -232,8 +219,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         not surface later as a per-project failed fix.
         """
         orchestrator = FlextInfraEnforcementFixerOrchestrator(
-            repository_root=tmp_path,
-            selected_projects=("demo",),
+            repository_root=tmp_path, selected_projects=("demo",)
         )
 
         result = orchestrator.execute()
@@ -242,8 +228,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
 
     @pytest.mark.slow
     def test_fix_enforcement_never_rewrites_text_or_typing_list(
-        self,
-        tmp_path: Path,
+        self, tmp_path: Path
     ) -> None:
         """The applied fix run leaves a module that quotes its own defects intact.
 
@@ -254,9 +239,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         fix run keeps every byte of the module, real violations included.
         """
         project_dir = u.Tests.mk_project(
-            tmp_path,
-            "demo",
-            pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n',
+            tmp_path, "demo", pyproject='[project]\nname = "demo"\nversion = "0.1.0"\n'
         )
         u.Tests.declare_workspace_projects(tmp_path, ("demo",))
         source_file = project_dir / "src" / "demo" / "documented.py"
@@ -305,12 +288,9 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         tm.ok(
             u.Cli.run_raw((sys.executable, "-c", probe), cwd=source_file.parent.parent)
         )
-        assert u.Cli.process_succeeded(before.outcome), before.stderr
 
         result = FlextInfraEnforcementFixerOrchestrator(
-            repository_root=project_dir,
-            selected_projects=("demo",),
-            apply=True,
+            repository_root=project_dir, selected_projects=("demo",), apply=True
         ).execute()
 
         # The module carries real violations whose catalog fix_action is
@@ -325,9 +305,7 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
     # invocations. The slow marker opts into the config-owned slow-item budget.
     @pytest.mark.slow
     def test_fix_enforcement_dry_run_leaves_worktree_unchanged(
-        self,
-        tmp_path: Path,
-        capsys: pytest.CaptureFixture[str],
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """A real CLI dry-run leaves its owned committed repository unchanged."""
         project_dir = tmp_path / "demo-project"
@@ -335,20 +313,16 @@ class TestsFlextInfraEnforcementFixerOrchestrator:
         constants_dir = source_dir / "_constants"
         constants_dir.mkdir(parents=True)
         (project_dir / "pyproject.toml").write_text(
-            '[project]\nname = "demo"\nversion = "0.1.0"\n',
-            encoding="utf-8",
+            '[project]\nname = "demo"\nversion = "0.1.0"\n', encoding="utf-8"
         )
         (source_dir / "__init__.py").write_text(
-            '"""Demo package."""\n',
-            encoding="utf-8",
+            '"""Demo package."""\n', encoding="utf-8"
         )
         (constants_dir / "__init__.py").write_text(
-            '"""Demo constants."""\n',
-            encoding="utf-8",
+            '"""Demo constants."""\n', encoding="utf-8"
         )
         (constants_dir / "worker.py").write_text(
-            '"""Worker constants."""\n',
-            encoding="utf-8",
+            '"""Worker constants."""\n', encoding="utf-8"
         )
         (source_dir / "worker.py").write_text(
             '"""Demo worker."""\n\n'

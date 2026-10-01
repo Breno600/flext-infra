@@ -299,9 +299,7 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                     f"managed destination escapes repository root: {entry.destination}",
                 )
             path = (root / relative).resolve()
-            try:
-                path.relative_to(root.resolve())
-            except ValueError:
+            if not path.is_relative_to(root.resolve()):
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(
                     f"managed destination escapes repository root: {entry.destination}",
                 )

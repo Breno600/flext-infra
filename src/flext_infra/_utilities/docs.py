@@ -56,8 +56,7 @@ class FlextInfraUtilitiesDocs(FlextInfraUtilitiesDocsScopeBuildMixin):
         return sorted(
             path
             for path in search_root.rglob("*.md")
-            if ".bak" not in path.name
-            and not any(
+            if not any(
                 part in c.Infra.DOC_EXCLUDED_DIRS or part.startswith(".")
                 for part in path.relative_to(search_root).parts
             )

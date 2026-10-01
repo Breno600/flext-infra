@@ -7,7 +7,7 @@ from pathlib import Path
 
 from flext_tests import tm
 
-from flext_infra import c, u
+from flext_infra import c, config, u
 
 
 class TestsFlextInfraMiseRuntimeStorage:
@@ -39,6 +39,16 @@ class TestsFlextInfraMiseRuntimeStorage:
         tm.fail(invalid, has="invalid Mise runtime release")
         tm.that(first.value.is_relative_to(storage.value), eq=True)
         tm.that(storage.value.is_relative_to(Path.cwd()), eq=False)
+
+    def test_safe_bootstrap_carries_the_fleet_cooldown(self) -> None:
+        """Safe mode ignores project settings, so the cooldown travels as env."""
+        contract = u.Infra.mise_bootstrap_environment()
+        days = config.Infra.codegen.toolchain.dependency_cooldown_days
+
+        tm.that(
+            dict(contract.fixed_environment).get("MISE_MINIMUM_RELEASE_AGE"),
+            eq=f"{days}d",
+        )
 
     def test_checkout_storage_is_rejected_before_creation(self, tmp_path: Path) -> None:
         contract = u.Infra.mise_bootstrap_environment()

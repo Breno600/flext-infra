@@ -6,7 +6,7 @@ import re
 import sys
 from collections.abc import Mapping, MutableMapping, Sequence
 from functools import lru_cache
-from importlib.metadata import Distribution, distributions, packages_distributions
+from importlib.metadata import Distribution, distributions
 from importlib.util import find_spec
 from pathlib import Path
 
@@ -14,11 +14,8 @@ from flext_cli import u
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
-from .. import c, config, m, p, r, t
-from ._rope_analysis.exports import FlextInfraUtilitiesRopeAnalysisExports
+from .. import c, m, p, r, t
 from .dependencies import FlextInfraUtilitiesDependencies
-from .namespace import FlextInfraUtilitiesCodegenNamespace
-from .pyproject import FlextInfraUtilitiesPyproject
 
 
 class FlextInfraUtilitiesCodemodRules:
@@ -34,12 +31,12 @@ class FlextInfraUtilitiesCodemodRules:
         single ``mod`` invocation issues while converging to a fixed point, and
         a fresh process (a new ``make mod`` run) always recomputes it from disk.
         """
-        project = cls._project(root)
+        project = cls.codemod_project_requirements(root)
         if project.failure:
             return r[m.Infra.CodemodRulePlan].from_failure(project)
         root_name, direct_runtime = project.value
-        indexed = cls._distributions()
-        runtime_closure = cls._runtime_closure(direct_runtime, indexed)
+        indexed = cls.codemod_distributions()
+        runtime_closure = cls.codemod_runtime_closure(direct_runtime, indexed)
         universal = cls._providers(
             indexed,
             scope=c.Infra.CODEMOD_SCOPE_UNIVERSAL,
@@ -78,7 +75,7 @@ class FlextInfraUtilitiesCodemodRules:
         return "^(?:" + "|".join(re.escape(rule_id) for rule_id in rule_ids) + ")$"
 
     @staticmethod
-    def _project(root: Path) -> p.Result[t.Pair[str, t.StrSequence]]:
+    def codemod_project_requirements(root: Path) -> p.Result[t.Pair[str, t.StrSequence]]:
         pyproject = root / c.PYPROJECT_FILENAME
         document = u.Cli.toml_read_document(pyproject)
         if document.failure:
@@ -117,7 +114,7 @@ class FlextInfraUtilitiesCodemodRules:
         ))
 
     @staticmethod
-    def _distributions() -> MutableMapping[str, Distribution]:
+    def codemod_distributions() -> MutableMapping[str, Distribution]:
         indexed: MutableMapping[str, Distribution] = {}
         # Import search paths may repeat the same physical directory. Query each
         # directory once; distinct installations with the same name still fail.
@@ -134,7 +131,7 @@ class FlextInfraUtilitiesCodemodRules:
         return indexed
 
     @classmethod
-    def _runtime_closure(
+    def codemod_runtime_closure(
         cls,
         direct: t.StrSequence,
         indexed: t.MappingKV[str, Distribution],
@@ -504,6 +501,12 @@ class FlextInfraUtilitiesCodemodRules:
                         "predicate": condition[verdict.value],
                         "holds": verdict.value == c.Infra.CODEMOD_CONTEXT_HOLDS_KEY,
                         "of": condition.get(c.Infra.CODEMOD_CONTEXT_OF_KEY),
+                        "arg": str(
+                            condition.get(c.Infra.CODEMOD_CONTEXT_ARG_KEY, "")
+                        ).split(),
+                        "as_": str(
+                            condition.get(c.Infra.CODEMOD_CONTEXT_AS_KEY, "")
+                        ).split(),
                     })
                 )
         return conditions.ok(tuple(parsed))
@@ -515,166 +518,17 @@ class FlextInfraUtilitiesCodemodRules:
         """Return the one verdict key (``is``/``not``) of a context condition."""
         keys = set(condition)
         verdict = keys.intersection(verdicts)
-        if len(verdict) != 1 or keys - set(verdicts) - {c.Infra.CODEMOD_CONTEXT_OF_KEY}:
+        operands = {
+            c.Infra.CODEMOD_CONTEXT_OF_KEY,
+            c.Infra.CODEMOD_CONTEXT_ARG_KEY,
+            c.Infra.CODEMOD_CONTEXT_AS_KEY,
+        }
+        if len(verdict) != 1 or keys - set(verdicts) - operands:
             return r[str].fail(
                 f"ast-grep rule context ${variable} must hold exactly one of "
-                f"{sorted(verdicts)} and at most {c.Infra.CODEMOD_CONTEXT_OF_KEY!r}"
+                f"{sorted(verdicts)} and at most {sorted(operands)}"
             )
         return r[str].ok(verdict.pop())
-
-    @classmethod
-    def codemod_context_admits(
-        cls,
-        root: Path,
-        rule: m.Infra.CodemodRule,
-        file_path: Path,
-        captures: t.JsonMapping,
-    ) -> bool:
-        """Return whether one finding satisfies its rule's project context.
-
-        ``captures`` maps each metavariable of the finding to its ast-grep
-        single capture (``{"text": ...}``) or transformed value (a string). A
-        declared variable the finding did not capture is a rule defect and
-        raises; the syntactic match alone never stands in for it.
-        """
-        source = (file_path if file_path.is_absolute() else root / file_path).resolve()
-        for condition in rule.context:
-            # A condition binds the capture of the branch that matched: a rule
-            # variable the matching branch does not capture leaves it vacuous.
-            # The plan proved every context variable occurs in the rule.
-            if condition.variable not in captures:
-                continue
-            value = cls._captured_text(rule, condition.variable, captures, source)
-            of = (
-                cls._captured_text(rule, condition.of, captures, source)
-                if condition.of is not None
-                else None
-            )
-            holds = cls._context_holds(
-                root.resolve(), condition.predicate, (value, of), source
-            )
-            if holds is not condition.holds:
-                return False
-        return True
-
-    @staticmethod
-    def _captured_text(
-        rule: m.Infra.CodemodRule, variable: str, captures: t.JsonMapping, source: Path
-    ) -> str:
-        capture = captures.get(variable)
-        text = capture.get("text") if isinstance(capture, Mapping) else capture
-        if not isinstance(text, str) or not text.strip():
-            msg = (
-                f"{rule.id}: context variable ${variable} was not captured in {source}"
-            )
-            raise ValueError(msg)
-        return text.strip()
-
-    @classmethod
-    def _context_holds(
-        cls,
-        root: Path,
-        predicate: c.Infra.CodemodContextPredicate,
-        captured: t.Pair[str, str | None],
-        file_path: Path,
-    ) -> bool:
-        """Evaluate one predicate against the project SSOT it names."""
-        value, of = captured
-        module = cls._top_module(value)
-        own = FlextInfraUtilitiesPyproject.project_package_name(root)
-        match predicate:
-            case c.Infra.CodemodContextPredicate.STDLIB_MODULE:
-                return module in sys.stdlib_module_names
-            case c.Infra.CodemodContextPredicate.OWN_PACKAGE:
-                return module == own
-            case c.Infra.CodemodContextPredicate.RUNTIME_PACKAGE:
-                return module in cls._runtime_modules(root)
-            case c.Infra.CodemodContextPredicate.FACADE_PACKAGE:
-                return module in cls._runtime_modules(root) and bool(
-                    u.runtime_alias_names(module)
-                )
-            case c.Infra.CodemodContextPredicate.RUNTIME_ALIAS:
-                return value in u.runtime_alias_names(
-                    own if of is None else cls._top_module(of)
-                )
-            case c.Infra.CodemodContextPredicate.LOCAL_ALIAS:
-                layout = FlextInfraUtilitiesCodegenNamespace.layout(root)
-                if layout is None:
-                    msg = f"project layout is unresolved: {root}"
-                    raise ValueError(msg)
-                return value in layout.runtime_aliases
-            case c.Infra.CodemodContextPredicate.MODULE_EXPORT:
-                return value in cls._module_exports(file_path)
-            case c.Infra.CodemodContextPredicate.FILE_FAMILY:
-                return value in cls._file_families(file_path)
-            case c.Infra.CodemodContextPredicate.PACKAGE_EXPORT:
-                if of is None:
-                    msg = f"predicate {predicate} requires an 'of' capture"
-                    raise ValueError(msg)
-                return value in cls._package_exports(of)
-
-    @staticmethod
-    def _top_module(value: str) -> str:
-        """Return the top-level package of a captured dotted module."""
-        return value.split(maxsplit=1)[0].split(".", maxsplit=1)[0]
-
-    @classmethod
-    @lru_cache(maxsize=8)
-    def _runtime_modules(cls, root: Path) -> frozenset[str]:
-        """Top-level import names provided by the project's runtime closure."""
-        project = cls._project(root).unwrap()
-        closure = cls._runtime_closure(project[1], cls._distributions())
-        return frozenset(
-            module
-            for module, providers in packages_distributions().items()
-            if any(canonicalize_name(name) in closure for name in providers)
-        )
-
-    @staticmethod
-    def _module_exports(file_path: Path) -> frozenset[str]:
-        """Names one module source declares in its own ``__all__``."""
-        return frozenset(
-            FlextInfraUtilitiesRopeAnalysisExports.public_export_names_source(
-                file_path.read_text(encoding=c.Cli.ENCODING_DEFAULT)
-            )
-        )
-
-    @classmethod
-    def _file_families(cls, file_path: Path) -> frozenset[str]:
-        """Facade letters of the family a module belongs to.
-
-        A module belongs to the letters its own ``__all__`` declares and to
-        those of the facade module of each private family package it lives
-        in (``<pkg>/_models/x.py`` belongs to what ``<pkg>/models.py``
-        declares). The letter vocabulary is the tooling import-layer order;
-        no file name is mapped to a letter.
-        """
-        letters = frozenset(config.Infra.tooling.lazy_init.import_layer_order)
-        facades = (
-            file_path,
-            *(
-                directory.parent / f"{directory.name.removeprefix('_')}.py"
-                for directory in file_path.parents
-                if directory.name.startswith("_")
-                and not directory.name.startswith("__")
-            ),
-        )
-        return frozenset(
-            letter
-            for facade in facades
-            if facade.is_file()
-            for letter in letters.intersection(cls._module_exports(facade))
-        )
-
-    @classmethod
-    @lru_cache(maxsize=256)
-    def _package_exports(cls, module: str) -> frozenset[str]:
-        """Names an installed module declares in its ``__all__`` (not imported)."""
-        spec = find_spec(module)
-        if spec is None or spec.origin is None:
-            msg = f"module is not importable for its exports: {module}"
-            raise ValueError(msg)
-        return cls._module_exports(Path(spec.origin))
 
     @staticmethod
     def _declared_expected(

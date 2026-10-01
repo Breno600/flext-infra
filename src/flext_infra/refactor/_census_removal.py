@@ -25,8 +25,6 @@ class FlextInfraRefactorCensusRemovalMixin(
     rule can see.
     """
 
-    _census_validate_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
-
     if TYPE_CHECKING:
         dry_run: bool
 

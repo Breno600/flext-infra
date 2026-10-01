@@ -262,6 +262,23 @@ class FlextInfraConfigModelsContexts:
     class ProjectRenderContext(MakeRenderContext):
         """Complete typed input consumed by project scaffold templates."""
 
+        docs_audit: Annotated[
+            FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+            m.Field(
+                default_factory=FlextInfraConfigModelsContract.DocsAuditOverridesSpec,
+                description="Repository-owned documentation audit declarations",
+            ),
+        ]
+        packaged_data_excludes: Annotated[
+            t.StrSequence,
+            m.Field(
+                default=(),
+                description=(
+                    "Repository-relative files omitted from declared data directories"
+                ),
+            ),
+        ]
+
         # This render field is the exact
         # projection of ProjectSpec; templates must not infer or default a hook.
         hatch_build_hook_path: Annotated[
@@ -910,6 +927,32 @@ class FlextInfraConfigModelsContexts:
                 ),
             ),
         ] = None
+
+    class SubprojectPolicy(FlextInfraConfigModelsContract.ConfigContract):
+        """Workspace policy one governed .gitmodules entry loads under."""
+
+        integration_branch: Annotated[
+            str | None,
+            m.Field(
+                default=None,
+                description="Detected integration line; None follows the superproject",
+            ),
+        ]
+        workspace_beads: Annotated[
+            FlextInfraConfigModelsBeads.BeadsProjectSpec | None,
+            m.Field(default=None, description="Inherited workspace beads spec"),
+        ]
+        declared_member: Annotated[
+            FlextInfraConfigModelsContexts.RepositoryRef | None,
+            m.Field(default=None, description="Catalog-declared member reference"),
+        ]
+        allow_unprovisioned_members: Annotated[
+            bool,
+            m.Field(
+                default=False,
+                description="Accept members without provisioned checkouts",
+            ),
+        ]
 
     class RepositoryConformTarget(FlextInfraConfigModelsContract.ConfigContract):
         """Runtime-derived conformance identity for one repository."""
