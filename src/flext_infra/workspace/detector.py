@@ -407,9 +407,8 @@ class FlextInfraWorkspaceDetector(
                 integration_branch=baseline.value if baseline.success else None,
                 workspace_beads=beads,
                 allow_unprovisioned_members=allow_unprovisioned_members,
-            )
+            ),
         )
-
 
     @classmethod
     def _load_subprojects(
@@ -688,7 +687,8 @@ class FlextInfraWorkspaceDetector(
             # Same owner as the parent load, so a composed member validates
             # against exactly the facts its superproject governs with.
             governance = cls._superproject_governance(
-                superproject_root, beads=inherited_beads.value
+                superproject_root,
+                beads=inherited_beads.value,
             )
             if governance.failure:
                 return r[m.Infra.WorkspaceSpec].from_failure(governance)
@@ -887,7 +887,8 @@ class FlextInfraWorkspaceDetector(
 
     @classmethod
     def analysis_excluded_top_dirs(
-        cls, repository_root: Path
+        cls,
+        repository_root: Path,
     ) -> p.Result[frozenset[str]]:
         """Return the first segments of the read-only external topology paths.
 
@@ -895,7 +896,7 @@ class FlextInfraWorkspaceDetector(
         callers: the topology owner computes it, the utilities only apply it.
         """
         return cls.analysis_exclusion_paths(repository_root).map(
-            lambda paths: frozenset(path.parts[0] for path in paths if path.parts)
+            lambda paths: frozenset(path.parts[0] for path in paths if path.parts),
         )
 
     def detect(self, project_root: Path) -> p.Result[c.Infra.MakeProfile]:
