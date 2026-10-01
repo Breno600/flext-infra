@@ -131,7 +131,10 @@ class TestsFlextInfraDepsModernizerPackaging:
         )
         included = set(u.Tests.toml_list(sdist["include"]))
         tm.that({f"/{path}/**" for path in package_paths} <= included, eq=True)
-        tm.that(f"/{module_path}" in included, eq=True)
+        tm.that(u.Tests.toml_mapping(sdist["force-include"]), has=module_path)
+        tm.that(
+            u.Tests.toml_mapping(sdist["force-include"])[module_path], eq=module_path
+        )
 
         fixed_point = infra_main([
             c.Infra.CLI_GROUP_CODEGEN,

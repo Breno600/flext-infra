@@ -175,13 +175,29 @@ class FlextInfraEnsurePackagingPhase:
                             key="include",
                             values=(
                                 *(f"/{path}/**" for path in package_paths),
-                                *(f"/{path}" for path in module_paths),
-                                *(f"/{path}" for path in data.files),
                                 *(f"/{path}/**" for path in data.directories),
                             ),
                         ),
                         toml.RemoveOp(key="only-include"),
                     ),
+                ),
+                (
+                    toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("sdist", "force-include"),
+                        operations=tuple(
+                            toml.SetOp(key=source, value=source)
+                            for source, _destination in force_include
+                        ),
+                    )
+                    if force_include
+                    else toml.PhaseConfig(
+                        name="packaging",
+                        root_path=(),
+                        table_path=("sdist",),
+                        operations=(toml.RemoveOp(key="force-include"),),
+                    )
                 ),
                 (
                     toml.PhaseConfig(
