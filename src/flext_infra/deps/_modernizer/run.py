@@ -178,7 +178,7 @@ class FlextInfraPyprojectModernizerRun:
                         state.value.rendered,
                         fromfile=f"{file_path}:before",
                         tofile=f"{file_path}:after",
-                        max_lines=30,
+                        max_lines=c.Infra.EDIT_DIFF_PREVIEW_MAX_LINES,
                     )
                     u.Cli.info(
                         "deps: first rendered drift\n" + "".join(diff_lines).rstrip()

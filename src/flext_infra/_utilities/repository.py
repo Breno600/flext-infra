@@ -73,21 +73,10 @@ class FlextInfraUtilitiesRepository:
                 f"internal dependency git source must declare a branch or ref: "
                 f"{requirement}"
             )
-        if url.startswith("https://"):
-            canonical = url
-        elif url.startswith("http://"):
-            canonical = f"https://{url.removeprefix('http://')}"
-        elif url.startswith("ssh://"):
-            canonical = f"https://{url.removeprefix('ssh://').removeprefix('git@')}"
-        elif url.startswith("git@") and ":" in url:
-            host, _, path = url.removeprefix("git@").partition(":")
-            canonical = f"https://{host}/{path}"
-        else:
-            return r[t.Pair[str, str]].fail(
-                f"internal dependency git source scheme is not canonicalizable "
-                f"to HTTPS: {requirement}"
-            )
-        return r[t.Pair[str, str]].ok((canonical, ref))
+        canonical = FlextInfraUtilitiesRepository._canonical_https_url(url)
+        if canonical.failure:
+            return r[t.Pair[str, str]].from_failure(canonical)
+        return r[t.Pair[str, str]].ok((canonical.value, ref))
 
     @classmethod
     def configured_repository_ref(

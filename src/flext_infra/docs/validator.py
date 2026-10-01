@@ -46,13 +46,7 @@ class FlextInfraDocValidator(FlextInfraDocServiceBase):
 
     def _run_adr_skill_check(self, repository_root: Path) -> t.Pair[int, t.StrSequence]:
         """Run the ADR skill validation check for the root docs scope."""
-        required_result = u.Infra.docs_load_required_skills(repository_root)
-        if required_result.failure:
-            self.logger.warning(
-                "adr_skill_check_failed", error=required_result.error or ""
-            )
-            return (1, [])
-        required_skills = required_result.value or ["flext-development"]
+        required_skills = u.Infra.docs_load_required_skills(repository_root).unwrap()
         skills_root = repository_root / ".agents/skills"
         missing: list[str] = []
         for skill_name in required_skills:

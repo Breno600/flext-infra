@@ -69,6 +69,8 @@ class FlextInfraConstantsBase(
     "Canonical import package name for flext-infra itself."
     WORKSPACE_FINGERPRINT_READ_CHUNK_BYTES: ClassVar[int] = 1024 * 1024
     "Bounded read size used while hashing workspace files."
+    EDIT_DIFF_PREVIEW_MAX_LINES: ClassVar[int] = 30
+    "Unified-diff lines shown when an edit preview or revert is reported."
     PYREFLY: ClassVar[str] = "pyrefly"
     "Pyrefly tool section key."
     MYPY: ClassVar[str] = "mypy"
