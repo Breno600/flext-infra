@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import config, m, t
+from flext_infra import c, config, m, t
 from flext_infra.gates.runtime_census import FlextInfraRuntimeCensusGate
 from flext_infra.validate.runtime_census import FlextInfraRuntimeCensusValidator
 
@@ -134,7 +134,7 @@ class TestsRuntimeCensusSuspensionConsistency:
             ).build_report()
         )
         output = capsys.readouterr().out
-        for token in ("class_prefix", "smell_function_parameters"):
+        for token in ("class_prefix",):
             owner = _owning_suspension(token)
             joined = "\n".join(report.violations)
             if owner is None:
@@ -150,10 +150,7 @@ class TestsRuntimeCensusSuspensionConsistency:
             tm.that("\n".join(report.violations), has="[ENFORCE-079]")
         else:
             tm.that(report.passed, eq=True)
-        if any(
-            _owning_suspension(token) is not None
-            for token in ("class_prefix", "smell_function_parameters")
-        ):
+        if _owning_suspension("class_prefix") is not None:
             tm.that(report.summary, has="suppressed under recorded gate suspensions")
 
     def test_genuine_rule_family_stays_fully_blocking(
@@ -195,3 +192,54 @@ class TestsRuntimeCensusSuspensionConsistency:
             tm.that(report.violations, length=1)
             tm.that(report.summary, eq="runtime census found 1 violation(s)")
             tm.that(output, eq="")
+
+
+class TestsRuntimeCensusSmellOwnership:
+    """Smell families belong to the smells gate, never to the check census."""
+
+    @staticmethod
+    def _smell_tokens(violations: t.SequenceOf[str]) -> tuple[str, ...]:
+        """Violations whose trailing rule token is a flext-core smell tag."""
+        return tuple(
+            violation
+            for violation in violations
+            if any(violation.endswith(f"[{tag}]") for tag in c.ENFORCEMENT_SMELL_TAGS)
+        )
+
+    def test_check_census_routes_smell_families_away(
+        self, mixed_project: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        """The runtime-census gate reports no smell and says where they went."""
+        report = tm.ok(
+            FlextInfraRuntimeCensusValidator(
+                repository_root=mixed_project
+            ).build_report()
+        )
+        output = capsys.readouterr().out
+        tm.that(self._smell_tokens(report.violations), length=0)
+        tm.that(output, has="runtime census routed")
+        tm.that(output, has=c.Infra.SMELLS)
+
+    def test_smells_census_reports_only_smell_families(
+        self, mixed_project: Path
+    ) -> None:
+        """The smells-scoped census grades exactly the smell families."""
+        report = tm.ok(
+            FlextInfraRuntimeCensusValidator(
+                repository_root=mixed_project, census_gate=c.Infra.SMELLS
+            ).build_report()
+        )
+        tm.that(report.passed, eq=False)
+        tm.that(report.violations, length=len(self._smell_tokens(report.violations)))
+        tm.that("\n".join(report.violations), has="[smell_function_parameters]")
+
+    def test_gate_without_census_families_is_a_failure(
+        self, mixed_project: Path
+    ) -> None:
+        """A gate that owns no census family cannot grade a census run."""
+        tm.fail(
+            FlextInfraRuntimeCensusValidator(
+                repository_root=mixed_project, census_gate=c.Infra.LINT
+            ).build_report(),
+            has="has no rule families",
+        )

@@ -18,7 +18,7 @@ import sys
 import types
 from collections import defaultdict
 from collections.abc import MutableMapping
-from typing import TYPE_CHECKING, Annotated, override
+from typing import TYPE_CHECKING, Annotated, Self, override
 
 from flext_core import r
 from flext_infra import c, config, m, t, u
@@ -26,6 +26,8 @@ from flext_infra import c, config, m, t, u
 from ..base import s
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from flext_infra import p
 
 
@@ -35,6 +37,52 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     project_filter: Annotated[
         str | None, m.Field(description="Project filter (comma-separated)")
     ] = None
+    census_gate: Annotated[
+        str,
+        m.Field(
+            description=(
+                "Gate whose census rule families this run grades: the runtime "
+                "census gate grades every family no other gate owns"
+            )
+        ),
+    ] = c.Infra.RUNTIME_CENSUS
+
+    @classmethod
+    def for_project(
+        cls, project_dir: Path, *, census_gate: str
+    ) -> Self:
+        """Scope one census run to ``project_dir`` for ``census_gate``.
+
+        The filter is the declared project name, never the checkout directory
+        name: a worktree or renamed checkout keeps its manifest identity, and
+        the census discovery keys projects by exactly that pyproject name.
+        """
+        metadata = u.Infra.read_project_metadata_result(project_dir)
+        return cls(
+            repository_root=project_dir,
+            project_filter=(
+                metadata.value.project.name if metadata.success else project_dir.name
+            ),
+            census_gate=census_gate,
+        )
+
+    @staticmethod
+    def _gate_rule_families() -> t.MappingKV[str, frozenset[str]]:
+        """Census rule families owned by a gate other than the runtime census.
+
+        Operator ruling 2026-10-01: no smell enters ``make check``; the
+        ``make smells`` verb owns every smell family. The family set derives
+        from the flext-core smell catalog — every smell tag plus the rule id
+        of every catalog row carrying one — so a smell added to the catalog
+        moves to the smells gate in the same edit, with no second list.
+        """
+        smell_rows = (*c.SMELL_BEARTYPE_ROWS, *c.SMELL_CODE_SMELL_ROWS)
+        return {
+            c.Infra.SMELLS: frozenset({
+                *c.ENFORCEMENT_SMELL_TAGS,
+                *(rule_id for rule_id, *_ in smell_rows),
+            })
+        }
 
     @staticmethod
     def _package_name_for_project(project: p.Infra.ProjectInfo) -> str | None:
@@ -292,8 +340,51 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                     )
         return tuple(kept), tuple(gate_counts.items())
 
+    def _partition_gate_owned(
+        self, violations: t.SequenceOf[str]
+    ) -> t.Pair[tuple[str, ...], int]:
+        """Keep the violations ``census_gate`` owns; count those routed away.
+
+        A gate that owns census families grades exactly those families; the
+        runtime census gate grades every family no other gate owns. Bracketless
+        lines (import failures) own no family and stay with the runtime census.
+        """
+        owned = self._gate_rule_families()
+        own_families = owned.get(self.census_gate)
+        foreign_families = frozenset(
+            family
+            for gate, families in owned.items()
+            if gate != self.census_gate
+            for family in families
+        )
+        kept: list[str] = []
+        for violation in violations:
+            token = self._violation_rule_token(violation)
+            if own_families is None:
+                keep = token is None or not any(
+                    self._matches_census_family(token, family)
+                    for family in foreign_families
+                )
+            else:
+                keep = token is not None and any(
+                    self._matches_census_family(token, family)
+                    for family in own_families
+                )
+            if keep:
+                kept.append(violation)
+        return tuple(kept), len(violations) - len(kept)
+
     def build_report(self) -> p.Result[m.Infra.ValidationReport]:
         """Build one validation report for the selected workspace projects."""
+        owning_gates = frozenset({
+            c.Infra.RUNTIME_CENSUS,
+            *self._gate_rule_families(),
+        })
+        if self.census_gate not in owning_gates:
+            return r[m.Infra.ValidationReport].fail(
+                f"runtime census has no rule families for gate {self.census_gate!r}; "
+                f"owning gates: {', '.join(sorted(owning_gates))}"
+            )
         projects_result = u.Infra.resolve_projects(self.repository_root, ())
         if projects_result.failure:
             return r[m.Infra.ValidationReport].from_failure(projects_result)
@@ -310,10 +401,28 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
                 return r[m.Infra.ValidationReport].from_failure(report_result)
             report = report_result.value
             merged_violations.extend(report.violations)
+        owned_violations, routed_total = self._partition_gate_owned(merged_violations)
+        if self.census_gate != c.Infra.RUNTIME_CENSUS:
+            kept = owned_violations
+            passed = not kept
+            summary = (
+                f"runtime census ({self.census_gate}) found {len(kept)} violation(s)"
+                if not passed
+                else f"runtime census ({self.census_gate}) passed"
+            )
+            return r[m.Infra.ValidationReport].ok(
+                m.Infra.ValidationReport(passed=passed, violations=kept, summary=summary)
+            )
+        if routed_total:
+            u.Cli.info(
+                f"runtime census routed {routed_total} finding(s) to their owning "
+                f"gates ({', '.join(sorted(self._gate_rule_families()))}); "
+                "each runs through its own Make verb, never make check"
+            )
         kept_violations, suppressed_by_gate = self._partition_suspended(
-            merged_violations
+            owned_violations
         )
-        suppressed_total = len(merged_violations) - len(kept_violations)
+        suppressed_total = len(owned_violations) - len(kept_violations)
         suppression_note = (
             (
                 f"; {suppressed_total} suppressed under recorded gate suspensions "

@@ -52,6 +52,7 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SMELLS: ClassVar[str] = "smells"
+    RUNTIME_CENSUS: ClassVar[str] = "runtime-census"
     SILENT_FAILURE: ClassVar[str] = "silent-failure"
     TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset({
         "pyrefly",
@@ -88,7 +89,7 @@ class FlextInfraConstantsCheck:
             "Flext Abstraction Boundary Auditor",
             "internal://flext-infra/abstraction-boundary",
         ),
-        "runtime-census": (
+        RUNTIME_CENSUS: (
             "Flext Runtime Enforcement Census",
             "internal://flext-infra/runtime-census",
         ),
