@@ -28,22 +28,6 @@ class FlextInfraModelsWorkspace:
 
         repository_root: Annotated[Path, m.Field(description="Repository root path")]
 
-    class SubprojectLoadContext(m.ContractModel):
-        """Inherited workspace policy and declaration for one Git member."""
-
-        integration_branch: str | None = m.Field(
-            default=None, description="Integration branch inherited from the workspace"
-        )
-        workspace_beads: FlextInfraConfigModels.BeadsProjectSpec | None = m.Field(
-            description="Beads identity inherited from the workspace"
-        )
-        declared_member: FlextInfraConfigModels.RepositoryRef | None = m.Field(
-            description="Canonical member declaration when present"
-        )
-        allow_unprovisioned_members: bool = m.Field(
-            default=False, description="Whether a declared member may lack a checkout"
-        )
-
     class EnvironmentContractViolation(mm.PositiveLineMixin, m.ContractModel):
         """One static ``.envrc``/``.envrc.local`` contract violation.
 

@@ -31,17 +31,6 @@ class FlextInfraModelsRope:
             ),
         ]
 
-    class ClassWrapperSpan(m.ContractModel):
-        """Rope-resolved header, body and optional docstring of one wrapper."""
-
-        header_start: int = m.Field(description="First source line of the class header")
-        header_end: int = m.Field(description="Last source line of the class header")
-        body_end: int = m.Field(description="Last source line of the class body")
-        indentation: int = m.Field(description="Indentation removed from body lines")
-        docstring_span: tuple[int, int] | None = m.Field(
-            default=None, description="Inclusive source lines of the wrapper docstring"
-        )
-
     class ExportOptions(m.ContractModel):
         """Canonical options for Rope module export discovery."""
 

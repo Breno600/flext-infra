@@ -71,6 +71,27 @@ class FlextInfraModelsGitWorktreeState:
             str, m.Field(description="Index blob or gitlink object identifier")
         ]
 
+    class GitWorktreeObservedFile(m.ContractModel):
+        """The observed worktree layer of one file before a guarded effect.
+
+        The guarded-effect precondition hashes these bytes itself (the hash
+        is the comparison), so this is the pre-hash identity: raw content
+        (symlink target text for links, ``None`` for an absent file), the
+        git mode string, and the exact permission bits.
+        """
+
+        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
+        content: Annotated[
+            bytes | None,
+            m.Field(
+                description="Raw working bytes; link text for symlinks, None when absent"
+            ),
+        ]
+        mode: Annotated[str, m.Field(description="Git mode for raw bytes or symlink")]
+        permissions: Annotated[
+            int, m.Field(description="Exact filesystem permission bits")
+        ]
+
     class GitWorktreeFileState(m.ContractModel):
         """Exact working bytes and permissions, including symlink link text."""
 
@@ -89,15 +110,6 @@ class FlextInfraModelsGitWorktreeState:
                 description="Object identifier for raw bytes or current gitlink HEAD"
             ),
         ]
-
-    class GitWorktreeObservedPayload(m.ContractModel):
-        """Raw worktree payload and metadata measured before a guarded write."""
-
-        model_config: ClassVar[m.ConfigDict] = m.ConfigDict(extra="forbid", frozen=True)
-        path: Path = m.Field(description="Repository-relative observed file path")
-        content: bytes | None = m.Field(description="Observed file or symlink bytes")
-        permissions: int = m.Field(description="Observed filesystem permission bits")
-        mode: str = m.Field(description="Observed Git file mode")
 
     class GitWorktreeStateSnapshot(m.ContractModel):
         """Scoped source identity and both independently measured layers."""
