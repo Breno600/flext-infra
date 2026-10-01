@@ -392,7 +392,7 @@ class FlextInfraModelsCore:
     class NamespaceValidateCommand(m.ContractModel):
         """CLI payload for ``flext-infra validate namespace``.
 
-        Read-only namespace rule scan (NS-000..003) for one repository root.
+        Read-only rule-catalog scan of one repository root's namespace scope.
         """
 
         repository_root: Annotated[

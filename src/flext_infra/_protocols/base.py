@@ -915,26 +915,6 @@ class FlextInfraProtocolsBase(Protocol):
             ...
 
     @runtime_checkable
-    class SafeTransformer(Protocol):
-        """Contract for transformers that run with copy-on-write protection."""
-
-        def transform(self, files: t.SequenceOf[Path]) -> p.Result[t.SequenceOf[Path]]:
-            """Apply transformation to files, return paths of modified files."""
-            ...
-
-    @runtime_checkable
-    class SafeValidator(Protocol):
-        """Contract for post-transform quality gate validators."""
-
-        def validate(
-            self,
-            files: t.SequenceOf[Path],
-            project_dir: Path,
-        ) -> p.Result[m.Infra.GateResult]:
-            """Validate files pass quality gates after transformation."""
-            ...
-
-    @runtime_checkable
     class XmlElementLike(Protocol):
         """Typed read-only subset of the safe XML element API from defusedxml.
 

@@ -16,9 +16,9 @@ from ._utilities.base import FlextInfraUtilitiesBase
 from ._utilities.census import FlextInfraUtilitiesRefactorCensus
 from ._utilities.codegen import FlextInfraUtilitiesCodegen
 from ._utilities.codegen_file_plan import FlextInfraUtilitiesCodegenFilePlan
-from ._utilities.codemod_rules import FlextInfraUtilitiesCodemodRules
-from ._utilities.deferred_self_reference_ast import (
-    FlextInfraUtilitiesDeferredSelfReference,
+from ._utilities.codemod_project import FlextInfraUtilitiesCodemodProject
+from ._utilities.deferred_self_reference_rewrite import (
+    FlextInfraUtilitiesDeferredSelfReferenceRewrite,
 )
 from ._utilities.dependencies import FlextInfraUtilitiesDependencies
 from ._utilities.discovery import FlextInfraUtilitiesDiscovery
@@ -132,7 +132,7 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraUtilitiesDocsValidate,
         FlextInfraUtilitiesWorkspaceManifest,
         FlextInfraUtilitiesDependencies,
-        FlextInfraUtilitiesDeferredSelfReference,
+        FlextInfraUtilitiesDeferredSelfReferenceRewrite,
         FlextInfraUtilitiesGit,
         FlextInfraUtilitiesIteration,
         FlextInfraUtilitiesLogParser,
@@ -150,7 +150,7 @@ class FlextInfraUtilities(FlextCliUtilities):
         FlextInfraWorktreeLifecycle,
         FlextInfraWorktreeProvisioning,
         FlextInfraUtilitiesWorkspaceFingerprint,
-        FlextInfraUtilitiesCodemodRules,
+        FlextInfraUtilitiesCodemodProject,
         FlextInfraUtilitiesPrivateImportAncestry,
         FlextInfraUtilitiesPrivateImportFacades,
     ):

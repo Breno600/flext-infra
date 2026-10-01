@@ -80,50 +80,41 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
 
     def check(self, request: m.Infra.RunCommand) -> p.Result[bool]:
         """Compose one shared Rope cycle and execute every requested gate."""
-        with FlextInfraRopeWorkspace.open_workspace(request.repository_root) as rope:
-            return FlextInfraWorkspaceChecker(
-                repository_root=request.repository_root,
-                rope=rope,
-            ).execute_payload(request)
+        return FlextInfraWorkspaceChecker(
+            repository_root=request.repository_root,
+        ).execute_payload(request)
 
     def codegen_census(self, request: m.Infra.CodegenCommand) -> p.Result[str]:
         """Run the read-only census within the facade-owned Rope lifecycle."""
-        with self.rope_workspace(request.repository_root) as rope:
-            return FlextInfraCodegenCensus(
-                repository_root=request.repository_root,
-                apply_changes=request.apply,
-                check_only=request.check_only,
-                dry_run=request.dry_run,
-                output_format=request.output_format,
-                rope=rope,
-            ).execute()
+        return FlextInfraCodegenCensus(
+            repository_root=request.repository_root,
+            apply_changes=request.apply,
+            check_only=request.check_only,
+            dry_run=request.dry_run,
+            output_format=request.output_format,
+        ).execute()
 
     def codegen_auto_fix(self, request: m.Infra.CodegenAutoFixCommand) -> p.Result[str]:
         """Run namespace fixes within the facade-owned Rope lifecycle."""
-        with self.rope_workspace(request.repository_root) as rope:
-            return FlextInfraCodegenFixer(
-                repository_root=request.repository_root,
-                apply_changes=request.apply,
-                check_only=request.check_only,
-                dry_run=request.dry_run,
-                output_format=request.output_format,
-                selected_projects=request.project_names,
-                rules_only=request.rules_only,
-                rope=rope,
-            ).execute()
+        return FlextInfraCodegenFixer(
+            repository_root=request.repository_root,
+            apply_changes=request.apply,
+            check_only=request.check_only,
+            dry_run=request.dry_run,
+            output_format=request.output_format,
+            selected_projects=request.project_names,
+            rules_only=request.rules_only,
+        ).execute()
 
     def codegen_pipeline(self, request: m.Infra.CodegenCommand) -> p.Result[str]:
         """Run the codegen pipeline within the facade-owned Rope lifecycle."""
-        with self.rope_workspace(request.repository_root) as rope:
-            return FlextInfraCodegenPipeline(
-                repository_root=request.repository_root,
-                apply_changes=request.apply,
-                check_only=request.check_only,
-                dry_run=request.dry_run,
-                output_format=request.output_format,
-                rope=rope,
-                conform_ports=self.codegen_conform_ports(),
-            ).execute()
+        return FlextInfraCodegenPipeline(
+            repository_root=request.repository_root,
+            apply_changes=request.apply,
+            check_only=request.check_only,
+            dry_run=request.dry_run,
+            output_format=request.output_format,
+        ).execute()
 
     @staticmethod
     def docs_artifact_planner(
@@ -228,23 +219,14 @@ class FlextInfra(FlextInfraWorkspaceEnvironmentMixin, s[t.JsonDict]):
                 rename_inputs=tuple(campaigns),
             ).execute()
 
-    def mod_text(self, request: m.Infra.ModCommand) -> p.Result[t.Cli.ResultValue]:
-        """Compose the standalone authenticated text-rule replay."""
-        root = u.Infra.resolve_repository_root_or_cwd(request.repository_root)
-        return FlextInfraModTextGateEngine.run(
-            root, apply=request.apply and not request.check and not request.dry_run_mode
-        )
-
     def validate_namespace(
         self,
         request: m.Infra.NamespaceValidateCommand,
     ) -> p.Result[m.Infra.ValidationReport]:
-        """Validate one project through a single composed Rope cycle."""
-        with FlextInfraRopeWorkspace.open_workspace(request.repository_root) as rope:
-            return FlextInfraNamespaceValidator(
-                repository_root=request.repository_root,
-                rope=rope,
-            ).build_report()
+        """Validate one project against the rule catalog."""
+        return FlextInfraNamespaceValidator(
+            repository_root=request.repository_root,
+        ).build_report()
 
     def mod_text(self, request: m.Infra.ModTextCommand) -> p.Result[t.Cli.ResultValue]:
         """Compose the standalone authenticated text-rule replay."""

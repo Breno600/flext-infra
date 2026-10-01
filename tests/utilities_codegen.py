@@ -22,13 +22,8 @@ class TestsFlextInfraUtilitiesCodegenMixin:
 
     @staticmethod
     def family_public_module(family: str) -> str:
-        """Return the public facade module stem the canonical file names give a letter."""
-        (stem,) = (
-            name.removesuffix(c.Infra.EXT_PYTHON)
-            for name, letter in c.Infra.NAMESPACE_FILE_TO_FAMILY.items()
-            if letter == family and not name.startswith("_")
-        )
-        return stem
+        """Return the public facade module stem the core package gives a letter."""
+        return u.Infra.facade_families()[family].module
 
     @staticmethod
     def ruff_per_file_ignores_toml() -> str:
@@ -167,7 +162,7 @@ class TestsFlextInfraUtilitiesCodegenMixin:
                 package_dir
                 / f"{TestsFlextInfraUtilitiesCodegenMixin.family_public_module(family)}.py"
             )
-            if (package_dir / c.Infra.FAMILY_DIRECTORIES[family]).is_dir() and (
+            if (package_dir / u.Infra.facade_families()[family].directory).is_dir() and (
                 not facade.is_file()
             ):
                 facade.write_text(
