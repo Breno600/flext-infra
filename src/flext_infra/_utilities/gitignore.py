@@ -118,7 +118,12 @@ class FlextInfraUtilitiesGitignore:
         project_dir: Path,
         blocks: t.VariadicTuple[m.Infra.ProjectGitignorePreservedBlock],
     ) -> p.Result[str]:
-        """Compose declared external blocks without taking ownership of their lines."""
+        """Compose declared external blocks without taking ownership of their lines.
+
+        Returns:
+            The resulting ``p.Result[str]``.
+
+        """
         if not blocks:
             return r[str].ok(rendered)
         from flext_infra import u
@@ -165,9 +170,16 @@ class FlextInfraUtilitiesGitignore:
                     f"ambiguous gitignore preserved block {block.begin!r}: "
                     f"{destination}",
                 )
-            sections.append((begins[0], ends[0], "".join(lines[begins[0] : ends[0] + 1])))
+            sections.append((
+                begins[0],
+                ends[0],
+                "".join(lines[begins[0] : ends[0] + 1]),
+            ))
         sections.sort(key=lambda item: item[0])
-        if any(previous[1] >= current[0] for previous, current in zip(sections, sections[1:])):
+        if any(
+            previous[1] >= current[0]
+            for previous, current in zip(sections, sections[1:])
+        ):
             return r[str].fail(f"overlapping gitignore preserved blocks: {destination}")
         composed = rendered
         for _, _, external in sections:
