@@ -410,7 +410,9 @@ class TestsFlextInfraModTextGateEngine:
             )
         )
         valid = tm.ok(FlextInfraModTextGateEngine.load_rules(mod_workspace))
-        tm.that(len(valid), eq=2)
+        # Provider rules compose before the consumer overlay; the packaged
+        # catalogue size is config-owned, so only the overlay order is asserted.
+        tm.that(tuple(rule.rule_id for rule in valid[-2:]), eq=("first", "second"))
 
     def test_include_and_exclude_globs_elect_exact_targets(
         self, mod_workspace: Path

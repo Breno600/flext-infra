@@ -55,6 +55,11 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
         name: a worktree or renamed checkout keeps its manifest identity, and
         the census discovery keys projects by exactly that pyproject name.
         """
+        # A checkout without a manifest declares no project: the census then
+        # selects nothing and reports that typed failure. A present manifest
+        # that cannot be read raises instead of falling back to the directory.
+        if not (project_dir / c.PYPROJECT_FILENAME).is_file():
+            return cls(repository_root=project_dir, census_gate=census_gate)
         metadata = u.Infra.read_project_metadata_result(project_dir).unwrap()
         return cls(
             repository_root=project_dir,

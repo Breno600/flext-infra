@@ -271,9 +271,12 @@ class FlextInfraUtilitiesProjectDiscovery(
         configuration (operator law 2026-10-01, flext-h2a9h).
         """
         if runtime_root is None:
-            runtime_root = FlextInfraUtilitiesGit.git_repository_root(
-                m.Infra.GitRepoRequest(repo_root=project_root)
-            ).unwrap().repository_root
+            runtime_root = (
+                FlextInfraUtilitiesGit
+                .git_repository_root(m.Infra.GitRepoRequest(repo_root=project_root))
+                .unwrap()
+                .repository_root
+            )
         return runtime_root.resolve() / c.Infra.ENVIRONMENT_DIRECTORY
 
     @classmethod

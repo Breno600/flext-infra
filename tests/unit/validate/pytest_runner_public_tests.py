@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, m, u
+from flext_infra import c, config, m, t, u
 from tests.unit.validate.pytest_runner_support import runner_for, summary
 
 
@@ -20,33 +20,46 @@ class TestsFlextInfraPytestRunner:
     def test_marker_selection_is_shared_by_collection_execution_and_coverage(
         self, cached_runner_project: Path, *, ci_context: bool
     ) -> None:
-        """CI/pre-commit omit slow cases; local/pre-push keep them selectable."""
+        """Selection, inventory and execution share one budgeted expression.
+
+        Premise (rules/workflow/gate-budget.md): slow cases run in their own
+        phase, so the budgeted phase always deselects the slow marker; the
+        coverage run keeps CI-excluded markers selectable outside CI.
+        """
         runner = runner_for(cached_runner_project, ci_context=ci_context)
         report = (
             cached_runner_project
             / config.Infra.codegen.make.testmon_cache.reports_directory
         )
-        expressions = []
-        for command in (
-            runner.build_selection_command(
-                report_log=report / "selection.jsonl",
-                manifest_path=report / "selection.json",
-            ),
-            runner.build_selection_command(
-                report_log=report / "inventory.jsonl",
-                manifest_path=report / "inventory.json",
-                complete=True,
-            ),
-            runner.build_command(report),
-            runner.build_coverage_command(report),
-        ):
-            marker_index = command.index("-m", 3)
-            expressions.append(command[marker_index + 1])
-        assert len(set(expressions)) == 1
-        for marker in config.Infra.tooling.tools.pytest.ci_excluded_markers:
-            assert (marker in expressions[0]) == ci_context
-        for marker in config.Infra.tooling.tools.pytest.external_gate_markers:
-            assert marker in expressions[0]
+        pytest_policy = config.Infra.tooling.tools.pytest
+
+        def marker_expression(command: t.StrSequence) -> str:
+            return command[command.index("-m", 3) + 1]
+
+        budgeted = {
+            marker_expression(command)
+            for command in (
+                runner.build_selection_command(
+                    report_log=report / "selection.jsonl",
+                    manifest_path=report / "selection.json",
+                ),
+                runner.build_selection_command(
+                    report_log=report / "inventory.jsonl",
+                    manifest_path=report / "inventory.json",
+                    complete=True,
+                ),
+                runner.build_command(report),
+            )
+        }
+        tm.that(budgeted, length=1)
+        budgeted_expression = next(iter(budgeted))
+        coverage_expression = marker_expression(runner.build_coverage_command(report))
+        tm.that(budgeted_expression, has=pytest_policy.slow_marker)
+        for marker in pytest_policy.ci_excluded_markers:
+            tm.that(marker in coverage_expression, eq=ci_context)
+        for marker in pytest_policy.external_gate_markers:
+            tm.that(budgeted_expression, has=marker)
+            tm.that(coverage_expression, has=marker)
 
     def test_testmon_commands_name_the_toolchain_environment(
         self, cached_runner_project: Path

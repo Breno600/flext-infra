@@ -82,14 +82,30 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
         def dispatch_plan(node_ids: t.StrSequence) -> m.Infra.PytestSelectionPlan:
             """Synthetic selection whose manifest path matches the real argv."""
-            return m.Infra.PytestSelectionPlan.model_validate({
-                "manifest_path": "m.json",
-                "node_ids": list(node_ids),
-                "whole_target": False,
-                "inventory_collected": False,
-                "owns_no_tests": False,
-            })
+            return m.Infra.PytestSelectionPlan(
+                manifest_path=Path("m.json"),
+                node_ids=tuple(node_ids),
+                whole_target=False,
+                inventory_collected=False,
+                owns_no_tests=False,
+            )
 
+        # The fleet default is one worker; only a declared project override
+        # admits xdist, so the fixture declares a project that owns one.
+        parallel_project = next(
+            name
+            for name, ceiling in policy.parallel_worker_overrides.items()
+            if isinstance(ceiling, int) and ceiling > 1
+            or not isinstance(ceiling, int)
+            and ceiling.workers is not None
+            and ceiling.workers > 1
+        )
+        pyproject = cached_runner_project / c.PYPROJECT_FILENAME
+        pyproject.write_text(
+            f'[project]\nname = "{parallel_project}"\nversion = "0.0.0"\n'
+            + pyproject.read_text(encoding="utf-8"),
+            encoding="utf-8",
+        )
         multi = [f"tests/test_serial_{'x' * index}.py::test_one" for index in range(4)]
         runner = runner_for(cached_runner_project)
         multi_plan = dispatch_plan(multi)
