@@ -11,11 +11,11 @@ This index points to the architectural owners that govern flext-infra. The platf
 ADRs below belong to the `flext` workspace; this repository keeps the code, its tests,
 and this navigation map. The index does not replace or duplicate the decision text.
 
-| Reference                                                                                                                                  | Responsibility                                               | Application in flext-infra                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| [ADR-005](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/005-config-settings-constants-templates-schemas-ssot.md) | Configuration, settings, constants, templates and schemas    | Use §§1–2 for configuration and its typed owners; fix templates/SSOT before projections     |
-| [ADR-010](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/010-unified-project-standardization-via-codegen.md)      | Standardization and semantic discovery                       | §3b describes source discovery and automatic rewiring; check it against the implementation |
-| [ADR-014](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/014-family-part-shape-rope-codemod-rules.md)             | Family shape and Rope codemods                               | Align orphans, wrappers, consumers and namespace detection                                  |
+| Reference                                                                                                                                  | Responsibility                                            | Application in flext-infra                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| [ADR-005](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/005-config-settings-constants-templates-schemas-ssot.md) | Configuration, settings, constants, templates and schemas | Use §§1–2 for configuration and its typed owners; fix templates/SSOT before projections    |
+| [ADR-010](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/010-unified-project-standardization-via-codegen.md)      | Standardization and semantic discovery                    | §3b describes source discovery and automatic rewiring; check it against the implementation |
+| [ADR-014](https://github.com/flext-sh/flext/blob/0.12.0-dev/docs/architecture/adr/014-family-part-shape-rope-codemod-rules.md)             | Family shape and Rope codemods                            | Align orphans, wrappers, consumers and namespace detection                                 |
 
 ## Known divergences
 
