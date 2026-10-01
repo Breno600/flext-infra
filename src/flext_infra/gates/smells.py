@@ -33,11 +33,8 @@ class FlextInfraSmellsGate(FlextInfraGate):
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Filter one scan to the blocking issues owned by ``project``.
 
-        The process outcome decides what an unusable payload means: a
-        successful scan that emits no SARIF payload is a zero-findings pass,
-        while a scanner that crashed or could not run at all is a blocking
-        issue carrying its own error, never a clean pass. Non-blank output
-        that fails to parse stays a loud parse failure.
+        Empty or malformed SARIF is a blocking scan failure, regardless of the
+        process status. A valid SARIF document with zero results is a pass.
         """
         prefix = (
             ""
@@ -48,11 +45,10 @@ class FlextInfraSmellsGate(FlextInfraGate):
         issues: t.VariadicTuple[m.Infra.Issue]
         if parsed.success:
             issues = parsed.value
-        elif not scan.stdout.strip():
-            issues = ()
+        elif not scan.stdout.strip() and not u.Cli.process_succeeded(scan.outcome):
+            issues = (self._tool_failure_issue(scan),)
         else:
             issues = (self._failure_issue(parsed.error),)
-        issues = self._drop_generated_projections(issues, project_dir)
         if not issues and not u.Cli.process_succeeded(scan.outcome):
             return (self._tool_failure_issue(scan),)
         return issues
@@ -169,29 +165,6 @@ class FlextInfraSmellsGate(FlextInfraGate):
             message=message or "qlty returned no parseable SARIF output",
             severity=str(c.Infra.GateSeverity.ERROR.value),
         )
-
-    def _drop_generated_projections(
-        self,
-        issues: t.VariadicTuple[m.Infra.Issue],
-        project_dir: Path,
-    ) -> t.VariadicTuple[m.Infra.Issue]:
-        """Drop findings in generated projections; their owner is the generator.
-
-        A file whose first line carries the canonical AUTO-GENERATED header is a
-        projection of one codegen source, so duplication between projections is
-        by construction and the smell gate reports only hand-written source.
-        ``Issue.file`` is project-relative while ``qlty`` URIs are
-        workspace-relative, so the project directory is joined to the workspace
-        root before reading the header.
-        """
-        visible: list[m.Infra.Issue] = []
-        for issue in issues:
-            path = project_dir / issue.file
-            with path.open("r", encoding=c.Cli.ENCODING_DEFAULT) as handle:
-                first_line = handle.readline()
-            if c.Infra.AUTOGEN_HEADER not in first_line:
-                visible.append(issue)
-        return tuple(visible)
 
     @classmethod
     def _issues_from_sarif(
