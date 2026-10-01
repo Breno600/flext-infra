@@ -83,12 +83,13 @@ class MiseLockTransaction:
                     selector = cls._sidecar_selector(relative)
                     if not digest.startswith("sha256:"):
                         raise ValueError(f"invalid mise.lock sidecar digest: {relative}")
+                    cls._reject_symlink_path(root, relative)
                     sidecar = root.joinpath(*selector.parts)
                     cls._physical_directory(sidecar)
                     source = cls._bytes(sidecar / filename)
                     if source is None:
                         raise ValueError(f"mise.lock sidecar is absent: {sidecar / filename}")
-                    actual = hashlib.sha256(source.replace(b"\r\n", b"\n")).hexdigest()
+                    actual = hashlib.sha256(source).hexdigest()
                     if actual != digest.removeprefix("sha256:"):
                         raise ValueError(f"mise.lock sidecar digest differs: {sidecar / filename}")
                     result[relative] = cls._tree_digest(sidecar)
@@ -184,13 +185,50 @@ class MiseLockTransaction:
         if not stage.name.startswith(f".{project.name}.mise-lock-stage."):
             raise ValueError(f"unexpected Mise lock transaction stage: {stage}")
 
+    @staticmethod
+    def _reject_symlink_path(project: Path, relative: str) -> None:
+        cursor = project
+        for part in PurePosixPath(relative).parts:
+            cursor /= part
+            if cursor.is_symlink():
+                raise ValueError(f"Mise sidecar path contains a symlink: {cursor}")
+
+    @classmethod
+    def _ensure_parent(cls, root: Path, target: Path) -> None:
+        """Materialize physical parents and durably record each directory entry."""
+        if not target.is_relative_to(root):
+            raise ValueError(f"Mise sidecar escapes transaction root: {target}")
+        missing: list[Path] = []
+        cursor = target.parent
+        while cursor != root:
+            missing.append(cursor)
+            cursor = cursor.parent
+        for directory in reversed(missing):
+            if directory.exists():
+                cls._physical_directory(directory)
+            else:
+                directory.mkdir()
+                cls._sync_directory(directory.parent)
+
+    @classmethod
+    def _retire_stage(cls, stage: Path) -> None:
+        """Move a completed journal out of the recovery scan before deleting it."""
+        retired = stage.with_name(
+            stage.name.replace(".mise-lock-stage.", ".mise-lock-cleanup.", 1),
+        )
+        if retired.exists() or retired.is_symlink():
+            raise ValueError(f"Mise cleanup target already exists: {retired}")
+        os.rename(stage, retired)
+        cls._sync_directory(stage.parent)
+        shutil.rmtree(retired)
+
     @classmethod
     def recover(cls, project: Path, stage: Path) -> None:
         """Finish or undo a prior interrupted publication by its lock commit point."""
         cls._require_roots(project, stage)
         journal = cls._read_journal(stage)
         if journal is None:
-            shutil.rmtree(stage)
+            cls._retire_stage(stage)
             return
         if journal.get("project") != str(project):
             raise ValueError(f"Mise lock journal belongs to another project: {stage}")
@@ -202,24 +240,32 @@ class MiseLockTransaction:
             raise ValueError(f"Mise lock journal digest changed: {stage}")
         old_refs = cls._journal_refs(journal, "old_refs")
         new_refs = cls._journal_refs(journal, "new_refs")
+        for relative in old_refs | new_refs:
+            cls._reject_symlink_path(project, relative)
         live = cls._bytes(project / "mise.lock")
         if live == old:
             for relative, expected in new_refs.items():
                 destination = project / relative
                 backup = stage / "old-sidecars" / relative
+                abandoned = stage / "abandoned-sidecars" / relative
                 if destination.exists() and cls._tree_digest(destination) == expected and expected != old_refs.get(relative):
-                    shutil.rmtree(destination)
+                    cls._ensure_parent(stage, abandoned)
+                    os.rename(destination, abandoned)
+                    cls._sync_directory(destination.parent)
+                    cls._sync_directory(abandoned.parent)
                 if backup.exists():
                     if destination.exists() or cls._tree_digest(backup) != old_refs[relative]:
                         raise ValueError(f"old Mise sidecar changed during recovery: {backup}")
-                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    cls._ensure_parent(project, destination)
                     os.rename(backup, destination)
+                    cls._sync_directory(backup.parent)
+                    cls._sync_directory(destination.parent)
                 elif relative in old_refs:
                     if not destination.exists() or cls._tree_digest(destination) != old_refs[relative]:
                         raise ValueError(f"old Mise sidecar missing during recovery: {destination}")
                 elif destination.exists():
                     raise ValueError(f"unowned Mise sidecar changed during recovery: {destination}")
-            shutil.rmtree(stage)
+            cls._retire_stage(stage)
             return
         if live != new:
             raise ValueError(f"Mise lock changed outside transaction: {project / 'mise.lock'}")
@@ -235,11 +281,13 @@ class MiseLockTransaction:
             if destination.exists():
                 if cls._tree_digest(destination) != expected:
                     raise ValueError(f"stale sidecar changed during recovery: {destination}")
-                retired.parent.mkdir(parents=True, exist_ok=True)
+                cls._ensure_parent(stage, retired)
                 os.rename(destination, retired)
+                cls._sync_directory(destination.parent)
+                cls._sync_directory(retired.parent)
             elif not retired.exists():
                 raise ValueError(f"stale sidecar disappeared during recovery: {destination}")
-        shutil.rmtree(stage)
+        cls._retire_stage(stage)
 
     @classmethod
     def publish(cls, project: Path, stage: Path) -> None:
@@ -248,6 +296,9 @@ class MiseLockTransaction:
         for prior in sorted(project.parent.glob(f".{project.name}.mise-lock-stage.*")):
             if prior != stage:
                 cls.recover(project, prior)
+        for retired in sorted(project.parent.glob(f".{project.name}.mise-lock-cleanup.*")):
+            cls._physical_directory(retired)
+            shutil.rmtree(retired)
         old = cls._bytes(project / "mise.lock")
         new = cls._bytes(stage / "mise.lock")
         if new is None:
@@ -255,9 +306,13 @@ class MiseLockTransaction:
         old_refs = cls._sidecars(old, project)
         new_refs = cls._sidecars(new, stage)
         cls._sync_tree(stage)
+        for relative in old_refs | new_refs:
+            cls._reject_symlink_path(project, relative)
         for relative, expected in new_refs.items():
             destination = project / relative
             if destination.exists():
+                if relative not in old_refs:
+                    raise ValueError(f"unowned Mise sidecar occupies target: {destination}")
                 actual = cls._tree_digest(destination)
                 if actual != expected and actual != old_refs.get(relative):
                     raise ValueError(f"Mise sidecar changed outside transaction: {destination}")
@@ -284,12 +339,14 @@ class MiseLockTransaction:
                 if cls._tree_digest(destination) == expected:
                     continue
                 backup = stage / "old-sidecars" / relative
-                backup.parent.mkdir(parents=True, exist_ok=True)
+                cls._ensure_parent(stage, backup)
                 os.rename(destination, backup)
                 cls._sync_directory(destination.parent)
-            destination.parent.mkdir(parents=True, exist_ok=True)
+                cls._sync_directory(backup.parent)
+            cls._ensure_parent(project, destination)
             os.rename(stage / relative, destination)
             cls._sync_directory(destination.parent)
+            cls._sync_directory((stage / relative).parent)
         os.replace(stage / "mise.lock", project / "mise.lock")
         cls._sync_directory(project)
         cls.recover(project, stage)

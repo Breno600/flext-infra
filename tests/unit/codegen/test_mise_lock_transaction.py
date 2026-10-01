@@ -74,7 +74,7 @@ class TestsMiseLockTransaction:
         passed, error = self._publish(root, first)
 
         tm.that(passed, eq=False)
-        tm.that(error, has="FileExistsError")
+        tm.that(error, has="transaction directory is not physical")
         tm.that(lock.read_bytes(), eq=old)
         tm.that((first / "transaction.json").is_file(), eq=True)
         tm.that((root / ".mise/locks/npm-alpha/1.0/aube-lock.yaml").is_file(), eq=True)
