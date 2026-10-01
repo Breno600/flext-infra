@@ -9,7 +9,7 @@ from importlib.metadata import distributions
 from pathlib import Path
 from typing import ClassVar
 
-from flext_infra import c, config, t
+from flext_infra import c, config, m, t
 
 from ..._pytest_collection import FlextInfraPytestCollection
 from .base import FlextInfraPytestRunnerBase
@@ -162,11 +162,9 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
     def build_command(
         self,
         report_dir: Path,
-        selected_node_ids: t.StrSequence | None = None,
+        selection_plan: m.Infra.PytestSelectionPlan | None = None,
         *,
-        manifest_path: Path | None = None,
         serialize: bool = False,
-        whole_target: bool = False,
         execution_mode: c.Infra.PytestExecutionMode = c.Infra.PytestExecutionMode.INCREMENTAL,
     ) -> t.VariadicTuple[str]:
         """Build the testmon suite argv (never the cov plugin).
@@ -175,17 +173,14 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         ``manifest_path``.
         """
         pytest = config.Infra.tooling.tools.pytest
-        selection = selected_node_ids or None
-        if selection and manifest_path is None:
-            msg = "a runner selection requires its collection manifest path"
-            raise ValueError(msg)
+        selection = selection_plan.node_ids or None if selection_plan else None
         # An empty selection needs no workers, and a selection smaller than the
         # worker budget never needs more workers than items: every extra worker
         # only pays startup cost for an empty queue. Explicit serial execution
         # remains available to callers; cold and warm cache runs share the same
         # manifest.
         budget = self.parallel_worker_budget(pytest)
-        if serialize or selected_node_ids == ():
+        if serialize or (selection_plan is not None and not selection_plan.node_ids):
             workers = "0"
         elif selection:
             workers = str(min(budget, len(selection)))
@@ -195,7 +190,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             report_dir,
             targets=(
                 (str(self.target),)
-                if whole_target or selection is None
+                if (selection_plan is not None and selection_plan.whole_target) or selection is None
                 else tuple(selection)
             ),
             workers=workers,
@@ -205,7 +200,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
                     (
                         "-p",
                         FlextInfraPytestCollection.__module__,
-                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={manifest_path}",
+                        f"{c.Infra.PYTEST_SELECTED_COLLECTION_OPTION}={selection_plan.manifest_path if selection_plan else None}",
                     )
                     if selection
                     else ()
