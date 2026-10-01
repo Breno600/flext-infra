@@ -532,10 +532,8 @@ class FlextInfraWorkspaceDetector(
                     "declared workspace member URL differs from its .gitmodules "
                     f"URL: {path.as_posix()}",
                 )
-            if (
-                declared_member.package
-                and not (subproject_root / c.PYPROJECT_FILENAME).is_file()
-            ):
+            # manifest identity still governs an uninitialized Git link.
+            if not (subproject_root / c.PYPROJECT_FILENAME).is_file():
                 if (
                     subproject_root / c.Infra.GIT_DIR
                 ).exists() and not policy.allow_unprovisioned_members:
