@@ -20,13 +20,13 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
     def unwrap_class_rewrites(
         source: str,
         *,
-        header_start: int,
-        header_end: int,
+        header: m.Infra.LogicalStatement,
         body_end: int,
         indentation: int,
         docstring_span: tuple[int, int] | None = None,
     ) -> t.VariadicTuple[m.Infra.SourceRewrite]:
         """Remove one Rope-resolved header without changing literal payloads."""
+        header_start, header_end = header.line, header.end_line
         lines = codeanalyze.SourceLinesAdapter(source)
         regions = tuple(simplify.ignored_regions(source))
         start = lines.get_line_start(header_start)

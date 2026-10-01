@@ -8,13 +8,11 @@ from typing import TYPE_CHECKING
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraEnsureRuffConfigPhase
-from tests import t, u
+from flext_infra import FlextInfraEnsureRuffConfigPhase, m as infra_m
+from tests import m, t, u
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from tests import m
 
 
 class TestsFlextInfraDepsModernizerTooling:
@@ -47,8 +45,15 @@ class TestsFlextInfraDepsModernizerTooling:
         )
         phase = FlextInfraEnsureRuffConfigPhase(tool_config_document)
         path = project_dir / "pyproject.toml"
-        _ = phase.apply_payload(payload, path=path)
-        tm.that(phase.apply_payload(payload, path=path), empty=True)
+        _ = phase.apply_payload(
+            payload, path=path, topology=infra_m.Infra.PyprojectDeclaredTopology()
+        )
+        tm.that(
+            phase.apply_payload(
+                payload, path=path, topology=infra_m.Infra.PyprojectDeclaredTopology()
+            ),
+            empty=True,
+        )
         return payload, u.Tests.toml_mapping(
             u.Tests.toml_mapping(payload["tool"])["ruff"]
         )
@@ -114,8 +119,16 @@ class TestsFlextInfraDepsModernizerTooling:
         )
         tm.that(ruff["line-length"], eq=ruff_policy.line_length)
         tm.that(ruff["target-version"], eq=ruff_policy.target_version)
+        # The declared src list stays the SSOT; the projection filters it to
+        # roots that exist (a retired tree must not name analyzer entries),
+        # with roots the active plan is materializing accepted as present.
         tm.that(
-            frozenset(u.Tests.toml_strings(ruff["src"])), eq=frozenset(ruff_policy.src)
+            frozenset(u.Tests.toml_strings(ruff["src"])),
+            eq=frozenset(
+                root
+                for root in ruff_policy.src
+                if (project_dir / root).is_dir()
+            ),
         )
         tm.that(
             u.Tests.toml_mapping(ruff["format"])["docstring-code-format"],

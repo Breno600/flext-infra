@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import FlextInfraPyprojectModernizer, FlextInfraToolTablesPhase, config
+from flext_infra import (
+    FlextInfraPyprojectModernizer,
+    FlextInfraToolTablesPhase,
+    config,
+    m as infra_m,
+)
 from tests import c, m, t, u
 
 
@@ -348,7 +353,9 @@ class TestsFlextInfraDepsModernizerToolTables:
             u.Tests.toml_payload('[project]\nname = "flext-sample"\n')
         )
         FlextInfraEnsureRuffConfigPhase(config.Infra.tooling).apply_payload(
-            payload, path=project_dir / "pyproject.toml"
+            payload,
+            path=project_dir / "pyproject.toml",
+            topology=infra_m.Infra.PyprojectDeclaredTopology(),
         )
         table = self._table(payload, "ruff")
         src_roots = u.Tests.toml_strings(table["src"])

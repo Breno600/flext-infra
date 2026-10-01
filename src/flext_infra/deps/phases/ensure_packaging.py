@@ -204,10 +204,7 @@ class FlextInfraEnsurePackagingPhase:
         payload: t.MutableJsonMapping,
         *,
         path: Path,
-        root_modules: t.StrSequence = (),
-        root_packages: t.StrSequence = (),
-        packaged_data_paths: t.StrSequence = (),
-        planned_data_files: t.StrSequence = (),
+        topology: m.Infra.PyprojectDeclaredTopology,
     ) -> t.StrSequence:
         """Emit bounded build targets for a distributable project.
 
@@ -216,6 +213,9 @@ class FlextInfraEnsurePackagingPhase:
         data paths enter those targets after existence, containment and collision
         validation, keeping both distribution formats consistent.
         """
+        root_modules = topology.root_modules
+        root_packages = topology.root_packages
+        packaged_data_paths = topology.packaged_data_paths
         project_dir = path.parent
         docs_meta = u.Infra.docs_meta_from_payload(payload)
         package_name = u.Infra.package_name_from_payload(
@@ -257,7 +257,7 @@ class FlextInfraEnsurePackagingPhase:
             )
             raise FileNotFoundError(msg)
         data_paths = self.resolve_data_paths(
-            project_dir, package_name, packaged_data_paths, planned_data_files
+            project_dir, package_name, packaged_data_paths, topology.planned_data_files
         )
         return u.Infra.apply_toml_phases(
             payload,
