@@ -123,6 +123,10 @@ class TestsFlextInfraDepsModernizerTooling:
             eq=sorted(ruff_policy.lint.extend_safe_fixes),
         )
         tm.that(
+            list(u.Tests.toml_strings(lint["ignore"])),
+            eq=list(ruff_policy.lint.ignore),
+        )
+        tm.that(
             list(
                 u.Tests.toml_strings(
                     u.Tests.toml_mapping(lint["isort"])["known-first-party"],

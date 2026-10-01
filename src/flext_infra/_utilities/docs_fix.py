@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from flext_cli import u
 
-from flext_infra import c, m, t
+from flext_infra import c, config, m, t
 from flext_infra._utilities._docs_github_links import FlextInfraUtilitiesDocsGithubLinks
 from flext_infra._utilities.docs import FlextInfraUtilitiesDocs
 from flext_infra._utilities.docs_contract import FlextInfraUtilitiesDocsContract
@@ -87,7 +87,7 @@ class FlextInfraUtilitiesDocsFix:
                         "-m",
                         c.Infra.RUFF,
                         c.Infra.VERB_CHECK,
-                        "--fix",
+                        *config.Infra.codegen.make.ruff.lint_fix,
                         "--extend-ignore",
                         ",".join(c.Infra.PYTHON_FENCE_RUFF_EXTEND_IGNORE),
                         "--stdin-filename",

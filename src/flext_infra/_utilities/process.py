@@ -6,11 +6,46 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from flext_infra import c
+
+if TYPE_CHECKING:
+    from flext_infra import p, t
 
 
 class FlextInfraUtilitiesProcess:
     """Normalize external process exits without discarding their status."""
+
+    @staticmethod
+    def tool_outcome(
+        outcome: p.Cli.ProcessOutcome,
+        *,
+        findings: int,
+        findings_exit_codes: t.VariadicTuple[int],
+    ) -> c.Infra.ToolOutcome:
+        """Classify one completed tool run as clean, findings or error.
+
+        A tool completes cleanly with a success status and nothing reported,
+        and completes with findings when it reports what it found under a
+        success status or under a findings status it declares. Any other
+        status, a timeout, a signal, or a findings status without a reported
+        finding is an error.
+
+        Returns:
+            The outcome the run ended with.
+
+        """
+        if outcome.timed_out or outcome.forwarded_signal is not None:
+            return c.Infra.ToolOutcome.ERROR
+        status = outcome.raw_return_code
+        if status == c.Cli.EXIT_CODE_SUCCESS:
+            return (
+                c.Infra.ToolOutcome.FINDINGS if findings else c.Infra.ToolOutcome.CLEAN
+            )
+        if status in findings_exit_codes and findings:
+            return c.Infra.ToolOutcome.FINDINGS
+        return c.Infra.ToolOutcome.ERROR
 
     @staticmethod
     def process_exit_classification(exit_code: int) -> str:

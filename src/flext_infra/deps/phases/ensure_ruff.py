@@ -253,6 +253,12 @@ class FlextInfraEnsureRuffConfigPhase:
                                 sorted(ruff_cfg.lint.extend_safe_fixes),
                             ),
                         ),
+                        # Only the unscoped operator-authorized exceptions of
+                        # the tooling owner, the same SSOT the template renders.
+                        toml.SetOp(
+                            key="ignore",
+                            value=u.normalize_to_json_value(list(ruff_cfg.lint.ignore)),
+                        ),
                     ),
                 ),
                 toml.PhaseConfig(

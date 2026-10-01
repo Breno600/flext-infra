@@ -12,6 +12,9 @@ Infra:
       hatch:
         allow-direct-references: true
       markdown:
+        # rumdl exits 1 on any violation and 2 on an error: a repair verb
+        # completes with findings under this status; any other fails it.
+        findings-exit-codes: [1]
         rules:
           default: true
           MD001: false
@@ -132,6 +135,9 @@ Infra:
         # ruff must not demand an __init__.py (INP001) there.
         namespace-packages: [tests, examples, scripts]
         fix: false
+        # Ruff exits 1 when it reports violations (2 on an error): a repair
+        # verb completes with findings under this status; any other fails it.
+        findings-exit-codes: [1]
         line-length: 88
         preview: true
         respect-gitignore: true
@@ -177,18 +183,19 @@ Infra:
           # copyright year; the SPDX line follows it in the module docstring.
           copyright-notice-rgx: 'Copyright \(c\) \d{4} \S[^\n]*\. All rights reserved\.'
           # Repairs make fix applies after Ruff's own fixes, to findings Ruff
-          # reports without a fix: each code maps to one recipe the lint gate
-          # derives from the source (docstring sections from the signature,
-          # summary and raise statement; summaries from the declared name; the
-          # notice from the project's declared author and copyright year).
+          # reports without a fix: each Ruff rule name maps to one recipe the
+          # lint gate derives from the source (docstring sections from the
+          # signature, summary and raise statement; summaries from the declared
+          # name; the notice from the project's declared author and copyright
+          # year).
           fix-recipes:
-            CPY001: copyright-notice
-            D101: summary-docstring
-            D102: summary-docstring
-            D103: summary-docstring
-            DOC201: returns-section
-            DOC402: yields-section
-            DOC501: raises-section
+            missing-copyright-notice: copyright-notice
+            undocumented-public-class: summary-docstring
+            undocumented-public-method: summary-docstring
+            undocumented-public-function: summary-docstring
+            docstring-missing-returns: returns-section
+            docstring-missing-yields: yields-section
+            docstring-missing-exception: raises-section
           # Banned API messages are policy data, never template literals.
           banned-api:
             argparse: "Use cli.register_result_command + Pydantic model from flext_cli."
@@ -202,15 +209,44 @@ Infra:
             combine-as-imports: true
             force-single-line: false
             split-on-trailing-comma: false
-          # The single operator-authorized exception entry, for generated
-          # lazy-init package initializers only:
-          # - TC004 (operator-ruling-2026-10-01-tc004-tid252): they declare
-          #   their exports under TYPE_CHECKING and resolve them lazily at
-          #   runtime, which TC004 reads as runtime use;
-          # - RUF067 (operator-ruling-2026-10-01-ruf067-lazy-init): they must
-          #   execute the lazy installation, which is not a re-export.
-          per-file-ignores:
-            "**/__init__.py": [TC004, RUF067]
+          # Each exception exists only with the operator ruling that authorized
+          # it and its reason; Ruff receives the unscoped entries as `ignore`
+          # and the scoped ones as `per-file-ignores`. Repositories declare no
+          # exception of their own.
+          authorized-exceptions:
+            - rules:
+                - typing-only-third-party-import
+                - typing-only-standard-library-import
+              authority: operator-ruling-2026-10-01-tc002-tc003-pydantic
+              reason: >-
+                Pydantic evaluates field annotations at runtime, so moving
+                third-party and standard-library annotation imports into a
+                TYPE_CHECKING block breaks model construction.
+            - rules: [camelcase-imported-as-lowercase]
+              authority: operator-ruling-2026-10-01-n813-accepted
+              reason: >-
+                The facade letters are imported as their facade class under
+                the letter (FlextInfraConstants as c), so type checkers see a
+                class rather than a variable rebind.
+            - files: "**/__init__.py"
+              rules: [runtime-import-in-type-checking-block]
+              authority: operator-ruling-2026-10-01-tc004-tid252
+              reason: >-
+                Generated lazy-init package initializers declare their exports
+                under TYPE_CHECKING and resolve them lazily at runtime, which
+                TC004 reads as runtime use.
+            - files: "**/__init__.py"
+              rules: [unused-import]
+              authority: operator-ruling-2026-10-01-init-declared-letter-f401
+              reason: >-
+                A package initializer publishes what its modules declare; Ruff
+                never removes those imports as unused.
+            - files: "**/__init__.py"
+              rules: [non-empty-init-module]
+              authority: operator-ruling-2026-10-01-ruf067-lazy-init
+              reason: >-
+                Generated lazy-init package initializers must execute the lazy
+                installation, which is not a re-export.
 
       mypy:
         # Wall-time bound for the bounded Mypy execution (SSOT). A project

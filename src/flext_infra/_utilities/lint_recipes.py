@@ -47,7 +47,8 @@ class FlextInfraUtilitiesLintRecipes:
             if not (candidate / c.PYPROJECT_FILENAME).is_file():
                 continue
             authors = (
-                FlextInfraUtilitiesPyproject.read_project_metadata_result(candidate)
+                FlextInfraUtilitiesPyproject
+                .read_project_metadata_result(candidate)
                 .unwrap()
                 .project.authors
             )
@@ -155,7 +156,11 @@ class FlextInfraUtilitiesLintRecipes:
                 offset = len(lines[0]) if lines and lines[0].startswith("#!") else 0
                 stem = path.parent.name if path.stem == "__init__" else path.stem
                 summary = stem.strip("_").replace("_", " ").capitalize()
-                edits.append((offset, offset, f'"""{summary} module.\n\n{notice}\n"""\n\n'))
+                edits.append((
+                    offset,
+                    offset,
+                    f'"""{summary} module.\n\n{notice}\n"""\n\n',
+                ))
             else:
                 start, end, raw = cls._literal(lines, module_docstring, path)
                 edits.append((start, end, cls._with_notice(raw, notice)))
@@ -165,7 +170,9 @@ class FlextInfraUtilitiesLintRecipes:
         return rewritten
 
     @staticmethod
-    def _docstring_expr(node: ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> ast.Expr | None:
+    def _docstring_expr(
+        node: ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> ast.Expr | None:
         """Return the docstring statement of a module, class or function.
 
         Returns:
@@ -281,15 +288,19 @@ class FlextInfraUtilitiesLintRecipes:
         docstring: ast.Expr,
         path: Path,
     ) -> t.Triple[int, int, str]:
-        """Return the span and text of one triple-double-quoted docstring.
+        (
+            """Return the span and text of one triple-double-quoted docstring.
 
         Returns:
             The span and text of one triple-double-quoted docstring.
 
         Raises:
-            ValueError: If ``not (body.startswith('"""") and body.endswith(""""') and
+            ValueError: If ``not (body.startswith('"""
+            ") and body.endswith("
+            """') and
                 (len(body) >= 6))``.
         """
+        )
         value = docstring.value
         start = cls._offset(lines, value.lineno, value.col_offset)
         end = cls._offset(
@@ -384,8 +395,7 @@ class FlextInfraUtilitiesLintRecipes:
             cls._raise_condition(function, raised, parents)
             for raised in ast.walk(function)
             if isinstance(raised, ast.Raise)
-            and name.rsplit(".", maxsplit=1)[-1]
-            in cls._raised_names(raised, parents)
+            and name.rsplit(".", maxsplit=1)[-1] in cls._raised_names(raised, parents)
         ]
         if not clauses:
             msg = f"{path}: {function.name} holds no raise of {name}"
@@ -407,9 +417,7 @@ class FlextInfraUtilitiesLintRecipes:
 
         """
         if raised.exc is not None:
-            target = (
-                raised.exc.func if isinstance(raised.exc, ast.Call) else raised.exc
-            )
+            target = raised.exc.func if isinstance(raised.exc, ast.Call) else raised.exc
             return frozenset({ast.unparse(target).rsplit(".", maxsplit=1)[-1]})
         node: ast.AST = raised
         while (parent := parents.get(node)) is not None:
@@ -463,9 +471,7 @@ class FlextInfraUtilitiesLintRecipes:
             if isinstance(parent, ast.If):
                 test = ast.unparse(parent.test)
                 return (
-                    f"if ``{test}``"
-                    if node in parent.body
-                    else f"if ``not ({test})``"
+                    f"if ``{test}``" if node in parent.body else f"if ``not ({test})``"
                 )
             if isinstance(parent, ast.ExceptHandler) and parent.type is not None:
                 return f"if a ``{ast.unparse(parent.type)}`` is caught"
@@ -492,7 +498,9 @@ class FlextInfraUtilitiesLintRecipes:
         return ""
 
     @staticmethod
-    def _summary_for(definition: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> str:
+    def _summary_for(
+        definition: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> str:
         """Derive a one-line summary from a definition's declared name.
 
         Returns:
@@ -543,7 +551,9 @@ class FlextInfraUtilitiesLintRecipes:
                     break_on_hyphens=False,
                 )
             ]
-            existing = re.search(rf"^{re.escape(indent)}{header}:\s*$", inner, re.MULTILINE)
+            existing = re.search(
+                rf"^{re.escape(indent)}{header}:\s*$", inner, re.MULTILINE
+            )
             if existing is None:
                 appended.append("\n".join((f"{indent}{header}:", *block)))
                 continue

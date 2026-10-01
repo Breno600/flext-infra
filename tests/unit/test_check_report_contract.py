@@ -81,14 +81,14 @@ class TestsFlextInfraCheckReportContract:
                     information_uri="https://example.invalid/tool",
                     rules=(
                         m.Infra.SarifRule(
-                            id="F401",
+                            id="unused-import",
                             short_description="Ruff Linter (lint) issue",
                             helpUri="https://example.invalid/rule",
                         ),
                     ),
                     results=(
                         m.Infra.SarifResult(
-                            ruleId="F401",
+                            ruleId="unused-import",
                             level="error",
                             message="`os` imported but unused",
                             locations=[

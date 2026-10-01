@@ -725,7 +725,8 @@ class TestsFlextInfraCodegenMakeEnvironment:
         tm.that(check_invocations, empty=False)
         for invocation in check_invocations:
             tm.that(invocation, lacks="--apply")
-        tm.that(makefile, has="--apply --report-findings")
+        tm.that(makefile, has="--apply")
+        tm.that(makefile, lacks="--report-findings")
 
     @staticmethod
     def test_standalone_check_executes_its_declared_default_gates(

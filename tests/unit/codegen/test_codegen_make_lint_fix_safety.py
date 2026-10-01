@@ -69,3 +69,7 @@ class TestsFlextInfraCodegenMakeLintFixSafety:
             ),
             eq=sorted(policy.extend_safe_fixes),
         )
+        tm.that(
+            list(u.Tests.toml_strings_at(pyproject, "tool", "ruff", "lint", "ignore")),
+            eq=list(policy.ignore),
+        )

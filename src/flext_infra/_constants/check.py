@@ -48,6 +48,20 @@ class FlextInfraConstantsCheck:
         NOTE = "note"
 
     @unique
+    class ToolOutcome(StrEnum):
+        """How a completed tool run ended, read from its exit and its report.
+
+        ``CLEAN`` and ``FINDINGS`` are runs the tool completed; only ``ERROR``
+        (a status the tool does not declare, a timeout, a signal, or a findings
+        status with nothing reported) breaks a repair verb. Findings stay
+        reported and are enforced by ``make check``.
+        """
+
+        CLEAN = "clean"
+        FINDINGS = "findings"
+        ERROR = "error"
+
+    @unique
     class GateKind(StrEnum):
         """Who owns a gate's rule catalog, which decides where the gate blocks.
 
@@ -65,7 +79,7 @@ class FlextInfraConstantsCheck:
     class LintFixRecipe(StrEnum):
         """Repair the lint gate applies to a finding Ruff reports without a fix.
 
-        The tooling owner maps each Ruff rule code to one recipe; ``make fix``
+        The tooling owner maps each Ruff rule name to one recipe; ``make fix``
         applies Ruff's own fixes first and then the recipe of every finding
         left, so no rule code or repair text lives in the gate.
         """

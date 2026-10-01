@@ -175,47 +175,50 @@ class FlextInfraRuffLintGate(FlextInfraGate):
         project_dir: Path,
         ctx: m.Infra.GateContext,
     ) -> t.Pair[bool, t.SequenceOf[m.Infra.Issue]]:
-        """Parse check output.
+        """Parse Ruff's JSON report into findings named by their Ruff rule.
+
+        Ruff names every finding by rule name (a syntax error included, as
+        ``invalid-syntax``); a report that is not the declared JSON list is a
+        tool error and raises with its cause.
 
         Returns:
-            The resulting ``t.Pair[bool, t.SequenceOf[m.Infra.Issue]]``.
+            The run's verdict and the findings it reported.
+
+        Raises:
+            TypeError: If the report is not a list of finding objects.
 
         """
-        _ = project_dir, ctx
+        _ = ctx
+        report = u.Cli.json_parse(result.stdout or "[]").unwrap()
+        if not isinstance(report, list):
+            msg = f"Ruff JSON report is not a list: {type(report).__name__}"
+            raise TypeError(msg)
         issues: t.MutableSequenceOf[m.Infra.Issue] = []
-        parsed_result = u.Cli.json_parse(result.stdout or "[]")
-        empty_items: t.JsonValueList = []
-        ruff_data = parsed_result.unwrap() if parsed_result.success else empty_items
-        try:
-            if isinstance(ruff_data, list):
-                for entry in ruff_data:
-                    if isinstance(entry, Mapping):
-                        issues.append(
-                            m.Infra.Issue(
-                                file=u.Cli.json_pick_str(entry, "filename", "?"),
-                                line=u.Cli.json_nested_int(entry, "location", "row"),
-                                column=u.Cli.json_nested_int(
-                                    entry,
-                                    "location",
-                                    "column",
-                                ),
-                                code=u.Cli.json_pick_str(entry, "code"),
-                                message=u.Cli.json_pick_str(entry, "message"),
-                            ),
-                        )
-        except c.EXC_VALIDATION_TYPE as err:
+        for entry in report:
+            if not isinstance(entry, Mapping):
+                msg = f"Ruff JSON finding is not an object: {type(entry).__name__}"
+                raise TypeError(msg)
             issues.append(
                 m.Infra.Issue(
-                    file="<ruff-output>",
-                    line=0,
-                    column=0,
-                    code="PARSE_ERROR",
-                    message=f"Tool output parsing failed: {type(err).__name__}",
-                    severity="ERROR",
+                    file=u.Cli.json_pick_str(entry, "filename", "?"),
+                    line=u.Cli.json_nested_int(entry, "location", "row"),
+                    column=u.Cli.json_nested_int(entry, "location", "column"),
+                    code=u.Cli.json_pick_str(entry, "name"),
+                    message=u.Cli.json_pick_str(entry, "message"),
                 ),
             )
-            return False, issues
         return self._finalize_parse_result(result, project_dir, issues, c.Infra.RUFF)
+
+    @staticmethod
+    @override
+    def _findings_exit_codes() -> t.VariadicTuple[int]:
+        """Exit statuses with which Ruff reports its findings.
+
+        Returns:
+            The findings statuses declared for Ruff in the tooling config.
+
+        """
+        return config.Infra.tooling.tools.ruff.findings_exit_codes
 
 
 __all__: list[str] = ["FlextInfraRuffLintGate"]

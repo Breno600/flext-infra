@@ -167,42 +167,11 @@ class TestsFlextInfraWorkspaceCheckCli:
             eq="Caller report must survive.\n",
         )
 
-    def test_run_cli_fix_contract_preserves_failure_when_reporting(
+    def test_run_cli_fix_completes_and_keeps_remaining_findings(
         self,
         tmp_path: Path,
     ) -> None:
-        """Test run cli fix contract preserves failure when reporting."""
-        workspace = self._create_workspace(tmp_path)
-        module_path = self._write_module(workspace, "flext-core", "def broken(:\n")
-
-        exit_code = main([
-            "check",
-            "run",
-            "--repository-root",
-            str(workspace),
-            "--gates",
-            "lint",
-            "--apply",
-            "--report-findings",
-            "--ruff-args",
-            "--select F401",
-            "--projects",
-            "flext-core",
-        ])
-
-        # Reporting cannot turn remaining gate failures into success;
-        # an unparsable module is never rewritten.
-        tm.that(exit_code, eq=1)
-        tm.that(
-            module_path.read_text(encoding="utf-8"),
-            eq='"""Fixture module."""\n\ndef broken(:\n',
-        )
-
-    def test_run_cli_check_contract_fails_on_remaining_findings(
-        self,
-        tmp_path: Path,
-    ) -> None:
-        """Apply without ``--report-findings`` still fails on remaining findings."""
+        """A repair run completes; what it cannot repair stays for check."""
         workspace = self._create_workspace(tmp_path)
         module_path = self._write_module(workspace, "flext-core", "def broken(:\n")
 
@@ -215,18 +184,39 @@ class TestsFlextInfraWorkspaceCheckCli:
             "lint",
             "--apply",
             "--ruff-args",
-            "--select F401",
+            "--select unused-import",
             "--projects",
             "flext-core",
         ])
 
-        # No --report-findings: apply mode still fails while findings remain,
-        # and the unparsable module is never rewritten.
-        tm.that(exit_code, eq=1)
+        # Ruff completes and reports the syntax error as a finding of the
+        # code: the verb does not break, and the module is never rewritten.
+        tm.that(exit_code, eq=0)
         tm.that(
             module_path.read_text(encoding="utf-8"),
             eq='"""Fixture module."""\n\ndef broken(:\n',
         )
+
+    def test_run_cli_fix_fails_on_a_tool_error(self, tmp_path: Path) -> None:
+        """A status the tool does not declare breaks the repair verb."""
+        workspace = self._create_workspace(tmp_path)
+        self._write_module(workspace, "flext-core", "VALUE = 1\n")
+
+        exit_code = main([
+            "check",
+            "run",
+            "--repository-root",
+            str(workspace),
+            "--gates",
+            "lint",
+            "--apply",
+            "--ruff-args",
+            "--select no-such-rule",
+            "--projects",
+            "flext-core",
+        ])
+
+        tm.that(exit_code, eq=1)
 
     def test_run_cli_check_only_preserves_source(self, tmp_path: Path) -> None:
         """Test run cli check only preserves source."""

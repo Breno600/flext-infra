@@ -330,8 +330,11 @@ Infra:
       # Every ruff invocation uses --preview. Never weaken ruff to keep a
       # file; change the code. [tool.ruff] preview: true in tooling.yaml is
       # the same policy projected into pyproject.
-      # Repair and formatting apply fixes and retain a failing exit status
-      # for remaining findings. Reporting never normalizes a red gate.
+      # Repair and formatting never break on findings (operator rulings
+      # 2026-10-01, lint automation): a tool run ends clean, with findings
+      # under the findings status its tooling config declares, or in error.
+      # Findings stay reported and are enforced by make check; only an error
+      # breaks the verb, with its cause.
       # lint_fix is the lint gate's apply mode and the ONLY lint repair: make
       # fmt runs format only (single-pass verb law), so no lint_apply exists.
       # make fix never deletes information: lint_fix applies

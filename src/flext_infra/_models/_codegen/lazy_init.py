@@ -59,12 +59,6 @@ class FlextInfraModelsCodegenLazyInitModels:
         lazy_map: t.LazyAliasMap = m.Field(
             description="Lazy import map: export name to module/attribute target.",
         )
-        type_checking_map: t.LazyAliasMap = m.Field(
-            description=(
-                "Type-checking import map used to publish static package attributes "
-                "without widening the runtime/public lazy export surface."
-            ),
-        )
         eager_dunders: t.LazyAliasMap = m.Field(
             description=(
                 "Dunder exports that must be eagerly imported at __init__.py "

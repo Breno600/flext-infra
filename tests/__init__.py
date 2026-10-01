@@ -16,13 +16,13 @@ if TYPE_CHECKING:
     from flext_tests import api, d, e, h, r, td, tf, tk, tm, x
 
     from tests import fixtures, integration, refactor, unit
-    from tests.base import TestsFlextInfraServiceBase, TestsFlextInfraServiceBase as s
-    from tests.constants import TestsFlextInfraConstants, TestsFlextInfraConstants as c
+    from tests.base import TestsFlextInfraServiceBase, s
+    from tests.constants import TestsFlextInfraConstants, c
     from tests.constants_scan import TestsFlextInfraConstantsScanMixin
-    from tests.models import TestsFlextInfraModels, TestsFlextInfraModels as m
-    from tests.protocols import TestsFlextInfraProtocols, TestsFlextInfraProtocols as p
-    from tests.typings import TestsFlextInfraTypes, TestsFlextInfraTypes as t
-    from tests.utilities import TestsFlextInfraUtilities, TestsFlextInfraUtilities as u
+    from tests.models import TestsFlextInfraModels, m
+    from tests.protocols import TestsFlextInfraProtocols, p
+    from tests.typings import TestsFlextInfraTypes, t
+    from tests.utilities import TestsFlextInfraUtilities, u
     from tests.utilities_codegen import TestsFlextInfraUtilitiesCodegenMixin
     from tests.utilities_deps import TestsFlextInfraUtilitiesDepsMixin
     from tests.utilities_fixture_docs import TestsFlextInfraUtilitiesDocsFixtureMixin

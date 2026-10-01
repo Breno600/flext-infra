@@ -167,7 +167,7 @@ class FlextInfraBanditGate(FlextInfraGate):
             file="<bandit-output>",
             line=0,
             column=0,
-            code="PARSE_ERROR",
+            code=c.Infra.ToolOutcome.ERROR.value,
             message=message,
             severity="ERROR",
         )

@@ -48,7 +48,7 @@ class FlextInfraCodegenGenerationStandardMixin(
             The resulting ``t.LazyAliasMap``.
 
         """
-        source = plan.type_checking_map or plan.lazy_map
+        source = plan.lazy_map
         public_names = frozenset(plan.exports)
         wildcard_modules = frozenset(plan.wildcard_runtime_modules)
         # Direct imports outside __all__ remain statically

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m, u
+from flext_infra import c, config, m, u
 from flext_infra.gates.markdown_support import FlextInfraMarkdownGateBase
 
 if TYPE_CHECKING:
@@ -22,10 +22,22 @@ class FlextInfraMarkdownGate(FlextInfraMarkdownGateBase):
 
     gate_id: ClassVar[str] = c.Infra.MARKDOWN
     gate_name: ClassVar[str] = "Markdown"
-    # Fixable findings are repaired by the native linter. Its exit status also
-    # reports findings that remain after repair, so the mutating verb cannot
-    # report success while the read-only gate would still fail.
+    # Fixable findings are repaired by the native linter. The findings that
+    # remain after repair come back under rumdl's declared findings status:
+    # the repair verb completes and reports them, and the read-only gate
+    # enforces them.
     can_fix: ClassVar[bool] = True
+
+    @staticmethod
+    @override
+    def _findings_exit_codes() -> t.VariadicTuple[int]:
+        """Exit statuses with which rumdl reports its findings.
+
+        Returns:
+            The findings statuses declared for rumdl in the tooling config.
+
+        """
+        return config.Infra.tooling.tools.markdown.findings_exit_codes
 
     def _resolve_config_args(self, project_dir: Path) -> t.StrSequence:
         """Resolve only the repository-local markdown settings owner.

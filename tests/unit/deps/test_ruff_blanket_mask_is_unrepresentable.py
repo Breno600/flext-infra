@@ -1,13 +1,13 @@
-"""A blanket Ruff mask is unrepresentable, not merely detected after the fact.
+"""A blanket Ruff mask or an unauthorized exception is unrepresentable.
 
-``ALL`` in ``per-file-ignores`` disables every lint rule for a path. It is a
-mask, not a policy: it hides real defects and it cannot be reviewed, because
-the set of rules it suppresses is unbounded and changes with every Ruff
-release. Each exemption names its rule.
+``ALL`` disables every lint rule for its scope. It is a mask, not a policy: it
+hides real defects and it cannot be reviewed, because the set of rules it
+suppresses is unbounded and changes with every Ruff release. Each exception
+names its rules and carries the operator ruling that authorized it.
 
-The tooling owner is the only place a per-file exemption is declared; these
-tests pin its typed boundary, so no configuration that renders a blanket mask
-can be constructed at all.
+The tooling owner is the only place an exception is declared; these tests pin
+its typed boundary, so no configuration that renders a blanket mask or an
+unauthorized exception can be constructed at all.
 
 Copyright (c) 2025 FLEXT Team. All rights reserved.
 SPDX-License-Identifier: MIT
@@ -24,61 +24,120 @@ from flext_infra import config, m, t
 class TestsFlextInfraRuffBlanketMaskIsUnrepresentable:
     """Tests for ``FlextInfraRuffBlanketMaskIsUnrepresentable``."""
 
+    SCOPE = "src/flext_sample/_config.py"
+
     @staticmethod
-    def _lint_policy(per_file_ignores: t.JsonDict) -> t.JsonDict:
-        """Return the shipped fleet lint policy with one replaced exemption map.
+    def _lint_policy(*exceptions: t.JsonDict) -> t.JsonDict:
+        """Return the shipped fleet lint policy with its exceptions replaced.
 
         Returns:
-            The shipped fleet lint policy with one replaced exemption map.
+            The shipped fleet lint policy with its exceptions replaced.
 
         """
         policy = config.Infra.tooling.tools.ruff.lint.model_dump(
             mode="json",
             by_alias=True,
+            exclude_computed_fields=True,
         )
-        return {**policy, "per-file-ignores": per_file_ignores}
+        return {**policy, "authorized-exceptions": list(exceptions)}
+
+    @staticmethod
+    def _exception(*rules: str, files: str | None = SCOPE) -> t.JsonDict:
+        """Return one authorized exception entry for the sample scope.
+
+        Returns:
+            One authorized exception entry for the sample scope.
+
+        """
+        entry: t.JsonDict = {
+            "rules": list(rules),
+            "authority": "operator-ruling-sample",
+            "reason": "The sample scope cannot hold these rules.",
+        }
+        return entry if files is None else {**entry, "files": files}
 
     @staticmethod
     def test_fleet_policy_declares_no_blanket_mask() -> None:
-        """No glob in the shipped fleet policy suppresses every rule."""
-        per_file_ignores = config.Infra.tooling.tools.ruff.lint.per_file_ignores
+        """No shipped exception suppresses every rule."""
+        lint = config.Infra.tooling.tools.ruff.lint
 
         masked = {
-            pattern
-            for pattern, rules in per_file_ignores.items()
-            if any(rule.strip().upper() == "ALL" for rule in rules)
+            entry.files or "every file"
+            for entry in lint.authorized_exceptions
+            if any(rule.strip().upper() == "ALL" for rule in entry.rules)
         }
 
         tm.that(masked, eq=set())
 
-    def test_fleet_policy_rejects_a_blanket_mask_for_any_glob(self) -> None:
-        """The typed boundary refuses ALL, not just for ``**/__init__.py``."""
-        payload = self._lint_policy({"src/flext_sample/generated.py": ["ALL"]})
+    @pytest.mark.parametrize("files", ["src/flext_sample/generated.py", None])
+    def test_typed_boundary_rejects_a_blanket_mask_for_any_scope(
+        self,
+        files: str | None,
+    ) -> None:
+        """The typed boundary refuses ALL, scoped or not."""
+        payload = self._lint_policy(self._exception("ALL", files=files))
 
         with pytest.raises(m.ValidationError) as failure:
             _ = m.Infra.RuffLintConfig.model_validate(payload)
 
         tm.that(str(failure.value), has="ALL")
 
-    def test_named_rule_exemptions_remain_representable(self) -> None:
-        """Rejecting the mask must not reject a named per-rule exemption."""
-        payload = self._lint_policy({"src/flext_sample/_config.py": ["N802"]})
+    def test_scoped_exception_renders_as_per_file_ignores(self) -> None:
+        """A named rule for one glob renders under that glob only."""
+        payload = self._lint_policy(self._exception("invalid-function-name"))
 
         parsed = m.Infra.RuffLintConfig.model_validate(payload)
 
-        tm.that(parsed.per_file_ignores["src/flext_sample/_config.py"], eq=("N802",))
+        tm.that(parsed.per_file_ignores, eq={self.SCOPE: ("invalid-function-name",)})
+        tm.that(parsed.ignore, eq=())
+
+    def test_unscoped_exception_renders_as_ignore(self) -> None:
+        """A named rule without a glob is excepted for every file."""
+        payload = self._lint_policy(
+            self._exception("invalid-function-name", files=None)
+        )
+
+        parsed = m.Infra.RuffLintConfig.model_validate(payload)
+
+        tm.that(parsed.ignore, eq=("invalid-function-name",))
+        tm.that(parsed.per_file_ignores, eq={})
 
     def test_surrounding_whitespace_is_normalized_away(self) -> None:
         """A padded rule renders as its bare name, never with its padding."""
-        payload = self._lint_policy({"src/flext_sample/_config.py": ["  N802  "]})
+        payload = self._lint_policy(self._exception("  invalid-function-name  "))
 
         parsed = m.Infra.RuffLintConfig.model_validate(payload)
 
-        tm.that(parsed.per_file_ignores["src/flext_sample/_config.py"], eq=("N802",))
+        tm.that(parsed.per_file_ignores, eq={self.SCOPE: ("invalid-function-name",)})
 
     def test_whitespace_only_rule_is_rejected(self) -> None:
-        """Blank padding names no rule, so it cannot be an exemption."""
-        payload = self._lint_policy({"src/flext_sample/_config.py": ["   "]})
+        """Blank padding names no rule, so it cannot be an exception."""
+        payload = self._lint_policy(self._exception("   "))
 
         with pytest.raises(m.ValidationError):
             _ = m.Infra.RuffLintConfig.model_validate(payload)
+
+    def test_exception_without_authority_is_rejected(self) -> None:
+        """An exception exists only with the ruling that authorized it."""
+        entry = self._exception("invalid-function-name")
+        unauthorized: t.JsonDict = {
+            key: value for key, value in entry.items() if key != "authority"
+        }
+        payload = self._lint_policy(unauthorized)
+
+        with pytest.raises(m.ValidationError) as failure:
+            _ = m.Infra.RuffLintConfig.model_validate(payload)
+
+        tm.that(str(failure.value), has="authority")
+
+    def test_exception_declared_twice_is_rejected(self) -> None:
+        """One rule excepted twice for one scope is an ambiguous record."""
+        payload = self._lint_policy(
+            self._exception("invalid-function-name"),
+            self._exception("invalid-function-name"),
+        )
+
+        with pytest.raises(m.ValidationError) as failure:
+            _ = m.Infra.RuffLintConfig.model_validate(payload)
+
+        tm.that(str(failure.value), has="declared twice")

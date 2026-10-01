@@ -39,7 +39,10 @@ class TestsFlextInfraLintRecipes:
             "    return path\n"
         )
 
-        repaired = self._apply(source, ("DOC201", 2, "`return` is not documented"))
+        repaired = self._apply(
+            source,
+            ("docstring-missing-returns", 2, "`return` is not documented"),
+        )
 
         tm.that(
             repaired,
@@ -67,8 +70,12 @@ class TestsFlextInfraLintRecipes:
 
         repaired = self._apply(
             source,
-            ("DOC201", 2, "`return` is not documented"),
-            ("DOC501", 5, "Raised exception `ValueError` missing from docstring"),
+            ("docstring-missing-returns", 2, "`return` is not documented"),
+            (
+                "docstring-missing-exception",
+                5,
+                "Raised exception `ValueError` missing from docstring",
+            ),
         )
 
         tm.that(
@@ -100,8 +107,8 @@ class TestsFlextInfraLintRecipes:
 
         repaired = self._apply(
             source,
-            ("D101", 1, "Missing docstring in public class"),
-            ("D102", 2, "Missing docstring in public method"),
+            ("undocumented-public-class", 1, "Missing docstring in public class"),
+            ("undocumented-public-method", 2, "Missing docstring in public method"),
         )
 
         tm.that(
@@ -119,7 +126,10 @@ class TestsFlextInfraLintRecipes:
         """Test copyright notice follows the module summary."""
         source = '"""Sample module."""\n\nVALUE = 1\n'
 
-        repaired = self._apply(source, ("CPY001", 1, "Missing copyright notice"))
+        repaired = self._apply(
+            source,
+            ("missing-copyright-notice", 1, "Missing copyright notice"),
+        )
 
         tm.that(
             repaired,

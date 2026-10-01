@@ -684,6 +684,13 @@ class FlextInfraModelsDepsToolConfig(
     class MarkdownConfig(m.ArbitraryTypesModel):
         """Markdown lint rules and excluded non-documentation surfaces."""
 
+        findings_exit_codes: Annotated[
+            t.VariadicTuple[int],
+            m.Field(
+                alias="findings-exit-codes",
+                description="Exit statuses with which rumdl reports its findings.",
+            ),
+        ]
         rules: t.JsonMapping = m.Field(description="Rumdl-compatible rule mapping.")
         exclude: t.StrTuple = m.Field(
             description="Glob patterns excluded from Markdown quality checks.",

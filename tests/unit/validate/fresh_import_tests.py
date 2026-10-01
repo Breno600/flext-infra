@@ -279,7 +279,6 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -327,7 +326,6 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -394,7 +392,6 @@ class TestsFlextInfraFreshImport:
             ),
             action=c.Infra.LazyInitAction.WRITE,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -440,7 +437,6 @@ class TestsFlextInfraFreshImport:
             action=c.Infra.LazyInitAction.WRITE,
             exports=exports,
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -487,7 +483,6 @@ class TestsFlextInfraFreshImport:
             action=c.Infra.LazyInitAction.WRITE,
             exports=("value",),
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -542,7 +537,6 @@ class TestsFlextInfraFreshImport:
             action=c.Infra.LazyInitAction.WRITE,
             exports=("value",),
             lazy_map={},
-            type_checking_map={},
             eager_dunders={},
             inline_constants={},
         )
@@ -597,7 +591,6 @@ class TestsFlextInfraFreshImport:
                 action=c.Infra.LazyInitAction.WRITE,
                 exports=exports,
                 lazy_map={},
-                type_checking_map={},
                 eager_dunders={},
                 inline_constants={},
             )

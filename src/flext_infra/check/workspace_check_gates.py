@@ -224,7 +224,10 @@ class FlextInfraWorkspaceCheckGatesMixin:
                 # Missing or malformed findings must retain the producer's failure.
                 if execution.raw_output.strip() and (
                     not execution.result.errors
-                    or any(issue.code == "TOOL_ERROR" for issue in execution.issues)
+                    or any(
+                        issue.code == c.Infra.ToolOutcome.ERROR
+                        for issue in execution.issues
+                    )
                 ):
                     u.Cli.info(execution.raw_output)
                 if ctx.fail_fast or mutating:

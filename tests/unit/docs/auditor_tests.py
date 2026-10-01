@@ -40,6 +40,7 @@ class TestsFlextInfraAuditor:
             The resulting ``Callable[[str], str]``.
 
         """
+
         def _normalize(value: str) -> str:
             normalized: str = u.Infra.docs_normalize_link(value)
             return normalized
@@ -54,6 +55,7 @@ class TestsFlextInfraAuditor:
             The resulting ``Callable[[str, str], bool]``.
 
         """
+
         def _should_skip(link: str, target: str) -> bool:
             should_skip: bool = u.Infra.docs_should_skip_target(link, target)
             return should_skip
@@ -68,6 +70,7 @@ class TestsFlextInfraAuditor:
             The resulting ``Callable[[str], bool]``.
 
         """
+
         def _is_external(value: str) -> bool:
             external: bool = u.Infra.docs_is_external(value)
             return external

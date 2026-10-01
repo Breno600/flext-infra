@@ -228,7 +228,7 @@ class FlextInfraGate:
             file=file,
             line=line,
             column=column,
-            code="TOOL_ERROR",
+            code=c.Infra.ToolOutcome.ERROR.value,
             message=f"{tool} exited with code {result.outcome.raw_return_code}: {detail}",
             severity="ERROR",
         )
@@ -274,7 +274,7 @@ class FlextInfraGate:
             file=file,
             line=0,
             column=0,
-            code="TOOL_ERROR",
+            code=c.Infra.ToolOutcome.ERROR.value,
             message=f"{tool} report is not a valid structured report: {detail}",
             severity="ERROR",
         )
@@ -649,16 +649,47 @@ class FlextInfraGate:
         cmd = self._build_fix_command(project_dir, ctx, targets)
         with self._mutation_lease(project_dir):
             result = self._run(cmd, project_dir)
-        # A fixer repairs what it can and succeeds on its own exit status;
-        # what remains is reported here and enforced by ``check``.
+        # A fixer repairs what it can. The run's outcome decides the verdict:
+        # the findings it reports stay for ``check``, and only an error (a
+        # status the tool does not declare, a timeout, a signal, a findings
+        # status with nothing reported) breaks the verb with its cause.
         _, issues = self._parse_check_output(result, project_dir, ctx)
+        errors = [issue for issue in issues if issue.code == c.Infra.ToolOutcome.ERROR]
+        outcome = u.Infra.tool_outcome(
+            result.outcome,
+            findings=len(issues) - len(errors),
+            findings_exit_codes=self._findings_exit_codes(),
+        )
+        if outcome is c.Infra.ToolOutcome.ERROR and not errors:
+            issues = (
+                *issues,
+                self._command_error_issue(
+                    result,
+                    tool=self.gate_id,
+                    file=str(project_dir),
+                    line=1,
+                    column=1,
+                ),
+            )
         return self._build_gate_execution(
             project_dir,
-            verdict=u.Cli.process_succeeded(result.outcome),
+            verdict=outcome is not c.Infra.ToolOutcome.ERROR,
             issues=issues,
             raw_output=self._raw_output(result),
             started=started,
         )
+
+    @staticmethod
+    def _findings_exit_codes() -> t.VariadicTuple[int]:
+        """Exit statuses with which this gate's tool reports its findings.
+
+        A tool that declares none completes only with a success status.
+
+        Returns:
+            The findings statuses the tool's config declares.
+
+        """
+        return ()
 
     def _check_only_fix_result(self, project_dir: Path) -> m.Infra.GateExecution:
         """Return a non-mutating fix preview for check-only gate contexts.

@@ -116,7 +116,6 @@ class FlextInfraCodegenLazyInitPlanner(
                     context=context,
                     action=residue_action,
                     lazy_map={},
-                    type_checking_map={},
                     eager_dunders={},
                     inline_constants={},
                 ),
@@ -165,7 +164,6 @@ class FlextInfraCodegenLazyInitPlanner(
                     context=context,
                     action=empty_action,
                     lazy_map={},
-                    type_checking_map={},
                     eager_dunders={},
                     inline_constants={},
                 ),
@@ -218,41 +216,6 @@ class FlextInfraCodegenLazyInitPlanner(
             lazy_map = filtered_lazy_map
             child_lazy = ()
             excluded_lazy_names = ()
-        type_checking_map = dict(lazy_map)
-        published_modules = {module_name for module_name, _ in lazy_map.values()}
-        declared_entries = sorted(
-            (
-                entry
-                for entry in self.rope_workspace.workspace_index.modules_by_path.values()
-                if entry.module_name in published_modules
-                and entry.file_path.parent == context.pkg_dir
-                and not entry.is_package_init
-            ),
-            key=lambda entry: entry.file_path,
-        )
-        for entry in declared_entries:
-            module_path = entry.file_path
-            policy = u.Infra.publication_policy(
-                module_path,
-                rope_project=self.rope_workspace.rope_project,
-                project_layout=self._project_layout_for(context.pkg_dir),
-            )
-            alias = policy.expected_alias
-            family = policy.expected_family
-            if (
-                alias is not None
-                and family is not None
-                and lazy_map.get(alias) == (entry.module_name, alias)
-                and alias
-                in self.rope_workspace.exports(
-                    module_path,
-                    export_options=m.Infra.ExportOptions(
-                        allow_assignments=True,
-                        require_explicit_all=True,
-                    ),
-                )
-            ):
-                type_checking_map[alias] = (entry.module_name, family)
         all_export_names = tuple(sorted(export_names))
         plan = m.Infra.LazyInitPlan(
             context=context,
@@ -263,7 +226,6 @@ class FlextInfraCodegenLazyInitPlanner(
                 export_names=all_export_names,
             ),
             lazy_map=dict(lazy_map),
-            type_checking_map=type_checking_map,
             eager_dunders=eager_dunders,
             inline_constants={},
             wildcard_runtime_modules=(),

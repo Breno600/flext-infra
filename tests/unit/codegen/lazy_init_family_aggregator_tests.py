@@ -79,7 +79,8 @@ class TestsFlextInfraLazyInitFamilyAggregator:
 
         tm.that(
             generated,
-            has="from .constants import FlextTestAggConstants, FlextTestAggConstants as c",
+            has="from .constants import FlextTestAggConstants, c",
         )
+        tm.that(generated, lacks="FlextTestAggConstants as c")
         tm.that(generated, has='".constants": ("FlextTestAggConstants", "c")')
         tm.that(generated, lacks="_exports_typing_aggregate")

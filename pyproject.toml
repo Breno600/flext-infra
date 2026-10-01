@@ -418,6 +418,11 @@ skip-magic-trailing-comma = false
 
 [tool.ruff.lint]
 extend-safe-fixes = []
+ignore = [
+  "camelcase-imported-as-lowercase",
+  "typing-only-standard-library-import",
+  "typing-only-third-party-import",
+]
 select = ["ALL"]
 unfixable = [
   "duplicate-value",
@@ -459,7 +464,11 @@ known-first-party = ["flext_core", "flext_infra"]
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/__init__.py" = ["RUF067", "TC004"]
+"**/__init__.py" = [
+  "non-empty-init-module",
+  "runtime-import-in-type-checking-block",
+  "unused-import",
+]
 
 [tool.tomlsort]
 all = true

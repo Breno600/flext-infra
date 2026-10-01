@@ -62,12 +62,12 @@ class TestsFlextInfraRealGateRunners:
             m.Infra.GateContext(
                 repository_root=tmp_path,
                 reports_dir=tmp_path,
-                ruff_args=("--select", "E501"),
+                ruff_args=("--select", "line-too-long"),
             ),
         )
 
         tm.that(not result.result.passed, eq=True)
-        tm.that([issue.code for issue in result.issues], has=["E501"])
+        tm.that([issue.code for issue in result.issues], has=["line-too-long"])
 
     @pytest.mark.slow
     def test_ruff_lint_fix_reports_stderr_diagnostics_instead_of_deleting_them(
