@@ -8,6 +8,7 @@ import pytest
 from flext_tests import tm
 
 from flext_infra import c, m, u
+from flext_infra.codemod.batch_gates import FlextInfraModGateEngine
 from flext_infra.codemod.batch_replacements import FlextInfraModReplacements
 from tests import u as test_u
 
@@ -70,6 +71,31 @@ class TestsBatchReplacements:
         tm.that(result.error, has=f"generator:{path}:fixture-rewrite")
         tm.that(report.findings, eq=1)
         tm.that(path.read_bytes(), eq=original)
+
+    def test_generator_evidence_never_blocks_authored_rewrites(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        root = test_u.Tests.git_repository(tmp_path)
+        original = b'value = "before"\n'
+        authored = self._report(root / "authored.py", original).entries[0]
+        generated = self._report(
+            root / "generated.py",
+            original,
+            generated=True,
+        ).entries[0]
+        evidence = generated.model_copy(
+            update={
+                "replacement": None,
+                "actionable": False,
+                "classification": c.Infra.ModScanFindingClass.DETECTION_ONLY,
+            },
+        )
+        report = FlextInfraModGateEngine.recounted((authored, evidence))
+        tm.ok(FlextInfraModReplacements.publish(root, report))
+        tm.that((root / "authored.py").read_bytes(), eq=b'value = "after"\n')
+        tm.that((root / "generated.py").read_bytes(), eq=original)
+        tm.that(FlextInfraModGateEngine.authored(report).entries, eq=(authored,))
 
     @pytest.mark.parametrize(
         "changed",

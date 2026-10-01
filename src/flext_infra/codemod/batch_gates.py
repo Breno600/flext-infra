@@ -423,16 +423,34 @@ class FlextInfraModGateEngine:
         )
         if len(entries) == len(report.entries):
             return report
+        return FlextInfraModGateEngine.recounted(entries)
+
+    @staticmethod
+    def recounted(
+        entries: t.VariadicTuple[m.Infra.ModScanFinding],
+    ) -> m.Infra.ModScanReport:
+        """Return the scan report of exactly these findings, classes recounted."""
         classes = [entry.classification for entry in entries]
         return m.Infra.ModScanReport(
             findings=len(entries),
             actionable=classes.count(c.Infra.ModScanFindingClass.ACTIONABLE),
             detection_only=classes.count(c.Infra.ModScanFindingClass.DETECTION_ONLY),
             non_actionable_with_fix=classes.count(
-                c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX
+                c.Infra.ModScanFindingClass.NON_ACTIONABLE_WITH_FIX,
             ),
             files=frozenset(entry.file for entry in entries),
             entries=entries,
+        )
+
+    @classmethod
+    def authored(cls, report: m.Infra.ModScanReport) -> m.Infra.ModScanReport:
+        """Return the findings mod may rewrite: a generated source is never one.
+
+        A generator finding stays blocking evidence for its generator; it never
+        holds back the rewrites of the authored sources.
+        """
+        return cls.recounted(
+            tuple(entry for entry in report.entries if entry.source_owner != "generator"),
         )
 
     @staticmethod

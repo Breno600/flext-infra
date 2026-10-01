@@ -132,14 +132,13 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                 rope_workspace.refresh()
                 after_ast = FlextInfraModGateEngine.scan(root, fix=False).unwrap()
             phase_states.append(fingerprint(root, after_ast))
-            owned = FlextInfraModReplacements.require_authored(after_ast)
-            if owned.failure:
-                return r[t.Cli.ResultValue].from_failure(owned)
             # Detection-only findings and configured import alignment select
             # semantic work even when no AST rule has a textual replacement.
+            # A generated source is never a semantic target: its findings are
+            # its generator's, judged once the authored sources converge.
             semantic = FlextInfraCodemodSemanticApply.apply(
                 root,
-                after_ast,
+                FlextInfraModGateEngine.authored(after_ast),
                 rope_workspace,
             )
             if semantic.failure:
@@ -182,6 +181,9 @@ class FlextInfraCodemodBatchApply(FlextInfraServiceBase[t.Cli.ResultValue]):
                     f"{current.actionable} AST and {current_text.actionable} text "
                     "actionable findings; changes retained for mandatory owner repair",
                 )
+            owned = FlextInfraModReplacements.require_authored(current.entries)
+            if owned.failure:
+                return r[t.Cli.ResultValue].from_failure(owned)
             self.progress.emit(
                 "mod: require canonical formatting and zero Ruff, Pyrefly, and LSP diagnostics",
             )

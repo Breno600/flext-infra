@@ -141,7 +141,6 @@ class FlextInfraConstantsCodegenLazy:
     "Internal child packages exported at the root as module objects only."
     INFRA_ONLY_EXPORTS: ClassVar[frozenset[str]] = frozenset({
         "cleanup_submodule_namespace",
-        "install_lazy_exports",
         "lazy_getattr",
         "logger",
         "merge_lazy_imports",
@@ -160,7 +159,6 @@ class FlextInfraConstantsCodegenLazy:
     })
     "Exports excluded from package __init__.py auto-export."
     PUBLISHED_ALL_EXCLUDE: ClassVar[frozenset[str]] = frozenset({
-        "build_lazy_import_map",
         "lazy",
         "normalize_lazy_imports",
     })

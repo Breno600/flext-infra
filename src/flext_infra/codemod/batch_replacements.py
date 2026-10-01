@@ -19,11 +19,11 @@ class FlextInfraModReplacements:
     """Preserve exact engine rewrites without granting it filesystem effects."""
 
     @staticmethod
-    def require_authored(report: m.Infra.ModScanReport) -> p.Result[bool]:
+    def require_authored(
+        entries: t.SequenceOf[m.Infra.ModScanFinding],
+    ) -> p.Result[bool]:
         """Retain generator findings as blocking evidence, never writable targets."""
-        generated = tuple(
-            item for item in report.entries if item.source_owner == "generator"
-        )
+        generated = tuple(item for item in entries if item.source_owner == "generator")
         if generated:
             details = ", ".join(
                 f"generator:{item.file}:{item.rule_id}" for item in generated
@@ -36,7 +36,9 @@ class FlextInfraModReplacements:
     @classmethod
     def publish(cls, root: Path, report: m.Infra.ModScanReport) -> p.Result[bool]:
         """Validate byte coordinates and publish complete CAS-owned file plans."""
-        allowed = cls.require_authored(report)
+        allowed = cls.require_authored(
+            tuple(finding for finding in report.entries if finding.actionable),
+        )
         if allowed.failure:
             return allowed
         grouped: MutableMapping[Path, list[m.Infra.ModScanFinding]] = {}
