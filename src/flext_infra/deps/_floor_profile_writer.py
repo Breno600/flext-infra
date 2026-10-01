@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, config, m, u
-from flext_infra.workspace import FlextInfraWorkspaceDetector
 
 if TYPE_CHECKING:
     from flext_infra import t
@@ -19,7 +18,7 @@ class FlextInfraDepsFloorProfileWriter:
     def _source_paths(root: Path) -> t.SequenceOf[Path]:
         """Elect the local owner from the caller's typed workspace declaration."""
         root = root.resolve()
-        manifests = FlextInfraWorkspaceDetector.load_workspace_manifest(root).unwrap()
+        manifests = u.Infra.load_workspace_manifest(root).unwrap()
         relative = Path(c.Infra.CODEGEN_CONFIG_DIR) / c.Infra.CODEGEN_CONFIG_FILENAME
         local = root / relative
         owners = [root] if local.exists() or local.is_symlink() else []

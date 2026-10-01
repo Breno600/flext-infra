@@ -553,7 +553,7 @@ class TestsFlextInfraCodegenConform:
         tm.that(first_result.plan.request.root, eq=root.resolve())
         # A new project serializes its own identity once from the typed
         # manifest contract; later conform runs read it as input.
-        (manifest,) = tm.ok(FlextInfraWorkspaceDetector.load_workspace_manifest(root))
+        (manifest,) = tm.ok(u.Infra.load_workspace_manifest(root))
         tm.that(manifest.name, eq=name)
         tm.that((root / "config" / "beads.yaml").is_file(), eq=True)
         tm.that((root / "pyproject.toml").is_file(), eq=True)

@@ -6,7 +6,6 @@ SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
-from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, override
 
@@ -117,53 +116,6 @@ class FlextInfraWorkspaceDetector(
         return r[str].ok(result.value.text.strip())
 
     @classmethod
-    def load_workspace_manifest(
-        cls, repository_root: Path
-    ) -> p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]:
-        """Load the checkout's own workspace manifest as a 0-or-1 sequence.
-
-        This is the single spec-load owner for ``config/workspace.yaml``: the
-        manifest is the authority for a repository's provider identity, and
-        every consumer loads it through here so validation cannot diverge.
-        Absence is an EMPTY sequence — success payloads are never ``None``.
-        """
-        manifest_path = u.Infra.workspace_manifest_path(repository_root)
-        if not manifest_path.is_file():
-            return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].ok(())
-        text = u.Cli.files_read_text(manifest_path)
-        if text.failure:
-            return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].fail(
-                f"invalid workspace manifest ({manifest_path}): {text.error}"
-            )
-        return cls._parsed_workspace_manifest(text.value, str(manifest_path))
-
-    @staticmethod
-    @lru_cache(maxsize=256)
-    def _parsed_workspace_manifest(
-        text: str, manifest_path: str
-    ) -> p.Result[t.SequenceOf[m.Infra.WorkspaceManifestSpec]]:
-        """Parse and validate one manifest text once per exact content.
-
-        One conform plan resolves the same manifest from many owners (the
-        integration branch, provider identity, members); the key is the exact
-        file text, so an edited manifest is a new key, never a stale spec.
-        """
-        loaded = u.Cli.yaml_parse(text)
-        if loaded.failure:
-            return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].fail(
-                f"invalid workspace manifest ({manifest_path}): {loaded.error}"
-            )
-        validated: p.Result[m.Infra.WorkspaceManifestSpec] = u.validate_value(
-            m.Infra.WorkspaceManifestSpec, loaded.value
-        )
-        if validated.failure:
-            return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].fail_op(
-                f"workspace manifest model validation ({manifest_path})",
-                validated.error,
-            )
-        return r[t.SequenceOf[m.Infra.WorkspaceManifestSpec]].ok((validated.value,))
-
-    @classmethod
     def _declared_provider_name(
         cls, repository_root: Path, *, origin_url: str
     ) -> p.Result[str]:
@@ -176,7 +128,7 @@ class FlextInfraWorkspaceDetector(
         identity from the live Git origin organization itself — no catalog,
         no invented rows.
         """
-        loaded = cls.load_workspace_manifest(repository_root)
+        loaded = u.Infra.load_workspace_manifest(repository_root)
         if loaded.failure:
             return r[str].from_failure(loaded)
         if not loaded.value:
@@ -271,7 +223,7 @@ class FlextInfraWorkspaceDetector(
         along: ``True`` when the manifest declares no overlay.
         """
         manifest_path = u.Infra.workspace_manifest_path(repository_root)
-        loaded = cls.load_workspace_manifest(repository_root)
+        loaded = u.Infra.load_workspace_manifest(repository_root)
         if loaded.failure:
             return r[
                 tuple[m.Infra.RepositoryRef, bool, m.Infra.ProjectSpec | None]
@@ -476,7 +428,7 @@ class FlextInfraWorkspaceDetector(
         cls, repository_root: Path
     ) -> p.Result[t.MappingKV[Path, m.Infra.RepositoryRef]]:
         """Index the manifest's declared member contracts by composed path."""
-        loaded = cls.load_workspace_manifest(repository_root)
+        loaded = u.Infra.load_workspace_manifest(repository_root)
         if loaded.failure:
             return r[t.MappingKV[Path, m.Infra.RepositoryRef]].from_failure(loaded)
         return r[t.MappingKV[Path, m.Infra.RepositoryRef]].ok({
@@ -589,7 +541,7 @@ class FlextInfraWorkspaceDetector(
         )
         if repository.failure:
             return result_type.from_failure(repository)
-        member_manifest = cls.load_workspace_manifest(subproject_root)
+        member_manifest = u.Infra.load_workspace_manifest(subproject_root)
         if member_manifest.failure:
             return result_type.from_failure(member_manifest)
         if not member_manifest.value:
@@ -637,7 +589,7 @@ class FlextInfraWorkspaceDetector(
         identity = u.Infra.git_identity(m.Infra.GitRepoRequest(repo_root=resolved_root))
         if identity.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(identity)
-        declared_manifest = cls.load_workspace_manifest(resolved_root)
+        declared_manifest = u.Infra.load_workspace_manifest(resolved_root)
         if declared_manifest.failure:
             return r[m.Infra.WorkspaceSpec].from_failure(declared_manifest)
         manifest = declared_manifest.value[0] if declared_manifest.value else None

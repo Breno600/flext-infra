@@ -17,6 +17,7 @@ from flext_infra import c, m, p, t
 
 from ._git.worktree_discovery import FlextInfraUtilitiesGitWorktreeDiscoveryMixin
 from .dependencies import FlextInfraUtilitiesDependencies
+from .workspace_manifest import FlextInfraUtilitiesWorkspaceManifest
 
 _GIT_URL_SCHEME_PREFIX = "git+"
 
@@ -294,9 +295,9 @@ class FlextInfraUtilitiesRepository:
         (every internal requirement is commit residue of a retired pin). Being
         hand-authored, a commit ref there is a pin beside uv.lock and fails.
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        loaded = FlextInfraWorkspaceDetector.load_workspace_manifest(repository_root)
+        loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
+            repository_root
+        )
         if loaded.failure:
             return r[t.Pair[str, str]].from_failure(loaded)
         project = loaded.value[0].project if loaded.value else None
@@ -431,9 +432,9 @@ class FlextInfraUtilitiesRepository:
         *, repository_root: Path, distribution: str
     ) -> p.Result[str]:
         """Return the workspace manifest's declared URL for one distribution."""
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        loaded = FlextInfraWorkspaceDetector.load_workspace_manifest(repository_root)
+        loaded = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
+            repository_root
+        )
         if loaded.failure:
             return r[str].from_failure(loaded)
         if not loaded.value:
@@ -520,9 +521,9 @@ class FlextInfraUtilitiesRepository:
         checkout. When none exists the failure is loud and no default is
         invented.
         """
-        from flext_infra.workspace.detector import FlextInfraWorkspaceDetector
-
-        manifest = FlextInfraWorkspaceDetector.load_workspace_manifest(repository_root)
+        manifest = FlextInfraUtilitiesWorkspaceManifest.load_workspace_manifest(
+            repository_root
+        )
         if manifest.success and manifest.value:
             integration = manifest.value[0].integration
             if integration is not None:
