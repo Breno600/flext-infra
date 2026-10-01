@@ -138,11 +138,15 @@ class FlextInfraEnsurePackagingPhase:
                     root_path=(),
                     table_path=("wheel",),
                     operations=(
-                        toml.ListOp(key="packages", values=package_paths),
                         toml.ListOp(
-                            key="only-include",
-                            values=(*package_paths, *data.directories),
+                            key="include",
+                            values=(
+                                *(f"/{path}/**" for path in package_paths),
+                                *(f"/{path}/**" for path in data.directories),
+                            ),
                         ),
+                        toml.RemoveOp(key="packages"),
+                        toml.RemoveOp(key="only-include"),
                         toml.SetOp(
                             key="sources",
                             value={
@@ -168,14 +172,15 @@ class FlextInfraEnsurePackagingPhase:
                     table_path=("sdist",),
                     operations=(
                         toml.ListOp(
-                            key="only-include",
+                            key="include",
                             values=(
-                                *package_paths,
-                                *module_paths,
-                                *data.files,
-                                *data.directories,
+                                *(f"/{path}/**" for path in package_paths),
+                                *(f"/{path}" for path in module_paths),
+                                *(f"/{path}" for path in data.files),
+                                *(f"/{path}/**" for path in data.directories),
                             ),
                         ),
+                        toml.RemoveOp(key="only-include"),
                     ),
                 ),
                 (

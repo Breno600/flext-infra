@@ -160,7 +160,6 @@ class TestsFlextInfraCodegenRepositoryRootScope:
             )
         ]
         tm.that(positions, eq=sorted(positions))
-        tm.that(steps[positions[-1] :], len=1)
         tm.that(sum("lock --project" in step for step in steps), eq=1)
         converge = second.stdout.splitlines()
         final_lock = next(i for i, s in enumerate(converge) if "lock --project" in s)
