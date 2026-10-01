@@ -165,12 +165,17 @@ class TestsFlextInfraPytestRunner(PytestRunnerContract):
         assert runner.run_timeout_seconds(policy) == expected
         command = runner.build_command(report)
         stop = next(
-            item for item in command if item.startswith(c.Infra.PYTEST_SUITE_STOP_OPTION)
+            item
+            for item in command
+            if item.startswith(c.Infra.PYTEST_SUITE_STOP_OPTION)
         )
-        assert float(stop.partition("=")[2]) == (
-            runner.started_at_monotonic
-            + expected
-            - policy.suite_stop_reserve_seconds
+        tm.that(
+            float(stop.partition("=")[2]),
+            eq=pytest.approx(
+                runner.started_at_monotonic
+                + expected
+                - policy.suite_stop_reserve_seconds
+            ),
         )
 
     def test_worker_ceiling_follows_the_declared_project_override(

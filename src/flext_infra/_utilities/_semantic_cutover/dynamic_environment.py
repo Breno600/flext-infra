@@ -36,7 +36,7 @@ class FlextInfraUtilitiesSemanticCutoverDynamicEnvironment(
         METADATA_DEPENDENCIES = (ParentNodeProvider, QualifiedNameProvider)
 
         def __init__(self, bindings: t.MappingKV[str, int]) -> None:
-            self.aliases: dict[tuple[str, cst.FunctionDef], str] = {}
+            self.aliases: t.MutableMappingKV[t.Pair[str, cst.FunctionDef], str] = {}
             self.packages: set[str] = set()
             self.bindings = bindings
 

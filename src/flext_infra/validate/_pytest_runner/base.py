@@ -104,12 +104,10 @@ class FlextInfraPytestRunnerBase(s[int]):
     def _declared_project_name(self) -> str | None:
         """Read the declared project identity shared by runtime policies."""
         pyproject_path = self.root / c.PYPROJECT_FILENAME
-        try:
-            return u.Infra.project_name_from_payload(
-                pyproject_path, u.Infra.pyproject_payload(pyproject_path)
-            )
-        except (TypeError, ValueError):
+        payload = u.Infra.pyproject_payload(pyproject_path)
+        if "project" not in payload:
             return None
+        return u.Infra.project_name_from_payload(pyproject_path, payload)
 
     def run_timeout_seconds(self, policy: PytestPolicy) -> int:
         """Resolve the declared project's measured wall over the fleet default."""

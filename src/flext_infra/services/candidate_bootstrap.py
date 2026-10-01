@@ -31,7 +31,7 @@ class FlextInfraCandidateBootstrapService:
         targets = workspace.candidate_bootstrap_targets
         if not targets:
             return r[bool].fail("candidate bootstrap targets are not declared")
-        roots: dict[str, Path] = {}
+        roots: t.MutableMappingKV[str, Path] = {}
         for index, target in enumerate(targets):
             identity = u.Infra.exact_worktree_root(
                 (source_root / target.path).resolve(strict=True)
@@ -79,7 +79,7 @@ class FlextInfraCandidateBootstrapService:
     ) -> p.Result[m.Infra.CodegenPhaseAnalysis]:
         """Compose one immutable receipt from all conform planners."""
         files: list[m.Infra.CodegenFilePlan] = []
-        inputs: dict[Path, m.Cli.AtomicFileState] = {
+        inputs: t.MutableMappingKV[Path, m.Cli.AtomicFileState] = {
             manifest_state.path: manifest_state
         }
         for root, target in zip(roots.values(), targets, strict=True):

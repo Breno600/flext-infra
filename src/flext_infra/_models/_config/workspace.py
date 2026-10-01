@@ -34,7 +34,7 @@ class FlextInfraConfigModelsWorkspace:
                 raise ValueError(msg)
             if (
                 self.what
-                is not FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE
+                != FlextInfraConstantsCodegenProject.CodegenConformSurface.MAKEFILE
             ):
                 msg = "candidate bootstrap owns only the Makefile surface"
                 raise ValueError(msg)

@@ -264,7 +264,7 @@ class TestsFlextInfraGateRegistry:
         registry = FlextInfraGateRegistry.default()
         mutating = {
             gate_id
-            for gate_id in c.Infra.CANONICAL_GATE_IDS
+            for gate_id in c.Infra.ALLOWED_GATES
             if (gate_cls := registry.get(gate_id)) is not None and gate_cls.can_fix
         }
         # `make fix` owns every mutating check-gate EXCEPT the fmt-owned

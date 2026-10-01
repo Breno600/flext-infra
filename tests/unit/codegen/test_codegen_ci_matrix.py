@@ -663,7 +663,9 @@ class TestsFlextInfraCodegenCiMatrix:
             msg = "Docs workflow steps must be a sequence"
             raise TypeError(msg)
         steps = [t.Cli.JSON_MAPPING_ADAPTER.validate_python(step) for step in raw_steps]
-        docs_step = next(step for step in steps if step["name"] == "Docs lifecycle (blocking)")
+        docs_step = next(
+            step for step in steps if step["name"] == "Docs lifecycle (blocking)"
+        )
         upload = next(
             step for step in steps if step["name"] == "Upload docs reports on failure"
         )

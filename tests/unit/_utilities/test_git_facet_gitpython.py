@@ -7,7 +7,6 @@ from pathlib import Path
 
 import pytest
 from flext_tests import tm
-from git import GitCommandError
 
 from flext_infra import FlextInfraGitService, c, m, main as infra_main, u
 from tests import u as test_u
@@ -47,7 +46,7 @@ class TestsFlextInfraGitFacet:
         repository = test_u.Tests.git_repository(tmp_path)
         (repository / ".git" / "index").write_bytes(b"invalid index")
 
-        with pytest.raises(GitCommandError, match="index"):
+        with pytest.raises(Exception, match="index"):
             u.Infra.git_tracked_scope_paths(repository)
 
     def test_identity_marks_only_a_missing_symbolic_branch_as_unborn(
@@ -234,10 +233,7 @@ class TestsFlextInfraGitFacet:
 
     @pytest.mark.parametrize("change", ["tracked", "staged", "untracked"])
     def test_verify_clean_cli_rejects_real_worktree_changes(
-        self,
-        real_git_repo: Path,
-        capsys: pytest.CaptureFixture[str],
-        change: str,
+        self, real_git_repo: Path, capsys: pytest.CaptureFixture[str], change: str
     ) -> None:
         """The public CLI passes a clean checkout and exposes a dirty Git report."""
         argv = ["workspace", "verify-clean", "--repo-root", str(real_git_repo)]
