@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from ._census_filters import FlextInfraRefactorCensusFiltersMixin
     from ._census_objects import FlextInfraRefactorCensusObjectsMixin
     from ._census_project import FlextInfraRefactorCensusProjectMixin
+    from ._census_removal import FlextInfraRefactorCensusRemovalMixin
     from ._census_render import FlextInfraRefactorCensusRenderMixin
     from ._namespace_enforcer_project import FlextInfraNamespaceEnforcerProjectMixin
     from ._project_classifier_deps import FlextInfraProjectClassifierDepsMixin
@@ -49,6 +50,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraRefactorCensusFiltersMixin",
     "FlextInfraRefactorCensusObjectsMixin",
     "FlextInfraRefactorCensusProjectMixin",
+    "FlextInfraRefactorCensusRemovalMixin",
     "FlextInfraRefactorCensusRenderMixin",
     "FlextInfraRefactorClassvarConstantAutofix",
     "FlextInfraRefactorProjectAliasMigrator",
@@ -71,6 +73,7 @@ _LAZY_IMPORTS = MappingProxyType(
             "._census_filters": ("FlextInfraRefactorCensusFiltersMixin",),
             "._census_objects": ("FlextInfraRefactorCensusObjectsMixin",),
             "._census_project": ("FlextInfraRefactorCensusProjectMixin",),
+            "._census_removal": ("FlextInfraRefactorCensusRemovalMixin",),
             "._census_render": ("FlextInfraRefactorCensusRenderMixin",),
             "._namespace_enforcer_project": (
                 "FlextInfraNamespaceEnforcerProjectMixin",

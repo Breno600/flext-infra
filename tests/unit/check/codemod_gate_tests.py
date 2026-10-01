@@ -155,7 +155,8 @@ class TestsFlextInfraCodemodGate:
 
     def test_invalid_rule_is_a_native_failure(self, tmp_path: Path) -> None:
         project = self._project(tmp_path)
-        (project / "rules" / "second.yml").write_text(
+        rules = (project / c.Infra.CODEMOD_CONFIG_RELPATH).parent / c.Cli.RULES_DIR_NAME
+        (rules / "second.yml").write_text(
             "id: contract-second\nlanguage: invalid-language\n"
             "rule:\n  pattern: second($VALUE)\n",
             encoding="utf-8",

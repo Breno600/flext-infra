@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Mapping
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from flext_infra import c, m, u
@@ -27,10 +28,12 @@ from flext_infra.detectors.private_import_bypass_detector import (
     FlextInfraPrivateImportBypassDetector,
 )
 from flext_infra.detectors.runtime_alias_detector import FlextInfraRuntimeAliasDetector
+from flext_infra.refactor.classvar_constant_autofix import (
+    FlextInfraRefactorClassvarConstantAutofix,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable, MutableMapping
-    from pathlib import Path
 
     from flext_infra import t
 
@@ -254,7 +257,9 @@ class FlextInfraNamespaceEnforcerProjectMixin:
                     parse_failures=parse_failures,
                 )
             ),
-            rewrite_fn=None,
+            rewrite_fn=lambda vs: self._relocate_class_placements(
+                vs, project_layout=project_layout, rope_project=rope_project
+            ),
             apply=apply,
         )
         return m.Infra.ProjectEnforcementReport(
@@ -275,6 +280,66 @@ class FlextInfraNamespaceEnforcerProjectMixin:
             parse_failures=list(parse_failures),
             files_scanned=len(py_files),
         )
+
+    @staticmethod
+    def _relocate_class_placements(
+        violations: t.SequenceOf[m.Infra.ClassPlacementViolation],
+        *,
+        project_layout: m.Infra.RopeProjectLayout | None,
+        rope_project: t.Infra.RopeProject,
+    ) -> None:
+        """Repair the class placements the detector marks as relocatable.
+
+        A ClassVar constant outside ``_constants`` moves to the package's
+        ``_constants`` module (ENFORCE-079); a fixable misplaced facade class
+        moves to its family module. Any other action stays a reported finding.
+        A failed relocation escapes with its cause.
+        """
+        relocatable = tuple(
+            violation
+            for violation in violations
+            if violation.action in {"classvar_relocation", "relocate_facade_class"}
+        )
+        if not relocatable:
+            return
+        if project_layout is None:
+            msg = "class placement relocation requires a resolved project layout"
+            raise ValueError(msg)
+        constants_module = f"{project_layout.package_name}._constants"
+        for violation in sorted(
+            relocatable, key=lambda item: (item.file, item.line), reverse=True
+        ):
+            source_file = Path(violation.file)
+            if violation.action == "classvar_relocation":
+                module_parts = source_file.relative_to(project_layout.src_dir).with_suffix(
+                    ""
+                ).parts
+                if module_parts[-1] == "__init__":
+                    module_parts = module_parts[:-1]
+                FlextInfraRefactorClassvarConstantAutofix.apply(
+                    repository_root=project_layout.project_root,
+                    class_full_name=".".join((*module_parts, violation.base_class)),
+                    constant_name=violation.name,
+                    constants_module=constants_module,
+                )
+                continue
+            if not (violation.fixable and violation.family):
+                continue
+            u.Infra.move_class(
+                m.Infra.ClassMoveRequest(
+                    rope_project=rope_project,
+                    source_file=source_file,
+                    target_file=u.Infra.class_target_file(
+                        package_dir=project_layout.package_dir,
+                        source_file=source_file,
+                        class_name=violation.name,
+                        family=violation.family,
+                    ),
+                    class_name=violation.name,
+                    line=violation.line,
+                    apply=True,
+                )
+            )
 
     def _relocate_rule_findings(
         self,

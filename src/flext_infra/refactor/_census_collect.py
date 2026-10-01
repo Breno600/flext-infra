@@ -15,6 +15,15 @@ class FlextInfraRefactorCensusCollectMixin:
 
     if TYPE_CHECKING:
 
+        @property
+        def effective_dry_run(self) -> bool: ...
+
+        def _validated_project_reports(
+            self,
+            rope: p.Infra.RopeWorkspaceDsl,
+            project_reports: t.VariadicTuple[m.Infra.ProjectReport],
+        ) -> t.VariadicTuple[m.Infra.ProjectReport]: ...
+
         @staticmethod
         def _project_name_for_module(
             module: m.Infra.RopeModuleIndexEntry,
@@ -77,9 +86,17 @@ class FlextInfraRefactorCensusCollectMixin:
             findings.project_objects.setdefault(project, []).extend(objects)
 
     def _assemble_report(
-        self, *, findings: m.Infra.ScanFindings, scan_config: m.Infra.ScanConfig
+        self,
+        rope: p.Infra.RopeWorkspaceDsl,
+        *,
+        findings: m.Infra.ScanFindings,
+        scan_config: m.Infra.ScanConfig,
     ) -> m.Infra.WorkspaceReport:
-        """Aggregate per-project inventories into the workspace census report."""
+        """Aggregate per-project inventories into the workspace census report.
+
+        In dry-run the removal candidates are previewed through the gates and
+        only the ones that pass stay candidates.
+        """
         duplicates = self._duplicate_groups(tuple(findings.project_objects.values()))
         duplicate_keys = frozenset(
             self._object_key(item)
@@ -97,6 +114,8 @@ class FlextInfraRefactorCensusCollectMixin:
                 findings.report_projects | set(findings.project_objects)
             )
         )
+        if self.effective_dry_run:
+            project_reports = self._validated_project_reports(rope, project_reports)
         return m.Infra.WorkspaceReport(
             projects=project_reports,
             total_objects=sum(report.objects_total for report in project_reports),

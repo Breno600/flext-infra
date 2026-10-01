@@ -58,7 +58,11 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
             ...
 
         def _assemble_report(
-            self, *, findings: m.Infra.ScanFindings, scan_config: m.Infra.ScanConfig
+            self,
+            rope: p.Infra.RopeWorkspaceDsl,
+            *,
+            findings: m.Infra.ScanFindings,
+            scan_config: m.Infra.ScanConfig,
         ) -> m.Infra.WorkspaceReport:
             """Assemble through the composed census collection mixin."""
             ...
@@ -114,7 +118,7 @@ class FlextInfraRefactorCensusCollectHelpersMixin:
         for module in rope.modules(project_names=self.project_names):
             if self._is_production_module(module):
                 self._scan_module(rope, module, scan_config, findings=findings)
-        return self._assemble_report(findings=findings, scan_config=scan_config)
+        return self._assemble_report(rope, findings=findings, scan_config=scan_config)
 
 
 __all__: list[str] = ["FlextInfraRefactorCensusCollectHelpersMixin"]
