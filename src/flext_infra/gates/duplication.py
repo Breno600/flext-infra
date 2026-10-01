@@ -404,19 +404,34 @@ class FlextInfraDuplicationGate(FlextInfraGate):
         return r[tuple[m.Infra.Issue, ...]].ok(tuple(issues))
 
     @staticmethod
-    def _report_file_name(side: t.JsonMapping) -> str:
-        """Return one jscpd clone side's on-disk file name.
+    def _report_name_parts(side: t.JsonMapping) -> tuple[str, str | None]:
+        """Return one jscpd clone side's file name and virtual language.
 
         jscpd names markdown-embedded code blocks ``<file>:<language>``; the
-        range belongs to the real file on disk, so the virtual language
-        suffix is dropped before the name is used for ownership, stat, or
-        issue reporting.
+        range belongs to that embedded block, not to a file of that literal
+        name. The parts feed ownership (the real file) and the behavioral
+        probe (the embedded language).
 
         Returns:
-            The clone side's file name without the virtual suffix.
+            The on-disk file name and the embedded language, or ``None``
+            when the side names a real file.
 
         """
-        return u.Cli.json_pick_str(side, "name").rsplit(":", 1)[0]
+        raw = u.Cli.json_pick_str(side, "name")
+        file_name, separator, language = raw.rpartition(":")
+        if separator and file_name and "." in file_name:
+            return file_name, language
+        return raw, None
+
+    @classmethod
+    def _report_file_name(cls, side: t.JsonMapping) -> str:
+        """Return one jscpd clone side's on-disk file name.
+
+        Returns:
+            The clone side's file name without any virtual suffix.
+
+        """
+        return cls._report_name_parts(side)[0]
 
     @classmethod
     def _issue_from_duplicate(
@@ -484,7 +499,12 @@ class FlextInfraDuplicationGate(FlextInfraGate):
             Whether one jscpd source range encloses executable behavior.
 
         """
-        file_name = cls._report_file_name(side)
+        file_name, virtual_language = cls._report_name_parts(side)
+        if virtual_language is not None:
+            # An embedded markdown code block is executable exactly when it
+            # is the python block jscpd tokenized; other languages never
+            # enclose python behavior.
+            return virtual_language == "python"
         path = Path(file_name)
         identity = path.stat()
         key = (file_name, identity.st_mtime_ns, identity.st_size)
