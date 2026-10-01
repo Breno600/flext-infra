@@ -10,10 +10,11 @@ from typing import TYPE_CHECKING, ClassVar
 
 from flext_cli import u
 
-from flext_infra import c, config, m, t
+from flext_infra import c, config, m, settings, t
 
 from .process import FlextInfraUtilitiesProcess
 from .project_discovery import FlextInfraUtilitiesProjectDiscovery
+from .pyproject import FlextInfraUtilitiesPyproject
 
 if TYPE_CHECKING:
     from flext_infra import p
@@ -66,7 +67,9 @@ class FlextInfraUtilitiesResourceLimits:
                 c.Infra.MYPY_MEMORY_LIMIT_MB_DEFAULT,
             ),
             timeout_seconds=FlextInfraUtilitiesResourceLimits._environment_integer(
-                process_env, c.Infra.MYPY_TIMEOUT_SECONDS_ENV, project_budget
+                process_env,
+                c.Infra.MYPY_TIMEOUT_SECONDS_ENV,
+                project_budget,
             ),
         )
 
@@ -93,7 +96,7 @@ class FlextInfraUtilitiesResourceLimits:
         interpreter = sys.executable
         if invocation.workspace is not None:
             managed_python = FlextInfraUtilitiesProjectDiscovery.runtime_python(
-                invocation.workspace
+                invocation.workspace,
             )
             if not managed_python.is_file():
                 msg = f"managed workspace interpreter is missing: {managed_python}"
@@ -101,7 +104,7 @@ class FlextInfraUtilitiesResourceLimits:
             interpreter = str(managed_python)
             if invocation.profile_output is None:
                 managed_mypy = managed_python.with_name(
-                    f"{c.Infra.MYPY}.exe" if sys.platform == "win32" else c.Infra.MYPY
+                    f"{c.Infra.MYPY}.exe" if sys.platform == "win32" else c.Infra.MYPY,
                 )
                 if not managed_mypy.is_file():
                     msg = f"managed workspace checker is missing: {managed_mypy}"
@@ -122,6 +125,32 @@ class FlextInfraUtilitiesResourceLimits:
             "-m",
             c.Infra.MYPY,
             *FlextInfraUtilitiesResourceLimits.mypy_arguments(invocation),
+        )
+
+    @staticmethod
+    def mypy_cache_directory(project_dir: Path) -> Path:
+        """Resolve the one shared Mypy cache of a project across relocks.
+
+        Mypy keys its cache by module and revalidates each entry by source hash,
+        so every checkout and every relock of one project reuse one analysis: a
+        dependency bump recomputes only the modules it changed. Keying by lock
+        content forced a cold full-fleet analysis after every
+        relock and broke the bounded Mypy run. Projects keep distinct
+        directories because their ``tests`` packages share one module name.
+        """
+        spec = config.Infra.codegen.make.mypy_cache
+        home = settings.env_lookup(str(spec.data_home_environment_variable)) or str(
+            Path(settings.env_required(str(spec.user_home_environment_variable)))
+            / spec.home_cache_directory,
+        )
+        metadata = FlextInfraUtilitiesPyproject.read_project_metadata_result(
+            project_dir,
+        )
+        if metadata.failure:
+            msg = metadata.error or f"project metadata unreadable: {project_dir}"
+            raise ValueError(msg)
+        return (
+            Path(home) / spec.external_storage_directory / metadata.value.project.name
         )
 
     @staticmethod
@@ -146,10 +175,10 @@ class FlextInfraUtilitiesResourceLimits:
                 invocation.model_dump_json(),
             )
         prlimit_executable = FlextInfraUtilitiesResourceLimits._required_executable(
-            c.Infra.PRLIMIT_COMMAND
+            c.Infra.PRLIMIT_COMMAND,
         )
         timeout_executable = FlextInfraUtilitiesResourceLimits._required_executable(
-            c.Infra.TIMEOUT_COMMAND
+            c.Infra.TIMEOUT_COMMAND,
         )
         return (
             timeout_executable,
@@ -191,28 +220,31 @@ class FlextInfraUtilitiesResourceLimits:
             budget = cls._project_mypy_budget(project_dir)
             if budget is not None:
                 limit = m.Infra.MypyResourceLimit(
-                    memory_limit_mb=limit.memory_limit_mb, timeout_seconds=budget
+                    memory_limit_mb=limit.memory_limit_mb,
+                    timeout_seconds=budget,
                 )
         return cls.mypy_runner_timeout(limit)
 
     @staticmethod
     def _project_mypy_budget(project_dir: Path) -> int | None:
-        """Read ``tools.mypy.timeout_seconds`` from the project overlay."""
+        """Read ``Infra.tooling.tools.mypy.timeout_seconds`` from the overlay.
+
+        The overlay has the same nesting as the packaged ``tooling.yaml``. A
+        level the overlay does not declare is a typed absence (no project
+        budget); a declared level that is not a mapping fails loud.
+        """
         tooling = project_dir / "config" / "tooling.yaml"
         if not tooling.is_file():
             return None
-        parsed = u.Cli.yaml_safe_load(tooling)
-        if parsed.failure:
-            msg = f"project tooling.yaml unreadable: {parsed.error}"
-            raise ValueError(msg)
-        payload = parsed.value or {}
-        tools = payload.get("tools") if isinstance(payload, dict) else None
-        mypy_block = tools.get("mypy") if isinstance(tools, dict) else None
-        raw_budget = (
-            mypy_block.get("timeout_seconds") if isinstance(mypy_block, dict) else None
-        )
-        if raw_budget is None:
-            return None
+        node: t.JsonValue = u.Cli.yaml_safe_load(tooling).unwrap()
+        for key in ("Infra", "tooling", "tools", "mypy", "timeout_seconds"):
+            if not isinstance(node, dict):
+                msg = f"project tooling.yaml level above {key!r} is not a mapping"
+                raise TypeError(msg)
+            if key not in node:
+                return None
+            node = node[key]
+        raw_budget = node
         if not isinstance(raw_budget, int) or isinstance(raw_budget, bool):
             msg = f"project mypy budget must be a plain integer: {raw_budget!r}"
             raise TypeError(msg)
@@ -236,23 +268,30 @@ class FlextInfraUtilitiesResourceLimits:
 
     @classmethod
     def mypy_launch_failure_diagnostic(
-        cls, detail: str, limit: m.Infra.MypyResourceLimit | None = None
+        cls,
+        detail: str,
+        limit: m.Infra.MypyResourceLimit | None = None,
     ) -> str:
         """Report an outer-runner failure that precluded a process exit status."""
         validated_limit = limit or cls.mypy_resource_limit()
         return cls._bounded_mypy_diagnostic(
-            validated_limit, detail=detail, exit_code="unavailable", signal="none"
+            validated_limit,
+            detail=detail,
+            exit_code="unavailable",
+            signal="none",
         )
 
     @classmethod
     def mypy_failure_diagnostic(
-        cls, output: p.Cli.CommandOutput, limit: m.Infra.MypyResourceLimit | None = None
+        cls,
+        output: p.Cli.CommandOutput,
+        limit: m.Infra.MypyResourceLimit | None = None,
     ) -> str | None:
         """Return a controlled diagnostic only for timeout or memory exhaustion."""
         validated_limit = limit or cls.mypy_resource_limit()
         combined = f"{output.stdout}\n{output.stderr}".lower()
         classification = FlextInfraUtilitiesProcess.process_exit_classification(
-            output.outcome.raw_return_code
+            output.outcome.raw_return_code,
         )
         resource_failure = classification != "failure" or any(
             marker in combined for marker in cls._MEMORY_FAILURE_MARKERS

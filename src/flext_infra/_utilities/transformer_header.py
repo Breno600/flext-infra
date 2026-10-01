@@ -59,7 +59,12 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
     @classmethod
     def ensure_alias_import(
-        cls, source: str, module: str, alias: str, *, runtime_required: bool = False
+        cls,
+        source: str,
+        module: str,
+        alias: str,
+        *,
+        runtime_required: bool = False,
     ) -> str:
         """Honor the consumer's runtime requirement when introducing an alias."""
         if not alias:
@@ -117,7 +122,10 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
     @classmethod
     def _alias_import_under_type_checking(
-        cls, source: str, module: str, alias: str
+        cls,
+        source: str,
+        module: str,
+        alias: str,
     ) -> str | None:
         """Place an annotation-only facade import inside ``if TYPE_CHECKING:``.
 
@@ -156,7 +164,7 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
         Without a block to extend, the injector fell through to a module-level
         import, which is exactly what breaks a module the package imports while
-        initialising itself (flext-dk13k): ``__version__.py`` then raised
+        initialising itself: ``__version__.py`` then raised
         ImportError on a partially initialised package. Deferred annotations
         make the alias a type-checker-only read, so the block is the correct
         destination and the facade law prescribes it.
@@ -228,7 +236,7 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
         built, so an alias used there is a runtime dependency even though the
         syntax is an annotation. Deferring such an alias under
         ``if TYPE_CHECKING:`` made ``_SmellData.model_validate_json`` raise
-        ``PydanticUserError`` during package import (flext-dk13k).
+        ``PydanticUserError`` during package import.
         """
         parents: MutableMapping[int, ast.AST] = {}
         for parent in ast.walk(module):
@@ -259,7 +267,7 @@ class FlextInfraUtilitiesTransformerHeader(FlextInfraUtilitiesTransformerHeaderP
 
         Class-body annotations on a runtime model are excluded from that set:
         the model resolves them at import time, so the alias must stay
-        importable at runtime (flext-dk13k).
+        importable at runtime.
         """
         module = ast.parse(source)
         runtime_ids = (

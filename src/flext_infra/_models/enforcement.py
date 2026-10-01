@@ -54,7 +54,8 @@ class FlextInfraModelsEnforcement:
 
         file_path: Annotated[Path, m.Field(description="File the step runs on")]
         record_path: Annotated[
-            str, m.Field(description="Path string used in outcome records")
+            str,
+            m.Field(description="Path string used in outcome records"),
         ]
 
     class FileFixOutcome(m.Value):
@@ -65,16 +66,20 @@ class FlextInfraModelsEnforcement:
         """
 
         skipped: Annotated[
-            t.StrSequence, m.Field(description="Skip reasons for the file")
+            t.StrSequence,
+            m.Field(description="Skip reasons for the file"),
         ] = ()
         errors: Annotated[
-            t.StrSequence, m.Field(description="Failure messages for the file")
+            t.StrSequence,
+            m.Field(description="Failure messages for the file"),
         ] = ()
         messages: Annotated[
-            t.StrSequence, m.Field(description="Change messages for the file")
+            t.StrSequence,
+            m.Field(description="Change messages for the file"),
         ] = ()
         files_modified: Annotated[
-            t.StrSequence, m.Field(description="Paths modified when the fix is applied")
+            t.StrSequence,
+            m.Field(description="Paths modified when the fix is applied"),
         ] = ()
 
     class ProjectFixResult(m.Value):
@@ -98,7 +103,8 @@ class FlextInfraModelsEnforcement:
             m.Field(description="Failed fix attempts"),
         ] = ()
         files_modified: Annotated[
-            t.StrSequence, m.Field(description="Modified file paths")
+            t.StrSequence,
+            m.Field(description="Modified file paths"),
         ] = ()
 
     class EnforcementEvaluation(m.ArbitraryTypesModel):

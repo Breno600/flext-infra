@@ -18,8 +18,8 @@ from ._models._config.base import FlextInfraConfigModels
 class FlextInfraConfig(FlextCliConfig):
     """Declarative flext-infra config loaded and validated once."""
 
-    # NOTE (multi-agent, flext-wkii.9 + flext-wkii.17 / agent: codex): direct
-    # config.Infra is the only codegen information surface; no accessor method.
+    # Direct config.Infra is the only codegen information surface; no accessor
+    # method.
     Infra: FlextInfraConfigModels.Infra
 
     @classmethod

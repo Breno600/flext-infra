@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from .abstraction_boundary import FlextInfraAbstractionBoundaryGate
     from .bandit import FlextInfraBanditGate
     from .base_gate import FlextInfraGate
     from .canonical_alias import FlextInfraCanonicalAliasGate
@@ -41,13 +40,10 @@ if TYPE_CHECKING:
     from .ruff_lint import FlextInfraRuffLintGate
     from .runtime_census import FlextInfraRuntimeCensusGate
     from .scanner_gate import FlextInfraScannerGateMixin
-    from .silent_failure import FlextInfraSilentFailureGate
     from .smells import FlextInfraSmellsGate
-    from .tier_whitelist import FlextInfraTierWhitelistGate
 
 
 __all__: tuple[str, ...] = (
-    "FlextInfraAbstractionBoundaryGate",
     "FlextInfraBanditGate",
     "FlextInfraCanonicalAliasGate",
     "FlextInfraDeferredSelfReferenceGate",
@@ -69,9 +65,7 @@ __all__: tuple[str, ...] = (
     "FlextInfraRuffLintGate",
     "FlextInfraRuntimeCensusGate",
     "FlextInfraScannerGateMixin",
-    "FlextInfraSilentFailureGate",
     "FlextInfraSmellsGate",
-    "FlextInfraTierWhitelistGate",
     "collect_markdown_files",
     "is_syntax_broken",
     "read_ignore_patterns",
@@ -83,7 +77,6 @@ __all__: tuple[str, ...] = (
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
-            ".abstraction_boundary": ("FlextInfraAbstractionBoundaryGate",),
             ".bandit": ("FlextInfraBanditGate",),
             ".base_gate": ("FlextInfraGate",),
             ".canonical_alias": ("FlextInfraCanonicalAliasGate",),
@@ -115,9 +108,7 @@ _LAZY_IMPORTS = MappingProxyType(
             ".ruff_lint": ("FlextInfraRuffLintGate",),
             ".runtime_census": ("FlextInfraRuntimeCensusGate",),
             ".scanner_gate": ("FlextInfraScannerGateMixin",),
-            ".silent_failure": ("FlextInfraSilentFailureGate",),
             ".smells": ("FlextInfraSmellsGate",),
-            ".tier_whitelist": ("FlextInfraTierWhitelistGate",),
         }),
         alias_groups=MappingProxyType({}),
         sort_keys=False,

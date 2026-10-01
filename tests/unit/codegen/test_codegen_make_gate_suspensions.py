@@ -14,6 +14,9 @@ from tests import c, m, t, u
 class TestsFlextInfraCodegenMakeGateSuspensions:
     """One typed gate universe drives local, CI, and hook execution."""
 
+    # Renders a full Make environment, the slow class every sibling render
+    # test declares; it runs in the slow phase, never by raising a limit.
+    @pytest.mark.slow
     def test_default_policy_renders_every_recorded_suspension_receipt(
         self, tmp_path: Path
     ) -> None:

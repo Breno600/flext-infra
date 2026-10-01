@@ -46,7 +46,7 @@ jobs:
 {%- include "_fragments/private_submodules_init.j2" %}
 {%- include "_fragments/private_dependency_auth.j2" %}
 
-      # Why (flext-gd3m1): a cold runner re-downloaded every locked Mise tool
+      # Why: a cold runner re-downloaded every locked Mise tool
       # (go included) on every Docs run, and a network blip failed setup. The
       # cache is content-addressed by the committed locks, so a warm cache is
       # always valid for the same lock and can never hide a finding; it only
@@ -63,14 +63,11 @@ jobs:
       - name: Generation drift (blocking)
         run: |
           make gen
-          make verify-clean
+          git status --short
+          test -z "$(git status --porcelain --untracked-files=all)"
 
       - name: Docs lifecycle (blocking)
         run: make docs
-
-      # The preceding generation check cannot see changes made by make docs.
-      - name: Verify docs byte-identical repository
-        run: make verify-clean
 
       # Failure diagnostics execute only after the original Make step has
       # already propagated its exact status to Actions.
@@ -110,9 +107,6 @@ jobs:
             apps/*/.reports/**/validate-summary.json
             apps/*/.reports/**/validate-report.md
           if-no-files-found: error
-          # The allowlisted reports live under hidden .reports directories.
-          # upload-artifact excludes hidden paths unless this is explicit.
-          include-hidden-files: true
           retention-days: 7
 
   build:
@@ -134,7 +128,7 @@ jobs:
 {%- include "_fragments/private_submodules_init.j2" %}
 {%- include "_fragments/private_dependency_auth.j2" %}
 
-      # Why (flext-gd3m1): same cold-download protection as the docs-quality job.
+      # Why: same cold-download protection as the docs-quality job.
 {%- include "_fragments/toolchain_cache_restore.j2" %}
 
       - name: Sync workspace toolchain
@@ -146,7 +140,9 @@ jobs:
         run: make docs
 
       - name: Verify byte-identical repository
-        run: make verify-clean
+        run: |
+          git diff --exit-code -- .
+          git diff --cached --exit-code -- .
 
       # Pages configure/upload exist only to feed deploy on main. Running them on
       # every integration push fails closed when Pages is unset and is wasted

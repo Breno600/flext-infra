@@ -68,15 +68,17 @@ class TestsFlextInfraCodegenMain:
         tm.ok(u.Cli.atomic_write_text_file(tests_init, ""))
         tm.ok(
             u.Cli.files_copy_directory(
-                project_root / "config", root / "config", dirs_exist_ok=True
-            )
+                project_root / "config",
+                root / "config",
+                dirs_exist_ok=True,
+            ),
         )
         u.Tests.copy_tracked_mise_seeds(root)
         tm.ok(
             u.Cli.files_copy(
                 project_root / c.Infra.MISE_TOML_FILENAME,
                 root / c.Infra.MISE_TOML_FILENAME,
-            )
+            ),
         )
 
     @staticmethod
@@ -168,7 +170,8 @@ class TestsFlextInfraCodegenMain:
             tm.that(result, ne=0)
 
         def test_init_rejects_nested_non_worktree_root(
-            self, real_git_repo: Path
+            self,
+            real_git_repo: Path,
         ) -> None:
             """Initialization accepts only the exact Git worktree root."""
             custom_root = real_git_repo / "custom"
@@ -203,7 +206,7 @@ class TestsFlextInfraCodegenMain:
             route = next(
                 item
                 for item in FlextInfraCliRouteService.route_table_for(
-                    c.Infra.CLI_GROUP_CODEGEN
+                    c.Infra.CLI_GROUP_CODEGEN,
                 )
                 if item.name == "init"
             )
@@ -223,8 +226,10 @@ class TestsFlextInfraCodegenMain:
             )
             tm.that(" ".join(result.value.stdout.split()), contains=route.help_text)
 
+        @pytest.mark.slow
         def test_managed_conflict_is_planned_and_published_atomically(
-            self, infra_git_repo: Path
+            self,
+            infra_git_repo: Path,
         ) -> None:
             """Keep live bytes unchanged until the public transaction commits."""
             root = infra_git_repo
@@ -246,7 +251,7 @@ class TestsFlextInfraCodegenMain:
             pyproject = root / "pyproject.toml"
             before = pyproject.read_bytes()
             journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
-                root
+                root,
             )
             command = TestsFlextInfraCodegenMain._public_conform_command(root)
             checked = u.Cli.run_raw([*command, "check"], cwd=root)
@@ -266,7 +271,10 @@ class TestsFlextInfraCodegenMain:
             rendered = pyproject.read_text(encoding="utf-8")
             tm.that(rendered, lacks="<<<<<<<")
             ini_options = u.Tests.toml_table_at(
-                rendered, "tool", "pytest", "ini_options"
+                rendered,
+                "tool",
+                "pytest",
+                "ini_options",
             )
             tm.that(
                 ini_options["addopts"],
@@ -290,14 +298,15 @@ class TestsFlextInfraCodegenMain:
             tm.that(transaction.exists(), eq=False)
 
         def test_present_invalid_mise_artifact_never_enters_external_resolution(
-            self, infra_git_repo: Path
+            self,
+            infra_git_repo: Path,
         ) -> None:
             """Reject a present invalid artifact before credential/network work."""
             root = infra_git_repo
             TestsFlextInfraCodegenMain._seed_public_conform_checkout(root)
             launcher = root / "bin" / "mise"
             launcher_state = tm.ok(
-                u.Cli.atomic_read_binary_file_state(launcher, required=True)
+                u.Cli.atomic_read_binary_file_state(launcher, required=True),
             )
             launcher_mode = launcher_state.mode
             tm.that(launcher_mode is None, eq=False)
@@ -310,11 +319,13 @@ class TestsFlextInfraCodegenMain:
             corrupted = launcher_state.content + b"\nchecksum_linux_x86_64=invalid\n"
             tm.ok(
                 u.Cli.atomic_write_binary_file_guarded(
-                    launcher_state, corrupted, permission_mode=launcher_mode
-                )
+                    launcher_state,
+                    corrupted,
+                    permission_mode=launcher_mode,
+                ),
             )
             journal, transaction = TestsFlextInfraCodegenMain._mise_transaction_state(
-                root
+                root,
             )
 
             applied = u.Cli.run_raw(

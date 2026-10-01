@@ -24,12 +24,19 @@ class FlextInfraEnsureCanonicalTImportMixin:
         """Keep newly canonicalized type expressions resolvable at runtime."""
         target_module = module_name or self._DEFAULT_ALIAS_MODULE
         updated = u.Infra.ensure_alias_import(
-            source, target_module, "t", runtime_required=True
+            source,
+            target_module,
+            "t",
+            runtime_required=True,
         )
         return updated, updated != source
 
     def _ensure_alias_import(
-        self, *, source: str, module_name: str, alias: str
+        self,
+        *,
+        source: str,
+        module_name: str,
+        alias: str,
     ) -> t.Pair[str, bool]:
         """Inject ``from <module_name> import <alias>`` when the alias is used."""
         target_module = module_name or self._DEFAULT_ALIAS_MODULE

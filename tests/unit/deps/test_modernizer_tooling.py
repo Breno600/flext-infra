@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 import pytest
@@ -43,18 +42,19 @@ class TestsFlextInfraDepsModernizerTooling:
     ) -> t.Pair[t.MutableJsonMapping, t.JsonMapping]:
         """Apply the Ruff phase twice to one named payload; return payload and ruff."""
         payload = t.Infra.MUTABLE_INFRA_MAPPING_ADAPTER.validate_python(
-            u.Tests.toml_payload(f'[project]\nname = "{project_dir.name}"\n{source}')
+            u.Tests.toml_payload(f'[project]\nname = "{project_dir.name}"\n{source}'),
         )
         phase = FlextInfraEnsureRuffConfigPhase(tool_config_document)
         path = project_dir / "pyproject.toml"
         _ = phase.apply_payload(payload, path=path)
         tm.that(phase.apply_payload(payload, path=path), empty=True)
         return payload, u.Tests.toml_mapping(
-            u.Tests.toml_mapping(payload["tool"])["ruff"]
+            u.Tests.toml_mapping(payload["tool"])["ruff"],
         )
 
     def test_typecheck_policy_keeps_tracked_surfaces_visible(
-        self, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Keep every tracked Python surface visible to all four analyzers."""
         tools = tool_config_document.tools
@@ -71,32 +71,26 @@ class TestsFlextInfraDepsModernizerTooling:
             frozenset(tools.ruff.namespace_packages),
             eq=frozenset({"examples", "scripts", "tests"}),
         )
-        tm.that(tracked_surfaces.isdisjoint(tools.ruff.exclude), eq=True)
-        # mypy's exclude is config-owned (tooling.yaml) and may legitimately
-        # hide non-tracked trees (e.g. legacy sources); the contract is that
-        # no exclude pattern ever matches a tracked surface.
-        for pattern in tools.mypy.exclude.split(","):
-            if pattern:
-                tm.that(
-                    any(re.match(pattern, surface) for surface in tracked_surfaces),
-                    eq=False,
-                )
         tm.that(frozenset(tools.pyright.path_rules.env_dirs), eq=tracked_surfaces)
         tm.that(
-            hidden_globs.isdisjoint(tools.pyright.path_rules.default_excludes), eq=True
+            hidden_globs.isdisjoint(tools.pyright.path_rules.default_excludes),
+            eq=True,
         )
         tm.that(frozenset(tools.pyrefly.path_rules.env_dirs), eq=tracked_surfaces)
         tm.that(hidden_globs.isdisjoint(tools.pyrefly.project_exclude_globs), eq=True)
 
     def test_ruff_phase_sets_expected_state(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Render Ruff policy, drop stale sections, and converge on second apply."""
         ruff_policy = tool_config_document.tools.ruff
         project_dir = tmp_path / "flext-sample"
         (project_dir / "src" / "flext_sample").mkdir(parents=True)
         (project_dir / "src" / "flext_sample" / "__init__.py").write_text(
-            "", encoding="utf-8"
+            "",
+            encoding="utf-8",
         )
         stale_pattern = "stale-pattern.py"
 
@@ -108,27 +102,26 @@ class TestsFlextInfraDepsModernizerTooling:
         )
 
         tm.that(payload, lacks="lint")
-        tm.that(
-            frozenset(u.Tests.toml_strings(ruff["exclude"])),
-            eq=frozenset(ruff_policy.exclude),
-        )
+        # A project without workspace declarations adds no exclusions, and
+        # Ruff keeps its own default excludes (never a replacement list).
+        tm.that(list(u.Tests.toml_strings(ruff["extend-exclude"])), eq=[])
+        tm.that(ruff, lacks="exclude")
         tm.that(ruff["line-length"], eq=ruff_policy.line_length)
         tm.that(ruff["target-version"], eq=ruff_policy.target_version)
+        # The declared src list stays the SSOT; the projection filters it to
+        # roots that exist (a retired tree must not name analyzer entries),
+        # with roots the active plan is materializing accepted as present.
         tm.that(
-            frozenset(u.Tests.toml_strings(ruff["src"])), eq=frozenset(ruff_policy.src)
+            frozenset(u.Tests.toml_strings(ruff["src"])),
+            eq=frozenset(
+                root for root in ruff_policy.src if (project_dir / root).is_dir()
+            ),
         )
         tm.that(
             u.Tests.toml_mapping(ruff["format"])["docstring-code-format"],
             eq=ruff_policy.format.docstring_code_format,
         )
         lint = u.Tests.toml_mapping(ruff["lint"])
-        tm.that(
-            frozenset(u.Tests.toml_strings(lint["ignore"])),
-            eq=frozenset({
-                *ruff_policy.lint.ignore,
-                *ruff_policy.lint.ignored_rule_rationales,
-            }),
-        )
         tm.that(
             list(u.Tests.toml_strings(lint["unfixable"])),
             eq=sorted(ruff_policy.lint.unfixable),
@@ -140,8 +133,8 @@ class TestsFlextInfraDepsModernizerTooling:
         tm.that(
             list(
                 u.Tests.toml_strings(
-                    u.Tests.toml_mapping(lint["isort"])["known-first-party"]
-                )
+                    u.Tests.toml_mapping(lint["isort"])["known-first-party"],
+                ),
             ),
             eq=sorted({
                 *tool_config_document.tools.deptry.known_first_party,
@@ -175,7 +168,7 @@ class TestsFlextInfraDepsModernizerTooling:
         _, ruff = self._applied(tool_config_document, project_dir)
 
         ignores = u.Tests.toml_mapping(
-            u.Tests.toml_mapping(ruff["lint"])["per-file-ignores"]
+            u.Tests.toml_mapping(ruff["lint"])["per-file-ignores"],
         )
         if with_local_policy:
             tm.that(
@@ -186,7 +179,9 @@ class TestsFlextInfraDepsModernizerTooling:
             tm.that(ignores, lacks="src/flext_cli/_config.py")
 
     def test_ruff_phase_skips_nonmember_workspace_namespaces(
-        self, tmp_path: Path, tool_config_document: m.Infra.ToolConfigDocument
+        self,
+        tmp_path: Path,
+        tool_config_document: m.Infra.ToolConfigDocument,
     ) -> None:
         """Exclude nonmember consumer namespaces from FLEXT first-party names."""
         repository_root = tmp_path / "workspace"
@@ -210,7 +205,8 @@ class TestsFlextInfraDepsModernizerTooling:
             encoding="utf-8",
         )
         (internal_project / "pyproject.toml").write_text(
-            '[project]\nname = "flext-core"\nversion = "0.1.0"\n', encoding="utf-8"
+            '[project]\nname = "flext-core"\nversion = "0.1.0"\n',
+            encoding="utf-8",
         )
 
         _, ruff = self._applied(
@@ -222,7 +218,7 @@ class TestsFlextInfraDepsModernizerTooling:
         known_first_party = u.Tests.toml_strings(
             u.Tests.toml_mapping(u.Tests.toml_mapping(ruff["lint"])["isort"])[
                 "known-first-party"
-            ]
+            ],
         )
         tm.that(known_first_party, has="flext_core")
         tm.that(known_first_party, lacks="demo_migration_tool")

@@ -56,7 +56,10 @@ class FlextInfraDocFormatter(FlextInfraDocServiceBase):
         )
 
     def _format_scope(
-        self, scope: m.Infra.DocScope, *, apply: bool
+        self,
+        scope: m.Infra.DocScope,
+        *,
+        apply: bool,
     ) -> m.Infra.DocsPhaseReport:
         """Format one scope through the canonical markdown-format gate."""
         gate = FlextInfraMarkdownFormatGate(scope.path)

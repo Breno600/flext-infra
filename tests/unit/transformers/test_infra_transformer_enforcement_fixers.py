@@ -188,7 +188,8 @@ class TestsFlextInfraTransformersEnforcementFixers:
             "def foo(x: dict[str, int]) -> list[str]:\n    pass\n"
         )
         transformer = FlextInfraRefactorTypingUnifier(
-            canonical_map={}, file_path=tmp_path / "module.py"
+            canonical_map={},
+            file_path=tmp_path / "module.py",
         )
         code, changes = transformer.apply_to_source(source)
         # A parameter is widened: every caller that could pass a dict still
@@ -209,7 +210,8 @@ class TestsFlextInfraTransformersEnforcementFixers:
             "    assert result.success\n"
         )
         transformer = FlextInfraRefactorTypingUnifier(
-            canonical_map={}, file_path=tmp_path / "module.py"
+            canonical_map={},
+            file_path=tmp_path / "module.py",
         )
         code, changes = transformer.apply_to_source(source)
         tm.that(code, eq=source)

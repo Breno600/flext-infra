@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import MutableMapping
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, override
+from typing import TYPE_CHECKING, override
 
 import libcst as cst
 
@@ -33,7 +33,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
     class _CstImportHelpers:
         """Static libcst helpers for reading and building import statements."""
 
-        # flext-j47u: keep CST rendering typed; Rope remains the semantic source.
+        # Keep CST rendering typed; Rope remains the semantic source.
         @staticmethod
         def dotted_name(module: cst.BaseExpression | None) -> str | None:
             """Return a dotted name for a libcst import expression."""
@@ -62,7 +62,8 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
             if " as " in display:
                 name, alias = display.split(" as ", maxsplit=1)
                 return cst.ImportAlias(
-                    name=cst.Name(name), asname=cst.AsName(name=cst.Name(alias))
+                    name=cst.Name(name),
+                    asname=cst.AsName(name=cst.Name(alias)),
                 )
             return cst.ImportAlias(name=cst.Name(display))
 
@@ -95,10 +96,11 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
                     cst.SimpleStatementLine(
                         body=[
                             cst.ImportFrom(
-                                module=cls.module_expression(module), names=aliases
-                            )
-                        ]
-                    )
+                                module=cls.module_expression(module),
+                                names=aliases,
+                            ),
+                        ],
+                    ),
                 )
 
             insert_pos = 0
@@ -113,7 +115,8 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
                             insert_pos = idx + 1
                             continue
                     if isinstance(body_stmt, cst.Expr) and isinstance(
-                        body_stmt.value, cst.SimpleString
+                        body_stmt.value,
+                        cst.SimpleString,
                     ):
                         insert_pos = idx + 1
                         continue
@@ -166,7 +169,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
                 return
             module = (
                 FlextInfraRefactorProjectAliasMigrator._CstImportHelpers.dotted_name(
-                    node.module
+                    node.module,
                 )
             )
             if module is None or not (
@@ -175,7 +178,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
                 return
             for alias in (
                 FlextInfraRefactorProjectAliasMigrator._CstImportHelpers.import_aliases(
-                    node
+                    node,
                 )
             ):
                 bound = alias.evaluated_alias or alias.evaluated_name
@@ -190,13 +193,11 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
             import_root: str,
             local_aliases: frozenset[str],
             existing_local: MutableMapping[str, set[str]],
-            alias_to_module: t.StrMapping,
             record_change: t.Infra.ChangeCallback,
         ) -> None:
             self._import_root = import_root
             self._local_aliases = local_aliases
             self._existing_local = existing_local
-            self._alias_to_module = alias_to_module
             self._record_change = record_change
             self.imports_to_add: MutableMapping[str, MutableMapping[str, str]] = {}
             self.changes: list[str] = []
@@ -215,12 +216,14 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
 
         @override
         def leave_ImportFrom(
-            self, original_node: cst.ImportFrom, updated_node: cst.ImportFrom
+            self,
+            original_node: cst.ImportFrom,
+            updated_node: cst.ImportFrom,
         ) -> cst.BaseSmallStatement | cst.RemovalSentinel:
             _ = original_node
             module = (
                 FlextInfraRefactorProjectAliasMigrator._CstImportHelpers.dotted_name(
-                    updated_node.module
+                    updated_node.module,
                 )
             )
             if (
@@ -233,7 +236,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
             kept: list[cst.ImportAlias] = []
             aliases = (
                 FlextInfraRefactorProjectAliasMigrator._CstImportHelpers.import_aliases(
-                    updated_node
+                    updated_node,
                 )
             )
             for alias in aliases:
@@ -242,16 +245,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
                     kept.append(alias)
                     continue
 
-                suffix = self._alias_to_module.get(bound)
-                if suffix is None:
-                    kept.append(alias)
-                    continue
-
-                local_module = (
-                    self._import_root
-                    if self._import_root == c.Infra.DIR_TESTS
-                    else f"{self._import_root}.{suffix}"
-                )
+                local_module = self._import_root
                 display = bound
                 if bound not in self._existing_local.get(local_module, set()):
                     self.imports_to_add.setdefault(local_module, {})[bound] = display
@@ -268,13 +262,16 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
                 names=[
                     cst.ImportAlias(name=alias.name, asname=alias.asname)
                     for alias in kept
-                ]
+                ],
             )
 
-    """Rewrite ``from flext_core import c`` to ``from <proj>.constants import c``."""
+    """Rewrite ``from flext_core import c`` to ``from <proj> import c``.
+
+    The package root re-exports every facade letter its modules declare in
+    ``__all__``, so the root is the one import target for each owned alias.
+    """
 
     _description = "rewrite foreign canonical alias imports to local project facade"
-    _ALIAS_TO_LOCAL_MODULE: ClassVar[t.StrMapping] = c.Infra.FAMILY_PUBLIC_MODULES
 
     def __init__(
         self,
@@ -316,7 +313,8 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
         ):
             return source, []
         context = self._resolve_context(
-            file_path=self._file_path, current_project=self._explicit_project
+            file_path=self._file_path,
+            current_project=self._explicit_project,
         )
         if (
             not context.policy_owner
@@ -334,7 +332,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
             raise ValueError(msg) from exc
 
         collector = FlextInfraRefactorProjectAliasMigrator._CollectExistingLocal(
-            context.import_root
+            context.import_root,
         )
         tree.visit(collector)
 
@@ -342,7 +340,6 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
             import_root=context.import_root,
             local_aliases=frozenset(local_aliases),
             existing_local=collector.existing_local,
-            alias_to_module=self._ALIAS_TO_LOCAL_MODULE,
             record_change=self._record_change,
         )
         new_tree = tree.visit(transformer)
@@ -350,18 +347,22 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
             return source, []
 
         final_tree = FlextInfraRefactorProjectAliasMigrator._CstImportHelpers.insert_local_imports(
-            new_tree, transformer.imports_to_add
+            new_tree,
+            transformer.imports_to_add,
         )
         return final_tree.code, list(self.changes)
 
     @staticmethod
     def _resolve_context(
-        *, file_path: Path | None, current_project: str
+        *,
+        file_path: Path | None,
+        current_project: str,
     ) -> m.Infra.AliasMigrationContext:
         """Resolve explicit or path-backed alias migration context."""
         if current_project:
             return m.Infra.AliasMigrationContext(
-                policy_owner=current_project, import_root=current_project
+                policy_owner=current_project,
+                import_root=current_project,
             )
         if file_path is None:
             return m.Infra.AliasMigrationContext(policy_owner="", import_root="")

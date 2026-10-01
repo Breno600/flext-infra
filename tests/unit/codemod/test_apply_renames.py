@@ -29,15 +29,18 @@ class TestsFlextInfraApplyRenames:
     def _seed(root: Path) -> Path:
         target = root / "guide.md"
         target.write_text(
-            "A campaign_token keeps surrounding prose.\n", encoding="utf-8"
+            "A campaign_token keeps surrounding prose.\n",
+            encoding="utf-8",
         )
         (root / "renames.csv").write_text(
-            "old,new\ncampaign_token,campaign_renamed_token\n", encoding="utf-8"
+            "old,new\ncampaign_token,campaign_renamed_token\n",
+            encoding="utf-8",
         )
         return target
 
     def test_check_and_apply_preserve_drivers_and_reach_fixed_point(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         target = self._seed(mod_workspace)
         driver = mod_workspace / "renames.csv"
@@ -48,24 +51,25 @@ class TestsFlextInfraApplyRenames:
         original_driver = driver.read_bytes()
         original = target.read_bytes()
         request = self._request(mod_workspace, apply=False).model_copy(
-            update={"text_globs": ("**/*.md", "**/*.csv")}
+            update={"text_globs": ("**/*.md", "**/*.csv")},
         )
         checked = tm.ok(FlextInfraApplyRenames.run(request))
         tm.that(checked.occurrences, eq=2)
         tm.that(target.read_bytes(), eq=original)
         first = tm.ok(
-            FlextInfraApplyRenames.run(request.model_copy(update={"apply": True}))
+            FlextInfraApplyRenames.run(request.model_copy(update={"apply": True})),
         )
         tm.that(first.files_changed, eq=2)
         tm.that(first.occurrences, eq=0)
         tm.that(
-            target.read_text(), eq="A campaign_renamed_token keeps surrounding prose.\n"
+            target.read_text(),
+            eq="A campaign_renamed_token keeps surrounding prose.\n",
         )
         tm.that(driver.read_bytes(), eq=original_driver)
         tm.that(other.read_bytes(), eq=original_driver)
         tm.that(data.read_text(), eq="description\ncampaign_renamed_token\n")
         second = tm.ok(
-            FlextInfraApplyRenames.run(self._request(mod_workspace, apply=True))
+            FlextInfraApplyRenames.run(self._request(mod_workspace, apply=True)),
         )
         tm.that(second.files_changed, eq=0)
         tm.that(second.occurrences, eq=0)
@@ -83,7 +87,10 @@ class TestsFlextInfraApplyRenames:
         ],
     )
     def test_invalid_campaign_never_publishes(
-        self, mod_workspace: Path, rows: str, error: str
+        self,
+        mod_workspace: Path,
+        rows: str,
+        error: str,
     ) -> None:
         target = self._seed(mod_workspace)
         original = target.read_bytes()
@@ -93,7 +100,8 @@ class TestsFlextInfraApplyRenames:
         tm.that(target.read_bytes(), eq=original)
 
     def test_documentation_changes_without_mutating_executable_strings(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         self._seed(mod_workspace)
         consumer = mod_workspace / "consumer.py"
@@ -119,7 +127,7 @@ class TestsFlextInfraApplyRenames:
                     "import consumer; print(consumer.__doc__); print(consumer.read.__doc__)",
                 ),
                 cwd=mod_workspace,
-            )
+            ),
         )
         tm.that(
             namespace.stdout,
@@ -127,13 +135,16 @@ class TestsFlextInfraApplyRenames:
         )
 
     def test_rope_uses_current_owner_and_preserves_alias_homonyms(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         (mod_workspace / "renames.csv").write_text(
-            "old,new\nOld,New\n", encoding="utf-8"
+            "old,new\nOld,New\n",
+            encoding="utf-8",
         )
         (mod_workspace / "definer.py").write_text(
-            "class Public:\n    New = 37\n", encoding="utf-8"
+            "class Public:\n    New = 37\n",
+            encoding="utf-8",
         )
         consumer = mod_workspace / "external_consumer.py"
         consumer.write_text(
@@ -160,22 +171,25 @@ class TestsFlextInfraApplyRenames:
         tm.that(second.occurrences, eq=0)
 
     def test_missing_public_destination_prevents_text_publication(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         target = self._seed(mod_workspace)
         (mod_workspace / "definer.py").write_text(
-            "class Public:\n    Present = 1\n", encoding="utf-8"
+            "class Public:\n    Present = 1\n",
+            encoding="utf-8",
         )
         before = target.read_bytes()
         request = self._request(mod_workspace, apply=True).model_copy(
-            update={"bindings": {"": ("definer.Public",)}}
+            update={"bindings": {"": ("definer.Public",)}},
         )
         with pytest.raises(ValueError, match="no declared current public owner"):
             FlextInfraApplyRenames.run(request)
         tm.that(target.read_bytes(), eq=before)
 
     def test_untracked_unusual_filename_and_projection_exclusions(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         self._seed(mod_workspace)
         tm.ok(u.Infra.git_init(m.Infra.GitRepoRequest(repo_root=mod_workspace)))
@@ -185,14 +199,15 @@ class TestsFlextInfraApplyRenames:
         generated = f'{c.Infra.AUTOGEN_HEADERS[0]}\n"""campaign_token"""\n'
         projected.write_text(generated, encoding="utf-8")
         report = tm.ok(
-            FlextInfraApplyRenames.run(self._request(mod_workspace, apply=True))
+            FlextInfraApplyRenames.run(self._request(mod_workspace, apply=True)),
         )
         tm.that(report.files_changed, eq=2)
         tm.that(authored.read_text(), eq="campaign_renamed_token")
         tm.that(projected.read_text(), eq=generated)
 
     def test_driver_drift_during_publication_rolls_back_consumer(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         target = self._seed(mod_workspace)
         original = target.read_bytes()
@@ -210,14 +225,15 @@ class TestsFlextInfraApplyRenames:
             "result = FlextInfraApplyRenames.run(m.Infra.ApplyRenamesInput(\n"
             "    csv=str(root / 'renames.csv'), roots=(str(root),), apply=True, text_globs=('**/*.md',)))\n"
             "assert changed\nassert result.failure\n"
-            "assert 'driver changed' in result.error\n"
+            "assert 'authenticated state changed' in result.error, result.error\n"
         )
         tm.ok(u.Cli.run_checked((sys.executable, "-c", script, str(mod_workspace))))
         tm.that(target.read_bytes(), eq=original)
         tm.that((mod_workspace / "renames.csv").read_text(), has="concurrent_name")
 
     def test_sibling_repositories_resolve_installed_provider_and_local_mro(
-        self, mod_workspace: Path
+        self,
+        mod_workspace: Path,
     ) -> None:
         roots = (mod_workspace / "first", mod_workspace / "second")
         for directory in roots:
@@ -235,7 +251,8 @@ class TestsFlextInfraApplyRenames:
             )
         driver = mod_workspace / "renames.csv"
         driver.write_text(
-            "old,new\nRetired.PYPROJECT_FILENAME,PYPROJECT_FILENAME\n", encoding="utf-8"
+            "old,new\nRetired.PYPROJECT_FILENAME,PYPROJECT_FILENAME\n",
+            encoding="utf-8",
         )
         request = m.Infra.ApplyRenamesInput(
             csv=str(driver),
@@ -250,7 +267,7 @@ class TestsFlextInfraApplyRenames:
                 u.Cli.run(
                     (sys.executable, "-m", f"{directory.name}.consumer"),
                     cwd=directory / "src",
-                )
+                ),
             )
             tm.that(output.stdout, eq=f"{c.PYPROJECT_FILENAME}\n")
         again = tm.ok(FlextInfraApplyRenames.run(request))

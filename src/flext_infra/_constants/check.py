@@ -21,7 +21,6 @@ class FlextInfraConstantsCheck:
 
     PYTEST_SELECTED_COLLECTION_OPTION: ClassVar[str] = "--flext-selected-collection"
     PYTEST_SUITE_STOP_OPTION: ClassVar[str] = "--flext-suite-stop-monotonic"
-    PYTEST_PROFILE_OPTION: ClassVar[str] = "--flext-profile-directory"
     PYTEST_COLLECTION_MANIFEST_OPTION: ClassVar[str] = "--flext-collection-manifest"
 
     @unique
@@ -44,6 +43,20 @@ class FlextInfraConstantsCheck:
         WARNING = "warning"
         NOTE = "note"
 
+    @unique
+    class GateKind(StrEnum):
+        """Who owns a gate's rule catalog, which decides where the gate blocks.
+
+        Only ``EXTERNAL`` gates run in the fast contexts (CI and pre-commit):
+        an external tool applying its own per-file rule catalog. Whole-program
+        type checkers and the validators whose rules this package owns run
+        locally and at pre-push, where they block.
+        """
+
+        EXTERNAL = "external"
+        TYPE_CHECKER = "type-checker"
+        INFRA = "infra"
+
     AST_GREP_DOCS_URL: ClassVar[str] = "https://ast-grep.github.io/"
     "Canonical ast-grep documentation URL for gate metadata."
     # Quality gate identifiers shared with the tool-name vocabulary.
@@ -53,29 +66,18 @@ class FlextInfraConstantsCheck:
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
     SMELLS: ClassVar[str] = "smells"
-    SILENT_FAILURE: ClassVar[str] = "silent-failure"
     TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset({
         "pyrefly",
         "mypy",
         "pyright",
     })
-    "Native type-checker gates: independent read-only analyzers of one tree."
-    UNSUSPENDABLE_GATES: ClassVar[frozenset[str]] = frozenset({
-        LINT,
-        FORMAT,
-        *TYPE_CHECKER_GATES,
-    })
-    "Lint, format and type-checker gates: never suspendable from `make check`."
+    "Gate id -> kind, derived from the registry declaration."
     SARIF_TOOL_INFO: ClassVar[t.MappingKV[str, t.StrPair]] = MappingProxyType({
         "lint": ("Ruff Linter", "https://docs.astral.sh/ruff/"),
         "format": ("Ruff Formatter", "https://docs.astral.sh/ruff/formatter/"),
         "pyrefly": ("Pyrefly", "https://github.com/facebook/pyrefly"),
         "mypy": ("Mypy", "https://mypy.readthedocs.io/"),
         "pyright": ("Pyright", "https://github.com/microsoft/pyright"),
-        "silent-failure": (
-            "Flext Silent Failure Detector",
-            "internal://flext-infra/silent-failure",
-        ),
         "deferred-self-reference": (
             "Flext Deferred Self Reference Detector",
             "internal://flext-infra/deferred-self-reference",
@@ -85,19 +87,11 @@ class FlextInfraConstantsCheck:
         "markdown-format": ("Prettier", "https://prettier.io/"),
         "markdown-code": ("Ruff", "https://docs.astral.sh/ruff/"),
         "loc-cap": ("scc", "https://github.com/boyter/scc"),
-        "boundary": (
-            "Flext Abstraction Boundary Auditor",
-            "internal://flext-infra/abstraction-boundary",
-        ),
         "runtime-census": (
             "Flext Runtime Enforcement Census",
             "internal://flext-infra/runtime-census",
         ),
         "namespace": ("Flext Namespace Rule Gate", "internal://flext-infra/namespace"),
-        "tier-whitelist": (
-            "Flext Tier Whitelist Gate",
-            "internal://flext-infra/tier-whitelist",
-        ),
         "index-declarations": (
             "Flext Index Declarations Gate",
             "internal://flext-infra/index-declarations",
@@ -115,6 +109,11 @@ class FlextInfraConstantsCheck:
         ),
         "duplication": ("jscpd", "https://github.com/kucherenko/jscpd"),
     })
+    "Gate id -> (tool name, tool url), derived from the registry declaration."
+    TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset(
+        GATE_TOOLS_BY_KIND[GateKind.TYPE_CHECKER]
+    )
+    "Native type-checker gates: independent read-only analyzers of one tree."
     ALLOWED_GATES: ClassVar[frozenset[str]] = frozenset(SARIF_TOOL_INFO)
     "Gate identifiers — derived from SARIF_TOOL_INFO keys (single SSOT)."
     CHECK_REPORT_MARKDOWN_FILENAME: ClassVar[str] = "check-report.md"
@@ -125,13 +124,14 @@ class FlextInfraConstantsCheck:
     "Gates that rewrite files: owned by `fmt`/`fix`, never a read-only `check` vocabulary."
 
     RUFF_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\s*-->\s*(.+?):\d+:\d+\s*$"
+        r"^\s*-->\s*(.+?):\d+:\d+\s*$",
     )
     MARKDOWN_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$"
+        r"^(?P<file>.*?):(?P<line>\d+):(?P<col>\d+):\s+\[(?P<code>MD\d+)\]\s+(?P<msg>.*)$",
     )
     MARKDOWN_FORMAT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$", re.MULTILINE
+        r"^\[warn\]\s+(?P<file>\S+\.md)\s*$",
+        re.MULTILINE,
     )
     "Prettier ``--check`` unformatted-file line (``[warn] <file.md>``); config warns never match."
     MARKDOWN_PY_FENCE_RE: ClassVar[t.RegexPattern] = re.compile(
@@ -144,11 +144,12 @@ class FlextInfraConstantsCheck:
     MARKDOWN_CODE_SKIP_MARKER: ClassVar[str] = "notest"
     "Existing fence marker (pytest-markdown-docs) opting a block out of code validation."
     MARKDOWN_CODE_FORMAT_FILE_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+"
+        r"^(?P<file>\S+):\d+:\d+:\s+unformatted:\s+",
     )
     "Ruff format ``--check`` concise verdict line over extracted sources."
     MARKDOWN_CODE_FORMAT_ERROR_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"^error: Failed to format (?P<file>\S+):", re.MULTILINE
+        r"^error: Failed to format (?P<file>\S+):",
+        re.MULTILINE,
     )
     "Ruff format hard-failure line over extracted sources (parse errors)."
     VALID_GATE_SEVERITIES: ClassVar[frozenset[str]] = frozenset(GateSeverity)
@@ -186,10 +187,10 @@ class FlextInfraConstantsCheck:
     })
     # ADR-0018 stdlib island: the native hook client runs as `python3 -I -S`
     # and is excluded from the facade-boundary rules; the fragment matches the
-    # real posix path segments (src/ai_hub/hook_client.py).
+    # real posix path segments of the consumer's hook client module.
     BOUNDARY_SKIP_PATH_FRAGMENTS: ClassVar[t.StrSequence] = (
         "/ai_hub/hook_client",
-        # Vendored standalone workspace tooling (cosmos-command dispatcher):
+        # Vendored standalone workspace tooling (promoted-command dispatcher):
         # it must stay importable by a bare `python3` outside any project
         # venv, so the facade imports the boundary rules mandate are
         # impossible by design; its stdlib usage belongs to the distributor.
@@ -312,7 +313,7 @@ class FlextInfraConstantsCheck:
     })
     "qlty ruleId suffix -> flext-core enforcement tag (texts SSOT: core ENFORCEMENT_RULES_TEXT)."
 
-    # --- jscpd duplication gate SSOT (operator 2026-09-04: flext-infra owns the
+    # --- jscpd duplication gate SSOT (flext-infra owns the
     # jscpd plugin behind one centralized `make check` verb; its config is
     # rendered from this typed SSOT at scan time, never a hand-maintained file).
     JSCPD_BINARY: ClassVar[str] = "jscpd"
@@ -351,7 +352,7 @@ class FlextInfraConstantsCheck:
         "**/__init__.py",
         "**/api_cases/**",
         "**/_cases/**",
-        "**/codemod/tests/**",
+        "**/rules/ast-grep/tests/**",
         "**/_cov.py",
         "**/_parts/**",
     )
@@ -427,7 +428,7 @@ class FlextInfraConstantsCheck:
         "--update-all",
     })
     MANUAL_CMD_SEGMENT_RE: ClassVar[t.RegexPattern] = re.compile(
-        r"&&|\|\||;|\||\n|`|\$\("
+        r"&&|\|\||;|\||\n|`|\$\(",
     )
 
     # --- Net-LOC-delta validator (§3.5) SSOT ---

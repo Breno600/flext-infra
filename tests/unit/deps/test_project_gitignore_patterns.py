@@ -24,7 +24,8 @@ class TestsFlextInfraProjectGitignorePatterns:
         return root
 
     def test_declared_patterns_render_as_one_project_section(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         root = self._project(
             tmp_path / "project",
@@ -33,7 +34,7 @@ class TestsFlextInfraProjectGitignorePatterns:
                     "ManagedArtifacts:\n  Gitignore:\n    patterns:\n"
                     "      - .dmypy/\n      - mcp/generated/*\n"
                     "      - '!mcp/generated/.gitkeep'\n"
-                )
+                ),
             },
         )
 
@@ -50,7 +51,8 @@ class TestsFlextInfraProjectGitignorePatterns:
         assert "!mcp/generated/.gitkeep" in text[section:]
 
     def test_patterns_compose_across_documents_without_duplicates(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         root = self._project(
             tmp_path / "project",
@@ -68,7 +70,8 @@ class TestsFlextInfraProjectGitignorePatterns:
 
     def test_absent_declaration_adds_no_section(self, tmp_path: Path) -> None:
         root = self._project(
-            tmp_path / "project", {"tooling.yaml": "ManagedArtifacts: {}\n"}
+            tmp_path / "project",
+            {"tooling.yaml": "ManagedArtifacts: {}\n"},
         )
 
         rendered = FlextInfraCodegenConform.render_project_gitignore(

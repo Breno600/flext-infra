@@ -16,7 +16,8 @@ class TestsFlextInfraDocsScopeWorktree:
     """Contract for docs scope classification inside a linked-worktree lane."""
 
     def test_project_scope_uses_declared_name_inside_worktree_lane(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Classify a project from metadata, not the worktree directory basename."""
         lane = tmp_path / ".worktrees" / "lane-example"
@@ -29,7 +30,9 @@ class TestsFlextInfraDocsScopeWorktree:
         )
 
         result = u.Infra.build_scopes(
-            lane, projects=None, output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR
+            lane,
+            projects=None,
+            output_dir=c.Infra.DEFAULT_DOCS_OUTPUT_DIR,
         )
 
         tm.ok(result)

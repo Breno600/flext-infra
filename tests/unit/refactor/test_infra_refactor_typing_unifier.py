@@ -22,7 +22,9 @@ class FlextInfraRefactorTypingUnificationRule:
         self._settings = settings
 
     def apply(
-        self, source: str, _file_path: Path | None = None
+        self,
+        source: str,
+        _file_path: Path | None = None,
     ) -> t.Infra.TransformResult:
         """Apply canonical typing unification to source text."""
         _ = self._settings
@@ -44,7 +46,7 @@ class TestsFlextInfraRefactorInfraRefactorTypingUnifier:
             "        return self.values\n"
         )
         updated, _ = FlextInfraRefactorTypingUnifier(canonical_map={}).apply_to_source(
-            source
+            source,
         )
         tm.that(updated, has="values: dict[str, str]")
         tm.that(updated, has="-> dict[str, str]")
@@ -514,7 +516,8 @@ class TestsFlextInfraRefactorInfraRefactorTypingUnifier:
             "fix_action": "unify_typings",
         })
         updated, _changes = rule.apply(
-            source, _file_path=tmp_path / "demo/src/flext_demo/sample.py"
+            source,
+            _file_path=tmp_path / "demo/src/flext_demo/sample.py",
         )
         tm.that(updated, has="from flext_core import t")
         tm.that(updated, has="value: t.Quad[str, int, float, bool]")
@@ -540,7 +543,8 @@ class TestsFlextInfraRefactorInfraRefactorTypingUnifier:
         tm.that(updated, has="value: t.SequenceOf[object]")
 
     def test_skips_duplicate_t_import_in_parenthesized_import_block(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Verify skips duplicate t import in parenthesized import block."""
         source = (
@@ -557,7 +561,8 @@ class TestsFlextInfraRefactorInfraRefactorTypingUnifier:
             "fix_action": "unify_typings",
         })
         updated, _changes = rule.apply(
-            source, _file_path=tmp_path / "demo/src/flext_demo/sample.py"
+            source,
+            _file_path=tmp_path / "demo/src/flext_demo/sample.py",
         )
         tm.that(updated, has="from flext_infra import (\n    c,\n    m,\n    t,\n)")
         tm.that(updated.count("from flext_infra import t"), eq=0)

@@ -81,7 +81,8 @@ class TestsFlextInfraCodegenConstantsQualityGate:
         tm.that(report_result.value, has="verdict")
 
     def test_build_report_uses_canonical_census_duplicates(
-        self, tmp_path: Path
+        self,
+        tmp_path: Path,
     ) -> None:
         """Duplicate groups are sourced from the canonical refactor census."""
         constant_source = (
@@ -100,8 +101,6 @@ class TestsFlextInfraCodegenConstantsQualityGate:
             },
         )
         u.Tests.provision_checkout(project)
-        # A repository scans its own sources; installed siblings are dependencies.
-        # Empty exports avoid an unrelated lazy-init reexport ambiguity.
         tm.that(u.Tests.run_lazy_init(project), eq=0)
         gate = FlextInfraCodegenQualityGate(repository_root=project)
         report_result = gate.build_report()
@@ -109,7 +108,8 @@ class TestsFlextInfraCodegenConstantsQualityGate:
         report = report_result.value
         after = u.Cli.json_deep_mapping(report, "after")
         duplicate_groups = u.Cli.json_deep_mapping_list(
-            report, "duplicate_constant_groups"
+            report,
+            "duplicate_constant_groups",
         )
 
         tm.that(u.Cli.json_pick_int(after, "duplicate_groups"), gte=1)

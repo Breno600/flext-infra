@@ -32,12 +32,16 @@ class TestsFlextInfraCodegenFilePlanState:
 
     @pytest.mark.parametrize("content", [b"", b'name = "demo"\n', b"\xff\n"])
     def test_equal_binary_content_is_not_drift(
-        self, tmp_path: Path, content: bytes
+        self,
+        tmp_path: Path,
+        content: bytes,
     ) -> None:
         before = self._observed_state(tmp_path, content=content)
 
         differs = FlextInfraUtilitiesCodegenFilePlan.atomic_file_state_differs(
-            before, desired_content=content, desired_mode=before.mode
+            before,
+            desired_content=content,
+            desired_mode=before.mode,
         )
 
         assert differs is False
@@ -53,12 +57,17 @@ class TestsFlextInfraCodegenFilePlanState:
         ],
     )
     def test_real_content_delta_still_differs(
-        self, tmp_path: Path, content: bytes, desired_content: bytes
+        self,
+        tmp_path: Path,
+        content: bytes,
+        desired_content: bytes,
     ) -> None:
         before = self._observed_state(tmp_path, content=content)
 
         differs = FlextInfraUtilitiesCodegenFilePlan.atomic_file_state_differs(
-            before, desired_content=desired_content, desired_mode=before.mode
+            before,
+            desired_content=desired_content,
+            desired_mode=before.mode,
         )
 
         assert differs is True
@@ -67,30 +76,39 @@ class TestsFlextInfraCodegenFilePlanState:
         before = self._observed_state(tmp_path, content=b'name = "demo"\n')
 
         drifted = FlextInfraUtilitiesCodegenFilePlan.atomic_file_state_differs(
-            before, desired_content=before.content, desired_mode=0o755
+            before,
+            desired_content=before.content,
+            desired_mode=0o755,
         )
 
         assert drifted is True
 
     def test_absent_file_is_not_an_empty_file(self, tmp_path: Path) -> None:
         state = u.Cli.atomic_read_binary_file_state(
-            tmp_path / c.PYPROJECT_FILENAME, required=False
+            tmp_path / c.PYPROJECT_FILENAME,
+            required=False,
         )
         if state.failure:
             raise AssertionError(state.error)
 
         assert FlextInfraUtilitiesCodegenFilePlan.atomic_file_state_differs(
-            state.value, desired_content=b"", desired_mode=state.value.mode
+            state.value,
+            desired_content=b"",
+            desired_mode=state.value.mode,
         )
         assert not FlextInfraUtilitiesCodegenFilePlan.atomic_file_state_differs(
-            state.value, desired_content=None, desired_mode=state.value.mode
+            state.value,
+            desired_content=None,
+            desired_mode=state.value.mode,
         )
 
     def test_empty_file_requires_deletion(self, tmp_path: Path) -> None:
         before = self._observed_state(tmp_path, content=b"")
 
         assert FlextInfraUtilitiesCodegenFilePlan.atomic_file_state_differs(
-            before, desired_content=None, desired_mode=None
+            before,
+            desired_content=None,
+            desired_mode=None,
         )
 
     @pytest.mark.parametrize(
@@ -102,7 +120,10 @@ class TestsFlextInfraCodegenFilePlanState:
         ],
     )
     def test_drift_report_exposes_exact_byte_delta(
-        self, tmp_path: Path, content: bytes, desired_content: bytes
+        self,
+        tmp_path: Path,
+        content: bytes,
+        desired_content: bytes,
     ) -> None:
         before = self._observed_state(tmp_path, content=content)
         planned = m.Infra.CodegenFilePlan(
@@ -142,5 +163,6 @@ class TestsFlextInfraCodegenFilePlanState:
     def test_drift_report_rejects_non_positive_limit(self, limit: int) -> None:
         with pytest.raises(ValueError, match="limit must be positive"):
             FlextInfraUtilitiesCodegenFilePlan.codegen_file_drift_report(
-                (), limit=limit
+                (),
+                limit=limit,
             )

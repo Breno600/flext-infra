@@ -26,7 +26,9 @@ class TestsFlextInfraLooseObjectDetector:
 
     @staticmethod
     def _violations(
-        *, project: Path, file_path: Path
+        *,
+        project: Path,
+        file_path: Path,
     ) -> t.VariadicTuple[m.Infra.LooseObjectViolation]:
         parse_failures: list[m.Infra.ParseFailureViolation] = []
         with u.Infra.open_project(project) as rope_project:
@@ -37,7 +39,7 @@ class TestsFlextInfraLooseObjectDetector:
                     parse_failures=parse_failures,
                     project_root=project,
                     project_name="demo-project",
-                )
+                ),
             )
         tm.that(parse_failures, eq=[])
         return tuple(violations)

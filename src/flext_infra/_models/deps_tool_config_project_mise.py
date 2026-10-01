@@ -12,7 +12,7 @@ from .deps_tool_config_project_ruff import FlextInfraModelsDepsToolConfigProject
 
 
 class FlextInfraModelsDepsToolConfigProjectMise(
-    FlextInfraModelsDepsToolConfigProjectRuff
+    FlextInfraModelsDepsToolConfigProjectRuff,
 ):
     """Project-local Mise tools extending fleet tool declarations."""
 
@@ -29,7 +29,8 @@ class FlextInfraModelsDepsToolConfigProjectMise(
 
         tools: Annotated[
             t.MappingKV[
-                t.NonEmptyStr, FlextInfraModelsDepsToolConfigProjectMise.ProjectMiseTool
+                t.NonEmptyStr,
+                FlextInfraModelsDepsToolConfigProjectMise.ProjectMiseTool,
             ],
             m.Field(description="Project-local Mise tools added to generated config."),
         ]

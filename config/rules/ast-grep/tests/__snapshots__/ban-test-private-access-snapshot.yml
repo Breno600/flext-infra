@@ -1,0 +1,121 @@
+id: ban-test-private-access
+snapshots:
+  Service._build():
+    labels:
+    - source: Service._build
+      style: primary
+      start: 0
+      end: 14
+    - source: _build
+      style: secondary
+      start: 8
+      end: 14
+  ? |
+    class TestsHandlerDiscovery:
+        def test_discovers(self) -> None:
+            command = FlextHandlers._CreateCommand()
+  : labels:
+    - source: FlextHandlers._CreateCommand
+      style: primary
+      start: 85
+      end: 113
+    - source: _CreateCommand
+      style: secondary
+      start: 99
+      end: 113
+  helper = flext_core._utilities.helper:
+    labels:
+    - source: flext_core._utilities
+      style: primary
+      start: 9
+      end: 30
+    - source: _utilities
+      style: secondary
+      start: 20
+      end: 30
+  lazy_parts = import_module("flext_core._lazy_parts"):
+    labels:
+    - source: import_module("flext_core._lazy_parts")
+      style: primary
+      start: 13
+      end: 52
+    - source: import_module
+      style: secondary
+      start: 13
+      end: 26
+    - source: '"flext_core._lazy_parts"'
+      style: secondary
+      start: 27
+      end: 51
+    - source: '"flext_core._lazy_parts"'
+      style: secondary
+      start: 27
+      end: 51
+  service._cache = {}:
+    labels:
+    - source: service._cache
+      style: primary
+      start: 0
+      end: 14
+    - source: _cache
+      style: secondary
+      start: 8
+      end: 14
+  state = service._cache:
+    labels:
+    - source: service._cache
+      style: primary
+      start: 8
+      end: 22
+    - source: _cache
+      style: secondary
+      start: 16
+      end: 22
+  tm.that(runner._invocations, eq=1):
+    labels:
+    - source: runner._invocations
+      style: primary
+      start: 8
+      end: 27
+    - source: _invocations
+      style: secondary
+      start: 15
+      end: 27
+  token = settings_model._token:
+    labels:
+    - source: settings_model._token
+      style: primary
+      start: 8
+      end: 29
+    - source: _token
+      style: secondary
+      start: 23
+      end: 29
+  typings = importlib.import_module("flext_core._typings.base"):
+    labels:
+    - source: importlib.import_module("flext_core._typings.base")
+      style: primary
+      start: 10
+      end: 61
+    - source: importlib.import_module
+      style: secondary
+      start: 10
+      end: 33
+    - source: '"flext_core._typings.base"'
+      style: secondary
+      start: 34
+      end: 60
+    - source: '"flext_core._typings.base"'
+      style: secondary
+      start: 34
+      end: 60
+  value = self.service._state:
+    labels:
+    - source: self.service._state
+      style: primary
+      start: 8
+      end: 27
+    - source: _state
+      style: secondary
+      start: 21
+      end: 27
