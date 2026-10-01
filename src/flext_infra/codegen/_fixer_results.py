@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from flext_infra import m, u
 from flext_infra.validate.namespace_validator import FlextInfraNamespaceValidator
@@ -12,11 +12,11 @@ if TYPE_CHECKING:
 
     from flext_infra import p, t
 
-_log = u.fetch_logger(__name__)
-
 
 class FlextInfraCodegenFixerResultsMixin:
     """Private result and validation helpers for codegen fixer composition."""
+
+    _fixer_log: ClassVar[p.Logger] = u.fetch_logger(__name__)
 
     if TYPE_CHECKING:
         rope: p.Infra.RopeWorkspaceDsl
@@ -53,7 +53,7 @@ class FlextInfraCodegenFixerResultsMixin:
             ).build_report()
         )
         if initial_violations_result.failure:
-            _log.warning(
+            self._fixer_log.warning(
                 "namespace_validation_failed",
                 project=project_path.name,
                 error=str(initial_violations_result.error),

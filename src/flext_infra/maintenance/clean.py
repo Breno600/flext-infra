@@ -21,7 +21,6 @@ from ..base import s
 if TYPE_CHECKING:
     from flext_infra import p, t
 
-logger = u.fetch_logger(__name__)
 
 
 class FlextInfraCleanService(s[int]):

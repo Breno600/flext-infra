@@ -19,8 +19,6 @@ from .lazy_init_planner import FlextInfraCodegenLazyInitPlanner
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-_log = u.fetch_logger(__name__)
-
 
 class FlextInfraCodegenPipeline(
     FlextInfraCodegenPipelineStagesMixin, FlextInfraCodegenExecutionBase[str]
@@ -49,7 +47,7 @@ class FlextInfraCodegenPipeline(
                     c.Infra.PIPELINE_KEY_DRY_RUN: self.dry_run or not self.apply_changes
                 },
             ),
-            logger=_log,
+            logger=self.logger,
         )
         if pipeline_result.failure:
             return r[str].from_failure(pipeline_result)
