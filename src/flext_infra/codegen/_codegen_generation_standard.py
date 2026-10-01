@@ -317,6 +317,7 @@ class FlextInfraCodegenGenerationStandardMixin(
 
         Raises:
             ValueError: A configured public name is absent from template bindings.
+
         """
         lazy_module_groups, lazy_alias_groups, lazy_map = cls._lazy_groups(plan)
         current_pkg = plan.context.current_pkg

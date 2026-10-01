@@ -18,13 +18,14 @@ import importlib.util
 import sys
 from typing import TYPE_CHECKING
 
-import pytest
 from flext_tests import tm
 
 from tests import c, u
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    import pytest
 
 
 class TestsFlextInfraLazyInitBootstrapPackage:
