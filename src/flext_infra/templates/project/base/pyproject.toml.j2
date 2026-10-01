@@ -400,6 +400,12 @@ unfixable = [
   {{ item | tojson }},
 {% endfor %}
 ]
+
+[tool.ruff.lint.flake8-copyright]
+notice-rgx = {{ tooling.tools.ruff.lint.copyright_notice_rgx | tojson }}
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = {{ tooling.tools.ruff.lint.ban_relative_imports | tojson }}
 {% for name, message in tooling.tools.ruff.lint.banned_api | dictsort %}
 
 [tool.ruff.lint.flake8-tidy-imports.banned-api.{{ name }}]
@@ -416,9 +422,8 @@ known-first-party = [
 ]
 split-on-trailing-comma = {{ tooling.tools.ruff.lint.isort.split_on_trailing_comma | lower }}
 
-{# ruff_per_file_ignores is the COMPOSED map: fleet policy plus this
-   repository's own ManagedArtifacts overlay. Rendering the fleet map alone
-   dropped the repository's declared local exemptions on every full render. #}
+{# ruff_per_file_ignores is the fleet exemption map declared at the tooling
+   owner, scoped to this project; repositories declare no exemption. #}
 [tool.ruff.lint.per-file-ignores]
 {% for pattern, rules in ruff_per_file_ignores | dictsort %}
 {{ pattern | tojson }} = [
