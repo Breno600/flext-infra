@@ -1819,7 +1819,6 @@ Infra:
             - "**/*.bkp?"
             - "**/*.backup"
             - "**/*.orig"
-            - "**/*_backup"
             - "**/*.md.backup"
             - "**/archived/"
         - name: "Autofix rejection artifacts (run_skill_autofix.sh rollback output)"

@@ -205,7 +205,6 @@ fix-report.json
 **/*.bkp?
 **/*.backup
 **/*.orig
-**/*_backup
 **/*.md.backup
 **/archived/
 

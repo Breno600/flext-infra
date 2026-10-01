@@ -125,7 +125,7 @@ class FlextInfraCodegenProtocolModelRender:
         if getter is None:
             msg = f"owned member {name!r} has no getter on {model.__name__}"
             raise TypeError(msg)
-        annotations: dict[str, t.TypeHintSpecifier | None] = getattr(
+        annotations: t.MappingKV[str, t.TypeHintSpecifier | None] = getattr(
             getter, "__annotations__", {}
         )
         annotation = annotations.get("return")
