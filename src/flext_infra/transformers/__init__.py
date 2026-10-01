@@ -9,26 +9,19 @@ from typing import TYPE_CHECKING
 from flext_core.lazy import build_lazy_import_map, install_lazy_exports
 
 if TYPE_CHECKING:
-    from ._semantic_publication import (
-        publish_semantic_file_plan,
-        publish_semantic_file_plans,
-    )
+    from ._semantic_publication import FlextInfraSemanticPublication
     from .rope_transformer import FlextInfraRopeTransformer
 
 
 __all__: tuple[str, ...] = (
     "FlextInfraRopeTransformer",
-    "publish_semantic_file_plan",
-    "publish_semantic_file_plans",
+    "FlextInfraSemanticPublication",
 )
 
 _LAZY_IMPORTS = MappingProxyType(
     build_lazy_import_map(
         MappingProxyType({
-            "._semantic_publication": (
-                "publish_semantic_file_plan",
-                "publish_semantic_file_plans",
-            ),
+            "._semantic_publication": ("FlextInfraSemanticPublication",),
             ".rope_transformer": ("FlextInfraRopeTransformer",),
         }),
         alias_groups=MappingProxyType({}),
