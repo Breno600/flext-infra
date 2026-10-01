@@ -46,7 +46,8 @@ class FlextInfraModelsMiseToolchain:
             t.NonEmptyStr,
             m.Field(
                 description=(
-                    "Rendered as dolt.mode in .beads/config.yaml. Change "
+                    "Rendered as dolt_mode in .beads/metadata.json and, for a "
+                    "Gas City rig, as dolt.mode in .beads/config.yaml. Change "
                     "toolchain.beads.dolt_mode; never the projection."
                 ),
             ),
@@ -72,7 +73,8 @@ class FlextInfraModelsMiseToolchain:
             bool,
             m.Field(
                 description=(
-                    "Rendered as dolt.disable-event-flush. Override "
+                    "Rendered for a Gas City rig as the nested "
+                    "dolt: disable-event-flush switch gc reads. Override "
                     "toolchain.beads.dolt_disable_event_flush."
                 ),
             ),
