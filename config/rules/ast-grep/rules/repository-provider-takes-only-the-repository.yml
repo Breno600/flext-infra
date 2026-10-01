@@ -1,5 +1,4 @@
-# repository_provider answers one question with one input
-# (flext-itpd1.3, 2026-09-19).
+# repository_provider answers one question with one input.
 #
 # The owner detects the provider identity a repository declares for itself,
 # reading organization and base URL from that repository's own manifest. It

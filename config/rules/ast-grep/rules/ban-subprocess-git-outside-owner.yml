@@ -1,4 +1,4 @@
-# Ban GitPython imports outside the _git/ owner (epic flext-ga9q).
+# Ban GitPython imports outside the _git/ owner.
 #
 # FLEXT law: all git interaction flows through u.Infra.git_* typed
 # Request/Report facade. Consumers must NEVER import GitPython directly.

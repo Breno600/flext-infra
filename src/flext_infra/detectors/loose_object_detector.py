@@ -69,7 +69,7 @@ class FlextInfraLooseObjectDetector:
                 )
             )
 
-        # Why (cosmos-3flk9): a module whose top level holds only imports,
+        # Why: a module whose top level holds only imports,
         # the export manifest and the package entrypoint call (operational
         # r/e/x/h/d/s re-exports, ``__main__`` stubs) carries no loose
         # object by law. Derived from the collected symbols — never a

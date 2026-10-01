@@ -1,5 +1,5 @@
 # Pydantic models are constructed by their own constructor, never by a `create`
-# factory that does not exist (flext-itpd1.3, 2026-09-19).
+# factory that does not exist.
 #
 # `m.Plugin.Entity` and the `FlextPluginPlatform` models extend `cli_m.Entity`;
 # neither declares `create`, so every call site raised `missing-attribute` and

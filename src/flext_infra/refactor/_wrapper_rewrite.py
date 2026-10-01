@@ -21,7 +21,7 @@ class FlextInfraWrapperRootNamespaceRewriteMixin:
     borrows repository_root + the include-init / dry-run flags + the wrapper
     package set from the facade via FLEXT. ``module_ast`` is narrowed to the
     rope-AST protocol at the parsing boundary via ``ensure_ast_node``, which
-    deliberately avoids ``import ast`` at the consumer layer (tracked: flext-6flt).
+    deliberately avoids ``import ast`` at the consumer layer.
     """
 
     if TYPE_CHECKING:

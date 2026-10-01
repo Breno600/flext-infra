@@ -161,7 +161,7 @@ class TestsFlextInfraRefactorDeclarativeEnforcement:
         """ENFORCE-080 detects a canonical alias imported from flext_core."""
         source = tmp_path / "src" / "flext_infra" / "consumer.py"
         source.parent.mkdir(parents=True)
-        # Why (flext-ygc2k): package discovery requires src/<pkg>/__init__.py;
+        # Why: package discovery requires src/<pkg>/__init__.py;
         # without it the policy owner resolves empty and detection is vacuous.
         (source.parent / "__init__.py").write_text("", encoding="utf-8")
         source.write_text(

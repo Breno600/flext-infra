@@ -12,7 +12,7 @@
 # `make fix` never auto-fixes T201 (tooling.yaml `unfixable`), so that print is
 # reported, never deleted.
 #
-# Diagnostics are rewired, never deleted (flext-itpd1.5): Ruff's T201 fix once
+# Diagnostics are rewired, never deleted: Ruff's T201 fix once
 # deleted `print(..., file=sys.stderr)` from a consumer script and turned its
 # failures silent. The call keeps exactly one positional argument (a splat has
 # no single-argument translation) and may carry only keywords the CLI display

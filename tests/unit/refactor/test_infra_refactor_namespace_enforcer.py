@@ -477,7 +477,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
                 "from typing import ClassVar\n\n"
                 "class ServiceConfig:\n"
                 "    HOME: ClassVar[Path] = Path('/home')\n"
-                "    AI_HUB: ClassVar[Path] = Path('.ai-hub')\n",
+                "    CACHE: ClassVar[Path] = Path('.cache')\n",
                 rope_project,
                 project_name="sample-proj",
             )
@@ -485,7 +485,7 @@ class TestsFlextInfraRefactorInfraRefactorNamespaceEnforcer:
 
         classvar_violations = [v for v in violations if v.kind == "classvar"]
         tm.that(len(classvar_violations), eq=2)
-        tm.that({v.name for v in classvar_violations}, eq={"HOME", "AI_HUB"})
+        tm.that({v.name for v in classvar_violations}, eq={"HOME", "CACHE"})
         tm.that(classvar_violations[0].suggestion, has="Constants")
 
     @pytest.mark.parametrize(

@@ -156,8 +156,7 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
         Settings/config owners legitimately declare nested Pydantic namespace
         models and so require the declaration facades ``m``/``t``/``u`` at
         runtime (BaseModel, Field, MappingKV, model_validator, JsonValue).
-        Operator ruling 2026-09-19: settings defaults also read declared
-        constants — ``AlgarOudMigSettings``-style layers bind
+        Settings defaults also read declared constants — settings layers bind
         ``= c.<Namespace>.CONSTANT`` as Pydantic field defaults — so ``c`` is
         allowed at runtime in settings owners exactly like the declaration
         facades; constants are the layer whose purpose is to be consumed.
@@ -181,7 +180,7 @@ class FlextInfraNamespaceRulesImports(FlextInfraNamespaceRulesBase):
         return None
 
 
-# Why (cosmos-3flk9): settings/config are Pydantic declaration layers —
+# Why: settings/config are Pydantic declaration layers —
 # their field and factory surface (BaseModel, Field, ConfigDict,
 # model_validator, JsonValue, resolve_env_file) legitimately lives on the
 # class/types/utility facades. ``c`` and ``p`` stay forward-chain-only and

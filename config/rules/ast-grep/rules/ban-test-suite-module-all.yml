@@ -1,4 +1,4 @@
-# Test-suite modules publish nothing (operator ruling 2026-09-24).
+# Test-suite modules publish nothing.
 #
 # A module under tests/{unit,integration,e2e,performance,benchmark} is a pytest
 # collection target, never an import source. An explicit `__all__` there makes

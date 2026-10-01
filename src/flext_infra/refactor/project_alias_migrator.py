@@ -33,7 +33,7 @@ class FlextInfraRefactorProjectAliasMigrator(FlextInfraRopeTransformer):
     class _CstImportHelpers:
         """Static libcst helpers for reading and building import statements."""
 
-        # flext-j47u: keep CST rendering typed; Rope remains the semantic source.
+        # Keep CST rendering typed; Rope remains the semantic source.
         @staticmethod
         def dotted_name(module: cst.BaseExpression | None) -> str | None:
             """Return a dotted name for a libcst import expression."""

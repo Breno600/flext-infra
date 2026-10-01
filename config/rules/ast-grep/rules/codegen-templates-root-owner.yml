@@ -1,5 +1,5 @@
 # The resolved template root is computed by its owner, never recomposed at a
-# call site (flext-itpd1.3, 2026-09-19).
+# call site.
 #
 # `u.Infra.codegen_templates_root(codegen)` is the single owner of
 # `<package root>/templates/<codegen.templates.root>`, resolved. It was

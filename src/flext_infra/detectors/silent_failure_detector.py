@@ -80,7 +80,7 @@ class FlextInfraSilentFailureDetector:
 def _is_test_module(file_path: Path) -> bool:
     """Return whether ``file_path`` lives under a tests tree.
 
-    Why (cosmos-3flk9): a test teardown legitimately suppresses lifecycle
+    Why: a test teardown legitimately suppresses lifecycle
     errors (a child process that already died) via ``contextlib.suppress``;
     that is process reaping, not a silenced production failure.
     """

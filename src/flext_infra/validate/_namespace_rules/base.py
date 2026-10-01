@@ -50,7 +50,7 @@ class FlextInfraNamespaceRulesBase:
         if kind == "Call":
             return cls.name_of(getattr(node, "func", None))
         if kind in {"FunctionDef", "AsyncFunctionDef", "ClassDef"}:
-            # Why (cosmos-3flk9): definition nodes carry their identifier on
+            # Why: definition nodes carry their identifier on
             # ``.name``; without this branch every name-based structure
             # exemption (the ``cli.py`` ``main`` entrypoint, facade classes,
             # alias publishes) silently resolved to "" and flagged as a

@@ -1,5 +1,4 @@
-# A consumer names the models facade, never the concrete namespace class
-# (flext-itpd1.3, 2026-09-19).
+# A consumer names the models facade, never the concrete namespace class.
 #
 # `m.Infra.ProjectInfo` and `FlextInfraModelsWorkspace.ProjectInfo` are the same
 # object; the facade path is the one the project's typing law mandates, and it

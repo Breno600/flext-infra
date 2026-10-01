@@ -15,14 +15,14 @@ valid:
         pass
   - |
     from flext_infra import p
-    class AiHubProtocols(p):
+    class ConsumerProtocols(p):
         pass
-    p = AiHubProtocols
+    p = ConsumerProtocols
   - |
     from flext_infra import c as _infra_c
-    class AiHubConstants(_infra_c):
+    class ConsumerConstants(_infra_c):
         pass
-    c: type[AiHubConstants] = AiHubConstants
+    c: type[ConsumerConstants] = ConsumerConstants
 invalid:
   - |
     from flext_cli import m

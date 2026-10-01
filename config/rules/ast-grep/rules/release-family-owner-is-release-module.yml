@@ -1,5 +1,4 @@
-# The release config family has one owner: the release module
-# (flext-itpd1.3, 2026-09-19).
+# The release config family has one owner: the release module.
 #
 # The _models/_config split duplicated the whole release block — four classes,
 # 151 lines — into the artifact module. The two copies are byte-identical once

@@ -309,7 +309,7 @@ class FlextInfraNamespaceEnforcerProjectMixin:
         )
         pattern_smells = self._detect_and_apply(
             py_files=py_files,
-            # flext-j47u (codex): config data + u.Infra are the only static-policy path.
+            # Config data + u.Infra are the only static-policy path.
             detect_fn=lambda f: u.Infra.detect_static_rules(
                 self._detector_context(
                     file_path=f,

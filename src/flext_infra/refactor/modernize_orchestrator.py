@@ -71,7 +71,7 @@ class FlextInfraModernizeOrchestrator:
         description: str,
     ) -> p.Result[t.Cli.ResultValue]:
         """Execute a modernization as a convenience entrypoint for CLI route handlers."""
-        # flext-r3r8: keep detailed results in run(); CLI routes expose one scalar contract.
+        # Keep detailed results in run(); CLI routes expose one scalar contract.
         orchestrator = cls(transformer_factory, description=description)
         result = orchestrator.run(params)
         if result.failure:

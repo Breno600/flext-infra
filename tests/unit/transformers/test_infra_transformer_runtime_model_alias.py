@@ -4,7 +4,7 @@ The canonical-alias injector deferred ``t`` under ``if TYPE_CHECKING:``
 whenever every use sat inside an annotation. A pydantic model resolves its
 class-body annotations while the class is built, so that deferral left
 ``t.VariadicTuple`` unresolvable and ``_SmellData.model_validate_json`` raised
-``PydanticUserError`` during package import (flext-dk13k). Class-body
+``PydanticUserError`` during package import. Class-body
 annotations on a runtime model therefore keep a module-level import, while a
 purely type-checking use keeps the deferred import that avoids an
 initialisation cycle.

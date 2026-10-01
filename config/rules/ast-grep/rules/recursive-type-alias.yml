@@ -2,7 +2,7 @@
 # expands X through a container (list/dict/set/tuple/Sequence/Mapping/Callable),
 # i.e. `type X = ... list[X] ...`. Mypy follows such an alias structurally and
 # the type graph grows without a fixpoint, exhausting memory (observed: 35 GiB
-# on the flext-ldif 13-path gate, bead flext-0ftd.3).
+# on the flext-ldif 13-path gate).
 #
 # ROOT-CAUSE FIX (never suppress): replace the recursive alias with the finite
 # canonical `t.JsonValue` / `t.JsonMapping` alias, or model the recursive shape

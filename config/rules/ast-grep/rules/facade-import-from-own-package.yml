@@ -1,5 +1,5 @@
 # A facade letter is imported from the package that owns the widest one the
-# module can see (flext-itpd1.3, 2026-09-19).
+# module can see.
 #
 # flext-infra's facades are strict subclasses of flext-cli's: FlextInfraUtilities
 # extends FlextCliUtilities, FlextInfraProtocols extends FlextCliProtocols. They
@@ -17,7 +17,7 @@
 # modules themselves extend the flext-cli facade by the class name flext-cli
 # declares in its own `__all__` — `class FlextInfraModels(FlextCliModels)`,
 # never `class FlextInfraModels(m)`; the facade-base-by-class-name rule and the
-# facade-base semantic phase own that shape (2026-09-23, flext-dv1ga). This
+# facade-base semantic phase own that shape. This
 # rule therefore concerns only consumer modules: it fires where the module
 # reaches the nested namespace that the base facade does not have, so the
 # import is wrong exactly when `<letter>.Infra` appears in the same module. The

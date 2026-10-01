@@ -1,5 +1,4 @@
-# A packaged resource is immutable data, never uniquely owned atomic state
-# (flext-itpd1.3, 2026-09-19).
+# A packaged resource is immutable data, never uniquely owned atomic state.
 #
 # `atomic_read_binary_file_state` returns a guarded-write precondition: it proves
 # the path is a single-owner regular file and rejects any alias (st_nlink != 1).

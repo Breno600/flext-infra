@@ -29,7 +29,7 @@ class TestsFlextInfraModCliRoute:
     ) -> None:
         report_path = mod_workspace / c.Infra.MOD_SCAN_REPORT_RELATIVE_PATH
         sample_path = mod_workspace / "sample.py"
-        generated_hook = mod_workspace / ".agents/aihub-hooks/session.py"
+        generated_hook = mod_workspace / ".agents/hooks/session.py"
         tm.ok(u.Cli.ensure_dir(generated_hook.parent))
         tm.ok(u.Cli.atomic_write_text_file(generated_hook, "value = 1\n"))
 
