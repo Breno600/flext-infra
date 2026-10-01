@@ -189,7 +189,12 @@ Infra:
             combine-as-imports: true
             force-single-line: false
             split-on-trailing-comma: false
-          per-file-ignores: {}
+          # The single operator-authorized exception
+          # (operator-ruling-2026-10-01-tc004-tid252): generated lazy-init
+          # package initializers declare their exports under TYPE_CHECKING and
+          # resolve them lazily at runtime, which TC004 reads as runtime use.
+          per-file-ignores:
+            "**/__init__.py": [TC004]
 
       mypy:
         # Project wall-time budget for the bounded Mypy execution (SSOT;
