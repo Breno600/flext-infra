@@ -5,7 +5,7 @@
 # No token fix: relocating the class rewires every consumer. The rule names the
 # rope relocation that performs the move and captures the class as $NAME, the
 # input that relocation consumes.
-id: ban-loose-protocol
+id: ban-manual-protocol-outside-protocols
 language: python
 severity: error
 files:

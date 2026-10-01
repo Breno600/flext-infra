@@ -8,7 +8,7 @@
 # No token fix: relocating the declaration rewires every consumer. The rule
 # names the rope relocation that performs the move and captures the declared
 # name as $NAME, the input that relocation consumes.
-id: ban-loose-typing-alias
+id: ban-manual-typing-alias-outside-typings
 language: python
 severity: error
 files:

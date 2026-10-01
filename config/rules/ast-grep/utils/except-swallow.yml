@@ -1,6 +1,7 @@
-# An except clause whose body is only `pass` (optionally beside bare constant
-# expressions such as a docstring): the exception is swallowed.
-id: except-pass
+# An except clause whose body only passes or continues (optionally beside
+# comments and bare constant expressions such as a docstring): the exception
+# is swallowed.
+id: except-swallow
 language: python
 rule:
   kind: except_clause
@@ -8,13 +9,16 @@ rule:
     kind: block
     all:
       - has:
-          kind: pass_statement
+          any:
+            - kind: pass_statement
+            - kind: continue_statement
       - not:
           has:
             pattern: $_
             not:
               any:
                 - kind: pass_statement
+                - kind: continue_statement
                 - kind: comment
                 - all:
                     - kind: expression_statement

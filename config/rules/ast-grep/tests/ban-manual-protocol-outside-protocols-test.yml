@@ -1,4 +1,4 @@
-id: ban-loose-protocol
+id: ban-manual-protocol-outside-protocols
 valid:
   - |
     class Service(Base):

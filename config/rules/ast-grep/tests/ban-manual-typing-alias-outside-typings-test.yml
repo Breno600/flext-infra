@@ -1,4 +1,4 @@
-id: ban-loose-typing-alias
+id: ban-manual-typing-alias-outside-typings
 valid:
   - |
     class Namespace:

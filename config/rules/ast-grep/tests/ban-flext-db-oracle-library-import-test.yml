@@ -1,7 +1,7 @@
 id: ban-flext-db-oracle-library-import
 valid:
   - from flext_db_oracle import FlextDbOracle
-invalid:
   - import oracledb
+invalid:
   - from sqlalchemy import create_engine
   - import sqlalchemy.orm

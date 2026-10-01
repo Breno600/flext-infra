@@ -1,7 +1,7 @@
 # Source type hints are the single source of truth: a hand-written `.pyi`
 # stub inside a package source tree competes with the module it shadows.
 # Delete the stub and keep the hints in the module.
-id: ban-source-stub-file
+id: ban-stub-file
 language: python
 severity: error
 files:
