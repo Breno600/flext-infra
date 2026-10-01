@@ -459,9 +459,16 @@ class FlextInfraUtilitiesLintRecipes:
                 ]
                 if assigned:
                     message = max(assigned, key=lambda value: value.lineno)
-            stated = cls._static_text(message).split(":", maxsplit=1)[0]
-            if stated.strip().rstrip("."):
-                return f"if {stated.strip().rstrip('.')}"
+            # The literal prefix of an f-string stops at its first placeholder,
+            # which can leave the opener or quote that wrapped it dangling.
+            stated = (
+                cls._static_text(message)
+                .split(":", maxsplit=1)[0]
+                .rstrip(" .([{'\"`")
+                .strip()
+            )
+            if stated:
+                return f"if {stated}"
         node: ast.AST = raised
         while (parent := parents.get(node)) is not None and parent is not function:
             if isinstance(parent, ast.If):

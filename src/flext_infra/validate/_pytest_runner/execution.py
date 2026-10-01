@@ -135,12 +135,13 @@ class FlextInfraPytestRunnerExecution(
         """Run one read-only collection and publish its manifest artifacts.
 
         Returns:
-            The resulting ``m.Infra.PytestSelectionPlan``.
+            The selection plan of the published manifest.
 
         Raises:
-            RuntimeError: If testmon selection failed (; or if pytest reported no
-                collection with a nonempty manifest; or if complete pytest inventory
-                must contain at least one test.
+            RuntimeError: If the collection exits with an unaccepted code, times
+                out or is signalled; if pytest reports no collection with a
+                nonempty manifest; or if a complete inventory outside the slow
+                phase holds no test.
 
         """
         artifact = "testmon-inventory" if complete else "testmon-selection"
