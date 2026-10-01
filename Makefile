@@ -1654,8 +1654,7 @@ _builtin_sonarcloud_sync_project: _builtin_require_environment
 
 _builtin-self-sonarcloud-sync: _builtin_sonarcloud_sync_project
 
-# Gate, fix and build verbs act on this repository only, with one body per verb
-# in every profile: a workspace root evaluates itself exactly as CI does.
+
 _builtin_build_artifacts:
 
 	@$(UV) build --project "$(PROJECT_ROOT)"
@@ -1725,7 +1724,6 @@ _builtin_fix_enforcement: _builtin_require_environment
 # to no setup/gen/check/test workflow row and never runs implicitly.
 _builtin_sonarcloud_sync_all: _builtin_require_environment
 	@$(PROJECT_FLEXT_INFRA) maintenance sonarcloud-sync --repository-root "$(PROJECT_ROOT)"
-
 
 _builtin_run_default: _builtin_require_environment
 	@$(UV_RUN) $(PROJECT_NAME) $(ARGS)
