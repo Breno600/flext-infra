@@ -473,6 +473,12 @@ class FlextInfraConfigModelsContexts:
             t.NonEmptyStr,
             m.Field(description="PEP 440 project Python requirement"),
         ]
+        dependency_cooldown_days: Annotated[
+            int,
+            m.Field(
+                ge=1, description="Supply-chain cooldown rendered as mise release age"
+            ),
+        ]
         kubectl_version: Annotated[
             t.NonEmptyStr,
             m.Field(description="Exact kubectl toolchain version"),

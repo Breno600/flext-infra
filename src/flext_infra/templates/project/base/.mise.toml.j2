@@ -12,8 +12,10 @@
 # Setup installs frozen from that lock and never re-resolves.
 
 # === SECTION: settings (managed) ===
-# Source: config:codegen.toolchain.mise_lockfile / mise_locked / mise_lockfile_platforms / python_compile
+# Source: config:codegen.toolchain.mise_lockfile / mise_locked / mise_lockfile_platforms /
+#         dependency_cooldown_days (one fleet supply-chain cooldown, operator 2026-10-01)
 [settings]
+minimum_release_age = "{{ dependency_cooldown_days }}d"
 lockfile = {{ "true" if mise_lockfile else "false" }}
 locked = {{ "true" if mise_locked else "false" }}
 lockfile_platforms = [{% for platform in mise_lockfile_platforms %}"{{ platform }}"{{ ", " if not loop.last }}{% endfor %}]

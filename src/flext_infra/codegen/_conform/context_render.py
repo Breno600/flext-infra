@@ -414,6 +414,7 @@ class FlextInfraCodegenConformContextRender(FlextInfraCodegenConformPyprojectPol
                 version=version_result.value,
                 license=project.license,
                 python_required_version=codegen.toolchain.python_required_version,
+                dependency_cooldown_days=codegen.toolchain.dependency_cooldown_days,
                 kubectl_version=codegen.toolchain.kubectl_version,
                 helm_version=codegen.toolchain.helm_version,
                 kind_version=codegen.toolchain.kind_version,
