@@ -19,7 +19,6 @@ from ._models.check import FlextInfraModelsCheck
 from ._models.codemod import FlextInfraModelsCodemod
 from ._models.deps import FlextInfraModelsDeps
 from ._models.docs import FlextInfraModelsDocs
-from ._models.enforcement import FlextInfraModelsEnforcement
 from ._models.gates import FlextInfraModelsGates
 from ._models.git import FlextInfraModelsGit
 from ._models.layout import FlextInfraModelsLayout
@@ -51,7 +50,6 @@ class FlextInfraModels(FlextCliModels):
         FlextInfraModelsCodemod,
         FlextInfraModelsDeps,
         FlextInfraModelsDocs,
-        FlextInfraModelsEnforcement,
         FlextInfraModelsGates,
         FlextInfraModelsLayout,
         FlextInfraModelsPromoted,

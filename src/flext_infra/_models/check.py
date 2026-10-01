@@ -136,33 +136,6 @@ class FlextInfraModelsCheck:
     class FixPyreflyConfigCommand(mm.WriteMixin, m.ContractModel):
         """Canonical CLI payload for ``flext-infra check fix-pyrefly-settings``."""
 
-    class FixEnforcementCommand(mm.WriteMixin, m.ContractModel):
-        """Canonical CLI payload for ``flext-infra check fix-enforcement``."""
-
-        @property
-        def fail_fast(self) -> bool:
-            """Share the service's fail-fast invariant with gate adapters."""
-            return c.Infra.SERVICE_FAIL_FAST
-
-        rules: Annotated[
-            t.StrSequence,
-            m.Field(description="Comma-separated enforcement rule IDs to fix"),
-        ] = ()
-        safe_only: Annotated[
-            bool,
-            m.Field(
-                alias="safe-only",
-                description="Only apply fixes marked safe in the catalog",
-            ),
-        ] = True
-        check_after: Annotated[
-            bool,
-            m.Field(
-                alias="check-after",
-                description="Re-run the corresponding check after fixing",
-            ),
-        ] = True
-
     class Issue(m.ContractModel):
         """Single issue reported by a quality gate tool."""
 

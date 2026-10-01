@@ -22,7 +22,6 @@ from flext_infra.deps.extra_paths import FlextInfraExtraPathsManager
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
 from flext_infra.deps.lock_integrity import FlextInfraLockIntegrityVerifier
 from flext_infra.deps.modernizer import FlextInfraPyprojectModernizer
-from flext_infra.fixers.orchestrator import FlextInfraEnforcementFixerOrchestrator
 
 from ..api import infra
 from .cli_route_base import FlextInfraCliRouteBase
@@ -50,14 +49,6 @@ class FlextInfraCodegenRoutes(FlextInfraCliRouteBase):
                 model_cls=m.Infra.FixPyreflyConfigCommand,
                 handler=FlextInfraCliRouteBase.result_handler(
                     FlextInfraConfigFixer.execute_payload
-                ),
-            ),
-            m.Cli.ResultCommandRoute(
-                name="fix-enforcement",
-                help_text="Auto-fix enforcement-catalog violations",
-                model_cls=m.Infra.FixEnforcementCommand,
-                handler=FlextInfraCliRouteBase.result_handler(
-                    FlextInfraEnforcementFixerOrchestrator.execute_payload
                 ),
             ),
         ),

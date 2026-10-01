@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from .collection_sources import FlextInfraEnforcementSourceCollectors
+from .metadata import FlextInfraEnforcementMetadata
+from .selection import FlextInfraEnforcementSelection
 
 
-class FlextInfraEnforcementEngine(FlextInfraEnforcementSourceCollectors):
-    """Single SSOT-backed collector for validation, census, and fix flows."""
+class FlextInfraEnforcementEngine(
+    FlextInfraEnforcementMetadata, FlextInfraEnforcementSelection
+):
+    """Single SSOT-backed selection and rendering for catalog-driven census."""
 
 
 __all__: list[str] = ["FlextInfraEnforcementEngine"]

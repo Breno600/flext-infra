@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 from flext_tests import tm
 
 from flext_infra.deps.fix_pyrefly_config import FlextInfraConfigFixer
-from flext_infra.fixers.rope_fixer import FlextInfraRopeFixerAdapter
 from flext_infra.refactor.census import FlextInfraRefactorCensus
 from tests import m, t
 from tests.utilities_fixture_tooling import TestsFlextInfraUtilitiesToolingFixtureMixin
@@ -20,24 +18,6 @@ if TYPE_CHECKING:
 
 class TestsFlextInfraUtilitiesGatesMixin:
     """Typed quality-gate execution and enforcement fixture helpers."""
-
-    @staticmethod
-    def run_rope_fixer(
-        tmp_path: Path,
-        project_dir: Path,
-        rule: m.EnforcementRuleSpec,
-        file_path: Path,
-        *,
-        apply: bool,
-    ) -> m.Infra.ProjectFixResult:
-        """Run one rope fixer adapter pass over a single reported file."""
-        adapter = FlextInfraRopeFixerAdapter(tmp_path)
-        ctx = m.Infra.FixEnforcementCommand(
-            repository_root=tmp_path, projects=("demo",), apply=apply
-        )
-        return adapter.fix_project(
-            project_dir, ((rule, SimpleNamespace(file_path=str(file_path))),), ctx
-        )
 
     @staticmethod
     def detector_context(
