@@ -25,7 +25,7 @@ class TestsFlextInfraRuffProjectExemptions:
         """A project without retired roots receives every fleet entry unchanged."""
         fleet = config.Infra.tooling.tools.ruff.lint.per_file_ignores
 
-        scoped = FlextInfraEnsureRuffConfigPhase.project_per_file_ignores(
+        scoped = FlextInfraEnsureRuffConfigPhase.compose_per_file_ignores(
             tmp_path,
             fleet,
         )
