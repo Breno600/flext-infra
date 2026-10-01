@@ -41,7 +41,6 @@ class TestsFlextInfraCodegenAutofixWorkspace:
     def test_project_without_pyproject_excluded_from_run(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         external_project = tmp_path / "external-project"
         external_project.mkdir()
@@ -65,7 +64,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         )
         u.Tests.declare_workspace_projects(tmp_path, (managed_project.name,))
         u.Tests.provision_checkout(managed_project)
-        fixer = FlextInfraCodegenFixer(repository_root=tmp_path, rope=rope_workspace)
+        fixer = FlextInfraCodegenFixer(repository_root=tmp_path)
         results = fixer.fix_workspace()
         project_names = [res.project for res in results]
         tm.that("external-project" not in project_names, eq=True)
@@ -74,14 +73,13 @@ class TestsFlextInfraCodegenAutofixWorkspace:
     def test_project_without_src_returns_empty(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         project = tmp_path / "no-src-proj"
         project.mkdir()
         (project / "Makefile").touch()
         (project / "pyproject.toml").write_text("[project]\nname='no-src-proj'\n")
         (project / ".git").mkdir()
-        fixer = FlextInfraCodegenFixer(repository_root=tmp_path, rope=rope_workspace)
+        fixer = FlextInfraCodegenFixer(repository_root=tmp_path)
         [result] = fixer.fix_workspace(
             projects=[self._project_info(project, package_name="")],
         )
@@ -93,7 +91,6 @@ class TestsFlextInfraCodegenAutofixWorkspace:
     def test_files_modified_tracks_affected_files(
         self,
         tmp_path: Path,
-        rope_workspace: p.Infra.RopeWorkspaceDsl,
     ) -> None:
         project = u.Tests.create_codegen_project(
             tmp_path=tmp_path,
@@ -108,7 +105,7 @@ class TestsFlextInfraCodegenAutofixWorkspace:
         )
         u.Tests.declare_workspace_projects(tmp_path, (project.name,))
         u.Tests.provision_checkout(project)
-        fixer = FlextInfraCodegenFixer(repository_root=tmp_path, rope=rope_workspace)
+        fixer = FlextInfraCodegenFixer(repository_root=tmp_path)
         [result] = fixer.fix_workspace(projects=[self._project_info(project)])
         modified_paths = tuple(Path(path) for path in result.files_modified)
         tm.that(modified_paths, length_gte=1)

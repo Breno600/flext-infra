@@ -51,7 +51,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
             if serial
             else pytest.suite_stop_reserve_seconds
         )
-        return self.started_at_monotonic + pytest.run_timeout_seconds - reserve
+        return self.started_at_monotonic + self.run_timeout_seconds(pytest) - reserve
 
     def ci_excluded_markers(
         self,

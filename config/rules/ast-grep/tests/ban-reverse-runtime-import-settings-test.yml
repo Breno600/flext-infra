@@ -1,0 +1,8 @@
+id: ban-reverse-runtime-import-settings
+valid:
+  - |
+    if TYPE_CHECKING:
+        from pkg import s
+invalid:
+  - from pkg import s
+  - from pkg.api import FlextFoo

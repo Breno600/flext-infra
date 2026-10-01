@@ -1,9 +1,12 @@
-# Enforce one public import boundary for every FLEXT consumer.
+# Enforce one public import boundary between FLEXT packages.
 #
-# Absolute imports of private implementation modules couple a consumer to an
-# owner layout. Same-owner implementation modules use relative sibling imports;
-# every other consumer uses a public facade discovered from its live assignment
-# and inheritance graph.
+# An absolute import of another package's private implementation module
+# couples a consumer to that owner's layout; the consumer uses the public
+# facade discovered from the owner's live assignment and inheritance graph.
+# Inside one package every import is absolute (relative imports are banned),
+# so the imported module's root is captured as $MOD and the engine admits the
+# finding only when it is not the scanned project's own package (context
+# own-package, read from the project's declared package name).
 #
 # Both static spellings are the same coupling: `from pkg._mod import X` and
 # `import pkg._mod`. The semantic private-import cutover rewrites only the
@@ -13,16 +16,27 @@
 id: ban-private-import
 language: Python
 severity: error
+metadata:
+  context:
+    MOD:
+      not: own-package
 rule:
   any:
     - all:
         - kind: import_from_statement
         - regex: '^from\s+\w[\w.]*\._[A-Za-z]\w*(\.[\w.]+)*\s+import\b'
+        - has:
+            field: module_name
+            pattern: $MOD
     - all:
         - kind: import_statement
-        - regex: '^import\s+(?:[^\n]*,\s*)?\w[\w.]*\._[A-Za-z]\w*(\.[\w.]+)*\b'
+        - has:
+            stopBy: end
+            kind: dotted_name
+            regex: '^\w[\w.]*\._[A-Za-z]\w*(\.[\w.]+)*$'
+            pattern: $MOD
 message: >-
-  Absolute private implementation import is forbidden. Use a relative sibling
-  import inside the owner or consume the public facade discovered from source.
+  Absolute import of another package's private implementation module is
+  forbidden. Consume the owner's public facade discovered from source.
 files:
   - "**/*.py"

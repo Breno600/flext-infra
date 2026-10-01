@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -235,6 +236,35 @@ class TestsFlextInfraGitFacet:
         assert dirty.success
         assert dirty.value.dirty is True
         assert "dirty.txt" in dirty.value.porcelain
+
+    @pytest.mark.parametrize("change", ["tracked", "staged", "untracked"])
+    def test_verify_clean_cli_rejects_real_worktree_changes(
+        self,
+        real_git_repo: Path,
+        capsys: pytest.CaptureFixture[str],
+        change: str,
+    ) -> None:
+        """The public CLI passes a clean checkout and exposes a dirty Git report."""
+        argv = ["workspace", "verify-clean", "--repo-root", str(real_git_repo)]
+        tm.that(infra_main(argv), eq=0)
+        _ = capsys.readouterr()
+
+        if change == "untracked":
+            changed_path = real_git_repo / "dirty.txt"
+            changed_path.write_text("dirty\n", encoding="utf-8")
+        else:
+            changed_path = real_git_repo / "README.md"
+            changed_path.write_text("# Changed Repository\n", encoding="utf-8")
+            if change == "staged":
+                tm.ok(
+                    test_u.Cli.run_checked(
+                        [c.Infra.GIT, "add", changed_path.name], cwd=real_git_repo
+                    )
+                )
+
+        tm.that(infra_main(argv), eq=1)
+        output = capsys.readouterr()
+        tm.that(output.out + output.err, has=changed_path.name)
 
     def test_changed_paths_reports_tracked_and_untracked_files(
         self,

@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 from flext_tests import tm
 
-from flext_infra import c, config, t
+from flext_infra import c, config, infra, t
 from flext_infra.codegen.conform import FlextInfraCodegenConform
 from flext_infra.codegen.project_new import FlextInfraCodegenProjectNew
 from tests import u
@@ -66,7 +66,7 @@ class TestsFlextInfraCodegenCiMatrix:
             year=2026,
             apply_changes=True,
         )
-        result = service.execute()
+        result = infra.codegen_new(service)
         tm.ok(result)
         return root
 
@@ -781,7 +781,9 @@ class TestsFlextInfraCodegenCiMatrix:
             step for step in steps if step["name"] == "Docs lifecycle (blocking)"
         )
         upload = next(
-            step for step in steps if step.get("name") == "Upload docs reports on failure"
+            step
+            for step in steps
+            if step.get("name") == "Upload docs reports on failure"
         )
         tm.that(docs_step.get("run"), eq="make docs")
         tm.that(docs_step.get("continue-on-error"), eq=None)

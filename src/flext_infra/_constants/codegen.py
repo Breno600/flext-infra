@@ -102,12 +102,10 @@ class FlextInfraConstantsCodegen(
     )
     "Runtime singleton modules for src/: (filename, class_suffix, base_class, docstring)."
     VIOLATION_PATTERN: ClassVar[t.RegexPattern] = re.compile(
-        r"\[(?P<rule>NS-(?:[A-Z]+|\d{3}))-\d{3}\]\s+"
+        r"\[(?P<rule>[a-z0-9][a-z0-9-]*)\]\s+"
         r"(?P<module>[^:]+):(?P<line>\d+)\s+\u2014\s+(?P<message>.+)",
     )
-    "Regex to parse violation strings: [NS-RULE-NNN] path:line — message."
-    PROTOCOL_MODEL_LINE_BUDGET: ClassVar[int] = 170
-    "Line budget of one generated structural-protocol module chunk."
+    "Regex to parse violation strings: [rule-id] path:line — message."
     PROTOCOL_MODEL_MINIMAL_BODY_LINES: ClassVar[int] = 3
     "Header lines of a generated protocol class; at or below it the body is empty."
     LAZY_IMPORTS_BINDING: ClassVar[str] = "_LAZY_IMPORTS"
@@ -124,7 +122,6 @@ class FlextInfraConstantsCodegen(
     "Canonical Unix Mise launcher filename."
     MISE_WINDOWS_LAUNCHER_FILENAME: ClassVar[str] = "mise.cmd"
     "Canonical Windows Mise launcher filename."
-    "UTC basic stamp for `{filename}.{stamp}.bak` written before gen apply."
     CODEGEN_TRANSACTION_LOCK_FILENAME: ClassVar[str] = "flext-infra-codegen.lock"
     "Worktree-specific administrative lock for complete generation."
     CODEGEN_TRANSACTION_LOCK_MODE: ClassVar[int] = 0o600
