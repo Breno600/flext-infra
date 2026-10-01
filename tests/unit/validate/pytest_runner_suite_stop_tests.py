@@ -82,13 +82,15 @@ class TestsFlextInfraPytestRunnerSuiteStop:
 
         def dispatch_plan(node_ids: t.StrSequence) -> m.Infra.PytestSelectionPlan:
             """Synthetic selection whose manifest path matches the real argv."""
-            return m.Infra.PytestSelectionPlan.model_validate({
-                "manifest_path": "m.json",
-                "node_ids": list(node_ids),
-                "whole_target": False,
-                "inventory_collected": False,
-                "owns_no_tests": False,
-            })
+            # The plan is a strict value: it takes typed fields, never the
+            # JSON-shaped str/list a lax validation would coerce.
+            return m.Infra.PytestSelectionPlan(
+                manifest_path=Path("m.json"),
+                node_ids=tuple(node_ids),
+                whole_target=False,
+                inventory_collected=False,
+                owns_no_tests=False,
+            )
 
         multi = [f"tests/test_serial_{'x' * index}.py::test_one" for index in range(4)]
         runner = runner_for(cached_runner_project)
