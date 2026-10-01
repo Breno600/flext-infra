@@ -89,47 +89,6 @@ def installed_dependency_path(tmp_path: Path) -> Iterator[Path]:
         importlib.invalidate_caches()
 
 
-def _is_collectable_test_module(collection_path: Path) -> bool:
-    tests_root = Path(__file__).parent
-    try:
-        collection_path.relative_to(tests_root)
-    except ValueError:
-        return True
-
-    file_name = collection_path.name
-    if collection_path.suffix != ".py" or file_name == "conftest.py":
-        return True
-
-    return file_name.startswith("test_") or file_name.endswith("_tests.py")
-
-
-def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool | None:
-    """Collect only executable test modules from the canonical test tree."""
-    del config
-    if _is_collectable_test_module(collection_path):
-        return None
-    return True
-
-
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
-    """Deselect non-test facade modules that pytest plugins may discover."""
-    kept_items: list[pytest.Item] = []
-    deselected_items: list[pytest.Item] = []
-
-    for item in items:
-        if _is_collectable_test_module(Path(item.path)):
-            # flext-wkii.4.15: settings identity is fixed at process startup.
-            kept_items.append(item)
-            continue
-        deselected_items.append(item)
-
-    if deselected_items:
-        config.hook.pytest_deselected(items=deselected_items)
-        items[:] = kept_items
-
-
 @pytest.fixture
 def infra_test_workspace(tmp_path: Path) -> Path:
     """Create a minimal typed project workspace for public service tests."""

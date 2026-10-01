@@ -1,8 +1,7 @@
 """Silent failure quality gate.
 
 Enforces silent-failure detection across every Python project the workspace
-discovers. Projects without Python sources provide an empty scan input; no
-project-name allowlist exists.
+discovers, with no path or project-name allowlist.
 """
 
 from __future__ import annotations
@@ -10,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, override
 
-from flext_infra import c, m
+from flext_infra import m
 from flext_infra.detectors.silent_failure_detector import (
     FlextInfraSilentFailureDetector,
 )
@@ -35,15 +34,6 @@ class FlextInfraSilentFailureGate(FlextInfraScannerGateMixin):
         self, file_path: Path, project_dir: Path, rope_project: t.Infra.RopeProject
     ) -> t.SequenceOf[m.Infra.Issue]:
         """Detect silent failure violations in a single file."""
-        # Why: ADR-0018 declares the stdlib hook-client island the sole,
-        # performance-motivated exception to the no-hidden-errors rules; the
-        # boundary and namespace gates already honor the same declaration.
-        posix = str(file_path).replace("\\", "/")
-        if any(
-            fragment in posix
-            for fragment in c.Infra.NAMESPACE_STDLIB_ISLAND_PATH_FRAGMENTS
-        ):
-            return ()
         return FlextInfraSilentFailureDetector.detect_file(
             m.Infra.DetectorContext(
                 file_path=file_path, project_root=project_dir, rope_project=rope_project

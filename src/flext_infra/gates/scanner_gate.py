@@ -23,6 +23,7 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
     """
 
     scan_error_message: ClassVar[str] = ""
+    requires_python_targets: ClassVar[bool] = True
 
     @override
     def check(
@@ -42,6 +43,8 @@ class FlextInfraScannerGateMixin(FlextInfraGate):
                 passed=False,
                 started=started,
             )
+        if not files_result.value:
+            return self._skip_result(project_dir, started)
         rope_project = u.Infra.init_rope_project(project_dir)
         try:
             issues = [

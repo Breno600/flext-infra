@@ -15,7 +15,6 @@ import inspect
 import pkgutil
 import re
 import sys
-import types
 from collections import defaultdict
 from collections.abc import MutableMapping
 from typing import TYPE_CHECKING, Annotated, override
@@ -78,34 +77,9 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             raise RuntimeError(msg)
         raise exception.with_traceback(exception.__traceback__)
 
-    @staticmethod
-    def _is_declared_island(module: types.ModuleType) -> bool:
-        """Whether the module lives under a declared stdlib island path.
-
-        Why: ADR-0018 declares the native hook-client island the sole,
-        performance-motivated exception to the FLEXT enforcement surface; it
-        is stdlib-only and cannot consume ``ai_hub._constants``, so the same
-        declaration the boundary, namespace, and silent-failure gates honor
-        keeps the runtime census from enforcing family constants on it.
-        """
-        module_file = getattr(module, "__file__", None)
-        if module_file is None:
-            return False
-        posix = str(module_file).replace("\\", "/")
-        return any(
-            fragment in posix
-            for fragment in c.Infra.NAMESPACE_STDLIB_ISLAND_PATH_FRAGMENTS
-        )
-
     def _check_module(self, module_name: str) -> t.SequenceOf[m.Infra.ValidationReport]:
         """Import one module and run runtime enforcement on its local classes."""
         module = importlib.import_module(module_name)
-        if self._is_declared_island(module):
-            return [
-                m.Infra.ValidationReport(
-                    passed=True, violations=(), summary=f"{module_name}: clean"
-                )
-            ]
         violations: list[str] = []
         for _name, obj in inspect.getmembers(module, inspect.isclass):
             if not self._is_local_class(obj, module.__name__):

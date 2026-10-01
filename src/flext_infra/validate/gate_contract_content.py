@@ -41,7 +41,6 @@ class FlextInfraGateContractContentMixin:
                             f"line {i}: interactive prompt without --interactive gate"
                         ),
                         script=script,
-                        severity=c.Infra.GateSeverity.WARNING.value,
                     )
                 )
         return tuple(violations)
@@ -68,7 +67,6 @@ class FlextInfraGateContractContentMixin:
                             "<skill>--<kind>--<slug>.<ext>"
                         ),
                         script=script,
-                        severity=c.Infra.GateSeverity.WARNING.value,
                     )
                 )
         return tuple(violations)

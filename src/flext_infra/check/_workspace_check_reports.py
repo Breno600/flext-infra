@@ -150,7 +150,7 @@ class FlextInfraWorkspaceCheckReportsMixin:
         u.Cli.info(f"Reports: {md_path}")
         u.Cli.info(f"         {sarif_path}")
         if total_findings > 0:
-            u.Cli.info("Findings by project (report-only; see reports for detail):")
+            u.Cli.info("Findings by project (see reports for detail):")
             for project in sorted(
                 results, key=operator.attrgetter("total_findings"), reverse=True
             ):

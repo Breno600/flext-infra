@@ -25,12 +25,6 @@ class FlextInfraGateContractReportMixin:
         return root / ".claude" / "skills" / "scripts-infra" / "report.json"
 
     @staticmethod
-    def _severity_count(script: m.Infra.GateContractScriptInfo, severity: str) -> int:
-        return sum(
-            1 for violation in script.violations if violation.severity == severity
-        )
-
-    @staticmethod
     def _visible_scripts(
         scripts: t.SequenceOf[m.Infra.GateContractScriptInfo],
     ) -> t.SequenceOf[m.Infra.GateContractScriptInfo]:
@@ -48,38 +42,20 @@ class FlextInfraGateContractReportMixin:
             script for script in scripts if script.role in {"validator", "fixer"}
         )
 
-    @staticmethod
-    def _status_for(errors: int, warnings: int) -> str:
-        if errors > 0:
-            return f"{c.Infra.RED}FAIL{c.Infra.RESET}"
-        if warnings > 0:
-            return f"{c.Infra.YELLOW}WARN{c.Infra.RESET}"
-        return f"{c.Infra.GREEN}OK{c.Infra.RESET}"
-
-    @staticmethod
-    def _detail_for(errors: int, warnings: int) -> str:
-        details = [
-            *([f"{errors} error(s)"] if errors > 0 else []),
-            *([f"{warnings} warning(s)"] if warnings > 0 else []),
-        ]
-        return ", ".join(details) if details else "contract compliant"
-
     def _print_script_result(self, script: m.Infra.GateContractScriptInfo) -> None:
-        errors = self._severity_count(script, c.Infra.GateSeverity.ERROR.value)
-        warnings = self._severity_count(script, c.Infra.GateSeverity.WARNING.value)
+        errors = len(script.violations)
+        status = (
+            f"{c.Infra.RED}FAIL{c.Infra.RESET}"
+            if errors
+            else f"{c.Infra.GREEN}OK{c.Infra.RESET}"
+        )
+        detail = f"{errors} error(s)" if errors else "contract compliant"
         u.Cli.formatters_print(
-            f"{script.path:<60} {script.role:<10} "
-            f"{self._status_for(errors, warnings):<22} "
-            f"{self._detail_for(errors, warnings)}"
+            f"{script.path:<60} {script.role:<10} {status:<22} {detail}"
         )
         for violation in script.violations:
-            color = (
-                c.Infra.RED
-                if violation.severity == c.Infra.GateSeverity.ERROR.value
-                else c.Infra.YELLOW
-            )
             u.Cli.formatters_print(
-                f"  {color}[{violation.check}]{c.Infra.RESET} {violation.message}"
+                f"  {c.Infra.RED}[{violation.check}]{c.Infra.RESET} {violation.message}"
             )
 
     def _print_results(
@@ -110,21 +86,10 @@ class FlextInfraGateContractReportMixin:
         self, scripts: t.SequenceOf[m.Infra.GateContractScriptInfo]
     ) -> m.Infra.GateContractSummary:
         gate_scripts = self._gate_scripts(scripts)
-        errors = sum(
-            self._severity_count(script, c.Infra.GateSeverity.ERROR.value)
-            for script in scripts
-        )
-        warnings = sum(
-            self._severity_count(script, c.Infra.GateSeverity.WARNING.value)
-            for script in scripts
-        )
-        ok = sum(
-            1
-            for script in gate_scripts
-            if self._severity_count(script, c.Infra.GateSeverity.ERROR.value) == 0
-        )
+        errors = sum(len(script.violations) for script in scripts)
+        ok = sum(1 for script in gate_scripts if not script.violations)
         return m.Infra.GateContractSummary(
-            errors=errors, gate_scripts=len(gate_scripts), ok=ok, warnings=warnings
+            errors=errors, gate_scripts=len(gate_scripts), ok=ok, warnings=0
         )
 
     def _write_report(
@@ -144,7 +109,6 @@ class FlextInfraGateContractReportMixin:
             "errors": summary.errors,
             "mode": mode,
             "violations": violations,
-            "warnings": summary.warnings,
         }
         write = u.Cli.json_write(
             report_path,
@@ -162,8 +126,7 @@ class FlextInfraGateContractReportMixin:
             f"\n{c.Infra.CYAN}Summary:{c.Infra.RESET} "
             f"gate_scripts={summary.gate_scripts} "
             f"{c.Infra.GREEN}ok={summary.ok}{c.Infra.RESET} "
-            f"{c.Infra.RED}errors={summary.errors}{c.Infra.RESET} "
-            f"{c.Infra.YELLOW}warnings={summary.warnings}{c.Infra.RESET}"
+            f"{c.Infra.RED}errors={summary.errors}{c.Infra.RESET}"
         )
         u.Cli.formatters_print(f"Report: {report_path}")
 
