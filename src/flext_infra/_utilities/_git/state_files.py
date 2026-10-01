@@ -107,18 +107,15 @@ class FlextInfraUtilitiesGitStateFilesMixin(
                 destination, required=False
             ).unwrap()
             permissions = before_file.mode if before_file.mode is not None else 0
-            cls._state_require_payload(
-                path,
-                m.Infra.GitWorktreeFileState(
+            observed: m.Infra.GitWorktreeFileState | None = None
+            if before_file.content is not None:
+                observed = m.Infra.GitWorktreeFileState(
                     path=path,
                     mode="100755" if permissions & stat.S_IXUSR else "100644",
                     permissions=permissions,
                     oid=cls._state_blob_oid(root, before_file.content),
                 )
-                if before_file.content is not None
-                else None,
-                allowed,
-            )
+            cls._state_require_payload(path, observed, allowed)
             if desired is not None and desired.mode != "120000":
                 payload = cls._state_blob_payload(root, desired.oid)
                 u.Cli.atomic_write_binary_file_guarded(
