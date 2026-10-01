@@ -92,18 +92,28 @@ class FlextInfraConfigModelsRender:
                     "fact and a second declaration could disagree with it"
                 ),
             ),
-        ]
-        dependabot_cooldown_days: Annotated[
+        ] = False
+        dependency_cooldown_days: Annotated[
             int,
             m.Field(
-                ge=0,
+                ge=1,
                 description=(
-                    "Dependabot cooldown (default-days) rendered into every "
-                    "ecosystem entry of the generated dependabot.yml; zero "
-                    "renders no cooldown"
+                    "Fleet supply-chain cooldown (codegen.toolchain SSOT) "
+                    "rendered as default-days into every dependabot ecosystem "
+                    "entry."
                 ),
             ),
         ]
+        cooldown_excluded_dependencies: Annotated[
+            t.VariadicTuple[t.NonEmptyStr],
+            m.Field(
+                description=(
+                    "Requirement names the project takes by direct git "
+                    "reference (forks and local projects): derived from its "
+                    "pyproject, they never enter the cooldown."
+                )
+            ),
+        ] = ()
         checkout_submodules: Annotated[
             t.NonEmptyStr,
             m.Field(

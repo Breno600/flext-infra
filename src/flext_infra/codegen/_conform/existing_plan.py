@@ -83,6 +83,11 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
                 root_packages=(
                     target.project.root_packages if target.project is not None else ()
                 ),
+                repository_namespace_packages=(
+                    target.project.repository_namespace_packages
+                    if target.project is not None
+                    else ()
+                ),
                 packaged_data_paths=(
                     target.project.packaged_data_paths
                     if target.project is not None
@@ -247,7 +252,12 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
         u.Cli.info(f"  stage=templates repository={target.repository.name}")
         profile = target.make_profile
         planned: list[m.Infra.CodegenFilePlan] = []
-        for managed in codegen.managed_files:
+        # The pyproject plans first: renders that derive from its requirements
+        # (the dependabot cooldown exclusion) read the planned bytes.
+        for managed in sorted(
+            codegen.managed_files,
+            key=lambda item: item.path != Path(c.PYPROJECT_FILENAME),
+        ):
             if target.beads is None and managed.path.parts[:1] == (".beads",):
                 continue
             if not target.ci_enabled and managed.path.parts[:2] == (
@@ -352,6 +362,13 @@ class FlextInfraCodegenConformExistingPlan(FlextInfraCodegenConformArtifactRende
             if composed.failure:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(composed)
             rendered_content = composed.value.rendered
+            if entry.destination == c.PYPROJECT_FILENAME:
+                recorded = self.with_planned_pyproject(render_inputs, rendered_content)
+                if recorded.failure:
+                    return r[t.SequenceOf[m.Infra.CodegenFilePlan]].from_failure(
+                        recorded
+                    )
+                render_inputs = recorded.value
             conflict_marker = u.Infra.first_merge_conflict_marker(rendered_content)
             if conflict_marker is not None:
                 return r[t.SequenceOf[m.Infra.CodegenFilePlan]].fail(

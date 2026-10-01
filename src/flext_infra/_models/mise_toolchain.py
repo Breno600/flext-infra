@@ -112,11 +112,16 @@ class FlextInfraModelsMiseToolchain:
                 description="Python major.minor line, e.g. '3.13'",
             ),
         ]
-        python_tool_version: Annotated[
-            t.NonEmptyStr,
+        dependency_cooldown_days: Annotated[
+            int,
             m.Field(
-                pattern=r"^[0-9]+\.[0-9]+\.[0-9]+$",
-                description="Python runtime patch available on every locked platform",
+                ge=1,
+                description=(
+                    "Supply-chain cooldown in days, the single value every "
+                    "resolver honours: the generated mise minimum_release_age "
+                    "and every dependabot ecosystem entry. Forks and local "
+                    "projects (direct git references) are excluded."
+                ),
             ),
         ]
         uv_link_mode: Annotated[

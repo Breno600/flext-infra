@@ -143,29 +143,6 @@ class FlextInfraConfigModelsArtifact:
                 ),
             ),
         ]
-        dependabot_cooldown_days: Annotated[
-            Mapping[str, int],
-            m.Field(
-                description=(
-                    "Per-distribution dependabot cooldown (default-days, >= 0) "
-                    "opted in for generated dependabot.yml. The fleet default "
-                    "is no cooldown: every ecosystem selects the newest "
-                    "available release immediately. A distribution that must "
-                    "stagger updates declares its own days here."
-                ),
-            ),
-        ]
-        dependabot_cooldown_default_days: Annotated[
-            int,
-            m.Field(
-                ge=7,
-                description=(
-                    "Dependabot cooldown (default-days) for every distribution "
-                    "absent from dependabot_cooldown_days; the supply-chain "
-                    "policy requires a rolling delay of at least seven days"
-                ),
-            ),
-        ]
         ci_private_submodules: Annotated[
             Mapping[str, FlextInfraConfigModelsProvider.CiPrivateSubmodulesSpec],
             m.Field(
@@ -543,6 +520,18 @@ class FlextInfraConfigModelsArtifact:
                 ),
             ),
         ]
+        planned_direct_sources: Annotated[
+            t.VariadicTuple[str] | None,
+            m.Field(
+                description=(
+                    "Requirement names the pyproject composed in this plan "
+                    "takes by direct reference (forks and local projects). "
+                    "Planners compose the pyproject first and record them; "
+                    "None means this plan composes no pyproject, so the "
+                    "committed one is the source"
+                )
+            ),
+        ] = None
 
     class CodegenFilePlan(FlextInfraConfigModelsContract.ConfigContract):
         """Exact before state and desired state for one managed file."""
