@@ -54,21 +54,8 @@ class FlextInfraConstantsSharedInfra:
         "x",
         "tc",
     })
-    DUNDER_ALLOWED: ClassVar[frozenset[str]] = frozenset({"__all__", "__version__"})
-    TYPEVAR_CALLABLES: ClassVar[frozenset[str]] = frozenset({
-        "TypeVar",
-        "ParamSpec",
-        "TypeVarTuple",
-    })
-    ENUM_BASES: ClassVar[frozenset[str]] = frozenset({"StrEnum", "Enum", "IntEnum"})
     CLASSVAR_ANNOTATION_NAMES: ClassVar[frozenset[str]] = frozenset({"ClassVar"})
     "Names treated as class-variable constant annotations."
-    COLLECTION_CALLS: ClassVar[frozenset[str]] = frozenset({
-        "frozenset",
-        "tuple",
-        "dict",
-        "list",
-    })
     SKILLS_DIR: ClassVar[Path] = Path(".agents/skills")
     BASELINE_DEFAULT: ClassVar[str] = ".agents/skills/{skill}/baseline.json"
     CPROFILE_RECEIPT_ARGUMENT_COUNT: ClassVar[int] = 3

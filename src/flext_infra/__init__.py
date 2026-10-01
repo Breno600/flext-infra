@@ -78,7 +78,6 @@ if TYPE_CHECKING:
     from .codemod.batch_apply import FlextInfraCodemodBatchApply
     from .codemod.batch_gates import FlextInfraModGateEngine
     from .codemod.batch_replacements import FlextInfraModReplacements
-    from .codemod.sed_apply import FlextInfraCodemodSedApply
     from .codemod.semantic_apply import FlextInfraCodemodSemanticApply
     from .codemod.snapshot_reconciler import FlextInfraCodemodSnapshotReconciler
     from .codemod.snapshot_refresh import FlextInfraCodemodSnapshotRefresh
@@ -99,23 +98,10 @@ if TYPE_CHECKING:
     from .deps.phases.ensure_ruff import FlextInfraEnsureRuffConfigPhase
     from .deps.phases.inject_comments import FlextInfraInjectCommentsPhase
     from .deps.phases.tool_tables import FlextInfraToolTablesPhase
-    from .detectors.class_placement_detector import FlextInfraClassPlacementDetector
-    from .detectors.compatibility_alias_detector import (
-        FlextInfraCompatibilityAliasDetector,
-    )
-    from .detectors.cyclic_import_detector import FlextInfraCyclicImportDetector
     from .detectors.deferred_self_reference_detector import (
         FlextInfraDeferredSelfReferenceDetector,
     )
-    from .detectors.import_alias_detector import FlextInfraImportAliasDetector
-    from .detectors.internal_import_detector import FlextInfraInternalImportDetector
-    from .detectors.loose_object_detector import FlextInfraLooseObjectDetector
     from .detectors.lsp_diagnostics import FlextInfraLspDiagnosticsDetector
-    from .detectors.namespace_source_detector import FlextInfraNamespaceSourceDetector
-    from .detectors.private_import_bypass_detector import (
-        FlextInfraPrivateImportBypassDetector,
-    )
-    from .detectors.runtime_alias_detector import FlextInfraRuntimeAliasDetector
     from .docs.auditor import FlextInfraDocAuditor
     from .docs.auditor_mixin import FlextInfraDocAuditorMixin
     from .docs.base import FlextInfraDocServiceBase
@@ -128,7 +114,6 @@ if TYPE_CHECKING:
     from .docs.validator import FlextInfraDocValidator
     from .gates.bandit import FlextInfraBanditGate
     from .gates.base_gate import FlextInfraGate
-    from .gates.canonical_alias import FlextInfraCanonicalAliasGate
     from .gates.deferred_self_reference import FlextInfraDeferredSelfReferenceGate
     from .gates.direnv import FlextInfraDirenvGate
     from .gates.duplication import FlextInfraDuplicationGate
@@ -171,14 +156,7 @@ if TYPE_CHECKING:
     )
     from .refactor.accessor_migration import FlextInfraAccessorMigrationOrchestrator
     from .refactor.census import FlextInfraRefactorCensus
-    from .refactor.classvar_constant_autofix import (
-        FlextInfraRefactorClassvarConstantAutofix,
-    )
     from .refactor.namespace_enforcer import FlextInfraNamespaceEnforcer
-    from .refactor.namespace_enforcer_phases import (
-        FlextInfraNamespaceEnforcerPhasesMixin,
-    )
-    from .refactor.project_alias_migrator import FlextInfraRefactorProjectAliasMigrator
     from .refactor.project_classifier import FlextInfraProjectClassifier
     from .refactor.wrapper_root_namespace import FlextInfraWrapperRootNamespaceRefactor
     from .release.orchestrator import FlextInfraReleaseOrchestrator
@@ -230,8 +208,6 @@ __all__: tuple[str, ...] = (
     "FlextInfraBanditGate",
     "FlextInfraCProfileReport",
     "FlextInfraCandidateBootstrapService",
-    "FlextInfraCanonicalAliasGate",
-    "FlextInfraClassPlacementDetector",
     "FlextInfraCleanService",
     "FlextInfraCli",
     "FlextInfraCliDispatchService",
@@ -262,16 +238,13 @@ __all__: tuple[str, ...] = (
     "FlextInfraCodegenVersionFile",
     "FlextInfraCodemodAstScan",
     "FlextInfraCodemodBatchApply",
-    "FlextInfraCodemodSedApply",
     "FlextInfraCodemodSemanticApply",
     "FlextInfraCodemodSnapshotReconciler",
     "FlextInfraCodemodSnapshotRefresh",
-    "FlextInfraCompatibilityAliasDetector",
     "FlextInfraConfig",
     "FlextInfraConfigFixer",
     "FlextInfraConsolidateGroupsPhase",
     "FlextInfraConstants",
-    "FlextInfraCyclicImportDetector",
     "FlextInfraDeferredSelfReferenceDetector",
     "FlextInfraDeferredSelfReferenceGate",
     "FlextInfraDependencyDetectionAnalysis",
@@ -298,16 +271,13 @@ __all__: tuple[str, ...] = (
     "FlextInfraGate",
     "FlextInfraGateRegistry",
     "FlextInfraGitService",
-    "FlextInfraImportAliasDetector",
     "FlextInfraIndexDeclarationsGate",
     "FlextInfraInjectCommentsPhase",
-    "FlextInfraInternalImportDetector",
     "FlextInfraInventoryService",
     "FlextInfraLayoutGate",
     "FlextInfraLocCapGate",
     "FlextInfraLocDeltaValidator",
     "FlextInfraLockIntegrityVerifier",
-    "FlextInfraLooseObjectDetector",
     "FlextInfraLspDiagnosticsDetector",
     "FlextInfraManualCommandValidator",
     "FlextInfraMarkdownCodeGate",
@@ -322,12 +292,9 @@ __all__: tuple[str, ...] = (
     "FlextInfraModels",
     "FlextInfraMypyGate",
     "FlextInfraNamespaceEnforcer",
-    "FlextInfraNamespaceEnforcerPhasesMixin",
     "FlextInfraNamespaceGate",
     "FlextInfraNamespaceRules",
-    "FlextInfraNamespaceSourceDetector",
     "FlextInfraNamespaceValidator",
-    "FlextInfraPrivateImportBypassDetector",
     "FlextInfraProjectClassifier",
     "FlextInfraProjectSelectionServiceBase",
     "FlextInfraPromoted",
@@ -340,15 +307,12 @@ __all__: tuple[str, ...] = (
     "FlextInfraPytestRunner",
     "FlextInfraPythonVersionEnforcer",
     "FlextInfraRefactorCensus",
-    "FlextInfraRefactorClassvarConstantAutofix",
-    "FlextInfraRefactorProjectAliasMigrator",
     "FlextInfraRefactorRoutes",
     "FlextInfraReleaseOrchestrator",
     "FlextInfraRopeTransformer",
     "FlextInfraRopeWorkspace",
     "FlextInfraRuffFormatGate",
     "FlextInfraRuffLintGate",
-    "FlextInfraRuntimeAliasDetector",
     "FlextInfraRuntimeCensusGate",
     "FlextInfraRuntimeCensusValidator",
     "FlextInfraRuntimeDevDependencyDetector",
@@ -472,7 +436,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".codemod.batch_apply": ("FlextInfraCodemodBatchApply",),
             ".codemod.batch_gates": ("FlextInfraModGateEngine",),
             ".codemod.batch_replacements": ("FlextInfraModReplacements",),
-            ".codemod.sed_apply": ("FlextInfraCodemodSedApply",),
             ".codemod.semantic_apply": ("FlextInfraCodemodSemanticApply",),
             ".codemod.snapshot_reconciler": ("FlextInfraCodemodSnapshotReconciler",),
             ".codemod.snapshot_refresh": ("FlextInfraCodemodSnapshotRefresh",),
@@ -495,29 +458,10 @@ _LAZY_IMPORTS = MappingProxyType(
             ".deps.phases.inject_comments": ("FlextInfraInjectCommentsPhase",),
             ".deps.phases.tool_tables": ("FlextInfraToolTablesPhase",),
             ".detectors": ("detectors",),
-            ".detectors.class_placement_detector": (
-                "FlextInfraClassPlacementDetector",
-            ),
-            ".detectors.compatibility_alias_detector": (
-                "FlextInfraCompatibilityAliasDetector",
-            ),
-            ".detectors.cyclic_import_detector": ("FlextInfraCyclicImportDetector",),
             ".detectors.deferred_self_reference_detector": (
                 "FlextInfraDeferredSelfReferenceDetector",
             ),
-            ".detectors.import_alias_detector": ("FlextInfraImportAliasDetector",),
-            ".detectors.internal_import_detector": (
-                "FlextInfraInternalImportDetector",
-            ),
-            ".detectors.loose_object_detector": ("FlextInfraLooseObjectDetector",),
             ".detectors.lsp_diagnostics": ("FlextInfraLspDiagnosticsDetector",),
-            ".detectors.namespace_source_detector": (
-                "FlextInfraNamespaceSourceDetector",
-            ),
-            ".detectors.private_import_bypass_detector": (
-                "FlextInfraPrivateImportBypassDetector",
-            ),
-            ".detectors.runtime_alias_detector": ("FlextInfraRuntimeAliasDetector",),
             ".docs": ("docs",),
             ".docs.auditor": ("FlextInfraDocAuditor",),
             ".docs.auditor_mixin": ("FlextInfraDocAuditorMixin",),
@@ -532,7 +476,6 @@ _LAZY_IMPORTS = MappingProxyType(
             ".gates": ("gates",),
             ".gates.bandit": ("FlextInfraBanditGate",),
             ".gates.base_gate": ("FlextInfraGate",),
-            ".gates.canonical_alias": ("FlextInfraCanonicalAliasGate",),
             ".gates.deferred_self_reference": ("FlextInfraDeferredSelfReferenceGate",),
             ".gates.direnv": ("FlextInfraDirenvGate",),
             ".gates.duplication": ("FlextInfraDuplicationGate",),
@@ -575,16 +518,7 @@ _LAZY_IMPORTS = MappingProxyType(
                 "FlextInfraAccessorMigrationOrchestrator",
             ),
             ".refactor.census": ("FlextInfraRefactorCensus",),
-            ".refactor.classvar_constant_autofix": (
-                "FlextInfraRefactorClassvarConstantAutofix",
-            ),
             ".refactor.namespace_enforcer": ("FlextInfraNamespaceEnforcer",),
-            ".refactor.namespace_enforcer_phases": (
-                "FlextInfraNamespaceEnforcerPhasesMixin",
-            ),
-            ".refactor.project_alias_migrator": (
-                "FlextInfraRefactorProjectAliasMigrator",
-            ),
             ".refactor.project_classifier": ("FlextInfraProjectClassifier",),
             ".refactor.wrapper_root_namespace": (
                 "FlextInfraWrapperRootNamespaceRefactor",

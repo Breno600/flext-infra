@@ -35,7 +35,7 @@ class FlextInfraPytestRunnerCommand(FlextInfraPytestRunnerBase):
         Registry distributions legitimately have no direct-URL receipt. An
         editable install names a checkout path, not a toolchain: testmon already
         tracks that source by file checksum, so every checkout of one project
-        on the same lock shares one environment record (flext-3l1gk).
+        on the same lock shares one environment record.
         """
         provenance: t.MutableSequenceOf[str] = []
         for distribution in distributions():

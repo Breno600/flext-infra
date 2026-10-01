@@ -24,12 +24,6 @@ class FlextInfraRopeTransformer:
         self._on_change = on_change
         self.changes: t.MutableSequenceOf[str] = []
 
-    def _record_change(self, message: str) -> None:
-        """Record a change and forward it to the callback when one is bound."""
-        self.changes.append(message)
-        if self._on_change is not None:
-            self._on_change(message)
-
     @abstractmethod
     def apply_to_source(self, source: str) -> t.Infra.TransformResult:
         """Apply transformation to in-memory source."""

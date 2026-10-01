@@ -26,8 +26,7 @@ class TestsFlextInfraModRuleExpectedReceipt:
         tm.ok(u.Cli.ensure_dir(rules_root))
         tm.ok(
             u.Cli.atomic_write_text_file(
-                config_path,
-                f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n",
+                config_path, f"ruleDirs:\n  - {c.Cli.RULES_DIR_NAME}\ntestConfigs: []\n"
             )
         )
         tm.ok(

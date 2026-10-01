@@ -197,9 +197,9 @@ class FlextInfraNamespaceValidator(s[bool], FlextInfraNamespaceRules):
         scopes enforcement to production sources when a project declares it —
         ``tests/`` host pytest conventions and ``scripts/`` are thin command
         adapters, so governing them as facades contradicts their contract.
-        The cyclic-import detector and the canonical-alias gate already honor
-        ``u.Infra.namespace_scan_dirs``; the validator silently ignoring the
-        same declaration made the declared scope a no-op. Without an explicit
+        The namespace enforcer already honors the declared scan directories;
+        the validator silently ignoring the same declaration made the declared
+        scope a no-op. Without an explicit
         declaration every file stays in scope (previous behavior).
         """
         declared = u.Infra.namespace_meta(project_root).get("scan_dirs")

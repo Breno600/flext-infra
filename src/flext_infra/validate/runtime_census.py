@@ -81,8 +81,8 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
     def _gate_rule_families() -> t.MappingKV[str, frozenset[str]]:
         """Census rule families owned by a gate other than the runtime census.
 
-        Operator ruling 2026-10-01: no smell enters ``make check``; the
-        ``make smells`` verb owns every smell family. The family set derives
+        No smell enters ``make check``; the ``make smells`` verb owns every
+        smell family. The family set derives
         from the flext-core smell catalog — every smell tag plus the rule id
         of every catalog row carrying one — so a smell added to the catalog
         moves to the smells gate in the same edit, with no second list.
@@ -286,7 +286,7 @@ class FlextInfraRuntimeCensusValidator(s[bool]):
             report = report_result.value
             merged_violations.extend(report.violations)
         # Every owned finding blocks: ownership routes a family to its gate,
-        # it never suspends one (operator order 2026-10-01, gc-wisp-1n83u4).
+        # it never suspends one.
         owned_violations = self._gate_owned(merged_violations)
         label = (
             "runtime census"

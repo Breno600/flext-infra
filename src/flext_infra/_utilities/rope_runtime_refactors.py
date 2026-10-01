@@ -258,15 +258,6 @@ class FlextInfraUtilitiesRopeRuntimeRefactors(FlextInfraUtilitiesRopeRuntimeBase
         return value
 
     @classmethod
-    def word_primary_at(cls, source: str, offset: int) -> str:
-        word_finder = cls._word_finder(source)
-        primary_at = getattr(word_finder, "get_primary_at", None)
-        if not callable(primary_at):
-            msg = "rope Worder does not expose callable get_primary_at"
-            raise TypeError(msg)
-        return str(primary_at(offset))
-
-    @classmethod
     def word_is_function_call(cls, source: str, offset: int) -> bool:
         """Return Rope's syntactic call fact for the primary at ``offset``."""
         word_finder = cls._word_finder(source)

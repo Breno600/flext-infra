@@ -93,9 +93,9 @@ class FlextInfraSmellsGate(FlextInfraGate):
     def _census_issues(self, project_dir: Path) -> t.SequenceOf[m.Infra.Issue]:
         """Runtime-census findings of the smell families this gate owns.
 
-        Operator ruling 2026-10-01: every smell family, qlty or runtime
-        census, runs through ``make smells`` and never ``make check``. A
-        census that cannot run is a blocking issue, never a clean pass.
+        Every smell family, qlty or runtime census, runs through
+        ``make smells`` and never ``make check``. A census that cannot run
+        is a blocking issue, never a clean pass.
         """
         validator = FlextInfraRuntimeCensusValidator.for_project(
             project_dir, census_gate=self.gate_id
