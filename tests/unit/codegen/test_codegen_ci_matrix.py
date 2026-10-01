@@ -313,7 +313,7 @@ class TestsFlextInfraCodegenCiMatrix:
         tm.that(workflow, has="cancel-in-progress: true")
 
     def test_ci_workflow_stable_blank_line_without_private_submodules(
-        self, rendered_project: Path
+        self, tmp_path: Path, rendered_project: Path
     ) -> None:
         """Empty private_submodules include must not accumulate blank lines."""
         root = rendered_project
