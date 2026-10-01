@@ -37,7 +37,7 @@ class FlextInfraRenameSymbols:
         rewrites: t.SequenceOf[m.Infra.SourceRewrite],
     ) -> t.VariadicTuple[t.Triple[int, int, bool]]:
         """Retain effective-member identity after Rope's receiver/MRO match."""
-        runtime = u.FlextInfraUtilitiesRopeRuntime
+        runtime = u.Infra
         module = project.get_pymodule(change.resource)
         owner, old, new = symbols
         expected = cls.resolve_member(project, owner, old)
@@ -140,7 +140,7 @@ class FlextInfraRenameSymbols:
                     if cls.resolve_member(project, owner, new_suffix) is None:
                         continue
                     accepted = True
-                    changes = u.FlextInfraUtilitiesRopeRuntime.restructure_changes(
+                    changes = u.Infra.restructure_changes(
                         project,
                         f"${{owner}}.{old_suffix}",
                         f"${{owner}}.{new_suffix}",

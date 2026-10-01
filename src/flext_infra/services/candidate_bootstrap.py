@@ -16,7 +16,7 @@ class FlextInfraCandidateBootstrapService:
         planner: p.Infra.CandidateBootstrapPlanner,
         transaction: p.Infra.CandidateBootstrapTransaction,
     ) -> None:
-        """Bind the injected plan boundary and atomic publisher (DI)."""
+        """Wire the declared-target planner to its atomic publisher."""
         self._planner = planner
         self._transaction = transaction
 

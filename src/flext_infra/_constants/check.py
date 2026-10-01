@@ -52,6 +52,7 @@ class FlextInfraConstantsCheck:
     MARKDOWN: ClassVar[str] = "markdown"
     MARKDOWN_FORMAT: ClassVar[str] = "markdown-format"
     MARKDOWN_CODE: ClassVar[str] = "markdown-code"
+    SMELLS: ClassVar[str] = "smells"
     SILENT_FAILURE: ClassVar[str] = "silent-failure"
     TYPE_CHECKER_GATES: ClassVar[frozenset[str]] = frozenset({
         "pyrefly",
@@ -101,7 +102,7 @@ class FlextInfraConstantsCheck:
             "Flext Index Declarations Gate",
             "internal://flext-infra/index-declarations",
         ),
-        "smells": ("Flext Code Smell Detector", "internal://flext-infra/smells"),
+        SMELLS: ("Flext Code Smell Detector", "internal://flext-infra/smells"),
         "codemod": ("ast-grep", AST_GREP_DOCS_URL),
         "layout": ("Flext Project Layout Gate", "internal://flext-infra/layout"),
         "canonical-alias": (

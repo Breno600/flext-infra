@@ -1,5 +1,11 @@
 # CSV rename campaigns
 
+<!-- TOC START -->
+
+- No sections found
+
+<!-- TOC END -->
+
 The public `make mod` circuit reads `Infra.refactor_csv_campaigns` from the packaged
 configuration. Each campaign keeps one `old,new` CSV as its rename source. Consumer
 repositories, including repositories outside the FLEXT superproject, consume that same
